@@ -257,6 +257,31 @@ class SubitoCollector(Collector):
             if len(ads) < lim:
                 break
         log.info("subito api: %d annunci letti", seen)
+        # Ricerche mirate ad auto incidentate o guaste
+        for kw in query.get("problem_keywords") or []:
+            n_kw = 0
+            for page in range(query.get("problem_pages", 2)):
+                r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                    params={"c": 2, "r": region, "t": "s", "q": kw, "lim": lim,
+                                            "start": page * lim, "sort": "datedesc"})
+                self.pause()
+                if r.status_code != 200:
+                    break
+                ads = (r.json() or {}).get("ads") or []
+                for it in ads:
+                    listing = parse_item(it)
+                    if not listing:
+                        continue
+                    if listing.province and listing.province.upper() not in wanted:
+                        continue
+                    if listing.price_eur is not None and listing.price_eur > query["max_price"]:
+                        continue
+                    listing.problem_search = True
+                    n_kw += 1
+                    yield listing
+                if len(ads) < lim:
+                    break
+            log.info("subito ricerca '%s': %d annunci nelle province", kw, n_kw)
 
     def _search_html(self, query: dict) -> Iterator[Listing]:
         for province in query["provinces"]:

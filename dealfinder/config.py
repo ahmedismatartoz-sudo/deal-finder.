@@ -25,6 +25,11 @@ class Settings:
                                          "mantova", "sondrio")
     market_max_price_eur: int = 40000
 
+    # Ricerche mirate ad auto con problemi (la maggior parte delle opportunità)
+    problem_keywords: tuple[str, ...] = field(default_factory=lambda: tuple(
+        __import__("json").loads(os.environ.get("PROBLEM_KEYWORDS", '["incidentata", "da sistemare", "non parte", "guasto", "da riparare", "danneggiata", "motore", "frizione"]'))))
+    problem_pages: int = field(default_factory=lambda: int(os.environ.get("PROBLEM_PAGES", "2")))
+
     # Regole prodotto
     max_dealer_opens: int = 7
 

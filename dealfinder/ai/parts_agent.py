@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 from . import client as ai
-from .damage import PARTS, hidden_parts, part_key
+from .damage import FAULTS, MECH_PART_LABELS, PARTS, hidden_parts, part_key
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def _side_label(side: str | None) -> str:
 
 
 def search_part(vehicle: dict, part: str, side: str | None, usage_sink=None, listing_id=None) -> dict:
-    label = PARTS.get(part) or HIDDEN_LABELS.get(part, part)
+    label = PARTS.get(part) or MECH_PART_LABELS.get(part) or HIDDEN_LABELS.get(part, part)
     query = (f"Veicolo: {vehicle.get('search_name')}. Pezzo: {label}{_side_label(side)}. "
              f"Dettagli veicolo: {json.dumps({k: vehicle.get(k) for k in ('generation', 'facelift', 'body_type', 'engine', 'year_from', 'year_to')}, ensure_ascii=False)}. "
              "Trova prezzi per ricambio originale, aftermarket e usato.")
@@ -102,8 +102,15 @@ def estimate_parts(vehicle: dict, damage_items: list[dict], year: int | None, pr
     """Stima il costo totale dei ricambi. cache_get/put: funzioni (vkey, part) per la cache."""
     vkey = vehicle_key(vehicle)
     lines, missing = [], []
-    wanted = [(it["part"], it.get("side"), False) for it in damage_items if it.get("action") == "sostituire"]
-    wanted += [(p, None, True) for p in hidden_parts(damage_items, year)]
+    body = [it for it in damage_items if it["part"] not in FAULTS]
+    faults = [it for it in damage_items if it["part"] in FAULTS]
+    wanted = [(it["part"], it.get("side"), False) for it in body if it.get("action") == "sostituire"]
+    # Guasti: ogni guasto diventa i suoi ricambi. Il volano bimassa non c'è su tutte le auto:
+    # entra solo nel costo alto.
+    for it in faults:
+        for mp in FAULTS[it["part"]][1]:
+            wanted.append((mp, None, mp == "volano_bimassa"))
+    wanted += [(p, None, True) for p in hidden_parts(body, year)]
 
     for part, side, probable in wanted:
         key = part_key(part, side)
@@ -118,7 +125,8 @@ def estimate_parts(vehicle: dict, damage_items: list[dict], year: int | None, pr
                 if cache_put:
                     cache_put(vkey, key, res)
         rng = price_range(res, preferred)
-        label = (PARTS.get(part) or HIDDEN_LABELS.get(part) or res.get("label") or part) + _side_label(side)
+        label = (PARTS.get(part) or MECH_PART_LABELS.get(part) or HIDDEN_LABELS.get(part)
+                 or res.get("label") or part) + _side_label(side)
         line = {"part": key, "label": label, "probable_hidden": probable, **rng,
                 "oem_codes": res.get("oem_codes", []),
                 "offers": sorted(res.get("offers", []), key=lambda o: o["price_eur"])[:5]}
@@ -131,7 +139,7 @@ def estimate_parts(vehicle: dict, damage_items: list[dict], year: int | None, pr
     low = sum(l["low"] for l in visible)
     high = sum(l["high"] for l in visible) + sum(l["high"] for l in hidden)
     # Riparazioni senza sostituzione: nessun ricambio, lo segnaliamo
-    repair_only = [part_key(it["part"], it.get("side")) for it in damage_items if it.get("action") == "riparare"]
+    repair_only = [part_key(it["part"], it.get("side")) for it in body if it.get("action") == "riparare"]
     return {"vehicle": vehicle.get("search_name"), "preferred_type": preferred,
             "parts_cost_low": low if lines else 0, "parts_cost_high": high if lines else 0,
             "lines": lines, "parts_not_priced": missing, "repair_only_no_parts": repair_only,

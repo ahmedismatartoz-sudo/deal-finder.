@@ -79,6 +79,7 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         region=listing.region, damage_declared=listing.damage_declared,
         damage_class=listing.damage_class, damage_items=json.dumps(damage),
         missing_fields=listing.missing_fields, raw=json.dumps(listing.raw, default=str),
+        problem_search=listing.problem_search,
     )
     if prev is None:
         cols = ", ".join(params)

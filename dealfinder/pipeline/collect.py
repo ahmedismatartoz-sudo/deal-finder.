@@ -33,8 +33,11 @@ def run(mode: str) -> Counter:
         sources = [(BrightDataFacebookCollector(), {"max_price": settings.max_purchase_eur})]
     else:
         subito = SubitoCollector(proxy=settings.scraper_proxy)
-        sources = [(subito, {"region": settings.region, "provinces": provinces,
-                             "max_price": max_price, "max_pages": settings.max_pages_per_province})]
+        q = {"region": settings.region, "provinces": provinces,
+             "max_price": max_price, "max_pages": settings.max_pages_per_province}
+        if mode == "opportunita":
+            q.update(problem_keywords=list(settings.problem_keywords), problem_pages=settings.problem_pages)
+        sources = [(subito, q)]
 
     with connect() as conn:
         finish = log_job(conn, f"collect:{mode}")

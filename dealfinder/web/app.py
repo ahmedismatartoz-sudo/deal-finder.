@@ -136,7 +136,7 @@ SELECT l.*, v.id AS valuation_id, v.private_median, v.dealer_median, v.resale_pr
        v.confidence, v.confidence_reasons, v.parts_cost_low, v.parts_cost_high, v.parts_detail,
        v.discount_vs_private, v.fraud_flags, v.motivation, v.checks, v.engine_version,
        v.created_at AS valued_at, v.resale_prudent_private, v.resale_median_private,
-       v.resale_prudent_dealer, v.resale_median_dealer,
+       v.resale_prudent_dealer, v.resale_median_dealer, v.asis_median, v.asis_n,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT array_agg(source_url ORDER BY position) FROM listing_photos p WHERE p.listing_id=l.id) AS photo_urls

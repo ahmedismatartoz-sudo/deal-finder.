@@ -17,6 +17,7 @@ from collections import Counter
 from dataclasses import asdict
 
 from ..ai import analyze, parts_agent, plate
+from ..ai.damage import EXCLUDE_FLAGS
 from ..ai.client import AIError, db_usage_sink
 from ..config import settings
 from ..core.models import DamageItem
@@ -84,7 +85,7 @@ def screen(conn) -> Counter:
             # 1. testo (AI economica): completa dati mancanti, danni dichiarati
             text = analyze.extract_text(l, sink, lid) if (l.description or l.missing_fields) else {}
             origin = analyze.apply_extract(l, text)
-            if text.get("severe_flags"):
+            if set(text.get("severe_flags") or []) & set(EXCLUDE_FLAGS):
                 l.damage_class = "grave"
                 update_listing_fields(conn, lid, l)
                 set_stage(conn, lid, "scartato", "danno_grave_dichiarato", ai_extract=text)

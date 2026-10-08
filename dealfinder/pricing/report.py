@@ -53,6 +53,10 @@ def motivation(l: Listing, v: Valuation, parts: dict | None) -> list[str]:
     if parts and parts.get("lines"):
         out.append(f"Ricambi stimati {eur(parts['parts_cost_low'])} – {eur(parts['parts_cost_high'])} "
                    f"({len(parts['lines'])} voci, manodopera esclusa).")
+    if v.asis_median:
+        rel = "sotto" if l.price_eur < v.asis_median else "sopra o in linea con"
+        out.append(f"Auto simili da sistemare in vendita a circa {eur(v.asis_median)} ({v.asis_n} annunci): "
+                   f"questa è {rel} quel prezzo.")
     for f in v.fraud_flags:
         out.append("Attenzione: " + FRAUD_LABELS.get(f, f))
     return out
@@ -87,6 +91,22 @@ def checks(l: Listing, v: Valuation, parts: dict | None, severe: list[str] | Non
         c.append("Annuncio Facebook: verificare identità del venditore, mai anticipi prima di vedere l'auto")
     if v.fraud_flags:
         c.append("Prezzo anomalo: vedere l'auto di persona prima di qualunque pagamento")
+    from ..ai.damage import FAULTS
+    fault_checks = {
+        "frizione": "Frizione: prova di slittamento in salita e punto di stacco; verificare se il volano è bimassa",
+        "distribuzione": "Distribuzione: chiedere quando è stata fatta; se rotta, verificare che le valvole non siano piegate (prova di compressione)",
+        "turbina": "Turbina: fumo allo scarico, fischi, gioco dell'albero; controllare anche l'intercooler",
+        "fap_egr": "FAP/EGR: leggere gli errori con diagnosi, chiedere se è stato rimosso o rigenerato",
+        "iniettori": "Iniettori: test di ritorno gasolio, avviamento a freddo",
+        "motore_sostituzione": "Motore: compressione, olio nel liquido di raffreddamento, rumori; il motore usato va trovato compatibile per codice",
+        "cambio_sostituzione": "Cambio: tutte le marce a caldo e a freddo, rumori; codice cambio per l'usato",
+        "airbag": "Airbag: centralina, cinture con pretensionatori e cruscotto; costo elevato, verificare dal vivo",
+    }
+    for d in l.damage_items:
+        if d.part in fault_checks:
+            c.append(fault_checks[d.part])
+        elif d.part in FAULTS:
+            c.append(f"{FAULTS[d.part][0]}: confermare il guasto con diagnosi prima di trattare")
     for s in severe or []:
         c.append("Verificare: " + SEVERE_FLAGS.get(s, s))
     return c

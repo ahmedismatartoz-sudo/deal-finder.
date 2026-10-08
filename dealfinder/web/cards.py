@@ -22,6 +22,7 @@ def valuation_from_row(v: dict) -> Valuation:
     val = Valuation()
     for k in ("engine_version", "private_median", "dealer_median", "resale_prudent", "resale_median",
               "resale_prudent_private", "resale_median_private", "resale_prudent_dealer", "resale_median_dealer",
+              "asis_median", "asis_n",
               "comparable_level", "n_comparables", "dispersion", "liquidity_days", "discount_vs_private",
               "confidence"):
         if v.get(k) is not None:
@@ -104,6 +105,7 @@ def build(listing_row: dict, val_row: dict, photos: list[str], costs_row: dict |
                 "resale_prudent": v.resale_prudent, "resale_median": v.resale_median,
                 "n_comparables": v.n_comparables, "comparable_level": v.comparable_level,
                 "dispersion": v.dispersion, "discount_vs_private": v.discount_vs_private,
+                "asis_median": v.asis_median, "asis_n": v.asis_n,
                 "confidence_reasons": [report.reason_text(r) for r in v.confidence_reasons],
                 "fraud_flags": [report.FRAUD_LABELS.get(f, f) for f in v.fraud_flags],
             },
@@ -121,7 +123,7 @@ def build(listing_row: dict, val_row: dict, photos: list[str], costs_row: dict |
 def _risk_label(l, v) -> str:
     from ..pricing.margin import risk_penalty
     r = risk_penalty(v, l)
-    return "basso" if r < 0.1 else ("medio" if r < 0.3 else "alto")
+    return "basso" if r < 0.1 else ("medio" if r < 0.3 else "alto")  # alto_rischio pesa 0.35 da solo
 
 
 def costs_dict(c: DealerCosts) -> dict:

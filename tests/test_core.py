@@ -183,3 +183,18 @@ def test_make_model_from_title():
     assert mm("BMW Serie 1 118d") == ("bmw", "serie-1")
     assert mm("Alfa Romeo Giulietta") == ("alfa-romeo", "giulietta")
     assert mm("Vendo auto ottimo stato") == (None, None)
+
+
+def test_asis_market_and_problem_hint():
+    from dealfinder.pricing.engine import asis_market
+    mkt = market()
+    damaged = []
+    for i, p in enumerate((5200, 5600, 6000, 6400)):
+        d = mk(500 + i, p, description="incidentata frontale")
+        assert d.damage_declared is True          # riconosciuta dalle parole chiave
+        damaged.append(d)
+    target = mk(999, 4000, damage="medio")
+    med, n = asis_market(target, mkt + damaged)
+    assert n == 4 and 5600 <= med <= 6000
+    v = value_listing(mk(998, 9000), mkt + damaged)
+    assert all(c["price"] > 7000 for c in v.comparables_used)   # le danneggiate non entrano nei confronti sani

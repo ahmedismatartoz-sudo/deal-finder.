@@ -20,7 +20,9 @@ class DealerCosts:
     paperwork_eur: int = 450
     preparation_eur: int = 300
     contingency_pct: float = 0.05
-    contingency_damaged_pct: float = 0.15
+    contingency_damaged_pct: float = 0.15        # carrozzeria
+    contingency_fault_pct: float = 0.25          # guasti meccanici noti
+    contingency_high_risk_pct: float = 0.35      # motore/cambio/airbag, non parte, guasto ignoto
     warranty_reserve_eur: int = 0       # tra privati non c'è garanzia legale del venditore
     vat_margin_scheme: bool = False     # default: compravendita tra privati, nessuna IVA
     threshold_low_eur: int = 2000
@@ -49,15 +51,27 @@ def compute_margin(listing: Listing, val: Valuation, costs: DealerCosts,
     if val.resale_prudent is None or listing.price_eur is None:
         return None
 
-    damaged = listing.damage_class in ("leggero", "medio") or bool(listing.damage_items)
+    from ..ai.damage import FAULTS
+    damaged = listing.damage_class in ("leggero", "medio", "alto_rischio") or bool(listing.damage_items)
+    has_fault = any(d.part in FAULTS for d in listing.damage_items)
+    high_risk = listing.damage_class == "alto_rischio"
     notes = ["manodopera_esclusa"] if damaged else []
     if damaged and parts_cost_high is None:
         notes.append("ricambi_non_stimati")
+    if high_risk:
+        notes.append("alto_rischio_meccanico")
 
     purchase = listing.price_eur
     parts = parts_cost_high or 0
     fixed = costs.transport_eur + costs.paperwork_eur + costs.preparation_eur + costs.warranty_reserve_eur
-    pct = costs.contingency_damaged_pct if damaged else costs.contingency_pct
+    if high_risk:
+        pct = costs.contingency_high_risk_pct
+    elif has_fault:
+        pct = costs.contingency_fault_pct
+    elif damaged:
+        pct = costs.contingency_damaged_pct
+    else:
+        pct = costs.contingency_pct
     contingency = round(pct * (purchase + parts))
 
     gross = val.resale_prudent - purchase - parts - fixed - contingency
@@ -72,7 +86,7 @@ def compute_margin(listing: Listing, val: Valuation, costs: DealerCosts,
 
     if net < threshold:
         status = "scartata"
-    elif val.confidence != "affidabile" or "ricambi_non_stimati" in notes:
+    elif val.confidence != "affidabile" or "ricambi_non_stimati" in notes or high_risk:
         status = "da_verificare"
     else:
         status = "opportunita"
@@ -104,6 +118,8 @@ def risk_penalty(val: Valuation, listing: Listing) -> float:
     r = 0.0
     if listing.damage_class in ("leggero", "medio"):
         r += 0.15
+    if listing.damage_class == "alto_rischio":
+        r += 0.35
     if listing.damage_class == "sconosciuto":
         r += 0.10
     if val.fraud_flags:

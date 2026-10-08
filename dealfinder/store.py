@@ -68,8 +68,9 @@ def save_valuation(conn, listing_id: int, val, parts: dict | None, motivation: l
              resale_median, comparables_used, comparable_level, n_comparables, dispersion, liquidity_days,
              confidence, confidence_reasons, parts_cost_low, parts_cost_high, parts_detail,
              discount_vs_private, fraud_flags, damage_items, motivation, checks, default_margin,
-             resale_prudent_private, resale_median_private, resale_prudent_dealer, resale_median_dealer)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+             resale_prudent_private, resale_median_private, resale_prudent_dealer, resale_median_dealer,
+             asis_median, asis_n)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
         (listing_id, val.engine_version, val.private_median, val.dealer_median, val.resale_prudent,
          val.resale_median, json.dumps(val.comparables_used), val.comparable_level, val.n_comparables,
          val.dispersion, val.liquidity_days, val.confidence, val.confidence_reasons,
@@ -77,5 +78,5 @@ def save_valuation(conn, listing_id: int, val, parts: dict | None, motivation: l
          json.dumps(parts) if parts else None, val.discount_vs_private, val.fraud_flags,
          None, motivation, checks, json.dumps(default_margin) if default_margin else None,
          val.resale_prudent_private, val.resale_median_private, val.resale_prudent_dealer,
-         val.resale_median_dealer)).fetchone()
+         val.resale_median_dealer, val.asis_median, val.asis_n)).fetchone()
     return row["id"]

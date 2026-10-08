@@ -84,7 +84,7 @@ async function viewList() {
         <option value="price">Prezzo più basso</option>
       </select>
       <select id="damaged" aria-label="Danni">
-        <option value="1">Sane e poco incidentate</option>
+        <option value="1">Sane e da sistemare</option>
         <option value="0">Solo sane</option>
       </select>
       <select id="source" aria-label="Fonte">
@@ -132,7 +132,8 @@ function rowHtml(c) {
       <div class="money"><span>Prezzo <b>${eur(c.price)}</b></span><span>Rivendita <b>${eur(c.resale_prudent)}</b></span>${c.parts_cost ? `<span>Ricambi <b>${eur(c.parts_cost)}</b></span>` : ""}</div>
       <div class="facts">
         <span class="tag risk-${esc(c.risk)}">Rischio ${esc(c.risk)}</span>
-        ${["leggero", "medio"].includes(c.damage_class) ? `<span class="tag damage">Incidentata ${esc(c.damage_class)}</span>` : ""}
+        ${["leggero", "medio"].includes(c.damage_class) ? `<span class="tag damage">Da sistemare (${esc(c.damage_class)})</span>` : ""}
+        ${c.damage_class === "alto_rischio" ? `<span class="tag risk-alto">Guasto importante</span>` : ""}
         ${c.opened_by_me ? "<span>Già aperta da te</span>" : ""}
       </div>
     </div>
@@ -305,7 +306,9 @@ async function viewProfile() {
       <div class="grid2">
         ${num("transport_eur", "Trasporto (€)", c.transport_eur)}${num("paperwork_eur", "Pratiche e passaggio (€)", c.paperwork_eur)}
         ${num("preparation_eur", "Preparazione (€)", c.preparation_eur, "Tagliando, pulizia, piccoli interventi")}${num("warranty_reserve_eur", "Riserva garanzia (€)", c.warranty_reserve_eur, "Lascia 0 se vendi a privati senza garanzia")}
-        ${num("contingency_pct", "Imprevisti auto sane (%)", Math.round(c.contingency_pct * 100))}${num("contingency_damaged_pct", "Imprevisti auto incidentate (%)", Math.round(c.contingency_damaged_pct * 100))}
+        ${num("contingency_pct", "Imprevisti auto sane (%)", Math.round(c.contingency_pct * 100))}${num("contingency_damaged_pct", "Imprevisti carrozzeria (%)", Math.round(c.contingency_damaged_pct * 100))}
+        ${num("contingency_fault_pct", "Imprevisti guasti meccanici (%)", Math.round(c.contingency_fault_pct * 100))}
+        ${num("contingency_high_risk_pct", "Imprevisti alto rischio (%)", Math.round(c.contingency_high_risk_pct * 100), "Motore, cambio, airbag, non parte")}
       </div>
       <div class="field inline"><input type="checkbox" id="vat_margin_scheme" ${c.vat_margin_scheme ? "checked" : ""}><label for="vat_margin_scheme">Applico l'IVA sul margine (solo se vendo come azienda)</label></div>
       <h2>Soglie di margine netto</h2>
@@ -328,7 +331,8 @@ async function viewProfile() {
         max_purchase: int("max_purchase"), accept_damage: g("accept_damage").checked, preferred_parts: g("preferred_parts").value, resale_as: g("resale_as").value,
         costs: { transport_eur: int("transport_eur"), paperwork_eur: int("paperwork_eur"), preparation_eur: int("preparation_eur"),
           warranty_reserve_eur: int("warranty_reserve_eur"), contingency_pct: int("contingency_pct") / 100,
-          contingency_damaged_pct: int("contingency_damaged_pct") / 100, vat_margin_scheme: g("vat_margin_scheme").checked,
+          contingency_damaged_pct: int("contingency_damaged_pct") / 100,
+          contingency_fault_pct: int("contingency_fault_pct") / 100, contingency_high_risk_pct: int("contingency_high_risk_pct") / 100, vat_margin_scheme: g("vat_margin_scheme").checked,
           threshold_low_eur: int("threshold_low_eur"), threshold_high_eur: int("threshold_high_eur"), threshold_split_eur: int("threshold_split_eur") } } });
       toast("Costi salvati");
     } catch (err) { toast(err.message); }

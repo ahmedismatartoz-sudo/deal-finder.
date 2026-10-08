@@ -46,6 +46,7 @@ class Listing:
     last_seen_at: datetime | None = None
     disappeared_at: datetime | None = None
     raw: dict = field(default_factory=dict)
+    problem_search: bool = False   # trovato con una ricerca mirata ad auto con problemi
 
     REQUIRED = ("make", "model", "year", "mileage_km", "fuel", "price_eur")
 

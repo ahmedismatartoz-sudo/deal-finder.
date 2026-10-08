@@ -36,12 +36,14 @@ DEFAULT_DATASET = "gd_lvt9iwuh6fbcwmx1a"
 # Facebook mostra un numero limitato di risultati per ricerca: dividere per fasce di prezzo
 # fa sì che ogni ricerca resti sotto il limite e insieme coprano quasi tutto.
 DEFAULT_SEARCHES = [
-    {"city": "milan", "radius": 60, "min_price": 500, "max_price": 3000},
-    {"city": "milan", "radius": 60, "min_price": 3000, "max_price": 6000},
-    {"city": "milan", "radius": 60, "min_price": 6000, "max_price": 10000},
-    {"city": "milan", "radius": 60, "min_price": 10000, "max_price": 20000},
-    {"city": "brescia", "radius": 30, "min_price": 500, "max_price": 8000},
-    {"city": "brescia", "radius": 30, "min_price": 8000, "max_price": 20000},
+    {"city": "milan", "radius": 60, "min_price": 500, "max_price": 6000},
+    {"city": "milan", "radius": 60, "min_price": 6000, "max_price": 20000},
+    {"city": "brescia", "radius": 30, "min_price": 500, "max_price": 20000},
+    # La maggior parte delle opportunità sono auto con problemi: ricerche mirate
+    {"city": "milan", "radius": 80, "query": "incidentata"},
+    {"city": "milan", "radius": 80, "query": "da sistemare"},
+    {"city": "milan", "radius": 80, "query": "non parte"},
+    {"city": "milan", "radius": 80, "query": "guasto"},
 ]
 RE_KM = re.compile(r"(?<!\d)(\d{1,3}(?:[ .]\d{3})+|\d{4,7})\s*(?:km|chilometri)\b", re.I)
 RE_YEAR = re.compile(r"\b(19[89]\d|20[0-3]\d)\b")
@@ -49,10 +51,13 @@ NOT_A_CAR = re.compile(r"\b(ricambi|vendo motore|motore in vendita|smembro|monop
                        r"bici|camper|roulotte|trattore|furgone)\b", re.I)
 
 
-def search_url(city: str, radius: int, min_price: int, max_price: int, days: int = 1) -> str:
-    q = urlencode({"minPrice": min_price, "maxPrice": max_price, "daysSinceListed": days,
-                   "sortBy": "creation_time_descend", "radius": radius, "exact": "false"})
-    return f"https://www.facebook.com/marketplace/{city}/vehicles?{q}"
+def search_url(city: str, radius: int, min_price: int, max_price: int, days: int = 1,
+               query: str | None = None) -> str:
+    params = {"minPrice": min_price, "maxPrice": max_price, "daysSinceListed": days,
+              "sortBy": "creation_time_descend", "radius": radius, "exact": "false"}
+    if query:
+        return f"https://www.facebook.com/marketplace/{city}/search/?" + urlencode({"query": query, **params})
+    return f"https://www.facebook.com/marketplace/{city}/vehicles?" + urlencode(params)
 
 
 def mileage_from(row: dict) -> int | None:
@@ -172,7 +177,8 @@ class BrightDataFacebookCollector(Collector):
             return
         max_price = query.get("max_price", 20_000)
         urls = [search_url(s["city"], s.get("radius", 40), s.get("min_price", 500),
-                           s.get("max_price", max_price), s.get("days", 1)) for s in self.searches]
+                           s.get("max_price", max_price), s.get("days", 1), s.get("query")) for s in self.searches]
+        problem_urls = {u for u, s in zip(urls, self.searches) if s.get("query")}
         sid = self.trigger(urls)
         log.info("Bright Data: snapshot %s avviato per %d ricerche", sid, len(urls))
         self.wait(sid)
@@ -196,6 +202,8 @@ class BrightDataFacebookCollector(Collector):
         for row in rows:
             listing = parse_row(row, max_price)
             if listing:
+                src = (row.get("input") or {}).get("url") if isinstance(row.get("input"), dict) else None
+                listing.problem_search = src in problem_urls if src else False
                 kept += 1
                 yield listing
         log.info("Bright Data: %d righe ricevute, %d auto valide", len(rows), kept)

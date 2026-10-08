@@ -11,22 +11,30 @@ from datetime import date
 from ..core.models import Listing
 from ..core.normalize import FUEL_MAP, GEARBOX_MAP, slug
 from . import client as ai
-from .damage import PARTS, SEVERE_FLAGS, classify, sanitize_items
+from .damage import FAULTS, PARTS, SEVERE_FLAGS, classify, sanitize_items
 
 PART_LIST = ", ".join(PARTS)
+FAULT_LIST = ", ".join(FAULTS)
 SEVERE_LIST = ", ".join(SEVERE_FLAGS)
 
 # ---------------------------------------------------------------------------
 # 1. Lettura del testo
 # ---------------------------------------------------------------------------
-EXTRACT_SYSTEM = f"""Sei un esperto di auto usate in Italia. Leggi un annuncio e restituisci SOLO JSON.
+EXTRACT_SYSTEM = f"""Sei un esperto di auto usate in Italia, specializzato in auto incidentate, guaste o "da sistemare".
+Leggi un annuncio e restituisci SOLO JSON.
 Regole: non inventare. Se un dato non è scritto o deducibile con certezza, usa null.
+Fai molta attenzione a guasti e sintomi descritti anche in modo vago o minimizzato
+("piccolo problema", "da rivedere", "spia accesa", "fa rumore", "perde olio", "fumo", "slitta",
+"non parte", "batteria scarica", "venduta così com'è", "per commercianti", "no perditempo"):
+riportali sempre. Un guasto con causa non chiara va in severe_flags come guasto_ignoto.
 Schema:
 {{"make": str|null, "model": str|null, "version": str|null, "year": int|null, "mileage_km": int|null,
  "fuel": "benzina|diesel|gpl|metano|ibrida|elettrica"|null, "gearbox": "manuale|automatico"|null,
  "power_kw": int|null, "power_cv": int|null,
- "damage_declared": bool, "damage_items": [{{"part": uno tra [{PART_LIST}], "side": "sx|dx"|null,
-   "action": "sostituire|riparare", "severity": "leggero|medio|grave", "note": str}}],
+ "damage_declared": bool, "damage_items": [{{"part": uno tra [{PART_LIST}] oppure un guasto tra [{FAULT_LIST}],
+   "side": "sx|dx"|null, "action": "sostituire|riparare", "severity": "leggero|medio|grave", "note": str}}],
+ "symptoms": [str],
+ "as_is_sale": bool,
  "severe_flags": [sottoinsieme di [{SEVERE_LIST}]],
  "price_notes": [ "plus_iva" | "rata" | "trattabile" | "permuta" | "prezzo_finto" ],
  "seller_is_dealer": bool|null,
@@ -93,7 +101,11 @@ Rispondi SOLO JSON:
  "stock_or_internet_photo": bool, "plate_text": str|null,
  "notes": str}}
 Regole: descrivi solo ciò che si vede. Se una zona non è visibile non dichiararla integra.
-Una foto scura, lontana o parziale = "incerto", non "no"."""
+Una foto scura, lontana o parziale = "incerto", non "no".
+Guarda con attenzione anche: cruscotto (spie accese: motore, airbag, ABS, batteria, olio), chilometri sul
+quadro, perdite sotto l'auto, vano motore, fumo, allineamento dei pannelli, differenze di colore,
+gomme lisce, interni bagnati o ammuffiti (possibile alluvione). Se vedi una spia accesa riportala in notes
+e, se è airbag o motore, aggiungi il segnale corrispondente."""
 
 PHOTO_DEEP_SYSTEM = PHOTO_SCREEN_SYSTEM + """
 Analisi approfondita: esamina tutte le foto, indica ogni pezzo da riparare o sostituire,

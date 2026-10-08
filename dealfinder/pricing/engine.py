@@ -66,6 +66,19 @@ class Valuation:
     confidence_reasons: list[str] = field(default_factory=list)
     fraud_flags: list[str] = field(default_factory=list)
     comparables_used: list[dict] = field(default_factory=list)
+    asis_median: int | None = None      # prezzo tipico delle auto simili "da sistemare"
+    asis_n: int = 0
+
+
+def asis_market(target: Listing, market: list[Listing]) -> tuple[int | None, int]:
+    """Prezzo mediano delle auto simili con problemi dichiarati (anno ±3, km ±50%)."""
+    prices = [c.price_eur for c in market
+              if c is not target and c.damage_declared and c.price_eur and c.year and c.mileage_km is not None
+              and (c.make, c.model) == (target.make, target.model)
+              and abs(c.year - target.year) <= 3
+              and abs(c.mileage_km - target.mileage_km) <= 0.5 * max(target.mileage_km, 20_000)
+              and not (set(c.price_flags) & EXCLUDE_FLAGS)]
+    return (round(median(prices)), len(prices)) if len(prices) >= 3 else (None, len(prices))
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +210,8 @@ def value_listing(target: Listing, market: list[Listing],
         v.confidence_reasons.append("dati_mancanti:" + ",".join(missing_core))
         return v
 
+    v.asis_median, v.asis_n = asis_market(target, market)
+
     # Livello più stretto che dà abbastanza confronti
     comps: list[Listing] = []
     for level in (1, 2, 3):
@@ -290,7 +305,7 @@ def value_listing(target: Listing, market: list[Listing],
 
     # Segnali di truffa o errore
     # Le incidentate costano naturalmente meno: soglia di sospetto più alta
-    fraud_limit = cfg.fraud_discount + (0.15 if target.damage_class in ("leggero", "medio") else 0)
+    fraud_limit = cfg.fraud_discount + {"leggero": 0.15, "medio": 0.25, "alto_rischio": 0.4}.get(target.damage_class, 0)
     if v.discount_vs_private > fraud_limit:
         v.fraud_flags.append("prezzo_troppo_basso")
     v.fraud_flags += [f for f in target.price_flags if f in EXCLUDE_FLAGS | {"plus_iva"}]

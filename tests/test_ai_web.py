@@ -19,12 +19,14 @@ def test_extract_json_variants():
 
 
 def test_damage_classification():
-    assert classify(["airbag_esplosi"], []) == "grave"
+    assert classify(["telaio_longheroni"], []) == "grave"
+    assert classify(["airbag_esplosi"], []) == "alto_rischio"
+    assert classify(["non_parte"], []) == "alto_rischio"
     assert classify([], []) == "nessuno"
     assert classify([], [{"part": "paraurti_anteriore", "severity": "leggero"}]) == "leggero"
     assert classify([], [{"part": "cofano", "severity": "medio"}]) == "medio"
-    assert classify([], [{"part": p, "severity": "leggero"} for p in
-                         ("cofano", "parabrezza", "cerchio", "lunotto", "portellone")]) == "grave"
+    assert classify([], [{"part": "frizione", "severity": "medio"}]) == "medio"
+    assert classify([], [{"part": "motore_sostituzione"}]) == "alto_rischio"
 
 
 def test_sanitize_drops_unknown_parts():

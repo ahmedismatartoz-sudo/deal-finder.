@@ -26,6 +26,13 @@ PROVINCE_REGION = {"MI": "Lombardia", "MB": "Lombardia", "BG": "Lombardia", "BS"
 RE_PLUS_IVA = re.compile(r"\+\s*iva|iva\s*esclusa|esclusa\s*iva|oltre\s*iva", re.I)
 RE_LEASING = re.compile(r"\b(rata|rate|al\s*mese|/\s*mese|leasing|noleggio|anticipo|finanziamento\s+da)\b", re.I)
 RE_IMPORT = re.compile(r"\b(da\s+immatricolare|import(azione)?|km\s*0\s*estero|targa\s+(tedesca|estera))\b", re.I)
+RE_PROBLEM = re.compile(
+    r"\b(incidentat[ao]|sinistrat[ao]|danneggiat[ao]|grandinat[ao]|da sistemare|da riparare|da rivedere|"
+    r"non (?:parte|si accende|va in moto)|guast[oai]|rott[oaie]|spia (?:motore|accesa|airbag)|"
+    r"frizione (?:da|che) |distribuzione da|turbina (?:da|rotta)|motore (?:da|fuso|rotto|grippato)|"
+    r"cambio (?:da|rotto)|fumo bianco|perde olio|batte in testa|cos[iì] com['’]? ?[eè]|per commercianti|"
+    r"solo esportazione|per pezzi)\b", re.I)
+RE_NEGATION = re.compile(r"(mai|non|nessun[ao]?|zero|senza)\s+(\w+\s+){0,2}$", re.I)
 RE_PLATE = re.compile(r"\b([A-Z]{2})\s?(\d{3})\s?([A-Z]{2})\b")
 
 KW_PER_CV = 0.7355
@@ -75,6 +82,17 @@ def normalize_price(listing: Listing) -> Listing:
     return listing
 
 
+def problem_hint(listing: Listing) -> list[str]:
+    """Parole che indicano un'auto con problemi; ignora le frasi negate ("mai incidentata")."""
+    text = " ".join(filter(None, [listing.title, listing.description]))
+    hits = []
+    for m in RE_PROBLEM.finditer(text):
+        if RE_NEGATION.search(text[max(0, m.start() - 25):m.start()]):
+            continue
+        hits.append(m.group(0).lower())
+    return hits
+
+
 def normalize_fields(listing: Listing) -> Listing:
     listing.make = slug(listing.make)
     listing.model = slug(listing.model)
@@ -85,6 +103,8 @@ def normalize_fields(listing: Listing) -> Listing:
     if listing.province and not listing.region:
         listing.region = PROVINCE_REGION.get(listing.province.upper())
     normalize_price(listing)
+    if listing.damage_declared is None and problem_hint(listing):
+        listing.damage_declared = True     # esclusa dai confronti "sani", usata per il mercato "da sistemare"
     listing.compute_missing()
     return listing
 
