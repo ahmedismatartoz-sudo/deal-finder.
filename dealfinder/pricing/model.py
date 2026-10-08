@@ -128,14 +128,14 @@ class PrescreenRule:
     """Quando un annuncio è "apparentemente interessante" già allo scraping."""
     private_resale_factor: float = 0.94      # da prezzo di mercato a incassato (trattativa)
     base_costs: int = 140                    # passaggio (90 €) e pulizia (50 €)
-    healthy_ratio: float = 0.8               # potenziale ≥ 80% della soglia: vale l'approfondimento
-    damaged_ratio: float = 1.3               # con problemi: deve restare spazio per i ricambi
+    healthy_ratio: float = 0.6               # potenziale ≥ 80% della soglia: vale l'approfondimento
+    damaged_ratio: float = 1.1               # con problemi: deve restare spazio per i ricambi
     max_spread: float = 0.6                  # gruppo troppo disperso: modello poco affidabile
 
 
 def prescreen(model: dict, l: Listing, rule: PrescreenRule | None = None,
-              threshold_low: int = 2000, threshold_high: int = 3000, split: int = 5000,
-              threshold_cheap: int = 1000, cheap_max: int = 2000) -> dict:
+              threshold_low: int = 1500, threshold_high: int = 2000, split: int = 5000,
+              threshold_cheap: int = 700, cheap_max: int = 2000) -> dict:
     rule = rule or PrescreenRule()
     if not l.price_eur:
         return {"esito": "dati_insufficienti"}

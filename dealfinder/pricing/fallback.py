@@ -16,12 +16,12 @@ from ..core.models import Listing
 from .model import predict
 
 KM_PER_YEAR_PRUDENT = 18_000
-MODEL_RESALE_FACTOR = 0.94      # trattativa con il privato acquirente
+MODEL_RESALE_FACTOR = 0.95      # trattativa con il privato acquirente
 MAX_SPREAD = 0.5
 
 
 def weak(v) -> bool:
-    return v.resale_prudent is None or v.n_comparables < 4 or (v.dispersion or 0) > 0.35
+    return v.resale_prudent is None or v.n_comparables < 3 or (v.dispersion or 0) > 0.40
 
 
 def estimate_missing_km(l: Listing) -> bool:
@@ -47,7 +47,7 @@ def apply_model(v, l: Listing, model: dict | None) -> bool:
         return False
     v.private_median = p["p50"]
     v.resale_median = round(p["p50"] * MODEL_RESALE_FACTOR)
-    v.resale_prudent = round((p["p25"] + p["p50"]) / 2 * MODEL_RESALE_FACTOR)
+    v.resale_prudent = round(p["p50"] * MODEL_RESALE_FACTOR)
     v.dispersion = p["spread"]
     v.confidence = "da_verificare"
     if "stima_da_modello" not in v.confidence_reasons:

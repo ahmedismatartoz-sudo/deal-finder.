@@ -88,7 +88,7 @@ def test_margin_and_thresholds():
     m = compute_margin(t, v, DealerCosts())
     expected_vat = 0   # default: tra privati, nessuna IVA
     assert m.vat_on_margin == expected_vat
-    assert m.threshold == 3000
+    assert m.threshold == 2000
     assert m.status in ("opportunita", "scartata")
     assert m.net_margin == v.resale_prudent - 9000 - m.fixed_costs - m.contingency - m.vat_on_margin
 
@@ -231,10 +231,10 @@ def test_cheap_cars_threshold_and_ranking():
     v = Valuation(resale_prudent=4300, confidence="affidabile", liquidity_days=20)
     cheap = mk(1, 1000)
     m = compute_margin(cheap, v, DealerCosts())
-    assert m.threshold == 1000 and m.net_margin >= 2000 and m.status == "opportunita"
+    assert m.threshold == 700 and m.net_margin >= 2000 and m.status == "opportunita"
     v2 = Valuation(resale_prudent=13300, confidence="affidabile", liquidity_days=20)
     dear = mk(2, 10000)
     m2 = compute_margin(dear, v2, DealerCosts())
-    assert m2.threshold == 3000
+    assert m2.threshold == 2000
     # stesso margine netto circa, ma l'auto economica rende di più sull'investimento: sta più in alto
     assert m.score > m2.score

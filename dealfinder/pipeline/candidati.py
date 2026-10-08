@@ -30,7 +30,7 @@ from .verify import verify_rows
 log = logging.getLogger("candidati")
 PROVINCES = ["MI", "MB", "BG", "BS"]
 MAX_EXPORT = int(os.environ.get("MAX_CANDIDATI", "400"))
-DAMAGE_ROOM = 800
+DAMAGE_ROOM = 400
 
 
 BANDS = [(500, 2000), (2000, 5000), (5000, 8000), (8000, 12000), (12000, 20001)]
@@ -74,12 +74,11 @@ def run() -> dict:
     stats: Counter = Counter()
     out = []
     with connect() as conn:
-        finish = log_job(conn, "candidati")
+        finish = log_job(conn, "candidati:v2")
         rows = conn.execute(
             """SELECT * FROM listings WHERE status='attivo' AND price_eur BETWEEN 500 AND %s
                  AND seller_type <> 'commerciante'
                  AND (province = ANY(%s) OR source='facebook')
-                 AND COALESCE(prescreen,'') <> 'non_interessante'
                  AND stage NOT IN ('scartato','approfondito')""",
             (settings.max_purchase_eur, PROVINCES)).fetchall()
         stats["esaminati"] = len(rows)
@@ -109,7 +108,7 @@ def run() -> dict:
             m = compute_margin(l, v, costs)
             need = m.threshold + (DAMAGE_ROOM if damaged else 0)
             if from_model or km_est:
-                need = round(need * 1.2)             # stima meno solida: serve più margine
+                need = round(need * 1.1)             # stima meno solida: serve più margine
             if m.net_margin < need:
                 stats["margine_insufficiente"] += 1
                 continue

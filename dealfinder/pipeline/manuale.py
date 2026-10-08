@@ -40,7 +40,7 @@ def run() -> dict:
         finish = log_job(conn, "manuale")
         model = load_active(conn)
         done = {r["listing_id"] for r in conn.execute(
-            "SELECT DISTINCT listing_id FROM valuations WHERE engine_version LIKE '%%+manuale'").fetchall()}
+            "SELECT DISTINCT listing_id FROM valuations WHERE engine_version LIKE '%%+manuale-v2'").fetchall()}
         for e in entries:
             lid = e["id"]
             if lid in done and not e.get("aggiorna"):
@@ -64,7 +64,7 @@ def run() -> dict:
             v = value_listing(l, load_market(conn, l.make, l.model, l.fuel))
             if weak(v):
                 apply_model(v, l, model)
-            v.engine_version += "+manuale"
+            v.engine_version += "+manuale-v2"
             # rivendita corretta a mano (es. allestimento povero, limitazioni di circolazione)
             if e.get("rivendita_prudente") and v.resale_prudent:
                 v.resale_prudent = min(v.resale_prudent, int(e["rivendita_prudente"]))

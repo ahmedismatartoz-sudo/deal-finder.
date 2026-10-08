@@ -19,16 +19,16 @@ class DealerCosts:
     transport_eur: int = 0             # il commerciante va a prendere l'auto da sé
     paperwork_eur: int = 90            # passaggio di proprietà a nome di un'azienda
     preparation_eur: int = 50          # pulizia
-    contingency_pct: float = 0.05
-    contingency_damaged_pct: float = 0.15        # carrozzeria
-    contingency_fault_pct: float = 0.25          # guasti meccanici noti
-    contingency_high_risk_pct: float = 0.35      # motore/cambio/airbag, non parte, guasto ignoto
+    contingency_pct: float = 0.0
+    contingency_damaged_pct: float = 0.0        # carrozzeria
+    contingency_fault_pct: float = 0.0          # guasti meccanici noti
+    contingency_high_risk_pct: float = 0.0      # motore/cambio/airbag, non parte, guasto ignoto
     warranty_reserve_eur: int = 0       # tra privati non c'è garanzia legale del venditore
     vat_margin_scheme: bool = False     # default: compravendita tra privati, nessuna IVA
-    threshold_low_eur: int = 2000
-    threshold_high_eur: int = 3000
+    threshold_low_eur: int = 1500
+    threshold_high_eur: int = 2000
     threshold_split_eur: int = 5000     # sul prezzo di acquisto
-    threshold_cheap_eur: int = 1000     # auto economiche: margine minimo per comparire
+    threshold_cheap_eur: int = 700     # auto economiche: margine minimo per comparire
     threshold_cheap_max_eur: int = 2000 # fino a questo prezzo di acquisto vale la soglia "economica"
 
 

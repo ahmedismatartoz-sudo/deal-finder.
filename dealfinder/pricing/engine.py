@@ -26,8 +26,8 @@ class PricingConfig:
     min_comparables: int = 5
     max_dispersion: float = 0.20          # (P75-P25)/mediana
     negotiation_discount: float = 0.08    # commercianti: da prezzo richiesto a incassato (da calibrare)
-    private_negotiation_discount: float = 0.06   # privati: trattativa tipica (da calibrare)
-    private_prudent_quantile: float = 0.35       # rivendita come privato: auto preparata, ma prudente
+    private_negotiation_discount: float = 0.05   # privati: trattativa tipica (da calibrare)
+    private_prudent_quantile: float = 0.50       # rivendita come privato: auto preparata, ma prudente
     dealer_prudent_quantile: float = 0.25
     resale_market: str = "privato"        # privato | commerciante: mercato della rivendita
     recency_half_life_days: int = 60      # peso degli annunci: dimezza ogni 60 giorni
