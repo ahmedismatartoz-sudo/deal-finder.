@@ -14,9 +14,10 @@ class Settings:
 
     # Ricerca opportunità
     region: str = "lombardia"
-    opportunity_provinces: tuple[str, ...] = ("milano", "monza-e-della-brianza", "bergamo", "brescia")
+    opportunity_provinces: tuple[str, ...] = field(default_factory=lambda: tuple(
+        os.environ.get("OPPORTUNITY_PROVINCES", "milano,monza-e-della-brianza,bergamo,brescia").split(",")))
     max_purchase_eur: int = 20000
-    max_pages_per_province: int = 25
+    max_pages_per_province: int = field(default_factory=lambda: int(os.environ.get("MAX_PAGES", "25")))
 
     # Base di mercato (più ampia della zona opportunità)
     market_provinces: tuple[str, ...] = ("milano", "monza-e-della-brianza", "bergamo", "brescia",
