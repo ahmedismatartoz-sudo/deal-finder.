@@ -55,10 +55,12 @@ def run() -> None:
         step("modello", train, not _has_model())
     elif not _has_model():
         step("modello", train, True)
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    from ..ai.client import available, provider
+    if available():
+        log.info("CICLO analisi con %s", provider())
         step("analisi", process, "tutto")
     else:
-        log.warning("CICLO analisi: ANTHROPIC_API_KEY mancante, analisi AI non eseguita")
+        log.warning("CICLO analisi: nessuna chiave AI (ANTHROPIC_API_KEY o GEMINI_API_KEY), analisi non eseguita")
     if _due("recheck", 20):
         step("verifica", recheck.run)
     if _due("backtest", 24 * 7):

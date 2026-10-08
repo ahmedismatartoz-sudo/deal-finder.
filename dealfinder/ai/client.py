@@ -83,10 +83,92 @@ def image_block(url: str, http=None) -> dict | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Fornitore AI: Anthropic (predefinito) oppure Google Gemini (ha un livello gratuito).
+# Si sceglie da solo in base alla chiave presente, o con AI_PROVIDER=anthropic|gemini.
+# ---------------------------------------------------------------------------
+GEMINI_MODEL_FAST = os.environ.get("GEMINI_MODEL_FAST", "gemini-2.5-flash")
+GEMINI_MODEL_DEEP = os.environ.get("GEMINI_MODEL_DEEP", "gemini-2.5-flash")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+_GEMINI_LAST = 0.0
+
+
+def provider() -> str | None:
+    forced = os.environ.get("AI_PROVIDER")
+    if forced:
+        return forced
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "anthropic"
+    if os.environ.get("GEMINI_API_KEY"):
+        return "gemini"
+    return None
+
+
+def available() -> bool:
+    return provider() is not None
+
+
+def _gemini(task, model, system, content, max_tokens, web_search, usage_sink, listing_id) -> AIResult:
+    import httpx
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise AIError("GEMINI_API_KEY non impostata")
+    gmodel = GEMINI_MODEL_DEEP if model == MODEL_DEEP else GEMINI_MODEL_FAST
+    parts = []
+    for b in content:
+        if b.get("type") == "text":
+            parts.append({"text": b["text"]})
+        elif b.get("type") == "image" and b.get("source", {}).get("type") == "base64":
+            parts.append({"inline_data": {"mime_type": b["source"]["media_type"], "data": b["source"]["data"]}})
+    body = {"systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": parts}],
+            "generationConfig": {"maxOutputTokens": max(max_tokens, 2048), "temperature": 0.2}}
+    if web_search is not None:
+        body["tools"] = [{"google_search": {}}]
+    else:
+        body["generationConfig"]["responseMimeType"] = "application/json"
+    # ritmo: il livello gratuito ha limiti di richieste al minuto
+    import time
+    global _GEMINI_LAST
+    wait = float(os.environ.get("GEMINI_MIN_INTERVAL", "7")) - (time.time() - _GEMINI_LAST)
+    if wait > 0:
+        time.sleep(wait)
+    _GEMINI_LAST = time.time()
+    last = None
+    for attempt in range(4):
+        r = httpx.post(GEMINI_URL.format(model=gmodel), params={"key": key}, json=body, timeout=180)
+        if r.status_code == 429 or r.status_code >= 500:
+            last = r.status_code
+            import time
+            time.sleep(15 * (attempt + 1))
+            continue
+        if r.status_code >= 400:
+            raise AIError(f"Gemini HTTP {r.status_code}: {r.text[:300]}")
+        data = r.json()
+        break
+    else:
+        raise AIError(f"Gemini non disponibile (HTTP {last}) dopo vari tentativi")
+    cand = (data.get("candidates") or [{}])[0]
+    text = "".join(p.get("text", "") for p in (cand.get("content") or {}).get("parts", []))
+    sources = [{"url": c.get("web", {}).get("uri"), "title": c.get("web", {}).get("title")}
+               for c in (cand.get("groundingMetadata") or {}).get("groundingChunks", []) if c.get("web")]
+    um = data.get("usageMetadata") or {}
+    result = AIResult(data=None, model=gmodel, input_tokens=um.get("promptTokenCount", 0),
+                      output_tokens=um.get("candidatesTokenCount", 0),
+                      web_searches=len((cand.get("groundingMetadata") or {}).get("webSearchQueries", []) or []),
+                      raw_text=text, sources=sources)
+    if usage_sink:
+        usage_sink(task, result, listing_id)
+    result.data = extract_json(text)
+    return result
+
+
 def ask_json(task: str, model: str, system: str, content: list[dict], max_tokens: int = 1500,
              web_search: dict | None = None, usage_sink=None, listing_id: int | None = None) -> AIResult:
     """Chiama il modello e restituisce JSON. `web_search` attiva la ricerca web
     (es. {"max_uses": 5, "user_location": {...}})."""
+    if provider() == "gemini":
+        return _gemini(task, model, system, content, max_tokens, web_search, usage_sink, listing_id)
     kwargs = dict(model=model, max_tokens=max_tokens, system=system,
                   messages=[{"role": "user", "content": content}])
     if web_search is not None:

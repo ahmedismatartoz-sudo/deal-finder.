@@ -34,8 +34,11 @@ log = logging.getLogger("process")
 
 OPPORTUNITY_PROVINCES = ("MI", "MB", "BG", "BS")
 BATCH = int(os.environ.get("PROCESS_BATCH", "3000"))          # filtro senza AI: economico
-MAX_AI_SCREEN = int(os.environ.get("MAX_AI_SCREEN", "150"))   # tetto di analisi foto per ciclo (costi)
-DEEP_BATCH = int(os.environ.get("DEEP_BATCH", "60"))
+_FREE = os.environ.get("AI_PROVIDER") == "gemini" or (not os.environ.get("ANTHROPIC_API_KEY")
+                                                      and bool(os.environ.get("GEMINI_API_KEY")))
+# tetti per ciclo: più bassi con il livello gratuito di Gemini (limiti giornalieri)
+MAX_AI_SCREEN = int(os.environ.get("MAX_AI_SCREEN", "30" if _FREE else "150"))
+DEEP_BATCH = int(os.environ.get("DEEP_BATCH", "10" if _FREE else "60"))
 
 
 def _to_items(dicts):
