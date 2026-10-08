@@ -129,11 +129,15 @@ class BrightDataFacebookCollector(Collector):
         return self._client
 
     def trigger(self, urls: list[str]) -> str:
+        # Formato verificato con questo dataset: limiti nella query e nel corpo, input dentro "input"
         r = self.client.post(f"{API}/trigger",
-                             params={"dataset_id": self.dataset, "include_errors": "true",
+                             params={"dataset_id": self.dataset, "include_errors": "true", "notify": "false",
                                      "type": "discover_new", "discover_by": "url",
-                                     "limit_per_input": self.limit},
-                             json=[{"url": u, "country": "IT"} for u in urls])
+                                     "limit_multiple_results": self.limit * len(urls)},
+                             json={"input": [{"url": u, "country": "IT"} for u in urls],
+                                   "limit_per_input": self.limit})
+        if r.status_code >= 400:
+            log.error("Bright Data trigger HTTP %s: %s", r.status_code, r.text[:400])
         r.raise_for_status()
         sid = r.json().get("snapshot_id")
         if not sid:
@@ -183,8 +187,11 @@ class BrightDataFacebookCollector(Collector):
         Costa un record per annuncio: si usa solo sui candidati."""
         if not urls:
             return {}
-        r = self.client.post(f"{API}/trigger", params={"dataset_id": self.dataset, "include_errors": "true"},
-                             json=[{"url": u} for u in urls])
+        r = self.client.post(f"{API}/trigger", params={"dataset_id": self.dataset, "include_errors": "true",
+                                                         "notify": "false"},
+                             json={"input": [{"url": u} for u in urls]})
+        if r.status_code >= 400:
+            log.error("Bright Data verifica HTTP %s: %s", r.status_code, r.text[:400])
         r.raise_for_status()
         sid = r.json().get("snapshot_id")
         self.wait(sid, max_minutes=20)
