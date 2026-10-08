@@ -61,9 +61,8 @@ def run() -> None:
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")
-        step("modello", train, not _has_model())
-    elif not _has_model():
-        step("modello", train, True)
+    # Il modello si riaddestra da solo quando la base cresce del 30% o ha più di 7 giorni
+    step("modello", train, not _has_model())
     from ..ai.client import available, provider
     if available():
         log.info("CICLO analisi con %s", provider())

@@ -45,22 +45,32 @@ def prescreen_backlog(conn, model: dict) -> dict:
     return dict(stats)
 
 
+GROWTH_RETRAIN = 0.30      # la base è cresciuta del 30%: si riaddestra subito, senza aspettare 7 giorni
+
+
 def run(force: bool = False) -> dict:
     with connect() as conn:
         cur = conn.execute("SELECT created_at, metrics FROM price_models WHERE active "
                            "ORDER BY created_at DESC LIMIT 1").fetchone()
+        where = """price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
+               AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
+               AND (status='attivo' OR disappeared_at > now() - interval '180 days')"""
+        n_now = conn.execute(f"SELECT count(*) AS n FROM listings WHERE {where}").fetchone()["n"]
         if cur and not force:
+            prev_m = cur["metrics"] if isinstance(cur["metrics"], dict) else json.loads(cur["metrics"] or "{}")
+            n_prev = prev_m.get("annunci_base")
+            grown = n_prev is None or n_now >= n_prev * (1 + GROWTH_RETRAIN)
             age = conn.execute("SELECT now() - %s > interval '7 days' AS old", (cur["created_at"],)).fetchone()
-            if not age["old"]:
-                log.info("modello attivo recente, nessun addestramento")
-                return {"saltato": True}
+            if not age["old"] and not grown:
+                log.info("modello attivo recente (base %s annunci, ora %s): nessun addestramento", n_prev, n_now)
+                return {"saltato": True, "annunci": n_now}
+            log.info("riaddestramento: base passata da %s a %s annunci", n_prev, n_now)
         finish = log_job(conn, "train")
         rows = conn.execute(
-            """SELECT * FROM listings WHERE price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
-               AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
-               AND (status='attivo' OR disappeared_at > now() - interval '180 days')""").fetchall()
+            f"""SELECT * FROM listings WHERE {where}""").fetchall()
         model = train([row_to_listing(r) for r in rows])
         m = model["metrics"]
+        m["annunci_base"] = n_now
         prev = (cur or {}).get("metrics") or {}
         if isinstance(prev, str):
             prev = json.loads(prev)
