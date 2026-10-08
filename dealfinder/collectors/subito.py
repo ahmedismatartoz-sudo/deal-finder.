@@ -82,6 +82,14 @@ def _features(item: dict) -> dict[str, str]:
             continue
         label = str(f.get("label") or f.get("uri") or "").lower()
         vals = f.get("values") or []
+        # Blocco "Auto" (uri /car): contiene marca, modello e versione, ognuno con la sua etichetta
+        if f.get("type") == "pack" and vals and isinstance(vals[0], dict) and vals[0].get("label"):
+            for v in vals:
+                if isinstance(v, dict) and v.get("label") and v.get("value") is not None:
+                    out[str(v["label"]).lower()] = str(v["value"])
+                    if v.get("group_label"):
+                        out[str(v["label"]).lower() + "_gruppo"] = str(v["group_label"])
+            continue
         if vals and isinstance(vals[0], dict):
             value = vals[0].get("value") or vals[0].get("key")
         else:
@@ -133,6 +141,10 @@ def parse_item(item: dict) -> Listing | None:
             m = re.search(r"(\d+)\s*(cv|hp)", power_raw, re.I)
             power_kw = round(int(m.group(1)) * 0.7355) if m else None
 
+    if power_kw is None:
+        m = re.search(r"(\d{2,3})\s*(cv|hp)\b", _pick(feats, "version") or "", re.I)
+        power_kw = round(int(m.group(1)) * 0.7355) if m else None
+
     year_raw = _pick(feats, "year")
     year = None
     if year_raw:
@@ -148,7 +160,7 @@ def parse_item(item: dict) -> Listing | None:
         title=item.get("subject"),
         description=item.get("body"),
         make=_pick(feats, "make"),
-        model=_pick(feats, "model"),
+        model=feats.get("modello_gruppo") or _pick(feats, "model"),
         version_raw=_pick(feats, "version"),
         year=year,
         mileage_km=parse_int(_pick(feats, "mileage")),
@@ -159,7 +171,8 @@ def parse_item(item: dict) -> Listing | None:
         price_eur=parse_int(_pick(feats, "price")),
         seller_type=seller,
         city=(geo.get("town") or {}).get("value") if isinstance(geo.get("town"), dict) else None,
-        province=(geo.get("city") or {}).get("shortName") if isinstance(geo.get("city"), dict) else None,
+        province=((geo.get("city") or {}).get("short_name") or (geo.get("city") or {}).get("shortName"))
+        if isinstance(geo.get("city"), dict) else None,
         region=(geo.get("region") or {}).get("value") if isinstance(geo.get("region"), dict) else None,
         photos=_photos(item),
         damage_declared=True if ("danneg" in damage_raw or "incident" in damage_raw) else None,

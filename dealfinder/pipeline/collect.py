@@ -57,6 +57,21 @@ def run(mode: str) -> Counter:
         if mode == "mercato" and not stats["subito:errore"] and seen > 200:
             stats["subito:scomparsi"] = mark_disappeared(conn, "subito", not_seen_hours=36)
         conn.commit()
+        # Riepilogo della qualità dei dati raccolti nell'ultima ora (visibile nei log)
+        for q in conn.execute(
+                """SELECT source, count(*) AS n,
+                          round(100.0*avg((make IS NOT NULL)::int)) AS marca,
+                          round(100.0*avg((model IS NOT NULL)::int)) AS modello,
+                          round(100.0*avg((year IS NOT NULL)::int)) AS anno,
+                          round(100.0*avg((mileage_km IS NOT NULL)::int)) AS km,
+                          round(100.0*avg((price_eur IS NOT NULL)::int)) AS prezzo,
+                          round(100.0*avg((province IS NOT NULL OR city IS NOT NULL)::int)) AS zona,
+                          round(100.0*avg((seller_type='privato')::int)) AS privati,
+                          round(100.0*avg((EXISTS (SELECT 1 FROM listing_photos p WHERE p.listing_id=listings.id))::int)) AS foto
+                   FROM listings WHERE last_seen_at > now() - interval '1 hour' GROUP BY source""").fetchall():
+            log.info("QUALITA %s: %s annunci | %% presenti: marca %s, modello %s, anno %s, km %s, prezzo %s, "
+                     "zona %s, foto %s | privati %s%%", q["source"], q["n"], q["marca"], q["modello"], q["anno"],
+                     q["km"], q["prezzo"], q["zona"], q["foto"], q["privati"])
         finish(not any(k.endswith(":errore") for k in stats), dict(stats))
     log.info("raccolta %s: %s", mode, dict(stats))
     return stats
