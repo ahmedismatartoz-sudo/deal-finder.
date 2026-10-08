@@ -46,8 +46,8 @@ def motivation(l: Listing, v: Valuation, parts: dict | None) -> list[str]:
         out.append(f"Prezzo {eur(l.price_eur)}: {v.discount_vs_private:.0%} sotto la mediana del mercato privato "
                    f"({eur(v.private_median)}) su {v.n_comparables} auto simili.")
     if v.resale_prudent:
-        out.append(f"Rivendita prudente {eur(v.resale_prudent)} (25° percentile dei commercianti, "
-                   f"corretto per anno e km, meno trattativa).")
+        out.append(f"Rivendita prudente a privati {eur(v.resale_prudent_private or v.resale_prudent)}: "
+                   f"parte bassa dei prezzi dei privati per auto uguali, corretti per anno e km, meno la trattativa.")
     if v.liquidity_days is not None:
         out.append(f"Le auto simili restano online in media {v.liquidity_days:.0f} giorni.")
     if parts and parts.get("lines"):

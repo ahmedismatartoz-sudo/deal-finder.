@@ -196,7 +196,7 @@ async function viewDetail(id) {
           <div class="verdict">${plate(c.net_margin, "big " + (c.status === "da_verificare" ? "check" : ""))}
             <p>${esc(STATUS[c.status] || c.status)}<br>margine netto stimato, soglia ${eur(c.threshold)}</p></div>
           <table class="bill">
-            <tr class="plus"><td>Rivendita prudente</td><td>${eur(v.resale_prudent)}</td></tr>
+            <tr class="plus"><td>Rivendita prudente (${c.resale_as === "commerciante" ? "come commerciante" : "a privati"})</td><td>${eur(v.resale_prudent)}</td></tr>
             ${costRows.filter(([, val]) => val).map(([l, val]) => `<tr class="minus"><td>${l}</td><td>${eur(val)}</td></tr>`).join("")}
             <tr class="total"><td>Margine netto</td><td>${eur(c.net_margin)}</td></tr>
           </table>
@@ -296,6 +296,9 @@ async function viewProfile() {
       <div class="field"><label for="provinces">Province</label><input id="provinces" value="${esc((u.provinces || []).join(", "))}"><small>Sigle separate da virgola, es. MI, MB, BG, BS</small></div>
       ${num("max_purchase", "Prezzo di acquisto massimo (€)", u.max_purchase)}
       <div class="field inline"><input type="checkbox" id="accept_damage" ${u.accept_damage ? "checked" : ""}><label for="accept_damage">Mostra anche auto poco incidentate</label></div>
+      <div class="field"><label for="resale_as">Come rivendi le auto</label><select id="resale_as">
+        <option value="privato">A privati, come privato</option><option value="commerciante">Come commerciante, con garanzia</option></select>
+        <small>Cambia il prezzo di rivendita usato per il margine</small></div>
       <div class="field"><label for="preferred_parts">Ricambi che usi di solito</label><select id="preferred_parts">
         <option value="aftermarket">Aftermarket (compatibili)</option><option value="originale">Originali</option><option value="usato">Usati</option></select></div>
       <h2>Costi per auto</h2>
@@ -314,6 +317,7 @@ async function viewProfile() {
       <button class="btn primary" type="submit">Salva costi</button>
     </form>`;
   document.getElementById("preferred_parts").value = u.preferred_parts || "aftermarket";
+  document.getElementById("resale_as").value = u.resale_as || "privato";
   document.getElementById("prof-form").onsubmit = async (e) => {
     e.preventDefault();
     const g = (id) => document.getElementById(id);
@@ -321,7 +325,7 @@ async function viewProfile() {
     try {
       await api("/api/me", { method: "PUT", body: {
         provinces: g("provinces").value.split(",").map((s) => s.trim()).filter(Boolean),
-        max_purchase: int("max_purchase"), accept_damage: g("accept_damage").checked, preferred_parts: g("preferred_parts").value,
+        max_purchase: int("max_purchase"), accept_damage: g("accept_damage").checked, preferred_parts: g("preferred_parts").value, resale_as: g("resale_as").value,
         costs: { transport_eur: int("transport_eur"), paperwork_eur: int("paperwork_eur"), preparation_eur: int("preparation_eur"),
           warranty_reserve_eur: int("warranty_reserve_eur"), contingency_pct: int("contingency_pct") / 100,
           contingency_damaged_pct: int("contingency_damaged_pct") / 100, vat_margin_scheme: g("vat_margin_scheme").checked,

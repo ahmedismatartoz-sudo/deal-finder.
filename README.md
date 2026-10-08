@@ -92,22 +92,13 @@ qualità delle stime ogni lunedì). Le chiavi si inseriscono nel pannello Render
 - Formato dei dati dello scraper Meta scelto (`FIELD_MAP` in `collectors/meta.py`, `META_PROVIDER_INPUT`).
 - Sconto di trattativa (8%) e soglie di confidenza: da tarare con il backtest e le vendite reali.
 
-## Collegare lo scraper di Facebook (Apify)
+## Facebook Marketplace (Bright Data)
 
-1. Account su apify.com, scegliere lo scraper e provarlo dalla console su Milano.
-2. Chiave API: Apify → Settings → API & Integrations.
-3. Su Render: `META_PROVIDER_TOKEN` (chiave), `META_ACTOR_ID` (es. `crawloop/facebook-marketplace-scraper`),
-   `META_PROVIDER_INPUT` (una ricerca o una lista di ricerche). Esempio per `crawloop`:
+Automatico, due volte al giorno (`collect facebook`): il software invia a Bright Data
+gli indirizzi di ricerca Marketplace (categoria veicoli, città, raggio, prezzo,
+pubblicati nell'ultimo giorno), attende lo snapshot e importa gli annunci.
+Nessun account Facebook necessario.
 
-```json
-[
-  {"marketplaceLocation": "milan", "categoryId": "vehicles", "radiusKm": 60, "minPrice": 500, "maxPrice": 20000,
-   "daysSinceListed": 1, "maxItems": 400, "includeSeller": true,
-   "proxyConfiguration": {"useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"], "apifyProxyCountry": "IT"}},
-  {"marketplaceLocation": "brescia", "categoryId": "vehicles", "radiusKm": 30, "minPrice": 500, "maxPrice": 20000,
-   "daysSinceListed": 1, "maxItems": 200, "includeSeller": true,
-   "proxyConfiguration": {"useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"], "apifyProxyCountry": "IT"}}
-]
-```
-
-I nomi dei campi dipendono dallo scraper: verificarli su un esempio reale e, se serve, aggiornare `FIELD_MAP`.
+Su Render: `BRIGHTDATA_API_KEY` (chiave), facoltativi `BRIGHTDATA_SEARCHES`
+(default Milano 60 km + Brescia 30 km) e `BRIGHTDATA_LIMIT` (default 300 per ricerca).
+I chilometri si prendono dal testo dell'annuncio: il campo del fornitore ha unità incerta.

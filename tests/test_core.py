@@ -147,3 +147,29 @@ def test_meta_parse_crawloop_style_and_mileage():
     assert meta.parse_mileage("120 mila") == 120000
     assert meta.parse_mileage("50K miles") == 80450
     assert meta.parse_mileage({"value": 99000, "unit": "KILOMETERS"}) == 99000
+
+
+def test_private_resale_and_weights():
+    from datetime import timedelta
+    from dealfinder.pricing.engine import PricingConfig, comparable_weight
+    v = value_listing(mk(999, 9000), market())
+    assert v.resale_prudent == v.resale_prudent_private            # default: vende a privati
+    assert v.resale_prudent_private < v.resale_prudent_dealer
+    cfg = PricingConfig()
+    fresh_sold = mk(1, 9000); fresh_sold.disappeared_at = fresh_sold.first_seen_at + timedelta(days=10)
+    stale = mk(2, 9000); stale.first_seen_at = stale.first_seen_at - timedelta(days=200)
+    from datetime import datetime, timezone
+    now = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    assert comparable_weight(fresh_sold, cfg, now) > comparable_weight(stale, cfg, now)
+
+
+def test_brightdata_parse():
+    from dealfinder.collectors.brightdata import parse_row
+    row = {"product_id": 5, "url": "https://www.facebook.com/marketplace/item/5/?x=1", "title": "2015 Fiat Panda",
+           "description": "Panda 1.2, 98.000 km", "final_price": 4500, "currency": "EUR", "country_code": "IT",
+           "images": ["https://x/1.jpg"], "car_miles": 60000, "is_sold": False}
+    l = parse_row(row)
+    assert (l.year, l.mileage_km, l.price_eur, l.url) == (2015, 98000, 4500, "https://www.facebook.com/marketplace/item/5/")
+    assert parse_row({**row, "is_sold": True}) is None
+    assert parse_row({**row, "currency": "USD"}) is None
+    assert parse_row({**row, "final_price": 25000}) is None

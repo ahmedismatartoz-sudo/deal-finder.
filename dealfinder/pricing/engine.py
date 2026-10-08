@@ -16,7 +16,7 @@ import numpy as np
 
 from ..core.models import Listing
 
-ENGINE_VERSION = "prezzi-0.1"
+ENGINE_VERSION = "prezzi-0.2"
 
 EXCLUDE_FLAGS = {"leasing_o_rata", "prezzo_civetta", "importazione"}
 
@@ -25,7 +25,13 @@ EXCLUDE_FLAGS = {"leasing_o_rata", "prezzo_civetta", "importazione"}
 class PricingConfig:
     min_comparables: int = 5
     max_dispersion: float = 0.20          # (P75-P25)/mediana
-    negotiation_discount: float = 0.08    # da prezzo richiesto a incassato (da calibrare)
+    negotiation_discount: float = 0.08    # commercianti: da prezzo richiesto a incassato (da calibrare)
+    private_negotiation_discount: float = 0.06   # privati: trattativa tipica (da calibrare)
+    private_prudent_quantile: float = 0.35       # rivendita come privato: auto preparata, ma prudente
+    dealer_prudent_quantile: float = 0.25
+    resale_market: str = "privato"        # privato | commerciante: mercato della rivendita
+    recency_half_life_days: int = 60      # peso degli annunci: dimezza ogni 60 giorni
+    stale_days: int = 90                  # annunci online da più di 90 giorni: prezzo che non vende
     dealer_private_ratio: float = 1.12    # usato solo se manca un mercato
     default_year_depr: float = 0.08       # svalutazione annua se non stimabile
     default_km_depr: float = 0.012        # per 10.000 km se non stimabile
@@ -45,8 +51,12 @@ class Valuation:
     engine_version: str = ENGINE_VERSION
     private_median: int | None = None
     dealer_median: int | None = None
-    resale_prudent: int | None = None
+    resale_prudent: int | None = None          # sul mercato scelto (config.resale_market)
     resale_median: int | None = None
+    resale_prudent_private: int | None = None
+    resale_median_private: int | None = None
+    resale_prudent_dealer: int | None = None
+    resale_median_dealer: int | None = None
     comparable_level: int | None = None
     n_comparables: int = 0
     dispersion: float | None = None
@@ -133,6 +143,45 @@ def _q(values: list[float], q: float) -> float:
     return float(np.quantile(values, q))
 
 
+def wquantile(values: list[float], weights: list[float], q: float) -> float:
+    """Quantile pesato (interpolazione sui pesi cumulati)."""
+    order = np.argsort(values)
+    v = np.asarray(values, dtype=float)[order]
+    w = np.asarray(weights, dtype=float)[order]
+    cw = np.cumsum(w) - 0.5 * w
+    cw /= w.sum()
+    return float(np.interp(q, cw, v))
+
+
+def comparable_weight(c: Listing, cfg: PricingConfig, now=None) -> float:
+    """Pesi: annunci recenti e venduti in fretta contano di più; quelli fermi da mesi meno.
+
+    - recenza: dimezza ogni `recency_half_life_days` dall'ultima volta visto
+    - sparito entro 21 giorni (probabilmente venduto a quel prezzo): x1.5
+    - online da oltre `stale_days` senza vendere: x0.4
+    """
+    from datetime import datetime, timezone
+    now = now or datetime.now(timezone.utc)
+    last = c.disappeared_at or c.last_seen_at
+    w = 1.0
+    if last is not None:
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        age = max(0.0, (now - last).total_seconds() / 86400)
+        w *= 0.5 ** (age / cfg.recency_half_life_days)
+    if c.first_seen_at is not None:
+        first = c.first_seen_at if c.first_seen_at.tzinfo else c.first_seen_at.replace(tzinfo=timezone.utc)
+        end = c.disappeared_at or now
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        online = (end - first).days
+        if c.disappeared_at is not None and online <= 21:
+            w *= 1.5
+        elif c.disappeared_at is None and online > cfg.stale_days:
+            w *= 0.4
+    return max(w, 0.05)
+
+
 # ---------------------------------------------------------------------------
 # Valutazione
 # ---------------------------------------------------------------------------
@@ -172,14 +221,18 @@ def value_listing(target: Listing, market: list[Listing],
     adjusted = [a for a in adjusted if abs(a.adjusted_price - med) <= 2.5 * 1.4826 * mad]
     v.n_comparables = len(adjusted)
 
-    private = [a.adjusted_price for a in adjusted if a.listing.seller_type == "privato"]
-    dealer = [a.adjusted_price for a in adjusted if a.listing.seller_type == "commerciante"]
+    private_a = [a for a in adjusted if a.listing.seller_type == "privato"]
+    dealer_a = [a for a in adjusted if a.listing.seller_type == "commerciante"]
     allp = [a.adjusted_price for a in adjusted]
 
-    if private:
-        v.private_median = round(median(private))
-    if dealer:
-        v.dealer_median = round(median(dealer))
+    def wq(items, q, factor=1.0):
+        return wquantile([a.adjusted_price * factor for a in items],
+                         [comparable_weight(a.listing, cfg) for a in items], q)
+
+    if private_a:
+        v.private_median = round(wq(private_a, 0.5))
+    if dealer_a:
+        v.dealer_median = round(wq(dealer_a, 0.5))
     if v.private_median is None and v.dealer_median:
         v.private_median = round(v.dealer_median / cfg.dealer_private_ratio)
         v.confidence_reasons.append("mercato_privato_stimato_da_commercianti")
@@ -187,11 +240,40 @@ def value_listing(target: Listing, market: list[Listing],
         v.dealer_median = round(v.private_median * cfg.dealer_private_ratio)
         v.confidence_reasons.append("mercato_commercianti_stimato_da_privati")
 
-    # Rivendita: dal mercato commercianti se ci sono abbastanza dati, altrimenti da tutti
-    base = dealer if len(dealer) >= 3 else [p * (cfg.dealer_private_ratio if a.listing.seller_type == "privato" else 1)
-                                             for a, p in zip(adjusted, allp)]
-    v.resale_prudent = round(_q(base, 0.25) * (1 - cfg.negotiation_discount))
-    v.resale_median = round(_q(base, 0.50) * (1 - cfg.negotiation_discount))
+    # Rivendita sui due mercati. Se un mercato ha meno di 3 annunci si usa l'altro, convertito.
+    if len(private_a) >= 3:
+        priv_base, priv_factor = private_a, 1.0
+    else:
+        priv_base, priv_factor = adjusted, None
+    if len(dealer_a) >= 3:
+        deal_base, deal_factor = dealer_a, 1.0
+    else:
+        deal_base, deal_factor = adjusted, None
+
+    def converted(items, to_private):
+        out = []
+        for a in items:
+            f = 1.0
+            if to_private and a.listing.seller_type == "commerciante":
+                f = 1 / cfg.dealer_private_ratio
+            if not to_private and a.listing.seller_type == "privato":
+                f = cfg.dealer_private_ratio
+            out.append((a.adjusted_price * f, comparable_weight(a.listing, cfg)))
+        return [x for x, _ in out], [w for _, w in out]
+
+    pv, pw = converted(priv_base, True) if priv_factor is None else (
+        [a.adjusted_price for a in priv_base], [comparable_weight(a.listing, cfg) for a in priv_base])
+    dv, dw = converted(deal_base, False) if deal_factor is None else (
+        [a.adjusted_price for a in deal_base], [comparable_weight(a.listing, cfg) for a in deal_base])
+    pdisc, ddisc = 1 - cfg.private_negotiation_discount, 1 - cfg.negotiation_discount
+    v.resale_prudent_private = round(wquantile(pv, pw, cfg.private_prudent_quantile) * pdisc)
+    v.resale_median_private = round(wquantile(pv, pw, 0.5) * pdisc)
+    v.resale_prudent_dealer = round(wquantile(dv, dw, cfg.dealer_prudent_quantile) * ddisc)
+    v.resale_median_dealer = round(wquantile(dv, dw, 0.5) * ddisc)
+    if cfg.resale_market == "commerciante":
+        v.resale_prudent, v.resale_median = v.resale_prudent_dealer, v.resale_median_dealer
+    else:
+        v.resale_prudent, v.resale_median = v.resale_prudent_private, v.resale_median_private
     v.dispersion = round((_q(allp, 0.75) - _q(allp, 0.25)) / median(allp), 3)
 
     # Liquidità: giorni online dei confronti già spariti

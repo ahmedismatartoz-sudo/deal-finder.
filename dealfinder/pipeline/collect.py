@@ -3,16 +3,15 @@
 Uso:
     python -m dealfinder.pipeline.collect opportunita   # zona Milano, ≤ 20.000 €
     python -m dealfinder.pipeline.collect mercato       # base di mercato, zona ampia
+    python -m dealfinder.pipeline.collect facebook      # Facebook Marketplace via Bright Data
 """
 from __future__ import annotations
 
-import json
 import logging
-import os
 import sys
 from collections import Counter
 
-from ..collectors.meta import MetaProviderCollector
+from ..collectors.brightdata import BrightDataFacebookCollector
 from ..collectors.subito import SubitoCollector
 from ..config import settings
 from ..core.normalize import normalize_fields
@@ -28,12 +27,14 @@ def run(mode: str) -> Counter:
     else:
         provinces, max_price = settings.market_provinces, settings.market_max_price_eur
 
-    subito = SubitoCollector(proxy=settings.scraper_proxy)
-    meta = MetaProviderCollector()
-    sources = [(subito, {"region": settings.region, "provinces": provinces,
-                         "max_price": max_price, "max_pages": settings.max_pages_per_province})]
-    if meta.configured() and mode == "opportunita":
-        sources.append((meta, {"provider_input": meta_input()}))
+    # Subito ogni 3 ore (opportunità) e ogni notte (mercato). Facebook ha un lavoro a parte,
+    # meno frequente, perché ogni annuncio scaricato da Bright Data ha un costo.
+    if mode == "facebook":
+        sources = [(BrightDataFacebookCollector(), {"max_price": settings.max_purchase_eur})]
+    else:
+        subito = SubitoCollector(proxy=settings.scraper_proxy)
+        sources = [(subito, {"region": settings.region, "provinces": provinces,
+                             "max_price": max_price, "max_pages": settings.max_pages_per_province})]
 
     with connect() as conn:
         finish = log_job(conn, f"collect:{mode}")
@@ -61,16 +62,10 @@ def run(mode: str) -> Counter:
     return stats
 
 
-def meta_input() -> dict:
-    """Parametri per il fornitore Meta: JSON in META_PROVIDER_INPUT (dipende dallo scraper scelto)."""
-    raw = os.environ.get("META_PROVIDER_INPUT")
-    return json.loads(raw) if raw else {}
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     mode = sys.argv[1] if len(sys.argv) > 1 else "opportunita"
     run(mode)
-    if mode == "opportunita" and "--senza-analisi" not in sys.argv:
+    if mode in ("opportunita", "facebook") and "--senza-analisi" not in sys.argv:
         from .process import run as process_run
         process_run("tutto")

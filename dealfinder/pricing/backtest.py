@@ -35,9 +35,10 @@ def evaluate(cases, market_loader, cfg: PricingConfig | None = None) -> dict:
         ref = v.private_median if l.seller_type == "privato" else v.dealer_median
         err = (ref - l.price_eur) / l.price_eur
         errors.append(abs(err))
-        gross_prudent = v.resale_prudent / (1 - cfg.negotiation_discount)
-        if l.seller_type == "commerciante":
-            covered.append(gross_prudent <= l.price_eur)
+        if l.seller_type == "commerciante" and v.resale_prudent_dealer:
+            covered.append(v.resale_prudent_dealer / (1 - cfg.negotiation_discount) <= l.price_eur)
+        elif l.seller_type == "privato" and v.resale_prudent_private:
+            covered.append(v.resale_prudent_private / (1 - cfg.private_negotiation_discount) <= l.price_eur)
         by_seg[f"{l.make} {l.model}"].append(abs(err))
     return {
         "n_cases": len(errors),

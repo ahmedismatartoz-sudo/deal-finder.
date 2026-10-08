@@ -21,6 +21,7 @@ def _j(v):
 def valuation_from_row(v: dict) -> Valuation:
     val = Valuation()
     for k in ("engine_version", "private_median", "dealer_median", "resale_prudent", "resale_median",
+              "resale_prudent_private", "resale_median_private", "resale_prudent_dealer", "resale_median_dealer",
               "comparable_level", "n_comparables", "dispersion", "liquidity_days", "discount_vs_private",
               "confidence"):
         if v.get(k) is not None:
@@ -47,9 +48,14 @@ def parts_for(parts: dict | None, preferred: str) -> tuple[int | None, bool]:
 
 def build(listing_row: dict, val_row: dict, photos: list[str], costs_row: dict | None,
           preferred: str = "aftermarket", opens: int = 0, opened_by_me: bool = False,
-          full: bool = False) -> dict | None:
+          full: bool = False, resale_as: str = "privato") -> dict | None:
     l = row_to_listing(listing_row, photos)
     v = valuation_from_row(val_row)
+    # Rivendita sul mercato scelto dal commerciante (privato di default)
+    if resale_as == "commerciante" and v.resale_prudent_dealer:
+        v.resale_prudent, v.resale_median = v.resale_prudent_dealer, v.resale_median_dealer
+    elif v.resale_prudent_private:
+        v.resale_prudent, v.resale_median = v.resale_prudent_private, v.resale_median_private
     parts = _j(val_row.get("parts_detail"))
     parts_high, parts_complete = parts_for(parts, preferred)
     costs = dealer_costs(costs_row)
@@ -72,6 +78,7 @@ def build(listing_row: dict, val_row: dict, photos: list[str], costs_row: dict |
         "city": l.city, "province": l.province,
         "price": l.price_eur,
         "resale_prudent": v.resale_prudent,
+        "resale_as": resale_as,
         "parts_cost": m.parts_cost,
         "net_margin": m.net_margin,
         "threshold": m.threshold,

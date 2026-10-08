@@ -84,7 +84,7 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+                         "preferred_parts, resale_as FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
     if not u:
         err(401, "Account non trovato")
@@ -102,6 +102,8 @@ async def update_me(request: Request):
             prefs["max_purchase"] = max(500, min(int(data["max_purchase"]), 200_000))
         if "accept_damage" in data:
             prefs["accept_damage"] = bool(data["accept_damage"])
+        if data.get("resale_as") in ("privato", "commerciante"):
+            prefs["resale_as"] = data["resale_as"]
         if data.get("preferred_parts") in ("originale", "aftermarket", "usato"):
             prefs["preferred_parts"] = data["preferred_parts"]
         for k, v in prefs.items():
@@ -133,7 +135,8 @@ SELECT l.*, v.id AS valuation_id, v.private_median, v.dealer_median, v.resale_pr
        v.comparables_used, v.comparable_level, v.n_comparables, v.dispersion, v.liquidity_days,
        v.confidence, v.confidence_reasons, v.parts_cost_low, v.parts_cost_high, v.parts_detail,
        v.discount_vs_private, v.fraud_flags, v.motivation, v.checks, v.engine_version,
-       v.created_at AS valued_at,
+       v.created_at AS valued_at, v.resale_prudent_private, v.resale_median_private,
+       v.resale_prudent_dealer, v.resale_median_dealer,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT array_agg(source_url ORDER BY position) FROM listing_photos p WHERE p.listing_id=l.id) AS photo_urls
@@ -154,7 +157,8 @@ def _build(row, costs, dealer, full=False):
     val_row["created_at"] = row.get("valued_at")
     return cards.build(row, val_row, list(row.get("photo_urls") or []), costs,
                        dealer.get("preferred_parts") or "aftermarket",
-                       opens=row["opens"], opened_by_me=row["opened_by_me"], full=full)
+                       opens=row["opens"], opened_by_me=row["opened_by_me"], full=full,
+                       resale_as=dealer.get("resale_as") or "privato")
 
 
 def _visible(row) -> bool:
