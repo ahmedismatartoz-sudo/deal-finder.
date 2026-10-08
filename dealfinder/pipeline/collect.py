@@ -26,6 +26,7 @@ def run(mode: str) -> Counter:
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
     else:
         provinces, max_price = settings.market_provinces, settings.market_max_price_eur
+        settings.max_pages_per_province = settings.market_max_pages
 
     # Subito ogni 3 ore (opportunità) e ogni notte (mercato). Facebook ha un lavoro a parte,
     # meno frequente, perché ogni annuncio scaricato da Bright Data ha un costo.
@@ -99,10 +100,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     mode = sys.argv[1] if len(sys.argv) > 1 else "opportunita"
     import os
+    if not os.environ.get("DATABASE_URL"):
+        log.info("DATABASE_URL non impostata: servizio non configurato, nulla da fare")
+        sys.exit(0)
     if os.environ.get("SUBITO_PROBE") == "1":
         # Diagnostica di accesso: nessuna raccolta finché la variabile è attiva
         from ..collectors.probe import run as probe_run
         probe_run()
+        sys.exit(0)
+    if os.environ.get("CICLO_COMPLETO") == "1" and mode == "opportunita":
+        from .ciclo import run as ciclo_run
+        ciclo_run()
         sys.exit(0)
     run(mode)
     if mode == "mercato":

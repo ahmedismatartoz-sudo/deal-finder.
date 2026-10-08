@@ -11,6 +11,9 @@ from .db import connect, migrate
 from .web.auth import hash_password
 
 if __name__ == "__main__":
+    if not os.environ.get("DATABASE_URL"):
+        print("DATABASE_URL non impostata: servizio non configurato, nulla da fare.")
+        raise SystemExit(0)
     with connect() as conn:
         applied = migrate(conn)
         print("Migrazioni applicate:", applied or "nessuna (già aggiornato)")

@@ -24,6 +24,7 @@ class Settings:
                                          "como", "varese", "lecco", "lodi", "pavia", "cremona",
                                          "mantova", "sondrio")
     market_max_price_eur: int = 40000
+    market_max_pages: int = field(default_factory=lambda: int(os.environ.get("MARKET_MAX_PAGES", "250")))
 
     # Ricerche mirate ad auto con problemi (la maggior parte delle opportunità)
     problem_keywords: tuple[str, ...] = field(default_factory=lambda: tuple(
