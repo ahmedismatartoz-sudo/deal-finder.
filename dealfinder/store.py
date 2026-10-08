@@ -30,14 +30,24 @@ def photos_of(conn, listing_id: int) -> list[str]:
         "SELECT source_url FROM listing_photos WHERE listing_id=%s ORDER BY position", (listing_id,)).fetchall()]
 
 
-def load_market(conn, make: str, model: str, fuel: str | None, days: int = 120) -> list[Listing]:
-    """Confronti possibili: stessa marca/modello/carburante, attivi o spariti di recente."""
+HOME_REGION_SQL = "(province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))"
+
+
+def load_market(conn, make: str, model: str, fuel: str | None, days: int = 120,
+                region: str | None = None) -> list[Listing]:
+    """Confronti possibili: stessa marca/modello/carburante, attivi o spariti di recente.
+    Senza `region`: solo il mercato di casa (Lombardia). Con `region`: un'altra regione
+    (raccolta per il confronto tra regioni; si usano gli annunci visti negli ultimi 14 giorni)."""
+    if region:
+        where = "lower(region) = lower(%s) AND last_seen_at > now() - interval '14 days'"
+        params = (make, model, fuel, fuel, region)
+    else:
+        where = HOME_REGION_SQL + " AND (status='attivo' OR disappeared_at > now() - make_interval(days => %s))"
+        params = (make, model, fuel, fuel, days)
     rows = conn.execute(
-        """SELECT * FROM listings
+        f"""SELECT * FROM listings
            WHERE make=%s AND model=%s AND (%s::text IS NULL OR fuel=%s)
-             AND price_eur IS NOT NULL
-             AND (status='attivo' OR disappeared_at > now() - make_interval(days => %s))""",
-        (make, model, fuel, fuel, days)).fetchall()
+             AND price_eur IS NOT NULL AND {where}""", params).fetchall()
     return [row_to_listing(r) for r in rows]
 
 

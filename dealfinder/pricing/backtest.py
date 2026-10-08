@@ -59,6 +59,7 @@ def run() -> dict:
         finish = log_job(conn, "backtest")
         rows = conn.execute(
             """SELECT * FROM listings WHERE status='scomparso' AND disappeared_at > now() - interval '60 days'
+               AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
                AND damage_class IN ('nessuno','sconosciuto') AND NOT COALESCE(damage_declared,false)
                AND price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
                ORDER BY random() LIMIT 2000""").fetchall()

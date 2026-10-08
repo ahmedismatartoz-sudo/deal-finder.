@@ -33,6 +33,13 @@ def run(mode: str) -> Counter:
     # meno frequente, perché ogni annuncio scaricato da Bright Data ha un costo.
     if mode == "facebook":
         sources = [(BrightDataFacebookCollector(), {"max_price": settings.max_purchase_eur})]
+    elif mode == "italia":
+        # Prezzi di altre regioni per il confronto (compra in Lombardia, rivendi dove vale di più)
+        from ..pricing.arbitrage import regions
+        subito = SubitoCollector(proxy=settings.scraper_proxy)
+        pages = int(os.environ.get("ITALIA_PAGES", "30"))
+        sources = [(subito, {"region": r, "provinces": [], "max_price": 40000, "max_pages": pages, "_slug": r})
+                   for r in regions()]
     else:
         subito = SubitoCollector(proxy=settings.scraper_proxy)
         q = {"region": settings.region, "provinces": provinces,
@@ -52,8 +59,23 @@ def run(mode: str) -> Counter:
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
+                    if query.get("_slug"):
+                        # nome regione uniforme per i confronti; se il codice regione di Subito non
+                        # corrisponde, vale la regione scritta nell'annuncio (e si segnala nei log)
+                        from ..core.normalize import slug as _slug
+                        real = _slug(listing.region) if listing.region else None
+                        if real and real != query["_slug"]:
+                            stats[f"regione_diversa:{query['_slug']}->{real}"] += 1
+                        listing.region = real or query["_slug"]
                     normalize_fields(listing)
                     lid, event = upsert_listing(conn, listing)
+                    if query.get("_slug"):
+                        stats[f"{collector.source}:{query['_slug']}"] += 1
+                        if event == "nuovo":
+                            conn.execute("UPDATE listings SET stage='mercato', stage_reason='altra_regione' "
+                                         "WHERE id=%s", (lid,))
+                        conn.commit()
+                        continue
                     if model is not None and event in ("nuovo", "prezzo", "riapparso"):
                         ps = prescreen(model, listing)
                         conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "

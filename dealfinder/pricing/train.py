@@ -57,6 +57,7 @@ def run(force: bool = False) -> dict:
         finish = log_job(conn, "train")
         rows = conn.execute(
             """SELECT * FROM listings WHERE price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
+               AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
                AND (status='attivo' OR disappeared_at > now() - interval '180 days')""").fetchall()
         model = train([row_to_listing(r) for r in rows])
         m = model["metrics"]

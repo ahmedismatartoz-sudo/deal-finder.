@@ -33,6 +33,8 @@ RE_PROBLEM = re.compile(
     r"cambio (?:da|rotto)|fumo bianco|perde olio|batte in testa|cos[iì] com['’]? ?[eè]|per commercianti|"
     r"solo esportazione|per pezzi)\b", re.I)
 RE_NEGATION = re.compile(r"(mai|non|nessun[ao]?|zero|senza)\s+(\w+\s+){0,2}$", re.I)
+RE_PRICE_TEXT = re.compile(r"(?:prezzo|chiedo|richiesta|vendo a|valore)\s*:?\s*(?:€|euro)?\s*(\d{1,2}[.\s]?\d{3})\b|"
+                           r"\b(?<![\d.])(\d{1,2}[.]?\d{3})\s*(?:€|euro|eur)\b", re.I)
 RE_PLATE = re.compile(r"\b([A-Z]{2})\s?(\d{3})\s?([A-Z]{2})\b")
 
 KW_PER_CV = 0.7355
@@ -72,6 +74,13 @@ def normalize_price(listing: Listing) -> Listing:
         flags.add("leasing_o_rata")
     if RE_IMPORT.search(text):
         flags.add("importazione")
+    # Prezzo messo a caso nel campo (1 €, 123456 €) ma scritto giusto nel testo: si recupera
+    if price is not None and (price < 500 or re.fullmatch(r"(\d)\1{4,}|12345\d*|99999\d*", str(price))):
+        found = [int(re.sub(r"\D", "", a or b)) for a, b in RE_PRICE_TEXT.findall(listing.description or "")]
+        found = [x for x in found if 500 <= x <= 60000]
+        if len(set(found)) == 1 and "leasing_o_rata" not in flags:
+            price = found[0]
+            flags.add("prezzo_da_descrizione")
     if price is not None and price < 500:
         flags.add("prezzo_civetta")
     if listing.description and re.search(r"trattabil", listing.description, re.I):

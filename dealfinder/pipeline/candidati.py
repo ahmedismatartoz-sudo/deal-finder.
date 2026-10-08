@@ -21,6 +21,7 @@ from ..config import settings
 from ..core.normalize import problem_hint
 from ..db import connect, log_job
 from ..pricing.engine import value_listing
+from ..pricing.arbitrage import best_region
 from ..pricing.fallback import apply_model, estimate_missing_km, weak
 from ..pricing.train import load_active
 from ..pricing.margin import DealerCosts, compute_margin
@@ -34,6 +35,21 @@ DAMAGE_ROOM = 800
 
 
 BANDS = [(500, 2000), (2000, 5000), (5000, 8000), (8000, 12000), (12000, 20001)]
+
+
+def hidden_reasons(l) -> list[str]:
+    """Annunci scritti male: pochi li notano, restano disponibili più a lungo e si tratta meglio."""
+    out = []
+    title = (l.title or "").lower()
+    if l.make and l.model and l.make.split("-")[0] not in title and l.model.split("-")[0] not in title:
+        out.append("titolo_senza_marca_modello")
+    if len((l.description or "").strip()) < 40:
+        out.append("descrizione_quasi_vuota")
+    if len(l.photos or []) <= 2:
+        out.append("poche_foto")
+    if "prezzo_da_descrizione" in (l.price_flags or []):
+        out.append("prezzo_sbagliato_nel_campo")
+    return out
 
 
 def balanced(items: list, limit: int) -> list:
@@ -71,6 +87,7 @@ def run() -> dict:
         cache: dict = {}
         costs = DealerCosts()
         model = load_active(conn)
+        arb_cache: dict = {}
         for r in rows:
             l = row_to_listing(r)
             km_est = estimate_missing_km(l)
@@ -95,18 +112,29 @@ def run() -> dict:
             need = m.threshold + (DAMAGE_ROOM if damaged else 0)
             if from_model or km_est:
                 need = round(need * 1.2)             # stima meno solida: serve più margine
+            arb = None
+            if m.net_margin >= need - 3000 and not from_model and not km_est:
+                arb = best_region(conn, l, v.resale_prudent, arb_cache)
             if m.net_margin < need:
-                stats["margine_insufficiente"] += 1
-                continue
+                if arb and m.net_margin + arb["guadagno_extra"] >= need:
+                    stats["solo_rivendendo_altrove"] += 1      # affare solo vendendo in un'altra regione
+                else:
+                    stats["margine_insufficiente"] += 1
+                    continue
+            if arb:
+                stats["con_regione_migliore"] += 1
             if "prezzo_troppo_basso" in v.fraud_flags and not damaged:
                 stats["sospetto"] += 1
-            out.append((m.score, r, l, v, m, hints, damaged, from_model, km_est))
+            hidden = hidden_reasons(l)
+            if hidden:
+                stats["annuncio_nascosto"] += 1
+            out.append((m.score, r, l, v, m, hints, damaged, from_model, km_est, arb, hidden))
         out = balanced(out, MAX_EXPORT)
         stats.update(verify_rows(conn, [x[1] for x in out]))
         alive = {x["id"] for x in conn.execute(
             "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'", ([x[1]["id"] for x in out],)).fetchall()}
         n = 0
-        for score, r, l, v, m, hints, damaged, from_model, km_est in out:
+        for score, r, l, v, m, hints, damaged, from_model, km_est, arb, hidden in out:
             if r["id"] not in alive:
                 continue
             n += 1
@@ -119,7 +147,8 @@ def run() -> dict:
                    "margine_prima_ricambi": m.net_margin, "soglia": m.threshold, "con_problemi": damaged,
                    "parole_problema": hints, "mediana_da_sistemare": v.asis_median, "segnali": v.fraud_flags,
                    "giorni_vendita_simili": v.liquidity_days,
-                   "stima": "modello" if from_model else "confronti", "km_stimati": km_est, "foto": photos_of(conn, r["id"])[:3]}
+                   "stima": "modello" if from_model else "confronti", "km_stimati": km_est,
+                   "rivendita_altra_regione": arb, "annuncio_nascosto": hidden, "foto": photos_of(conn, r["id"])[:3]}
             log.info("CANDIDATO %s", json.dumps(rec, ensure_ascii=False, default=str))
         stats["esportati"] = n
         finish(True, dict(stats))

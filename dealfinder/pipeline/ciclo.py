@@ -57,6 +57,17 @@ def run() -> None:
     step("opportunita", collect, "opportunita")
     if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", 6):
         step("facebook", collect, "facebook")
+    if os.environ.get("ARBITRAGGIO", "1") == "1" and _due("collect:italia", 20):
+        from ..pricing.arbitrage import price_index
+        from ..pricing.train import load_active
+        step("italia", collect, "italia")
+        def _indice():
+            with connect() as conn:
+                out = price_index(conn, load_active(conn))
+            import json as _j
+            log.info("ARBITRAGGIO_INDICE %s", _j.dumps(out))
+            return out
+        step("indice_regioni", _indice)
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")
         step("modello", train, not _has_model())
