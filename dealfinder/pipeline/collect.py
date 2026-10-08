@@ -34,7 +34,7 @@ def run(mode: str) -> Counter:
     if mode == "profondo":
         bands = [(p, p + 500) for p in range(500, 5000, 500)] + [(p, p + 1000) for p in range(5000, 20000, 1000)]
         sources = [(SubitoCollector(proxy=settings.scraper_proxy),
-                    {"region": settings.region, "provinces": list(settings.market_provinces),
+                    {"region": settings.region, "provinces": list(settings.opportunity_provinces),
                      "max_price": settings.max_purchase_eur, "max_pages": 0, "price_bands": bands,
                      "band_pages": int(os.environ.get("BAND_PAGES", "30"))})]
     elif mode == "facebook":

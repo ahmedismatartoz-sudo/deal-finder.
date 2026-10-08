@@ -257,31 +257,10 @@ class SubitoCollector(Collector):
             if len(ads) < lim:
                 break
         log.info("subito api: %d annunci letti", seen)
-        # Raccolta profonda: tutta la regione divisa in fasce di prezzo, così si arriva oltre
-        # i primi annunci più recenti e si coprono quasi tutti gli annunci attivi.
-        for ps, pe in query.get("price_bands") or []:
-            n_read = n_kept = 0
-            for page in range(query.get("band_pages", 30)):
-                r = self.client.get(API_SEARCH, headers=API_HEADERS,
-                                    params={"c": 2, "r": region, "t": "s", "ps": ps, "pe": pe, "lim": lim,
-                                            "start": page * lim, "sort": "datedesc"})
-                self.pause()
-                if r.status_code != 200:
-                    log.warning("subito fascia %s-%s: HTTP %s a pagina %s", ps, pe, r.status_code, page)
-                    break
-                ads = (r.json() or {}).get("ads") or []
-                for it in ads:
-                    listing = parse_item(it)
-                    if not listing:
-                        continue
-                    n_read += 1
-                    if wanted and listing.province and listing.province.upper() not in wanted:
-                        continue
-                    n_kept += 1
-                    yield listing
-                if len(ads) < lim:
-                    break
-            log.info("subito fascia %s-%s €: %d letti, %d nelle province", ps, pe, n_read, n_kept)
+        # Raccolta profonda: SOLO le province volute (Milano e dintorni), una per una, divise in
+        # fasce di prezzo, così si leggono quasi tutti gli annunci attivi e non solo i più recenti.
+        if query.get("price_bands"):
+            yield from self._deep(query, wanted, region, lim)
         # Ricerca dedicata alle auto economiche (ps/pe = prezzo minimo/massimo; filtrate comunque qui)
         n_cheap = 0
         for page in range(query.get("cheap_pages", 0)):
@@ -329,6 +308,57 @@ class SubitoCollector(Collector):
                 if len(ads) < lim:
                     break
             log.info("subito ricerca '%s': %d annunci nelle province", kw, n_kw)
+
+    def _province_keys(self, region: int, wanted: set, lim: int) -> dict:
+        """Codice interno di Subito per ogni provincia (es. Milano = 8), letto dagli annunci."""
+        keys: dict = {}
+        for page in range(10):
+            r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                params={"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim,
+                                        "sort": "datedesc"})
+            self.pause()
+            if r.status_code != 200:
+                break
+            for it in (r.json() or {}).get("ads") or []:
+                city = ((it.get("geo") or {}).get("city") or {})
+                sn, key = (city.get("short_name") or "").upper(), city.get("key")
+                if sn in wanted and key:
+                    keys[sn] = key
+            if wanted <= set(keys):
+                break
+        return keys
+
+    def _deep(self, query: dict, wanted: set, region: int, lim: int) -> Iterator[Listing]:
+        keys = self._province_keys(region, wanted, lim)
+        log.info("subito raccolta profonda: codici province %s", keys)
+        missing = wanted - set(keys)
+        if missing:
+            log.warning("subito: codice non trovato per %s (saltate nella raccolta profonda)", sorted(missing))
+        for sn, key in sorted(keys.items()):
+            tot_read = tot_kept = 0
+            for ps, pe in query["price_bands"]:
+                for page in range(query.get("band_pages", 30)):
+                    r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                        params={"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
+                                                "lim": lim, "start": page * lim, "sort": "datedesc"})
+                    self.pause()
+                    if r.status_code != 200:
+                        log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
+                        break
+                    ads = (r.json() or {}).get("ads") or []
+                    for it in ads:
+                        listing = parse_item(it)
+                        if not listing:
+                            continue
+                        tot_read += 1
+                        if listing.province and listing.province.upper() not in wanted:
+                            continue          # il filtro per provincia non ha funzionato: si scarta qui
+                        tot_kept += 1
+                        yield listing
+                    if len(ads) < lim:
+                        break
+            log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot_read, tot_kept,
+                     query["price_bands"][-1][1])
 
     def _search_html(self, query: dict) -> Iterator[Listing]:
         for province in query["provinces"]:

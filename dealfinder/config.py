@@ -21,8 +21,7 @@ class Settings:
 
     # Base di mercato (più ampia della zona opportunità)
     market_provinces: tuple[str, ...] = ("milano", "monza-e-della-brianza", "bergamo", "brescia",
-                                         "como", "varese", "lecco", "lodi", "pavia", "cremona",
-                                         "mantova", "sondrio")
+                                         "como", "varese", "lecco", "lodi", "pavia")   # Milano e dintorni
     market_max_price_eur: int = 40000
     market_max_pages: int = field(default_factory=lambda: int(os.environ.get("MARKET_MAX_PAGES", "250")))
 
