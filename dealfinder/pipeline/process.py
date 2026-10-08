@@ -25,6 +25,7 @@ from ..db import connect, log_job
 from ..pricing import report
 from ..pricing.engine import EXCLUDE_FLAGS, value_listing
 from ..pricing.margin import DealerCosts, compute_margin
+from .verify import verify_rows
 from ..store import (load_market, photos_of, row_to_listing, save_valuation, set_stage,
                      update_listing_fields)
 
@@ -135,6 +136,12 @@ def deep(conn) -> Counter:
     cache_get, cache_put = parts_agent.db_cache(conn)
     rows = conn.execute("SELECT * FROM listings WHERE stage='candidato' AND status='attivo' "
                         "ORDER BY first_seen_at DESC LIMIT %s", (DEEP_BATCH,)).fetchall()
+    # Prima di spendere in analisi: l'annuncio esiste ancora?
+    stats.update(verify_rows(conn, rows))
+    alive = {r["id"] for r in conn.execute(
+        "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo' AND last_checked_at > now() - interval '2 hours'",
+        ([r["id"] for r in rows],)).fetchall()}
+    rows = [r for r in rows if r["id"] in alive]
     for row in rows:
         lid = row["id"]
         l = row_to_listing(row, photos_of(conn, lid))

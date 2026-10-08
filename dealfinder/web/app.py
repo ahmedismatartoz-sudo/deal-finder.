@@ -143,6 +143,7 @@ SELECT l.*, v.id AS valuation_id, v.private_median, v.dealer_median, v.resale_pr
 FROM listings l
 JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.stage='approfondito' AND l.status='attivo'
+  AND l.last_checked_at > now() - interval '24 hours'
 """
 
 

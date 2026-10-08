@@ -178,5 +178,34 @@ class BrightDataFacebookCollector(Collector):
                 yield listing
         log.info("Bright Data: %d righe ricevute, %d auto valide", len(rows), kept)
 
+    def check_urls(self, urls: list[str]) -> dict[str, str]:
+        """Verifica se gli annunci esistono ancora: {url: attivo|scomparso|venduto|errore}.
+        Costa un record per annuncio: si usa solo sui candidati."""
+        if not urls:
+            return {}
+        r = self.client.post(f"{API}/trigger", params={"dataset_id": self.dataset, "include_errors": "true"},
+                             json=[{"url": u} for u in urls])
+        r.raise_for_status()
+        sid = r.json().get("snapshot_id")
+        self.wait(sid, max_minutes=20)
+        rows = self.download(sid)
+        out = {u: "errore" for u in urls}
+        by_id = {u.rstrip("/").split("/")[-1]: u for u in urls}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            src = (row.get("input") or {}).get("url") if isinstance(row.get("input"), dict) else None
+            key = src or by_id.get(str(row.get("product_id")))
+            if key not in out:
+                continue
+            err = str(row.get("error") or row.get("error_code") or "").lower()
+            if err:
+                out[key] = "scomparso" if any(x in err for x in ("not found", "dead", "removed", "unavailable", "404")) else "errore"
+            elif row.get("is_sold") is True:
+                out[key] = "venduto"
+            else:
+                out[key] = "attivo"
+        return out
+
     def fetch(self, url: str) -> Listing | None:
-        raise NotImplementedError("Disponibilità Facebook: annuncio non più restituito per 48 ore = scomparso")
+        raise NotImplementedError("Per Facebook usare check_urls su più annunci insieme")
