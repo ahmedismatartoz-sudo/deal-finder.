@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import datetime
 import re
 import unicodedata
 
@@ -112,6 +113,10 @@ def normalize_fields(listing: Listing) -> Listing:
     if listing.province and not listing.region:
         listing.region = PROVINCE_REGION.get(listing.province.upper())
     normalize_price(listing)
+    # Km scritti in migliaia ("270" per 270.000) su auto non recenti: si correggono
+    if listing.mileage_km is not None and listing.year and listing.mileage_km < 1000 \
+            and datetime.date.today().year - listing.year >= 2:
+        listing.mileage_km = listing.mileage_km * 1000 if listing.mileage_km >= 5 else None
     if listing.damage_declared is None and problem_hint(listing):
         listing.damage_declared = True     # esclusa dai confronti "sani", usata per il mercato "da sistemare"
     listing.compute_missing()

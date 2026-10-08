@@ -115,6 +115,7 @@ def run() -> dict:
                 continue
             if "prezzo_troppo_basso" in v.fraud_flags and not damaged:
                 stats["sospetto"] += 1
+            l.photos = photos_of(conn, r["id"])
             hidden = hidden_reasons(l)
             if hidden:
                 stats["annuncio_nascosto"] += 1

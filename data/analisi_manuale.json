@@ -1,99 +1,739 @@
 [
-  {"id": 3382, "esito": "opportunita", "danno": "nessuno", "danni": [],
-   "nota": "Audi A6 Avant 190 CV S tronic, 2 proprietari, tagliando appena fatto con pulizia FAP e valvola EGR nuova (documentati), gomme e pastiglie nuove. Prezzo circa 7.000 € sotto la mediana dei privati con confronti molto omogenei. Il venditore dice di non trattare.",
-   "controlli": ["Fatture di FAP, EGR e tagliandi", "Prova su strada del cambio S tronic (strappi, ritardi)", "Verifica che non abbia subito incidenti (spessore vernice)", "Visura al PRA per fermi o ipoteche"]},
-
-  {"id": 5030, "esito": "opportunita", "danno": "nessuno", "danni": [],
-   "nota": "Panda 1.2 benzina 2012, guidabile da neopatentati, cinghia di distribuzione appena fatta, revisione fino ad aprile 2028. Km alti (223.000), già considerati nella rivendita prudente. Margine contenuto ma reale, auto molto richiesta nella fascia neopatentati.",
-   "controlli": ["Fattura della distribuzione", "Fumo allo scarico e consumo d'olio (km alti)", "Frizione: slittamento in salita"]},
-
-  {"id": 732, "esito": "da_verificare", "danno": "medio",
-   "danni": [{"part": "paraurti_anteriore", "severity": "medio", "source": "testo"},
-             {"part": "cofano", "severity": "medio", "source": "testo"},
-             {"part": "faro_anteriore", "severity": "medio", "source": "testo"},
-             {"part": "griglia_radiatore", "severity": "medio", "source": "testo"},
-             {"part": "radiatore", "severity": "medio", "source": "testo"}],
-   "ricambi_min": 1000, "ricambi_max": 3000,
-   "ricambi": [{"label": "Paraurti anteriore con griglia e staffe (aftermarket)", "low": 180, "high": 370},
-               {"label": "Fari anteriori LED (coppia, aftermarket o usati)", "low": 300, "high": 700},
-               {"label": "Cofano motore", "low": 120, "high": 250},
-               {"label": "Radiatore, condensatore clima ed elettroventola", "low": 200, "high": 400},
-               {"label": "Traversa e ossatura anteriore", "low": 100, "high": 250},
-               {"label": "Riserva airbag frontali se esplosi", "low": 0, "high": 1030}],
-   "nota": "Peugeot 208 2022 incidentata davanti: il venditore dice motore funzionante, interni perfetti e posteriore intatto. Il prezzo (3.000 €) è molto basso: il danno frontale potrebbe essere importante. Se gli airbag non sono esplosi e i longheroni sono sani, il margine resta alto.",
-   "controlli": ["Chiedere foto ravvicinate del frontale e del vano motore", "Airbag esplosi? (spia, volante, cruscotto)", "Longheroni e attacchi del frontale dritti (esclude danno strutturale)", "L'auto si sposta da sola o serve il carro attrezzi"]},
-
-  {"id": 5079, "esito": "da_verificare", "danno": "medio",
-   "danni": [{"part": "paraurti_anteriore", "severity": "medio", "source": "testo"},
-             {"part": "faro_anteriore", "severity": "medio", "source": "testo"},
-             {"part": "cofano", "severity": "medio", "source": "testo"}],
-   "ricambi_min": 800, "ricambi_max": 2500,
-   "ricambi": [{"label": "Frontale (paraurti, fari, cofano, radiatori) - stima senza dettagli", "low": 800, "high": 1700},
-               {"label": "Riserva airbag se esplosi", "low": 0, "high": 800}],
-   "nota": "Opel Corsa 2022 automatica, 78.000 km. Il titolo dice 'incidentata' (scritto 'indidentata') ma la descrizione non dice dove né quanto: stima prudente sul danno tipico. Prezzo trattabile.",
-   "controlli": ["Chiedere dove è il danno e le foto", "Airbag esplosi?", "Cambio automatico funzionante dopo l'urto", "Danno strutturale escluso"]},
-
-  {"id": 7578, "esito": "da_verificare", "danno": "medio",
-   "danni": [{"part": "portiera_anteriore", "side": "dx", "severity": "medio", "source": "testo"},
-             {"part": "portiera_posteriore", "side": "dx", "severity": "medio", "source": "testo"},
-             {"part": "parafango_anteriore", "side": "dx", "severity": "medio", "source": "testo"},
-             {"part": "minigonna", "side": "dx", "severity": "medio", "source": "testo"},
-             {"part": "ammortizzatori", "severity": "medio", "source": "testo"}],
-   "ricambi_min": 900, "ricambi_max": 2000,
-   "ricambi": [{"label": "Portiere destre usate (2)", "low": 300, "high": 600},
-               {"label": "Parafango anteriore destro e specchietto", "low": 160, "high": 350},
-               {"label": "Braccio, montante e ammortizzatore anteriore destro", "low": 250, "high": 500},
-               {"label": "Cerchio e gomma", "low": 100, "high": 250},
-               {"label": "Minigonna e modanature", "low": 60, "high": 300}],
-   "nota": "BMW 316d Touring 2016, 215.000 km, fiancata destra e sospensione da sistemare, si ritira con il carro attrezzi. Margine al limite della soglia: conviene solo se il sottoporta e il montante centrale sono sani.",
-   "controlli": ["Sottoporta e montante centrale non deformati (se sì è danno strutturale: scartare)", "Geometria e scatola sterzo dopo l'urto", "Costo del carro attrezzi"]},
-
-  {"id": 9769, "esito": "da_verificare", "danno": "alto_rischio",
-   "danni": [{"part": "airbag", "severity": "grave", "source": "testo"},
-             {"part": "paraurti_anteriore", "severity": "medio", "source": "testo"},
-             {"part": "faro_anteriore", "severity": "medio", "source": "testo"},
-             {"part": "cofano", "severity": "medio", "source": "testo"},
-             {"part": "radiatore", "severity": "medio", "source": "testo"}],
-   "ricambi_min": 2500, "ricambi_max": 4900,
-   "ricambi": [{"label": "Airbag volante e passeggero (usati)", "low": 400, "high": 700},
-               {"label": "Centralina airbag e pretensionatori", "low": 300, "high": 600},
-               {"label": "Cruscotto (se si è aperto l'airbag passeggero)", "low": 300, "high": 600},
-               {"label": "Frontale: paraurti, griglia, fari, cofano, radiatori (usato/aftermarket)", "low": 1500, "high": 3000}],
-   "nota": "Audi Q5 2.0 TDI 2017 con airbag esplosi: urto frontale forte. Margine potenzialmente alto ma ad alto rischio: va vista di persona prima di qualsiasi offerta.",
-   "controlli": ["Longheroni e traversa anteriore (se deformati: scartare)", "Quali airbag sono esplosi (anche tendine?)", "Cambio S tronic e trazione quattro dopo l'urto", "Vano motore: radiatori, intercooler, supporti"]},
-
-  {"id": 9924, "esito": "da_verificare", "danno": "alto_rischio",
-   "danni": [{"part": "motore_sostituzione", "severity": "grave", "source": "testo", "note": "guasto non descritto"}],
-   "ricambi_min": 500, "ricambi_max": 3500,
-   "ricambi": [{"label": "Guasto non dichiarato: da turbina/EGR/FAP (500-1.500) fino a motore usato (3.000-3.500)", "low": 500, "high": 3500}],
-   "nota": "Tiguan 2.0 TDI 2017, 200.000 km, 'da riparare' senza dire cosa. Il prezzo basso fa pensare a un guasto meccanico importante. Se il guasto è leggero l'affare è ottimo; se è il motore, il margine si riduce molto.",
-   "controlli": ["Chiedere esattamente il guasto e se c'è una diagnosi scritta", "L'auto parte e si muove?", "Leggere gli errori in centralina prima dell'offerta"]},
-
-  {"id": 8815, "esito": "da_verificare", "danno": "nessuno", "danni": [],
-   "nota": "Alfa Stelvio 2022 dichiarata perfetta, unico proprietario, a circa 10.000 € sotto le simili: prezzo troppo basso per un'auto sana. Possibili truffa, finanziamento ancora da pagare, auto di importazione o km non reali.",
-   "controlli": ["Visura al PRA: intestatario, fermi amministrativi, ipoteche", "Mai pagare anticipi o caparre a distanza", "Vedere l'auto e il libretto di persona", "Storico chilometri dal libretto tagliandi e dalle revisioni"]},
-
-  {"id": 3452, "esito": "da_verificare", "danno": "leggero",
-   "danni": [{"part": "frizione", "severity": "leggero", "source": "testo", "note": "lavoro futuro segnalato dal venditore (descrizione tagliata)"}],
-   "ricambi_min": 150, "ricambi_max": 300,
-   "ricambi": [{"label": "Kit frizione o distribuzione (lavoro segnalato in descrizione)", "low": 150, "high": 300}],
-   "rivendita_prudente": 4300,
-   "nota": "Panda 1.3 Multijet: è un diesel Euro 4, con limitazioni di circolazione in Lombardia (a Milano non entra in Area B): la rivendita è più difficile e la stima va ridotta. Km e anno incoerenti nell'annuncio (115.000 o 124.000; 2009 o 2010). Carrozzeria con segni e ammaccature.",
-   "controlli": ["Quale lavoro va fatto 'in futuro' (descrizione tagliata)", "Anno e km reali dal libretto", "Ammaccature: solo estetiche o da sostituire"]},
-
-  {"id": 3198, "esito": "da_verificare", "danno": "nessuno", "danni": [],
-   "rivendita_prudente": 3000,
-   "nota": "Panda 1.1 Actual del 2010 con soli 70.000 km, ma allestimento base senza aria condizionata, vetri elettrici e servosterzo: si rivende meno delle Panda usate come confronto. Con una rivendita realistica il margine scende sotto la soglia.",
-   "controlli": ["Km reali dal libretto tagliandi", "Ruggine sotto la scocca"]},
-
-  {"id": 7553, "esito": "da_verificare", "danno": "leggero",
-   "danni": [{"part": "portiera_posteriore", "side": "sx", "action": "riparare", "severity": "leggero", "source": "testo"}],
-   "ricambi_min": 30, "ricambi_max": 90,
-   "ricambi": [{"label": "Serratura o maniglia interna porta posteriore sinistra (usata/aftermarket)", "low": 30, "high": 90}],
-   "nota": "Nissan Micra 2007: la porta posteriore sinistra non si apre, quasi sempre è la serratura o il tirante della maniglia. Margine al limite dei 1.000 €.",
-   "controlli": ["Porta: serratura o danno alla carrozzeria", "Ruggine e km reali"]},
-
-  {"id": 7552, "esito": "scartata", "nota": "Duplicato dello stesso annuncio della Micra (stesso venditore, stesso testo e foto)."},
-
-  {"id": 9706, "esito": "scartata", "nota": "Nessuna foto e nessuna descrizione: annuncio non valutabile."}
+ {
+  "id": 3382,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Audi A6 Avant 190 CV S tronic, 2 proprietari, tagliando appena fatto con pulizia FAP e valvola EGR nuova (documentati), gomme e pastiglie nuove. Prezzo circa 7.000 € sotto la mediana dei privati con confronti molto omogenei. Il venditore dice di non trattare.",
+  "controlli": [
+   "Fatture di FAP, EGR e tagliandi",
+   "Prova su strada del cambio S tronic (strappi, ritardi)",
+   "Verifica che non abbia subito incidenti (spessore vernice)",
+   "Visura al PRA per fermi o ipoteche"
+  ]
+ },
+ {
+  "id": 5030,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Panda 1.2 benzina 2012, guidabile da neopatentati, cinghia di distribuzione appena fatta, revisione fino ad aprile 2028. Km alti (223.000), già considerati nella rivendita prudente. Margine contenuto ma reale, auto molto richiesta nella fascia neopatentati.",
+  "controlli": [
+   "Fattura della distribuzione",
+   "Fumo allo scarico e consumo d'olio (km alti)",
+   "Frizione: slittamento in salita"
+  ]
+ },
+ {
+  "id": 732,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "griglia_radiatore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "radiatore",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 1000,
+  "ricambi_max": 3000,
+  "ricambi": [
+   {
+    "label": "Paraurti anteriore con griglia e staffe (aftermarket)",
+    "low": 180,
+    "high": 370
+   },
+   {
+    "label": "Fari anteriori LED (coppia, aftermarket o usati)",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano motore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "Radiatore, condensatore clima ed elettroventola",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "Traversa e ossatura anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "Riserva airbag frontali se esplosi",
+    "low": 0,
+    "high": 1030
+   }
+  ],
+  "nota": "Peugeot 208 2022 incidentata davanti: il venditore dice motore funzionante, interni perfetti e posteriore intatto. Il prezzo (3.000 €) è molto basso: il danno frontale potrebbe essere importante. Se gli airbag non sono esplosi e i longheroni sono sani, il margine resta alto.",
+  "controlli": [
+   "Chiedere foto ravvicinate del frontale e del vano motore",
+   "Airbag esplosi? (spia, volante, cruscotto)",
+   "Longheroni e attacchi del frontale dritti (esclude danno strutturale)",
+   "L'auto si sposta da sola o serve il carro attrezzi"
+  ]
+ },
+ {
+  "id": 5079,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 2500,
+  "ricambi": [
+   {
+    "label": "Frontale (paraurti, fari, cofano, radiatori) - stima senza dettagli",
+    "low": 800,
+    "high": 1700
+   },
+   {
+    "label": "Riserva airbag se esplosi",
+    "low": 0,
+    "high": 800
+   }
+  ],
+  "nota": "Opel Corsa 2022 automatica, 78.000 km. Il titolo dice 'incidentata' (scritto 'indidentata') ma la descrizione non dice dove né quanto: stima prudente sul danno tipico. Prezzo trattabile.",
+  "controlli": [
+   "Chiedere dove è il danno e le foto",
+   "Airbag esplosi?",
+   "Cambio automatico funzionante dopo l'urto",
+   "Danno strutturale escluso"
+  ]
+ },
+ {
+  "id": 7578,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "minigonna",
+    "side": "dx",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "ammortizzatori",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 900,
+  "ricambi_max": 2000,
+  "ricambi": [
+   {
+    "label": "Portiere destre usate (2)",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "Parafango anteriore destro e specchietto",
+    "low": 160,
+    "high": 350
+   },
+   {
+    "label": "Braccio, montante e ammortizzatore anteriore destro",
+    "low": 250,
+    "high": 500
+   },
+   {
+    "label": "Cerchio e gomma",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "Minigonna e modanature",
+    "low": 60,
+    "high": 300
+   }
+  ],
+  "nota": "BMW 316d Touring 2016, 215.000 km, fiancata destra e sospensione da sistemare, si ritira con il carro attrezzi. Margine al limite della soglia: conviene solo se il sottoporta e il montante centrale sono sani.",
+  "controlli": [
+   "Sottoporta e montante centrale non deformati (se sì è danno strutturale: scartare)",
+   "Geometria e scatola sterzo dopo l'urto",
+   "Costo del carro attrezzi"
+  ]
+ },
+ {
+  "id": 9769,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [
+   {
+    "part": "airbag",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "radiatore",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 2500,
+  "ricambi_max": 4900,
+  "ricambi": [
+   {
+    "label": "Airbag volante e passeggero (usati)",
+    "low": 400,
+    "high": 700
+   },
+   {
+    "label": "Centralina airbag e pretensionatori",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "Cruscotto (se si è aperto l'airbag passeggero)",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "Frontale: paraurti, griglia, fari, cofano, radiatori (usato/aftermarket)",
+    "low": 1500,
+    "high": 3000
+   }
+  ],
+  "nota": "Audi Q5 2.0 TDI 2017 con airbag esplosi: urto frontale forte. Margine potenzialmente alto ma ad alto rischio: va vista di persona prima di qualsiasi offerta.",
+  "controlli": [
+   "Longheroni e traversa anteriore (se deformati: scartare)",
+   "Quali airbag sono esplosi (anche tendine?)",
+   "Cambio S tronic e trazione quattro dopo l'urto",
+   "Vano motore: radiatori, intercooler, supporti"
+  ]
+ },
+ {
+  "id": 9924,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [
+   {
+    "part": "motore_sostituzione",
+    "severity": "grave",
+    "source": "testo",
+    "note": "guasto non descritto"
+   }
+  ],
+  "ricambi_min": 500,
+  "ricambi_max": 3500,
+  "ricambi": [
+   {
+    "label": "Guasto non dichiarato: da turbina/EGR/FAP (500-1.500) fino a motore usato (3.000-3.500)",
+    "low": 500,
+    "high": 3500
+   }
+  ],
+  "nota": "Tiguan 2.0 TDI 2017, 200.000 km, 'da riparare' senza dire cosa. Il prezzo basso fa pensare a un guasto meccanico importante. Se il guasto è leggero l'affare è ottimo; se è il motore, il margine si riduce molto.",
+  "controlli": [
+   "Chiedere esattamente il guasto e se c'è una diagnosi scritta",
+   "L'auto parte e si muove?",
+   "Leggere gli errori in centralina prima dell'offerta"
+  ]
+ },
+ {
+  "id": 8815,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Alfa Stelvio 2022 dichiarata perfetta, unico proprietario, a circa 10.000 € sotto le simili: prezzo troppo basso per un'auto sana. Possibili truffa, finanziamento ancora da pagare, auto di importazione o km non reali.",
+  "controlli": [
+   "Visura al PRA: intestatario, fermi amministrativi, ipoteche",
+   "Mai pagare anticipi o caparre a distanza",
+   "Vedere l'auto e il libretto di persona",
+   "Storico chilometri dal libretto tagliandi e dalle revisioni"
+  ]
+ },
+ {
+  "id": 3452,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "frizione",
+    "severity": "leggero",
+    "source": "testo",
+    "note": "lavoro futuro segnalato dal venditore (descrizione tagliata)"
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 300,
+  "ricambi": [
+   {
+    "label": "Kit frizione o distribuzione (lavoro segnalato in descrizione)",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "rivendita_prudente": 4300,
+  "nota": "Panda 1.3 Multijet: è un diesel Euro 4, con limitazioni di circolazione in Lombardia (a Milano non entra in Area B): la rivendita è più difficile e la stima va ridotta. Km e anno incoerenti nell'annuncio (115.000 o 124.000; 2009 o 2010). Carrozzeria con segni e ammaccature.",
+  "controlli": [
+   "Quale lavoro va fatto 'in futuro' (descrizione tagliata)",
+   "Anno e km reali dal libretto",
+   "Ammaccature: solo estetiche o da sostituire"
+  ]
+ },
+ {
+  "id": 3198,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 3000,
+  "nota": "Panda 1.1 Actual del 2010 con soli 70.000 km, ma allestimento base senza aria condizionata, vetri elettrici e servosterzo: si rivende meno delle Panda usate come confronto. Con una rivendita realistica il margine scende sotto la soglia.",
+  "controlli": [
+   "Km reali dal libretto tagliandi",
+   "Ruggine sotto la scocca"
+  ]
+ },
+ {
+  "id": 7553,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 30,
+  "ricambi_max": 90,
+  "ricambi": [
+   {
+    "label": "Serratura o maniglia interna porta posteriore sinistra (usata/aftermarket)",
+    "low": 30,
+    "high": 90
+   }
+  ],
+  "nota": "Nissan Micra 2007: la porta posteriore sinistra non si apre, quasi sempre è la serratura o il tirante della maniglia. Margine al limite dei 1.000 €.",
+  "controlli": [
+   "Porta: serratura o danno alla carrozzeria",
+   "Ruggine e km reali"
+  ]
+ },
+ {
+  "id": 7552,
+  "esito": "scartata",
+  "nota": "Duplicato dello stesso annuncio della Micra (stesso venditore, stesso testo e foto)."
+ },
+ {
+  "id": 9706,
+  "esito": "scartata",
+  "nota": "Nessuna foto e nessuna descrizione: annuncio non valutabile."
+ },
+ {
+  "id": 9767,
+  "esito": "scartata",
+  "nota": "Golf 6 1.4 TSI 2011: i km sono 270.000 (scritti '270'), non 270. Con i km veri vale circa 4.500 €: margine sotto soglia."
+ },
+ {
+  "id": 789,
+  "esito": "scartata",
+  "nota": "Microcar elettrica 50cc senza patente (quadriciclo), non un'auto: confronto con le auto non valido."
+ },
+ {
+  "id": 10328,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [
+   {
+    "part": "distribuzione",
+    "severity": "grave",
+    "source": "testo",
+    "note": "catena rotta, auto non marciante"
+   }
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 2500,
+  "ricambi": [
+   {
+    "label": "Kit catena distribuzione 1.4 TSI",
+    "low": 250,
+    "high": 450
+   },
+   {
+    "label": "Riserva testata/valvole se piegate (o motore usato)",
+    "low": 150,
+    "high": 2050
+   }
+  ],
+  "nota": "Tiguan 1.4 TSI 4Motion 2008, 175.000 km, catena di distribuzione rotta, non marciante, 'per operatori del settore'. Con la catena rotta le valvole sono spesso piegate: il costo può salire molto. Margine al limite.",
+  "controlli": [
+   "Prova di compressione: valvole piegate o no",
+   "Costo del carro attrezzi",
+   "Il resto della meccanica (cambio, trazione 4Motion)"
+  ]
+ },
+ {
+  "id": 9540,
+  "esito": "scartata",
+  "nota": "Golf 5 1.6 FSI 2006: i km sono 340.000 (scritti '3400'). Vale circa 2.000-2.500 €: nessun margine."
+ },
+ {
+  "id": 10084,
+  "esito": "scartata",
+  "nota": "Audi A3 2017 automatica a 2.500 € (vale oltre 10.000 €): testo copiato da un vecchio annuncio (bollo 'fino ad aprile 2024'). Truffa probabile."
+ },
+ {
+  "id": 5389,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 4900,
+  "nota": "BMW 320d 177 CV 2009, 140.000 km, venduta per limiti di età: solo segni di parcheggio e righe (lavoro di carrozzeria, nessun pezzo). La stima del modello era troppo alta: una E90 320d del 2009 si rivende sui 5.000-5.500 €. Margine vicino alla soglia: conviene se si tratta.",
+  "controlli": [
+   "Motore N47: rumore della catena di distribuzione a freddo",
+   "Classe Euro (4 o 5) sul libretto: Euro 4 non entra in Area B",
+   "Km reali dalle revisioni"
+  ]
+ },
+ {
+  "id": 10417,
+  "esito": "scartata",
+  "nota": "Grande Punto van autocarro 2 posti, 210.000 km: si rivende poco (non è un'auto per famiglie). Margine sotto soglia."
+ },
+ {
+  "id": 7374,
+  "esito": "scartata",
+  "nota": "Clio 1.2 SporTour 2010, 120.000 km: con una rivendita realistica (circa 4.300 €) il margine scende sotto la soglia di 2.000 €."
+ },
+ {
+  "id": 6723,
+  "esito": "scartata",
+  "nota": "Audi A3 1.6 TDI 2011, 220.000 km, 'problemi meccanici' non descritti: con un guasto ignoto e la rivendita realistica il margine sparisce."
+ },
+ {
+  "id": 4147,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 3500,
+  "nota": "Citroen C3 2009 con soli 56.000 km, unico proprietario, adatta ai neopatentati. Descrizione minima. Margine contenuto (circa 1.300 €) ma con un'auto facile da rivendere.",
+  "controlli": [
+   "Km reali dalle revisioni sul Portale dell'Automobilista",
+   "Cilindrata (annuncio dice 1.1 e 1200 cc)",
+   "Ruggine e stato frizione"
+  ]
+ },
+ {
+  "id": 5060,
+  "esito": "scartata",
+  "nota": "Golf 1.4 TSI 2013: i km sono 167.000 (scritti '167'). Con i km veri vale circa 9.500 €: margine sotto soglia."
+ },
+ {
+  "id": 10116,
+  "esito": "scartata",
+  "nota": "Jeep Renegade 2017 'perfetta' a 5.500 € (vale circa 11.000 €), testo tradotto ('120 ch'): truffa probabile."
+ },
+ {
+  "id": 10387,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [
+   {
+    "part": "fap_egr",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 650,
+  "ricambi_max": 2100,
+  "ricambi": [
+   {
+    "label": "FAP/DPF (pulizia o aftermarket)",
+    "low": 300,
+    "high": 1200
+   },
+   {
+    "label": "Cielo e pannelli porte usati",
+    "low": 200,
+    "high": 500
+   },
+   {
+    "label": "Radio/sistema multimediale usato",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "nota": "Jeep Renegade 2.0 4x4 diesel 2019, 126.000 km: FAP intasato, interni da cambiare (cielo e pannelli porte), radio mancante, carrozzeria appena riverniciata, 'solo operatori del settore'. Interni da rifare più carrozzeria riverniciata possono indicare un'auto alluvionata o recuperata dopo un furto: va vista di persona.",
+  "controlli": [
+   "Segni di acqua: ruggine sotto i sedili, moquette, centraline, odore di umido",
+   "Perché è stata riverniciata (incidente?)",
+   "Visura PRA e storico: furto o sinistro",
+   "FAP: diagnosi"
+  ]
+ },
+ {
+  "id": 4460,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [
+   {
+    "part": "ammortizzatori",
+    "severity": "grave",
+    "source": "testo",
+    "note": "asse uscito"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 1500,
+  "ricambi_max": 4000,
+  "ricambi": [
+   {
+    "label": "Assale/sospensione (usato)",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "Carrozzeria rotta: pannelli e paraurti (stima senza foto)",
+    "low": 800,
+    "high": 2200
+   },
+   {
+    "label": "Riserva per danni nascosti",
+    "low": 400,
+    "high": 1000
+   }
+  ],
+  "nota": "Ypsilon 2021, 90.000 km, a 1.000 €: 'asse completamente uscito e carrozzeria rotta', motore e centralina intatti. Urto forte: se il telaio è sano il margine è molto alto, ma il rischio di danno strutturale è serio.",
+  "controlli": [
+   "Telaio e attacchi dell'assale non deformati (altrimenti scartare)",
+   "Airbag esplosi?",
+   "Foto complete della carrozzeria"
+  ]
+ },
+ {
+  "id": 10037,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "parabrezza",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 320,
+  "ricambi_max": 530,
+  "rivendita_prudente": 3300,
+  "ricambi": [
+   {
+    "label": "Parabrezza (aftermarket)",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "4 gomme",
+    "low": 200,
+    "high": 280
+   }
+  ],
+  "nota": "Citroen C3 1.4 GPL 2011, 225.000 km, leggermente grandinata, parabrezza e gomme da cambiare, bombola GPL valida fino al 2031. La grandine abbassa la rivendita (stima ridotta a 3.300 €). Margine intorno ai 1.000 €, prezzo trattabile.",
+  "controlli": [
+   "Quanta grandine: solo bolle leggere o tetto rovinato",
+   "Altri 'lavoretti' citati: quali",
+   "Impianto GPL a norma"
+  ]
+ },
+ {
+  "id": 8923,
+  "esito": "scartata",
+  "nota": "Smart EQ fortwo cabrio elettrica 2021: le elettriche si sono svalutate molto, la stima del modello (senza auto simili) è troppo alta. Rivendita realistica vicina al prezzo richiesto."
+ },
+ {
+  "id": 7425,
+  "esito": "scartata",
+  "nota": "Peugeot 3008 Hybrid4 2023 a 14.300 € (vale circa 25.000 €): due annunci con lo stesso testo, colori e città diversi. Truffa probabile."
+ },
+ {
+  "id": 9768,
+  "esito": "scartata",
+  "nota": "Peugeot 3008 Hybrid4 2023: secondo annuncio con lo stesso testo dell'altro (colore e città diversi). Truffa probabile."
+ },
+ {
+  "id": 5,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Nissan Qashqai 2025 'pari al nuovo' a 17.499 €, circa 30% sotto le simili, con testo da concessionario. Possibile truffa o commerciante che si finge privato.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Mai pagare anticipi a distanza",
+   "Vedere auto e libretto di persona"
+  ]
+ },
+ {
+  "id": 9641,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "frizione",
+    "severity": "medio",
+    "source": "testo",
+    "note": "marce non entrano a motore acceso"
+   },
+   {
+    "part": "iniettori",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 420,
+  "rivendita_prudente": 2600,
+  "ricambi": [
+   {
+    "label": "Kit frizione con cilindretto/pompa",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "2 iniettori benzina",
+    "low": 50,
+    "high": 120
+   }
+  ],
+  "nota": "Clio 1.6 16V 2007, 170.000 km, a 900 €: le marce non entrano a motore acceso (quasi sempre frizione o comando idraulico) e 2 iniettori da cambiare. Rivendita realistica circa 2.600 €. Margine intorno ai 1.100 €.",
+  "controlli": [
+   "Frizione o cambio: diagnosi",
+   "Iniettori: prova motore",
+   "Ruggine e km reali"
+  ]
+ },
+ {
+  "id": 2729,
+  "esito": "scartata",
+  "nota": "Golf 1.4 del 1993 (auto storica): mercato da collezione, non confrontabile; margine non dimostrabile."
+ },
+ {
+  "id": 3551,
+  "esito": "scartata",
+  "nota": "Golf 1.6 2007, 307.000 km, a 1.000 €: vale circa 1.800-2.000 €. Margine sotto soglia."
+ },
+ {
+  "id": 9627,
+  "esito": "scartata",
+  "nota": "Clio 1.2 del 2000, 190.000 km, a 800 €: vale circa 1.200-1.500 €. Margine sotto soglia."
+ },
+ {
+  "id": 2927,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [
+   {
+    "part": "motore_sostituzione",
+    "severity": "grave",
+    "source": "testo",
+    "note": "problemi motore non descritti"
+   },
+   {
+    "part": "ammortizzatori",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi_min": 500,
+  "ricambi_max": 1500,
+  "rivendita_prudente": 3000,
+  "ricambi": [
+   {
+    "label": "Problemi motore non descritti (stima)",
+    "low": 300,
+    "high": 1100
+   },
+   {
+    "label": "Sospensioni",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "nota": "Clio 1.2 GPL 2014, 240.000 km, a 1.000 €: 'problemi motore, FAP, sospensioni' (un benzina GPL non ha il FAP: descrizione confusa). Guasto da capire prima di qualsiasi offerta.",
+  "controlli": [
+   "Quale problema motore: diagnosi",
+   "Impianto GPL e scadenza bombola"
+  ]
+ },
+ {
+  "id": 9558,
+  "esito": "scartata",
+  "nota": "Audi A3 1.6 del 2001 con molti piccoli difetti (sonda lambda, ammortizzatori, alzavetro, chiusura, fari): vale circa 2.000-2.300 €, margine sotto soglia."
+ }
 ]

@@ -37,6 +37,11 @@ def apply_model(v, l: Listing, model: dict | None) -> bool:
     """Sostituisce una stima debole con quella del modello addestrato. True se applicata."""
     if not model:
         return False
+    # il modello è affidabile solo su auto normali e recenti, con km plausibili
+    age = date.today().year - (l.year or 0)
+    if not l.year or l.year < 2008 or l.fuel in (None, "altro") or l.mileage_km is None \
+            or (age >= 2 and l.mileage_km < 5000):
+        return False
     p = predict(model, l)
     if not p or p["level"] not in ("mmf", "mm") or p["spread"] > MAX_SPREAD:
         return False
