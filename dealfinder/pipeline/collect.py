@@ -65,6 +65,12 @@ def run(mode: str) -> Counter:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     mode = sys.argv[1] if len(sys.argv) > 1 else "opportunita"
+    import os
+    if os.environ.get("SUBITO_PROBE") == "1":
+        # Diagnostica di accesso: nessuna raccolta finché la variabile è attiva
+        from ..collectors.probe import run as probe_run
+        probe_run()
+        sys.exit(0)
     run(mode)
     if mode in ("opportunita", "facebook") and "--senza-analisi" not in sys.argv:
         from .process import run as process_run
