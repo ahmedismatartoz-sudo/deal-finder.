@@ -46,10 +46,7 @@ API_HEADERS = {
 # Interfaccia interna usata dal sito: annunci già strutturati.
 # c=2 auto, t=s vendita, r=4 Lombardia, ordinati dal più recente.
 API_SEARCH = "https://hades.subito.it/v1/search/items"
-REGION_CODES = {"valle-d-aosta": 1, "piemonte": 2, "liguria": 3, "lombardia": 4, "trentino-alto-adige": 5,
-                "veneto": 6, "friuli-venezia-giulia": 7, "emilia-romagna": 8, "toscana": 9, "umbria": 10,
-                "marche": 11, "lazio": 12, "abruzzo": 13, "molise": 14, "campania": 15, "puglia": 16,
-                "basilicata": 17, "calabria": 18, "sicilia": 19, "sardegna": 20}
+REGION_CODES = {"lombardia": 4}
 PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG", "brescia": "BS",
                   "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",
                   "cremona": "CR", "mantova": "MN", "sondrio": "SO"}
@@ -252,7 +249,7 @@ class SubitoCollector(Collector):
                 if not listing:
                     continue
                 seen += 1
-                if wanted and listing.province and listing.province.upper() not in wanted:
+                if listing.province and listing.province.upper() not in wanted:
                     continue
                 if listing.price_eur is not None and listing.price_eur > query["max_price"]:
                     continue
