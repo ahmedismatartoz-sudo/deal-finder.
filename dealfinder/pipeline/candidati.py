@@ -31,6 +31,28 @@ MAX_EXPORT = int(os.environ.get("MAX_CANDIDATI", "400"))
 DAMAGE_ROOM = 800
 
 
+BANDS = [(500, 2000), (2000, 5000), (5000, 8000), (8000, 12000), (12000, 20001)]
+
+
+def balanced(items: list, limit: int) -> list:
+    """Stessa quota per ogni fascia di prezzo e stato (sana / con problemi); i posti non usati
+    vanno ai migliori rimasti. Dentro ogni gruppo vince il margine più alto e solido."""
+    items = sorted(items, key=lambda x: -x[0])
+    groups: dict = {}
+    for it in items:
+        price, damaged = it[2].price_eur, it[6]
+        band = next((b for b in BANDS if b[0] <= price < b[1]), BANDS[-1])
+        groups.setdefault((band, damaged), []).append(it)
+    quota = max(1, limit // (len(BANDS) * 2))
+    chosen, rest = [], []
+    for g in groups.values():
+        chosen += g[:quota]
+        rest += g[quota:]
+    rest.sort(key=lambda x: -x[0])
+    chosen += rest[:max(0, limit - len(chosen))]
+    return chosen
+
+
 def run() -> dict:
     stats: Counter = Counter()
     out = []
@@ -58,8 +80,8 @@ def run() -> dict:
             damaged = bool(hints or l.damage_declared or r.get("problem_search"))
             l.damage_class = "nessuno"                 # rivendita calcolata da auto sistemata
             v = value_listing(l, cache[key])
-            if v.resale_prudent is None:
-                stats["nessun_confronto"] += 1
+            if v.resale_prudent is None or v.n_comparables < 4 or (v.dispersion or 0) > 0.35:
+                stats["stima_poco_solida"] += 1
                 continue
             m = compute_margin(l, v, costs)
             need = m.threshold + (DAMAGE_ROOM if damaged else 0)
@@ -69,8 +91,7 @@ def run() -> dict:
             if "prezzo_troppo_basso" in v.fraud_flags and not damaged:
                 stats["sospetto"] += 1
             out.append((m.score, r, l, v, m, hints, damaged))
-        out.sort(key=lambda x: -x[0])
-        out = out[:MAX_EXPORT]
+        out = balanced(out, MAX_EXPORT)
         stats.update(verify_rows(conn, [x[1] for x in out]))
         alive = {x["id"] for x in conn.execute(
             "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'", ([x[1]["id"] for x in out],)).fetchall()}

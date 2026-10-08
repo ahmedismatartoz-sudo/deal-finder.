@@ -50,6 +50,8 @@ def run() -> None:
     from .process import run as process
 
     step("opportunita", collect, "opportunita")
+    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", 6):
+        step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")
         step("modello", train, not _has_model())
