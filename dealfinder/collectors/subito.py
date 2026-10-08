@@ -160,12 +160,28 @@ class SubitoCollector(Collector):
     source = "subito"
 
     def __init__(self, client=None, proxy: str | None = None):
+        import os
+
         import httpx
         self.client = client or httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True,
                                              proxy=proxy)
+        # Subito blocca le richieste dai server cloud (HTTP 403): se configurato,
+        # le pagine passano dal Web Unlocker di Bright Data (stesso account dello scraper Facebook).
+        self.unlocker_zone = os.environ.get("BRIGHTDATA_UNLOCKER_ZONE")
+        self.unlocker_key = os.environ.get("BRIGHTDATA_API_KEY")
+        if self.unlocker_zone and self.unlocker_key:
+            self.min_delay_s, self.max_delay_s = 1.0, 2.5   # il ritmo lo gestisce il fornitore
 
     def _get(self, url: str):
-        r = self.client.get(url)
+        if self.unlocker_zone and self.unlocker_key:
+            r = self.client.post("https://api.brightdata.com/request",
+                                 headers={"Authorization": f"Bearer {self.unlocker_key}"},
+                                 json={"zone": self.unlocker_zone, "url": url, "format": "raw", "country": "it"},
+                                 timeout=120)
+            if r.headers.get("x-brd-error"):
+                log.warning("unlocker: %s per %s", r.headers.get("x-brd-error")[:200], url)
+        else:
+            r = self.client.get(url)
         self.pause()
         return r
 

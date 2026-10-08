@@ -11,6 +11,8 @@ envVarGroups:
         sync: false
       - key: BRIGHTDATA_LIMIT
         value: "300"
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        sync: false
       - key: SCRAPER_PROXY
         sync: false
       - key: PLATE_LOOKUP_URL
