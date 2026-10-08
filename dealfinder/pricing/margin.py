@@ -1,0 +1,124 @@
+"""Margine per singolo commerciante, soglie, classifica, regola delle aperture.
+
+La manodopera NON è inclusa: Deal Finder stima solo i ricambi; ogni
+commerciante valuta il lavoro con la propria officina.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from ..core.models import Listing
+from .engine import Valuation
+
+MAX_DEALER_OPENS = 7
+VAT_RATE = 0.22
+
+
+@dataclass
+class DealerCosts:
+    transport_eur: int = 150
+    paperwork_eur: int = 450
+    preparation_eur: int = 300
+    contingency_pct: float = 0.05
+    contingency_damaged_pct: float = 0.15
+    warranty_reserve_eur: int = 200
+    vat_margin_scheme: bool = True
+    threshold_low_eur: int = 2000
+    threshold_high_eur: int = 3000
+    threshold_split_eur: int = 5000     # sul prezzo di acquisto
+
+
+@dataclass
+class MarginResult:
+    purchase: int
+    resale_prudent: int
+    parts_cost: int
+    fixed_costs: int
+    contingency: int
+    vat_on_margin: int
+    net_margin: int
+    threshold: int
+    status: str                         # opportunita | da_verificare | scartata
+    score: float = 0.0
+    breakdown: dict = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)
+
+
+def compute_margin(listing: Listing, val: Valuation, costs: DealerCosts,
+                   parts_cost_high: int | None = None) -> MarginResult | None:
+    if val.resale_prudent is None or listing.price_eur is None:
+        return None
+
+    damaged = listing.damage_class in ("leggero", "medio") or bool(listing.damage_items)
+    notes = ["manodopera_esclusa"] if damaged else []
+    if damaged and parts_cost_high is None:
+        notes.append("ricambi_non_stimati")
+
+    purchase = listing.price_eur
+    parts = parts_cost_high or 0
+    fixed = costs.transport_eur + costs.paperwork_eur + costs.preparation_eur + costs.warranty_reserve_eur
+    pct = costs.contingency_damaged_pct if damaged else costs.contingency_pct
+    contingency = round(pct * (purchase + parts))
+
+    gross = val.resale_prudent - purchase - parts - fixed - contingency
+    # Regime del margine: IVA sulla differenza vendita - acquisto (scorporata)
+    vat_base = max(0, val.resale_prudent - purchase) if costs.vat_margin_scheme else max(0, gross)
+    vat = round(vat_base * VAT_RATE / (1 + VAT_RATE))
+    net = gross - vat
+
+    threshold = costs.threshold_low_eur if purchase < costs.threshold_split_eur else costs.threshold_high_eur
+
+    if net < threshold:
+        status = "scartata"
+    elif val.confidence != "affidabile" or "ricambi_non_stimati" in notes:
+        status = "da_verificare"
+    else:
+        status = "opportunita"
+
+    res = MarginResult(purchase=purchase, resale_prudent=val.resale_prudent, parts_cost=parts,
+                       fixed_costs=fixed, contingency=contingency, vat_on_margin=vat,
+                       net_margin=net, threshold=threshold, status=status, notes=notes,
+                       breakdown={"trasporto": costs.transport_eur, "pratiche": costs.paperwork_eur,
+                                  "preparazione": costs.preparation_eur,
+                                  "riserva_garanzia": costs.warranty_reserve_eur})
+    res.score = rank_score(res, val, listing)
+    return res
+
+
+def liquidity_factor(days: float | None) -> float:
+    if days is None:
+        return 0.85
+    if days <= 30:
+        return 1.0
+    if days <= 60:
+        return 0.9
+    if days <= 90:
+        return 0.8
+    return 0.65
+
+
+def risk_penalty(val: Valuation, listing: Listing) -> float:
+    """0 = nessun rischio, 1 = massimo. Pesi iniziali, da tarare."""
+    r = 0.0
+    if listing.damage_class in ("leggero", "medio"):
+        r += 0.15
+    if listing.damage_class == "sconosciuto":
+        r += 0.10
+    if val.fraud_flags:
+        r += 0.30
+    if val.dispersion and val.dispersion > 0.15:
+        r += 0.10
+    if len(listing.missing_fields) > 2:
+        r += 0.10
+    return min(r, 0.8)
+
+
+def rank_score(m: MarginResult, val: Valuation, listing: Listing) -> float:
+    conf = 1.0 if val.confidence == "affidabile" else 0.7
+    return round(m.net_margin * conf * liquidity_factor(val.liquidity_days)
+                 * (1 - risk_penalty(val, listing)), 1)
+
+
+def visible_for_dealers(distinct_dealers_opened: int) -> bool:
+    """L'annuncio sparisce dopo 7 commercianti diversi che hanno aperto il link."""
+    return distinct_dealers_opened < MAX_DEALER_OPENS
