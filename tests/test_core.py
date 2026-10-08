@@ -173,3 +173,13 @@ def test_brightdata_parse():
     assert parse_row({**row, "is_sold": True}) is None
     assert parse_row({**row, "currency": "USD"}) is None
     assert parse_row({**row, "final_price": 25000}) is None
+
+
+def test_make_model_from_title():
+    from dealfinder.core.vehicles import make_model_from_title as mm
+    assert mm("2016 Volkswagen Golf 1.6 TDI") == ("volkswagen", "golf")
+    assert mm("Fiat Panda 1.2 2015") == ("fiat", "panda")
+    assert mm("2019 Mercedes-Benz Classe A 180d") == ("mercedes-benz", "classe-a")
+    assert mm("BMW Serie 1 118d") == ("bmw", "serie-1")
+    assert mm("Alfa Romeo Giulietta") == ("alfa-romeo", "giulietta")
+    assert mm("Vendo auto ottimo stato") == (None, None)

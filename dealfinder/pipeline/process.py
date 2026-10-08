@@ -72,6 +72,11 @@ def screen(conn) -> Counter:
         lid = row["id"]
         l = row_to_listing(row, photos_of(conn, lid))
         try:
+            if l.seller_type == "commerciante":
+                # Si compra da privati: gli annunci dei concessionari servono solo alla base dei prezzi
+                set_stage(conn, lid, "mercato", "venditore_commerciante")
+                stats["solo_mercato_commerciante"] += 1
+                continue
             if set(l.price_flags) & EXCLUDE_FLAGS:
                 set_stage(conn, lid, "scartato", "prezzo_non_affidabile")
                 stats["scartato_prezzo"] += 1

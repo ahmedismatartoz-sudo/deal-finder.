@@ -26,6 +26,7 @@ from typing import Iterator
 from urllib.parse import urlencode
 
 from ..core.models import Listing
+from ..core.vehicles import make_model_from_title
 from .base import Collector
 
 log = logging.getLogger(__name__)
@@ -94,10 +95,12 @@ def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
     city = loc.get("city") if isinstance(loc, dict) else (str(loc).split(",")[0].strip() if loc else None)
     trans = row.get("transmission")
     images = [i for i in (row.get("images") or []) if isinstance(i, str) and i.startswith("https://")]
+    t_make, t_model = make_model_from_title(title)
     return Listing(
         source="facebook", source_id=str(pid), url=str(url).split("?")[0],
         title=title or None, description=desc or None,
-        make=row.get("brand") or None,
+        make=row.get("brand") or t_make,
+        model=t_model,
         year=int(m.group(1)) if m else None,
         mileage_km=mileage_from(row),
         gearbox={"MANUAL": "manuale", "AUTOMATIC": "automatico"}.get(str(trans).upper()) if trans else None,
@@ -174,6 +177,21 @@ class BrightDataFacebookCollector(Collector):
         log.info("Bright Data: snapshot %s avviato per %d ricerche", sid, len(urls))
         self.wait(sid)
         rows = self.download(sid)
+        same = miles = other = 0
+        for row in rows:
+            if not isinstance(row, dict) or not isinstance(row.get("car_miles"), (int, float)):
+                continue
+            vals = {int(re.sub(r"[ .]", "", x)) for x in RE_KM.findall(row.get("description") or "")}
+            if not vals:
+                continue
+            cm = int(row["car_miles"])
+            if cm in vals:
+                same += 1
+            elif any(abs(v / 1.609 - cm) < 0.03 * v for v in vals):
+                miles += 1
+            else:
+                other += 1
+        log.info("Bright Data km: campo fornitore uguale ai km scritti %d, in miglia %d, diverso %d", same, miles, other)
         kept = 0
         for row in rows:
             listing = parse_row(row, max_price)
