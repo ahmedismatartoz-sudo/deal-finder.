@@ -21,6 +21,8 @@ from ..config import settings
 from ..core.normalize import problem_hint
 from ..db import connect, log_job
 from ..pricing.engine import value_listing
+from ..pricing.fallback import apply_model, estimate_missing_km, weak
+from ..pricing.train import load_active
 from ..pricing.margin import DealerCosts, compute_margin
 from ..store import load_market, photos_of, row_to_listing
 from .verify import verify_rows
@@ -68,8 +70,10 @@ def run() -> dict:
         stats["esaminati"] = len(rows)
         cache: dict = {}
         costs = DealerCosts()
+        model = load_active(conn)
         for r in rows:
             l = row_to_listing(r)
+            km_est = estimate_missing_km(l)
             if not (l.make and l.model and l.year and l.mileage_km is not None):
                 stats["dati_mancanti"] += 1
                 continue
@@ -80,23 +84,29 @@ def run() -> dict:
             damaged = bool(hints or l.damage_declared or r.get("problem_search"))
             l.damage_class = "nessuno"                 # rivendita calcolata da auto sistemata
             v = value_listing(l, cache[key])
-            if v.resale_prudent is None or v.n_comparables < 4 or (v.dispersion or 0) > 0.35:
-                stats["stima_poco_solida"] += 1
-                continue
+            from_model = False
+            if weak(v):
+                from_model = apply_model(v, l, model)
+                if not from_model:
+                    stats["stima_poco_solida"] += 1
+                    continue
+                stats["stima_da_modello"] += 1
             m = compute_margin(l, v, costs)
             need = m.threshold + (DAMAGE_ROOM if damaged else 0)
+            if from_model or km_est:
+                need = round(need * 1.2)             # stima meno solida: serve più margine
             if m.net_margin < need:
                 stats["margine_insufficiente"] += 1
                 continue
             if "prezzo_troppo_basso" in v.fraud_flags and not damaged:
                 stats["sospetto"] += 1
-            out.append((m.score, r, l, v, m, hints, damaged))
+            out.append((m.score, r, l, v, m, hints, damaged, from_model, km_est))
         out = balanced(out, MAX_EXPORT)
         stats.update(verify_rows(conn, [x[1] for x in out]))
         alive = {x["id"] for x in conn.execute(
             "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'", ([x[1]["id"] for x in out],)).fetchall()}
         n = 0
-        for score, r, l, v, m, hints, damaged in out:
+        for score, r, l, v, m, hints, damaged, from_model, km_est in out:
             if r["id"] not in alive:
                 continue
             n += 1
@@ -108,7 +118,8 @@ def run() -> dict:
                    "confronti": v.n_comparables, "livello_confronti": v.comparable_level, "dispersione": v.dispersion,
                    "margine_prima_ricambi": m.net_margin, "soglia": m.threshold, "con_problemi": damaged,
                    "parole_problema": hints, "mediana_da_sistemare": v.asis_median, "segnali": v.fraud_flags,
-                   "giorni_vendita_simili": v.liquidity_days, "foto": photos_of(conn, r["id"])[:3]}
+                   "giorni_vendita_simili": v.liquidity_days,
+                   "stima": "modello" if from_model else "confronti", "km_stimati": km_est, "foto": photos_of(conn, r["id"])[:3]}
             log.info("CANDIDATO %s", json.dumps(rec, ensure_ascii=False, default=str))
         stats["esportati"] = n
         finish(True, dict(stats))

@@ -7,6 +7,7 @@ from ..core.models import Listing
 from .engine import Valuation
 
 REASON_LABELS = {
+    "stima_da_modello": "Poche auto simili in vendita: prezzo stimato dal modello addestrato su tutto il mercato",
     "stato_non_verificato": "Le foto non bastano per confermare che l'auto sia senza danni",
     "danni_da_verificare": "Danni presenti: costo ricambi stimato, da verificare dal vivo",
     "confronti_solo_livello_largo": "Confronti trovati solo tra auto meno simili",

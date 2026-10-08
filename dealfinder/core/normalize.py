@@ -27,7 +27,7 @@ RE_PLUS_IVA = re.compile(r"\+\s*iva|iva\s*esclusa|esclusa\s*iva|oltre\s*iva", re
 RE_LEASING = re.compile(r"\b(rata|rate|al\s*mese|/\s*mese|leasing|noleggio|anticipo|finanziamento\s+da)\b", re.I)
 RE_IMPORT = re.compile(r"\b(da\s+immatricolare|import(azione)?|km\s*0\s*estero|targa\s+(tedesca|estera))\b", re.I)
 RE_PROBLEM = re.compile(
-    r"\b(incidentat[ao]|sinistrat[ao]|danneggiat[ao]|grandinat[ao]|da sistemare|da riparare|da rivedere|"
+    r"\b(incident(?:at)?[ao]|indidentat[ao]|incidntat[ao]|sinistrat[ao]|danneggiat[ao]|grandinat[ao]|da sistemare|da riparare|da rivedere|"
     r"non (?:parte|si accende|va in moto)|guast[oai]|rott[oaie]|spia (?:motore|accesa|airbag)|"
     r"frizione (?:da|che) |distribuzione da|turbina (?:da|rotta)|motore (?:da|fuso|rotto|grippato)|"
     r"cambio (?:da|rotto)|fumo bianco|perde olio|batte in testa|cos[iì] com['’]? ?[eè]|per commercianti|"
