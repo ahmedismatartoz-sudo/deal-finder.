@@ -51,7 +51,10 @@ def quick_potential(listing, market) -> tuple[bool, str, object]:
     if v.resale_median is None:
         return False, "nessun_confronto", v
     costs = DealerCosts()
-    threshold = costs.threshold_low_eur if listing.price_eur < costs.threshold_split_eur else costs.threshold_high_eur
+    if listing.price_eur <= costs.threshold_cheap_max_eur:
+        threshold = costs.threshold_cheap_eur
+    else:
+        threshold = costs.threshold_low_eur if listing.price_eur < costs.threshold_split_eur else costs.threshold_high_eur
     fixed = costs.transport_eur + costs.paperwork_eur + costs.preparation_eur + costs.warranty_reserve_eur
     potential = v.resale_median - listing.price_eur - fixed
     # Margine teorico generoso: se nemmeno così supera il 70% della soglia, si scarta
@@ -67,7 +70,8 @@ def screen(conn) -> Counter:
         """SELECT * FROM listings WHERE stage IN ('nuovo','attesa_mercato') AND status='attivo'
              AND price_eur IS NOT NULL AND price_eur <= %s
              AND (province = ANY(%s) OR source='facebook')
-           ORDER BY first_seen_at DESC LIMIT %s""",
+           ORDER BY (price_eur BETWEEN 800 AND 2500) DESC, (prescreen = 'interessante') DESC,
+                    problem_search DESC, first_seen_at DESC LIMIT %s""",
         (settings.max_purchase_eur, list(OPPORTUNITY_PROVINCES), BATCH)).fetchall()
     market_cache: dict = {}
     for row in rows:
@@ -155,7 +159,8 @@ def deep(conn) -> Counter:
     sink = db_usage_sink(conn)
     cache_get, cache_put = parts_agent.db_cache(conn)
     rows = conn.execute("SELECT * FROM listings WHERE stage='candidato' AND status='attivo' "
-                        "ORDER BY first_seen_at DESC LIMIT %s", (DEEP_BATCH,)).fetchall()
+                        "ORDER BY (price_eur BETWEEN 800 AND 2500) DESC, first_seen_at DESC LIMIT %s",
+                        (DEEP_BATCH,)).fetchall()
     # Prima di spendere in analisi: l'annuncio esiste ancora?
     stats.update(verify_rows(conn, rows))
     alive = {r["id"] for r in conn.execute(

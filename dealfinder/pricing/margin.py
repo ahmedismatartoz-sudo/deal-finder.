@@ -28,6 +28,8 @@ class DealerCosts:
     threshold_low_eur: int = 2000
     threshold_high_eur: int = 3000
     threshold_split_eur: int = 5000     # sul prezzo di acquisto
+    threshold_cheap_eur: int = 1000     # auto economiche: margine minimo per comparire
+    threshold_cheap_max_eur: int = 2000 # fino a questo prezzo di acquisto vale la soglia "economica"
 
 
 @dataclass
@@ -82,7 +84,12 @@ def compute_margin(listing: Listing, val: Valuation, costs: DealerCosts,
         vat = round(max(0, val.resale_prudent - purchase) * VAT_RATE / (1 + VAT_RATE))
     net = gross - vat
 
-    threshold = costs.threshold_low_eur if purchase < costs.threshold_split_eur else costs.threshold_high_eur
+    if purchase <= costs.threshold_cheap_max_eur:
+        threshold = costs.threshold_cheap_eur
+    elif purchase < costs.threshold_split_eur:
+        threshold = costs.threshold_low_eur
+    else:
+        threshold = costs.threshold_high_eur
 
     if net < threshold:
         status = "scartata"
@@ -133,7 +140,9 @@ def risk_penalty(val: Valuation, listing: Listing) -> float:
 
 def rank_score(m: MarginResult, val: Valuation, listing: Listing) -> float:
     conf = 1.0 if val.confidence == "affidabile" else 0.7
-    return round(m.net_margin * conf * liquidity_factor(val.liquidity_days)
+    roi = max(0.0, m.net_margin) / max(m.purchase, 500)
+    roi_boost = 1 + 0.3 * min(roi, 3.0)       # 1.000 € di acquisto e 2.000 € di margine: +60%
+    return round(m.net_margin * conf * roi_boost * liquidity_factor(val.liquidity_days)
                  * (1 - risk_penalty(val, listing)), 1)
 
 

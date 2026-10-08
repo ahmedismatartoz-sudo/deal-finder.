@@ -15,7 +15,8 @@ from ..web import cards
 from ..web.app import LIST_SQL
 
 log = logging.getLogger("bande")
-BANDS = [(0, 5000), (5000, 8000), (8000, 11000), (11000, 14000), (14000, 17000), (17000, 20000)]
+BANDS = [(1000, 2000), (2000, 5000), (5000, 8000), (8000, 11000), (11000, 14000), (14000, 17000), (17000, 20000)]
+PER_BAND = {(1000, 2000): 10}
 
 
 def run(per_band: int = 3) -> dict:
@@ -34,7 +35,7 @@ def run(per_band: int = 3) -> dict:
         key = f"{lo}-{hi}"
         out[key] = {"trovate": len(sel), "migliori": [
             {k: c[k] for k in ("id", "title", "source", "price", "resale_prudent", "parts_cost", "net_margin",
-                               "risk", "damage_class", "city", "km", "year")} for c in sel[:per_band]]}
+                               "risk", "damage_class", "city", "km", "year")} for c in sel[:PER_BAND.get((lo, hi), per_band)]]}
         log.info("FASCIA %s: %s", key, json.dumps(out[key], ensure_ascii=False, default=str))
     return out
 

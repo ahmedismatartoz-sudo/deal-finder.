@@ -8,6 +8,7 @@ Uso:
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from collections import Counter
 
@@ -37,7 +38,8 @@ def run(mode: str) -> Counter:
         q = {"region": settings.region, "provinces": provinces,
              "max_price": max_price, "max_pages": settings.max_pages_per_province}
         if mode == "opportunita":
-            q.update(problem_keywords=list(settings.problem_keywords), problem_pages=settings.problem_pages)
+            q.update(problem_keywords=list(settings.problem_keywords), problem_pages=settings.problem_pages,
+                     cheap_pages=int(os.environ.get("CHEAP_PAGES", "5")))
         sources = [(subito, q)]
 
     with connect() as conn:

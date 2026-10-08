@@ -223,3 +223,18 @@ def test_price_model_train_predict_prescreen():
     assert prescreen(model, fair)["esito"] == "non_interessante"
     damaged = mk(4, int(truth * 0.75), year=2018, km=100_000, description="incidentata")
     assert prescreen(model, damaged)["con_problemi"] is True
+
+
+def test_cheap_cars_threshold_and_ranking():
+    from dealfinder.pricing.engine import Valuation
+    from dealfinder.pricing.margin import DealerCosts, compute_margin
+    v = Valuation(resale_prudent=4300, confidence="affidabile", liquidity_days=20)
+    cheap = mk(1, 1000)
+    m = compute_margin(cheap, v, DealerCosts())
+    assert m.threshold == 1000 and m.net_margin >= 2000 and m.status == "opportunita"
+    v2 = Valuation(resale_prudent=13300, confidence="affidabile", liquidity_days=20)
+    dear = mk(2, 10000)
+    m2 = compute_margin(dear, v2, DealerCosts())
+    assert m2.threshold == 3000
+    # stesso margine netto circa, ma l'auto economica rende di più sull'investimento: sta più in alto
+    assert m.score > m2.score

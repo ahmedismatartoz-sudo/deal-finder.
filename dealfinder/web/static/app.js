@@ -315,6 +315,8 @@ async function viewProfile() {
       <div class="grid2">
         ${num("threshold_low_eur", "Auto economiche (€)", c.threshold_low_eur)}${num("threshold_high_eur", "Auto più care (€)", c.threshold_high_eur)}
         ${num("threshold_split_eur", "Confine tra le due fasce (€ di acquisto)", c.threshold_split_eur)}
+        ${num("threshold_cheap_eur", "Auto economiche: margine minimo (€)", c.threshold_cheap_eur)}
+        ${num("threshold_cheap_max_eur", "Auto economiche: fino a (€ di acquisto)", c.threshold_cheap_max_eur)}
       </div>
       <p class="note">La manodopera non è inclusa: valuta tu il lavoro della tua officina.</p>
       <button class="btn primary" type="submit">Salva costi</button>
@@ -333,7 +335,8 @@ async function viewProfile() {
           warranty_reserve_eur: int("warranty_reserve_eur"), contingency_pct: int("contingency_pct") / 100,
           contingency_damaged_pct: int("contingency_damaged_pct") / 100,
           contingency_fault_pct: int("contingency_fault_pct") / 100, contingency_high_risk_pct: int("contingency_high_risk_pct") / 100, vat_margin_scheme: g("vat_margin_scheme").checked,
-          threshold_low_eur: int("threshold_low_eur"), threshold_high_eur: int("threshold_high_eur"), threshold_split_eur: int("threshold_split_eur") } } });
+          threshold_low_eur: int("threshold_low_eur"), threshold_high_eur: int("threshold_high_eur"), threshold_split_eur: int("threshold_split_eur"),
+          threshold_cheap_eur: int("threshold_cheap_eur"), threshold_cheap_max_eur: int("threshold_cheap_max_eur") } } });
       toast("Costi salvati");
     } catch (err) { toast(err.message); }
   };

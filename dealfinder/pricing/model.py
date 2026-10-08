@@ -134,14 +134,15 @@ class PrescreenRule:
 
 
 def prescreen(model: dict, l: Listing, rule: PrescreenRule | None = None,
-              threshold_low: int = 2000, threshold_high: int = 3000, split: int = 5000) -> dict:
+              threshold_low: int = 2000, threshold_high: int = 3000, split: int = 5000,
+              threshold_cheap: int = 1000, cheap_max: int = 2000) -> dict:
     rule = rule or PrescreenRule()
     if not l.price_eur:
         return {"esito": "dati_insufficienti"}
     p = predict(model, l)
     if not p:
         return {"esito": "nessun_modello"}
-    threshold = threshold_low if l.price_eur < split else threshold_high
+    threshold = threshold_cheap if l.price_eur <= cheap_max else (threshold_low if l.price_eur < split else threshold_high)
     potential = p["p50"] * rule.private_resale_factor - l.price_eur - rule.base_costs
     damaged = bool(l.damage_declared or l.problem_search)
     need = threshold * (rule.damaged_ratio if damaged else rule.healthy_ratio)

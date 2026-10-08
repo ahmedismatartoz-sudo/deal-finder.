@@ -257,6 +257,28 @@ class SubitoCollector(Collector):
             if len(ads) < lim:
                 break
         log.info("subito api: %d annunci letti", seen)
+        # Ricerca dedicata alle auto economiche (ps/pe = prezzo minimo/massimo; filtrate comunque qui)
+        n_cheap = 0
+        for page in range(query.get("cheap_pages", 0)):
+            r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                params={"c": 2, "r": region, "t": "s", "ps": 500, "pe": 2500, "lim": lim,
+                                        "start": page * lim, "sort": "datedesc"})
+            self.pause()
+            if r.status_code != 200:
+                break
+            ads = (r.json() or {}).get("ads") or []
+            for it in ads:
+                listing = parse_item(it)
+                if not listing or not listing.price_eur or not 500 <= listing.price_eur <= 2500:
+                    continue
+                if listing.province and listing.province.upper() not in wanted:
+                    continue
+                n_cheap += 1
+                yield listing
+            if len(ads) < lim:
+                break
+        if query.get("cheap_pages"):
+            log.info("subito ricerca economiche: %d annunci 500-2.500 € nelle province", n_cheap)
         # Ricerche mirate ad auto incidentate o guaste
         for kw in query.get("problem_keywords") or []:
             n_kw = 0
