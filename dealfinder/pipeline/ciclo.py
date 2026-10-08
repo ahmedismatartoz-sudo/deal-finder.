@@ -49,6 +49,11 @@ def run() -> None:
     from .collect import run as collect
     from .process import run as process
 
+    # Prova una tantum: quante persone cercano un'auto su Facebook (rifatta se si aggiungono i gruppi)
+    from . import cerco_probe
+    if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_CERCO_PROBE", "1") == "1" \
+            and _due(cerco_probe.job_name(), 24 * 30):
+        step("prova_cerco", cerco_probe.run)
     step("opportunita", collect, "opportunita")
     if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", 6):
         step("facebook", collect, "facebook")
@@ -72,8 +77,3 @@ def run() -> None:
         step("qualita", backtest)
     step("rapporto", bande.run)
     step("esportazione", esporta.run)
-    # Prova una tantum: quante persone cercano un'auto su Facebook (rifatta se si aggiungono i gruppi)
-    from . import cerco_probe
-    if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_CERCO_PROBE", "1") == "1" \
-            and _due(cerco_probe.job_name(), 24 * 30):
-        step("prova_cerco", cerco_probe.run)
