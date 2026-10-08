@@ -16,9 +16,9 @@ VAT_RATE = 0.22
 
 @dataclass
 class DealerCosts:
-    transport_eur: int = 150
-    paperwork_eur: int = 450
-    preparation_eur: int = 300
+    transport_eur: int = 0             # il commerciante va a prendere l'auto da sé
+    paperwork_eur: int = 90            # passaggio di proprietà a nome di un'azienda
+    preparation_eur: int = 50          # pulizia
     contingency_pct: float = 0.05
     contingency_damaged_pct: float = 0.15        # carrozzeria
     contingency_fault_pct: float = 0.25          # guasti meccanici noti

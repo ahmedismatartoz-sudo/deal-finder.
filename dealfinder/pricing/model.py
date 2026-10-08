@@ -127,7 +127,7 @@ def evaluate(model: dict, test: list[Listing]) -> dict:
 class PrescreenRule:
     """Quando un annuncio è "apparentemente interessante" già allo scraping."""
     private_resale_factor: float = 0.94      # da prezzo di mercato a incassato (trattativa)
-    base_costs: int = 1100                   # trasporto, pratiche, preparazione
+    base_costs: int = 140                    # passaggio (90 €) e pulizia (50 €)
     healthy_ratio: float = 0.8               # potenziale ≥ 80% della soglia: vale l'approfondimento
     damaged_ratio: float = 1.3               # con problemi: deve restare spazio per i ricambi
     max_spread: float = 0.6                  # gruppo troppo disperso: modello poco affidabile
