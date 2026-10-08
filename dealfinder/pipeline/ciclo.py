@@ -45,7 +45,7 @@ def step(name: str, fn, *args):
 def run() -> None:
     from ..pricing.backtest import run as backtest
     from ..pricing.train import run as train
-    from . import bande, esporta, recheck
+    from . import bande, candidati, esporta, manuale, recheck
     from .collect import run as collect
     from .process import run as process
 
@@ -60,7 +60,10 @@ def run() -> None:
         log.info("CICLO analisi con %s", provider())
         step("analisi", process, "tutto")
     else:
-        log.warning("CICLO analisi: nessuna chiave AI (ANTHROPIC_API_KEY o GEMINI_API_KEY), analisi non eseguita")
+        log.warning("CICLO analisi: nessuna chiave AI, si esportano i candidati per l'analisi a parte")
+        if _due("candidati", 5):
+            step("candidati", candidati.run)
+    step("analisi_manuale", manuale.run)
     if _due("recheck", 20):
         step("verifica", recheck.run)
     if _due("backtest", 24 * 7):
