@@ -12,7 +12,7 @@ country_code, location, images, brand, transmission, car_miles, is_sold).
 Variabili d'ambiente:
   BRIGHTDATA_API_KEY      chiave API (obbligatoria)
   BRIGHTDATA_DATASET      default gd_lvt9iwuh6fbcwmx1a (Marketplace)
-  BRIGHTDATA_SEARCHES     JSON, lista di ricerche; default Milano 60 km + Brescia 30 km
+  BRIGHTDATA_SEARCHES     JSON, lista di ricerche; default Milano 60 km e Brescia 30 km, per fasce di prezzo
   BRIGHTDATA_LIMIT        annunci massimi per ricerca (default 300): limita la spesa
 """
 from __future__ import annotations
@@ -32,9 +32,15 @@ log = logging.getLogger(__name__)
 
 API = "https://api.brightdata.com/datasets/v3"
 DEFAULT_DATASET = "gd_lvt9iwuh6fbcwmx1a"
+# Facebook mostra un numero limitato di risultati per ricerca: dividere per fasce di prezzo
+# fa sì che ogni ricerca resti sotto il limite e insieme coprano quasi tutto.
 DEFAULT_SEARCHES = [
-    {"city": "milan", "radius": 60},
-    {"city": "brescia", "radius": 30},
+    {"city": "milan", "radius": 60, "min_price": 500, "max_price": 3000},
+    {"city": "milan", "radius": 60, "min_price": 3000, "max_price": 6000},
+    {"city": "milan", "radius": 60, "min_price": 6000, "max_price": 10000},
+    {"city": "milan", "radius": 60, "min_price": 10000, "max_price": 20000},
+    {"city": "brescia", "radius": 30, "min_price": 500, "max_price": 8000},
+    {"city": "brescia", "radius": 30, "min_price": 8000, "max_price": 20000},
 ]
 RE_KM = re.compile(r"(?<!\d)(\d{1,3}(?:[ .]\d{3})+|\d{4,7})\s*(?:km|chilometri)\b", re.I)
 RE_YEAR = re.compile(r"\b(19[89]\d|20[0-3]\d)\b")
