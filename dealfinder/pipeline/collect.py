@@ -41,11 +41,26 @@ def run(mode: str) -> Counter:
 
     with connect() as conn:
         finish = log_job(conn, f"collect:{mode}")
+        from ..pricing.model import prescreen
+        from ..pricing.train import load_active
+        model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
+        if model is None:
+            log.info("nessun modello dei prezzi attivo: filtro rapido con i confronti")
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
                     normalize_fields(listing)
                     lid, event = upsert_listing(conn, listing)
+                    if model is not None and event in ("nuovo", "prezzo", "riapparso"):
+                        ps = prescreen(model, listing)
+                        conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "
+                                     "prescreen_potential=%s WHERE id=%s",
+                                     (ps.get("model_p50"), ps.get("model_p25"), ps["esito"],
+                                      ps.get("potenziale"), lid))
+                        stats[f"prescreen:{ps['esito']}"] += 1
+                        if ps["esito"] == "non_interessante":
+                            conn.execute("UPDATE listings SET stage='mercato', stage_reason='modello_prezzi' "
+                                         "WHERE id=%s AND stage='nuovo'", (lid,))
                     if event in ("prezzo", "riapparso"):
                         # prezzo cambiato: l'annuncio va rivalutato
                         conn.execute("UPDATE listings SET stage='nuovo' WHERE id=%s AND stage<>'nuovo'", (lid,))
@@ -90,6 +105,10 @@ if __name__ == "__main__":
         probe_run()
         sys.exit(0)
     run(mode)
+    if mode == "mercato":
+        # dopo la raccolta notturna: riaddestra il modello se ha più di 7 giorni
+        from ..pricing.train import run as train_run
+        train_run()
     # L'analisi parte se non è esclusa dal comando, oppure se ANALISI_ATTIVA=1 (impostabile da Render)
     analisi = "--senza-analisi" not in sys.argv or os.environ.get("ANALISI_ATTIVA") == "1"
     if mode in ("opportunita", "facebook") and analisi:

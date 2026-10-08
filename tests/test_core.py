@@ -198,3 +198,28 @@ def test_asis_market_and_problem_hint():
     assert n == 4 and 5600 <= med <= 6000
     v = value_listing(mk(998, 9000), mkt + damaged)
     assert all(c["price"] > 7000 for c in v.comparables_used)   # le danneggiate non entrano nei confronti sani
+
+
+def test_price_model_train_predict_prescreen():
+    import random as _r
+    from dealfinder.pricing.model import predict, prescreen, train
+    rnd = _r.Random(3)
+    data = []
+    for i in range(400):
+        year = rnd.choice(range(2012, 2022))
+        km = rnd.randint(20_000, 220_000)
+        price = int(20000 * (0.88 ** (2026 - year)) * (1 - 0.01 * km / 10_000) * rnd.uniform(0.92, 1.08))
+        l = mk(10_000 + i, price, year=year, km=km, seller="privato" if i % 2 else "commerciante")
+        data.append(l)
+    model = train(data, ref_year=2026)
+    assert model["metrics"]["median_abs_pct_error"] < 0.08
+    t = mk(1, 1000, year=2018, km=100_000)
+    p = predict(model, t)
+    truth = 20000 * 0.88 ** 8 * 0.9
+    assert abs(p["p50"] - truth) / truth < 0.12 and p["level"] in ("mmf", "mm")
+    cheap = mk(2, int(truth * 0.45), year=2018, km=100_000)   # margine potenziale > 80% della soglia
+    fair = mk(3, int(truth), year=2018, km=100_000)
+    assert prescreen(model, cheap)["esito"] == "interessante"
+    assert prescreen(model, fair)["esito"] == "non_interessante"
+    damaged = mk(4, int(truth * 0.75), year=2018, km=100_000, description="incidentata")
+    assert prescreen(model, damaged)["con_problemi"] is True
