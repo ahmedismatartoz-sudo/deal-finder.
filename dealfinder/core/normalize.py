@@ -113,6 +113,15 @@ def normalize_fields(listing: Listing) -> Listing:
     if listing.province and not listing.region:
         listing.region = PROVINCE_REGION.get(listing.province.upper())
     normalize_price(listing)
+    # Valori assurdi (km da 10 cifre, prezzi da milioni): si scartano invece di bloccare il database
+    if listing.mileage_km is not None and not 0 <= listing.mileage_km <= 1_500_000:
+        listing.mileage_km = None
+    if listing.price_eur is not None and not 0 <= listing.price_eur <= 5_000_000:
+        listing.price_eur = None
+    if listing.power_kw is not None and not 0 < listing.power_kw <= 1500:
+        listing.power_kw = None
+    if listing.year is not None and not 1900 <= listing.year <= datetime.date.today().year + 1:
+        listing.year = None
     # Km scritti in migliaia ("270" per 270.000) su auto non recenti: si correggono
     if listing.mileage_km is not None and listing.year and listing.mileage_km < 1000 \
             and datetime.date.today().year - listing.year >= 2:

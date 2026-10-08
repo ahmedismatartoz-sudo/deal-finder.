@@ -59,7 +59,13 @@ def run(mode: str) -> Counter:
             try:
                 for listing in collector.search(query):
                     normalize_fields(listing)
-                    lid, event = upsert_listing(conn, listing)
+                    try:
+                        lid, event = upsert_listing(conn, listing)
+                    except Exception as e:          # un annuncio con dati assurdi non ferma la raccolta
+                        conn.rollback()
+                        stats[f"{collector.source}:scartato_dati"] += 1
+                        log.warning("annuncio %s non salvato: %s", listing.url, str(e)[:120])
+                        continue
                     if model is not None and event in ("nuovo", "prezzo", "riapparso"):
                         ps = prescreen(model, listing)
                         conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "
