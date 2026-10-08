@@ -45,7 +45,7 @@ def step(name: str, fn, *args):
 def run() -> None:
     from ..pricing.backtest import run as backtest
     from ..pricing.train import run as train
-    from . import bande, recheck
+    from . import bande, esporta, recheck
     from .collect import run as collect
     from .process import run as process
 
@@ -64,3 +64,4 @@ def run() -> None:
     if _due("backtest", 24 * 7):
         step("qualita", backtest)
     step("rapporto", bande.run)
+    step("esportazione", esporta.run)

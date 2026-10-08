@@ -33,7 +33,8 @@ from ..store import (load_market, photos_of, row_to_listing, save_valuation, set
 log = logging.getLogger("process")
 
 OPPORTUNITY_PROVINCES = ("MI", "MB", "BG", "BS")
-BATCH = int(os.environ.get("PROCESS_BATCH", "400"))
+BATCH = int(os.environ.get("PROCESS_BATCH", "3000"))          # filtro senza AI: economico
+MAX_AI_SCREEN = int(os.environ.get("MAX_AI_SCREEN", "150"))   # tetto di analisi foto per ciclo (costi)
 DEEP_BATCH = int(os.environ.get("DEEP_BATCH", "60"))
 
 
@@ -82,32 +83,46 @@ def screen(conn) -> Counter:
                 set_stage(conn, lid, "scartato", "prezzo_non_affidabile")
                 stats["scartato_prezzo"] += 1
                 continue
-            # 1. testo (AI economica): completa dati mancanti, danni dichiarati
-            text = analyze.extract_text(l, sink, lid) if (l.description or l.missing_fields) else {}
-            origin = analyze.apply_extract(l, text)
+            # 1. stima rapida SENZA AI quando i dati essenziali ci sono già (quasi sempre su Subito)
+            text: dict = {}
+            have_core = bool(l.make and l.model and l.year and l.mileage_km is not None)
+            if not have_core:
+                # dati mancanti (spesso Facebook): l'AI economica li ricava dal testo
+                text = analyze.extract_text(l, sink, lid) if l.description or l.title else {}
+                analyze.apply_extract(l, text)
+                if not (l.make and l.model and l.year and l.mileage_km is not None):
+                    update_listing_fields(conn, lid, l)
+                    set_stage(conn, lid, "scartato", "dati_essenziali_mancanti", ai_extract=text)
+                    stats["scartato_dati"] += 1
+                    continue
+            key = (l.make, l.model, l.fuel)
+            if key not in market_cache:
+                market_cache[key] = load_market(conn, *key)
+            ok, why, _ = quick_potential(l, market_cache[key])
+            if not ok and row.get("prescreen") == "interessante":
+                ok, why = True, "modello_prezzi"      # il modello addestrato lo ritiene interessante
+            if not ok:
+                update_listing_fields(conn, lid, l)
+                set_stage(conn, lid, "attesa_mercato" if why == "nessun_confronto" else "scartato", why,
+                          ai_extract=text or None)
+                stats[why] += 1
+                continue
+            # 2. testo (AI economica) solo per chi ha superato la stima: danni e guasti dichiarati
+            if not text and l.description:
+                text = analyze.extract_text(l, sink, lid)
+                analyze.apply_extract(l, text)
             if set(text.get("severe_flags") or []) & set(EXCLUDE_FLAGS):
                 l.damage_class = "grave"
                 update_listing_fields(conn, lid, l)
                 set_stage(conn, lid, "scartato", "danno_grave_dichiarato", ai_extract=text)
                 stats["scartato_grave"] += 1
                 continue
-            if not (l.make and l.model and l.year and l.mileage_km is not None):
+            # 3. foto (AI economica, 3 foto), con un tetto per ciclo
+            if stats["ai_foto"] >= MAX_AI_SCREEN:
                 update_listing_fields(conn, lid, l)
-                set_stage(conn, lid, "scartato", "dati_essenziali_mancanti", ai_extract=text)
-                stats["scartato_dati"] += 1
+                stats["rimandato_prossimo_ciclo"] += 1
                 continue
-            # 2. stima rapida dal mercato
-            key = (l.make, l.model, l.fuel)
-            if key not in market_cache:
-                market_cache[key] = load_market(conn, *key)
-            ok, why, _ = quick_potential(l, market_cache[key])
-            if not ok:
-                update_listing_fields(conn, lid, l)
-                set_stage(conn, lid, "attesa_mercato" if why == "nessun_confronto" else "scartato", why,
-                          ai_extract=text)
-                stats[why] += 1
-                continue
-            # 3. foto (AI economica, 3 foto)
+            stats["ai_foto"] += 1
             photos = analyze.analyze_photos(l, deep=False, usage_sink=sink, listing_id=lid)
             cls, items, severe = analyze.merge_damage(text, photos)
             l.damage_class, l.damage_items = cls, _to_items(items)
@@ -121,7 +136,6 @@ def screen(conn) -> Counter:
             else:
                 set_stage(conn, lid, "candidato", why, photo_screen=photos, ai_extract=text)
                 stats["candidato"] += 1
-            conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(origin), lid))
         except AIError as e:
             log.error("AI non disponibile: %s", e)
             stats["errore_ai"] += 1

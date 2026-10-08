@@ -26,6 +26,25 @@ def load_active(conn) -> dict | None:
     return json.loads(m) if isinstance(m, str) else m
 
 
+def prescreen_backlog(conn, model: dict) -> dict:
+    """Applica il modello agli annunci ancora da valutare (stage nuovo/attesa_mercato)."""
+    from collections import Counter
+
+    from .model import prescreen
+    stats: Counter = Counter()
+    rows = conn.execute("SELECT * FROM listings WHERE stage IN ('nuovo','attesa_mercato') AND status='attivo' "
+                        "AND price_eur IS NOT NULL").fetchall()
+    for r in rows:
+        ps = prescreen(model, row_to_listing(r))
+        stats[ps["esito"]] += 1
+        conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, prescreen_potential=%s, "
+                     "stage = CASE WHEN %s='non_interessante' THEN 'mercato' ELSE stage END WHERE id=%s",
+                     (ps.get("model_p50"), ps.get("model_p25"), ps["esito"], ps.get("potenziale"),
+                      ps["esito"], r["id"]))
+    conn.commit()
+    return dict(stats)
+
+
 def run(force: bool = False) -> dict:
     with connect() as conn:
         cur = conn.execute("SELECT created_at, metrics FROM price_models WHERE active "
@@ -53,6 +72,8 @@ def run(force: bool = False) -> dict:
             conn.execute("UPDATE price_models SET active = (id = (SELECT max(id) FROM price_models))")
         conn.commit()
         res = {"annunci": len(rows), "gruppi": len(model["groups"]), "metriche": m, "attivato": ok}
+        if ok:
+            res["prevalutati"] = prescreen_backlog(conn, model)
         finish(True, res)
     log.info("MODELLO %s", json.dumps(res, default=str))
     return res
