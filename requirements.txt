@@ -5,3 +5,4 @@ starlette>=0.40
 uvicorn[standard]>=0.30
 anthropic>=0.40
 pillow>=10.4
+brotli>=1.1

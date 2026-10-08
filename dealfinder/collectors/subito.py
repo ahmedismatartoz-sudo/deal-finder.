@@ -24,10 +24,32 @@ log = logging.getLogger(__name__)
 
 BASE = "https://www.subito.it"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/129.0 Safari/537.36",
-    "Accept-Language": "it-IT,it;q=0.9",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/129.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "it-IT,it;q=0.9,en;q=0.6",
+    "Accept-Encoding": "gzip, deflate",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "sec-ch-ua": '"Chromium";v="129", "Google Chrome";v="129", "Not=A?Brand";v="8"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
 }
+API_HEADERS = {
+    "User-Agent": HEADERS["User-Agent"], "Accept": "application/json", "Accept-Language": "it-IT,it;q=0.9",
+    "Accept-Encoding": "gzip, deflate", "X-Subito-Channel": "web",
+    "Origin": "https://www.subito.it", "Referer": "https://www.subito.it/",
+}
+# Interfaccia interna usata dal sito: annunci già strutturati.
+# c=2 auto, t=s vendita, r=4 Lombardia, ordinati dal più recente.
+API_SEARCH = "https://hades.subito.it/v1/search/items"
+REGION_CODES = {"lombardia": 4}
+PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG", "brescia": "BS",
+                  "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",
+                  "cremona": "CR", "mantova": "MN", "sondrio": "SO"}
 
 LABELS = {
     "price": ("prezzo",),
@@ -186,7 +208,44 @@ class SubitoCollector(Collector):
         return r
 
     def search(self, query: dict) -> Iterator[Listing]:
-        """query: {region, provinces[], max_price, max_pages, private_only}"""
+        """query: {region, provinces[], max_price, max_pages}. Usa l'interfaccia interna (100 annunci
+        per pagina, dal più recente) e filtra per provincia e prezzo; se non risponde, ripiega sulle pagine web."""
+        wanted = {PROVINCE_CODES.get(p, p.upper()[:2]) for p in query["provinces"]}
+        region = REGION_CODES.get(query.get("region", "lombardia"), 4)
+        lim, seen = 100, 0
+        for page in range(query.get("max_pages", 20)):
+            r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                params={"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim,
+                                        "sort": "datedesc"})
+            self.pause()
+            if r.status_code != 200:
+                log.warning("subito api -> HTTP %s (pagina %s): ripiego sulle pagine web", r.status_code, page)
+                yield from self._search_html(query)
+                return
+            ads = (r.json() or {}).get("ads") or []
+            if not ads:
+                break
+            if page == 0 and __import__("os").environ.get("SUBITO_DEBUG") == "1":
+                import json as _json
+                a0 = ads[0]
+                log.info("SUBITO_DEBUG geo=%s advertiser=%s dates=%s features=%s",
+                         _json.dumps(a0.get("geo"))[:600], _json.dumps(a0.get("advertiser"))[:300],
+                         _json.dumps(a0.get("dates"))[:200], _json.dumps(a0.get("features"))[:1500])
+            for it in ads:
+                listing = parse_item(it)
+                if not listing:
+                    continue
+                seen += 1
+                if listing.province and listing.province.upper() not in wanted:
+                    continue
+                if listing.price_eur is not None and listing.price_eur > query["max_price"]:
+                    continue
+                yield listing
+            if len(ads) < lim:
+                break
+        log.info("subito api: %d annunci letti", seen)
+
+    def _search_html(self, query: dict) -> Iterator[Listing]:
         for province in query["provinces"]:
             for page in range(1, query.get("max_pages", 20) + 1):
                 url = search_url(query["region"], province, query["max_price"], page,
@@ -206,17 +265,24 @@ class SubitoCollector(Collector):
                     listing = parse_item(it)
                     if listing:
                         if not listing.province:
-                            listing.province = province
+                            listing.province = PROVINCE_CODES.get(province, province)
                         yield listing
 
     def fetch(self, url: str) -> Listing | None:
+        """None SOLO se l'annuncio non esiste più (404/410 o rimando alla ricerca).
+        Se la pagina c'è ma non si riesce a leggerla, l'annuncio è considerato ancora attivo."""
         r = self._get(url)
         if r.status_code in (404, 410):
             return None
         if r.status_code != 200:
             raise RuntimeError(f"subito HTTP {r.status_code} per {url}")
+        final = str(getattr(r, "url", url))
+        if final.rstrip("/") != url.rstrip("/") and ".htm" not in final:
+            return None          # rimandato a una pagina di ricerca: annuncio rimosso
         data = next_data(r.text)
-        if not data:
-            return None
-        item: Any = find_key(data, "ad", "item")
-        return parse_item(item) if isinstance(item, dict) else None
+        item: Any = find_key(data, "ad", "item") if data else None
+        if isinstance(item, dict):
+            parsed = parse_item(item)
+            if parsed:
+                return parsed
+        return Listing(source="subito", source_id=url, url=url)
