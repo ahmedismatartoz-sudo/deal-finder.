@@ -78,6 +78,8 @@ def run() -> dict:
                          "lines": lines, "complete": True, "vehicle": f"{l.make} {l.model} {l.year}",
                          "by_type": {"aftermarket": {"high": e["ricambi_max"], "complete": True}}}
             m = compute_margin(l, v, DealerCosts(), parts["parts_cost_high"] if parts else None)
+            if m and e.get("esito") == "opportunita" and m.net_margin >= m.threshold:
+                m.status = "opportunita"           # confermata dall'analisi (stima e testo controllati)
             if m and e.get("esito") == "da_verificare" and m.status == "opportunita":
                 m.status = "da_verificare"         # l'analisi chiede controlli prima di proporla
             mot = report.motivation(l, v, parts)
