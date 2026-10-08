@@ -63,7 +63,7 @@ def run() -> None:
         step("analisi", process, "tutto")
     else:
         log.warning("CICLO analisi: nessuna chiave AI, si esportano i candidati per l'analisi a parte")
-        if _due("candidati", 5):
+        if _due("candidati", 2):
             step("candidati", candidati.run)
     step("analisi_manuale", manuale.run)
     if _due("recheck", 20):
