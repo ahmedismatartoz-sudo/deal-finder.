@@ -5,23 +5,47 @@ import json
 from contextlib import contextmanager
 from pathlib import Path
 
-import psycopg
-from psycopg.rows import dict_row
-
 from .config import settings
 from .core.models import Listing
 from .core.normalize import fingerprint, find_plate, plate_hash
 
+MIGRATIONS = Path(__file__).resolve().parent.parent / "db" / "migrations"
+
 
 @contextmanager
 def connect():
+    import psycopg
+    from psycopg.rows import dict_row
     with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
         yield conn
 
 
-def init_schema(conn) -> None:
-    sql = (Path(__file__).resolve().parent.parent / "db" / "schema.sql").read_text()
-    conn.execute(sql)
+def migrate(conn) -> list[str]:
+    """Applica in ordine le migrazioni non ancora eseguite."""
+    conn.execute("CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, "
+                 "applied_at TIMESTAMPTZ NOT NULL DEFAULT now())")
+    done = {r["name"] for r in conn.execute("SELECT name FROM schema_migrations").fetchall()}
+    applied = []
+    for f in sorted(MIGRATIONS.glob("*.sql")):
+        if f.name in done:
+            continue
+        conn.execute(f.read_text())
+        conn.execute("INSERT INTO schema_migrations (name) VALUES (%s)", (f.name,))
+        conn.commit()
+        applied.append(f.name)
+    return applied
+
+
+def log_job(conn, job: str):
+    """Registra l'inizio di un lavoro; ritorna una funzione per chiuderlo."""
+    jid = conn.execute("INSERT INTO job_runs (job) VALUES (%s) RETURNING id", (job,)).fetchone()["id"]
+    conn.commit()
+
+    def finish(ok: bool, stats: dict) -> None:
+        conn.execute("UPDATE job_runs SET finished_at=now(), ok=%s, stats=%s WHERE id=%s",
+                     (ok, json.dumps(stats, default=str), jid))
+        conn.commit()
+    return finish
 
 
 def upsert_vehicle(conn, listing: Listing) -> int:

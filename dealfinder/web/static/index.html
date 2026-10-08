@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F3FA6">
+<title>Deal Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar" id="topbar" hidden>
+  <a class="brand" href="#/"><span class="brand-band" aria-hidden="true">I</span>Deal Finder</a>
+  <nav class="nav">
+    <a href="#/" data-nav="list">Opportunità <span class="badge" id="notif" hidden></span></a>
+    <a href="#/attivita" data-nav="attivita">Le mie auto</a>
+    <a href="#/profilo" data-nav="profilo">Costi</a>
+    <a href="#/admin" data-nav="admin" id="nav-admin" hidden>Gestione</a>
+  </nav>
+</header>
+<main id="view" class="view" aria-live="polite"></main>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,4 +1,29 @@
-# Configurazione Render (Blueprint). Non attiva finché non viene approvata su Render.
+# Configurazione Render (Blueprint). Regione Francoforte (UE).
+# Le chiavi segrete (sync: false) si inseriscono nel pannello Render, mai qui.
+envVarGroups:
+  - name: dealfinder-secrets
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: META_PROVIDER_TOKEN
+        sync: false
+      - key: META_ACTOR_ID
+        sync: false
+      - key: META_PROVIDER_INPUT
+        sync: false
+      - key: SCRAPER_PROXY
+        sync: false
+      - key: PLATE_LOOKUP_URL
+        sync: false
+      - key: PLATE_LOOKUP_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PLATE_SALT
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+
 databases:
   - name: dealfinder-db
     databaseName: dealfinder
@@ -6,34 +31,77 @@ databases:
     region: frankfurt
 
 services:
-  # Raccolta opportunità: ogni 3 ore (orari UTC)
-  - type: cron
-    name: collect-opportunita
+  # Sito + API per commercianti (e futura app)
+  - type: web
+    name: dealfinder-web
     runtime: python
     region: frankfurt
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: python -m dealfinder.init_db
+    startCommand: uvicorn dealfinder.web.app:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: dealfinder-secrets
+      - key: DATABASE_URL
+        fromDatabase: { name: dealfinder-db, property: connectionString }
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # Nuovi annunci + filtro + approfondimento: ogni 3 ore (orari UTC)
+  - type: cron
+    name: dealfinder-opportunita
+    runtime: python
+    region: frankfurt
+    plan: starter
     schedule: "7 */3 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.collect opportunita
-    envVars: &env
+    envVars:
+      - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
         fromDatabase: { name: dealfinder-db, property: connectionString }
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: META_PROVIDER_TOKEN
-        sync: false
-      - key: META_ACTOR_ID
-        sync: false
-      - key: SCRAPER_PROXY
-        sync: false
-      - key: PLATE_SALT
-        generateValue: true
 
-  # Base di mercato: ogni notte
+  # Base di mercato (Lombardia, fino a 40.000 €): ogni notte
   - type: cron
-    name: collect-mercato
+    name: dealfinder-mercato
     runtime: python
     region: frankfurt
+    plan: starter
     schedule: "13 1 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.collect mercato
-    envVars: *env
+    envVars:
+      - fromGroup: dealfinder-secrets
+      - key: DATABASE_URL
+        fromDatabase: { name: dealfinder-db, property: connectionString }
+
+  # Verifica disponibilità delle opportunità: ogni giorno
+  - type: cron
+    name: dealfinder-verifica
+    runtime: python
+    region: frankfurt
+    plan: starter
+    schedule: "41 5 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m dealfinder.pipeline.recheck
+    envVars:
+      - fromGroup: dealfinder-secrets
+      - key: DATABASE_URL
+        fromDatabase: { name: dealfinder-db, property: connectionString }
+
+  # Misura della qualità delle stime: ogni lunedì
+  - type: cron
+    name: dealfinder-qualita
+    runtime: python
+    region: frankfurt
+    plan: starter
+    schedule: "29 4 * * 1"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m dealfinder.pricing.backtest
+    envVars:
+      - fromGroup: dealfinder-secrets
+      - key: DATABASE_URL
+        fromDatabase: { name: dealfinder-db, property: connectionString }

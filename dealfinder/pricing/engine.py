@@ -207,7 +207,9 @@ def value_listing(target: Listing, market: list[Listing],
     } for a in sorted(adjusted, key=lambda a: a.adjusted_price)]
 
     # Segnali di truffa o errore
-    if v.discount_vs_private > cfg.fraud_discount:
+    # Le incidentate costano naturalmente meno: soglia di sospetto più alta
+    fraud_limit = cfg.fraud_discount + (0.15 if target.damage_class in ("leggero", "medio") else 0)
+    if v.discount_vs_private > fraud_limit:
         v.fraud_flags.append("prezzo_troppo_basso")
     v.fraud_flags += [f for f in target.price_flags if f in EXCLUDE_FLAGS | {"plus_iva"}]
 

@@ -24,13 +24,38 @@ Meta Marketplace (fornitore  ├─► pulizia + deduplica ─► base di mercat
 
 | Cartella | Contenuto |
 |---|---|
-| `db/schema.sql` | Tabelle: annunci, storico prezzi, veicoli, valutazioni, commercianti, aperture |
+| `db/migrations/` | Tabelle (applicate in ordine da `python -m dealfinder.init_db`) |
 | `dealfinder/core/` | Modello annuncio, pulizia prezzi (+IVA, rate, civetta), dati mancanti, deduplica |
 | `dealfinder/collectors/` | `subito.py` (collettore), `meta.py` (adattatore fornitore esterno) |
-| `dealfinder/pricing/engine.py` | Confronti a 3 livelli, mercato privato vs commercianti, prezzo prudente, confidenza |
-| `dealfinder/pricing/margin.py` | Margine per commerciante, IVA sul margine, soglie, classifica, regola 7 aperture |
-| `dealfinder/pipeline/` | Lavori programmati (raccolta, filtro, approfondimento, verifica) |
-| `tests/` | Test su dati di prova |
+| `dealfinder/ai/` | Lettura testo, analisi foto, identificazione veicolo, agente ricambi con ricerca web, tassonomia danni |
+| `dealfinder/pricing/` | Motore prezzi, margine, motivazioni e controlli, backtest settimanale |
+| `dealfinder/pipeline/` | Raccolta, filtro + approfondimento, verifica disponibilità |
+| `dealfinder/web/` | API (Starlette) e sito per commercianti in `static/` |
+| `tests/` | Test su dati di prova (`python run_tests.py`) |
+
+## Flusso di un annuncio
+
+`nuovo` → regole sul prezzo → lettura testo (AI veloce) → stima rapida dal mercato
+→ foto (AI veloce, 3 foto) → `candidato` → foto complete (AI approfondita)
+→ identificazione veicolo (anche da targa, se configurato) → agente ricambi
+→ valutazione e margine → `approfondito`. Ogni scarto ha un motivo (`stage_reason`).
+
+Il margine mostrato al commerciante viene ricalcolato con **i suoi** costi, soglie
+e tipo di ricambio preferito (originale, aftermarket, usato).
+
+## API (usata dal sito e dalla futura app)
+
+| Metodo | Percorso | Cosa fa |
+|---|---|---|
+| POST | `/api/auth/login` | Accesso, restituisce il token |
+| GET/PUT | `/api/me` | Profilo, zona, budget, costi, soglie |
+| GET | `/api/opportunities` | Lista (`status`, `sort`, `damaged`, `source`, `province`, `max_price`) |
+| GET | `/api/opportunities/{id}` | Scheda completa |
+| POST | `/api/opportunities/{id}/open` | Registra l'apertura e dà il link dell'annuncio |
+| POST | `/api/opportunities/{id}/feedback` | Esito: contattato, trattativa, comprata, venduta, scartata |
+| GET | `/api/activity` | Le auto del commerciante |
+| GET/POST | `/api/notifications`, `/api/notifications/seen` | Nuove opportunità |
+| GET/POST/PATCH | `/api/admin/...` | Pannello amministratore e account |
 
 ## Regole di prodotto
 
@@ -48,24 +73,21 @@ Meta Marketplace (fornitore  ├─► pulizia + deduplica ─► base di mercat
 pip install -r requirements.txt
 cp .env.example .env        # e compila i valori
 python -m dealfinder.init_db
-python -m dealfinder.pipeline.collect opportunita
-python run_tests.py         # oppure: pytest
+python -m dealfinder.pipeline.collect mercato
+python -m dealfinder.pipeline.collect opportunita   # raccolta + analisi
+uvicorn dealfinder.web.app:app --reload            # sito su http://localhost:8000
+python run_tests.py
 ```
 
 ## Online (Render)
 
-`render.yaml` descrive database e lavori programmati. Le chiavi (Anthropic,
-fornitore Meta, proxy) si inseriscono nelle variabili d'ambiente di Render,
-mai nel codice.
+`render.yaml` crea: database, sito/API, e quattro lavori programmati
+(opportunità ogni 3 ore, mercato ogni notte, verifica disponibilità ogni giorno,
+qualità delle stime ogni lunedì). Le chiavi si inseriscono nel pannello Render.
 
-## Stato dei lavori
+## Da verificare al primo avvio reale
 
-- [x] Fase 1 — database, pulizia, deduplica, motore prezzi, margine, collettore Subito, adattatore Meta
-- [ ] Fase 2 — base di mercato reale, backtest settimanale
-- [ ] Fase 3 — AI: estrazione testo, analisi foto, identificazione veicolo, agente ricambi
-- [ ] Fase 4 — API e sito web commercianti, pannello amministratore
-- [ ] Fase 5 — fornitore Meta collegato
-- [ ] Fase 6 — messa online e prima raccolta reale
-
-Da verificare al primo avvio reale: struttura JSON delle pagine Subito e nomi
-delle province negli indirizzi di ricerca (`config.py`).
+- Struttura JSON delle pagine Subito e nomi delle province negli indirizzi (`config.py`).
+- Nomi dei modelli AI e versione dello strumento di ricerca web (variabili `AI_*`).
+- Formato dei dati dello scraper Meta scelto (`FIELD_MAP` in `collectors/meta.py`, `META_PROVIDER_INPUT`).
+- Sconto di trattativa (8%) e soglie di confidenza: da tarare con il backtest e le vendite reali.
