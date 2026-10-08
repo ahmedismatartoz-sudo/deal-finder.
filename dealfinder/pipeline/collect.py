@@ -87,6 +87,8 @@ if __name__ == "__main__":
         probe_run()
         sys.exit(0)
     run(mode)
-    if mode in ("opportunita", "facebook") and "--senza-analisi" not in sys.argv:
+    # L'analisi parte se non è esclusa dal comando, oppure se ANALISI_ATTIVA=1 (impostabile da Render)
+    analisi = "--senza-analisi" not in sys.argv or os.environ.get("ANALISI_ATTIVA") == "1"
+    if mode in ("opportunita", "facebook") and analisi:
         from .process import run as process_run
         process_run("tutto")
