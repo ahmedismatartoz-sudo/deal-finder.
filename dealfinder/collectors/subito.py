@@ -249,7 +249,7 @@ class SubitoCollector(Collector):
                 if not listing:
                     continue
                 seen += 1
-                if listing.province and listing.province.upper() not in wanted:
+                if wanted and listing.province and listing.province.upper() not in wanted:
                     continue
                 if listing.price_eur is not None and listing.price_eur > query["max_price"]:
                     continue
@@ -257,6 +257,31 @@ class SubitoCollector(Collector):
             if len(ads) < lim:
                 break
         log.info("subito api: %d annunci letti", seen)
+        # Raccolta profonda: tutta la regione divisa in fasce di prezzo, così si arriva oltre
+        # i primi annunci più recenti e si coprono quasi tutti gli annunci attivi.
+        for ps, pe in query.get("price_bands") or []:
+            n_read = n_kept = 0
+            for page in range(query.get("band_pages", 30)):
+                r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                    params={"c": 2, "r": region, "t": "s", "ps": ps, "pe": pe, "lim": lim,
+                                            "start": page * lim, "sort": "datedesc"})
+                self.pause()
+                if r.status_code != 200:
+                    log.warning("subito fascia %s-%s: HTTP %s a pagina %s", ps, pe, r.status_code, page)
+                    break
+                ads = (r.json() or {}).get("ads") or []
+                for it in ads:
+                    listing = parse_item(it)
+                    if not listing:
+                        continue
+                    n_read += 1
+                    if wanted and listing.province and listing.province.upper() not in wanted:
+                        continue
+                    n_kept += 1
+                    yield listing
+                if len(ads) < lim:
+                    break
+            log.info("subito fascia %s-%s €: %d letti, %d nelle province", ps, pe, n_read, n_kept)
         # Ricerca dedicata alle auto economiche (ps/pe = prezzo minimo/massimo; filtrate comunque qui)
         n_cheap = 0
         for page in range(query.get("cheap_pages", 0)):

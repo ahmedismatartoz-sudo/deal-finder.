@@ -55,7 +55,9 @@ def run() -> None:
             and _due(cerco_probe.job_name(), 24 * 30):
         step("prova_cerco", cerco_probe.run)
     step("opportunita", collect, "opportunita")
-    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", 6):
+    if _due("collect:profondo", 20):
+        step("raccolta_profonda", collect, "profondo")
+    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "4"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")

@@ -28,7 +28,7 @@ from ..store import load_market, photos_of, row_to_listing
 from .verify import verify_rows
 
 log = logging.getLogger("candidati")
-PROVINCES = ["MI", "MB", "BG", "BS"]
+PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]   # Milano e dintorni
 MAX_EXPORT = int(os.environ.get("MAX_CANDIDATI", "400"))
 DAMAGE_ROOM = 400
 

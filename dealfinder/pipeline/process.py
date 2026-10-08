@@ -32,7 +32,7 @@ from ..store import (load_market, photos_of, row_to_listing, save_valuation, set
 
 log = logging.getLogger("process")
 
-OPPORTUNITY_PROVINCES = ("MI", "MB", "BG", "BS")
+OPPORTUNITY_PROVINCES = ("MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV")
 BATCH = int(os.environ.get("PROCESS_BATCH", "3000"))          # filtro senza AI: economico
 _FREE = os.environ.get("AI_PROVIDER") == "gemini" or (not os.environ.get("ANTHROPIC_API_KEY")
                                                       and bool(os.environ.get("GEMINI_API_KEY")))
