@@ -91,3 +91,23 @@ qualità delle stime ogni lunedì). Le chiavi si inseriscono nel pannello Render
 - Nomi dei modelli AI e versione dello strumento di ricerca web (variabili `AI_*`).
 - Formato dei dati dello scraper Meta scelto (`FIELD_MAP` in `collectors/meta.py`, `META_PROVIDER_INPUT`).
 - Sconto di trattativa (8%) e soglie di confidenza: da tarare con il backtest e le vendite reali.
+
+## Collegare lo scraper di Facebook (Apify)
+
+1. Account su apify.com, scegliere lo scraper e provarlo dalla console su Milano.
+2. Chiave API: Apify → Settings → API & Integrations.
+3. Su Render: `META_PROVIDER_TOKEN` (chiave), `META_ACTOR_ID` (es. `crawloop/facebook-marketplace-scraper`),
+   `META_PROVIDER_INPUT` (una ricerca o una lista di ricerche). Esempio per `crawloop`:
+
+```json
+[
+  {"marketplaceLocation": "milan", "categoryId": "vehicles", "radiusKm": 60, "minPrice": 500, "maxPrice": 20000,
+   "daysSinceListed": 1, "maxItems": 400, "includeSeller": true,
+   "proxyConfiguration": {"useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"], "apifyProxyCountry": "IT"}},
+  {"marketplaceLocation": "brescia", "categoryId": "vehicles", "radiusKm": 30, "minPrice": 500, "maxPrice": 20000,
+   "daysSinceListed": 1, "maxItems": 200, "includeSeller": true,
+   "proxyConfiguration": {"useApifyProxy": true, "apifyProxyGroups": ["RESIDENTIAL"], "apifyProxyCountry": "IT"}}
+]
+```
+
+I nomi dei campi dipendono dallo scraper: verificarli su un esempio reale e, se serve, aggiornare `FIELD_MAP`.

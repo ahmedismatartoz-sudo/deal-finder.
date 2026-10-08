@@ -301,10 +301,10 @@ async function viewProfile() {
       <h2>Costi per auto</h2>
       <div class="grid2">
         ${num("transport_eur", "Trasporto (€)", c.transport_eur)}${num("paperwork_eur", "Pratiche e passaggio (€)", c.paperwork_eur)}
-        ${num("preparation_eur", "Preparazione (€)", c.preparation_eur, "Tagliando, pulizia, piccoli interventi")}${num("warranty_reserve_eur", "Riserva garanzia (€)", c.warranty_reserve_eur)}
+        ${num("preparation_eur", "Preparazione (€)", c.preparation_eur, "Tagliando, pulizia, piccoli interventi")}${num("warranty_reserve_eur", "Riserva garanzia (€)", c.warranty_reserve_eur, "Lascia 0 se vendi a privati senza garanzia")}
         ${num("contingency_pct", "Imprevisti auto sane (%)", Math.round(c.contingency_pct * 100))}${num("contingency_damaged_pct", "Imprevisti auto incidentate (%)", Math.round(c.contingency_damaged_pct * 100))}
       </div>
-      <div class="field inline"><input type="checkbox" id="vat_margin_scheme" ${c.vat_margin_scheme ? "checked" : ""}><label for="vat_margin_scheme">Vendo con il regime del margine (IVA sul margine)</label></div>
+      <div class="field inline"><input type="checkbox" id="vat_margin_scheme" ${c.vat_margin_scheme ? "checked" : ""}><label for="vat_margin_scheme">Applico l'IVA sul margine (solo se vendo come azienda)</label></div>
       <h2>Soglie di margine netto</h2>
       <div class="grid2">
         ${num("threshold_low_eur", "Auto economiche (€)", c.threshold_low_eur)}${num("threshold_high_eur", "Auto più care (€)", c.threshold_high_eur)}

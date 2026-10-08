@@ -21,8 +21,8 @@ class DealerCosts:
     preparation_eur: int = 300
     contingency_pct: float = 0.05
     contingency_damaged_pct: float = 0.15
-    warranty_reserve_eur: int = 200
-    vat_margin_scheme: bool = True
+    warranty_reserve_eur: int = 0       # tra privati non c'è garanzia legale del venditore
+    vat_margin_scheme: bool = False     # default: compravendita tra privati, nessuna IVA
     threshold_low_eur: int = 2000
     threshold_high_eur: int = 3000
     threshold_split_eur: int = 5000     # sul prezzo di acquisto
@@ -61,9 +61,11 @@ def compute_margin(listing: Listing, val: Valuation, costs: DealerCosts,
     contingency = round(pct * (purchase + parts))
 
     gross = val.resale_prudent - purchase - parts - fixed - contingency
-    # Regime del margine: IVA sulla differenza vendita - acquisto (scorporata)
-    vat_base = max(0, val.resale_prudent - purchase) if costs.vat_margin_scheme else max(0, gross)
-    vat = round(vat_base * VAT_RATE / (1 + VAT_RATE))
+    # IVA solo per chi vende con il regime del margine (opzione per commerciante).
+    # Default: acquisto da privato e vendita a privato, nessuna IVA.
+    vat = 0
+    if costs.vat_margin_scheme:
+        vat = round(max(0, val.resale_prudent - purchase) * VAT_RATE / (1 + VAT_RATE))
     net = gross - vat
 
     threshold = costs.threshold_low_eur if purchase < costs.threshold_split_eur else costs.threshold_high_eur

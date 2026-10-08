@@ -86,7 +86,7 @@ def test_margin_and_thresholds():
     t = mk(999, 9000)
     v = value_listing(t, mkt)
     m = compute_margin(t, v, DealerCosts())
-    expected_vat = round(max(0, v.resale_prudent - 9000) * 0.22 / 1.22)
+    expected_vat = 0   # default: tra privati, nessuna IVA
     assert m.vat_on_margin == expected_vat
     assert m.threshold == 3000
     assert m.status in ("opportunita", "scartata")
@@ -136,3 +136,14 @@ def test_meta_parse():
                          "listing_price": {"amount": "4500"}, "location": {"city": "Monza"}})
     assert l.year == 2015 and l.price_eur == 4500 and l.city == "Monza"
     assert l.url.endswith("/item/77/")
+
+
+def test_meta_parse_crawloop_style_and_mileage():
+    l = meta.parse_item({"id": "88", "listingTitle": "2016 Volkswagen Golf", "listingPrice": {"amount": "7900"},
+                         "listingPhotos": ["https://f/1.jpg"], "vehicle": {"make": "Volkswagen", "model": "Golf",
+                         "odometer": "120K km"}})
+    assert (l.make, l.model, l.year, l.mileage_km, l.price_eur) == ("Volkswagen", "Golf", 2016, 120000, 7900)
+    assert meta.parse_mileage("85.000 km") == 85000
+    assert meta.parse_mileage("120 mila") == 120000
+    assert meta.parse_mileage("50K miles") == 80450
+    assert meta.parse_mileage({"value": 99000, "unit": "KILOMETERS"}) == 99000
