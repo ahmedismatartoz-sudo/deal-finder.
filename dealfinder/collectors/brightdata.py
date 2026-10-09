@@ -49,9 +49,31 @@ FB_BANDS_FINE = [(500, 1000), (1000, 1500), (1500, 2000), (2000, 3000), (3000, 4
                  (5500, 7000), (7000, 9000), (9000, 12000), (12000, 15000), (15000, 20000)]
 
 
-def default_searches(days: int = 1, bands: list | None = None) -> list[dict]:
-    out = [{"city": c, "radius": r, "min_price": lo, "max_price": hi, "days": days}
-           for c, r in FB_CITIES for lo, hi in (bands or FB_BANDS)]
+# Facebook ignora le città che non conosce e ripete i risultati di Milano: per avere annunci
+# diversi si cerca su Milano (raggio ampio) per marca e modello, in fasce di prezzo.
+FB_BRAND_QUERIES = ["fiat panda", "fiat 500", "fiat punto", "fiat tipo", "fiat", "volkswagen golf", "volkswagen polo",
+                    "volkswagen", "audi a3", "audi a4", "audi", "bmw serie 1", "bmw serie 3", "bmw", "mercedes classe a",
+                    "mercedes", "ford fiesta", "ford focus", "ford", "opel corsa", "opel", "renault clio", "renault",
+                    "peugeot 208", "peugeot", "citroen c3", "citroen", "toyota yaris", "toyota", "lancia ypsilon",
+                    "nissan qashqai", "nissan", "hyundai", "kia", "dacia", "skoda", "seat", "mini", "smart",
+                    "jeep", "alfa romeo", "suzuki", "mazda", "volvo", "land rover", "mitsubishi", "honda", "ds"]
+FB_QUERY_BANDS = [(500, 3000), (3000, 7000), (7000, 12000), (12000, 20000)]
+
+
+def backfill_searches(days: int = 30) -> list[dict]:
+    out = [{"city": "milan", "radius": 60, "min_price": lo, "max_price": hi, "days": days}
+           for lo, hi in FB_BANDS_FINE]
+    out += [{"city": "milan", "radius": 60, "query": q, "min_price": lo, "max_price": hi, "days": days}
+            for q in FB_BRAND_QUERIES for lo, hi in FB_QUERY_BANDS]
+    out += [{"city": "milan", "radius": 80, "query": q, "days": days} for q in FB_PROBLEM_QUERIES]
+    return out
+
+
+def default_searches(days: int = 1) -> list[dict]:
+    """Raccolta normale (annunci dell'ultimo giorno): fasce di prezzo, marche e ricerche "con problemi"."""
+    out = [{"city": "milan", "radius": 60, "min_price": lo, "max_price": hi, "days": days} for lo, hi in FB_BANDS_FINE]
+    out += [{"city": "milan", "radius": 60, "query": q, "min_price": 500, "max_price": 20000, "days": days}
+            for q in FB_BRAND_QUERIES]
     out += [{"city": "milan", "radius": 80, "query": q, "days": days} for q in FB_PROBLEM_QUERIES]
     return out
 
@@ -228,7 +250,7 @@ class BrightDataFacebookCollector(Collector):
             self.limit = int(os.environ.get("BRIGHTDATA_LIMIT", "300"))
         # Raccolta di partenza (una volta sola): gli annunci degli ultimi 30 giorni
         if backfill:
-            self.searches = default_searches(30, FB_BANDS_FINE)
+            self.searches = backfill_searches(30)
             self.limit = int(os.environ.get("FB_BACKFILL_LIMIT", "300"))
         self._client = client
 
@@ -284,7 +306,7 @@ class BrightDataFacebookCollector(Collector):
         max_price = query.get("max_price", 20_000)
         urls = [search_url(s["city"], s.get("radius", 40), s.get("min_price", 500),
                            s.get("max_price", max_price), s.get("days", 1), s.get("query")) for s in self.searches]
-        problem_urls = {u for u, s in zip(urls, self.searches) if s.get("query")}
+        problem_urls = {u for u, s in zip(urls, self.searches) if s.get("query") in FB_PROBLEM_QUERIES}
         # a lotti: tutti i lotti partono insieme su Bright Data (più veloce), poi si scaricano
         # uno alla volta (poca memoria anche con decine di migliaia di annunci)
         size = int(os.environ.get("FB_LOTTO", "15"))

@@ -25,13 +25,13 @@ def _recent_facebook() -> bool:
     hours = max(1, int(os.environ.get("FACEBOOK_ORE", "8")) - 1)
     with connect() as conn:
         row = conn.execute("SELECT max(started_at) > now() - make_interval(hours => %s) AS recent FROM job_runs "
-                           "WHERE job IN ('collect:facebook','collect:fb_backfill') AND ok", (hours,)).fetchone()
+                           "WHERE (job='collect:facebook' OR job LIKE 'collect:fb_backfill%%') AND ok", (hours,)).fetchone()
     return bool(row and row["recent"])
 
 
 def _backfill_done() -> bool:
     with connect() as conn:
-        row = conn.execute("SELECT 1 FROM job_runs WHERE job='collect:fb_backfill' AND ((ok AND started_at > now() - "
+        row = conn.execute("SELECT 1 FROM job_runs WHERE job='collect:fb_backfill:v2' AND ((ok AND started_at > now() - "
                            "interval '30 days') OR (finished_at IS NULL AND started_at > now() - interval '6 hours')) LIMIT 1").fetchone()
     return bool(row)
 
@@ -71,7 +71,7 @@ def run(mode: str) -> Counter:
         sources = [(subito, q)]
 
     with connect() as conn:
-        finish = log_job(conn, f"collect:{mode}")
+        finish = log_job(conn, "collect:fb_backfill:v2" if mode == "fb_backfill" else f"collect:{mode}")
         from ..pricing.model import prescreen
         from ..pricing.train import load_active
         model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
