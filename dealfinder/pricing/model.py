@@ -49,6 +49,9 @@ def _features(l: Listing, ref_year: int) -> list[float] | None:
 
 
 def _usable(l: Listing) -> bool:
+    from ..core.consistency import check
+    if check(l, fix=True) or "dati_incoerenti" in (l.price_flags or []):
+        return False
     return (l.price_eur and 500 <= l.price_eur <= 80_000 and l.make and l.model and l.year
             and l.mileage_km is not None and not l.damage_declared
             and l.damage_class in ("nessuno", "sconosciuto")

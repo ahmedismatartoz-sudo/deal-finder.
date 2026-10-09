@@ -59,7 +59,13 @@ def load_market(conn, make: str, model: str, fuel: str | None, days: int = 120,
         f"""SELECT {MARKET_COLS} FROM listings
            WHERE make=%s AND model=%s AND (%s::text IS NULL OR fuel=%s)
              AND price_eur IS NOT NULL AND {where}""", params).fetchall()
-    return [row_to_listing(r) for r in rows]
+    from .core.consistency import check
+    out = []
+    for r in rows:
+        l = row_to_listing(r)
+        if not check(l, fix=True) and "dati_incoerenti" not in l.price_flags:
+            out.append(l)
+    return out
 
 
 def set_stage(conn, listing_id: int, stage: str, reason: str | None = None, **cols) -> None:

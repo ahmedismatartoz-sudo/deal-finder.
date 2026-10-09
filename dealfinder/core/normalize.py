@@ -32,7 +32,7 @@ RE_PROBLEM = re.compile(
     r"non (?:parte|si accende|va in moto)|guast[oai]|rott[oaie]|spia (?:motore|accesa|airbag)|"
     r"frizione (?:da|che) |distribuzione da|turbina (?:da|rotta)|motore (?:da|fuso|rotto|grippato)|"
     r"cambio (?:da|rotto)|fumo bianco|perde olio|batte in testa|cos[iì] com['’]? ?[eè]|per commercianti|"
-    r"solo esportazione|per pezzi)\b", re.I)
+    r"solo esportazione|per pezzi|per ricambi|non marciante|non funzionante|incendiat[ao]|sbronzinat[ao]|bronzine)\b", re.I)
 RE_NEGATION = re.compile(r"(mai|non|nessun[ao]?|zero|senza)\s+(\w+\s+){0,2}$", re.I)
 RE_PRICE_TEXT = re.compile(r"(?:prezzo|chiedo|richiesta|vendo a|valore)\s*:?\s*(?:€|euro)?\s*(\d{1,2}[.\s]?\d{3})\b|"
                            r"\b(?<![\d.])(\d{1,2}[.]?\d{3})\s*(?:€|euro|eur)\b", re.I)
@@ -126,6 +126,9 @@ def normalize_fields(listing: Listing) -> Listing:
     if listing.mileage_km is not None and listing.year and listing.mileage_km < 1000 \
             and datetime.date.today().year - listing.year >= 2:
         listing.mileage_km = listing.mileage_km * 1000 if listing.mileage_km >= 5 else None
+    from .consistency import check
+    if check(listing, fix=True):
+        listing.price_flags = sorted(set(listing.price_flags) | {"dati_incoerenti"})
     if listing.damage_declared is None and problem_hint(listing):
         listing.damage_declared = True     # esclusa dai confronti "sani", usata per il mercato "da sistemare"
     listing.compute_missing()

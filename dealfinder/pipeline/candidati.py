@@ -18,6 +18,7 @@ import os
 from collections import Counter
 
 from ..config import settings
+from ..core.consistency import check as check_consistency
 from ..core.normalize import problem_hint
 from ..db import connect, log_job
 from ..pricing.engine import value_listing
@@ -74,7 +75,7 @@ def run() -> dict:
     stats: Counter = Counter()
     out = []
     with connect() as conn:
-        finish = log_job(conn, "candidati:v2")
+        finish = log_job(conn, "candidati:v3")
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS} FROM listings WHERE status='attivo' AND price_eur BETWEEN 500 AND %s
                  AND seller_type <> 'commerciante'
@@ -87,6 +88,9 @@ def run() -> dict:
         model = load_active(conn)
         for r in rows:
             l = row_to_listing(r)
+            if check_consistency(l, fix=True) or "dati_incoerenti" in l.price_flags:
+                stats["dati_incoerenti"] += 1          # campi compilati a caso dal venditore
+                continue
             km_est = estimate_missing_km(l)
             if not (l.make and l.model and l.year and l.mileage_km is not None):
                 stats["dati_mancanti"] += 1

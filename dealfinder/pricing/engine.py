@@ -18,7 +18,7 @@ from ..core.models import Listing
 
 ENGINE_VERSION = "prezzi-0.2"
 
-EXCLUDE_FLAGS = {"leasing_o_rata", "prezzo_civetta", "importazione"}
+EXCLUDE_FLAGS = {"leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoerenti"}
 
 
 @dataclass
