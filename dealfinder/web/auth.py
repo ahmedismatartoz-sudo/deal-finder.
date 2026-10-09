@@ -35,9 +35,9 @@ def verify_password(pwd: str, stored: str | None) -> bool:
     return hmac.compare_digest(calc, base64.b64decode(h))
 
 
-def make_token(dealer_id: int, role: str) -> str:
+def make_token(dealer_id: int, role: str, sid: str | None = None) -> str:
     payload = base64.urlsafe_b64encode(json.dumps(
-        {"id": dealer_id, "role": role, "exp": int(time.time()) + TOKEN_DAYS * 86400}).encode()).decode()
+        {"id": dealer_id, "role": role, "sid": sid, "exp": int(time.time()) + TOKEN_DAYS * 86400}).encode()).decode()
     sig = hmac.new(_secret(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
 

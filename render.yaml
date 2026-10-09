@@ -55,6 +55,8 @@ services:
         value: https://scovo.onrender.com
       - key: ISCRIZIONE                # approvazione (nuovi account attivati a mano) | aperta
         value: approvazione
+      - key: MAX_DISPOSITIVI           # sessioni attive per account (telefono + computer)
+        value: "2"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

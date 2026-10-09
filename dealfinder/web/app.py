@@ -22,7 +22,7 @@ from starlette.staticfiles import StaticFiles
 
 from ..config import settings
 from ..db import connect
-from . import cards, foto, scovo, social
+from . import cards, foto, scovo, sessions, social
 from .auth import hash_password, make_token, read_token, verify_password
 
 log = logging.getLogger("web")
@@ -44,9 +44,20 @@ def current_user(request: Request, admin: bool = False) -> dict:
     data = read_token(auth[7:] if auth.lower().startswith("bearer ") else None)
     if not data:
         err(401, "Accesso richiesto")
+    ok, why = sessions.check(data.get("sid"), data["id"])
+    if not ok:
+        err(401, sessions.REVOKED_MSG.get(why or "", "Accesso scaduto: entra di nuovo"))
     if admin and data.get("role") != "admin":
         err(403, "Solo amministratori")
     return data
+
+
+def start_session(request: Request, dealer: dict, method: str) -> dict:
+    """Login riuscito: apre la sessione personale e restituisce token e dati."""
+    with connect() as conn:
+        sid = sessions.open_session(conn, dealer["id"], method, request.headers.get("user-agent"))
+    return {"token": make_token(dealer["id"], dealer["role"], sid),
+            "user": {"id": dealer["id"], "name": dealer["name"], "email": dealer["email"], "role": dealer["role"]}}
 
 
 async def body(request: Request) -> dict:
@@ -89,8 +100,7 @@ async def login(request: Request):
         _attempts[email].append(now)
         _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")
-    return jsonify({"token": make_token(u["id"], u["role"]),
-                    "user": {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"]}})
+    return jsonify(await run_in_threadpool(start_session, request, u, "password"))
 
 
 def me(request: Request):
@@ -377,7 +387,12 @@ def admin_dealers(request: Request):
         rows = conn.execute(
             """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at,
                       (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id) AS opens,
-                      (SELECT count(*) FROM dealer_feedback f WHERE f.dealer_id=d.id AND f.status='comprata') AS bought
+                      (SELECT count(*) FROM dealer_feedback f WHERE f.dealer_id=d.id AND f.status='comprata') AS bought,
+                      (SELECT count(*) FROM dealer_sessions s WHERE s.dealer_id=d.id AND s.revoked_at IS NULL) AS sessions,
+                      (SELECT max(last_seen_at) FROM dealer_sessions s WHERE s.dealer_id=d.id) AS last_seen,
+                      concat_ws(' ', CASE WHEN d.google_sub IS NOT NULL THEN 'Google' END,
+                                CASE WHEN d.apple_sub IS NOT NULL THEN 'Apple' END,
+                                CASE WHEN d.password_hash IS NOT NULL THEN 'Email' END) AS methods
                FROM dealers d ORDER BY d.created_at DESC""").fetchall()
     return jsonify({"items": rows})
 
@@ -410,10 +425,13 @@ async def admin_update_dealer(request: Request):
     with connect() as conn:
         if "active" in data:
             conn.execute("UPDATE dealers SET active=%s WHERE id=%s", (bool(data["active"]), did))
+            if not data["active"]:
+                sessions.revoke_all(conn, did, "account_disattivato")
         if data.get("password"):
             if len(data["password"]) < 8:
                 err(400, "Password troppo corta")
             conn.execute("UPDATE dealers SET password_hash=%s WHERE id=%s", (hash_password(data["password"]), did))
+            sessions.revoke_all(conn, did, "password_cambiata")
         conn.commit()
     return jsonify({"ok": True})
 
@@ -478,7 +496,7 @@ async def auth_callback(request: Request):
     if esito != "ok":
         resp = RedirectResponse(f"/#/entra/{esito.replace('_', '-')}", status_code=302)
     else:
-        resp = RedirectResponse(f"/#/accesso/{social.one_time_code(dealer)}", status_code=302)
+        resp = RedirectResponse(f"/#/accesso/{social.one_time_code(dealer, provider)}", status_code=302)
     resp.delete_cookie(social.STATE_COOKIE, path="/auth/")
     return resp
 
@@ -488,8 +506,14 @@ async def auth_scambio(request: Request):
     d = social.redeem(str(data.get("code", "")))
     if not d:
         err(401, "Accesso scaduto: riprova")
-    return jsonify({"token": make_token(d["id"], d["role"]),
-                    "user": {"id": d["id"], "name": d["name"], "email": d["email"], "role": d["role"]}})
+    return jsonify(await run_in_threadpool(start_session, request, d, d.get("method", "google")))
+
+
+async def esci(request: Request):
+    data = current_user(request)
+    with connect() as conn:
+        sessions.revoke(conn, data["sid"], "uscita")
+    return jsonify({"ok": True})
 
 
 SERVIZI_LIMITE_GIORNO = int(os.environ.get("SERVIZI_LIMITE_GIORNO", "15"))     # per commerciante, ogni servizio
@@ -635,6 +659,7 @@ async def cambia_password(request: Request):
                 return False
             conn.execute("UPDATE dealers SET password_hash=%s WHERE id=%s", (hash_password(new), user["id"]))
             conn.commit()
+            sessions.revoke_all(conn, user["id"], "password_cambiata", keep=user.get("sid"))
             return True
     if not await run_in_threadpool(work):
         err(400, "La password attuale non è giusta")
@@ -806,6 +831,7 @@ routes = [
     Route("/api/auth/login", login, methods=["POST"]),
     Route("/api/auth/metodi", auth_metodi),
     Route("/api/auth/scambio", auth_scambio, methods=["POST"]),
+    Route("/api/auth/esci", esci, methods=["POST"]),
     Route("/auth/{provider}", auth_start),
     Route("/auth/{provider}/callback", auth_callback, methods=["GET", "POST"]),
     Route("/api/me", me, methods=["GET"]),

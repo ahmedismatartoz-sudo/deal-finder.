@@ -156,13 +156,13 @@ def find_or_create(conn, provider: str, info: dict, name_hint: str | None = None
     return d, ("ok" if active else "in_attesa")
 
 
-def one_time_code(dealer: dict) -> str:
+def one_time_code(dealer: dict, method: str = "google") -> str:
     now = time.time()
     for k in [k for k, (exp, _) in _codes.items() if exp < now]:
         _codes.pop(k, None)
     code = secrets.token_urlsafe(24)
     _codes[code] = (now + 60, {"id": dealer["id"], "role": dealer["role"], "name": dealer["name"],
-                               "email": dealer["email"]})
+                               "email": dealer["email"], "method": method})
     return code
 
 

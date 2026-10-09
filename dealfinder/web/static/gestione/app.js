@@ -370,7 +370,7 @@ async function viewAdmin() {
         ["id", "", (v, r) => r.dealer_id ? `<button class="btn primary" data-approve="${v}">Attiva</button>`
           : `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email, id: v}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
-      ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
+      ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
         ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}
       <h2>Nuovo commerciante</h2>
       <form class="form" id="new-dealer">

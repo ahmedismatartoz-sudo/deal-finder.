@@ -89,3 +89,10 @@ def test_token_fornitore_e_codice_monouso():
     assert social._claims("x." + body + ".y")["email"] == "a@b.it"
     code = social.one_time_code({"id": 3, "role": "commerciante", "name": "A", "email": "a@b.it"})
     assert social.redeem(code)["id"] == 3 and social.redeem(code) is None
+
+
+def test_messaggi_sessione_chiusa():
+    from dealfinder.web import sessions
+    assert "altro dispositivo" in sessions.REVOKED_MSG["altro_dispositivo"]
+    assert sessions.MAX_DISPOSITIVI >= 1
+    assert sessions.check(None, 1) == (False, None)

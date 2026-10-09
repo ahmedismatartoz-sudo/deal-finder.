@@ -67,7 +67,7 @@ async function api(path, opts = {}) {
   }
   let data = null;
   try { data = await res.json(); } catch (e) {}
-  if (res.status === 401 && S.token && !path.includes("/auth/")) { logout(true); throw new Error("Accesso scaduto: entra di nuovo"); }
+  if (res.status === 401 && S.token && !path.includes("/auth/")) { const m = (data && data.error) || "Accesso scaduto: entra di nuovo"; logout(m); throw new Error(m); }
   if (!res.ok) { const e = new Error((data && (data.error || data.errore)) || "Errore " + res.status); e.data = data; e.status = res.status; throw e; }
   return data;
 }
@@ -469,9 +469,10 @@ async function redeemCode(code){
   catch (e) { S.esitoAccesso = "errore"; go("entra", true); }
 }
 function logout(silent){
+  if (!silent && S.token) { fetch("/api/auth/esci", {method: "POST", headers: {Authorization: "Bearer " + S.token}}).catch(() => {}); }
   S.token = null; S.user = null; S.cars = null; S.detail = {}; store.del("token"); store.del("user");
   try { if (window.caches) caches.delete("scovo-dati"); } catch (e) {}
-  L.err = silent ? "Accesso scaduto: entra di nuovo." : "";
+  L.err = typeof silent === "string" ? silent : silent ? "Accesso scaduto: entra di nuovo." : "";
   go(silent ? "entra" : "", true);
 }
 
