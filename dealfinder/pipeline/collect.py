@@ -29,6 +29,13 @@ def _recent_facebook() -> bool:
     return bool(row and row["recent"])
 
 
+def _backfill_done() -> bool:
+    with connect() as conn:
+        row = conn.execute("SELECT 1 FROM job_runs WHERE job='collect:fb_backfill' AND ((ok AND started_at > now() - "
+                           "interval '30 days') OR (finished_at IS NULL AND started_at > now() - interval '6 hours')) LIMIT 1").fetchone()
+    return bool(row)
+
+
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode == "opportunita":
@@ -46,6 +53,9 @@ def run(mode: str) -> Counter:
                      "max_price": settings.max_purchase_eur, "max_pages": 0, "price_bands": bands,
                      "band_pages": int(os.environ.get("BAND_PAGES", "30"))})]
     elif mode in ("facebook", "fb_backfill"):
+        if mode == "facebook" and os.environ.get("FB_BACKFILL") == "1" and not _backfill_done():
+            mode = "fb_backfill"          # "Trigger Run" sul lavoro Facebook avvia subito la raccolta di partenza
+            log.info("Facebook: raccolta di partenza (ultimi 30 giorni)")
         if mode == "facebook" and _recent_facebook():
             log.info("Facebook raccolto da poco (altro lavoro): salto per non pagare due volte gli stessi annunci")
             return stats

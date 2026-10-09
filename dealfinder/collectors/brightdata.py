@@ -44,9 +44,14 @@ FB_BANDS = [(500, 2000), (2000, 4000), (4000, 7000), (7000, 12000), (12000, 2000
 FB_PROBLEM_QUERIES = ["incidentata", "da sistemare", "non parte", "guasto"]
 
 
-def default_searches(days: int = 1) -> list[dict]:
+# raccolta di partenza: fasce più strette, così ogni ricerca resta sotto il limite di Facebook
+FB_BANDS_FINE = [(500, 1000), (1000, 1500), (1500, 2000), (2000, 3000), (3000, 4000), (4000, 5500),
+                 (5500, 7000), (7000, 9000), (9000, 12000), (12000, 15000), (15000, 20000)]
+
+
+def default_searches(days: int = 1, bands: list | None = None) -> list[dict]:
     out = [{"city": c, "radius": r, "min_price": lo, "max_price": hi, "days": days}
-           for c, r in FB_CITIES for lo, hi in FB_BANDS]
+           for c, r in FB_CITIES for lo, hi in (bands or FB_BANDS)]
     out += [{"city": "milan", "radius": 80, "query": q, "days": days} for q in FB_PROBLEM_QUERIES]
     return out
 
@@ -223,7 +228,7 @@ class BrightDataFacebookCollector(Collector):
             self.limit = int(os.environ.get("BRIGHTDATA_LIMIT", "300"))
         # Raccolta di partenza (una volta sola): gli annunci degli ultimi 30 giorni
         if backfill:
-            self.searches = default_searches(30)
+            self.searches = default_searches(30, FB_BANDS_FINE)
             self.limit = int(os.environ.get("FB_BACKFILL_LIMIT", "300"))
         self._client = client
 
@@ -280,39 +285,42 @@ class BrightDataFacebookCollector(Collector):
         urls = [search_url(s["city"], s.get("radius", 40), s.get("min_price", 500),
                            s.get("max_price", max_price), s.get("days", 1), s.get("query")) for s in self.searches]
         problem_urls = {u for u, s in zip(urls, self.searches) if s.get("query")}
-        sid = self.trigger(urls)
-        log.info("Bright Data: snapshot %s avviato per %d ricerche", sid, len(urls))
-        self.wait(sid)
-        rows = self.download(sid)
-        same = miles = other = 0
-        for row in rows:
-            if not isinstance(row, dict) or not isinstance(row.get("car_miles"), (int, float)):
+        # a lotti: tutti i lotti partono insieme su Bright Data (più veloce), poi si scaricano
+        # uno alla volta (poca memoria anche con decine di migliaia di annunci)
+        size = int(os.environ.get("FB_LOTTO", "15"))
+        chunks = [urls[i:i + size] for i in range(0, len(urls), size)]
+        sids = []
+        for ch in chunks:
+            try:
+                sids.append((self.trigger(ch), len(ch)))
+            except Exception as e:
+                log.error("Bright Data: lotto non avviato: %s", str(e)[:200])
+        log.info("Bright Data: %d lotti avviati per %d ricerche (max %d annunci per ricerca)",
+                 len(sids), len(urls), self.limit)
+        per: dict = {}
+        total = kept = 0
+        for sid, n in sids:
+            try:
+                self.wait(sid, max_minutes=int(os.environ.get("FB_ATTESA_MIN", "180")))
+                rows = self.download(sid)
+            except Exception as e:
+                log.error("Bright Data: lotto %s perso: %s", sid, str(e)[:200])
                 continue
-            vals = {int(re.sub(r"[ .]", "", x)) for x in RE_KM.findall(row.get("description") or "")}
-            if not vals:
-                continue
-            cm = int(row["car_miles"])
-            if cm in vals:
-                same += 1
-            elif any(abs(v / 1.609 - cm) < 0.03 * v for v in vals):
-                miles += 1
-            else:
-                other += 1
-        log.info("Bright Data km: campo fornitore uguale ai km scritti %d, in miglia %d, diverso %d", same, miles, other)
-        kept = 0
-        for row in rows:
-            listing = parse_row(row, max_price)
-            if listing:
+            total += len(rows)
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
                 src = (row.get("input") or {}).get("url") if isinstance(row.get("input"), dict) else None
-                listing.problem_search = src in problem_urls if src else False
-                kept += 1
-                yield listing
-        log.info("Bright Data: %d righe ricevute, %d auto valide", len(rows), kept)
-        per = {}
-        for row in rows:
-            src = (row.get("input") or {}).get("url") if isinstance(row, dict) and isinstance(row.get("input"), dict) else None
-            k = (src or "?").split("marketplace/")[-1][:70]
-            per[k] = per.get(k, 0) + 1
+                k = (src or "?").split("marketplace/")[-1][:60]
+                per[k] = per.get(k, 0) + 1
+                listing = parse_row(row, max_price)
+                if listing:
+                    listing.problem_search = src in problem_urls if src else False
+                    kept += 1
+                    yield listing
+            log.info("Bright Data: lotto %s: %d righe", sid, len(rows))
+            del rows
+        log.info("Bright Data: %d righe ricevute, %d auto valide", total, kept)
         log.info("FB_PER_RICERCA %s", json.dumps(per))
 
     def check_urls(self, urls: list[str]) -> dict[str, str]:
