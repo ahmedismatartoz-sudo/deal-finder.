@@ -24,7 +24,7 @@ from ..pricing.engine import value_listing
 from ..pricing.fallback import apply_model, estimate_missing_km, weak
 from ..pricing.train import load_active
 from ..pricing.margin import DealerCosts, compute_margin
-from ..store import load_market, photos_of, row_to_listing
+from ..store import LIGHT_COLS, load_market, photos_of, row_to_listing
 from .verify import verify_rows
 
 log = logging.getLogger("candidati")
@@ -76,7 +76,7 @@ def run() -> dict:
     with connect() as conn:
         finish = log_job(conn, "candidati:v2")
         rows = conn.execute(
-            """SELECT * FROM listings WHERE status='attivo' AND price_eur BETWEEN 500 AND %s
+            f"""SELECT {LIGHT_COLS} FROM listings WHERE status='attivo' AND price_eur BETWEEN 500 AND %s
                  AND seller_type <> 'commerciante'
                  AND (province = ANY(%s) OR source='facebook')
                  AND stage NOT IN ('scartato','approfondito')""",

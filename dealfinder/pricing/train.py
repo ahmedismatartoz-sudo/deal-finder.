@@ -12,7 +12,7 @@ import logging
 import sys
 
 from ..db import connect, log_job
-from ..store import row_to_listing
+from ..store import LIGHT_COLS, row_to_listing
 from .model import MODEL_VERSION, train
 
 log = logging.getLogger("train")
@@ -32,7 +32,7 @@ def prescreen_backlog(conn, model: dict) -> dict:
 
     from .model import prescreen
     stats: Counter = Counter()
-    rows = conn.execute("SELECT * FROM listings WHERE stage IN ('nuovo','attesa_mercato') AND status='attivo' "
+    rows = conn.execute(f"SELECT {LIGHT_COLS} FROM listings WHERE stage IN ('nuovo','attesa_mercato') AND status='attivo' "
                         "AND price_eur IS NOT NULL").fetchall()
     for r in rows:
         ps = prescreen(model, row_to_listing(r))
@@ -67,7 +67,7 @@ def run(force: bool = False) -> dict:
             log.info("riaddestramento: base passata da %s a %s annunci", n_prev, n_now)
         finish = log_job(conn, "train")
         rows = conn.execute(
-            f"""SELECT * FROM listings WHERE {where}""").fetchall()
+            f"""SELECT {LIGHT_COLS} FROM listings WHERE {where}""").fetchall()
         model = train([row_to_listing(r) for r in rows])
         m = model["metrics"]
         m["annunci_base"] = n_now

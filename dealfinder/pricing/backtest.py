@@ -18,7 +18,7 @@ from collections import defaultdict
 from statistics import median
 
 from ..db import connect, log_job
-from ..store import load_market, row_to_listing
+from ..store import LIGHT_COLS, load_market, row_to_listing
 from .engine import ENGINE_VERSION, PricingConfig, value_listing
 
 log = logging.getLogger("backtest")
@@ -58,7 +58,7 @@ def run() -> dict:
     with connect() as conn:
         finish = log_job(conn, "backtest")
         rows = conn.execute(
-            """SELECT * FROM listings WHERE status='scomparso' AND disappeared_at > now() - interval '60 days'
+            f"""SELECT {LIGHT_COLS} FROM listings WHERE status='scomparso' AND disappeared_at > now() - interval '60 days'
                AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
                AND damage_class IN ('nessuno','sconosciuto') AND NOT COALESCE(damage_declared,false)
                AND price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
