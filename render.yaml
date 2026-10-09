@@ -33,15 +33,15 @@ databases:
     region: frankfurt
 
 services:
-  # Sito + API per commercianti (e futura app)
+  # Sito Scovo (telefono) + API: https://scovo.onrender.com
   - type: web
-    name: dealfinder-web
+    name: scovo
     runtime: python
     region: frankfurt
     plan: starter
     buildCommand: pip install -r requirements.txt
-    preDeployCommand: python -m dealfinder.init_db
-    startCommand: uvicorn dealfinder.web.app:app --host 0.0.0.0 --port $PORT --proxy-headers
+    startCommand: python -m dealfinder.init_db && uvicorn dealfinder.web.app:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
+
     healthCheckPath: /health
     envVars:
       - fromGroup: dealfinder-secrets
@@ -51,6 +51,10 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: SERVIZI_LIMITE_GIORNO     # Vendi/Ricambi per commerciante al giorno
+        value: "15"
+      - key: SERVIZI_LIMITE_TOTALE     # tutto il sito al giorno (le ricerche targa costano)
+        value: "150"
 
   # Nuovi annunci + filtro + approfondimento: ogni 3 ore (orari UTC)
   - type: cron
