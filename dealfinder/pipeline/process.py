@@ -189,7 +189,9 @@ def deep(conn) -> Counter:
             # targa: solo per identificare il modello; si conserva solo l'hash
             plate_txt = (photos.get("plate_text") or "").replace(" ", "").upper() or \
                 find_plate(" ".join(filter(None, [l.title, l.description])))
-            plate_data = plate.lookup(plate_txt) if plate_txt else None
+            # La ricerca targhe è a pagamento: nel cerca-affari è spenta (si usa solo nei
+            # servizi Vendi e Ricambi). Si riaccende solo con PLATE_IN_PIPELINE=1.
+            plate_data = plate.lookup(plate_txt) if plate_txt and os.environ.get("PLATE_IN_PIPELINE") == "1" else None
             if plate_txt:
                 conn.execute("UPDATE vehicles SET plate_hash=COALESCE(plate_hash,%s) "
                              "WHERE id=(SELECT vehicle_id FROM listings WHERE id=%s)",
