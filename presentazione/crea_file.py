@@ -98,7 +98,14 @@ def html_file():
     s = open("index.html", encoding="utf-8").read()
     def emb(m):
         p = m.group(1)
-        if os.path.exists(p): return '"f":"data:image/jpeg;base64,' + base64.b64encode(open(p, "rb").read()).decode() + '"'
+        if os.path.exists(p):
+            data = open(p, "rb").read()
+            try:
+                from PIL import Image
+                im = Image.open(io.BytesIO(data)).convert("RGB"); im.thumbnail((1000, 1000)); b = io.BytesIO(); im.save(b, "JPEG", quality=75); data = b.getvalue()
+            except Exception:
+                pass
+            return '"f":"data:image/jpeg;base64,' + base64.b64encode(data).decode() + '"'
         return m.group(0)
     s = re.sub(r'"f": ?"(img/[^"]+)"', emb, s)
     s = s.replace('<a class="dl"', '<a hidden class="dl"')
