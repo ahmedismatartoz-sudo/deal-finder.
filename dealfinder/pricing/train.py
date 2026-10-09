@@ -1,9 +1,9 @@
 """Addestramento del modello dei prezzi (automatico, dopo la raccolta notturna del mercato).
 
-    python -m dealfinder.pricing.train            # addestra se il modello attivo ha più di 7 giorni
+    python -m dealfinder.pricing.train            # addestra se il modello attivo ha più di un giorno
     python -m dealfinder.pricing.train --forza    # addestra comunque
 
-Il nuovo modello diventa attivo solo se l'errore misurato non peggiora più del 5%.
+Il nuovo modello diventa attivo solo se sbaglia meno del modello attivo sugli stessi annunci di prova.
 """
 from __future__ import annotations
 
@@ -45,7 +45,8 @@ def prescreen_backlog(conn, model: dict) -> dict:
     return dict(stats)
 
 
-GROWTH_RETRAIN = 0.30      # la base è cresciuta del 30%: si riaddestra subito, senza aspettare 7 giorni
+GROWTH_RETRAIN = 0.10      # la base è cresciuta del 10%: si riaddestra subito
+RETRAIN_HOURS = 22         # altrimenti ogni giorno: il modello impara di continuo dai nuovi annunci
 
 
 def run(force: bool = False) -> dict:
@@ -61,7 +62,8 @@ def run(force: bool = False) -> dict:
             n_prev = prev_m.get("annunci_base")
             grown = n_prev is None or n_now >= n_prev * (1 + GROWTH_RETRAIN) \
                 or cur.get("version") != MODEL_VERSION          # nuova versione del modello: si riaddestra
-            age = conn.execute("SELECT now() - %s > interval '7 days' AS old", (cur["created_at"],)).fetchone()
+            age = conn.execute("SELECT now() - %s > make_interval(hours => %s) AS old",
+                               (cur["created_at"], RETRAIN_HOURS)).fetchone()
             if not age["old"] and not grown:
                 log.info("modello attivo recente (base %s annunci, ora %s): nessun addestramento", n_prev, n_now)
                 return {"saltato": True, "annunci": n_now}
@@ -72,20 +74,30 @@ def run(force: bool = False) -> dict:
         model = train(listings)
         n_rows = len(listings)
         del listings
+        test = model.pop("_test", [])
         m = model["metrics"]
         m["annunci_base"] = n_now
-        prev = (cur or {}).get("metrics") or {}
-        if isinstance(prev, str):
-            prev = json.loads(prev)
-        ok = m.get("n_test", 0) >= 50 and (
-            not prev.get("median_abs_pct_error")
-            or m["median_abs_pct_error"] <= prev["median_abs_pct_error"] * 1.05)
+        # Sfida tra modelli: il nuovo vince solo se sbaglia meno del vecchio SUGLI STESSI annunci di prova
+        old_model = load_active(conn)
+        old_err = None
+        if old_model:
+            from .model import evaluate
+            try:
+                old_err = evaluate(old_model, test).get("median_abs_pct_error")
+            except Exception:
+                old_err = None
+        m["errore_modello_precedente"] = old_err
+        ok = m.get("n_test", 0) >= 50 and (old_err is None or m["median_abs_pct_error"] <= old_err * 1.01)
+        del test
         conn.execute("INSERT INTO price_models (version, model, metrics, active) VALUES (%s,%s,%s,%s)",
                      (MODEL_VERSION, json.dumps(model), json.dumps(m), ok))
         if ok:
             conn.execute("UPDATE price_models SET active = (id = (SELECT max(id) FROM price_models))")
         conn.commit()
         res = {"annunci": n_rows, "gruppi": len(model["groups"]), "metriche": m, "attivato": ok}
+        log.info("MODELLO_STORIA errore %.2f%% (prima %s) impostazioni %s attivato %s",
+                 100 * m.get("median_abs_pct_error", 0), f"{100 * old_err:.2f}%" if old_err else "n.d.",
+                 m.get("impostazioni"), ok)
         if ok:
             res["prevalutati"] = prescreen_backlog(conn, model)
         finish(True, res)
