@@ -1431,5 +1431,5875 @@
     "high": 1000
    }
   ]
+ },
+ {
+  "id": 23644,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 69% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 9502,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 62% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 33530,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 62% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 3200,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 67% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 15107,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 69% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 23465,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 61% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 23400,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 61% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 38905,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 68% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 23741,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 56% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 15214,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 66% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 10661,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 644,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 74% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 13974,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 22588,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 13809,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 22435,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 52% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 37689,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 8068,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 466,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 9764,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 30908,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 33707,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 1984,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 23771,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 10505,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 78% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 36250,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 74% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 38903,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 20571,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 41298,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 41097,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 78% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 14975,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 38863,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 10805,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 66% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 10584,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 20529,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 23257,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 77% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 38885,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 36219,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 79% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 23396,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 67% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 23274,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 33561,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 23157,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 33704,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 36214,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 23449,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 64% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 38853,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 23722,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 729,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 23445,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 61% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 2662,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 75% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 24443,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 79% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 38978,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 79% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 33947,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 44867,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 33526,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 24313,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 24742,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 25641,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 25412,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 10832,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 7175,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 64% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 41749,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 25775,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 15631,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 67% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 23671,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 75% sotto la media: controllare che non sia un errore o una truffa; km non indicati, stimati; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 41510,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 15434,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 5542,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 25677,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 41423,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 33591,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 41485,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 64% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 16038,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 24355,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 2738,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 24980,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 25184,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 33450,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 34340,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 7333,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 24386,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 39255,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 63% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 39200,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 52% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 5375,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 63% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 37524,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 27087,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 57% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21445,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 51% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 16799,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 16847,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37500,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 57% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 7645,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12423,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27321,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25704,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 60% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 16811,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27346,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27567,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26968,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 52% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42756,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26690,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 2731,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26749,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 34737,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12707,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 34793,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17546,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 3380,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42185,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 53% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 1122,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 39904,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12611,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 36668,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21604,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27263,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12434,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11927,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42535,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17343,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17024,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37570,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42274,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11825,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 52% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12574,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26232,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26194,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 39755,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 39930,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12470,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26156,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 69% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 45068,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 66% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 12164,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 60% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 5399,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 36511,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 39669,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 36542,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 27208,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 55% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 42286,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 17428,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 27100,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 12000,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 57% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 9742,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 42537,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 25851,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 11778,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 26872,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzi delle auto simili molto variabili; danno leggero.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 26814,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 26529,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 26230,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 16896,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 26260,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 26005,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 7612,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 11829,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 55% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 10981,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 70% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 15855,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzi delle auto simili molto variabili; prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 20746,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 70% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11883,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 24767,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 50% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25179,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 57% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25157,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 57% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25506,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 55% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25668,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11693,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11653,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 50% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25101,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 15978,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 16442,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 54% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 9564,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 60% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 24227,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 56% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 39036,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 57% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 9397,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 66% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 41988,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 41965,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 54% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 20722,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 24416,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 62% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 15927,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11562,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 41855,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 24793,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 41489,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 63% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11331,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 58% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 24264,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 51% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25482,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28143,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 58% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43183,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27706,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 53% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27806,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35046,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 59% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40075,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 50% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18120,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12805,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 58% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12699,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18009,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35166,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28542,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 51% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21760,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 51% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43400,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 39948,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17961,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35149,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 51% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28790,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42877,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 50% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21857,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29799,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18364,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29290,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18723,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27340,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18336,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29444,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28778,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13195,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40151,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17848,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27741,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 52% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 9178,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 50% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29719,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43125,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 39875,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18194,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 8120,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 43383,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18201,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43158,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 36708,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43007,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17745,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13454,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37604,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21649,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29491,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37663,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13479,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 35153,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 3614,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35077,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18631,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35023,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 56% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 27492,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 34983,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 18003,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 28782,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 2840,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 43283,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 28549,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 42674,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 17738,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 28254,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 35127,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 28524,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 29263,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 9766,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 9730,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 18391,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 28824,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 150,
+    "high": 400
+   }
+  ]
+ },
+ {
+  "id": 28627,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 9765,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 20116,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43748,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 52% sotto la media: controllare che non sia un errore o una truffa.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 14279,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19439,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43782,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 14607,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 22449,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35941,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13550,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40530,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 38227,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19086,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13678,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43843,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40489,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 30905,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 35322,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19796,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 14665,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 2737,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 22190,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44098,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 14444,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29754,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18857,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 30309,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35542,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 30853,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 32896,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40476,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 30671,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 41042,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40988,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 32575,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43614,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19309,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40556,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31655,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 625,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31267,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31190,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 14255,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 20021,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 33225,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44496,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44448,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13649,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44460,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 38449,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19239,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 5416,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 32643,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13990,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 22371,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 33032,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40956,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28577,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 2917,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21947,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28287,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28038,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28073,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18157,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 7378,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28547,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29875,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 36780,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28471,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43152,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27875,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 33109,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13790,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18314,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43690,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 2487,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28842,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35033,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43238,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 33451,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12892,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19128,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43746,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 7200,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 22362,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18293,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42826,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 32817,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13192,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28131,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28693,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 3288,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 30586,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18737,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42990,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29900,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43604,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31537,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37084,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 32812,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43861,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29320,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43276,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28195,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29967,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12190,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28462,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19250,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26386,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12306,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17118,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 11906,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18562,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 16992,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 8869,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27459,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19221,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 40864,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37560,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 19465,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17333,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 7588,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13811,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43391,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31794,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29410,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 37622,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 400,
+  "ricambi_max": 900,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 400,
+    "high": 900
+   }
+  ]
+ },
+ {
+  "id": 14592,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 34988,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 34993,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 1488,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31066,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 36783,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili).",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44520,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 17744,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "controlli": [
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1800,
+  "ricambi": [
+   {
+    "label": "Riparazione stimata (da verificare)",
+    "low": 800,
+    "high": 1800
+   }
+  ]
+ },
+ {
+  "id": 2594,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44488,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35272,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26790,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 31964,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 34728,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 44340,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 2600,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43099,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 16511,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 28774,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26388,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42474,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: numeri in linea, auto simili sufficienti.",
+  "controlli": [
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ]
  }
 ]
