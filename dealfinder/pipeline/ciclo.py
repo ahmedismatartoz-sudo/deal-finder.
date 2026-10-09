@@ -57,6 +57,9 @@ def run() -> None:
     step("opportunita", collect, "opportunita")
     if _due("collect:profondo", 20):
         step("raccolta_profonda", collect, "profondo")
+    from . import fb_rilettura
+    if _due(fb_rilettura.JOB, 24 * 365):
+        step("fb_rilettura", fb_rilettura.run)
     if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "4"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):

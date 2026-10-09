@@ -23,6 +23,14 @@ MAKES = {
     "lynk & co": "lynk-co", "lynk&co": "lynk-co", "dr": "dr", "maserati": "maserati", "abarth": "abarth",
     "polestar": "polestar", "saab": "saab", "chrysler": "chrysler", "genesis": "genesis",
 }
+# modelli che sono solo numeri (non vanno scambiati per una cilindrata)
+NUMERIC_MODELS = {
+    "peugeot": {"106", "107", "108", "205", "206", "207", "208", "306", "307", "308", "407", "408", "508", "607",
+                "807", "1007", "2008", "3008", "4007", "4008", "5008"},
+    "fiat": {"500", "600", "124"}, "abarth": {"500", "595", "695", "124"},
+    "alfa-romeo": {"145", "146", "147", "156", "159", "166"}, "mazda": {"2", "3", "5", "6"},
+    "ds": {"3", "4", "5", "7"}, "renault": {"4", "5"}, "volvo": {"240", "740", "850", "940"},
+}
 # modelli che occupano due parole
 TWO_WORD_PREFIX = {"serie", "classe", "series", "class", "range", "grand", "c4", "nuova", "new", "up!"}
 _ALIASES = sorted(MAKES, key=len, reverse=True)
@@ -49,7 +57,8 @@ def make_model_from_title(title: str | None) -> tuple[str | None, str | None]:
             words = [rest[1]]
         model = slug(" ".join(words))
         # una cilindrata o una sigla motore non è un modello
-        if model and re.fullmatch(r"\d(\.\d)?|\d{3,4}|tdi|tsi|hdi|cdi|jtd|mjt|gpl|diesel|benzina", model):
+        if model and re.fullmatch(r"\d(\.\d)?|\d{3,4}|tdi|tsi|hdi|cdi|jtd|mjt|gpl|diesel|benzina", model) \
+                and model not in NUMERIC_MODELS.get(make, ()):
             model = None
         return make, model
     return None, None

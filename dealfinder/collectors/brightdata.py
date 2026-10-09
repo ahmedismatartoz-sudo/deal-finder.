@@ -47,6 +47,21 @@ DEFAULT_SEARCHES = [
 ]
 RE_KM = re.compile(r"(?<!\d)(\d{1,3}(?:[ .]\d{3})+|\d{4,7})\s*(?:km|chilometri)\b", re.I)
 RE_YEAR = re.compile(r"\b(19[89]\d|20[0-3]\d)\b")
+RE_YEAR_TEXT = re.compile(r"\b(?:anno|del|immatricolat[ao](?: nel| a)?|immatricolazione|imm\.?)\s*:?\s*(?:\d{1,2}/)?((?:19[89]|20[0-2])\d)\b", re.I)
+# carburante dal testo (Facebook non ha un campo): l'ordine conta, GPL/metano/ibrida prima di benzina
+FUEL_TEXT = [
+    ("gpl", re.compile(r"\b(gpl|lpg|bifuel|bi-fuel)\b", re.I)),
+    ("metano", re.compile(r"\b(metano|cng|natural power|ecofuel)\b", re.I)),
+    ("ibrida", re.compile(r"\b(hybrid|ibrida|full hybrid|mild hybrid|plug-in|phev|e-tense)\b", re.I)),
+    ("elettrica", re.compile(r"\b(elettrica|100% elettric[ao]|full electric)\b", re.I)),
+    ("diesel", re.compile(r"\b(diesel|gasolio|tdi|tdci|jtd|jtdm|multijet|mjt|m-?jet|hdi|bluehdi|e-?hdi|dci|cdi|crdi|"
+                          r"d-?4d|ecoblue|bluetec|bluemotion tdi|cdti|ddis|i-?dtec|skyactiv-d|\d{2,3}\s?d|[1-9]\d{2}d)\b", re.I)),
+    ("benzina", re.compile(r"\b(benzina|tsi|tfsi|tce|puretech|ecoboost|fire|twinair|t-?jet|vti|thp|mpi|t-?gdi|gdi|"
+                           r"vvt-?i|i-?vtec|skyactiv-g|turbo benzina|[1-9]\d{2}i)\b", re.I)),
+]
+RE_AUTO = re.compile(r"\b(cambio automatico|automatica|automatico|dsg|s-?tronic|steptronic|edc|easytronic|"
+                     r"dualogic|powershift|cvt|tiptronic|7g-?tronic|aut\.)\b", re.I)
+RE_MANUAL = re.compile(r"\b(cambio manuale|manuale)\b", re.I)
 NOT_A_CAR = re.compile(r"\b(ricambi|vendo motore|motore in vendita|smembro|monopattino|scooter|moto(?:cicletta)?|"
                        r"bici|camper|roulotte|trattore|furgone)\b", re.I)
 
@@ -71,7 +86,71 @@ def mileage_from(row: dict) -> int | None:
     if len(values) == 1:
         km = values.pop()
         return km if km <= 900_000 else None
+    # Nessun km leggibile nel testo: il campo del fornitore è in km (verificato: mai in miglia
+    # sui dati italiani) e si usa se plausibile
+    if not values and isinstance(miles, (int, float)) and 500 <= miles <= 600_000:
+        return int(miles)
     return None
+
+
+def fuel_from(text: str) -> str | None:
+    for fuel, rx in FUEL_TEXT:
+        if rx.search(text):
+            return fuel
+    return None
+
+
+def year_from(title: str, desc: str) -> int | None:
+    m = RE_YEAR.search(title)
+    if m:
+        return int(m.group(1))
+    years = {int(y) for y in RE_YEAR_TEXT.findall(desc[:600])}
+    return years.pop() if len(years) == 1 else None
+
+
+# parole che bastano a riconoscere la marca quando il venditore non la scrive
+EXTRA_MODEL_MAKE = {"classe": "mercedes", "serie": "bmw", "x1": "bmw", "x2": "bmw", "x3": "bmw", "x4": "bmw",
+                    "x5": "bmw", "x6": "bmw", "a1": "audi", "a3": "audi", "a4": "audi", "a5": "audi", "a6": "audi",
+                    "q2": "audi", "q3": "audi", "q5": "audi", "tt": "audi", "500l": "fiat", "500x": "fiat",
+                    "208": "peugeot", "2008": "peugeot", "308": "peugeot", "3008": "peugeot", "207": "peugeot",
+                    "c1": "citroen", "c5": "citroen", "ds3": "citroen", "kuga": "ford", "puma": "ford", "ka": "ford",
+                    "tiguan": "volkswagen", "t-roc": "volkswagen", "troc": "volkswagen", "up": "volkswagen",
+                    "touran": "volkswagen", "captur": "renault", "scenic": "renault", "kadjar": "renault",
+                    "juke": "nissan", "x-trail": "nissan", "note": "nissan", "rav4": "toyota", "auris": "toyota",
+                    "c-hr": "toyota", "chr": "toyota", "tucson": "hyundai", "ix35": "hyundai", "i30": "hyundai",
+                    "rio": "kia", "ceed": "kia", "stonic": "kia", "niro": "kia", "swift": "suzuki", "vitara": "suzuki",
+                    "ignis": "suzuki", "jimny": "suzuki", "renegade": "jeep", "compass": "jeep", "mokka": "opel",
+                    "crossland": "opel", "grandland": "opel", "insignia": "opel", "adam": "opel", "karl": "opel",
+                    "delta": "lancia", "stelvio": "alfa-romeo", "giulia": "alfa-romeo", "tonale": "alfa-romeo",
+                    "arona": "seat", "ateca": "seat", "kamiq": "skoda", "karoq": "skoda", "kodiaq": "skoda",
+                    "citigo": "skoda", "logan": "dacia", "jogger": "dacia", "cooper": "mini", "countryman": "mini",
+                    "fortwo": "smart", "forfour": "smart", "qubo": "fiat", "bravo": "fiat", "freemont": "fiat",
+                    "sedici": "fiat", "idea": "fiat", "croma": "fiat", "multipla": "fiat", "fiorino": "fiat"}
+
+
+def make_model_from(title: str, desc: str, brand: str | None) -> tuple[str | None, str | None]:
+    """Marca e modello: dal titolo, poi con la marca del fornitore, poi dal modello famoso
+    (es. "Golf 7 tdi" -> volkswagen golf), infine dall'inizio della descrizione."""
+    from ..core.consistency import MODEL_MAKE
+    make, model = make_model_from_title(title)
+    if model:
+        return make, model
+    if brand and not make:
+        b_make, b_model = make_model_from_title(f"{brand} {title}")
+        if b_model:
+            return b_make, b_model
+        make = make or b_make
+    known = {**MODEL_MAKE, **EXTRA_MODEL_MAKE}
+    words = re.findall(r"[a-z0-9]+", title.lower())
+    for w in words:
+        if w in known:
+            mk, md = make_model_from_title(f"{known[w]} {w} " + " ".join(words[words.index(w) + 1:]))
+            if md:
+                return make or mk, md
+    d_make, d_model = make_model_from_title(desc[:160])
+    if d_model and (make is None or d_make == make):
+        return d_make, d_model
+    return make, model
 
 
 def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
@@ -95,20 +174,24 @@ def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
         return None
     if not 0 < price < max_price:
         return None
-    m = RE_YEAR.search(title)
     loc = row.get("location")
     city = loc.get("city") if isinstance(loc, dict) else (str(loc).split(",")[0].strip() if loc else None)
     trans = row.get("transmission")
     images = [i for i in (row.get("images") or []) if isinstance(i, str) and i.startswith("https://")]
-    t_make, t_model = make_model_from_title(title)
+    t_make, t_model = make_model_from(title, desc, row.get("brand"))
+    text = f"{title} {desc[:800]}"
+    gearbox = {"MANUAL": "manuale", "AUTOMATIC": "automatico"}.get(str(trans).upper()) if trans else None
+    if not gearbox:
+        gearbox = "automatico" if RE_AUTO.search(text) else ("manuale" if RE_MANUAL.search(text) else None)
     return Listing(
         source="facebook", source_id=str(pid), url=str(url).split("?")[0],
         title=title or None, description=desc or None,
-        make=row.get("brand") or t_make,
+        make=t_make or row.get("brand"),
         model=t_model,
-        year=int(m.group(1)) if m else None,
+        year=year_from(title, desc),
         mileage_km=mileage_from(row),
-        gearbox={"MANUAL": "manuale", "AUTOMATIC": "automatico"}.get(str(trans).upper()) if trans else None,
+        fuel=fuel_from(text),
+        gearbox=gearbox,
         price_raw=str(price), price_eur=price,
         seller_type="privato",   # Marketplace: in prevalenza privati; l'AI corregge se il testo indica un'azienda
         city=city, photos=images[:30], raw=row,
@@ -207,6 +290,12 @@ class BrightDataFacebookCollector(Collector):
                 kept += 1
                 yield listing
         log.info("Bright Data: %d righe ricevute, %d auto valide", len(rows), kept)
+        per = {}
+        for row in rows:
+            src = (row.get("input") or {}).get("url") if isinstance(row, dict) and isinstance(row.get("input"), dict) else None
+            k = (src or "?").split("marketplace/")[-1][:70]
+            per[k] = per.get(k, 0) + 1
+        log.info("FB_PER_RICERCA %s", json.dumps(per))
 
     def check_urls(self, urls: list[str]) -> dict[str, str]:
         """Verifica se gli annunci esistono ancora: {url: attivo|scomparso|venduto|errore}.
