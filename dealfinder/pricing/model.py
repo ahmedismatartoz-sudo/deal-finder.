@@ -118,6 +118,8 @@ def predict(model: dict, l: Listing) -> dict | None:
         g = model["groups"].get(f"{lvl}:{key}")
         if g is None:
             continue
+        if len(g["beta"]) != len(f):
+            return None                    # modello di una versione precedente: si aspetta il riaddestramento
         base = float(np.dot(g["beta"], f))
         q25, q50, q75 = g["q"]
         return {"p50": round(math.exp(base + q50)), "p25": round(math.exp(base + q25)),
