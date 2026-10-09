@@ -69,6 +69,7 @@ FUEL_TEXT = [
 RE_AUTO = re.compile(r"\b(cambio automatico|automatica|automatico|dsg|s-?tronic|steptronic|edc|easytronic|"
                      r"dualogic|powershift|cvt|tiptronic|7g-?tronic|aut\.)\b", re.I)
 RE_MANUAL = re.compile(r"\b(cambio manuale|manuale)\b", re.I)
+SPARE_PARTS_ONLY = re.compile(r"\b(vendo (solo )?ricambi|vendo pezzi|smembro)\b", re.I)
 NOT_A_CAR = re.compile(r"\b(ricambi|vendo motore|motore in vendita|smembro|monopattino|scooter|moto(?:cicletta)?|"
                        r"bici|camper|roulotte|trattore|furgone)\b", re.I)
 
@@ -172,7 +173,9 @@ def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
         return None
     title = (row.get("title") or "").strip()
     desc = row.get("description") or ""
-    if NOT_A_CAR.search(title) or NOT_A_CAR.search(desc[:300]):
+    # filtro largo: si scarta solo ciò che dal titolo NON è un'auto (moto, bici, ricambi venduti a parte);
+    # tutto il resto si salva con foto, prezzo, link e testo e lo giudica la stima dei prezzi
+    if NOT_A_CAR.search(title) or SPARE_PARTS_ONLY.search(desc[:200]):
         return None
     price = row.get("final_price") if row.get("final_price") is not None else row.get("initial_price")
     try:
