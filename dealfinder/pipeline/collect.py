@@ -36,6 +36,24 @@ def _backfill_done() -> bool:
     return bool(row)
 
 
+def _backfill_running() -> bool:
+    with connect() as conn:
+        row = conn.execute("SELECT 1 FROM job_runs WHERE job LIKE 'collect:fb_backfill%%' AND finished_at IS NULL "
+                           "AND started_at > now() - interval '6 hours' LIMIT 1").fetchone()
+    return bool(row)
+
+
+class _ReadyImporter(BrightDataFacebookCollector):
+    """Importa i lotti Facebook già pronti su Bright Data (avviati da un altro giro): nessuna nuova spesa."""
+
+    def search(self, query: dict):
+        if not self.configured():
+            return
+        sids = self.ready_snapshots(hours=int(os.environ.get("FB_IMPORTA_ORE", "12")))
+        log.info("Facebook: %d lotti pronti da importare", len(sids))
+        yield from self.collect_snapshots(sids, query.get("max_price", 20_000), max_minutes=5)
+
+
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode == "opportunita":
@@ -52,15 +70,24 @@ def run(mode: str) -> Counter:
                     {"region": settings.region, "provinces": list(settings.opportunity_provinces),
                      "max_price": settings.max_purchase_eur, "max_pages": 0, "price_bands": bands,
                      "band_pages": int(os.environ.get("BAND_PAGES", "30"))})]
-    elif mode in ("facebook", "fb_backfill"):
-        if mode == "facebook" and os.environ.get("FB_BACKFILL") == "1" and not _backfill_done():
+    elif mode == "fb_importa":
+        sources = [(_ReadyImporter(), {"max_price": settings.max_purchase_eur})]
+    elif mode in ("facebook", "fb_backfill", "fb_importa"):
+        if mode == "facebook" and _backfill_running():
+            # una raccolta grande è ancora in corso in un altro giro: si importano subito i lotti già pronti
+            mode = "fb_importa"
+            log.info("Facebook: raccolta di partenza in corso altrove, importo i lotti già pronti")
+        elif mode == "facebook" and os.environ.get("FB_BACKFILL") == "1" and not _backfill_done():
             mode = "fb_backfill"          # "Trigger Run" sul lavoro Facebook avvia subito la raccolta di partenza
             log.info("Facebook: raccolta di partenza (ultimi 30 giorni)")
         if mode == "facebook" and _recent_facebook():
             log.info("Facebook raccolto da poco (altro lavoro): salto per non pagare due volte gli stessi annunci")
             return stats
-        sources = [(BrightDataFacebookCollector(backfill=(mode == "fb_backfill")),
-                    {"max_price": settings.max_purchase_eur})]
+        if mode == "fb_importa":
+            sources = [(_ReadyImporter(), {"max_price": settings.max_purchase_eur})]
+        else:
+            sources = [(BrightDataFacebookCollector(backfill=(mode == "fb_backfill")),
+                        {"max_price": settings.max_purchase_eur})]
     else:
         subito = SubitoCollector(proxy=settings.scraper_proxy)
         q = {"region": settings.region, "provinces": provinces,

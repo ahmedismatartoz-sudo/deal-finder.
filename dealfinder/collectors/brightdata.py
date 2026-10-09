@@ -307,43 +307,96 @@ class BrightDataFacebookCollector(Collector):
         urls = [search_url(s["city"], s.get("radius", 40), s.get("min_price", 500),
                            s.get("max_price", max_price), s.get("days", 1), s.get("query")) for s in self.searches]
         problem_urls = {u for u, s in zip(urls, self.searches) if s.get("query") in FB_PROBLEM_QUERIES}
-        # a lotti: tutti i lotti partono insieme su Bright Data (più veloce), poi si scaricano
-        # uno alla volta (poca memoria anche con decine di migliaia di annunci)
-        size = int(os.environ.get("FB_LOTTO", "15"))
+        problem_set = set(problem_urls)
+        # Lotti piccoli, tutti avviati insieme su Bright Data (lavorano in parallelo).
+        # Ogni lotto si scarica appena è pronto, nell'ordine in cui finiscono: uno lento non blocca gli altri.
+        size = int(os.environ.get("FB_LOTTO", "5"))
         chunks = [urls[i:i + size] for i in range(0, len(urls), size)]
-        sids = []
+        pending = []
         for ch in chunks:
             try:
-                sids.append((self.trigger(ch), len(ch)))
+                pending.append(self.trigger(ch))
             except Exception as e:
                 log.error("Bright Data: lotto non avviato: %s", str(e)[:200])
-        log.info("Bright Data: %d lotti avviati per %d ricerche (max %d annunci per ricerca)",
-                 len(sids), len(urls), self.limit)
-        per: dict = {}
-        total = kept = 0
-        for sid, n in sids:
+        log.info("Bright Data: %d lotti avviati per %d ricerche (max %d annunci per ricerca): %s",
+                 len(pending), len(urls), self.limit, ",".join(pending))
+        yield from self.collect_snapshots(pending, max_price, problem_set)
+
+    def snapshot_status(self, sid: str) -> str:
+        r = self.client.get(f"{API}/progress/{sid}")
+        r.raise_for_status()
+        return str(r.json().get("status") or "")
+
+    def ready_snapshots(self, hours: int = 24) -> list[str]:
+        """Lotti già pronti su Bright Data (anche avviati da un altro giro), più recenti prima."""
+        r = self.client.get(f"{API}/snapshots", params={"dataset_id": self.dataset, "status": "ready"})
+        if r.status_code >= 400:
+            log.warning("Bright Data elenco lotti HTTP %s: %s", r.status_code, r.text[:200])
+            return []
+        data = r.json()
+        items = data if isinstance(data, list) else (data.get("snapshots") or data.get("data") or [])
+        out = []
+        from datetime import datetime, timedelta, timezone
+        limit = datetime.now(timezone.utc) - timedelta(hours=hours)
+        for it in items:
+            sid = it.get("id") or it.get("snapshot_id")
+            created = str(it.get("created") or it.get("created_at") or "")
             try:
-                self.wait(sid, max_minutes=int(os.environ.get("FB_ATTESA_MIN", "180")))
-                rows = self.download(sid)
-            except Exception as e:
-                log.error("Bright Data: lotto %s perso: %s", sid, str(e)[:200])
-                continue
-            total += len(rows)
-            for row in rows:
-                if not isinstance(row, dict):
+                when = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            except ValueError:
+                when = None
+            if sid and (when is None or when >= limit):
+                out.append(sid)
+        return out
+
+    def collect_snapshots(self, pending: list[str], max_price: int, problem_set: set | None = None,
+                          max_minutes: int | None = None) -> Iterator[Listing]:
+        problem_set = problem_set or set()
+        deadline = time.time() + 60 * (max_minutes or int(os.environ.get("FB_ATTESA_MIN", "180")))
+        pending = list(pending)
+        total = kept = 0
+        per: dict = {}
+        while pending and time.time() < deadline:
+            done_any = False
+            for sid in list(pending):
+                try:
+                    st = self.snapshot_status(sid)
+                except Exception as e:
+                    log.warning("Bright Data: stato lotto %s non letto: %s", sid, str(e)[:120])
                     continue
-                src = (row.get("input") or {}).get("url") if isinstance(row.get("input"), dict) else None
-                k = (src or "?").split("marketplace/")[-1][:60]
-                per[k] = per.get(k, 0) + 1
-                listing = parse_row(row, max_price)
-                if listing:
-                    listing.problem_search = src in problem_urls if src else False
-                    kept += 1
-                    yield listing
-            log.info("Bright Data: lotto %s: %d righe", sid, len(rows))
-            del rows
+                if st == "failed":
+                    log.error("Bright Data: lotto %s fallito", sid)
+                    pending.remove(sid)
+                    continue
+                if st != "ready":
+                    continue
+                pending.remove(sid)
+                done_any = True
+                try:
+                    rows = self.download(sid)
+                except Exception as e:
+                    log.error("Bright Data: lotto %s non scaricato: %s", sid, str(e)[:200])
+                    continue
+                total += len(rows)
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    src = (row.get("input") or {}).get("url") if isinstance(row.get("input"), dict) else None
+                    k = (src or "?").split("marketplace/")[-1][:60]
+                    per[k] = per.get(k, 0) + 1
+                    listing = parse_row(row, max_price)
+                    if listing:
+                        listing.problem_search = src in problem_set if src else False
+                        kept += 1
+                        yield listing
+                log.info("Bright Data: lotto %s: %d righe (mancano %d lotti)", sid, len(rows), len(pending))
+                del rows
+            if pending and not done_any:
+                time.sleep(20)
+        if pending:
+            log.warning("Bright Data: %d lotti non pronti in tempo (li raccoglie il giro dopo): %s",
+                        len(pending), ",".join(pending))
         log.info("Bright Data: %d righe ricevute, %d auto valide", total, kept)
-        log.info("FB_PER_RICERCA %s", json.dumps(per))
 
     def check_urls(self, urls: list[str]) -> dict[str, str]:
         """Verifica se gli annunci esistono ancora: {url: attivo|scomparso|venduto|errore}.
