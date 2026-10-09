@@ -35,16 +35,23 @@ API = "https://api.brightdata.com/datasets/v3"
 DEFAULT_DATASET = "gd_lvt9iwuh6fbcwmx1a"
 # Facebook mostra un numero limitato di risultati per ricerca: dividere per fasce di prezzo
 # fa sì che ogni ricerca resti sotto il limite e insieme coprano quasi tutto.
-DEFAULT_SEARCHES = [
-    {"city": "milan", "radius": 60, "min_price": 500, "max_price": 6000},
-    {"city": "milan", "radius": 60, "min_price": 6000, "max_price": 20000},
-    {"city": "brescia", "radius": 30, "min_price": 500, "max_price": 20000},
-    # La maggior parte delle opportunità sono auto con problemi: ricerche mirate
-    {"city": "milan", "radius": 80, "query": "incidentata"},
-    {"city": "milan", "radius": 80, "query": "da sistemare"},
-    {"city": "milan", "radius": 80, "query": "non parte"},
-    {"city": "milan", "radius": 80, "query": "guasto"},
-]
+# Facebook mostra un numero limitato di risultati per ricerca: si divide per zona e per fascia
+# di prezzo, così ogni ricerca resta sotto il limite e insieme coprono Milano e dintorni.
+FB_CITIES = [("milan", 25), ("monza", 15), ("bergamo", 25), ("brescia", 25), ("como", 20),
+             ("varese", 20), ("pavia", 20), ("lecco", 15), ("lodi", 15)]
+FB_BANDS = [(500, 2000), (2000, 4000), (4000, 7000), (7000, 12000), (12000, 20000)]
+# La maggior parte delle opportunità sono auto con problemi: ricerche mirate su tutta l'area
+FB_PROBLEM_QUERIES = ["incidentata", "da sistemare", "non parte", "guasto"]
+
+
+def default_searches(days: int = 1) -> list[dict]:
+    out = [{"city": c, "radius": r, "min_price": lo, "max_price": hi, "days": days}
+           for c, r in FB_CITIES for lo, hi in FB_BANDS]
+    out += [{"city": "milan", "radius": 80, "query": q, "days": days} for q in FB_PROBLEM_QUERIES]
+    return out
+
+
+DEFAULT_SEARCHES = default_searches(1)
 RE_KM = re.compile(r"(?<!\d)(\d{1,3}(?:[ .]\d{3})+|\d{4,7})\s*(?:km|chilometri)\b", re.I)
 RE_YEAR = re.compile(r"\b(19[89]\d|20[0-3]\d)\b")
 RE_YEAR_TEXT = re.compile(r"\b(?:anno|del|immatricolat[ao](?: nel| a)?|immatricolazione|imm\.?)\s*:?\s*(?:\d{1,2}/)?((?:19[89]|20[0-2])\d)\b", re.I)
@@ -201,12 +208,20 @@ def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
 class BrightDataFacebookCollector(Collector):
     source = "facebook"
 
-    def __init__(self, key: str | None = None, client=None):
+    def __init__(self, key: str | None = None, client=None, backfill: bool = False):
         self.key = key or os.environ.get("BRIGHTDATA_API_KEY")
         self.dataset = os.environ.get("BRIGHTDATA_DATASET", DEFAULT_DATASET)
-        self.limit = int(os.environ.get("BRIGHTDATA_LIMIT", "300"))
+        # annunci massimi per singola ricerca: con molte ricerche piccole si spende poco e si
+        # prendono quasi solo annunci nuovi (BRIGHTDATA_LIMIT vale solo con BRIGHTDATA_SEARCHES)
+        self.limit = int(os.environ.get("FB_LIMIT_PER_RICERCA", "40"))
         raw = os.environ.get("BRIGHTDATA_SEARCHES")
         self.searches = json.loads(raw) if raw else DEFAULT_SEARCHES
+        if raw:
+            self.limit = int(os.environ.get("BRIGHTDATA_LIMIT", "300"))
+        # Raccolta di partenza (una volta sola): gli annunci degli ultimi 30 giorni
+        if backfill:
+            self.searches = default_searches(30)
+            self.limit = int(os.environ.get("FB_BACKFILL_LIMIT", "300"))
         self._client = client
 
     def configured(self) -> bool:

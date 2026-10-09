@@ -21,6 +21,14 @@ from ..db import connect, log_job, mark_disappeared, upsert_listing
 log = logging.getLogger("collect")
 
 
+def _recent_facebook() -> bool:
+    hours = max(1, int(os.environ.get("FACEBOOK_ORE", "8")) - 1)
+    with connect() as conn:
+        row = conn.execute("SELECT max(started_at) > now() - make_interval(hours => %s) AS recent FROM job_runs "
+                           "WHERE job IN ('collect:facebook','collect:fb_backfill') AND ok", (hours,)).fetchone()
+    return bool(row and row["recent"])
+
+
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode == "opportunita":
@@ -37,8 +45,12 @@ def run(mode: str) -> Counter:
                     {"region": settings.region, "provinces": list(settings.opportunity_provinces),
                      "max_price": settings.max_purchase_eur, "max_pages": 0, "price_bands": bands,
                      "band_pages": int(os.environ.get("BAND_PAGES", "30"))})]
-    elif mode == "facebook":
-        sources = [(BrightDataFacebookCollector(), {"max_price": settings.max_purchase_eur})]
+    elif mode in ("facebook", "fb_backfill"):
+        if mode == "facebook" and _recent_facebook():
+            log.info("Facebook raccolto da poco (altro lavoro): salto per non pagare due volte gli stessi annunci")
+            return stats
+        sources = [(BrightDataFacebookCollector(backfill=(mode == "fb_backfill")),
+                    {"max_price": settings.max_purchase_eur})]
     else:
         subito = SubitoCollector(proxy=settings.scraper_proxy)
         q = {"region": settings.region, "provinces": provinces,

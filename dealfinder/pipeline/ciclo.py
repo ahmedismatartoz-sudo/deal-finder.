@@ -60,7 +60,9 @@ def run() -> None:
     from . import fb_rilettura
     if _due(fb_rilettura.JOB, 24 * 365):
         step("fb_rilettura", fb_rilettura.run)
-    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "4"))):
+    if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_BACKFILL") == "1" and _due("collect:fb_backfill", 24 * 30):
+        step("facebook_partenza", collect, "fb_backfill")
+    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "8"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")

@@ -39,10 +39,24 @@ def apply_model(v, l: Listing, model: dict | None) -> bool:
         return False
     # il modello è affidabile solo su auto normali e recenti, con km plausibili
     age = date.today().year - (l.year or 0)
-    if not l.year or l.year < 2008 or l.fuel in (None, "altro") or l.mileage_km is None \
+    if not l.year or l.year < 2008 or l.fuel == "altro" or l.mileage_km is None \
             or (age >= 2 and l.mileage_km < 5000):
         return False
-    p = predict(model, l)
+    if l.fuel is None:
+        # carburante non scritto (frequente su Facebook): si prende la stima più bassa
+        # tra benzina e diesel, così il valore non viene mai gonfiato
+        preds = []
+        for f in ("benzina", "diesel"):
+            l.fuel = f
+            q = predict(model, l)
+            if q and q["level"] in ("mmfg", "mmf", "mm"):
+                preds.append(q)
+        l.fuel = None
+        p = min(preds, key=lambda q: q["p50"]) if preds else None
+        if p and "carburante_non_indicato" not in v.confidence_reasons:
+            v.confidence_reasons.append("carburante_non_indicato")
+    else:
+        p = predict(model, l)
     if not p or p["level"] not in ("mmfg", "mmf", "mm") or p["spread"] > MAX_SPREAD:
         return False
     v.private_median = p["p50"]
