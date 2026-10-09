@@ -55,7 +55,9 @@ def run(force: bool = False) -> dict:
                            "ORDER BY created_at DESC LIMIT 1").fetchone()
         where = """price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
                AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
-               AND (status='attivo' OR disappeared_at > now() - interval '180 days')"""
+               AND (status='attivo' OR disappeared_at > now() - interval '180 days')
+               AND id NOT IN (SELECT listing_id FROM dealer_feedback WHERE status='scartata' AND
+                   (reason ILIKE '%%dati%%' OR reason ILIKE '%%prezzo non vero%%' OR reason ILIKE '%%truffa%%'))"""
         n_now = conn.execute(f"SELECT count(*) AS n FROM listings WHERE {where}").fetchone()["n"]
         if cur and not force:
             prev_m = cur["metrics"] if isinstance(cur["metrics"], dict) else json.loads(cur["metrics"] or "{}")
@@ -71,6 +73,21 @@ def run(force: bool = False) -> dict:
         finish = log_job(conn, "train")
         listings = [row_to_listing(r) for r in conn.execute(
             f"""SELECT {MARKET_COLS} FROM listings WHERE {where}""")]
+        # Impara anche dai commercianti: si aggiungono i prezzi di vendita VERI delle auto
+        # rivendute (contano 3 volte); gli annunci segnalati come falsi sono già esclusi sopra
+        try:
+            cols = ", ".join("f.sold_eur AS price_eur" if c.strip() == "price_eur" else "l." + c.strip()
+                             for c in MARKET_COLS.split(","))
+            sold = conn.execute(f"SELECT {cols} FROM dealer_feedback f JOIN listings l ON l.id=f.listing_id "
+                                "WHERE f.sold_eur IS NOT NULL").fetchall()
+            for r in sold:
+                x = row_to_listing(r)
+                x.damage_declared, x.damage_class, x.peso = False, "nessuno", 3.0
+                listings.append(x)
+            log.info("feedback commercianti: %d prezzi di vendita veri", len(sold))
+        except Exception as e:
+            conn.rollback()
+            log.warning("feedback commercianti non usato: %s", str(e)[:150])
         model = train(listings)
         n_rows = len(listings)
         del listings

@@ -98,6 +98,8 @@ def market_weight(l: Listing, today: date | None = None) -> float:
     """Quanto conta un annuncio per imparare il prezzo VERO di mercato.
     Un annuncio sparito in fretta è stato probabilmente venduto: il suo prezzo era giusto (conta di più).
     Un annuncio fermo da mesi chiede troppo (conta di meno)."""
+    if getattr(l, "peso", None):
+        return l.peso                      # prezzo di vendita vero riportato da un commerciante
     today = today or date.today()
     first = l.first_seen_at.date() if l.first_seen_at else None
     if not first:
