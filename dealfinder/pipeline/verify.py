@@ -5,6 +5,9 @@ Subito: apertura della pagina. Facebook: controllo per URL con Bright Data (a lo
 """
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor
+
 import logging
 from collections import Counter
 
@@ -43,15 +46,28 @@ def verify_rows(conn, rows: list[dict]) -> Counter:
                 log.warning("verifica Facebook fallita: %s", e)
                 stats["facebook:errore"] += len(fb)
     if sb:
-        col = SubitoCollector(proxy=settings.scraper_proxy)
+        # Visti da Subito nelle ultime ore durante la raccolta: sono attivi, non serve riaprirli
+        fresh = {x["id"] for x in conn.execute(
+            "SELECT id FROM listings WHERE id = ANY(%s) AND last_seen_at > now() - make_interval(hours => %s)",
+            ([r["id"] for r in sb], int(os.environ.get("VERIFICA_ORE_FRESCHI", "6")))).fetchall()}
         for r in sb:
+            if r["id"] in fresh:
+                mark(conn, r["id"], "attivo", r.get("price_eur"))
+                stats["subito:attivo_recente"] += 1
+        todo = [r for r in sb if r["id"] not in fresh]
+
+        def check(r):
+            col = SubitoCollector(proxy=settings.scraper_proxy)
             try:
-                cur = col.fetch(r["url"])
-                st = "attivo" if cur is not None else "scomparso"
+                return r, ("attivo" if col.fetch(r["url"]) is not None else "scomparso")
             except Exception as e:
                 log.warning("verifica Subito fallita %s: %s", r["url"], e)
-                st = "errore"
-            mark(conn, r["id"], st, r.get("price_eur"))
-            stats[f"subito:{st}"] += 1
+                return r, "errore"
+
+        # pochi controlli in parallelo: più veloce, ma sempre con un ritmo rispettoso per il sito
+        with ThreadPoolExecutor(max_workers=int(os.environ.get("VERIFICA_PARALLELI", "3"))) as ex:
+            for r, st in ex.map(check, todo):
+                mark(conn, r["id"], st, r.get("price_eur"))
+                stats[f"subito:{st}"] += 1
     conn.commit()
     return stats
