@@ -352,7 +352,9 @@ class BrightDataFacebookCollector(Collector):
     def collect_snapshots(self, pending: list[str], max_price: int, problem_set: set | None = None,
                           max_minutes: int | None = None) -> Iterator[Listing]:
         problem_set = problem_set or set()
-        deadline = time.time() + 60 * (max_minutes or int(os.environ.get("FB_ATTESA_MIN", "180")))
+        # Attesa breve: i lotti non pronti non bloccano il ciclo, li importa il giro dopo (fb_importa)
+        deadline = time.time() + 60 * (max_minutes or int(os.environ.get("FB_ATTESA_MIN", "40")))
+        self.done_sids = getattr(self, "done_sids", [])
         pending = list(pending)
         total = kept = 0
         per: dict = {}
@@ -389,6 +391,7 @@ class BrightDataFacebookCollector(Collector):
                         listing.problem_search = src in problem_set if src else False
                         kept += 1
                         yield listing
+                self.done_sids.append((sid, len(rows)))
                 log.info("Bright Data: lotto %s: %d righe (mancano %d lotti)", sid, len(rows), len(pending))
                 del rows
             if pending and not done_any:

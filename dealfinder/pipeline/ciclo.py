@@ -74,6 +74,9 @@ def run() -> None:
     from .collect import _backfill_done
     if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_BACKFILL") == "1" and not _backfill_done():
         step("facebook_partenza", collect, "fb_backfill")
+    if os.environ.get("BRIGHTDATA_API_KEY"):
+        # lotti Facebook diventati pronti dopo la fine di un giro precedente: importati subito, nessuna spesa
+        step("facebook_pronti", collect, "fb_importa")
     if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "8"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):

@@ -49,8 +49,12 @@ class _ReadyImporter(BrightDataFacebookCollector):
     def search(self, query: dict):
         if not self.configured():
             return
-        sids = self.ready_snapshots(hours=int(os.environ.get("FB_IMPORTA_ORE", "12")))
-        log.info("Facebook: %d lotti pronti da importare", len(sids))
+        sids = self.ready_snapshots(hours=int(os.environ.get("FB_IMPORTA_ORE", "48")))
+        with connect() as conn:
+            done = {r["sid"] for r in conn.execute("SELECT sid FROM fb_snapshots WHERE sid = ANY(%s)",
+                                                   (sids,)).fetchall()} if sids else set()
+        sids = [s for s in sids if s not in done]
+        log.info("Facebook: %d lotti pronti da importare (%d già importati)", len(sids), len(done))
         yield from self.collect_snapshots(sids, query.get("max_price", 20_000), max_minutes=5)
 
 
@@ -133,6 +137,9 @@ def run(mode: str) -> Counter:
             except Exception:
                 log.exception("collettore %s fallito", collector.source)
                 stats[f"{collector.source}:errore"] += 1
+            for sid, n in getattr(collector, "done_sids", []):   # lotti Facebook importati: non si riscaricano
+                conn.execute("INSERT INTO fb_snapshots (sid, rows) VALUES (%s,%s) ON CONFLICT (sid) DO NOTHING", (sid, n))
+            conn.commit()
         # Si segnano gli scomparsi solo se la raccolta è andata a buon fine,
         # altrimenti un blocco del sito farebbe "sparire" tutto.
         seen = sum(v for k, v in stats.items() if k.startswith("subito:") and k != "subito:errore")
