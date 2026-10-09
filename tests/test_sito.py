@@ -71,3 +71,21 @@ def test_foto_ridotta():
     im = Image.open(io.BytesIO(out))
     assert im.format == "JPEG" and max(im.size) == 960
     assert foto.shrink(b"non e una foto") is None
+
+
+def test_stato_accesso_social():
+    from dealfinder.web import social
+    st = social.make_state("google")
+    assert social.check_state(st, st, "google")
+    assert not social.check_state(st, st, "apple")          # stato di un altro fornitore
+    assert not social.check_state(st, "altro", "google")    # cookie diverso
+    assert not social.check_state(st[:-1] + "x", st[:-1] + "x", "google")   # firma alterata
+
+
+def test_token_fornitore_e_codice_monouso():
+    import base64, json
+    from dealfinder.web import social
+    body = base64.urlsafe_b64encode(json.dumps({"sub": "1", "email": "a@b.it"}).encode()).decode().rstrip("=")
+    assert social._claims("x." + body + ".y")["email"] == "a@b.it"
+    code = social.one_time_code({"id": 3, "role": "commerciante", "name": "A", "email": "a@b.it"})
+    assert social.redeem(code)["id"] == 3 and social.redeem(code) is None

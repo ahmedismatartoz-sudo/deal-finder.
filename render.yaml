@@ -51,6 +51,22 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: PUBLIC_URL                # indirizzo del sito (per Entra con Google/Apple)
+        value: https://scovo.onrender.com
+      - key: ISCRIZIONE                # approvazione (nuovi account attivati a mano) | aperta
+        value: approvazione
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: APPLE_PRIVATE_KEY
+        sync: false
       - key: SERVIZI_LIMITE_GIORNO     # Vendi/Ricambi per commerciante al giorno
         value: "15"
       - key: SERVIZI_LIMITE_TOTALE     # tutto il sito al giorno (le ricerche targa costano)

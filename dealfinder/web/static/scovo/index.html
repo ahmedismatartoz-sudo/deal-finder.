@@ -28,14 +28,146 @@
 <script src="/static/scovo/app.js?v=__V__" defer></script>
 </head>
 <body>
-<div class="app" id="app">
-  <div class="land">
-    <section class="hero">
+
+<div id="landing-root">
+<header class="l-nav"><div class="l-wrap l-nav-in">
+  <a class="l-brand" href="/" aria-label="Scovo, pagina iniziale"><svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="13" fill="#007AFF"/><circle cx="21" cy="21" r="10.5" fill="none" stroke="#fff" stroke-width="4.2"/><path d="M29 29l8.5 8.5" stroke="#fff" stroke-width="4.6" stroke-linecap="round"/><path d="M24.6 16.6a5.6 5.6 0 1 0 0 8.8M14.6 19.6h7.2M14.6 22.6h7.2" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/></svg><span>scovo</span></a>
+  <a class="l-btn l-btn-ghost" href="#/entra">Entra</a>
+</div></header>
+<main id="landing" class="landing">
+  <section class="l-hero"><div class="l-wrap l-hero-in">
+    <div class="l-hero-text">
+      <p class="l-kicker">Per commercianti di auto usate, Milano e dintorni</p>
       <h1>Le auto da girare, prima degli altri.</h1>
-      <p>Ogni giorno troviamo su Subito e Facebook le auto dei privati sotto prezzo a Milano e dintorni. Per ognuna: prezzo, riparazioni, rivendita e guadagno.</p>
-    </section>
-    <noscript><p style="padding:16px">Per usare Scovo attiva JavaScript nel browser.</p></noscript>
+      <p class="l-lead">Ogni giorno leggiamo gli annunci dei privati su Subito e Facebook e ti mostriamo solo le auto sotto prezzo, con riparazioni, rivendita e guadagno già calcolati.</p>
+    </div>
+    <div class="l-hero-demo">
+      <p class="l-demo-cap">Ecco cosa vedi per ogni auto. Sposta lo sconto e guarda il guadagno.</p>
+      <article class="ex-card" id="demo" data-prezzo="4300" data-mercato="9900" data-lo="380" data-hi="720">
+  <div class="ex-photo"><svg class="ex-car" viewBox="0 0 220 90" aria-hidden="true"><ellipse cx="110" cy="80" rx="96" ry="6" fill="rgba(0,0,0,.14)"/><path d="M14 62c0-9 5-14 14-16l26-6 24-20c5-4 10-6 17-6h46c8 0 14 3 19 8l18 18 25 5c8 2 13 8 13 16v9c0 3-2 5-5 5H19c-3 0-5-2-5-5z" fill="#2f6db5"/><path d="M86 24c3-3 6-4 10-4h21v22H64z" fill="rgba(255,255,255,.75)"/><path d="M123 20h18c5 0 9 2 12 5l16 17h-46z" fill="rgba(255,255,255,.75)"/><rect x="168" y="52" width="16" height="6" rx="3" fill="rgba(255,255,255,.8)"/><circle cx="58" cy="72" r="15" fill="#1c1c1e"/><circle cx="58" cy="72" r="6" fill="#c7c7cc"/><circle cx="168" cy="72" r="15" fill="#1c1c1e"/><circle cx="168" cy="72" r="6" fill="#c7c7cc"/></svg><span class="ex-badge">Danno leggero</span></div>
+  <div class="ex-body">
+    <h3>Volkswagen Golf 1.6 TDI</h3><p class="ex-meta">2015, 168.000 km, diesel, Monza (MB)</p>
+    <dl class="ex-trio"><div><dt>Prezzo</dt><dd>4.300 €</dd></div><div><dt>Riparazioni</dt><dd class="w">380–720 €</dd></div><div><dt>Rivendita</dt><dd data-riv>6.930 €</dd></div></dl>
+    <p class="ex-gain"><span>Guadagno stimato</span><b data-gain>+1.770–2.110 €</b></p>
   </div>
+</article>
+      <div class="l-slider">
+        <label for="sconto-demo">Rivendi sotto il prezzo di mercato: <b id="sconto-val">30%</b></label>
+        <input id="sconto-demo" type="range" min="10" max="40" step="10" value="30">
+        <div class="l-ticks" aria-hidden="true"><span>10%</span><span>20%</span><span>30%</span><span>40%</span></div>
+      </div>
+    </div>
+    <div class="l-hero-cta">
+      <div class="l-cta" id="l-cta">
+        <a class="l-btn l-btn-google" href="/auth/google" data-social="google" hidden><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continua con Google</a>
+        <a class="l-btn l-btn-apple" href="/auth/apple" data-social="apple" hidden><svg width="18" height="20" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM11.6 3c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>Continua con Apple</a>
+        <a class="l-btn l-btn-blue" href="#/entra">Entra con email</a>
+        <a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a>
+      </div>
+    </div>
+  </div></section>
+
+  <section class="l-sec"><div class="l-wrap">
+    <h2>Come funziona</h2>
+    <ol class="l-steps">
+      <li><b>Leggiamo gli annunci</b><span>Ogni 3 ore controlliamo Subito e i gruppi pubblici di Facebook Marketplace a Milano e dintorni. Solo privati.</span></li>
+      <li><b>Facciamo i conti</b><span>Confrontiamo ogni auto con quelle uguali in vendita in Lombardia, stimiamo i pezzi da comprare e togliamo passaggio e pulizia.</span></li>
+      <li><b>Chiami tu, per primo</b><span>Un tocco su “Parla col venditore”. Ogni auto sparisce dopo 7 commercianti: non la vedono tutti.</span></li>
+    </ol>
+  </div></section>
+
+  <section class="l-sec l-sec-alt"><div class="l-wrap">
+    <h2>Il conto, senza sorprese</h2>
+    <p class="l-sub">Il guadagno è sempre prudente: rivendi al 30% sotto il mercato per vendere in fretta, e le riparazioni sono contate da–a.</p>
+    <div class="l-receipt-row">
+      <div class="l-receipt" aria-label="Esempio di conto per la Golf">
+        <p class="r-title">Golf 1.6 TDI del 2015</p>
+        <div class="r-line"><span>Mercato (auto simili in Lombardia)</span><span>9.900 €</span></div>
+        <div class="r-line"><span>Rivendita veloce, −30%</span><span>6.930 €</span></div>
+        <div class="r-line r-minus"><span>Prezzo richiesto</span><span>−4.300 €</span></div>
+        <div class="r-line r-minus"><span>Passaggio di proprietà</span><span>−90 €</span></div>
+        <div class="r-line r-minus"><span>Pulizia</span><span>−50 €</span></div>
+        <div class="r-line r-minus"><span>Pezzi: paraurti e faro</span><span>−380 / −720 €</span></div>
+        <div class="r-total"><span>Guadagno</span><b>+1.770–2.110 €</b></div>
+      </div>
+      <ul class="l-notes">
+        <li><b>Contiamo</b> il prezzo dei pezzi compatibili o usati, passaggio e pulizia.</li>
+        <li><b>Non contiamo</b> la manodopera: la conosci meglio tu.</li>
+        <li><b>Tratta sempre.</b> Ogni euro di sconto dal venditore è guadagno in più.</li>
+      </ul>
+    </div>
+  </div></section>
+
+  <section class="l-sec"><div class="l-wrap">
+    <h2>Altri esempi di schede</h2>
+    <p class="l-sub">Auto economiche, sane o da sistemare: le trovi tutte, filtrate per marca e prezzo.</p>
+    <div class="l-strip">
+      <article class="ex-card" >
+  <div class="ex-photo"><svg class="ex-car" viewBox="0 0 220 90" aria-hidden="true"><ellipse cx="110" cy="80" rx="96" ry="6" fill="rgba(0,0,0,.14)"/><path d="M14 62c0-9 5-14 14-16l26-6 24-20c5-4 10-6 17-6h46c8 0 14 3 19 8l18 18 25 5c8 2 13 8 13 16v9c0 3-2 5-5 5H19c-3 0-5-2-5-5z" fill="#e8e8ed"/><path d="M86 24c3-3 6-4 10-4h21v22H64z" fill="rgba(255,255,255,.75)"/><path d="M123 20h18c5 0 9 2 12 5l16 17h-46z" fill="rgba(255,255,255,.75)"/><rect x="168" y="52" width="16" height="6" rx="3" fill="rgba(255,255,255,.8)"/><circle cx="58" cy="72" r="15" fill="#1c1c1e"/><circle cx="58" cy="72" r="6" fill="#c7c7cc"/><circle cx="168" cy="72" r="15" fill="#1c1c1e"/><circle cx="168" cy="72" r="6" fill="#c7c7cc"/></svg><span class="ex-badge">Sana</span></div>
+  <div class="ex-body">
+    <h3>Fiat Panda 1.2</h3><p class="ex-meta">2012, 121.000 km, benzina, Sesto San Giovanni (MI)</p>
+    <dl class="ex-trio"><div><dt>Prezzo</dt><dd>1.600 €</dd></div><div><dt>Riparazioni</dt><dd class="g">Nessuna</dd></div><div><dt>Rivendita</dt><dd data-riv>2.940 €</dd></div></dl>
+    <p class="ex-gain"><span>Guadagno stimato</span><b data-gain>+1.200 €</b></p>
+  </div>
+</article>
+      <article class="ex-card" >
+  <div class="ex-photo"><svg class="ex-car" viewBox="0 0 220 90" aria-hidden="true"><ellipse cx="110" cy="80" rx="96" ry="6" fill="rgba(0,0,0,.14)"/><path d="M14 62c0-9 5-14 14-16l26-6 24-20c5-4 10-6 17-6h46c8 0 14 3 19 8l18 18 25 5c8 2 13 8 13 16v9c0 3-2 5-5 5H19c-3 0-5-2-5-5z" fill="#3a3a3c"/><path d="M86 24c3-3 6-4 10-4h21v22H64z" fill="rgba(255,255,255,.75)"/><path d="M123 20h18c5 0 9 2 12 5l16 17h-46z" fill="rgba(255,255,255,.75)"/><rect x="168" y="52" width="16" height="6" rx="3" fill="rgba(255,255,255,.8)"/><circle cx="58" cy="72" r="15" fill="#1c1c1e"/><circle cx="58" cy="72" r="6" fill="#c7c7cc"/><circle cx="168" cy="72" r="15" fill="#1c1c1e"/><circle cx="168" cy="72" r="6" fill="#c7c7cc"/></svg><span class="ex-badge warn">Da sistemare</span></div>
+  <div class="ex-body">
+    <h3>BMW Serie 1 118d</h3><p class="ex-meta">2014, 189.000 km, diesel, Bergamo (BG)</p>
+    <dl class="ex-trio"><div><dt>Prezzo</dt><dd>3.200 €</dd></div><div><dt>Riparazioni</dt><dd class="w">450–900 €</dd></div><div><dt>Rivendita</dt><dd data-riv>6.020 €</dd></div></dl>
+    <p class="ex-gain"><span>Guadagno stimato</span><b data-gain>+1.780–2.230 €</b></p>
+  </div>
+</article>
+      <article class="ex-card" >
+  <div class="ex-photo"><svg class="ex-car" viewBox="0 0 220 90" aria-hidden="true"><ellipse cx="110" cy="80" rx="96" ry="6" fill="rgba(0,0,0,.14)"/><path d="M14 62c0-9 5-14 14-16l26-6 24-20c5-4 10-6 17-6h46c8 0 14 3 19 8l18 18 25 5c8 2 13 8 13 16v9c0 3-2 5-5 5H19c-3 0-5-2-5-5z" fill="#c0392b"/><path d="M86 24c3-3 6-4 10-4h21v22H64z" fill="rgba(255,255,255,.75)"/><path d="M123 20h18c5 0 9 2 12 5l16 17h-46z" fill="rgba(255,255,255,.75)"/><rect x="168" y="52" width="16" height="6" rx="3" fill="rgba(255,255,255,.8)"/><circle cx="58" cy="72" r="15" fill="#1c1c1e"/><circle cx="58" cy="72" r="6" fill="#c7c7cc"/><circle cx="168" cy="72" r="15" fill="#1c1c1e"/><circle cx="168" cy="72" r="6" fill="#c7c7cc"/></svg><span class="ex-badge">Danno leggero</span></div>
+  <div class="ex-body">
+    <h3>Toyota Yaris Hybrid</h3><p class="ex-meta">2016, 98.000 km, ibrida, Rho (MI)</p>
+    <dl class="ex-trio"><div><dt>Prezzo</dt><dd>6.900 €</dd></div><div><dt>Riparazioni</dt><dd class="w">250–480 €</dd></div><div><dt>Rivendita</dt><dd data-riv>8.680 €</dd></div></dl>
+    <p class="ex-gain"><span>Guadagno stimato</span><b data-gain>+1.160–1.390 €</b></p>
+  </div>
+</article>
+    </div>
+    <p class="l-fine">Esempi per mostrare come sono fatte le schede. I numeri veri cambiano ogni giorno.</p>
+  </div></section>
+
+  <section class="l-sec l-sec-alt"><div class="l-wrap l-two">
+    <div class="l-tool">
+      <h2>Vendi</h2>
+      <p>Scrivi la targa e i chilometri, aggiungi qualche foto. Ti diamo l'auto esatta, il prezzo giusto per venderla e titolo e descrizione pronti da copiare su Subito o Facebook.</p>
+      <div class="l-plate" aria-hidden="true"><span class="l-eu">I</span>AB 123 CD</div>
+    </div>
+    <div class="l-tool">
+      <h2>Ricambi</h2>
+      <p>Scrivi la targa e i pezzi che ti servono. Confrontiamo negozi online, eBay e usato e ti mostriamo l'offerta più bassa compatibile con la tua auto.</p>
+      <div class="l-offer" aria-hidden="true"><span>Faro anteriore sinistro, compatibile</span><b>97 €</b></div>
+    </div>
+  </div></section>
+
+  <section class="l-sec"><div class="l-wrap l-faq-wrap">
+    <h2>Domande</h2>
+    <div class="l-faq">
+      <details><summary>Da dove arrivano le auto?</summary><p>Da annunci pubblici di privati su Subito e Facebook Marketplace, a Milano e nelle province vicine. Niente concessionari, niente aste.</p></details>
+      <details><summary>Quanto sono precise le stime?</summary><p>Il prezzo di mercato viene dalle auto uguali o simili in vendita in Lombardia e il modello impara ogni giorno da quelle che si vendono. Le riparazioni sono stimate dalla descrizione e dalle foto: per questo le diamo da–a e ti diciamo cosa controllare prima di andare a vederla.</p></details>
+      <details><summary>Perché un'auto sparisce dopo 7 commercianti?</summary><p>Per non mandare tutti sullo stesso venditore. Chi arriva prima, tratta meglio.</p></details>
+      <details><summary>Devo installare un'app?</summary><p>No. Scovo funziona dal browser del telefono. Se vuoi, lo aggiungi alla schermata Home e si apre come un'app.</p></details>
+      <details><summary>Quanto costa?</summary><p>Per ora Scovo è in prova con un gruppo di commercianti. Chiedi l'accesso e ti spieghiamo tutto.</p></details>
+    </div>
+  </div></section>
+
+  <section class="l-final"><div class="l-wrap l-final-in">
+    <h2>Trova la prossima auto da girare.</h2>
+    <div class="l-cta l-cta-final">
+      <a class="l-btn l-btn-white" href="#/prova">Chiedi di provare Scovo</a>
+      <a class="l-btn l-btn-ghost-w" href="#/entra">Ho già un account</a>
+    </div>
+  </div></section>
+</main>
+<footer class="l-foot"><div class="l-wrap l-foot-in">
+  <span>© Scovo</span>
+  <nav aria-label="Informazioni"><a href="/chi-siamo">Chi siamo</a><a href="/privacy">Privacy</a><a href="/condizioni">Condizioni d'uso</a></nav>
+</div></footer>
+<noscript><p style="padding:16px">Per usare Scovo attiva JavaScript nel browser.</p></noscript>
 </div>
+<div class="app" id="app" hidden></div>
 </body>
 </html>

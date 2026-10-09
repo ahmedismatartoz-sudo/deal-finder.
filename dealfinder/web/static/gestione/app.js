@@ -366,7 +366,9 @@ async function viewAdmin() {
       <h2>Annunci per stato (7 giorni)</h2>${table(o.stages, [["stage", "Stato"], ["stage_reason", "Motivo"], ["n", "Annunci"]])}
       <h2>Vendi e Ricambi oggi</h2>${table(o.servizi_oggi || [], [["service", "Servizio"], ["n", "Usi"], ["ok", "Riusciti"]])}
       <h2>Richieste di accesso</h2>${table(rq.items, [["at", "Quando", (v) => esc(new Date(v).toLocaleString("it-IT"))], ["name", "Nome"], ["company", "Autosalone"], ["email", "Email"], ["phone", "Telefono"],
-        ["id", "", (v, r) => `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email}))}">Crea account</button>`]])}
+        ["source", "Da", (v) => esc(v === "google" ? "Google" : v === "apple" ? "Apple" : "Modulo")],
+        ["id", "", (v, r) => r.dealer_id ? `<button class="btn primary" data-approve="${v}">Attiva</button>`
+          : `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email, id: v}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
       ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
         ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}
@@ -384,8 +386,12 @@ async function viewAdmin() {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();
     });
+    box.querySelectorAll("[data-approve]").forEach((b) => b.onclick = async () => {
+      await api("/api/admin/richieste/" + b.dataset.approve, { method: "POST" }); toast("Account attivato"); viewAdmin();
+    });
+    let fromRequest = null;
     box.querySelectorAll("[data-prefill]").forEach((b) => b.onclick = () => {
-      const v = JSON.parse(b.dataset.prefill);
+      const v = JSON.parse(b.dataset.prefill); fromRequest = v.id;
       document.getElementById("nd-name").value = v.n || ""; document.getElementById("nd-company").value = v.c || "";
       document.getElementById("nd-email").value = v.e || ""; document.getElementById("nd-pwd").focus();
     });
@@ -394,6 +400,7 @@ async function viewAdmin() {
       const g = (id) => document.getElementById(id).value;
       try {
         await api("/api/admin/dealers", { method: "POST", body: { name: g("nd-name"), company: g("nd-company"), email: g("nd-email"), password: g("nd-pwd") } });
+        if (fromRequest) await api("/api/admin/richieste/" + fromRequest, { method: "POST" });
         toast("Account creato"); viewAdmin();
       } catch (err) { toast(err.message); }
     };

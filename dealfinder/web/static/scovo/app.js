@@ -385,40 +385,57 @@ function installHint(){
   return `<div class="tip" style="font:500 15px/1.4 var(--body)"><span class="eur" aria-hidden="true">+</span><span><b>Scovo come un'app:</b> ${ios ? "tocca Condividi e poi “Aggiungi alla schermata Home”." : "dal menu del browser scegli “Installa app” o “Aggiungi a schermata Home”."}</span></div>`;
 }
 
-/* ---------- accesso e vetrina ---------- */
+/* ---------- entra e chiedi di provare (la vetrina è nella pagina, già pronta) ---------- */
+const ESITI_ACCESSO = {
+  "attesa": ["info", "Richiesta ricevuta. Attiviamo il tuo account entro un giorno lavorativo e ti scriviamo per email."],
+  "in-attesa": ["info", "Il tuo account è in attesa di attivazione: ti scriviamo appena è pronto."],
+  "disattivato": ["bad", "Questo account non è attivo. Scrivici se pensi sia un errore."],
+  "annullato": ["info", "Accesso annullato. Puoi riprovare quando vuoi."],
+  "scaduto": ["bad", "La pagina di accesso è rimasta aperta troppo a lungo. Riprova."],
+  "errore": ["bad", "Non siamo riusciti a farti entrare. Riprova o usa email e password."],
+  "non-attivo": ["bad", "Questo modo di entrare non è ancora attivo. Usa email e password."]
+};
+const GOOGLE_SVG = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+const APPLE_SVG = '<svg width="18" height="20" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM11.6 3c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>';
+function socialButtons(){
+  const m = S.metodi || {};
+  if (!m.google && !m.apple) return "";
+  return `<div class="auth-social">
+      ${m.google ? `<a class="l-btn l-btn-google" href="/auth/google">${GOOGLE_SVG}Continua con Google</a>` : ""}
+      ${m.apple ? `<a class="l-btn l-btn-apple" href="/auth/apple">${APPLE_SVG}Continua con Apple</a>` : ""}
+    </div><div class="auth-or">oppure con email</div>`;
+}
 function viewLogin(){
-  const req = L.mode === "richiesta";
-  return `<div class="land">
-    <section class="hero">
-      <div class="lock">${LOGO(56, "#ffffff", "#007aff")}<span class="w">scovo</span></div>
-      <h1>Le auto da girare, prima degli altri.</h1>
-      <p>Ogni giorno troviamo su Subito e Facebook le auto dei privati sotto prezzo a Milano e dintorni. Per ognuna: prezzo, riparazioni, rivendita e guadagno.</p>
-    </section>
-    <ul class="points">
-      <li><span class="ic">€</span><div><b>Il guadagno, subito</b><span>Rivendita al 30% sotto mercato, riparazioni da–a e costi già tolti.</span></div></li>
-      <li><span class="ic">7</span><div><b>Mai troppi su un'auto</b><span>Ogni auto sparisce dopo 7 commercianti: arrivi tra i primi.</span></div></li>
-      <li><span class="ic">✓</span><div><b>Vendi e Ricambi</b><span>Dalla targa: prezzo giusto e annuncio pronto, e i pezzi al prezzo più basso.</span></div></li>
-    </ul>
-    ${req ? `<form class="card-form" id="req-form" novalidate>
-      <h2>Prova Scovo</h2>
-      ${L.sent ? `<div class="ok-msg">Richiesta inviata. Ti contattiamo noi entro un giorno lavorativo.</div>` : `
+  const req = S.route === "prova";
+  const esito = ESITI_ACCESSO[S.esitoAccesso || ""];
+  const top = `<div class="auth-top"><a class="l-brand" href="#/">${LOGO(34)}<span>scovo</span></a><a class="l-link" href="#/">Torna alla pagina iniziale</a></div>`;
+  if (req) return `<div class="auth">${top}
+    <div><h1>Prova Scovo</h1><p class="l-sub">Lasciaci i tuoi dati: ti attiviamo l'accesso e ti spieghiamo come funziona.</p></div>
+    ${L.sent ? `<div class="note-box info">Richiesta inviata. Ti contattiamo entro un giorno lavorativo.</div><a class="l-btn l-btn-blue" href="#/">Torna alla pagina iniziale</a>` : `
+    ${socialButtons().replace("oppure con email", "oppure lasciaci i tuoi dati")}
+    <form id="req-form" novalidate>
       <label class="field">Nome e cognome<input name="nome" autocomplete="name" required value="${esc(L.req.nome || "")}"></label>
       <label class="field">Autosalone<input name="azienda" autocomplete="organization" value="${esc(L.req.azienda || "")}"></label>
       <label class="field">Email<input name="email" type="email" autocomplete="email" required value="${esc(L.req.email || L.email)}"></label>
       <label class="field">Telefono<input name="telefono" type="tel" autocomplete="tel" value="${esc(L.req.telefono || "")}"></label>
       <label class="hp" aria-hidden="true">Sito<input name="sito" tabindex="-1" autocomplete="off"></label>
       ${L.err ? `<span class="err" role="alert">${esc(L.err)}</span>` : ""}
-      <button class="btn btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Invio…" : "Chiedi l'accesso"}</button>
-      <span class="hint">Inviando accetti la <a href="/privacy">privacy</a>.</span>`}
-      <button class="link" type="button" data-act="mode" data-v="login">Hai già un account? Entra</button>
-    </form>` : `<form class="card-form" id="login-form" novalidate>
-      <h2>Entra</h2>
+      <button class="l-btn l-btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Invio…" : "Chiedi di provare"}</button>
+      <span class="hint">Inviando accetti la <a href="/privacy">privacy</a>.</span>
+    </form>`}
+    <a class="l-link" href="#/entra">Hai già un account? Entra</a>
+  </div>`;
+  return `<div class="auth">${top}
+    <div><h1>Entra in Scovo</h1><p class="l-sub">Le auto dei privati sotto prezzo, con il guadagno già calcolato.</p></div>
+    ${esito ? `<div class="note-box ${esito[0]}" role="status">${esc(esito[1])}</div>` : ""}
+    ${socialButtons()}
+    <form id="login-form" novalidate>
       <label class="field">Email<input name="email" type="email" autocomplete="username" inputmode="email" required value="${esc(L.email)}"></label>
       <label class="field">Password<input name="password" type="password" autocomplete="current-password" required></label>
       ${L.err ? `<span class="err" role="alert">${esc(L.err)}</span>` : ""}
-      <button class="btn btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Entro…" : "Entra"}</button>
-      <button class="link" type="button" data-act="mode" data-v="richiesta">Non hai un account? Chiedi di provare Scovo</button>
-    </form>`}
+      <button class="l-btn l-btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Entro…" : "Entra"}</button>
+    </form>
+    <a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a>
     <nav class="foot" aria-label="Informazioni"><a href="/chi-siamo">Chi siamo</a><a href="/privacy">Privacy</a><a href="/condizioni">Condizioni d'uso</a></nav>
   </div>`;
 }
@@ -433,8 +450,7 @@ async function onSubmit(e){
     L.busy = true; L.err = ""; render();
     try {
       const r = await api("/api/auth/login", {method: "POST", body: {email: data.email, password: data.password}});
-      S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user);
-      L.busy = false; S.scroll = {}; go("affari", true); loadCars(true); window.scrollTo(0, 0);
+      L.busy = false; loggedIn(r);
     } catch (err) { L.busy = false; L.err = err.message; render(); }
   } else if (f.id === "req-form") {
     if (!data.email || !data.nome) { L.err = "Scrivi almeno nome ed email."; return render(); }
@@ -444,11 +460,19 @@ async function onSubmit(e){
     L.busy = false; render();
   }
 }
+function loggedIn(r){
+  S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user);
+  S.scroll = {}; go("affari", true); loadCars(true); window.scrollTo(0, 0);
+}
+async function redeemCode(code){
+  try { loggedIn(await api("/api/auth/scambio", {method: "POST", body: {code}})); }
+  catch (e) { S.esitoAccesso = "errore"; go("entra", true); }
+}
 function logout(silent){
   S.token = null; S.user = null; S.cars = null; S.detail = {}; store.del("token"); store.del("user");
   try { if (window.caches) caches.delete("scovo-dati"); } catch (e) {}
-  L.mode = "login"; L.err = silent ? "Accesso scaduto: entra di nuovo." : "";
-  go("affari", true);
+  L.err = silent ? "Accesso scaduto: entra di nuovo." : "";
+  go(silent ? "entra" : "", true);
 }
 
 /* ---------- navigazione (il tasto indietro del telefono funziona) ---------- */
@@ -456,6 +480,12 @@ function parseHash(){
   const h = location.hash.replace(/^#\/?/, "");
   const m = h.match(/^auto\/(\d+)$/);
   if (m) return {route: "auto", sel: Number(m[1])};
+  const a = h.match(/^accesso\/([\w-]+)$/);
+  if (a) return {route: "accesso", code: a[1]};
+  const e = h.match(/^entra(?:\/([\w-]+))?$/);
+  if (e) return {route: "entra", esito: e[1] || ""};
+  if (h === "prova") return {route: "prova"};
+  if (!S.token) return {route: "vetrina"};
   return {route: ["vendi","ricambi","profilo"].includes(h) ? h : "affari", sel: null};
 }
 function go(route, replace){
@@ -467,8 +497,12 @@ function applyRoute(){
   const prev = S.route;
   S.scroll[prev === "auto" ? "auto" : prev] = window.scrollY;
   const r = parseHash();
+  if (r.route === "accesso") { history.replaceState(null, "", "#/entra"); S.route = "entra"; render({top:true}); redeemCode(r.code); return; }
+  if (S.token && ["entra","prova","vetrina"].includes(r.route)) { go("affari", true); return; }
+  if (r.route === "entra") { S.esitoAccesso = r.esito; if (r.esito) history.replaceState(null, "", "#/entra"); }
   S.route = r.route; S.sel = r.sel; S.sheet = null; S.descOpen = false;
-  if (S.route === "auto") { loadDetail(S.sel); render({top:true}); }
+  if (S.route === "auto") { if (!S.token) { go("entra", true); return; } loadDetail(S.sel); render({top:true}); }
+  else if (S.route === "entra" || S.route === "prova") render({top:true});
   else render({y: S.scroll[S.route] || 0});
   if (S.route === "affari" && S.token) loadCars();
 }
@@ -484,8 +518,16 @@ function render(opts){
   const y = window.scrollY;
   const active = document.activeElement && document.activeElement.id;
   const chipsX = [...document.querySelectorAll(".chips")].map(c => c.scrollLeft);
+  const land = document.getElementById("landing-root");
+  if (!S.token && S.route === "vetrina") {
+    if (land) land.hidden = false; $app.hidden = true; $app.innerHTML = "";
+    document.title = "Scovo · le auto da girare, prima degli altri";
+    if (opts.y != null) window.scrollTo(0, opts.y);
+    return;
+  }
+  if (land) land.hidden = true; $app.hidden = false;
   let html;
-  if (!S.token) { html = viewLogin(); document.title = "Scovo · le auto da girare, prima degli altri"; }
+  if (!S.token) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
   if (S.token) {
@@ -612,7 +654,6 @@ $app.addEventListener("click", e => {
     case "esito": if (v === "comprata") { S.sheet = "comprata"; break; } sendEsito(v); return;
     case "comprata-ok": { const p = (document.getElementById("paid") || {}).value; S.sheet = null; sendEsito("comprata", p ? {bought_eur: Number(p)} : {}); return; }
     case "cerca-pezzi": { const d = S.detail[S.sel] || {}; R.pezzi = (d.pezzi || []).map(p => p.pezzo).slice(0, 8); R.stato = "form"; R.err = ""; S.sheet = null; go("ricambi"); return; }
-    case "mode": L.mode = v; L.err = ""; L.sent = false; break;
     case "logout": logout(); return;
     case "install": if (installEvt) { installEvt.prompt(); installEvt = null; } break;
     case "pwd": P.open = !P.open; P.err = ""; P.ok = false; break;
@@ -672,5 +713,24 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && S.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
 }
+S.metodi = {};
+api("/api/auth/metodi").then(m => {
+  S.metodi = m || {};
+  document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
+  if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
+}).catch(() => {});
+(function demo(){
+  const card = document.getElementById("demo"), r = document.getElementById("sconto-demo");
+  if (!card || !r) return;
+  const p = Number(card.dataset.prezzo), m = Number(card.dataset.mercato), lo = Number(card.dataset.lo), hi = Number(card.dataset.hi);
+  const upd = () => {
+    const sc = Number(r.value), riv = Math.round(m * (1 - sc / 100)), base = riv - p - 140;
+    document.getElementById("sconto-val").textContent = sc + "%";
+    card.querySelector("[data-riv]").textContent = eur(riv);
+    const g = card.querySelector("[data-gain]");
+    g.textContent = base - lo <= 0 ? "Nessun guadagno" : base - hi <= 0 ? "fino a +" + eur(base - lo) : "+" + num(base - hi) + "–" + num(base - lo) + " €";
+  };
+  r.addEventListener("input", upd); upd();
+})();
 applyRoute();
 if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => {});

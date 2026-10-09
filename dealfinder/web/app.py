@@ -22,7 +22,7 @@ from starlette.staticfiles import StaticFiles
 
 from ..config import settings
 from ..db import connect
-from . import cards, foto, scovo
+from . import cards, foto, scovo, social
 from .auth import hash_password, make_token, read_token, verify_password
 
 log = logging.getLogger("web")
@@ -425,6 +425,73 @@ def health(request: Request):
 # ---------------------------------------------------------------------------
 # Servizi: Vendi (targa+foto -> prezzo e annuncio) e Ricambi (targa+pezzi -> offerte)
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Entra con Google / Apple
+# ---------------------------------------------------------------------------
+def auth_metodi(request: Request):
+    return jsonify(social.enabled())
+
+
+def auth_start(request: Request):
+    provider = request.path_params["provider"]
+    if provider not in ("google", "apple") or not social.enabled().get(provider):
+        return RedirectResponse("/#/entra/non-attivo", status_code=302)
+    state = social.make_state(provider)
+    resp = RedirectResponse(social.auth_url(request, provider, state), status_code=302)
+    # Apple rimanda con un POST da un altro sito: il cookie deve essere SameSite=None
+    resp.set_cookie(social.STATE_COOKIE, state, max_age=600, httponly=True, secure=True,
+                    samesite="none" if provider == "apple" else "lax", path="/auth/")
+    return resp
+
+
+async def auth_callback(request: Request):
+    provider = request.path_params["provider"]
+    if provider not in ("google", "apple") or not social.enabled().get(provider):
+        return RedirectResponse("/#/entra/non-attivo", status_code=302)
+    if request.method == "POST":
+        from urllib.parse import parse_qs
+        raw = (await request.body())[:20000].decode(errors="ignore")
+        params = {k: v[0] for k, v in parse_qs(raw).items()}
+    else:
+        params = dict(request.query_params)
+    if params.get("error"):
+        return RedirectResponse("/#/entra/annullato", status_code=302)
+    if not social.check_state(params.get("state"), request.cookies.get(social.STATE_COOKIE), provider):
+        return RedirectResponse("/#/entra/scaduto", status_code=302)
+    name_hint = None
+    if params.get("user"):                       # Apple manda il nome solo la prima volta
+        try:
+            n = json.loads(params["user"]).get("name") or {}
+            name_hint = " ".join(filter(None, [n.get("firstName"), n.get("lastName")])) or None
+        except ValueError:
+            pass
+
+    def work():
+        info = social.exchange(request, provider, params.get("code", ""))
+        with connect() as conn:
+            return social.find_or_create(conn, provider, info, name_hint)
+    try:
+        dealer, esito = await run_in_threadpool(work)
+    except Exception as e:
+        log.warning("accesso %s non riuscito: %s", provider, str(e)[:200])
+        return RedirectResponse("/#/entra/errore", status_code=302)
+    if esito != "ok":
+        resp = RedirectResponse(f"/#/entra/{esito.replace('_', '-')}", status_code=302)
+    else:
+        resp = RedirectResponse(f"/#/accesso/{social.one_time_code(dealer)}", status_code=302)
+    resp.delete_cookie(social.STATE_COOKIE, path="/auth/")
+    return resp
+
+
+async def auth_scambio(request: Request):
+    data = await body(request)
+    d = social.redeem(str(data.get("code", "")))
+    if not d:
+        err(401, "Accesso scaduto: riprova")
+    return jsonify({"token": make_token(d["id"], d["role"]),
+                    "user": {"id": d["id"], "name": d["name"], "email": d["email"], "role": d["role"]}})
+
+
 SERVIZI_LIMITE_GIORNO = int(os.environ.get("SERVIZI_LIMITE_GIORNO", "15"))     # per commerciante, ogni servizio
 SERVIZI_LIMITE_TOTALE = int(os.environ.get("SERVIZI_LIMITE_TOTALE", "150"))    # tutto il sito, al giorno
 
@@ -604,8 +671,22 @@ async def richiesta_accesso(request: Request):
 def admin_requests(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
-        rows = conn.execute("SELECT * FROM access_requests ORDER BY at DESC LIMIT 200").fetchall()
+        rows = conn.execute(
+            "SELECT r.*, d.id AS dealer_id, d.active AS dealer_active FROM access_requests r "
+            "LEFT JOIN dealers d ON d.email = r.email WHERE NOT r.handled ORDER BY r.at DESC LIMIT 200").fetchall()
     return jsonify({"items": rows})
+
+
+async def admin_request_done(request: Request):
+    """Richiesta gestita: se il commerciante si è iscritto con Google/Apple, lo attiva."""
+    current_user(request, admin=True)
+    rid = int(request.path_params["id"])
+    with connect() as conn:
+        r = conn.execute("UPDATE access_requests SET handled=true WHERE id=%s RETURNING email", (rid,)).fetchone()
+        if r:
+            conn.execute("UPDATE dealers SET active=true WHERE email=%s", (r["email"],))
+        conn.commit()
+    return jsonify({"ok": True})
 
 
 SITE = STATIC / "scovo"
@@ -723,6 +804,10 @@ class SecurityMiddleware:
 routes = [
     Route("/health", health),
     Route("/api/auth/login", login, methods=["POST"]),
+    Route("/api/auth/metodi", auth_metodi),
+    Route("/api/auth/scambio", auth_scambio, methods=["POST"]),
+    Route("/auth/{provider}", auth_start),
+    Route("/auth/{provider}/callback", auth_callback, methods=["GET", "POST"]),
     Route("/api/me", me, methods=["GET"]),
     Route("/api/me", update_me, methods=["PUT"]),
     Route("/api/me/password", cambia_password, methods=["PUT"]),
@@ -744,6 +829,7 @@ routes = [
     Route("/api/admin/dealers", admin_create_dealer, methods=["POST"]),
     Route("/api/admin/dealers/{id:int}", admin_update_dealer, methods=["PATCH"]),
     Route("/api/admin/richieste", admin_requests),
+    Route("/api/admin/richieste/{id:int}", admin_request_done, methods=["POST"]),
     Route("/api/servizi/vendi", servizio_vendi, methods=["POST"]),
     Route("/api/servizi/ricambi", servizio_ricambi, methods=["POST"]),
     Route("/sw.js", service_worker),
