@@ -119,21 +119,36 @@
     "source": "testo"
    }
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 2500,
+  "ricambi_min": 860,
+  "ricambi_max": 2050,
   "ricambi": [
    {
-    "label": "Frontale (paraurti, fari, cofano, radiatori) - stima senza dettagli",
-    "low": 800,
-    "high": 1700
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 330
    },
    {
-    "label": "Riserva airbag se esplosi",
-    "low": 0,
-    "high": 800
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 580
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ],
-  "nota": "Opel Corsa 2022 automatica, 78.000 km. Il titolo dice 'incidentata' (scritto 'indidentata') ma la descrizione non dice dove né quanto: stima prudente sul danno tipico. Prezzo trattabile.",
+  "nota": "Opel Corsa 2022 automatica, 78.000 km. Il titolo dice 'incidentata' (scritto 'indidentata') ma la descrizione non dice dove né quanto: stima prudente sul danno tipico. Prezzo trattabile. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2050 €.",
   "controlli": [
    "Chiedere dove è il danno e le foto",
    "Airbag esplosi?",
@@ -1095,18 +1110,18 @@
   "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 4600,
-  "nota": "Fiat 500 2011, frizione e distribuzione nuove, solo il paraurti anteriore da sistemare.",
+  "nota": "Fiat 500 2011, frizione e distribuzione nuove, solo il paraurti anteriore da sistemare. Ricambi stimati dalla descrizione: 120-250 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 100,
+  "ricambi_min": 120,
   "ricambi_max": 250,
   "ricambi": [
    {
-    "label": "Paraurti anteriore (aftermarket)",
-    "low": 100,
+    "label": "Paraurti anteriore",
+    "low": 120,
     "high": 250
    }
   ]
@@ -1117,40 +1132,50 @@
   "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 2400,
-  "nota": "Fiat Grande Punto 2010, 256.000 km, perfettamente marciante, carrozzeria da rivedere.",
+  "nota": "Fiat Grande Punto 2010, 256.000 km, perfettamente marciante, carrozzeria da rivedere. Ricambi stimati dalla descrizione: 180-400 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 0,
-  "ricambi_max": 200,
+  "ricambi_min": 180,
+  "ricambi_max": 400,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 0,
-    "high": 200
+    "label": "Paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "Parafango",
+    "low": 60,
+    "high": 150
    }
   ]
  },
  {
   "id": 25441,
   "esito": "opportunita",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 8500,
-  "nota": "Smart Forfour 2019, 140.000 km, 'minimamente sinistrata' sul lato anteriore, sempre tagliandata.",
+  "nota": "Smart Forfour 2019, 140.000 km, 'minimamente sinistrata' sul lato anteriore, sempre tagliandata. Ricambi stimati dalla descrizione: 220-520 €.",
   "controlli": [
    "Foto del frontale: airbag e radiatori",
    "Visura PRA"
   ],
-  "ricambi_min": 600,
-  "ricambi_max": 1500,
+  "ricambi_min": 220,
+  "ricambi_max": 520,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 600,
-    "high": 1500
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 90,
+    "high": 240
    }
   ]
  },
@@ -1160,151 +1185,211 @@
   "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 6600,
-  "nota": "Kia Carens 2015 automatica: paraurti rotto lato destro e vaschetta tergicristalli, qualche ammaccatura sul cofano.",
+  "nota": "Kia Carens 2015 automatica: paraurti rotto lato destro e vaschetta tergicristalli, qualche ammaccatura sul cofano. Ricambi stimati dalla descrizione: 280-630 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 250,
-  "ricambi_max": 600,
+  "ricambi_min": 280,
+  "ricambi_max": 630,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 250,
-    "high": 600
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Vaschetta tergicristalli",
+    "low": 20,
+    "high": 60
+   },
+   {
+    "label": "Cofano",
+    "low": 130,
+    "high": 290
    }
   ]
  },
  {
   "id": 41682,
   "esito": "opportunita",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 7300,
-  "nota": "Opel Mokka 1.6 diesel 2016, 147.000 km: frizione da sistemare, difetti di carrozzeria, motore perfetto.",
+  "nota": "Opel Mokka 1.6 diesel 2016, 147.000 km: frizione da sistemare, difetti di carrozzeria, motore perfetto. Ricambi stimati dalla descrizione: 290-670 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 250,
-  "ricambi_max": 500,
+  "ricambi_min": 290,
+  "ricambi_max": 670,
   "ricambi": [
    {
-    "label": "Kit frizione (volano se bimassa)",
-    "low": 250,
-    "high": 500
+    "label": "Kit frizione",
+    "low": 160,
+    "high": 390
+   },
+   {
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
    }
   ]
  },
  {
   "id": 33827,
-  "esito": "opportunita",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
   "rivendita_prudente": 3700,
-  "nota": "Citroen C3 2011, 152.000 km, incidentata alle ruote: un braccetto rotto e una ruota posteriore.",
+  "nota": "Citroen C3 2011, 152.000 km, incidentata alle ruote: un braccetto rotto e una ruota posteriore. Ricambi stimati dalla descrizione: 940-2310 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 250,
-  "ricambi_max": 600,
+  "ricambi_min": 940,
+  "ricambi_max": 2310,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 250,
-    "high": 600
+    "label": "Braccetto sospensione",
+    "low": 40,
+    "high": 120
+   },
+   {
+    "label": "Semiasse o giunto",
+    "low": 70,
+    "high": 180
+   },
+   {
+    "label": "Cerchio e pneumatico",
+    "low": 90,
+    "high": 220
+   },
+   {
+    "label": "Ruota posteriore e braccio",
+    "low": 130,
+    "high": 330
+   },
+   {
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 90,
+    "high": 240
+   },
+   {
+    "label": "Portiera (usata, da verniciare)",
+    "low": 160,
+    "high": 390
+   },
+   {
+    "label": "Portiera (usata, da verniciare)",
+    "low": 160,
+    "high": 390
+   },
+   {
+    "label": "Minigonna",
+    "low": 70,
+    "high": 160
    }
   ]
  },
  {
   "id": 10613,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
   "rivendita_prudente": 3200,
-  "nota": "Nissan Qashqai 1.6 benzina 2008, grandinata, parabrezza da cambiare, motore perfetto. Rivendita ridotta per la grandine.",
+  "nota": "Nissan Qashqai 1.6 benzina 2008, grandinata, parabrezza da cambiare, motore perfetto. Rivendita ridotta per la grandine. Ricambi stimati dalla descrizione: 580-1580 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 120,
-  "ricambi_max": 250,
+  "ricambi_min": 580,
+  "ricambi_max": 1580,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 120,
-    "high": 250
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
+    "low": 400,
+    "high": 1200
+   },
+   {
+    "label": "Parabrezza",
+    "low": 180,
+    "high": 380
    }
   ]
  },
  {
   "id": 34600,
-  "esito": "opportunita",
-  "danno": "leggero",
+  "esito": "da_verificare",
+  "danno": "medio",
   "danni": [],
   "rivendita_prudente": 7700,
-  "nota": "Renault Megane diesel automatica 2019, tetto grandinato, nessun lavoro meccanico. Rivendita ridotta per la grandine.",
+  "nota": "Renault Megane diesel automatica 2019, tetto grandinato, nessun lavoro meccanico. Rivendita ridotta per la grandine. Ricambi stimati dalla descrizione: 400-1200 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
+  "ricambi_min": 400,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 0,
-    "high": 0
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
+    "low": 400,
+    "high": 1200
    }
   ]
  },
  {
   "id": 12179,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
   "rivendita_prudente": 9000,
-  "nota": "Fiat 500C cabrio 2022, 149.000 km, movimento della cappottina lato destro da sistemare, secondo treno di gomme.",
+  "nota": "Fiat 500C cabrio 2022, 149.000 km, movimento della cappottina lato destro da sistemare, secondo treno di gomme. Ricambi stimati dalla descrizione: 300-960 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 500,
+  "ricambi_min": 300,
+  "ricambi_max": 960,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 150,
-    "high": 500
+    "label": "Meccanismo tetto/capote",
+    "low": 300,
+    "high": 960
    }
   ]
  },
  {
   "id": 40289,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
   "rivendita_prudente": 14200,
-  "nota": "Mercedes CLA 220d 2017, freni nuovi, non funziona solo il tettuccio elettrico.",
+  "nota": "Mercedes CLA 220d 2017, freni nuovi, non funziona solo il tettuccio elettrico. Ricambi stimati dalla descrizione: 500-1600 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 200,
-  "ricambi_max": 800,
+  "ricambi_min": 500,
+  "ricambi_max": 1600,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 200,
-    "high": 800
+    "label": "Meccanismo tetto/capote",
+    "low": 500,
+    "high": 1600
    }
   ]
  },
@@ -1314,19 +1399,19 @@
   "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 15000,
-  "nota": "Audi A3 2.0 TDI 150 CV 2018, qualche graffio e un faro anteriore da rivedere, gomme nuove. Margine appena sotto la soglia di 2.000 €: conviene solo trattando.",
+  "nota": "Audi A3 2.0 TDI 150 CV 2018, qualche graffio e un faro anteriore da rivedere, gomme nuove. Margine appena sotto la soglia di 2.000 €: conviene solo trattando. Ricambi stimati dalla descrizione: 160-440 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 250,
-  "ricambi_max": 700,
+  "ricambi_min": 160,
+  "ricambi_max": 440,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 250,
-    "high": 700
+    "label": "Faro anteriore",
+    "low": 160,
+    "high": 440
    }
   ]
  },
@@ -1336,99 +1421,134 @@
   "danno": "medio",
   "danni": [],
   "rivendita_prudente": 6800,
-  "nota": "BMW 320i Touring E91 2009, fiancata destra da sistemare e sonda lambda da cambiare.",
+  "nota": "BMW 320i Touring E91 2009, fiancata destra da sistemare e sonda lambda da cambiare. Ricambi stimati dalla descrizione: 520-1240 €.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 500,
-  "ricambi_max": 1100,
+  "ricambi_min": 520,
+  "ricambi_max": 1240,
   "ricambi": [
    {
-    "label": "Ricambi (stima)",
-    "low": 500,
-    "high": 1100
+    "label": "Fiancata: portiera e minigonna (usate)",
+    "low": 440,
+    "high": 1000
+   },
+   {
+    "label": "Sonda lambda",
+    "low": 80,
+    "high": 240
    }
   ]
  },
  {
   "id": 24187,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Peugeot 208 2021 incidentata, 49.000 km, a 3.000 €: margine molto alto se il danno è limitato. Annuncio senza dettagli.",
-  "ricambi_min": 1500,
-  "ricambi_max": 3500,
+  "nota": "Peugeot 208 2021 incidentata, 49.000 km, a 3.000 €: margine molto alto se il danno è limitato. Annuncio senza dettagli. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2050 €.",
+  "ricambi_min": 860,
+  "ricambi_max": 2050,
   "ricambi": [
    {
-    "label": "Ricambi (stima senza foto)",
-    "low": 1500,
-    "high": 3500
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 330
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 580
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
  {
   "id": 15304,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Fiat 500L 2013, tamponamento a 50 km/h, motore e interni perfetti.",
-  "ricambi_min": 600,
-  "ricambi_max": 1500,
+  "nota": "Fiat 500L 2013, tamponamento a 50 km/h, motore e interni perfetti. Ricambi stimati dalla descrizione: 250-600 €.",
+  "ricambi_min": 250,
+  "ricambi_max": 600,
   "ricambi": [
    {
-    "label": "Ricambi (stima senza foto)",
-    "low": 600,
-    "high": 1500
+    "label": "Kit posteriore: paraurti, fanali, pannello",
+    "low": 250,
+    "high": 600
    }
   ]
  },
  {
   "id": 22059,
   "esito": "da_verificare",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
-  "nota": "Peugeot 3008 2019 grandinata: la grandine si ripara con levabolli (manodopera), la rivendita va ridotta.",
-  "ricambi_min": 0,
-  "ricambi_max": 0,
+  "nota": "Peugeot 3008 2019 grandinata: la grandine si ripara con levabolli (manodopera), la rivendita va ridotta. Ricambi stimati dalla descrizione: 400-1200 €.",
+  "ricambi_min": 400,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Ricambi (stima senza foto)",
-    "low": 0,
-    "high": 0
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
+    "low": 400,
+    "high": 1200
    }
   ]
  },
  {
   "id": 42514,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Hyundai Kona 1.6 diesel 2018: perde olio, causa da capire.",
-  "ricambi_min": 100,
-  "ricambi_max": 800,
+  "nota": "Hyundai Kona 1.6 diesel 2018: perde olio, causa da capire. Ricambi stimati dalla descrizione: 70-440 €.",
+  "ricambi_min": 70,
+  "ricambi_max": 440,
   "ricambi": [
    {
-    "label": "Ricambi (stima senza foto)",
-    "low": 100,
-    "high": 800
+    "label": "Guarnizioni per perdita olio",
+    "low": 70,
+    "high": 440
    }
   ]
  },
  {
   "id": 26429,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "medio",
   "danni": [],
-  "nota": "BMW 218d Gran Tourer 2015, carrozzeria da rivedere: margine al limite.",
-  "ricambi_min": 500,
-  "ricambi_max": 1000,
+  "nota": "Margine insufficiente dopo i ricambi stimati (660-1500 €).",
+  "ricambi_min": 660,
+  "ricambi_max": 1500,
   "ricambi": [
    {
-    "label": "Ricambi (stima senza foto)",
-    "low": 500,
-    "high": 1000
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Parafango",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "Portiera (usata, da verniciare)",
+    "low": 300,
+    "high": 700
    }
   ]
  },
@@ -1566,22 +1686,62 @@
  {
   "id": 644,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 74% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 74% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 3880-8590 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 3880,
+  "ricambi_max": 8590,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 290,
+    "high": 600
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 380,
+    "high": 1060
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 360,
+    "high": 840
+   },
+   {
+    "label": "Cofano",
+    "low": 290,
+    "high": 620
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 240,
+    "high": 620
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 1680,
+    "high": 3360
+   },
+   {
+    "label": "Parabrezza",
+    "low": 360,
+    "high": 770
+   },
+   {
+    "label": "Parafango",
+    "low": 140,
+    "high": 360
+   },
+   {
+    "label": "Parafango",
+    "low": 140,
+    "high": 360
    }
   ]
  },
@@ -1610,43 +1770,88 @@
  {
   "id": 22588,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 3240-7100 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 3240,
+  "ricambi_max": 7100,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 290,
+    "high": 600
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 380,
+    "high": 1060
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 360,
+    "high": 840
+   },
+   {
+    "label": "Cofano",
+    "low": 290,
+    "high": 620
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 240,
+    "high": 620
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 1680,
+    "high": 3360
    }
   ]
  },
  {
   "id": 13809,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1560-3740 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1560,
+  "ricambi_max": 3740,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 290,
+    "high": 600
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 380,
+    "high": 1060
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 360,
+    "high": 840
+   },
+   {
+    "label": "Cofano",
+    "low": 290,
+    "high": 620
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 240,
+    "high": 620
    }
   ]
  },
@@ -1674,214 +1879,237 @@
  },
  {
   "id": 37689,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (4320-9600 €).",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 4320,
+  "ricambi_max": 9600,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 2160,
+    "high": 4800
+   },
+   {
+    "label": "Motore usato garantito",
+    "low": 2160,
+    "high": 4800
    }
   ]
  },
  {
   "id": 8068,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno leggero.",
   "controlli": [
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
-   }
   ]
  },
  {
   "id": 466,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "nota": "Selezione allargata del 9/10: danno leggero. Ricambi stimati dalla descrizione: 480-1080 €.",
   "controlli": [
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 480,
+  "ricambi_max": 1080,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "4 pneumatici",
+    "low": 480,
+    "high": 1080
    }
   ]
  },
  {
   "id": 9764,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 30908,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 33707,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 240-620 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 240,
+  "ricambi_max": 620,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Semiasse o giunto",
+    "low": 60,
+    "high": 160
+   },
+   {
+    "label": "Braccetto sospensione",
+    "low": 40,
+    "high": 110
+   },
+   {
+    "label": "Cerchio e pneumatico",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "Parafango",
+    "low": 60,
+    "high": 150
    }
   ]
  },
  {
   "id": 1984,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 290-680 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 290,
+  "ricambi_max": 680,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 90,
+    "high": 240
+   },
+   {
+    "label": "Parafango",
+    "low": 70,
+    "high": 160
    }
   ]
  },
  {
   "id": 23771,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 900-2000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 900,
+  "ricambi_max": 2000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 900,
+    "high": 2000
    }
   ]
  },
  {
   "id": 10505,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 78% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 78% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1300-3120 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1300,
+  "ricambi_max": 3120,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 320,
+    "high": 880
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano",
+    "low": 240,
+    "high": 520
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 200,
+    "high": 520
    }
   ]
  },
  {
   "id": 36250,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 74% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 74% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 80-200 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 80,
+  "ricambi_max": 200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Intercooler",
+    "low": 80,
+    "high": 200
    }
   ]
  },
@@ -1890,42 +2118,57 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1300-3000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1300,
+  "ricambi_max": 3000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Pompa iniezione",
     "low": 800,
     "high": 1800
+   },
+   {
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 160,
+    "high": 440
+   },
+   {
+    "label": "Specchietto",
+    "low": 100,
+    "high": 260
    }
   ]
  },
  {
   "id": 20571,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 600-1400 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 600,
+  "ricambi_max": 1400,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Turbina",
+    "low": 600,
+    "high": 1400
    }
   ]
  },
@@ -1934,7 +2177,7 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 400-1200 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -1942,12 +2185,12 @@
    "Vedere l'auto di persona prima di pagare"
   ],
   "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
     "low": 400,
-    "high": 900
+    "high": 1200
    }
   ]
  },
@@ -1956,20 +2199,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 78% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 78% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 710-1730 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 710,
+  "ricambi_max": 1730,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 180,
+    "high": 480
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 160,
+    "high": 390
+   },
+   {
+    "label": "Cofano",
+    "low": 130,
+    "high": 290
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 110,
+    "high": 290
    }
   ]
  },
@@ -1978,20 +2241,30 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 880-2270 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 880,
+  "ricambi_max": 2270,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Scambiatore e termostato",
+    "low": 90,
+    "high": 240
+   },
+   {
+    "label": "Kit frizione e volano",
+    "low": 390,
+    "high": 830
+   },
+   {
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
     "low": 400,
-    "high": 900
+    "high": 1200
    }
   ]
  },
@@ -2000,19 +2273,19 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 130-420 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 130,
+  "ricambi_max": 420,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Tubo o pompa idroguida",
+    "low": 130,
+    "high": 420
    }
   ]
  },
@@ -2021,28 +2294,65 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 66% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: prezzo 66% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 80-220 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 80,
+  "ricambi_max": 220,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Dischi e pastiglie",
+    "low": 80,
+    "high": 220
    }
   ]
  },
  {
   "id": 10584,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 310-780 €.",
+  "controlli": [
+   "Telefonare al venditore e confermare prezzo e dati",
+   "Preventivo dal meccanico per il lavoro dichiarato",
+   "Visura PRA e storico revisioni (km reali)",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 310,
+  "ricambi_max": 780,
+  "ricambi": [
+   {
+    "label": "Kit distribuzione",
+    "low": 110,
+    "high": 280
+   },
+   {
+    "label": "Coppia ammortizzatori",
+    "low": 90,
+    "high": 200
+   },
+   {
+    "label": "Fanale posteriore",
+    "low": 40,
+    "high": 120
+   },
+   {
+    "label": "Dischi e pastiglie",
+    "low": 70,
+    "high": 180
+   }
+  ]
+ },
+ {
+  "id": 20529,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 400-870 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -2050,175 +2360,203 @@
    "Vedere l'auto di persona prima di pagare"
   ],
   "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_max": 870,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
-  ]
- },
- {
-  "id": 20529,
-  "esito": "da_verificare",
-  "danno": "alto_rischio",
-  "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
-  "controlli": [
-   "Telefonare al venditore e confermare prezzo e dati",
-   "Preventivo dal meccanico per il lavoro dichiarato",
-   "Visura PRA e storico revisioni (km reali)",
-   "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
+    "label": "Kit catena distribuzione",
+    "low": 250,
+    "high": 550
+   },
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Parabrezza",
+    "low": 150,
+    "high": 320
    }
   ]
  },
  {
   "id": 23257,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 77% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (2380-5460 €).",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 2380,
+  "ricambi_max": 5460,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 160,
+    "high": 440
+   },
+   {
+    "label": "Portiera (usata, da verniciare)",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Braccetto sospensione",
+    "low": 80,
+    "high": 220
+   },
+   {
+    "label": "Cambio automatico usato o revisionato",
+    "low": 1600,
+    "high": 3600
    }
   ]
  },
  {
   "id": 38885,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 210-840 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 210,
+  "ricambi_max": 840,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Pulizia o FAP rigenerato",
+    "low": 210,
+    "high": 840
    }
   ]
  },
  {
   "id": 36219,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 79% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 79% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 770-1870 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 770,
+  "ricambi_max": 1870,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 140,
+    "high": 300
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 190,
+    "high": 530
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 180,
+    "high": 420
+   },
+   {
+    "label": "Cofano",
+    "low": 140,
+    "high": 310
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 120,
+    "high": 310
    }
   ]
  },
  {
   "id": 23396,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 67% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 67% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 990-2200 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 990,
+  "ricambi_max": 2200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 990,
+    "high": 2200
    }
   ]
  },
  {
   "id": 23274,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 310-700 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 310,
+  "ricambi_max": 700,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Kit catena distribuzione",
+    "low": 280,
+    "high": 600
+   },
+   {
+    "label": "Serratura portellone",
+    "low": 30,
+    "high": 100
    }
   ]
  },
  {
   "id": 33561,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 990-2200 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 990,
+  "ricambi_max": 2200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 990,
+    "high": 2200
    }
   ]
  },
  {
   "id": 23157,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 80% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Errore nei dati: venduta solo come ricambi o per export.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -2240,7 +2578,7 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 400-1000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -2248,34 +2586,34 @@
    "Vedere l'auto di persona prima di pagare"
   ],
   "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_max": 1000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Attuatori cambio",
     "low": 400,
-    "high": 900
+    "high": 1000
    }
   ]
  },
  {
   "id": 36214,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 900-2000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 900,
+  "ricambi_max": 2000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 900,
+    "high": 2000
    }
   ]
  },
@@ -2284,19 +2622,19 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 64% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 64% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 120-440 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 120,
+  "ricambi_max": 440,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Pompa carburante",
+    "low": 120,
+    "high": 440
    }
   ]
  },
@@ -2305,7 +2643,7 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 400-1200 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -2313,78 +2651,108 @@
    "Vedere l'auto di persona prima di pagare"
   ],
   "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
     "low": 400,
-    "high": 900
+    "high": 1200
    }
   ]
  },
  {
   "id": 23722,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 80-220 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 80,
+  "ricambi_max": 220,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Braccetto sospensione",
+    "low": 80,
+    "high": 220
    }
   ]
  },
  {
   "id": 729,
-  "esito": "da_verificare",
-  "danno": "medio",
+  "esito": "scartata",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (1670-3620 €).",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1670,
+  "ricambi_max": 3620,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 140,
+    "high": 300
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 190,
+    "high": 530
+   },
+   {
+    "label": "Cofano",
+    "low": 140,
+    "high": 310
+   },
+   {
+    "label": "Parabrezza",
+    "low": 180,
+    "high": 380
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 840,
+    "high": 1680
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 180,
+    "high": 420
    }
   ]
  },
  {
   "id": 23445,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 61% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (1820-4160 €).",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1820,
+  "ricambi_max": 4160,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Meccatronica cambio DSG",
+    "low": 650,
+    "high": 1560
+   },
+   {
+    "label": "Motore usato garantito",
+    "low": 1170,
+    "high": 2600
    }
   ]
  },
@@ -2393,20 +2761,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 75% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 75% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2030 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2030,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 320
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 570
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
@@ -2415,42 +2803,82 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 79% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 79% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2030 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2030,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 320
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 570
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
  {
   "id": 38978,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 79% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 79% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1300-3120 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1300,
+  "ricambi_max": 3120,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 320,
+    "high": 880
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano",
+    "low": 240,
+    "high": 520
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 200,
+    "high": 520
    }
   ]
  },
@@ -2459,20 +2887,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 710-1730 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 710,
+  "ricambi_max": 1730,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 180,
+    "high": 480
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 160,
+    "high": 390
+   },
+   {
+    "label": "Cofano",
+    "low": 130,
+    "high": 290
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 110,
+    "high": 290
    }
   ]
  },
@@ -2481,42 +2929,72 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 2310-5260 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 2310,
+  "ricambi_max": 5260,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 170,
+    "high": 350
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 220,
+    "high": 620
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 210,
+    "high": 490
+   },
+   {
+    "label": "Cofano",
+    "low": 170,
+    "high": 360
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 140,
+    "high": 360
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 980,
+    "high": 1960
+   },
+   {
+    "label": "Cruscotto con airbag passeggero",
+    "low": 420,
+    "high": 1120
    }
   ]
  },
  {
   "id": 33526,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 76% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 700-700 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 700,
+  "ricambi_max": 700,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Cablaggio motore (prezzo indicato dal venditore)",
+    "low": 700,
+    "high": 700
    }
   ]
  },
@@ -2525,42 +3003,62 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1800-4000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1800,
+  "ricambi_max": 4000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 1800,
+    "high": 4000
    }
   ]
  },
  {
   "id": 24742,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1300-3120 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1300,
+  "ricambi_max": 3120,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 320,
+    "high": 880
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano",
+    "low": 240,
+    "high": 520
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 200,
+    "high": 520
    }
   ]
  },
@@ -2569,20 +3067,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2050 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2050,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 330
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 580
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
@@ -2591,63 +3109,88 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1840-4140 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1840,
+  "ricambi_max": 4140,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Cambio automatico usato o revisionato",
+    "low": 1840,
+    "high": 4140
    }
   ]
  },
  {
   "id": 10832,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 74% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 710-1730 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 710,
+  "ricambi_max": 1730,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 180,
+    "high": 480
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 160,
+    "high": 390
+   },
+   {
+    "label": "Cofano",
+    "low": 130,
+    "high": 290
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 110,
+    "high": 290
    }
   ]
  },
  {
   "id": 7175,
   "esito": "da_verificare",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 64% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: prezzo 64% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 540-1200 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 540,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Kit frizione",
+    "low": 300,
+    "high": 700
    }
   ]
  },
@@ -2656,20 +3199,45 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 68% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 3570-8190 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 3570,
+  "ricambi_max": 8190,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 280,
+    "high": 580
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 370,
+    "high": 1010
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 340,
+    "high": 800
+   },
+   {
+    "label": "Cofano",
+    "low": 280,
+    "high": 600
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 230,
+    "high": 600
+   },
+   {
+    "label": "Motore usato garantito",
+    "low": 2070,
+    "high": 4600
    }
   ]
  },
@@ -2678,20 +3246,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2050 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2050,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 330
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 580
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
@@ -2700,20 +3288,20 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 67% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 67% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 960-2160 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 960,
+  "ricambi_max": 2160,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Cambio automatico usato o revisionato",
+    "low": 960,
+    "high": 2160
    }
   ]
  },
@@ -2722,51 +3310,96 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 75% sotto la media: controllare che non sia un errore o una truffa; km non indicati, stimati; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 75% sotto la media: controllare che non sia un errore o una truffa; km non indicati, stimati; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 770-1870 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 770,
+  "ricambi_max": 1870,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 140,
+    "high": 300
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 190,
+    "high": 530
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 180,
+    "high": 420
+   },
+   {
+    "label": "Cofano",
+    "low": 140,
+    "high": 310
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 120,
+    "high": 310
    }
   ]
  },
  {
   "id": 41510,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 70% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1330-2820 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1330,
+  "ricambi_max": 2820,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 130,
+    "high": 280
+   },
+   {
+    "label": "Cofano",
+    "low": 130,
+    "high": 290
+   },
+   {
+    "label": "Parafango",
+    "low": 70,
+    "high": 160
+   },
+   {
+    "label": "Parafango",
+    "low": 70,
+    "high": 160
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 770,
+    "high": 1540
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 160,
+    "high": 390
    }
   ]
  },
  {
   "id": 15434,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 69% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Errore nei dati: A4 B8 Euro 5 elaborata: anno indicato sbagliato.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -2786,44 +3419,35 @@
  {
   "id": 5542,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 72% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 900-2000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 900,
+  "ricambi_max": 2000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 900,
+    "high": 2000
    }
   ]
  },
  {
   "id": 25677,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -2831,20 +3455,25 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 2700-6000 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 2700,
+  "ricambi_max": 6000,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 1350,
+    "high": 3000
+   },
+   {
+    "label": "Motore usato garantito",
+    "low": 1350,
+    "high": 3000
    }
   ]
  },
@@ -2853,20 +3482,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2050 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2050,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 330
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 580
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
@@ -2875,41 +3524,51 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 64% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 64% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1800-4040 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1800,
+  "ricambi_max": 4040,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Cambio automatico usato o revisionato",
+    "low": 1600,
+    "high": 3600
+   },
+   {
+    "label": "Paraurti posteriore",
+    "low": 200,
+    "high": 440
    }
   ]
  },
  {
   "id": 16038,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (1000-2700 €).",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1000,
+  "ricambi_max": 2700,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Set iniettori",
+    "low": 600,
+    "high": 1500
+   },
+   {
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
     "low": 400,
-    "high": 900
+    "high": 1200
    }
   ]
  },
@@ -2918,72 +3577,102 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 330-830 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 330,
+  "ricambi_max": 830,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Set iniettori",
+    "low": 330,
+    "high": 830
    }
   ]
  },
  {
   "id": 2738,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 520-1240 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 520,
+  "ricambi_max": 1240,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 160,
+    "high": 440
+   },
+   {
+    "label": "Parafango",
+    "low": 120,
+    "high": 300
    }
   ]
  },
  {
   "id": 24980,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1300-3120 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1300,
+  "ricambi_max": 3120,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 320,
+    "high": 880
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano",
+    "low": 240,
+    "high": 520
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 200,
+    "high": 520
    }
   ]
  },
  {
   "id": 25184,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Errore nei dati: fermo amministrativo: vendibile solo per esportazione.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -3003,51 +3692,33 @@
  {
   "id": 33450,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 34340,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 7333,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 800-1800 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -3058,7 +3729,7 @@
   "ricambi_max": 1800,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Pompa iniezione",
     "low": 800,
     "high": 1800
    }
@@ -3067,22 +3738,27 @@
  {
   "id": 24386,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 790-2140 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 790,
+  "ricambi_max": 2140,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Testata e guarnizione",
+    "low": 390,
+    "high": 940
+   },
+   {
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
+    "low": 400,
+    "high": 1200
    }
   ]
  },
@@ -3091,19 +3767,24 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 63% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 63% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 360-800 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 360,
+  "ricambi_max": 800,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Parafango",
+    "low": 120,
+    "high": 300
    }
   ]
  },
@@ -3112,42 +3793,47 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 52% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 52% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 540-1260 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 540,
+  "ricambi_max": 1260,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Fiancata: portiera e minigonna (usate)",
+    "low": 440,
+    "high": 1000
+   },
+   {
+    "label": "Specchietto",
+    "low": 100,
+    "high": 260
    }
   ]
  },
  {
   "id": 5375,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 63% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 63% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 80-180 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 80,
+  "ricambi_max": 180,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Coppia ammortizzatori",
+    "low": 80,
+    "high": 180
    }
   ]
  },
@@ -3664,22 +4350,37 @@
  {
   "id": 26156,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 69% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 69% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 450-1050 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 450,
+  "ricambi_max": 1050,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Paraurti anteriore",
+    "low": 140,
+    "high": 300
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 100,
+    "high": 260
+   },
+   {
+    "label": "Cofano",
+    "low": 140,
+    "high": 310
+   },
+   {
+    "label": "Parafango",
+    "low": 70,
+    "high": 180
    }
   ]
  },
@@ -3688,42 +4389,62 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 66% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 66% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2050 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2050,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 330
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 580
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
  {
   "id": 12164,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 60% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; prezzo 60% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 690-1610 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 690,
+  "ricambi_max": 1610,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Turbina",
+    "low": 690,
+    "high": 1610
    }
   ]
  },
@@ -3732,20 +4453,25 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1380-3330 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1380,
+  "ricambi_max": 3330,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Turbina",
+    "low": 690,
+    "high": 1610
+   },
+   {
+    "label": "Set iniettori",
+    "low": 690,
+    "high": 1720
    }
   ]
  },
@@ -3754,42 +4480,57 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 59% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 600-1400 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 600,
+  "ricambi_max": 1400,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Fiancata: portiera e minigonna (usate)",
+    "low": 440,
+    "high": 1000
+   },
+   {
+    "label": "Cerchio e pneumatico",
+    "low": 160,
+    "high": 400
    }
   ]
  },
  {
   "id": 39669,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 2500-5600 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 2500,
+  "ricambi_max": 5600,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Kit posteriore: paraurti, fanali, pannello",
+    "low": 500,
+    "high": 1200
+   },
+   {
+    "label": "Cruscotto con airbag passeggero",
+    "low": 600,
+    "high": 1600
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 1400,
+    "high": 2800
    }
   ]
  },
@@ -3798,40 +4539,40 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 1150-2590 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1150,
+  "ricambi_max": 2590,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Cambio automatico usato o revisionato",
+    "low": 1150,
+    "high": 2590
    }
   ]
  },
  {
   "id": 27208,
   "esito": "da_verificare",
-  "danno": "leggero",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 55% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: prezzo 55% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 500-1600 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 500,
+  "ricambi_max": 1600,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Meccanismo tetto/capote",
+    "low": 500,
+    "high": 1600
    }
   ]
  },
@@ -3840,50 +4581,60 @@
   "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1600-3550 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1600,
+  "ricambi_max": 3550,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 1440,
+    "high": 3200
+   },
+   {
+    "label": "Paraurti posteriore",
+    "low": 160,
+    "high": 350
    }
   ]
  },
  {
   "id": 17428,
-  "esito": "opportunita",
-  "danno": "leggero",
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "nota": "Selezione allargata del 9/10: danno leggero. Ricambi stimati dalla descrizione: 2700-6240 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 2700,
+  "ricambi_max": 6240,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Interni abitacolo usati (sedili, cruscotto, cielo)",
+    "low": 2400,
+    "high": 5600
+   },
+   {
+    "label": "Parabrezza",
+    "low": 300,
+    "high": 640
    }
   ]
  },
  {
   "id": 27100,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Errore nei dati: Smart 451 del 2012, non 2016.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
@@ -3904,29 +4655,49 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 57% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 57% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 860-2030 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 860,
+  "ricambi_max": 2030,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 160,
+    "high": 320
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 210,
+    "high": 570
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 200,
+    "high": 460
+   },
+   {
+    "label": "Cofano",
+    "low": 160,
+    "high": 340
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 130,
+    "high": 340
    }
   ]
  },
  {
   "id": 9742,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "nota": "Errore nei dati: anno reale 2011, non 2021.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
@@ -3946,21 +4717,12 @@
  {
   "id": 42537,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno leggero.",
   "controlli": [
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
-   }
   ]
  },
  {
@@ -3968,41 +4730,41 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno leggero.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 54% sotto la media: controllare che non sia un errore o una truffa; danno leggero. Ricambi stimati dalla descrizione: 120-440 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 120,
+  "ricambi_max": 440,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Pompa carburante",
+    "low": 120,
+    "high": 440
    }
   ]
  },
  {
   "id": 11778,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; prezzo 56% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 600-1500 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 600,
+  "ricambi_max": 1500,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Set iniettori",
+    "low": 600,
+    "high": 1500
    }
   ]
  },
@@ -4011,40 +4773,45 @@
   "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzi delle auto simili molto variabili; danno leggero.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzi delle auto simili molto variabili; danno leggero. Ricambi stimati dalla descrizione: 80-260 €.",
   "controlli": [
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 80,
+  "ricambi_max": 260,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Tubo o pompa idroguida",
+    "low": 80,
+    "high": 260
    }
   ]
  },
  {
   "id": 26814,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (4140-9200 €).",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 4140,
+  "ricambi_max": 9200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Motore usato garantito",
+    "low": 2070,
+    "high": 4600
+   },
+   {
+    "label": "Motore usato garantito",
+    "low": 2070,
+    "high": 4600
    }
   ]
  },
@@ -4053,83 +4820,98 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 370-900 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
+  "ricambi_min": 370,
   "ricambi_max": 900,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Kit posteriore: paraurti, fanali, pannello",
+    "low": 250,
+    "high": 600
+   },
+   {
+    "label": "Ruota posteriore e braccio",
+    "low": 120,
+    "high": 300
    }
   ]
  },
  {
   "id": 26230,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 930-1890 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 930,
+  "ricambi_max": 1890,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 770,
+    "high": 1540
+   },
+   {
+    "label": "Parabrezza",
+    "low": 160,
+    "high": 350
    }
   ]
  },
  {
   "id": 16896,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 210-490 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 210,
+  "ricambi_max": 490,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Parafango",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "Paraurti posteriore",
+    "low": 130,
+    "high": 290
    }
   ]
  },
  {
   "id": 26260,
-  "esito": "opportunita",
-  "danno": "leggero",
+  "esito": "da_verificare",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno leggero.",
+  "nota": "Selezione allargata del 9/10: danno leggero. Ricambi stimati dalla descrizione: 1080-2400 €.",
   "controlli": [
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
+  "ricambi_min": 1080,
+  "ricambi_max": 2400,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
+    "label": "Motore usato garantito",
+    "low": 1080,
+    "high": 2400
    }
   ]
  },
@@ -4138,41 +4920,32 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 400-1200 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
   "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
     "low": 400,
-    "high": 900
+    "high": 1200
    }
   ]
  },
  {
   "id": 7612,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
@@ -4202,22 +4975,22 @@
  {
   "id": 15855,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzi delle auto simili molto variabili; prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzi delle auto simili molto variabili; prezzo 66% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 300-750 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 300,
+  "ricambi_max": 750,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Set iniettori",
+    "low": 300,
+    "high": 750
    }
   ]
  },
@@ -4435,7 +5208,7 @@
  {
   "id": 20722,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: prezzo 65% sotto la media: controllare che non sia un errore o una truffa; lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
@@ -4443,15 +5216,6 @@
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -4459,20 +5223,20 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 62% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; prezzo 62% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 650-1560 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 650,
+  "ricambi_max": 1560,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Meccatronica cambio DSG",
+    "low": 650,
+    "high": 1560
    }
   ]
  },
@@ -4990,22 +5754,13 @@
  {
   "id": 8120,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -5133,22 +5888,13 @@
  {
   "id": 13479,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -5200,41 +5946,61 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 56% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzo 56% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 930-2230 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 930,
+  "ricambi_max": 2230,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 170,
+    "high": 360
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 230,
+    "high": 630
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 220,
+    "high": 500
+   },
+   {
+    "label": "Cofano",
+    "low": 170,
+    "high": 370
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 140,
+    "high": 370
    }
   ]
  },
  {
   "id": 27492,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 420-1020 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 420,
+  "ricambi_max": 1020,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Testata e guarnizione",
+    "low": 420,
+    "high": 1020
    }
   ]
  },
@@ -5243,62 +6009,82 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 650-1560 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 650,
+  "ricambi_max": 1560,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Meccatronica cambio DSG",
+    "low": 650,
+    "high": 1560
    }
   ]
  },
  {
   "id": 18003,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 330-830 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 330,
+  "ricambi_max": 830,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Serbatoio AdBlue",
+    "low": 330,
+    "high": 830
    }
   ]
  },
  {
   "id": 28782,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 53% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1560-3740 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1560,
+  "ricambi_max": 3740,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 290,
+    "high": 600
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 380,
+    "high": 1060
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 360,
+    "high": 840
+   },
+   {
+    "label": "Cofano",
+    "low": 290,
+    "high": 620
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 240,
+    "high": 620
    }
   ]
  },
@@ -5307,41 +6093,56 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: prezzo 58% sotto la media: controllare che non sia un errore o una truffa; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 1120-2520 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1120,
+  "ricambi_max": 2520,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Airbag volante e cinture",
+    "low": 600,
+    "high": 1300
+   },
+   {
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Fanale posteriore",
+    "low": 80,
+    "high": 220
+   },
+   {
+    "label": "Cinture posteriori",
+    "low": 200,
+    "high": 500
    }
   ]
  },
  {
   "id": 43283,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 2500-4500 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 2500,
+  "ricambi_max": 4500,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Ricostruzione motore Wankel",
+    "low": 2500,
+    "high": 4500
    }
   ]
  },
@@ -5350,42 +6151,87 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione (danno non descritto: ipotesi urto frontale con radiatori): 1020-2450 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1020,
+  "ricambi_max": 2450,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 190,
+    "high": 390
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 250,
+    "high": 690
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 230,
+    "high": 550
+   },
+   {
+    "label": "Cofano",
+    "low": 190,
+    "high": 410
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 160,
+    "high": 410
    }
   ]
  },
  {
   "id": 42674,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: solo 3 auto simili per il confronto; danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 2700-5920 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 2700,
+  "ricambi_max": 5920,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 320,
+    "high": 880
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano",
+    "low": 240,
+    "high": 520
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 200,
+    "high": 520
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 1400,
+    "high": 2800
    }
   ]
  },
@@ -5394,41 +6240,61 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 400-1200 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
   "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
+    "label": "Levabolli grandine (servizio esterno, non è un pezzo)",
     "low": 400,
-    "high": 900
+    "high": 1200
    }
   ]
  },
  {
   "id": 28254,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); lavoro meccanico importante: far vedere da un meccanico. Ricambi stimati dalla descrizione: 1360-2910 €.",
   "controlli": [
    "Telefonare al venditore e confermare prezzo e dati",
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
+  "ricambi_min": 1360,
+  "ricambi_max": 2910,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
+    "label": "Parafango",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "Braccetto sospensione",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "Faro anteriore",
+    "low": 110,
+    "high": 290
+   },
+   {
+    "label": "Parabrezza",
+    "low": 200,
+    "high": 420
+   },
+   {
+    "label": "Airbag frontali, centralina e pretensionatori",
+    "low": 920,
+    "high": 1850
    }
   ]
  },
@@ -5437,187 +6303,158 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 650-1560 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 650,
+  "ricambi_max": 1560,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Meccatronica cambio DSG",
+    "low": 650,
+    "high": 1560
    }
   ]
  },
  {
   "id": 28524,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 29263,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: prezzo di mercato stimato dal modello (poche auto simili); prezzi delle auto simili molto variabili; lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
   "id": 9766,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 9730,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
   "id": 18391,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "leggero",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 360-800 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 360,
+  "ricambi_max": 800,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Parafango",
+    "low": 120,
+    "high": 300
    }
   ]
  },
  {
   "id": 28824,
   "esito": "opportunita",
-  "danno": "leggero",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno leggero.",
   "controlli": [
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 150,
-  "ricambi_max": 400,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 150,
-    "high": 400
-   }
   ]
  },
  {
   "id": 28627,
-  "esito": "da_verificare",
-  "danno": "medio",
+  "esito": "scartata",
+  "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: solo 4 auto simili per il confronto; danno o lavoro meccanico medio.",
+  "nota": "Margine insufficiente dopo i ricambi stimati (1300-3120 €).",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 1300,
+  "ricambi_max": 3120,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Paraurti anteriore",
+    "low": 240,
+    "high": 500
+   },
+   {
+    "label": "Coppia fari anteriori",
+    "low": 320,
+    "high": 880
+   },
+   {
+    "label": "Radiatore, condensatore ed elettroventola",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "Cofano",
+    "low": 240,
+    "high": 520
+   },
+   {
+    "label": "Traversa e ossatura frontale",
+    "low": 200,
+    "high": 520
    }
   ]
  },
  {
   "id": 9765,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: prezzi delle auto simili molto variabili; danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
@@ -5790,22 +6627,13 @@
  {
   "id": 30905,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -5824,19 +6652,19 @@
   "esito": "da_verificare",
   "danno": "medio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
+  "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio. Ricambi stimati dalla descrizione: 450-1200 €.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
+  "ricambi_min": 450,
+  "ricambi_max": 1200,
   "ricambi": [
    {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
+    "label": "Revisione cambio manuale (pezzi)",
+    "low": 450,
+    "high": 1200
    }
   ]
  },
@@ -6624,22 +7452,13 @@
  {
   "id": 28693,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -7032,22 +7851,13 @@
  {
   "id": 37622,
   "esito": "da_verificare",
-  "danno": "medio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: danno o lavoro meccanico medio.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 400,
-  "ricambi_max": 900,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 400,
-    "high": 900
-   }
   ]
  },
  {
@@ -7097,22 +7907,13 @@
  {
   "id": 31066,
   "esito": "da_verificare",
-  "danno": "alto_rischio",
+  "danno": "nessuno",
   "danni": [],
   "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
-  ],
-  "ricambi_min": 800,
-  "ricambi_max": 1800,
-  "ricambi": [
-   {
-    "label": "Riparazione stimata (da verificare)",
-    "low": 800,
-    "high": 1800
-   }
   ]
  },
  {
@@ -7139,10 +7940,10 @@
  },
  {
   "id": 17744,
-  "esito": "da_verificare",
+  "esito": "scartata",
   "danno": "alto_rischio",
   "danni": [],
-  "nota": "Selezione allargata del 9/10: lavoro meccanico importante: far vedere da un meccanico.",
+  "nota": "Errore nei dati: auto storica ASI del 1997.",
   "controlli": [
    "Preventivo dal meccanico per il lavoro dichiarato",
    "Visura PRA e storico revisioni (km reali)",
