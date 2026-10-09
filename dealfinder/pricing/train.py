@@ -12,7 +12,7 @@ import logging
 import sys
 
 from ..db import connect, log_job
-from ..store import LIGHT_COLS, row_to_listing
+from ..store import LIGHT_COLS, MARKET_COLS, row_to_listing
 from .model import MODEL_VERSION, train
 
 log = logging.getLogger("train")
@@ -66,9 +66,11 @@ def run(force: bool = False) -> dict:
                 return {"saltato": True, "annunci": n_now}
             log.info("riaddestramento: base passata da %s a %s annunci", n_prev, n_now)
         finish = log_job(conn, "train")
-        rows = conn.execute(
-            f"""SELECT {LIGHT_COLS} FROM listings WHERE {where}""").fetchall()
-        model = train([row_to_listing(r) for r in rows])
+        listings = [row_to_listing(r) for r in conn.execute(
+            f"""SELECT {MARKET_COLS} FROM listings WHERE {where}""")]
+        model = train(listings)
+        n_rows = len(listings)
+        del listings
         m = model["metrics"]
         m["annunci_base"] = n_now
         prev = (cur or {}).get("metrics") or {}
@@ -82,7 +84,7 @@ def run(force: bool = False) -> dict:
         if ok:
             conn.execute("UPDATE price_models SET active = (id = (SELECT max(id) FROM price_models))")
         conn.commit()
-        res = {"annunci": len(rows), "gruppi": len(model["groups"]), "metriche": m, "attivato": ok}
+        res = {"annunci": n_rows, "gruppi": len(model["groups"]), "metriche": m, "attivato": ok}
         if ok:
             res["prevalutati"] = prescreen_backlog(conn, model)
         finish(True, res)

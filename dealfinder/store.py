@@ -17,6 +17,11 @@ LISTING_FIELDS = ("source", "source_id", "url", "title", "description", "make", 
 LIGHT_COLS = ", ".join(LISTING_FIELDS + ("id", "status", "stage", "prescreen", "problem_search", "price_flags",
                                           "missing_fields", "damage_items", "last_checked_at"))
 
+# Solo i dati che servono ai confronti e al modello dei prezzi (niente testi)
+MARKET_COLS = ("id, source, source_id, url, make, model, version_raw, year, mileage_km, fuel, gearbox, power_kw, "
+               "price_eur, price_flags, seller_type, province, region, damage_declared, damage_class, status, "
+               "first_seen_at, last_seen_at, disappeared_at")
+
 
 def row_to_listing(row: dict, photos: list[str] | None = None) -> Listing:
     l = Listing(**{k: row.get(k) for k in LISTING_FIELDS})
@@ -51,7 +56,7 @@ def load_market(conn, make: str, model: str, fuel: str | None, days: int = 120,
         where = HOME_REGION_SQL + " AND (status='attivo' OR disappeared_at > now() - make_interval(days => %s))"
         params = (make, model, fuel, fuel, days)
     rows = conn.execute(
-        f"""SELECT {LIGHT_COLS} FROM listings
+        f"""SELECT {MARKET_COLS} FROM listings
            WHERE make=%s AND model=%s AND (%s::text IS NULL OR fuel=%s)
              AND price_eur IS NOT NULL AND {where}""", params).fetchall()
     return [row_to_listing(r) for r in rows]
