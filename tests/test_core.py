@@ -216,7 +216,7 @@ def test_price_model_train_predict_prescreen():
     t = mk(1, 1000, year=2018, km=100_000)
     p = predict(model, t)
     truth = 20000 * 0.88 ** 8 * 0.9
-    assert abs(p["p50"] - truth) / truth < 0.12 and p["level"] in ("mmf", "mm")
+    assert abs(p["p50"] - truth) / truth < 0.12 and p["level"] in ("mmfg", "mmf", "mm")
     cheap = mk(2, int(truth * 0.45), year=2018, km=100_000)   # margine potenziale > 80% della soglia
     fair = mk(3, int(truth), year=2018, km=100_000)
     assert prescreen(model, cheap)["esito"] == "interessante"

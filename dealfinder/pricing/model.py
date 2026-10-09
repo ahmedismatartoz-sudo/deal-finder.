@@ -29,8 +29,9 @@ import numpy as np
 
 from ..core.models import Listing
 
-MODEL_VERSION = "modello-prezzi-1"
-MIN_GROUP = {"mmf": 40, "mm": 40, "m": 80}
+MODEL_VERSION = "modello-prezzi-2"
+MIN_GROUP = {"mmfg": 40, "mmf": 30, "mm": 30, "m": 60}
+OUTLIER_MAD = 3.0          # annunci con prezzo assurdo per il loro gruppo: esclusi e si ricalcola
 RIDGE = 1.0
 
 
@@ -38,10 +39,13 @@ def _features(l: Listing, ref_year: int) -> list[float] | None:
     if not (l.year and l.mileage_km is not None):
         return None
     age = max(0, ref_year - l.year)
+    km = min(l.mileage_km, 400_000) / 10_000
     kw = l.power_kw if l.power_kw and 30 <= l.power_kw <= 400 else None
-    return [1.0, age, min(l.mileage_km, 400_000) / 10_000,
+    # la svalutazione non è lineare: anni e km anche al quadrato e insieme
+    return [1.0, age, age * age / 10, km, km * km / 10, age * km / 10,
             math.log(kw) if kw else 0.0, 1.0 if kw else 0.0,
-            1.0 if l.seller_type == "commerciante" else 0.0]
+            1.0 if l.seller_type == "commerciante" else 0.0,
+            1.0 if (l.gearbox or "").startswith("auto") else 0.0]
 
 
 def _usable(l: Listing) -> bool:
@@ -51,17 +55,30 @@ def _usable(l: Listing) -> bool:
             and not ({"leasing_o_rata", "prezzo_civetta", "importazione"} & set(l.price_flags)))
 
 
-def _fit(X: np.ndarray, y: np.ndarray) -> tuple[list[float], list[float]]:
+def _solve(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     A = X.T @ X + RIDGE * np.eye(X.shape[1])
     A[0, 0] -= RIDGE                       # nessuna penalità sull'intercetta
-    beta = np.linalg.solve(A, X.T @ y)
+    return np.linalg.solve(A, X.T @ y)
+
+
+def _fit(X: np.ndarray, y: np.ndarray) -> tuple[list[float], list[float]]:
+    beta = _solve(X, y)
     resid = y - X @ beta
+    # robusto: si tolgono gli annunci molto lontani dal gruppo (prezzi civetta, errori) e si ricalcola
+    mad = float(np.median(np.abs(resid - np.median(resid)))) * 1.4826
+    if mad > 0:
+        keep = np.abs(resid - np.median(resid)) <= OUTLIER_MAD * mad
+        if keep.sum() >= max(10, X.shape[1] + 2) and keep.sum() < len(y):
+            beta = _solve(X[keep], y[keep])
+            resid = y[keep] - X[keep] @ beta
     q = np.quantile(resid, [0.25, 0.5, 0.75]).tolist()
     return beta.tolist(), q
 
 
 def _keys(l: Listing) -> list[tuple[str, str]]:
-    return [("mmf", f"{l.make}|{l.model}|{l.fuel}"), ("mm", f"{l.make}|{l.model}"), ("m", f"{l.make}"), ("all", "*")]
+    gear = "auto" if (l.gearbox or "").startswith("auto") else "man"
+    return [("mmfg", f"{l.make}|{l.model}|{l.fuel}|{gear}"), ("mmf", f"{l.make}|{l.model}|{l.fuel}"),
+            ("mm", f"{l.make}|{l.model}"), ("m", f"{l.make}"), ("all", "*")]
 
 
 def train(listings: list[Listing], ref_year: int | None = None, holdout: float = 0.2, seed: int = 7) -> dict:

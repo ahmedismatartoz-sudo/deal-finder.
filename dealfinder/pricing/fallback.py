@@ -43,7 +43,7 @@ def apply_model(v, l: Listing, model: dict | None) -> bool:
             or (age >= 2 and l.mileage_km < 5000):
         return False
     p = predict(model, l)
-    if not p or p["level"] not in ("mmf", "mm") or p["spread"] > MAX_SPREAD:
+    if not p or p["level"] not in ("mmfg", "mmf", "mm") or p["spread"] > MAX_SPREAD:
         return False
     v.private_median = p["p50"]
     v.resale_median = round(p["p50"] * MODEL_RESALE_FACTOR)
