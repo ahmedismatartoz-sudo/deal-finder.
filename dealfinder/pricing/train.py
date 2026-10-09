@@ -50,7 +50,7 @@ GROWTH_RETRAIN = 0.30      # la base è cresciuta del 30%: si riaddestra subito,
 
 def run(force: bool = False) -> dict:
     with connect() as conn:
-        cur = conn.execute("SELECT created_at, metrics FROM price_models WHERE active "
+        cur = conn.execute("SELECT created_at, metrics, version FROM price_models WHERE active "
                            "ORDER BY created_at DESC LIMIT 1").fetchone()
         where = """price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
                AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
@@ -59,7 +59,8 @@ def run(force: bool = False) -> dict:
         if cur and not force:
             prev_m = cur["metrics"] if isinstance(cur["metrics"], dict) else json.loads(cur["metrics"] or "{}")
             n_prev = prev_m.get("annunci_base")
-            grown = n_prev is None or n_now >= n_prev * (1 + GROWTH_RETRAIN)
+            grown = n_prev is None or n_now >= n_prev * (1 + GROWTH_RETRAIN) \
+                or cur.get("version") != MODEL_VERSION          # nuova versione del modello: si riaddestra
             age = conn.execute("SELECT now() - %s > interval '7 days' AS old", (cur["created_at"],)).fetchone()
             if not age["old"] and not grown:
                 log.info("modello attivo recente (base %s annunci, ora %s): nessun addestramento", n_prev, n_now)
