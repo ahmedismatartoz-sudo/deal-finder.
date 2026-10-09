@@ -56,3 +56,14 @@ def test_ricambi_run_and_sorting():
     assert out["ok"] and len(out["pezzi"]) == 1
     assert out["pezzi"][0]["migliore"]["totale"] == 55 and out["risparmio_totale"] == 185
     assert ricambi.run(None, "AB123CD", [], lookup=lambda t: {})["ok"] is False
+
+
+def test_plate_parse_regcheck_xml():
+    xml = ('<?xml version="1.0"?><Vehicle><vehicleJson>{"Description":"Alfa Romeo 147","RegistrationYear":"2005",'
+           '"CarMake":{"CurrentTextValue":"ALFA ROMEO"},"CarModel":{"CurrentTextValue":"147"},'
+           '"EngineSize":{"CurrentTextValue":"1598"},"FuelType":{"CurrentTextValue":"Benzina"},'
+           '"Version":"147 1.6 16V TS (105 CV) 5p","PowerCV":"105","PowerKW":"77"}</vehicleJson></Vehicle>')
+    v = plate.parse_regcheck(xml)
+    assert v["make"] == "ALFA ROMEO" and v["model"] == "147" and v["year"] == 2005
+    assert v["fuel"] == "Benzina" and v["power_kw"] == 77 and v["engine_cc"] == 1598
+    assert plate.parse_regcheck("<x/>") is None
