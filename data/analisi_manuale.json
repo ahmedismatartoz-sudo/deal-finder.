@@ -784,5 +784,660 @@
   "id": 9558,
   "esito": "scartata",
   "nota": "Audi A3 1.6 del 2001 con molti piccoli difetti (sonda lambda, ammortizzatori, alzavetro, chiusura, fari): vale circa 2.000-2.300 €, margine sotto soglia."
+ },
+ {
+  "id": 7474,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 10200,
+  "nota": "Peugeot 208 1.2 2019 con meno di 50.000 km, unico proprietario, tagliandi fatti, qualche graffio.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 34966,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 12300,
+  "nota": "Ford Focus SW 1.0 EcoBoost 2018 con 49.000 km, unico proprietario, lievi segni di carrozzeria.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26645,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 9000,
+  "nota": "Dacia Duster 1.0 TCe benzina/GPL 2018, 83.000 km, tagliandi fatti, segni sul paraurti anteriore.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 36530,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 8100,
+  "nota": "Renault Clio 1.2 2017 con 73.000 km, distribuzione e freni fatti, nessun lavoro da fare.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 25616,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 6700,
+  "nota": "Fiat Panda 1.2 benzina/GPL 2019 (Euro 6d), 173.000 km, presa a km 0.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 21150,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 6600,
+  "nota": "Alfa Romeo MiTo 1.4 2015, 103.000 km, unico proprietario, buono stato.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42549,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 8700,
+  "nota": "Citroen C3 Aircross 1.2 2020, 170.000 km, unico proprietario, distribuzione fatta a 100.000 km.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 4870,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 11000,
+  "nota": "Opel Corsa 1.2 2023, 84.000 km, unico proprietario, tagliandata, tenuta in garage.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 12830,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 11200,
+  "nota": "Opel Crossland 1.2 2020, 56.000 km, unico proprietario, tagliandi Opel, doppio treno di gomme.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 27694,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 11000,
+  "nota": "Fiat 500 Sport 2021, 47.500 km, piccola strisciata sulla portiera lato guida.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 26769,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 9700,
+  "nota": "Fiat 500 1.0 Hybrid 2020, 67.500 km, uso quotidiano.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 6580,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 13000,
+  "nota": "MINI Cooper D 2016, 86.000 km, Euro 6B, manuale.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 30913,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 17400,
+  "nota": "MINI Cooper 136 CV 2021 con 52.000 km, gomme nuove e tagliando appena fatto. Prezzo basso: verificare bene documenti e intestatario.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 22198,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 15500,
+  "nota": "BMW 116d 2019, 114.000 km, adatta ai neopatentati, tagliando appena fatto, storico BMW fino a 72.000 km.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 18470,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 14300,
+  "nota": "BMW 118d automatica 2018, 153.000 km, sempre tagliandata.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 35159,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 13500,
+  "nota": "Mercedes A220d 4Matic Premium AMG 2016, 118.000 km, tagliandi certificati Mercedes.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 43722,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 16500,
+  "nota": "VW Golf Variant 2.0 TDI DSG 2021, 190.000 km autostradali, km e tagliandi certificati.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 29931,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 15500,
+  "nota": "Ford Focus SW ST-Line 1.0 EcoBoost automatica 2023, 112.000 km. Prezzo molto basso: controllare bene documenti e intestatario prima di tutto.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 9021,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 11500,
+  "nota": "Audi A4 Allroad 2.0 TDI quattro 2014, 199.000 km, 2 proprietari, meccanica ok, qualche segno.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 42982,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 11400,
+  "nota": "BMW 525d Touring 2014, 163.000 km, turbina e FAP nuovi, batteria nuova.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 13423,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 14200,
+  "nota": "Range Rover Evoque 2.0 TD4 2016, 89.000 km, catena di distribuzione, turbina e FAP appena fatti.",
+  "controlli": [
+   "Fatture di catena, turbina e FAP",
+   "Visura PRA",
+   "Km reali"
+  ]
+ },
+ {
+  "id": 31520,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 17800,
+  "nota": "VW T-Roc 1.0 TSI Sport 2021, 70.000 km, appena tagliandata, virtual cockpit.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 8811,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 17800,
+  "nota": "Ford Puma 1.0 Hybrid 2024, 36.000 km certificati, unico proprietario.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 32039,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "rivendita_prudente": 18300,
+  "nota": "Mercedes Classe A 180d automatica 2019, 103.000 km.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ]
+ },
+ {
+  "id": 10772,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 4600,
+  "nota": "Fiat 500 2011, frizione e distribuzione nuove, solo il paraurti anteriore da sistemare.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 250,
+  "ricambi": [
+   {
+    "label": "Paraurti anteriore (aftermarket)",
+    "low": 100,
+    "high": 250
+   }
+  ]
+ },
+ {
+  "id": 33837,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 2400,
+  "nota": "Fiat Grande Punto 2010, 256.000 km, perfettamente marciante, carrozzeria da rivedere.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 200,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 0,
+    "high": 200
+   }
+  ]
+ },
+ {
+  "id": 25441,
+  "esito": "opportunita",
+  "danno": "medio",
+  "danni": [],
+  "rivendita_prudente": 8500,
+  "nota": "Smart Forfour 2019, 140.000 km, 'minimamente sinistrata' sul lato anteriore, sempre tagliandata.",
+  "controlli": [
+   "Foto del frontale: airbag e radiatori",
+   "Visura PRA"
+  ],
+  "ricambi_min": 600,
+  "ricambi_max": 1500,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 600,
+    "high": 1500
+   }
+  ]
+ },
+ {
+  "id": 41556,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 6600,
+  "nota": "Kia Carens 2015 automatica: paraurti rotto lato destro e vaschetta tergicristalli, qualche ammaccatura sul cofano.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 600,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 250,
+    "high": 600
+   }
+  ]
+ },
+ {
+  "id": 41682,
+  "esito": "opportunita",
+  "danno": "medio",
+  "danni": [],
+  "rivendita_prudente": 7300,
+  "nota": "Opel Mokka 1.6 diesel 2016, 147.000 km: frizione da sistemare, difetti di carrozzeria, motore perfetto.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 500,
+  "ricambi": [
+   {
+    "label": "Kit frizione (volano se bimassa)",
+    "low": 250,
+    "high": 500
+   }
+  ]
+ },
+ {
+  "id": 33827,
+  "esito": "opportunita",
+  "danno": "medio",
+  "danni": [],
+  "rivendita_prudente": 3700,
+  "nota": "Citroen C3 2011, 152.000 km, incidentata alle ruote: un braccetto rotto e una ruota posteriore.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 600,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 250,
+    "high": 600
+   }
+  ]
+ },
+ {
+  "id": 10613,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 3200,
+  "nota": "Nissan Qashqai 1.6 benzina 2008, grandinata, parabrezza da cambiare, motore perfetto. Rivendita ridotta per la grandine.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 120,
+  "ricambi_max": 250,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 120,
+    "high": 250
+   }
+  ]
+ },
+ {
+  "id": 34600,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 7700,
+  "nota": "Renault Megane diesel automatica 2019, tetto grandinato, nessun lavoro meccanico. Rivendita ridotta per la grandine.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 0,
+    "high": 0
+   }
+  ]
+ },
+ {
+  "id": 12179,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 9000,
+  "nota": "Fiat 500C cabrio 2022, 149.000 km, movimento della cappottina lato destro da sistemare, secondo treno di gomme.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 500,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 150,
+    "high": 500
+   }
+  ]
+ },
+ {
+  "id": 40289,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 14200,
+  "nota": "Mercedes CLA 220d 2017, freni nuovi, non funziona solo il tettuccio elettrico.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 800,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 200,
+    "high": 800
+   }
+  ]
+ },
+ {
+  "id": 18901,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "rivendita_prudente": 15000,
+  "nota": "Audi A3 2.0 TDI 150 CV 2018, qualche graffio e un faro anteriore da rivedere, gomme nuove.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 700,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 250,
+    "high": 700
+   }
+  ]
+ },
+ {
+  "id": 41904,
+  "esito": "opportunita",
+  "danno": "medio",
+  "danni": [],
+  "rivendita_prudente": 6800,
+  "nota": "BMW 320i Touring E91 2009, fiancata destra da sistemare e sonda lambda da cambiare.",
+  "controlli": [
+   "Visura PRA: intestatario privato, fermi, ipoteche",
+   "Km reali dalle revisioni",
+   "Vedere l'auto di persona prima di pagare"
+  ],
+  "ricambi_min": 500,
+  "ricambi_max": 1100,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima)",
+    "low": 500,
+    "high": 1100
+   }
+  ]
+ },
+ {
+  "id": 24187,
+  "esito": "da_verificare",
+  "danno": "alto_rischio",
+  "danni": [],
+  "nota": "Peugeot 208 2021 incidentata, 49.000 km, a 3.000 €: margine molto alto se il danno è limitato. Annuncio senza dettagli.",
+  "ricambi_min": 1500,
+  "ricambi_max": 3500,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima senza foto)",
+    "low": 1500,
+    "high": 3500
+   }
+  ]
+ },
+ {
+  "id": 15304,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Fiat 500L 2013, tamponamento a 50 km/h, motore e interni perfetti.",
+  "ricambi_min": 600,
+  "ricambi_max": 1500,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima senza foto)",
+    "low": 600,
+    "high": 1500
+   }
+  ]
+ },
+ {
+  "id": 22059,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "nota": "Peugeot 3008 2019 grandinata: la grandine si ripara con levabolli (manodopera), la rivendita va ridotta.",
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima senza foto)",
+    "low": 0,
+    "high": 0
+   }
+  ]
+ },
+ {
+  "id": 42514,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "Hyundai Kona 1.6 diesel 2018: perde olio, causa da capire.",
+  "ricambi_min": 100,
+  "ricambi_max": 800,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima senza foto)",
+    "low": 100,
+    "high": 800
+   }
+  ]
+ },
+ {
+  "id": 26429,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [],
+  "nota": "BMW 218d Gran Tourer 2015, carrozzeria da rivedere: margine al limite.",
+  "ricambi_min": 500,
+  "ricambi_max": 1000,
+  "ricambi": [
+   {
+    "label": "Ricambi (stima senza foto)",
+    "low": 500,
+    "high": 1000
+   }
+  ]
  }
 ]
