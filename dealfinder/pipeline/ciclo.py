@@ -54,6 +54,17 @@ def run() -> None:
     if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_CERCO_PROBE", "1") == "1" \
             and _due(cerco_probe.job_name(), 24 * 30):
         step("prova_cerco", cerco_probe.run)
+    # Prova del collegamento targhe (una volta, con la targa di prova gratuita di RegCheck)
+    if os.environ.get("REGCHECK_USERNAME") and _due("prova_targa", 24 * 365):
+        def prova_targa():
+            from ..ai import plate
+            from ..db import connect as _c, log_job as _lj
+            v = plate.lookup(os.environ.get("REGCHECK_TEST_PLATE", "BN071VN"))
+            log.info("PROVA_TARGA %s", v)
+            with _c() as conn:
+                _lj(conn, "prova_targa")(bool(v), {"risultato": v})
+            return {"ok": bool(v)}
+        step("prova_targa", prova_targa)
     step("opportunita", collect, "opportunita")
     if _due("collect:profondo", 20):
         step("raccolta_profonda", collect, "profondo")
