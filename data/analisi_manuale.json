@@ -813,16 +813,8 @@
  },
  {
   "id": 26645,
-  "esito": "opportunita",
-  "danno": "nessuno",
-  "danni": [],
-  "rivendita_prudente": 9000,
-  "nota": "Dacia Duster 1.0 TCe benzina/GPL 2018, 83.000 km, tagliandi fatti, segni sul paraurti anteriore.",
-  "controlli": [
-   "Visura PRA: intestatario privato, fermi, ipoteche",
-   "Km reali dalle revisioni",
-   "Vedere l'auto di persona prima di pagare"
-  ]
+  "esito": "scartata",
+  "nota": "L'annuncio è una Dacia Sandero Stepway (titolo e link), non una Duster come nei campi: vale meno e il margine scende sotto la soglia."
  },
  {
   "id": 36530,
@@ -1318,11 +1310,11 @@
  },
  {
   "id": 18901,
-  "esito": "opportunita",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
   "rivendita_prudente": 15000,
-  "nota": "Audi A3 2.0 TDI 150 CV 2018, qualche graffio e un faro anteriore da rivedere, gomme nuove.",
+  "nota": "Audi A3 2.0 TDI 150 CV 2018, qualche graffio e un faro anteriore da rivedere, gomme nuove. Margine appena sotto la soglia di 2.000 €: conviene solo trattando.",
   "controlli": [
    "Visura PRA: intestatario privato, fermi, ipoteche",
    "Km reali dalle revisioni",
