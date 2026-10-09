@@ -6,21 +6,23 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from collections import defaultdict
 from pathlib import Path
 
 from starlette.applications import Starlette
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from ..config import settings
 from ..db import connect
-from . import cards
+from . import cards, foto, scovo
 from .auth import hash_password, make_token, read_token, verify_password
 
 log = logging.getLogger("web")
@@ -58,6 +60,11 @@ def jsonify(data, status=200):
     return JSONResponse(json.loads(json.dumps(data, default=str)), status_code=status)
 
 
+def client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return (fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")) or "?"
+
+
 # ---------------------------------------------------------------------------
 # Accesso
 # ---------------------------------------------------------------------------
@@ -66,15 +73,21 @@ _attempts: dict[str, list[float]] = defaultdict(list)
 
 async def login(request: Request):
     data = await body(request)
-    email = str(data.get("email", "")).strip().lower()
+    email = str(data.get("email", "")).strip().lower()[:200]
+    ip = client_ip(request)
     now = time.time()
-    _attempts[email] = [t for t in _attempts[email] if now - t < 900]
-    if len(_attempts[email]) >= 8:
+    for k in (email, "ip:" + ip):
+        _attempts[k] = [t for t in _attempts[k] if now - t < 900]
+    if len(_attempts[email]) >= 8 or len(_attempts["ip:" + ip]) >= 30:
         err(429, "Troppi tentativi, riprova tra 15 minuti")
-    with connect() as conn:
-        u = conn.execute("SELECT * FROM dealers WHERE email=%s AND active", (email,)).fetchone()
-    if not u or not verify_password(str(data.get("password", "")), u["password_hash"]):
+    def check():
+        with connect() as conn:
+            u = conn.execute("SELECT * FROM dealers WHERE email=%s AND active", (email,)).fetchone()
+        return u, bool(u) and verify_password(str(data.get("password", ""))[:200], u["password_hash"])
+    u, ok = await run_in_threadpool(check)
+    if not ok:
         _attempts[email].append(now)
+        _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")
     return jsonify({"token": make_token(u["id"], u["role"]),
                     "user": {"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"]}})
@@ -314,8 +327,48 @@ def admin_overview(request: Request):
             "quality": conn.execute("SELECT * FROM model_runs ORDER BY at DESC LIMIT 8").fetchall(),
             "feedback": conn.execute(
                 "SELECT status, count(*) AS n FROM dealer_feedback GROUP BY status").fetchall(),
+            "servizi_oggi": conn.execute(
+                "SELECT service, count(*) AS n, count(*) FILTER (WHERE ok) AS ok FROM service_usage "
+                "WHERE at > date_trunc('day', now()) GROUP BY service").fetchall(),
+            "richieste_accesso": conn.execute(
+                "SELECT count(*) AS n FROM access_requests WHERE NOT handled").fetchone()["n"],
         }
+        out["allarmi"] = alarms(conn)
     return jsonify(out)
+
+
+DB_DISK_GB = float(os.environ.get("DB_DISK_GB", "5"))
+
+
+def alarms(conn) -> list[str]:
+    """Cose che non vanno: cicli fermi, Facebook che non raccoglie, disco quasi pieno, nessun affare."""
+    out = []
+    size = conn.execute("SELECT pg_database_size(current_database()) AS b").fetchone()["b"]
+    used = size / (DB_DISK_GB * 1024 ** 3)
+    if used > 0.8:
+        out.append(f"Database pieno al {used:.0%}: aumenta il disco su Render o pulisci i dati vecchi")
+    last = conn.execute("SELECT max(started_at) AS t FROM job_runs WHERE job LIKE 'ciclo%%' OR job LIKE 'collect:%%'"
+                        ).fetchone()["t"]
+    if not last or conn.execute("SELECT %s < now() - interval '7 hours' AS old", (last,)).fetchone()["old"]:
+        out.append("Nessun ciclo di raccolta nelle ultime 7 ore: controlla i cron su Render")
+    fb = conn.execute("SELECT count(*) AS n FROM listings WHERE source='facebook' "
+                      "AND first_seen_at > now() - interval '36 hours'").fetchone()["n"]
+    if fb == 0:
+        out.append("Facebook: nessun annuncio nuovo nelle ultime 36 ore (Bright Data, credito o chiave)")
+    sb = conn.execute("SELECT count(*) AS n FROM listings WHERE source='subito' "
+                      "AND first_seen_at > now() - interval '12 hours'").fetchone()["n"]
+    if sb == 0:
+        out.append("Subito: nessun annuncio nuovo nelle ultime 12 ore")
+    fails = conn.execute("SELECT job, count(*) AS n FROM job_runs WHERE ok = false AND started_at > now() - interval '24 hours' "
+                         "GROUP BY job").fetchall()
+    for f in fails:
+        out.append(f"Lavoro '{f['job']}' fallito {f['n']} volte nelle ultime 24 ore")
+    affari_n = conn.execute("SELECT count(*) AS n FROM listings WHERE stage='approfondito' AND status='attivo' "
+                            "AND stage_reason IN ('opportunita','da_verificare') "
+                            "AND last_checked_at > now() - interval '48 hours'").fetchone()["n"]
+    if affari_n < 10:
+        out.append(f"Solo {affari_n} auto visibili ai commercianti: controlla verifica e analisi")
+    return out
 
 
 def admin_dealers(request: Request):
@@ -372,44 +425,299 @@ def health(request: Request):
 # ---------------------------------------------------------------------------
 # Servizi: Vendi (targa+foto -> prezzo e annuncio) e Ricambi (targa+pezzi -> offerte)
 # ---------------------------------------------------------------------------
+SERVIZI_LIMITE_GIORNO = int(os.environ.get("SERVIZI_LIMITE_GIORNO", "15"))     # per commerciante, ogni servizio
+SERVIZI_LIMITE_TOTALE = int(os.environ.get("SERVIZI_LIMITE_TOTALE", "150"))    # tutto il sito, al giorno
+
+
+def _service_gate(conn, user: dict, service: str) -> None:
+    """Tetti giornalieri: ogni ricerca targa e ogni ricerca ricambi ha un costo."""
+    tot = conn.execute("SELECT count(*) AS n FROM service_usage WHERE at > date_trunc('day', now())").fetchone()["n"]
+    if tot >= SERVIZI_LIMITE_TOTALE:
+        err(503, "Servizio molto richiesto oggi: riprova domani")
+    if user.get("role") != "admin":
+        mine = conn.execute("SELECT count(*) AS n FROM service_usage WHERE dealer_id=%s AND service=%s "
+                            "AND at > date_trunc('day', now())", (user["id"], service)).fetchone()["n"]
+        if mine >= SERVIZI_LIMITE_GIORNO:
+            err(429, f"Hai usato {service.capitalize()} {mine} volte oggi: il limite è {SERVIZI_LIMITE_GIORNO}. Riprova domani")
+
+
+def _service_log(conn, user: dict, service: str, ok: bool) -> None:
+    conn.execute("INSERT INTO service_usage (dealer_id, service, ok) VALUES (%s,%s,%s)", (user["id"], service, ok))
+    conn.commit()
+
+
 async def servizio_vendi(request: Request):
-    current_user(request)
+    user = current_user(request)
     data = await body(request)
     from ..servizi import vendi
     try:
         km = int(str(data.get("km") or "").replace(".", "")) if data.get("km") else None
     except ValueError:
         err(400, "Km non validi")
-    foto = [f for f in (data.get("foto") or []) if isinstance(f, str)][:6]
-    with connect() as conn:
-        out = vendi.run(conn, str(data.get("targa", "")), km, foto, str(data.get("note") or "")[:500] or None,
-                        data.get("cambio"))
+    if km is not None and not (0 <= km <= 1_000_000):
+        err(400, "Km non validi")
+    foto_in = [f for f in (data.get("foto") or []) if isinstance(f, str)][:6]
+    cambio = data.get("cambio") if data.get("cambio") in ("manuale", "automatico") else None
+
+    def work():
+        from ..ai import plate as plates
+        if not plates.valid_plate(str(data.get("targa", ""))):
+            return {"ok": False, "errore": "Targa non valida: scrivila come AB123CD"}
+        with connect() as conn:
+            _service_gate(conn, user, "vendi")
+            out = vendi.run(conn, str(data.get("targa", ""))[:12], km, foto_in,
+                            str(data.get("note") or "")[:500] or None, cambio)
+            _service_log(conn, user, "vendi", bool(out.get("ok")))
+            return out
+    out = await run_in_threadpool(work)
     return jsonify(out, 200 if out.get("ok") else 422)
 
 
 async def servizio_ricambi(request: Request):
-    current_user(request)
+    user = current_user(request)
     data = await body(request)
     from ..servizi import ricambi
     pezzi = data.get("pezzi") or []
     if isinstance(pezzi, str):
         pezzi = [p for p in pezzi.replace(";", ",").split(",")]
-    with connect() as conn:
-        out = ricambi.run(conn, str(data.get("targa", "")), [str(p) for p in pezzi])
+
+    def work():
+        from ..ai import plate as plates
+        if not plates.valid_plate(str(data.get("targa", ""))):
+            return {"ok": False, "errore": "Targa non valida: scrivila come AB123CD"}
+        with connect() as conn:
+            _service_gate(conn, user, "ricambi")
+            out = ricambi.run(conn, str(data.get("targa", ""))[:12], [str(p)[:80] for p in pezzi][:8])
+            _service_log(conn, user, "ricambi", bool(out.get("ok")))
+            return out
+    out = await run_in_threadpool(work)
     return jsonify(out, 200 if out.get("ok") else 422)
 
 
+# ---------------------------------------------------------------------------
+# Sito Scovo: affari, scheda, contatto, foto
+# ---------------------------------------------------------------------------
+def affari(request: Request):
+    user = current_user(request)
+    with connect() as conn:
+        dealer = conn.execute("SELECT provinces FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+        prov = list((dealer or {}).get("provinces") or [])
+        sql = scovo.LIST_SQL
+        if prov:
+            sql += " AND (l.province = ANY(%(prov)s) OR l.source='facebook' OR l.province IS NULL)"
+        rows = conn.execute(sql + " LIMIT 3000", {"me": user["id"], "prov": prov}).fetchall()
+    items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if it]
+    return jsonify({"items": items, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
+                    "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+
+
+def affare(request: Request):
+    user = current_user(request)
+    lid = int(request.path_params["id"])
+    with connect() as conn:
+        row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
+        extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() if row else None
+    if not row or not scovo.visible(row, settings.max_dealer_opens):
+        err(404, "Questa auto non è più disponibile")
+    base = scovo.item(row)
+    if not base:
+        err(404, "Questa auto non è più disponibile")
+    return jsonify(scovo.detail(base, extra or {}))
+
+
+def contatto(request: Request):
+    """Parla col venditore: conta l'apertura e restituisce il numero (se scritto nell'annuncio) e il link."""
+    user = current_user(request)
+    lid = int(request.path_params["id"])
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT url, description, (SELECT count(*) FROM listing_opens WHERE listing_id=%s) AS opens, "
+            "EXISTS (SELECT 1 FROM listing_opens WHERE listing_id=%s AND dealer_id=%s) AS mine "
+            "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, user["id"], lid)).fetchone()
+        if not row or (not row["mine"] and row["opens"] >= settings.max_dealer_opens):
+            err(404, "Questa auto non è più disponibile")
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
+                     (lid, user["id"]))
+        conn.commit()
+    return jsonify({"url": row["url"], "tel": scovo.find_phone(row["description"])})
+
+
+def foto_auto(request: Request):
+    lid, pos = int(request.path_params["id"]), int(request.path_params["pos"])
+    if pos >= foto.MAX_PER_AUTO or not foto.check(lid, pos, request.query_params.get("s")):
+        return Response(status_code=404)
+    with connect() as conn:
+        content = foto.fetch_one(conn, lid, pos)
+    if not content:
+        return Response(status_code=404, headers={"Cache-Control": "public, max-age=3600"})
+    return Response(content, media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=2592000, immutable"})
+
+
+async def cambia_password(request: Request):
+    user = current_user(request)
+    data = await body(request)
+    old, new = str(data.get("vecchia", ""))[:200], str(data.get("nuova", ""))[:200]
+    if len(new) < 8:
+        err(400, "La nuova password deve avere almeno 8 caratteri")
+
+    def work():
+        with connect() as conn:
+            u = conn.execute("SELECT password_hash FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+            if not u or not verify_password(old, u["password_hash"]):
+                return False
+            conn.execute("UPDATE dealers SET password_hash=%s WHERE id=%s", (hash_password(new), user["id"]))
+            conn.commit()
+            return True
+    if not await run_in_threadpool(work):
+        err(400, "La password attuale non è giusta")
+    return jsonify({"ok": True})
+
+
+_requests_ip: dict[str, list[float]] = defaultdict(list)
+
+
+async def richiesta_accesso(request: Request):
+    """Modulo pubblico "Prova Scovo": salva la richiesta, la vede l'amministratore."""
+    data = await body(request)
+    ip, now = client_ip(request), time.time()
+    _requests_ip[ip] = [t for t in _requests_ip[ip] if now - t < 3600]
+    if len(_requests_ip[ip]) >= 5:
+        err(429, "Troppe richieste, riprova più tardi")
+    email = str(data.get("email", "")).strip().lower()[:200]
+    if "@" not in email or "." not in email.split("@")[-1]:
+        err(400, "Scrivi un'email valida")
+    if data.get("sito"):                      # campo nascosto: lo compilano solo i robot
+        return jsonify({"ok": True})
+    _requests_ip[ip].append(now)
+
+    def work():
+        with connect() as conn:
+            conn.execute("INSERT INTO access_requests (name, company, email, phone, note) VALUES (%s,%s,%s,%s,%s)",
+                         (str(data.get("nome") or "")[:120], str(data.get("azienda") or "")[:120], email,
+                          str(data.get("telefono") or "")[:40], str(data.get("note") or "")[:500]))
+            conn.commit()
+    await run_in_threadpool(work)
+    return jsonify({"ok": True}, 201)
+
+
+def admin_requests(request: Request):
+    current_user(request, admin=True)
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM access_requests ORDER BY at DESC LIMIT 200").fetchall()
+    return jsonify({"items": rows})
+
+
+SITE = STATIC / "scovo"
+NO_CACHE = {"Cache-Control": "no-cache"}
+
+
+_index_cache: dict = {}
+
+
 def index(request: Request):
-    return FileResponse(STATIC / "index.html")
+    """Pagina del sito, con la versione dei file nel link (il telefono non tiene file vecchi)."""
+    files = [SITE / "index.html", SITE / "app.js", SITE / "app.css"]
+    key = tuple(f.stat().st_mtime_ns for f in files)
+    if _index_cache.get("key") != key:
+        import hashlib
+        ver = hashlib.sha256(b"".join(f.read_bytes() for f in files[1:])).hexdigest()[:10]
+        _index_cache.update(key=key, html=files[0].read_text().replace("__V__", ver))
+    return HTMLResponse(_index_cache["html"], headers=NO_CACHE)
+
+
+def service_worker(request: Request):
+    return FileResponse(SITE / "sw.js", media_type="text/javascript",
+                        headers={**NO_CACHE, "Service-Worker-Allowed": "/"})
+
+
+def manifest(request: Request):
+    return FileResponse(SITE / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+def pagina(name: str):
+    def handler(request: Request):
+        return FileResponse(SITE / f"{name}.html", headers=NO_CACHE)
+    return handler
+
+
+def gestione(request: Request):
+    return FileResponse(STATIC / "gestione" / "index.html", headers=NO_CACHE)
+
+
+def robots(request: Request):
+    host = request.headers.get("host", "")
+    return Response("User-agent: *\nAllow: /$\nAllow: /chi-siamo\nAllow: /privacy\nAllow: /condizioni\n"
+                    "Disallow: /api/\nDisallow: /gestione\n"
+                    f"Sitemap: https://{host}/sitemap.xml\n", media_type="text/plain")
+
+
+def sitemap(request: Request):
+    host = request.headers.get("host", "")
+    urls = "".join(f"<url><loc>https://{host}{p}</loc></url>" for p in ("/", "/chi-siamo", "/privacy", "/condizioni"))
+    return Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                    + urls + "</urlset>", media_type="application/xml")
 
 
 async def http_error(request: Request, exc: HTTPError):
     return JSONResponse({"error": exc.message}, status_code=exc.status)
 
 
-def _wrap(fn):
-    """Le funzioni sincrone vengono eseguite in un thread da Starlette."""
-    return fn
+async def server_error(request: Request, exc: Exception):
+    log.exception("errore %s %s", request.method, request.url.path)
+    return JSONResponse({"error": "Qualcosa è andato storto, riprova tra poco"}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# Sicurezza: HTTPS obbligatorio, intestazioni, grandezza massima delle richieste
+# ---------------------------------------------------------------------------
+MAX_BODY = 12 * 1024 * 1024        # Vendi: fino a 6 foto già ridotte dal telefono
+CSP = ("default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; "
+       "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; worker-src 'self'")
+SECURITY_HEADERS = [
+    (b"x-content-type-options", b"nosniff"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    (b"x-frame-options", b"DENY"),
+    (b"permissions-policy", b"camera=(self), geolocation=(), microphone=()"),
+    (b"content-security-policy", CSP.encode()),
+]
+
+
+class SecurityMiddleware:
+    def __init__(self, app):
+        self.app = app
+        self.force_https = bool(os.environ.get("RENDER")) or os.environ.get("FORCE_HTTPS") == "1"
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        headers = dict(scope.get("headers") or [])
+        proto = headers.get(b"x-forwarded-proto", b"").decode()
+        if self.force_https and proto == "http":
+            host = headers.get(b"host", b"").decode()
+            qs = scope.get("query_string", b"").decode()
+            url = f"https://{host}{scope['path']}" + (f"?{qs}" if qs else "")
+            return await RedirectResponse(url, status_code=301)(scope, receive, send)
+        try:
+            if int(headers.get(b"content-length", b"0") or 0) > MAX_BODY:
+                return await JSONResponse({"error": "Richiesta troppo grande: usa meno foto"}, status_code=413)(
+                    scope, receive, send)
+        except ValueError:
+            pass
+        https = self.force_https
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                h = list(message.get("headers") or [])
+                h += SECURITY_HEADERS
+                if https:
+                    h.append((b"strict-transport-security", b"max-age=31536000; includeSubDomains"))
+                if scope["path"].startswith("/api/") and not scope["path"].startswith("/api/foto/"):
+                    h.append((b"cache-control", b"no-store"))
+                message["headers"] = h
+            await send(message)
+        await self.app(scope, receive, send_wrapper)
 
 
 routes = [
@@ -417,10 +725,17 @@ routes = [
     Route("/api/auth/login", login, methods=["POST"]),
     Route("/api/me", me, methods=["GET"]),
     Route("/api/me", update_me, methods=["PUT"]),
+    Route("/api/me/password", cambia_password, methods=["PUT"]),
+    Route("/api/affari", affari),
+    Route("/api/affari/{id:int}", affare),
+    Route("/api/affari/{id:int}/contatto", contatto, methods=["POST"]),
+    Route("/api/foto/{id:int}/{pos:int}", foto_auto),
+    Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),
     Route("/api/opportunities/{id:int}", opportunity_detail),
     Route("/api/opportunities/{id:int}/open", open_listing, methods=["POST"]),
     Route("/api/opportunities/{id:int}/feedback", feedback, methods=["POST"]),
+    Route("/api/affari/{id:int}/esito", feedback, methods=["POST"]),
     Route("/api/activity", my_activity),
     Route("/api/notifications", notifications),
     Route("/api/notifications/seen", notifications_seen, methods=["POST"]),
@@ -428,11 +743,21 @@ routes = [
     Route("/api/admin/dealers", admin_dealers, methods=["GET"]),
     Route("/api/admin/dealers", admin_create_dealer, methods=["POST"]),
     Route("/api/admin/dealers/{id:int}", admin_update_dealer, methods=["PATCH"]),
+    Route("/api/admin/richieste", admin_requests),
     Route("/api/servizi/vendi", servizio_vendi, methods=["POST"]),
     Route("/api/servizi/ricambi", servizio_ricambi, methods=["POST"]),
+    Route("/sw.js", service_worker),
+    Route("/manifest.webmanifest", manifest),
+    Route("/robots.txt", robots),
+    Route("/sitemap.xml", sitemap),
+    Route("/chi-siamo", pagina("chi-siamo")),
+    Route("/privacy", pagina("privacy")),
+    Route("/condizioni", pagina("condizioni")),
+    Route("/gestione", gestione),
     Mount("/static", StaticFiles(directory=STATIC), name="static"),
     Route("/", index),
 ]
 
-app = Starlette(routes=routes, middleware=[Middleware(GZipMiddleware, minimum_size=1000)],
-                exception_handlers={HTTPError: http_error})
+app = Starlette(routes=routes,
+                middleware=[Middleware(SecurityMiddleware), Middleware(GZipMiddleware, minimum_size=800)],
+                exception_handlers={HTTPError: http_error, 500: server_error})

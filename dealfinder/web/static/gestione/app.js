@@ -347,11 +347,13 @@ async function viewAdmin() {
   $view.innerHTML = `<h1>Gestione</h1><p class="sub">Stato delle fonti, qualità delle stime, costi AI e commercianti.</p><div id="adm"></div>`;
   const box = document.getElementById("adm");
   try {
-    const [o, d] = await Promise.all([api("/api/admin/overview"), api("/api/admin/dealers")]);
+    const [o, d, rq] = await Promise.all([api("/api/admin/overview"), api("/api/admin/dealers"), api("/api/admin/richieste")]);
     const table = (rows, cols) => rows.length ? `<table class="kv"><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr>
       ${rows.map((r) => `<tr>${cols.map(([k, , f]) => `<td>${f ? f(r[k], r) : esc(r[k])}</td>`).join("")}</tr>`).join("")}</table>` : `<p class="note">Nessun dato.</p>`;
     const q = o.quality[0];
+    const al = o.allarmi || [];
     box.innerHTML = `
+      <div class="panel" style="margin-bottom:16px"><h2>Allarmi</h2>${al.length ? `<ul>${al.map((a) => `<li class="ko">${esc(a)}</li>`).join("")}</ul>` : '<p class="ok">Tutto regolare</p>'}</div>
       <div class="stats">
         <div class="panel"><h2>Ultimi lavori</h2>${table(o.jobs, [["job", "Lavoro"], ["finished_at", "Fine", (v) => esc(v ? new Date(v).toLocaleString("it-IT") : "in corso")], ["ok", "Esito", (v) => v ? '<span class="ok">ok</span>' : '<span class="ko">errore</span>']])}</div>
         <div class="panel"><h2>Nuovi annunci (24 ore)</h2>${table(o.new_last_24h, [["source", "Fonte"], ["n", "Annunci"]])}</div>
@@ -362,6 +364,9 @@ async function viewAdmin() {
         <div class="panel"><h2>Uso AI oggi</h2>${table(o.ai_usage_today, [["task", "Attività"], ["calls", "Chiamate"], ["input_tokens", "Token in"], ["output_tokens", "Token out"], ["web_searches", "Ricerche"]])}</div>
       </div>
       <h2>Annunci per stato (7 giorni)</h2>${table(o.stages, [["stage", "Stato"], ["stage_reason", "Motivo"], ["n", "Annunci"]])}
+      <h2>Vendi e Ricambi oggi</h2>${table(o.servizi_oggi || [], [["service", "Servizio"], ["n", "Usi"], ["ok", "Riusciti"]])}
+      <h2>Richieste di accesso</h2>${table(rq.items, [["at", "Quando", (v) => esc(new Date(v).toLocaleString("it-IT"))], ["name", "Nome"], ["company", "Autosalone"], ["email", "Email"], ["phone", "Telefono"],
+        ["id", "", (v, r) => `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
       ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
         ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}
@@ -378,6 +383,11 @@ async function viewAdmin() {
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();
+    });
+    box.querySelectorAll("[data-prefill]").forEach((b) => b.onclick = () => {
+      const v = JSON.parse(b.dataset.prefill);
+      document.getElementById("nd-name").value = v.n || ""; document.getElementById("nd-company").value = v.c || "";
+      document.getElementById("nd-email").value = v.e || ""; document.getElementById("nd-pwd").focus();
     });
     document.getElementById("new-dealer").onsubmit = async (e) => {
       e.preventDefault();

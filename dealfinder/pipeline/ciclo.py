@@ -91,6 +91,13 @@ def run() -> None:
     step("analisi_manuale", manuale.run)
     if _due("recheck", 20):
         step("verifica", recheck.run)
+    # Copia delle foto delle auto proposte (i link di Facebook scadono in pochi giorni)
+    def foto_auto():
+        from ..db import connect as _c
+        from ..web import foto
+        with _c() as conn:
+            return foto.warm(conn, int(os.environ.get("FOTO_AUTO_PER_CICLO", "300")))
+    step("foto", foto_auto)
     if _due("backtest", 24 * 7):
         step("qualita", backtest)
     step("rapporto", bande.run)
