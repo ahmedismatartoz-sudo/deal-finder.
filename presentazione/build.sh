@@ -14,3 +14,11 @@ while read -r f u1 u2; do
   rm -f "img/$f"; ko=$((ko+1))
 done < foto.txt
 echo "FOTO_TOTALE scaricate=$ok mancanti=$ko"
+# file scaricabili (PowerPoint e pagina unica con le foto incluse)
+PY=$(command -v python3 || command -v python)
+if [ -n "$PY" ]; then
+  "$PY" -m pip install --quiet --user python-pptx pillow 2>&1 | tail -2 || true
+  "$PY" crea_file.py
+else
+  echo "FILE_KO python non disponibile"
+fi
