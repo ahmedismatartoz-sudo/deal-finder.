@@ -71,7 +71,7 @@ def run(conn, targa: str, pezzi: list[str], lookup=plates.lookup, searcher=searc
     pezzi = [p.strip()[:80] for p in (pezzi or []) if p and p.strip()][:MAX_PEZZI]
     if not pezzi:
         return {"ok": False, "errore": "Scrivi almeno un pezzo (es. faro anteriore sinistro)"}
-    vehicle = lookup(targa)
+    vehicle = plates.cached_lookup(conn, targa, lookup)
     if not vehicle:
         return {"ok": False, "errore": "Non troviamo questa targa. Controlla di averla scritta giusta."}
     if searcher is search and not ai.available():

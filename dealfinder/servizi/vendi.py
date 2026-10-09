@@ -143,7 +143,7 @@ def run(conn, targa: str, km: int | None, foto: list[str] | None = None, note: s
         cambio: str | None = None, lookup=plates.lookup) -> dict:
     if not plates.valid_plate(targa):
         return {"ok": False, "errore": "Targa non valida: scrivila come AB123CD"}
-    vehicle = lookup(targa)
+    vehicle = plates.cached_lookup(conn, targa, lookup)
     if not vehicle:
         return {"ok": False, "errore": "Non troviamo questa targa. Controlla di averla scritta giusta."}
     l = to_listing(vehicle, km, cambio)

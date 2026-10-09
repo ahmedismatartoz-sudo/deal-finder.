@@ -135,3 +135,26 @@ def lookup(plate: str, http=None) -> dict | None:
     except Exception as e:
         log.warning("ricerca targa fallita: %s", str(e)[:200])
         return None
+
+
+def cached_lookup(conn, plate: str, lookup_fn=None, days: int = 180) -> dict | None:
+    """Come lookup(), ma una targa già cercata negli ultimi `days` giorni non si paga di nuovo."""
+    import json
+    from ..config import settings
+    from ..core.normalize import plate_hash
+    lookup_fn = lookup_fn or lookup
+    p = normalize_plate(plate)
+    if conn is None or not p:
+        return lookup_fn(p)
+    h = plate_hash(p, settings.plate_salt)
+    row = conn.execute("SELECT vehicle FROM plate_cache WHERE plate_hash=%s "
+                       "AND searched_at > now() - make_interval(days => %s)", (h, days)).fetchone()
+    if row and row["vehicle"]:
+        v = row["vehicle"]
+        return json.loads(v) if isinstance(v, str) else v
+    v = lookup_fn(p)
+    if v:
+        conn.execute("INSERT INTO plate_cache (plate_hash, vehicle) VALUES (%s,%s) ON CONFLICT (plate_hash) "
+                     "DO UPDATE SET vehicle=EXCLUDED.vehicle, searched_at=now()", (h, json.dumps(v)))
+        conn.commit()
+    return v
