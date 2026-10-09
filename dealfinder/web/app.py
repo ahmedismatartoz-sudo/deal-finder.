@@ -369,6 +369,36 @@ def health(request: Request):
     return JSONResponse({"ok": True})
 
 
+# ---------------------------------------------------------------------------
+# Servizi: Vendi (targa+foto -> prezzo e annuncio) e Ricambi (targa+pezzi -> offerte)
+# ---------------------------------------------------------------------------
+async def servizio_vendi(request: Request):
+    current_user(request)
+    data = await body(request)
+    from ..servizi import vendi
+    try:
+        km = int(str(data.get("km") or "").replace(".", "")) if data.get("km") else None
+    except ValueError:
+        err(400, "Km non validi")
+    foto = [f for f in (data.get("foto") or []) if isinstance(f, str)][:6]
+    with connect() as conn:
+        out = vendi.run(conn, str(data.get("targa", "")), km, foto, str(data.get("note") or "")[:500] or None,
+                        data.get("cambio"))
+    return jsonify(out, 200 if out.get("ok") else 422)
+
+
+async def servizio_ricambi(request: Request):
+    current_user(request)
+    data = await body(request)
+    from ..servizi import ricambi
+    pezzi = data.get("pezzi") or []
+    if isinstance(pezzi, str):
+        pezzi = [p for p in pezzi.replace(";", ",").split(",")]
+    with connect() as conn:
+        out = ricambi.run(conn, str(data.get("targa", "")), [str(p) for p in pezzi])
+    return jsonify(out, 200 if out.get("ok") else 422)
+
+
 def index(request: Request):
     return FileResponse(STATIC / "index.html")
 
@@ -398,6 +428,8 @@ routes = [
     Route("/api/admin/dealers", admin_dealers, methods=["GET"]),
     Route("/api/admin/dealers", admin_create_dealer, methods=["POST"]),
     Route("/api/admin/dealers/{id:int}", admin_update_dealer, methods=["PATCH"]),
+    Route("/api/servizi/vendi", servizio_vendi, methods=["POST"]),
+    Route("/api/servizi/ricambi", servizio_ricambi, methods=["POST"]),
     Mount("/static", StaticFiles(directory=STATIC), name="static"),
     Route("/", index),
 ]
