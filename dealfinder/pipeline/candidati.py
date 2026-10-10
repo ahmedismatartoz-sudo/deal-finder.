@@ -101,6 +101,9 @@ def run() -> dict:
             if check_consistency(l, fix=True) or "dati_incoerenti" in l.price_flags:
                 stats["dati_incoerenti"] += 1          # campi compilati a caso dal venditore
                 continue
+            if l.year and l.year < scovo.ANNO_MINIMO:
+                stats["troppo_vecchia"] += 1
+                continue
             km_est = estimate_missing_km(l)
             if not (l.make and l.model and l.year and l.mileage_km is not None):
                 stats["dati_mancanti"] += 1

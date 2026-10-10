@@ -131,3 +131,10 @@ def test_soglie_guadagno_per_prezzo():
     assert scovo.guadagno_minimo(it) == 7000 - 4000 - 140
     assert scovo.abbastanza(it)                     # 2.860 € ≥ 1.500
     assert not scovo.abbastanza({"mercato": 20000, "prezzo": 11000, "rip_hi": 0})   # 2.860 € < 3.000
+
+
+def test_niente_auto_prima_del_2007():
+    from dealfinder.web import scovo
+    ok = {"mercato": 10000, "prezzo": 3000, "rip_hi": 0, "anno": 2007}
+    assert scovo.abbastanza(ok)
+    assert not scovo.abbastanza({**ok, "anno": 2006})

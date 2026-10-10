@@ -38,8 +38,16 @@ def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
     return riv - it["prezzo"] - sum(COSTI_FISSI.values()) - it["rip_hi"]
 
 
+# auto più vecchie di questo anno non si propongono
+ANNO_MINIMO = int(os.environ.get("ANNO_MINIMO", "2007"))
+
+
 def abbastanza(it: dict | None) -> bool:
-    return bool(it) and guadagno_minimo(it) >= soglia(it["prezzo"])
+    if not it:
+        return False
+    if it.get("anno") and it["anno"] < ANNO_MINIMO:
+        return False
+    return guadagno_minimo(it) >= soglia(it["prezzo"])
 
 LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
