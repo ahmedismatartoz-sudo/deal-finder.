@@ -260,14 +260,19 @@ def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
 class BrightDataFacebookCollector(Collector):
     source = "facebook"
 
-    def __init__(self, key: str | None = None, client=None, backfill: bool = False):
+    def __init__(self, key: str | None = None, client=None, backfill: bool = False, part: tuple[int, int] = (0, 1)):
         self.key = key or os.environ.get("BRIGHTDATA_API_KEY")
+        self.part = part
         self.dataset = os.environ.get("BRIGHTDATA_DATASET", DEFAULT_DATASET)
         # annunci massimi per singola ricerca: con molte ricerche piccole si spende poco e si
         # prendono quasi solo annunci nuovi (BRIGHTDATA_LIMIT vale solo con BRIGHTDATA_SEARCHES)
         raw = os.environ.get("BRIGHTDATA_SEARCHES")
         days = int(os.environ.get("FB_GIORNI", "1"))
         self.searches = json.loads(raw) if raw else searches_senza_doppioni(days)
+        # con più account Bright Data le ricerche si dividono: ogni account fa la sua parte, nessuna ripetuta
+        i, n = self.part
+        if n > 1:
+            self.searches = self.searches[i::n]
         # tetto di righe per giro (Bright Data si paga a riga, doppioni compresi): diviso tra le ricerche
         cap = int(os.environ.get("FB_RIGHE_PER_GIRO", "3000"))
         n_fasce = sum(1 for s in self.searches if s.get("kind") != "problema") or len(self.searches)
@@ -468,3 +473,13 @@ class BrightDataFacebookCollector(Collector):
 
     def fetch(self, url: str) -> Listing | None:
         raise NotImplementedError("Per Facebook usare check_urls su più annunci insieme")
+
+
+def bright_keys() -> list[str]:
+    """Chiavi Bright Data configurate: BRIGHTDATA_API_KEY, BRIGHTDATA_API_KEY_2, _3 ... (account diversi)."""
+    keys = [os.environ.get("BRIGHTDATA_API_KEY")] + [os.environ.get(f"BRIGHTDATA_API_KEY_{i}") for i in range(2, 6)]
+    out = []
+    for k in keys:
+        if k and k.strip() and k.strip() not in out:
+            out.append(k.strip())
+    return out

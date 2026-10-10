@@ -103,7 +103,8 @@ def run(mode: str) -> Counter:
                      "max_price": settings.max_purchase_eur, "max_pages": 0, "price_bands": bands,
                      "band_pages": int(os.environ.get("BAND_PAGES", "30"))})]
     elif mode == "fb_importa":
-        sources = [(_ReadyImporter(), {"max_price": settings.max_purchase_eur})]
+        from ..collectors.brightdata import bright_keys
+        sources = [(_ReadyImporter(key=k), {"max_price": settings.max_purchase_eur}) for k in (bright_keys() or [None])]
     elif mode in ("facebook", "fb_backfill", "fb_importa"):
         if mode == "facebook" and _backfill_running():
             # una raccolta grande è ancora in corso in un altro giro: si importano subito i lotti già pronti
@@ -116,15 +117,19 @@ def run(mode: str) -> Counter:
             log.info("Facebook raccolto da poco (altro lavoro): salto per non pagare due volte gli stessi annunci")
             return stats
         if mode == "fb_importa":
-            sources = [(_ReadyImporter(), {"max_price": settings.max_purchase_eur})]
+            from ..collectors.brightdata import bright_keys
+            sources = [(_ReadyImporter(key=k), {"max_price": settings.max_purchase_eur}) for k in (bright_keys() or [None])]
         else:
             # dopo una pausa (più di 3 giorni senza annunci Facebook) si recupera l'ultima settimana, poi solo il giorno
             from .ciclo import facebook_due
             if mode == "facebook" and "FB_GIORNI" not in os.environ and facebook_due(72):
                 os.environ["FB_GIORNI"] = "7"
                 log.info("Facebook: ripresa dopo una pausa, recupero gli annunci dell'ultima settimana")
-            sources = [(BrightDataFacebookCollector(backfill=(mode == "fb_backfill")),
-                        {"max_price": settings.max_purchase_eur})]
+            from ..collectors.brightdata import bright_keys
+            keys = bright_keys() or [None]
+            sources = [(BrightDataFacebookCollector(key=k, backfill=(mode == "fb_backfill"), part=(i, len(keys))),
+                        {"max_price": settings.max_purchase_eur}) for i, k in enumerate(keys)]
+            log.info("Facebook: %d account Bright Data, ricerche divise tra loro", len(keys))
     else:
         subito = SubitoCollector(proxy=settings.scraper_proxy)
         q = {"region": settings.region, "provinces": provinces,
