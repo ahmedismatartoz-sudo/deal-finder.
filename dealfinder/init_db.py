@@ -37,3 +37,12 @@ if __name__ == "__main__":
                 conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
                 print("Creato amministratore", email)
         conn.commit()
+    # controllo foto delle auto sul sito (una volta per versione), solo sul sito web
+    if os.environ.get("RENDER_SERVICE_TYPE", "web") == "web":
+        try:
+            import logging
+            logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+            from .web import controllo_foto
+            controllo_foto.once()
+        except Exception as e:
+            print("controllo foto saltato:", str(e)[:200])
