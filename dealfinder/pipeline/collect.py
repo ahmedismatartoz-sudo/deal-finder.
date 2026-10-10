@@ -129,7 +129,8 @@ def run(mode: str) -> Counter:
             keys = bright_keys() or [None]
             sources = [(BrightDataFacebookCollector(key=k, backfill=(mode == "fb_backfill"), part=(i, len(keys))),
                         {"max_price": settings.max_purchase_eur}) for i, k in enumerate(keys)]
-            log.info("Facebook: %d account Bright Data, ricerche divise tra loro", len(keys))
+            log.info("Facebook: %d account Bright Data (chiavi che finiscono con %s), ricerche divise tra loro",
+                     len(keys), ", ".join("…" + (k or "")[-4:] for k in keys))
     else:
         subito = SubitoCollector(proxy=settings.scraper_proxy)
         q = {"region": settings.region, "provinces": provinces,
