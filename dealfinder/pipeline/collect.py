@@ -297,8 +297,8 @@ if __name__ == "__main__":
             mode = "autoscout"            # la notte aggressiva è già fatta: da qui solo le novità
         run(mode)
         from . import mille
-        versione = "as-" + os.environ.get("AUTOSCOUT_MILLE_VERSIONE", "v1")
-        if mode == "autoscout_massiva" and _due(f"mille:{versione}", 24 * 365):
+        versione = "as-" + os.environ.get("AUTOSCOUT_MILLE_VERSIONE", "v2")
+        if _due(f"mille:{versione}", 24 * 365):
             # i migliori di AutoScout24 con le foto, per il controllo uno per uno
             mille.run(fonte="autoscout24", versione=versione)
         sys.exit(0)

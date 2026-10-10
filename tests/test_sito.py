@@ -17,9 +17,10 @@ def test_item_compatto():
     assert it["nome"] == "Mazda MX-5 Roadster 2.0"
     assert (it["prezzo"], it["mercato"], it["rip_lo"], it["rip_hi"]) == (3000, 14369, 860, 2030)
     assert it["zona"] == "Settala (MI)" and it["foto"].startswith("/api/foto/1/0?s=")
-    # guadagno al 30% sotto mercato, come lo calcola il telefono
-    riv = round(it["mercato"] * 0.7)
-    assert riv - it["prezzo"] - 140 - it["rip_hi"] == 4888
+    # guadagno al 10% sotto mercato, come lo calcola il telefono
+    assert scovo.SCONTO_DEFAULT == 10
+    riv = round(it["mercato"] * 0.9)
+    assert riv - it["prezzo"] - 140 - it["rip_hi"] == 7762
 
 
 def test_item_scarta_danni_senza_stima():
@@ -128,9 +129,9 @@ def test_soglie_guadagno_per_prezzo():
     assert scovo.soglia(3000) == 1500 and scovo.soglia(5000) == 1500
     assert scovo.soglia(6500) == 2000 and scovo.soglia(15000) == 2000
     it = {"mercato": 10000, "prezzo": 4000, "rip_hi": 0}
-    assert scovo.guadagno_minimo(it) == 7000 - 4000 - 140
-    assert scovo.abbastanza(it)                     # 2.860 € ≥ 1.500
-    assert not scovo.abbastanza({"mercato": 15000, "prezzo": 9000, "rip_hi": 0})   # 1.360 € < 2.000
+    assert scovo.guadagno_minimo(it) == 9000 - 4000 - 140     # rivendita al 10% sotto mercato
+    assert scovo.abbastanza(it)                     # 4.860 € ≥ 1.500
+    assert not scovo.abbastanza({"mercato": 15000, "prezzo": 11500, "rip_hi": 0})   # 1.860 € < 2.000
 
 
 def test_niente_auto_prima_del_2007():
@@ -163,8 +164,8 @@ def test_filtro_prima_dell_ai_usa_la_regola_del_sito():
     pr.value_listing = lambda l, m, **k: V()
     try:
         ok = Listing(source="subito", source_id="1", url="u", price_eur=3000, year=2012)
-        assert quick_potential(ok, None)[0]                        # 7.000 − 3.000 − 140 = 3.860 ≥ 1.500
-        assert quick_potential(Listing(source="subito", source_id="2", url="u", price_eur=6000, year=2012), None)[1] == "margine_insufficiente"
+        assert quick_potential(ok, None)[0]                        # 9.000 − 3.000 − 140 = 5.860 ≥ 1.500
+        assert quick_potential(Listing(source="subito", source_id="2", url="u", price_eur=7000, year=2012), None)[1] == "margine_insufficiente"
         assert quick_potential(Listing(source="subito", source_id="3", url="u", price_eur=3000, year=2005), None)[1] == "troppo_vecchia"
     finally:
         pr.value_listing = old

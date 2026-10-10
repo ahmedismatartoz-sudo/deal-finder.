@@ -79,12 +79,12 @@ def run() -> dict:
                          "lines": lines, "complete": True, "vehicle": f"{l.make} {l.model} {l.year}",
                          "by_type": {"aftermarket": {"high": e["ricambi_max"], "complete": True}}}
             m = compute_margin(l, v, DealerCosts(), parts["parts_cost_high"] if parts else None)
-            # regola del sito (mercato −30%, ricambi al massimo, soglia per fascia di prezzo): se la supera,
+            # regola del sito (mercato −10%, ricambi al massimo, soglia per fascia di prezzo): se la supera,
             # l'auto si propone anche quando il calcolo prudente del motore la scarterebbe
             if m and m.status == "scartata" and e.get("esito") in ("opportunita", "da_verificare"):
                 mercato = v.private_median or v.resale_median_private or v.resale_median
                 if mercato and l.price_eur:
-                    sito = (round(mercato * 0.7) - l.price_eur - sum(scovo.COSTI_FISSI.values())
+                    sito = (round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
                             - int((parts or {}).get("parts_cost_high") or 0))
                     if sito >= scovo.soglia(l.price_eur):
                         m.status = "da_verificare"

@@ -40,7 +40,7 @@ Come parli:
 - puoi rispondere anche a domande generali sul mestiere (trattativa, documenti, passaggio, difetti tipici di un modello).
 Dati: usa SEMPRE gli strumenti per auto, prezzi e guadagni, non inventare mai.
 Quando cerchi auto con cerca_affari, TUTTE le auto trovate compaiono sullo schermo come catalogo: dillo in breve ("te le ho messe sullo schermo"), cita solo la migliore o le due migliori con prezzo e guadagno, senza elencarle tutte.
-Conti di Scovo: rivendita = prezzo di mercato meno lo sconto (30% se non detto); guadagno = rivendita − prezzo − 140 € (passaggio e pulizia) − ricambi (solo pezzi, mai manodopera); il guadagno si dice da–a.
+Conti di Scovo: rivendita = prezzo di mercato meno lo sconto (10% se non detto; mai più del 10% salvo richiesta esplicita); guadagno = rivendita − prezzo − 140 € (passaggio e pulizia) − ricambi (solo pezzi, mai manodopera); il guadagno si dice da–a.
 Per targhe e ricambi usa gli strumenti dedicati; se mancano km o pezzi, chiedili in una frase.
 Se un dato sembra troppo bello per essere vero (guadagno enorme su un'auto quasi nuova), avvisa che va verificato."""
 
@@ -51,7 +51,7 @@ TOOLS = [
          "modello": {"type": "string", "description": "es. Golf, Serie 1, TT"},
          "prezzo_min": {"type": "integer"}, "prezzo_max": {"type": "integer"},
          "guadagno_min": {"type": "integer", "description": "guadagno minimo nel caso peggiore, in euro"},
-         "sconto": {"type": "integer", "description": "sconto di rivendita sotto mercato in %, predefinito 30"},
+         "sconto": {"type": "integer", "description": "sconto di rivendita sotto mercato in %, predefinito 10 (0 = mercato pieno)"},
          "stato": {"type": "string", "enum": ["tutte", "sane", "danni"]},
          "anno_min": {"type": "integer"}, "km_max": {"type": "integer"},
          "fonte": {"type": "string", "enum": ["subito", "facebook"]},
@@ -92,7 +92,7 @@ def _gain(it: dict, sconto: int) -> tuple[int, int, int]:
 
 
 def cerca_affari(conn, user: dict, a: dict) -> dict:
-    sconto = max(0, min(int(a.get("sconto") or 30), 60))
+    sconto = max(0, min(int(a.get("sconto") if a.get("sconto") is not None else scovo.SCONTO_DEFAULT), 60))
     rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": user["id"]}).fetchall()
     items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
     marca = (a.get("marca") or "").strip().lower()
@@ -149,7 +149,7 @@ def dettaglio_auto(conn, user: dict, a: dict) -> dict:
         return {"errore": "auto non più disponibile"}
     extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {}
     d = scovo.detail(scovo.item(row), extra)
-    riv, g_lo, g_hi = _gain(d, 30)
+    riv, g_lo, g_hi = _gain(d, scovo.SCONTO_DEFAULT)
     return {k: d.get(k) for k in ("id", "nome", "anno", "km", "carb", "zona", "prezzo", "mercato", "rip_lo", "rip_hi",
                                    "descrizione", "pezzi", "controlli", "verificare")} | {
         "rivendita_30": riv, "guadagno_da": g_lo, "guadagno_a": g_hi}
@@ -167,7 +167,7 @@ def prezzo_mercato(conn, user: dict, a: dict) -> dict:
     market = load_market(conn, l.make, l.model, l.fuel)
     pr = vendi.prices(l, market, load_active(conn))
     if pr.get("ok"):
-        pr["rivendita_veloce_30"] = round(pr["giusto"] * 0.7)
+        pr["rivendita_veloce_30"] = round(pr["giusto"] * (1 - scovo.SCONTO_DEFAULT / 100))
         pr["km_usati_per_la_stima"] = km
         pr["auto"] = f"{scovo.make_name(l.make)} {scovo.model_name(l.model)} {l.year}"
     return pr
@@ -387,7 +387,7 @@ def ask_simple(conn, user: dict, text: str, gate, log_use, prima: str = "") -> d
                 return {"risposta": pr.get("motivo") or pr.get("errore") or "Non ho abbastanza auto simili per stimarla.", "auto": []}
             return {"risposta": f"Una {pr['auto']} con circa {pr['km_usati_per_la_stima']:,} km oggi vale intorno a {eur(pr['giusto'])} tra privati, "
                                 f"da {eur(pr['veloce'])} per vendere in fretta a {eur(pr['alto'])} se si ha pazienza. "
-                                f"Per rivenderla in fretta al 30% sotto mercato conta circa {eur(pr['rivendita_veloce_30'])}. "
+                                f"Rivendendola al 10% sotto mercato conta circa {eur(pr['rivendita_veloce_30'])}. "
                                 f"Stima basata su {pr.get('fonte')}.".replace(",", "."), "auto": []}
         if q["intento"] in ("targa", "vendita", "ricambi"):
             if q["intento"] == "ricambi":

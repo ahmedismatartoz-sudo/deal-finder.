@@ -2,7 +2,7 @@
 
 Regole (le stesse del sito, prima dei ricambi):
   auto dal 2007, privati, Milano e dintorni (o Facebook), annuncio attivo e verificato,
-  mercato tra privati −30% − prezzo − 140 € ≥ soglia della fascia di prezzo.
+  mercato tra privati −10% − prezzo − 140 € ≥ soglia della fascia di prezzo.
 Per ognuno scrive nei log:
   MILLE {json}                         dati, descrizione, stato e ricambi già stimati
   MILLEFOTO <id> <k>/<n> <base64>      foglio con 4 foto (2×2) per guardare i danni
@@ -28,7 +28,7 @@ from ..web import foto, scovo
 from .verify import verify_rows
 
 log = logging.getLogger("mille")
-VERSIONE = os.environ.get("MILLE_VERSIONE", "v3")
+VERSIONE = os.environ.get("MILLE_VERSIONE", "v4")      # v4: rivendita al 10% sotto mercato
 QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]
 CELLA = (270, 200)
@@ -105,7 +105,7 @@ def run(fonte: str | None = None, versione: str | None = None) -> dict:
             if not mercato:
                 stats["senza_mercato"] += 1
                 continue
-            sito = round(mercato * 0.7) - l.price_eur - sum(scovo.COSTI_FISSI.values())
+            sito = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
             soglia = scovo.soglia(l.price_eur)
             if sito < soglia:
                 stats["sotto_soglia"] += 1

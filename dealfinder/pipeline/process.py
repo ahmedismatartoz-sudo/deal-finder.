@@ -47,7 +47,7 @@ def _to_items(dicts):
 
 def quick_potential(listing, market) -> tuple[bool, str, object]:
     """Stima rapida senza AI: vale la pena guardare le foto?
-    Si usa la stessa regola del sito (mercato −30% − prezzo − 140 € ≥ soglia della fascia di prezzo,
+    Si usa la stessa regola del sito (mercato −10% − prezzo − 140 € ≥ soglia della fascia di prezzo,
     auto dal 2007): l'AI si paga solo per le auto che potrebbero davvero finire sul sito."""
     from ..web import scovo
     if listing.year and listing.year < scovo.ANNO_MINIMO:

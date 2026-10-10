@@ -45,7 +45,7 @@ const S = {
   token: store.get("token", null), user: store.get("user", null),
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
   brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte",
-  sconto: saved.sconto || 30, sort: saved.sort || "guadagno",
+  sconto: (saved.sv === 2 && saved.sconto != null) ? Number(saved.sconto) : 10, sort: saved.sort || "guadagno",
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
@@ -55,7 +55,7 @@ const L = {mode:"login", err:"", busy:false, sent:false, email:"", req:{}};
 
 const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
-function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sort:S.sort}); }
+function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:2, sort:S.sort}); }
 
 /* ---------- API ---------- */
 async function api(path, opts = {}) {
@@ -178,7 +178,7 @@ function viewList(){
       </div>
     </button>`).join("");
   const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
-      <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o abbassa lo sconto di rivendita." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
+      <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
   const right = `<div style="display:flex;gap:8px;align-items:center"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>
       <button class="chip more" data-act="filters" aria-label="Tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}Filtri${nf ? ` <span class="count-pill">${nf}</span>` : ""}</button></div>`;
@@ -239,7 +239,7 @@ function viewDetail(){
         <div class="row"><span class="k">Prezzo richiesto</span><span class="v">${eur(c.prezzo)}</span></div>
         <div class="row"><span class="k">Riparazioni (solo pezzi)</span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
         <div class="row" style="border-bottom:0"><span class="k">Rivendita veloce</span><span class="v">${eur(c.riv)}</span></div>
-        <div class="note">Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo che fa vendere in fretta.</div>
+        <div class="note">Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.</div>
         <div class="row total"><span class="k">Guadagno stimato</span><span class="v">${gainTxt(c)}</span></div>
         <div class="note" style="border:0;margin-top:-8px">Già tolti passaggio (90 €) e pulizia (50 €).${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}</div>
       </div>
@@ -278,8 +278,8 @@ function sheetFilters(){
         <div class="wrap">${brandsAll().map(b => `<button class="pill" data-act="brand" data-v="${esc(b)}" aria-pressed="${S.brands.includes(b)}" ${!counts[b] && !S.brands.includes(b) ? "disabled" : ""}>${esc(b)}<span class="n">${counts[b] || 0}</span></button>`).join("")}</div>
       </section>
       <section class="sec"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Sane"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
-      <section class="sec"><h3>Rivendi sotto il prezzo di mercato</h3>${seg([[10,"−10%"],[20,"−20%"],[30,"−30%"],[40,"−40%"]], S.sconto, "sconto", 4)}
-        <span class="hint">Più sconto: vendi prima ma guadagni meno. I guadagni si ricalcolano subito.</span></section>
+      <section class="sec"><h3>Rivendi sotto il prezzo di mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
+        <span class="hint">Rivendita a mercato pieno o al massimo 10% sotto. I guadagni si ricalcolano subito.</span></section>
       <section class="sec"><h3>Ordine</h3>${seg([["guadagno","Più guadagno"],["prezzo","Più economiche"],["nuove","Più nuove"]], S.sort, "sort", 3)}</section>
     </div>
     <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="close" id="show">${n ? `Mostra ${n} auto` : "Nessuna auto: cambia i filtri"}</button></div>
@@ -695,7 +695,7 @@ function showCatalog(f, testo){
   S.brands = f.marca ? [f.marca] : [];
   S.min = f.prezzo_min ? String(f.prezzo_min) : ""; S.max = f.prezzo_max ? String(f.prezzo_max) : "";
   S.stato = f.stato || "tutte";
-  if (f.sconto) S.sconto = Number(f.sconto);
+  if (f.sconto != null) S.sconto = Math.min(10, Number(f.sconto));
   if (f.ordina) S.sort = f.ordina;
   S.bot = {testo: testo || "", modello: f.modello || "", guadagno_min: f.guadagno_min || 0, anno_min: f.anno_min || 0, km_max: f.km_max || 0, fonte: f.fonte || ""};
   saveFilters();

@@ -2,7 +2,7 @@
 
 Per ogni auto il sito riceve solo quello che mostra:
   prezzo richiesto, riparazioni da–a (solo pezzi), prezzo medio di mercato.
-La rivendita (mercato meno lo sconto scelto, 30% di default) e il guadagno da–a
+La rivendita (mercato meno lo sconto scelto, 10% di default, da 0 a 10%) e il guadagno da–a
 si calcolano sul telefono, così cambiando lo sconto tutto si aggiorna subito:
   guadagno = mercato × (1 − sconto) − prezzo − costi fissi (passaggio 90 + pulizia 50) − riparazioni
 
@@ -19,8 +19,8 @@ import re
 from . import foto
 
 COSTI_FISSI = {"passaggio": 90, "pulizia": 50}
-SCONTO_DEFAULT = 30
-# guadagno minimo (caso peggiore, rivendita al 30% sotto mercato) per proporre un'auto,
+SCONTO_DEFAULT = int(os.environ.get("SCONTO_RIVENDITA", "10"))   # rivendita: al massimo 10% sotto mercato
+# guadagno minimo (caso peggiore, rivendita al 10% sotto mercato) per proporre un'auto,
 # secondo il prezzo di acquisto: fino a 5.000 € → 1.500; 5.000–8.000 → 2.000; 8.000–12.000 → 3.000; oltre 12.000 → 4.000
 # MODALITA_SITO=mille: sul sito vanno i migliori 1.000 per guadagno, con un minimo unico (GUADAGNO_MINIMO_MILLE,
 # 500 €) al posto delle soglie per fascia. Con MODALITA_SITO=soglie si torna alle soglie per fascia qui sotto.

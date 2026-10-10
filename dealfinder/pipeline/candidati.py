@@ -39,7 +39,7 @@ BANDS = [(500, 2000), (2000, 5000), (5000, 8000), (8000, 12000), (12000, 20001)]
 
 
 def guadagno_sito(v, price: int | None) -> int | None:
-    """Guadagno come lo mostra il sito, prima dei ricambi: rivendita al 30% sotto il mercato tra privati."""
+    """Guadagno come lo mostra il sito, prima dei ricambi: rivendita al 10% sotto il mercato tra privati."""
     mercato = v.private_median or v.resale_median_private or v.resale_median
     if not mercato or not price:
         return None
@@ -123,7 +123,7 @@ def run() -> dict:
                     continue
                 stats["stima_da_modello"] += 1
             m = compute_margin(l, v, costs)
-            # regola del sito: mercato tra privati −30% − prezzo − 140 € ≥ soglia per fascia di prezzo
+            # regola del sito: mercato tra privati −10% − prezzo − 140 € ≥ soglia per fascia di prezzo
             # (fino a 5.000 → 1.500; 8.000 → 2.000; 12.000 → 3.000; oltre → 4.000)
             sito = guadagno_sito(v, l.price_eur)
             need = scovo.soglia(l.price_eur) + (DAMAGE_ROOM if damaged else 0)
