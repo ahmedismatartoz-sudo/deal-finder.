@@ -57,6 +57,10 @@ services:
         value: approvazione
       - key: MAX_DISPOSITIVI           # sessioni attive per account (telefono + computer)
         value: "2"
+      - key: OPENAI_API_KEY            # voce naturale dell'assistente (gpt-4o-mini-tts) e trascrizione
+        sync: false
+      - key: ELEVENLABS_API_KEY        # in alternativa: voce ElevenLabs
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

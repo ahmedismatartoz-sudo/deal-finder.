@@ -459,7 +459,8 @@ def health(request: Request):
 # Entra con Google / Apple
 # ---------------------------------------------------------------------------
 def auth_metodi(request: Request):
-    return jsonify({**social.enabled(), "aperto": site_open()})
+    from . import voce
+    return jsonify({**social.enabled(), "aperto": site_open(), "voce": voce.info()})
 
 
 def auth_start(request: Request):
@@ -628,6 +629,61 @@ async def assistente(request: Request):
                 _service_log(conn, user, "assistente", True)
             return out
     return jsonify(await run_in_threadpool(work))
+
+
+# Voce naturale: le chiamate costano, quindi un tetto al giorno per persona (o per indirizzo, per gli ospiti)
+VOCE_LIMITE = {"tts": int(os.environ.get("VOCE_LIMITE_GIORNO", "300")), "stt": int(os.environ.get("TRASCRIZIONI_LIMITE_GIORNO", "150"))}
+_voce_uso: dict[str, list[float]] = defaultdict(list)
+
+
+def _voce_gate(request: Request, user: dict, kind: str) -> None:
+    ospite = user.get("role") == "ospite"
+    k = f"{kind}:{'ip:' + client_ip(request) if ospite else user['id']}"
+    now = time.time()
+    _voce_uso[k] = [t for t in _voce_uso[k] if now - t < 86400]
+    lim = VOCE_LIMITE[kind] // (5 if ospite else 1)
+    if len(_voce_uso[k]) >= lim:
+        err(429, "Hai usato molto la voce oggi: continuo a risponderti per iscritto")
+    _voce_uso[k].append(now)
+
+
+async def voce_tts(request: Request):
+    """Testo -> audio MP3 con voce naturale."""
+    from . import voce
+    user = viewer(request)
+    if not voce.provider():
+        err(404, "Voce naturale non attiva")
+    data = await body(request)
+    testo = str(data.get("testo") or "").strip()
+    if not testo:
+        err(400, "Niente da leggere")
+    _voce_gate(request, user, "tts")
+    try:
+        audio = await run_in_threadpool(voce.tts, testo)
+    except Exception as e:
+        log.warning("voce non riuscita: %s", str(e)[:200])
+        err(502, "La voce non risponde adesso")
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+
+async def voce_stt(request: Request):
+    """Registrazione dal microfono -> testo (funziona anche dove il telefono non riconosce la voce)."""
+    from . import voce
+    user = viewer(request)
+    if not voce.provider("stt"):
+        err(404, "Trascrizione non attiva")
+    audio = await request.body()
+    if not audio or len(audio) < 800:
+        return jsonify({"testo": ""})
+    if len(audio) > voce.MAX_AUDIO:
+        err(413, "Registrazione troppo lunga")
+    _voce_gate(request, user, "stt")
+    try:
+        testo = await run_in_threadpool(voce.stt, audio, request.headers.get("content-type", ""))
+    except Exception as e:
+        log.warning("trascrizione non riuscita: %s", str(e)[:200])
+        err(502, "Non riesco a capire la registrazione adesso: riprova o scrivi")
+    return jsonify({"testo": testo})
 
 
 # ---------------------------------------------------------------------------
@@ -824,7 +880,7 @@ async def server_error(request: Request, exc: Exception):
 # ---------------------------------------------------------------------------
 MAX_BODY = 12 * 1024 * 1024        # Vendi: fino a 6 foto già ridotte dal telefono
 CSP = ("default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-       "font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; "
+       "font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; media-src 'self' blob:; "
        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; worker-src 'self'")
 SECURITY_HEADERS = [
     (b"x-content-type-options", b"nosniff"),
@@ -902,6 +958,8 @@ routes = [
     Route("/api/admin/richieste", admin_requests),
     Route("/api/admin/richieste/{id:int}", admin_request_done, methods=["POST"]),
     Route("/api/assistente", assistente, methods=["POST"]),
+    Route("/api/voce", voce_tts, methods=["POST"]),
+    Route("/api/trascrivi", voce_stt, methods=["POST"]),
     Route("/api/servizi/vendi", servizio_vendi, methods=["POST"]),
     Route("/api/servizi/ricambi", servizio_ricambi, methods=["POST"]),
     Route("/sw.js", service_worker),

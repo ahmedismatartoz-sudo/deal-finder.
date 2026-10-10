@@ -29,13 +29,20 @@ log = logging.getLogger("assistente")
 COSTI = sum(scovo.COSTI_FISSI.values())
 MAX_PASSI = 6
 
-SYSTEM = """Sei l'assistente vocale di Scovo, il servizio che trova auto usate di privati sotto prezzo a Milano e dintorni per i commercianti.
-Rispondi in italiano, come un collega esperto: frasi brevi e chiare, perché la risposta viene letta ad alta voce.
-Usa SEMPRE gli strumenti per i dati: non inventare auto, prezzi o guadagni.
-Regole dei conti di Scovo: rivendita = prezzo di mercato meno lo sconto (30% se non specificato); guadagno = rivendita − prezzo − 140 € (passaggio e pulizia) − ricambi (solo pezzi, mai manodopera); il guadagno si dà sempre da–a.
-Quando elenchi auto: al massimo 5 nella voce, con nome, anno, prezzo e guadagno; il resto lo vede nelle schede sotto la risposta.
-Per targhe e ricambi usa gli strumenti dedicati; se servono km o pezzi che mancano, chiedili in una frase.
-Non leggere link o codici. Niente elenchi puntati lunghi: massimo 6 frasi."""
+SYSTEM = """Sei Scovo, l'assistente vocale di un servizio che trova auto usate di privati sotto prezzo a Milano e dintorni per i commercianti.
+Stai PARLANDO al telefono con un commerciante: quello che scrivi viene letto ad alta voce da una voce naturale.
+Come parli:
+- italiano parlato e naturale, da collega del mestiere: diretto, cordiale, un po' informale (dai del tu);
+- di solito 1-3 frasi brevi; mai elenchi puntati, titoli, asterischi, emoji, link o codici;
+- numeri come si dicono: "dodicimila e cinque" va bene, ma scrivi le cifre normali (12.500 €), la voce le legge da sola;
+- nomi corti delle auto ("una Golf del 2016", non tutta la versione);
+- se la domanda è vaga, rispondi comunque con qualcosa di utile e poi fai UNA domanda per restringere;
+- puoi rispondere anche a domande generali sul mestiere (trattativa, documenti, passaggio, difetti tipici di un modello).
+Dati: usa SEMPRE gli strumenti per auto, prezzi e guadagni, non inventare mai.
+Quando cerchi auto con cerca_affari, TUTTE le auto trovate compaiono sullo schermo come catalogo: dillo in breve ("te le ho messe sullo schermo"), cita solo la migliore o le due migliori con prezzo e guadagno, senza elencarle tutte.
+Conti di Scovo: rivendita = prezzo di mercato meno lo sconto (30% se non detto); guadagno = rivendita − prezzo − 140 € (passaggio e pulizia) − ricambi (solo pezzi, mai manodopera); il guadagno si dice da–a.
+Per targhe e ricambi usa gli strumenti dedicati; se mancano km o pezzi, chiedili in una frase.
+Se un dato sembra troppo bello per essere vero (guadagno enorme su un'auto quasi nuova), avvisa che va verificato."""
 
 TOOLS = [
     {"name": "cerca_affari", "description": "Cerca tra le auto proposte oggi da Scovo con filtri. Restituisce le auto ordinate.",
@@ -342,8 +349,35 @@ def eur(n) -> str:
     return f"{round(n):,}".replace(",", ".") + " euro"
 
 
-def ask_simple(conn, user: dict, text: str, gate, log_use) -> dict:
+def short_name(c: dict) -> str:
+    """"Audi A5 Sportback 2.0 TDI" -> "Audi A5": per la voce bastano marca e modello."""
+    marca, nome = c.get("marca") or "", c.get("nome") or ""
+    rest = nome[len(marca):].split() if marca and nome.startswith(marca) else nome.split()[1:]
+    words = [marca] if marca and marca != "Altro" else nome.split()[:1]
+    for w in rest[:2]:
+        if re.fullmatch(r"\d\.\d|\d+\s*CV|TDI|TFSI|TSI|HDi|CDI|JTD.*|\d+[pP]\.?", w):
+            break
+        words.append(w)
+    out = " ".join(words[:3]) if words[1:2] and words[1].lower() in ("classe", "serie") else " ".join(words[:2])
+    return out or nome
+
+
+def una(c: dict) -> str:
+    n = short_name(c)
+    return ("un'" if n[:1].lower() in "aeiou" else "una ") + n
+
+
+SEGUITO = re.compile(r"(?i)^\s*(e\s|ed\s|invece|di queste|tra queste|fra queste|quelle|quali di|anche)")
+
+
+def ask_simple(conn, user: dict, text: str, gate, log_use, prima: str = "") -> dict:
     q = parse(text)
+    # "e quelle sotto i 5000?": si tiene la marca/modello della domanda prima
+    if prima and SEGUITO.search(text) and not q.get("marca") and q["intento"] == "affari":
+        pq = parse(prima)
+        for k in ("marca", "modello"):
+            if pq.get(k):
+                q[k] = pq[k]
     tools = _plate_tools(gate, log_use)
     try:
         if q["intento"] == "mercato":
@@ -390,14 +424,27 @@ def ask_simple(conn, user: dict, text: str, gate, log_use) -> dict:
     if not n:
         return {"risposta": f"Oggi non ci sono auto {filtro} con questi filtri. Prova ad allargare il prezzo o il guadagno.".replace("  ", " "),
                 "auto": []}
-    top = res["auto"][:3]
-    frasi = [f"Ho trovato {n} {'auto' if n != 1 else 'auto'}{(' ' + filtro) if filtro else ''}. Le migliori:"]
-    for c in top:
-        g = (f"guadagno circa {eur(c['guadagno_a'])}" if c["guadagno_da"] == c["guadagno_a"]
-             else f"guadagno da {eur(max(c['guadagno_da'], 0))} a {eur(c['guadagno_a'])}")
-        frasi.append(f"{c['nome']} del {c['anno']}, costa {eur(c['prezzo'])}, {g}.")
-    if n > 3:
-        frasi.append(f"Te le metto tutte e {n} sullo schermo.")
+    import random
+    top = res["auto"][:2]
+
+    def gtxt(c):
+        return (f"ci guadagni circa {eur(c['guadagno_a'])}" if c["guadagno_da"] == c["guadagno_a"] or c["guadagno_da"] <= 0
+                else f"ci guadagni da {eur(c['guadagno_da'])} a {eur(c['guadagno_a'])}")
+    chi = f" {filtro}" if filtro else ""
+    if n == 1:
+        c = top[0]
+        frasi = [f"Ce n'è una sola{chi}: {una(c)} del {c['anno']} a {eur(c['prezzo'])}, {gtxt(c)}. Te l'ho messa sullo schermo."]
+    else:
+        apertura = random.choice([f"Ne ho trovate {n}{chi}, te le ho messe tutte sullo schermo.",
+                                  f"Allora, oggi ci sono {n} auto{chi}: le vedi tutte qui sotto.",
+                                  f"Ecco qua, {n} auto{chi}, le trovi tutte sullo schermo."])
+        c = top[0]
+        frasi = [apertura, f"La migliore è {una(c)} del {c['anno']} a {eur(c['prezzo'])}: {gtxt(c)}."]
+        if len(top) > 1:
+            d = top[1]
+            frasi.append(f"Subito dopo c'è {una(d)} a {eur(d['prezzo'])}.")
+        if c["guadagno_da"] > 8000 and (c.get("anno") or 0) >= 2021:
+            frasi.append("Quella prima però è troppo bella per essere vera: verificala bene prima di muoverti.")
     return {"risposta": " ".join(frasi), "auto": res["auto"], "filtri": {**res["filtri"], "totale": n}}
 
 
@@ -408,7 +455,7 @@ def answer(conn, user: dict, messages: list[dict], gate, log_use) -> dict:
             return ask_ai(conn, user, messages, gate, log_use)
         except Exception as e:
             log.warning("assistente AI non riuscito: %s", str(e)[:200])
-    last = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-    out = ask_simple(conn, user, str(last), gate, log_use)
+    users = [str(m["content"]) for m in messages if m.get("role") == "user"]
+    out = ask_simple(conn, user, users[-1] if users else "", gate, log_use, users[-2] if len(users) > 1 else "")
     out["semplice"] = True
     return out

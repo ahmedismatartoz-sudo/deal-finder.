@@ -555,7 +555,12 @@ const MIC = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke=
 const IN_APP = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Telegram|GSA\/|; wv\)/i.test(navigator.userAgent || "");
 function botFab(){ return `<button class="bot-fab" data-act="bot" data-voce="1" aria-label="Chiedi a Scovo a voce">${MIC}<span>Chiedi</span></button>`; }
 
-/* la voce: si sceglie una voce italiana, preferendo quelle più naturali */
+/* ---- voce in uscita ----
+   Con la voce naturale attiva (chiave sul server) l'audio arriva da /api/voce e suona come una persona.
+   Senza, si usa la voce del telefono. */
+const VOX = () => !!(S.metodi && S.metodi.voce && S.metodi.voce.tts);
+const EARS = () => !!(S.metodi && S.metodi.voce && S.metodi.voce.stt && navigator.mediaDevices && window.MediaRecorder);
+let player = null, speakToken = 0, speakEnd = null;
 function pickVoice(){
   if (!TTS) return null;
   const vs = speechSynthesis.getVoices().filter(v => /^it/i.test(v.lang));
@@ -564,37 +569,95 @@ function pickVoice(){
   return vs[0] || null;
 }
 if (TTS) { A.voiceObj = pickVoice(); try { speechSynthesis.addEventListener("voiceschanged", () => { A.voiceObj = pickVoice(); }); } catch (e) {} }
-/* iPhone: la voce parte solo se il primo "parla" avviene dentro un tocco. Lo facciamo subito, in silenzio. */
+function silentWav(){
+  const n = 800, buf = new ArrayBuffer(44 + n), d = new DataView(buf);
+  const w = (o, t) => { for (let i = 0; i < t.length; i++) d.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, "RIFF"); d.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); d.setUint32(16, 16, true); d.setUint16(20, 1, true);
+  d.setUint16(22, 1, true); d.setUint32(24, 8000, true); d.setUint32(28, 8000, true); d.setUint16(32, 1, true); d.setUint16(34, 8, true);
+  w(36, "data"); d.setUint32(40, n, true); for (let i = 0; i < n; i++) d.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], {type: "audio/wav"}));
+}
+/* iPhone: l'audio parte solo se il primo "play" avviene dentro un tocco. Lo facciamo subito, in silenzio. */
 function unlockVoice(){
-  if (!TTS || A.unlocked) return;
-  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "it-IT"; speechSynthesis.speak(u); A.unlocked = true; } catch (e) {}
+  if (!player) { player = new Audio(); player.preload = "auto"; player.setAttribute("playsinline", ""); }
+  if (A.unlocked) return;
+  A.unlocked = true;
+  try { player.src = silentWav(); const pr = player.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
+  if (TTS) { try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "it-IT"; speechSynthesis.speak(u); } catch (e) {} }
 }
 function speakable(t){
   return String(t || "").replace(/€/g, " euro").replace(/(\d)\.(\d{3})/g, "$1$2").replace(/\+(\d)/g, "più $1")
     .replace(/(\d)\s*[–-]\s*(\d)/g, "$1 a $2").replace(/\bkm\b/g, "chilometri").replace(/[*_#•]/g, " ");
 }
-function speak(text){
-  if (!A.voice || !TTS || !text) return;
-  try {
-    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    // frasi corte: Chrome si blocca sulle frasi lunghe, iPhone le taglia
-    const parts = speakable(text).split(/(?<=[.!?;:])\s+/);
-    const chunks = [];
-    parts.forEach(p => { p = p.trim(); if (!p) return; if (chunks.length && (chunks[chunks.length - 1] + " " + p).length < 160) chunks[chunks.length - 1] += " " + p; else chunks.push(p); });
-    A.speaking = true; refreshSpeaking();
-    chunks.forEach((c, i) => {
-      const u = new SpeechSynthesisUtterance(c); u.lang = "it-IT"; u.rate = 1.04; u.pitch = 1;
-      if (A.voiceObj) u.voice = A.voiceObj;
-      if (i === chunks.length - 1) { u.onend = u.onerror = () => { A.speaking = false; refreshSpeaking(); }; }
-      speechSynthesis.speak(u);
-    });
-    try { speechSynthesis.resume(); } catch (e) {}
-  } catch (e) { A.speaking = false; }
+function chunks(text, max){
+  const parts = String(text).split(/(?<=[.!?;:])\s+/), out = [];
+  parts.forEach(p => { p = p.trim(); if (!p) return; if (out.length && (out[out.length - 1] + " " + p).length < max) out[out.length - 1] += " " + p; else out.push(p); });
+  return out;
 }
-function stopVoice(){ if (!A.speaking) return; try { speechSynthesis.cancel(); } catch (e) {} A.speaking = false; refreshSpeaking(); }
+async function fetchVoice(t){
+  const headers = {"Content-Type": "application/json"}; if (S.token) headers.Authorization = "Bearer " + S.token;
+  const r = await fetch("/api/voce", {method: "POST", headers, body: JSON.stringify({testo: t})});
+  if (!r.ok) throw new Error("voce " + r.status);
+  return URL.createObjectURL(await r.blob());
+}
+function playUrl(url, tok){
+  return new Promise(res => {
+    if (tok !== speakToken) return res(false);
+    const done = ok => { player.onended = player.onerror = null; res(ok); };
+    player.onended = () => done(true); player.onerror = () => done(false);
+    player.src = url;
+    const pr = player.play(); if (pr && pr.catch) pr.catch(() => done(false));
+  });
+}
+function speakDevice(text, tok){
+  return new Promise(res => {
+    if (!TTS) return res();
+    try {
+      if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+      const cs = chunks(speakable(text), 160); if (!cs.length) return res();
+      cs.forEach((c, i) => {
+        const u = new SpeechSynthesisUtterance(c); u.lang = "it-IT"; u.rate = 1.04;
+        if (A.voiceObj) u.voice = A.voiceObj;
+        if (i === cs.length - 1) u.onend = u.onerror = () => res();
+        speechSynthesis.speak(u);
+      });
+      try { speechSynthesis.resume(); } catch (e) {}
+      setTimeout(res, 60000);
+    } catch (e) { res(); }
+  });
+}
+/* parla e restituisce una promessa che finisce quando ha finito di parlare */
+async function speak(text, force){
+  if ((!A.voice && !force) || !text) return;
+  stopVoice();
+  const tok = ++speakToken;
+  A.speaking = true; refreshSpeaking();
+  try {
+    if (VOX()) {
+      // la prima frase parte subito, le altre si preparano mentre parla
+      const cs = chunks(text, 220), urls = cs.map(c => fetchVoice(c).catch(() => null));
+      let ok = true;
+      for (let i = 0; i < cs.length && tok === speakToken; i++) {
+        const u = await urls[i];
+        if (!u) { ok = false; await speakDevice(cs.slice(i).join(" "), tok); break; }
+        ok = await playUrl(u, tok); URL.revokeObjectURL(u);
+        if (!ok && tok === speakToken) { await speakDevice(cs.slice(i).join(" "), tok); break; }
+      }
+    } else await speakDevice(text, tok);
+  } finally {
+    if (tok === speakToken) { A.speaking = false; refreshSpeaking(); }
+  }
+}
+function stopVoice(){
+  speakToken++;
+  try { if (player) { player.pause(); player.onended && player.onended(); } } catch (e) {}
+  try { if (TTS && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel(); } catch (e) {}
+  if (A.speaking) { A.speaking = false; refreshSpeaking(); }
+}
 function refreshSpeaking(){
   const b = document.querySelector(".bb-stop");
   if (b) { b.dataset.act = A.speaking ? "bot-zitto" : "bot-ripeti"; b.textContent = A.speaking ? "Basta voce" : "Riascolta"; }
+  if (VC.on) vcPaint();
 }
 
 function sheetBot(){
@@ -641,7 +704,7 @@ function showCatalog(f, testo){
 }
 
 async function botAsk(text){
-  text = (text || "").trim(); if (!text || A.busy) return;
+  text = (text || "").trim(); if (!text || A.busy) return null;
   const i = document.getElementById("bot-text"); if (i) i.blur();      // chiude la tastiera: si vede la risposta
   A.msgs.push({role: "user", content: text}); A.text = ""; A.busy = true;
   botRender();
@@ -651,14 +714,17 @@ async function botAsk(text){
   } catch (e) {
     A.busy = false;
     const msg = e.status === 429 ? (e.message || "Hai fatto tante domande oggi: riprova domani o entra col tuo account.") : e.message || "Non riesco a rispondere adesso, riprova.";
-    A.msgs.push({role: "assistant", content: msg, err: true}); speak(msg); botRender(); return;
+    A.msgs.push({role: "assistant", content: msg, err: true}); botRender(); VC.last = msg; return {talking: speak(msg, VC.on)};
   }
   A.busy = false;
   const risposta = r.risposta || "Non ho trovato una risposta.";
   A.msgs.push({role: "assistant", content: risposta, auto: r.auto || [], filtri: r.filtri || null});
-  speak(risposta);
+  VC.last = risposta;
+  const talking = speak(risposta, VC.on);
   if (r.filtri && r.filtri.totale > 0) showCatalog(r.filtri, risposta);     // le auto trovate vanno tutte sullo schermo
+  else if (VC.on && S.sheet !== "bot") vcPaint();
   else botRender();
+  return {talking};
 }
 
 const SR_ERR = {
@@ -700,6 +766,150 @@ function botListen(){
   try { rec.start(); } catch (e) { clearTimeout(guard); A.listening = false; A.rec = null; toast(SR_ERR["service-not-allowed"]); botRender(); }
 }
 
+/* ---------- Conversazione a mani libere ----------
+   Tocchi "Chiedi" una volta: ascolta, capisce quando hai finito di parlare, risponde a voce
+   e si rimette ad ascoltare. Le auto trovate restano sullo schermo. Tocchi la bolla per interromperlo. */
+const VC = {on: false, state: "", heard: "", last: "", stream: null, ctx: null, mr: null, raf: 0, lv: 0, sr: null};
+const VC_TXT = {ascolto: "Ti ascolto…", capisco: "Ho capito, un attimo…", penso: "Ci penso…", parlo: "", pausa: "In pausa: tocca per parlare"};
+function vcDock(){
+  if (!VC.on) return "";
+  const cap = VC.state === "parlo" ? VC.last : VC.state === "ascolto" && VC.heard ? VC.heard : VC_TXT[VC.state] || "";
+  return `<div class="vc-dock" role="region" aria-label="Conversazione con Scovo">
+    <button class="vc-orb vc-${VC.state}" data-act="vc-orb" aria-label="${VC.state === "parlo" ? "Interrompi e parla" : VC.state === "ascolto" ? "Ho finito di parlare" : "Parla"}"><span class="vc-core"></span><span class="vc-ring"></span></button>
+    <div class="vc-txt"><b>${VC.state === "parlo" ? "Scovo" : VC.state === "ascolto" ? "Tu" : "Scovo"}</b><span id="vc-cap">${esc(cap)}</span></div>
+    <button class="vc-btn" data-act="vc-chat" aria-label="Scrivi o vedi la conversazione"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
+    <button class="vc-btn vc-x" data-act="vc-end" aria-label="Chiudi la conversazione"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>`;
+}
+function vcPaint(){
+  if (S.sheet === "bot") return;
+  const old = document.querySelector(".vc-dock");
+  const html = vcDock();
+  if (!old) { if (html) render({keep:true}); return; }
+  if (!html) { old.remove(); return; }
+  const t = document.createElement("div"); t.innerHTML = html; old.replaceWith(t.firstElementChild);
+}
+function vcSet(st, heard){ VC.state = st; if (heard != null) VC.heard = heard; vcPaint(); }
+
+async function vcStart(){
+  stopVoice(); unlockVoice();
+  if (!SR && !EARS()) {          // niente microfono utilizzabile: si scrive
+    toast(IN_APP ? "Apri il sito in Safari o Chrome per parlare. Qui puoi scrivere." : "Questo browser non ascolta la voce: scrivi la domanda.");
+    S.sheet = "bot"; render({keep:true}); return;
+  }
+  // l'audio va "acceso" dentro il tocco (iPhone)
+  if (EARS() && !VC.ctx) { try { VC.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  try { VC.ctx && VC.ctx.resume(); } catch (e) {}
+  VC.on = true; VC.heard = ""; if (S.sheet === "bot") S.sheet = null;
+  render({keep:true});
+  vcListen();
+}
+function vcEnd(){
+  VC.on = false; VC.state = ""; stopVoice(); vcStopMic(true);
+  if (VC.sr) { try { VC.sr.abort(); } catch (e) {} VC.sr = null; }
+  vcPaint(); render({keep:true});
+}
+function vcStopMic(release){
+  cancelAnimationFrame(VC.raf);
+  if (VC.mr && VC.mr.state !== "inactive") { try { VC.mr.stop(); } catch (e) {} }
+  if (release && VC.stream) { VC.stream.getTracks().forEach(t => t.stop()); VC.stream = null; }
+}
+async function vcListen(){
+  if (!VC.on) return;
+  stopVoice();
+  vcSet("ascolto", "");
+  if (EARS()) return vcRecord();
+  return vcSpeechApi();
+}
+/* ascolto col riconoscimento del telefono (se non c'è la trascrizione sul server) */
+function vcSpeechApi(){
+  let rec; try { rec = new SR(); } catch (e) { toast(SR_ERR["service-not-allowed"]); return vcEnd(); }
+  VC.sr = rec; rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = false;
+  let fin = "", inter = "", errored = "";
+  rec.onresult = ev => { inter = ""; for (let i = ev.resultIndex; i < ev.results.length; i++) { if (ev.results[i].isFinal) fin += ev.results[i][0].transcript; else inter += ev.results[i][0].transcript; }
+    VC.heard = (fin + " " + inter).trim(); const c = document.getElementById("vc-cap"); if (c) c.textContent = VC.heard; };
+  rec.onerror = ev => { errored = ev.error; };
+  rec.onend = () => {
+    VC.sr = null; if (!VC.on) return;
+    const said = (fin || inter).trim();
+    if (said) return vcSend(said);
+    if (errored && errored !== "no-speech" && errored !== "aborted") { toast(SR_ERR[errored] || "Il microfono non funziona: scrivi la domanda."); return vcEnd(); }
+    vcSet("pausa");
+  };
+  try { rec.start(); } catch (e) { toast(SR_ERR["service-not-allowed"]); vcEnd(); }
+}
+/* ascolto registrando: capisce da solo quando hai smesso di parlare, poi trascrive sul server */
+async function vcRecord(){
+  try {
+    if (!VC.stream || !VC.stream.active) VC.stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}});
+  } catch (e) {
+    toast(e && e.name === "NotAllowedError" ? SR_ERR["not-allowed"] : "Non riesco ad aprire il microfono: scrivi la domanda.");
+    if (SR) return vcSpeechApi();
+    return vcEnd();
+  }
+  if (!VC.on) return vcStopMic(true);
+  const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+  const mime = types.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || "";
+  let mr; try { mr = new MediaRecorder(VC.stream, mime ? {mimeType: mime} : undefined); } catch (e) { if (SR) return vcSpeechApi(); return vcEnd(); }
+  VC.mr = mr; const parts = [];
+  mr.ondataavailable = e => { if (e.data && e.data.size) parts.push(e.data); };
+  let spoke = false, aborted = false;
+  mr.onstop = async () => {
+    cancelAnimationFrame(VC.raf);
+    if (!VC.on || aborted || VC.mr !== mr) return;
+    VC.mr = null;
+    if (!spoke) return vcSet("pausa");
+    vcSet("capisco");
+    const blob = new Blob(parts, {type: mr.mimeType || mime || "audio/webm"});
+    const headers = {"Content-Type": blob.type || "audio/webm"}; if (S.token) headers.Authorization = "Bearer " + S.token;
+    try {
+      const r = await fetch("/api/trascrivi", {method: "POST", headers, body: blob});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || d.errore || "Non ho capito");
+      if (!VC.on) return;
+      if (!(d.testo || "").trim()) { toast("Non ho capito bene: ripeti?"); return vcListen(); }
+      vcSend(d.testo);
+    } catch (e) { toast(e.message || "Non ho capito: riprova"); if (VC.on) vcSet("pausa"); }
+  };
+  mr.start(250);
+  // misura del volume: si vede sulla bolla e serve a capire quando hai finito
+  let an = null, data = null;
+  try { const src = VC.ctx.createMediaStreamSource(VC.stream); an = VC.ctx.createAnalyser(); an.fftSize = 1024; src.connect(an); data = new Uint8Array(an.fftSize); } catch (e) {}
+  const t0 = performance.now(); let lastVoice = t0, noise = 0.012;
+  const tick = () => {
+    if (VC.mr !== mr) return;
+    const now = performance.now();
+    let rms = 0;
+    if (an) { an.getByteTimeDomainData(data); for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; rms += v * v; } rms = Math.sqrt(rms / data.length); }
+    if (!spoke && now - t0 < 400) noise = Math.max(noise, rms * 1.2);          // rumore di fondo dei primi istanti
+    const thr = Math.max(0.025, noise * 2.2);
+    if (rms > thr) { spoke = true; lastVoice = now; }
+    VC.lv = Math.min(1, rms * 9); const o = document.querySelector(".vc-orb"); if (o) o.style.setProperty("--lv", VC.lv.toFixed(2));
+    const silence = now - lastVoice;
+    if ((spoke && silence > 1100) || (!spoke && now - t0 > 7000) || now - t0 > 20000 || (!an && now - t0 > 6000 && (spoke = true))) { try { mr.stop(); } catch (e) {} return; }
+    VC.raf = requestAnimationFrame(tick);
+  };
+  VC.abortRec = () => { aborted = true; try { mr.stop(); } catch (e) {} };
+  VC.raf = requestAnimationFrame(tick);
+}
+async function vcSend(text){
+  if (!VC.on) return;
+  VC.heard = text; vcSet("penso");
+  vcStopMic(true);                         // iPhone: col microfono aperto la voce esce bassa dall'auricolare
+  const res = await botAsk(text);          // risposta arrivata, la voce sta partendo
+  if (!VC.on) return;
+  if (!res) return vcListen();
+  vcSet("parlo");
+  await res.talking;
+  if (VC.on && VC.state === "parlo") vcListen();
+}
+function vcOrb(){
+  unlockVoice();
+  if (VC.state === "parlo" || VC.state === "penso") { stopVoice(); return vcListen(); }      // lo interrompi e parli tu
+  if (VC.state === "ascolto") { if (VC.mr) { try { VC.mr.stop(); } catch (e) {} } else if (VC.sr) { try { VC.sr.stop(); } catch (e) {} } return; }
+  vcListen();
+}
+
 function tabBar(){
   const cur = S.route === "auto" ? "affari" : S.route;
   return `<nav class="tabs" aria-label="Sezioni">${TABS.map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
@@ -723,12 +933,14 @@ function render(opts){
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
   if (canBrowse()) {
-    if (S.route !== "auto" && !S.sheet) html += botFab();
+    if (S.route !== "auto" && !S.sheet && !VC.on) html += botFab();
+    if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
     html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "bot" ? sheetBot() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
   $app.innerHTML = html;
+  $app.classList.toggle("vc-on", VC.on);
   document.body.style.overflow = S.sheet ? "hidden" : "";
   if (active) { const el = document.getElementById(active); if (el && el.tagName === "INPUT") { el.focus({preventScroll:true}); try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} } }
   document.querySelectorAll(".chips").forEach((c, i) => { if (chipsX[i]) c.scrollLeft = chipsX[i]; });
@@ -837,7 +1049,7 @@ $app.addEventListener("click", e => {
   if (act === "close-bg" && e.target !== t) return;
   switch (act) {
     case "tab": if (v === S.route) { window.scrollTo({top: 0, behavior: "smooth"}); return; } go(v); return;
-    case "open": S.fromList = true; go("auto/" + v); return;
+    case "open": if (VC.on) vcEnd(); S.fromList = true; go("auto/" + v); return;
     case "back": if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go("affari", true); return;
     case "reload": loadCars(true); return;
     case "talk": talk(); return;
@@ -848,18 +1060,21 @@ $app.addEventListener("click", e => {
     case "parts": S.sheet = "parts"; break;
     case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); S.sheet = null; break;
     case "bot": {
+      // dal bottone "Chiedi": conversazione a voce, un tocco solo
+      if ((t.dataset.voce || t.classList.contains("bb-ask")) && (SR || EARS())) { vcStart(); return; }
       stopVoice(); unlockVoice(); S.sheet = "bot"; render({keep:true}); botScroll();
-      // dal bottone "Chiedi": si comincia subito ad ascoltare (un tocco solo)
-      if (SR && !A.busy && (t.dataset.voce || t.classList.contains("bb-ask"))) botListen();
-      else if (!SR) setTimeout(() => { const i = document.getElementById("bot-text"); if (i) i.focus(); }, 50);
+      setTimeout(() => { const i = document.getElementById("bot-text"); if (i) i.focus(); }, 50);
       return;
     }
+    case "vc-orb": vcOrb(); return;
+    case "vc-end": vcEnd(); return;
+    case "vc-chat": if (VC.abortRec) VC.abortRec(); if (VC.sr) { try { VC.sr.abort(); } catch (err) {} } VC.on = false; vcStopMic(true); stopVoice(); S.sheet = "bot"; render({keep:true}); botScroll(); return;
     case "bot-idea": unlockVoice(); botAsk(v); return;
     case "bot-mic": unlockVoice(); botListen(); return;
     case "bot-voice": A.voice = !A.voice; store.set("voce", A.voice); if (!A.voice) stopVoice(); else unlockVoice(); break;
     case "bot-zitto": stopVoice(); return;
     case "bb-more": if (S.bot) S.bot.open = true; break;
-    case "bot-ripeti": unlockVoice(); if (S.bot && S.bot.testo) { const was = A.voice; A.voice = true; speak(S.bot.testo); A.voice = was; } return;
+    case "bot-ripeti": unlockVoice(); if (S.bot && S.bot.testo) speak(S.bot.testo, true); return;
     case "bot-catalogo": { const m = A.msgs[Number(v)]; if (m && m.filtri) showCatalog(m.filtri, m.content); return; }
     case "bot-open": S.sheet = null; S.fromList = true; go("auto/" + v); return;
     case "tip": S.tip = false; store.set("tip", false); break;
