@@ -77,7 +77,7 @@ WHERE l.id=%s
 MAKE_NAMES = {"bmw": "BMW", "mg": "MG", "ds": "DS", "alfa-romeo": "Alfa Romeo", "land-rover": "Land Rover",
               "mercedes": "Mercedes", "volkswagen": "Volkswagen", "citroen": "Citroën", "skoda": "Škoda",
               "mini": "MINI", "seat": "SEAT", "cupra": "Cupra", "byd": "BYD", "kia": "Kia"}
-SOURCE_NAMES = {"subito": "Subito", "facebook": "Facebook Marketplace"}
+SOURCE_NAMES = {"subito": "Subito", "facebook": "Facebook Marketplace", "autoscout24": "AutoScout24"}
 FUEL_NAMES = {"gpl": "GPL", "ibrida": "ibrida", "elettrica": "elettrica", "metano": "metano",
               "diesel": "diesel", "benzina": "benzina"}
 

@@ -68,7 +68,7 @@ def _norm_city(c: str | None) -> str:
 
 
 def collector_is_fb(sources) -> bool:
-    return any(getattr(c, "source", "") == "facebook" for c, _ in sources)
+    return any(getattr(c, "source", "") in ("facebook", "autoscout24") for c, _ in sources)
 
 
 def city_provinces(conn) -> dict:
@@ -96,7 +96,12 @@ def run(mode: str) -> Counter:
 
     # Subito ogni 3 ore (opportunità) e ogni notte (mercato). Facebook ha un lavoro a parte,
     # meno frequente, perché ogni annuncio scaricato da Bright Data ha un costo.
-    if mode == "massiva":
+    if mode == "autoscout":
+        from ..collectors.autoscout import AutoScoutCollector
+        bands = ([(p, p + 499) for p in range(500, 5000, 500)] + [(p, p + 999) for p in range(5000, 12000, 1000)]
+                 + [(p, p + 1999) for p in range(12000, 20000, 2000)])
+        sources = [(AutoScoutCollector(), {"price_bands": bands, "pages": int(os.environ.get("AUTOSCOUT_PAGINE", "20"))})]
+    elif mode == "massiva":
         # raccolta aggressiva: TUTTA la Lombardia, tutte le fasce di prezzo fino a 40.000 € in fasce strette,
         # così si leggono quasi tutti gli annunci attivi (i doppioni li scarta il salvataggio)
         bands = ([(p, p + 249) for p in range(0, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
@@ -177,7 +182,7 @@ def run(mode: str) -> Counter:
             try:
                 for listing in collector.search(query):
                     normalize_fields(listing)
-                    if listing.source == "facebook":
+                    if listing.source in ("facebook", "autoscout24"):
                         # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
                         pv = prov_of.get(_norm_city(listing.city))
                         if pv and not listing.province:

@@ -105,6 +105,9 @@ def run() -> None:
     # Facebook lo raccolgono i servizi dealfinder-facebook (uno per account); nel ciclo solo se FB_NEL_CICLO=1
     if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_NEL_CICLO", "0") == "1" and facebook_due(int(os.environ.get("FACEBOOK_ORE", "23"))):
         step("facebook", collect, "facebook")
+    # AutoScout24 (privati attorno a Milano): ogni 6 ore; si spegne con AUTOSCOUT=0
+    if os.environ.get("AUTOSCOUT", "1") == "1" and _due("collect:autoscout", int(os.environ.get("AUTOSCOUT_ORE", "6"))):
+        step("autoscout", collect, "autoscout")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")
     # Il modello si riaddestra da solo quando la base cresce del 30% o ha più di 7 giorni
