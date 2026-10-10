@@ -53,6 +53,8 @@ const V = {targa:"", km:"", note:"", cambio:"", foto:[], stato:"form", err:"", r
 const R = {targa:"", pezzo:"", pezzi:[], stato:"form", err:"", res:null, aperti:{}};
 const L = {mode:"login", err:"", busy:false, sent:false, email:"", req:{}};
 
+const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
+const canBrowse = () => !!S.token || guest();
 function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sort:S.sort}); }
 
 /* ---------- API ---------- */
@@ -169,7 +171,7 @@ function viewList(){
     <div class="chips" role="group" aria-label="Prezzo">${priceChips}</div>
     <div class="chips" role="group" aria-label="Marca">${brandChips}</div>
   </header>
-  <main class="list" aria-live="polite">${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${guest() ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Anteprima libera: per contattare i venditori <a href="#/entra" style="color:inherit;font-weight:800">entra</a>.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- viste: scheda auto ---------- */
@@ -486,7 +488,7 @@ function parseHash(){
   const e = h.match(/^entra(?:\/([\w-]+))?$/);
   if (e) return {route: "entra", esito: e[1] || ""};
   if (h === "prova") return {route: "prova"};
-  if (!S.token) return {route: "vetrina"};
+  if (!canBrowse()) return {route: "vetrina"};
   return {route: ["vendi","ricambi","profilo"].includes(h) ? h : "affari", sel: null};
 }
 function go(route, replace){
@@ -502,10 +504,10 @@ function applyRoute(){
   if (S.token && ["entra","prova","vetrina"].includes(r.route)) { go("affari", true); return; }
   if (r.route === "entra") { S.esitoAccesso = r.esito; if (r.esito) history.replaceState(null, "", "#/entra"); }
   S.route = r.route; S.sel = r.sel; S.sheet = null; S.descOpen = false;
-  if (S.route === "auto") { if (!S.token) { go("entra", true); return; } loadDetail(S.sel); render({top:true}); }
+  if (S.route === "auto") { if (!canBrowse()) { go("entra", true); return; } loadDetail(S.sel); render({top:true}); }
   else if (S.route === "entra" || S.route === "prova") render({top:true});
   else render({y: S.scroll[S.route] || 0});
-  if (S.route === "affari" && S.token) loadCars();
+  if (S.route === "affari" && canBrowse()) loadCars();
 }
 window.addEventListener("popstate", () => { if (S.sheet) { S.sheet = null; } applyRoute(); });
 
@@ -520,7 +522,7 @@ function render(opts){
   const active = document.activeElement && document.activeElement.id;
   const chipsX = [...document.querySelectorAll(".chips")].map(c => c.scrollLeft);
   const land = document.getElementById("landing-root");
-  if (!S.token && S.route === "vetrina") {
+  if (!canBrowse() && S.route === "vetrina") {
     if (land) land.hidden = false; $app.hidden = true; $app.innerHTML = "";
     document.title = "Scovo · le auto da girare, prima degli altri";
     if (opts.y != null) window.scrollTo(0, opts.y);
@@ -528,10 +530,11 @@ function render(opts){
   }
   if (land) land.hidden = true; $app.hidden = false;
   let html;
-  if (!S.token) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
+  if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
+  else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
-  if (S.token) {
+  if (canBrowse()) {
     html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
@@ -576,7 +579,15 @@ function shrinkPhoto(file){
     im.src = url;
   });
 }
+function viewGuestLock(){
+  const t = ({vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
+  return svcHead(t, "Serve un account") + `<main class="list"><div class="empty">
+    <strong style="font:700 21px var(--disp)">Entra per usare ${t === "Profilo" ? "il tuo profilo" : t}</strong>
+    <span class="meta">${t === "Vendi" ? "Dalla targa: auto esatta, prezzo giusto e annuncio pronto." : t === "Ricambi" ? "Dalla targa: i pezzi compatibili al prezzo più basso." : "Il tuo account, le auto che hai contattato e le impostazioni."}</span>
+    <a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a><a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a></div></main>`;
+}
 async function talk(){
+  if (!S.token) { toast("Entra per contattare il venditore"); go("entra"); return; }
   const d = S.detail[S.sel]; if (!d || d.err) return;
   const btn = document.getElementById("talk");
   // la finestra si apre subito (dentro il tocco), altrimenti il telefono la blocca
@@ -719,6 +730,7 @@ api("/api/auth/metodi").then(m => {
   S.metodi = m || {};
   document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
   if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
+  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo)$/.test(h) ? h : "affari", true); }
 }).catch(() => {});
 (function demo(){
   const card = document.getElementById("demo"), r = document.getElementById("sconto-demo");

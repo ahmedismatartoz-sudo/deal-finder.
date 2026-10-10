@@ -52,6 +52,18 @@ def current_user(request: Request, admin: bool = False) -> dict:
     return data
 
 
+def site_open() -> bool:
+    """SITO_APERTO=1: chiunque vede l'elenco e le schede (anteprima). Contatti, Vendi e Ricambi restano solo con accesso."""
+    return os.environ.get("SITO_APERTO") == "1"
+
+
+def viewer(request: Request) -> dict:
+    """Utente con accesso, oppure ospite se il sito è aperto e non c'è un accesso."""
+    if not request.headers.get("authorization") and site_open():
+        return {"id": 0, "role": "ospite", "sid": None}
+    return current_user(request)
+
+
 def start_session(request: Request, dealer: dict, method: str) -> dict:
     """Login riuscito: apre la sessione personale e restituisce token e dati."""
     with connect() as conn:
@@ -447,7 +459,7 @@ def health(request: Request):
 # Entra con Google / Apple
 # ---------------------------------------------------------------------------
 def auth_metodi(request: Request):
-    return jsonify(social.enabled())
+    return jsonify({**social.enabled(), "aperto": site_open()})
 
 
 def auth_start(request: Request):
@@ -589,7 +601,7 @@ async def servizio_ricambi(request: Request):
 # Sito Scovo: affari, scheda, contatto, foto
 # ---------------------------------------------------------------------------
 def affari(request: Request):
-    user = current_user(request)
+    user = viewer(request)
     with connect() as conn:
         dealer = conn.execute("SELECT provinces FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         prov = list((dealer or {}).get("provinces") or [])
@@ -603,7 +615,7 @@ def affari(request: Request):
 
 
 def affare(request: Request):
-    user = current_user(request)
+    user = viewer(request)
     lid = int(request.path_params["id"])
     with connect() as conn:
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
