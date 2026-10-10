@@ -124,7 +124,12 @@ def cerca_affari(conn, user: dict, a: dict) -> dict:
     else:
         out.sort(key=lambda x: -x["guadagno_da"])
     lim = max(1, min(int(a.get("limite") or 8), 10))
-    return {"totale": len(out), "sconto": sconto,
+    filtri = {k: a[k] for k in ("modello", "prezzo_min", "prezzo_max", "guadagno_min", "stato", "anno_min", "km_max", "fonte")
+              if a.get(k) not in (None, "", "tutte")}
+    if marca:
+        filtri["marca"] = scovo.make_name(_slug_make(marca))
+    filtri["sconto"] = sconto
+    return {"totale": len(out), "sconto": sconto, "filtri": filtri,
             "auto": [{k: x[k] for k in ("id", "nome", "anno", "km", "carb", "zona", "fonte", "prezzo", "mercato", "riv",
                                         "rip_lo", "rip_hi", "guadagno_da", "guadagno_a", "verificare", "foto")}
                      for x in out[:lim]]}
@@ -203,7 +208,7 @@ def ask_ai(conn, user: dict, messages: list[dict], gate, log_use) -> dict:
                 **_plate_tools(gate, log_use)}
     msgs = [{"role": m["role"], "content": str(m["content"])[:2000]} for m in messages[-10:]
             if m.get("role") in ("user", "assistant") and m.get("content")]
-    cars, steps = [], []
+    cars, steps, filtri = [], [], None
     model = os.environ.get("ASSISTENTE_MODEL", ai.MODEL_DEEP)
     for _ in range(MAX_PASSI):
         resp = ai.client().messages.create(model=model, max_tokens=900, system=SYSTEM, tools=TOOLS, messages=msgs)
@@ -215,7 +220,7 @@ def ask_ai(conn, user: dict, messages: list[dict], gate, log_use) -> dict:
             conn.rollback()
         if resp.stop_reason != "tool_use":
             text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
-            return {"risposta": text or "Non ho trovato una risposta.", "auto": cars, "passi": steps}
+            return {"risposta": text or "Non ho trovato una risposta.", "auto": cars, "passi": steps, "filtri": filtri}
         msgs.append({"role": "assistant", "content": [b.model_dump() for b in resp.content]})
         results = []
         for b in resp.content:
@@ -229,6 +234,7 @@ def ask_ai(conn, user: dict, messages: list[dict], gate, log_use) -> dict:
                 out = {"errore": msg}
             if b.name == "cerca_affari" and isinstance(out, dict):
                 cars = out.get("auto") or cars
+                filtri = {**(out.get("filtri") or {}), "totale": out.get("totale", 0)}
             results.append({"type": "tool_result", "tool_use_id": b.id,
                             "content": json.dumps(out, ensure_ascii=False, default=str)[:12000]})
         msgs.append({"role": "user", "content": results})
@@ -391,8 +397,8 @@ def ask_simple(conn, user: dict, text: str, gate, log_use) -> dict:
              else f"guadagno da {eur(max(c['guadagno_da'], 0))} a {eur(c['guadagno_a'])}")
         frasi.append(f"{c['nome']} del {c['anno']}, costa {eur(c['prezzo'])}, {g}.")
     if n > 3:
-        frasi.append("Le altre le vedi qui sotto.")
-    return {"risposta": " ".join(frasi), "auto": res["auto"]}
+        frasi.append(f"Te le metto tutte e {n} sullo schermo.")
+    return {"risposta": " ".join(frasi), "auto": res["auto"], "filtri": {**res["filtri"], "totale": n}}
 
 
 def answer(conn, user: dict, messages: list[dict], gate, log_use) -> dict:

@@ -100,11 +100,23 @@ function filtered(over){
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
+    .filter(c => botMatch(c, s.bot))
     .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax);
+}
+/* filtri in più che mette l'assistente (modello, guadagno minimo, anno, km, fonte) */
+function botMatch(c, b){
+  if (!b) return true;
+  const norm = t => String(t || "").toLowerCase().replace(/[-_]/g, " ");
+  if (b.modello && !norm(c.nome).includes(norm(b.modello))) return false;
+  if (b.guadagno_min && c.gain < Number(b.guadagno_min)) return false;
+  if (b.anno_min && (c.anno || 0) < Number(b.anno_min)) return false;
+  if (b.km_max && c.km && c.km > Number(b.km_max)) return false;
+  if (b.fonte && !norm(c.fonte).includes(norm(b.fonte))) return false;
+  return true;
 }
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
-function nFiltri(){ return S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
+function nFiltri(){ return (S.bot ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 function statoTxt(c){ return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
@@ -171,7 +183,26 @@ function viewList(){
     <div class="chips" role="group" aria-label="Prezzo">${priceChips}</div>
     <div class="chips" role="group" aria-label="Marca">${brandChips}</div>
   </header>
-  <main class="list" aria-live="polite">${guest() ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Anteprima libera: per contattare i venditori <a href="#/entra" style="color:inherit;font-weight:800">entra</a>.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Anteprima libera: per contattare i venditori <a href="#/entra" style="color:inherit;font-weight:800">entra</a>.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+}
+
+function botBanner(n){
+  const b = S.bot, bits = [];
+  if (S.brands.length) bits.push(S.brands.join(", "));
+  if (b.modello) bits.push(cap(b.modello));
+  if (S.min !== "" || S.max !== "") bits.push(S.min !== "" && S.max !== "" ? eur(S.min) + "–" + eur(S.max) : S.min !== "" ? "da " + eur(S.min) : "fino a " + eur(S.max));
+  if (b.guadagno_min) bits.push("guadagno da " + eur(b.guadagno_min));
+  if (S.stato !== "tutte") bits.push(S.stato === "sane" ? "senza danni" : "con danni");
+  if (b.anno_min) bits.push("dal " + b.anno_min);
+  if (b.km_max) bits.push("max " + num(b.km_max) + " km");
+  if (b.fonte) bits.push(cap(b.fonte));
+  return `<section class="bot-banner" aria-label="Risposta di Scovo">
+    <div class="bb-top"><span class="bb-ic" aria-hidden="true">${MIC}</span><b>${n} ${n === 1 ? "auto" : "auto"} per te</b>
+      ${A.speaking ? `<button class="link bb-stop" data-act="bot-zitto">Basta voce</button>` : b.testo ? `<button class="link bb-stop" data-act="bot-ripeti">Riascolta</button>` : ""}</div>
+    ${b.testo ? `<p class="bb-txt${b.open ? " open" : ""}">${esc(b.testo)}</p>${!b.open && b.testo.length > 120 ? `<button class="link bb-more" data-act="bb-more">Leggi tutta la risposta</button>` : ""}` : ""}
+    ${bits.length ? `<div class="bb-tags">${bits.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+    <div class="bb-act"><button class="btn btn-blue bb-ask" data-act="bot">${MIC} Chiedi ancora</button><button class="btn" data-act="reset">Togli filtri</button></div>
+  </section>`;
 }
 
 /* ---------- viste: scheda auto ---------- */
@@ -444,7 +475,7 @@ function viewLogin(){
 async function onSubmit(e){
   const f = e.target; if (!f.id) return;
   e.preventDefault();
-  if (f.id === "bot-form") { const i = document.getElementById("bot-text"); botAsk(i ? i.value : A.text); return; }
+  if (f.id === "bot-form") { unlockVoice(); const i = document.getElementById("bot-text"); botAsk(i ? i.value : A.text); return; }
   const data = Object.fromEntries(new FormData(f).entries());
   if (data.email) L.email = data.email;
   if (f.id === "req-form") L.req = data;
@@ -515,73 +546,158 @@ window.addEventListener("popstate", () => { if (S.sheet) { S.sheet = null; } app
 /* ---------- disegno ---------- */
 /* ---------- Assistente a voce ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const A = {msgs: [], listening: false, busy: false, voice: store.get("voce", true), rec: null, text: ""};
-const BOT_IDEE = ["Che affari ci sono oggi sopra i 3.000 € di guadagno?", "Che Audi ci sono oggi?", "Auto sotto i 5.000 € senza danni",
+const TTS = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+const A = {msgs: [], listening: false, busy: false, voice: store.get("voce", true), rec: null, text: "", speaking: false, unlocked: false, voiceObj: null};
+const BOT_IDEE = ["Che affari ci sono oggi sopra i 3.000 € di guadagno?", "Fammi vedere tutte le Audi", "Auto sotto i 5.000 € senza danni",
                   "Quanto vale una Audi TT del 2014?", "Controlla la targa AB123CD e dimmi il prezzo di faro e paraurti"];
 const MIC = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
-function botFab(){ return `<button class="bot-fab" data-act="bot" aria-label="Chiedi a Scovo a voce">${MIC}<span>Chiedi</span></button>`; }
+/* dentro le app (Instagram, Facebook, WhatsApp...) il microfono spesso non c'è */
+const IN_APP = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Telegram|GSA\/|; wv\)/i.test(navigator.userAgent || "");
+function botFab(){ return `<button class="bot-fab" data-act="bot" data-voce="1" aria-label="Chiedi a Scovo a voce">${MIC}<span>Chiedi</span></button>`; }
+
+/* la voce: si sceglie una voce italiana, preferendo quelle più naturali */
+function pickVoice(){
+  if (!TTS) return null;
+  const vs = speechSynthesis.getVoices().filter(v => /^it/i.test(v.lang));
+  const pref = [/premium|enhanced|natural|neural/i, /google/i, /alice|federica|paola|luca|elsa|diego|isabella/i];
+  for (const re of pref) { const v = vs.find(v => re.test(v.name)); if (v) return v; }
+  return vs[0] || null;
+}
+if (TTS) { A.voiceObj = pickVoice(); try { speechSynthesis.addEventListener("voiceschanged", () => { A.voiceObj = pickVoice(); }); } catch (e) {} }
+/* iPhone: la voce parte solo se il primo "parla" avviene dentro un tocco. Lo facciamo subito, in silenzio. */
+function unlockVoice(){
+  if (!TTS || A.unlocked) return;
+  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "it-IT"; speechSynthesis.speak(u); A.unlocked = true; } catch (e) {}
+}
+function speakable(t){
+  return String(t || "").replace(/€/g, " euro").replace(/(\d)\.(\d{3})/g, "$1$2").replace(/\+(\d)/g, "più $1")
+    .replace(/(\d)\s*[–-]\s*(\d)/g, "$1 a $2").replace(/\bkm\b/g, "chilometri").replace(/[*_#•]/g, " ");
+}
+function speak(text){
+  if (!A.voice || !TTS || !text) return;
+  try {
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    // frasi corte: Chrome si blocca sulle frasi lunghe, iPhone le taglia
+    const parts = speakable(text).split(/(?<=[.!?;:])\s+/);
+    const chunks = [];
+    parts.forEach(p => { p = p.trim(); if (!p) return; if (chunks.length && (chunks[chunks.length - 1] + " " + p).length < 160) chunks[chunks.length - 1] += " " + p; else chunks.push(p); });
+    A.speaking = true; refreshSpeaking();
+    chunks.forEach((c, i) => {
+      const u = new SpeechSynthesisUtterance(c); u.lang = "it-IT"; u.rate = 1.04; u.pitch = 1;
+      if (A.voiceObj) u.voice = A.voiceObj;
+      if (i === chunks.length - 1) { u.onend = u.onerror = () => { A.speaking = false; refreshSpeaking(); }; }
+      speechSynthesis.speak(u);
+    });
+    try { speechSynthesis.resume(); } catch (e) {}
+  } catch (e) { A.speaking = false; }
+}
+function stopVoice(){ if (!A.speaking) return; try { speechSynthesis.cancel(); } catch (e) {} A.speaking = false; refreshSpeaking(); }
+function refreshSpeaking(){
+  const b = document.querySelector(".bb-stop");
+  if (b) { b.dataset.act = A.speaking ? "bot-zitto" : "bot-ripeti"; b.textContent = A.speaking ? "Basta voce" : "Riascolta"; }
+}
+
 function sheetBot(){
-  const msgs = A.msgs.map(m => m.role === "user" ? `<div class="b-msg me">${esc(m.content)}</div>` : `
-    <div class="b-msg bot">${esc(m.content)}${(m.auto || []).length ? `<div class="b-cars">${m.auto.map(c => `
+  const msgs = A.msgs.map((m, k) => m.role === "user" ? `<div class="b-msg me">${esc(m.content)}</div>` : `
+    <div class="b-msg bot${m.err ? " b-err" : ""}">${esc(m.content)}${(m.auto || []).length ? `<div class="b-cars">${m.auto.slice(0, 3).map(c => `
       <button class="b-car" data-act="bot-open" data-v="${c.id}">${c.foto ? `<img src="${esc(c.foto)}" alt="" loading="lazy">` : `<span class="b-noimg">${CAR_SVG}</span>`}
         <span class="b-car-t"><b>${esc(c.nome)}</b><span>${esc([c.anno, c.zona].filter(Boolean).join(" · "))}</span>
-        <span>${eur(c.prezzo)} · <em>${c.guadagno_da === c.guadagno_a ? "+" + eur(c.guadagno_a) : "+" + num(Math.max(c.guadagno_da, 0)) + "–" + num(c.guadagno_a) + " €"}</em></span></span></button>`).join("")}</div>` : ""}</div>`).join("");
-  const ideas = A.msgs.length ? "" : `<div class="b-ideas"><p class="hint">Chiedimi quello che vuoi, a voce o scrivendo. Per esempio:</p>${BOT_IDEE.map(t => `<button class="pill" data-act="bot-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>`;
+        <span>${eur(c.prezzo)} · <em>${c.guadagno_da === c.guadagno_a ? "+" + eur(c.guadagno_a) : "+" + num(Math.max(c.guadagno_da, 0)) + "–" + num(c.guadagno_a) + " €"}</em></span></span></button>`).join("")}</div>` : ""}
+      ${m.filtri && m.filtri.totale ? `<button class="btn btn-blue b-all" data-act="bot-catalogo" data-v="${k}">Vedi ${m.filtri.totale === 1 ? "l'auto" : "tutte le " + m.filtri.totale + " auto"} sullo schermo</button>` : ""}</div>`).join("");
+  const micNote = !SR ? `<p class="hint b-note">${IN_APP ? "Qui dentro l'app il microfono non funziona: apri scovo.onrender.com in Safari o Chrome per parlare. Intanto puoi scrivere." : "Questo browser non ascolta la voce: scrivi la domanda, ti rispondo lo stesso" + (TTS ? " a voce." : ".")}</p>` : "";
+  const ideas = A.msgs.length ? "" : `<div class="b-ideas"><p class="hint">${SR ? "Tocca il microfono e parla, oppure scrivi." : ""} Per esempio:</p>${BOT_IDEE.map(t => `<button class="pill" data-act="bot-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>`;
   return `
   <div class="sheet-wrap" data-act="close-bg"><div class="sheet bot-sheet" role="dialog" aria-modal="true" aria-labelledby="bh">
     <div class="sheet-head"><h2 id="bh">Chiedi a Scovo</h2><div style="display:flex;gap:4px;align-items:center">
-      <button class="link" data-act="bot-voice" aria-pressed="${A.voice}">${A.voice ? "Voce sì" : "Voce no"}</button><button class="link" data-act="close">Chiudi</button></div></div>
-    <div class="sheet-body bot-body" id="bot-body" aria-live="polite">${ideas}${msgs}
+      ${TTS ? `<button class="link" data-act="bot-voice" aria-pressed="${A.voice}">${A.voice ? "Voce sì" : "Voce no"}</button>` : ""}<button class="link" data-act="close">Chiudi</button></div></div>
+    <div class="sheet-body bot-body" id="bot-body" aria-live="polite">${micNote}${ideas}${msgs}
       ${A.busy ? `<div class="b-msg bot b-wait"><span class="spin" aria-hidden="true"></span>Ci penso…</div>` : ""}
       <div class="b-live" id="bot-live" ${A.listening ? "" : "hidden"}>Ti ascolto…</div>
     </div>
     <form class="bot-foot" id="bot-form">
-      <input id="bot-text" placeholder="${SR ? "Scrivi o tocca il microfono" : "Scrivi la tua domanda"}" autocomplete="off" value="${esc(A.text)}" enterkeyhint="send">
-      ${SR ? `<button type="button" class="bot-mic${A.listening ? " on" : ""}" data-act="bot-mic" aria-label="${A.listening ? "Smetti di ascoltare" : "Parla"}">${MIC}</button>` : ""}
+      <input id="bot-text" placeholder="${SR ? "Parla o scrivi qui" : "Scrivi la tua domanda"}" autocomplete="off" value="${esc(A.text)}" enterkeyhint="send">
+      <button type="button" class="bot-mic${A.listening ? " on" : ""}${SR ? "" : " off"}" data-act="bot-mic" aria-label="${A.listening ? "Smetti di ascoltare" : "Parla"}">${MIC}</button>
       <button type="submit" class="bot-send" aria-label="Invia"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </form>
   </div></div>`;
 }
 function botScroll(){ const b = document.getElementById("bot-body"); if (b) b.scrollTop = b.scrollHeight; }
-function speak(text){
-  if (!A.voice || !window.speechSynthesis) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text); u.lang = "it-IT"; u.rate = 1.05;
-    const v = speechSynthesis.getVoices().find(v => /^it/i.test(v.lang)); if (v) u.voice = v;
-    speechSynthesis.speak(u);
-  } catch (e) {}
+function botRender(){ if (S.sheet === "bot") { render({keep:true}); botScroll(); } }
+
+/* mette tutte le auto trovate nell'elenco principale, come un catalogo */
+function showCatalog(f, testo){
+  if (!f) return;
+  S.brands = f.marca ? [f.marca] : [];
+  S.min = f.prezzo_min ? String(f.prezzo_min) : ""; S.max = f.prezzo_max ? String(f.prezzo_max) : "";
+  S.stato = f.stato || "tutte";
+  if (f.sconto) S.sconto = Number(f.sconto);
+  if (f.ordina) S.sort = f.ordina;
+  S.bot = {testo: testo || "", modello: f.modello || "", guadagno_min: f.guadagno_min || 0, anno_min: f.anno_min || 0, km_max: f.km_max || 0, fonte: f.fonte || ""};
+  saveFilters();
+  S.sheet = null;
+  if (S.route !== "affari") { S.scroll.affari = 0; go("affari"); }
+  else render({top:true});
+  if (!S.cars) loadCars(true);
 }
+
 async function botAsk(text){
   text = (text || "").trim(); if (!text || A.busy) return;
+  const i = document.getElementById("bot-text"); if (i) i.blur();      // chiude la tastiera: si vede la risposta
   A.msgs.push({role: "user", content: text}); A.text = ""; A.busy = true;
-  render({keep:true}); botScroll();
+  botRender();
+  let r;
   try {
-    const r = await api("/api/assistente", {method: "POST", body: {messages: A.msgs.map(m => ({role: m.role, content: m.content}))}});
-    A.msgs.push({role: "assistant", content: r.risposta || "", auto: r.auto || []});
-    speak(r.risposta || "");
-  } catch (e) { A.msgs.push({role: "assistant", content: e.message}); }
+    r = await api("/api/assistente", {method: "POST", body: {messages: A.msgs.filter(m => !m.err).slice(-12).map(m => ({role: m.role, content: m.content}))}});
+  } catch (e) {
+    A.busy = false;
+    const msg = e.status === 429 ? (e.message || "Hai fatto tante domande oggi: riprova domani o entra col tuo account.") : e.message || "Non riesco a rispondere adesso, riprova.";
+    A.msgs.push({role: "assistant", content: msg, err: true}); speak(msg); botRender(); return;
+  }
   A.busy = false;
-  if (S.sheet === "bot") { render({keep:true}); botScroll(); }
+  const risposta = r.risposta || "Non ho trovato una risposta.";
+  A.msgs.push({role: "assistant", content: risposta, auto: r.auto || [], filtri: r.filtri || null});
+  speak(risposta);
+  if (r.filtri && r.filtri.totale > 0) showCatalog(r.filtri, risposta);     // le auto trovate vanno tutte sullo schermo
+  else botRender();
 }
+
+const SR_ERR = {
+  "not-allowed": "Il microfono è bloccato: permettilo nelle impostazioni del browser, oppure scrivi la domanda.",
+  "service-not-allowed": IN_APP ? "Qui dentro l'app il microfono non va: apri il sito in Safari o Chrome. Intanto scrivi." : "Il riconoscimento vocale non è attivo su questo telefono: scrivi la domanda.",
+  "audio-capture": "Non trovo il microfono: scrivi la domanda.",
+  "network": "Per capire la voce serve internet: riprova o scrivi.",
+  "no-speech": "Non ti ho sentito: tocca il microfono e parla subito."
+};
 function botListen(){
-  if (!SR) return;
-  if (A.listening && A.rec) { A.rec.stop(); return; }
-  try { speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
-  const rec = new SR(); A.rec = rec;
-  rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = false;
-  let finalText = "";
+  if (!SR) {
+    toast(IN_APP ? "Apri il sito in Safari o Chrome per parlare. Qui puoi scrivere." : "Questo browser non ascolta la voce: scrivi la domanda.");
+    const i = document.getElementById("bot-text"); if (i) i.focus();
+    return;
+  }
+  if (A.listening && A.rec) { try { A.rec.stop(); } catch (e) {} return; }
+  stopVoice();
+  let rec;
+  try { rec = new SR(); } catch (e) { toast(SR_ERR["service-not-allowed"]); return; }
+  A.rec = rec;
+  rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  let finalText = "", interimText = "", failed = false;
+  const guard = setTimeout(() => { try { rec.stop(); } catch (e) {} }, 15000);
   rec.onresult = ev => {
-    let interim = "";
+    interimText = "";
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
-      if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript; else interim += ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript; else interimText += ev.results[i][0].transcript;
     }
-    const live = document.getElementById("bot-live"); if (live) { live.hidden = false; live.textContent = (finalText + " " + interim).trim() || "Ti ascolto…"; }
+    const live = document.getElementById("bot-live"); if (live) { live.hidden = false; live.textContent = (finalText + " " + interimText).trim() || "Ti ascolto…"; }
   };
-  rec.onerror = ev => { if (ev.error === "not-allowed") toast("Permetti l'uso del microfono per parlare con Scovo"); };
-  rec.onend = () => { A.listening = false; A.rec = null; if (finalText.trim()) botAsk(finalText); else render({keep:true}); };
-  A.listening = true; render({keep:true}); botScroll();
-  try { rec.start(); } catch (e) { A.listening = false; render({keep:true}); }
+  rec.onerror = ev => { if (ev.error === "aborted") return; failed = true; toast(SR_ERR[ev.error] || "Non ho capito: riprova o scrivi la domanda."); };
+  rec.onend = () => {
+    clearTimeout(guard);
+    A.listening = false; A.rec = null;
+    const said = (finalText || interimText).trim();      // iPhone a volte chiude senza risultato "finale"
+    if (said) botAsk(said); else { if (!failed && S.sheet === "bot") toast(SR_ERR["no-speech"]); botRender(); }
+  };
+  A.listening = true; botRender();
+  try { rec.start(); } catch (e) { clearTimeout(guard); A.listening = false; A.rec = null; toast(SR_ERR["service-not-allowed"]); botRender(); }
 }
 
 function tabBar(){
@@ -730,14 +846,24 @@ $app.addEventListener("click", e => {
     case "band": setBand(v); saveFilters(); break;
     case "filters": S.sheet = "filters"; break;
     case "parts": S.sheet = "parts"; break;
-    case "close": case "close-bg": if (A.rec) A.rec.abort(); try { speechSynthesis.cancel(); } catch (e) {} S.sheet = null; break;
-    case "bot": S.sheet = "bot"; render({keep:true}); botScroll(); setTimeout(() => { const i = document.getElementById("bot-text"); if (i && !SR) i.focus(); }, 50); return;
-    case "bot-idea": botAsk(v); return;
-    case "bot-mic": botListen(); return;
-    case "bot-voice": A.voice = !A.voice; store.set("voce", A.voice); if (!A.voice) { try { speechSynthesis.cancel(); } catch (e) {} } break;
+    case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); S.sheet = null; break;
+    case "bot": {
+      stopVoice(); unlockVoice(); S.sheet = "bot"; render({keep:true}); botScroll();
+      // dal bottone "Chiedi": si comincia subito ad ascoltare (un tocco solo)
+      if (SR && !A.busy && (t.dataset.voce || t.classList.contains("bb-ask"))) botListen();
+      else if (!SR) setTimeout(() => { const i = document.getElementById("bot-text"); if (i) i.focus(); }, 50);
+      return;
+    }
+    case "bot-idea": unlockVoice(); botAsk(v); return;
+    case "bot-mic": unlockVoice(); botListen(); return;
+    case "bot-voice": A.voice = !A.voice; store.set("voce", A.voice); if (!A.voice) stopVoice(); else unlockVoice(); break;
+    case "bot-zitto": stopVoice(); return;
+    case "bb-more": if (S.bot) S.bot.open = true; break;
+    case "bot-ripeti": unlockVoice(); if (S.bot && S.bot.testo) { const was = A.voice; A.voice = true; speak(S.bot.testo); A.voice = was; } return;
+    case "bot-catalogo": { const m = A.msgs[Number(v)]; if (m && m.filtri) showCatalog(m.filtri, m.content); return; }
     case "bot-open": S.sheet = null; S.fromList = true; go("auto/" + v); return;
     case "tip": S.tip = false; store.set("tip", false); break;
-    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; saveFilters(); break;
+    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; S.bot = null; stopVoice(); saveFilters(); break;
     case "stato": S.stato = v; saveFilters(); break;
     case "sconto": S.sconto = Number(v); saveFilters(); break;
     case "sort": S.sort = v; saveFilters(); break;
