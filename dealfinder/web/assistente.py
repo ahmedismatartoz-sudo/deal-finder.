@@ -100,7 +100,7 @@ def cerca_affari(conn, user: dict, a: dict) -> dict:
     out = []
     for it in items:
         riv, g_lo, g_hi = _gain(it, sconto)
-        if g_lo < scovo.MARGINE_MINIMO:
+        if g_lo < scovo.soglia(it["prezzo"]):
             continue
         if marca and scovo.make_name(_slug_make(marca)).lower() != it["marca"].lower():
             continue

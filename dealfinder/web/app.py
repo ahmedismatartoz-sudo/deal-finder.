@@ -700,7 +700,7 @@ def affari(request: Request):
         rows = conn.execute(sql + " LIMIT 3000", {"me": user["id"], "prov": prov}).fetchall()
     items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
     return jsonify({"items": items, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
-                    "margine_minimo": scovo.MARGINE_MINIMO,
+                    "margine_minimo": scovo.MARGINE_MINIMO, "soglie": [[l if l < 10**9 else None, m] for l, m in scovo.SOGLIE],
                     "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
 
 

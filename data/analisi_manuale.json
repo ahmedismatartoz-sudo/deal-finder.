@@ -11648,7 +11648,7 @@
  },
  {
   "id": 46227,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -11733,11 +11733,11 @@
   ],
   "ricambi_min": 2600,
   "ricambi_max": 5930,
-  "nota": "Lancia Ypsilon IV (2024-) 1.2 Turbo Hybrid 48V 100 CV eDCT6 Edizione Cassina 2025. Urto anteriore dx con airbag esplosi e auto non marciante; modello 2024+ con ricambi usati quasi introvabili (tutti stimati su listino nuovo). Margine ridotto: prezzo 11.300 vs rivendita ~16.500. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Lancia Ypsilon IV (2024-) 1.2 Turbo Hybrid 48V 100 CV eDCT6 Edizione Cassina 2025. Urto anteriore dx con airbag esplosi e auto non marciante; modello 2024+ con ricambi usati quasi introvabili (tutti stimati su listino nuovo). Margine ridotto: prezzo 11.300 vs rivendita ~16.500."
  },
  {
   "id": 46230,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -11822,11 +11822,11 @@
   ],
   "ricambi_min": 2600,
   "ricambi_max": 5930,
-  "nota": "Lancia Ypsilon IV (2024-) 1.2 Turbo Hybrid 48V 100 CV eDCT6 Edizione Cassina 2025. Duplicato dell'annuncio 46227 (stesso venditore MCcar, stessa auto). Urto anteriore dx con airbag esplosi e auto non marciante; modello 2024+ con ricambi usati quasi introvabili (tutti stimati su listino nuovo). Margine ridotto: prezzo 11.300 vs rivendita ~16.500. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Lancia Ypsilon IV (2024-) 1.2 Turbo Hybrid 48V 100 CV eDCT6 Edizione Cassina 2025. Duplicato dell'annuncio 46227 (stesso venditore MCcar, stessa auto). Urto anteriore dx con airbag esplosi e auto non marciante; modello 2024+ con ricambi usati quasi introvabili (tutti stimati su listino nuovo). Margine ridotto: prezzo 11.300 vs rivendita ~16.500."
  },
  {
   "id": 1013,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -11838,7 +11838,7 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 450,
-  "nota": "Hyundai Tucson III (TL) 1.7 CRDi 141 CV DCT7 XPossible 2016. Dichiarata senza incidenti e perfettamente funzionante: nessun danno da prezzare; 177.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Hyundai Tucson III (TL) 1.7 CRDi 141 CV DCT7 XPossible 2016. Dichiarata senza incidenti e perfettamente funzionante: nessun danno da prezzare; 177.000 km."
  },
  {
   "id": 112,
@@ -11849,7 +11849,7 @@
  },
  {
   "id": 13058,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -11887,11 +11887,11 @@
   ],
   "ricambi_min": 129,
   "ricambi_max": 310,
-  "nota": "Mercedes-Benz Classe B (W246) restyling B 180 d 1.5 OM607 109 CV 7G-DCT Executive 2018. Spia motore accesa (probabile EGR, motore dichiarato ok) e lavavetri non funzionante; 106.500 km tagliandata. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mercedes-Benz Classe B (W246) restyling B 180 d 1.5 OM607 109 CV 7G-DCT Executive 2018. Spia motore accesa (probabile EGR, motore dichiarato ok) e lavavetri non funzionante; 106.500 km tagliandata."
  },
  {
   "id": 3575,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -11903,11 +11903,11 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 300,
-  "nota": "Mercedes-Benz CLA (C117) CLA 200 d 2.1 OM651 136 CV manuale 2016. Dichiarata mai incidentata e senza interventi necessari; 203.000 km, nessun danno da prezzare. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mercedes-Benz CLA (C117) CLA 200 d 2.1 OM651 136 CV manuale 2016. Dichiarata mai incidentata e senza interventi necessari; 203.000 km, nessun danno da prezzare."
  },
  {
   "id": 47081,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -11940,21 +11940,21 @@
   ],
   "ricambi_min": 100,
   "ricambi_max": 646,
-  "nota": "Mercedes-Benz CLA Shooting Brake (X117) restyling CLA 180 1.6 M270 122 CV manuale Sport 2018. Grandinata (riparazione levabolli = manodopera) e fanale posteriore dx danneggiato ma funzionante; meccanica dichiarata perfetta, 156.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mercedes-Benz CLA Shooting Brake (X117) restyling CLA 180 1.6 M270 122 CV manuale Sport 2018. Grandinata (riparazione levabolli = manodopera) e fanale posteriore dx danneggiato ma funzionante; meccanica dichiarata perfetta, 156.000 km."
  },
  {
   "id": 680,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Seat Leon III (5F) restyling 1.2 TSI Style 5p 2018 (potenza 86 CV in annuncio da verificare). Dichiarata mai incidentata, solo normali graffi d'uso: nessun danno da prezzare. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Seat Leon III (5F) restyling 1.2 TSI Style 5p 2018 (potenza 86 CV in annuncio da verificare). Dichiarata mai incidentata, solo normali graffi d'uso: nessun danno da prezzare."
  },
  {
   "id": 10266,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -11966,11 +11966,11 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 250,
-  "nota": "BMW X5 (E70 LCI) xDrive30d 3.0 N57 235 CV Steptronic 2011. Nessun danno dichiarato; il wrap blu satinato puo nascondere difetti di carrozzeria, verificare sotto pellicola. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW X5 (E70 LCI) xDrive30d 3.0 N57 235 CV Steptronic 2011. Nessun danno dichiarato; il wrap blu satinato puo nascondere difetti di carrozzeria, verificare sotto pellicola."
  },
  {
   "id": 657,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -11982,27 +11982,27 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 600,
-  "nota": "Audi A6 Avant (C7 4G) 3.0 TDI 245 CV quattro S tronic 2013. Dichiarata non incidentata e senza lavori; anno e km non indicati nell'annuncio (183.000 km stimati), verificare libretto. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Audi A6 Avant (C7 4G) 3.0 TDI 245 CV quattro S tronic 2013. Dichiarata non incidentata e senza lavori; anno e km non indicati nell'annuncio (183.000 km stimati), verificare libretto."
  },
  {
   "id": 44936,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Land Rover Discovery Sport (L550) 2.0 TD4 180 CV aut. 9 marce HSE Luxury 2017. Dichiarata mai incidentata e mai grandinata, appena revisionata: nessun danno da prezzare; 170.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Land Rover Discovery Sport (L550) 2.0 TD4 180 CV aut. 9 marce HSE Luxury 2017. Dichiarata mai incidentata e mai grandinata, appena revisionata: nessun danno da prezzare; 170.000 km."
  },
  {
   "id": 1099,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "BMW Serie 1 (F20 LCI) 116d 1.5 B37 116 CV 5p Business 2016. Nessun danno, freni e frizione appena sostituiti: nessun danno da prezzare. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW Serie 1 (F20 LCI) 116d 1.5 B37 116 CV 5p Business 2016. Nessun danno, freni e frizione appena sostituiti: nessun danno da prezzare."
  },
  {
   "id": 44699,
@@ -12095,7 +12095,7 @@
  },
  {
   "id": 46044,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12132,11 +12132,11 @@
   ],
   "ricambi_min": 420,
   "ricambi_max": 1870,
-  "nota": "Volkswagen Passat B6 (3C) 2008 benzina + GPL aftermarket, motore a catena (probabile 1.8 TSI 160 CV BZB, da verificare) manuale 6 marce. Testata rotta per cedimento pattino catena distribuzione; motorizzazione non indicata (catena: 1.8 TSI o 1.6 FSI), prezzo da confermare con codice motore. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Passat B6 (3C) 2008 benzina + GPL aftermarket, motore a catena (probabile 1.8 TSI 160 CV BZB, da verificare) manuale 6 marce. Testata rotta per cedimento pattino catena distribuzione; motorizzazione non indicata (catena: 1.8 TSI o 1.6 FSI), prezzo da confermare con codice motore."
  },
  {
   "id": 46257,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12162,7 +12162,7 @@
   ],
   "ricambi_min": 400,
   "ricambi_max": 1280,
-  "nota": "Volkswagen Touran I (1T) restyling 1.9 TDI 105 CV DSG6 (DQ250 02E) 7 posti 2009. Cambio automatico DSG 'da sistemare' senza diagnosi; 280.000 km, motore dichiarato perfetto. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Touran I (1T) restyling 1.9 TDI 105 CV DSG6 (DQ250 02E) 7 posti 2009. Cambio automatico DSG 'da sistemare' senza diagnosi; 280.000 km, motore dichiarato perfetto."
  },
  {
   "id": 46285,
@@ -12173,7 +12173,7 @@
  },
  {
   "id": 20551,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12199,11 +12199,11 @@
   ],
   "ricambi_min": 423,
   "ricambi_max": 849,
-  "nota": "Peugeot 207 (WA/WC) 1.4 8V 75 CV (KFV) benzina/GPL Access ECO 5p 2009. Motore grippato per guarnizione testata bruciata: motore usato KFV da sostituire; 180.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Peugeot 207 (WA/WC) 1.4 8V 75 CV (KFV) benzina/GPL Access ECO 5p 2009. Motore grippato per guarnizione testata bruciata: motore usato KFV da sostituire; 180.000 km."
  },
  {
   "id": 8125,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12229,7 +12229,7 @@
   ],
   "ricambi_min": 1919,
   "ricambi_max": 2532,
-  "nota": "Suzuki Grand Vitara II (JT) 1.9 DDiS 129 CV (Renault F9Q) 4x4 5p 2008. 'Motore rotto' senza causa: considerato motore usato da sostituire; a 1.500 EUR margine quasi nullo (rivendita ~4.200). Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Suzuki Grand Vitara II (JT) 1.9 DDiS 129 CV (Renault F9Q) 4x4 5p 2008. 'Motore rotto' senza causa: considerato motore usato da sostituire; a 1.500 EUR margine quasi nullo (rivendita ~4.200)."
  },
  {
   "id": 23463,
@@ -12282,7 +12282,7 @@
  },
  {
   "id": 45158,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12345,7 +12345,7 @@
   ],
   "ricambi_min": 537,
   "ricambi_max": 1137,
-  "nota": "Fiat 500L (351) 1.3 MultiJet 85 CV (199B4000) Pop 2013. Parafango ant. dx ammaccato, turbo e tubi olio da sostituire, FAP da lavare; venditore stima 2.500 EUR di riparazione, 202.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat 500L (351) 1.3 MultiJet 85 CV (199B4000) Pop 2013. Parafango ant. dx ammaccato, turbo e tubi olio da sostituire, FAP da lavare; venditore stima 2.500 EUR di riparazione, 202.000 km."
  },
  {
   "id": 10640,
@@ -12356,7 +12356,7 @@
  },
  {
   "id": 41104,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -12420,11 +12420,11 @@
   ],
   "ricambi_min": 261,
   "ricambi_max": 829,
-  "nota": "Fiat Grande Punto (199) 1.4 8V Natural Power 77 CV benzina/metano 5p Active 2010. Avaria airbag + frecce/tergi intermittenti tipico guasto del modulo devioluci con spiralina; alzacristalli posteriori bloccati, A/C scarica. 217.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat Grande Punto (199) 1.4 8V Natural Power 77 CV benzina/metano 5p Active 2010. Avaria airbag + frecce/tergi intermittenti tipico guasto del modulo devioluci con spiralina; alzacristalli posteriori bloccati, A/C scarica. 217.000 km."
  },
  {
   "id": 41159,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -12474,11 +12474,11 @@
   ],
   "ricambi_min": 461,
   "ricambi_max": 922,
-  "nota": "Audi A3 (8P) 1.9 TDI 105 CV (BKC/BXE) 3p Attraction 2005. Urto anteriore sx contro muro: paraurti, faro e vaschetta lavavetri dichiarati; km stimati (300.000). Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Audi A3 (8P) 1.9 TDI 105 CV (BKC/BXE) 3p Attraction 2005. Urto anteriore sx contro muro: paraurti, faro e vaschetta lavavetri dichiarati; km stimati (300.000)."
  },
  {
   "id": 23641,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -12498,7 +12498,7 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 300,
-  "nota": "Renault Twingo II (CN0) 1.2 16V 75 CV (D4F) 3p Dynamique 2009. Solo grandine visibile (levabolli/PDR = manodopera, nessun ricambio). Prezzo fisso 1.700 € da commerciante. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Renault Twingo II (CN0) 1.2 16V 75 CV (D4F) 3p Dynamique 2009. Solo grandine visibile (levabolli/PDR = manodopera, nessun ricambio). Prezzo fisso 1.700 € da commerciante."
  },
  {
   "id": 38850,
@@ -12509,7 +12509,7 @@
  },
  {
   "id": 23187,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12534,11 +12534,11 @@
   ],
   "ricambi_min": 80,
   "ricambi_max": 1200,
-  "nota": "Peugeot 3008 I (0U) 1.6 HDi 112 CV (9HR) cambio robotizzato EGS6 Tecno 2011. Nessun danno specifico: solo 'necessita manutenzione', 248.000 km, robotizzato e 1.6 HDi (turbina/iniettori) ad alto rischio; serve ispezione. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Peugeot 3008 I (0U) 1.6 HDi 112 CV (9HR) cambio robotizzato EGS6 Tecno 2011. Nessun danno specifico: solo 'necessita manutenzione', 248.000 km, robotizzato e 1.6 HDi (turbina/iniettori) ad alto rischio; serve ispezione."
  },
  {
   "id": 20665,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -12564,11 +12564,11 @@
   ],
   "ricambi_min": 206,
   "ricambi_max": 458,
-  "nota": "Lancia Musa (350) restyling 1.4 benzina/GPL BRC 2012 (annuncio indica 16V 95 CV; ecochic GPL di serie è 8V 77 CV: verificare). Unico difetto dichiarato: A/C non funzionante (da diagnosticare: può bastare la ricarica). 212.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Lancia Musa (350) restyling 1.4 benzina/GPL BRC 2012 (annuncio indica 16V 95 CV; ecochic GPL di serie è 8V 77 CV: verificare). Unico difetto dichiarato: A/C non funzionante (da diagnosticare: può bastare la ricarica). 212.000 km."
  },
  {
   "id": 15373,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12593,11 +12593,11 @@
   ],
   "ricambi_min": 60,
   "ricambi_max": 540,
-  "nota": "Mini (R56) One 1.4 benzina 2010 (versione 'tdi One D' incoerente con carburante benzina). Solo spia motore accesa senza causa: su motori Prince N12/N16 rischio catena distribuzione; diagnosi OBD prima dell'offerta. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mini (R56) One 1.4 benzina 2010 (versione 'tdi One D' incoerente con carburante benzina). Solo spia motore accesa senza causa: su motori Prince N12/N16 rischio catena distribuzione; diagnosi OBD prima dell'offerta."
  },
  {
   "id": 41222,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12634,11 +12634,11 @@
   ],
   "ricambi_min": 190,
   "ricambi_max": 2190,
-  "nota": "BMW Serie 1 (E87 LCI) 118d 2.0 N47D20 143 CV 5p 2008 (annuncio indica 116i/90 kW: incoerente, titolo 118d diesel). Distribuzione da fare su N47: catena lato cambio, lavoro a motore smontato; tetto con difetto estetico. 270.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW Serie 1 (E87 LCI) 118d 2.0 N47D20 143 CV 5p 2008 (annuncio indica 116i/90 kW: incoerente, titolo 118d diesel). Distribuzione da fare su N47: catena lato cambio, lavoro a motore smontato; tetto con difetto estetico. 270.000 km."
  },
  {
   "id": 10456,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12663,11 +12663,11 @@
   ],
   "ricambi_min": 100,
   "ricambi_max": 1800,
-  "nota": "Opel Astra J (P10) 2011 motorizzazione non indicata. Motore 'da controllare' dopo smontaggio e pulizia aspirazione; versione, carburante e potenza non indicati. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Opel Astra J (P10) 2011 motorizzazione non indicata. Motore 'da controllare' dopo smontaggio e pulizia aspirazione; versione, carburante e potenza non indicati."
  },
  {
   "id": 23300,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12718,7 +12718,7 @@
   ],
   "ricambi_min": 373,
   "ricambi_max": 1068,
-  "nota": "Seat Ibiza IV (6J) 1.2 12V 70 CV (CGPA) 3p Style benzina/GPL 2010. Solo 'incidentata' senza dettagli: ipotesi minima urto anteriore (paraurti + un faro); 'sterza a fatica' indica danno a sterzo/sospensione. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Seat Ibiza IV (6J) 1.2 12V 70 CV (CGPA) 3p Style benzina/GPL 2010. Solo 'incidentata' senza dettagli: ipotesi minima urto anteriore (paraurti + un faro); 'sterza a fatica' indica danno a sterzo/sospensione."
  },
  {
   "id": 23295,
@@ -12729,7 +12729,7 @@
  },
  {
   "id": 23620,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -12779,11 +12779,11 @@
   ],
   "ricambi_min": 122,
   "ricambi_max": 536,
-  "nota": "Volkswagen Polo IV (9N3) 1.4 16V 80 CV BiFuel GPL 5p Comfortline 2008. Non incidentata: GPL che singhiozza, finestrino passeggero e cielo scollato; difetti minori. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Polo IV (9N3) 1.4 16V 80 CV BiFuel GPL 5p Comfortline 2008. Non incidentata: GPL che singhiozza, finestrino passeggero e cielo scollato; difetti minori."
  },
  {
   "id": 38868,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "grave",
   "danni": [
    {
@@ -12809,11 +12809,11 @@
   ],
   "ricambi_min": 339,
   "ricambi_max": 803,
-  "nota": "Opel Antara (L07) 2.0 CDTI 150 CV (Z20DMH) automatico 5 marce Cosmo 2007. Cambio automatico difettoso, non marciante: usato economico ma non testato; preferibile ricambio garantito. 297.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Opel Antara (L07) 2.0 CDTI 150 CV (Z20DMH) automatico 5 marce Cosmo 2007. Cambio automatico difettoso, non marciante: usato economico ma non testato; preferibile ricambio garantito. 297.000 km."
  },
  {
   "id": 23329,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -12852,11 +12852,11 @@
   ],
   "ricambi_min": 271,
   "ricambi_max": 520,
-  "nota": "Opel Corsa D (S07) 1.4 16V 90 CV (Z14XEP) 5p Cosmo 2009. Solo 'incidentata' senza dettagli: ipotesi minima urto anteriore (paraurti + un faro). Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Opel Corsa D (S07) 1.4 16V 90 CV (Z14XEP) 5p Cosmo 2009. Solo 'incidentata' senza dettagli: ipotesi minima urto anteriore (paraurti + un faro)."
  },
  {
   "id": 14974,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -12925,7 +12925,7 @@
   ],
   "ricambi_min": 908,
   "ricambi_max": 2152,
-  "nota": "Citroen C4 Picasso I (UD) 1.6 HDi 110 CV FAP (9HZ) 2008. Per commercianti: parabrezza rotto dalla tempesta (blocca revisione), fanale post. sx, gomme, FAP; motore dichiarato rifatto. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Citroen C4 Picasso I (UD) 1.6 HDi 110 CV FAP (9HZ) 2008. Per commercianti: parabrezza rotto dalla tempesta (blocca revisione), fanale post. sx, gomme, FAP; motore dichiarato rifatto."
  },
  {
   "id": 721,
@@ -12936,7 +12936,7 @@
  },
  {
   "id": 550,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -12969,11 +12969,11 @@
   ],
   "ricambi_min": 520,
   "ricambi_max": 1700,
-  "nota": "Mercedes-Benz Classe A Coupé (W169) A 150 1.5 M266 95 CV Autotronic CVT Elegance 2009. Anomalia centralina cambio CVT ma marciante; difetti di carrozzeria non descritti. Versione indicata manuale, titolo automatica. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mercedes-Benz Classe A Coupé (W169) A 150 1.5 M266 95 CV Autotronic CVT Elegance 2009. Anomalia centralina cambio CVT ma marciante; difetti di carrozzeria non descritti. Versione indicata manuale, titolo automatica."
  },
  {
   "id": 859,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13011,11 +13011,11 @@
   ],
   "ricambi_min": 1215,
   "ricambi_max": 1899,
-  "nota": "Fiat Punto Evo (199) 1.4 MultiAir Turbo 135 CV 3p 2010 (versione S&S Blue&Me). Non marciante per modulo MultiAir guasto; distribuzione fatta. 200.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat Punto Evo (199) 1.4 MultiAir Turbo 135 CV 3p 2010 (versione S&S Blue&Me). Non marciante per modulo MultiAir guasto; distribuzione fatta. 200.000 km."
  },
  {
   "id": 45135,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -13041,11 +13041,11 @@
   ],
   "ricambi_min": 65,
   "ricambi_max": 439,
-  "nota": "smart fortwo coupé (450) 0.7 pulse 61 CV (45 kW) softouch 2006. Attuatore cambio da rifare; 97.000 km, poche foto. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "smart fortwo coupé (450) 0.7 pulse 61 CV (45 kW) softouch 2006. Attuatore cambio da rifare; 97.000 km, poche foto."
  },
  {
   "id": 15002,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "grave",
   "danni": [
    {
@@ -13107,11 +13107,11 @@
   ],
   "ricambi_min": 714,
   "ricambi_max": 1783,
-  "nota": "Volkswagen Passat B6 (3C) 2.0 Highline 2008 (2.0 FSI 150 CV per kW; carburante 'diesel' incoerente). Caduta tronco: parabrezza, finestrino e porta guida, tetto ammaccato; rischio strutturale su montanti. 340.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Passat B6 (3C) 2.0 Highline 2008 (2.0 FSI 150 CV per kW; carburante 'diesel' incoerente). Caduta tronco: parabrezza, finestrino e porta guida, tetto ammaccato; rischio strutturale su montanti. 340.000 km."
  },
  {
   "id": 10516,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "grave",
   "danni": [
    {
@@ -13149,7 +13149,7 @@
   ],
   "ricambi_min": 175,
   "ricambi_max": 719,
-  "nota": "Mini (R50) Cooper 1.6 16V 116 CV 3p 2002. Assale posteriore rotto, non marciante; motore e frizione rifatti. Ritiro con carroattrezzi. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mini (R50) Cooper 1.6 16V 116 CV 3p 2002. Assale posteriore rotto, non marciante; motore e frizione rifatti. Ritiro con carroattrezzi."
  },
  {
   "id": 46038,
@@ -13182,7 +13182,7 @@
  },
  {
   "id": 15728,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "grave",
   "danni": [
    {
@@ -13208,7 +13208,7 @@
   ],
   "ricambi_min": 3695,
   "ricambi_max": 5518,
-  "nota": "Peugeot 308 II (T9) restyling 1.5 BlueHDi 130 S&S EAT8 (DV5RC/YH01) Active Pack 2018. Motore guasto senza dettagli; motore usato costoso, verificare se il guasto è solo cinghia/catena o turbina. km stimati. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Peugeot 308 II (T9) restyling 1.5 BlueHDi 130 S&S EAT8 (DV5RC/YH01) Active Pack 2018. Motore guasto senza dettagli; motore usato costoso, verificare se il guasto è solo cinghia/catena o turbina. km stimati."
  },
  {
   "id": 41892,
@@ -13333,7 +13333,7 @@
  },
  {
   "id": 46281,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -13385,11 +13385,11 @@
   ],
   "ricambi_min": 756,
   "ricambi_max": 1959,
-  "nota": "Renault Master III (X62) 2.3 dCi 110 CV (M9T) Quickshift robotizzato furgone 3.5t 2014. Furgone marciante a 370.000 km con FAP che non rigenera, porta scorrevole non apribile e chiusura portellone da sistemare (descrizione troncata). Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Renault Master III (X62) 2.3 dCi 110 CV (M9T) Quickshift robotizzato furgone 3.5t 2014. Furgone marciante a 370.000 km con FAP che non rigenera, porta scorrevole non apribile e chiusura portellone da sistemare (descrizione troncata)."
  },
  {
   "id": 725,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -13427,11 +13427,11 @@
   ],
   "ricambi_min": 313,
   "ricambi_max": 627,
-  "nota": "smart fortwo II (451) restyling 1.0 mhd 71 CV (52 kW) coupé passion 2014. Solo 'incidentata solo davanti' senza dettagli: ipotesi minima paraurti/frontale + un faro. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "smart fortwo II (451) restyling 1.0 mhd 71 CV (52 kW) coupé passion 2014. Solo 'incidentata solo davanti' senza dettagli: ipotesi minima paraurti/frontale + un faro."
  },
  {
   "id": 11499,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13457,7 +13457,7 @@
   ],
   "ricambi_min": 2422,
   "ricambi_max": 3848,
-  "nota": "Mercedes-Benz GLK (X204) 250 CDI 2.1 OM651 204 CV 4Matic BlueEFFICIENCY 7G-Tronic Sport 2010. Motore fuso da sostituire su 265.000 km; carrozzeria e interni dichiarati in ordine. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mercedes-Benz GLK (X204) 250 CDI 2.1 OM651 204 CV 4Matic BlueEFFICIENCY 7G-Tronic Sport 2010. Motore fuso da sostituire su 265.000 km; carrozzeria e interni dichiarati in ordine."
  },
  {
   "id": 9352,
@@ -13492,7 +13492,7 @@
  },
  {
   "id": 41500,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13518,7 +13518,7 @@
   ],
   "ricambi_min": 3656,
   "ricambi_max": 5190,
-  "nota": "Fiat Freemont (JF) 2.0 Multijet 170 CV (939B5) AWD automatico 6 marce Lounge 7 posti 2012. Cambio automatico da sostituire: costo ricambio usato supera il prezzo d'acquisto; valutare revisione cambio presso specialista. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat Freemont (JF) 2.0 Multijet 170 CV (939B5) AWD automatico 6 marce Lounge 7 posti 2012. Cambio automatico da sostituire: costo ricambio usato supera il prezzo d'acquisto; valutare revisione cambio presso specialista."
  },
  {
   "id": 46243,
@@ -13606,7 +13606,7 @@
  },
  {
   "id": 34172,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -13638,7 +13638,7 @@
   ],
   "ricambi_min": 25,
   "ricambi_max": 190,
-  "nota": "Opel Adam (M13) 1.4 100 CV (B14XEL) Jam 2013. Graffi e danni estetici sul frontale e un fanalino rotto; meccanica dichiarata ok. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Opel Adam (M13) 1.4 100 CV (B14XEL) Jam 2013. Graffi e danni estetici sul frontale e un fanalino rotto; meccanica dichiarata ok."
  },
  {
   "id": 914,
@@ -13672,7 +13672,7 @@
  },
  {
   "id": 34324,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -13722,11 +13722,11 @@
   ],
   "ricambi_min": 369,
   "ricambi_max": 916,
-  "nota": "Fiat 500 (312) 1.3 Multijet 95 CV (330A1000) S 2015. Incidentata sulla porta lato passeggero; catena distribuzione e gomme anteriori da fare. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat 500 (312) 1.3 Multijet 95 CV (330A1000) S 2015. Incidentata sulla porta lato passeggero; catena distribuzione e gomme anteriori da fare."
  },
  {
   "id": 24148,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13771,11 +13771,11 @@
   ],
   "ricambi_min": 196,
   "ricambi_max": 1086,
-  "nota": "BMW Serie 1 (E87 LCI) 116i 1.6 N43B16 122 CV 5p Attiva 2010. Kit catena, consumo refrigerante e misfire/catalizzatore da diagnosticare: rischio guarnizione testata o iniettori N43. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW Serie 1 (E87 LCI) 116i 1.6 N43B16 122 CV 5p Attiva 2010. Kit catena, consumo refrigerante e misfire/catalizzatore da diagnosticare: rischio guarnizione testata o iniettori N43."
  },
  {
   "id": 20876,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13801,7 +13801,7 @@
   ],
   "ricambi_min": 2195,
   "ricambi_max": 2839,
-  "nota": "Ford B-Max (JK) 1.0 EcoBoost 100 CV (SFJA/M1JA) Plus 2016. Solo 'motore rotto' senza dettagli: previsto motore sostitutivo usato. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Ford B-Max (JK) 1.0 EcoBoost 100 CV (SFJA/M1JA) Plus 2016. Solo 'motore rotto' senza dettagli: previsto motore sostitutivo usato."
  },
  {
   "id": 9958,
@@ -13829,7 +13829,7 @@
  },
  {
   "id": 10933,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13855,11 +13855,11 @@
   ],
   "ricambi_min": 1600,
   "ricambi_max": 2320,
-  "nota": "Volkswagen Golf Plus (5M) restyling 1.6 TDI 105 CV (CAYC) DSG7 DQ200 Highline 2011. Cambio DSG da rifare su 243.000 km; una sola chiave. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Golf Plus (5M) restyling 1.6 TDI 105 CV (CAYC) DSG7 DQ200 Highline 2011. Cambio DSG da rifare su 243.000 km; una sola chiave."
  },
  {
   "id": 15460,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13889,11 +13889,11 @@
   ],
   "ricambi_min": 350,
   "ricambi_max": 2300,
-  "nota": "Volkswagen Passat Variant B7 (365) 1.4 TSI 150 CV EcoFuel (CDGA) Comfortline 2011. Funziona solo a metano per 'difetti al motore' non specificati; il venditore la propone anche come ricambi: diagnosi necessaria. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Passat Variant B7 (365) 1.4 TSI 150 CV EcoFuel (CDGA) Comfortline 2011. Funziona solo a metano per 'difetti al motore' non specificati; il venditore la propone anche come ricambi: diagnosi necessaria."
  },
  {
   "id": 47072,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -13926,7 +13926,7 @@
   ],
   "ricambi_min": 170,
   "ricambi_max": 963,
-  "nota": "Fiat 500L (330) 1.3 Multijet 85 CV (199B4) Pop 2014. Pompa olio da sostituire (rischio danni da lubrificazione); graffi leggeri, frizione, catena, batteria e gomme nuove. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat 500L (330) 1.3 Multijet 85 CV (199B4) Pop 2014. Pompa olio da sostituire (rischio danni da lubrificazione); graffi leggeri, frizione, catena, batteria e gomme nuove."
  },
  {
   "id": 10876,
@@ -13954,7 +13954,7 @@
  },
  {
   "id": 16044,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -13993,11 +13993,11 @@
   ],
   "ricambi_min": 90,
   "ricambi_max": 650,
-  "nota": "Fiat Freemont (JF) 2.0 Multijet 170 CV (939B5) Urban 2013 (trazione/cambio da verificare). Ferma da mesi con batteria a terra; piccolo danno porta anteriore sx e grandine sul tetto. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat Freemont (JF) 2.0 Multijet 170 CV (939B5) Urban 2013 (trazione/cambio da verificare). Ferma da mesi con batteria a terra; piccolo danno porta anteriore sx e grandine sul tetto."
  },
  {
   "id": 25752,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -14029,11 +14029,11 @@
   ],
   "ricambi_min": 25,
   "ricambi_max": 510,
-  "nota": "Mercedes-Benz Classe M (W164) ML 320 CDI 3.0 V6 OM642 224 CV 4Matic 7G-Tronic 2007. Carrozzeria da rivedere per età e spia ABS da diagnosticare. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mercedes-Benz Classe M (W164) ML 320 CDI 3.0 V6 OM642 224 CV 4Matic 7G-Tronic 2007. Carrozzeria da rivedere per età e spia ABS da diagnosticare."
  },
  {
   "id": 39067,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14059,11 +14059,11 @@
   ],
   "ricambi_min": 359,
   "ricambi_max": 672,
-  "nota": "Volkswagen Touareg I (7L) 2.5 R5 TDI 174 CV (BAC/BPE) 2007. Alcune punterie (bicchierini) da sostituire: tipico difetto R5 TDI, spesso con albero a camme usurato. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Touareg I (7L) 2.5 R5 TDI 174 CV (BAC/BPE) 2007. Alcune punterie (bicchierini) da sostituire: tipico difetto R5 TDI, spesso con albero a camme usurato."
  },
  {
   "id": 15915,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -14090,11 +14090,11 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 700,
-  "nota": "BMW Serie 3 Touring (E91 LCI) 320d 2.0 N47D20C 177 CV Attiva 2010. Grandine leggera e segni di carrozzeria: solo levabolli/ritocchi (manodopera), nessun ricambio. Catena distribuzione gia fatta a 160.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW Serie 3 Touring (E91 LCI) 320d 2.0 N47D20C 177 CV Attiva 2010. Grandine leggera e segni di carrozzeria: solo levabolli/ritocchi (manodopera), nessun ricambio. Catena distribuzione gia fatta a 160.000 km."
  },
  {
   "id": 24237,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14124,11 +14124,11 @@
   ],
   "ricambi_min": 1950,
   "ricambi_max": 4250,
-  "nota": "Jeep Compass (MK49) restyling 2.2 CRD 136 CV (Mercedes OM651.925) Sport 2013. 'Non parte' senza alcuna diagnosi: causa ignota, da elettrica banale a motore. 230.000 km; il motore OM651 e la catena sono il rischio principale. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Jeep Compass (MK49) restyling 2.2 CRD 136 CV (Mercedes OM651.925) Sport 2013. 'Non parte' senza alcuna diagnosi: causa ignota, da elettrica banale a motore. 230.000 km; il motore OM651 e la catena sono il rischio principale."
  },
  {
   "id": 15328,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14154,11 +14154,11 @@
   ],
   "ricambi_min": 1614,
   "ricambi_max": 3117,
-  "nota": "BMW Serie 3 Touring (E91) 320d xDrive 2.0 N47D20A 177 CV aut. Eletta 2008. Auto ferma senza diagnosi a 300.000 km; venditore la propone anche per ricambi/export. Con N47 il guasto tipico e la catena distribuzione: prezzo motore come caso peggiore. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW Serie 3 Touring (E91) 320d xDrive 2.0 N47D20A 177 CV aut. Eletta 2008. Auto ferma senza diagnosi a 300.000 km; venditore la propone anche per ricambi/export. Con N47 il guasto tipico e la catena distribuzione: prezzo motore come caso peggiore."
  },
  {
   "id": 33915,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -14183,11 +14183,11 @@
   ],
   "ricambi_min": 150,
   "ricambi_max": 850,
-  "nota": "Peugeot 5008 I (0U) 1.6 HDi 112 CV (DV6C 9HR) Feline 7 posti 2011. Motore rotto ma motore sostitutivo (circa 130.000 km, con fattura) gia incluso nel prezzo, da montare; distribuzione e frizione nuove. Costo principale e la manodopera. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Peugeot 5008 I (0U) 1.6 HDi 112 CV (DV6C 9HR) Feline 7 posti 2011. Motore rotto ma motore sostitutivo (circa 130.000 km, con fattura) gia incluso nel prezzo, da montare; distribuzione e frizione nuove. Costo principale e la manodopera."
  },
  {
   "id": 20790,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -14238,11 +14238,11 @@
   ],
   "ricambi_min": 353,
   "ricambi_max": 682,
-  "nota": "Peugeot 208 I (CA) 1.2 VTi 82 CV (EB2F) 5p Allure 2012. Cinghia distribuzione da fare (EB2 a bagno d'olio), un braccio rumoroso e tamponi ammortizzatori; frizione nuova. 185.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Peugeot 208 I (CA) 1.2 VTi 82 CV (EB2F) 5p Allure 2012. Cinghia distribuzione da fare (EB2 a bagno d'olio), un braccio rumoroso e tamponi ammortizzatori; frizione nuova. 185.000 km."
  },
  {
   "id": 46254,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -14272,11 +14272,11 @@
   ],
   "ricambi_min": 280,
   "ricambi_max": 1400,
-  "nota": "Volkswagen Passat B7 (3C) 1.4 TSI EcoFuel 150 CV benzina/metano 2012. Funziona solo a metano, benzina 'da sistemare' senza dettagli; versione dedotta dal motore 1.4 TSI. 370.000 km dichiarati. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Passat B7 (3C) 1.4 TSI EcoFuel 150 CV benzina/metano 2012. Funziona solo a metano, benzina 'da sistemare' senza dettagli; versione dedotta dal motore 1.4 TSI. 370.000 km dichiarati."
  },
  {
   "id": 10134,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14313,11 +14313,11 @@
   ],
   "ricambi_min": 330,
   "ricambi_max": 1480,
-  "nota": "Renault Clio IV (BH) 1.5 dCi 90 CV (K9K) 2013. Problema testata/guarnizione dichiarato. Immatricolata 10/2013 (annuncio indica 2014). 187.000 km. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Renault Clio IV (BH) 1.5 dCi 90 CV (K9K) 2013. Problema testata/guarnizione dichiarato. Immatricolata 10/2013 (annuncio indica 2014). 187.000 km."
  },
  {
   "id": 37396,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -14342,11 +14342,11 @@
   ],
   "ricambi_min": 120,
   "ricambi_max": 410,
-  "nota": "Fiat 500L (351) 1.6 MultiJet 105 CV Pop Star 2013. Solo parafango posteriore destro incidentato; auto marciante, revisione scaduta da rifare. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat 500L (351) 1.6 MultiJet 105 CV Pop Star 2013. Solo parafango posteriore destro incidentato; auto marciante, revisione scaduta da rifare."
  },
  {
   "id": 20783,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -14371,11 +14371,11 @@
   ],
   "ricambi_min": 250,
   "ricambi_max": 910,
-  "nota": "Opel Astra J (P10) 2015 (motorizzazione non indicata). Frizione da fare, nessun altro dato. Motore non specificato: con 1.7 CDTI il kit Valeo con volano costa circa 644-689 EUR, con benzina 1.4 molto meno. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Opel Astra J (P10) 2015 (motorizzazione non indicata). Frizione da fare, nessun altro dato. Motore non specificato: con 1.7 CDTI il kit Valeo con volano costa circa 644-689 EUR, con benzina 1.4 molto meno."
  },
  {
   "id": 3886,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14401,11 +14401,11 @@
   ],
   "ricambi_min": 343,
   "ricambi_max": 1364,
-  "nota": "Land Rover Freelander 2 (L359) 2.2 TD4 160 CV (224DT) S 2010. Non funzionante per iniettori andati (dichiarato). Verificare che non ci siano danni a pistoni da iniettore gocciolante. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Land Rover Freelander 2 (L359) 2.2 TD4 160 CV (224DT) S 2010. Non funzionante per iniettori andati (dichiarato). Verificare che non ci siano danni a pistoni da iniettore gocciolante."
  },
  {
   "id": 11022,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "grave",
   "danni": [
    {
@@ -14431,11 +14431,11 @@
   ],
   "ricambi_min": 1499,
   "ricambi_max": 3073,
-  "nota": "Volkswagen Golf V (1K) GTI 2.0 TFSI 200 CV (BWA) DSG 3p 2008. Motore fuso dichiarato, 333.000 km: serve motore usato o revisione completa; margine ridotto rispetto alla mediana. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Volkswagen Golf V (1K) GTI 2.0 TFSI 200 CV (BWA) DSG 3p 2008. Motore fuso dichiarato, 333.000 km: serve motore usato o revisione completa; margine ridotto rispetto alla mediana."
  },
  {
   "id": 36277,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -14468,11 +14468,11 @@
   ],
   "ricambi_min": 333,
   "ricambi_max": 437,
-  "nota": "Fiat Grande Punto (199) 1.3 Multijet 90 CV (199A3000) 3p Dynamic 2006. Spia motore per FAP che non rigenera: spesso basta pulizia/rigenerazione forzata, sostituzione come caso peggiore. Catena e piantone gia sostituiti. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat Grande Punto (199) 1.3 Multijet 90 CV (199A3000) 3p Dynamic 2006. Spia motore per FAP che non rigenera: spesso basta pulizia/rigenerazione forzata, sostituzione come caso peggiore. Catena e piantone gia sostituiti."
  },
  {
   "id": 37383,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "medio",
   "danni": [
    {
@@ -14492,11 +14492,11 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 400,
-  "nota": "Ford Focus III SW 1.6 TDCi 95 CV Titanium 2014. Carrozzeria grandinata (entita non indicata): levabolli PDR, solo manodopera. Meccanica ok, distribuzione fatta. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Ford Focus III SW 1.6 TDCi 95 CV Titanium 2014. Carrozzeria grandinata (entita non indicata): levabolli PDR, solo manodopera. Meccanica ok, distribuzione fatta."
  },
  {
   "id": 39033,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14540,11 +14540,11 @@
   ],
   "ricambi_min": 175,
   "ricambi_max": 1380,
-  "nota": "Mini (R56) Cooper 1.6 120 CV (N12B16A) 2007. 'Motore da rivedere' senza dettagli: probabile catena/tendicatena N12. Ammortizzatori nuovi forniti dal venditore. Prezzo non trattabile. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Mini (R56) Cooper 1.6 120 CV (N12B16A) 2007. 'Motore da rivedere' senza dettagli: probabile catena/tendicatena N12. Ammortizzatori nuovi forniti dal venditore. Prezzo non trattabile."
  },
  {
   "id": 23802,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -14582,11 +14582,11 @@
   ],
   "ricambi_min": 233,
   "ricambi_max": 542,
-  "nota": "Hyundai i30 (FD) 1.4 CVVT 109 CV 5p 2010. Solo 'incidentata, funziona tutto tranne la carrozzeria' senza dettagli: ipotesi minima urto frontale (paraurti + un faro). Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Hyundai i30 (FD) 1.4 CVVT 109 CV 5p 2010. Solo 'incidentata, funziona tutto tranne la carrozzeria' senza dettagli: ipotesi minima urto frontale (paraurti + un faro)."
  },
  {
   "id": 15653,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14623,11 +14623,11 @@
   ],
   "ricambi_min": 120,
   "ricambi_max": 690,
-  "nota": "Fiat Panda (141) 1100 i.e. 54 CV (FIRE 1108) 4x4 Country Club 1998. Testata da rifare e carrozzeria da rivedere (dettagli assenti); alternatore nuovo e gancio traino inclusi. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Fiat Panda (141) 1100 i.e. 54 CV (FIRE 1108) 4x4 Country Club 1998. Testata da rifare e carrozzeria da rivedere (dettagli assenti); alternatore nuovo e gancio traino inclusi."
  },
  {
   "id": 36275,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -14653,11 +14653,11 @@
   ],
   "ricambi_min": 1195,
   "ricambi_max": 1813,
-  "nota": "BMW Serie 1 (E81) 118i 2.0 N46B20B 3p Eletta 2008. Guasto motore non diagnosticato (non si avvia), 260.000 km, venduta anche per ricambi: prezzo motore come caso peggiore. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "BMW Serie 1 (E81) 118i 2.0 N46B20B 3p Eletta 2008. Guasto motore non diagnosticato (non si avvia), 260.000 km, venduta anche per ricambi: prezzo motore come caso peggiore."
  },
  {
   "id": 3342,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -14677,7 +14677,7 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 300,
-  "nota": "Alfa Romeo MiTo (955) 1.4 78 CV Progression 2009. Solo segni e imperfezioni di carrozzeria (estetica), auto funzionante: nessun ricambio necessario. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Alfa Romeo MiTo (955) 1.4 78 CV Progression 2009. Solo segni e imperfezioni di carrozzeria (estetica), auto funzionante: nessun ricambio necessario."
  },
  {
   "id": 10388,
@@ -14788,7 +14788,7 @@
  },
  {
   "id": 646,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -14815,7 +14815,7 @@
   ],
   "ricambi_min": 0,
   "ricambi_max": 400,
-  "nota": "Ford Edge II (CDQ) 2.0 TDCi Bi-Turbo 210 CV AWD Powershift ST-Line 2018. Non incidentata: solo piccoli segni d'uso sui paraurti (ritocco), tagliandi Ford documentati. Fuori dalla selezione dei 100 migliori (10/10)."
+  "nota": "Ford Edge II (CDQ) 2.0 TDCi Bi-Turbo 210 CV AWD Powershift ST-Line 2018. Non incidentata: solo piccoli segni d'uso sui paraurti (ritocco), tagliandi Ford documentati."
  },
  {
   "id": 38836,
@@ -15275,7 +15275,7 @@
  },
  {
   "id": 23304,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -15300,7 +15300,7 @@
   ],
   "ricambi_min": 1000,
   "ricambi_max": 2000,
-  "nota": "Problemi al cambio automatico Powershift dichiarati: costo riparazione potenzialmente alto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Problemi al cambio automatico Powershift dichiarati: costo riparazione potenzialmente alto.",
   "controlli": [
    "Diagnosi centralina cambio",
    "Preventivo frizione doppia/meccatronica"
@@ -15511,7 +15511,7 @@
  },
  {
   "id": 9536,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -15522,7 +15522,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Va a vuoti e non supera i 3000 giri, 389.000 km e EGR/FAP disattivati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Va a vuoti e non supera i 3000 giri, 389.000 km e EGR/FAP disattivati.",
   "controlli": [
    "Diagnosi turbo e iniettori",
    "Verificare legalità modifiche FAP/EGR per revisione"
@@ -15530,7 +15530,7 @@
  },
  {
   "id": 23301,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -15550,7 +15550,7 @@
   ],
   "ricambi_min": 400,
   "ricambi_max": 900,
-  "nota": "Bombole metano scadute e 385.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Bombole metano scadute e 385.000 km.",
   "controlli": [
    "Preventivo sostituzione bombole",
    "Verificare funzionamento a benzina"
@@ -15775,7 +15775,7 @@
  },
  {
   "id": 33524,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -15793,7 +15793,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Revisione scaduta, targhe da rifare e difetti estetici; versione benzina/diesel incoerente. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Revisione scaduta, targhe da rifare e difetti estetici; versione benzina/diesel incoerente.",
   "controlli": [
    "Verificare motivo rifacimento targhe",
    "Confermare motore (1.4 TDI)"
@@ -15801,7 +15801,7 @@
  },
  {
   "id": 23291,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -15821,7 +15821,7 @@
   ],
   "ricambi_min": 250,
   "ricambi_max": 600,
-  "nota": "Rumore al cambio dichiarato, preventivo 800€. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Rumore al cambio dichiarato, preventivo 800€.",
   "controlli": [
    "Prova su strada del cambio"
   ]
@@ -16014,13 +16014,13 @@
  },
  {
   "id": 21762,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "EcoSport tagliandata, dati coerenti e prezzo sotto mercato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "EcoSport tagliandata, dati coerenti e prezzo sotto mercato.",
   "controlli": [
    "Verificare storico tagliandi"
   ]
@@ -16053,7 +16053,7 @@
  },
  {
   "id": 364,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -16064,7 +16064,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Ammaccatura posteriore sinistra e 215.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Ammaccatura posteriore sinistra e 215.000 km.",
   "controlli": [
    "Valutare entità ammaccatura",
    "Storico tagliandi"
@@ -16099,13 +16099,13 @@
  },
  {
   "id": 28404,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Discovery Sport con catena distribuzione appena sostituita, buon prezzo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Discovery Sport con catena distribuzione appena sostituita, buon prezzo.",
   "controlli": [
    "Fattura sostituzione catena",
    "Verificare cambio automatico"
@@ -16113,7 +16113,7 @@
  },
  {
   "id": 28012,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -16131,7 +16131,7 @@
     "source": "testo"
    }
   ],
-  "nota": "320i cabrio 1995 curata, piccolo problema al clima e graffi su portiera. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "320i cabrio 1995 curata, piccolo problema al clima e graffi su portiera.",
   "controlli": [
    "Verificare clima e capote"
   ]
@@ -16151,13 +16151,13 @@
  },
  {
   "id": 37698,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Testo molto vago su una 318d Touring automatica con 165.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Testo molto vago su una 318d Touring automatica con 165.000 km.",
   "controlli": [
    "Chiedere storico tagliandi",
    "Verificare cambio automatico"
@@ -16165,13 +16165,13 @@
  },
  {
   "id": 10435,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 S line 1.8 TFSI quattro S tronic, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 S line 1.8 TFSI quattro S tronic, dati coerenti.",
   "controlli": [
    "Verificare consumo olio 1.8 TFSI",
    "Controllare S tronic"
@@ -16179,26 +16179,26 @@
  },
  {
   "id": 29030,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Mini One 2015 con 58.000 km, tagliandata e revisionata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Mini One 2015 con 58.000 km, tagliandata e revisionata.",
   "controlli": [
    "Verificare tagliandi"
   ]
  },
  {
   "id": 46018,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Clio E-Tech 2021 unico proprietario, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Clio E-Tech 2021 unico proprietario, dati coerenti.",
   "controlli": [
    "Verificare km aggiornati",
    "Diagnosi sistema ibrido"
@@ -16206,78 +16206,78 @@
  },
  {
   "id": 12708,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "114d 2016 tagliandata, prezzo sotto mercato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "114d 2016 tagliandata, prezzo sotto mercato.",
   "controlli": [
    "Verificare frizione e volano"
   ]
  },
  {
   "id": 40335,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "3008 EAT8 2019 controllata in Peugeot, prezzo sotto mercato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "3008 EAT8 2019 controllata in Peugeot, prezzo sotto mercato.",
   "controlli": [
    "Verificare storico tagliandi"
   ]
  },
  {
   "id": 12868,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "208 PureTech 2022 con cinghia già sostituita, buono stato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "208 PureTech 2022 con cinghia già sostituita, buono stato.",
   "controlli": [
    "Fattura sostituzione cinghia"
   ]
  },
  {
   "id": 17611,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf GTI DSG unico proprietario, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI DSG unico proprietario, dati coerenti.",
   "controlli": [
    "Verificare catena distribuzione e DSG"
   ]
  },
  {
   "id": 2823,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Countryman S JCW con manutenzione recente, prezzo sotto mercato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Countryman S JCW con manutenzione recente, prezzo sotto mercato.",
   "controlli": [
    "Verificare catena distribuzione 1.6 THP"
   ]
  },
  {
   "id": 17772,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Jaguar XE tagliandata e revisionata, buone condizioni. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Jaguar XE tagliandata e revisionata, buone condizioni.",
   "controlli": [
    "Verificare storico tagliandi"
   ]
@@ -16297,39 +16297,39 @@
  },
  {
   "id": 29095,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Q3 2.0 TDI 2015 con tagliando a 180.000 km in Audi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Q3 2.0 TDI 2015 con tagliando a 180.000 km in Audi.",
   "controlli": [
    "Verificare distribuzione"
   ]
  },
  {
   "id": 18360,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "CLA diesel 238.000 km senza difetti dichiarati, versione non indicata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "CLA diesel 238.000 km senza difetti dichiarati, versione non indicata.",
   "controlli": [
    "Verificare versione e storico tagliandi"
   ]
  },
  {
   "id": 17338,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Range Rover 3.0 Td6 non prodotta nel 2010: anno o versione errati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Range Rover 3.0 Td6 non prodotta nel 2010: anno o versione errati.",
   "controlli": [
    "Verificare anno e modello sul libretto",
    "Controllare sospensioni pneumatiche"
@@ -16350,20 +16350,20 @@
  },
  {
   "id": 7450,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Classe A 180 Sport tagliandata, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Classe A 180 Sport tagliandata, dati coerenti.",
   "controlli": [
    "Verificare storico tagliandi"
   ]
  },
  {
   "id": 21920,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -16374,7 +16374,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Auris hybrid 2017 tagliandata Toyota, solo segni di carrozzeria dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Auris hybrid 2017 tagliandata Toyota, solo segni di carrozzeria dichiarati.",
   "controlli": [
    "Valutare segni carrozzeria dalle foto",
    "Verificare storico tagliandi e garanzia batteria"
@@ -16382,13 +16382,13 @@
  },
  {
   "id": 18153,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Classe B 180 d automatica ben accessoriata, tagliando appena fatto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Classe B 180 d automatica ben accessoriata, tagliando appena fatto.",
   "controlli": [
    "Verificare cambio automatico in prova",
    "Controllare storico tagliandi"
@@ -16410,7 +16410,7 @@
  },
  {
   "id": 39894,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -16428,7 +16428,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Classe A 2016 con ammaccature su entrambi i lati da quantificare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Classe A 2016 con ammaccature su entrambi i lati da quantificare.",
   "controlli": [
    "Preventivo carrozzeria per le fiancate",
    "Storico tagliandi"
@@ -16436,13 +16436,13 @@
  },
  {
   "id": 28499,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Smart 453 benzina 2019 in buone condizioni, prezzo fermo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Smart 453 benzina 2019 in buone condizioni, prezzo fermo.",
   "controlli": [
    "Verificare se cambio manuale o twinamic",
    "Storico tagliandi"
@@ -16450,13 +16450,13 @@
  },
  {
   "id": 13447,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "SLK 200 Kompressor curata con manutenzione recente documentata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "SLK 200 Kompressor curata con manutenzione recente documentata.",
   "controlli": [
    "Verificare tetto retrattile",
    "Fatture lavori recenti"
@@ -16464,13 +16464,13 @@
  },
  {
   "id": 27832,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Q5 3.0 TDI con km alti ma certificati Audi e storico tagliandi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Q5 3.0 TDI con km alti ma certificati Audi e storico tagliandi.",
   "controlli": [
    "Verificare S tronic e trasmissione quattro",
    "Controllare iniettori/turbo a 318.000 km"
@@ -16478,13 +16478,13 @@
  },
  {
   "id": 36720,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Compass 4x4 2019 con descrizione minima e lavori al cambio citati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Compass 4x4 2019 con descrizione minima e lavori al cambio citati.",
   "controlli": [
    "Verificare cambio automatico 9 marce in prova",
    "Chiedere storico manutenzione"
@@ -16492,13 +16492,13 @@
  },
  {
   "id": 17690,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf 7.5 TDI con km alti autostradali, manutenzione regolare dichiarata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf 7.5 TDI con km alti autostradali, manutenzione regolare dichiarata.",
   "controlli": [
    "Verificare anno immatricolazione (2019 vs 2020)",
    "Controllare frizione e volano"
@@ -16520,13 +16520,13 @@
  },
  {
   "id": 18407,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Transit Connect furgone N1: verificare che il confronto sia su soli veicoli commerciali e IVA. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Transit Connect furgone N1: verificare che il confronto sia su soli veicoli commerciali e IVA.",
   "controlli": [
    "Confronto con furgoni N1 equivalenti",
    "Prezzo IVA inclusa o esclusa"
@@ -16534,13 +16534,13 @@
  },
  {
   "id": 27408,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Touareg 2012 con descrizione di una sola riga, nessun dettaglio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Touareg 2012 con descrizione di una sola riga, nessun dettaglio.",
   "controlli": [
    "Chiedere storico tagliandi e km",
    "Verificare cambio tiptronic e sospensioni"
@@ -16548,13 +16548,13 @@
  },
  {
   "id": 29660,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Fiesta ST-Line 2021 funzionante con normale usura. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Fiesta ST-Line 2021 funzionante con normale usura.",
   "controlli": [
    "Verificare cinghia a bagno d'olio 1.0 Ecoboost",
    "Storico tagliandi"
@@ -16562,13 +16562,13 @@
  },
  {
   "id": 30078,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "T-Roc 4Motion manuale, unico proprietario, km alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "T-Roc 4Motion manuale, unico proprietario, km alti.",
   "controlli": [
    "Verificare km reali (199.999)",
    "Controllare frizione e trasmissione 4Motion"
@@ -16576,13 +16576,13 @@
  },
  {
   "id": 40388,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Discovery Sport HSE 2016 con catena distribuzione appena sostituita. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Discovery Sport HSE 2016 con catena distribuzione appena sostituita.",
   "controlli": [
    "Fattura catena distribuzione",
    "Verificare cambio automatico ZF 9 marce"
@@ -16604,7 +16604,7 @@
  },
  {
   "id": 27348,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -16615,7 +16615,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Evoque 2.2 con km alti e piccoli danni di carrozzeria dichiarati (~400 euro). Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Evoque 2.2 con km alti e piccoli danni di carrozzeria dichiarati (~400 euro).",
   "controlli": [
    "Valutare danni carrozzeria dalle foto",
    "Verificare cambio automatico e trasmissione"
@@ -16623,13 +16623,13 @@
  },
  {
   "id": 12479,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf TGI metano con km molto alti autostradali, tagliandi VW. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf TGI metano con km molto alti autostradali, tagliandi VW.",
   "controlli": [
    "Scadenza revisione bombole metano",
    "Verificare DSG a 309.000 km"
@@ -16637,13 +16637,13 @@
  },
  {
   "id": 27993,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "TT Roadster 225 quattro del 2000 dichiarata perfetta. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "TT Roadster 225 quattro del 2000 dichiarata perfetta.",
   "controlli": [
    "Verificare cinghia distribuzione e Haldex",
    "Controllare capote"
@@ -16651,7 +16651,7 @@
  },
  {
   "id": 43412,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -16662,7 +16662,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Yaris Hybrid 2020 automatica con piccolo segno posteriore destro. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Yaris Hybrid 2020 automatica con piccolo segno posteriore destro.",
   "controlli": [
    "Verificare segno posteriore dx",
    "Storico tagliandi (2026 mancante)"
@@ -16670,13 +16670,13 @@
  },
  {
   "id": 22114,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Panda hybrid 2024 unico proprietario con garanzia 12 mesi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Panda hybrid 2024 unico proprietario con garanzia 12 mesi.",
   "controlli": [
    "Verificare se venditore professionale",
    "Condizioni garanzia"
@@ -16684,13 +16684,13 @@
  },
  {
   "id": 28760,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Clubman 1.6 2009 con pochi km e lavori comuni già eseguiti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Clubman 1.6 2009 con pochi km e lavori comuni già eseguiti.",
   "controlli": [
    "Verificare catena distribuzione (motore Prince)",
    "Km certificati"
@@ -16698,13 +16698,13 @@
  },
  {
   "id": 36781,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf Variant 1.4 TSI highline unico proprietario mai incidentata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf Variant 1.4 TSI highline unico proprietario mai incidentata.",
   "controlli": [
    "Verificare catena distribuzione 1.4 TSI",
    "Storico tagliandi"
@@ -16712,13 +16712,13 @@
  },
  {
   "id": 13561,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Evoque 2019 automatica ben accessoriata, km circa 180-190.000. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Evoque 2019 automatica ben accessoriata, km circa 180-190.000.",
   "controlli": [
    "Verificare km reali (180 vs 190.000)",
    "Controllare cambio automatico"
@@ -16977,7 +16977,7 @@
  },
  {
   "id": 39348,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -16997,7 +16997,7 @@
   ],
   "ricambi_min": 1200,
   "ricambi_max": 2500,
-  "nota": "A4 Avant con strappo in partenza e problema al cambio multitronic. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A4 Avant con strappo in partenza e problema al cambio multitronic.",
   "controlli": [
    "Diagnosi cambio multitronic",
    "Preventivo revisione cambio"
@@ -17061,7 +17061,7 @@
  },
  {
   "id": 25279,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -17072,7 +17072,7 @@
     "source": "testo"
    }
   ],
-  "nota": "406 V6 SW ben tenuta ma mediana di mercato poco attendibile per un'auto del 2000. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "406 V6 SW ben tenuta ma mediana di mercato poco attendibile per un'auto del 2000.",
   "controlli": [
    "Verificare valore reale di mercato",
    "Segni paraurti"
@@ -17149,7 +17149,7 @@
  },
  {
   "id": 15588,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -17160,7 +17160,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Golf GTI incidentata (solo carrozzeria), motore e cambio funzionanti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI incidentata (solo carrozzeria), motore e cambio funzionanti.",
   "controlli": [
    "Entità del danno e telaio",
    "Preventivo carrozzeria"
@@ -17182,13 +17182,13 @@
  },
  {
   "id": 45995,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Freelander 2 con descrizione di una sola riga. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Freelander 2 con descrizione di una sola riga.",
   "controlli": [
    "Storico tagliandi e km",
    "Verificare trasmissione Haldex e cambio"
@@ -17333,7 +17333,7 @@
  },
  {
   "id": 24688,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -17344,7 +17344,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Panda metano con lieve danno alla fiancata da valutare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Panda metano con lieve danno alla fiancata da valutare.",
   "controlli": [
    "Entità danno fiancata",
    "Revisione bombole (ok fino 2027)"
@@ -17394,7 +17394,7 @@
  },
  {
   "id": 45917,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -17405,7 +17405,7 @@
     "source": "testo"
    }
   ],
-  "nota": "500L metano senza descrizione, km stimati e grandine dichiarata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500L metano senza descrizione, km stimati e grandine dichiarata.",
   "controlli": [
    "Km reali",
    "Entità grandine e revisione bombole"
@@ -17413,13 +17413,13 @@
  },
  {
   "id": 11671,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Forester diesel 2013 con descrizione di una riga. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Forester diesel 2013 con descrizione di una riga.",
   "controlli": [
    "Verificare motore boxer diesel (albero e DPF)",
    "Storico tagliandi"
@@ -17441,7 +17441,7 @@
  },
  {
   "id": 46245,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -17452,7 +17452,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Transit 2009 con 400.000 km e difetti da sistemare non specificati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Transit 2009 con 400.000 km e difetti da sistemare non specificati.",
   "controlli": [
    "Elenco difetti dalle foto",
    "Verificare confronto con furgoni equivalenti"
@@ -17489,7 +17489,7 @@
  },
  {
   "id": 16191,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -17509,7 +17509,7 @@
   ],
   "ricambi_min": 150,
   "ricambi_max": 400,
-  "nota": "SLK 200 con restauro incompleto, ferma da due anni, manca parte del cruscotto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "SLK 200 con restauro incompleto, ferma da due anni, manca parte del cruscotto.",
   "controlli": [
    "Stato dopo fermo prolungato",
    "Reperibilità parte cruscotto"
@@ -17517,13 +17517,13 @@
  },
  {
   "id": 367,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Orlando GPL 7 posti da rivenditore, dichiarata controllata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Orlando GPL 7 posti da rivenditore, dichiarata controllata.",
   "controlli": [
    "Revisione bombola GPL",
    "Garanzia del rivenditore"
@@ -17545,13 +17545,13 @@
  },
  {
   "id": 16129,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500L 1.3 Multijet per neopatentati in buone condizioni dichiarate. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500L 1.3 Multijet per neopatentati in buone condizioni dichiarate.",
   "controlli": [
    "Verificare catena distribuzione (non cinghia)",
    "Frizione"
@@ -17606,7 +17606,7 @@
  },
  {
   "id": 5450,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -17617,7 +17617,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Tipo SW DCT 2020 tagliandata, km autostradali, segni carrozzeria. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tipo SW DCT 2020 tagliandata, km autostradali, segni carrozzeria.",
   "controlli": [
    "Verificare cambio DCT",
    "Segni carrozzeria"
@@ -17639,7 +17639,7 @@
  },
  {
   "id": 10418,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -17673,7 +17673,7 @@
   ],
   "ricambi_min": 80,
   "ricambi_max": 200,
-  "nota": "Aygo con danni da grandine su lato sinistro, cofano e tetto, prezzo coerente col danno. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Aygo con danni da grandine su lato sinistro, cofano e tetto, prezzo coerente col danno.",
   "controlli": [
    "Preventivo levabolli",
    "Valore con grandine"
@@ -17723,13 +17723,13 @@
  },
  {
   "id": 24993,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "208 PureTech 2019 con km alti ma interni curati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "208 PureTech 2019 con km alti ma interni curati.",
   "controlli": [
    "Verificare cinghia a bagno d'olio PureTech",
    "Consumo olio"
@@ -17751,7 +17751,7 @@
  },
  {
   "id": 25232,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -17762,7 +17762,7 @@
     "source": "testo"
    }
   ],
-  "nota": "DS3 a prezzo molto basso con 'qualche segno' e testo minimo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "DS3 a prezzo molto basso con 'qualche segno' e testo minimo.",
   "controlli": [
    "Stato carrozzeria",
    "Storico tagliandi"
@@ -17804,13 +17804,13 @@
  },
  {
   "id": 15701,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A6 Avant 3.0 TDI quattro con km molto alti, dichiarata funzionante. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A6 Avant 3.0 TDI quattro con km molto alti, dichiarata funzionante.",
   "controlli": [
    "Verificare cambio e trasmissione",
    "Catene distribuzione V6 TDI"
@@ -17818,13 +17818,13 @@
  },
  {
   "id": 34234,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500L 1.3 Multijet con descrizione completa. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500L 1.3 Multijet con descrizione completa.",
   "controlli": [
    "Verificare alimentazione reale (diesel)",
    "Storico tagliandi"
@@ -17832,13 +17832,13 @@
  },
  {
   "id": 25845,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Polo 3 porte con DSG 7 marce, gomme nuove. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Polo 3 porte con DSG 7 marce, gomme nuove.",
   "controlli": [
    "Verificare DSG7 (frizioni/meccatronica)",
    "Storico tagliandi"
@@ -17874,13 +17874,13 @@
  },
  {
   "id": 19075,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 Sportback 30 TDI (1.6 116 CV) tagliandata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 Sportback 30 TDI (1.6 116 CV) tagliandata.",
   "controlli": [
    "Verificare S tronic",
    "Storico tagliandi"
@@ -17888,13 +17888,13 @@
  },
  {
   "id": 22328,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Grand Cherokee 3.0 con descrizione minima e anno discordante (2015/2016). Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Grand Cherokee 3.0 con descrizione minima e anno discordante (2015/2016).",
   "controlli": [
    "Anno reale",
    "Storico tagliandi"
@@ -17912,13 +17912,13 @@
  },
  {
   "id": 44713,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 2015 indicata 1.5 benzina 150 CV (motore uscito nel 2017): anno o motore incoerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 2015 indicata 1.5 benzina 150 CV (motore uscito nel 2017): anno o motore incoerenti.",
   "controlli": [
    "Anno e motore reali",
    "Storico tagliandi"
@@ -17926,13 +17926,13 @@
  },
  {
   "id": 18889,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Giulia 2.2 136 CV con tagliando e revisione recenti, vendita o scambio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Giulia 2.2 136 CV con tagliando e revisione recenti, vendita o scambio.",
   "controlli": [
    "Storico tagliandi",
    "Verificare stato cerchi aggiuntivi"
@@ -17940,13 +17940,13 @@
  },
  {
   "id": 19419,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Stelvio 2020 con 70.000 km, dati coerenti e prezzo interessante. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Stelvio 2020 con 70.000 km, dati coerenti e prezzo interessante.",
   "controlli": [
    "Storico tagliandi",
    "Verifica km su libretto service"
@@ -17954,13 +17954,13 @@
  },
  {
   "id": 29850,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Spider d'importazione olandese da reimmatricolare e ferma da un anno: costi di nazionalizzazione da aggiungere. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Spider d'importazione olandese da reimmatricolare e ferma da un anno: costi di nazionalizzazione da aggiungere.",
   "controlli": [
    "Documenti per immatricolazione in Italia",
    "Stato meccanico dopo il fermo"
@@ -17968,13 +17968,13 @@
  },
  {
   "id": 4421,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Stelvio 2022 con km alti dichiarati e dimostrabili, prezzo coerente col chilometraggio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Stelvio 2022 con km alti dichiarati e dimostrabili, prezzo coerente col chilometraggio.",
   "controlli": [
    "Storico manutenzione",
    "Stato cambio AT8"
@@ -17982,13 +17982,13 @@
  },
  {
   "id": 44473,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "X4 xDrive20d Msport tagliandata, mai incidentata, doppia chiave. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "X4 xDrive20d Msport tagliandata, mai incidentata, doppia chiave.",
   "controlli": [
    "Fatture tagliandi",
    "Stato catena distribuzione"
@@ -17996,7 +17996,7 @@
  },
  {
   "id": 44737,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -18007,7 +18007,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Q3 con difetti estetici di carrozzeria non dettagliati, già considerati nel prezzo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Q3 con difetti estetici di carrozzeria non dettagliati, già considerati nel prezzo.",
   "controlli": [
    "Foto dettagliate carrozzeria",
    "Stato cambio S tronic"
@@ -18028,13 +18028,13 @@
  },
  {
   "id": 30902,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Spider Duetto iscritta ASI, conservata in box, capote nuova. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Spider Duetto iscritta ASI, conservata in box, capote nuova.",
   "controlli": [
    "Ruggine sottoscocca",
    "Certificato ASI"
@@ -18042,13 +18042,13 @@
  },
  {
   "id": 43473,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Annuncio molto generico su A6 Avant con 195.000 km, mancano dettagli su versione e manutenzione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Annuncio molto generico su A6 Avant con 195.000 km, mancano dettagli su versione e manutenzione.",
   "controlli": [
    "Storico tagliandi",
    "Stato cambio S tronic"
@@ -18056,13 +18056,13 @@
  },
  {
   "id": 23079,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf GTI Performance con descrizione quasi assente; il nero opaco può essere wrap. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI Performance con descrizione quasi assente; il nero opaco può essere wrap.",
   "controlli": [
    "Verniciatura originale o pellicola",
    "Storico tagliandi DSG"
@@ -18070,13 +18070,13 @@
  },
  {
   "id": 18758,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Z3 1.9 del 1999 con gomme nuove, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Z3 1.9 del 1999 con gomme nuove, dati coerenti.",
   "controlli": [
    "Ruggine e capote",
    "Iscrizione ASI"
@@ -18084,13 +18084,13 @@
  },
  {
   "id": 19241,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Spider JTS ASI con soli 66.500 km, ottime condizioni dichiarate. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Spider JTS ASI con soli 66.500 km, ottime condizioni dichiarate.",
   "controlli": [
    "Variatore di fase JTS",
    "Documentazione km"
@@ -18098,13 +18098,13 @@
  },
  {
   "id": 19019,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A4 allroad con allestimento non indicato e descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A4 allroad con allestimento non indicato e descrizione minima.",
   "controlli": [
    "Motorizzazione e allestimento esatti",
    "Storico tagliandi"
@@ -18125,13 +18125,13 @@
  },
  {
   "id": 10246,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 Sportback metano S-line unico proprietario, sempre tagliandata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 Sportback metano S-line unico proprietario, sempre tagliandata.",
   "controlli": [
    "Scadenza revisione bombole",
    "Fatture tagliandi"
@@ -18139,13 +18139,13 @@
  },
  {
   "id": 35860,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf GTI elaborata stage 3 da 430 CV: forte rischio meccanico e problemi di omologazione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI elaborata stage 3 da 430 CV: forte rischio meccanico e problemi di omologazione.",
   "controlli": [
    "Omologazione modifiche a libretto",
    "Stato frizioni DSG e motore"
@@ -18153,13 +18153,13 @@
  },
  {
   "id": 44615,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Sportage HEV 2022 tagliandi Kia certificati, condizioni pari al nuovo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Sportage HEV 2022 tagliandi Kia certificati, condizioni pari al nuovo.",
   "controlli": [
    "Libretto tagliandi Kia",
    "Garanzia residua"
@@ -18167,13 +18167,13 @@
  },
  {
   "id": 31797,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Mini Cooper S 2018 con 100.000 km in buone condizioni dichiarate. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Mini Cooper S 2018 con 100.000 km in buone condizioni dichiarate.",
   "controlli": [
    "Storico tagliandi",
    "Consumo olio"
@@ -18181,13 +18181,13 @@
  },
  {
   "id": 31058,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C220d con targa rumena: costi e tempi di immatricolazione in Italia da calcolare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C220d con targa rumena: costi e tempi di immatricolazione in Italia da calcolare.",
   "controlli": [
    "Documenti per nazionalizzazione",
    "Km reali e storico"
@@ -18195,7 +18195,7 @@
  },
  {
   "id": 35597,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -18206,7 +18206,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Puma 2022 tagliandata Ford con alcuni graffi da valutare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Puma 2022 tagliandata Ford con alcuni graffi da valutare.",
   "controlli": [
    "Entità graffi carrozzeria",
    "Storico tagliandi"
@@ -18214,7 +18214,7 @@
  },
  {
   "id": 36199,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -18225,7 +18225,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Ford Ranger (autocarro) con graffi visibili in foto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Ford Ranger (autocarro) con graffi visibili in foto.",
   "controlli": [
    "Entità graffi carrozzeria",
    "Uso pregresso e cassone"
@@ -18233,7 +18233,7 @@
  },
  {
   "id": 22213,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -18244,7 +18244,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Fiesta ST-Line 2022 con difetti estetici di carrozzeria dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Fiesta ST-Line 2022 con difetti estetici di carrozzeria dichiarati.",
   "controlli": [
    "Foto dettagliate dei segni",
    "Libretto tagliandi"
@@ -18252,13 +18252,13 @@
  },
  {
   "id": 13707,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf GTI mappata con scarico artigianale; meccatronica DSG già sostituita. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI mappata con scarico artigianale; meccatronica DSG già sostituita.",
   "controlli": [
    "Omologazione scarico e mappa",
    "Stato DSG"
@@ -18266,13 +18266,13 @@
  },
  {
   "id": 7988,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "ML 250 tagliandi Mercedes, sempre in box, due treni di gomme. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "ML 250 tagliandi Mercedes, sempre in box, due treni di gomme.",
   "controlli": [
    "Storico tagliandi",
    "Stato sospensioni e AdBlue"
@@ -18280,13 +18280,13 @@
  },
  {
   "id": 40713,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Peugeot 2008 2024 con 39.000 km tagliandata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Peugeot 2008 2024 con 39.000 km tagliandata.",
   "controlli": [
    "Allestimento esatto",
    "Garanzia residua"
@@ -18294,13 +18294,13 @@
  },
  {
   "id": 32373,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan 2.0 TDI 2019 tenuto in garage, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan 2.0 TDI 2019 tenuto in garage, dati coerenti.",
   "controlli": [
    "Storico tagliandi DSG",
    "Km reali"
@@ -18308,13 +18308,13 @@
  },
  {
   "id": 126,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Focus ST-Line X 2024 unico proprietario, tagliandi regolari. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Focus ST-Line X 2024 unico proprietario, tagliandi regolari.",
   "controlli": [
    "Garanzia residua",
    "Libretto tagliandi Ford"
@@ -18322,13 +18322,13 @@
  },
  {
   "id": 18997,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan con annuncio privo di descrizione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan con annuncio privo di descrizione.",
   "controlli": [
    "Storico tagliandi",
    "Condizioni generali in visione"
@@ -18336,13 +18336,13 @@
  },
  {
   "id": 40844,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "420d M Sport tagliandata BMW con 171.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "420d M Sport tagliandata BMW con 171.000 km.",
   "controlli": [
    "Fatture BMW",
    "Catena distribuzione"
@@ -18350,13 +18350,13 @@
  },
  {
   "id": 19219,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A4 Avant con descrizione quasi assente. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A4 Avant con descrizione quasi assente.",
   "controlli": [
    "Storico tagliandi",
    "Stato S tronic"
@@ -18364,13 +18364,13 @@
  },
  {
   "id": 19842,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A4 Avant 40 TDI tagliandata regolarmente, nessun problema dichiarato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A4 Avant 40 TDI tagliandata regolarmente, nessun problema dichiarato.",
   "controlli": [
    "Fatture tagliandi",
    "Km reali"
@@ -18378,13 +18378,13 @@
  },
  {
   "id": 13686,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "208 2023 con 28.000 km e 12 mesi di garanzia. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "208 2023 con 28.000 km e 12 mesi di garanzia.",
   "controlli": [
    "Venditore professionale o privato",
    "Storico tagliandi"
@@ -18392,13 +18392,13 @@
  },
  {
   "id": 37817,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "320d Msport con testo incomprensibile, nessuna informazione sulle condizioni. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "320d Msport con testo incomprensibile, nessuna informazione sulle condizioni.",
   "controlli": [
    "Condizioni carrozzeria",
    "Storico tagliandi"
@@ -18406,13 +18406,13 @@
  },
  {
   "id": 35447,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Captur E-Tech tagliandato a 70.000 km, solo piccoli segni d'uso. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Captur E-Tech tagliandato a 70.000 km, solo piccoli segni d'uso.",
   "controlli": [
    "Stato batteria ibrida",
    "Cavo di ricarica"
@@ -18420,13 +18420,13 @@
  },
  {
   "id": 35677,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf GTI Performance elaborata stage 2: rischio meccanico da valutare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI Performance elaborata stage 2: rischio meccanico da valutare.",
   "controlli": [
    "Omologazione modifiche",
    "Stato DSG e frizioni"
@@ -18434,13 +18434,13 @@
  },
  {
   "id": 14358,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "420d Coupé M Sport 2018 ben accessoriata, km alti coerenti col prezzo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "420d Coupé M Sport 2018 ben accessoriata, km alti coerenti col prezzo.",
   "controlli": [
    "Storico tagliandi",
    "Catena distribuzione"
@@ -18448,13 +18448,13 @@
  },
  {
   "id": 35932,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Q2 unico proprietario, tagliandi Audi, uso casa-lavoro. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Q2 unico proprietario, tagliandi Audi, uso casa-lavoro.",
   "controlli": [
    "Fatture tagliandi Audi",
    "Km reali"
@@ -18462,13 +18462,13 @@
  },
  {
   "id": 30425,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "320d GT Luxury 2016 con revisione valida al 2028. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "320d GT Luxury 2016 con revisione valida al 2028.",
   "controlli": [
    "Storico tagliandi",
    "Catena distribuzione"
@@ -18476,13 +18476,13 @@
  },
  {
   "id": 43562,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Classe A 160d automatica 2018 con km originali dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Classe A 160d automatica 2018 con km originali dichiarati.",
   "controlli": [
    "Storico tagliandi",
    "Stato cambio automatico"
@@ -18490,13 +18490,13 @@
  },
  {
   "id": 32558,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "420d xDrive Gran Coupé M con gomme nuove, sempre in box. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "420d xDrive Gran Coupé M con gomme nuove, sempre in box.",
   "controlli": [
    "Storico tagliandi",
    "Stato trasmissione xDrive"
@@ -18504,13 +18504,13 @@
  },
  {
   "id": 19103,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "CLA Shooting Brake 4Matic con storico tagliandi disponibile. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "CLA Shooting Brake 4Matic con storico tagliandi disponibile.",
   "controlli": [
    "Fatture tagliandi",
    "Stato cambio automatico"
@@ -18518,7 +18518,7 @@
  },
  {
   "id": 22586,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -18529,7 +18529,7 @@
     "source": "testo"
    }
   ],
-  "nota": "DS 7 con lieve grandine dichiarata: valutare costo levabolli. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "DS 7 con lieve grandine dichiarata: valutare costo levabolli.",
   "controlli": [
    "Numero bolli e pannelli coinvolti",
    "Storico tagliandi"
@@ -18537,13 +18537,13 @@
  },
  {
   "id": 31422,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Abarth Pista con stage 2 e impianto Brembo maggiorato: modifiche da verificare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Abarth Pista con stage 2 e impianto Brembo maggiorato: modifiche da verificare.",
   "controlli": [
    "Omologazione modifiche",
    "Stato frizione e turbo"
@@ -18551,13 +18551,13 @@
  },
  {
   "id": 35393,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Compass Night Eagle 4WD 2020 in ottime condizioni dichiarate. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Compass Night Eagle 4WD 2020 in ottime condizioni dichiarate.",
   "controlli": [
    "Storico tagliandi",
    "Km reali"
@@ -18565,13 +18565,13 @@
  },
  {
   "id": 13498,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Q3 2.0 TDI 2016 in buone condizioni, prezzo finale 12.000 trattabili. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Q3 2.0 TDI 2016 in buone condizioni, prezzo finale 12.000 trattabili.",
   "controlli": [
    "Trazione quattro o anteriore",
    "Stato S tronic"
@@ -18579,13 +18579,13 @@
  },
  {
   "id": 10424,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan R-Line 1.6 TDI 2018, meccanica dichiarata perfetta. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan R-Line 1.6 TDI 2018, meccanica dichiarata perfetta.",
   "controlli": [
    "Storico tagliandi",
    "Km reali"
@@ -18593,13 +18593,13 @@
  },
  {
   "id": 22575,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C4 quasi nuova venduta dopo il decesso del proprietario: verificare titolarità degli eredi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C4 quasi nuova venduta dopo il decesso del proprietario: verificare titolarità degli eredi.",
   "controlli": [
    "Documenti di successione",
    "Garanzia residua"
@@ -18607,13 +18607,13 @@
  },
  {
   "id": 30326,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C-HR Hybrid ben accessoriata, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C-HR Hybrid ben accessoriata, dati coerenti.",
   "controlli": [
    "Stato batteria ibrida",
    "Storico tagliandi"
@@ -18621,13 +18621,13 @@
  },
  {
   "id": 30473,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 2022 con 155.748 km e nessuna descrizione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 2022 con 155.748 km e nessuna descrizione.",
   "controlli": [
    "Uso pregresso (noleggio/aziendale)",
    "Storico tagliandi"
@@ -18635,13 +18635,13 @@
  },
  {
   "id": 31801,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "118d 2020 con tagliandi eseguiti, condizioni dichiarate perfette. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "118d 2020 con tagliandi eseguiti, condizioni dichiarate perfette.",
   "controlli": [
    "Fatture tagliandi",
    "Km reali"
@@ -18649,13 +18649,13 @@
  },
  {
   "id": 22396,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "X6 2012 con freni, sospensioni e gomme nuove, tagliandata BMW. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "X6 2012 con freni, sospensioni e gomme nuove, tagliandata BMW.",
   "controlli": [
    "Motorizzazione esatta",
    "Stato cambio e turbine"
@@ -18663,7 +18663,7 @@
  },
  {
   "id": 44348,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -18674,7 +18674,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Cayenne diesel senza storico tagliandi, graffi e opacità di carrozzeria. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Cayenne diesel senza storico tagliandi, graffi e opacità di carrozzeria.",
   "controlli": [
    "Storico manutenzione",
    "Stato carrozzeria e distanziali"
@@ -18682,13 +18682,13 @@
  },
  {
   "id": 19957,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "XC60 B4 con descrizione minima e 190.000 km in 4 anni. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "XC60 B4 con descrizione minima e 190.000 km in 4 anni.",
   "controlli": [
    "Uso pregresso aziendale",
    "Storico tagliandi Volvo"
@@ -18696,13 +18696,13 @@
  },
  {
   "id": 44464,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Ateca FR 2021 con 61.000 km in ottimo stato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Ateca FR 2021 con 61.000 km in ottimo stato.",
   "controlli": [
    "Storico tagliandi",
    "Stato DSG"
@@ -18781,7 +18781,7 @@
  },
  {
   "id": 26111,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -18806,7 +18806,7 @@
   ],
   "ricambi_min": 2750,
   "ricambi_max": 5550,
-  "nota": "F-Pace marciante con rumore anomalo dal motore: rischio di rifacimento motore. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "F-Pace marciante con rumore anomalo dal motore: rischio di rifacimento motore.",
   "controlli": [
    "Diagnosi rumore motore (catena/bronzine)",
    "Preventivo riparazione"
@@ -18961,13 +18961,13 @@
  },
  {
   "id": 39811,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500X 1.6 Multijet con distribuzione sostituita e nessun problema dichiarato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500X 1.6 Multijet con distribuzione sostituita e nessun problema dichiarato.",
   "controlli": [
    "Fattura cinghia distribuzione",
    "Storico tagliandi"
@@ -18975,7 +18975,7 @@
  },
  {
   "id": 46921,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -18995,7 +18995,7 @@
   ],
   "ricambi_min": 250,
   "ricambi_max": 600,
-  "nota": "Panda con cambio da sostituire (tremolio in 4a e 5a) e impianto audio modificato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Panda con cambio da sostituire (tremolio in 4a e 5a) e impianto audio modificato.",
   "controlli": [
    "Diagnosi cambio",
    "Impianto GPL e revisione"
@@ -19003,13 +19003,13 @@
  },
  {
   "id": 27174,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "118d Msport 2015 automatica, condizioni dichiarate perfette. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "118d Msport 2015 automatica, condizioni dichiarate perfette.",
   "controlli": [
    "Storico tagliandi",
    "Catena distribuzione"
@@ -19072,7 +19072,7 @@
  },
  {
   "id": 12604,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -19083,7 +19083,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Duster tagliandata con qualche graffio di carrozzeria. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Duster tagliandata con qualche graffio di carrozzeria.",
   "controlli": [
    "Entità graffi",
    "Storico tagliandi"
@@ -19159,13 +19159,13 @@
  },
  {
   "id": 434,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Serie 1 benzina con 225.000 km e descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Serie 1 benzina con 225.000 km e descrizione minima.",
   "controlli": [
    "Versione e potenza esatte",
    "Storico tagliandi"
@@ -19173,13 +19173,13 @@
  },
  {
   "id": 27483,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Duster 1.6 benzina 2017 con 80.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Duster 1.6 benzina 2017 con 80.000 km.",
   "controlli": [
    "Storico tagliandi",
    "Km reali"
@@ -19201,13 +19201,13 @@
  },
  {
   "id": 39819,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "V40 D2 N1 tagliandata in Volvo con distribuzione, dischi e pastiglie nuovi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "V40 D2 N1 tagliandata in Volvo con distribuzione, dischi e pastiglie nuovi.",
   "controlli": [
    "Fatture Volvo",
    "Immatricolazione N1"
@@ -19215,13 +19215,13 @@
  },
  {
   "id": 12617,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Megane SW 2021 con IVA deducibile, venditore professionale. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Megane SW 2021 con IVA deducibile, venditore professionale.",
   "controlli": [
    "Uso pregresso aziendale",
    "Costo passaggio escluso"
@@ -19242,7 +19242,7 @@
  },
  {
   "id": 21288,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -19253,7 +19253,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Golf 7 TSI con alcuni bolli da grandine. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf 7 TSI con alcuni bolli da grandine.",
   "controlli": [
    "Numero bolli e pannelli",
    "Storico tagliandi"
@@ -19275,7 +19275,7 @@
  },
  {
   "id": 17512,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -19286,7 +19286,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Astra Sports Tourer mai incidentata ma con qualche graffio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Astra Sports Tourer mai incidentata ma con qualche graffio.",
   "controlli": [
    "Entità graffi",
    "Storico tagliandi"
@@ -19294,13 +19294,13 @@
  },
  {
   "id": 39966,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "GTV 1996 ASI con 118.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "GTV 1996 ASI con 118.000 km.",
   "controlli": [
    "Ruggine",
    "Cinghia distribuzione"
@@ -19308,13 +19308,13 @@
  },
  {
   "id": 42444,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "CLS 320 CDI sempre tagliandata, nero opaco da verificare se pellicola. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "CLS 320 CDI sempre tagliandata, nero opaco da verificare se pellicola.",
   "controlli": [
    "Storico tagliandi",
    "Stato cambio 7G"
@@ -19322,13 +19322,13 @@
  },
  {
   "id": 21515,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C4 Picasso 2018 con cinghia appena cambiata e revisionata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C4 Picasso 2018 con cinghia appena cambiata e revisionata.",
   "controlli": [
    "Fattura cinghia",
    "Storico tagliandi"
@@ -19336,13 +19336,13 @@
  },
  {
   "id": 26756,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Km nei dati 6.800 ma nel testo 70.000: confronto falsato, verificare i km reali. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km nei dati 6.800 ma nel testo 70.000: confronto falsato, verificare i km reali.",
   "controlli": [
    "Km reali da libretto tagliandi",
    "Revisione e storico"
@@ -19350,7 +19350,7 @@
  },
  {
   "id": 4383,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -19370,7 +19370,7 @@
   ],
   "ricambi_min": 250,
   "ricambi_max": 500,
-  "nota": "Botta lato guida da valutare in foto/dal vivo, km alti per l'anno. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Botta lato guida da valutare in foto/dal vivo, km alti per l'anno.",
   "controlli": [
    "Entità botta lato guida e montante",
    "Tagliandi a 160.000 km"
@@ -19378,13 +19378,13 @@
  },
  {
   "id": 435,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Testo molto vago, versione e alimentazione non indicate. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Testo molto vago, versione e alimentazione non indicate.",
   "controlli": [
    "Motorizzazione e allestimento",
    "Storico tagliandi"
@@ -19392,13 +19392,13 @@
  },
  {
   "id": 9020,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500 Dolcevita con km nella norma, prezzo interessante. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500 Dolcevita con km nella norma, prezzo interessante.",
   "controlli": [
    "Tagliandi e revisione",
    "Stato frizione"
@@ -19406,13 +19406,13 @@
  },
  {
   "id": 12414,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Allestimento R-Line vs Highline da confermare; 1.4 TSI 160 a rischio catena/pistoni. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Allestimento R-Line vs Highline da confermare; 1.4 TSI 160 a rischio catena/pistoni.",
   "controlli": [
    "Rumorosità catena distribuzione",
    "Stato DSG a 7 marce"
@@ -19420,7 +19420,7 @@
  },
  {
   "id": 34841,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -19431,7 +19431,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Countryman tagliandata, solo piccoli segni estetici dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Countryman tagliandata, solo piccoli segni estetici dichiarati.",
   "controlli": [
    "Storico officina",
    "Segni carrozzeria"
@@ -19477,13 +19477,13 @@
  },
  {
   "id": 45045,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Auto modificata con collettori senza catalizzatore: problemi di revisione/omologazione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Auto modificata con collettori senza catalizzatore: problemi di revisione/omologazione.",
   "controlli": [
    "Conformità a libretto delle modifiche",
    "Documenti sostituzione motore"
@@ -19491,13 +19491,13 @@
  },
  {
   "id": 26091,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500 diesel con revisione recente, uso cittadino. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500 diesel con revisione recente, uso cittadino.",
   "controlli": [
    "FAP/DPF per uso cittadino",
    "Frizione"
@@ -19529,7 +19529,7 @@
  },
  {
   "id": 11944,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -19540,7 +19540,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Motore che non rende pur con turbine appena cambiate: possibile guasto serio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Motore che non rende pur con turbine appena cambiate: possibile guasto serio.",
   "controlli": [
    "Diagnosi centralina e compressione",
    "Livello olio (diluizione) e iniettori"
@@ -19548,7 +19548,7 @@
  },
  {
   "id": 3492,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -19559,7 +19559,7 @@
     "source": "testo"
    }
   ],
-  "nota": "318d con km alti ma prezzo coerente, solo graffi dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "318d con km alti ma prezzo coerente, solo graffi dichiarati.",
   "controlli": [
    "Catena distribuzione e storico",
    "Graffi carrozzeria"
@@ -19567,13 +19567,13 @@
  },
  {
   "id": 39970,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "SLK con revisione e bollo recenti, venditore in trasferimento. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "SLK con revisione e bollo recenti, venditore in trasferimento.",
   "controlli": [
    "Funzionamento tetto vario",
    "Ruggine sottoscocca"
@@ -19581,13 +19581,13 @@
  },
  {
   "id": 42375,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Giulietta diesel con normale usura dichiarata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Giulietta diesel con normale usura dichiarata.",
   "controlli": [
    "Tagliandi e distribuzione",
    "Usura interni"
@@ -19595,13 +19595,13 @@
  },
  {
   "id": 16852,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Motore 2.2 nel titolo vs 2.0 eD4 nei dati (non esistente nel 2013); km molto alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Motore 2.2 nel titolo vs 2.0 eD4 nei dati (non esistente nel 2013); km molto alti.",
   "controlli": [
    "Motorizzazione a libretto",
    "Storico a 270.000 km"
@@ -19609,13 +19609,13 @@
  },
  {
   "id": 12545,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan unico proprietario con tagliandi documentati e distribuzione fatta. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan unico proprietario con tagliandi documentati e distribuzione fatta.",
   "controlli": [
    "Fatture tagliandi e DSG",
    "Anno a libretto (2010/2011)"
@@ -19623,13 +19623,13 @@
  },
  {
   "id": 27029,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan con turbo, distribuzione e freni nuovi, km alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan con turbo, distribuzione e freni nuovi, km alti.",
   "controlli": [
    "Fatture lavori",
    "Stato DSG"
@@ -19651,13 +19651,13 @@
  },
  {
   "id": 42783,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Discovery 2 Td5 originale con freni e gomme nuove. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Discovery 2 Td5 originale con freni e gomme nuove.",
   "controlli": [
    "Ruggine telaio",
    "Perdite olio"
@@ -19665,13 +19665,13 @@
  },
  {
   "id": 2593,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Corsa recente con garanzia e tagliando completo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Corsa recente con garanzia e tagliando completo.",
   "controlli": [
    "Trasferibilità garanzia",
    "Storico tagliandi"
@@ -19679,13 +19679,13 @@
  },
  {
   "id": 28827,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500L unico proprietario con tagliandi regolari. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500L unico proprietario con tagliandi regolari.",
   "controlli": [
    "Fatture tagliandi",
    "Frizione"
@@ -19693,13 +19693,13 @@
  },
  {
   "id": 30002,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Annuncio senza descrizione (solo email), dati da confermare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Annuncio senza descrizione (solo email), dati da confermare.",
   "controlli": [
    "Stato cambio S tronic e sospensioni",
    "Storico manutenzione"
@@ -19707,13 +19707,13 @@
  },
  {
   "id": 29554,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Corsa 2023 unico proprietario, mai incidentata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Corsa 2023 unico proprietario, mai incidentata.",
   "controlli": [
    "Tagliandi",
    "Garanzia residua"
@@ -19721,13 +19721,13 @@
  },
  {
   "id": 28720,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Compass 4WD automatica, testo scarno ma dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Compass 4WD automatica, testo scarno ma dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Cambio automatico"
@@ -19735,13 +19735,13 @@
  },
  {
   "id": 18222,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Espace ben documentata, FAP rigenerato e tagliandi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Espace ben documentata, FAP rigenerato e tagliandi.",
   "controlli": [
    "Fatture manutenzione",
    "Cambio EDC"
@@ -19749,13 +19749,13 @@
  },
  {
   "id": 43108,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Panda Hybrid 2023 pochi km, con gomme invernali. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Panda Hybrid 2023 pochi km, con gomme invernali.",
   "controlli": [
    "Verificare che sia autovettura M1 e non N1",
    "Tagliandi"
@@ -19763,13 +19763,13 @@
  },
  {
   "id": 12938,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Evoque da privato, km alti ma prezzo coerente. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Evoque da privato, km alti ma prezzo coerente.",
   "controlli": [
    "Storico tagliandi",
    "Cambio e trasmissione"
@@ -19777,13 +19777,13 @@
  },
  {
   "id": 18186,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500X 4x4 automatica con pochi km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500X 4x4 automatica con pochi km.",
   "controlli": [
    "Km reali",
    "Cambio automatico 9 marce"
@@ -19791,7 +19791,7 @@
  },
  {
   "id": 11935,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -19818,7 +19818,7 @@
   ],
   "ricambi_min": 150,
   "ricambi_max": 350,
-  "nota": "Meccanica dichiarata solo discreta, paraurti anteriore da sostituire. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Meccanica dichiarata solo discreta, paraurti anteriore da sostituire.",
   "controlli": [
    "Stato meccanica e catena",
    "Danni sotto paraurti anteriore"
@@ -19826,7 +19826,7 @@
  },
  {
   "id": 21830,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -19858,7 +19858,7 @@
   ],
   "ricambi_min": 180,
   "ricambi_max": 450,
-  "nota": "Duster unico proprietario con ammaccature dichiarate su cofano e paraurti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Duster unico proprietario con ammaccature dichiarate su cofano e paraurti.",
   "controlli": [
    "Entità ammaccature",
    "Tagliandi"
@@ -19866,7 +19866,7 @@
  },
  {
   "id": 27566,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -19877,7 +19877,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Danni da grandine e impianto GPL su TFSI: valutare costi carrozzeria e omologazione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Danni da grandine e impianto GPL su TFSI: valutare costi carrozzeria e omologazione.",
   "controlli": [
    "Entità grandine su tetto/cofano",
    "GPL a libretto e stato motore"
@@ -19885,7 +19885,7 @@
  },
  {
   "id": 26448,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -19896,7 +19896,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Km molto alti e allestimento California da confermare, problemi di carrozzeria in foto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km molto alti e allestimento California da confermare, problemi di carrozzeria in foto.",
   "controlli": [
    "Allestimento e omologazione a libretto",
    "Ruggine e carrozzeria"
@@ -19904,13 +19904,13 @@
  },
  {
   "id": 37639,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A5 Sportback V6 TDI con storico manutenzione, km alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A5 Sportback V6 TDI con storico manutenzione, km alti.",
   "controlli": [
    "Cambio multitronic",
    "Storico manutenzione"
@@ -19918,13 +19918,13 @@
  },
  {
   "id": 29531,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C180d W205 con manutenzione regolare, disponibile a verifica. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C180d W205 con manutenzione regolare, disponibile a verifica.",
   "controlli": [
    "Storico tagliandi",
    "Cambio automatico"
@@ -19932,13 +19932,13 @@
  },
  {
   "id": 19454,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 g-tron tagliandata Audi, unico proprietario. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 g-tron tagliandata Audi, unico proprietario.",
   "controlli": [
    "Scadenza bombole metano",
    "Cambio S tronic"
@@ -19946,7 +19946,7 @@
  },
  {
   "id": 13776,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -19957,7 +19957,7 @@
     "source": "testo"
    }
   ],
-  "nota": "520d Touring senza sinistri, solo segni estetici. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "520d Touring senza sinistri, solo segni estetici.",
   "controlli": [
    "Fatture manutenzione",
    "Segni carrozzeria"
@@ -19965,13 +19965,13 @@
  },
  {
   "id": 34660,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Fiat Coupé originale ben tenuta, auto d'epoca. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Fiat Coupé originale ben tenuta, auto d'epoca.",
   "controlli": [
    "Ruggine",
    "Distribuzione"
@@ -19979,13 +19979,13 @@
  },
  {
   "id": 31295,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Z4 E85 da amatore appena tagliandata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Z4 E85 da amatore appena tagliandata.",
   "controlli": [
    "Capote",
    "Storico tagliandi"
@@ -19993,7 +19993,7 @@
  },
  {
   "id": 32583,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -20004,7 +20004,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Q3 tagliandata, graffi superficiali dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Q3 tagliandata, graffi superficiali dichiarati.",
   "controlli": [
    "Graffi in foto",
    "Cambio S tronic"
@@ -20012,13 +20012,13 @@
  },
  {
   "id": 21686,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Evoque Dynamic con distribuzione fatta, km molto alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Evoque Dynamic con distribuzione fatta, km molto alti.",
   "controlli": [
    "Revisione scaduta a settembre 2026",
    "Cambio automatico"
@@ -20026,13 +20026,13 @@
  },
  {
   "id": 13533,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Discovery 4 HSE con due turbine nuove. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Discovery 4 HSE con due turbine nuove.",
   "controlli": [
    "Sospensioni pneumatiche",
    "Fatture turbine"
@@ -20040,13 +20040,13 @@
  },
  {
   "id": 19760,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "500X recente ben accessoriata, venditore passa ad auto aziendale. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "500X recente ben accessoriata, venditore passa ad auto aziendale.",
   "controlli": [
    "Tagliandi e garanzia",
    "Km reali"
@@ -20054,13 +20054,13 @@
  },
  {
   "id": 12855,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Grand Cherokee Overland, testo scarno ma dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Grand Cherokee Overland, testo scarno ma dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Cambio e sospensioni"
@@ -20068,13 +20068,13 @@
  },
  {
   "id": 2640,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Jimny automatico pochi km, verificare la generazione (1.3 vecchia o 1.5 nuova). Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Jimny automatico pochi km, verificare la generazione (1.3 vecchia o 1.5 nuova).",
   "controlli": [
    "Generazione e motore a libretto",
    "Ruggine sottoscocca"
@@ -20082,13 +20082,13 @@
  },
  {
   "id": 5391,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "18.200 km per una 2013 poco credibile, probabile 182.000: confronto falsato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "18.200 km per una 2013 poco credibile, probabile 182.000: confronto falsato.",
   "controlli": [
    "Km reali da tagliandi",
    "Cambio S tronic"
@@ -20110,13 +20110,13 @@
  },
  {
   "id": 22683,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Grand Cherokee Limited con km certificati e manutenzione recente. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Grand Cherokee Limited con km certificati e manutenzione recente.",
   "controlli": [
    "Libretto tagliandi",
    "Cambio automatico"
@@ -20124,13 +20124,13 @@
  },
  {
   "id": 44668,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A180d recente; posteriore modificato stile A45. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A180d recente; posteriore modificato stile A45.",
   "controlli": [
    "Modifiche omologate",
    "Storico tagliandi"
@@ -20138,13 +20138,13 @@
  },
  {
   "id": 13411,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Discovery Sport automatica, testo scarno. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Discovery Sport automatica, testo scarno.",
   "controlli": [
    "Storico tagliandi",
    "Cambio 9 marce"
@@ -20152,13 +20152,13 @@
  },
  {
   "id": 18249,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Testo incomprensibile, nessuna informazione sulle condizioni. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Testo incomprensibile, nessuna informazione sulle condizioni.",
   "controlli": [
    "Documenti e storico",
    "Prova su strada"
@@ -20166,13 +20166,13 @@
  },
  {
   "id": 17477,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Testo vuoto, km molto alti, motorizzazione da confermare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Testo vuoto, km molto alti, motorizzazione da confermare.",
   "controlli": [
    "Motore a libretto",
    "Storico a 270.000 km"
@@ -20180,13 +20180,13 @@
  },
  {
   "id": 21769,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Wrangler YJ con metano e hard top, auto da collezione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Wrangler YJ con metano e hard top, auto da collezione.",
   "controlli": [
    "Ruggine telaio",
    "Bombole metano a libretto"
@@ -20194,13 +20194,13 @@
  },
  {
   "id": 12142,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Ex taxi tedesco con 420.000 km, usura elevata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Ex taxi tedesco con 420.000 km, usura elevata.",
   "controlli": [
    "Storico importazione",
    "Cambio e motore"
@@ -20208,13 +20208,13 @@
  },
  {
   "id": 5107,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "X3 sDrive18d automatica, testo scarno. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "X3 sDrive18d automatica, testo scarno.",
   "controlli": [
    "Storico tagliandi",
    "Km reali"
@@ -20236,7 +20236,7 @@
  },
  {
   "id": 21010,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -20247,7 +20247,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Targa tedesca, immatricolazione italiana a carico del venditore: verificare documenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Targa tedesca, immatricolazione italiana a carico del venditore: verificare documenti.",
   "controlli": [
    "Documenti esteri e nazionalizzazione",
    "Difetti carrozzeria"
@@ -20255,13 +20255,13 @@
  },
  {
   "id": 43312,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C3 recente tagliandata in concessionaria con gomme neve. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C3 recente tagliandata in concessionaria con gomme neve.",
   "controlli": [
    "Tagliandi",
    "Garanzia residua"
@@ -20269,13 +20269,13 @@
  },
  {
   "id": 26664,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Giulietta 1.4 con distribuzione fatta e km certificati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Giulietta 1.4 con distribuzione fatta e km certificati.",
   "controlli": [
    "Fatture distribuzione",
    "Graffi carrozzeria"
@@ -20283,13 +20283,13 @@
  },
  {
   "id": 43343,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan 2010 con pochi km per l'età. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan 2010 con pochi km per l'età.",
   "controlli": [
    "Km reali",
    "DSG e distribuzione"
@@ -20321,7 +20321,7 @@
  },
  {
   "id": 42280,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -20339,7 +20339,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Versione benzina nei dati ma alimentazione diesel: motorizzazione da confermare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Versione benzina nei dati ma alimentazione diesel: motorizzazione da confermare.",
   "controlli": [
    "Motore a libretto",
    "Graffi fiancata dx e cofano"
@@ -20347,13 +20347,13 @@
  },
  {
   "id": 39221,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Panda con molta manutenzione recente, km alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Panda con molta manutenzione recente, km alti.",
   "controlli": [
    "Fatture lavori",
    "Km reali"
@@ -20361,7 +20361,7 @@
  },
  {
   "id": 22062,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -20381,7 +20381,7 @@
   ],
   "ricambi_min": 600,
   "ricambi_max": 1200,
-  "nota": "Strappi a freddo, probabile frizione del cambio DCT. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Strappi a freddo, probabile frizione del cambio DCT.",
   "controlli": [
    "Diagnosi cambio DCT",
    "Prova a motore freddo"
@@ -20423,13 +20423,13 @@
  },
  {
   "id": 44240,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "T-Roc 4MOTION DSG con tagliandi VW. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "T-Roc 4MOTION DSG con tagliandi VW.",
   "controlli": [
    "Tagliandi certificati",
    "DSG"
@@ -20447,13 +20447,13 @@
  },
  {
   "id": 37822,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "IVA esposta: il prezzo potrebbe essere imponibile, totale vicino al mercato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "IVA esposta: il prezzo potrebbe essere imponibile, totale vicino al mercato.",
   "controlli": [
    "Prezzo IVA inclusa",
    "Storico ex aziendale"
@@ -20461,13 +20461,13 @@
  },
  {
   "id": 21815,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "2CV ASI prima vernice, unico proprietario. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "2CV ASI prima vernice, unico proprietario.",
   "controlli": [
    "Ruggine telaio",
    "Certificato ASI"
@@ -20475,13 +20475,13 @@
  },
  {
   "id": 10257,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Km 15.000 dubbi e scarico diretto non omologato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km 15.000 dubbi e scarico diretto non omologato.",
   "controlli": [
    "Km reali",
    "Scarico originale per revisione"
@@ -20558,7 +20558,7 @@
  },
  {
   "id": 16979,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -20569,7 +20569,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Carrozzeria da ripristinare, entità dei lavori non specificata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Carrozzeria da ripristinare, entità dei lavori non specificata.",
   "controlli": [
    "Entità danni carrozzeria",
    "Km alti e frizione"
@@ -20577,13 +20577,13 @@
  },
  {
   "id": 31176,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Kamiq recente mai incidentata con tagliandi ufficiali. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Kamiq recente mai incidentata con tagliandi ufficiali.",
   "controlli": [
    "Km effettivi (74.000 vs 88.000)",
    "Garanzia residua"
@@ -20601,13 +20601,13 @@
  },
  {
   "id": 35669,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Giulia AT8 con tagliando e distribuzione appena fatti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Giulia AT8 con tagliando e distribuzione appena fatti.",
   "controlli": [
    "Fatture",
    "Cambio AT8"
@@ -20615,13 +20615,13 @@
  },
  {
   "id": 30107,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Compass 2021 tagliandata Jeep, km alti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Compass 2021 tagliandata Jeep, km alti.",
   "controlli": [
    "Libretto tagliandi",
    "Frizione"
@@ -20629,13 +20629,13 @@
  },
  {
   "id": 12937,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf Sportsvan pochi km in ottime condizioni. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf Sportsvan pochi km in ottime condizioni.",
   "controlli": [
    "DSG",
    "Tagliandi"
@@ -20643,13 +20643,13 @@
  },
  {
   "id": 27565,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Tiguan con turbina nuova e FAP pulito. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Tiguan con turbina nuova e FAP pulito.",
   "controlli": [
    "Fatture turbina",
    "DSG"
@@ -20677,13 +20677,13 @@
  },
  {
   "id": 12961,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C200 BlueTEC, venditore aperto anche a scambio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C200 BlueTEC, venditore aperto anche a scambio.",
   "controlli": [
    "Vendita senza permuta",
    "Storico tagliandi"
@@ -20691,13 +20691,13 @@
  },
  {
   "id": 12778,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Passat Variant km autostradali, distribuzione da confermare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Passat Variant km autostradali, distribuzione da confermare.",
   "controlli": [
    "Distribuzione eseguita?",
    "Fatture tagliandi"
@@ -20705,7 +20705,7 @@
  },
  {
   "id": 15331,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -20716,7 +20716,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Panda Van N1 a prezzo 64% sotto mercato, clima da ricaricare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Panda Van N1 a prezzo 64% sotto mercato, clima da ricaricare.",
   "controlli": [
    "Perdite impianto clima",
    "Motivo del prezzo basso"
@@ -20724,13 +20724,13 @@
  },
  {
   "id": 35353,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C5 Aircross tagliandata Citroen, nessuna anomalia. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C5 Aircross tagliandata Citroen, nessuna anomalia.",
   "controlli": [
    "Cambio EAT8",
    "Tagliandi"
@@ -20738,7 +20738,7 @@
  },
  {
   "id": 12016,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "leggero",
   "danni": [
    {
@@ -20765,7 +20765,7 @@
   ],
   "ricambi_min": 80,
   "ricambi_max": 180,
-  "nota": "Qubo con scheggiatura parabrezza e segni carrozzeria; prezzo testo 6.500. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Qubo con scheggiatura parabrezza e segni carrozzeria; prezzo testo 6.500.",
   "controlli": [
    "Prezzo reale",
    "Omologazione autovettura (non N1)"
@@ -20773,7 +20773,7 @@
  },
  {
   "id": 7548,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -20784,7 +20784,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Motore 1.2 su Panda 4x4 2022 dubbio, km alti: confermare versione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Motore 1.2 su Panda 4x4 2022 dubbio, km alti: confermare versione.",
   "controlli": [
    "Motorizzazione a libretto",
    "Trasmissione 4x4"
@@ -20792,7 +20792,7 @@
  },
  {
   "id": 25451,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -20812,7 +20812,7 @@
   ],
   "ricambi_min": 400,
   "ricambi_max": 800,
-  "nota": "Auto ferma con frizione/trasmissione che slitta: su versione automatica il problema può essere il cambio, non solo la frizione. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Auto ferma con frizione/trasmissione che slitta: su versione automatica il problema può essere il cambio, non solo la frizione.",
   "controlli": [
    "Diagnosi trasmissione automatica",
    "Verificare da quanto è ferma (batteria, freni)"
@@ -20820,13 +20820,13 @@
  },
  {
   "id": 43730,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Plug-in 2021 con km alti ma prezzo coerente, carrozzeria e interni dichiarati perfetti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Plug-in 2021 con km alti ma prezzo coerente, carrozzeria e interni dichiarati perfetti.",
   "controlli": [
    "Stato batteria alta tensione (SOH)",
    "Storico tagliandi BMW"
@@ -20834,13 +20834,13 @@
  },
  {
   "id": 30437,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Pandina 2026 quasi nuova, dati coerenti e nessun danno dichiarato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Pandina 2026 quasi nuova, dati coerenti e nessun danno dichiarato.",
   "controlli": [
    "Verificare garanzia ufficiale residua",
    "Controllare libretto e km reali"
@@ -20848,13 +20848,13 @@
  },
  {
   "id": 43251,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Unico proprietario con tagliandi originali e freni nuovi, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Unico proprietario con tagliandi originali e freni nuovi, dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Stato frizione e DPF"
@@ -20862,13 +20862,13 @@
  },
  {
   "id": 30572,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A 200 1.6 benzina coerente con la versione, testo scarno con scarico aftermarket. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A 200 1.6 benzina coerente con la versione, testo scarno con scarico aftermarket.",
   "controlli": [
    "Omologazione scarico AMG a libretto",
    "Storico tagliandi"
@@ -20876,13 +20876,13 @@
  },
  {
   "id": 31076,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Giulia 2.2 180 CV con dati coerenti, descrizione molto breve. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Giulia 2.2 180 CV con dati coerenti, descrizione molto breve.",
   "controlli": [
    "Storico tagliandi e distribuzione",
    "Diagnosi elettronica"
@@ -20890,13 +20890,13 @@
  },
  {
   "id": 13878,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A3 e-tron tagliandata in rete Audi con batteria in buono stato, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A3 e-tron tagliandata in rete Audi con batteria in buono stato, dati coerenti.",
   "controlli": [
    "Test autonomia elettrica",
    "Verificare tagliando prepagato trasferibile"
@@ -20904,13 +20904,13 @@
  },
  {
   "id": 29519,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "TT 2.0 TFSI 2007 dichiarata in ottime condizioni, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "TT 2.0 TFSI 2007 dichiarata in ottime condizioni, dati coerenti.",
   "controlli": [
    "Stato cambio S tronic (meccatronica)",
    "Consumo olio motore TFSI"
@@ -20918,13 +20918,13 @@
  },
  {
   "id": 26283,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "3008 e-HDi 2015 con dati coerenti ma descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "3008 e-HDi 2015 con dati coerenti ma descrizione minima.",
   "controlli": [
    "Stato cambio robotizzato ETG6",
    "Storico tagliandi"
@@ -20946,13 +20946,13 @@
  },
  {
   "id": 45909,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A4 Avant 2.0 TDI con manutenzione recente documentata, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A4 Avant 2.0 TDI con manutenzione recente documentata, dati coerenti.",
   "controlli": [
    "Prevedere distribuzione a 210.000 km",
    "Storico tagliandi"
@@ -20960,13 +20960,13 @@
  },
  {
   "id": 19868,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Abarth 595 165 CV 2020 con 26.550 km e tagliando appena fatto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Abarth 595 165 CV 2020 con 26.550 km e tagliando appena fatto.",
   "controlli": [
    "Verificare modifiche/mappature",
    "Stato frizione"
@@ -20974,13 +20974,13 @@
  },
  {
   "id": 17188,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Scirocco con motore rigenerato da 12.000 km, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Scirocco con motore rigenerato da 12.000 km, dati coerenti.",
   "controlli": [
    "Fattura sostituzione motore",
    "Controllo catena distribuzione"
@@ -20988,7 +20988,7 @@
  },
  {
   "id": 42607,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -21008,7 +21008,7 @@
   ],
   "ricambi_min": 300,
   "ricambi_max": 900,
-  "nota": "Dichiarata modifica 'senza urea': eliminazione AdBlue non omologata, va ripristinata prima della rivendita. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Dichiarata modifica 'senza urea': eliminazione AdBlue non omologata, va ripristinata prima della rivendita.",
   "controlli": [
    "Verificare centralina e impianto SCR originali",
    "Esito revisione/emissioni"
@@ -21016,13 +21016,13 @@
  },
  {
   "id": 34959,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "C3 Aircross 2020 con solo piccoli segni d'usura, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "C3 Aircross 2020 con solo piccoli segni d'usura, dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Stato cinghia distribuzione"
@@ -21030,13 +21030,13 @@
  },
  {
   "id": 45827,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Km a sistema errati (2022), in testo 114.000 km: confronto probabilmente falsato, sembra un commerciante con garanzia. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km a sistema errati (2022), in testo 114.000 km: confronto probabilmente falsato, sembra un commerciante con garanzia.",
   "controlli": [
    "Confermare km reali",
    "Verificare se privato o rivenditore"
@@ -21044,13 +21044,13 @@
  },
  {
   "id": 14049,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "530d xDrive Touring M Sport con km certificati, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "530d xDrive Touring M Sport con km certificati, dati coerenti.",
   "controlli": [
    "Stato catena distribuzione",
    "Storico tagliandi"
@@ -21058,13 +21058,13 @@
  },
  {
   "id": 27160,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Grandland X 2019 con dati coerenti ma descrizione molto vaga. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Grandland X 2019 con dati coerenti ma descrizione molto vaga.",
   "controlli": [
    "Motorizzazione e allestimento esatti",
    "Storico tagliandi"
@@ -21072,13 +21072,13 @@
  },
  {
   "id": 21968,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "XE AWD unico proprietario, tagliandata in casa madre e distribuzione fatta. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "XE AWD unico proprietario, tagliandata in casa madre e distribuzione fatta.",
   "controlli": [
    "Fatture tagliandi e distribuzione",
    "Diagnosi motore Ingenium"
@@ -21086,13 +21086,13 @@
  },
  {
   "id": 35151,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Cooper S Cabrio (128 kW) con revisione motore e lavori recenti dichiarati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Cooper S Cabrio (128 kW) con revisione motore e lavori recenti dichiarati.",
   "controlli": [
    "Fatture revisione motore",
    "Stato capote e cambio automatico"
@@ -21100,13 +21100,13 @@
  },
  {
   "id": 10235,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Grandland X 1.5 diesel Ultimate 2021, dati coerenti; annuncio duplicato con 29312. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Grandland X 1.5 diesel Ultimate 2021, dati coerenti; annuncio duplicato con 29312.",
   "controlli": [
    "Storico tagliandi",
    "Stato sistema AdBlue"
@@ -21114,13 +21114,13 @@
  },
  {
   "id": 29312,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Stesso annuncio di 10235: Grandland X 2021 con dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Stesso annuncio di 10235: Grandland X 2021 con dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Stato sistema AdBlue"
@@ -21128,13 +21128,13 @@
  },
  {
   "id": 36947,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Compass 2.0 4WD aut. con distribuzione e pompa acqua fatte, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Compass 2.0 4WD aut. con distribuzione e pompa acqua fatte, dati coerenti.",
   "controlli": [
    "Fatture manutenzione",
    "Prova cambio automatico"
@@ -21142,13 +21142,13 @@
  },
  {
   "id": 28890,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Cherokee 2.2 185 CV in condizioni dichiarate perfette, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Cherokee 2.2 185 CV in condizioni dichiarate perfette, dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Prova cambio 9 marce"
@@ -21156,13 +21156,13 @@
  },
  {
   "id": 34571,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf GTI DSG con mappa stage 2, scarico e assetto non di serie: rischio omologazione e usura meccanica. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf GTI DSG con mappa stage 2, scarico e assetto non di serie: rischio omologazione e usura meccanica.",
   "controlli": [
    "Modifiche a libretto/omologate",
    "Stato DSG e frizioni"
@@ -21170,13 +21170,13 @@
  },
  {
   "id": 9043,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Ranger doppia cabina 2013 coerente con il confronto, appena tagliandato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Ranger doppia cabina 2013 coerente con il confronto, appena tagliandato.",
   "controlli": [
    "Immatricolazione autocarro N1",
    "Stato trazione 4x4"
@@ -21184,13 +21184,13 @@
  },
  {
   "id": 36519,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Clubman One D con 212.000 km e lavori documentati, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Clubman One D con 212.000 km e lavori documentati, dati coerenti.",
   "controlli": [
    "Fatture lavori",
    "Stato cambio automatico"
@@ -21198,13 +21198,13 @@
  },
  {
   "id": 10429,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Octavia 1.6 TDI DSG Executive 2019 ben descritta, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Octavia 1.6 TDI DSG Executive 2019 ben descritta, dati coerenti.",
   "controlli": [
    "Storico tagliandi DSG",
    "Verificare km"
@@ -21212,7 +21212,7 @@
  },
  {
   "id": 29483,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21223,7 +21223,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Mini One Baker Street con piccoli danni di carrozzeria non specificati e tagliando da eseguire. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Mini One Baker Street con piccoli danni di carrozzeria non specificati e tagliando da eseguire.",
   "controlli": [
    "Valutare danni carrozzeria da foto/visione",
    "Costo tagliando e olio cambio"
@@ -21231,13 +21231,13 @@
  },
  {
   "id": 40684,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "2008 PureTech 2023 con 34.000 km e cinghia già aggiornata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "2008 PureTech 2023 con 34.000 km e cinghia già aggiornata.",
   "controlli": [
    "Documentazione intervento cinghia",
    "Garanzia residua"
@@ -21245,13 +21245,13 @@
  },
  {
   "id": 18674,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Versione a sistema incoerente (2.0 16V benzina su A6 diesel 2014) e descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Versione a sistema incoerente (2.0 16V benzina su A6 diesel 2014) e descrizione minima.",
   "controlli": [
    "Motorizzazione e allestimento reali",
    "Storico tagliandi"
@@ -21259,13 +21259,13 @@
  },
  {
   "id": 31609,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A6 Avant 40 TDI quattro S line 2017 con dati coerenti e descrizione completa. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A6 Avant 40 TDI quattro S line 2017 con dati coerenti e descrizione completa.",
   "controlli": [
    "Storico tagliandi S tronic",
    "Stato AdBlue/DPF"
@@ -21273,13 +21273,13 @@
  },
  {
   "id": 43544,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Wrangler TJ 1998 iscritta ASI, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Wrangler TJ 1998 iscritta ASI, dati coerenti.",
   "controlli": [
    "Certificato ASI/CRS",
    "Ruggine telaio"
@@ -21287,13 +21287,13 @@
  },
  {
   "id": 8829,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Passat 2.0 TDI DSG con 370.000 km autostradali: prezzo coerente solo se il confronto considera i km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Passat 2.0 TDI DSG con 370.000 km autostradali: prezzo coerente solo se il confronto considera i km.",
   "controlli": [
    "Stato DSG e frizioni",
    "Storico manutenzione"
@@ -21301,13 +21301,13 @@
  },
  {
   "id": 42077,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Terios 4x4 GPL 2008 con impianto valido al 2031. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Terios 4x4 GPL 2008 con impianto valido al 2031.",
   "controlli": [
    "GPL a libretto",
    "Ruggine sottoscocca"
@@ -21315,7 +21315,7 @@
  },
  {
   "id": 26794,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21326,7 +21326,7 @@
     "source": "testo"
    }
   ],
-  "nota": "DS3 con graffi e segni di grandine sul tetto, riparabili con levabolli. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "DS3 con graffi e segni di grandine sul tetto, riparabili con levabolli.",
   "controlli": [
    "Entità grandine (preventivo levabolli)",
    "Stato catena/cinghia PureTech"
@@ -21334,13 +21334,13 @@
  },
  {
   "id": 18942,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "508 SW Hybrid 225 2021 unico proprietario con 75.000 km certificati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "508 SW Hybrid 225 2021 unico proprietario con 75.000 km certificati.",
   "controlli": [
    "Stato batteria e caricatore",
    "Storico tagliandi"
@@ -21362,13 +21362,13 @@
  },
  {
   "id": 18271,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "A6 Avant 3.0 TDI quattro 2014 dichiarata senza difetti, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "A6 Avant 3.0 TDI quattro 2014 dichiarata senza difetti, dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Stato catena distribuzione"
@@ -21404,13 +21404,13 @@
  },
  {
   "id": 31242,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "420d Coupé con 290.000 km, descrizione generica ma nessun danno dichiarato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "420d Coupé con 290.000 km, descrizione generica ma nessun danno dichiarato.",
   "controlli": [
    "Stato catena distribuzione",
    "Storico tagliandi"
@@ -21418,7 +21418,7 @@
  },
  {
   "id": 162,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21429,7 +21429,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Octavia con segni di grandine da valutare, meccanica dichiarata a posto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Octavia con segni di grandine da valutare, meccanica dichiarata a posto.",
   "controlli": [
    "Preventivo levabolli",
    "Storico distribuzione"
@@ -21437,13 +21437,13 @@
  },
  {
   "id": 30464,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Passat B8 2.0 TDI DSG ben descritta con tagliando e revisione recenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Passat B8 2.0 TDI DSG ben descritta con tagliando e revisione recenti.",
   "controlli": [
    "Storico DSG",
    "Allestimento reale (Highline/Business)"
@@ -21500,13 +21500,13 @@
  },
  {
   "id": 22866,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Renegade 2022 con 15.461 km venduta da rivenditore con garanzia 12 mesi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Renegade 2022 con 15.461 km venduta da rivenditore con garanzia 12 mesi.",
   "controlli": [
    "Verificare km e storico",
    "Condizioni rivenditore"
@@ -21514,7 +21514,7 @@
  },
  {
   "id": 21805,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21525,7 +21525,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Anno incoerente (titolo 2017, testo 2018, dati 2019): il confronto potrebbe essere sbagliato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Anno incoerente (titolo 2017, testo 2018, dati 2019): il confronto potrebbe essere sbagliato.",
   "controlli": [
    "Data prima immatricolazione a libretto",
    "Stato sedile e carrozzeria"
@@ -21533,13 +21533,13 @@
  },
  {
   "id": 18431,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "GLK 220 CDI 4Matic 2012 con dati coerenti, descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "GLK 220 CDI 4Matic 2012 con dati coerenti, descrizione minima.",
   "controlli": [
    "Storico tagliandi",
    "Stato catena distribuzione"
@@ -21547,13 +21547,13 @@
  },
  {
   "id": 27257,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Ecosport 1.0 con distribuzione e cambio rifatti, due segni di carrozzeria già nel prezzo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Ecosport 1.0 con distribuzione e cambio rifatti, due segni di carrozzeria già nel prezzo.",
   "controlli": [
    "Fatture distribuzione e cambio",
    "Visione segni carrozzeria"
@@ -21561,7 +21561,7 @@
  },
  {
   "id": 24205,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21572,7 +21572,7 @@
     "source": "testo"
    }
   ],
-  "nota": "DS3 1.4 HDi con segni di grandine già considerati nel prezzo. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "DS3 1.4 HDi con segni di grandine già considerati nel prezzo.",
   "controlli": [
    "Preventivo levabolli",
    "Storico tagliandi"
@@ -21580,13 +21580,13 @@
  },
  {
   "id": 12968,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Maggiolino 1.6 TDI DSG mai incidentato, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Maggiolino 1.6 TDI DSG mai incidentato, dati coerenti.",
   "controlli": [
    "Storico tagliandi DSG",
    "Verificare km"
@@ -21594,13 +21594,13 @@
  },
  {
   "id": 10209,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Km a sistema 15.000 ma testo 150.000: confronto falsato, carburante non indicato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km a sistema 15.000 ma testo 150.000: confronto falsato, carburante non indicato.",
   "controlli": [
    "Km reali e motorizzazione 1.5 (benzina/diesel)",
    "Storico tagliandi"
@@ -21608,13 +21608,13 @@
  },
  {
   "id": 30285,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "730d xDrive 2015 con 250.000 km, tagliandata e revisionata. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "730d xDrive 2015 con 250.000 km, tagliandata e revisionata.",
   "controlli": [
    "Stato sospensioni pneumatiche",
    "Storico tagliandi"
@@ -21622,7 +21622,7 @@
  },
  {
   "id": 25555,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -21647,7 +21647,7 @@
   ],
   "ricambi_min": 290,
   "ricambi_max": 720,
-  "nota": "Cilindri 2 e 3 non funzionanti: causa da diagnosticare (bobine, iniettori o compressione). Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Cilindri 2 e 3 non funzionanti: causa da diagnosticare (bobine, iniettori o compressione).",
   "controlli": [
    "Prova compressione cilindri",
    "Diagnosi iniettori/bobine"
@@ -21655,13 +21655,13 @@
  },
  {
   "id": 45846,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Nessuna descrizione né carburante/versione: impossibile valutare il confronto. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Nessuna descrizione né carburante/versione: impossibile valutare il confronto.",
   "controlli": [
    "Motorizzazione e allestimento",
    "Stato e storico manutenzione"
@@ -21669,13 +21669,13 @@
  },
  {
   "id": 29409,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Km a sistema 14.000 ma testo 132.000: confronto falsato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km a sistema 14.000 ma testo 132.000: confronto falsato.",
   "controlli": [
    "Km reali",
    "Stato cambio automatico Powershift"
@@ -21683,13 +21683,13 @@
  },
  {
   "id": 14052,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Cooper D 2019 con 100.000 km, dati coerenti ma descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Cooper D 2019 con 100.000 km, dati coerenti ma descrizione minima.",
   "controlli": [
    "Storico tagliandi",
    "Stato frizione/DPF"
@@ -21711,13 +21711,13 @@
  },
  {
   "id": 28266,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Touareg 3.0 V6 TDI con 300.000 km e filtri/batteria/alternatore nuovi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Touareg 3.0 V6 TDI con 300.000 km e filtri/batteria/alternatore nuovi.",
   "controlli": [
    "Stato sospensioni e cambio",
    "Storico distribuzione"
@@ -21739,13 +21739,13 @@
  },
  {
   "id": 286,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Boxster 986 2.5 iscritta ASI, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Boxster 986 2.5 iscritta ASI, dati coerenti.",
   "controlli": [
    "Cuscinetto IMS e perdite olio",
    "Certificato ASI/CRS"
@@ -21753,13 +21753,13 @@
  },
  {
   "id": 9202,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "RAV4 Hybrid 2WD 2018 con 79.800 km, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "RAV4 Hybrid 2WD 2018 con 79.800 km, dati coerenti.",
   "controlli": [
    "Storico tagliandi Toyota",
    "Stato batteria ibrida"
@@ -21781,13 +21781,13 @@
  },
  {
   "id": 16646,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "308 SW BlueHDi EAT6 2016 con dati coerenti, descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "308 SW BlueHDi EAT6 2016 con dati coerenti, descrizione minima.",
   "controlli": [
    "Storico tagliandi",
    "Stato AdBlue/cinghia"
@@ -21795,13 +21795,13 @@
  },
  {
   "id": 17313,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "X3 sDrive18d 2011 con km originali dichiarati, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "X3 sDrive18d 2011 con km originali dichiarati, dati coerenti.",
   "controlli": [
    "Stato catena distribuzione N47",
    "Storico tagliandi"
@@ -21865,13 +21865,13 @@
  },
  {
   "id": 30318,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Km a sistema 17.000 ma testo 170.000: confronto falsato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Km a sistema 17.000 ma testo 170.000: confronto falsato.",
   "controlli": [
    "Km reali",
    "Storico tagliandi"
@@ -21879,13 +21879,13 @@
  },
  {
   "id": 16647,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Qashqai 1.5 dCi mai incidentato e appena tagliandato. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Qashqai 1.5 dCi mai incidentato e appena tagliandato.",
   "controlli": [
    "Storico tagliandi",
    "Stato frizione"
@@ -21907,7 +21907,7 @@
  },
  {
   "id": 15453,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -21927,7 +21927,7 @@
   ],
   "ricambi_min": 300,
   "ricambi_max": 900,
-  "nota": "Frizione del cambio automatico da sistemare su auto con 380.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Frizione del cambio automatico da sistemare su auto con 380.000 km.",
   "controlli": [
    "Diagnosi cambio automatico",
    "Storico manutenzione motore"
@@ -21935,7 +21935,7 @@
  },
  {
   "id": 41998,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21955,7 +21955,7 @@
   ],
   "ricambi_min": 150,
   "ricambi_max": 400,
-  "nota": "Punterie rumorose a freddo e FAP già riparato, 225.000 km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Punterie rumorose a freddo e FAP già riparato, 225.000 km.",
   "controlli": [
    "Ascolto motore a freddo",
    "Diagnosi FAP/turbo"
@@ -21963,13 +21963,13 @@
  },
  {
   "id": 27582,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Countryman Cooper SD 2014 con 98.000 km, dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Countryman Cooper SD 2014 con 98.000 km, dati coerenti.",
   "controlli": [
    "Storico tagliandi",
    "Stato cambio automatico"
@@ -21977,13 +21977,13 @@
  },
  {
   "id": 38247,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Grand Cherokee 250 CV S con garanzia residua, venditore con fretta di vendere. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Grand Cherokee 250 CV S con garanzia residua, venditore con fretta di vendere.",
   "controlli": [
    "Verificare garanzia trasferibile",
    "Storico tagliandi"
@@ -21991,7 +21991,7 @@
  },
  {
   "id": 17855,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -22011,7 +22011,7 @@
   ],
   "ricambi_min": 150,
   "ricambi_max": 400,
-  "nota": "Schermo infotainment rovinato, altrimenti dati coerenti. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Schermo infotainment rovinato, altrimenti dati coerenti.",
   "controlli": [
    "Funzionamento display",
    "Stato catena distribuzione"
@@ -22019,13 +22019,13 @@
  },
  {
   "id": 32011,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Koleos Initiale Paris 2020 tagliandato; nel testo chiede 16.000 euro. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Koleos Initiale Paris 2020 tagliandato; nel testo chiede 16.000 euro.",
   "controlli": [
    "Confermare prezzo",
    "Stato cambio X-Tronic"
@@ -22033,13 +22033,13 @@
  },
  {
   "id": 43335,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Giulia 190 CV con 320.000 km e lavori recenti, prezzo coerente con i km. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Giulia 190 CV con 320.000 km e lavori recenti, prezzo coerente con i km.",
   "controlli": [
    "Stato catena distribuzione",
    "Storico tagliandi"
@@ -22047,7 +22047,7 @@
  },
  {
   "id": 43230,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -22067,7 +22067,7 @@
   ],
   "ricambi_min": 120,
   "ricambi_max": 300,
-  "nota": "Piccolo danno anteriore visibile in foto da valutare. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Piccolo danno anteriore visibile in foto da valutare.",
   "controlli": [
    "Verificare fari/radiatore dietro il danno",
    "Storico tagliandi"
@@ -22075,13 +22075,13 @@
  },
  {
   "id": 43307,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Evoque TD4 ex flotta con garanzia 12 mesi, solo qualche graffio. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Evoque TD4 ex flotta con garanzia 12 mesi, solo qualche graffio.",
   "controlli": [
    "Storico tagliandi Land Rover",
    "Stato cambio automatico"
@@ -22131,13 +22131,13 @@
  },
  {
   "id": 39632,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "B 180 CDI 1.5 coerente con la versione, descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "B 180 CDI 1.5 coerente con la versione, descrizione minima.",
   "controlli": [
    "Storico tagliandi",
    "Stato frizione"
@@ -22145,7 +22145,7 @@
  },
  {
   "id": 27233,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -22156,7 +22156,7 @@
     "source": "testo"
    }
   ],
-  "nota": "MX-5 NC con difetti di carrozzeria non specificati. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "MX-5 NC con difetti di carrozzeria non specificati.",
   "controlli": [
    "Ruggine passaruota/sottoporta",
    "Stato capote"
@@ -22164,13 +22164,13 @@
  },
  {
   "id": 17735,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "E 350 CDI 2011 funzionante senza spie, solo qualche segno. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "E 350 CDI 2011 funzionante senza spie, solo qualche segno.",
   "controlli": [
    "Storico tagliandi",
    "Stato cambio 7G"
@@ -22178,7 +22178,7 @@
  },
  {
   "id": 41360,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -22189,7 +22189,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Problemi al motore non specificati e versione sconosciuta: probabile auto da ricambi. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Problemi al motore non specificati e versione sconosciuta: probabile auto da ricambi.",
   "controlli": [
    "Diagnosi motore (catena, compressione)",
    "Versione esatta"
@@ -22197,13 +22197,13 @@
  },
  {
   "id": 6867,
-  "esito": "scartata",
+  "esito": "opportunita",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
   "ricambi_min": 0,
   "ricambi_max": 0,
-  "nota": "Golf 2.0 TDI 150 CV con 280.000 km, dati coerenti ma descrizione minima. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Golf 2.0 TDI 150 CV con 280.000 km, dati coerenti ma descrizione minima.",
   "controlli": [
    "Stato DSG",
    "Storico distribuzione"
@@ -22211,7 +22211,7 @@
  },
  {
   "id": 16718,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "alto_rischio",
   "danni": [
    {
@@ -22222,7 +22222,7 @@
     "source": "testo"
    }
   ],
-  "nota": "Motore rumoroso nonostante sostituzione albero, catena e turbina: rischio guasto grave. Fuori dalla selezione dei 100 migliori (10/10).",
+  "nota": "Motore rumoroso nonostante sostituzione albero, catena e turbina: rischio guasto grave.",
   "controlli": [
    "Diagnosi motore in officina",
    "Fatture lavori eseguiti"

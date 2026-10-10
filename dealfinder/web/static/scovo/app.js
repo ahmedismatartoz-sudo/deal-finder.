@@ -46,7 +46,7 @@ const S = {
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
   brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte",
   sconto: saved.sconto || 30, sort: saved.sort || "guadagno",
-  cars: null, costs: 140, minMargin: 1500, loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
+  cars: null, costs: 140, soglie: [[5000, 1500], [8000, 2000], [12000, 3000], [null, 4000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
 const V = {targa:"", km:"", note:"", cambio:"", foto:[], stato:"form", err:"", res:null};
@@ -88,6 +88,8 @@ function numeri(c){
   const base = riv - c.prezzo - S.costs;
   return {riv, gain: base - c.rip_hi, gainMax: base - c.rip_lo};
 }
+/* guadagno minimo per comparire, secondo il prezzo: fino a 5.000 € → 1.500, fino a 8.000 € → 2.000, fino a 12.000 € → 3.000, oltre → 4.000 */
+function sogliaDi(prezzo){ const s = S.soglie.find(([lim]) => lim == null || prezzo <= lim); return s ? s[1] : 0; }
 function bandId(){
   const b = BANDS.find(b => String(b.min ?? "") === S.min && String(b.max ?? "") === S.max);
   return b ? b.id : null;
@@ -96,7 +98,7 @@ function filtered(over){
   const s = Object.assign({}, S, over || {});
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
   return (S.cars || []).map(c => Object.assign({}, c, numeri(c)))
-    .filter(c => c.gain >= S.minMargin)
+    .filter(c => c.gain >= sogliaDi(c.prezzo))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
@@ -134,7 +136,7 @@ async function loadCars(force){
   try {
     const d = await api("/api/affari");
     S.cars = d.items || []; S.loadedAt = Date.now();
-    if (d.margine_minimo != null) S.minMargin = d.margine_minimo;
+    if (d.soglie) S.soglie = d.soglie;
     if (d.costi_fissi) S.costs = Object.values(d.costi_fissi).reduce((a,b) => a + b, 0);
     const known = new Set(S.cars.map(c => c.marca)); S.brands = S.brands.filter(b => known.has(b));
   } catch (e) { S.loadErr = e.message; }

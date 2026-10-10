@@ -119,3 +119,15 @@ def test_assistente_capisce_le_domande():
     q = parse("auto tra 2 e 5 mila con guadagno oltre 3000")
     assert (q["prezzo_min"], q["prezzo_max"], q["guadagno_min"]) == (2000, 5000, 3000)
     assert scovo.version_short("Altro allestimento", "a5") == ""
+
+
+def test_soglie_guadagno_per_prezzo():
+    from dealfinder.web import scovo
+    assert scovo.soglia(3000) == 1500 and scovo.soglia(5000) == 1500
+    assert scovo.soglia(6500) == 2000 and scovo.soglia(8000) == 2000
+    assert scovo.soglia(10000) == 3000 and scovo.soglia(12000) == 3000
+    assert scovo.soglia(15000) == 4000
+    it = {"mercato": 10000, "prezzo": 4000, "rip_hi": 0}
+    assert scovo.guadagno_minimo(it) == 7000 - 4000 - 140
+    assert scovo.abbastanza(it)                     # 2.860 € ≥ 1.500
+    assert not scovo.abbastanza({"mercato": 20000, "prezzo": 11000, "rip_hi": 0})   # 2.860 € < 3.000

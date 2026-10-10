@@ -20,8 +20,17 @@ from . import foto
 
 COSTI_FISSI = {"passaggio": 90, "pulizia": 50}
 SCONTO_DEFAULT = 30
-# sotto questo guadagno (caso peggiore, rivendita al 30% sotto mercato) l'auto non si propone
-MARGINE_MINIMO = int(os.environ.get("MARGINE_MINIMO", "1500"))
+# guadagno minimo (caso peggiore, rivendita al 30% sotto mercato) per proporre un'auto,
+# secondo il prezzo di acquisto: fino a 5.000 € → 1.500; 5.000–8.000 → 2.000; 8.000–12.000 → 3.000; oltre 12.000 → 4.000
+SOGLIE = [(5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
+          (8000, int(os.environ.get("MARGINE_FINO_8000", "2000"))),
+          (12000, int(os.environ.get("MARGINE_FINO_12000", "3000"))),
+          (10**9, int(os.environ.get("MARGINE_OLTRE_12000", "4000")))]
+MARGINE_MINIMO = SOGLIE[0][1]
+
+
+def soglia(prezzo: int) -> int:
+    return next(m for limite, m in SOGLIE if prezzo <= limite)
 
 
 def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
@@ -30,7 +39,7 @@ def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
 
 
 def abbastanza(it: dict | None) -> bool:
-    return bool(it) and guadagno_minimo(it) >= MARGINE_MINIMO
+    return bool(it) and guadagno_minimo(it) >= soglia(it["prezzo"])
 
 LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
