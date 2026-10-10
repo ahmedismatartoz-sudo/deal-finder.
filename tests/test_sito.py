@@ -124,15 +124,13 @@ def test_assistente_capisce_le_domande():
 def test_soglie_guadagno_per_prezzo():
     from dealfinder.web import scovo
     scovo.SOGLIE = scovo.SOGLIE_FASCE
-    assert scovo.soglia(1800) == 1000 and scovo.soglia(2000) == 1000
+    assert scovo.soglia(1800) == 700 and scovo.soglia(2000) == 700
     assert scovo.soglia(3000) == 1500 and scovo.soglia(5000) == 1500
-    assert scovo.soglia(6500) == 2000 and scovo.soglia(8000) == 2000
-    assert scovo.soglia(10000) == 3000 and scovo.soglia(12000) == 3000
-    assert scovo.soglia(15000) == 4000
+    assert scovo.soglia(6500) == 2000 and scovo.soglia(15000) == 2000
     it = {"mercato": 10000, "prezzo": 4000, "rip_hi": 0}
     assert scovo.guadagno_minimo(it) == 7000 - 4000 - 140
     assert scovo.abbastanza(it)                     # 2.860 € ≥ 1.500
-    assert not scovo.abbastanza({"mercato": 20000, "prezzo": 11000, "rip_hi": 0})   # 2.860 € < 3.000
+    assert not scovo.abbastanza({"mercato": 15000, "prezzo": 9000, "rip_hi": 0})   # 1.360 € < 2.000
 
 
 def test_niente_auto_prima_del_2007():

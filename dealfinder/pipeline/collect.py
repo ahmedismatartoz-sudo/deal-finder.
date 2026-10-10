@@ -96,7 +96,19 @@ def run(mode: str) -> Counter:
 
     # Subito ogni 3 ore (opportunità) e ogni notte (mercato). Facebook ha un lavoro a parte,
     # meno frequente, perché ogni annuncio scaricato da Bright Data ha un costo.
-    if mode == "profondo":
+    if mode == "massiva":
+        # raccolta aggressiva: TUTTA la Lombardia, tutte le fasce di prezzo fino a 40.000 € in fasce strette,
+        # così si leggono quasi tutti gli annunci attivi (i doppioni li scarta il salvataggio)
+        bands = ([(p, p + 249) for p in range(0, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
+                 + [(p, p + 999) for p in range(15000, 40000, 1000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.5"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.5"))
+        from ..collectors.subito import PROVINCE_CODES
+        sources = [(sub, {"region": settings.region, "provinces": list(PROVINCE_CODES), "max_price": 40000,
+                          "max_pages": 0, "price_bands": bands,
+                          "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))})]
+    elif mode == "profondo":
         bands = [(p, p + 500) for p in range(500, 5000, 500)] + [(p, p + 1000) for p in range(5000, 20000, 1000)]
         sources = [(SubitoCollector(proxy=settings.scraper_proxy),
                     {"region": settings.region, "provinces": list(settings.opportunity_provinces),

@@ -82,11 +82,16 @@ def run() -> None:
             return {"ok": bool(v)}
         step("prova_targa", prova_targa)
     step("opportunita", collect, "opportunita")
+    # raccolta aggressiva di tutta la Lombardia (una volta per versione), poi la selezione
+    massiva = False
+    if _due("collect:massiva", 24 * 365):
+        step("raccolta_massiva", collect, "massiva")
+        massiva = True
     # selezione dei 1.000 migliori di tutta la base, con foto, per il controllo uno per uno (una volta)
     from . import mille
     if _due(mille.job_name(), 24 * 365):
         step("mille", mille.run)
-    if _due("collect:profondo", 20):
+    if not massiva and _due("collect:profondo", 20):
         step("raccolta_profonda", collect, "profondo")
     from . import fb_rilettura
     if _due(fb_rilettura.JOB, 24 * 365):

@@ -28,7 +28,7 @@ from ..web import foto, scovo
 from .verify import verify_rows
 
 log = logging.getLogger("mille")
-VERSIONE = os.environ.get("MILLE_VERSIONE", "v2")
+VERSIONE = os.environ.get("MILLE_VERSIONE", "v3")
 QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]
 CELLA = (270, 200)
