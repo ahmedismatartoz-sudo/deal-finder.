@@ -166,7 +166,7 @@ function viewList(){
   const priceChips = BANDS.map(b => `<button class="chip" data-act="band" data-v="${b.id}" aria-pressed="${bid === b.id}">${b.label}</button>`).join("");
   const cards = list.map((c, i) => `
     <button class="card" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
-      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge${c.verificare ? " warn" : ""}">${c.verificare ? "Da verificare" : statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
+      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
       <div class="card-body">
         <div><div class="name">${esc(c.nome)}</div><div class="meta">${esc(meta(c))}</div></div>
         <div class="trio">
@@ -234,7 +234,6 @@ function viewDetail(){
     </div>
     <div class="d-body">
       <div><h1 class="d-name">${esc(c.nome)}</h1><div class="meta" style="margin-top:4px">${esc(meta(c))}</div></div>
-      ${c.verificare ? `<div class="banner">Da verificare: chiedi al venditore i dati che mancano prima di andare a vederla.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
       <div class="box">
         <div class="row"><span class="k">Prezzo richiesto</span><span class="v">${eur(c.prezzo)}</span></div>
