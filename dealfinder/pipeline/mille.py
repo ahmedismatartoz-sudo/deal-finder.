@@ -28,10 +28,10 @@ from ..web import foto, scovo
 from .verify import verify_rows
 
 log = logging.getLogger("mille")
-VERSIONE = os.environ.get("MILLE_VERSIONE", "v1")
+VERSIONE = os.environ.get("MILLE_VERSIONE", "v2")
 QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]
-CELLA = (300, 225)
+CELLA = (270, 200)
 PEZZO = 12000
 
 
@@ -58,7 +58,7 @@ def foglio(images: list[bytes], titolo: str) -> bytes | None:
         sheet.paste(im, (x + (CELLA[0] - im.width) // 2, y + (CELLA[1] - im.height) // 2))
     ImageDraw.Draw(sheet).text((5, 3), titolo[:110], fill=(255, 255, 0))
     out = io.BytesIO()
-    sheet.save(out, "JPEG", quality=58, optimize=True)
+    sheet.save(out, "JPEG", quality=52, optimize=True)
     return out.getvalue()
 
 

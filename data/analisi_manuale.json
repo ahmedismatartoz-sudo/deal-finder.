@@ -1008,7 +1008,7 @@
  },
  {
   "id": 10772,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -1064,7 +1064,7 @@
   ],
   "ricambi_min": 180,
   "ricambi_max": 630,
-  "nota": "Fiat 500 TwinAir Matt Black 2011: il testo dice solo paraurti, ma la foto mostra urto anteriore dx con paraurti strappato, faro dx, parafango dx ammaccato e ruota forse spostata. Prezzo nel testo 2.500 €. Margine sotto soglia.",
+  "nota": "Fiat 500 TwinAir Matt Black 2011: il testo dice solo paraurti, ma la foto mostra urto anteriore dx con paraurti strappato, faro dx, parafango dx ammaccato e ruota forse spostata. Prezzo nel testo 2.500 €. Margine sotto soglia. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [],
   "aggiorna": true
  },
@@ -2524,7 +2524,7 @@
  },
  {
   "id": 20571,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -2554,7 +2554,7 @@
   ],
   "ricambi_min": 330,
   "ricambi_max": 1200,
-  "nota": "Classe A 180 CDI 2011 non marciante per turbina rotta; foto buone, carrozzeria senza danni. Con turbina e riserva il margine va sotto soglia.",
+  "nota": "Classe A 180 CDI 2011 non marciante per turbina rotta; foto buone, carrozzeria senza danni. Con turbina e riserva il margine va sotto soglia. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [],
   "aggiorna": true
  },
@@ -5360,7 +5360,7 @@
  },
  {
   "id": 45068,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -5438,7 +5438,7 @@
   ],
   "ricambi_min": 1080,
   "ricambi_max": 3825,
-  "nota": "Opel Crossland 1.2 Turbo 130 CV aut. 2023, 12.600 km. Foto: urto anteriore dx con faro dx distrutto, parafango dx accartocciato, cofano e paraurti coinvolti, possibile sospensione dx; retro e lato sx ok. Con riserva il margine scende sotto soglia.",
+  "nota": "Opel Crossland 1.2 Turbo 130 CV aut. 2023, 12.600 km. Foto: urto anteriore dx con faro dx distrutto, parafango dx accartocciato, cofano e paraurti coinvolti, possibile sospensione dx; retro e lato sx ok. Con riserva il margine scende sotto soglia. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [
    "Verificare airbag e longherone dx",
    "Geometria ruota anteriore dx"
@@ -5836,7 +5836,7 @@
  },
  {
   "id": 11778,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -5861,7 +5861,7 @@
   ],
   "ricambi_min": 400,
   "ricambi_max": 1350,
-  "nota": "BMW 320i Cabrio E93 (testo dice 2008) non marciante perché mancano gli iniettori. Foto lontane, auto blu senza danni evidenti. Con 4 iniettori piezo e riserva il margine resta sotto soglia; non si sa perché siano stati tolti.",
+  "nota": "BMW 320i Cabrio E93 (testo dice 2008) non marciante perché mancano gli iniettori. Foto lontane, auto blu senza danni evidenti. Con 4 iniettori piezo e riserva il margine resta sotto soglia; non si sa perché siano stati tolti. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [
    "Chiedere perché sono stati tolti gli iniettori",
    "Verificare tetto rigido elettrico"
@@ -10212,7 +10212,7 @@
  },
  {
   "id": 10504,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -10237,7 +10237,7 @@
   ],
   "ricambi_min": 90,
   "ricambi_max": 300,
-  "nota": "Nissan Micra 1.2 2007 non marciante (motore fuori fase) e grandinata; incluso motore e cambio di scorta. Foto lontane, si vede poco. Anche con il solo kit catena il margine va sotto soglia.",
+  "nota": "Nissan Micra 1.2 2007 non marciante (motore fuori fase) e grandinata; incluso motore e cambio di scorta. Foto lontane, si vede poco. Anche con il solo kit catena il margine va sotto soglia. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [],
   "aggiorna": true
  },
@@ -16915,7 +16915,7 @@
  },
  {
   "id": 10253,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -16935,7 +16935,7 @@
   ],
   "ricambi_min": 500,
   "ricambi_max": 1200,
-  "nota": "Volvo V40 2016 automatica, 190.000 km. Foto: carrozzeria in ordine. Servosterzo elettrico in avaria: con la scatola guida il margine va sotto soglia, e il mercato è stimato dal modello senza confronti.",
+  "nota": "Volvo V40 2016 automatica, 190.000 km. Foto: carrozzeria in ordine. Servosterzo elettrico in avaria: con la scatola guida il margine va sotto soglia, e il mercato è stimato dal modello senza confronti. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [],
   "aggiorna": true
  },
@@ -21372,7 +21372,7 @@
  },
  {
   "id": 10741,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    {
@@ -21404,7 +21404,7 @@
   ],
   "ricambi_min": 60,
   "ricambi_max": 450,
-  "nota": "VW Touareg 2.5 R5 TDI 2007, 280.000 km, perdita olio non localizzata. Foto: segni e graffi su frontale/parafango dx, resto ok. Diesel Euro 4 (Area B Milano). Con la riserva il margine va sotto soglia.",
+  "nota": "VW Touareg 2.5 R5 TDI 2007, 280.000 km, perdita olio non localizzata. Foto: segni e graffi su frontale/parafango dx, resto ok. Diesel Euro 4 (Area B Milano). Con la riserva il margine va sotto soglia. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [],
   "aggiorna": true
  },
@@ -21722,7 +21722,7 @@
  },
  {
   "id": 20897,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    {
@@ -21756,7 +21756,7 @@
   ],
   "ricambi_min": 50,
   "ricambi_max": 120,
-  "nota": "Golf V Variant 1.4 TSI: nelle foto (fronte sx, lato sx, retro dx) carrozzeria in ordine, interni puliti; il bozzo sul parafango ant. dx dichiarato non si vede bene. Graffi sui paraurti da lucidare. Margine molto stretto sulla soglia. Guadagno finale 1491 € sotto la soglia di 1500 €.",
+  "nota": "Golf V Variant 1.4 TSI: nelle foto (fronte sx, lato sx, retro dx) carrozzeria in ordine, interni puliti; il bozzo sul parafango ant. dx dichiarato non si vede bene. Graffi sui paraurti da lucidare. Margine molto stretto sulla soglia. Guadagno finale 1491 € sotto la soglia di 1500 €. (Rientra con il nuovo minimo di 500 € di guadagno.)",
   "controlli": [
    "Foto del parafango anteriore dx",
    "Stato catena distribuzione 1.4 TSI (rumori a freddo)",
