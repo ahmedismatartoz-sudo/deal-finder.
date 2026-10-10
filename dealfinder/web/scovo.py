@@ -26,8 +26,7 @@ SCONTO_DEFAULT = 30
 # 500 €) al posto delle soglie per fascia. Con MODALITA_SITO=soglie si torna alle soglie per fascia qui sotto.
 MODALITA = os.environ.get("MODALITA_SITO", "soglie")
 MINIMO_MILLE = int(os.environ.get("GUADAGNO_MINIMO_MILLE", "500"))
-SOGLIE_FASCE = [(2000, int(os.environ.get("MARGINE_FINO_2000", "700"))),
-                (5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
+SOGLIE_FASCE = [(5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
           (10**9, int(os.environ.get("MARGINE_OLTRE_5000", "2000")))]
 SOGLIE = [(10**9, MINIMO_MILLE)] if MODALITA == "mille" else SOGLIE_FASCE
 MARGINE_MINIMO = SOGLIE[0][1]
