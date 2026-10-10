@@ -28,6 +28,16 @@ def _due(job: str, hours: int) -> bool:
     return not (row and row["recent"])
 
 
+def facebook_due(hours: int) -> bool:
+    """Facebook da raccogliere? Contano solo i giri che hanno portato annunci: se Bright Data era
+    fermo (credito finito), appena torna attivo si raccoglie subito, senza aspettare un giorno."""
+    with connect() as conn:
+        row = conn.execute("SELECT max(started_at) > now() - make_interval(hours => %s) AS recent FROM job_runs "
+                           "WHERE job IN ('collect:facebook','collect:fb_importa') AND ok AND stats::text LIKE '%%facebook:%%'",
+                           (hours,)).fetchone()
+    return not (row and row["recent"])
+
+
 def _has_model() -> bool:
     with connect() as conn:
         return bool(conn.execute("SELECT 1 FROM price_models WHERE active LIMIT 1").fetchone())
@@ -77,7 +87,7 @@ def run() -> None:
     if os.environ.get("BRIGHTDATA_API_KEY"):
         # lotti Facebook diventati pronti dopo la fine di un giro precedente: importati subito, nessuna spesa
         step("facebook_pronti", collect, "fb_importa")
-    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "23"))):
+    if os.environ.get("BRIGHTDATA_API_KEY") and facebook_due(int(os.environ.get("FACEBOOK_ORE", "23"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")
