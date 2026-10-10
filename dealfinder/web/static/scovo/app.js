@@ -46,7 +46,7 @@ const S = {
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
   brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte",
   sconto: saved.sconto || 30, sort: saved.sort || "guadagno",
-  cars: null, costs: 140, soglie: [[5000, 1500], [8000, 2000], [12000, 3000], [null, 4000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
+  cars: null, costs: 140, soglie: [[2000, 1000], [5000, 1500], [8000, 2000], [12000, 3000], [null, 4000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
 const V = {targa:"", km:"", note:"", cambio:"", foto:[], stato:"form", err:"", res:null};

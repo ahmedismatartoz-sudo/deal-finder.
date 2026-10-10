@@ -124,6 +124,7 @@ def test_assistente_capisce_le_domande():
 def test_soglie_guadagno_per_prezzo():
     from dealfinder.web import scovo
     scovo.SOGLIE = scovo.SOGLIE_FASCE
+    assert scovo.soglia(1800) == 1000 and scovo.soglia(2000) == 1000
     assert scovo.soglia(3000) == 1500 and scovo.soglia(5000) == 1500
     assert scovo.soglia(6500) == 2000 and scovo.soglia(8000) == 2000
     assert scovo.soglia(10000) == 3000 and scovo.soglia(12000) == 3000

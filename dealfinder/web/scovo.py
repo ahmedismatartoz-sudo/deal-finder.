@@ -24,9 +24,10 @@ SCONTO_DEFAULT = 30
 # secondo il prezzo di acquisto: fino a 5.000 € → 1.500; 5.000–8.000 → 2.000; 8.000–12.000 → 3.000; oltre 12.000 → 4.000
 # MODALITA_SITO=mille: sul sito vanno i migliori 1.000 per guadagno, con un minimo unico (GUADAGNO_MINIMO_MILLE,
 # 500 €) al posto delle soglie per fascia. Con MODALITA_SITO=soglie si torna alle soglie per fascia qui sotto.
-MODALITA = os.environ.get("MODALITA_SITO", "mille")
+MODALITA = os.environ.get("MODALITA_SITO", "soglie")
 MINIMO_MILLE = int(os.environ.get("GUADAGNO_MINIMO_MILLE", "500"))
-SOGLIE_FASCE = [(5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
+SOGLIE_FASCE = [(2000, int(os.environ.get("MARGINE_FINO_2000", "1000"))),
+                (5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
           (8000, int(os.environ.get("MARGINE_FINO_8000", "2000"))),
           (12000, int(os.environ.get("MARGINE_FINO_12000", "3000"))),
           (10**9, int(os.environ.get("MARGINE_OLTRE_12000", "4000")))]
