@@ -13,12 +13,24 @@ che conta come apertura (dopo 7 commercianti diversi l'auto sparisce).
 from __future__ import annotations
 
 import json
+import os
 import re
 
 from . import foto
 
 COSTI_FISSI = {"passaggio": 90, "pulizia": 50}
 SCONTO_DEFAULT = 30
+# sotto questo guadagno (caso peggiore, rivendita al 30% sotto mercato) l'auto non si propone
+MARGINE_MINIMO = int(os.environ.get("MARGINE_MINIMO", "1500"))
+
+
+def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
+    riv = round(it["mercato"] * (1 - sconto / 100))
+    return riv - it["prezzo"] - sum(COSTI_FISSI.values()) - it["rip_hi"]
+
+
+def abbastanza(it: dict | None) -> bool:
+    return bool(it) and guadagno_minimo(it) >= MARGINE_MINIMO
 
 LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,

@@ -94,13 +94,13 @@ def _gain(it: dict, sconto: int) -> tuple[int, int, int]:
 def cerca_affari(conn, user: dict, a: dict) -> dict:
     sconto = max(0, min(int(a.get("sconto") or 30), 60))
     rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": user["id"]}).fetchall()
-    items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if it]
+    items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
     marca = (a.get("marca") or "").strip().lower()
     modello = (a.get("modello") or "").strip().lower().replace("-", " ")
     out = []
     for it in items:
         riv, g_lo, g_hi = _gain(it, sconto)
-        if g_hi <= 0:
+        if g_lo < scovo.MARGINE_MINIMO:
             continue
         if marca and scovo.make_name(_slug_make(marca)).lower() != it["marca"].lower():
             continue
