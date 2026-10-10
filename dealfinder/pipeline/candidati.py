@@ -84,7 +84,7 @@ def run() -> dict:
     stats: Counter = Counter()
     out = []
     with connect() as conn:
-        finish = log_job(conn, "candidati:v3")
+        finish = log_job(conn, "candidati:v4")
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS} FROM listings WHERE status='attivo' AND price_eur BETWEEN 500 AND %s
                  AND seller_type <> 'commerciante'
