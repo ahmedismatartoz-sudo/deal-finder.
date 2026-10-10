@@ -130,7 +130,8 @@ def fetch_one(conn, listing_id: int, pos: int) -> bytes | None:
     found, content = cached(conn, listing_id, pos)
     if found:
         return content
-    row = conn.execute("SELECT source_url FROM listing_photos WHERE listing_id=%s AND position=%s",
+    # pos = n-esima foto dell'annuncio (le posizioni salvate non sempre partono da 0)
+    row = conn.execute("SELECT source_url FROM listing_photos WHERE listing_id=%s ORDER BY position OFFSET %s LIMIT 1",
                        (listing_id, pos)).fetchone()
     content = download(row["source_url"]) if row else None
     if row:
@@ -141,9 +142,12 @@ def fetch_one(conn, listing_id: int, pos: int) -> bytes | None:
 def warm(conn, limit_listings: int = 300, http=None) -> dict:
     """Salva le foto delle auto proposte che non abbiamo ancora (chiamato dal ciclo)."""
     rows = conn.execute(
-        """SELECT p.listing_id, p.position, p.source_url FROM listing_photos p
-           JOIN listings l ON l.id = p.listing_id
-           WHERE l.stage='approfondito' AND l.status='attivo' AND p.position < %s
+        """SELECT * FROM (
+             SELECT p.listing_id, (row_number() OVER (PARTITION BY p.listing_id ORDER BY p.position)) - 1 AS position,
+                    p.source_url FROM listing_photos p
+             JOIN listings l ON l.id = p.listing_id
+             WHERE l.stage='approfondito' AND l.status='attivo') p
+           WHERE p.position < %s
              AND NOT EXISTS (SELECT 1 FROM photo_cache c WHERE c.listing_id=p.listing_id AND c.position=p.position
                              AND (c.content IS NOT NULL OR c.saved_at > now() - interval '6 hours'))
              AND p.listing_id IN (SELECT id FROM listings WHERE stage='approfondito' AND status='attivo'
