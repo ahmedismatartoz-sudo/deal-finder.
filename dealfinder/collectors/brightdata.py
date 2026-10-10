@@ -261,7 +261,7 @@ class BrightDataFacebookCollector(Collector):
     source = "facebook"
 
     def __init__(self, key: str | None = None, client=None, backfill: bool = False, part: tuple[int, int] = (0, 1)):
-        self.key = key or os.environ.get("BRIGHTDATA_API_KEY")
+        self.key = key or (os.environ.get("BRIGHTDATA_NUOVA") or "").strip() or os.environ.get("BRIGHTDATA_API_KEY")
         # FB_PARTE="2/2": questo servizio fa la seconda metà delle ricerche (un altro servizio fa la prima)
         fp = os.environ.get("FB_PARTE")
         if fp and part == (0, 1):
@@ -482,6 +482,9 @@ class BrightDataFacebookCollector(Collector):
 
 def bright_keys() -> list[str]:
     """Chiavi Bright Data configurate: BRIGHTDATA_API_KEY, BRIGHTDATA_API_KEY_2, _3 ... (account diversi)."""
+    nuova = (os.environ.get("BRIGHTDATA_NUOVA") or "").strip()
+    if nuova:
+        return [nuova]          # chiave del nuovo account: sostituisce quella vecchia, senza doverla cercare
     keys = [os.environ.get("BRIGHTDATA_API_KEY")] + [os.environ.get(f"BRIGHTDATA_API_KEY_{i}") for i in range(2, 6)]
     out = []
     for k in keys:

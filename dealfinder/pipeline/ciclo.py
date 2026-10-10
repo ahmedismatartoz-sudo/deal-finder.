@@ -90,7 +90,7 @@ def run() -> None:
     from .collect import _backfill_done
     if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_BACKFILL") == "1" and not _backfill_done():
         step("facebook_partenza", collect, "fb_backfill")
-    if os.environ.get("BRIGHTDATA_API_KEY"):
+    if os.environ.get("BRIGHTDATA_API_KEY") or os.environ.get("BRIGHTDATA_NUOVA"):
         # lotti Facebook diventati pronti dopo la fine di un giro precedente: importati subito, nessuna spesa
         step("facebook_pronti", collect, "fb_importa")
     # Facebook lo raccolgono i servizi dealfinder-facebook (uno per account); nel ciclo solo se FB_NEL_CICLO=1
