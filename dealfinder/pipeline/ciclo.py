@@ -28,13 +28,19 @@ def _due(job: str, hours: int) -> bool:
     return not (row and row["recent"])
 
 
+def fb_job() -> str:
+    """Nome del lavoro Facebook: con FB_PARTE ogni servizio ha il suo (così non si bloccano a vicenda)."""
+    fp = os.environ.get("FB_PARTE")
+    return "collect:facebook" + (f":p{fp.replace('/', 'di')}" if fp else "")
+
+
 def facebook_due(hours: int) -> bool:
     """Facebook da raccogliere? Contano solo i giri che hanno portato annunci: se Bright Data era
     fermo (credito finito), appena torna attivo si raccoglie subito, senza aspettare un giorno."""
     with connect() as conn:
         row = conn.execute("SELECT max(started_at) > now() - make_interval(hours => %s) AS recent FROM job_runs "
-                           "WHERE job='collect:facebook' AND ok AND stats::text LIKE '%%facebook:nuovo%%'",
-                           (hours,)).fetchone()
+                           "WHERE job=%s AND ok AND stats::text LIKE '%%facebook:nuovo%%'",
+                           (hours, fb_job())).fetchone()
     return not (row and row["recent"])
 
 
@@ -87,7 +93,8 @@ def run() -> None:
     if os.environ.get("BRIGHTDATA_API_KEY"):
         # lotti Facebook diventati pronti dopo la fine di un giro precedente: importati subito, nessuna spesa
         step("facebook_pronti", collect, "fb_importa")
-    if os.environ.get("BRIGHTDATA_API_KEY") and facebook_due(int(os.environ.get("FACEBOOK_ORE", "23"))):
+    # Facebook lo raccolgono i servizi dealfinder-facebook (uno per account); nel ciclo solo se FB_NEL_CICLO=1
+    if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_NEL_CICLO", "0") == "1" and facebook_due(int(os.environ.get("FACEBOOK_ORE", "23"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")

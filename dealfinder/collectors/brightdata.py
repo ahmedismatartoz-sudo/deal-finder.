@@ -262,6 +262,11 @@ class BrightDataFacebookCollector(Collector):
 
     def __init__(self, key: str | None = None, client=None, backfill: bool = False, part: tuple[int, int] = (0, 1)):
         self.key = key or os.environ.get("BRIGHTDATA_API_KEY")
+        # FB_PARTE="2/2": questo servizio fa la seconda metà delle ricerche (un altro servizio fa la prima)
+        fp = os.environ.get("FB_PARTE")
+        if fp and part == (0, 1):
+            i, n = (int(x) for x in fp.split("/"))
+            part = (i - 1, n)
         self.part = part
         self.dataset = os.environ.get("BRIGHTDATA_DATASET", DEFAULT_DATASET)
         # annunci massimi per singola ricerca: con molte ricerche piccole si spende poco e si

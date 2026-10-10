@@ -140,7 +140,9 @@ def run(mode: str) -> Counter:
         sources = [(subito, q)]
 
     with connect() as conn:
-        finish = log_job(conn, "collect:fb_backfill:v2" if mode == "fb_backfill" else f"collect:{mode}")
+        from .ciclo import fb_job
+        finish = log_job(conn, "collect:fb_backfill:v2" if mode == "fb_backfill"
+                         else fb_job() if mode == "facebook" else f"collect:{mode}")
         from ..pricing.model import prescreen
         from ..pricing.train import load_active
         model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
