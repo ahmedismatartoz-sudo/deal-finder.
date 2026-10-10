@@ -50,32 +50,68 @@ def shrink(raw: bytes) -> bytes | None:
         return None
 
 
-def download(url: str, http=None) -> bytes | None:
-    if not url or not url.startswith("http"):
+SUBITO_IMG = "https://images.sbito.it/api/v1/sbt-ads-images-pro/images/"
+RULE = "?rule=gallery-desktop-2x-auto"
+_warned: set = set()
+
+
+def candidate_urls(src: str | None) -> list[str]:
+    """Indirizzi da provare per una foto. Subito salva spesso solo l'identificativo ("imgid:<uuid>")."""
+    if not src:
+        return []
+    src = src.strip()
+    if src.startswith("imgid:") or (not src.startswith("http") and len(src.split("?")[0]) >= 32):
+        uid = src.split(":", 1)[-1].split("?")[0].strip("/")
+        return [f"{SUBITO_IMG}{uid[:2]}/{uid}{RULE}", f"{SUBITO_IMG}{uid}{RULE}"]
+    if src.startswith("//"):
+        src = "https:" + src
+    return [src] if src.startswith("http") else []
+
+
+def _get(http, url: str):
+    headers = {"Referer": "https://www.subito.it/"} if "sbito.it" in url or "subito.it" in url else {}
+    return http.get(url, headers=headers)
+
+
+def download(src: str, http=None) -> bytes | None:
+    urls = candidate_urls(src)
+    if not urls:
         return None
+    import httpx
+    own = http is None
+    http = http or httpx.Client(timeout=12, follow_redirects=True, headers={"User-Agent": UA})
     try:
-        import httpx
-        own = http is None
-        http = http or httpx.Client(timeout=12, follow_redirects=True, headers={"User-Agent": UA})
-        try:
-            r = http.get(url)
-        finally:
-            if own:
-                http.close()
-        if r.status_code != 200 or len(r.content) > 15_000_000:
-            return None
-        return shrink(r.content)
-    except Exception as e:
-        log.info("foto non scaricata: %s", str(e)[:120])
+        for url in urls:
+            try:
+                r = _get(http, url)
+            except Exception as e:
+                _warn(url, str(e)[:120])
+                continue
+            if r.status_code == 200 and len(r.content) < 15_000_000:
+                img = shrink(r.content)
+                if img:
+                    return img
+            _warn(url, f"HTTP {r.status_code}")
         return None
+    finally:
+        if own:
+            http.close()
+
+
+def _warn(url: str, why: str) -> None:
+    host = url.split("/")[2] if "//" in url else url[:30]
+    key = (host, why[:12])
+    if key not in _warned and len(_warned) < 50:       # un avviso per tipo di errore, non uno per foto
+        _warned.add(key)
+        log.warning("foto non scaricata da %s: %s", host, why)
 
 
 def cached(conn, listing_id: int, pos: int):
     """(trovata, contenuto): trovata=False se non abbiamo mai provato a salvarla."""
-    row = conn.execute("SELECT content FROM photo_cache WHERE listing_id=%s AND position=%s",
-                       (listing_id, pos)).fetchone()
-    if not row:
-        return False, None
+    row = conn.execute("SELECT content, saved_at < now() - interval '6 hours' AS old FROM photo_cache "
+                       "WHERE listing_id=%s AND position=%s", (listing_id, pos)).fetchone()
+    if not row or (row["content"] is None and row["old"]):
+        return False, None                       # foto mai provata, o fallita da più di 6 ore: si riprova
     c = row["content"]
     if isinstance(c, str) and c.startswith("\\x"):       # bytea letto come testo esadecimale
         c = bytes.fromhex(c[2:])
@@ -107,26 +143,24 @@ def warm(conn, limit_listings: int = 300, http=None) -> dict:
         """SELECT p.listing_id, p.position, p.source_url FROM listing_photos p
            JOIN listings l ON l.id = p.listing_id
            WHERE l.stage='approfondito' AND l.status='attivo' AND p.position < %s
-             AND NOT EXISTS (SELECT 1 FROM photo_cache c WHERE c.listing_id=p.listing_id AND c.position=p.position)
+             AND NOT EXISTS (SELECT 1 FROM photo_cache c WHERE c.listing_id=p.listing_id AND c.position=p.position
+                             AND (c.content IS NOT NULL OR c.saved_at > now() - interval '6 hours'))
              AND p.listing_id IN (SELECT id FROM listings WHERE stage='approfondito' AND status='attivo'
                                   ORDER BY (source='facebook') DESC, deep_at DESC NULLS LAST LIMIT %s)
            ORDER BY p.listing_id, p.position""", (MAX_PER_AUTO, limit_listings)).fetchall()
     ok = fail = 0
     own = http is None
     if own:
-        try:
-            import httpx
-            http = httpx.Client(timeout=12, follow_redirects=True, headers={"User-Agent": UA})
-        except Exception:
-            http = None
+        import httpx
+        http = httpx.Client(timeout=12, follow_redirects=True, headers={"User-Agent": UA})
     try:
         for r in rows:
-            content = download(r["source_url"], http) if http is not None else None
+            content = download(r["source_url"], http)
             save(conn, r["listing_id"], r["position"], content)
             ok += content is not None
             fail += content is None
     finally:
-        if own and http is not None:
+        if own:
             http.close()
     # le foto delle auto non più proposte da oltre 30 giorni non servono: spazio sul disco
     conn.execute("DELETE FROM photo_cache c USING listings l WHERE l.id=c.listing_id "

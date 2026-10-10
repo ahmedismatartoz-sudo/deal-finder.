@@ -652,7 +652,7 @@ def foto_auto(request: Request):
     with connect() as conn:
         content = foto.fetch_one(conn, lid, pos)
     if not content:
-        return Response(status_code=404, headers={"Cache-Control": "public, max-age=3600"})
+        return Response(status_code=404, headers={"Cache-Control": "no-store"})
     return Response(content, media_type="image/jpeg",
                     headers={"Cache-Control": "public, max-age=2592000, immutable"})
 

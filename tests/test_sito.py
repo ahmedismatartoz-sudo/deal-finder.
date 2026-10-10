@@ -96,3 +96,11 @@ def test_messaggi_sessione_chiusa():
     assert "altro dispositivo" in sessions.REVOKED_MSG["altro_dispositivo"]
     assert sessions.MAX_DISPOSITIVI >= 1
     assert sessions.check(None, 1) == (False, None)
+
+
+def test_indirizzi_foto_subito():
+    from dealfinder.web.foto import candidate_urls
+    u = candidate_urls("imgid:8ecb9da4-ef52-4eb3-b3cb-cea7a073cafb?rule=x")
+    assert u[0].endswith("/images/8e/8ecb9da4-ef52-4eb3-b3cb-cea7a073cafb?rule=gallery-desktop-2x-auto")
+    assert candidate_urls("https://a.b/c.jpg") == ["https://a.b/c.jpg"]
+    assert candidate_urls(None) == [] and candidate_urls("boh") == []
