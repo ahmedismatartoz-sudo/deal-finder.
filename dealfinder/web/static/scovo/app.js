@@ -259,9 +259,9 @@ function sheetParts(){
     <div class="sheet-head"><h2 id="ph">Cosa comprare</h2><button class="link" data-act="close">Chiudi</button></div>
     <div class="sheet-body" style="gap:0">
       <span class="hint" style="padding-bottom:6px">${esc(base.nome || "")}</span>
-      ${(d.pezzi || []).map(it => `<div class="part"><span>${esc(it.pezzo)}</span><b>${it.da === it.a ? eur(it.a) : num(it.da) + "–" + eur(it.a)}</b></div>`).join("")}
+      ${(d.pezzi || []).map(it => `<div class="part"><span>${esc(it.pezzo)}${it.link ? `<br><a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer" style="font-size:13px;font-weight:600">Vedi l'offerta più bassa</a>` : ""}</span><b>${it.da === it.a ? eur(it.a) : num(it.da) + "–" + eur(it.a)}</b></div>`).join("")}
       <div class="part-total"><strong>Totale pezzi</strong><b>${ripTxt(base)}</b></div>
-      <span class="hint" style="padding:10px 0 4px">Pezzi compatibili o usati, manodopera esclusa. Stima fatta da descrizione e foto: chiedi conferma al venditore.</span>
+      <span class="hint" style="padding:10px 0 4px">Prezzi trovati online per questo modello (pezzi compatibili o usati), manodopera esclusa. Dove c'è scritto "prezzo stimato" non abbiamo trovato un'offerta: chiedi conferma al venditore.</span>
       <button class="btn" data-act="cerca-pezzi" style="margin:8px 0 4px">Cerca i prezzi migliori in Ricambi</button>
     </div>
   </div></div>`;

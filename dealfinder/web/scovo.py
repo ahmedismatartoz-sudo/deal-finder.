@@ -190,8 +190,9 @@ def parts_items(parts) -> list[dict]:
         if not label or hi is None:
             continue
         label = str(label).replace("_", " ").strip()
+        offer = ((p.get("offers") or [{}])[0] or {}).get("url")
         out.append({"pezzo": label[:1].upper() + label[1:], "da": int(p.get("low") if p.get("low") is not None else hi),
-                    "a": int(hi)})
+                    "a": int(hi), "link": offer if offer and str(offer).startswith("http") else None})
     return out
 
 
