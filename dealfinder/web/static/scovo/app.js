@@ -444,6 +444,7 @@ function viewLogin(){
 async function onSubmit(e){
   const f = e.target; if (!f.id) return;
   e.preventDefault();
+  if (f.id === "bot-form") { const i = document.getElementById("bot-text"); botAsk(i ? i.value : A.text); return; }
   const data = Object.fromEntries(new FormData(f).entries());
   if (data.email) L.email = data.email;
   if (f.id === "req-form") L.req = data;
@@ -512,6 +513,77 @@ function applyRoute(){
 window.addEventListener("popstate", () => { if (S.sheet) { S.sheet = null; } applyRoute(); });
 
 /* ---------- disegno ---------- */
+/* ---------- Assistente a voce ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const A = {msgs: [], listening: false, busy: false, voice: store.get("voce", true), rec: null, text: ""};
+const BOT_IDEE = ["Che affari ci sono oggi sopra i 3.000 € di guadagno?", "Che Audi ci sono oggi?", "Auto sotto i 5.000 € senza danni",
+                  "Quanto vale una Audi TT del 2014?", "Controlla la targa AB123CD e dimmi il prezzo di faro e paraurti"];
+const MIC = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+function botFab(){ return `<button class="bot-fab" data-act="bot" aria-label="Chiedi a Scovo a voce">${MIC}<span>Chiedi</span></button>`; }
+function sheetBot(){
+  const msgs = A.msgs.map(m => m.role === "user" ? `<div class="b-msg me">${esc(m.content)}</div>` : `
+    <div class="b-msg bot">${esc(m.content)}${(m.auto || []).length ? `<div class="b-cars">${m.auto.map(c => `
+      <button class="b-car" data-act="bot-open" data-v="${c.id}">${c.foto ? `<img src="${esc(c.foto)}" alt="" loading="lazy">` : `<span class="b-noimg">${CAR_SVG}</span>`}
+        <span class="b-car-t"><b>${esc(c.nome)}</b><span>${esc([c.anno, c.zona].filter(Boolean).join(" · "))}</span>
+        <span>${eur(c.prezzo)} · <em>${c.guadagno_da === c.guadagno_a ? "+" + eur(c.guadagno_a) : "+" + num(Math.max(c.guadagno_da, 0)) + "–" + num(c.guadagno_a) + " €"}</em></span></span></button>`).join("")}</div>` : ""}</div>`).join("");
+  const ideas = A.msgs.length ? "" : `<div class="b-ideas"><p class="hint">Chiedimi quello che vuoi, a voce o scrivendo. Per esempio:</p>${BOT_IDEE.map(t => `<button class="pill" data-act="bot-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>`;
+  return `
+  <div class="sheet-wrap" data-act="close-bg"><div class="sheet bot-sheet" role="dialog" aria-modal="true" aria-labelledby="bh">
+    <div class="sheet-head"><h2 id="bh">Chiedi a Scovo</h2><div style="display:flex;gap:4px;align-items:center">
+      <button class="link" data-act="bot-voice" aria-pressed="${A.voice}">${A.voice ? "Voce sì" : "Voce no"}</button><button class="link" data-act="close">Chiudi</button></div></div>
+    <div class="sheet-body bot-body" id="bot-body" aria-live="polite">${ideas}${msgs}
+      ${A.busy ? `<div class="b-msg bot b-wait"><span class="spin" aria-hidden="true"></span>Ci penso…</div>` : ""}
+      <div class="b-live" id="bot-live" ${A.listening ? "" : "hidden"}>Ti ascolto…</div>
+    </div>
+    <form class="bot-foot" id="bot-form">
+      <input id="bot-text" placeholder="${SR ? "Scrivi o tocca il microfono" : "Scrivi la tua domanda"}" autocomplete="off" value="${esc(A.text)}" enterkeyhint="send">
+      ${SR ? `<button type="button" class="bot-mic${A.listening ? " on" : ""}" data-act="bot-mic" aria-label="${A.listening ? "Smetti di ascoltare" : "Parla"}">${MIC}</button>` : ""}
+      <button type="submit" class="bot-send" aria-label="Invia"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+  </div></div>`;
+}
+function botScroll(){ const b = document.getElementById("bot-body"); if (b) b.scrollTop = b.scrollHeight; }
+function speak(text){
+  if (!A.voice || !window.speechSynthesis) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = "it-IT"; u.rate = 1.05;
+    const v = speechSynthesis.getVoices().find(v => /^it/i.test(v.lang)); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+async function botAsk(text){
+  text = (text || "").trim(); if (!text || A.busy) return;
+  A.msgs.push({role: "user", content: text}); A.text = ""; A.busy = true;
+  render({keep:true}); botScroll();
+  try {
+    const r = await api("/api/assistente", {method: "POST", body: {messages: A.msgs.map(m => ({role: m.role, content: m.content}))}});
+    A.msgs.push({role: "assistant", content: r.risposta || "", auto: r.auto || []});
+    speak(r.risposta || "");
+  } catch (e) { A.msgs.push({role: "assistant", content: e.message}); }
+  A.busy = false;
+  if (S.sheet === "bot") { render({keep:true}); botScroll(); }
+}
+function botListen(){
+  if (!SR) return;
+  if (A.listening && A.rec) { A.rec.stop(); return; }
+  try { speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+  const rec = new SR(); A.rec = rec;
+  rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = false;
+  let finalText = "";
+  rec.onresult = ev => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript; else interim += ev.results[i][0].transcript;
+    }
+    const live = document.getElementById("bot-live"); if (live) { live.hidden = false; live.textContent = (finalText + " " + interim).trim() || "Ti ascolto…"; }
+  };
+  rec.onerror = ev => { if (ev.error === "not-allowed") toast("Permetti l'uso del microfono per parlare con Scovo"); };
+  rec.onend = () => { A.listening = false; A.rec = null; if (finalText.trim()) botAsk(finalText); else render({keep:true}); };
+  A.listening = true; render({keep:true}); botScroll();
+  try { rec.start(); } catch (e) { A.listening = false; render({keep:true}); }
+}
+
 function tabBar(){
   const cur = S.route === "auto" ? "affari" : S.route;
   return `<nav class="tabs" aria-label="Sezioni">${TABS.map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
@@ -535,7 +607,8 @@ function render(opts){
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
   if (canBrowse()) {
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : "";
+    if (S.route !== "auto" && !S.sheet) html += botFab();
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "bot" ? sheetBot() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
@@ -552,7 +625,7 @@ function render(opts){
   else if (opts.y != null) window.scrollTo(0, opts.y);
   else if (opts.keep) window.scrollTo(0, y);
   else window.scrollTo(0, y);
-  if (S.sheet) { const sh = document.querySelector(".sheet"); if (sh && !sh.contains(document.activeElement)) { const f = sh.querySelector("h2"); if (f) { f.tabIndex = -1; f.focus({preventScroll:true}); } } }
+  if (S.sheet && S.sheet !== "bot") { const sh = document.querySelector(".sheet"); if (sh && !sh.contains(document.activeElement)) { const f = sh.querySelector("h2"); if (f) { f.tabIndex = -1; f.focus({preventScroll:true}); } } }
 }
 /* foto che non si caricano: resta il disegno dell'auto (niente codice nell'HTML: CSP) */
 document.addEventListener("error", e => { const t = e.target; if (t && t.tagName === "IMG") t.classList.add("ko"); }, true);
@@ -657,7 +730,12 @@ $app.addEventListener("click", e => {
     case "band": setBand(v); saveFilters(); break;
     case "filters": S.sheet = "filters"; break;
     case "parts": S.sheet = "parts"; break;
-    case "close": case "close-bg": S.sheet = null; break;
+    case "close": case "close-bg": if (A.rec) A.rec.abort(); try { speechSynthesis.cancel(); } catch (e) {} S.sheet = null; break;
+    case "bot": S.sheet = "bot"; render({keep:true}); botScroll(); setTimeout(() => { const i = document.getElementById("bot-text"); if (i && !SR) i.focus(); }, 50); return;
+    case "bot-idea": botAsk(v); return;
+    case "bot-mic": botListen(); return;
+    case "bot-voice": A.voice = !A.voice; store.set("voce", A.voice); if (!A.voice) { try { speechSynthesis.cancel(); } catch (e) {} } break;
+    case "bot-open": S.sheet = null; S.fromList = true; go("auto/" + v); return;
     case "tip": S.tip = false; store.set("tip", false); break;
     case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; saveFilters(); break;
     case "stato": S.stato = v; saveFilters(); break;
@@ -704,6 +782,7 @@ $app.addEventListener("keydown", e => {
 });
 $app.addEventListener("input", e => {
   const id = e.target.id, val = e.target.value;
+  if (id === "bot-text") { A.text = val; return; }
   if (id === "v-targa") V.targa = val; else if (id === "v-km") { V.km = val.replace(/\D/g, ""); if (val !== V.km) e.target.value = V.km; }
   else if (id === "v-note") V.note = val; else if (id === "r-targa") R.targa = val; else if (id === "r-pezzo") R.pezzo = val;
   else if (id === "fmin" || id === "fmax") {

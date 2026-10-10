@@ -79,7 +79,7 @@ def model_name(model: str | None) -> str:
 
 
 def version_short(v: str | None, model: str | None) -> str:
-    if not v:
+    if not v or re.fullmatch(r"(?i)\s*altr[oa] (allestimento|versione)\s*", v):
         return ""
     v = re.sub(r"\s+", " ", v).strip()
     if model:

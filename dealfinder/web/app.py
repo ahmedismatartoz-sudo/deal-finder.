@@ -597,6 +597,39 @@ async def servizio_ricambi(request: Request):
     return jsonify(out, 200 if out.get("ok") else 422)
 
 
+ASSISTENTE_LIMITE_GIORNO = int(os.environ.get("ASSISTENTE_LIMITE_GIORNO", "80"))
+_guest_questions: dict[str, list[float]] = defaultdict(list)
+
+
+async def assistente(request: Request):
+    """Assistente a voce: domanda in linguaggio naturale, risposta + auto trovate."""
+    user = viewer(request)
+    data = await body(request)
+    msgs = [m for m in (data.get("messages") or []) if isinstance(m, dict)][-10:]
+    if not msgs or not str(msgs[-1].get("content", "")).strip():
+        err(400, "Fai una domanda")
+    if user.get("role") == "ospite":
+        ip, now = client_ip(request), time.time()
+        _guest_questions[ip] = [t for t in _guest_questions[ip] if now - t < 86400]
+        if len(_guest_questions[ip]) >= 15:
+            err(429, "Hai fatto molte domande oggi: entra con il tuo account per continuare")
+        _guest_questions[ip].append(now)
+    from . import assistente as bot
+
+    def work():
+        with connect() as conn:
+            if user.get("role") != "ospite":
+                n = conn.execute("SELECT count(*) AS n FROM service_usage WHERE dealer_id=%s AND service='assistente' "
+                                 "AND at > date_trunc('day', now())", (user["id"],)).fetchone()["n"]
+                if n >= ASSISTENTE_LIMITE_GIORNO:
+                    err(429, "Hai raggiunto le domande di oggi: riprova domani")
+            out = bot.answer(conn, user, msgs, _service_gate, _service_log)
+            if user.get("role") != "ospite":
+                _service_log(conn, user, "assistente", True)
+            return out
+    return jsonify(await run_in_threadpool(work))
+
+
 # ---------------------------------------------------------------------------
 # Sito Scovo: affari, scheda, contatto, foto
 # ---------------------------------------------------------------------------
@@ -797,7 +830,7 @@ SECURITY_HEADERS = [
     (b"x-content-type-options", b"nosniff"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
     (b"x-frame-options", b"DENY"),
-    (b"permissions-policy", b"camera=(self), geolocation=(), microphone=()"),
+    (b"permissions-policy", b"camera=(self), geolocation=(), microphone=(self)"),
     (b"content-security-policy", CSP.encode()),
 ]
 
@@ -868,6 +901,7 @@ routes = [
     Route("/api/admin/dealers/{id:int}", admin_update_dealer, methods=["PATCH"]),
     Route("/api/admin/richieste", admin_requests),
     Route("/api/admin/richieste/{id:int}", admin_request_done, methods=["POST"]),
+    Route("/api/assistente", assistente, methods=["POST"]),
     Route("/api/servizi/vendi", servizio_vendi, methods=["POST"]),
     Route("/api/servizi/ricambi", servizio_ricambi, methods=["POST"]),
     Route("/sw.js", service_worker),

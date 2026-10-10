@@ -104,3 +104,18 @@ def test_indirizzi_foto_subito():
     assert u[0].endswith("/images/8e/8ecb9da4-ef52-4eb3-b3cb-cea7a073cafb?rule=gallery-desktop-2x-auto")
     assert candidate_urls("https://a.b/c.jpg") == ["https://a.b/c.jpg"]
     assert candidate_urls(None) == [] and candidate_urls("boh") == []
+
+
+def test_assistente_capisce_le_domande():
+    from dealfinder.web.assistente import parse
+    q = parse("che opportunità ci sono oggi sopra i 6000 euro di margine")
+    assert q["guadagno_min"] == 6000 and "prezzo_min" not in q and q["intento"] == "affari"
+    q = parse("Che Audi ci sono oggi?")
+    assert q["marca"] == "audi" and "modello" not in q
+    q = parse("audi tt del 2014 oggi più o meno a che prezzo è")
+    assert (q["modello"], q["anno"], q["intento"]) == ("tt", 2014, "mercato")
+    q = parse("controllami la targa AB 123 CD e dimmi i prezzi per faro anteriore sinistro e paraurti")
+    assert q["targa"] == "AB123CD" and q["intento"] == "ricambi" and q["pezzi"] == ["faro anteriore sinistro", "paraurti"]
+    q = parse("auto tra 2 e 5 mila con guadagno oltre 3000")
+    assert (q["prezzo_min"], q["prezzo_max"], q["guadagno_min"]) == (2000, 5000, 3000)
+    assert scovo.version_short("Altro allestimento", "a5") == ""
