@@ -70,6 +70,25 @@ def backfill_searches(days: int = 30) -> list[dict]:
     return out
 
 
+def fasce_disgiunte() -> list[tuple[int, int]]:
+    """Fasce di prezzo che non si sovrappongono: ogni annuncio compare in UNA sola ricerca (niente doppioni pagati),
+    strette dove gli annunci sono tanti (auto economiche) così ogni ricerca resta sotto il limite di Facebook."""
+    out, p = [], 500
+    for top, step in ((3000, 100), (8000, 250), (20000, 500)):
+        while p < top:
+            out.append((p, min(p + step, top) - 1))
+            p += step
+    return out
+
+
+def searches_senza_doppioni(days: int = 1) -> list[dict]:
+    out = [{"city": "milan", "radius": 60, "min_price": lo, "max_price": hi, "days": days, "kind": "fascia"}
+           for lo, hi in fasce_disgiunte()]
+    # poche ricerche mirate per auto con problemi (le uniche che possono ripetere un annuncio: limite basso)
+    out += [{"city": "milan", "radius": 60, "query": q, "days": days, "kind": "problema"} for q in FB_PROBLEM_QUERIES]
+    return out
+
+
 def default_searches(days: int = 1) -> list[dict]:
     """Raccolta normale (annunci dell'ultimo giorno, una volta al giorno così non si ripagano gli stessi):
     fasce di prezzo strette (molte sotto i 2.000 €), marche e ricerche "con problemi"."""
@@ -247,10 +266,15 @@ class BrightDataFacebookCollector(Collector):
         # annunci massimi per singola ricerca: con molte ricerche piccole si spende poco e si
         # prendono quasi solo annunci nuovi (BRIGHTDATA_LIMIT vale solo con BRIGHTDATA_SEARCHES)
         raw = os.environ.get("BRIGHTDATA_SEARCHES")
-        self.searches = json.loads(raw) if raw else DEFAULT_SEARCHES
+        days = int(os.environ.get("FB_GIORNI", "1"))
+        self.searches = json.loads(raw) if raw else searches_senza_doppioni(days)
         # tetto di righe per giro (Bright Data si paga a riga, doppioni compresi): diviso tra le ricerche
         cap = int(os.environ.get("FB_RIGHE_PER_GIRO", "3000"))
-        self.limit = max(10, min(int(os.environ.get("FB_LIMIT_PER_RICERCA", "60")), cap // max(1, len(self.searches))))
+        n_fasce = sum(1 for s in self.searches if s.get("kind") != "problema") or len(self.searches)
+        n_prob = len(self.searches) - n_fasce
+        self.limit_problema = int(os.environ.get("FB_LIMIT_PROBLEMA", "20"))
+        self.limit = max(10, min(int(os.environ.get("FB_LIMIT_PER_RICERCA", "150")),
+                                 (cap - n_prob * self.limit_problema) // max(1, n_fasce)))
         if raw:
             self.limit = int(os.environ.get("BRIGHTDATA_LIMIT", "300"))
         # Raccolta di partenza (una volta sola): gli annunci degli ultimi 30 giorni
@@ -269,14 +293,15 @@ class BrightDataFacebookCollector(Collector):
             self._client = httpx.Client(timeout=120, headers={"Authorization": f"Bearer {self.key}"})
         return self._client
 
-    def trigger(self, urls: list[str]) -> str:
+    def trigger(self, urls: list[str], limit: int | None = None) -> str:
+        limit = limit or self.limit
         # Formato verificato con questo dataset: limiti nella query e nel corpo, input dentro "input"
         r = self.client.post(f"{API}/trigger",
                              params={"dataset_id": self.dataset, "include_errors": "true", "notify": "false",
                                      "type": "discover_new", "discover_by": "url",
-                                     "limit_multiple_results": self.limit * len(urls)},
+                                     "limit_multiple_results": limit * len(urls)},
                              json={"input": [{"url": u, "country": "IT"} for u in urls],
-                                   "limit_per_input": self.limit})
+                                   "limit_per_input": limit})
         if r.status_code >= 400:
             log.error("Bright Data trigger HTTP %s: %s", r.status_code, r.text[:400])
         r.raise_for_status()
@@ -316,11 +341,14 @@ class BrightDataFacebookCollector(Collector):
         # Lotti piccoli, tutti avviati insieme su Bright Data (lavorano in parallelo).
         # Ogni lotto si scarica appena è pronto, nell'ordine in cui finiscono: uno lento non blocca gli altri.
         size = int(os.environ.get("FB_LOTTO", "5"))
-        chunks = [urls[i:i + size] for i in range(0, len(urls), size)]
+        prob = [u for u, s in zip(urls, self.searches) if s.get("kind") == "problema"]
+        rest = [u for u in urls if u not in set(prob)]
+        chunks = [(rest[i:i + size], self.limit) for i in range(0, len(rest), size)]
+        chunks += [(prob[i:i + size], getattr(self, "limit_problema", self.limit)) for i in range(0, len(prob), size)]
         pending = []
-        for ch in chunks:
+        for ch, lim in chunks:
             try:
-                pending.append(self.trigger(ch))
+                pending.append(self.trigger(ch, lim))
             except Exception as e:
                 log.error("Bright Data: lotto non avviato: %s", str(e)[:200])
         log.info("Bright Data: %d lotti avviati per %d ricerche (max %d annunci per ricerca): %s",

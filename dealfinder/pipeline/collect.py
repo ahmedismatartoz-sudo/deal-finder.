@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sys
 from collections import Counter
 
@@ -58,6 +59,34 @@ class _ReadyImporter(BrightDataFacebookCollector):
         yield from self.collect_snapshots(sids, query.get("max_price", 20_000), max_minutes=5)
 
 
+ZONA = {"MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO"}
+
+
+def _norm_city(c: str | None) -> str:
+    import unicodedata
+    c = unicodedata.normalize("NFKD", str(c or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z]", "", c.split(",")[0])
+
+
+def collector_is_fb(sources) -> bool:
+    return any(getattr(c, "source", "") == "facebook" for c, _ in sources)
+
+
+def city_provinces(conn) -> dict:
+    """Comune -> provincia, imparato dagli annunci di Subito (che hanno sempre la provincia)."""
+    rows = conn.execute("SELECT city, province, count(*) AS n FROM listings WHERE source='subito' "
+                        "AND city IS NOT NULL AND province IS NOT NULL GROUP BY 1,2").fetchall()
+    best: dict = {}
+    for r in rows:
+        k = _norm_city(r["city"])
+        if k and r["n"] > best.get(k, ("", 0))[1]:
+            best[k] = (r["province"], r["n"])
+    out = {k: v[0] for k, v in best.items()}
+    out.update({"milan": "MI", "milano": "MI", "monza": "MB", "bergamo": "BG", "brescia": "BS", "como": "CO",
+                "varese": "VA", "pavia": "PV", "lecco": "LC", "lodi": "LO", "cremona": "CR", "novara": "NO"})
+    return out
+
+
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode == "opportunita":
@@ -90,6 +119,11 @@ def run(mode: str) -> Counter:
         if mode == "fb_importa":
             sources = [(_ReadyImporter(), {"max_price": settings.max_purchase_eur})]
         else:
+            # dopo una pausa (più di 3 giorni senza annunci Facebook) si recupera l'ultima settimana, poi solo il giorno
+            from .ciclo import facebook_due
+            if mode == "facebook" and "FB_GIORNI" not in os.environ and facebook_due(72):
+                os.environ["FB_GIORNI"] = "7"
+                log.info("Facebook: ripresa dopo una pausa, recupero gli annunci dell'ultima settimana")
             sources = [(BrightDataFacebookCollector(backfill=(mode == "fb_backfill")),
                         {"max_price": settings.max_purchase_eur})]
     else:
@@ -108,10 +142,30 @@ def run(mode: str) -> Counter:
         model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
         if model is None:
             log.info("nessun modello dei prezzi attivo: filtro rapido con i confronti")
+        prov_of = city_provinces(conn) if collector_is_fb(sources) else {}
+        if prov_of:
+            # provincia anche per gli annunci Facebook già salvati
+            n = 0
+            for r in conn.execute("SELECT id, city FROM listings WHERE source='facebook' AND province IS NULL "
+                                  "AND city IS NOT NULL").fetchall():
+                pv = prov_of.get(_norm_city(r["city"]))
+                if pv:
+                    conn.execute("UPDATE listings SET province=%s WHERE id=%s", (pv, r["id"]))
+                    n += 1
+            conn.commit()
+            stats["facebook:provincia_aggiunta"] += n
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
                     normalize_fields(listing)
+                    if listing.source == "facebook":
+                        # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
+                        pv = prov_of.get(_norm_city(listing.city))
+                        if pv and not listing.province:
+                            listing.province = pv
+                        if pv and pv not in ZONA:
+                            stats["facebook:fuori_zona"] += 1
+                            continue
                     try:
                         lid, event = upsert_listing(conn, listing)
                     except Exception as e:          # un annuncio con dati assurdi non ferma la raccolta
