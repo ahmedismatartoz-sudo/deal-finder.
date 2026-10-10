@@ -27,7 +27,8 @@ def sign(listing_id: int, pos: int) -> str:
 
 
 def url_for(listing_id: int, pos: int) -> str:
-    return f"/api/foto/{listing_id}/{pos}?s={sign(listing_id, pos)}"
+    # v=2: indirizzo nuovo, così i telefoni non riusano gli errori vecchi tenuti in memoria
+    return f"/api/foto/{listing_id}/{pos}?s={sign(listing_id, pos)}&v=2"
 
 
 def check(listing_id: int, pos: int, s: str | None) -> bool:
