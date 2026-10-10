@@ -16808,15 +16808,88 @@
  {
   "id": 11498,
   "esito": "da_verificare",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "CLA SW 2016 a prezzo molto basso con solo 'motore funzionante'.",
+  "danno": "alto_rischio",
+  "aggiorna": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "porta_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "Paraurti anteriore AMG Line (prezzo stimato)",
+    "low": 250,
+    "high": 450
+   },
+   {
+    "label": "Faro anteriore sinistro (prezzo stimato)",
+    "low": 250,
+    "high": 650
+   },
+   {
+    "label": "Parafango anteriore sinistro (prezzo stimato)",
+    "low": 80,
+    "high": 180
+   },
+   {
+    "label": "Cofano motore (prezzo stimato)",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "Kit radiatori e condensatore clima (prezzo stimato)",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "Ossatura frontale / traversa (prezzo stimato)",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "Porta anteriore sinistra usata (prezzo stimato)",
+    "low": 250,
+    "high": 550
+   },
+   {
+    "label": "Riserva per danni probabili non dichiarati (airbag, sospensione ant. sx)",
+    "low": 0,
+    "high": 1465
+   }
+  ],
+  "ricambi_min": 1380,
+  "ricambi_max": 4395,
+  "nota": "Mercedes CLA 180 d Shooting Brake 2016 incidentata sul frontale sinistro (dalle foto: paraurti, faro, parafango, cofano e porta anteriore sinistra). L'annuncio dice solo 'motore funzionante'.",
   "controlli": [
-   "Chiedere motivo del prezzo e stato carrozzeria",
-   "Verificare cambio automatico"
+   "Chiedere se sono esplosi gli airbag",
+   "Controllare sospensione e cerchio anteriore sinistro",
+   "Verificare che il telaio/longherone non sia piegato",
+   "Chiedere se parte e se il cambio automatico funziona"
   ]
  },
  {
