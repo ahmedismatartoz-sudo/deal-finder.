@@ -237,8 +237,8 @@
     "source": "testo"
    }
   ],
-  "ricambi_min": 1300,
-  "ricambi_max": 3150,
+  "ricambi_min": 1708,
+  "ricambi_max": 3460,
   "ricambi": [
    {
     "label": "Paraurti anteriore con primer (compatibile) (prezzo stimato)",
@@ -246,9 +246,10 @@
     "high": 350
    },
    {
-    "label": "Faro anteriore xeno/LED (usato) (prezzo stimato)",
-    "low": 400,
-    "high": 700
+    "label": "Faro anteriore xeno/LED (usato)",
+    "low": 808,
+    "high": 1010,
+    "offer": "https://www.ebay.it/itm/166320491552"
    },
    {
     "label": "Kit airbag volante + passeggero + centralina (usato) (prezzo stimato)",
@@ -1396,8 +1397,8 @@
    "Km reali dalle revisioni",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 690,
-  "ricambi_max": 1563,
+  "ricambi_min": 650,
+  "ricambi_max": 1445,
   "ricambi": [
    {
     "label": "Braccio oscillante anteriore (Kamoka 9953475)",
@@ -1406,9 +1407,10 @@
     "offer": "https://www.auto-doc.it/kamoka/7831366"
    },
    {
-    "label": "Paraurti anteriore grezzo (compatibile) (prezzo stimato)",
-    "low": 150,
-    "high": 250
+    "label": "Paraurti anteriore grezzo (compatibile)",
+    "low": 110,
+    "high": 132,
+    "offer": "https://www.autoparti.it/hd-karosserieteile/7056440"
    },
    {
     "label": "Faro anteriore sx alogeno (Prasco CI3244903/04)",
@@ -1745,13 +1747,14 @@
    }
   ],
   "nota": "Fiat 500L (351) 1.3 MultiJet 85 CV Pop 2013. Tamponamento posteriore a 50 km/h: paraurti, portellone, fanali e traversa; rischio pannello posteriore e pianale.",
-  "ricambi_min": 534,
-  "ricambi_max": 1252,
+  "ricambi_min": 474,
+  "ricambi_max": 1117,
   "ricambi": [
    {
-    "label": "Paraurti posteriore (compatibile/usato) (prezzo stimato)",
-    "low": 180,
-    "high": 300
+    "label": "Paraurti posteriore (compatibile/usato)",
+    "low": 120,
+    "high": 165,
+    "offer": "https://www.autoparti.it/prasco/11246030"
    },
    {
     "label": "Portellone posteriore (usato) (prezzo stimato)",
@@ -2198,13 +2201,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 320,
-  "ricambi_max": 480,
+  "ricambi_min": 243,
+  "ricambi_max": 267,
   "ricambi": [
    {
-    "label": "4 pneumatici 225/55 R17 (o misura a libretto) (prezzo stimato)",
-    "low": 320,
-    "high": 480
+    "label": "4 pneumatici 225/55 R17 (o misura a libretto)",
+    "low": 243,
+    "high": 267,
+    "offer": "https://www.gommadiretto.it/product/Kleber/17/D-150108"
    }
   ]
  },
@@ -2557,13 +2561,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 250,
-  "ricambi_max": 670,
+  "ricambi_min": 273,
+  "ricambi_max": 562,
   "ricambi": [
    {
-    "label": "Turbina OM640 usata garantita/ricondizionata (prezzo stimato)",
-    "low": 250,
-    "high": 450
+    "label": "Turbina OM640 usata garantita/ricondizionata",
+    "low": 273,
+    "high": 342,
+    "offer": "https://www.ebay.de/itm/175019577942"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (tubi olio turbo + guarnizioni, intercooler/fap contaminati da olio)",
@@ -2623,8 +2628,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 110,
-  "ricambi_max": 310,
+  "ricambi_min": 142,
+  "ricambi_max": 376,
   "ricambi": [
    {
     "label": "Paraurti anteriore grezzo (compatibile) (prezzo stimato)",
@@ -2632,9 +2637,10 @@
     "high": 130
    },
    {
-    "label": "Faro anteriore (compatibile) (prezzo stimato)",
-    "low": 40,
-    "high": 80
+    "label": "Faro anteriore (compatibile)",
+    "low": 72,
+    "high": 146,
+    "offer": "https://www.auto-doc.it/abakus/8354295"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (radiatore acqua + condensatore a/c, traversa/staffe paraurti)",
@@ -3027,8 +3033,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 236,
-  "ricambi_max": 480,
+  "ricambi_min": 293,
+  "ricambi_max": 508,
   "ricambi": [
    {
     "label": "Paraurti anteriore con primer (compatibile, verificare pre-restyling)",
@@ -3037,9 +3043,10 @@
     "offer": "https://www.auto-doc.it/prasco/12123010"
    },
    {
-    "label": "Faro anteriore alogeno (compatibile) (prezzo stimato)",
-    "low": 70,
-    "high": 130
+    "label": "Faro anteriore alogeno (compatibile)",
+    "low": 127,
+    "high": 158,
+    "offer": "https://www.autoparti.it/valeo/1059989"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (radiatore + condensatore a/c, traversa / staffe paraurti)",
@@ -3110,13 +3117,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 110,
-  "ricambi_max": 930,
+  "ricambi_min": 179,
+  "ricambi_max": 966,
   "ricambi": [
    {
-    "label": "Kit catena distribuzione 1.3 CDTI (compatibile) (prezzo stimato)",
-    "low": 80,
-    "high": 150
+    "label": "Kit catena distribuzione 1.3 CDTI (compatibile)",
+    "low": 149,
+    "high": 186,
+    "offer": "https://www.autoparti.it/optimal/26135082"
    },
    {
     "label": "Serratura portellone posteriore (compatibile) (prezzo stimato)",
@@ -3659,13 +3667,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 1036,
-  "ricambi_max": 2524,
+  "ricambi_min": 1035,
+  "ricambi_max": 2312,
   "ricambi": [
    {
-    "label": "Kit airbag (volante + passeggero) usato (prezzo stimato)",
-    "low": 300,
-    "high": 600
+    "label": "Kit airbag (volante + passeggero) usato",
+    "low": 234,
+    "high": 263,
+    "offer": "https://rrr.lt/en/used-part/ovp215466-01561246940-alfa-romeo-giulia-steering-wheel-airbag"
    },
    {
     "label": "Centralina airbag (usata/reset) (prezzo stimato)",
@@ -3679,9 +3688,10 @@
     "offer": "https://www.auto-doc.it/blic/25029084"
    },
    {
-    "label": "Faro anteriore (usato) (prezzo stimato)",
-    "low": 300,
-    "high": 600
+    "label": "Faro anteriore (usato)",
+    "low": 365,
+    "high": 725,
+    "offer": "https://ovoko.it/parte/nrz2586-00505465710-alfa-romeo-giulia-faro-fanale"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (pretensionatori cinture anteriori, plancia lato passeggero, radiatori + traversa anteriore)",
@@ -3863,13 +3873,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 1200,
-  "ricambi_max": 2750,
+  "ricambi_min": 1180,
+  "ricambi_max": 2441,
   "ricambi": [
    {
-    "label": "Cambio automatico ZF 9HP48 usato (garantito) (prezzo stimato)",
-    "low": 1200,
-    "high": 2200
+    "label": "Cambio automatico ZF 9HP48 usato (garantito)",
+    "low": 1180,
+    "high": 1891,
+    "offer": "https://rrr.lt/en/used-part/dbr172332-lr101959-land-rover-discovery-sport-automatic-gearbox"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (centralina cambio / software, ripartitore / ptu trazione integrale)",
@@ -3920,8 +3931,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 1350,
+  "ricambi_min": 320,
+  "ricambi_max": 1141,
   "ricambi": [
    {
     "label": "Paraurti anteriore con primer (compatibile, ipotesi) (prezzo stimato)",
@@ -3929,9 +3940,10 @@
     "high": 400
    },
    {
-    "label": "Faro anteriore (usato, ipotesi) (prezzo stimato)",
-    "low": 150,
-    "high": 300
+    "label": "Faro anteriore (usato, ipotesi)",
+    "low": 70,
+    "high": 91,
+    "offer": "https://rrr.lt/en/used-part/rov11813-a2128205761-mercedes-benz-e-w212-headlight-headlamp"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (iniettori / catena distribuzione om651, sospensioni e bracci anteriori)",
@@ -4324,18 +4336,20 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 330,
-  "ricambi_max": 720,
+  "ricambi_min": 345,
+  "ricambi_max": 560,
   "ricambi": [
    {
-    "label": "Paraurti anteriore grezzo (compatibile) (prezzo stimato)",
-    "low": 180,
-    "high": 280
+    "label": "Paraurti anteriore grezzo (compatibile)",
+    "low": 160,
+    "high": 194,
+    "offer": "https://www.autoparti.it/van-wezel/20839460"
    },
    {
-    "label": "Faro anteriore con DRL LED (compatibile) (prezzo stimato)",
-    "low": 150,
-    "high": 260
+    "label": "Faro anteriore con DRL LED (compatibile)",
+    "low": 185,
+    "high": 186,
+    "offer": "https://www.autoparti.it/hd-karosserieteile/25389854"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (staffe/traversa anteriore, diagnosi batteria/impianto alta tensione)",
@@ -4424,8 +4438,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 85,
-  "ricambi_max": 531,
+  "ricambi_min": 74,
+  "ricambi_max": 496,
   "ricambi": [
    {
     "label": "Bobina accensione (ipotesi guasto)",
@@ -4434,9 +4448,10 @@
     "offer": "https://www.auto-doc.it/ridex/8055665"
    },
    {
-    "label": "Candele (4) (prezzo stimato)",
-    "low": 25,
-    "high": 50
+    "label": "Candele (4)",
+    "low": 14,
+    "high": 15,
+    "offer": "https://www.autoparti.it/bosch/1148156"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (catalizzatore intasato / sonda lambda, pompa benzina / iniettori, corpo farfallato / sensori)",
@@ -4708,13 +4723,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 80,
-  "ricambi_max": 650,
+  "ricambi_min": 251,
+  "ricambi_max": 804,
   "ricambi": [
    {
-    "label": "Kit guarnizione testata + paraoli valvole (compatibile) (prezzo stimato)",
-    "low": 80,
-    "high": 160
+    "label": "Kit guarnizione testata + paraoli valvole (compatibile)",
+    "low": 251,
+    "high": 314,
+    "offer": "https://www.auto-doc.it/ajusa/13585590"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (motore g4la usato garantito (se fasce/cilindro), candela/bobina cilindro)",
@@ -5373,8 +5389,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 790,
+  "ricambi_min": 348,
+  "ricambi_max": 904,
   "ricambi": [
    {
     "label": "Paraurti anteriore Stepway grezzo (compatibile) (prezzo stimato)",
@@ -5382,9 +5398,10 @@
     "high": 320
    },
    {
-    "label": "Faro anteriore LED (compatibile/usato) (prezzo stimato)",
-    "low": 200,
-    "high": 350
+    "label": "Faro anteriore LED (compatibile/usato)",
+    "low": 148,
+    "high": 464,
+    "offer": "https://rrr.lt/en/used-part/tti12442-260602809r-dacia-sandero-iii-headlight-headlamp"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (radiatore acqua + condensatore a/c)",
@@ -5504,13 +5521,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 600,
-  "ricambi_max": 1950,
+  "ricambi_min": 359,
+  "ricambi_max": 1360,
   "ricambi": [
    {
-    "label": "Turbocompressore 204DTD (compatibile/rigenerato) (prezzo stimato)",
-    "low": 600,
-    "high": 1000
+    "label": "Turbocompressore 204DTD (compatibile/rigenerato)",
+    "low": 359,
+    "high": 410,
+    "offer": "https://www.auto-doc.it/frankberg/21588093"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (intercooler e tubi pulizia detriti, danni motore da detriti/olio (aspirazione, egr, dpf))",
@@ -5692,13 +5710,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 1500,
-  "ricambi_max": 3050,
+  "ricambi_min": 2306,
+  "ricambi_max": 3432,
   "ricambi": [
    {
-    "label": "Motore usato N47C20A (garantito) (prezzo stimato)",
-    "low": 1500,
-    "high": 2500
+    "label": "Motore usato N47C20A (garantito)",
+    "low": 2306,
+    "high": 2882,
+    "offer": "https://rrr.lt/en/used-part/smt18303-n47c20a-mini-cooper-countryman-r60-engine"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (catena distribuzione / turbina contaminata, radiatore olio e pompa olio)",
@@ -5994,8 +6013,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 62,
-  "ricambi_max": 485,
+  "ricambi_min": 53,
+  "ricambi_max": 463,
   "ricambi": [
    {
     "label": "Tubo idroguida servosterzo (prezzo stimato)",
@@ -6003,9 +6022,10 @@
     "high": 110
    },
    {
-    "label": "Guarnizione coperchio punterie (prezzo stimato)",
-    "low": 12,
-    "high": 25
+    "label": "Guarnizione coperchio punterie",
+    "low": 3,
+    "high": 3,
+    "offer": "https://www.autoparti.it/glaser/1747030"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (ruggine sottoscocca / lamierati, pompa servosterzo)",
@@ -7561,13 +7581,14 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 1044,
-  "ricambi_max": 1860,
+  "ricambi_min": 953,
+  "ricambi_max": 1513,
   "ricambi": [
    {
-    "label": "Airbag volante (usato) (prezzo stimato)",
-    "low": 150,
-    "high": 300
+    "label": "Airbag volante (usato)",
+    "low": 109,
+    "high": 110,
+    "offer": "https://rrr.lt/en/used-part/lfc115568-a1728603002-mercedes-benz-cla-c117-x117-w117-steering-wheel-airbag"
    },
    {
     "label": "Paraurti anteriore con primer (compatibile)",
@@ -7581,9 +7602,10 @@
     "high": 250
    },
    {
-    "label": "Fanale posteriore LED (usato) (prezzo stimato)",
-    "low": 150,
-    "high": 257
+    "label": "Fanale posteriore LED (usato)",
+    "low": 100,
+    "high": 100,
+    "offer": "https://rrr.lt/en/used-part/nrg30732-a1179063800-mercedes-benz-cla-c117-x117-w117-rear-tail-lights"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (centralina airbag (reset/sostituzione), cintura anteriore guida con pretensionatore, radiatore/traversa anteriore)",
@@ -7798,8 +7820,8 @@
    "Visura PRA e storico revisioni (km reali)",
    "Vedere l'auto di persona prima di pagare"
   ],
-  "ricambi_min": 1317,
-  "ricambi_max": 2653,
+  "ricambi_min": 1396,
+  "ricambi_max": 2646,
   "ricambi": [
    {
     "label": "Faro anteriore alogeno (compatibile)",
@@ -7819,9 +7841,10 @@
     "high": 80
    },
    {
-    "label": "Parabrezza (compatibile) (prezzo stimato)",
-    "low": 250,
-    "high": 400
+    "label": "Parabrezza (compatibile)",
+    "low": 329,
+    "high": 393,
+    "offer": "https://www.auto-doc.it/glavista/19109610"
    },
    {
     "label": "Kit airbag frontali + centralina + pretensionatori (usato) (prezzo stimato)",
@@ -9857,9 +9880,10 @@
     "high": 200
    },
    {
-    "label": "Faro anteriore (compatibile) (prezzo stimato)",
-    "low": 100,
-    "high": 180
+    "label": "Faro anteriore (compatibile)",
+    "low": 175,
+    "high": 195,
+    "offer": "https://www.auto-doc.it/alkar/17241672"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (centralina airbag + cinture pretensionate, cruscotto/plancia (airbag passeggero), radiatore + condensatore a/c + traversa)",
@@ -9867,8 +9891,8 @@
     "high": 480
    }
   ],
-  "ricambi_min": 400,
-  "ricambi_max": 1240,
+  "ricambi_min": 475,
+  "ricambi_max": 1255,
   "nota": "Renault Clio IV (BH) 1.5 dCi 90 CV EDC Energy 2017. Urto frontale con 2 airbag esplosi (motore/cambio dichiarati ok); parti frontali non dettagliate (ipotesi paraurti+faro), rischio plancia e centralina airbag."
  },
  {
@@ -9997,9 +10021,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito EE20 2.0D (prezzo stimato)",
-    "low": 2000,
-    "high": 3000
+    "label": "Motore usato garantito EE20 2.0D",
+    "low": 1889,
+    "high": 1985,
+    "offer": "https://www.ebay.de/itm/227334056323"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (turbo/intercooler e radiatore olio, frizione/volano bimassa)",
@@ -10007,8 +10032,8 @@
     "high": 480
    }
   ],
-  "ricambi_min": 2000,
-  "ricambi_max": 3480,
+  "ricambi_min": 1889,
+  "ricambi_max": 2465,
   "nota": "Subaru Forester III (SH) 2.0D Boxer EE20 147 CV 2009. Motore fuso e già smontato: serve motore EE20 usato (costoso e raro), verificare completezza componenti."
  },
  {
@@ -10191,9 +10216,10 @@
     "high": 120
    },
    {
-    "label": "Faro anteriore (compatibile) (prezzo stimato)",
-    "low": 45,
-    "high": 80
+    "label": "Faro anteriore (compatibile)",
+    "low": 88,
+    "high": 111,
+    "offer": "https://www.auto-doc.it/abakus/8357019"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (kit distribuzione + pompa acqua (detriti cinghia), altri pannelli carrozzeria)",
@@ -10201,8 +10227,8 @@
     "high": 300
    }
   ],
-  "ricambi_min": 155,
-  "ricambi_max": 580,
+  "ricambi_min": 198,
+  "ricambi_max": 611,
   "nota": "Fiat Grande Punto (199) 1.9 Multijet 3p 2008 (potenza dichiarata 74 kW incoerente). Cinghia servizi rotta e 'carrozzeria da rifare' non dettagliata (ipotesi urto anteriore); verificare la distribuzione."
  },
  {
@@ -10227,9 +10253,10 @@
   ],
   "ricambi": [
    {
-    "label": "Kit catena distribuzione CR12DE (compatibile) (prezzo stimato)",
-    "low": 100,
-    "high": 180
+    "label": "Kit catena distribuzione CR12DE (compatibile)",
+    "low": 91,
+    "high": 114,
+    "offer": "https://www.auto-doc.it/bga/12199603"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (testata/valvole se piegate, grandine: solo levabolli, nessun ricambio)",
@@ -10237,8 +10264,8 @@
     "high": 150
    }
   ],
-  "ricambi_min": 100,
-  "ricambi_max": 330,
+  "ricambi_min": 91,
+  "ricambi_max": 264,
   "nota": "Nissan Micra III (K12) 1.2 16V CR12DE 80 CV 3p 2007. Motore fuori fase (catena) e grandine; incluso motore e cambio di scorta che riducono il rischio."
  },
  {
@@ -10333,9 +10360,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito 1.3 CDTI A13DTC (prezzo stimato)",
-    "low": 600,
-    "high": 1000
+    "label": "Motore usato garantito 1.3 CDTI A13DTC",
+    "low": 1249,
+    "high": 1832,
+    "offer": "https://www.ebay.de/itm/327376457256"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (turbo/radiatore/frizione)",
@@ -10343,8 +10371,8 @@
     "high": 200
    }
   ],
-  "ricambi_min": 600,
-  "ricambi_max": 1200,
+  "ricambi_min": 1249,
+  "ricambi_max": 2032,
   "nota": "Opel Corsa D 1.3 CDTI 75 CV (A13DTC) 5p 2011. Motore fuso, carrozzeria e interni dichiarati buoni; serve motore 1.3 CDTI usato."
  },
  {
@@ -10439,9 +10467,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito 1.4 8V 350A1000 (prezzo stimato)",
-    "low": 350,
-    "high": 600
+    "label": "Motore usato garantito 1.4 8V 350A1000",
+    "low": 630,
+    "high": 788,
+    "offer": "https://www.ebay.de/itm/317388173971"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (batteria, riduttore/iniettori gpl)",
@@ -10449,8 +10478,8 @@
     "high": 180
    }
   ],
-  "ricambi_min": 350,
-  "ricambi_max": 780,
+  "ricambi_min": 630,
+  "ricambi_max": 968,
   "nota": "Lancia Musa (350) restyling 1.4 8V 77 CV benzina/GPL 2012. Guasto motore non specificato con 240.000 km e varie ammaccature; cambio e GPL dichiarati ok."
  },
  {
@@ -10517,9 +10546,10 @@
     "high": 120
    },
    {
-    "label": "Faro anteriore dx (compatibile) (prezzo stimato)",
-    "low": 60,
-    "high": 110
+    "label": "Faro anteriore dx (compatibile)",
+    "low": 149,
+    "high": 149,
+    "offer": "https://www.piecesauto-pro.fr/hd-karosserieteile-8010468"
    },
    {
     "label": "Parafango anteriore dx (compatibile) (prezzo stimato)",
@@ -10532,8 +10562,8 @@
     "high": 190
    }
   ],
-  "ricambi_min": 165,
-  "ricambi_max": 480,
+  "ricambi_min": 254,
+  "ricambi_max": 519,
   "nota": "Citroen C3 II (SC) 1.4 HDi 70 CV 2011 (versione e-HDi CMP vs cambio manuale da verificare). Danno anteriore dx non dettagliato e auto non marciante venduta per ricambi: verificare motore e sospensione."
  },
  {
@@ -10657,9 +10687,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato 1.3 Multijet 75 CV garantito (prezzo stimato)",
+    "label": "Motore usato 1.3 Multijet 75 CV garantito",
     "low": 900,
-    "high": 1500
+    "high": 1125,
+    "offer": "https://www.subito.it/auto/motore-1-3-multijet-75cv-salerno-625314392.htm"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (turbina/intercooler e radiatore, kit frizione)",
@@ -10668,7 +10699,7 @@
    }
   ],
   "ricambi_min": 900,
-  "ricambi_max": 1750,
+  "ricambi_max": 1375,
   "nota": "Fiat Panda III (319) Van 4x4 1.3 Multijet II 75 CV autocarro 2013. Motore fuso con 320.000 km: serve motore usato, verificare trasmissione 4x4."
  },
  {
@@ -10882,9 +10913,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato OM651 2.2 CDI garantito (prezzo stimato)",
-    "low": 1800,
-    "high": 3000
+    "label": "Motore usato OM651 2.2 CDI garantito",
+    "low": 2239,
+    "high": 2422,
+    "offer": "https://www.ebay.de/p/1534189453"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (turbina/iniettori e accessori motore)",
@@ -10892,8 +10924,8 @@
     "high": 300
    }
   ],
-  "ricambi_min": 1800,
-  "ricambi_max": 3300,
+  "ricambi_min": 2239,
+  "ricambi_max": 2722,
   "nota": "Mercedes-Benz Classe E (W212) E 220 CDI OM651 170 CV Avantgarde AMG automatica 2011. Motore rotto (causa non indicata): prevedere motore usato OM651, verificare cambio automatico."
  },
  {
@@ -10994,19 +11026,22 @@
     "high": 300
    },
    {
-    "label": "Radiatore acqua (prezzo stimato)",
-    "low": 70,
-    "high": 130
+    "label": "Radiatore acqua",
+    "low": 46,
+    "high": 57,
+    "offer": "https://www.oscaro.com/radiateur-du-moteur-tyc-726-0016-r-10556869-470-p#/?vid=38294"
    },
    {
-    "label": "Condensatore A/C (prezzo stimato)",
-    "low": 60,
-    "high": 110
+    "label": "Condensatore A/C",
+    "low": 87,
+    "high": 109,
+    "offer": "https://www.opisto.fr/fr/auto/fiche-produit/122846230/condenseur-de-clim-mazda-mx5-3-2011"
    },
    {
-    "label": "Faro anteriore dx (compatibile) (prezzo stimato)",
-    "low": 150,
-    "high": 280
+    "label": "Faro anteriore dx (compatibile)",
+    "low": 139,
+    "high": 191,
+    "offer": "https://www.piecesauto-pro.fr/alkar-9417745"
    },
    {
     "label": "Specchietto retrovisore dx (prezzo stimato)",
@@ -11039,8 +11074,8 @@
     "high": 280
    }
   ],
-  "ricambi_min": 1560,
-  "ricambi_max": 3260,
+  "ricambi_min": 1552,
+  "ricambi_max": 3097,
   "nota": "Mazda MX-5 III (NC1) 2.0 MZR 160 CV Roadster 2008. Danni ant/post estesi con airbag e cinture da ripristinare; telaio e motore dichiarati integri, da verificare."
  },
  {
@@ -11168,9 +11203,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito N57D30A (prezzo stimato)",
-    "low": 2500,
-    "high": 3800
+    "label": "Motore usato garantito N57D30A",
+    "low": 1599,
+    "high": 2499,
+    "offer": "https://www.ebay.de/itm/128073572945"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (turbina / intercooler (detriti), guarnizioni, liquidi, supporti motore)",
@@ -11178,8 +11214,8 @@
     "high": 600
    }
   ],
-  "ricambi_min": 2500,
-  "ricambi_max": 4400,
+  "ricambi_min": 1599,
+  "ricambi_max": 3099,
   "nota": "BMW X6 (E71) xDrive30d 3.0 N57D30A 245 CV automatica 2011. Motore rotto senza diagnosi su 308.000 km; serve motore usato, verificare cambio e trasmissione xDrive."
  },
  {
@@ -11358,9 +11394,10 @@
     "high": 280
    },
    {
-    "label": "Assale/ponte posteriore con mozzo (usato) (prezzo stimato)",
-    "low": 200,
-    "high": 400
+    "label": "Assale/ponte posteriore con mozzo (usato)",
+    "low": 259,
+    "high": 323,
+    "offer": "https://www.opisto.fr/fr/auto/fiche-produit/123085464/essieu-arriere-renault-megane-4-2017"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (airbag laterale/tendina sx, sottoporta/montante sx e cerchio)",
@@ -11368,8 +11405,8 @@
     "high": 420
    }
   ],
-  "ricambi_min": 550,
-  "ricambi_max": 1520,
+  "ricambi_min": 609,
+  "ricambi_max": 1443,
   "nota": "Renault Mégane IV Sporter 1.5 dCi 90 CV (66 kW) Life 2016. Urto con autoarticolato su lato guida (fiancata, specchietto, assale posteriore); rischio struttura e geometria scocca."
  },
  {
@@ -11401,9 +11438,10 @@
   ],
   "ricambi": [
    {
-    "label": "Compressore A/C (compatibile) (prezzo stimato)",
-    "low": 150,
-    "high": 230
+    "label": "Compressore A/C (compatibile)",
+    "low": 74,
+    "high": 93,
+    "offer": "https://www.opisto.fr/fr/auto/fiche-produit/127160157/compresseur-clim-fiat"
    },
    {
     "label": "Paraoli/guarnizioni cambio (prezzo stimato)",
@@ -11421,8 +11459,8 @@
     "high": 250
    }
   ],
-  "ricambi_min": 210,
-  "ricambi_max": 630,
+  "ricambi_min": 134,
+  "ricambi_max": 493,
   "nota": "Fiat 500 (312) 1.2 8V 69 CV Lounge Dualogic 2009. Mai incidentata: A/C non raffredda, Bluetooth guasto e perdita olio cambio; rischio robot Dualogic."
  },
  {
@@ -11485,9 +11523,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito 2.0d 125d (prezzo stimato)",
-    "low": 1800,
-    "high": 2800
+    "label": "Motore usato garantito 2.0d 125d",
+    "low": 2974,
+    "high": 3718,
+    "offer": "https://www.ebay.de/itm/316671546367"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (ripristino fap/egr rimossi (omologazione), turbine biturbo / liquidi)",
@@ -11495,8 +11534,8 @@
     "high": 750
    }
   ],
-  "ricambi_min": 1800,
-  "ricambi_max": 3550,
+  "ricambi_min": 2974,
+  "ricambi_max": 4468,
   "nota": "BMW Serie 1 (F21) 125d 3p 218 CV (160 kW, N47D20/B47 da verificare) 2016. Bronzine saltate: serve motore; FAP ed EGR rimossi da ripristinare per revisione."
  },
  {
@@ -11514,9 +11553,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito D4FD 1.7 CRDi (prezzo stimato)",
-    "low": 1500,
-    "high": 2500
+    "label": "Motore usato garantito D4FD 1.7 CRDi",
+    "low": 2348,
+    "high": 2584,
+    "offer": "https://www.ebay.de/itm/336322408877"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (guarnizioni, liquidi, supporti, radiatore/pompa acqua (causa crepa))",
@@ -11524,8 +11564,8 @@
     "high": 300
    }
   ],
-  "ricambi_min": 1500,
-  "ricambi_max": 2800,
+  "ricambi_min": 2348,
+  "ricambi_max": 2884,
   "nota": "Hyundai Tucson III (TL) 1.7 CRDi 115 CV (D4FD) XPossible 2016. Testata crepata su 278.000 km: conviene motore usato (venditore indica 2.500-3.000 euro)."
  },
  {
@@ -11550,9 +11590,10 @@
   ],
   "ricambi": [
    {
-    "label": "Motore usato garantito OM651 2.1 CDI (prezzo stimato)",
-    "low": 1800,
-    "high": 2800
+    "label": "Motore usato garantito OM651 2.1 CDI",
+    "low": 2422,
+    "high": 3028,
+    "offer": "https://www.ebay.de/itm/354257278826"
    },
    {
     "label": "Riserva per danni probabili non dichiarati (turbina / radiatore olio (detriti), guarnizioni, liquidi, supporti)",
@@ -11560,8 +11601,8 @@
     "high": 550
    }
   ],
-  "ricambi_min": 1800,
-  "ricambi_max": 3350,
+  "ricambi_min": 2422,
+  "ricambi_max": 3578,
   "nota": "Mercedes-Benz GLK (X204) restyling 220 CDI 2.1 170 CV OM651 4Matic automatica 2013. Bronzine motore in avaria su ~265.000 km, non marciante; carrozzeria buona con graffi porta dx."
  },
  {
