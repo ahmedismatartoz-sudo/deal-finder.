@@ -54,7 +54,7 @@ def test_nomi():
 
 def test_pezzi_da_valutazione():
     items = scovo.parts_items({"lines": [{"label": "paraurti_anteriore", "low": 100, "high": 200}, {"label": "x"}]})
-    assert items == [{"pezzo": "Paraurti anteriore", "da": 100, "a": 200}]
+    assert items == [{"pezzo": "Paraurti anteriore", "da": 100, "a": 200, "link": None}]
 
 
 def test_firma_foto():
