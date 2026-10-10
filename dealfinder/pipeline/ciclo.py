@@ -77,7 +77,7 @@ def run() -> None:
     if os.environ.get("BRIGHTDATA_API_KEY"):
         # lotti Facebook diventati pronti dopo la fine di un giro precedente: importati subito, nessuna spesa
         step("facebook_pronti", collect, "fb_importa")
-    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "8"))):
+    if os.environ.get("BRIGHTDATA_API_KEY") and _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "23"))):
         step("facebook", collect, "facebook")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")

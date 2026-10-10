@@ -41,7 +41,8 @@ FB_CITIES = [("milan", 25), ("monza", 15), ("bergamo", 25), ("brescia", 25), ("c
              ("varese", 20), ("pavia", 20), ("lecco", 15), ("lodi", 15)]
 FB_BANDS = [(500, 2000), (2000, 4000), (4000, 7000), (7000, 12000), (12000, 20000)]
 # La maggior parte delle opportunità sono auto con problemi: ricerche mirate su tutta l'area
-FB_PROBLEM_QUERIES = ["incidentata", "da sistemare", "non parte", "guasto"]
+FB_PROBLEM_QUERIES = ["incidentata", "incidentato", "da sistemare", "da riparare", "sinistrata", "grandinata",
+                      "non parte", "guasto", "problema motore", "frizione", "per commercianti", "solo commercianti"]
 
 
 # raccolta di partenza: fasce più strette, così ogni ricerca resta sotto il limite di Facebook
@@ -70,8 +71,10 @@ def backfill_searches(days: int = 30) -> list[dict]:
 
 
 def default_searches(days: int = 1) -> list[dict]:
-    """Raccolta normale (annunci dell'ultimo giorno): fasce di prezzo, marche e ricerche "con problemi"."""
-    out = [{"city": "milan", "radius": 60, "min_price": lo, "max_price": hi, "days": days} for lo, hi in FB_BANDS_FINE]
+    """Raccolta normale (annunci dell'ultimo giorno, una volta al giorno così non si ripagano gli stessi):
+    fasce di prezzo strette (molte sotto i 2.000 €), marche e ricerche "con problemi"."""
+    out = [{"city": "milan", "radius": 60, "min_price": lo, "max_price": hi, "days": days}
+           for lo, hi in [(500, 800), (800, 1100), (1100, 1400), (1400, 1700), (1700, 2000)] + FB_BANDS_FINE[3:]]
     out += [{"city": "milan", "radius": 60, "query": q, "min_price": 500, "max_price": 20000, "days": days}
             for q in FB_BRAND_QUERIES]
     out += [{"city": "milan", "radius": 80, "query": q, "days": days} for q in FB_PROBLEM_QUERIES]
@@ -243,9 +246,11 @@ class BrightDataFacebookCollector(Collector):
         self.dataset = os.environ.get("BRIGHTDATA_DATASET", DEFAULT_DATASET)
         # annunci massimi per singola ricerca: con molte ricerche piccole si spende poco e si
         # prendono quasi solo annunci nuovi (BRIGHTDATA_LIMIT vale solo con BRIGHTDATA_SEARCHES)
-        self.limit = int(os.environ.get("FB_LIMIT_PER_RICERCA", "40"))
         raw = os.environ.get("BRIGHTDATA_SEARCHES")
         self.searches = json.loads(raw) if raw else DEFAULT_SEARCHES
+        # tetto di righe per giro (Bright Data si paga a riga, doppioni compresi): diviso tra le ricerche
+        cap = int(os.environ.get("FB_RIGHE_PER_GIRO", "3000"))
+        self.limit = max(10, min(int(os.environ.get("FB_LIMIT_PER_RICERCA", "60")), cap // max(1, len(self.searches))))
         if raw:
             self.limit = int(os.environ.get("BRIGHTDATA_LIMIT", "300"))
         # Raccolta di partenza (una volta sola): gli annunci degli ultimi 30 giorni

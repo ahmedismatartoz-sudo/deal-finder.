@@ -178,6 +178,13 @@ if __name__ == "__main__":
         from ..collectors.probe import run as probe_run
         probe_run()
         sys.exit(0)
+    if mode == "facebook":
+        # una raccolta Facebook al giorno basta (ogni riga si paga, anche i doppioni): se il ciclo
+        # o un altro lavoro l'ha già fatta nelle ultime ore, questo giro non riscarica
+        from .ciclo import _due
+        if not _due("collect:facebook", int(os.environ.get("FACEBOOK_ORE", "23"))):
+            log.info("Facebook già raccolto nelle ultime %s ore: niente da fare", os.environ.get("FACEBOOK_ORE", "23"))
+            sys.exit(0)
     if os.environ.get("CICLO_COMPLETO") == "1" and mode == "opportunita":
         from .ciclo import run as ciclo_run
         ciclo_run()
