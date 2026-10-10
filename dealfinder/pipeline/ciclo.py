@@ -28,6 +28,12 @@ def _due(job: str, hours: int) -> bool:
     return not (row and row["recent"])
 
 
+def _in_corso(job: str, hours: int = 8) -> bool:
+    with connect() as conn:
+        return bool(conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND finished_at IS NULL "
+                                 "AND started_at > now() - make_interval(hours => %s) LIMIT 1", (job, hours)).fetchone())
+
+
 def fb_job() -> str:
     """Nome del lavoro Facebook: con FB_PARTE ogni servizio ha il suo (così non si bloccano a vicenda)."""
     fp = os.environ.get("FB_PARTE")
@@ -106,7 +112,8 @@ def run() -> None:
     if os.environ.get("BRIGHTDATA_API_KEY") and os.environ.get("FB_NEL_CICLO", "0") == "1" and facebook_due(int(os.environ.get("FACEBOOK_ORE", "23"))):
         step("facebook", collect, "facebook")
     # AutoScout24 (privati attorno a Milano): ogni 6 ore; si spegne con AUTOSCOUT=0
-    if os.environ.get("AUTOSCOUT", "1") == "1" and _due("collect:autoscout", int(os.environ.get("AUTOSCOUT_ORE", "6"))):
+    if os.environ.get("AUTOSCOUT", "1") == "1" and not _in_corso("collect:autoscout_massiva") \
+            and _due("collect:autoscout", int(os.environ.get("AUTOSCOUT_ORE", "6"))):
         step("autoscout", collect, "autoscout")
     if _due("collect:mercato", 20):
         step("mercato", collect, "mercato")

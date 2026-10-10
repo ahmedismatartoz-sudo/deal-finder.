@@ -35,8 +35,8 @@ CELLA = (270, 200)
 PEZZO = 12000
 
 
-def job_name() -> str:
-    return f"mille:{VERSIONE}"
+def job_name(versione: str | None = None) -> str:
+    return f"mille:{versione or VERSIONE}"
 
 
 def foglio(images: list[bytes], titolo: str) -> bytes | None:
@@ -62,17 +62,19 @@ def foglio(images: list[bytes], titolo: str) -> bytes | None:
     return out.getvalue()
 
 
-def run() -> dict:
+def run(fonte: str | None = None, versione: str | None = None) -> dict:
+    """fonte: solo gli annunci di quel sito (es. "autoscout24"); versione: nome del lavoro."""
     stats: Counter = Counter()
     with connect() as conn:
-        finish = log_job(conn, job_name())
+        finish = log_job(conn, job_name(versione))
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS}, stage_reason FROM listings
                 WHERE status='attivo' AND price_eur BETWEEN 500 AND %s AND seller_type <> 'commerciante'
                   AND (province = ANY(%s) OR source='facebook')
                   AND (year IS NULL OR year >= %s)
-                  AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia'))""",
-            (settings.max_purchase_eur, PROVINCES, scovo.ANNO_MINIMO)).fetchall()
+                  AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia'))
+                  AND (%s::text IS NULL OR source = %s)""",
+            (settings.max_purchase_eur, PROVINCES, scovo.ANNO_MINIMO, fonte, fonte)).fetchall()
         stats["esaminati"] = len(rows)
         cache: dict = {}
         model = load_active(conn)
@@ -152,5 +154,6 @@ def run() -> dict:
                 stats["senza_foto"] += 1
         stats["esportati"] = len(top)
         finish(True, dict(stats))
+    stats["versione"] = versione or VERSIONE
     log.info("MILLE_RIEPILOGO %s", json.dumps(dict(stats)))
     return dict(stats)

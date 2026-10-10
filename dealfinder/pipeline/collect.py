@@ -58,6 +58,22 @@ class _ReadyImporter(BrightDataFacebookCollector):
         yield from self.collect_snapshots(sids, query.get("max_price", 20_000), max_minutes=5)
 
 
+def doppione_altro_sito(conn, l, lid) -> bool:
+    """Stessa auto già presa da un altro sito (stessa marca, modello, anno, km e prezzo vicini):
+    l'annuncio di AutoScout24 resta solo come dato di mercato, così sul sito non compare due volte."""
+    if not (l.make and l.model and l.year and l.mileage_km is not None and l.price_eur):
+        return False
+    row = conn.execute(
+        """SELECT id FROM listings WHERE source <> 'autoscout24' AND status='attivo' AND make=%s AND model=%s
+             AND year=%s AND mileage_km BETWEEN %s AND %s AND price_eur BETWEEN %s AND %s LIMIT 1""",
+        (l.make, l.model, l.year, l.mileage_km - 1500, l.mileage_km + 1500,
+         int(l.price_eur * 0.93) - 200, int(l.price_eur * 1.07) + 200)).fetchone()
+    if not row:
+        return False
+    conn.execute("UPDATE listings SET stage='scartato', stage_reason='doppione' WHERE id=%s", (lid,))
+    return True
+
+
 ZONA = {"MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO"}
 
 
@@ -96,7 +112,15 @@ def run(mode: str) -> Counter:
 
     # Subito ogni 3 ore (opportunità) e ogni notte (mercato). Facebook ha un lavoro a parte,
     # meno frequente, perché ogni annuncio scaricato da Bright Data ha un costo.
-    if mode == "autoscout":
+    if mode == "autoscout_massiva":
+        # notte aggressiva: privati e poi concessionari (questi solo come prezzi di mercato, mai proposti),
+        # fasce di prezzo che si dividono da sole, auto dal 2007, entro 100 km da Milano
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
+        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("AUTOSCOUT_MAX_PREZZO", "40000"))})]
+    elif mode == "autoscout":
         from ..collectors.autoscout import AutoScoutCollector
         bands = ([(p, p + 499) for p in range(500, 5000, 500)] + [(p, p + 999) for p in range(5000, 12000, 1000)]
                  + [(p, p + 1999) for p in range(12000, 20000, 2000)])
@@ -187,9 +211,13 @@ def run(mode: str) -> Counter:
                         pv = prov_of.get(_norm_city(listing.city))
                         if pv and not listing.province:
                             listing.province = pv
-                        if pv and pv not in ZONA:
-                            stats["facebook:fuori_zona"] += 1
+                        pv = listing.province or pv
+                        if (pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv):
+                            stats[f"{listing.source}:fuori_zona"] += 1
                             continue
+                        if listing.province and not listing.region:
+                            from ..core.normalize import PROVINCE_REGION
+                            listing.region = PROVINCE_REGION.get(listing.province)
                     try:
                         lid, event = upsert_listing(conn, listing)
                     except Exception as e:          # un annuncio con dati assurdi non ferma la raccolta
@@ -211,7 +239,17 @@ def run(mode: str) -> Counter:
                         # prezzo cambiato: l'annuncio va rivalutato
                         conn.execute("UPDATE listings SET stage='nuovo' WHERE id=%s AND stage<>'nuovo'", (lid,))
                     stats[f"{collector.source}:{event}"] += 1
+                    if listing.source == "autoscout24" and event == "nuovo" and listing.seller_type == "privato" \
+                            and doppione_altro_sito(conn, listing, lid):
+                        stats["autoscout24:doppione_altro_sito"] += 1
                     conn.commit()
+                    obiettivo = int(os.environ.get("AUTOSCOUT_OBIETTIVO", "30000"))
+                    if mode == "autoscout_massiva" and stats["autoscout24:nuovo"] >= obiettivo:
+                        collector.stop = True
+                        log.info("autoscout: obiettivo di %d annunci nuovi raggiunto", obiettivo)
+                        break
+                    if event == "nuovo" and stats[f"{collector.source}:nuovo"] % 1000 == 0:
+                        log.info("raccolta %s: %d annunci nuovi finora", mode, stats[f"{collector.source}:nuovo"])
             except Exception:
                 log.exception("collettore %s fallito", collector.source)
                 stats[f"{collector.source}:errore"] += 1
@@ -250,6 +288,19 @@ if __name__ == "__main__":
     import os
     if not os.environ.get("DATABASE_URL"):
         log.info("DATABASE_URL non impostata: servizio non configurato, nulla da fare")
+        sys.exit(0)
+    # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
+    mode = os.environ.get("COLLECT_MODO") or mode
+    if mode in ("autoscout_massiva", "autoscout"):
+        from .ciclo import _due
+        if mode == "autoscout_massiva" and not _due("collect:autoscout_massiva", 24 * 365):
+            mode = "autoscout"            # la notte aggressiva è già fatta: da qui solo le novità
+        run(mode)
+        from . import mille
+        versione = "as-" + os.environ.get("AUTOSCOUT_MILLE_VERSIONE", "v1")
+        if mode == "autoscout_massiva" and _due(f"mille:{versione}", 24 * 365):
+            # i migliori di AutoScout24 con le foto, per il controllo uno per uno
+            mille.run(fonte="autoscout24", versione=versione)
         sys.exit(0)
     if os.environ.get("SUBITO_PROBE") == "1":
         # Diagnostica di accesso: nessuna raccolta finché la variabile è attiva
