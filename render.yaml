@@ -57,6 +57,10 @@ services:
         value: approvazione
       - key: MAX_DISPOSITIVI           # sessioni attive per account (telefono + computer)
         value: "2"
+      - key: ANTHROPIC_API_KEY         # analisi AI (testo, foto, ricambi) e assistente: anche sui due cron
+        sync: false
+      - key: AI_BUDGET_GIORNO          # tetto di spesa AI al giorno in dollari: oltre, l'analisi riprende il giorno dopo
+        value: "5"
       - key: OPENAI_API_KEY            # voce naturale dell'assistente (gpt-4o-mini-tts) e trascrizione
         sync: false
       - key: ELEVENLABS_API_KEY        # in alternativa: voce ElevenLabs

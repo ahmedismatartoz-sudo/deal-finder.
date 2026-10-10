@@ -6,6 +6,7 @@ validata con regole prima di essere usata.
 from __future__ import annotations
 
 import json
+import os
 from datetime import date
 
 from ..core.models import Listing
@@ -115,8 +116,10 @@ Aggiungi al JSON: "previous_repairs": [str], "visible_identity": {"generation_hi
 
 
 def analyze_photos(listing: Listing, deep: bool, usage_sink=None, listing_id=None) -> dict:
-    urls = listing.photos[: (12 if deep else 3)]
-    blocks = [b for b in (ai.image_block(u) for u in urls) if b]
+    n = int(os.environ.get("AI_FOTO_APPROFONDITE", "8")) if deep else int(os.environ.get("AI_FOTO_FILTRO", "3"))
+    urls = listing.photos[:n]
+    side = ai.MAX_IMAGE_SIDE if deep else ai.SCREEN_IMAGE_SIDE
+    blocks = [b for b in (ai.image_block(u, side=side) for u in urls) if b]
     if not blocks:
         return {"damage_visible": "incerto", "damage_items": [], "severe_flags": [],
                 "photo_quality": "scarsa", "exterior_fully_visible": False, "notes": "nessuna foto utilizzabile"}

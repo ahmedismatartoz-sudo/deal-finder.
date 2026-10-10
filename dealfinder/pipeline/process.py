@@ -18,7 +18,7 @@ from dataclasses import asdict
 
 from ..ai import analyze, parts_agent, plate
 from ..ai.damage import EXCLUDE_FLAGS
-from ..ai.client import AIError, db_usage_sink
+from ..ai.client import AIError, budget_finito, db_usage_sink, spesa_oggi
 from ..config import settings
 from ..core.models import DamageItem
 from ..core.normalize import find_plate, plate_hash
@@ -46,13 +46,24 @@ def _to_items(dicts):
 
 
 def quick_potential(listing, market) -> tuple[bool, str, object]:
-    """Stima rapida senza AI: vale la pena guardare le foto?"""
+    """Stima rapida senza AI: vale la pena guardare le foto?
+    Si usa la stessa regola del sito (mercato −30% − prezzo − 140 € ≥ soglia della fascia di prezzo,
+    auto dal 2007): l'AI si paga solo per le auto che potrebbero davvero finire sul sito."""
+    from ..web import scovo
+    if listing.year and listing.year < scovo.ANNO_MINIMO:
+        return False, "troppo_vecchia", None
     saved_class = listing.damage_class
     listing.damage_class = "nessuno"        # stima come se fosse sana, solo per il filtro
     v = value_listing(listing, market)
     listing.damage_class = saved_class
     if v.resale_median is None:
         return False, "nessun_confronto", v
+    mercato = v.private_median or v.resale_median_private or v.resale_median
+    sito = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - listing.price_eur - sum(scovo.COSTI_FISSI.values())
+    if sito < scovo.soglia(listing.price_eur):
+        return False, "margine_insufficiente", v
+    if os.environ.get("AI_ECONOMICA", "1") == "1":
+        return True, "potenziale", v
     costs = DealerCosts()
     if listing.price_eur <= costs.threshold_cheap_max_eur:
         threshold = costs.threshold_cheap_eur
@@ -106,7 +117,8 @@ def screen(conn) -> Counter:
             if key not in market_cache:
                 market_cache[key] = load_market(conn, *key)
             ok, why, _ = quick_potential(l, market_cache[key])
-            if not ok and row.get("prescreen") == "interessante":
+            if not ok and row.get("prescreen") == "interessante" and why != "troppo_vecchia" \
+                    and os.environ.get("AI_ECONOMICA", "1") != "1":
                 ok, why = True, "modello_prezzi"      # il modello addestrato lo ritiene interessante
             if not ok:
                 update_listing_fields(conn, lid, l)
@@ -124,8 +136,8 @@ def screen(conn) -> Counter:
                 set_stage(conn, lid, "scartato", "danno_grave_dichiarato", ai_extract=text)
                 stats["scartato_grave"] += 1
                 continue
-            # 3. foto (AI economica, 3 foto), con un tetto per ciclo
-            if stats["ai_foto"] >= MAX_AI_SCREEN:
+            # 3. foto (AI economica, 3 foto), con un tetto per ciclo e uno di spesa al giorno
+            if stats["ai_foto"] >= MAX_AI_SCREEN or budget_finito(conn):
                 update_listing_fields(conn, lid, l)
                 stats["rimandato_prossimo_ciclo"] += 1
                 continue
@@ -172,10 +184,24 @@ def deep(conn) -> Counter:
     rows = [r for r in rows if r["id"] in alive]
     for row in rows:
         lid = row["id"]
+        if budget_finito(conn):
+            stats["rimandato_tetto_spesa"] += 1
+            break
         l = row_to_listing(row, photos_of(conn, lid))
         text = row.get("ai_extract") or {}
+        screen_ph = row.get("photo_screen") or {}
+        if isinstance(screen_ph, str):
+            screen_ph = json.loads(screen_ph)
         try:
-            photos = analyze.analyze_photos(l, deep=True, usage_sink=sink, listing_id=lid)
+            # Foto approfondite (modello migliore) solo se il filtro ha visto danni o non era sicuro:
+            # un'auto chiaramente sana non ha bisogno di 8 foto in più.
+            clean = (screen_ph.get("damage_visible") == "no" and screen_ph.get("exterior_fully_visible")
+                     and not (text.get("damage_items") or text.get("damage_declared")))
+            if clean and os.environ.get("AI_ECONOMICA", "1") == "1":
+                photos = dict(screen_ph)
+                stats["foto_approfondite_saltate"] += 1
+            else:
+                photos = analyze.analyze_photos(l, deep=True, usage_sink=sink, listing_id=lid)
             cls, items, severe = analyze.merge_damage(text, photos)
             if cls == "grave":
                 l.damage_class, l.damage_items = cls, _to_items(items)
@@ -196,10 +222,12 @@ def deep(conn) -> Counter:
                 conn.execute("UPDATE vehicles SET plate_hash=COALESCE(plate_hash,%s) "
                              "WHERE id=(SELECT vehicle_id FROM listings WHERE id=%s)",
                              (plate_hash(plate_txt, settings.plate_salt), lid))
-            identity = analyze.identify_vehicle(l, photos, plate_data, sink, lid)
-
             parts = None
+            identity = {"search_name": " ".join(str(x) for x in (l.make, l.model, l.version_raw, l.year) if x),
+                        "make": l.make, "model": l.model, "confidence": 0.6, "method": "dati_annuncio"}
             if items:
+                # identificazione precisa (per i ricambi giusti) solo se ci sono pezzi da cercare
+                identity = analyze.identify_vehicle(l, photos, plate_data, sink, lid)
                 by_type = {}
                 for pref in ("aftermarket", "originale", "usato"):
                     by_type[pref] = parts_agent.estimate_parts(identity, items, l.year, pref,
@@ -241,10 +269,13 @@ def run(what: str = "tutto") -> dict:
     with connect() as conn:
         finish = log_job(conn, f"process:{what}")
         try:
+            from ..ai.client import budget_giorno
+            log.info("SPESA_AI oggi %.2f $ su un tetto di %.2f $", spesa_oggi(conn), budget_giorno())
             if what in ("tutto", "filtro"):
                 out["filtro"] = dict(screen(conn))
             if what in ("tutto", "approfondimento"):
                 out["approfondimento"] = dict(deep(conn))
+            out["spesa_ai_oggi_usd"] = spesa_oggi(conn)
             finish(True, out)
         except Exception as e:
             finish(False, {**out, "errore": str(e)})

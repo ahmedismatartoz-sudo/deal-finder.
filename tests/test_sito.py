@@ -138,3 +138,30 @@ def test_niente_auto_prima_del_2007():
     ok = {"mercato": 10000, "prezzo": 3000, "rip_hi": 0, "anno": 2007}
     assert scovo.abbastanza(ok)
     assert not scovo.abbastanza({**ok, "anno": 2006})
+
+
+def test_costi_ai_e_tetto():
+    from dealfinder.ai import client
+    # 1 milione di token in entrata con Haiku = 0,10 $; con Sonnet 2 $
+    assert abs(client.costo("claude-haiku-5-5", 1_000_000, 0) - 0.10) < 1e-9
+    assert abs(client.costo("claude-sonnet-5-5", 0, 100_000) - 1.0) < 1e-9
+    assert abs(client.costo("claude-haiku-5-5", 0, 0, web_searches=3) - 0.03) < 1e-9
+
+
+def test_filtro_prima_dell_ai_usa_la_regola_del_sito():
+    from dealfinder.pipeline.process import quick_potential
+    from dealfinder.core.models import Listing
+
+    class V:
+        resale_median = private_median = 10000
+        resale_median_private = None
+    import dealfinder.pipeline.process as pr
+    old = pr.value_listing
+    pr.value_listing = lambda l, m, **k: V()
+    try:
+        ok = Listing(source="subito", source_id="1", url="u", price_eur=3000, year=2012)
+        assert quick_potential(ok, None)[0]                        # 7.000 − 3.000 − 140 = 3.860 ≥ 1.500
+        assert quick_potential(Listing(source="subito", source_id="2", url="u", price_eur=6000, year=2012), None)[1] == "margine_insufficiente"
+        assert quick_potential(Listing(source="subito", source_id="3", url="u", price_eur=3000, year=2005), None)[1] == "troppo_vecchia"
+    finally:
+        pr.value_listing = old

@@ -216,7 +216,7 @@ def ask_ai(conn, user: dict, messages: list[dict], gate, log_use) -> dict:
     msgs = [{"role": m["role"], "content": str(m["content"])[:2000]} for m in messages[-10:]
             if m.get("role") in ("user", "assistant") and m.get("content")]
     cars, steps, filtri = [], [], None
-    model = os.environ.get("ASSISTENTE_MODEL", ai.MODEL_DEEP)
+    model = os.environ.get("ASSISTENTE_MODEL", ai.MODEL_FAST)    # economico; ASSISTENTE_MODEL per cambiarlo
     for _ in range(MAX_PASSI):
         resp = ai.client().messages.create(model=model, max_tokens=900, system=SYSTEM, tools=TOOLS, messages=msgs)
         try:

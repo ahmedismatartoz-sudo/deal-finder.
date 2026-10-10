@@ -18,7 +18,43 @@ log = logging.getLogger(__name__)
 MODEL_FAST = os.environ.get("AI_MODEL_FAST", "claude-haiku-5-5")      # filtro veloce, testo
 MODEL_DEEP = os.environ.get("AI_MODEL_DEEP", "claude-sonnet-5-5")     # foto approfondite, ricambi
 WEB_SEARCH_TOOL = os.environ.get("AI_WEB_SEARCH_TOOL", "web_search_20250305")
-MAX_IMAGE_SIDE = 1024
+MAX_IMAGE_SIDE = int(os.environ.get("AI_FOTO_LATO", "1024"))         # foto approfondite
+SCREEN_IMAGE_SIDE = int(os.environ.get("AI_FOTO_LATO_FILTRO", "768"))  # filtro: foto più piccole, costano meno
+
+# Prezzi in dollari per milione di token (entrata, uscita) e per ricerca web: servono a calcolare
+# la spesa del giorno e a fermarsi al tetto AI_BUDGET_GIORNO. Aggiornabili con AI_PREZZI (JSON).
+PREZZI = {"haiku": (0.10, 0.50), "sonnet": (2.0, 10.0), "opus": (5.0, 25.0), "gemini": (0.0, 0.0)}
+PREZZO_RICERCA_WEB = 0.01
+try:
+    PREZZI.update({k: tuple(v) for k, v in json.loads(os.environ.get("AI_PREZZI", "{}")).items()})
+except Exception:
+    pass
+
+
+def costo(model: str, input_tokens: int, output_tokens: int, web_searches: int = 0) -> float:
+    m = (model or "").lower()
+    fam = next((k for k in PREZZI if k in m), "sonnet")
+    pin, pout = PREZZI[fam]
+    return input_tokens / 1e6 * pin + output_tokens / 1e6 * pout + web_searches * PREZZO_RICERCA_WEB
+
+
+def spesa_oggi(conn) -> float:
+    """Dollari spesi oggi (ora italiana) in AI, dal registro ai_usage."""
+    rows = conn.execute("SELECT model, sum(input_tokens) AS i, sum(output_tokens) AS o, sum(web_searches) AS w "
+                        "FROM ai_usage WHERE at > date_trunc('day', now() AT TIME ZONE 'Europe/Rome') AT TIME ZONE 'Europe/Rome' "
+                        "GROUP BY model").fetchall()
+    return round(sum(costo(r["model"], int(r["i"] or 0), int(r["o"] or 0), int(r["w"] or 0)) for r in rows), 4)
+
+
+def budget_giorno() -> float:
+    return float(os.environ.get("AI_BUDGET_GIORNO", "5"))
+
+
+def budget_finito(conn) -> bool:
+    try:
+        return spesa_oggi(conn) >= budget_giorno()
+    except Exception:
+        return False
 
 
 @dataclass
@@ -63,17 +99,26 @@ def extract_json(text: str):
     return json.loads(text[start:end + 1])
 
 
-def image_block(url: str, http=None) -> dict | None:
-    """Scarica una foto, la riduce e la passa come base64 (più affidabile dei link diretti)."""
+def image_block(url: str, http=None, side: int | None = None) -> dict | None:
+    """Scarica una foto, la riduce e la passa come base64 (più affidabile dei link diretti).
+    Le foto di Subito salvate come "imgid:..." vengono trasformate nel link vero."""
     try:
         import httpx
         from PIL import Image
-        http = http or httpx.Client(timeout=20, follow_redirects=True,
-                                    headers={"User-Agent": "Mozilla/5.0"})
-        r = http.get(url)
-        r.raise_for_status()
-        img = Image.open(io.BytesIO(r.content)).convert("RGB")
-        img.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE))
+        from ..web.foto import UA, candidate_urls
+        http = http or httpx.Client(timeout=20, follow_redirects=True, headers={"User-Agent": UA})
+        content = None
+        for u in candidate_urls(url) or [url]:
+            headers = {"Referer": "https://www.subito.it/"} if "sbito.it" in u or "subito.it" in u else {}
+            r = http.get(u, headers=headers)
+            if r.status_code == 200 and r.content:
+                content = r.content
+                break
+        if content is None:
+            raise ValueError("foto non scaricabile")
+        img = Image.open(io.BytesIO(content)).convert("RGB")
+        lato = side or MAX_IMAGE_SIDE
+        img.thumbnail((lato, lato))
         buf = io.BytesIO()
         img.save(buf, "JPEG", quality=82)
         return {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",

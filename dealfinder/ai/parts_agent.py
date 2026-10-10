@@ -11,6 +11,7 @@ solo nel costo alto. Con meno di 2 offerte il pezzo è "da verificare".
 from __future__ import annotations
 
 import json
+import os
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -56,9 +57,10 @@ def search_part(vehicle: dict, part: str, side: str | None, usage_sink=None, lis
     query = (f"Veicolo: {vehicle.get('search_name')}. Pezzo: {label}{_side_label(side)}. "
              f"Dettagli veicolo: {json.dumps({k: vehicle.get(k) for k in ('generation', 'facelift', 'body_type', 'engine', 'year_from', 'year_to')}, ensure_ascii=False)}. "
              "Trova prezzi per ricambio originale, aftermarket e usato.")
-    r = ai.ask_json("ricambi", ai.MODEL_DEEP, SYSTEM, [{"type": "text", "text": query}],
+    # modello economico con poche ricerche: i prezzi li legge dalle pagine trovate, i conti li fa il codice
+    r = ai.ask_json("ricambi", os.environ.get("AI_MODEL_RICAMBI", ai.MODEL_FAST), SYSTEM, [{"type": "text", "text": query}],
                     max_tokens=2000, usage_sink=usage_sink, listing_id=listing_id,
-                    web_search={"max_uses": 4,
+                    web_search={"max_uses": int(os.environ.get("AI_RICERCHE_PER_PEZZO", "2")),
                                 "user_location": {"type": "approximate", "country": "IT", "city": "Milano"}})
     data = r.data if isinstance(r.data, dict) else {}
     cited = {s["url"] for s in r.sources}
