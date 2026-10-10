@@ -82,6 +82,10 @@ def run() -> None:
             return {"ok": bool(v)}
         step("prova_targa", prova_targa)
     step("opportunita", collect, "opportunita")
+    # selezione dei 1.000 migliori di tutta la base, con foto, per il controllo uno per uno (una volta)
+    from . import mille
+    if _due(mille.job_name(), 24 * 365):
+        step("mille", mille.run)
     if _due("collect:profondo", 20):
         step("raccolta_profonda", collect, "profondo")
     from . import fb_rilettura
@@ -108,10 +112,6 @@ def run() -> None:
         log.warning("CICLO analisi: nessuna chiave AI, si esportano i candidati per l'analisi a parte")
         if _due("candidati:v4", 2):
             step("candidati", candidati.run)
-    # selezione dei 1.000 migliori di tutta la base, con foto, per il controllo uno per uno (una volta)
-    from . import mille
-    if _due(mille.job_name(), 24 * 365):
-        step("mille", mille.run)
     step("analisi_manuale", manuale.run)
     if _due("recheck", 20):
         step("verifica", recheck.run)
