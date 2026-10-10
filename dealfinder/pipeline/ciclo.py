@@ -33,7 +33,7 @@ def facebook_due(hours: int) -> bool:
     fermo (credito finito), appena torna attivo si raccoglie subito, senza aspettare un giorno."""
     with connect() as conn:
         row = conn.execute("SELECT max(started_at) > now() - make_interval(hours => %s) AS recent FROM job_runs "
-                           "WHERE job IN ('collect:facebook','collect:fb_importa') AND ok AND stats::text LIKE '%%facebook:%%'",
+                           "WHERE job='collect:facebook' AND ok AND stats::text LIKE '%%facebook:nuovo%%'",
                            (hours,)).fetchone()
     return not (row and row["recent"])
 
