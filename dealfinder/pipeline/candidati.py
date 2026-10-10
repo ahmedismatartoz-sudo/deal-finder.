@@ -26,15 +26,24 @@ from ..pricing.fallback import apply_model, estimate_missing_km, weak
 from ..pricing.train import load_active
 from ..pricing.margin import DealerCosts, compute_margin
 from ..store import LIGHT_COLS, load_market, photos_of, row_to_listing
+from ..web import scovo
 from .verify import verify_rows
 
 log = logging.getLogger("candidati")
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]   # Milano e dintorni
-MAX_EXPORT = int(os.environ.get("MAX_CANDIDATI", "400"))
+MAX_EXPORT = int(os.environ.get("MAX_CANDIDATI", "1500"))
 DAMAGE_ROOM = 400
 
 
 BANDS = [(500, 2000), (2000, 5000), (5000, 8000), (8000, 12000), (12000, 20001)]
+
+
+def guadagno_sito(v, price: int | None) -> int | None:
+    """Guadagno come lo mostra il sito, prima dei ricambi: rivendita al 30% sotto il mercato tra privati."""
+    mercato = v.private_median or v.resale_median_private or v.resale_median
+    if not mercato or not price:
+        return None
+    return round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - price - sum(scovo.COSTI_FISSI.values())
 
 
 def hidden_reasons(l) -> list[str]:
@@ -80,7 +89,8 @@ def run() -> dict:
             f"""SELECT {LIGHT_COLS} FROM listings WHERE status='attivo' AND price_eur BETWEEN 500 AND %s
                  AND seller_type <> 'commerciante'
                  AND (province = ANY(%s) OR source='facebook')
-                 AND stage NOT IN ('scartato','approfondito')""",
+                 AND (stage NOT IN ('scartato','approfondito')
+                      OR (stage='scartato' AND stage_reason='margine_insufficiente'))""",
             (settings.max_purchase_eur, PROVINCES)).fetchall()
         stats["esaminati"] = len(rows)
         cache: dict = {}
@@ -110,12 +120,16 @@ def run() -> dict:
                     continue
                 stats["stima_da_modello"] += 1
             m = compute_margin(l, v, costs)
-            need = m.threshold + (DAMAGE_ROOM if damaged else 0)
+            # regola del sito: mercato tra privati −30% − prezzo − 140 € ≥ soglia per fascia di prezzo
+            # (fino a 5.000 → 1.500; 8.000 → 2.000; 12.000 → 3.000; oltre → 4.000)
+            sito = guadagno_sito(v, l.price_eur)
+            need = scovo.soglia(l.price_eur) + (DAMAGE_ROOM if damaged else 0)
             if from_model or km_est:
                 need = round(need * 1.1)             # stima meno solida: serve più margine
-            if m.net_margin < need:
+            if sito is None or sito < need:
                 stats["margine_insufficiente"] += 1
                 continue
+            stats["fascia_" + str(scovo.soglia(l.price_eur))] += 1
             if "prezzo_troppo_basso" in v.fraud_flags and not damaged:
                 stats["sospetto"] += 1
             l.photos = photos_of(conn, r["id"])
@@ -138,7 +152,8 @@ def run() -> dict:
                    "cambio": l.gearbox, "kw": l.power_kw, "citta": l.city, "provincia": l.province,
                    "prezzo": l.price_eur, "mediana_privati": v.private_median, "rivendita_prudente": v.resale_prudent,
                    "confronti": v.n_comparables, "livello_confronti": v.comparable_level, "dispersione": v.dispersion,
-                   "margine_prima_ricambi": m.net_margin, "soglia": m.threshold, "con_problemi": damaged,
+                   "margine_prima_ricambi": guadagno_sito(v, l.price_eur), "soglia": scovo.soglia(l.price_eur),
+                   "margine_prudente_motore": m.net_margin, "con_problemi": damaged,
                    "parole_problema": hints, "mediana_da_sistemare": v.asis_median, "segnali": v.fraud_flags,
                    "giorni_vendita_simili": v.liquidity_days,
                    "stima": "modello" if from_model else "confronti", "km_stimati": km_est,
