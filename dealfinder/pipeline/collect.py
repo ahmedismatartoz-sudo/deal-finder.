@@ -23,11 +23,10 @@ log = logging.getLogger("collect")
 
 
 def _recent_facebook() -> bool:
-    hours = max(1, int(os.environ.get("FACEBOOK_ORE", "8")) - 1)
-    with connect() as conn:
-        row = conn.execute("SELECT max(started_at) > now() - make_interval(hours => %s) AS recent FROM job_runs "
-                           "WHERE (job='collect:facebook' OR job LIKE 'collect:fb_backfill%%') AND ok", (hours,)).fetchone()
-    return bool(row and row["recent"])
+    """Facebook raccolto da poco? Contano solo i giri che hanno davvero portato annunci
+    (un giro vuoto per credito finito non deve bloccare la ripresa)."""
+    from .ciclo import facebook_due
+    return not facebook_due(max(1, int(os.environ.get("FACEBOOK_ORE", "23")) - 1))
 
 
 def _backfill_done() -> bool:
