@@ -42,6 +42,9 @@ if __name__ == "__main__":
         try:
             import logging
             logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+            from .pipeline import manuale
+            with connect() as conn:
+                print("Auto scartate a mano tolte dal sito:", manuale.applica_scarti(conn))
             from .web import controllo_foto
             controllo_foto.once()
         except Exception as e:

@@ -32,6 +32,22 @@ log = logging.getLogger("manuale")
 FILE = Path(__file__).resolve().parents[2] / "data" / "analisi_manuale.json"
 
 
+def applica_scarti(conn) -> int:
+    """Toglie subito dal sito le auto scartate a mano (foto: incidenti gravi, airbag, ecc.).
+    Leggero: solo un aggiornamento dello stato, si fa a ogni avvio del sito senza aspettare il ciclo."""
+    if not FILE.exists():
+        return 0
+    ids = [e["id"] for e in json.loads(FILE.read_text())
+           if e.get("esito") == "scartata" or e.get("danno") == "grave"]
+    if not ids:
+        return 0
+    n = conn.execute("UPDATE listings SET stage='scartato', stage_reason='analisi_manuale: controllo foto' "
+                     "WHERE id = ANY(%s) AND stage <> 'scartato'", (ids,)).rowcount
+    conn.commit()
+    log.info("MANUALE scarti applicati subito: %d auto tolte dal sito", n)
+    return n
+
+
 def run() -> dict:
     if not FILE.exists():
         return {"file": "assente"}
