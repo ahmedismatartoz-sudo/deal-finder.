@@ -221,6 +221,9 @@ def prescreen(model: dict, l: Listing, rule: PrescreenRule | None = None,
     p = predict(model, l)
     if not p:
         return {"esito": "nessun_modello"}
+    if not (0 < p["p50"] < 2_000_000 and 0 < p["p25"] < 2_000_000) or abs(l.price_eur) > 2_000_000:
+        # stima assurda (annuncio con dati strani): non si salva, non deve fermare la raccolta
+        return {"esito": "modello_incerto"}
     threshold = threshold_cheap if l.price_eur <= cheap_max else (threshold_low if l.price_eur < split else threshold_high)
     potential = p["p50"] * rule.private_resale_factor - l.price_eur - rule.base_costs
     damaged = bool(l.damage_declared or l.problem_search)

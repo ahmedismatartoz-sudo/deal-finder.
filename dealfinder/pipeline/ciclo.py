@@ -132,7 +132,9 @@ def run() -> None:
         step("analisi", process, "tutto")
     else:
         log.warning("CICLO analisi: nessuna chiave AI, si esportano i candidati per l'analisi a parte")
-        if _due("candidati:v4", 2):
+        # la selezione dei migliori con foto (mille) ha preso il posto di questo export; con tanti annunci
+        # andava fuori memoria: si riaccende con CANDIDATI=1
+        if os.environ.get("CANDIDATI", "0") == "1" and _due("candidati:v4", 2):
             step("candidati", candidati.run)
     step("analisi_manuale", manuale.run)
     if _due("recheck", 20):
