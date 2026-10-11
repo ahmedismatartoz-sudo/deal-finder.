@@ -1151,7 +1151,7 @@ def _aggiorna_visibili():
         from ..pipeline import manuale
         try:
             # sezione Incidentate: le auto scelte a mano entrano subito, senza aspettare il ciclo
-            manuale.run(esiti=("incidentata",))
+            logging.getLogger("visibili").warning("INCIDENTATE importate: %s", manuale.run(esiti=("incidentata",)))
         except Exception as e:
             logging.getLogger("visibili").warning("incidentate non importate: %s", str(e)[:200])
         while True:
