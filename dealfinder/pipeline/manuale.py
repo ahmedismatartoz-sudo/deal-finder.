@@ -65,7 +65,7 @@ def segna_viste_di_recente(conn) -> dict:
     return out
 
 
-def run(esiti: tuple[str, ...] | None = None) -> dict:
+def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False) -> dict:
     """esiti: importa solo le voci con questi esiti (es. ("incidentata",) all'avvio del sito, veloce)."""
     if not FILE.exists():
         return {"file": "assente"}
@@ -80,7 +80,7 @@ def run(esiti: tuple[str, ...] | None = None) -> dict:
             "SELECT DISTINCT listing_id FROM valuations WHERE engine_version LIKE '%%+manuale-v5'").fetchall()}
         for e in entries:
             lid = e["id"]
-            if lid in done and not e.get("aggiorna"):
+            if lid in done and (solo_nuove or not e.get("aggiorna")):
                 stats["gia_importati"] += 1
                 continue
             row = conn.execute("SELECT * FROM listings WHERE id=%s", (lid,)).fetchone()

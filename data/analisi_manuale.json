@@ -40675,5 +40675,6034 @@
    "eventuali airbag laterali"
   ],
   "aggiorna": true
+ },
+ {
+  "id": 93460,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "cinghia_servizi",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "ammortizzatori_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "gomme",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "fiancata",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cinghia servizi + pompa acqua",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "ammortizzatori anteriori",
+    "low": 80,
+    "high": 160
+   },
+   {
+    "label": "4 gomme",
+    "low": 160,
+    "high": 280
+   },
+   {
+    "label": "pezzi fiancata dx",
+    "low": 50,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 350,
+  "ricambi_max": 790,
+  "guadagno_finale": 1023,
+  "nota": "Meriva nera, foto pulite ma il testo dichiara cinghia servizi rotta, ammortizzatori, gomme e danno sulla fiancata destra: con questi pezzi il margine non basta.",
+  "controlli": [
+   "fiancata dx",
+   "pompa acqua e surriscaldamento"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93461,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "controllo/ripristino impianto GPL",
+    "low": 50,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 250,
+  "guadagno_finale": 1327,
+  "nota": "Clio blu con bozzi da grandine e GPL inutilizzato da anni, revisione scaduta: anche con pochi pezzi il guadagno resta sotto soglia.",
+  "controlli": [
+   "impianto GPL",
+   "grandine"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93465,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1898,
+  "nota": "MiTo con motore da cambiare o da rifare (catena, punterie, turbo) e non movimentabile: guasto grave, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93476,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2070,
+  "nota": "Focus SW con motore in blocco e spia guasto: guasto grave non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93484,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3339,
+  "nota": "Il testo dice auto gia venduta e le foto mostrano una Fiesta smontata senza portiere: annuncio non valido.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93488,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1807,
+  "nota": "Clio venduta anche per pezzi con problemi al motore non specificati: guasto non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93491,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1702,
+  "nota": "Nessuna foto e venduta per pezzi di ricambio: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93523,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "fiancata_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2407,
+  "nota": "Sedici venduta solo per pezzi, con danno al posteriore destro visibile in foto: non e un'auto da rivendere, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93560,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "batteria",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "cuscinetto_ruota",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "batteria",
+    "low": 70,
+    "high": 120
+   },
+   {
+    "label": "cuscinetto ruota",
+    "low": 30,
+    "high": 80
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 200,
+  "guadagno_finale": 1366,
+  "nota": "Captiva con 294.000 km, interni usurati ma integri; servono batteria e un cuscinetto. Con mercato a 3.000 il guadagno non arriva a soglia.",
+  "controlli": [
+   "cuscinetto ruota",
+   "stato frizione a 294.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93568,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "pezzi carrozzeria (portellone/paraurti/fanale)",
+    "low": 250,
+    "high": 550
+   }
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 550,
+  "guadagno_finale": 1507,
+  "nota": "Panda 4x4 dichiarata incidentata solo di carrozzeria; nelle foto lato sinistro e frontale sembrano a posto, il danno non si vede bene (forse posteriore) ed e caricata su carro attrezzi. Margine al limite: da vedere dal vivo.",
+  "controlli": [
+   "individuare il danno reale",
+   "verificare che sia marciante",
+   "trazione 4x4"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93589,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "motore_perdita_olio",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "raffreddamento",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "guarnizioni perdita olio",
+    "low": 20,
+    "high": 60
+   },
+   {
+    "label": "radiatore abitacolo/termostato/pompa",
+    "low": 60,
+    "high": 140
+   },
+   {
+    "label": "riserva guarnizione testata",
+    "low": 30,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 110,
+  "ricambi_max": 300,
+  "guadagno_finale": 1370,
+  "nota": "Panda metano con perdita d'olio, surriscaldamento e acqua nell'abitacolo, paraurti segnato in foto: rischio guarnizione testata e margine sotto soglia.",
+  "controlli": [
+   "surriscaldamento",
+   "guarnizione testata"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93606,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "cambio_automatico",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1724,
+  "nota": "Classe B a metano con 282.000 km e cambio automatico (CVT) rumoroso: guasto al cambio costoso e non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93611,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "faro dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "traversa/ossatura frontale",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "parafango dx",
+    "low": 40,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 390,
+  "ricambi_max": 1000,
+  "guadagno_finale": 1280,
+  "nota": "Golf 6 con frontale destro sfondato (paraurti assente, faro e ossatura) e 290.000 km: con i pezzi il margine non basta.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93628,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva revisione",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 810,
+  "nota": "Corsa in ordine nelle foto, ma il testo dice 300.000 km (motore cambiato) mentre l'annuncio ne dichiara 130.000: dati falsati, conto non valido.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 2400
+ },
+ {
+  "id": 93638,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva tagliando/lavori",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 1672,
+  "nota": "Meriva nera, foto poche e scure ma nessun danno evidente; descrizione minima. Margine sufficiente, da vedere dal vivo.",
+  "controlli": [
+   "carrozzeria (foto scure)",
+   "tagliando e revisione",
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93649,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "impianto_gpl",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "pezzi impianto GPL",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 150,
+  "guadagno_finale": 810,
+  "nota": "Polo in buono stato estetico nelle foto ma con 300.000 km: il mercato a 3.757 e gonfiato per questi km, con il valore prudente il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 2500
+ },
+ {
+  "id": 93661,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 80,
+    "high": 180
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "parafango sx",
+    "low": 40,
+    "high": 100
+   },
+   {
+    "label": "mascherina",
+    "low": 20,
+    "high": 50
+   },
+   {
+    "label": "traversa e radiatori",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "sospensione ant. sx",
+    "low": 50,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 780,
+  "ricambi_max": 1980,
+  "guadagno_finale": 1186,
+  "nota": "C3 con frontale sinistro distrutto fino alla ruota (ossatura probabilmente coinvolta), airbag non visibili: pezzi troppo cari, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": false
+ },
+ {
+  "id": 93667,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6961,
+  "nota": "Ducato cabinato con cassa frigo da lavoro (e il testo parla della sola cassa da mettere a terra), km sconosciuti: non e un'auto da rivendere a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93703,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "crociera",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "gomme",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "chiave",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "crociera/giunto dx",
+    "low": 40,
+    "high": 150
+   },
+   {
+    "label": "gomme",
+    "low": 200,
+    "high": 350
+   },
+   {
+    "label": "chiave",
+    "low": 30,
+    "high": 80
+   }
+  ],
+  "ricambi_min": 270,
+  "ricambi_max": 580,
+  "guadagno_finale": 680,
+  "nota": "Freelander 2 con 340.000 km, immatricolato autocarro, una sola foto: mercato gonfiato per i km e con il valore prudente il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 3000
+ },
+ {
+  "id": 93723,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 200,
+  "guadagno_finale": 1599,
+  "nota": "Grand C4 Picasso argento in buono stato, unico danno visibile il paraurti posteriore destro rovinato. Margine appena sopra soglia.",
+  "controlli": [
+   "cambio robotizzato e frizione",
+   "243.000 km: tagliando e FAP"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93736,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "frontale (paraurti, fari, radiatori, cofano)",
+    "low": 600,
+    "high": 1500
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1600,
+  "ricambi_max": 5000,
+  "guadagno_finale": -2860,
+  "nota": "A4 Avant con frontale distrutto e airbag esplosi (volante e tendina), in un piazzale di gomme: i pezzi superano il margine.",
+  "controlli": [],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": true
+ },
+ {
+  "id": 93790,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6174,
+  "nota": "E coupe bianca bella fuori, ma danno meccanico al motore e non funzionante: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93801,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva sospensione posteriore (cigolio)",
+    "low": 0,
+    "high": 120
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 120,
+  "guadagno_finale": 1403,
+  "nota": "Panda metano pulita nelle foto, segni di grandine dichiarati: auto sana ma al prezzo chiesto il guadagno resta sotto 1.500.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93810,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1886,
+  "nota": "BMW E91 elaborata (cerchi 19, kit M), ma non va in moto: guasto non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93822,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 200,
+  "guadagno_finale": 2068,
+  "nota": "Tucson nero con ammaccatura sul cofano, paraurti posteriore graffiato e staccato, grandine sulla carrozzeria; meccanica dichiarata ok. Margine c'e ma la grandine pesa sul valore: da vedere.",
+  "controlli": [
+   "entita grandine",
+   "impianto GPL",
+   "trazione 4WD"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93833,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 8327,
+  "nota": "Le foto mostrano una Grand C4 Picasso prima serie (2007-2013), non del 2021: anno sbagliato, mercato a 11.852 falso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93845,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "bombola GPL (2015, probabilmente scaduta)",
+    "low": 250,
+    "high": 450
+   }
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 450,
+  "guadagno_finale": 1611,
+  "nota": "i10 GPL in buono stato, interni puliti, solo piccolo segno sul davanti destro. Con 205.000 km e bombola probabilmente da rifare, il margine resta sopra soglia.",
+  "controlli": [
+   "scadenza bombola GPL",
+   "205.000 km: frizione e tagliando"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93849,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva kit catena distribuzione",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 400,
+  "guadagno_finale": 2160,
+  "nota": "320d Touring pulita nelle foto, ma 336.000 km e un 2010 monta l'N47 (non l'M47 dichiarato), a rischio catena. Mercato gonfiato per i km: uso un valore prudente.",
+  "controlli": [
+   "rumore catena distribuzione",
+   "km reali e tagliandi",
+   "frizione e volano"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 4700
+ },
+ {
+  "id": 93877,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva tagliando",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 1513,
+  "nota": "Tucson diesel nero senza danni visibili nelle foto, venduto per trasferimento. Margine appena sopra soglia.",
+  "controlli": [
+   "data prima immatricolazione (2007)",
+   "frizione/volano",
+   "4WD"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93889,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5047,
+  "nota": "GLK bianca in ottimo stato estetico ma con motore fuso: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93902,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3820,
+  "nota": "Nessuna foto e carrozzeria da rivedere: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93913,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4804,
+  "nota": "Focus SW 2013 blu senza difetti visibili, ma a 2.100 euro e un terzo del mercato: prezzo sospetto, possibile truffa. Da verificare di persona prima di qualsiasi pagamento.",
+  "controlli": [
+   "documenti e intestatario",
+   "nessun anticipo",
+   "km e tagliandi",
+   "impianto GPL"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 93943,
+  "esito": "incidentata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "vetro_portiera",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "cofano",
+    "low": 0,
+    "high": 200
+   },
+   {
+    "label": "traversa e radiatori",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "vetro portiera",
+    "low": 30,
+    "high": 80
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1440,
+  "ricambi_max": 4680,
+  "guadagno_finale": 1579,
+  "nota": "A1 S line con angolo anteriore sinistro schiacciato, airbag esplosi e vetro sinistro coperto; resto dell'auto pulito. Per carrozzieri il margine regge anche con airbag.",
+  "controlli": [
+   "airbag e centralina",
+   "longherone sx",
+   "sterzo e sospensione sx"
+  ],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": true
+ },
+ {
+  "id": 94038,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva catena distribuzione 1.2 TSI",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 300,
+  "guadagno_finale": 1925,
+  "nota": "Yeti chiaro con interni in ordine, nessun danno visibile, ma 240.000 km su un 1.2 TSI noto per la catena e testo vago. Da vedere.",
+  "controlli": [
+   "catena distribuzione",
+   "consumo olio",
+   "spie in quadro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94088,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "radiatore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "radiatore",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "riserva altri problemi",
+    "low": 100,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 160,
+  "ricambi_max": 550,
+  "guadagno_finale": 1883,
+  "nota": "Forester diesel in buono stato nelle foto (paraurti posteriore segnato); radiatore da cambiare e altri problemi non precisati: da vedere dal vivo.",
+  "controlli": [
+   "altri problemi dichiarati",
+   "albero motore boxer diesel",
+   "frizione/volano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94103,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 11076,
+  "nota": "Le foto mostrano una Fiesta di vecchia serie (circa 2002-2005), non del 2024, con vernice scolorita e scritte sul cofano: anno falso e auto ante 2007, scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "dati_sbagliati"
+ },
+ {
+  "id": 94153,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "interni",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "interni da sistemare",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "guadagno_finale": 760,
+  "nota": "Doblò 2009 ex mezzo di servizio (barra luci sul tetto); il mercato di 19.000 € è irreale, vale circa 4.000 € e i 28.904 km dichiarati non sono credibili con motore rigenerato: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 4000,
+  "motivo": "margine"
+ },
+ {
+  "id": 94236,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2657,
+  "nota": "Carrozzeria in ordine nelle foto ma il venditore dichiara catena di distribuzione rotta: motore da rifare, scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "motore_rotto"
+ },
+ {
+  "id": 94266,
+  "esito": "incidentata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore + griglie",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "faro anteriore",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "parafango anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano / radiatori / staffe",
+    "low": 300,
+    "high": 900
+   }
+  ],
+  "ricambi_min": 750,
+  "ricambi_max": 2050,
+  "guadagno_finale": 3602,
+  "nota": "Nelle foto il frontale è danneggiato (paraurti, fanale e zona anteriore sx), il resto è integro; auto marciante con cambio, frizione e turbina nuovi. Da carrozziere.",
+  "controlli": [
+   "verificare airbag e longherone anteriore",
+   "chilometraggio 300.000 km",
+   "funzionamento cambio automatico"
+  ],
+  "aggiorna": true,
+  "strutturale": false,
+  "airbag": false
+ },
+ {
+  "id": 94268,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2047,
+  "nota": "Peugeot 5008 bianca in buone condizioni nelle foto, interni ordinati; manutenzione documentata. Resta con margine sufficiente.",
+  "controlli": [
+   "cambio automatico in prova",
+   "fatture distribuzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94274,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "sensore_abs",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "kit frizione",
+    "low": 150,
+    "high": 250
+   },
+   {
+    "label": "sensore ABS",
+    "low": 30,
+    "high": 90
+   },
+   {
+    "label": "parafango / ritocchi",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 230,
+  "ricambi_max": 490,
+  "guadagno_finale": 1907,
+  "nota": "Ammaccature e graffi visibili sul parafango anteriore; il venditore segnala frizione probabilmente da rifare e spia ABS accesa. Lavori quantificabili, margine ok.",
+  "controlli": [
+   "diagnosi spia ABS",
+   "prova frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94310,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5065,
+  "nota": "XEV Yoyo è un quadriciclo/microcar e nelle foto ha il frontale distrutto: non è un'auto da rivendere a privati, scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "microcar"
+ },
+ {
+  "id": 94374,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 26823,
+  "nota": "Le foto mostrano una Classe E W211 (2002-2009), non del 2024: anno e mercato di 33.600 € falsi, e la frizione slitta. Scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "dati_sbagliati"
+ },
+ {
+  "id": 94390,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva difetto non dichiarato",
+    "low": 200,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 800,
+  "guadagno_finale": 3084,
+  "nota": "Verso pulita nelle foto, ma la scritta 'veicolo per operatori del settore' fa pensare a un difetto non dichiarato o a venditore del settore; tengo una riserva.",
+  "controlli": [
+   "chiedere perché è solo per operatori",
+   "venditore privato o commerciante",
+   "diagnosi motore/frizione/DPF"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94395,
+  "esito": "incidentata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "pannello_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "cofano baule",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "fanali posteriori (2)",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura posteriore",
+    "low": 300,
+    "high": 900
+   }
+  ],
+  "ricambi_min": 750,
+  "ricambi_max": 2050,
+  "guadagno_finale": 6424,
+  "nota": "Tamponata dietro come dichiarato: paraurti, coda e fanali posteriori schiacciati, pannello posteriore coinvolto; davanti integra. Da carrozziere.",
+  "controlli": [
+   "misura scocca posteriore",
+   "260.000 km"
+  ],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": false
+ },
+ {
+  "id": 94451,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4803,
+  "nota": "Carrozzeria e interni belli nelle foto, ma il venditore dichiara motore rotto: scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "motore_rotto"
+ },
+ {
+  "id": 94453,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6986,
+  "nota": "Non è una vendita dell'auto ma solo della quota di comproprietà del 50%: annuncio non valido.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "annuncio_non_valido"
+ },
+ {
+  "id": 94459,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riparazione bozzo / ritocco",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": 1491,
+  "nota": "Bozzo visibile sulla fiancata posteriore vicino al portellone; con 271.000 km il margine resta sotto soglia.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "margine"
+ },
+ {
+  "id": 94481,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1755,
+  "nota": "Annuncio senza foto: scartato.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "nessuna_foto"
+ },
+ {
+  "id": 94512,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1360,
+  "nota": "È un Doblò Cargo furgone ex aziendale con scritte pubblicitarie e motore sostituito: furgone da lavoro, il mercato da Doblò passeggeri non vale.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 5000,
+  "motivo": "furgone_lavoro"
+ },
+ {
+  "id": 94513,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 7774,
+  "nota": "Venduta da Vandelli srl (venditore professionale) con frontale distrutto: scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "venditore_professionale"
+ },
+ {
+  "id": 94570,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "abitacolo",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 9683,
+  "nota": "Tetto e montanti schiacciati, vetri esplosi e fianchi danneggiati: abitacolo distrutto, venduta per ricambi. Da demolire.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "demolire"
+ },
+ {
+  "id": 94607,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "ritocchi carrozzeria",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 2123,
+  "nota": "Ypsilon in buone condizioni nelle foto, solo piccoli segni di carrozzeria; distribuzione e gomme nuove, pochi km.",
+  "controlli": [
+   "verificare km con libretto tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94632,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "nota": "5008 di prima serie in ordine nelle foto, ma la versione indicata (BlueHDi 2017) non corrisponde all'anno 2011: valutata come la 5008 2011, il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 5200,
+  "motivo": "margine"
+ },
+ {
+  "id": 94649,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [
+   {
+    "part": "bombola_gpl",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "bombola GPL omologata",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 400,
+  "guadagno_finale": 3380,
+  "nota": "Juke bianco perla pulito, interni in buono stato; da fare la sostituzione della bombola GPL e la revisione.",
+  "controlli": [
+   "scadenza bombola e revisione",
+   "funzionamento impianto GPL"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94651,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "ritocchi carrozzeria",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": 2209,
+  "nota": "159 grigia in buone condizioni nelle foto, piccole imperfezioni di carrozzeria; km bassi e manutenzione dichiarata.",
+  "controlli": [
+   "verificare luci LED omologate",
+   "storico km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94741,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva usura (300.000 km)",
+    "low": 0,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 200,
+  "guadagno_finale": 1982,
+  "nota": "X1 blu in ordine nelle foto, revisione fatta, motore e cambio dichiarati ok; 300.000 km quindi piccola riserva.",
+  "controlli": [
+   "prova cambio automatico",
+   "storico tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94787,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "freni",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "valvola_egr",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "dischi e pastiglie",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "tappo/intervento EGR",
+    "low": 20,
+    "high": 80
+   }
+  ],
+  "ricambi_min": 170,
+  "ricambi_max": 380,
+  "guadagno_finale": 1396,
+  "nota": "Serie 5 Touring in buono stato nelle foto, ma servono freni e intervento EGR; con questi costi il margine resta sotto soglia.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "margine"
+ },
+ {
+  "id": 94858,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 17192,
+  "nota": "Annuncio senza foto e testo sospetto per una Camaro a 4.500 €: scartato.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "nessuna_foto"
+ },
+ {
+  "id": 94877,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1511,
+  "nota": "Solo due foto (frontale e interni) che sembrano in ordine; margine appena sopra soglia con 294.000 km, da vedere dal vivo.",
+  "controlli": [
+   "vedere fiancate e retro",
+   "294.000 km: catena distribuzione e cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 94903,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1631,
+  "nota": "GLK bella fuori e dentro, ma il venditore dichiara motore rotto e auto non marciante: scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "motore_rotto"
+ },
+ {
+  "id": 94909,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "meccanica",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2432,
+  "nota": "Carrozzeria perfetta nelle foto, ma l'auto è dichiarata non marciante senza causa: guasto non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "non_marciante"
+ },
+ {
+  "id": 94959,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1360,
+  "nota": "Micra in ordine nelle foto, ma è un allestimento base (copricerchi, specchietti neri) e non Tekna: il mercato è gonfiato e il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 6300,
+  "motivo": "margine"
+ },
+ {
+  "id": 94977,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2541,
+  "nota": "Freemont nera in buono stato nelle foto, distribuzione e molti lavori appena fatti con fatture.",
+  "controlli": [
+   "fatture lavori",
+   "240.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95011,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "fiancata",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "ritocchi fiancata",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 300,
+  "guadagno_finale": 1460,
+  "nota": "Fiesta Van autocarro N1 a 2 posti con segni di lavoro su fiancata dx e paraurti posteriore; vale meno della Fiesta normale, margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 6800,
+  "motivo": "margine"
+ },
+ {
+  "id": 95064,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5532,
+  "nota": "Classe C Coupé nera in ordine nelle foto, interni buoni, tagliando recente; prezzo basso rispetto al mercato.",
+  "controlli": [
+   "278.000 km: cambio automatico e iniettori",
+   "venditore privato (foto in zona commerciale)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95068,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3072,
+  "nota": "Classe A grigia pulita, vano motore in ordine; nessun danno visibile.",
+  "controlli": [
+   "cambio automatico (CVT) in prova",
+   "storico km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95085,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "pezzi carrozzeria/ritocchi",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "guadagno_finale": 1416,
+  "nota": "Giulietta nera con 'problemi estetici' dichiarati, foto poco chiare; tolti i pezzi di carrozzeria il margine scende sotto soglia.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "margine"
+ },
+ {
+  "id": 95141,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2031,
+  "nota": "Classe A grigia in ordine nelle foto, gomme e batteria nuove; margine appena sopra soglia.",
+  "controlli": [
+   "cambio automatico",
+   "verificare km originali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95181,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4537,
+  "nota": "Jaguar bella esteticamente ma con motore fuso dichiarato: scartata.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "motore_rotto"
+ },
+ {
+  "id": 95218,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "faro anteriore sx",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parafango sx",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori/traversa",
+    "low": 100,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 680,
+  "ricambi_max": 1500,
+  "guadagno_finale": 1560,
+  "nota": "Frontale con cofano accartocciato e faro sx rotto, visibile in foto. Il mercato di 15.700 € è gonfiato per un Maggiolino 1.2 2013 con 118.000 km: con un valore realistico il margine non basta.",
+  "controlli": [
+   "radiatori e traversa",
+   "geometria ruote"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 9000
+ },
+ {
+  "id": 95386,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva manutenzione (240.000 km)",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 2444,
+  "nota": "Grand Cherokee nero, dalle foto (ruotate) non si vedono danni evidenti; descrizione di una riga. Margine buono ma tutto da vedere dal vivo.",
+  "controlli": [
+   "storico tagliandi",
+   "turbo e iniettori 3.0 CRD",
+   "cambio automatico",
+   "sospensioni"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95398,
+  "esito": "incidentata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "lunotto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "tetto/lamierati posteriori",
+    "low": 300,
+    "high": 1200
+   },
+   {
+    "label": "portellone usato",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "lunotto",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "spoiler e guarnizioni",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "verniciatura materiali",
+    "low": 70,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 700,
+  "ricambi_max": 2200,
+  "guadagno_finale": 2267,
+  "nota": "Tetto schiacciato nella parte posteriore fino al portellone, il resto della carrozzeria e gli interni sono in ordine e marcia. Danno strutturale sul padiglione: da carrozziere.",
+  "controlli": [
+   "montanti posteriori",
+   "tendine airbag",
+   "telaio portellone",
+   "che sia davvero diesel o benzina (18i)"
+  ],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": false
+ },
+ {
+  "id": 95409,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2566,
+  "nota": "Bella in foto, ma i 7.000 km sono del motore nuovo: la scocca ha 189.000 km. Il mercato è calcolato su km falsi, con il valore reale non c'è margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 95410,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "nota": "Foto piccole (screenshot), si vede un V60 grigio senza danni evidenti, qualche segno dichiarato. Con 190.000 km e 2010 il mercato di 9.250 € è alto: con valore realistico il margine non arriva a 2.000 €.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 7200
+ },
+ {
+  "id": 95414,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria_varie",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva piccoli ritocchi",
+    "low": 0,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 200,
+  "guadagno_finale": 2303,
+  "nota": "Santa Fe argento in buono stato nelle foto, solo segni da garage dichiarati; frizione e turbo appena rifatti, gomme nuove.",
+  "controlli": [
+   "fatture frizione e turbo",
+   "segni carrozzeria"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95422,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 9315,
+  "nota": "Mini Cooper S 2008 in ordine nelle foto, ma i 5.000 km sono del motore nuovo, non dell'auto: il mercato di 17.000 € è falso. Valore reale circa 5-6.000 €, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 95653,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria_varie",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva ammaccature/usura 250.000 km",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 2545,
+  "nota": "Scudo 9 posti con qualche ammaccatura dichiarata, nelle foto nulla di grave. Km alti (250.000), da vedere dal vivo.",
+  "controlli": [
+   "frizione e volano",
+   "ammaccature",
+   "stato interni"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 95676,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3433,
+  "nota": "Furgone Caddy Maxi da lavoro (vano chiuso) con 250.000 km: veicolo commerciale non adatto alla rivendita a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 95701,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4988,
+  "nota": "Fiesta grigia, paraurti anteriore con segni. I 17.000 km dichiarati non sono credibili per una 2014 con ammortizzatori e bombola cambiati: mercato gonfiato, al valore reale (circa 7.500 €) non c'è margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 95967,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3227,
+  "nota": "Vitara Top nero in buono stato, interni in pelle puliti, nessun danno visibile. Prezzo sotto mercato.",
+  "controlli": [
+   "cambio DCT",
+   "tagliandi",
+   "trazione AllGrip"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96064,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 8568,
+  "nota": "Nessuna foto; inoltre i km dichiarati (18.000) sono in realtà 190.000.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 96070,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3338,
+  "nota": "Megane grigia senza danni visibili, ma i km sono 192.000 e non 19.200 come dichiarato, e va revisionata. Il mercato è falso, al valore reale non c'è margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 96077,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2046,
+  "nota": "Astra bianca in buone condizioni nelle foto, adesivo Alperia sul lunotto (forse ex auto aziendale). Margine appena sopra soglia.",
+  "controlli": [
+   "provenienza ex aziendale",
+   "tagliandi",
+   "cambio AT9"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96083,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "eventuale cofano",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 1833,
+  "nota": "Yaris rossa grandinata (bolle su cofano e tetto), il resto ok. Tolta la riserva per la grandine il margine scende sotto 2.000 €.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 96091,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [
+   {
+    "part": "catalizzatore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "termostato",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "catalizzatore compatibile",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "termostato",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 350,
+  "ricambi_max": 850,
+  "guadagno_finale": 1524,
+  "nota": "Renegade bianca in buono stato nelle foto, ma il venditore dichiara spia accesa con termostato e catalizzatore da cambiare: tolti i pezzi il margine è sotto 2.000 €.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 96092,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3281,
+  "nota": "Evoque bianca pulita, interni in pelle in ordine, nessun danno visibile. Prezzo molto sotto mercato.",
+  "controlli": [
+   "catena distribuzione fatture",
+   "cambio",
+   "verifica km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96372,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1460,
+  "nota": "Countryman S in buono stato nelle foto, grandine leggera dichiarata. Con 211.000 km e grandine il mercato di 13.500 € è alto: al valore realistico il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 10800
+ },
+ {
+  "id": 96387,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4860,
+  "nota": "Evoque nera bella nelle foto, nessun danno visibile. Il mercato di 29.000 € è gonfiato ('altro allestimento'); anche con valore prudente il margine è ottimo, ma prezzo così basso va controllato (possibile truffa).",
+  "controlli": [
+   "documenti e intestatario",
+   "km reali (190.000)",
+   "DPF",
+   "targa e libretto"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 14000
+ },
+ {
+  "id": 96570,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2700,
+  "nota": "Golf 7.5 nera in ordine, nessun danno visibile nelle foto. Verificare se è DSG o manuale (descrizione dice manuale).",
+  "controlli": [
+   "cambio manuale o DSG",
+   "tagliandi 200.000 km",
+   "frizione/volano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96710,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3033,
+  "nota": "Tiguan nero senza danni visibili, ma sullo sfondo c'è un'insegna di attività: verificare che sia un privato. Margine buono.",
+  "controlli": [
+   "privato o commerciante",
+   "cambio DSG",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96728,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva bozza portellone",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 2648,
+  "nota": "EcoSport Titanium grigia, 42.000 km, in ordine; solo una bozza dichiarata sul portellone.",
+  "controlli": [
+   "bozza portellone",
+   "km certificati"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96754,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "eventuale portiera usata",
+    "low": 0,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 250,
+  "guadagno_finale": 2022,
+  "nota": "Polo TGI bianca in buono stato, piccola ammaccatura sulla fiancata destra visibile in foto. Margine appena sopra soglia.",
+  "controlli": [
+   "ammaccatura dx",
+   "bombole metano (scadenza)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96755,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2340,
+  "nota": "Mini One grigia in buone condizioni dentro e fuori, nessun danno visibile.",
+  "controlli": [
+   "tagliandi",
+   "frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96774,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2314,
+  "nota": "BMW 116d grigia in ordine, con treno di gomme invernali; nessun danno visibile.",
+  "controlli": [
+   "catena distribuzione",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96811,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2235,
+  "nota": "Classe A 200d 4Matic bianca in buono stato, quadro conferma circa 200.000 km. Nessun danno visibile.",
+  "controlli": [
+   "cambio automatico",
+   "trazione 4Matic"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 96825,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2672,
+  "nota": "Nessuna foto e descrizione incomprensibile ('no motore'): annuncio non valido.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 96837,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano, paraurti, parafanghi",
+    "low": 500,
+    "high": 1100
+   },
+   {
+    "label": "fari anteriori",
+    "low": 400,
+    "high": 900
+   },
+   {
+    "label": "radiatori pacco",
+    "low": 250,
+    "high": 600
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "airbag+centralina+pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 2300,
+  "ricambi_max": 6900,
+  "guadagno_finale": -390,
+  "nota": "Frontale distrutto con cofano accartocciato, fari rotti e parabrezza crepato; venduta per pezzi. Con airbag e ossatura i pezzi superano il guadagno.",
+  "controlli": [],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": true
+ },
+ {
+  "id": 96858,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4132,
+  "nota": "A6 nera bella nelle foto, ma il contachilometri segna 406.000 km (motore sostituito senza documenti): i 130.000 km dichiarati rendono falso il conto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 96890,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2994,
+  "nota": "Classe C SW grigia in ottime condizioni, nessun danno visibile, tagliandi Mercedes.",
+  "controlli": [
+   "cambio 9G",
+   "tagliandi 236.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97028,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3151,
+  "nota": "A4 Avant nera in ordine (griglia stile RS), interni puliti, nessun danno visibile.",
+  "controlli": [
+   "frizione/volano o multitronic",
+   "tagliandi",
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97165,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 12634,
+  "nota": "Le foto mostrano altre auto (C-HR, Peugeot, Skoda, Nissan) e non un'Audi A3, 'auto per export': annuncio non valido/commerciante.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 97248,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "nota": "Tiguan grigio in ordine nelle foto, ma è un 150 CV (non il 190 4Motion della scheda) con 240.000 km: mercato alto, al valore realistico il margine è sotto 2.000 €.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 12800
+ },
+ {
+  "id": 97344,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2409,
+  "nota": "Le foto e il testo sono di una Mercedes SLK 320 R170 iscritta ASI (anni 2000-2003), non di una Classe C 2015: auto storica e precedente al 2007.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 97377,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 11101,
+  "nota": "Arkana bianca senza danni visibili, ma con 235.000 km, cambio già rotto una volta e 'IVA esposta' (venditore con partita IVA). Il mercato di 25.800 € non tiene conto dei km.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 97415,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2273,
+  "nota": "Giulia blu in buone condizioni nelle foto, motore pulito; 172.000 km quasi tutti autostradali con tagliandi documentati. Margine sopra soglia.",
+  "controlli": [
+   "storico tagliandi",
+   "stato cambio AT8 e catena distribuzione",
+   "verificare tagliando 80.000 km senza fattura"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97422,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2007,
+  "nota": "Tucson grigia pulita fuori e dentro, nessun danno visibile, dichiarata mai incidentata. Margine appena sopra soglia.",
+  "controlli": [
+   "libretto tagliandi",
+   "frizione e volano",
+   "prova su strada"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97491,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 14000,
+  "nota": "Foto solo come screenshot minuscoli del telefono e versione sbagliata (il mercato è di una e-tron automatica, l'auto è diesel manuale). Con un valore realistico il margine è sotto soglia; annuncio anche un po' sospetto.",
+  "controlli": [
+   "foto reali",
+   "versione e libretto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97725,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3242,
+  "nota": "Classe A nera in garage, nessun danno visibile. Nel testo il prezzo è 13.500 non trattabili (non 12.500): con 13.500 il margine resta di poco sopra soglia.",
+  "controlli": [
+   "prezzo effettivo richiesto",
+   "km originali 62.000 (storico revisioni)",
+   "versione esatta"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97825,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "airbag",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "cinture_pretensionatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "sensori_adas",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + cinture + centralina",
+    "low": 700,
+    "high": 1500
+   },
+   {
+    "label": "sensori/telecamera ADAS",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 700,
+  "ricambi_max": 1800,
+  "guadagno_finale": 785,
+  "nota": "Polo già incidentata: nelle foto sembra a posto ma il testo dice airbag e cinture ancora da rifare e ADAS da calibrare. Con quei pezzi il margine non basta.",
+  "controlli": [
+   "spia airbag",
+   "calibrazione ADAS"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97861,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2036,
+  "nota": "Golf 7.5 grigia senza danni visibili, targa italiana recente perché importata. Il testo sulle date di immatricolazione è confuso: margine di poco sopra soglia, da verificare i documenti.",
+  "controlli": [
+   "data prima immatricolazione sul libretto",
+   "storico km estero",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97896,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 13800,
+  "nota": "420d coupé grigia in buono stato con interni rossi, ma ha 230.000 km e il paraurti non sembra M Sport: il mercato indicato è gonfiato. Margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 97960,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2549,
+  "nota": "Range Rover Sport nera curata nelle foto, nessun danno visibile; cambio già sostituito, tagliandi regolari. Margine sopra soglia ma auto costosa da mantenere con 210.000 km.",
+  "controlli": [
+   "fattura sostituzione cambio",
+   "sospensioni pneumatiche",
+   "perdite motore TDV6"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 97979,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6364,
+  "nota": "BMW Serie 1 2023 fotografata in un piazzale con furgoni di aste/noleggio e prezzo molto sotto mercato con 'urgenza': sembra auto da asta o rivenditore, non da privato. Scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 97987,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -6540,
+  "rivendita_prudente": 7500,
+  "nota": "A3 del 2009 bella nelle foto, ma a 13.900 € il prezzo è fuori mercato: il valore indicato (1 solo confronto) è gonfiato. Margine negativo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 98109,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2747,
+  "nota": "E-Pace blu in ottimo stato nelle foto, nessun danno visibile, tagliandata Jaguar. Margine sopra soglia.",
+  "controlli": [
+   "km reali (testo dice 86.000, annuncio 92.000)",
+   "storico tagliandi",
+   "cambio 9 marce"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 98274,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -4640,
+  "rivendita_prudente": 9500,
+  "nota": "È una Golf 5 GTI Pirelli del 2008, non del 2023 come nei dati: il mercato è sbagliato. Con il valore reale il prezzo di 14.000 € non lascia margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 98647,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2646,
+  "nota": "X1 grigia con interni chiari puliti, quadro a 133.900 km coerente, nessun danno visibile. Margine sopra soglia.",
+  "controlli": [
+   "tagliandi BMW",
+   "cerchi neri (verniciati?)",
+   "prova cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 98729,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2406,
+  "nota": "Annuncio senza foto: scartato per regola.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 98768,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4360,
+  "rivendita_prudente": 19500,
+  "nota": "E All-Terrain sporca ma senza danni evidenti, interni in ordine con tetto panoramico; si vede solo il posteriore da fuori. Con 220.000 km il mercato è alto, ma anche con valore prudente il margine resta buono.",
+  "controlli": [
+   "foto/visione di fiancate e frontale",
+   "storico tagliandi",
+   "sospensioni e cambio 9G"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 98842,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -3640,
+  "rivendita_prudente": 11500,
+  "nota": "Le foto mostrano una Fiesta ST Mk7 (182 CV, 2013-2017), non una 2021: anno sbagliato e mercato gonfiato. A 15.000 € nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 99156,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 18500,
+  "nota": "X6 blu in buono stato nelle foto, nessun danno visibile. Solo 3 confronti di mercato e 90.000 km pochi per un 2012: con valore prudente margine sopra soglia, da verificare km.",
+  "controlli": [
+   "storico km e revisioni",
+   "turbo e cambio automatico",
+   "perdite olio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 99239,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2900,
+  "nota": "A6 Avant nera con cerchi da 20 in ottimo stato nelle foto, manutenzione recente dichiarata. Margine sopra soglia.",
+  "controlli": [
+   "fatture manutenzione",
+   "cambio S tronic",
+   "km 183.000 reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 99993,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva usura (269.000 km, interni trascurati)",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 1413,
+  "nota": "Golf 5 sporca e trascurata dentro, 269.000 km, venduta da San Marino senza descrizione. Con una piccola riserva il margine scende sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 99997,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 3000,
+  "nota": "Non è una vera GTI ma una Golf 5 1.6 102 CV con estetica GTI: il mercato è gonfiato. Con valore reale il margine è basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100008,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva batteria/consumabili (auto ferma)",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": 1572,
+  "nota": "116d grigia senza danni visibili, molto sporca come se ferma da tempo; 250.000 km. Margine di poco sopra soglia.",
+  "controlli": [
+   "avviamento e catena distribuzione",
+   "frizione e volano",
+   "DPF"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100009,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "batteria/gomme (auto ferma nell'erba)",
+    "low": 100,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 250,
+  "guadagno_finale": 1659,
+  "nota": "Qubo bianco camperizzato con letto in legno, fermo nell'erba e sporco ma senza danni evidenti. Margine sopra soglia con piccola riserva.",
+  "controlli": [
+   "scadenza bombole metano",
+   "omologazione allestimento camper",
+   "avviamento"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100017,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera anteriore sx usata",
+    "low": 100,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 250,
+  "guadagno_finale": 1902,
+  "nota": "206 Plus blu con portiera anteriore sinistra ammaccata e interni sporchi; per il resto integra. Margine sopra soglia anche cambiando la portiera.",
+  "controlli": [
+   "chiusura portiera sx",
+   "km 100.000 reali",
+   "motore 1.1"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100018,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva per difetti non dichiarati",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 1268,
+  "nota": "Una sola foto reale più uno screenshot di un'immagine da catalogo, prezzo di 500 € quasi simbolico: annuncio poco affidabile e margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100045,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1689,
+  "nota": "Caddy Maxi rosso con vano posteriore da furgone e 389.000 km: mezzo da lavoro molto usurato, non adatto alla rivendita a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100050,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva (prezzo molto basso, 270.000 km)",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": 1519,
+  "nota": "Punto Evo bianca pulita senza danni visibili, ma 270.000 km e prezzo di 600 € fanno pensare a qualche difetto. Margine al limite.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "frizione e turbo",
+   "spie sul quadro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100065,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva cambio robotizzato CMP6 (attuatore/frizione)",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 1416,
+  "nota": "C4 Grand Picasso bianca sporca, fotografata tra pile di gomme, 230.000 km e cambio robotizzato delicato. Margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100067,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1982,
+  "nota": "Tipo SW bella fuori ma il titolo dice motore non funzionante: guasto grave non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100078,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro anteriore dx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "traversa/frontale",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "radiatori",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 900,
+    "high": 2500
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 2010,
+  "ricambi_max": 5350,
+  "guadagno_finale": -526,
+  "nota": "Octavia con frontale distrutto, cofano accartocciato e airbag esplosi, probabile danno alla struttura. I pezzi per rimetterla in strada mangiano tutto il margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100092,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva cofano (segno/adesivo nero)",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 1869,
+  "nota": "159 grigia in buono stato con cerchi belli; sul cofano c'è un segno nero (adesivo o graffio). Margine sopra soglia.",
+  "controlli": [
+   "segno sul cofano",
+   "286.000 km: frizione, volano, turbo",
+   "EGR e DPF"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100093,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva cambio DSG con 250.000 km",
+    "low": 0,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 200,
+  "guadagno_finale": 2034,
+  "nota": "Altea XL bianca senza danni evidenti, ma le foto sembrano scattate in un paese del sud e non vicino a Bologna. Margine sopra soglia, da verificare che l'auto sia davvero lì.",
+  "controlli": [
+   "dove si trova l'auto",
+   "cambio DSG",
+   "documenti intestati al venditore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100096,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2417,
+  "nota": "Sportage grigio senza danni visibili, carrozzeria ordinata. 270.000 km ma margine buono.",
+  "controlli": [
+   "frizione e volano",
+   "turbo e iniettori",
+   "trazione e ruggine sottoscocca"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100097,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3792,
+  "nota": "Clio verde fotografata in strade che sembrano di Malta con targhe coperte, mentre l'annuncio è a Ferrara a prezzo molto basso: foto che non c'entrano, probabile truffa.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100100,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1823,
+  "nota": "Clio nera con cofano aperto e titolo 'non funzionante': guasto non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100101,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva catena distribuzione/bobine",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 2139,
+  "nota": "116i grigia senza danni visibili, cerchi aftermarket; foto da screenshot ma l'auto si vede bene. Margine sopra soglia.",
+  "controlli": [
+   "rumori catena distribuzione a freddo",
+   "consumo olio",
+   "198.000 km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100108,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva attuatore/frizione cambio robotizzato",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "guadagno_finale": 1660,
+  "nota": "Foto pulite, monovolume bianca senza danni visibili; prezzo molto basso per un cambio robotizzato a 245.000 km: mercato ridotto e riserva per il robot.",
+  "controlli": [
+   "prova cambio robotizzato (strappi, errori)",
+   "perché prezzo così basso",
+   "tagliandi e frizione"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 3300
+ },
+ {
+  "id": 100124,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2472,
+  "nota": "Qashqai in buono stato nelle foto, contachilometri 207.560 coerente; prezzo bassissimo, va capito il motivo dal vivo.",
+  "controlli": [
+   "motivo prezzo basso",
+   "frizione/volano e turbo",
+   "documenti e revisione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100135,
+  "esito": "incidentata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "porta_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "porta_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "porta anteriore sx usata",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "porta posteriore sx usata",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "faro anteriore sx",
+    "low": 50,
+    "high": 120
+   }
+  ],
+  "ricambi_min": 350,
+  "ricambi_max": 820,
+  "guadagno_finale": 1998,
+  "nota": "Fiancata sinistra rigata e ammaccata sulle due porte, paraurti anteriore rotto tenuto col nastro e faro anteriore sx da controllare; carrozzeria da rifare ma il conto regge.",
+  "controlli": [
+   "montante e soglia sx non piegati",
+   "motore e frizione (200.000 km)",
+   "faro e attacchi paraurti"
+  ],
+  "aggiorna": true,
+  "strutturale": false,
+  "airbag": false
+ },
+ {
+  "id": 100156,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2860,
+  "nota": "Serie 3 Touring senza danni visibili ma solo 3 foto esterne; mercato su 2 confronti sembra alto, uso un valore prudente.",
+  "controlli": [
+   "interni e cruscotto (spie)",
+   "cambio automatico",
+   "catena distribuzione N47"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 6000
+ },
+ {
+  "id": 100188,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "parafango (fiancata) posteriore sx",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 230,
+  "ricambi_max": 550,
+  "guadagno_finale": 1080,
+  "nota": "Fiesta con parafango posteriore sx e paraurti posteriore ammaccati (lamierato da sostituire/raddrizzare): con i pezzi il margine scende sotto 1.500 €.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "margine"
+ },
+ {
+  "id": 100200,
+  "esito": "incidentata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "frontale_ossatura",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "paraurti anteriore completo",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "fari anteriori x2",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "traversa e staffe",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 930,
+  "ricambi_max": 2300,
+  "guadagno_finale": 2482,
+  "nota": "Urto frontale: cofano accartocciato, paraurti anteriore mancante, fari e frontale da rifare; dietro e fianchi integri. Probabile ossatura frontale toccata, airbag da verificare.",
+  "controlli": [
+   "airbag frontali esplosi?",
+   "longheroni e misure scocca",
+   "motore e cambio dopo urto",
+   "213.000 km"
+  ],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": false
+ },
+ {
+  "id": 100213,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1505,
+  "nota": "V50 pulita nelle foto, nessun danno visibile; margine appena sopra soglia, nessuna spesa prevista.",
+  "controlli": [
+   "frizione e tagliandi (205.000 km)",
+   "ruggine sottoscocca",
+   "trattare il prezzo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100218,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1688,
+  "nota": "Foto scattate da schermo di un altro annuncio, auto apparentemente sana ma poco visibile; 280.000 km e margine stretto.",
+  "controlli": [
+   "foto reali e venditore",
+   "paraurti anteriore",
+   "frizione/volano e iniettori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100228,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva cambio Powershift (olio/frizioni)",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "guadagno_finale": 3954,
+  "nota": "S-Max con interni in pelle in ordine, esterno visto solo da una foto; prezzo molto basso per un automatico: riserva per il cambio.",
+  "controlli": [
+   "cambio Powershift",
+   "spie sul cruscotto",
+   "carrozzeria lati e retro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100308,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1410,
+  "nota": "C-Max senza danni visibili ma 14.700 km dichiarati non credibili per un 2010 (quasi certo 147.000): con un valore realistico il margine non basta.",
+  "controlli": [
+   "km reali"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 4050,
+  "motivo": "margine/km dubbi"
+ },
+ {
+  "id": 100311,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3781,
+  "nota": "Ford Transit con cassone ribaltabile (non un Transit Custom): furgone da lavoro, non adatto alla rivendita a privati.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "furgone da lavoro"
+ },
+ {
+  "id": 100317,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4636,
+  "nota": "Annuncio senza foto: non si può valutare.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "nessuna foto"
+ },
+ {
+  "id": 100318,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4636,
+  "nota": "Annuncio senza foto: non si può valutare.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "nessuna foto"
+ },
+ {
+  "id": 100320,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4079,
+  "nota": "Annuncio senza foto: non si può valutare.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "nessuna foto"
+ },
+ {
+  "id": 100356,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva manutenzione (freni/olio cambio)",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 400,
+  "guadagno_finale": 1284,
+  "nota": "Solo foto degli interni (schermo aftermarket), nessuna foto esterna; 289.000 km su un 3.0 biturbo: con una minima riserva il margine va sotto soglia.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "margine"
+ },
+ {
+  "id": 100362,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1501,
+  "nota": "308 SW senza danni visibili; margine al limite della soglia, nessuna spesa prevista.",
+  "controlli": [
+   "235.000 km: frizione e distribuzione",
+   "trattare il prezzo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100374,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1569,
+  "nota": "Doblò bianco pulito, solo lievi segni sul paraurti posteriore; km bassi per l'anno.",
+  "controlli": [
+   "omologazione autocarro o autovettura",
+   "revisione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100381,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1964,
+  "nota": "Octavia Wagon nera sporca ma senza danni evidenti, lievi graffi al paraurti posteriore.",
+  "controlli": [
+   "frizione/volano",
+   "carrozzeria pulita dal vivo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100411,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4076,
+  "nota": "Forester in ottimo stato nelle foto; prezzo molto basso rispetto al mercato, va capito il perché (diesel boxer).",
+  "controlli": [
+   "motivo del prezzo basso",
+   "motore boxer diesel (consumo olio, DPF)",
+   "trazione e frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100421,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "paraurti posteriore/riserva",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "staffe e fendinebbia",
+    "low": 30,
+    "high": 80
+   }
+  ],
+  "ricambi_min": 230,
+  "ricambi_max": 530,
+  "guadagno_finale": 1628,
+  "nota": "A1 bianca con paraurti anteriore staccato/rovinato a destra e paraurti posteriore graffiato in basso; danni leggeri chiari.",
+  "controlli": [
+   "traversa anteriore e faro dx",
+   "220.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100457,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2418,
+  "nota": "Touran argento pulito, nessun danno visibile.",
+  "controlli": [
+   "frizione/DSG se presente",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100474,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5413,
+  "nota": "Discovery Sport bianca pulita nelle foto ma prezzo al 38% del mercato: possibile truffa o problema serio al motore.",
+  "controlli": [
+   "verifica venditore e documenti (possibile truffa)",
+   "motore Ingenium: catena distribuzione",
+   "cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100491,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "calotta_specchietto",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "calotta specchietto",
+    "low": 30,
+    "high": 80
+   }
+  ],
+  "ricambi_min": 30,
+  "ricambi_max": 80,
+  "guadagno_finale": 2780,
+  "nota": "Scirocco con calotta specchietto sx rovinata e lievi segni sul paraurti; targa di San Marino da nazionalizzare e mercato alto per 226.000 km.",
+  "controlli": [
+   "targa San Marino: costi di nazionalizzazione",
+   "226.000 km: turbo e frizione"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7000
+ },
+ {
+  "id": 100509,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1946,
+  "nota": "Ypsilon rossa pulita, nessun danno visibile.",
+  "controlli": [
+   "221.000 km: frizione",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100514,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2731,
+  "nota": "Baleno 2019 in ordine, nessun danno visibile; prezzo basso da confermare.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100554,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1526,
+  "nota": "320d xDrive Touring pulita, ma margine appena sopra soglia e annuncio doppio (100560) in un piazzale con altre auto: verificare che sia un privato.",
+  "controlli": [
+   "venditore privato?",
+   "catena distribuzione N47",
+   "trasmissione xDrive"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100560,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1526,
+  "nota": "Annuncio senza foto: non si può valutare.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "nessuna foto"
+ },
+ {
+  "id": 100567,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2773,
+  "nota": "Cherokee in buono stato esterno, sedile guida usurato; nessun danno visibile.",
+  "controlli": [
+   "275.000 km: cambio automatico e iniettori",
+   "sedile guida"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100577,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1598,
+  "nota": "Golf grigia pulita, nessun danno visibile; margine vicino alla soglia.",
+  "controlli": [
+   "259.000 km: frizione/volano",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100583,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 7970,
+  "nota": "Iveco Daily ribaltabile: autocarro da lavoro, non adatto alla rivendita a privati.",
+  "controlli": [],
+  "aggiorna": true,
+  "motivo": "furgone da lavoro"
+ },
+ {
+  "id": 100591,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2060,
+  "nota": "Astra GPL bianca senza danni evidenti, ma una foto inquadra il tetto: possibile bozzo o grandine da vedere dal vivo.",
+  "controlli": [
+   "tetto (bozzi/grandine)",
+   "scadenza bombola GPL",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100602,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2354,
+  "nota": "Countryman nera pulita, nessun danno visibile.",
+  "controlli": [
+   "tagliandi",
+   "frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100659,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4360,
+  "nota": "A6 bianca pulita, fotografata in un piazzale con altre auto; mercato alto per 293.000 km, uso un valore prudente.",
+  "controlli": [
+   "venditore privato?",
+   "293.000 km: turbo e cambio",
+   "spie e manutenzione"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 9500
+ },
+ {
+  "id": 100679,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2234,
+  "nota": "5008 grigia pulita, nessun danno visibile.",
+  "controlli": [
+   "cambio EAT6",
+   "220.000 km: distribuzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100685,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "nota": "Antara bianca pulita ma le foto sono screenshot di un altro annuncio; mercato un po' alto, valore prudente.",
+  "controlli": [
+   "foto reali e venditore",
+   "cambio automatico"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7500
+ },
+ {
+  "id": 100695,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2260,
+  "nota": "Nelle foto è un Transit Courier furgone (vano merci, niente vetri posteriori), non un Tourneo passeggeri: carrozzeria pulita. Il mercato è da Tourneo, uso un valore prudente da furgone e il margine resta.",
+  "controlli": [
+   "verificare se è autocarro N1 o autovettura",
+   "prezzo molto basso: controllare documenti e tagliandi",
+   "stato frizione e DPF"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7600
+ },
+ {
+  "id": 100816,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "sedile_guida",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva interni/sedile pelle usurato e spie",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 300,
+  "guadagno_finale": 1368,
+  "nota": "Foto solo di interni: sedile guida in pelle consumato, 295.000 km. Con 5.000 € serve 1.500 di margine e con una minima riserva non ci arriva (margine).",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 100842,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3783,
+  "nota": "Tucson nero in buono stato in tutte e quattro le foto, nessun danno visibile. Prezzo molto sotto mercato: margine ampio.",
+  "controlli": [
+   "prezzo troppo basso: verificare documenti e proprietà",
+   "tagliandi e frizione a 154.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100852,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "porta_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "ritocco porta posteriore sx (materiale)",
+    "low": 50,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 100,
+  "guadagno_finale": 2360,
+  "nota": "Compass con un graffio/strisciata sulla porta posteriore sinistra, interni in pelle ok. Con 287.000 km il mercato è alto, uso valore prudente e il margine resta sopra soglia.",
+  "controlli": [
+   "cambio automatico 9 marce e trazione 4x4",
+   "stato motore a 287.000 km"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 8500
+ },
+ {
+  "id": 100923,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3504,
+  "nota": "114d bianca pulita, foto all'autolavaggio senza danni visibili. Margine buono.",
+  "controlli": [
+   "tagliandi e catena distribuzione",
+   "frizione e volano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 100977,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1660,
+  "nota": "530d Touring bella nelle foto, ma con 392.000 km il mercato è ottimista: con valore prudente il margine scende sotto 2.000 (margine).",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 7700
+ },
+ {
+  "id": 100996,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3060,
+  "nota": "120d xDrive rossa, carrozzeria a posto nelle foto. Prezzo molto basso rispetto al mercato (che per un 2013 è un po' alto): uso valore prudente, margine comunque buono ma da vedere dal vivo.",
+  "controlli": [
+   "perché costa così poco: guasti nascosti?",
+   "catena distribuzione N47",
+   "documenti e km reali"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 9000
+ },
+ {
+  "id": 101100,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "sedile",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore ritocco",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 150,
+  "guadagno_finale": 3239,
+  "nota": "L'annuncio dice 118d ma le foto mostrano una BMW Serie 2 Active Tourer (monovolume), con paraurti posteriore graffiato e sedile macchiato: modello diverso, il conto del mercato non vale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 101189,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2290,
+  "nota": "Kangoo Express furgone aziendale con grafiche della ditta, foto nel piazzale dell'azienda: venduto da società (probabile IVA) e veicolo da lavoro.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 101253,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3292,
+  "nota": "XC60 bianca in buone condizioni nelle foto, nessun danno visibile. Margine buono.",
+  "controlli": [
+   "cambio Geartronic",
+   "tagliandi a 233.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101394,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2409,
+  "nota": "Renegade nera pulita fuori e dentro, nessun danno visibile. Margine sopra soglia.",
+  "controlli": [
+   "frizione e cinghia distribuzione a 182.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101435,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2070,
+  "nota": "C4 SpaceTourer fotografata nel piazzale di un concessionario con altre auto in vendita: venditore professionale, e il margine sarebbe comunque al limite.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 101439,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6360,
+  "nota": "E-Pace grigia senza danni evidenti, ma foto parziali (manca un frontale chiaro) e prezzo a metà del mercato: sospetto, da vedere dal vivo prima di tutto.",
+  "controlli": [
+   "prezzo anomalo: possibile truffa o guasto motore Ingenium",
+   "foto complete del frontale e interni",
+   "documenti e km reali"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 14500
+ },
+ {
+  "id": 101495,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2281,
+  "nota": "Evoque fotografata di notte: nessun danno evidente ma le foto non permettono di vedere bene carrozzeria e cerchi. Margine sopra soglia.",
+  "controlli": [
+   "vedere la carrozzeria alla luce del giorno",
+   "cambio automatico e turbo 2.2"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101594,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3223,
+  "nota": "Golf GTI bianca pulita, nessun danno visibile nelle foto. Margine buono.",
+  "controlli": [
+   "catena distribuzione e consumo olio TSI",
+   "modifiche non omologate"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101640,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1260,
+  "nota": "S-Cross argento senza danni evidenti, ma il mercato è stimato solo sul modello ed è gonfiato per un 2015 Cool: con valore realistico il margine non c'è (margine).",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 9900
+ },
+ {
+  "id": 101801,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2120,
+  "nota": "Evoque 2017 grigia in buono stato in tutte le foto, nessun danno visibile. Margine appena sopra soglia.",
+  "controlli": [
+   "cambio automatico 9 marce",
+   "tagliandi a 161.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101839,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2784,
+  "nota": "Q5 nera in buone condizioni, il quadro conferma circa 110.000 km. Margine buono.",
+  "controlli": [
+   "S-tronic e frizioni",
+   "catena/cinghia e tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101859,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3494,
+  "nota": "116d argento pulita fuori e dentro, nessun danno visibile. Margine buono.",
+  "controlli": [
+   "tagliandi e frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101864,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4157,
+  "nota": "Berlingo bianco versione passeggeri, carrozzeria pulita in tutte le foto. Margine buono.",
+  "controlli": [
+   "verificare se ex flotta/noleggio",
+   "cinghia distribuzione a bagno d'olio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101877,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3046,
+  "nota": "A5 Sportback nera lucida senza danni visibili. Margine buono.",
+  "controlli": [
+   "cambio multitronic",
+   "tagliandi a 177.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101896,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3081,
+  "nota": "F-Pace blu in buono stato, interni chiari ok. Margine buono.",
+  "controlli": [
+   "motore Ingenium: catena e tagliandi",
+   "cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101916,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3250,
+  "nota": "Polo arancione pulita fuori e dentro, nessun danno visibile. Margine buono.",
+  "controlli": [
+   "tagliandi e cinghia"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101944,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2879,
+  "nota": "Grandland X bianca tenuta in garage, nessun danno visibile. Margine buono.",
+  "controlli": [
+   "cinghia a bagno d'olio del 1.2 PureTech"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101963,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2050,
+  "nota": "Kuga Vignale: foto minuscole, sembra a posto ma non si vedono i dettagli. Margine appena sopra soglia, da vedere dal vivo.",
+  "controlli": [
+   "foto più grandi/visione dal vivo",
+   "cambio automatico Powershift",
+   "tagliandi a 165.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101988,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2001,
+  "nota": "Corsa 2023 argento senza danni visibili, pochi km. Margine proprio al limite della soglia.",
+  "controlli": [
+   "garanzia residua e tagliandi",
+   "trattare sul prezzo: margine al limite"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 101989,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2173,
+  "nota": "525d Touring grigia in ordine nelle foto, nessun danno visibile. Margine sopra soglia.",
+  "controlli": [
+   "cambio automatico e xDrive",
+   "tagliandi a 190.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102001,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -240,
+  "nota": "Swift rossa in ottime condizioni, ma il mercato è stimato solo sul modello senza confronti ed è troppo alto: a prezzo reale non c'è margine.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 10400
+ },
+ {
+  "id": 102057,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riparazione parafango post. sx (materiale)",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": 2162,
+  "nota": "Tiguan grigio con un bozzo/strisciata sul parafango posteriore sinistro, il resto a posto. Danno leggero da carrozziere, margine sopra soglia.",
+  "controlli": [
+   "verificare che il bozzo non tocchi il fanale",
+   "tagliandi a 206.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102090,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2546,
+  "nota": "E-Pace grigia, fuori e interni in buono stato, nessuna spia nel quadro. Margine sopra soglia.",
+  "controlli": [
+   "motore Ingenium e cambio 9 marce"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102127,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3560,
+  "nota": "Caddy Maxi passeggeri bianco, carrozzeria e sedili puliti. Margine buono.",
+  "controlli": [
+   "verificare se ex flotta",
+   "frizione e cinghia a 175.000 km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102130,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "porta_laterale",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "faro anteriore sx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "parafango anteriore sx",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "lamierato porta laterale",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 380,
+  "ricambi_max": 850,
+  "guadagno_finale": 1472,
+  "nota": "Trafic furgone da lavoro con faro e paraurti anteriore sinistro rotti e lamiera bucata sulla fiancata: furgone usurato e con i ricambi il margine scende sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102154,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "specchietto",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "specchietto retrovisore sx",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 200,
+  "guadagno_finale": 1918,
+  "nota": "2008 grigia con lo specchietto sinistro rotto, per il resto ok. Con il ricambio il margine scende sotto 2.000 (margine).",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102174,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2069,
+  "nota": "Annuncio senza foto: non si può valutare.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102225,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2460,
+  "nota": "Amarok nero in buone condizioni nelle foto, nessun danno visibile. Con 297.000 km il mercato è ottimista, con valore prudente il margine resta sopra soglia.",
+  "controlli": [
+   "frizione, turbo e trasmissione 4Motion a 297.000 km",
+   "verificare se immatricolato autocarro"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 15000
+ },
+ {
+  "id": 102271,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "motore usato 3.0 SDV6",
+    "low": 4000,
+    "high": 8000
+   }
+  ],
+  "ricambi_min": 4000,
+  "ricambi_max": 8000,
+  "guadagno_finale": -2171,
+  "nota": "Foto pulite ma il titolo dichiara 'Motore ROTTO': guasto grave non quantificabile, si scarta.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102296,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2126,
+  "nota": "Evoque bianca in buono stato, interni chiari puliti, nessun danno visibile; margine appena sopra soglia.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "cambio automatico 9 marce: cambi fluidi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102305,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2126,
+  "nota": "Stessa Evoque dell'annuncio 102296 (stesse foto, km, prezzo e citta'): annuncio doppio, si tiene solo l'altro.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102316,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -390,
+  "nota": "Golf nera sana nelle foto, ma e' una 1.5 TGI Highline a metano con 157.000 km, non una GTI: il mercato GTI e' gonfiato, margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 12150
+ },
+ {
+  "id": 102331,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -340,
+  "nota": "A6 Avant bianca pulita, ma con 320.000 km il mercato indicato e' troppo alto; con valore realistico il margine non c'e'.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 11700
+ },
+ {
+  "id": 102344,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4157,
+  "nota": "XCeed bianca 2020 in ottime condizioni nelle foto, nessun danno visibile; prezzo molto basso rispetto al mercato.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "verificare perche' il prezzo e' cosi' basso (sinistri, finanziamento in corso)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102373,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "nota": "A4 Avant g-tron marrone senza danni visibili, ma 233.000 km a metano: valore reale piu' basso del mercato indicato, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 12600
+ },
+ {
+  "id": 102396,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2450,
+  "nota": "Leon ST X-Perience 4Drive grigia in buono stato, interni ok, nessun danno evidente.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "DSG e trazione 4Drive (olio Haldex)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102450,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2124,
+  "nota": "Anno dichiarato 2008 ma le foto mostrano una Peugeot 2008 restyling recente, ripresa in un piazzale coperto: dati falsi e prezzo sospetto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102460,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2088,
+  "nota": "Nessuna foto disponibile: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102464,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "griglia_staffe",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 250,
+    "high": 450
+   },
+   {
+    "label": "faro LED dx",
+    "low": 400,
+    "high": 900
+   },
+   {
+    "label": "griglia, staffe, fendinebbia",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "radiatore/traversa (riserva)",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 850,
+  "ricambi_max": 1900,
+  "guadagno_finale": 708,
+  "nota": "A1 bianca con frontale destro incidentato: paraurti strappato, faro dx rotto, griglia e supporti da rifare; con i pezzi il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "strutturale": false,
+  "airbag": false
+ },
+ {
+  "id": 102507,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2343,
+  "nota": "X1 grigia in buono stato, carrozzeria pulita, nessun danno visibile.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102519,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2052,
+  "nota": "Countryman arancio in ottime condizioni nelle foto; margine appena sopra soglia, trattare il prezzo.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102585,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "nota": "Solo foto degli interni (ordinati), carrozzeria non visibile; la 500e Action base vale meno del mercato indicato e il margine non c'e'.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 13500
+ },
+ {
+  "id": 102604,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3243,
+  "nota": "Range Rover Sport grigia, carrozzeria a posto nelle foto; prezzo molto basso per l'auto, da vedere bene la meccanica dal vivo.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "motore SDV6/TDV6: rumori, perdite, fumosita'",
+   "sospensioni pneumatiche",
+   "verificare allestimento Autobiography dichiarato"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102606,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2823,
+  "nota": "Discovery 4 nera fotografata all'autolavaggio, nessun danno visibile; 218.000 km.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "sospensioni pneumatiche",
+   "cambio automatico e turbo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102652,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4450,
+  "nota": "S-Max bianca 2021 in ottimo stato nelle foto, nessun danno; margine buono.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "cambio automatico 8 marce"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102703,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2654,
+  "nota": "XC40 bianca senza danni visibili, fotografata in un capannone senza loghi.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "verificare che il venditore sia un privato"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102745,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "nota": "Le foto sono screenshot di un altro annuncio e del cruscotto: foto non originali; Hummer di nicchia con mercato poco affidabile.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 13500
+ },
+ {
+  "id": 102760,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2140,
+  "nota": "Abarth grigia con strisce rosse in buono stato, ma dalle foto sembra una berlina e non la 500C cabrio dichiarata: verificare il modello.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "verificare che sia davvero 500C (tetto in tela)",
+   "frizione e turbo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102761,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2493,
+  "nota": "Sorento grigia in buono stato; una foto mostra la serratura del portellone, da controllare.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "funzionamento portellone/serratura posteriore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102764,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6891,
+  "nota": "Anno 2008 dichiarato ma le foto mostrano un Jumpy di ultima serie; inoltre e' un furgone da lavoro: dati sbagliati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102776,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "nota": "Dichiarata Range Rover Autobiography, ma le foto mostrano una Range Rover Sport 2009-2013 bianca: modello diverso, valore reale piu' basso, niente margine.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 13500
+ },
+ {
+  "id": 102812,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2535,
+  "nota": "Transit Custom autocarro con livrea aziendale: veicolo commerciale da flotta, non auto da rivendere a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102833,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4849,
+  "nota": "Grand C4 Spacetourer grigia 2021 in buono stato, nessun danno visibile; margine buono.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102835,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2705,
+  "nota": "Jumper con livrea della ditta Italservizi srl: furgone aziendale, venditore professionale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102863,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5320,
+  "nota": "Nessuna foto disponibile: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 102933,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -240,
+  "nota": "Smart EQ bianca quasi nuova e pulita, ma il mercato (stimato su un solo confronto) e' gonfiato: con valore reale il margine non c'e'.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 15300
+ },
+ {
+  "id": 102951,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2152,
+  "nota": "Abarth 595 bianca 2022 in ottimo stato, interni puliti; margine sopra soglia.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "frizione e turbo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102991,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3390,
+  "nota": "220d Active Tourer bronzo in ottime condizioni, con gancio traino; nessun danno visibile.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 102993,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3872,
+  "nota": "Nessuna foto disponibile (e 13.000 km su una Giulia 2016 da verificare): scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 103047,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "nota": "TT con pellicola cangiante opaca, nessun danno visibile, ma 180.000 km su una 1.8: valore reale piu' basso, margine insufficiente.",
+  "controlli": [
+   "stato vernice sotto la pellicola"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 15300
+ },
+ {
+  "id": 103085,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2203,
+  "nota": "530d Touring M Sport nera, interni chiari curati e tetto panoramico; nessun danno visibile.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "cambio, trasferimento xDrive"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103100,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5840,
+  "nota": "Transit Custom furgone bianco da lavoro: veicolo commerciale, non auto per privati, mercato stimato sul modello.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 103146,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "catena_distribuzione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "kit catena distribuzione Ingenium + guarnizioni",
+    "low": 500,
+    "high": 1000
+   },
+   {
+    "label": "riserva valvole/punterie",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 500,
+  "ricambi_max": 1500,
+  "guadagno_finale": 3891,
+  "nota": "Velar nera in ottimo stato estetico; il titolo dice catena di distribuzione da sostituire: lavoro quantificabile se il motore non ha subito danni.",
+  "controlli": [
+   "storico tagliandi e revisioni",
+   "visura PRA per fermi e passaggi",
+   "prova su strada e diagnosi centralina",
+   "motore: rumori catena, compressioni, nessun salto di fase",
+   "preventivo officina per la catena"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103190,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3360,
+  "nota": "Foto pulite ma l'auto in foto sembra una berlina, non una Touring come dichiarato; sul cruscotto c'è una spia rossa freni accesa. Margine buono anche con valore prudente.",
+  "controlli": [
+   "Verificare sul libretto se è 330d Touring xDrive o berlina/altra motorizzazione",
+   "Spia rossa freni/freno di stazionamento sul quadro",
+   "Tagliandi e km (164.831 visti sul quadro)"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 19500
+ },
+ {
+  "id": 103197,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1460,
+  "nota": "Navara Visia King Cab base, sporco e da lavoro (foto in campagna, cassone usurato). Il mercato indicato vale per allestimenti migliori: col valore prudente il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 17500
+ },
+ {
+  "id": 103252,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5560,
+  "nota": "X1 25e nera, foto pulite senza danni visibili. Prezzo molto basso per l'auto e mercato stimato solo sul modello: da verificare bene venditore e documenti.",
+  "controlli": [
+   "Prezzo sospettosamente basso: verificare venditore e documenti",
+   "Stato batteria ibrida plug-in e cavo di ricarica",
+   "Storico tagliandi"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 21500
+ },
+ {
+  "id": 103268,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "nota": "Cayenne con 266.000 km e foto solo di dettagli (cerchio, quadro, tetto), nessuna vista completa. Con i km reali il mercato è gonfiato e il margine prudente non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 18000
+ },
+ {
+  "id": 103307,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "nota": "Le foto mostrano due auto diverse (una berlina e una Touring): annuncio poco affidabile. Con 210.000 km su una 2021 il valore reale è più basso e il margine non basta.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 20000
+ },
+ {
+  "id": 103342,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "nota": "Spider 3.2 V6 nera in buono stato apparente, foto davanti a un capannone/salone. Il mercato di quasi 30.000 è gonfiato per una 2010 con 144.000 km: margine reale quasi nullo.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 18000
+ },
+ {
+  "id": 103411,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3360,
+  "nota": "Jumpy Spacetourer blu, carrozzeria pulita senza danni visibili. Mercato stimato solo sul modello, quindi uso un valore prudente: il margine resta buono.",
+  "controlli": [
+   "Numero posti e omologazione (autovettura M1 o autocarro N1)",
+   "Cambio automatico e tagliandi",
+   "Usura interni zona carico"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 21500
+ },
+ {
+  "id": 103460,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2714,
+  "nota": "BMW 118d grigia in garage, carrozzeria e interni puliti, nessun danno visibile. Margine sopra soglia.",
+  "controlli": [
+   "Tagliandi e km",
+   "Cambio automatico senza strappi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103593,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "nota": "A3 e-tron bianca pulita, nessun danno visibile, ma è il modello vecchio (8V) e con 90.000 km il valore reale è più basso del mercato indicato: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 19000
+ },
+ {
+  "id": 103615,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2950,
+  "nota": "Kuga ST-Line grigia in piazzale di centro commerciale, carrozzeria e cerchi a posto. Margine sopra soglia.",
+  "controlli": [
+   "Gomme (battistrada) e tagliandi",
+   "Che sia un privato e non un rivenditore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103653,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3081,
+  "nota": "Countryman Cooper SD bianca, una sola foto laterale senza danni visibili. Margine buono ma servono altre foto (interni, km, lati).",
+  "controlli": [
+   "Chiedere altre foto di interni, quadro km e lato destro",
+   "Tagliandi con 127.000 km",
+   "Trazione ALL4 e cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103654,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2117,
+  "nota": "A3 Sportback blu, carrozzeria perfetta in tutte le foto. Margine appena sopra soglia; la targa GL fa pensare a immatricolazione più recente del 2020.",
+  "controlli": [
+   "Verificare anno di immatricolazione sul libretto",
+   "Che non sia un rivenditore (foto davanti a edificio commerciale)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103710,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2244,
+  "nota": "Tourneo Courier 2025 nero praticamente nuovo, interni e carrozzeria puliti. Margine appena sopra soglia.",
+  "controlli": [
+   "Garanzia ufficiale residua",
+   "Allestimento e cambio automatico come dichiarato"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103715,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2076,
+  "nota": "Q3 grigio argento, carrozzeria e cerchi senza danni visibili. Margine appena sopra soglia.",
+  "controlli": [
+   "Tagliandi con 125.000 km",
+   "Cambio S-tronic"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103728,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4060,
+  "nota": "X5 40e grigio chiaro in cortile, carrozzeria pulita. Ibrido plug-in con 170.000 km: il mercato è un po' alto, ma anche con valore prudente il margine è ampio.",
+  "controlli": [
+   "Stato batteria ibrida e sistema di ricarica",
+   "Sospensioni e tagliandi",
+   "Storico km"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 24000
+ },
+ {
+  "id": 103761,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -2640,
+  "nota": "S3 2008 nera con cerchi non originali, 54.800 km dichiarati poco credibili. Il mercato di 28.000 è stimato su un solo confronto ed è molto gonfiato: margine negativo.",
+  "controlli": [],
+  "aggiorna": true,
+  "rivendita_prudente": 16500
+ },
+ {
+  "id": 103800,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 7282,
+  "nota": "Iveco Daily cassonato con telone: è un veicolo commerciale da lavoro, non un'auto da rivendere a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 103827,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2097,
+  "nota": "Compass Limited bianca, carrozzeria e sedili in pelle in buono stato. Margine appena sopra soglia.",
+  "controlli": [
+   "Tagliandi e km bassi (38.400) da verificare"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103862,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2324,
+  "nota": "Annuncio senza foto: non si può valutare, quindi scartato.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 103902,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2117,
+  "nota": "BMW 118i bianca, foto davanti e dietro senza danni visibili. Margine appena sopra soglia.",
+  "controlli": [
+   "Chiedere foto laterali e interni",
+   "Tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 103917,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2778,
+  "nota": "X4 M Sport argento, carrozzeria e interni puliti, cerchi aftermarket. Margine sopra soglia, ma 179.000 km pesano sulla rivendita.",
+  "controlli": [
+   "Tagliandi con 179.000 km",
+   "Cambio automatico e trazione xDrive",
+   "Cerchi non originali: omologazione"
+  ],
+  "aggiorna": true
  }
 ]
