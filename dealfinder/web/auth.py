@@ -9,7 +9,7 @@ import os
 import secrets
 import time
 
-TOKEN_DAYS = 30
+TOKEN_DAYS = int(os.environ.get("TOKEN_GIORNI", "3650"))   # resta collegato: si esce solo con 'Esci' o se l'account viene chiuso
 
 
 def _secret() -> bytes:

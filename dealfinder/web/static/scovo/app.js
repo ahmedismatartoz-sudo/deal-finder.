@@ -53,6 +53,15 @@ const V = {targa:"", km:"", note:"", cambio:"", foto:[], stato:"form", err:"", r
 const R = {targa:"", pezzo:"", pezzi:[], stato:"form", err:"", res:null, aperti:{}};
 const L = {mode:"login", err:"", busy:false, sent:false, email:"", req:{}};
 
+// Il token vive anche in un cookie, così le sezioni aperte come pagina (Incentivi) sanno chi sei.
+function syncCookie(){
+  try {
+    if (S.token) document.cookie = "scovo_t=" + encodeURIComponent(S.token) + "; path=/; max-age=315360000; samesite=lax" + (location.protocol === "https:" ? "; secure" : "");
+    else document.cookie = "scovo_t=; path=/; max-age=0; samesite=lax";
+  } catch (e) { /* cookie non disponibili */ }
+}
+const perm = p => !!(S.user && (S.user.role === "admin" || (S.user.permessi || []).includes(p)));
+const tabOk = id => id === "profilo" || (id === "incentivi" ? perm("incentivi") : (!S.user || !S.user.permessi || perm("auto")));
 const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
 function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:2, sort:S.sort}); }
@@ -501,7 +510,7 @@ async function onSubmit(e){
   }
 }
 function loggedIn(r){
-  S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user);
+  S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user); syncCookie();
   S.scroll = {}; go("affari", true); loadCars(true); window.scrollTo(0, 0);
 }
 async function redeemCode(code){
@@ -510,7 +519,7 @@ async function redeemCode(code){
 }
 function logout(silent){
   if (!silent && S.token) { fetch("/api/auth/esci", {method: "POST", headers: {Authorization: "Bearer " + S.token}}).catch(() => {}); }
-  S.token = null; S.user = null; S.cars = null; S.detail = {}; store.del("token"); store.del("user");
+  S.token = null; S.user = null; S.cars = null; S.detail = {}; store.del("token"); store.del("user"); syncCookie();
   try { if (window.caches) caches.delete("scovo-dati"); } catch (e) {}
   L.err = typeof silent === "string" ? silent : silent ? "Accesso scaduto: entra di nuovo." : "";
   go(silent ? "entra" : "", true);
@@ -919,7 +928,7 @@ function vcOrb(){
 
 function tabBar(){
   const cur = S.route === "auto" ? "affari" : S.route;
-  return `<nav class="tabs" aria-label="Sezioni">${TABS.map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
+  return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
 }
 function render(opts){
   opts = opts || {};
@@ -1173,4 +1182,7 @@ api("/api/auth/metodi").then(m => {
   r.addEventListener("input", upd); upd();
 })();
 applyRoute();
-if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => {});
+syncCookie();
+if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role, permessi: u.permessi}); syncCookie();
+  if (!perm("auto") && perm("incentivi")) { location.href = "/incentivi/"; return; }
+  render({keep:true}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => {});

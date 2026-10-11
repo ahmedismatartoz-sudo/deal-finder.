@@ -32,6 +32,7 @@ async function api(path, opts = {}) {
   });
   let j = null;
   try { j = await r.json(); } catch (e) { /* risposta non JSON */ }
+  if (r.status === 401) { location.href = "/#/entra"; throw new Error("Accesso richiesto"); }
   if (!r.ok) throw new Error((j && j.errore) || "Errore di rete, riprova");
   return j;
 }

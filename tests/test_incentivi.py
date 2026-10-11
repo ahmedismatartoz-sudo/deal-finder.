@@ -205,3 +205,29 @@ Impresa artigiana: no"""
     assert p["ateco"][0]["codice"] == "45.11" and p["ateco2025"][0]["codice"] == "47.81.10"
     assert p["data_costituzione"] == "2015-04-01" and p["stato"] == "attiva" and p["addetti"] == 2
     assert profilo.domande_mancanti(p) == [] and p["extra"]["artigiana"] is False
+
+
+def test_accesso_riservato():
+    """Dentro il sito: senza accesso si va al login, senza permesso pagina 'non inclusa'; i link del commercialista restano liberi."""
+    from starlette.testclient import TestClient
+    import incentivi.web as w
+    stato = {"r": (False, 401, "Accesso richiesto")}
+    visti = []
+    w.controllo_accesso = lambda req: (visti.append(req.url.path), stato["r"])[1]
+    try:
+        c = TestClient(w.app)
+        r = c.get("/", follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/#/entra"
+        r = c.post("/api/impresa", json={})
+        assert r.status_code == 401 and r.json()["errore"] == "Accesso richiesto"
+        assert c.get("/static/app.css").status_code == 200
+        n = len(visti)
+        assert c.get("/static/app.js").status_code == 200 and len(visti) == n   # non controllati
+        assert all(not p.startswith(("/c/", "/static/")) for p in visti)
+        stato["r"] = (False, 403, "Il tuo account non comprende gli Incentivi")
+        r = c.get("/", follow_redirects=False)
+        assert r.status_code == 403 and "non comprende" in r.text
+        stato["r"] = (True, 200, "")
+        assert c.get("/", follow_redirects=False).status_code == 200
+    finally:
+        w.controllo_accesso = None

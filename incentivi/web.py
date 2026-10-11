@@ -627,4 +627,42 @@ routes = [
     Mount("/static", StaticFiles(directory=STATIC), name="inc_static"),
 ]
 
+# ------------------------------------------------------------------ accesso
+# Dentro il sito Scovo il modulo è riservato: serve un account con il permesso "incentivi"
+# (gli amministratori hanno tutto). Il sito imposta qui la funzione di controllo quando monta il modulo;
+# da solo (prove) il modulo resta aperto. I link firmati per il commercialista restano senza accesso.
+controllo_accesso = None   # callable(request) -> (ok, codice, messaggio)
+LIBERI = ("/c/", "/static/")
+
+
+class Accesso:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or controllo_accesso is None:
+            return await self.app(scope, receive, send)
+        request = Request(scope)
+        path = scope.get("path", "")
+        rel = path[len(scope.get("root_path", "")):] if path.startswith(scope.get("root_path", "")) else path
+        if rel.startswith(LIBERI):
+            return await self.app(scope, receive, send)
+        ok, codice, msg = await run_in_threadpool(controllo_accesso, request)
+        if ok:
+            return await self.app(scope, receive, send)
+        if rel.startswith("/api/"):
+            resp = JSONResponse({"errore": msg}, status_code=codice)
+        elif codice == 401:
+            resp = Response(status_code=303, headers={"location": "/#/entra", "cache-control": "no-store"})
+        else:
+            resp = HTMLResponse(
+                "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                "<title>Incentivi</title><body style='font-family:system-ui;max-width:32rem;margin:15vh auto;padding:0 16px'>"
+                f"<h1 style='font-size:1.4rem'>Sezione non inclusa</h1><p>{msg}.</p>"
+                "<p><a href='/'>← Torna alle auto</a></p></body>", status_code=403,
+                headers={"cache-control": "no-store"})
+        await resp(scope, receive, send)
+
+
 app = Starlette(routes=routes)
+app.add_middleware(Accesso)

@@ -52,16 +52,36 @@ def current_user(request: Request, admin: bool = False) -> dict:
     return data
 
 
+PERMESSI = ("auto", "incentivi")
+
+
+def permessi_di(conn, user: dict) -> list[str]:
+    if user.get("role") == "admin":
+        return list(PERMESSI)
+    row = conn.execute("SELECT permessi FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+    return list((row or {}).get("permessi") or [])
+
+
+def richiede(request: Request, permesso: str) -> dict:
+    """Accesso con credenziali e con il permesso giusto (gli amministratori hanno tutto)."""
+    user = current_user(request)
+    if user.get("role") != "admin":
+        with connect() as conn:
+            if permesso not in permessi_di(conn, user):
+                err(403, "Il tuo account non ha accesso a questa sezione")
+    return user
+
+
 def site_open() -> bool:
     """SITO_APERTO=1: chiunque vede l'elenco e le schede (anteprima). Contatti, Vendi e Ricambi restano solo con accesso."""
     return os.environ.get("SITO_APERTO") == "1"
 
 
-def viewer(request: Request) -> dict:
+def viewer(request: Request, permesso: str | None = None) -> dict:
     """Utente con accesso, oppure ospite se il sito è aperto e non c'è un accesso."""
     if not request.headers.get("authorization") and site_open():
         return {"id": 0, "role": "ospite", "sid": None}
-    return current_user(request)
+    return richiede(request, permesso) if permesso else current_user(request)
 
 
 def start_session(request: Request, dealer: dict, method: str) -> dict:
@@ -123,7 +143,9 @@ def me(request: Request):
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
     if not u:
         err(401, "Account non trovato")
-    return jsonify({**u, "costs": cards.costs_dict(cards.dealer_costs(c))})
+    with connect() as conn:
+        perm = permessi_di(conn, {"id": user["id"], "role": u.get("role")})
+    return jsonify({**u, "permessi": perm, "costs": cards.costs_dict(cards.dealer_costs(c))})
 
 
 async def update_me(request: Request):
@@ -397,7 +419,7 @@ def admin_dealers(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
         rows = conn.execute(
-            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at,
+            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at, d.permessi,
                       (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id) AS opens,
                       (SELECT count(*) FROM dealer_feedback f WHERE f.dealer_id=d.id AND f.status='comprata') AS bought,
                       (SELECT count(*) FROM dealer_sessions s WHERE s.dealer_id=d.id AND s.revoked_at IS NULL) AS sessions,
@@ -421,10 +443,11 @@ async def admin_create_dealer(request: Request):
         if conn.execute("SELECT 1 FROM dealers WHERE email=%s", (email,)).fetchone():
             err(409, "Email già registrata")
         row = conn.execute(
-            "INSERT INTO dealers (name, email, company, phone, password_hash, role, provinces) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+            "INSERT INTO dealers (name, email, company, phone, password_hash, role, provinces, permessi) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
             (str(data.get("name") or email)[:120], email, data.get("company"), data.get("phone"),
-             hash_password(pwd), role, data.get("provinces") or ["MI", "MB", "BG", "BS"])).fetchone()
+             hash_password(pwd), role, data.get("provinces") or ["MI", "MB", "BG", "BS"],
+             [p for p in (data.get("permessi") or ["auto"]) if p in PERMESSI])).fetchone()
         conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
         conn.commit()
     return jsonify({"id": row["id"]}, 201)
@@ -435,6 +458,9 @@ async def admin_update_dealer(request: Request):
     did = int(request.path_params["id"])
     data = await body(request)
     with connect() as conn:
+        if isinstance(data.get("permessi"), list):
+            conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
+                         ([p for p in data["permessi"] if p in PERMESSI], did))
         if "active" in data:
             conn.execute("UPDATE dealers SET active=%s WHERE id=%s", (bool(data["active"]), did))
             if not data["active"]:
@@ -697,7 +723,7 @@ def _vetrina() -> dict:
 
 
 def affari(request: Request):
-    user = viewer(request)
+    user = viewer(request, "auto")
     with connect() as conn:
         dealer = conn.execute("SELECT provinces FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         prov = list((dealer or {}).get("provinces") or [])
@@ -720,7 +746,7 @@ def affari(request: Request):
 
 
 def affare(request: Request):
-    user = viewer(request)
+    user = viewer(request, "auto")
     lid = int(request.path_params["id"])
     with connect() as conn:
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
@@ -759,7 +785,7 @@ def contatto(request: Request):
             err(429, "Hai aperto molti contatti: riprova tra un po' oppure crea un account")
         _contatti_ospiti[ip].append(now)
     else:
-        user = current_user(request)
+        user = richiede(request, "auto")
     lid = int(request.path_params["id"])
     with connect() as conn:
         uid = _ospiti_id(conn) if ospite else user["id"]
@@ -970,8 +996,30 @@ class SecurityMiddleware:
 
 def _incentivi_app():
     """Modulo Incentivi (prototipo), applicazione a sé montata su /incentivi."""
-    from incentivi.web import app as inc
-    return inc
+    import incentivi.web as incw
+    incw.controllo_accesso = _accesso_incentivi
+    return incw.app
+
+
+COOKIE_TOKEN = "scovo_t"
+
+
+def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
+    """Il browser apre /incentivi come pagina normale: il token arriva dal cookie che il sito imposta all'accesso."""
+    auth = request.headers.get("authorization", "")
+    tok = auth[7:] if auth.lower().startswith("bearer ") else request.cookies.get(COOKIE_TOKEN)
+    data = read_token(tok)
+    if not data:
+        return False, 401, "Accesso richiesto"
+    ok, why = sessions.check(data.get("sid"), data["id"])
+    if not ok:
+        return False, 401, sessions.REVOKED_MSG.get(why or "", "Accesso scaduto: entra di nuovo")
+    if data.get("role") == "admin":
+        return True, 200, ""
+    with connect() as conn:
+        if "incentivi" in permessi_di(conn, data):
+            return True, 200, ""
+    return False, 403, "Il tuo account non comprende gli Incentivi. Chiedi all'amministratore di attivarli"
 
 
 routes = [

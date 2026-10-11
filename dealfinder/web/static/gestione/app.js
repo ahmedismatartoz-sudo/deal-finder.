@@ -371,6 +371,8 @@ async function viewAdmin() {
           : `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email, id: v}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
       ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
+        ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"]].map(([k, l]) =>
+          `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
         ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}
       <h2>Nuovo commerciante</h2>
       <form class="form" id="new-dealer">
@@ -380,11 +382,20 @@ async function viewAdmin() {
           <div class="field"><label for="nd-email">Email</label><input id="nd-email" type="email" required></div>
           <div class="field"><label for="nd-pwd">Password iniziale</label><input id="nd-pwd" minlength="8" required></div>
         </div>
+        <fieldset class="field" style="border:0;padding:0"><legend>Accesso a</legend>
+          <label style="margin-right:1rem"><input type="checkbox" id="nd-auto" checked> Auto (affari e vendi)</label>
+          <label><input type="checkbox" id="nd-inc"> Incentivi</label></fieldset>
         <button class="btn primary" type="submit">Crea account</button>
       </form>`;
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();
+    });
+    box.querySelectorAll("[data-perm]").forEach((c) => c.onchange = async () => {
+      const id = c.dataset.perm;
+      const permessi = [...box.querySelectorAll(`[data-perm="${id}"]`)].filter((x) => x.checked).map((x) => x.dataset.k);
+      try { await api("/api/admin/dealers/" + id, { method: "PATCH", body: { permessi } }); toast("Accesso aggiornato: vale dal prossimo caricamento della pagina"); }
+      catch (err) { toast(err.message); c.checked = !c.checked; }
     });
     box.querySelectorAll("[data-approve]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/richieste/" + b.dataset.approve, { method: "POST" }); toast("Account attivato"); viewAdmin();
@@ -399,7 +410,8 @@ async function viewAdmin() {
       e.preventDefault();
       const g = (id) => document.getElementById(id).value;
       try {
-        await api("/api/admin/dealers", { method: "POST", body: { name: g("nd-name"), company: g("nd-company"), email: g("nd-email"), password: g("nd-pwd") } });
+        await api("/api/admin/dealers", { method: "POST", body: { name: g("nd-name"), company: g("nd-company"), email: g("nd-email"), password: g("nd-pwd"),
+          permessi: [["nd-auto", "auto"], ["nd-inc", "incentivi"]].filter(([i]) => document.getElementById(i).checked).map(([, k]) => k) } });
         if (fromRequest) await api("/api/admin/richieste/" + fromRequest, { method: "POST" });
         toast("Account creato"); viewAdmin();
       } catch (err) { toast(err.message); }
