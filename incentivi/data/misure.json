@@ -1,5 +1,5 @@
 {
- "versione": "6a9cd10d37",
+ "versione": "35481fa014",
  "aggiornato": "2026-10-11",
  "misure": [
   {
@@ -17,12 +17,12 @@
    "calcolo": {
     "modo": "importo_mensile_per_assunto",
     "percentuale": 100,
-    "massimale": 12000,
+    "massimale": 6000,
     "spesa_minima": null,
     "spesa_massima": null,
     "importo_unitario": 500,
-    "durata_mesi": 24,
-    "formula_testo": "Esonero del 100% dei contributi previdenziali a carico del datore (esclusi premi INAIL), fino a 500 euro al mese per lavoratore per max 24 mesi (650 euro/mese solo per sedi in Abruzzo, Molise, Campania, Basilicata, Sicilia, Puglia, Calabria, Sardegna, Marche, Umbria). In Lombardia: max 500 euro/mese, cioè max 12000 euro in 24 mesi."
+    "durata_mesi": 12,
+    "formula_testo": "Esonero del 100% dei contributi a carico del datore (esclusi premi INAIL) fino a 500 € al mese per 12 mesi; 24 mesi (fino a 12.000 €) solo per i lavoratori molto svantaggiati."
    },
    "territorio": {
     "livello": "nazionale",
@@ -68,7 +68,7 @@
    ],
    "piattaforma": "Sito INPS – Portale delle Agevolazioni (ex DiResCo), sezione 'Bonus giovani 2026'; fruizione con UniEmens",
    "date": {
-    "apertura": null,
+    "apertura": "2026-06-11",
     "chiusura": "2026-12-31",
     "chiusura_effettiva": null
    },
@@ -83,7 +83,8 @@
     "Istruzioni: circolare INPS n. 55 del 14-05-2026 (riportata da pmi.it, non letta su inps.it). Non ho trovato il numero del messaggio INPS che ha aperto le domande del Bonus Giovani (per il Bonus Donne è il msg 1970 dell'11-06-2026); data di apertura quindi null.",
     "pmi.it riporta anche una variante da 12 mesi per giovani 'svantaggiati' (senza impiego da 6 mesi): non trovata nel testo di legge riassunto, da verificare sulla circolare 55/2026.",
     "Dotazione: 497500000 è la somma dei limiti di spesa 2026-2028 (109,7 + 252,4 + 135,4 milioni). Le domande sono accolte fino a esaurimento risorse: non ho trovato comunicazioni di esaurimento al 2026-10-11.",
-    "Non confuso con la scadenza del 30-09-2026 (msg INPS 2451/2026), che riguarda le domande per le assunzioni 2024-2025 del vecchio Bonus Giovani DL 60/2024."
+    "Non confuso con la scadenza del 30-09-2026 (msg INPS 2451/2026), che riguarda le domande per le assunzioni 2024-2025 del vecchio Bonus Giovani DL 60/2024.",
+    "Revisione indipendente: apertura domande 11/6/2026 (messaggio INPS 1966/2026); durata 12 mesi nel caso generale, 24 solo per i molto svantaggiati."
    ],
    "fonte_ufficiale": true,
    "regole": [
@@ -2078,7 +2079,8 @@
     "Data di chiusura riferita alla Linea 6 microimprese; le altre linee hanno scadenze diverse (vedi requisiti_extra)",
     "Destinatari: non verificato se titolari/soci artigiani siano ammessi nelle Linee 1 e 6 (rinvio al Regolamento generale); per la Linea 8 il testo cita gli imprenditori",
     "Scadenza finale Linea 8 non leggibile nel testo estratto",
-    "Pagina ufficiale non dichiara esplicitamente lo stato; scadenze ricavate dal testo integrale e confermate da forme.online (fonte non ufficiale)"
+    "Pagina ufficiale non dichiara esplicitamente lo stato; scadenze ricavate dal testo integrale e confermate da forme.online (fonte non ufficiale)",
+    "Revisione indipendente: Invito pubblicato il 3/6/2026 ma la scadenza del 4/11/2026 (Linea 6) non è stata ritrovata sul testo integrale."
    ],
    "fonte_ufficiale": true,
    "regole": [

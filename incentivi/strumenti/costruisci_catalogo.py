@@ -28,9 +28,17 @@ CORREZIONI: dict[str, dict] = {
         "prossima_edizione_prevista": "PREVISIONE: nuova edizione probabile tra maggio e luglio 2027 (2024: 22/5, 2025: 6/5, 2026: 28/7); si chiude in minuti o ore, quindi la domanda va preparata prima.",
         "_dubbio_extra": "Chiusura del 29/7/2026 ore 10:09 da pagina Unioncamere Lombardia (bandi-e-incentivi-alle-imprese/dettaglio-bando/bando-voucher-doppia-transizione-lombardia-2026); le pagine della CCIAA MiMBLo risultavano ancora 'aperto' ad agosto."},
     "iperammortamento-2026": {"serve": ["investimento", "beni_40"]},
+    # revisione indipendente 11/10/2026: domande aperte dall'11/6 (messaggio INPS 1966/2026); 24 mesi solo per
+    # i "molto svantaggiati", per gli altri 12 mesi → caso generale 500 € × 12 = 6.000 €
+    "dl62-bonus-giovani-2026": {
+        "date": {"apertura": "2026-06-11", "chiusura": "2026-12-31", "chiusura_effettiva": None},
+        "_calcolo": {"durata_mesi": 12, "massimale": 6000,
+                     "formula_testo": "Esonero del 100% dei contributi a carico del datore (esclusi premi INAIL) fino a 500 € al mese per 12 mesi; 24 mesi (fino a 12.000 €) solo per i lavoratori molto svantaggiati."},
+        "_dubbio_extra": "Revisione indipendente: apertura domande 11/6/2026 (messaggio INPS 1966/2026); durata 12 mesi nel caso generale, 24 solo per i molto svantaggiati."},
+    "fondartigianato-invito-1-2026": {"serve": ["dipendenti", "formazione", "artigiana", "fondo_fondartigianato"],
+        "_dubbio_extra": "Revisione indipendente: Invito pubblicato il 3/6/2026 ma la scadenza del 4/11/2026 (Linea 6) non è stata ritrovata sul testo integrale."},
     "dl62-stabilizzazione-under35-2026": {"serve": ["dipendenti", "stabilizzazione"]},
     "conto-termico-3-imprese": {"serve": ["investimento", "officina", "intervento_energetico"]},
-    "fondartigianato-invito-1-2026": {"serve": ["dipendenti", "formazione", "artigiana", "fondo_fondartigianato"]},
     "forte-avviso-1-26-cnfc": {"serve": ["dipendenti", "formazione", "fondo_forte"]},
     "forte-avviso-3-25-voucher": {"serve": ["dipendenti", "formazione", "fondo_forte"]},
     "rl-nuova-impresa-2026": {"serve": ["nuova_impresa", "investimento"]},
@@ -159,6 +167,8 @@ def build() -> dict:
         for m in json.loads((DATA / "ricerca" / f"{f}.json").read_text()):
             corr = dict(CORREZIONI.get(m["id"], {}))
             extra = corr.pop("_dubbio_extra", None)
+            if corr.get("_calcolo"):
+                m["calcolo"] = {**(m.get("calcolo") or {}), **corr.pop("_calcolo")}
             m.update(corr)
             if extra:
                 m["dubbi"] = list(m.get("dubbi") or []) + [extra]

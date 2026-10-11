@@ -1,0 +1,160 @@
+[
+  {
+    "id": "rl-formazione-continua-4-ed",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Lo sportello è aperto dal 13/07/2026 alle 12:00 fino al 31/03/2027 alle 17:00, salvo esaurimento dei 10 milioni. Il contributo pubblico è del 90% fino a 9 addetti e per gli autonomi, con tetto di 2.000 euro per destinatario e 50.000 euro per impresa all'anno. Sono ammessi titolari e ditte individuali e non risultano esclusioni settoriali. I tetti per corso per livello EQF e la regola su domanda e avvio del corso non sono stati verificati: sono nell'Allegato A del DDUO 8809/26.",
+    "fonti": [
+      "https://www.bandi.regione.lombardia.it/servizi/servizio/bandi/dettaglio/istruzione-formazione-lavoro/formazione-professionale/formazione-continua-quarta-edizione-voucher-aziendali-catalogo-pr-fse-2021-2027-RLW12026053243",
+      "https://www.assolombarda.it/servizi/formazione/informazioni/regione-lombardia-avviso-formazione-continua-quarta-edizione"
+    ]
+  },
+  {
+    "id": "dl62-bonus-giovani-2026",
+    "esito": "da_correggere",
+    "correzioni": {"date.apertura": "2026-06-11"},
+    "motivo": "Il messaggio INPS 1966 dell'11/06/2026 apre le domande da quella data, per assunzioni a tempo indeterminato dall'1/1 al 31/12/2026, fino a 500 euro al mese (650 nella ZES). Secondo la circolare 55/2026 i 24 mesi spettano solo ai lavoratori 'molto svantaggiati' (senza impiego da almeno 24 mesi); agli altri svantaggiati spettano 12 mesi, quindi massimo 6.000 euro. Il catalogo indica 24 mesi e 12.000 euro come caso generale.",
+    "fonti": [
+      "https://www.informazionefiscale.it/IMG/pdf/16805_messaggio-numero-1966-del-11-06-2026.pdf",
+      "https://www.ecnews.it/lavoro/imposte-contributi-e-premi/agevolazioni/bonus-giovani-le-indicazioni-inps/",
+      "https://www.finanzaefisco.com/bonus-giovani-donne-e-zes/"
+    ]
+  },
+  {
+    "id": "dl62-bonus-donne-2026",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Il messaggio INPS 1970 dell'11/06/2026 apre le domande. Vale per assunzioni a tempo indeterminato dall'1/1 al 31/12/2026 di donne svantaggiate o molto svantaggiate, con esonero del 100% fino a 650 euro al mese (800 nella ZES) per al massimo 24 mesi. Sono esclusi lavoro domestico e apprendistato; nessuna esclusione settoriale.",
+    "fonti": [
+      "https://www.studiocerbone.com/?p=503509",
+      "https://www.finanzaefisco.com/bonus-giovani-donne-e-zes/"
+    ]
+  },
+  {
+    "id": "dl62-stabilizzazione-under35-2026",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "La circolare INPS 72 del 3/07/2026 e il messaggio 2518 del 29/07/2026 aprono le domande. Vale per trasformazioni da tempo determinato a indeterminato dall'1/08 al 31/12/2026, con esonero del 100% fino a 500 euro al mese per al massimo 24 mesi. Servono un incremento occupazionale netto e un lavoratore under 35 mai assunto a tempo indeterminato; non è cumulabile con l'esonero under 30.",
+    "fonti": [
+      "https://www.dottrinalavoro.it/notizie-c/inps-al-via-le-domande-per-lincentivo-alla-stabilizzazione-dei-giovani-under-35",
+      "https://www.finanzaefisco.com/incentivo-per-la-stabilizzazione-degli-under-35/"
+    ]
+  },
+  {
+    "id": "esonero-under30-strutturale",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "La misura strutturale della L. 205/2017 è ancora in vigore nel 2026: esonero del 50% dei contributi del datore, esclusi i premi INAIL, entro 3.000 euro l'anno per 36 mesi, per under 30 assunti a tempo indeterminato. Fonte non ufficiale: manca la verifica su inps.it.",
+    "fonti": [
+      "https://www.finanza.com/fisco/bonus-assunzioni-giovani-2026-eta-importi-e-durata-degli-sgravi-che-restano-davvero-a-regime"
+    ]
+  },
+  {
+    "id": "maxi-deduzione-nuovi-assunti",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Deduzione del 120% (130% per le categorie svantaggiate) sull'incremento dei dipendenti a tempo indeterminato. La L. 207/2024, commi 399-400, la proroga ai periodi d'imposta 2025-2027. Serve un'attività in corso da almeno 365 giorni e un aumento del numero di dipendenti stabili rispetto all'anno precedente.",
+    "fonti": [
+      "https://www.finanzaefisco.com/deduzione-nuove-assunzioni/",
+      "https://www.dirittobancario.it/wp-content/uploads/2025/01/Circolare-Agenzia-delle-Entrate-20-gennaio-2025-n.-1.pdf"
+    ]
+  },
+  {
+    "id": "inail-ot23-2027",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "La domanda OT23 2027 scade l'1/03/2027, perché il 28/02 cade di domenica. La riduzione è del 28% fino a 10 lavoratori-anno, poi 18%, 10% e 5%, e dell'8% fisso nei primi due anni della PAT. Richiede un intervento di tipo A o due di tipo B realizzati nel 2026. Il titolare commerciante senza dipendenti non ha una posizione INAIL (PAT), quindi non ne beneficia.",
+    "fonti": [
+      "https://www.informazionefiscale.it/Modello-OT23-2027-inail-domanda-riduzione-premio-assicurazione-novita"
+    ]
+  },
+  {
+    "id": "fondo-garanzia-pmi",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Il DL 200/2025 proroga le regole al 31/12/2026: garanzia (non contributo) del 50% sui prestiti per liquidità e dell'80% su quelli per investimenti e sulle start-up non valutabili. Il massimo garantito è di 5 milioni, con la fascia 2,5-5 milioni in attesa del via libera UE; gratuita per le microimprese.",
+    "fonti": [
+      "https://www.assolombarda.it/servizi/credito-e-mercati-finanziari/informazioni/decreto-liquidita-guida-operativa-per-finanziamenti-oltre-a-25-000-euro-garantiti-dal-fondo-di-garanzia"
+    ]
+  },
+  {
+    "id": "nuova-sabatini",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Il tasso convenzionale è del 2,75% (ordinari) e del 3,575% (4.0 e green), su finanziamenti da 20.000 euro a 4 milioni per al massimo 5 anni. È escluso solo il settore finanziario e assicurativo. Il bene deve essere acquistato dopo la domanda. Dal 2026 serve la polizza contro le catastrofi naturali per ricevere il contributo. Le auto destinate alla rivendita non sono beni strumentali.",
+    "fonti": [
+      "https://www.me.camcom.it/sites/default/files/contenuto_redazione/pagina_base/allegati/mimit_-_misura_di_agevolazione_nuova_sabatini_2026.pdf",
+      "https://www.partitaiva.it/nuova-sabatini-2026-domande/",
+      "https://www.raiffeisen.it/raiffeisenkasse/Landesbank/user_upload/Scheda_prodotto_Nuova_Sabatini.pdf",
+      "https://www.pmi.it/economia/finanziamenti/481712/nuova-sabatini-ancora-fondi-residui-come-funziona-il-rifinanziamento-2026.html"
+    ]
+  },
+  {
+    "id": "iperammortamento-2026",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Previsto dalla L. 199/2025, commi 427-436, per investimenti dall'1/1/2026 al 30/09/2028. La piattaforma GSE è aperta dalle 12:00 del 12/06/2026 e la comunicazione di completamento va inviata entro il 15/11/2028. Le maggiorazioni sono del 180% fino a 2,5 milioni, del 100% fino a 10 e del 50% fino a 20. Vale solo per beni 4.0 (allegati IV e V) e serve un acconto del 20% alla conferma.",
+    "fonti": [
+      "https://www.finanzaefisco.com/apertura_piattaforma_iperammortamento_2026/?print=pdf",
+      "https://www.assolombarda.it/servizi/fisco/guida-agevolazioni-fiscali/sezioni/transizione-5.0/iperammortamento"
+    ]
+  },
+  {
+    "id": "conto-termico-3-imprese",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Il Portaltermico 3.0 è attivo dalle 12:00 del 2/02/2026. Le imprese devono inviare una comunicazione preliminare prima di avviare i lavori. Gli incentivi arrivano fino al 25% per l'efficienza e al 45% per le rinnovabili, con maggiorazioni per le PMI. L'erogazione è in rata unica fino a 15.000 euro, altrimenti in 2-5 rate annuali. Le percentuali non sono state verificate direttamente sulle Regole applicative del GSE.",
+    "fonti": [
+      "https://www.qualenergia.it/articoli/conto-termico-30-operativo-nuovo-portale-richieste/",
+      "https://www.infobuildenergia.it/wp-content/uploads/2026/04/IBE_Conto-Termico-3.0.pdf"
+    ]
+  },
+  {
+    "id": "forte-avviso-3-25-voucher",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Il catalogo è aperto alle aziende dal 9/06/2026 per 12 mesi, quindi fino a giugno 2027 circa. Il tetto è di 5.000 euro (1-25 dipendenti) o 6.000 euro (26-50). Non serve cofinanziamento in de minimis e non ci sono esclusioni settoriali. I destinatari sono solo i dipendenti di imprese aderenti a For.Te., quindi il titolare senza dipendenti è escluso.",
+    "fonti": [
+      "https://www.fondoforte.it/wp-content/uploads/2025/12/Avviso-3_25-Voucher_formativi_p.pdf"
+    ]
+  },
+  {
+    "id": "forte-avviso-1-26-cnfc",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "La piattaforma è disponibile dal 20/10/2026 (oggi la misura è quindi in arrivo) e il catalogo dura 36 mesi. Le dotazioni sono di 160,48 euro per ora più 193,45 euro per lavoratore, con 50 ore per le aziende da 1 a 10 dipendenti. Vale solo per imprese aderenti con dipendenti e senza conto individuale.",
+    "fonti": [
+      "https://www.fondoforte.it/wp-content/uploads/2026/05/Avviso1_26_CNFC_p.pdf"
+    ]
+  },
+  {
+    "id": "fondartigianato-invito-1-2026",
+    "esito": "non_verificabile",
+    "correzioni": {},
+    "motivo": "L'Invito esiste: pubblicato il 3/06/2026 (GU 5a serie n. 62), con 11 milioni divisi tra le linee 1, 2, 3, 6, 8 e 10. Non ho potuto verificare su una fonte la scadenza del 4/11/2026, né il plafond della Linea 8 e i parametri orari, che sono nel testo integrale.",
+    "fonti": [
+      "https://www.fondartigianato.it/inviti/invito-1-2026",
+      "https://www.gazzettaufficiale.it/eli/id/2026/06/03/TX26BFM266/S5"
+    ]
+  },
+  {
+    "id": "rl-nuova-impresa-2026",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "Le domande vanno dal 30/04/2026 alle 10:00 al 29/01/2027 alle 12:00, a sportello. Il contributo a fondo perduto è del 50%, fino a 10.000 euro, con spesa minima di 3.000 euro. Sono ammesse le spese sostenute prima della domanda, se successive all'apertura della partita IVA. Gli ATECO 45 non sono esclusi, ma i veicoli non sono spese ammissibili e l'impresa deve essere iscritta dall'1/06/2025.",
+    "fonti": [
+      "https://www.unioncamerelombardia.it/fileadmin/bandi/2026/NUOVA_IMPRESA_2026/Bando_Nuova_impresa_2026_def.pdf",
+      "https://www.fiscozen.it/guide/guida-bando-nuova-impresa-2026-regione-lombardia/"
+    ]
+  },
+  {
+    "id": "esonero-madri-tre-figli-2026",
+    "esito": "confermato",
+    "correzioni": {},
+    "motivo": "La circolare INPS 82 del 29/07/2026 (L. 199/2025, commi 210-213) prevede un esonero del 100% entro 8.000 euro l'anno. La durata è di 12 mesi per il tempo determinato, 18 per la trasformazione e 24 per l'assunzione a tempo indeterminato. Vale per assunzioni dall'1/1/2026 di madri di almeno 3 figli minorenni senza impiego da 6 mesi, con domanda ELM3 nel Portale Agevolazioni.",
+    "fonti": [
+      "https://www.finanzaefisco.com/istruzioni-inps-per-stabilizzare-giovani-e-assumere-madri-con-tre-figli/?print=pdf",
+      "https://www.fisco7.it/2026/08/esonero-per-lassunzione-di-lavoratrici-madri-le-istruzioni-operative-inps/"
+    ]
+  }
+]

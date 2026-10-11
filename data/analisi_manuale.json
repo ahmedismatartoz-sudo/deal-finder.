@@ -23878,5 +23878,1114 @@
   "nota": "SsangYong Tivoli 1.6d 2017 venduta 'per ricambi': motivo non dichiarato (probabile guasto meccanico o auto da radiare). Foto: carrozzeria bianca integra, paraurti anteriore segnato. Annuncio per ricambi: valore di mercato non applicabile.",
   "controlli": [],
   "aggiorna": true
+ },
+ {
+  "id": 60188,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 12522,
+  "nota": "Furgone pulito e in ordine nelle foto, ma il prezzo è circa il 63% sotto il mercato e manca la descrizione: possibile truffa o errore nei dati.",
+  "controlli": [
+   "Chiamare e verificare che l'auto esista (libretto, targa, visione dal vivo)",
+   "Chiedere perché il prezzo è così basso"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 63785,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 10912,
+  "nota": "Nelle foto è un furgone Transit Custom con scaffalature, non un Tourneo Custom passeggeri: il mercato usato è sbagliato e il margine reale non c'è.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50254,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5363,
+  "nota": "Qubo in buono stato nelle foto, ma il prezzo è circa il 76% sotto il mercato senza spiegazione.",
+  "controlli": [
+   "Verificare il motivo del prezzo basso",
+   "Controllare km e tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51861,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5239,
+  "nota": "Il titolo dice MOTORE ROTTO e la foto del vano motore lo conferma (motore smontato): guasto serio non quantificabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 54952,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6930,
+  "nota": "Anno sbagliato: l'annuncio dice 2008 ma è una Peugeot 2008 del 2016 circa (targa FC), quindi il mercato calcolato non è affidabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 53857,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5260,
+  "nota": "Tiguan bianca pulita, nessun danno visibile nelle foto.",
+  "controlli": [
+   "Controllare cambio automatico e km (260.000)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51983,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4749,
+  "nota": "Panda in buono stato; una foto mostra il passaruota anteriore, nessun danno evidente.",
+  "controlli": [
+   "Verificare passaruota e gomma anteriore",
+   "Km alti (250.000): controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 49944,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3856,
+  "nota": "Trafic da lavoro con 390.000 km a 700 €: nessun danno visibile ma prezzo bassissimo, probabili problemi meccanici non dichiarati.",
+  "controlli": [
+   "Chiedere perché costa così poco",
+   "Provare motore e frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50130,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4114,
+  "nota": "MiTo senza danni visibili, ma il titolo dice 'x commercianti leggere descrizione' e la descrizione manca: probabilmente ha un difetto.",
+  "controlli": [
+   "Chiedere al venditore quale difetto ha",
+   "Provare motore e cambio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51584,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4373,
+  "nota": "Transit cassonato con gru venduto a 3.000 €: prezzo incompatibile con un autocarro con gru, sospetta truffa o annuncio non reale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 59821,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 7015,
+  "nota": "Anno sbagliato: indicato 2026 ma dalle foto è una Clio Sporter di circa 2013-2016, il mercato calcolato non vale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 58201,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6608,
+  "nota": "Foto da studio fotografico di concessionario con prezzo a metà mercato: venditore professionale o foto prese da altro annuncio.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50848,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "sedile guida",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "cielo abitacolo",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "rivestimento sedile guida",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cielo abitacolo",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 300,
+  "guadagno_finale": 3789,
+  "nota": "Scudo da lavoro con sedile strappato e cielo staccato, carrozzeria con pellicola pubblicitaria; danni piccoli e di poco costo.",
+  "controlli": [
+   "Togliere la pellicola pubblicitaria",
+   "Km alti (300.000): controllare motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50072,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3800,
+  "nota": "Dati sbagliati: indicata 2017 ma è una Picanto prima serie con targa CT (2004 circa), quindi prima del 2007.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51125,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti posteriore",
+    "side": "sinistro",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 150,
+    "high": 350
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 350,
+  "guadagno_finale": 3820,
+  "nota": "Golf Variant con paraurti segnati (posteriore sinistro rovinato), nessun danno strutturale.",
+  "controlli": [
+   "Km molto alti (345.000)",
+   "Controllare paraurti e attacchi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 55043,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4749,
+  "nota": "Berlingo in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Verificare spia rossa accesa sul cruscotto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 66912,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 8766,
+  "nota": "Rifter in ottimo stato, ma è la versione MIX (autocarro) e il mercato di 27.500 € sembra alto: con un mercato reale di 19-21.000 € il margine è al limite.",
+  "controlli": [
+   "Verificare prezzo di mercato reale versione MIX autocarro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 69828,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 9128,
+  "nota": "Auto in buono stato ma con IVA esposta: venditore con partita IVA (azienda/commerciante) e prezzo probabilmente più IVA.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 60123,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6586,
+  "nota": "Nelle foto è un Transit Connect furgone, non un Tourneo Connect: il mercato è sovrastimato e il margine reale non basta.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 52818,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4128,
+  "nota": "Compass bianca senza danni visibili nelle foto (foto poche e da screenshot).",
+  "controlli": [
+   "Chiedere altre foto del lato destro e del retro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53133,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4115,
+  "nota": "500 in buone condizioni, nessun danno visibile.",
+  "controlli": [
+   "Controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51089,
+  "esito": "opportunita",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango anteriore",
+    "side": "destro",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "fari anteriori",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano usato",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parafango anteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 230,
+  "ricambi_max": 550,
+  "guadagno_finale": 3402,
+  "nota": "Mini con cofano ammaccato e parafango segnato, fari opachi; lavori di carrozzeria contenuti.",
+  "controlli": [
+   "Verificare se le ammaccature sono da grandine",
+   "Controllare frontale e radiatore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 64459,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 7716,
+  "nota": "Multivan nero in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare cambio DSG e km"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52838,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4118,
+  "nota": "BMW 520 bianca in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Km alti (290.000): controllare cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 49933,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3407,
+  "nota": "Captiva in ordine nelle foto, ma il prezzo (1.300 €) è circa il 75% sotto mercato: possibile guasto non dichiarato.",
+  "controlli": [
+   "Chiedere perché costa così poco",
+   "Provare motore e trasmissione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51649,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3933,
+  "nota": "A4 Avant bianca in ottimo stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare km e tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50885,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3601,
+  "nota": "320d Touring in buono stato, interni in pelle ok, nessun danno visibile.",
+  "controlli": [
+   "Auto ferma sull'erba: controllare batteria e se parte"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58425,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5661,
+  "nota": "Cayenne bianca in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Km alti (280.000): controllare motore e sospensioni"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50057,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3139,
+  "nota": "Nessuna foto disponibile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 54032,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3914,
+  "nota": "Tiguan bianca in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50231,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti anteriore",
+    "side": "destro",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3184,
+  "nota": "Fiorino ex flotta aziendale con pellicola verde e graffi sul paraurti, niente di grave.",
+  "controlli": [
+   "Km molto alti (450.000)",
+   "Togliere pellicole aziendali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53698,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3727,
+  "nota": "Megane Coupé in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 60112,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5843,
+  "nota": "Nessuna foto disponibile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 64255,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6972,
+  "nota": "Serie 2 Active Tourer in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 55726,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4963,
+  "nota": "Daily fotografato al buio in un capannone con spia accesa sul cruscotto: non si vede bene lo stato.",
+  "controlli": [
+   "Chiedere foto alla luce",
+   "Verificare la spia accesa e il motore (458.000 km)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57852,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5225,
+  "nota": "Duster in ottimo stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 54926,
+  "esito": "da_verificare",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro anteriore",
+    "side": "destro",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "faro anteriore",
+    "low": 250,
+    "high": 600
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 600,
+  "ricambi_max": 1300,
+  "guadagno_finale": 2664,
+  "nota": "Il cofano non chiude bene e c'è una fessura vicino al faro: segni di un urto frontale da verificare.",
+  "controlli": [
+   "Verificare che il frontale non abbia danni alla struttura",
+   "Controllare radiatori e traverse"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50011,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2959,
+  "nota": "Tipo SW senza danni visibili; la targa FN fa pensare a un'auto del 2018, più nuova dell'anno indicato.",
+  "controlli": [
+   "Verificare anno sul libretto",
+   "Km alti (243.000)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53093,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti anteriore",
+    "side": "destro",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3477,
+  "nota": "Furgone di un'attività di noleggio/gommista fotografato in un piazzale pieno di auto: venditore professionale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 56691,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4970,
+  "nota": "Vivaro in buono stato con motore rifatto, nessun danno visibile.",
+  "controlli": [
+   "Chiedere fattura del motore rifatto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59219,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5336,
+  "nota": "Dati non coerenti (F-Pace 2015 non esiste, targa del 2017) e prezzo molto sotto il valore reale: sospetta truffa.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 60072,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5533,
+  "nota": "Panda in buono stato ma il mercato (15.900 €) è quasi il prezzo del nuovo: con un mercato reale di circa 10-11.000 € il margine non c'è.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 49856,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2596,
+  "nota": "Golf VI in buono stato, motore in ordine nelle foto.",
+  "controlli": [
+   "Targa FD non coerente con il 2008: verificare libretto e immatricolazione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 56598,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4729,
+  "nota": "Nessuna foto disponibile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 49884,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2565,
+  "nota": "Captiva ferma sull'erba in un piazzale con altre auto: forse ferma da tempo o venditore professionale.",
+  "controlli": [
+   "Verificare se parte e chi vende",
+   "Controllare cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57337,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4710,
+  "nota": "Vivaro furgone in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Km alti (320.000)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57942,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4840,
+  "nota": "Master in buono stato, solo paraurti posteriore segnato.",
+  "controlli": [
+   "Controllare motore e frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58042,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4944,
+  "nota": "Ducato centinato con sponda in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Verificare funzionamento sponda idraulica"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53368,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3338,
+  "nota": "Serie 3 Touring bianca in ottimo stato; dalle foto non sembra MSport.",
+  "controlli": [
+   "Verificare allestimento e trazione xDrive"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 49915,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti posteriore",
+    "side": "sinistro",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 0,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 250,
+  "guadagno_finale": 2209,
+  "nota": "Giulietta bianca con paraurti posteriore segnato, per il resto in ordine.",
+  "controlli": [
+   "Km alti (280.000)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50168,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portellone usato",
+    "low": 100,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 250,
+  "guadagno_finale": 2319,
+  "nota": "Zafira con portellone ammaccato; è a metano (ecoM), non a benzina.",
+  "controlli": [
+   "Verificare scadenza bombole metano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 62217,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5799,
+  "nota": "A3 e-tron in buono stato, ma la targa GE (2021) non torna con l'anno 2017.",
+  "controlli": [
+   "Verificare anno e provenienza sul libretto",
+   "Controllare stato batteria ibrida"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50157,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "portiera posteriore",
+    "side": "sinistro",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2495,
+  "nota": "Il titolo dice NON PARTE: guasto non quantificabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 54492,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3457,
+  "nota": "Il titolo dice GUASTO MOTORE, da trasportare: guasto serio non quantificabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 49904,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "piccoli ricambi carrozzeria",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "guadagno_finale": 2250,
+  "nota": "Freemont con vernice del cofano rovinata e interni consumati, nessun danno strutturale.",
+  "controlli": [
+   "Km alti (280.000)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 71275,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 8147,
+  "nota": "335i del 2009 a 19.000 €: il mercato di 30.000 € è sbagliato, il valore reale è circa 13-17.000 € e non c'è margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 53855,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3243,
+  "nota": "520d Touring nera in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Km alti (320.000): controllare cambio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 56207,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4338,
+  "nota": "Caddy Maxi furgone in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57182,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4352,
+  "nota": "Grand Cherokee in buono stato, interni in pelle ok.",
+  "controlli": [
+   "Verificare che il venditore sia privato (piazzale con mezzi)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59658,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 4916,
+  "nota": "Clio RS Trophy in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare cambio EDC e uso in pista"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50401,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2634,
+  "nota": "MiTo nera in buono stato, nessun danno visibile.",
+  "controlli": [
+   "Controllare cambio TCT"
+  ],
+  "aggiorna": true
  }
 ]
