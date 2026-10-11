@@ -1,0 +1,56 @@
+[
+ {
+  "demo_id": "titolare",
+  "etichetta": "Solo titolare",
+  "descrizione": "Ditta individuale a Milano, vende auto usate, nessun dipendente",
+  "piva": "ESEMPIO-1",
+  "ragione_sociale": "AUTO ROSSI DI ROSSI MARIO (esempio)",
+  "forma_giuridica": "Impresa individuale",
+  "ateco": [{"codice": "45.11.01", "descrizione": "Commercio all'ingrosso e al dettaglio di autovetture e di autoveicoli leggeri", "primario": true}],
+  "ateco2025": [{"codice": "47.81.10", "descrizione": "corrispondenza indicativa, da verificare sulle tabelle ISTAT"}],
+  "sede": {"indirizzo": "Via Esempio 1", "comune": "Milano", "provincia": "MI", "regione": "Lombardia"},
+  "unita_locali": [],
+  "data_costituzione": "2019-03-01",
+  "data_inizio_attivita": "2019-03-01",
+  "stato": "attiva",
+  "addetti": 0,
+  "extra": {}
+ },
+ {
+  "demo_id": "due_dipendenti",
+  "etichetta": "2 dipendenti",
+  "descrizione": "Srl a Monza, rivendita auto usate, 2 dipendenti",
+  "piva": "ESEMPIO-2",
+  "ragione_sociale": "BRIANZA CAR SRL (esempio)",
+  "forma_giuridica": "Società a responsabilità limitata",
+  "ateco": [{"codice": "45.11.01", "descrizione": "Commercio all'ingrosso e al dettaglio di autovetture e di autoveicoli leggeri", "primario": true}],
+  "ateco2025": [{"codice": "47.81.10", "descrizione": "corrispondenza indicativa, da verificare sulle tabelle ISTAT"}],
+  "sede": {"indirizzo": "Via Esempio 2", "comune": "Monza", "provincia": "MB", "regione": "Lombardia"},
+  "unita_locali": [],
+  "data_costituzione": "2015-06-10",
+  "data_inizio_attivita": "2015-07-01",
+  "stato": "attiva",
+  "addetti": 2,
+  "extra": {}
+ },
+ {
+  "demo_id": "officina",
+  "etichetta": "5 dipendenti con officina",
+  "descrizione": "Snc a Sesto San Giovanni, rivendita e officina, 5 dipendenti",
+  "piva": "ESEMPIO-3",
+  "ragione_sociale": "AUTOFFICINA SESTO SNC (esempio)",
+  "forma_giuridica": "Società in nome collettivo",
+  "ateco": [
+   {"codice": "45.11.01", "descrizione": "Commercio all'ingrosso e al dettaglio di autovetture e di autoveicoli leggeri", "primario": true},
+   {"codice": "45.20.10", "descrizione": "Riparazioni meccaniche di autoveicoli", "primario": false}
+  ],
+  "ateco2025": [{"codice": "47.81.10", "descrizione": "corrispondenza indicativa, da verificare sulle tabelle ISTAT"}],
+  "sede": {"indirizzo": "Viale Esempio 3", "comune": "Sesto San Giovanni", "provincia": "MI", "regione": "Lombardia"},
+  "unita_locali": [{"indirizzo": "Via Esempio 3/A", "comune": "Cinisello Balsamo", "provincia": "MI", "regione": "Lombardia", "attivita": "officina"}],
+  "data_costituzione": "2008-01-15",
+  "data_inizio_attivita": "2008-02-01",
+  "stato": "attiva",
+  "addetti": 5,
+  "extra": {}
+ }
+]

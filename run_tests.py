@@ -4,7 +4,7 @@ import sys
 import traceback
 
 fails = 0
-for modname in ("tests.test_core", "tests.test_ai_web", "tests.test_servizi", "tests.test_sito", "tests.test_autoscout_massiva"):
+for modname in ("tests.test_core", "tests.test_ai_web", "tests.test_servizi", "tests.test_sito", "tests.test_autoscout_massiva", "tests.test_incentivi"):
     mod = importlib.import_module(modname)
     for name in sorted(dir(mod)):
         if name.startswith("test_") and callable(getattr(mod, name)):

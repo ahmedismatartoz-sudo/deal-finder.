@@ -1,0 +1,315 @@
+[
+ {
+  "id": "spidy-2026",
+  "nome": "Spidy: Speed up your business 2026",
+  "ente": "Camera di Commercio Milano Monza Brianza Lodi",
+  "fonte_url": "https://www.assolombarda.it/servizi/credito-finanza-e-incentivi/informazioni/bando-camerale-spidy-2026-contributi-per-innovare-con-startup",
+  "altre_fonti": [
+   "https://www.milomb.camcom.it/documents/d/guest/regolamento-bando-spidy-2026",
+   "https://www.milomb.camcom.it/documents/d/guest/regolamento-bando-spidy-speed-up-your-business-2025"
+  ],
+  "apertura": "2026-05-04",
+  "chiusura_prevista": "2026-09-30",
+  "chiusura_effettiva": "2026-06-09",
+  "motivo_chiusura": "esaurimento fondi",
+  "giorni_aperto": 36,
+  "dotazione_eur": 700000,
+  "contributo_max_eur": 15000,
+  "per_rivenditori_auto": "sì (il regolamento esclude solo ATECO gioco/scommesse 92.00.x e 96.99.92; nessuna esclusione per commercio auto)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2025,
+    "apertura": "2025-06-09",
+    "chiusura": null
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE: edizione 2027 probabile tra maggio e giugno 2027 (2025 aperto 9/6, 2026 aperto 4/5); con dotazione simile i fondi possono finire in ~5 settimane.",
+  "dubbi": [
+   "Chiusura 9/6/2026 confermata da Assolombarda (associazione, non sito camerale); pagina ufficiale milomb.camcom.it del bando non consultata.",
+   "Edizione 2025 (dotazione 300.000 EUR, scadenza prevista 31/10/2025): data di chiusura effettiva non trovata."
+  ]
+ },
+ {
+  "id": "impresa-sostenibile-2026",
+  "nome": "Bando Impresa Sostenibile 2026",
+  "ente": "Camera di Commercio Milano Monza Brianza Lodi",
+  "fonte_url": "https://www.assolombarda.it/servizi/credito-finanza-e-incentivi/informazioni/bando-impresa-sostenibile-2026-per-mpmi",
+  "altre_fonti": [
+   "https://www.milomb.camcom.it/documents/d/guest/regolamento-bando-impresa-sostenibile-2026-approvato-il-08-05",
+   "https://www.milomb.camcom.it/documents/d/guest/regolamento-bando-impresa-sostenibile-2025"
+  ],
+  "apertura": "2026-06-03",
+  "chiusura_prevista": "2026-09-03",
+  "chiusura_effettiva": "2026-08-03",
+  "motivo_chiusura": "esaurimento fondi (domande oltre lo stanziamento)",
+  "giorni_aperto": 61,
+  "dotazione_eur": 1000000,
+  "contributo_max_eur": 50000,
+  "per_rivenditori_auto": "sì (nessuna esclusione ATECO per commercio auto; solo esclusioni de minimis agricoltura/pesca)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2025,
+    "apertura": "2025-09-04",
+    "chiusura": null
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE: edizione 2027 plausibile tra giugno e settembre 2027 (2025 aperto 4/9, 2026 aperto 3/6); nel 2026 fondi esauriti in 2 mesi.",
+  "dubbi": [
+   "Chiusura 3/8/2026 confermata da Assolombarda, non verificata sulla pagina camerale.",
+   "Contributo max 50.000 EUR è Misura A (investimenti energetici); Misura B (ISO 50001) max 20.000 EUR.",
+   "Edizione 2025 (scadenza prevista 31/10/2025): chiusura effettiva non trovata."
+  ]
+ },
+ {
+  "id": "connessi-2026",
+  "nome": "Bando CONneSSi 2026 (strategie digitali per i mercati globali)",
+  "ente": "Camera di Commercio Milano Monza Brianza Lodi",
+  "fonte_url": "https://www.assolombarda.it/servizi/internazionalizzazione/informazioni/bando-connessi-2026",
+  "altre_fonti": [
+   "https://www.milomb.camcom.it/documents/d/guest/regolamento-bando-connessi-2026-uv3",
+   "https://incentivalab.it/bando/968/cciaa-milomb-bando-connessi-2026",
+   "https://www.assolombarda.it/servizi/internazionalizzazione/informazioni/al-via-il-bando-connessi-2025",
+   "https://www.milomb.camcom.it/documents/d/guest/bando-connessi-2024-1-"
+  ],
+  "apertura": "2026-02-05",
+  "chiusura_prevista": "2026-04-09",
+  "chiusura_effettiva": null,
+  "motivo_chiusura": "esaurimento fondi (raggiunto tetto richieste, art. 9: 150% della dotazione)",
+  "giorni_aperto": null,
+  "dotazione_eur": 2500000,
+  "contributo_max_eur": 10000,
+  "per_rivenditori_auto": "sì (nessuna esclusione ATECO per commercio auto; serve sito/e-commerce in lingua straniera)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2025,
+    "apertura": "2025-02-06",
+    "chiusura": null
+   },
+   {
+    "anno": 2024,
+    "apertura": "2024-02-15",
+    "chiusura": null
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE: edizione 2027 probabile all'inizio di febbraio 2027 (aperture 15/2/2024, 6/2/2025, 5/2/2026); anche il 2025 chiuso in anticipo, quindi conviene essere pronti dal primo giorno.",
+  "dubbi": [
+   "Chiusura anticipata confermata da Assolombarda ma SENZA data.",
+   "Incentivalab (aggregatore non ufficiale) indica risorse esaurite il 10/02/2026 (5 giorni): non confermato da fonte ufficiale, quindi data lasciata null.",
+   "Edizione 2025 chiusa in anticipo (Assolombarda) ma senza data; edizione 2024 (scadenza prevista 19/4/2024): chiusura effettiva non trovata."
+  ]
+ },
+ {
+  "id": "doppia-transizione-bergamo-2026",
+  "nome": "Voucher doppia transizione 2026 - Misura A (progetti aggregati)",
+  "ente": "Camera di Commercio di Bergamo",
+  "fonte_url": "https://www.bg.camcom.it/sites/default/files/contenuto_redazione/bandi/2026/17-CE321/bando.pdf",
+  "altre_fonti": [
+   "https://www.obiettivoeuropa.com/bandi/cciaa-bergamo-bando-voucher-doppia-transizione"
+  ],
+  "apertura": "2026-07-08",
+  "chiusura_prevista": "2026-09-10",
+  "chiusura_effettiva": "2026-09-10",
+  "motivo_chiusura": "scadenza naturale (graduatoria, NON sportello; nessuna chiusura anticipata trovata)",
+  "giorni_aperto": 64,
+  "dotazione_eur": 400000,
+  "contributo_max_eur": 10000,
+  "per_rivenditori_auto": "sì (nessuna esclusione ATECO nel bando; ma serve aggregazione di 3-20 imprese)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2025,
+    "apertura": null,
+    "chiusura": null
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE: edizione 2027 plausibile in estate 2027 (luglio-settembre); non è un bando lampo.",
+  "dubbi": [
+   "Il dato fornito (apertura 28/7/2026) NON corrisponde al bando di Bergamo: il bando ufficiale dice apertura 8/7/2026 ore 13 e chiusura 10/9/2026 ore 12. Il 28/7/2026 è l'apertura del bando regionale Unioncamere 'Voucher doppia transizione Lombardia 2026', a cui Bergamo NON aderisce (vedi id doppia-transizione-lombardia-2026).",
+   "Chiusura 10/9 è scadenza ordinaria, non esaurimento fondi: probabilmente da NON mostrare come 'bando lampo'.",
+   "Edizione 2025 citata nel bando (premialità per imprese non finanziate nel 2025) ma date non trovate."
+  ]
+ },
+ {
+  "id": "rinnova-veicoli-2026",
+  "nome": "Bando Rinnova Veicoli 2026-2027 (PMI) - Linea 2026",
+  "ente": "Regione Lombardia (attuato da Unioncamere Lombardia)",
+  "fonte_url": "https://www.regione.lombardia.it/ambiente-e-territorio/qualita-dell-aria/approvati-i-criteri-del-bando-rinnova-veicoli-2026-per-le-pmi",
+  "altre_fonti": [
+   "https://www.unioncamerelombardia.it/fileadmin/bandi/2026/Bando_Rinnova_Veicoli_2026-2027/Bando_Rinnova_Veicoli_2026-2027.pdf",
+   "https://www.assolombarda.it/servizi/mobilita-e-trasporti/informazioni/bando-rinnova-veicoli-2026-2027",
+   "https://www.unioncamerelombardia.it/fileadmin/bandi/2024/Bando_Rinnova_Veicoli_2024-2025/4_Determinazione_D.O._n._30-2025.pdf"
+  ],
+  "apertura": "2026-06-03",
+  "chiusura_prevista": "2026-10-31",
+  "chiusura_effettiva": "2026-07-01",
+  "motivo_chiusura": "esaurimento fondi (Linea 2026; rif. determinazione n. 172/2026)",
+  "giorni_aperto": 28,
+  "dotazione_eur": 2970000,
+  "contributo_max_eur": 30000,
+  "per_rivenditori_auto": "no (esclusi ATECO 45.11.01 e 45.11.02 commercio/intermediazione autovetture, e 45.40.11/45.40.12 moto, anche come attività secondaria)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2024,
+    "apertura": "2024-05-14",
+    "chiusura": "2024-07-31"
+   },
+   {
+    "anno": 2025,
+    "apertura": "2024-12-02",
+    "chiusura": null
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE (ma da bando già fissata): Linea 2027 apre il 2/3/2027 ore 10:00, dotazione solo 970.000 EUR, quindi esaurimento probabilmente più rapido del 2026.",
+  "dubbi": [
+   "Chiusura '1° luglio' dalla pagina regionale; ora esatta non indicata.",
+   "Contributo 30.000 EUR è il massimo per veicolo (N3 elettrico/idrogeno); fino a 4 domande per impresa; per auto M1 elettrica 15.000 EUR.",
+   "Chiusura Linea 2027: bando PDF dice 30/9/2027, Assolombarda e Regione dicono 31/8/2027; apertura 2/3 vs 3/3 in un passaggio del PDF.",
+   "Linea 2025 (aperta 2/12/2024): chiusura effettiva non trovata. Linea 2024: chiusura 31/7/2024 disposta con Det. 117/2024 del 1/8/2024."
+  ]
+ },
+ {
+  "id": "ricarica-pmi-2023-finestra2",
+  "nome": "Contributi alle PMI per punti di ricarica veicoli elettrici - 2a finestra",
+  "ente": "Regione Lombardia",
+  "fonte_url": "https://www.qualenergia.it/articoli/lombardia-tornano-incentivi-colonnine-ricarica-pmi/",
+  "altre_fonti": [
+   "https://www.assolombarda.it/servizi/mobilita-e-trasporti/informazioni/riapertura-contributi-alle-pmi-per-linstallazione-di-punti-di-ricarica-per-veicoli-elettrici-in-lombardia",
+   "https://www.qualenergia.it/wp-content/uploads/2023/02/bando_lombardia_colonnine_pmi.pdf",
+   "https://www.assolombarda.it/servizi/mobilita-e-trasporti/informazioni/contributi-alle-pmi-per-linstallazione-in-lombardia-di-punti-di-ricarica-per-veicoli-elettrici"
+  ],
+  "apertura": "2023-02-07",
+  "chiusura_prevista": "2023-03-07",
+  "chiusura_effettiva": "2023-02-13",
+  "motivo_chiusura": "esaurimento fondi",
+  "giorni_aperto": 6,
+  "dotazione_eur": 873172,
+  "contributo_max_eur": 150000,
+  "per_rivenditori_auto": "sì (esclusi solo ATECO 10.2, 46.38.1, 46.38.2, 47.23, tabacco e agricoltura; nessuna esclusione per 45.x)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2022,
+    "apertura": "2022-01-18",
+    "chiusura": "2022-02-17"
+   }
+  ],
+  "ricorrente": false,
+  "prossima_prevista": "PREVISIONE: nessuna nuova finestra PMI trovata dopo il 2023; non prevedibile.",
+  "dubbi": [
+   "Chiusura 13/2/2023 da stampa specializzata (QualEnergia), non trovato il decreto regionale di chiusura.",
+   "Prima finestra 2022: chiusura indicata è la scadenza prevista (17/2/2022); nessuna chiusura anticipata documentata."
+  ]
+ },
+ {
+  "id": "doppia-transizione-lombardia-2026",
+  "nome": "Bando Voucher doppia transizione Lombardia 2026",
+  "ente": "Unioncamere Lombardia + CCIAA Brescia, Como-Lecco, Cremona-Mantova-Pavia, Milano Monza Brianza Lodi, Sondrio, Varese",
+  "fonte_url": "https://www.unioncamerelombardia.it/bandi-e-incentivi-alle-imprese/dettaglio-bando/bando-voucher-doppia-transizione-lombardia-2026",
+  "altre_fonti": [
+   "https://www.unioncamerelombardia.it/fileadmin/bandi/2026/Bando_voucher_doppia_transizione_Lombardia_2026/Bando_VOUCHER_DOPPIA_TRANSIZIONE_LOMBARDIA_2026.pdf"
+  ],
+  "apertura": "2026-07-28",
+  "chiusura_prevista": null,
+  "chiusura_effettiva": "2026-07-29",
+  "motivo_chiusura": "esaurimento fondi + lista d'attesa piena (50%) in tutti i territori, ore 10:09 del 29/7",
+  "giorni_aperto": 1,
+  "dotazione_eur": 4463500,
+  "contributo_max_eur": 10000,
+  "per_rivenditori_auto": "da verificare (la pagina non riporta esclusioni ATECO; testo integrale del bando non controllato)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2025,
+    "apertura": "2025-05-06",
+    "chiusura": "2025-05-06"
+   },
+   {
+    "anno": 2024,
+    "apertura": "2024-05-22",
+    "chiusura": "2024-05-22"
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE: nuova edizione (voucher digitali/doppia transizione) probabile tra maggio e luglio 2027; si chiude in minuti/ore, quindi domanda da preparare prima (upload documenti aperto giorni prima: 8/7 nel 2026).",
+  "dubbi": [
+   "Aperto ore 11:00 del 28/7, chiuso ore 10:09 del 29/7 (~23 ore).",
+   "Data di chiusura prevista originale non riportata dalla pagina consultata.",
+   "Le edizioni 2024-2025 si chiamavano 'Voucher digitali 4.0 Lombardia'; la continuità è dedotta (il bando 2026 esclude i beneficiari 2025)."
+  ]
+ },
+ {
+  "id": "voucher-digitali-lombardia-2025",
+  "nome": "Bando voucher digitali 4.0 Lombardia 2025",
+  "ente": "Unioncamere Lombardia + CCIAA Brescia, Como-Lecco, Cremona-Mantova-Pavia, Milano Monza Brianza Lodi, Varese",
+  "fonte_url": "https://www.unioncamerelombardia.it/bandi-e-incentivi-alle-imprese/dettaglio-bando/bando-voucher-digitali-40-lombardia-2025",
+  "altre_fonti": [],
+  "apertura": "2025-05-06",
+  "chiusura_prevista": "2025-06-06",
+  "chiusura_effettiva": "2025-05-06",
+  "motivo_chiusura": "esaurimento fondi + lista d'attesa (ore 11:43, 43 minuti dopo l'apertura; Det. D.O. n. 100/2025)",
+  "giorni_aperto": 0,
+  "dotazione_eur": 3398000,
+  "contributo_max_eur": 10000,
+  "per_rivenditori_auto": "da verificare (esclusioni ATECO non controllate)",
+  "edizioni_precedenti": [
+   {
+    "anno": 2024,
+    "apertura": "2024-05-22",
+    "chiusura": "2024-05-22"
+   }
+  ],
+  "ricorrente": true,
+  "prossima_prevista": null,
+  "dubbi": []
+ },
+ {
+  "id": "voucher-digitali-lombardia-2024",
+  "nome": "Bando voucher digitali 4.0 Lombardia 2024",
+  "ente": "Unioncamere Lombardia + Camere di commercio lombarde aderenti",
+  "fonte_url": "https://unioncamerelombardia.it/fileadmin/bandi/2024/Bando_voucher_digitali_2024/Determinazione_D.O._n._73-2024.pdf",
+  "altre_fonti": [
+   "https://www.ticonsiglio.com/lombardia-contributi-fondo-perduto-bando-voucher-digitale/"
+  ],
+  "apertura": "2024-05-22",
+  "chiusura_prevista": "2024-07-15",
+  "chiusura_effettiva": "2024-05-22",
+  "motivo_chiusura": "esaurimento fondi (domande oltre dotazione alle ore 13:32 del 22/5/2024, tutte le province; Det. D.O. n. 73/2024)",
+  "giorni_aperto": 0,
+  "dotazione_eur": 3208000,
+  "contributo_max_eur": 10000,
+  "per_rivenditori_auto": "da verificare (esclusioni ATECO non controllate)",
+  "edizioni_precedenti": [],
+  "ricorrente": true,
+  "prossima_prevista": null,
+  "dubbi": [
+   "Apertura ore 10:00 del 22/5, dotazione e chiusura prevista 15/7 da sito non ufficiale (ticonsiglio.com); la chiusura alle 13:32 è da determinazione ufficiale."
+  ]
+ },
+ {
+  "id": "export-2024-lombardia",
+  "nome": "Bando Export 2024 (nuovi mercati per le MPMI lombarde)",
+  "ente": "Regione Lombardia + Unioncamere Lombardia",
+  "fonte_url": "https://www.unioncamerelombardia.it/fileadmin/bandi/2024/Bando_export_2024/Determinazione_D.O._n._145-2025.pdf",
+  "altre_fonti": [
+   "https://assolombarda.it/servizi/internazionalizzazione/informazioni/bando-export-2024-nuovi-mercati-per-le-mpmi-lombarde",
+   "https://www.unioncamerelombardia.it/fileadmin/bandi/2024/Bando_export_2024/Determinazione_D.O._n._178-2024.pdf"
+  ],
+  "apertura": "2024-07-04",
+  "chiusura_prevista": "2024-09-16",
+  "chiusura_effettiva": null,
+  "motivo_chiusura": "esaurimento fondi (Det. D.O. n. 93 del 5/7/2024 per BG, BS, CO, LC, MI, MB, LO, VA; Mantova chiusa con Det. 126 del 5/8/2024)",
+  "giorni_aperto": null,
+  "dotazione_eur": 1570000,
+  "contributo_max_eur": null,
+  "per_rivenditori_auto": "da verificare",
+  "edizioni_precedenti": [],
+  "ricorrente": true,
+  "prossima_prevista": "PREVISIONE: esistono edizioni 2023 e 2024 (cartelle Unioncamere); date edizioni successive non verificate.",
+  "dubbi": [
+   "Determinazione di chiusura datata 5/7/2024 (giorno dopo l'apertura), ma il bando garantiva l'apertura per i primi 3 giorni: data effettiva di stop domande non certa, lasciata null.",
+   "Contributo 50% su investimento 10.000-30.000 EUR: massimo 15.000 EUR calcolato, non indicato dalla fonte."
+  ]
+ }
+]

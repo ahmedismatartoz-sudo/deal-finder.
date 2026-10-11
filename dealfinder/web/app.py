@@ -928,6 +928,12 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_wrapper)
 
 
+def _incentivi_app():
+    """Modulo Incentivi (prototipo), applicazione a sé montata su /incentivi."""
+    from incentivi.web import app as inc
+    return inc
+
+
 routes = [
     Route("/health", health),
     Route("/api/auth/login", login, methods=["POST"]),
@@ -972,6 +978,8 @@ routes = [
     Route("/condizioni", pagina("condizioni")),
     Route("/gestione", gestione),
     Mount("/static", StaticFiles(directory=STATIC), name="static"),
+    Route("/incentivi", lambda r: RedirectResponse("/incentivi/", status_code=308)),
+    Mount("/incentivi", app=_incentivi_app()),
     Route("/", index),
 ]
 

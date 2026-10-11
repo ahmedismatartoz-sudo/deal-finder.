@@ -146,5 +146,12 @@ def run() -> None:
     step("foto", foto_auto)
     if _due("backtest", 24 * 7):
         step("qualita", backtest)
+    # Modulo Incentivi: aggiornamento giornaliero degli stati dei bandi e degli avvisi (prototipo)
+    def incentivi_giorno():
+        from incentivi import job as inc_job, store as inc_store
+        with connect() as conn:
+            inc_store.ensure(conn)
+            return {"fatto": False} if inc_job.ultimo_oggi(conn) else inc_job.esegui(conn)
+    step("incentivi", incentivi_giorno)
     step("rapporto", bande.run)
     step("esportazione", esporta.run)
