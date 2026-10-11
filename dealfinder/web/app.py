@@ -834,6 +834,18 @@ def affari(request: Request):
         rows = conn.execute(sql + " LIMIT 3000", {"me": user["id"], "prov": prov}).fetchall()
     items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
     items = _meno_subito_senza_telefono(items)
+    # sezione "Sotto 1.000 €": tutte le auto di privati dal 2010, anche senza margine calcolato
+    if os.environ.get("ECONOMICHE_SITO", "1") == "1":
+        gia = {it["id"] for it in items}
+        try:
+            with connect() as conn:
+                conn.execute("SET LOCAL statement_timeout = '15s'")
+                eco = conn.execute(scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s",
+                                   dict(scovo.eco_params(user["id"]), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
+            items += [it for it in (scovo.item_eco(r) for r in eco if scovo.visible(r, settings.max_dealer_opens))
+                      if it and it["id"] not in gia]
+        except Exception as e:
+            logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     pos = {i: k for k, i in enumerate(vet.get("ids") or [])}
@@ -852,10 +864,13 @@ def affare(request: Request):
     lid = int(request.path_params["id"])
     with connect() as conn:
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
+        eco = None
+        if not row:
+            eco = row = conn.execute(scovo.ECO_SQL + " AND l.id=%(id)s", dict(scovo.eco_params(user["id"]), id=lid)).fetchone()
         extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() if row else None
     if not row or not scovo.visible(row, settings.max_dealer_opens):
         err(404, "Questa auto non è più disponibile")
-    base = scovo.item(row)
+    base = scovo.item_eco(row) if eco else scovo.item(row)
     if not base:
         err(404, "Questa auto non è più disponibile")
     return jsonify(scovo.detail(base, extra or {}))

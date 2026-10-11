@@ -149,6 +149,28 @@ def run(mode: str) -> Counter:
         sources = [(sub, {"region": settings.region, "provinces": lomb, "max_price": 40000, "max_pages": 0,
                           "price_bands": bands, "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (asc, {"massiva": True, "min_price": 500, "max_price": 40000})]
+        if os.environ.get("LOMBARDIA_SOLO_AUTOSCOUT") == "1":      # Subito già letto in un giro interrotto
+            sources = sources[1:]
+    elif mode == "economiche":
+        # Auto da pochi soldi in Lombardia (fino a ECONOMICHE_MAX_PREZZO, 1.500 €): Subito tutte le province in fasce
+        # da 100 €, poi AutoScout24 entro LOMBARDIA_RAGGIO km da Milano (privati e concessionari, questi solo come prezzi).
+        # Si ferma a ECONOMICHE_OBIETTIVO annunci letti.
+        top = int(os.environ.get("ECONOMICHE_MAX_PREZZO", "1500"))
+        bands = [(p, p + 99) for p in range(200, top, 100)]
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.2"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.0"))
+        from ..collectors.subito import PROVINCE_CODES
+        lomb = [k for k, v in PROVINCE_CODES.items() if v in ("MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO")]
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LOMBARDIA_RAGGIO", "150")
+        os.environ.setdefault("ANNO_MINIMO", "2007")
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
+        sources = [(sub, {"region": settings.region, "provinces": lomb, "max_price": top, "max_pages": 0,
+                          "price_bands": bands, "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
+                   (asc, {"massiva": True, "min_price": 200, "max_price": top, "step": 250})]
     elif mode == "incidentate":
         # Auto incidentate in TUTTA Italia (sezione Incidentate): Subito con le parole tipiche, AutoScout24 solo
         # annunci "danneggiati" di privati. Obiettivo INCIDENTATE_OBIETTIVO annunci da filtrare.
@@ -324,6 +346,11 @@ def run(mode: str) -> Counter:
                         collector.stop = True
                         log.info("autoscout: obiettivo di %d annunci nuovi raggiunto", obiettivo)
                         break
+                    if mode == "economiche" and sum(v for k, v in stats.items() if ":" in k and k.split(":")[0] in ("subito", "autoscout24")) \
+                            >= int(os.environ.get("ECONOMICHE_OBIETTIVO", "20000")):
+                        collector.stop = True
+                        log.info("economiche: obiettivo raggiunto")
+                        break
                     if mode == "lombardia":
                         # metà dell'obiettivo per ciascun sito, così ci sono sia Subito sia AutoScout24
                         letti = sum(v for k, v in stats.items() if k.split(":")[0] == collector.source)
@@ -388,11 +415,30 @@ if __name__ == "__main__":
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
         sys.exit(0)
+    if mode == "economiche" or mode.startswith("economiche,"):
+        # poi, se indicato (es. "economiche,lombardia"), riprende l'altro lavoro
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        versione = os.environ.get("ECONOMICHE_VERSIONE", "eco-v1")
+        if _due("collect:economiche", int(os.environ.get("ECONOMICHE_ORE", "20"))):
+            run("economiche")
+        if _due(f"mille:{versione}", 24 * 365):
+            # fino a 1.500 €, almeno 1.000 € di guadagno prima dei pezzi, sane o incidentate, Lombardia
+            mille.run(versione=versione, province=["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO"],
+                      max_prezzo=int(os.environ.get("ECONOMICHE_MAX_PREZZO", "1500")), min_prezzo=300,
+                      anche_scartate=True)
+        log.info("ECONOMICHE analisi_manuale: %s", manuale.run(solo_nuove=True))
+        log.info("ECONOMICHE verifica: %s", recheck.run())
+        mode = mode.split(",", 1)[1] if "," in mode else ""
+        if not mode:
+            sys.exit(0)
     if mode == "lombardia":
         from . import manuale, mille, recheck
         from .ciclo import _due
         versione = os.environ.get("LOMBARDIA_VERSIONE", "v6")
         if _due("collect:lombardia", int(os.environ.get("LOMBARDIA_ORE", "20"))):
+            if os.environ.get("LOMBARDIA_SALTA_SUBITO") == "1":
+                os.environ["LOMBARDIA_SOLO_AUTOSCOUT"] = "1"
             run("lombardia")
         if _due(f"mille:{versione}", 24 * 365):
             mille.run(versione=versione)          # i migliori di Milano e dintorni, con le foto

@@ -26,7 +26,9 @@ SCONTO_DEFAULT = int(os.environ.get("SCONTO_RIVENDITA", "10"))   # rivendita: al
 # 500 €) al posto delle soglie per fascia. Con MODALITA_SITO=soglie si torna alle soglie per fascia qui sotto.
 MODALITA = os.environ.get("MODALITA_SITO", "soglie")
 MINIMO_MILLE = int(os.environ.get("GUADAGNO_MINIMO_MILLE", "500"))
-SOGLIE_FASCE = [(5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
+# fino a 1.500 € basta 1.000 € di guadagno (auto da pochi soldi, sane o incidentate)
+SOGLIE_FASCE = [(1500, int(os.environ.get("MARGINE_FINO_1500", "1000"))),
+          (5000, int(os.environ.get("MARGINE_FINO_5000", "1500"))),
           (10**9, int(os.environ.get("MARGINE_OLTRE_5000", "2000")))]
 SOGLIE = [(10**9, MINIMO_MILLE)] if MODALITA == "mille" else SOGLIE_FASCE
 MARGINE_MINIMO = SOGLIE[0][1]
@@ -67,10 +69,70 @@ WHERE l.stage='approfondito' AND l.status='attivo'
   AND l.last_checked_at > now() - interval '48 hours'
 """
 
+# Sezione "Sotto 1.000 €": tutte le auto di privati dal 2010 sotto i 1.000 €, senza soglia di guadagno
+# (mercato dalla valutazione se c'è, altrimenti dalla stima del modello dei prezzi).
+ECO_MAX = int(os.environ.get("ECONOMICHE_MAX", "1000"))
+ECO_ANNO = int(os.environ.get("ECONOMICHE_ANNO", "2010"))
+ECO_SQL = """
+SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
+       l.power_kw, l.city, l.province, l.price_eur, l.damage_class, l.stage_reason, l.first_seen_at,
+       l.first_seen_at AS deep_at, l.model_p50,
+       v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
+       v.n_comparables, v.confidence,
+       (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
+       EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
+       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
+FROM listings l
+LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
+WHERE l.status='attivo' AND l.price_eur BETWEEN 300 AND %(eco_max)s AND l.year >= %(eco_anno)s
+  AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
+  AND l.province = ANY(%(eco_prov)s)
+  AND l.last_seen_at > now() - interval '5 days'
+  AND COALESCE(l.stage_reason, '') NOT IN ('doppione', 'truffa', 'dati_incoerenti', 'prezzo_finto')
+"""
+
+
+def eco_params(me: int) -> dict:
+    from ..zone import tutte
+    return {"me": me, "eco_max": ECO_MAX, "eco_anno": ECO_ANNO, "eco_prov": list(tutte()) + ["MN", "SO"]}
+
+
+def item_eco(r: dict) -> dict | None:
+    """Scheda per la sezione "Sotto 1.000 €": anche senza stima dei pezzi (si guarda dal vivo)."""
+    price = r.get("price_eur")
+    if not price:
+        return None
+    mercato = r.get("private_median") or r.get("resale_median_private") or r.get("resale_median") or r.get("model_p50")
+    try:
+        mercato = int(round(float(mercato))) if mercato else 0
+    except (TypeError, ValueError):
+        mercato = 0
+    if mercato > price * 12:            # stima assurda (es. modello sbagliato): meglio non mostrarla
+        mercato = 0
+    lo, hi = r.get("parts_cost_low"), r.get("parts_cost_high")
+    n_ph = int(r.get("n_photos") or 0)
+    return {
+        "id": r["id"], "marca": make_name(r.get("make")) or "Altro", "nome": nome(r),
+        "anno": r.get("year"), "km": r.get("mileage_km"),
+        "carb": FUEL_NAMES.get(r.get("fuel") or "", r.get("fuel")), "cambio": r.get("gearbox"),
+        "zona": zona(r), "area": area(r), "geo": _geo(r),
+        "fonte": SOURCE_NAMES.get(r.get("source"), r.get("source")),
+        "prezzo": int(price), "mercato": mercato,
+        "rip_lo": int(lo if lo is not None else (hi or 0)), "rip_hi": int(hi or 0),
+        "danno": r.get("damage_class") or "sconosciuto",
+        "verificare": True, "incidentata": False, "economica": True,
+        "confronti": r.get("n_comparables"),
+        "foto": foto.url_for(r["id"], 0) if n_ph else None,
+        "n_foto": min(n_ph, foto.MAX_PER_AUTO),
+        "nuova": r.get("first_seen_at"),
+        "aperta": bool(r.get("opened_by_me")),
+    }
+
+
 DETAIL_EXTRA_SQL = """
 SELECT l.description, l.seller_type, v.parts_detail, v.checks, v.motivation
 FROM listings l
-JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
+LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.id=%s
 """
 
