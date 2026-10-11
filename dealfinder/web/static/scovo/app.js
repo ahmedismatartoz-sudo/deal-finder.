@@ -186,7 +186,7 @@ function viewList(){
     <div class="chips" role="group" aria-label="Prezzo">${priceChips}</div>
     <div class="chips" role="group" aria-label="Marca">${brandChips}</div>
   </header>
-  <main class="list" aria-live="polite">${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Anteprima libera: per contattare i venditori <a href="#/entra" style="color:inherit;font-weight:800">entra</a>.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 function botBanner(n){
@@ -990,7 +990,7 @@ function viewGuestLock(){
     <a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a><a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a></div></main>`;
 }
 async function talk(){
-  if (!S.token) { toast("Entra per contattare il venditore"); go("entra"); return; }
+  if (!S.token && !guest()) { toast("Entra per contattare il venditore"); go("entra"); return; }
   const d = S.detail[S.sel]; if (!d || d.err) return;
   const btn = document.getElementById("talk");
   // la finestra si apre subito (dentro il tocco), altrimenti il telefono la blocca

@@ -718,19 +718,44 @@ def affare(request: Request):
     return jsonify(scovo.detail(base, extra or {}))
 
 
+_contatti_ospiti: dict[str, list[float]] = defaultdict(list)
+OSPITI_EMAIL = "ospiti@scovo.invalid"
+
+
+def _ospiti_id(conn) -> int:
+    """Un unico profilo tecnico per i visitatori senza account (conta come UN commerciante per auto)."""
+    row = conn.execute("SELECT id FROM dealers WHERE email=%s", (OSPITI_EMAIL,)).fetchone()
+    if row:
+        return row["id"]
+    row = conn.execute("INSERT INTO dealers (name, email, role, active) VALUES ('Visitatori senza account', %s, "
+                       "'commerciante', false) ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+                       (OSPITI_EMAIL,)).fetchone()
+    return row["id"]
+
+
 def contatto(request: Request):
-    """Parla col venditore: conta l'apertura e restituisce il numero (se scritto nell'annuncio) e il link."""
-    user = current_user(request)
+    """Parla col venditore: conta l'apertura e restituisce il numero (se scritto nell'annuncio) e il link.
+    Con il sito aperto anche chi non ha un account può contattare (limite per indirizzo, contro gli abusi)."""
+    ospite = not request.headers.get("authorization") and site_open()
+    if ospite:
+        ip, now = client_ip(request), time.time()
+        _contatti_ospiti[ip] = [t for t in _contatti_ospiti[ip] if now - t < 3600]
+        if len(_contatti_ospiti[ip]) >= int(os.environ.get("CONTATTI_OSPITE_ORA", "30")):
+            err(429, "Hai aperto molti contatti: riprova tra un po' oppure crea un account")
+        _contatti_ospiti[ip].append(now)
+    else:
+        user = current_user(request)
     lid = int(request.path_params["id"])
     with connect() as conn:
+        uid = _ospiti_id(conn) if ospite else user["id"]
         row = conn.execute(
             "SELECT url, description, (SELECT count(*) FROM listing_opens WHERE listing_id=%s) AS opens, "
             "EXISTS (SELECT 1 FROM listing_opens WHERE listing_id=%s AND dealer_id=%s) AS mine "
-            "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, user["id"], lid)).fetchone()
+            "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, uid, lid)).fetchone()
         if not row or (not row["mine"] and row["opens"] >= settings.max_dealer_opens):
             err(404, "Questa auto non è più disponibile")
         conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
-                     (lid, user["id"]))
+                     (lid, uid))
         conn.commit()
     return jsonify({"url": row["url"], "tel": scovo.find_phone(row["description"])})
 
