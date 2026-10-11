@@ -1168,10 +1168,29 @@ def _aggiorna_visibili():
 from contextlib import asynccontextmanager
 
 
+def _lavoro_subito():
+    """LAVORO_SUBITO=ravenna (da Render): fa partire subito quel lavoro di raccolta in un processo a parte,
+    senza aspettare il cron (un solo giro: il lavoro stesso salta se è già stato fatto)."""
+    modo = os.environ.get("LAVORO_SUBITO", "").strip()
+    if not modo:
+        return
+    import subprocess
+    import sys
+    env = dict(os.environ, COLLECT_MODO=modo, RAVENNA_SOLO_SUBITO="1", POI_RAVENNA="0",
+               RAVENNA_VERSIONE=os.environ.get("RAVENNA_VERSIONE", "ra-v2"))
+    subprocess.Popen([sys.executable, "-m", "dealfinder.pipeline.collect", modo], env=env)
+    logging.getLogger("lavoro").warning("LAVORO_SUBITO avviato: %s", modo)
+
+
 @asynccontextmanager
 async def _lifespan(app):
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
         _aggiorna_visibili()
+    if os.environ.get("DATABASE_URL"):
+        try:
+            _lavoro_subito()
+        except Exception as e:
+            logging.getLogger("lavoro").warning("lavoro non avviato: %s", str(e)[:200])
     yield
 
 

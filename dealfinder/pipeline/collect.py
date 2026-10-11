@@ -167,8 +167,9 @@ def run(mode: str) -> Counter:
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
         sources = [(sub, {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
                           "max_price": 30000, "max_pages": 0, "price_bands": bands,
-                          "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
-                   (asc, {"massiva": True, "min_price": 500, "max_price": 30000})]
+                          "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))})]
+        if os.environ.get("RAVENNA_SOLO_SUBITO") != "1":
+            sources.append((asc, {"massiva": True, "min_price": 500, "max_price": 30000}))
     elif mode == "autoscout":
         from ..collectors.autoscout import AutoScoutCollector
         bands = ([(p, p + 499) for p in range(500, 5000, 500)] + [(p, p + 999) for p in range(5000, 12000, 1000)]

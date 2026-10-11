@@ -135,8 +135,8 @@ function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
 const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"],["italia","Resto d'Italia"]];
 function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.italia; return o; }
-function zoneList(){ const a = new Set((S.cars || []).filter(c => !!c.incidentata === (S.route === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => k === "tutte" || a.has(k) || S.zona === k); }
-function dueZone(){ return zoneList().length > 2; }
+function zoneList(){ const a = new Set((S.cars || []).filter(c => !!c.incidentata === (S.route === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => ["tutte","milano","ravenna"].includes(k) || a.has(k) || S.zona === k); }
+function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
 function nFiltri(){ return (S.bot ? 1 : 0) + (S.zona !== "tutte" ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
