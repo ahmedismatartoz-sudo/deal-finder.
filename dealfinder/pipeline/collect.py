@@ -291,6 +291,16 @@ if __name__ == "__main__":
         sys.exit(0)
     # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
     mode = os.environ.get("COLLECT_MODO") or mode
+    if mode == "sito":
+        # Accelerazione: mette subito sul sito le auto già controllate a mano, poi prepara la selezione
+        # dei migliori di Subito (stessa del ciclo: se la fa prima questo lavoro, il ciclo la salta)
+        from . import manuale, mille
+        from .ciclo import _due
+        log.info("SITO analisi_manuale: %s", manuale.run())
+        if _due(mille.job_name(), 24 * 365):
+            mille.run(fonte="subito")
+        log.info("SITO analisi_manuale (dopo la selezione): %s", manuale.run())
+        sys.exit(0)
     if mode in ("autoscout_massiva", "autoscout"):
         from .ciclo import _due
         if mode == "autoscout_massiva" and not _due("collect:autoscout_massiva", 24 * 365):
