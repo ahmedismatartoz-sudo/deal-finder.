@@ -364,12 +364,12 @@ async function viewAdmin() {
         ["id", "", (v, r) => r.dealer_id ? `<button class="btn primary" data-approve="${v}">Attiva</button>`
           : `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email, id: v}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
-      ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
+      <div style="overflow-x:auto;margin:0 -16px;padding:0 16px">${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
         ["provinces", "Zona", (v, r) => r.role === "admin" ? "Tutte" : `<select data-zona="${r.id}">${[["milano", "Milano e dintorni"], ["ravenna", "Ravenna e dintorni"], ["tutte", "Tutte"]].map(([k, l]) =>
           `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"]].map(([k, l]) =>
           `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
-        ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}
+        ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}</div>
       <h2>Nuovo commerciante</h2>
       <form class="form" id="new-dealer">
         <div class="grid2">
@@ -381,8 +381,8 @@ async function viewAdmin() {
         <div class="field"><label for="nd-zona">Zona</label><select id="nd-zona">
           <option value="milano">Milano e dintorni</option><option value="ravenna">Ravenna e dintorni</option><option value="tutte">Tutte</option></select></div>
         <fieldset class="field" style="border:0;padding:0"><legend>Accesso a</legend>
-          <label style="margin-right:1rem"><input type="checkbox" id="nd-auto" checked> Auto (affari e vendi)</label>
-          <label><input type="checkbox" id="nd-inc"> Incentivi</label></fieldset>
+          <label style="display:inline-flex;gap:8px;align-items:center;margin:6px 18px 0 0"><input type="checkbox" id="nd-auto" checked style="width:20px;height:20px"> Auto (affari e vendi)</label>
+          <label style="display:inline-flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="nd-inc" style="width:20px;height:20px"> Incentivi</label></fieldset>
         <button class="btn primary" type="submit">Crea account</button>
       </form>`;
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
