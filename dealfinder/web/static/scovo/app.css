@@ -421,3 +421,5 @@ a{color:var(--focus)}
 .vc-btn{flex:none;width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--soft);color:var(--ink);display:flex;align-items:center;justify-content:center}
 @media (prefers-reduced-motion:reduce){.vc-core{animation:none!important;transition:none}}
 .vc-on .list{padding-bottom:200px}
+.vet-h{font:800 19px/1.2 var(--disp,inherit);margin:14px 4px 6px}
+.card.vet{outline:2px solid #f5b800;outline-offset:-2px}

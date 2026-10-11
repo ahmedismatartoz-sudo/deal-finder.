@@ -103,8 +103,11 @@ function filtered(over){
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
     .filter(c => botMatch(c, s.bot))
-    .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax);
+    .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax)
+    .sort((a,b) => vetrinaOn(s) ? (a.vetrina ?? 999) - (b.vetrina ?? 999) : 0);
 }
+/* vetrina in testa solo con l'elenco "normale" (nessun filtro, ordine per guadagno) */
+function vetrinaOn(s){ return !s.bot && s.sort === "guadagno" && !s.brands.length && s.min === "" && s.max === "" && s.stato === "tutte"; }
 /* filtri in più che mette l'assistente (modello, guadagno minimo, anno, km, fonte) */
 function botMatch(c, b){
   if (!b) return true;
@@ -135,7 +138,7 @@ async function loadCars(force){
   S.loading = true; S.loadErr = ""; if (S.route === "affari") render({keep:true});
   try {
     const d = await api("/api/affari");
-    S.cars = d.items || []; S.loadedAt = Date.now();
+    S.cars = d.items || []; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now();
     if (d.soglie) S.soglie = d.soglie;
     if (d.costi_fissi) S.costs = Object.values(d.costi_fissi).reduce((a,b) => a + b, 0);
     const known = new Set(S.cars.map(c => c.marca)); S.brands = S.brands.filter(b => known.has(b));
@@ -164,8 +167,9 @@ function viewList(){
   const list = filtered(), bid = bandId(), nf = nFiltri(), avail = brandCounts();
   const brandChips = brandsAll().filter(b => avail[b] || S.brands.includes(b)).map(b => `<button class="chip" data-act="brand" data-v="${esc(b)}" aria-pressed="${S.brands.includes(b)}">${esc(b)}</button>`).join("");
   const priceChips = BANDS.map(b => `<button class="chip" data-act="band" data-v="${b.id}" aria-pressed="${bid === b.id}">${b.label}</button>`).join("");
-  const cards = list.map((c, i) => `
-    <button class="card" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
+  const vOn = vetrinaOn(S) && list.some(c => c.vetrina != null);
+  const cards = list.map((c, i) => `${vOn && i === 0 ? `<h2 class="vet-h">⭐ ${esc(S.vetrinaTitolo || "Le migliori di oggi")}</h2>` : ""}${vOn && i > 0 && c.vetrina == null && list[i-1].vetrina != null ? `<h2 class="vet-h">Tutte le altre auto</h2>` : ""}
+    <button class="card${vOn && c.vetrina != null ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
       <div class="card-body">
         <div><div class="name">${esc(c.nome)}</div><div class="meta">${esc(meta(c))}</div></div>

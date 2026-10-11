@@ -689,6 +689,13 @@ async def voce_stt(request: Request):
 # ---------------------------------------------------------------------------
 # Sito Scovo: affari, scheda, contatto, foto
 # ---------------------------------------------------------------------------
+def _vetrina() -> dict:
+    try:
+        return json.loads((Path(__file__).resolve().parents[2] / "data" / "vetrina.json").read_text())
+    except Exception:
+        return {}
+
+
 def affari(request: Request):
     user = viewer(request)
     with connect() as conn:
@@ -699,7 +706,15 @@ def affari(request: Request):
             sql += " AND (l.province = ANY(%(prov)s) OR l.source='facebook' OR l.province IS NULL)"
         rows = conn.execute(sql + " LIMIT 3000", {"me": user["id"], "prov": prov}).fetchall()
     items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
-    return jsonify({"items": items, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
+    # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
+    vet = _vetrina()
+    pos = {i: k for k, i in enumerate(vet.get("ids") or [])}
+    n = 0
+    for it in sorted((it for it in items if it["id"] in pos), key=lambda it: pos[it["id"]]):
+        if n < int(vet.get("quante") or 30):
+            it["vetrina"] = n
+            n += 1
+    return jsonify({"items": items, "vetrina_titolo": vet.get("titolo") if n else None, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
                     "margine_minimo": scovo.MARGINE_MINIMO, "soglie": [[l if l < 10**9 else None, m] for l, m in scovo.SOGLIE],
                     "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
 
