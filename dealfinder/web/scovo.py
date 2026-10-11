@@ -172,8 +172,11 @@ def zona(r: dict) -> str:
 
 def area(r: dict) -> str:
     """Zona di lavoro: "ravenna" (Ravenna e dintorni) oppure "milano" (Milano e dintorni)."""
-    from ..zone import RAVENNA
-    return "ravenna" if (r.get("province") or "").upper() in RAVENNA else "milano"
+    from ..zone import MILANO, RAVENNA
+    pv = (r.get("province") or "").upper()
+    if pv in RAVENNA:
+        return "ravenna"
+    return "milano" if (not pv or pv in MILANO or pv in ("MN", "SO")) else "italia"
 
 
 def visible(r: dict, max_opens: int) -> bool:

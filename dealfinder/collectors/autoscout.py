@@ -31,6 +31,20 @@ CAP_PROVINCE = [("208", "MB"), ("209", "MB"), ("20", "MI"), ("21", "VA"), ("238"
                 ("41", "MO"), ("42", "RE"), ("43", "PR"), ("61", "PU")]
 
 
+# Tutta Italia (prime 2 cifre del CAP, provincia principale): solo come ripiego dopo quelle precise sopra
+CAP_ITALIA = {"00": "RM", "01": "VT", "02": "RI", "03": "FR", "04": "LT", "05": "TR", "06": "PG", "07": "SS", "08": "NU",
+              "09": "CA", "10": "TO", "11": "AO", "12": "CN", "13": "VC", "14": "AT", "15": "AL", "16": "GE", "17": "SV",
+              "18": "IM", "19": "SP", "20": "MI", "21": "VA", "22": "CO", "23": "LC", "24": "BG", "25": "BS", "26": "CR",
+              "27": "PV", "28": "NO", "29": "PC", "30": "VE", "31": "TV", "32": "BL", "33": "UD", "34": "TS", "35": "PD",
+              "36": "VI", "37": "VR", "38": "TN", "39": "BZ", "40": "BO", "41": "MO", "42": "RE", "43": "PR", "44": "FE",
+              "45": "RO", "46": "MN", "47": "FC", "48": "RA", "50": "FI", "51": "PT", "52": "AR", "53": "SI", "54": "MS",
+              "55": "LU", "56": "PI", "57": "LI", "58": "GR", "59": "PO", "60": "AN", "61": "PU", "62": "MC", "63": "AP",
+              "64": "TE", "65": "PE", "66": "CH", "67": "AQ", "70": "BA", "71": "FG", "72": "BR", "73": "LE", "74": "TA",
+              "75": "MT", "76": "BT", "80": "NA", "81": "CE", "82": "BN", "83": "AV", "84": "SA", "85": "PZ", "86": "CB",
+              "87": "CS", "88": "CZ", "89": "RC", "90": "PA", "91": "TP", "92": "AG", "93": "CL", "94": "EN", "95": "CT",
+              "96": "SR", "97": "RG", "98": "ME"}
+
+
 def province_from_cap(cap: str | None) -> str | None:
     cap = re.sub(r"\D", "", str(cap or ""))
     if len(cap) != 5:
@@ -38,7 +52,7 @@ def province_from_cap(cap: str | None) -> str | None:
     for pre, pv in sorted(CAP_PROVINCE, key=lambda x: -len(x[0])):
         if cap.startswith(pre):
             return pv
-    return None
+    return CAP_ITALIA.get(cap[:2])
 
 
 def _num(v) -> int | None:
@@ -138,8 +152,10 @@ class AutoScoutCollector(Collector):
         custtype = custtype or os.environ.get("AUTOSCOUT_VENDITORI", "P")        # P = privati, D = concessionari
         y0, y1 = years or (int(os.environ.get("ANNO_MINIMO", "2007")), None)
         anni = f"&fregfrom={y0}" + (f"&fregto={y1}" if y1 else "")
-        return (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include&custtype={custtype}"
-                f"&zip={zip_}&zipr={radius}&pricefrom={lo}&priceto={hi}{anni}&sort=age&desc=1&page={page}")
+        danni = os.environ.get("AUTOSCOUT_DANNEGGIATE", "include")     # include | only (solo incidentate)
+        dove = f"&zip={zip_}&zipr={radius}" if zip_ else ""                # senza CAP: tutta Italia
+        return (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing={danni}&custtype={custtype}"
+                f"{dove}&pricefrom={lo}&priceto={hi}{anni}&sort=age&desc=1&page={page}")
 
     # ---------- raccolta massiva: fasce che si dividono da sole finché ogni ricerca sta sotto il tetto ----------
     TETTO = 400            # AutoScout24 mostra al massimo 20 pagine da 20
@@ -196,6 +212,8 @@ class AutoScoutCollector(Collector):
                 continue
             self.visti.add(l.source_id)
             l.seller_type = seller                     # deciso dalla ricerca (privati / concessionari): sicuro
+            if os.environ.get("AUTOSCOUT_DANNEGGIATE") == "only":
+                l.damage_declared, l.problem_search = True, True
             yield l
 
     def _band(self, lo: int, hi: int, ctype: str, seller: str, years=None) -> Iterator[Listing]:

@@ -78,6 +78,16 @@ from ..zone import tutte as _zone_tutte
 ZONA = set(_zone_tutte())
 
 
+class _Parole:
+    """Adattatore: ricerca per parole su Subito come se fosse un collettore."""
+    def __init__(self, sub, parole, bands):
+        self.sub, self.parole, self.bands = sub, parole, bands
+        self.source = "subito"
+
+    def search(self, query):
+        yield from self.sub.search_parole(self.parole, self.bands, int(os.environ.get("INCIDENTATE_PAGINE", "50")))
+
+
 def _norm_city(c: str | None) -> str:
     import unicodedata
     c = unicodedata.normalize("NFKD", str(c or "")).encode("ascii", "ignore").decode().lower()
@@ -121,6 +131,25 @@ def run(mode: str) -> Counter:
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
         sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("AUTOSCOUT_MAX_PREZZO", "40000"))})]
+    elif mode == "incidentate":
+        # Auto incidentate in TUTTA Italia (sezione Incidentate): Subito con le parole tipiche, AutoScout24 solo
+        # annunci "danneggiati" di privati. Obiettivo INCIDENTATE_OBIETTIVO annunci da filtrare.
+        bands = ([(p, p + 499) for p in range(0, 5000, 500)] + [(p, p + 999) for p in range(5000, 15000, 1000)]
+                 + [(15000, 19999), (20000, 30000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.2"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.0"))
+        parole = [p.strip() for p in os.environ.get("INCIDENTATE_PAROLE", "incidentata,incidentato,sinistrata,"
+                  "danneggiata,danneggiato,da riparare,non marciante,airbag,botta,urto,grandinata,"
+                  "carrozzeria da sistemare,da sistemare,frontale,tamponata,ricambi").split(",") if p.strip()]
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"] = ""
+        os.environ["AUTOSCOUT_DANNEGGIATE"] = "only"
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
+        sources = [(asc, {"massiva": True, "min_price": 300, "max_price": 30000, "venditori": [("P", "privato")]}),
+                   (_Parole(sub, parole, bands), {})]
     elif mode == "ravenna":
         # Ravenna e dintorni (cliente in Romagna): Subito provincia per provincia in fasce strette,
         # poi AutoScout24 entro RAVENNA_RAGGIO km da Ravenna (privati da proporre, concessionari come prezzi)
@@ -240,7 +269,7 @@ def run(mode: str) -> Counter:
                         if pv and not listing.province:
                             listing.province = pv
                         pv = listing.province or pv
-                        if (pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv):
+                        if mode != "incidentate" and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
                             stats[f"{listing.source}:fuori_zona"] += 1
                             continue
                         if listing.province and not listing.region:
@@ -333,6 +362,21 @@ if __name__ == "__main__":
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
         sys.exit(0)
+    if mode == "incidentate":
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        versione = os.environ.get("INCIDENTATE_VERSIONE", "inc-v1")
+        if _due("collect:incidentate", int(os.environ.get("INCIDENTATE_ORE", "20"))):
+            run("incidentate")
+        if _due(f"mille:{versione}", 24 * 365):
+            # le incidentate migliori di tutta Italia con le foto, per il controllo uno per uno (pezzi da stimare)
+            mille.run(versione=versione, ovunque=True, danneggiate=True)
+        log.info("INCIDENTATE analisi_manuale: %s", manuale.run())
+        log.info("INCIDENTATE verifica: %s", recheck.run())
+        if os.environ.get("POI_RAVENNA", "1") == "1":
+            mode = "ravenna"                       # poi completa la raccolta di Ravenna
+        else:
+            sys.exit(0)
     if mode == "ravenna":
         from . import manuale, mille, recheck
         from ..zone import ZONE

@@ -133,9 +133,10 @@ function botMatch(c, b){
 }
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
-const ZONE = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"]];
-function zoneCounts(){ const o = {milano:0, ravenna:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna; return o; }
-function dueZone(){ const a = new Set((S.cars || []).map(c => c.area || "milano")); return a.size > 1; }
+const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"],["italia","Resto d'Italia"]];
+function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.italia; return o; }
+function zoneList(){ const a = new Set((S.cars || []).filter(c => !!c.incidentata === (S.route === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => k === "tutte" || a.has(k) || S.zona === k); }
+function dueZone(){ return zoneList().length > 2; }
 function nFiltri(){ return (S.bot ? 1 : 0) + (S.zona !== "tutte" ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
@@ -184,8 +185,8 @@ function viewList(){
   const priceChips = BANDS.map(b => `<button class="chip" data-act="band" data-v="${b.id}" aria-pressed="${bid === b.id}">${b.label}</button>`).join("");
   const vOn = vetrinaOn(S) && list.some(c => c.vetrina != null);
   const zc = dueZone() || S.zona !== "tutte" ? zoneCounts() : null;
-  const zoneBar = zc ? `<div class="seg zone-seg" role="group" aria-label="Zona" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">${ZONE.map(([k,l]) =>
-    `<button data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}" aria-label="${l}: ${zc[k] || 0} auto">${l.replace(" e dintorni","").replace(" le zone","")} <span class="n">${zc[k] || 0}</span></button>`).join("")}</div>` : "";
+  const zoneBar = zc ? `<div class="seg zone-seg" role="group" aria-label="Zona" style="grid-template-columns:repeat(${zoneList().length},minmax(0,1fr));margin-bottom:8px">${zoneList().map(([k,l]) =>
+    `<button data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}" aria-label="${l}: ${zc[k] || 0} auto">${l.replace(" e dintorni","").replace(" le zone","").replace("Resto d'Italia","Italia")} <span class="n">${zc[k] || 0}</span></button>`).join("")}</div>` : "";
   const cards = list.map((c, i) => `${vOn && i === 0 ? `<h2 class="vet-h">⭐ ${esc(S.vetrinaTitolo || "Le migliori di oggi")}</h2>` : ""}${vOn && i > 0 && c.vetrina == null && list[i-1].vetrina != null ? `<h2 class="vet-h">Tutte le altre auto</h2>` : ""}
     <button class="card${vOn && c.vetrina != null ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
@@ -220,7 +221,7 @@ function botBanner(n){
   if (S.min !== "" || S.max !== "") bits.push(S.min !== "" && S.max !== "" ? eur(S.min) + "–" + eur(S.max) : S.min !== "" ? "da " + eur(S.min) : "fino a " + eur(S.max));
   if (b.guadagno_min) bits.push("guadagno da " + eur(b.guadagno_min));
   if (S.stato !== "tutte") bits.push(S.stato === "sane" ? "senza danni" : "con danni");
-  if (S.zona !== "tutte") bits.push(S.zona === "ravenna" ? "Ravenna e dintorni" : "Milano e dintorni");
+  if (S.zona !== "tutte") bits.push((ZONE_ALL.find(z => z[0] === S.zona) || ["", ""])[1]);
   if (b.anno_min) bits.push("dal " + b.anno_min);
   if (b.km_max) bits.push("max " + num(b.km_max) + " km");
   if (b.fonte) bits.push(cap(b.fonte));
@@ -302,7 +303,7 @@ function sheetFilters(){
       <section class="sec"><h3>Marca</h3>
         <div class="wrap">${brandsAll().map(b => `<button class="pill" data-act="brand" data-v="${esc(b)}" aria-pressed="${S.brands.includes(b)}" ${!counts[b] && !S.brands.includes(b) ? "disabled" : ""}>${esc(b)}<span class="n">${counts[b] || 0}</span></button>`).join("")}</div>
       </section>
-      ${dueZone() || S.zona !== "tutte" ? `<section class="sec"><h3>Zona</h3>${seg(ZONE.map(([k,l]) => [k, l.replace(" e dintorni","")]), S.zona, "zona", 3)}</section>` : ""}
+      ${dueZone() || S.zona !== "tutte" ? `<section class="sec"><h3>Zona</h3>${seg(zoneList().map(([k,l]) => [k, l.replace(" e dintorni","").replace(" le zone","")]), S.zona, "zona", zoneList().length)}</section>` : ""}
       <section class="sec"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Sane"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
       <section class="sec"><h3>Rivendi sotto il prezzo di mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
         <span class="hint">Rivendita a mercato pieno o al massimo 10% sotto. I guadagni si ricalcolano subito.</span></section>

@@ -310,6 +310,33 @@ class SubitoCollector(Collector):
                     break
             log.info("subito ricerca '%s': %d annunci nelle province", kw, n_kw)
 
+    def search_parole(self, parole: list[str], bands: list[tuple[int, int]], max_pagine: int = 50) -> Iterator[Listing]:
+        """Tutta Italia: annunci che contengono le parole (es. incidentata), fascia di prezzo per fascia."""
+        lim, visti = 100, set()
+        for kw in parole:
+            n_kw = 0
+            for ps, pe in bands:
+                for page in range(max_pagine):
+                    r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                        params={"c": 2, "t": "s", "q": kw, "ps": ps, "pe": pe, "lim": lim,
+                                                "start": page * lim, "sort": "datedesc"})
+                    self.pause()
+                    if r.status_code != 200:
+                        log.warning("subito parole '%s' %s-%s: HTTP %s", kw, ps, pe, r.status_code)
+                        break
+                    ads = (r.json() or {}).get("ads") or []
+                    for it in ads:
+                        listing = parse_item(it)
+                        if not listing or listing.source_id in visti:
+                            continue
+                        visti.add(listing.source_id)
+                        listing.problem_search = True
+                        n_kw += 1
+                        yield listing
+                    if len(ads) < lim:
+                        break
+            log.info("subito parole '%s': %d annunci nuovi in tutta Italia", kw, n_kw)
+
     def _province_keys(self, region: int, wanted: set, lim: int) -> dict:
         """Codice interno di Subito per ogni provincia (es. Milano = 8), letto dagli annunci."""
         keys: dict = {}

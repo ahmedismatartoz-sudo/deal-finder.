@@ -75,7 +75,8 @@ def foglio(images: list[bytes], titolo: str) -> bytes | None:
     return out.getvalue()
 
 
-def run(fonte: str | None = None, versione: str | None = None, province: list[str] | None = None) -> dict:
+def run(fonte: str | None = None, versione: str | None = None, province: list[str] | None = None,
+        ovunque: bool = False, danneggiate: bool = False) -> dict:
     """fonte: solo gli annunci di quel sito (es. "autoscout24"); versione: nome del lavoro;
     province: zona da selezionare (predefinita Milano e dintorni)."""
     stats: Counter = Counter()
@@ -84,12 +85,14 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
         # Memoria limitata (512 MB su Render): prima solo id e chiave del mercato, poi gli annunci a blocchi
         # senza testi, nell'ordine marca/modello/carburante, tenendo in memoria UN solo mercato alla volta.
         where = """status='attivo' AND price_eur BETWEEN 500 AND %s AND seller_type <> 'commerciante'
-                  AND (province = ANY(%s) OR (source='facebook' AND %s))
+                  AND (%s OR province = ANY(%s) OR (source='facebook' AND %s))
+                  AND (NOT %s OR damage_declared OR problem_search OR damage_class IN ('leggero','medio','grave'))
                   AND (year IS NULL OR year >= %s)
-                  AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia'))
+                  AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia') OR %s)
                   AND (%s::text IS NULL OR source = %s)
                   AND NOT (id = ANY(%s))"""
-        params = (settings.max_purchase_eur, list(province or PROVINCES), province is None, scovo.ANNO_MINIMO, fonte, fonte, _gia_controllate())
+        params = (settings.max_purchase_eur, ovunque, list(province or PROVINCES), province is None and not ovunque,
+                  danneggiate, scovo.ANNO_MINIMO, danneggiate, fonte, fonte, _gia_controllate())
         ids = [r["id"] for r in conn.execute(
             f"SELECT id FROM listings WHERE {where} ORDER BY make, model, fuel, id", params).fetchall()]
         stats["esaminati"] = len(ids)
