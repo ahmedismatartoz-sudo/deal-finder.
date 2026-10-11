@@ -141,6 +141,10 @@ async def login(request: Request):
                                (pw != pw.strip() and verify_password(pw.strip(), u["password_hash"])))
     u, ok = await run_in_threadpool(check)
     if not ok:
+        pw = str(data.get("password", ""))
+        log.info("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s",
+                 email, "trovato" if u else "NON trovato o disattivato", len(pw), any(c.isupper() for c in pw),
+                 pw != pw.strip())
         _attempts[email].append(now)
         _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")

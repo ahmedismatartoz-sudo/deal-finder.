@@ -488,8 +488,9 @@ function viewLogin(){
     ${esito ? `<div class="note-box ${esito[0]}" role="status">${esc(esito[1])}</div>` : ""}
     ${socialButtons()}
     <form id="login-form" novalidate>
-      <label class="field">Email<input name="email" type="email" autocomplete="username" inputmode="email" required value="${esc(L.email)}"></label>
-      <label class="field">Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <label class="field">Email<input name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required value="${esc(L.email)}"></label>
+      <label class="field">Password<input name="password" id="l-pwd" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
+      <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:-4px"><input type="checkbox" onchange="document.getElementById('l-pwd').type=this.checked?'text':'password'" style="width:20px;height:20px"> Mostra password</label>
       ${L.err ? `<span class="err" role="alert">${esc(L.err)}</span>` : ""}
       <button class="l-btn l-btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Entro…" : "Entra"}</button>
     </form>
