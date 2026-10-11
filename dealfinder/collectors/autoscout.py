@@ -60,8 +60,8 @@ def _num(v) -> int | None:
         return None
     if isinstance(v, (int, float)):
         return int(v)
-    d = re.sub(r"[^\d]", "", str(v).split(",")[0])
-    return int(d) if d else None
+    from ..core.normalize import parse_int
+    return parse_int(v)
 
 
 def _year(*vals) -> int | None:

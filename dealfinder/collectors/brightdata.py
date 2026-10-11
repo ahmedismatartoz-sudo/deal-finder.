@@ -227,10 +227,13 @@ def parse_row(row: dict, max_price: int = 20_000) -> Listing | None:
     if NOT_A_CAR.search(title) or SPARE_PARTS_ONLY.search(desc[:200]):
         return None
     price = row.get("final_price") if row.get("final_price") is not None else row.get("initial_price")
+    from ..core.normalize import parse_int
     try:
         price = int(float(price))
     except (TypeError, ValueError):
-        return None
+        price = parse_int(price)            # "12.500,00" / "€12.500": numeri all'italiana
+        if price is None:
+            return None
     if not 0 < price < max_price:
         return None
     loc = row.get("location")

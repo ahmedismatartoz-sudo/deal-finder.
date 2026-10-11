@@ -51,12 +51,26 @@ def slug(s: str | None) -> str | None:
     return s or None
 
 
+_RE_NUMERO = re.compile(r"\d[\d.,'\u00a0\u202f ]*")
+
+
 def parse_int(s) -> int | None:
+    """Numero scritto all'italiana o all'inglese, senza decimali:
+    "12.500,00 €" → 12500, "12500.00" → 12500, "12,500" → 12500, "€ 8.900" → 8900, "150.000 km" → 150000.
+    Si legge solo il PRIMO numero del testo (mai cifre di numeri diversi attaccate insieme)."""
     if s is None:
+        return None
+    if isinstance(s, bool):
         return None
     if isinstance(s, (int, float)):
         return int(s)
-    digits = re.sub(r"[^\d]", "", str(s))
+    m = _RE_NUMERO.search(str(s))
+    if not m:
+        return None
+    t = re.sub(r"[\s'\u00a0\u202f]", "", m.group(0)).rstrip(".,")
+    # decimali: separatore finale seguito da 1-2 cifre ("12.500,00", "12500.5") → si tolgono
+    t = re.sub(r"[.,]\d{1,2}$", "", t)
+    digits = re.sub(r"[^\d]", "", t)
     return int(digits) if digits else None
 
 
