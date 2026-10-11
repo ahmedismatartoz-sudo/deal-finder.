@@ -45,7 +45,7 @@ const saved = store.get("filtri", {});
 const S = {
   token: store.get("token", null), user: store.get("user", null),
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
-  brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: saved.zona || "tutte", raggio: 0,
+  brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: "milano", raggio: 0,
   pos: store.get("pos", null),
   sconto: (saved.sv === 2 && saved.sconto != null) ? Number(saved.sconto) : 10, sort: saved.sort || "guadagno",
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
@@ -165,9 +165,9 @@ function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
 const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"],["italia","Resto d'Italia"]];
 function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.italia; return o; }
-function zoneList(){ const a = new Set((S.cars || []).filter(c => !!c.incidentata === (S.route === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => ["tutte","milano","ravenna"].includes(k) || a.has(k) || S.zona === k); }
+function zoneList(){ const a = new Set((S.cars || []).filter(c => !!c.incidentata === (S.route === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => ["milano","ravenna"].includes(k) || (k === "italia" && a.has(k)) || S.zona === k); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
-function nFiltri(){ return (S.bot ? 1 : 0) + (S.zona !== "tutte" ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
+function nFiltri(){ return (S.bot ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
@@ -215,8 +215,9 @@ function viewList(){
   const priceChips = BANDS.map(b => `<button class="chip" data-act="band" data-v="${b.id}" aria-pressed="${bid === b.id}">${b.label}</button>`).join("");
   const vOn = vetrinaOn(S) && list.some(c => c.vetrina != null);
   const zc = zoneCounts();
-  const zoneBar = `<div class="seg zone-seg" role="group" aria-label="Zona" style="grid-template-columns:repeat(${zoneList().length},minmax(0,1fr));margin-bottom:8px">${zoneList().map(([k,l]) =>
-    `<button data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}" aria-label="${l}: ${zc[k] || 0} auto">${l.replace(" le zone","").replace("Resto d'Italia","Italia")} <span class="n">${zc[k] || 0}</span></button>`).join("")}</div>`;
+  const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
+    `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${k === "italia" ? "altre zone" : "e dintorni"} · ${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
   const TIT = {top: "⭐ Le migliori sotto 5.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${(i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
@@ -252,7 +253,7 @@ function botBanner(n){
   if (S.min !== "" || S.max !== "") bits.push(S.min !== "" && S.max !== "" ? eur(S.min) + "–" + eur(S.max) : S.min !== "" ? "da " + eur(S.min) : "fino a " + eur(S.max));
   if (b.guadagno_min) bits.push("guadagno da " + eur(b.guadagno_min));
   if (S.stato !== "tutte") bits.push(S.stato === "sane" ? "senza danni" : "con danni");
-  if (S.zona !== "tutte") bits.push((ZONE_ALL.find(z => z[0] === S.zona) || ["", ""])[1]);
+  if (S.zona && S.zona !== "tutte") bits.push((ZONE_ALL.find(z => z[0] === S.zona) || ["", ""])[1]);
   if (b.anno_min) bits.push("dal " + b.anno_min);
   if (b.km_max) bits.push("max " + num(b.km_max) + " km");
   if (b.fonte) bits.push(cap(b.fonte));
@@ -1142,7 +1143,7 @@ $app.addEventListener("click", e => {
     case "bot-catalogo": { const m = A.msgs[Number(v)]; if (m && m.filtri) showCatalog(m.filtri, m.content); return; }
     case "bot-open": S.sheet = null; S.fromList = true; go("auto/" + v); return;
     case "tip": S.tip = false; store.set("tip", false); break;
-    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; S.zona = "tutte"; S.bot = null; stopVoice(); saveFilters(); break;
+    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; S.bot = null; stopVoice(); saveFilters(); break;
     case "stato": S.stato = v; saveFilters(); break;
     case "zona": S.zona = v; saveFilters(); window.scrollTo(0, 0); break;
     case "raggio": S.raggio = Number(v); saveFilters(); window.scrollTo(0, 0); break;

@@ -425,3 +425,13 @@ a{color:var(--focus)}
 .card.vet{outline:2px solid #f5b800;outline-offset:-2px}
 
 .zone-seg button{font-size:13px;line-height:1.15}.zone-seg .n{color:var(--muted);font-weight:600}
+
+/* Zona: scelta ben visibile (Milano e dintorni / Ravenna e dintorni) */
+.zona-box{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin:2px 0 10px}
+.zona-btn{display:flex;align-items:center;gap:8px;min-height:56px;padding:8px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(18,23,28,.06);transition:background .15s,border-color .15s}
+.zona-btn svg{flex:none;color:var(--tag)}
+.zona-txt{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.zona-txt b{font:700 17px var(--disp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zona-txt small{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.zona-btn[aria-pressed="true"]{background:var(--tag);border-color:var(--tag);color:var(--tag-ink);box-shadow:0 4px 12px rgba(0,122,255,.28)}
+.zona-btn[aria-pressed="true"] svg,.zona-btn[aria-pressed="true"] small{color:var(--tag-ink)}
