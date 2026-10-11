@@ -33,6 +33,28 @@ def verify_rows(conn, rows: list[dict]) -> Counter:
     stats: Counter = Counter()
     fb = [r for r in rows if r["source"] == "facebook"]
     sb = [r for r in rows if r["source"] == "subito"]
+    asx = [r for r in rows if r["source"] == "autoscout24"]
+    if asx:
+        # AutoScout24: visti dalla raccolta nelle ultime 48 ore = attivi; gli altri si riaprono (404/410 = venduto)
+        fresh = {x["id"] for x in conn.execute(
+            "SELECT id FROM listings WHERE id = ANY(%s) AND last_seen_at > now() - make_interval(hours => %s)",
+            ([r["id"] for r in asx], int(os.environ.get("VERIFICA_ORE_AUTOSCOUT", "48")))).fetchall()}
+        from ..collectors.autoscout import AutoScoutCollector
+        col = AutoScoutCollector()
+        for r in asx:
+            if r["id"] in fresh:
+                mark(conn, r["id"], "attivo", r.get("price_eur"))
+                stats["autoscout24:attivo_recente"] += 1
+                continue
+            try:
+                resp = col.client.get(r["url"])
+                st = "attivo" if resp.status_code == 200 else ("scomparso" if resp.status_code in (404, 410) else "errore")
+            except Exception as e:
+                log.warning("verifica AutoScout24 fallita %s: %s", r["url"], e)
+                st = "errore"
+            if st != "errore":
+                mark(conn, r["id"], st, r.get("price_eur"))
+            stats[f"autoscout24:{st}"] += 1
     if fb:
         bd = BrightDataFacebookCollector()
         if bd.configured():

@@ -297,9 +297,13 @@ if __name__ == "__main__":
         from . import manuale, mille
         from .ciclo import _due
         log.info("SITO analisi_manuale: %s", manuale.run())
+        from . import recheck
+        log.info("SITO verifica: %s", recheck.run())
         if _due(mille.job_name(), 24 * 365):
             mille.run(fonte="subito")
         log.info("SITO analisi_manuale (dopo la selezione): %s", manuale.run())
+        from . import recheck
+        log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
         sys.exit(0)
     if mode in ("autoscout_massiva", "autoscout"):
         from .ciclo import _due
