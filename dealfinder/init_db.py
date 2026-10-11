@@ -37,6 +37,35 @@ if __name__ == "__main__":
                 conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
                 print("Creato amministratore", email)
         conn.commit()
+        # Account commercianti preparati da Render (ACCOUNT_CLIENTI, JSON): si creano o si rimettono
+        # attivi con quella password, zona e accessi. [{"email","password","nome","zona","permessi"}]
+        import json as _json
+        try:
+            clienti = _json.loads(os.environ.get("ACCOUNT_CLIENTI") or "[]")
+        except ValueError:
+            clienti = []
+            print("ACCOUNT_CLIENTI non è un JSON valido")
+        from .zone import ZONE, tutte
+        for c in clienti:
+            em, pw = str(c.get("email", "")).strip().lower(), str(c.get("password", "")).strip()
+            if "@" not in em or len(pw) < 8:
+                continue
+            z = c.get("zona") or "milano"
+            prov = tutte() if z == "tutte" else list(ZONE.get(z, ZONE["milano"])["province"])
+            perm = [x for x in (c.get("permessi") or ["auto"]) if x in ("auto", "incentivi")]
+            row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
+            if row:
+                conn.execute("UPDATE dealers SET password_hash=%s, active=true, provinces=%s, permessi=%s WHERE id=%s",
+                             (hash_password(pw), prov, perm, row["id"]))
+                print("Account cliente aggiornato:", em)
+            else:
+                row = conn.execute(
+                    "INSERT INTO dealers (name, email, password_hash, role, provinces, permessi) "
+                    "VALUES (%s,%s,%s,'commerciante',%s,%s) RETURNING id",
+                    (str(c.get("nome") or em)[:120], em, hash_password(pw), prov, perm)).fetchone()
+                conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
+                print("Creato account cliente", em)
+        conn.commit()
     # controllo foto delle auto sul sito (una volta per versione), solo sul sito web
     if os.environ.get("RENDER_SERVICE_TYPE", "web") == "web":
         try:
