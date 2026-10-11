@@ -29,7 +29,7 @@ const ICON = {
 };
 const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
               ["vendi","Vendi",'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'],
-              ["ricambi","Ricambi",'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
+              ["incentivi","Incentivi",'<circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5M7.5 11h5M7.5 13.5h5"/>'],
               ["profilo","Profilo",'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']];
 const BANDS = [
   {id:"tutti", label:"Tutti i prezzi", min:null, max:null},
@@ -299,7 +299,7 @@ function sheetParts(){
       ${(d.pezzi || []).map(it => `<div class="part"><span>${esc(it.pezzo)}${it.link ? `<br><a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer" style="font-size:13px;font-weight:600">Vedi l'offerta più bassa</a>` : ""}</span><b>${it.da === it.a ? eur(it.a) : num(it.da) + "–" + eur(it.a)}</b></div>`).join("")}
       <div class="part-total"><strong>Totale pezzi</strong><b>${ripTxt(base)}</b></div>
       <span class="hint" style="padding:10px 0 4px">Prezzi trovati online per questo modello (pezzi compatibili o usati), manodopera esclusa. Dove c'è scritto "prezzo stimato" non abbiamo trovato un'offerta: chiedi conferma al venditore.</span>
-      <button class="btn" data-act="cerca-pezzi" style="margin:8px 0 4px">Cerca i prezzi migliori in Ricambi</button>
+
     </div>
   </div></div>`;
 }
@@ -527,7 +527,8 @@ function parseHash(){
   if (e) return {route: "entra", esito: e[1] || ""};
   if (h === "prova") return {route: "prova"};
   if (!canBrowse()) return {route: "vetrina"};
-  return {route: ["vendi","ricambi","profilo"].includes(h) ? h : "affari", sel: null};
+  if (h === "ricambi") { location.replace("/incentivi/"); }
+  return {route: ["vendi","profilo"].includes(h) ? h : "affari", sel: null};
 }
 function go(route, replace){
   const h = "#/" + route;
@@ -1054,7 +1055,7 @@ $app.addEventListener("click", e => {
   const act = t.dataset.act, v = t.dataset.v;
   if (act === "close-bg" && e.target !== t) return;
   switch (act) {
-    case "tab": if (v === S.route) { window.scrollTo({top: 0, behavior: "smooth"}); return; } go(v); return;
+    case "tab": if (v === "incentivi") { location.href = "/incentivi/"; return; } if (v === S.route) { window.scrollTo({top: 0, behavior: "smooth"}); return; } go(v); return;
     case "open": if (VC.on) vcEnd(); S.fromList = true; go("auto/" + v); return;
     case "back": if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go("affari", true); return;
     case "reload": loadCars(true); return;

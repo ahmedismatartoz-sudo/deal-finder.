@@ -1008,7 +1008,6 @@ routes = [
     Route("/api/voce", voce_tts, methods=["POST"]),
     Route("/api/trascrivi", voce_stt, methods=["POST"]),
     Route("/api/servizi/vendi", servizio_vendi, methods=["POST"]),
-    Route("/api/servizi/ricambi", servizio_ricambi, methods=["POST"]),
     Route("/sw.js", service_worker),
     Route("/manifest.webmanifest", manifest),
     Route("/robots.txt", robots),
