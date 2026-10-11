@@ -123,6 +123,28 @@ def client_ip(request: Request) -> str:
 _attempts: dict[str, list[float]] = defaultdict(list)
 
 
+def _diagnosi_password(email: str, pw: str, u: dict | None) -> str:
+    """Perché la password non va, SENZA scriverla: è quella dell'amministratore (riempita dal telefono)?
+    Dove differisce da quella preparata su Render? La password salvata corrisponde a quella preparata?"""
+    out = []
+    adm = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+    if adm:
+        out.append(f"e_la_password_admin={pw.strip() == adm}")
+    try:
+        for c in json.loads(os.environ.get("ACCOUNT_CLIENTI") or "[]"):
+            if str(c.get("email", "")).strip().lower() == email:
+                giusta = str(c.get("password", "")).strip()
+                diff = next((i for i, (a, b) in enumerate(zip(pw, giusta)) if a != b), None)
+                out.append(f"uguale_a_quella_preparata={pw == giusta} lunghezza_giusta={len(giusta)} "
+                           f"prima_differenza_carattere={None if diff is None else diff + 1} "
+                           f"tipo_carattere_diverso={'' if diff is None else ('cifra' if pw[diff].isdigit() else 'lettera' if pw[diff].isalpha() else 'simbolo')}")
+                if u:
+                    out.append(f"salvata_corrisponde_a_preparata={verify_password(giusta, u['password_hash'])}")
+    except Exception as e:
+        out.append(f"diagnosi_errore={type(e).__name__}")
+    return " ".join(out)
+
+
 async def login(request: Request):
     data = await body(request)
     email = str(data.get("email", "")).strip().lower()[:200]
@@ -142,9 +164,9 @@ async def login(request: Request):
     u, ok = await run_in_threadpool(check)
     if not ok:
         pw = str(data.get("password", ""))
-        log.warning("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s",
+        log.warning("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s %s",
                  email, "trovato" if u else "NON trovato o disattivato", len(pw), any(c.isupper() for c in pw),
-                 pw != pw.strip())
+                 pw != pw.strip(), _diagnosi_password(email, pw, u))
         _attempts[email].append(now)
         _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")
