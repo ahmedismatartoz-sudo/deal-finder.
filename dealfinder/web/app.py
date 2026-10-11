@@ -800,6 +800,28 @@ def _vetrina() -> dict:
         return {}
 
 
+_tel_cache: dict[int, bool] = {}
+
+
+def _meno_subito_senza_telefono(items: list[dict]) -> list[dict]:
+    """Annunci Subito senza numero di telefono nel testo: si nasconde la metà peggiore (meno guadagno).
+    TOGLI_SENZA_TELEFONO = percentuale da togliere (predefinita 50)."""
+    quota = int(os.environ.get("TOGLI_SENZA_TELEFONO", "50"))
+    if quota <= 0:
+        return items
+    sub_ids = [it["id"] for it in items if it.get("fonte") == "Subito"]
+    mancano = [i for i in sub_ids if i not in _tel_cache]
+    if mancano:
+        with connect() as conn:
+            for r in conn.execute("SELECT id, description FROM listings WHERE id = ANY(%s)", (mancano,)).fetchall():
+                t = r.get("description") or ""
+                _tel_cache[r["id"]] = bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
+    senza = [it for it in items if it.get("fonte") == "Subito" and not _tel_cache.get(it["id"], False)]
+    senza.sort(key=lambda it: scovo.guadagno_minimo(it))
+    via = {it["id"] for it in senza[: len(senza) * quota // 100]}
+    return [it for it in items if it["id"] not in via]
+
+
 def affari(request: Request):
     user = viewer(request, "auto")
     with connect() as conn:
@@ -811,6 +833,7 @@ def affari(request: Request):
             sql += " AND (l.province = ANY(%(prov)s) OR l.source='facebook' OR l.province IS NULL)"
         rows = conn.execute(sql + " LIMIT 3000", {"me": user["id"], "prov": prov}).fetchall()
     items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
+    items = _meno_subito_senza_telefono(items)
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     pos = {i: k for k, i in enumerate(vet.get("ids") or [])}
