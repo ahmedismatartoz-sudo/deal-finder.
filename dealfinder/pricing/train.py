@@ -46,6 +46,7 @@ def prescreen_backlog(conn, model: dict) -> dict:
 
 
 GROWTH_RETRAIN = 0.10      # la base è cresciuta del 10%: si riaddestra subito
+TRAIN_MAX = int(__import__("os").environ.get("TRAIN_MAX", "45000"))
 BASE = "tutte_le_zone"     # tutti gli annunci di Milano e dintorni + Ravenna e dintorni, tutti i siti
 RETRAIN_HOURS = 22         # altrimenti ogni giorno: il modello impara di continuo dai nuovi annunci
 
@@ -59,7 +60,7 @@ def run(force: bool = False) -> dict:
                AND (status='attivo' OR disappeared_at > now() - interval '180 days')
                AND id NOT IN (SELECT listing_id FROM dealer_feedback WHERE status='scartata' AND
                    (reason ILIKE '%%dati%%' OR reason ILIKE '%%prezzo non vero%%' OR reason ILIKE '%%truffa%%'))"""
-        n_now = conn.execute(f"SELECT count(*) AS n FROM listings WHERE {where}").fetchone()["n"]
+        n_now = min(TRAIN_MAX, conn.execute(f"SELECT count(*) AS n FROM listings WHERE {where}").fetchone()["n"])
         if cur and not force:
             prev_m = cur["metrics"] if isinstance(cur["metrics"], dict) else json.loads(cur["metrics"] or "{}")
             n_prev = prev_m.get("annunci_base")
@@ -73,8 +74,10 @@ def run(force: bool = False) -> dict:
                 return {"saltato": True, "annunci": n_now}
             log.info("riaddestramento: base passata da %s a %s annunci", n_prev, n_now)
         finish = log_job(conn, "train")
+        # Memoria limitata (512 MB): al massimo TRAIN_MAX annunci, i più recenti (privati prima dei concessionari)
         listings = [row_to_listing(r) for r in conn.execute(
-            f"""SELECT {MARKET_COLS} FROM listings WHERE {where}""")]
+            f"""SELECT {MARKET_COLS} FROM listings WHERE {where}
+                ORDER BY (seller_type = 'privato') DESC, last_seen_at DESC LIMIT %s""", (TRAIN_MAX,))]
         # Impara anche dai commercianti: si aggiungono i prezzi di vendita VERI delle auto
         # rivendute (contano 3 volte); gli annunci segnalati come falsi sono già esclusi sopra
         try:
