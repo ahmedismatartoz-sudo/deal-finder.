@@ -1008,6 +1008,33 @@ routes = [
     Route("/", index),
 ]
 
-app = Starlette(routes=routes,
+def _aggiorna_visibili():
+    """In sottofondo (ogni 30 minuti): le auto approvate e viste dalla raccolta nelle ultime 48 ore restano visibili,
+    anche quando il ciclo notturno è in ritardo. Non blocca mai l'avvio del sito."""
+    import threading
+
+    def loop():
+        from ..pipeline import manuale
+        while True:
+            try:
+                with connect() as conn:
+                    manuale.segna_viste_di_recente(conn)
+            except Exception as e:
+                logging.getLogger("visibili").warning("aggiornamento auto visibili non riuscito: %s", str(e)[:200])
+            time.sleep(1800)
+    threading.Thread(target=loop, daemon=True, name="visibili").start()
+
+
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _lifespan(app):
+    if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
+        _aggiorna_visibili()
+    yield
+
+
+app = Starlette(routes=routes, lifespan=_lifespan,
                 middleware=[Middleware(SecurityMiddleware), Middleware(GZipMiddleware, minimum_size=800)],
                 exception_handlers={HTTPError: http_error, 500: server_error})
