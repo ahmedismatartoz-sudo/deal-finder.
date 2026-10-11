@@ -142,7 +142,7 @@ async def login(request: Request):
     u, ok = await run_in_threadpool(check)
     if not ok:
         pw = str(data.get("password", ""))
-        log.info("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s",
+        log.warning("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s",
                  email, "trovato" if u else "NON trovato o disattivato", len(pw), any(c.isupper() for c in pw),
                  pw != pw.strip())
         _attempts[email].append(now)
