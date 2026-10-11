@@ -351,27 +351,14 @@ const zonaDi = (prov) => {
 };
 
 async function viewAdmin() {
-  $view.innerHTML = `<h1>Gestione</h1><p class="sub">Stato delle fonti, qualità delle stime, costi AI e commercianti.</p><div id="adm"></div>`;
+  $view.innerHTML = `<h1>Gestione</h1><p class="sub">Stato delle fonti, qualità delle stime, costi AI e commercianti.</p><div id="adm"></div><div id="adm-stato"><p class="note">Carico lo stato delle fonti…</p></div>`;
   const box = document.getElementById("adm");
   try {
-    const [o, d, rq] = await Promise.all([api("/api/admin/overview"), api("/api/admin/dealers"), api("/api/admin/richieste")]);
+    const oP = api("/api/admin/overview");      // lento con tanti annunci: si carica dopo, i commercianti subito
+    const [d, rq] = await Promise.all([api("/api/admin/dealers"), api("/api/admin/richieste")]);
     const table = (rows, cols) => rows.length ? `<table class="kv"><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr>
       ${rows.map((r) => `<tr>${cols.map(([k, , f]) => `<td>${f ? f(r[k], r) : esc(r[k])}</td>`).join("")}</tr>`).join("")}</table>` : `<p class="note">Nessun dato.</p>`;
-    const q = o.quality[0];
-    const al = o.allarmi || [];
     box.innerHTML = `
-      <div class="panel" style="margin-bottom:16px"><h2>Allarmi</h2>${al.length ? `<ul>${al.map((a) => `<li class="ko">${esc(a)}</li>`).join("")}</ul>` : '<p class="ok">Tutto regolare</p>'}</div>
-      <div class="stats">
-        <div class="panel"><h2>Ultimi lavori</h2>${table(o.jobs, [["job", "Lavoro"], ["finished_at", "Fine", (v) => esc(v ? new Date(v).toLocaleString("it-IT") : "in corso")], ["ok", "Esito", (v) => v ? '<span class="ok">ok</span>' : '<span class="ko">errore</span>']])}</div>
-        <div class="panel"><h2>Nuovi annunci (24 ore)</h2>${table(o.new_last_24h, [["source", "Fonte"], ["n", "Annunci"]])}</div>
-        <div class="panel"><h2>Qualità stime</h2>${q ? `<table class="kv"><tr><td>Casi misurati</td><td>${q.n_cases}</td></tr>
-          <tr><td>Errore mediano</td><td>${q.median_abs_pct_error != null ? Math.round(q.median_abs_pct_error * 100) + "%" : "n.d."}</td></tr>
-          <tr><td>Prudente sotto il prezzo finale</td><td>${q.prudent_coverage != null ? Math.round(q.prudent_coverage * 100) + "% (obiettivo 75%)" : "n.d."}</td></tr>
-          <tr><td>Sconto trattativa dalle vendite</td><td>${q.suggested_negotiation_discount != null ? Math.round(q.suggested_negotiation_discount * 100) + "%" : "servono 10 vendite"}</td></tr></table>` : '<p class="note">Prima misura dopo una settimana di dati.</p>'}</div>
-        <div class="panel"><h2>Uso AI oggi</h2>${table(o.ai_usage_today, [["task", "Attività"], ["calls", "Chiamate"], ["input_tokens", "Token in"], ["output_tokens", "Token out"], ["web_searches", "Ricerche"]])}</div>
-      </div>
-      <h2>Annunci per stato (7 giorni)</h2>${table(o.stages, [["stage", "Stato"], ["stage_reason", "Motivo"], ["n", "Annunci"]])}
-      <h2>Vendi e Ricambi oggi</h2>${table(o.servizi_oggi || [], [["service", "Servizio"], ["n", "Usi"], ["ok", "Riusciti"]])}
       <h2>Richieste di accesso</h2>${table(rq.items, [["at", "Quando", (v) => esc(new Date(v).toLocaleString("it-IT"))], ["name", "Nome"], ["company", "Autosalone"], ["email", "Email"], ["phone", "Telefono"],
         ["source", "Da", (v) => esc(v === "google" ? "Google" : v === "apple" ? "Apple" : "Modulo")],
         ["id", "", (v, r) => r.dealer_id ? `<button class="btn primary" data-approve="${v}">Attiva</button>`
@@ -431,6 +418,24 @@ async function viewAdmin() {
         toast("Account creato"); viewAdmin();
       } catch (err) { toast(err.message); }
     };
+    const st = document.getElementById("adm-stato");
+    oP.then((o) => {
+      const q = (o.quality || [])[0];
+      const al = o.allarmi || [];
+      st.innerHTML = `<h2 style="margin-top:28px">Stato del sistema</h2>
+      <div class="panel" style="margin-bottom:16px"><h2>Allarmi</h2>${al.length ? `<ul>${al.map((a) => `<li class="ko">${esc(a)}</li>`).join("")}</ul>` : '<p class="ok">Tutto regolare</p>'}</div>
+      <div class="stats">
+        <div class="panel"><h2>Ultimi lavori</h2>${table(o.jobs, [["job", "Lavoro"], ["finished_at", "Fine", (v) => esc(v ? new Date(v).toLocaleString("it-IT") : "in corso")], ["ok", "Esito", (v) => v ? '<span class="ok">ok</span>' : '<span class="ko">errore</span>']])}</div>
+        <div class="panel"><h2>Nuovi annunci (24 ore)</h2>${table(o.new_last_24h, [["source", "Fonte"], ["n", "Annunci"]])}</div>
+        <div class="panel"><h2>Qualità stime</h2>${q ? `<table class="kv"><tr><td>Casi misurati</td><td>${q.n_cases}</td></tr>
+          <tr><td>Errore mediano</td><td>${q.median_abs_pct_error != null ? Math.round(q.median_abs_pct_error * 100) + "%" : "n.d."}</td></tr>
+          <tr><td>Prudente sotto il prezzo finale</td><td>${q.prudent_coverage != null ? Math.round(q.prudent_coverage * 100) + "% (obiettivo 75%)" : "n.d."}</td></tr>
+          <tr><td>Sconto trattativa dalle vendite</td><td>${q.suggested_negotiation_discount != null ? Math.round(q.suggested_negotiation_discount * 100) + "%" : "servono 10 vendite"}</td></tr></table>` : '<p class="note">Prima misura dopo una settimana di dati.</p>'}</div>
+        <div class="panel"><h2>Uso AI oggi</h2>${table(o.ai_usage_today, [["task", "Attività"], ["calls", "Chiamate"], ["input_tokens", "Token in"], ["output_tokens", "Token out"], ["web_searches", "Ricerche"]])}</div>
+      </div>
+      <h2>Annunci per stato (7 giorni)</h2>${table(o.stages, [["stage", "Stato"], ["stage_reason", "Motivo"], ["n", "Annunci"]])}
+      <h2>Vendi e Ricambi oggi</h2>${table(o.servizi_oggi || [], [["service", "Servizio"], ["n", "Usi"], ["ok", "Riusciti"]])}`;
+    }).catch((err) => { st.innerHTML = `<p class="note">Stato delle fonti non disponibile ora (${esc(err.message)}).</p>`; });
   } catch (err) { box.innerHTML = `<div class="empty error">${esc(err.message)}</div>`; }
 }
 

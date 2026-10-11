@@ -357,6 +357,7 @@ def notifications_seen(request: Request):
 def admin_overview(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
+        conn.execute("SET statement_timeout = '20s'")        # con tanti annunci: meglio un errore che una pagina ferma
         out = {
             "listings_by_source": conn.execute(
                 "SELECT source, status, count(*) AS n FROM listings GROUP BY source, status ORDER BY source").fetchall(),
