@@ -175,3 +175,13 @@ def test_zona_milano_ravenna():
     from dealfinder.web.scovo import area
     assert area({"province": "RA"}) == "ravenna" and area({"province": "FC"}) == "ravenna"
     assert area({"province": "MI"}) == "milano" and area({"province": None}) == "milano"
+
+
+def test_link_di_accesso():
+    from dealfinder.web.auth import check_link_code, make_link_code
+    c = make_link_code(7, "scrypt$abc$def")
+    assert check_link_code(c, "scrypt$abc$def")
+    assert not check_link_code(c, "scrypt$abc$altra")            # password cambiata: il link non vale più
+    assert not check_link_code(c[:-1] + ("0" if c[-1] != "0" else "1"), "scrypt$abc$def")
+    import re
+    assert re.fullmatch(r"[\w-]+", c)                              # passa nel link #/accesso/...

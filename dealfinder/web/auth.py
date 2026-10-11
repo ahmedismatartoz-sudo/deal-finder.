@@ -53,3 +53,33 @@ def read_token(token: str | None) -> dict | None:
     except Exception:
         return None
     return data if data.get("exp", 0) > time.time() else None
+
+
+# ---------- link di accesso (senza scrivere la password) ----------
+LINK_GIORNI = int(os.environ.get("LINK_GIORNI", "7"))
+
+
+def _link_sig(dealer_id: int, exp: int, pw_hash: str | None) -> str:
+    msg = f"link:{dealer_id}:{exp}:{(pw_hash or '')[-24:]}".encode()
+    return hmac.new(_secret(), msg, hashlib.sha256).hexdigest()[:40]
+
+
+def make_link_code(dealer_id: int, pw_hash: str | None) -> str:
+    """Codice per entrare con un link: vale LINK_GIORNI giorni e smette di valere se cambia la password."""
+    exp = int(time.time()) + LINK_GIORNI * 86400
+    return f"L{dealer_id}x{exp}x{_link_sig(dealer_id, exp, pw_hash)}"
+
+
+def parse_link_code(code: str) -> tuple[int, int, str] | None:
+    try:
+        a, b, sig = code[1:].split("x")
+        return int(a), int(b), sig
+    except (ValueError, IndexError):
+        return None
+
+
+def check_link_code(code: str, pw_hash: str | None) -> bool:
+    p = parse_link_code(code)
+    if not p or p[1] < time.time():
+        return False
+    return hmac.compare_digest(p[2], _link_sig(p[0], p[1], pw_hash))

@@ -370,7 +370,7 @@ async function viewAdmin() {
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"]].map(([k, l]) =>
           `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
         ["active", "Attivo", (v, r) => `${v ? '<span class="ok">Attivo</span>' : '<b class="ko">Disattivato</b>'} <button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Riattiva"}</button>`],
-        ["id", "Password", (v, r) => `<button class="btn" data-pwd="${v}" data-who="${esc(r.email)}">Nuova password</button>`]])}</div>
+        ["id", "Accesso", (v, r) => `<button class="btn primary" data-link="${v}" data-who="${esc(r.email)}">Link di accesso</button> <button class="btn" data-pwd="${v}" data-who="${esc(r.email)}">Nuova password</button>`]])}</div>
       <h2>Nuovo commerciante</h2>
       <form class="form" id="new-dealer">
         <div class="grid2">
@@ -389,6 +389,15 @@ async function viewAdmin() {
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();
+    });
+    box.querySelectorAll("[data-link]").forEach((b) => b.onclick = async () => {
+      try {
+        const r = await api("/api/admin/dealers/" + b.dataset.link + "/link", { method: "POST" });
+        const testo = "Ecco il tuo accesso a Scovo (apri il link, entri subito): " + r.url;
+        if (navigator.share) { try { await navigator.share({ title: "Accesso a Scovo", text: testo }); return; } catch (e) { /* annullato */ } }
+        try { await navigator.clipboard.writeText(r.url); toast("Link copiato: incollalo su WhatsApp. Vale " + r.giorni + " giorni."); }
+        catch (e) { prompt("Copia questo link e mandalo a " + b.dataset.who + ":", r.url); }
+      } catch (err) { toast(err.message); }
     });
     box.querySelectorAll("[data-pwd]").forEach((b) => b.onclick = async () => {
       const pwd = prompt("Nuova password per " + b.dataset.who + " (almeno 8 caratteri; maiuscole e minuscole contano):");

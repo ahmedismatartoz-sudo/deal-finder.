@@ -23,7 +23,7 @@ from starlette.staticfiles import StaticFiles
 from ..config import settings
 from ..db import connect
 from . import cards, foto, scovo, sessions, social
-from .auth import hash_password, make_token, read_token, verify_password
+from .auth import check_link_code, hash_password, make_link_code, make_token, parse_link_code, read_token, verify_password
 
 log = logging.getLogger("web")
 STATIC = Path(__file__).parent / "static"
@@ -492,6 +492,20 @@ async def admin_create_dealer(request: Request):
     return jsonify({"id": row["id"]}, 201)
 
 
+def admin_link(request: Request):
+    """Link per entrare senza password (da mandare al cliente su WhatsApp)."""
+    current_user(request, admin=True)
+    did = int(request.path_params["id"])
+    with connect() as conn:
+        u = conn.execute("SELECT id, password_hash, active FROM dealers WHERE id=%s", (did,)).fetchone()
+    if not u:
+        err(404, "Account non trovato")
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "scovo.onrender.com"
+    from .auth import LINK_GIORNI
+    return jsonify({"url": f"https://{host}/#/accesso/{make_link_code(did, u['password_hash'])}", "giorni": LINK_GIORNI,
+                    "attivo": u["active"]})
+
+
 async def admin_update_dealer(request: Request):
     current_user(request, admin=True)
     did = int(request.path_params["id"])
@@ -583,7 +597,21 @@ async def auth_callback(request: Request):
 
 async def auth_scambio(request: Request):
     data = await body(request)
-    d = social.redeem(str(data.get("code", "")))
+    code = str(data.get("code", ""))[:200]
+    if code.startswith("L"):
+        # link di accesso preparato dall'amministratore: si entra senza scrivere la password
+        def by_link():
+            p = parse_link_code(code)
+            if not p:
+                return None
+            with connect() as conn:
+                u = conn.execute("SELECT * FROM dealers WHERE id=%s AND active", (p[0],)).fetchone()
+            return u if u and check_link_code(code, u["password_hash"]) else None
+        u = await run_in_threadpool(by_link)
+        if not u:
+            err(401, "Link scaduto o non valido: chiedine uno nuovo")
+        return jsonify(await run_in_threadpool(start_session, request, u, "link"))
+    d = social.redeem(code)
     if not d:
         err(401, "Accesso scaduto: riprova")
     return jsonify(await run_in_threadpool(start_session, request, d, d.get("method", "google")))
@@ -1093,6 +1121,7 @@ routes = [
     Route("/api/admin/dealers", admin_dealers, methods=["GET"]),
     Route("/api/admin/dealers", admin_create_dealer, methods=["POST"]),
     Route("/api/admin/dealers/{id:int}", admin_update_dealer, methods=["PATCH"]),
+    Route("/api/admin/dealers/{id:int}/link", admin_link, methods=["POST"]),
     Route("/api/admin/richieste", admin_requests),
     Route("/api/admin/richieste/{id:int}", admin_request_done, methods=["POST"]),
     Route("/api/assistente", assistente, methods=["POST"]),
