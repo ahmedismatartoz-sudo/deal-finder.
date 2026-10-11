@@ -34,6 +34,13 @@ def _in_corso(job: str, hours: int = 8) -> bool:
                                  "AND started_at > now() - make_interval(hours => %s) LIMIT 1", (job, hours)).fetchone())
 
 
+def _massiva_fatta() -> bool:
+    """Raccolta massiva già fatta anche se un errore isolato l'ha segnata come non riuscita."""
+    with connect() as conn:
+        return bool(conn.execute("SELECT 1 FROM job_runs WHERE job='collect:massiva' AND finished_at IS NOT NULL "
+                                 "AND (stats->>'subito:nuovo')::int > 1000 LIMIT 1").fetchone())
+
+
 def fb_job() -> str:
     """Nome del lavoro Facebook: con FB_PARTE ogni servizio ha il suo (così non si bloccano a vicenda)."""
     fp = os.environ.get("FB_PARTE")
@@ -90,7 +97,7 @@ def run() -> None:
     step("opportunita", collect, "opportunita")
     # raccolta aggressiva di tutta la Lombardia (una volta per versione), poi la selezione
     massiva = False
-    if _due("collect:massiva", 24 * 365):
+    if _due("collect:massiva", 24 * 365) and not _massiva_fatta():
         step("raccolta_massiva", collect, "massiva")
         massiva = True
     # selezione dei 1.000 migliori di tutta la base, con foto, per il controllo uno per uno (una volta)
