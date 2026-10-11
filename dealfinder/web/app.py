@@ -447,7 +447,7 @@ def alarms(conn) -> list[str]:
     for f in fails:
         out.append(f"Lavoro '{f['job']}' fallito {f['n']} volte nelle ultime 24 ore")
     affari_n = conn.execute("SELECT count(*) AS n FROM listings WHERE stage='approfondito' AND status='attivo' "
-                            "AND stage_reason IN ('opportunita','da_verificare') "
+                            "AND stage_reason IN ('opportunita','da_verificare','incidentata') "
                             "AND last_checked_at > now() - interval '48 hours'").fetchone()["n"]
     if affari_n < 10:
         out.append(f"Solo {affari_n} auto visibili ai commercianti: controlla verifica e analisi")
@@ -1149,6 +1149,11 @@ def _aggiorna_visibili():
 
     def loop():
         from ..pipeline import manuale
+        try:
+            # sezione Incidentate: le auto scelte a mano entrano subito, senza aspettare il ciclo
+            manuale.run(esiti=("incidentata",))
+        except Exception as e:
+            logging.getLogger("visibili").warning("incidentate non importate: %s", str(e)[:200])
         while True:
             try:
                 with connect() as conn:

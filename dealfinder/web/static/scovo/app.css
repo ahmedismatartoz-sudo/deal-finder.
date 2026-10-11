@@ -118,8 +118,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .part-total b{font:800 22px var(--disp)}
 .err{color:#c0392b;font-size:13px}
 
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:7;margin:0 auto;max-width:480px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
-.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;font-size:12px;font-weight:600;color:var(--muted)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:7;margin:0 auto;max-width:480px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;font-size:11.5px;padding:0 2px;white-space:nowrap;font-weight:600;color:var(--muted)}
 .tabs button[aria-current="page"]{color:var(--tag)}
 .list{padding-bottom:96px}
 .demo{background:var(--soft);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted)}

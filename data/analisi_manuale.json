@@ -30,11 +30,13 @@
  },
  {
   "id": 732,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
    {
-    "part": "altro",
+    "part": "paraurti_anteriore",
     "side": null,
     "action": "sostituire",
     "severity": "grave",
@@ -48,18 +50,105 @@
     "source": "foto"
    },
    {
-    "part": "paraurti_anteriore",
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
     "side": null,
     "action": "sostituire",
     "severity": "grave",
     "source": "foto"
+   },
+   {
+    "part": "longheroni_traversa",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Peugeot 208 2022: frontale pesante, muso distrutto fino al vano motore, cofano accartocciato, probabili longheroni coinvolti. Incidente grave, da scartare.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "2 fari LED",
+    "low": 200,
+    "high": 1000
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "2 parafanghi",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa/ossatura frontale",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (longheroni)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "riserva airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "riserva accessori vano motore",
+    "low": 200,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1920,
+  "ricambi_max": 7500,
+  "guadagno_finale": 1538,
+  "nota": "208 del 2022 con frontale distrutto fino al vano motore e probabili longheroni coinvolti (danno strutturale); fiancate, retro e interni buoni. Anche con riserva airbag piena resta un margine appena sopra soglia: conviene solo se longheroni e motore reggono.",
+  "controlli": [
+   "longheroni e misure di scocca",
+   "airbag esplosi o no",
+   "motore e supporti, perdite",
+   "montante anteriore e porte"
+  ],
   "aggiorna": true
  },
  {
@@ -178,29 +267,92 @@
  },
  {
   "id": 9769,
-  "esito": "scartata",
-  "danno": "grave",
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
   "danni": [
    {
-    "part": "altro",
+    "part": "paraurti_anteriore",
     "side": null,
     "action": "sostituire",
-    "severity": "grave",
+    "severity": "medio",
     "source": "foto"
    },
    {
-    "part": "paraurti_anteriore",
+    "part": "faro_anteriore",
     "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
     "action": "sostituire",
     "severity": "grave",
     "source": "foto"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Audi Q5 2017: airbag esplosi (volante e passeggero) visibili in foto e frontale sinistro danneggiato. Da scartare.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx LED",
+    "low": 200,
+    "high": 800
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "plancia (airbag passeggero)",
+    "low": 150,
+    "high": 600
+   },
+   {
+    "label": "radiatori/condensatore (riserva)",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "sensori, fendinebbia, supporti",
+    "low": 50,
+    "high": 200
+   },
+   {
+    "label": "riserva traversa/supporti frontale",
+    "low": 100,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1460,
+  "ricambi_max": 5450,
+  "guadagno_finale": 4224,
+  "nota": "Q5 2017 con urto anteriore sinistro (paraurti, faro, parafango) e airbag volante e passeggero esplosi; carrozzeria e interni per il resto buoni. Anche con kit airbag completo il margine è buono.",
+  "controlli": [
+   "radiatori e traversa sotto il paraurti",
+   "longherone anteriore sx",
+   "sospensione e convergenza ant sx",
+   "airbag laterali e cinture"
+  ],
   "aggiorna": true
  },
  {
@@ -1363,8 +1515,10 @@
  },
  {
   "id": 41682,
-  "esito": "scartata",
-  "danno": "medio",
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
    {
     "part": "parafango_anteriore",
@@ -1376,7 +1530,7 @@
    {
     "part": "paraurti_anteriore",
     "side": "sx",
-    "action": "riparare",
+    "action": "sostituire",
     "severity": "leggero",
     "source": "foto"
    },
@@ -1388,7 +1542,7 @@
     "source": "foto"
    },
    {
-    "part": "altro",
+    "part": "frizione",
     "side": null,
     "action": "sostituire",
     "severity": "medio",
@@ -1397,32 +1551,39 @@
   ],
   "ricambi": [
    {
-    "label": "Kit frizione Mokka 1.6 CDTI (prezzo stimato)",
-    "low": 150,
-    "high": 350
-   },
-   {
-    "label": "Parafango anteriore sx Mokka (prezzo stimato)",
+    "label": "parafango anteriore sx",
     "low": 60,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "modanatura passaruota posteriore dx",
+    "low": 30,
+    "high": 80
+   },
+   {
+    "label": "kit frizione + volano",
+    "low": 250,
+    "high": 700
+   },
+   {
+    "label": "tagliando (filtri e olio)",
+    "low": 80,
     "high": 150
-   },
-   {
-    "label": "Paraurti anteriore Mokka (aftermarket) (prezzo stimato)",
-    "low": 150,
-    "high": 300
-   },
-   {
-    "label": "Riserva per danni probabili non dichiarati",
-    "low": 0,
-    "high": 400
    }
   ],
-  "ricambi_min": 360,
-  "ricambi_max": 1200,
-  "nota": "Opel Mokka 1.6 CDTI 2016, 147.000 km. Foto: parafango anteriore sx ammaccato e strisciato con angolo paraurti sx, segni sulla porta posteriore/passaruota dx. Testo: frizione da fare, tagliando e revisione.",
+  "ricambi_min": 500,
+  "ricambi_max": 1380,
+  "guadagno_finale": 1857,
+  "nota": "Mokka 2016 con parafango e angolo paraurti sx ammaccati e segni sul lato dx, più frizione da fare. Danni leggeri e pezzi economici: il guadagno resta sopra i 1.500 €.",
   "controlli": [
-   "Volano bimassa insieme alla frizione",
-   "Foto lato destro completo"
+   "frizione e volano",
+   "fissaggi faro sx",
+   "revisione e tagliando"
   ],
   "aggiorna": true
  },
@@ -2189,8 +2350,10 @@
  },
  {
   "id": 22588,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
   "danni": [
    {
     "part": "paraurti_anteriore",
@@ -2208,31 +2371,103 @@
    },
    {
     "part": "faro_anteriore",
-    "side": "dx",
-    "action": "sostituire",
-    "severity": "grave",
-    "source": "foto"
-   },
-   {
-    "part": "faro_anteriore",
     "side": "sx",
     "action": "sostituire",
     "severity": "grave",
     "source": "foto"
    },
    {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
     "part": "parafango_anteriore",
     "side": "dx",
     "action": "sostituire",
-    "severity": "grave",
-    "source": "foto"
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Mercedes CLA 2022 su carroattrezzi con forte urto frontale: cofano accartocciato, paraurti distrutto, fari LED e parafango dx colpiti; probabili radiatori, traversa, sensori ADAS e airbag. Titolo dice CLA 250, versione CLA 220 4Matic. Incidente frontale pesante.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore AMG line",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "cofano",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "faro LED sx",
+    "low": 400,
+    "high": 800
+   },
+   {
+    "label": "faro LED dx",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "parafango",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "traversa e supporti",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "sensori ADAS/radar",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "riserva airbag + centralina",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "lamierati/ossatura (riserva longheroni)",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 2700,
+  "ricambi_max": 8050,
+  "guadagno_finale": 5611,
+  "nota": "CLA 2022 con 11.000 km e forte urto frontale (cofano, paraurti, fari, radiatori); possibili longheroni e airbag, messi in riserva. Anche così il margine resta ampio su un'auto quasi nuova.",
+  "controlli": [
+   "versione reale (250 o 220 4Matic) dal libretto",
+   "airbag e centralina",
+   "longheroni e misure scocca",
+   "radar/sensori ADAS",
+   "vano motore e radiatori"
+  ],
   "aggiorna": true
  },
  {
@@ -2467,11 +2702,20 @@
  },
  {
   "id": 1984,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
    {
-    "part": "altro",
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_posteriore",
     "side": "sx",
     "action": "sostituire",
     "severity": "grave",
@@ -2481,15 +2725,83 @@
     "part": "cerchio",
     "side": "sx",
     "action": "sostituire",
-    "severity": "grave",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
     "source": "foto"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Peugeot 308 SW 2016: urto laterale posteriore sinistro pesante, ruota posteriore spinta dentro (assale/sospensione), fiancata e paraurti posteriore schiacciati. Danno strutturale, da scartare.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "lamierati/ossatura (fiancata e passaruota post sx)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "assale/ponte posteriore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "ammortizzatore + molla",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "pneumatico",
+    "low": 50,
+    "high": 120
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "fanale posteriore sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "portiera posteriore sx",
+    "low": 150,
+    "high": 450
+   }
+  ],
+  "ricambi_min": 930,
+  "ricambi_max": 3370,
+  "guadagno_finale": 1801,
+  "nota": "308 SW 2016 con urto laterale posteriore sinistro: fiancata e passaruota schiacciati (danno strutturale) e ruota spinta dentro. Il frontale è sano e con assale e lamierati resta un margine sopra soglia, ma stretto.",
+  "controlli": [
+   "pianale e longherone posteriore",
+   "attacchi assale posteriore",
+   "portellone e chiusura",
+   "dati auto: annuncio senza descrizione"
+  ],
   "aggiorna": true
  },
  {
@@ -3814,18 +4126,27 @@
  },
  {
   "id": 25641,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
    {
     "part": "paraurti_anteriore",
     "side": null,
     "action": "sostituire",
-    "severity": "medio",
+    "severity": "grave",
     "source": "foto"
    },
    {
     "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "griglia",
     "side": null,
     "action": "sostituire",
     "severity": "medio",
@@ -3837,49 +4158,66 @@
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
    }
   ],
   "ricambi": [
    {
-    "label": "Paraurti anteriore Hyundai i10 III (prezzo stimato)",
-    "low": 150,
-    "high": 350
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
    },
    {
-    "label": "Cofano i10 (prezzo stimato)",
-    "low": 150,
-    "high": 350
+    "label": "cofano",
+    "low": 100,
+    "high": 250
    },
    {
-    "label": "Faro anteriore dx (prezzo stimato)",
+    "label": "griglia",
+    "low": 30,
+    "high": 80
+   },
+   {
+    "label": "faro dx",
+    "low": 60,
+    "high": 250
+   },
+   {
+    "label": "radiatori/condensatore",
     "low": 120,
     "high": 300
    },
    {
-    "label": "Traversa/rinforzo anteriore (prezzo stimato)",
-    "low": 60,
+    "label": "traversa",
+    "low": 80,
     "high": 200
    },
    {
-    "label": "Kit radiatori (prezzo stimato)",
-    "low": 150,
-    "high": 400
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
    },
    {
-    "label": "Griglia (prezzo stimato)",
-    "low": 40,
-    "high": 120
-   },
-   {
-    "label": "Riserva per danni probabili non dichiarati (prezzo stimato)",
-    "low": 0,
-    "high": 860
+    "label": "riserva airbag/sensori",
+    "low": 300,
+    "high": 700
    }
   ],
-  "ricambi_min": 670,
-  "ricambi_max": 2580,
-  "nota": "Hyundai i10 2023 con urto frontale: cofano accartocciato, paraurti staccato, griglia e zona faro dx colpiti; retro e lati ok. Con ricambi e riserva il margine non basta; da verificare anche airbag e sensori.",
-  "controlli": [],
+  "ricambi_min": 830,
+  "ricambi_max": 2130,
+  "guadagno_finale": 3323,
+  "nota": "i10 2023 con urto frontale (cofano accartocciato, paraurti staccato, faro dx): danno da pezzi semplici, retro e lati ok. Margine buono.",
+  "controlli": [
+   "airbag e sensori",
+   "radiatori",
+   "traversa e longheroni"
+  ],
   "aggiorna": true
  },
  {
@@ -4446,8 +4784,10 @@
  },
  {
   "id": 24980,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
    {
     "part": "paraurti_anteriore",
@@ -4480,41 +4820,48 @@
   ],
   "ricambi": [
    {
-    "label": "Paraurti anteriore BMW F31 (prezzo stimato)",
-    "low": 150,
-    "high": 400
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
    },
    {
-    "label": "Faro anteriore dx F31 (prezzo stimato)",
+    "label": "faro dx",
     "low": 100,
     "high": 350
    },
    {
-    "label": "Parafango anteriore dx F31 (prezzo stimato)",
-    "low": 70,
-    "high": 180
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
    },
    {
-    "label": "Cofano F31 (prezzo stimato)",
-    "low": 150,
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore (riserva)",
+    "low": 120,
     "high": 400
    },
    {
-    "label": "Kit radiatori/staffe (prezzo stimato)",
-    "low": 150,
-    "high": 400
-   },
-   {
-    "label": "Riserva per danni probabili non dichiarati (prezzo stimato)",
-    "low": 0,
-    "high": 865
+    "label": "supporti, traversa, griglia",
+    "low": 50,
+    "high": 230
    }
   ],
-  "ricambi_min": 620,
-  "ricambi_max": 2595,
-  "nota": "BMW 320d Touring F31 2013, 260.000 km: urto anteriore dx con paraurti, faro dx, parafango dx e cofano piegati; vano motore apparentemente integro. Con i ricambi il margine non c'è.",
-  "controlli": [],
-  "aggiorna": true
+  "ricambi_min": 510,
+  "ricambi_max": 1780,
+  "guadagno_finale": 1680,
+  "nota": "Urto anteriore dx su 320d Touring: paraurti, faro, parafango dx e cofano, vano motore integro. Con 260.000 km uso una rivendita prudente, e il margine passa comunque di poco.",
+  "controlli": [
+   "radiatori e condensatore",
+   "supporto faro e longherone dx",
+   "airbag non esplosi",
+   "km e manutenzione"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7100
  },
  {
   "id": 25184,
@@ -5587,28 +5934,23 @@
  },
  {
   "id": 45068,
-  "esito": "scartata",
-  "danno": "medio",
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
    {
     "part": "faro_anteriore",
     "side": "dx",
     "action": "sostituire",
-    "severity": "medio",
+    "severity": "grave",
     "source": "foto"
    },
    {
     "part": "parafango_anteriore",
     "side": "dx",
     "action": "sostituire",
-    "severity": "medio",
-    "source": "foto"
-   },
-   {
-    "part": "paraurti_anteriore",
-    "side": null,
-    "action": "sostituire",
-    "severity": "medio",
+    "severity": "grave",
     "source": "foto"
    },
    {
@@ -5619,56 +5961,88 @@
     "source": "foto"
    },
    {
-    "part": "altro",
+    "part": "paraurti_anteriore",
     "side": "dx",
     "action": "sostituire",
     "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
     "source": "foto"
    }
   ],
   "ricambi": [
    {
-    "label": "Paraurti anteriore Crossland restyling (Vizor) (prezzo stimato)",
-    "low": 250,
-    "high": 450
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
    },
    {
-    "label": "Faro anteriore LED dx Crossland restyling (prezzo stimato)",
-    "low": 350,
+    "label": "faro dx LED",
+    "low": 300,
     "high": 800
    },
    {
-    "label": "Parafango anteriore dx (prezzo stimato)",
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parafango dx",
     "low": 80,
     "high": 200
    },
    {
-    "label": "Cofano Crossland (usato) (prezzo stimato)",
+    "label": "radiatori/condensatore",
     "low": 150,
     "high": 400
    },
    {
-    "label": "Kit radiatori + condensatore (prezzo stimato)",
-    "low": 150,
-    "high": 400
-   },
-   {
-    "label": "Sospensione anteriore dx (braccio/montante) (prezzo stimato)",
+    "label": "braccio/montante dx",
     "low": 100,
     "high": 300
    },
    {
-    "label": "Riserva per danni probabili non dichiarati",
-    "low": 0,
-    "high": 1275
+    "label": "cerchio dx",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "airbag (riserva, non visibili)",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
    }
   ],
-  "ricambi_min": 1080,
-  "ricambi_max": 3825,
-  "nota": "Opel Crossland 1.2 Turbo 130 CV aut. 2023, 12.600 km. Foto: urto anteriore dx con faro dx distrutto, parafango dx accartocciato, cofano e paraurti coinvolti, possibile sospensione dx; retro e lato sx ok. Con riserva il margine scende sotto soglia.",
+  "ricambi_min": 2080,
+  "ricambi_max": 6800,
+  "guadagno_finale": 2166,
+  "nota": "Crossland 2023 con 12.600 km colpita sull'angolo anteriore dx (faro, parafango, cofano, possibile sospensione e ossatura). Auto quasi nuova: anche con riserve prudenti su airbag e lamierati il guadagno supera i 2.000 €.",
   "controlli": [
-   "Verificare airbag e longherone dx",
-   "Geometria ruota anteriore dx"
+   "airbag e pretensionatori",
+   "longherone e duomo dx",
+   "geometria sospensione dx",
+   "paraurti posteriore"
   ],
   "aggiorna": true
  },
@@ -6527,19 +6901,35 @@
  },
  {
   "id": 25179,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
    {
-    "part": "altro",
+    "part": "paraurti_posteriore",
     "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "dx",
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
    },
    {
-    "part": "paraurti_anteriore",
+    "part": "fianco_posteriore",
     "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
@@ -6554,40 +6944,50 @@
   ],
   "ricambi": [
    {
-    "label": "Paraurti posteriore Audi A1 (prezzo stimato)",
-    "low": 150,
-    "high": 400
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
    },
    {
-    "label": "Rinforzo paraurti posteriore (prezzo stimato)",
+    "label": "fanale posteriore dx",
+    "low": 40,
+    "high": 150
+   },
+   {
+    "label": "traversa posteriore",
     "low": 50,
     "high": 150
    },
    {
-    "label": "Fanale posteriore dx (prezzo stimato)",
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "parafango anteriore dx",
     "low": 60,
-    "high": 180
+    "high": 200
    },
    {
-    "label": "Paraurti anteriore Audi A1 (prezzo stimato)",
-    "low": 150,
-    "high": 400
+    "label": "faro dx",
+    "low": 60,
+    "high": 350
    },
    {
-    "label": "Parafango anteriore dx (prezzo stimato)",
-    "low": 70,
-    "high": 180
-   },
-   {
-    "label": "Riserva per danni probabili non dichiarati (prezzo stimato)",
-    "low": 0,
-    "high": 655
+    "label": "lamierati (fianco/pannello posteriore dx)",
+    "low": 300,
+    "high": 1000
    }
   ],
-  "ricambi_min": 480,
-  "ricambi_max": 1965,
-  "nota": "Audi A1 2014 con paraurti posteriore strappato a terra e lato dx colpito (fianco posteriore e angolo anteriore dx con paraurti e parafango). Danno su più lati, possibile pannello posteriore deformato: margine insufficiente.",
-  "controlli": [],
+  "ricambi_min": 670,
+  "ricambi_max": 2350,
+  "guadagno_finale": 1911,
+  "nota": "A1 colpita dietro (paraurti strappato, fanale e fianco dx) e sull'angolo anteriore dx; danni da carrozzeria con pannello posteriore da tirare. Il margine resta sopra soglia.",
+  "controlli": [
+   "pannello posteriore e pianale baule",
+   "versione reale (Attraction o S line)",
+   "faro dx"
+  ],
   "aggiorna": true
  },
  {
@@ -8021,8 +8421,10 @@
  },
  {
   "id": 28782,
-  "esito": "scartata",
-  "danno": "medio",
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
    {
     "part": "paraurti_anteriore",
@@ -8033,7 +8435,7 @@
    },
    {
     "part": "faro_anteriore",
-    "side": "sx",
+    "side": null,
     "action": "sostituire",
     "severity": "grave",
     "source": "foto"
@@ -8047,13 +8449,13 @@
    },
    {
     "part": "parafango_anteriore",
-    "side": "sx",
+    "side": null,
     "action": "sostituire",
-    "severity": "medio",
+    "severity": "grave",
     "source": "foto"
    },
    {
-    "part": "altro",
+    "part": "sospensione_anteriore",
     "side": null,
     "action": "sostituire",
     "severity": "medio",
@@ -8062,43 +8464,60 @@
   ],
   "ricambi": [
    {
-    "label": "Paraurti anteriore Q2 (prezzo stimato)",
-    "low": 200,
-    "high": 450
-   },
-   {
-    "label": "Faro anteriore sx LED Q2 (prezzo stimato)",
-    "low": 300,
-    "high": 900
-   },
-   {
-    "label": "Cofano Q2 (prezzo stimato)",
-    "low": 200,
-    "high": 450
-   },
-   {
-    "label": "Parafango anteriore sx (prezzo stimato)",
+    "label": "paraurti",
     "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro LED",
+    "low": 250,
+    "high": 800
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango",
+    "low": 60,
     "high": 200
    },
    {
-    "label": "Kit radiatori (prezzo stimato)",
-    "low": 200,
+    "label": "radiatori/condensatore",
+    "low": 120,
     "high": 400
    },
    {
-    "label": "Riserva per danni probabili non dichiarati",
+    "label": "braccio/montante",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "lamierati/ossatura (longherone/supporti)",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva airbag/pretensionatori non verificati",
     "low": 0,
-    "high": 1200
+    "high": 1500
    }
   ],
-  "ricambi_min": 980,
-  "ricambi_max": 3600,
-  "nota": "Audi Q2 2020 con urto forte sull'angolo anteriore sinistro: cofano piegato, faro sx rotto, paraurti e parafango distrutti, possibile danno a longherone/sospensione. Con la riserva i ricambi superano il margine.",
+  "ricambi_min": 1070,
+  "ricambi_max": 5050,
+  "guadagno_finale": 3486,
+  "nota": "Q2 2020 con 40.000 km e angolo anteriore schiacciato (cofano, faro, paraurti, parafango): anche con riserva per longherone e airbag il guadagno supera i 2.000 €.",
   "controlli": [
-   "Verificare longherone e traversa anteriore sx",
-   "Verificare airbag esplosi",
-   "Controllare motore 1.4 COD vs anno 2020"
+   "longherone e passaruota anteriore",
+   "airbag e spie in quadro",
+   "sospensione/geometria",
+   "fiancate (graffi e bozzi)"
   ],
   "aggiorna": true
  },
@@ -11735,29 +12154,117 @@
  },
  {
   "id": 10750,
-  "esito": "scartata",
-  "danno": "grave",
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
   "danni": [
    {
-    "part": "altro",
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
     "side": null,
     "action": "sostituire",
     "severity": "grave",
     "source": "foto"
    },
    {
-    "part": "paraurti_anteriore",
+    "part": "sospensione_anteriore",
     "side": "dx",
     "action": "sostituire",
-    "severity": "grave",
-    "source": "foto"
+    "severity": "medio",
+    "source": "testo"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Kia Picanto 2024: airbag esplosi visibili in foto, urto anteriore dx, non marciante. Da scartare.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "airbag a tendina + rivestimento cielo",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "braccio/montante sospensione dx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio dx",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva traversa/supporti frontale",
+    "low": 100,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1530,
+  "ricambi_max": 5600,
+  "rivendita_prudente": 11000,
+  "guadagno_finale": 3260,
+  "nota": "Picanto 2024 con 10.000 km, urto anteriore destro e airbag esplosi (volante e tendina); fiancate e posteriore integri. Il mercato di 15.600 € è troppo alto, ma anche con 11.000 € di rivendita prudente il margine regge.",
+  "controlli": [
+   "longherone e passaruota ant dx",
+   "perché non è marciante (sensore urto o motore)",
+   "geometria ruota ant dx",
+   "libretto: non radiata"
+  ],
   "aggiorna": true
  },
  {
@@ -11830,44 +12337,96 @@
  },
  {
   "id": 23580,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
+   {
+    "part": "ruota_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
    {
     "part": "parafango_anteriore",
     "side": "dx",
     "action": "sostituire",
-    "severity": "grave",
+    "severity": "medio",
     "source": "foto"
    },
    {
-    "part": "porta_anteriore",
+    "part": "portiera",
     "side": "dx",
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
    },
    {
-    "part": "cerchio",
+    "part": "sottoporta",
     "side": "dx",
-    "action": "sostituire",
+    "action": "riparare",
     "severity": "medio",
-    "source": "foto"
-   },
-   {
-    "part": "altro",
-    "side": "dx",
-    "action": "sostituire",
-    "severity": "grave",
-    "source": "foto"
+    "source": "testo"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Audi TT 2.0 TFSI 2008: urto laterale dx con ruota anteriore dx spinta indietro e fuori asse, porta dx ammaccata in basso, parafango dx rovinato. Ruota spostata così indica sospensione e probabilmente sottoporta/scatola ruota deformati: incidente laterale pesante.",
-  "controlli": [],
-  "aggiorna": true
+  "ricambi": [
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "braccio + montante sospensione ant dx",
+    "low": 160,
+    "high": 600
+   },
+   {
+    "label": "semiasse/scatola sterzo",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "portiera dx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "minigonna/sottoporta",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura (scatola ruota, sottoporta)",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 910,
+  "ricambi_max": 3500,
+  "guadagno_finale": 1560,
+  "nota": "Urto laterale dx con ruota anteriore spinta indietro, porta e parafango dx da cambiare; probabile scatola ruota deformata. Con 200.000 km il mercato è gonfiato, ma con la rivendita prudente il margine passa di poco.",
+  "controlli": [
+   "scatola ruota e sottoporta dx",
+   "misure telaio",
+   "scatola sterzo e semiasse",
+   "motore funzionante"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7200
  },
  {
   "id": 23982,
@@ -14323,12 +14882,14 @@
  },
  {
   "id": 46243,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
    {
-    "part": "altro",
-    "side": null,
+    "part": "paraurti_posteriore",
+    "side": "dx",
     "action": "sostituire",
     "severity": "leggero",
     "source": "foto"
@@ -14336,15 +14897,30 @@
   ],
   "ricambi": [
    {
-    "label": "Paraurti posteriore C3 Aircross (aftermarket) (prezzo stimato)",
-    "low": 150,
-    "high": 320
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "staffe/gancio traino (riserva)",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "pezzi per revisione (riserva)",
+    "low": 100,
+    "high": 300
    }
   ],
-  "ricambi_min": 150,
-  "ricambi_max": 320,
-  "nota": "Citroen C3 Aircross 1.2 benzina 2018, 139.000 km. Foto: lieve danno al paraurti posteriore lato dx vicino al gancio traino; resto della carrozzeria in ordine. Revisione da fare.",
-  "controlli": [],
+  "ricambi_min": 230,
+  "ricambi_max": 700,
+  "guadagno_finale": 2605,
+  "nota": "C3 Aircross 2018 con piccolo urto al paraurti posteriore dx vicino al gancio traino, resto in ordine. Pezzi economici e buon margine.",
+  "controlli": [
+   "lamiera posteriore sotto paraurti",
+   "gancio traino",
+   "revisione"
+  ],
   "aggiorna": true
  },
  {
@@ -17817,9 +18393,32 @@
  },
  {
   "id": 11498,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
    {
     "part": "paraurti_anteriore",
     "side": null,
@@ -17833,85 +18432,64 @@
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
-   },
-   {
-    "part": "parafango_anteriore",
-    "side": "sx",
-    "action": "sostituire",
-    "severity": "medio",
-    "source": "foto"
-   },
-   {
-    "part": "cofano",
-    "side": null,
-    "action": "sostituire",
-    "severity": "medio",
-    "source": "foto"
-   },
-   {
-    "part": "porta_anteriore",
-    "side": "sx",
-    "action": "sostituire",
-    "severity": "leggero",
-    "source": "foto"
-   },
-   {
-    "part": "altro",
-    "side": null,
-    "action": "sostituire",
-    "severity": "medio",
-    "source": "foto"
    }
   ],
   "ricambi": [
    {
-    "label": "Paraurti anteriore AMG line (prezzo stimato)",
-    "low": 200,
-    "high": 450
-   },
-   {
-    "label": "Faro anteriore sx LED (prezzo stimato)",
-    "low": 250,
-    "high": 900
-   },
-   {
-    "label": "Parafango anteriore sx (prezzo stimato)",
-    "low": 80,
-    "high": 200
-   },
-   {
-    "label": "Cofano (prezzo stimato)",
-    "low": 200,
-    "high": 450
-   },
-   {
-    "label": "Porta anteriore sx usata (prezzo stimato)",
-    "low": 150,
-    "high": 500
-   },
-   {
-    "label": "Kit radiatori (prezzo stimato)",
-    "low": 150,
-    "high": 400
-   },
-   {
-    "label": "Traversa/ossatura anteriore (prezzo stimato)",
+    "label": "paraurti anteriore",
     "low": 80,
     "high": 250
    },
    {
-    "label": "Riserva per danni probabili non dichiarati",
+    "label": "faro sx LED",
+    "low": 200,
+    "high": 800
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "portiera ant sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa frontale",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "riserva lamierati (muso coperto da telo)",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva airbag",
     "low": 0,
-    "high": 1575
+    "high": 1500
    }
   ],
   "ricambi_min": 1110,
-  "ricambi_max": 4725,
-  "nota": "CLA 180 d Shooting Brake bianca con urto anteriore sinistro: dalle foto cofano piegato, parafango sx deformato, bordo porta sx toccato e muso coperto da un telo (danno nascosto). Testo dice solo 'motore funzionante'. Con i ricambi realistici il margine non basta.",
+  "ricambi_max": 5250,
+  "guadagno_finale": 3813,
+  "nota": "CLA 180 d Shooting Brake 2016 con urto anteriore sinistro: cofano piegato, parafango e bordo porta sx toccati, muso nascosto da un telo. Con riserve prudenti su lamierati e airbag il margine resta buono, ma va vista dal vivo.",
   "controlli": [
-   "Foto del frontale senza telo",
-   "Verificare airbag e longherone anteriore sx",
-   "Chiedere se è marciante"
+   "togliere il telo e vedere muso e longherone sx",
+   "airbag esplosi o no",
+   "radiatori e sospensione ant sx",
+   "cambio automatico e motore in moto"
   ],
   "aggiorna": true
  },
@@ -23272,8 +23850,10 @@
  },
  {
   "id": 20897,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
    {
     "part": "parafango_anteriore",
@@ -23290,7 +23870,7 @@
     "source": "testo"
    },
    {
-    "part": "altro",
+    "part": "paraurti_posteriore",
     "side": null,
     "action": "riparare",
     "severity": "leggero",
@@ -23299,20 +23879,31 @@
   ],
   "ricambi": [
    {
-    "label": "Parafango anteriore dx Golf V Variant aftermarket (prezzo stimato)",
-    "low": 50,
-    "high": 120
+    "label": "parafango ant dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva lato dx non fotografato",
+    "low": 60,
+    "high": 200
    }
   ],
-  "ricambi_min": 50,
-  "ricambi_max": 120,
-  "nota": "Golf V Variant 1.4 TSI: nelle foto (fronte sx, lato sx, retro dx) carrozzeria in ordine, interni puliti; il bozzo sul parafango ant. dx dichiarato non si vede bene. Graffi sui paraurti da lucidare. Margine molto stretto sulla soglia. Guadagno finale 1491 € sotto la soglia di 1500 €.",
+  "ricambi_min": 200,
+  "ricambi_max": 650,
+  "guadagno_finale": 1660,
+  "nota": "Golf Variant con un bozzo sul parafango anteriore destro e graffi sui paraurti, meccanica dichiarata perfetta. Pezzi economici: anche con un valore di rivendita prudente il guadagno supera i 1.500 €.",
   "controlli": [
-   "Foto del parafango anteriore dx",
-   "Stato catena distribuzione 1.4 TSI (rumori a freddo)",
-   "Consumo olio e tagliandi"
+   "lato destro non fotografato",
+   "catena distribuzione 1.4 TSI"
   ],
-  "aggiorna": true
+  "aggiorna": true,
+  "rivendita_prudente": 5400
  },
  {
   "id": 36316,
@@ -35787,15 +36378,31 @@
  },
  {
   "id": 26994,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "grave",
+  "strutturale": false,
+  "airbag": true,
   "danni": [
    {
-    "part": "frontale",
+    "part": "frontale_completo",
     "side": null,
     "action": "sostituire",
     "severity": "grave",
     "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "pompa_acqua",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
    },
    {
     "part": "airbag",
@@ -35805,12 +36412,48 @@
     "source": "testo"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "guadagno_finale": 7544,
-  "nota": "Furgone Jumpy con frontale smontato, airbag e radiatore da rifare: incidentato e non è un'auto per privati, scartata.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "pompa acqua",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "riserva frontale (paraurti, fari, cofano) se non inclusi",
+    "low": 400,
+    "high": 1200
+   },
+   {
+    "label": "traversa anteriore e supporti",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "riserva danni non visibili",
+    "low": 200,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1630,
+  "ricambi_max": 5050,
+  "guadagno_finale": 2494,
+  "nota": "Furgone Jumpy 2020 con frontale smontato: da rifare radiatori, pompa e airbag. Pagato poco rispetto al valore e anche con riserve il guadagno resta sopra i 2.000 €.",
+  "controlli": [
+   "longheroni e traversa anteriore",
+   "quali airbag sono esplosi",
+   "se il frontale in foto è compreso",
+   "motore e cambio in moto"
+  ],
   "aggiorna": true
  },
  {
@@ -39413,8 +40056,10 @@
  },
  {
   "id": 48344,
-  "esito": "scartata",
+  "esito": "incidentata",
   "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
   "danni": [
    {
     "part": "paraurti_anteriore",
@@ -39431,15 +40076,15 @@
     "source": "foto"
    },
    {
-    "part": "faro_anteriore",
-    "side": "sx",
+    "part": "griglia",
+    "side": null,
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
    },
    {
-    "part": "griglia",
-    "side": null,
+    "part": "faro_anteriore",
+    "side": "sx",
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
@@ -39450,18 +40095,30 @@
     "action": "sostituire",
     "severity": "medio",
     "source": "foto"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
    }
   ],
   "ricambi": [
    {
-    "label": "paraurti anteriore",
-    "low": 300,
-    "high": 600
+    "label": "paraurti anteriore S line",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "griglia single frame",
+    "low": 100,
+    "high": 250
    },
    {
     "label": "cofano",
-    "low": 200,
-    "high": 450
+    "low": 150,
+    "high": 350
    },
    {
     "label": "faro LED sx",
@@ -39469,28 +40126,37 @@
     "high": 800
    },
    {
-    "label": "griglia",
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "traversa/assorbitore",
     "low": 100,
     "high": 250
    },
    {
-    "label": "radiatori",
-    "low": 150,
-    "high": 400
+    "label": "sensori/staffe/fendinebbia",
+    "low": 80,
+    "high": 200
    },
    {
-    "label": "traversa",
-    "low": 100,
-    "high": 200
+    "label": "riserva danni nascosti",
+    "low": 200,
+    "high": 400
    }
   ],
-  "ricambi_min": 1150,
-  "ricambi_max": 2700,
-  "guadagno_finale": 1660,
-  "nota": "Q2 incidentata nel frontale: paraurti strappato, cofano piegato, faro e griglia da cambiare, probabili radiatori. Auto sinistrata con pochi confronti: con ricambi e rivendita prudente il margine è sotto 2.000 €.",
-  "controlli": [],
-  "aggiorna": true,
-  "rivendita_prudente": 18000
+  "ricambi_min": 1250,
+  "ricambi_max": 2900,
+  "guadagno_finale": 3093,
+  "nota": "Q2 2025 col frontale preso (paraurti strappato, cofano piegato, griglia, probabili radiatori), motore visibilmente integro: anche con pezzi abbondanti resta un buon margine.",
+  "controlli": [
+   "airbag e spie al quadro",
+   "longheroni e traversa",
+   "radar/sensori anteriori",
+   "faro sx e radiatori"
+  ],
+  "aggiorna": true
  },
  {
   "id": 48379,
@@ -39792,8 +40458,10 @@
  },
  {
   "id": 93322,
-  "esito": "scartata",
-  "danno": "grave",
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
   "danni": [
    {
     "part": "fiancata_posteriore",
@@ -39803,19 +40471,88 @@
     "source": "foto"
    },
    {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
     "part": "sospensione_posteriore",
     "side": "sx",
     "action": "sostituire",
-    "severity": "grave",
+    "severity": "medio",
     "source": "testo"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
    }
   ],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "guadagno_finale": 7714,
-  "nota": "C3 con fiancata e passaruota posteriore sinistro schiacciati, fanale distrutto, e il venditore dice che non è marciante: danno strutturale alla zona ruota. Scartata per incidente grave.",
-  "controlli": [],
+  "ricambi": [
+   {
+    "label": "fanale posteriore sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "portiera posteriore sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "lamierati/ossatura (fiancata e passaruota)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "sospensione/assale posteriore",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "riserva danni nascosti",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 920,
+  "ricambi_max": 3450,
+  "guadagno_finale": 4264,
+  "nota": "C3 2024 automatica urtata sul posteriore sinistro: fiancata e passaruota schiacciati (lamierati), fanale, portiera e probabilmente ruota/sospensione. Con prezzo basso e auto quasi nuova il margine resta ampio anche con riserva sull'ossatura.",
+  "controlli": [
+   "assale e geometria posteriore",
+   "pianale posteriore e longherone",
+   "motivo del 'non marciante'",
+   "cambio EAT6"
+  ],
   "aggiorna": true
  },
  {

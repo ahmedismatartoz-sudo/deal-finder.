@@ -28,6 +28,7 @@ const ICON = {
   camera: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>'
 };
 const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
+              ["incidentate","Incidentate",'<path d="M5 17h-1a1 1 0 0 1-1-1v-3l2-5h9l3 4h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1"/><circle cx="7.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/><path d="M12 3l-1 3 2 1-1 3"/>'],
               ["vendi","Vendi",'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'],
               ["incentivi","Incentivi",'<circle cx="12" cy="12" r="9"/><path d="M15 9.5a3.5 3.5 0 1 0 0 5M7.5 11h5M7.5 13.5h5"/>'],
               ["profilo","Profilo",'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']];
@@ -106,7 +107,8 @@ function bandId(){
 function filtered(over){
   const s = Object.assign({}, S, over || {});
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
-  return (S.cars || []).map(c => Object.assign({}, c, numeri(c)))
+  const inc = (s.sezione || (S.route === "incidentate" ? "incidentate" : "affari")) === "incidentate";
+  return (S.cars || []).filter(c => !!c.incidentata === inc).map(c => Object.assign({}, c, numeri(c)))
     .filter(c => c.gain >= sogliaDi(c.prezzo))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
@@ -117,7 +119,7 @@ function filtered(over){
     .sort((a,b) => vetrinaOn(s) ? (a.vetrina ?? 999) - (b.vetrina ?? 999) : 0);
 }
 /* vetrina in testa solo con l'elenco "normale" (nessun filtro, ordine per guadagno) */
-function vetrinaOn(s){ return !s.bot && s.sort === "guadagno" && !s.brands.length && s.min === "" && s.max === "" && s.stato === "tutte" && (!s.zona || s.zona === "tutte"); }
+function vetrinaOn(s){ return S.route !== "incidentate" && !s.bot && s.sort === "guadagno" && !s.brands.length && s.min === "" && s.max === "" && s.stato === "tutte" && (!s.zona || s.zona === "tutte"); }
 /* filtri in più che mette l'assistente (modello, guadagno minimo, anno, km, fonte) */
 function botMatch(c, b){
   if (!b) return true;
@@ -135,7 +137,7 @@ const ZONE = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna
 function zoneCounts(){ const o = {milano:0, ravenna:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna; return o; }
 function dueZone(){ const a = new Set((S.cars || []).map(c => c.area || "milano")); return a.size > 1; }
 function nFiltri(){ return (S.bot ? 1 : 0) + (S.zona !== "tutte" ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
-function statoTxt(c){ return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
+function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
   const lo = Math.max(c.gain, 0);
@@ -148,7 +150,7 @@ function img(src, alt, eager){ return src ? `<img src="${esc(src)}" alt="${esc(a
 async function loadCars(force){
   if (S.loading) return;
   if (!force && S.cars && Date.now() - S.loadedAt < 5 * 60 * 1000) return;
-  S.loading = true; S.loadErr = ""; if (S.route === "affari") render({keep:true});
+  S.loading = true; S.loadErr = ""; if (isList(S.route)) render({keep:true});
   try {
     const d = await api("/api/affari");
     S.cars = d.items || []; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now();
@@ -157,7 +159,7 @@ async function loadCars(force){
     const known = new Set(S.cars.map(c => c.marca)); S.brands = S.brands.filter(b => known.has(b));
   } catch (e) { S.loadErr = e.message; }
   S.loading = false;
-  if (S.route === "affari") render({keep:true});
+  if (isList(S.route)) render({keep:true});
 }
 async function loadDetail(id){
   if (S.detail[id] && !S.detail[id].err) return;
@@ -202,12 +204,13 @@ function viewList(){
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
   const right = `<div style="display:flex;gap:8px;align-items:center"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>
       <button class="chip more" data-act="filters" aria-label="Tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}Filtri${nf ? ` <span class="count-pill">${nf}</span>` : ""}</button></div>`;
-  return header("scovo", `${list.length} auto da girare · rivendita −${S.sconto}%`, right) + `
+  const incV = S.route === "incidentate";
+  return header(incV ? "Incidentate" : "scovo", incV ? `${list.length} auto incidentate da riparare · rivendita −${S.sconto}%` : `${list.length} auto da girare · rivendita −${S.sconto}%`, right) + `
     ${zoneBar}
     <div class="chips" role="group" aria-label="Prezzo">${priceChips}</div>
     <div class="chips" role="group" aria-label="Marca">${brandChips}</div>
   </header>
-  <main class="list" aria-live="polite">${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 function botBanner(n){
@@ -537,6 +540,7 @@ function logout(silent){
 }
 
 /* ---------- navigazione (il tasto indietro del telefono funziona) ---------- */
+const isList = r => r === "affari" || r === "incidentate";
 function parseHash(){
   const h = location.hash.replace(/^#\/?/, "");
   const m = h.match(/^auto\/(\d+)$/);
@@ -548,7 +552,7 @@ function parseHash(){
   if (h === "prova") return {route: "prova"};
   if (!canBrowse()) return {route: "vetrina"};
   if (h === "ricambi") { location.replace("/incentivi/"); }
-  return {route: ["vendi","profilo"].includes(h) ? h : "affari", sel: null};
+  return {route: ["vendi","profilo","incidentate"].includes(h) ? h : "affari", sel: null};
 }
 function go(route, replace){
   const h = "#/" + route;
@@ -566,7 +570,7 @@ function applyRoute(){
   if (S.route === "auto") { if (!canBrowse()) { go("entra", true); return; } loadDetail(S.sel); render({top:true}); }
   else if (S.route === "entra" || S.route === "prova") render({top:true});
   else render({y: S.scroll[S.route] || 0});
-  if (S.route === "affari" && canBrowse()) loadCars();
+  if (isList(S.route) && canBrowse()) loadCars();
 }
 window.addEventListener("popstate", () => { if (S.sheet) { S.sheet = null; } applyRoute(); });
 
@@ -938,7 +942,7 @@ function vcOrb(){
 }
 
 function tabBar(){
-  const cur = S.route === "auto" ? "affari" : S.route;
+  const cur = S.route === "auto" ? (S.fromInc ? "incidentate" : "affari") : S.route;
   return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
 }
 function render(opts){
@@ -963,7 +967,7 @@ function render(opts){
     if (S.route !== "auto" && !S.sheet && !VC.on) html += botFab();
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
     html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "bot" ? sheetBot() : "";
-    const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
+    const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", incidentate:"Incidentate", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
   $app.innerHTML = html;
@@ -1076,8 +1080,8 @@ $app.addEventListener("click", e => {
   if (act === "close-bg" && e.target !== t) return;
   switch (act) {
     case "tab": if (v === "incentivi") { location.href = "/incentivi/"; return; } if (v === S.route) { window.scrollTo({top: 0, behavior: "smooth"}); return; } go(v); return;
-    case "open": if (VC.on) vcEnd(); S.fromList = true; go("auto/" + v); return;
-    case "back": if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go("affari", true); return;
+    case "open": if (VC.on) vcEnd(); S.fromList = true; S.fromInc = S.route === "incidentate"; go("auto/" + v); return;
+    case "back": if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go(S.fromInc ? "incidentate" : "affari", true); return;
     case "reload": loadCars(true); return;
     case "talk": talk(); return;
     case "desc": S.descOpen = true; break;
@@ -1165,9 +1169,9 @@ $app.addEventListener("input", e => {
   }
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.sheet) { S.sheet = null; render({keep:true}); } });
-window.addEventListener("online", () => { S.offline = false; if (S.token && S.route === "affari") loadCars(true); });
-window.addEventListener("offline", () => { S.offline = true; if (S.route === "affari") render({keep:true}); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden && S.token && S.route === "affari") loadCars(); });
+window.addEventListener("online", () => { S.offline = false; if (canBrowse() && isList(S.route)) loadCars(true); });
+window.addEventListener("offline", () => { S.offline = true; if (isList(S.route)) render({keep:true}); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && canBrowse() && isList(S.route)) loadCars(); });
 
 /* ---------- avvio ---------- */
 if ("serviceWorker" in navigator) {
@@ -1178,7 +1182,7 @@ api("/api/auth/metodi").then(m => {
   S.metodi = m || {};
   document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
   if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
-  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo)$/.test(h) ? h : "affari", true); }
+  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|incidentate)$/.test(h) ? h : "affari", true); }
 }).catch(() => {});
 (function demo(){
   const card = document.getElementById("demo"), r = document.getElementById("sconto-demo");

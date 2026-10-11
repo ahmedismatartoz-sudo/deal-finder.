@@ -63,7 +63,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
 FROM listings l
 JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.stage='approfondito' AND l.status='attivo'
-  AND l.stage_reason IN ('opportunita','da_verificare')
+  AND l.stage_reason IN ('opportunita','da_verificare','incidentata')
   AND l.last_checked_at > now() - interval '48 hours'
 """
 
@@ -208,6 +208,7 @@ def item(r: dict) -> dict | None:
         "rip_lo": lo, "rip_hi": int(hi),
         "danno": r.get("damage_class") or "sconosciuto",
         "verificare": r.get("stage_reason") == "da_verificare",
+        "incidentata": r.get("stage_reason") == "incidentata",
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),

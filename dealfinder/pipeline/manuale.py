@@ -1,7 +1,7 @@
 """Importa l'analisi fatta a parte (file data/analisi_manuale.json nel repository).
 
 Formato: lista di oggetti
-  {"id": 123, "esito": "opportunita|da_verificare|scartata", "danno": "nessuno|leggero|medio|alto_rischio|grave",
+  {"id": 123, "esito": "opportunita|da_verificare|incidentata|scartata", "danno": "nessuno|leggero|medio|alto_rischio|grave",
    "danni": [{"part": "paraurti_anteriore", "side": null, "action": "sostituire", "severity": "medio"}],
    "ricambi_min": 250, "ricambi_max": 420, "ricambi": [{"label": "...", "low": 120, "high": 180, "offer": "url"}],
    "nota": "testo per la scheda", "controlli": ["..."], "rivendita_prudente": 3000 (facoltativo, solo al ribasso)}
@@ -38,7 +38,7 @@ def applica_scarti(conn) -> int:
     if not FILE.exists():
         return 0
     ids = [e["id"] for e in json.loads(FILE.read_text())
-           if e.get("esito") == "scartata" or e.get("danno") == "grave"]
+           if e.get("esito") == "scartata" or (e.get("danno") == "grave" and e.get("esito") != "incidentata")]
     if not ids:
         return 0
     n = conn.execute("UPDATE listings SET stage='scartato', stage_reason='analisi_manuale: controllo foto' "
@@ -53,11 +53,11 @@ def segna_viste_di_recente(conn) -> dict:
     Serve a mostrarle subito, senza aspettare il controllo una per una del ciclo."""
     conn.execute("SET lock_timeout = '10s'")
     n = conn.execute("""UPDATE listings SET last_checked_at=now()
-                        WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare')
+                        WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
                           AND last_seen_at > now() - interval '48 hours'
                           AND (last_checked_at IS NULL OR last_checked_at < now() - interval '12 hours')""").rowcount
     rows = conn.execute("""SELECT source, count(*) AS n FROM listings
-                           WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare')
+                           WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
                              AND last_checked_at > now() - interval '48 hours' GROUP BY source""").fetchall()
     conn.commit()
     out = {"aggiornate": n, **{r["source"]: r["n"] for r in rows}}
@@ -65,10 +65,13 @@ def segna_viste_di_recente(conn) -> dict:
     return out
 
 
-def run() -> dict:
+def run(esiti: tuple[str, ...] | None = None) -> dict:
+    """esiti: importa solo le voci con questi esiti (es. ("incidentata",) all'avvio del sito, veloce)."""
     if not FILE.exists():
         return {"file": "assente"}
     entries = json.loads(FILE.read_text())
+    if esiti:
+        entries = [e for e in entries if e.get("esito") in esiti]
     stats: Counter = Counter()
     with connect() as conn:
         finish = log_job(conn, "manuale")
@@ -85,7 +88,7 @@ def run() -> dict:
                 stats["non_trovato"] += 1
                 continue
             l = row_to_listing(row)
-            if e.get("esito") == "scartata" or e.get("danno") == "grave":
+            if e.get("esito") == "scartata" or (e.get("danno") == "grave" and e.get("esito") != "incidentata"):
                 set_stage(conn, lid, "scartato", "analisi_manuale: " + str(e.get("nota", ""))[:150])
                 stats["scartate"] += 1
                 conn.commit()
@@ -125,6 +128,16 @@ def run() -> dict:
                 m.status = "opportunita"           # confermata dall'analisi (stima e testo controllati)
             if m and e.get("esito") == "da_verificare" and m.status == "opportunita":
                 m.status = "da_verificare"         # l'analisi chiede controlli prima di proporla
+            if e.get("esito") == "incidentata" and m:
+                # sezione Incidentate (per commercianti e carrozzieri): conta solo la regola del sito con i pezzi
+                mercato = v.private_median or v.resale_median_private or v.resale_median
+                sito = None
+                if mercato and l.price_eur:
+                    riv = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100))
+                    if e.get("rivendita_prudente"):
+                        riv = min(riv, int(e["rivendita_prudente"]))
+                    sito = riv - l.price_eur - sum(scovo.COSTI_FISSI.values()) - int((parts or {}).get("parts_cost_high") or 0)
+                m.status = "incidentata" if sito is not None and sito >= scovo.soglia(l.price_eur) else "scartata"
             mot = report.motivation(l, v, parts)
             if e.get("nota"):
                 mot.append("Analisi: " + e["nota"])
