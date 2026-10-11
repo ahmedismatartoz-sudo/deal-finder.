@@ -177,7 +177,7 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts, resale_as FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+                         "preferred_parts, resale_as, lat, lon FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
     if not u:
         err(401, "Account non trovato")
@@ -203,6 +203,15 @@ async def update_me(request: Request):
             prefs["preferred_parts"] = data["preferred_parts"]
         for k, v in prefs.items():
             conn.execute(f"UPDATE dealers SET {k}=%s WHERE id=%s", (v, user["id"]))
+        pos = data.get("posizione")
+        if isinstance(pos, dict):
+            try:
+                lat, lon = float(pos["lat"]), float(pos["lon"])
+                if -90 <= lat <= 90 and -180 <= lon <= 180:
+                    conn.execute("UPDATE dealers SET lat=%s, lon=%s, pos_at=now() WHERE id=%s",
+                                 (round(lat, 3), round(lon, 3), user["id"]))
+            except (KeyError, TypeError, ValueError):
+                pass
         costs = data.get("costs") or {}
         clean = {}
         for k in cards.COST_FIELDS:
@@ -796,8 +805,7 @@ def affari(request: Request):
     with connect() as conn:
         dealer = conn.execute("SELECT provinces FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         prov = list((dealer or {}).get("provinces") or [])
-        if user.get("role") == "admin":
-            prov = []                     # l'amministratore vede tutte le zone
+        prov = []                         # niente più zone fisse: ognuno filtra per distanza dalla sua posizione
         sql = scovo.LIST_SQL
         if prov:
             sql += " AND (l.province = ANY(%(prov)s) OR l.source='facebook' OR l.province IS NULL)"

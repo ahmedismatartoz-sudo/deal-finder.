@@ -170,6 +170,12 @@ def zona(r: dict) -> str:
     return city or prov or "Lombardia"
 
 
+def _geo(r: dict):
+    from ..geo import coords
+    c = coords(r.get("province"))
+    return [c[0], c[1]] if c else None
+
+
 def area(r: dict) -> str:
     """Zona di lavoro: "ravenna" (Ravenna e dintorni) oppure "milano" (Milano e dintorni)."""
     from ..zone import MILANO, RAVENNA
@@ -205,6 +211,7 @@ def item(r: dict) -> dict | None:
         "cambio": r.get("gearbox"),
         "zona": zona(r),
         "area": area(r),
+        "geo": _geo(r),
         "fonte": SOURCE_NAMES.get(r.get("source"), r.get("source")),
         "prezzo": int(price),
         "mercato": int(round(float(mercato))),

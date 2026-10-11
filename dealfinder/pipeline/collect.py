@@ -131,6 +131,24 @@ def run(mode: str) -> Counter:
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
         sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("AUTOSCOUT_MAX_PREZZO", "40000"))})]
+    elif mode == "lombardia":
+        # Raccolta pesante di tutta la Lombardia: Subito in fasce strette (tutte le province) e AutoScout24 entro
+        # LOMBARDIA_RAGGIO km da Milano (privati da proporre, concessionari come prezzi). Si ferma a LOMBARDIA_OBIETTIVO.
+        bands = ([(p, p + 249) for p in range(0, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
+                 + [(p, p + 999) for p in range(15000, 40000, 1000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.2"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.0"))
+        from ..collectors.subito import PROVINCE_CODES
+        lomb = [k for k, v in PROVINCE_CODES.items() if v in ("MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO")]
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LOMBARDIA_RAGGIO", "120")
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
+        sources = [(sub, {"region": settings.region, "provinces": lomb, "max_price": 40000, "max_pages": 0,
+                          "price_bands": bands, "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
+                   (asc, {"massiva": True, "min_price": 500, "max_price": 40000})]
     elif mode == "incidentate":
         # Auto incidentate in TUTTA Italia (sezione Incidentate): Subito con le parole tipiche, AutoScout24 solo
         # annunci "danneggiati" di privati. Obiettivo INCIDENTATE_OBIETTIVO annunci da filtrare.
@@ -306,6 +324,13 @@ def run(mode: str) -> Counter:
                         collector.stop = True
                         log.info("autoscout: obiettivo di %d annunci nuovi raggiunto", obiettivo)
                         break
+                    if mode == "lombardia":
+                        # metà dell'obiettivo per ciascun sito, così ci sono sia Subito sia AutoScout24
+                        letti = sum(v for k, v in stats.items() if k.split(":")[0] == collector.source)
+                        if letti >= int(os.environ.get("LOMBARDIA_OBIETTIVO", "60000")) // 2:
+                            collector.stop = True
+                            log.info("lombardia: %s, obiettivo raggiunto (%d annunci letti)", collector.source, letti)
+                            break
                     if event == "nuovo" and stats[f"{collector.source}:nuovo"] % 1000 == 0:
                         log.info("raccolta %s: %d annunci nuovi finora", mode, stats[f"{collector.source}:nuovo"])
             except Exception:
@@ -362,6 +387,17 @@ if __name__ == "__main__":
         log.info("SITO analisi_manuale (dopo la selezione): %s", manuale.run())
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
+        sys.exit(0)
+    if mode == "lombardia":
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        versione = os.environ.get("LOMBARDIA_VERSIONE", "v6")
+        if _due("collect:lombardia", int(os.environ.get("LOMBARDIA_ORE", "20"))):
+            run("lombardia")
+        if _due(f"mille:{versione}", 24 * 365):
+            mille.run(versione=versione)          # i migliori di Milano e dintorni, con le foto
+        log.info("LOMBARDIA analisi_manuale: %s", manuale.run(solo_nuove=True))
+        log.info("LOMBARDIA verifica: %s", recheck.run())
         sys.exit(0)
     if mode == "incidentate":
         from . import manuale, mille, recheck

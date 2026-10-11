@@ -45,7 +45,8 @@ const saved = store.get("filtri", {});
 const S = {
   token: store.get("token", null), user: store.get("user", null),
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
-  brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: saved.zona || "tutte",
+  brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: "tutte", raggio: saved.raggio != null ? Number(saved.raggio) : 100,
+  pos: store.get("pos", null),
   sconto: (saved.sv === 2 && saved.sconto != null) ? Number(saved.sconto) : 10, sort: saved.sort || "guadagno",
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
@@ -65,7 +66,7 @@ const perm = p => !!(S.user && (S.user.role === "admin" || (S.user.permessi || [
 const tabOk = id => id === "profilo" || (id === "incentivi" ? perm("incentivi") : (!S.user || !S.user.permessi || perm("auto")));
 const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
-function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, zona:S.zona, sconto:S.sconto, sv:2, sort:S.sort}); }
+function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, raggio:S.raggio, sconto:S.sconto, sv:2, sort:S.sort}); }
 
 /* ---------- API ---------- */
 async function api(path, opts = {}) {
@@ -108,18 +109,47 @@ function filtered(over){
   const s = Object.assign({}, S, over || {});
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
   const inc = (s.sezione || (S.route === "incidentate" ? "incidentate" : "affari")) === "incidentate";
-  return (S.cars || []).filter(c => !!c.incidentata === inc).map(c => Object.assign({}, c, numeri(c)))
+  return ordinaLista(s, (S.cars || []).filter(c => !!c.incidentata === inc).map(c => Object.assign({}, c, numeri(c)))
     .filter(c => c.gain >= sogliaDi(c.prezzo))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
     .filter(c => !s.zona || s.zona === "tutte" || (c.area || "milano") === s.zona)
     .filter(c => botMatch(c, s.bot))
-    .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax)
-    .sort((a,b) => vetrinaOn(s) ? (a.vetrina ?? 999) - (b.vetrina ?? 999) : 0);
+    .filter(c => { if (!S.pos || !s.raggio) return true; const d = distKm(c); return d == null || d <= s.raggio; })
+    .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax));
 }
 /* vetrina in testa solo con l'elenco "normale" (nessun filtro, ordine per guadagno) */
-function vetrinaOn(s){ return S.route !== "incidentate" && !s.bot && s.sort === "guadagno" && !s.brands.length && s.min === "" && s.max === "" && s.stato === "tutte" && (!s.zona || s.zona === "tutte"); }
+/* Ordine: prima le 15 migliori sotto 5.000 €, poi tutte le altre dalla migliore, le troppo care sempre in fondo */
+const CARE = 15000, ECONOMICHE = 5000, PRIME = 15;
+function ordinaLista(s, arr){
+  const top = [], rest = [], care = [];
+  for (const c of arr) {
+    if (c.prezzo > CARE) care.push(Object.assign(c, {_grp: "care"}));
+    else if (s.sort === "guadagno" && c.prezzo < ECONOMICHE && top.length < PRIME) top.push(Object.assign(c, {_grp: "top"}));
+    else rest.push(Object.assign(c, {_grp: "rest"}));
+  }
+  return top.concat(rest, care);
+}
+function distKm(c){
+  if (!S.pos || !c.geo) return null;
+  const R = Math.PI / 180, la1 = S.pos.lat * R, la2 = c.geo[0] * R, dla = la2 - la1, dlo = (c.geo[1] - S.pos.lon) * R;
+  const h = Math.sin(dla / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+const RAGGI = [[50,"50 km"],[100,"100 km"],[200,"200 km"],[300,"300 km"],[0,"Ovunque"]];
+function chiediPosizione(silenzioso){
+  if (!navigator.geolocation) { if (!silenzioso) toast("Questo telefono non dà la posizione"); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    S.pos = {lat: p.coords.latitude, lon: p.coords.longitude, t: Date.now()}; store.set("pos", S.pos); store.del("posNo");
+    if (S.token) api("/api/me", {method: "PUT", body: {posizione: {lat: S.pos.lat, lon: S.pos.lon}}}).catch(() => {});
+    render({keep: true});
+    if (!silenzioso) toast("Posizione attiva: vedi prima le auto entro " + (S.raggio || 100) + " km");
+  }, () => { store.set("posNo", true); if (!silenzioso) toast("Posizione non concessa: vedi le auto di tutte le zone"); render({keep: true}); },
+  {enableHighAccuracy: false, timeout: 15000, maximumAge: 6 * 3600 * 1000});
+}
+function vetrinaOn(s){ return false; }
+function vetrinaOnVecchia(s){ return S.route !== "incidentate" && !s.bot && s.sort === "guadagno" && !s.brands.length && s.min === "" && s.max === "" && s.stato === "tutte" && (!s.zona || s.zona === "tutte"); }
 /* filtri in più che mette l'assistente (modello, guadagno minimo, anno, km, fonte) */
 function botMatch(c, b){
   if (!b) return true;
@@ -137,14 +167,14 @@ const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["rav
 function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.italia; return o; }
 function zoneList(){ const a = new Set((S.cars || []).filter(c => !!c.incidentata === (S.route === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => ["tutte","milano","ravenna"].includes(k) || a.has(k) || S.zona === k); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
-function nFiltri(){ return (S.bot ? 1 : 0) + (S.zona !== "tutte" ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
+function nFiltri(){ return (S.bot ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
   const lo = Math.max(c.gain, 0);
   return c.gainMax !== c.gain ? (c.gain < 0 ? "fino a +" + eur(c.gainMax) : "+" + num(lo) + "–" + num(c.gainMax) + " €") : "+" + eur(c.gain);
 }
-function meta(c){ return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, c.zona].filter(Boolean).join(" · "); }
+function meta(c){ const d = distKm(c); return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, c.zona + (d != null ? " · a " + num(Math.max(1, d)) + " km" : "")].filter(Boolean).join(" · "); }
 function img(src, alt, eager){ return src ? `<img src="${esc(src)}" alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">` : ""; }
 
 /* ---------- dati ---------- */
@@ -184,11 +214,13 @@ function viewList(){
   const brandChips = brandsAll().filter(b => avail[b] || S.brands.includes(b)).map(b => `<button class="chip" data-act="brand" data-v="${esc(b)}" aria-pressed="${S.brands.includes(b)}">${esc(b)}</button>`).join("");
   const priceChips = BANDS.map(b => `<button class="chip" data-act="band" data-v="${b.id}" aria-pressed="${bid === b.id}">${b.label}</button>`).join("");
   const vOn = vetrinaOn(S) && list.some(c => c.vetrina != null);
-  const zc = dueZone() || S.zona !== "tutte" ? zoneCounts() : null;
-  const zoneBar = zc ? `<div class="seg zone-seg" role="group" aria-label="Zona" style="grid-template-columns:repeat(${zoneList().length},minmax(0,1fr));margin-bottom:8px">${zoneList().map(([k,l]) =>
+  const zoneBar = S.pos ? `<div class="chips" role="group" aria-label="Distanza da te">${RAGGI.map(([k,l]) => `<button class="chip" data-act="raggio" data-v="${k}" aria-pressed="${S.raggio === k}">${k ? "Entro " + l : l}</button>`).join("")}</div>`
+    : `<button class="btn pos-btn" data-act="posizione" style="width:100%;margin-bottom:8px">📍 Usa la mia posizione: vedi le auto vicino a te</button>`;
+  const zcVecchio = false ? `<div class="seg zone-seg" role="group" aria-label="Zona" style="grid-template-columns:repeat(${zoneList().length},minmax(0,1fr));margin-bottom:8px">${zoneList().map(([k,l]) =>
     `<button data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}" aria-label="${l}: ${zc[k] || 0} auto">${l.replace(" e dintorni","").replace(" le zone","").replace("Resto d'Italia","Italia")} <span class="n">${zc[k] || 0}</span></button>`).join("")}</div>` : "";
-  const cards = list.map((c, i) => `${vOn && i === 0 ? `<h2 class="vet-h">⭐ ${esc(S.vetrinaTitolo || "Le migliori di oggi")}</h2>` : ""}${vOn && i > 0 && c.vetrina == null && list[i-1].vetrina != null ? `<h2 class="vet-h">Tutte le altre auto</h2>` : ""}
-    <button class="card${vOn && c.vetrina != null ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
+  const TIT = {top: "⭐ Le migliori sotto 5.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
+  const cards = list.map((c, i) => `${(i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${TIT[c._grp]}</h2>` : ""}
+    <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
       <div class="card-body">
         <div><div class="name">${esc(c.nome)}</div><div class="meta">${esc(meta(c))}</div></div>
@@ -221,7 +253,7 @@ function botBanner(n){
   if (S.min !== "" || S.max !== "") bits.push(S.min !== "" && S.max !== "" ? eur(S.min) + "–" + eur(S.max) : S.min !== "" ? "da " + eur(S.min) : "fino a " + eur(S.max));
   if (b.guadagno_min) bits.push("guadagno da " + eur(b.guadagno_min));
   if (S.stato !== "tutte") bits.push(S.stato === "sane" ? "senza danni" : "con danni");
-  if (S.zona !== "tutte") bits.push((ZONE_ALL.find(z => z[0] === S.zona) || ["", ""])[1]);
+  if (S.pos && S.raggio) bits.push("entro " + S.raggio + " km");
   if (b.anno_min) bits.push("dal " + b.anno_min);
   if (b.km_max) bits.push("max " + num(b.km_max) + " km");
   if (b.fonte) bits.push(cap(b.fonte));
@@ -303,7 +335,7 @@ function sheetFilters(){
       <section class="sec"><h3>Marca</h3>
         <div class="wrap">${brandsAll().map(b => `<button class="pill" data-act="brand" data-v="${esc(b)}" aria-pressed="${S.brands.includes(b)}" ${!counts[b] && !S.brands.includes(b) ? "disabled" : ""}>${esc(b)}<span class="n">${counts[b] || 0}</span></button>`).join("")}</div>
       </section>
-      ${dueZone() || S.zona !== "tutte" ? `<section class="sec"><h3>Zona</h3>${seg(zoneList().map(([k,l]) => [k, l.replace(" e dintorni","").replace(" le zone","")]), S.zona, "zona", zoneList().length)}</section>` : ""}
+      <section class="sec"><h3>Distanza da te</h3>${S.pos ? seg(RAGGI.map(([k,l]) => [k, l]), S.raggio, "raggio", 5) : `<button class="btn" data-act="posizione" style="width:100%">📍 Usa la mia posizione</button>`}</section>
       <section class="sec"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Sane"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
       <section class="sec"><h3>Rivendi sotto il prezzo di mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
         <span class="hint">Rivendita a mercato pieno o al massimo 10% sotto. I guadagni si ricalcolano subito.</span></section>
@@ -527,6 +559,7 @@ async function onSubmit(e){
 function loggedIn(r){
   S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user); syncCookie();
   S.scroll = {}; go("affari", true); loadCars(true); window.scrollTo(0, 0);
+  if (!S.pos) setTimeout(() => chiediPosizione(false), 600);    // appena entra: chiede il permesso per la posizione
 }
 async function redeemCode(code){
   try { loggedIn(await api("/api/auth/scambio", {method: "POST", body: {code}})); }
@@ -1110,9 +1143,11 @@ $app.addEventListener("click", e => {
     case "bot-catalogo": { const m = A.msgs[Number(v)]; if (m && m.filtri) showCatalog(m.filtri, m.content); return; }
     case "bot-open": S.sheet = null; S.fromList = true; go("auto/" + v); return;
     case "tip": S.tip = false; store.set("tip", false); break;
-    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; S.zona = "tutte"; S.bot = null; stopVoice(); saveFilters(); break;
+    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; S.zona = "tutte"; S.raggio = S.pos ? 100 : 0; S.bot = null; stopVoice(); saveFilters(); break;
     case "stato": S.stato = v; saveFilters(); break;
     case "zona": S.zona = v; saveFilters(); window.scrollTo(0, 0); break;
+    case "raggio": S.raggio = Number(v); saveFilters(); window.scrollTo(0, 0); break;
+    case "posizione": chiediPosizione(false); return;
     case "sconto": S.sconto = Number(v); saveFilters(); break;
     case "sort": S.sort = v; saveFilters(); break;
     case "esito": if (v === "comprata") { S.sheet = "comprata"; break; } sendEsito(v); return;
@@ -1200,6 +1235,9 @@ api("/api/auth/metodi").then(m => {
 })();
 applyRoute();
 syncCookie();
+if (S.token && !S.pos && !store.get("posNo")) setTimeout(() => chiediPosizione(true), 800);
+else if (S.token && S.pos && Date.now() - (S.pos.t || 0) > 86400000) chiediPosizione(true);
 if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role, permessi: u.permessi}); syncCookie();
+  if (!S.pos && u.lat != null && u.lon != null) { S.pos = {lat: u.lat, lon: u.lon, t: 0}; store.set("pos", S.pos); }
   if (!perm("auto") && perm("incentivi")) { location.href = "/incentivi/"; return; }
   render({keep:true}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => {});
