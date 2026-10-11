@@ -150,62 +150,148 @@ def _data(s: str) -> str | None:
         return None
 
 
+ATECO_2025_A_2007 = {"47.81": "45.11", "46.71": "45.11", "95.31": "45.20", "47.82": "45.32", "47.83": "45.40"}
+STATI = ("inattiva", "attiva", "sospesa", "cessata", "in liquidazione", "in scioglimento")
+
+
+def _dopo(t: str, etichetta: str, n: int = 160) -> str | None:
+    """Testo che segue un'etichetta (anche se il valore è sulla riga dopo)."""
+    m = re.search(etichetta, t, re.I)
+    return t[m.end(): m.end() + n] if m else None
+
+
 def leggi_visura(text: str, oggi: dt.date | None = None) -> tuple[dict, list[str]]:
-    """Estrae i dati principali dal testo di una visura camerale. Ritorna (profilo, campi_trovati).
-    Lettura prudente: un dato si prende solo se l'etichetta è chiara; altrimenti resta mancante."""
+    """Estrae i dati principali dal testo di una visura camerale (formato InfoCamere/Registro Imprese).
+    Ritorna (profilo, campi_trovati). Un dato si prende solo se l'etichetta è riconosciuta;
+    i dati non trovati restano mancanti e diventano domande."""
     oggi = oggi or dt.date.today()
-    t = re.sub(r"[ \t]+", " ", text or "")
+    raw = (text or "").replace("\r", "")
+    t = re.sub(r"[ \t ]+", " ", raw)
+    t = t.replace("’", "'").replace("`", "'")
+    flat = re.sub(r"\s+", " ", t)                       # valori che finiscono sulla riga dopo l'etichetta
     fonte = f"letto dalla visura caricata il {oggi.strftime('%d/%m/%Y')}"
     prof = vuoto(None)
-    trovati = []
+    trovati: list[str] = []
 
     def ok(campo):
         prof["campi"][campo] = _campo("verificato", fonte)
-        trovati.append(campo)
+        if campo not in trovati:
+            trovati.append(campo)
 
-    m = re.search(r"Partita IVA\s*:?\s*(\d{11})", t, re.I)
+    # partita IVA (o codice fiscale numerico)
+    m = re.search(r"Partita\s*IVA\s*:?\s*(?:IT)?\s*(\d{11})", flat, re.I) or \
+        re.search(r"Codice fiscale[^0-9]{0,60}(\d{11})\b", flat, re.I)
     if m:
         prof["piva"] = m.group(1)
-    m = re.search(r"(?:Denominazione|Ragione sociale)\s*:?\s*([^\n]{3,120})", t, re.I)
-    if m:
-        prof["ragione_sociale"] = m.group(1).strip()
+    # denominazione: etichetta esplicita oppure la riga subito dopo il titolo "VISURA ..."
+    m = re.search(r"(?:Denominazione|Ragione sociale|Ditta)\s*:?\s*([^\n]{3,120})", t, re.I)
+    nome = m.group(1).strip() if m else None
+    if not nome:
+        lines = [x.strip() for x in t.split("\n") if x.strip()]
+        for i, x in enumerate(lines[:25]):
+            if re.match(r"VISURA\b", x, re.I):
+                for y in lines[i + 1:i + 5]:
+                    if not re.search(r"visura|registro|camera|documento|estratto|data|pagina|codice|numero|indirizzo",
+                                     y, re.I) and len(y) > 3:
+                        nome = y
+                        break
+                break
+    if nome:
+        prof["ragione_sociale"] = re.sub(r"\s{2,}", " ", nome)[:120]
         ok("ragione_sociale")
-    m = re.search(r"Forma giuridica\s*:?\s*([^\n]{3,80})", t, re.I)
+    m = re.search(r"Forma giuridica\s*:?\s*([A-Za-zÀ-ú' .]{3,80}?)(?=\s+(?:Data|Codice|Numero|Indirizzo|Sede|PEC|Partita|Oggetto|Capitale|Durata|$))",
+                  flat, re.I)
     if m:
         prof["forma_giuridica"] = m.group(1).strip()
         ok("forma_giuridica")
-    # sede: "Indirizzo Sede legale ... (MI)" oppure "Sede legale ... ( MI )"
-    m = re.search(r"Sede legale[^\n]*?\n?[^\n]*?\b([A-Z][A-Za-zÀ-ú' ]{1,40})\s*\(\s*([A-Z]{2})\s*\)", t)
-    if m and m.group(2) in SIGLE:
-        pv = m.group(2)
-        prof["sede"] = {"comune": m.group(1).strip().title(), "provincia": pv, "regione": REGIONE.get(pv, "fuori Lombardia")}
+    else:
+        mt = re.search(r"VISURA[^\n]*?(SOCIETA'? DI CAPITAL[EI]|SOCIETA'? DI PERSONE|IMPRESA INDIVIDUALE)", t, re.I)
+        if mt:
+            prof["forma_giuridica"] = mt.group(1).title().replace("Societa'", "Società")
+            ok("forma_giuridica")
+    # sede: "Indirizzo Sede legale MILANO (MI) VIA ..." / "Indirizzo Sede MILANO (MI)" / "Sede legale ... (MI)"
+    sede = None
+    for lab in (r"Indirizzo\s+Sede(?:\s+legale)?", r"Sede\s+legale", r"Indirizzo\s+(?:della\s+)?sede", r"\bSede\b"):
+        chunk = _dopo(flat, lab, 200)
+        if chunk:
+            m = re.search(r"([A-ZÀ-Ú][A-ZÀ-Ú' .-]{1,40}?)\s*\(\s*([A-Z]{2})\s*\)", chunk)
+            if m and m.group(2) in SIGLE:
+                sede = (m.group(1).strip(), m.group(2))
+                break
+    if sede:
+        prof["sede"] = {"comune": sede[0].title(), "provincia": sede[1], "regione": REGIONE.get(sede[1], "fuori Lombardia")}
         ok("sede")
-    codes = []
-    for m in re.finditer(r"(?:Codice|Codice ATECO|ATECO)\s*:?\s*(\d{2}\.\d{2}(?:\.\d{1,2})?)", t, re.I):
-        if m.group(1) not in codes:
-            codes.append(m.group(1))
-    if codes:
-        prof["ateco"] = [{"codice": c, "descrizione": None, "primario": i == 0, "versione": "da visura"}
-                         for i, c in enumerate(codes[:6])]
-        ok("ateco")
-    m = re.search(r"Data (?:atto di )?costituzione\s*:?\s*([0-9/.-]{8,10})", t, re.I)
-    if m and _data(m.group(1)):
-        prof["data_costituzione"] = _data(m.group(1))
+    # unità locali (sigla tra parentesi dopo "Unità locale" / "U.L.")
+    for m in re.finditer(r"(?:Unit[àa] Locale|Unita' locale|U\.L\.)[^()]{0,160}?([A-ZÀ-Ú][A-ZÀ-Ú' .-]{1,40}?)\s*\(\s*([A-Z]{2})\s*\)", flat, re.I):
+        if m.group(2) in SIGLE:
+            prof["unita_locali"].append({"comune": m.group(1).strip().title(), "provincia": m.group(2),
+                                         "regione": REGIONE.get(m.group(2), "fuori Lombardia")})
+    if prof["unita_locali"]:
+        ok("unita_locali")
+    # date
+    for lab, campo in ((r"Data\s+(?:dell')?atto\s+di\s+costituzione", "data_costituzione"),
+                       (r"Data\s+(?:di\s+)?costituzione", "data_costituzione"),
+                       (r"Data\s+(?:d'|di\s+)?inizio\s+(?:dell')?attivit(?:à|a'?)(?:\s+dell'impresa)?", "data_inizio_attivita"),
+                       (r"Data\s+iscrizione", "data_iscrizione")):
+        chunk = _dopo(flat, lab, 40)
+        d = _data(chunk) if chunk else None
+        if d and not prof.get(campo):
+            prof[campo] = d
+    if not prof.get("data_costituzione"):
+        prof["data_costituzione"] = prof.get("data_inizio_attivita") or prof.pop("data_iscrizione", None)
+    prof.pop("data_iscrizione", None)
+    if prof.get("data_costituzione"):
         ok("data_costituzione")
-    m = re.search(r"Data (?:d'|di )?inizio (?:dell')?attivit(?:à|a'?)\s*:?\s*([0-9/.-]{8,10})", t, re.I)
-    if m and _data(m.group(1)):
-        prof["data_inizio_attivita"] = _data(m.group(1))
-        if "data_costituzione" not in trovati:
-            prof["data_costituzione"] = prof["data_inizio_attivita"]
-            ok("data_costituzione")
-    m = re.search(r"Stato (?:dell')?attivit(?:à|a'?)\s*:?\s*([A-Za-z ]{4,30})", t, re.I)
-    if m:
-        prof["stato"] = "attiva" if "attiv" in m.group(1).lower() and "inattiv" not in m.group(1).lower() else m.group(1).strip().lower()
+    # stato attività
+    chunk = _dopo(flat, r"Stato\s+(?:dell')?attivit(?:à|a'?)", 40)
+    if chunk:
+        low = chunk.lower()
+        st = next((x for x in STATI if low.lstrip(" :").startswith(x)), None)
+        if st:
+            prof["stato"] = st
+            ok("stato")
+    elif re.search(r"\bimpresa\s+(?:attiva|risulta attiva)\b", flat, re.I):
+        prof["stato"] = "attiva"
         ok("stato")
-    m = re.search(r"(?:Numero )?[Aa]ddetti(?:\s+al\s+\d{1,2}/\d{1,2}/\d{4})?[^\n\d]{0,60}(\d{1,4})\b(?!/)", t)
-    if m:
-        prof["addetti"] = int(m.group(1))
-        ok("addetti")
-    if re.search(r"impresa artigiana|albo (?:delle )?imprese artigiane", t, re.I):
+    # ATECO (2007 e 2025)
+    codes = []
+    for m in re.finditer(r"(?:Codice\s+ATECO(?:\s*20(?:07|25))?|ATECO(?:RI)?(?:\s*20(?:07|25))?|Codice)\s*:?\s*(\d{2}\.\d{2}(?:\.\d{1,2})?)\b",
+                         flat, re.I):
+        c = m.group(1)
+        if c not in codes:
+            codes.append(c)
+    ateco07 = []
+    for c in codes:
+        pre = c[:5]
+        if pre in ATECO_2025_A_2007:
+            prof["ateco2025"].append({"codice": c, "descrizione": "ATECO 2025 letto dalla visura"})
+            alt = ATECO_2025_A_2007[pre]
+            if not any(a.startswith(alt) for a in ateco07):
+                ateco07.append(alt)
+        elif c not in ateco07:
+            ateco07.append(c)
+    if ateco07:
+        prof["ateco"] = [{"codice": c, "descrizione": None, "primario": i == 0, "versione": "da visura"}
+                         for i, c in enumerate(ateco07[:8])]
+        ok("ateco")
+        if any(c.startswith("45.20") for c in ateco07):
+            prof["extra"]["officina_dichiarata"] = True
+    # addetti: il primo numero dopo "Addetti"/"Numero addetti"/"dipendenti", saltando le date
+    for lab in (r"Numero\s+(?:degli\s+)?addetti(?:\s+dell'impresa)?", r"\bAddetti\b", r"Numero\s+dipendenti", r"\bdipendenti\b"):
+        chunk = _dopo(flat, lab, 140)
+        if not chunk:
+            continue
+        chunk = re.sub(r"\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}", " ", chunk)
+        m = re.search(r"(?:Totale|totale|:)?\s*\b(\d{1,4})\b", chunk)
+        if m:
+            prof["addetti"] = int(m.group(1))
+            ok("addetti")
+            break
+    # artigiana: se la visura lo dice; se la visura è stata letta e non ne parla, si considera non artigiana
+    if re.search(r"artigian\w*\s*:?\s*(?:no|non)\b", flat, re.I):
+        prof["extra"]["artigiana"] = False
+    elif re.search(r"impresa\s+artigiana|albo\s+(?:delle\s+)?imprese\s+artigiane|\bartigian[oa]\b", flat, re.I):
         prof["extra"]["artigiana"] = True
+    elif len(trovati) >= 3:
+        prof["extra"]["artigiana"] = False
     return prof, trovati

@@ -164,4 +164,44 @@ Addetti al 30/06/2026 5"""
     assert [a["codice"] for a in p["ateco"]] == ["45.11.01", "45.20.10"]
     assert p["data_costituzione"] == "2008-01-15" and p["stato"] == "attiva" and p["addetti"] == 5
     assert set(trovati) >= {"sede", "ateco", "data_costituzione", "stato", "addetti"}
-    assert profilo.domande_mancanti(p) == [q for q in profilo.DOMANDE_PROFILO if q["id"] == "artigiana"]
+    assert profilo.domande_mancanti(p) == []          # visura letta: nessuna domanda sull'impresa
+
+
+def test_visura_impaginazione_infocamere():
+    """Etichette e valori su righe diverse, ditta individuale, codici ATECO 2025."""
+    from incentivi import profilo
+    testo = """Camera di Commercio Industria Artigianato e Agricoltura di MILANO MONZA BRIANZA LODI
+VISURA ORDINARIA IMPRESA INDIVIDUALE
+ROSSI MARIO
+DATI ANAGRAFICI
+Indirizzo Sede
+CINISELLO BALSAMO (MI)
+VIA DEI MILLE 10 CAP 20092
+Numero REA
+MI - 1234567
+Codice fiscale
+RSSMRA70A01F205X
+Partita IVA
+12485671007
+Data iscrizione
+10/03/2015
+ATTIVITA'
+Stato attività
+attiva
+Data inizio attività
+01/04/2015
+Attività esercitata
+commercio di autoveicoli usati
+Codice ATECO 2025
+47.81.10 - commercio al dettaglio di autoveicoli
+Addetti
+al 30/06/2026
+Totale 2
+Impresa artigiana: no"""
+    p, trovati = profilo.leggi_visura(testo, OGGI)
+    assert p["ragione_sociale"] == "ROSSI MARIO" and p["piva"] == "12485671007"
+    assert p["sede"] == {"comune": "Cinisello Balsamo", "provincia": "MI", "regione": "Lombardia"}
+    assert p["forma_giuridica"].lower().startswith("impresa individuale")
+    assert p["ateco"][0]["codice"] == "45.11" and p["ateco2025"][0]["codice"] == "47.81.10"
+    assert p["data_costituzione"] == "2015-04-01" and p["stato"] == "attiva" and p["addetti"] == 2
+    assert profilo.domande_mancanti(p) == [] and p["extra"]["artigiana"] is False

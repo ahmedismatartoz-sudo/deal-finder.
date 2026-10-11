@@ -128,6 +128,7 @@ def _vista_impresa(conn, row) -> dict:
                         (row["id"],)).fetchone()
     vis = next((d for d in docs if d["tipo"] == "visura"), None)
     return {"id": row["id"], "profilo": row["profilo"], "fonte": row["fonte"],
+            "domande_profilo": profilo.domande_mancanti(row["profilo"]),
             "visura": {"documento": ({"id": vis["id"], "nome": vis["nome"], "fonte": vis["fonte"],
                                       "data": vis["creato"].isoformat(), "sha256": vis["sha256"]} if vis else None),
                        "richiesta": ({"stato": rich["stato"], "aggiornato": rich["aggiornato"].isoformat()} if rich else None)},
@@ -198,9 +199,13 @@ async def crea_impresa(request: Request):
                     if not data.startswith(b"%PDF") or len(data) > MAX_FILE:
                         raise Errore("Carica la visura in PDF (massimo 8 MB)")
                     try:
-                        letto, trovati = profilo.leggi_visura(profilo.testo_pdf(data))
+                        testo = profilo.testo_pdf(data)
                     except Exception:
-                        letto, trovati = profilo.vuoto(None), []
+                        testo = ""
+                    if len(testo.strip()) < 80:
+                        raise Errore("Non riesco a leggere il testo di questa visura (forse è una foto o una scansione). "
+                                     "Carica il PDF originale scaricato dal Cassetto Digitale, oppure continua senza visura.")
+                    letto, trovati = profilo.leggi_visura(testo)
                     if piva and letto.get("piva") not in (None, "non indicata", piva):
                         raise Errore("La partita IVA della visura non corrisponde a quella inserita")
                     if letto.get("piva") in (None, "non indicata") and piva:

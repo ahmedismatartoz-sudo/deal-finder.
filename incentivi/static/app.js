@@ -90,7 +90,14 @@ async function home() {
         const dati = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(",")[1]); rd.onerror = ko; rd.readAsDataURL(f); });
         body = { modo: "visura_pdf", piva, visura: { nome: f.name, dati } };
       }
-      apriImpresa(await api("/api/impresa", { method: "POST", body }));
+      const imp = await api("/api/impresa", { method: "POST", body });
+      if (body.modo === "visura_pdf" && !(imp.domande_profilo || []).length) {
+        // visura letta per intero: si va dritti ai risultati, le domande restano facoltative
+        S.imp = imp; S.res = null; S.risposte = {}; S.extra = {}; S.prof = {};
+        LS.set("impresa", imp.id);
+        return calcola(imp.id);
+      }
+      apriImpresa(imp);
     } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; b.disabled = false; b.textContent = "Continua"; }
   });
   const auto = document.getElementById("auto");
@@ -292,6 +299,7 @@ async function risultati(id) {
     <section class="hero"><p class="big">${esc(res.titolo)}</p><p class="sub">${esc(res.sottotitolo)}</p>
       <p class="small" style="opacity:.85;margin:8px 0 0">${esc(nome)} · controllo del ${dIt(res.data)} · regole versione ${esc(res.versione_catalogo)}</p></section>
     ${res.avviso ? alertHtml(res, id) : ""}
+    ${Object.keys(res.risposte || {}).length < 2 ? `<a class="card opp" href="#/impresa/${id}" style="display:block"><b>🎯 Vuoi un risultato più preciso?</b><br><span class="muted">Rispondi a 3 domande veloci (assunzioni, spese, officina): dalla visura non si possono sapere.</span></a>` : ""}
     ${utili.length ? "" : `<div class="card"><p><b>Oggi non c'è nulla di utile per te.</b></p><p class="muted">Ti avvisiamo appena esce qualcosa.</p></div>`}
     ${sez("Conviene", utili.filter(r => r.etichetta === "conviene"), id)}
     ${sez("Da valutare", utili.filter(r => r.etichetta === "da_valutare"), id)}
