@@ -41,7 +41,11 @@ def photos_of(conn, listing_id: int) -> list[str]:
         "SELECT source_url FROM listing_photos WHERE listing_id=%s ORDER BY position", (listing_id,)).fetchall()]
 
 
-HOME_REGION_SQL = "(province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))"
+# Base dei prezzi: TUTTI gli annunci delle nostre zone (Milano e dintorni + Ravenna e dintorni), privati e
+# concessionari, Subito, AutoScout24 e Facebook: più annunci = mediane più precise.
+_PROV_BASE = ['MI', 'MB', 'BG', 'BS', 'CO', 'VA', 'LC', 'LO', 'PV', 'CR', 'MN', 'SO', 'NO', 'RA', 'FC', 'RN', 'FE', 'BO']
+HOME_REGION_SQL = ("(province IN (" + ",".join(f"'{p}'" for p in _PROV_BASE) + ") OR (province IS NULL AND "
+                   "(region IS NULL OR lower(region) IN ('lombardia','emilia-romagna'))))")
 
 
 def load_market(conn, make: str, model: str, fuel: str | None, days: int = 120,

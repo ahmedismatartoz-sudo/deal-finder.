@@ -12,7 +12,7 @@ import logging
 import sys
 
 from ..db import connect, log_job
-from ..store import LIGHT_COLS, MARKET_COLS, row_to_listing
+from ..store import HOME_REGION_SQL, LIGHT_COLS, MARKET_COLS, row_to_listing
 from .model import MODEL_VERSION, train
 
 log = logging.getLogger("train")
@@ -46,6 +46,7 @@ def prescreen_backlog(conn, model: dict) -> dict:
 
 
 GROWTH_RETRAIN = 0.10      # la base è cresciuta del 10%: si riaddestra subito
+BASE = "tutte_le_zone"     # tutti gli annunci di Milano e dintorni + Ravenna e dintorni, tutti i siti
 RETRAIN_HOURS = 22         # altrimenti ogni giorno: il modello impara di continuo dai nuovi annunci
 
 
@@ -53,8 +54,8 @@ def run(force: bool = False) -> dict:
     with connect() as conn:
         cur = conn.execute("SELECT created_at, metrics, version FROM price_models WHERE active "
                            "ORDER BY created_at DESC LIMIT 1").fetchone()
-        where = """price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
-               AND (province IN ('MI','MB','BG','BS','CO','VA','LC','LO','PV','CR','MN','SO') OR (province IS NULL AND (region IS NULL OR lower(region) = 'lombardia')))
+        where = f"""price_eur IS NOT NULL AND make IS NOT NULL AND model IS NOT NULL
+               AND {HOME_REGION_SQL}
                AND (status='attivo' OR disappeared_at > now() - interval '180 days')
                AND id NOT IN (SELECT listing_id FROM dealer_feedback WHERE status='scartata' AND
                    (reason ILIKE '%%dati%%' OR reason ILIKE '%%prezzo non vero%%' OR reason ILIKE '%%truffa%%'))"""
@@ -63,6 +64,7 @@ def run(force: bool = False) -> dict:
             prev_m = cur["metrics"] if isinstance(cur["metrics"], dict) else json.loads(cur["metrics"] or "{}")
             n_prev = prev_m.get("annunci_base")
             grown = n_prev is None or n_now >= n_prev * (1 + GROWTH_RETRAIN) \
+                or prev_m.get("base") != BASE \
                 or cur.get("version") != MODEL_VERSION          # nuova versione del modello: si riaddestra
             age = conn.execute("SELECT now() - %s > make_interval(hours => %s) AS old",
                                (cur["created_at"], RETRAIN_HOURS)).fetchone()
@@ -94,6 +96,7 @@ def run(force: bool = False) -> dict:
         test = model.pop("_test", [])
         m = model["metrics"]
         m["annunci_base"] = n_now
+        m["base"] = BASE
         # Sfida tra modelli: il nuovo vince solo se sbaglia meno del vecchio SUGLI STESSI annunci di prova
         old_model = load_active(conn)
         old_err = None

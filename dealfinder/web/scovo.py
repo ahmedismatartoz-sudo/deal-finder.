@@ -170,6 +170,12 @@ def zona(r: dict) -> str:
     return city or prov or "Lombardia"
 
 
+def area(r: dict) -> str:
+    """Zona di lavoro: "ravenna" (Ravenna e dintorni) oppure "milano" (Milano e dintorni)."""
+    from ..zone import RAVENNA
+    return "ravenna" if (r.get("province") or "").upper() in RAVENNA else "milano"
+
+
 def visible(r: dict, max_opens: int) -> bool:
     return bool(r["opened_by_me"]) or (r["opens"] or 0) < max_opens
 
@@ -195,6 +201,7 @@ def item(r: dict) -> dict | None:
         "carb": FUEL_NAMES.get(r.get("fuel") or "", r.get("fuel")),
         "cambio": r.get("gearbox"),
         "zona": zona(r),
+        "area": area(r),
         "fonte": SOURCE_NAMES.get(r.get("source"), r.get("source")),
         "prezzo": int(price),
         "mercato": int(round(float(mercato))),

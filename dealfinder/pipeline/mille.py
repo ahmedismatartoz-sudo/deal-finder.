@@ -15,6 +15,7 @@ import io
 import json
 import logging
 import os
+from pathlib import Path
 from collections import Counter
 
 from ..config import settings
@@ -33,6 +34,18 @@ QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]     # Milano e dintorni (selezione di sempre)
 CELLA = (270, 200)
 PEZZO = 12000
+
+
+def _gia_controllate() -> list[int]:
+    """Auto già guardate una per una (data/analisi_manuale.json): non si ripropongono, così ogni nuova
+    selezione porta auto nuove. MILLE_RIVEDI=1 le riprende tutte."""
+    if os.environ.get("MILLE_RIVEDI") == "1":
+        return []
+    try:
+        p = Path(__file__).resolve().parents[2] / "data" / "analisi_manuale.json"
+        return [int(x["id"]) for x in json.loads(p.read_text()) if x.get("id") is not None]
+    except Exception:
+        return []
 
 
 def job_name(versione: str | None = None) -> str:
@@ -74,8 +87,9 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
                   AND (province = ANY(%s) OR (source='facebook' AND %s))
                   AND (year IS NULL OR year >= %s)
                   AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia'))
-                  AND (%s::text IS NULL OR source = %s)"""
-        params = (settings.max_purchase_eur, list(province or PROVINCES), province is None, scovo.ANNO_MINIMO, fonte, fonte)
+                  AND (%s::text IS NULL OR source = %s)
+                  AND NOT (id = ANY(%s))"""
+        params = (settings.max_purchase_eur, list(province or PROVINCES), province is None, scovo.ANNO_MINIMO, fonte, fonte, _gia_controllate())
         ids = [r["id"] for r in conn.execute(
             f"SELECT id FROM listings WHERE {where} ORDER BY make, model, fuel, id", params).fetchall()]
         stats["esaminati"] = len(ids)

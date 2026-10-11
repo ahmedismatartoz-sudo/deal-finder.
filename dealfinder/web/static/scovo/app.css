@@ -423,3 +423,5 @@ a{color:var(--focus)}
 .vc-on .list{padding-bottom:200px}
 .vet-h{font:800 19px/1.2 var(--disp,inherit);margin:14px 4px 6px}
 .card.vet{outline:2px solid #f5b800;outline-offset:-2px}
+
+.zone-seg button{font-size:13px;line-height:1.15}.zone-seg .n{color:var(--muted);font-weight:600}

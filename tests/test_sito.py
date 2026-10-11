@@ -169,3 +169,9 @@ def test_filtro_prima_dell_ai_usa_la_regola_del_sito():
         assert quick_potential(Listing(source="subito", source_id="3", url="u", price_eur=3000, year=2005), None)[1] == "troppo_vecchia"
     finally:
         pr.value_listing = old
+
+
+def test_zona_milano_ravenna():
+    from dealfinder.web.scovo import area
+    assert area({"province": "RA"}) == "ravenna" and area({"province": "FC"}) == "ravenna"
+    assert area({"province": "MI"}) == "milano" and area({"province": None}) == "milano"
