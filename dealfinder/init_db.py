@@ -45,6 +45,7 @@ if __name__ == "__main__":
             from .pipeline import manuale
             with connect() as conn:
                 print("Auto scartate a mano tolte dal sito:", manuale.applica_scarti(conn))
+                print("Auto approvate pronte sul sito:", manuale.segna_viste_di_recente(conn))
             from .web import controllo_foto
             controllo_foto.once()
         except Exception as e:

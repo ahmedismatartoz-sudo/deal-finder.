@@ -48,6 +48,22 @@ def applica_scarti(conn) -> int:
     return n
 
 
+def segna_viste_di_recente(conn) -> dict:
+    """Auto approvate e viste dalla raccolta nelle ultime 48 ore: valgono come verificate (sono ancora online).
+    Serve a mostrarle subito, senza aspettare il controllo una per una del ciclo."""
+    n = conn.execute("""UPDATE listings SET last_checked_at=now()
+                        WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare')
+                          AND last_seen_at > now() - interval '48 hours'
+                          AND (last_checked_at IS NULL OR last_checked_at < now() - interval '12 hours')""").rowcount
+    rows = conn.execute("""SELECT source, count(*) AS n FROM listings
+                           WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare')
+                             AND last_checked_at > now() - interval '48 hours' GROUP BY source""").fetchall()
+    conn.commit()
+    out = {"aggiornate": n, **{r["source"]: r["n"] for r in rows}}
+    log.info("MANUALE auto approvate visibili: %s", out)
+    return out
+
+
 def run() -> dict:
     if not FILE.exists():
         return {"file": "assente"}
