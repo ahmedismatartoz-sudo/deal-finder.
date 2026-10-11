@@ -369,14 +369,15 @@ async function viewAdmin() {
           `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"]].map(([k, l]) =>
           `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
-        ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}</div>
+        ["active", "Attivo", (v, r) => `${v ? '<span class="ok">Attivo</span>' : '<b class="ko">Disattivato</b>'} <button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Riattiva"}</button>`],
+        ["id", "Password", (v, r) => `<button class="btn" data-pwd="${v}" data-who="${esc(r.email)}">Nuova password</button>`]])}</div>
       <h2>Nuovo commerciante</h2>
       <form class="form" id="new-dealer">
         <div class="grid2">
           <div class="field"><label for="nd-name">Nome</label><input id="nd-name" required></div>
           <div class="field"><label for="nd-company">Azienda</label><input id="nd-company"></div>
-          <div class="field"><label for="nd-email">Email</label><input id="nd-email" type="email" required></div>
-          <div class="field"><label for="nd-pwd">Password iniziale</label><input id="nd-pwd" minlength="8" required></div>
+          <div class="field"><label for="nd-email">Email</label><input id="nd-email" type="email" required autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+          <div class="field"><label for="nd-pwd">Password iniziale</label><input id="nd-pwd" minlength="8" required autocapitalize="off" autocorrect="off" autocomplete="new-password" spellcheck="false"><small class="note">Scrivila esattamente così al cliente: maiuscole e minuscole contano.</small></div>
         </div>
         <div class="field"><label for="nd-zona">Zona</label><select id="nd-zona">
           <option value="milano">Milano e dintorni</option><option value="ravenna">Ravenna e dintorni</option><option value="tutte">Tutte</option></select></div>
@@ -388,6 +389,13 @@ async function viewAdmin() {
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();
+    });
+    box.querySelectorAll("[data-pwd]").forEach((b) => b.onclick = async () => {
+      const pwd = prompt("Nuova password per " + b.dataset.who + " (almeno 8 caratteri; maiuscole e minuscole contano):");
+      if (pwd == null) return;
+      if (pwd.trim().length < 8) { toast("Servono almeno 8 caratteri"); return; }
+      try { await api("/api/admin/dealers/" + b.dataset.pwd, { method: "PATCH", body: { password: pwd.trim() } }); toast("Password cambiata: " + pwd.trim()); }
+      catch (err) { toast(err.message); }
     });
     box.querySelectorAll("[data-zona]").forEach((sel) => sel.onchange = async () => {
       try { await api("/api/admin/dealers/" + sel.dataset.zona, { method: "PATCH", body: { zona: sel.value } }); toast("Zona aggiornata"); }

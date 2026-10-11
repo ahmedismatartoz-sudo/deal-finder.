@@ -135,7 +135,10 @@ async def login(request: Request):
     def check():
         with connect() as conn:
             u = conn.execute("SELECT * FROM dealers WHERE email=%s AND active", (email,)).fetchone()
-        return u, bool(u) and verify_password(str(data.get("password", ""))[:200], u["password_hash"])
+        pw = str(data.get("password", ""))[:200]
+        # spazi in più copiati dal messaggio con la password: si prova anche senza
+        return u, bool(u) and (verify_password(pw, u["password_hash"]) or
+                               (pw != pw.strip() and verify_password(pw.strip(), u["password_hash"])))
     u, ok = await run_in_threadpool(check)
     if not ok:
         _attempts[email].append(now)
@@ -445,7 +448,7 @@ async def admin_create_dealer(request: Request):
     current_user(request, admin=True)
     data = await body(request)
     email = str(data.get("email", "")).strip().lower()
-    pwd = str(data.get("password", ""))
+    pwd = str(data.get("password", "")).strip()
     if "@" not in email or len(pwd) < 8:
         err(400, "Email valida e password di almeno 8 caratteri")
     role = "admin" if data.get("role") == "admin" else "commerciante"
