@@ -8,3 +8,4 @@ pillow>=10.4
 brotli>=1.1
 PyJWT[crypto]>=2.8
 reportlab>=4.2
+pypdf>=5.0

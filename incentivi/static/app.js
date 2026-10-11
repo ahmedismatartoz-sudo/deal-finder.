@@ -49,27 +49,59 @@ async function home() {
   const vis = S.stato.visura || {};
   $app.innerHTML = `
     <h1>Scopri gli incentivi per la tua attività</h1>
-    <p class="muted">Inserisci solo la partita IVA. Recuperiamo la visura camerale ufficiale e controlliamo i requisiti uno per uno.</p>
+    <p class="muted">Bastano poche domande semplici. Se hai la visura camerale, caricala: i dati li leggiamo noi.</p>
     <form class="card" id="f">
-      <div class="field"><label for="piva">Partita IVA</label>
-        <input id="piva" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="11 cifre" aria-describedby="pivah"></div>
-      <p id="pivah" class="small muted">${vis.configurata ? `Visura da Openapi (${esc(vis.ambiente)}).` : "Nel prototipo il collegamento alla visura non è ancora attivo: usa un profilo di esempio qui sotto."}</p>
+      <div class="field"><label for="piva">Partita IVA <span class="muted small">(facoltativa)</span></label>
+        <input id="piva" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="11 cifre"></div>
+      <div class="field"><label for="vis">Visura camerale <span class="muted small">(facoltativa, PDF)</span></label>
+        <label class="btn sec block" style="cursor:pointer"><span id="visname">📄 Carica la visura</span>
+          <input type="file" id="vis" accept="application/pdf" style="display:none"></label>
+        <span class="small muted">La scarichi <b>gratis</b> dal <a href="https://impresa.italia.it" target="_blank" rel="noopener">Cassetto Digitale dell'Imprenditore</a> con lo SPID (solo il titolare o il legale rappresentante).</span></div>
       <div id="ferr"></div>
       <button class="btn block" id="go">Continua</button>
+      ${vis.configurata ? `<p style="margin:10px 0 0"><button type="button" class="btn sec block" id="auto">Recupera la visura in automatico (a pagamento)</button></p>` : ""}
     </form>
     ${last ? `<p><a href="#/impresa/${last}">Riprendi l'ultima impresa →</a></p>` : ""}
     <h2>Oppure prova con un esempio</h2>
     <div class="demo">${(S.stato.demo || []).map(d => `<button data-demo="${esc(d.id)}"><b>${esc(d.etichetta)}</b><span class="muted small">${esc(d.descrizione)}</span></button>`).join("")}</div>
     <p class="small muted">I profili di esempio hanno dati inventati, segnati come tali.</p>`;
-  const f = document.getElementById("f");
-  f.addEventListener("submit", async ev => {
-    ev.preventDefault();
+  const inp = document.getElementById("vis");
+  inp.addEventListener("change", () => {
+    const f = inp.files[0];
+    document.getElementById("visname").textContent = f ? "📄 " + f.name : "📄 Carica la visura";
+  });
+  const leggiPiva = () => {
     const piva = document.getElementById("piva").value.replace(/\D/g, "");
-    const box = document.getElementById("ferr");
-    if (!/^\d{11}$/.test(piva) || !pivaOk(piva)) { box.innerHTML = `<div class="err">La partita IVA non è valida: controlla le 11 cifre.</div>`; return; }
-    const b = document.getElementById("go"); b.disabled = true; b.innerHTML = `<span class="spin"></span> Recupero la visura…`;
-    try { const imp = await api("/api/impresa", { method: "POST", body: { piva } }); apriImpresa(imp); }
-    catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; b.disabled = false; b.textContent = "Continua"; }
+    if (piva && (!/^\d{11}$/.test(piva) || !pivaOk(piva))) throw new Error("La partita IVA non è valida: controlla le 11 cifre (oppure lasciala vuota).");
+    return piva;
+  };
+  document.getElementById("f").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const box = document.getElementById("ferr"); box.innerHTML = "";
+    const b = document.getElementById("go");
+    try {
+      const piva = leggiPiva();
+      const f = inp.files[0];
+      b.disabled = true;
+      let body = { modo: "domande", piva };
+      if (f) {
+        if (f.type !== "application/pdf" || f.size > 8 * 1024 * 1024) throw new Error("La visura deve essere un PDF più piccolo di 8 MB.");
+        b.innerHTML = `<span class="spin"></span> Leggo la visura…`;
+        const dati = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(",")[1]); rd.onerror = ko; rd.readAsDataURL(f); });
+        body = { modo: "visura_pdf", piva, visura: { nome: f.name, dati } };
+      }
+      apriImpresa(await api("/api/impresa", { method: "POST", body }));
+    } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; b.disabled = false; b.textContent = "Continua"; }
+  });
+  const auto = document.getElementById("auto");
+  if (auto) auto.addEventListener("click", async () => {
+    const box = document.getElementById("ferr"); box.innerHTML = "";
+    try {
+      const piva = leggiPiva();
+      if (!piva) throw new Error("Per il recupero automatico serve la partita IVA.");
+      auto.disabled = true; auto.innerHTML = `<span class="spin"></span> Recupero la visura…`;
+      apriImpresa(await api("/api/impresa", { method: "POST", body: { piva } }));
+    } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; auto.disabled = false; auto.textContent = "Recupera la visura in automatico (a pagamento)"; }
   });
   $app.querySelectorAll("[data-demo]").forEach(b => b.addEventListener("click", async () => {
     b.disabled = true;
@@ -85,7 +117,7 @@ function pivaOk(p) {
 }
 
 function apriImpresa(imp) {
-  S.imp = imp; S.res = null; S.risposte = {}; S.extra = {};
+  S.imp = imp; S.res = null; S.risposte = {}; S.extra = {}; S.prof = {};
   LS.set("impresa", imp.id);
   go("#/impresa/" + imp.id);
 }
@@ -94,6 +126,7 @@ function apriImpresa(imp) {
 function tag(campi, k) {
   const c = (campi || {})[k] || {};
   if (c.stato === "verificato") return `<span class="tag v" title="${esc(c.fonte || "")}">verificato</span>`;
+  if (c.stato === "dichiarato") return `<span class="tag e" title="${esc(c.fonte || "")}">dichiarato</span>`;
   return `<span class="tag m">mancante</span>`;
 }
 
@@ -113,11 +146,15 @@ async function impresa(id) {
     : (vis.richiesta ? `<p class="small note">Visura PDF in preparazione (${esc(vis.richiesta.stato)}): ricarica tra poco.</p>`
       : `<p class="small muted">${(imp.fonte || {}).tipo === "esempio" ? "Profilo di ESEMPIO: nessuna visura reale." : "Visura PDF non disponibile."}</p>`);
   const qs = imp.domande || [];
+  const qp = imp.domande_profilo || [];
+  S.prof = S.prof || {};
+  const noti = Object.values(c).some(x => x && (x.stato === "verificato" || x.stato === "dichiarato"));
   $app.innerHTML = `
     <a class="back" href="#/">← Cambia impresa</a>
-    <h1>${esc(p.ragione_sociale || "Impresa")}</h1>
-    <p class="muted small">P.IVA ${esc(p.piva)}${fonteData ? " · dati del " + fonteData : ""}</p>
-    <section class="card">
+    <h1>${esc(p.ragione_sociale || "La tua impresa")}</h1>
+    <p class="muted small">P.IVA ${esc(p.piva || "non indicata")}${fonteData ? " · " + fonteData : ""}</p>
+    ${qp.length ? `<h2>La tua impresa</h2><section class="card" id="qp">${qp.map(domandaProfilo).join("")}</section>` : ""}
+    <section class="card" ${noti ? "" : 'hidden'}>
       <dl class="kv">
         <dt>Forma giuridica</dt><dd>${esc(p.forma_giuridica || "—")} ${tag(c, "forma_giuridica")}</dd>
         <dt>Attività (ATECO)</dt><dd>${(p.ateco || []).map(a => `${esc(a.codice)}${a.primario ? " (principale)" : ""}`).join(", ") || "—"} ${tag(c, "ateco")}
@@ -131,12 +168,38 @@ async function impresa(id) {
       </dl>
       ${visBox}
     </section>
-    <h2>${qs.length ? "Ancora " + qs.length + " domande veloci" : "Nessuna domanda: abbiamo tutto"}</h2>
+    <h2>${qs.length ? (qp.length ? "E ancora " : "Ancora ") + qs.length + " domande veloci" : "Nessuna domanda: abbiamo tutto"}</h2>
     <section class="card" id="qs">${qs.map(domanda).join("")}</section>
     <div class="sticky"><button class="btn block" id="vai">Vedi i risultati</button>
     <p class="small muted">Puoi rispondere dopo: le risposte mancanti restano "da verificare".</p></div>`;
   wireDomande();
+  wireProfilo();
   document.getElementById("vai").addEventListener("click", () => calcola(imp.id));
+}
+
+function domandaProfilo(q) {
+  const v = S.prof[q.id];
+  if (q.tipo === "anno") {
+    return `<div class="q"><p>${esc(q.testo)}</p><input type="text" inputmode="numeric" maxlength="4" data-p="anno" placeholder="Es. 2015" value="${v ? esc(v) : ""}" aria-label="${esc(q.testo)}"></div>`;
+  }
+  if (q.opzioni.length > 4) {
+    return `<div class="q"><p>${esc(q.testo)}</p><select data-p="${q.id}" aria-label="${esc(q.testo)}" class="sel">
+      <option value="">Scegli…</option>${q.opzioni.map(o => `<option value="${esc(o[0])}" ${v === o[0] ? "selected" : ""}>${esc(o[1])}</option>`).join("")}</select></div>`;
+  }
+  return `<div class="q"><p>${esc(q.testo)}</p><div class="yn wrap" role="group" aria-label="${esc(q.testo)}">${q.opzioni.map(o =>
+    `<button type="button" data-p="${q.id}" data-v="${esc(o[0])}" class="${v === o[0] ? "on" : ""}" aria-pressed="${v === o[0]}">${esc(o[1])}</button>`).join("")}</div>
+    ${q.id === "attivita" ? `<input type="text" data-p="ateco" placeholder="Codice ATECO, es. 43.21" value="${esc(S.prof.ateco || "")}" ${v === "altro" ? "" : "hidden"} style="margin-top:8px" aria-label="Codice ATECO">` : ""}</div>`;
+}
+
+function wireProfilo() {
+  $app.querySelectorAll("#qp button[data-p]").forEach(b => b.addEventListener("click", () => {
+    S.prof[b.dataset.p] = b.dataset.v;
+    b.parentNode.querySelectorAll("button").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); });
+    if (b.dataset.p === "attivita") { const a = $app.querySelector('input[data-p="ateco"]'); if (a) a.hidden = b.dataset.v !== "altro"; }
+    if (b.dataset.p === "attivita" && /officina/.test(b.dataset.v)) S.risposte.officina = true;
+  }));
+  $app.querySelectorAll("#qp select[data-p]").forEach(sl => sl.addEventListener("change", () => { S.prof[sl.dataset.p] = sl.value; }));
+  $app.querySelectorAll("#qp input[data-p]").forEach(i => i.addEventListener("input", () => { S.prof[i.dataset.p] = i.value.trim(); }));
 }
 
 function domanda(q) {
@@ -164,7 +227,9 @@ function wireDomande() {
 async function calcola(id, extra) {
   busy("Controllo i requisiti uno per uno…");
   try {
-    S.res = await api(`/api/impresa/${id}/valuta`, { method: "POST", body: Object.assign({}, S.risposte, extra ? { extra } : {}) });
+    const prof = S.prof && Object.keys(S.prof).length ? { profilo: S.prof } : {};
+    S.res = await api(`/api/impresa/${id}/valuta`, { method: "POST", body: Object.assign({}, S.risposte, prof, extra ? { extra } : {}) });
+    S.prof = {};
     go("#/risultati/" + id);
   } catch (e) { $app.innerHTML = ""; fail(e); }
 }

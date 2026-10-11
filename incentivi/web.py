@@ -21,7 +21,7 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Respon
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
-from . import job, motore, pdf, store, visura
+from . import job, motore, pdf, profilo, store, visura
 
 log = logging.getLogger("incentivi.web")
 STATIC = Path(__file__).resolve().parent / "static"
@@ -182,6 +182,43 @@ async def crea_impresa(request: Request):
                 conn.commit()
                 return _vista_impresa(conn, conn.execute("SELECT * FROM inc_imprese WHERE id=%s", (iid,)).fetchone())
             piva = "".join(ch for ch in str(body.get("piva") or "") if ch.isdigit())
+            if body.get("modo") in ("domande", "visura_pdf"):
+                # strade GRATUITE: domande semplici e/o visura caricata dal commerciante
+                if piva and not visura.piva_valida(piva):
+                    raise Errore("La partita IVA non è valida: controlla le 11 cifre (o lasciala vuota)")
+                prof = profilo.vuoto(piva or None)
+                fonte = {"tipo": "dichiarato", "fornitore": "risposte del commerciante", "data": dt.date.today().isoformat()}
+                pdf_doc = None
+                if body.get("modo") == "visura_pdf":
+                    v = body.get("visura") or {}
+                    try:
+                        data = base64.b64decode(str(v.get("dati") or ""), validate=True)
+                    except Exception:
+                        raise Errore("File della visura non leggibile")
+                    if not data.startswith(b"%PDF") or len(data) > MAX_FILE:
+                        raise Errore("Carica la visura in PDF (massimo 8 MB)")
+                    try:
+                        letto, trovati = profilo.leggi_visura(profilo.testo_pdf(data))
+                    except Exception:
+                        letto, trovati = profilo.vuoto(None), []
+                    if piva and letto.get("piva") not in (None, "non indicata", piva):
+                        raise Errore("La partita IVA della visura non corrisponde a quella inserita")
+                    if letto.get("piva") in (None, "non indicata") and piva:
+                        letto["piva"] = piva
+                    prof = letto
+                    fonte = {"tipo": "visura_caricata", "fornitore": "visura caricata dal commerciante (Cassetto Digitale)",
+                             "data": dt.date.today().isoformat(), "campi_letti": trovati}
+                    pdf_doc = (str(v.get("nome") or "visura.pdf")[:120].replace("/", "_"), data)
+                if isinstance(body.get("dichiarato"), dict):
+                    profilo.applica_dichiarato(prof, body["dichiarato"])
+                iid = _salva_impresa(conn, sessione, prof.get("piva") or "non indicata", prof, fonte)
+                if pdf_doc:
+                    conn.execute("INSERT INTO inc_documenti (impresa_id, tipo, nome, mime, dati, sha256, fonte) "
+                                 "VALUES (%s,'visura',%s,'application/pdf',%s,%s,%s)",
+                                 (iid, pdf_doc[0], store.cifra(pdf_doc[1]), store.sha256(pdf_doc[1]),
+                                  f"visura caricata dal commerciante il {dt.date.today().strftime('%d/%m/%Y')}"))
+                conn.commit()
+                return _vista_impresa(conn, conn.execute("SELECT * FROM inc_imprese WHERE id=%s", (iid,)).fetchone())
             if not visura.piva_valida(piva):
                 raise Errore("La partita IVA non è valida: controlla le 11 cifre")
             if not visura.configurato():
@@ -222,7 +259,9 @@ async def leggi_impresa(request: Request):
             row = _impresa(conn, request, iid)
             _aggiorna_visura(conn, row)
             out = _vista_impresa(conn, row)
-            out["domande"] = motore.domande_utili(row["profilo"])
+            out["domande_profilo"] = profilo.domande_mancanti(row["profilo"])
+            out["domande"] = [q for q in motore.domande_utili(row["profilo"])
+                              if not (q["id"] == "officina" and (row["profilo"].get("extra") or {}).get("officina_dichiarata"))]
             v = conn.execute("SELECT risposte FROM inc_valutazioni WHERE impresa_id=%s ORDER BY id DESC LIMIT 1",
                              (iid,)).fetchone()
             out["risposte"] = v["risposte"] if v else {}
@@ -273,6 +312,11 @@ async def valuta(request: Request):
         with _db() as conn:
             row = _impresa(conn, request, iid)
             prof = row["profilo"]
+            if isinstance(body.get("profilo"), dict):
+                profilo.applica_dichiarato(prof, body["profilo"])
+                conn.execute("UPDATE inc_imprese SET profilo=%s, aggiornato=now() WHERE id=%s", (store.J(prof), iid))
+            if (prof.get("extra") or {}).get("officina_dichiarata") and "officina" not in ris:
+                ris["officina"] = True
             extra = body.get("extra")
             if isinstance(extra, dict):
                 allowed = {"artigiana", "fondo_forte", "fondo_fondartigianato", "lavoratore_requisiti", "beni_40",

@@ -121,3 +121,47 @@ def test_ogni_regola_ha_fonte():
         assert m["fonte_url"].startswith("http"), m["id"]
         for r in m["regole"]:
             assert r["riferimento"] and r["testo"]
+
+
+def test_profilo_da_domande_semplici():
+    from incentivi import profilo
+    p = profilo.applica_dichiarato(profilo.vuoto(None), {"provincia": "MB", "attivita": "auto_officina", "anno": "2012",
+                                                          "dipendenti": "3-9", "forma": "societa", "artigiana": "no"}, OGGI)
+    assert p["sede"]["regione"] == "Lombardia" and p["addetti"] == 6 and p["stato"] == "attiva"
+    assert [a["codice"] for a in p["ateco"]] == ["45.11.01", "45.20.10"]
+    assert p["campi"]["sede"]["stato"] == "dichiarato" and profilo.domande_mancanti(p) == []
+    res = motore.valuta_tutto(p, {"investimento": 0, "assume": False}, OGGI)
+    r = _by_id(res)["rl-formazione-continua-4-ed"]
+    terr = next(x for x in r["regole"] if x["id"] == "territorio")
+    assert terr["esito"] == "ok" and terr["fonte"].startswith("dichiarato")
+
+
+def test_altro_settore_edile():
+    from incentivi import profilo
+    p = profilo.applica_dichiarato(profilo.vuoto(None), {"provincia": "MI", "attivita": "altro", "ateco": "43.21",
+                                                          "anno": "2005", "dipendenti": "1-2", "forma": "individuale"}, OGGI)
+    assert p["ateco"][0]["codice"] == "43.21"
+    rv = _by_id(motore.valuta_tutto(p, {}, OGGI))["rl-rinnova-veicoli-2026-2027"]
+    assert next(x for x in rv["regole"] if x["id"] == "ateco_non_escluso")["esito"] == "ok"
+
+
+def test_lettura_visura_caricata():
+    from incentivi import profilo
+    testo = """VISURA ORDINARIA SOCIETA' DI PERSONE
+Denominazione AUTO PROVA S.N.C. DI ROSSI
+Forma giuridica societa' in nome collettivo
+Partita IVA 12485671007
+Sede legale VIA ROMA 1
+20099 SESTO SAN GIOVANNI (MI)
+Data atto di costituzione 15/01/2008
+Data d'inizio dell'attivita' 01/02/2008
+Stato attivita' attiva
+Codice ATECO 45.11.01
+Codice: 45.20.10 - riparazioni meccaniche
+Addetti al 30/06/2026 5"""
+    p, trovati = profilo.leggi_visura(testo, OGGI)
+    assert p["piva"] == "12485671007" and p["sede"]["provincia"] == "MI" and p["sede"]["regione"] == "Lombardia"
+    assert [a["codice"] for a in p["ateco"]] == ["45.11.01", "45.20.10"]
+    assert p["data_costituzione"] == "2008-01-15" and p["stato"] == "attiva" and p["addetti"] == 5
+    assert set(trovati) >= {"sede", "ateco", "data_costituzione", "stato", "addetti"}
+    assert profilo.domande_mancanti(p) == [q for q in profilo.DOMANDE_PROFILO if q["id"] == "artigiana"]

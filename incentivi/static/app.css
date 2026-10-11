@@ -120,3 +120,5 @@ details.nofa summary{cursor:pointer;font-weight:700;padding:10px 0}
 @keyframes s{to{transform:rotate(360deg)}}
 @media (min-width:700px){h1{font-size:30px}.hero .big{font-size:32px}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.yn.wrap{flex-wrap:wrap}.yn.wrap button{flex:1 1 45%;min-height:46px;padding:8px 10px;font-size:15px}
+.sel{width:100%;font:600 17px var(--font);padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}

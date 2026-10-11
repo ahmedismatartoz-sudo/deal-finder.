@@ -97,8 +97,8 @@ def stato_bando(m: dict, oggi: dt.date) -> dict:
 # ---------------------------------------------------------------- dati del profilo
 def _src(profilo: dict, campo: str) -> str:
     c = (profilo.get("campi") or {}).get(campo) or {}
-    if c.get("stato") == "verificato":
-        return c.get("fonte") or "visura"
+    if c.get("stato") in ("verificato", "dichiarato"):
+        return c.get("fonte") or ("visura" if c.get("stato") == "verificato" else "dichiarato")
     return "mancante"
 
 

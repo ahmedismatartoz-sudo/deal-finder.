@@ -43,7 +43,11 @@ def genera(impresa: dict, risultati: list[dict], checklist: dict, allegati: list
 
     def fonte(c):
         x = campi.get(c) or {}
-        return x.get("fonte") if x.get("stato") == "verificato" else "MANCANTE"
+        if x.get("stato") == "verificato":
+            return x.get("fonte")
+        if x.get("stato") == "dichiarato":
+            return f"DICHIARATO ({x.get('fonte')}): da verificare con la visura"
+        return "MANCANTE"
 
     sede = p.get("sede") or {}
     righe = [
