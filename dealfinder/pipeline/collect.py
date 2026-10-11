@@ -171,6 +171,8 @@ def run(mode: str) -> Counter:
         sources = [(sub, {"region": settings.region, "provinces": lomb, "max_price": top, "max_pages": 0,
                           "price_bands": bands, "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (asc, {"massiva": True, "min_price": 200, "max_price": top, "step": 250})]
+        fonti = os.environ.get("ECONOMICHE_FONTI", "subito,autoscout")       # AutoScout può girare a parte, in parallelo
+        sources = [x for x in sources if (x[0] is sub and "subito" in fonti) or (x[0] is asc and "autoscout" in fonti)]
     elif mode == "incidentate":
         # Auto incidentate in TUTTA Italia (sezione Incidentate): Subito con le parole tipiche, AutoScout24 solo
         # annunci "danneggiati" di privati. Obiettivo INCIDENTATE_OBIETTIVO annunci da filtrare.
@@ -282,7 +284,7 @@ def run(mode: str) -> Counter:
     with connect() as conn:
         from .ciclo import fb_job
         finish = log_job(conn, "collect:fb_backfill:v2" if mode == "fb_backfill"
-                         else fb_job() if mode == "facebook" else f"collect:{mode}")
+                         else fb_job() if mode == "facebook" else os.environ.get("COLLECT_JOB") or f"collect:{mode}")
         from ..pricing.model import prescreen
         from ..pricing.train import load_active
         model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
@@ -415,13 +417,33 @@ if __name__ == "__main__":
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
         sys.exit(0)
+    if mode == "economiche_as":
+        # solo AutoScout24 fino a 1.500 € (in parallelo alla parte Subito), poi le auto già controllate sul sito
+        from . import manuale
+        os.environ["ECONOMICHE_FONTI"] = "autoscout"
+        from .ciclo import _due
+        if _due("collect:economiche_as", 20):
+            os.environ["COLLECT_JOB"] = "collect:economiche_as"
+            run("economiche")
+        log.info("ECONOMICHE_AS analisi_manuale: %s", manuale.run(solo_nuove=True))
+        sys.exit(0)
     if mode == "economiche" or mode.startswith("economiche,"):
         # poi, se indicato (es. "economiche,lombardia"), riprende l'altro lavoro
         from . import manuale, mille, recheck
         from .ciclo import _due
         versione = os.environ.get("ECONOMICHE_VERSIONE", "eco-v1")
         if _due("collect:economiche", int(os.environ.get("ECONOMICHE_ORE", "20"))):
+            if "economiche_as" in os.environ.get("LAVORO_SUBITO", ""):
+                os.environ["ECONOMICHE_FONTI"] = "subito"        # AutoScout lo fa l'altro processo
             run("economiche")
+        if "economiche_as" in os.environ.get("LAVORO_SUBITO", ""):
+            # la selezione aspetta che finisca anche AutoScout (al massimo 40 minuti)
+            import time
+            from .ciclo import _in_corso
+            for _ in range(80):
+                if not _in_corso("collect:economiche_as", 3):
+                    break
+                time.sleep(30)
         if _due(f"mille:{versione}", 24 * 365):
             # fino a 1.500 €, almeno 1.000 € di guadagno prima dei pezzi, sane o incidentate, Lombardia
             mille.run(versione=versione, province=["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO"],

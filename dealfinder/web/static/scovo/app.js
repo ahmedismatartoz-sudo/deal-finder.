@@ -35,6 +35,7 @@ const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
               ["profilo","Profilo",'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']];
 const BANDS = [
   {id:"tutti", label:"Tutti i prezzi", min:null, max:null},
+  {id:"1", label:"Fino a 1.500 €", min:null, max:1500},
   {id:"2", label:"Fino a 2.000 €", min:null, max:2000},
   {id:"5", label:"2.000–5.000 €", min:2000, max:5000},
   {id:"10", label:"5.000–10.000 €", min:5000, max:10000},

@@ -1217,15 +1217,14 @@ from contextlib import asynccontextmanager
 def _lavoro_subito():
     """LAVORO_SUBITO=ravenna (da Render): fa partire subito quel lavoro di raccolta in un processo a parte,
     senza aspettare il cron (un solo giro: il lavoro stesso salta se è già stato fatto)."""
-    modo = os.environ.get("LAVORO_SUBITO", "").strip()
-    if not modo:
-        return
     import subprocess
     import sys
-    env = dict(os.environ, COLLECT_MODO=modo, RAVENNA_SOLO_SUBITO="1", POI_RAVENNA="0",
-               RAVENNA_VERSIONE=os.environ.get("RAVENNA_VERSIONE", "ra-v2"))
-    subprocess.Popen([sys.executable, "-m", "dealfinder.pipeline.collect", modo], env=env)
-    logging.getLogger("lavoro").warning("LAVORO_SUBITO avviato: %s", modo)
+    # più lavori in parallelo separati da ";" (es. "economiche,lombardia;economiche_as")
+    for modo in [m.strip() for m in os.environ.get("LAVORO_SUBITO", "").split(";") if m.strip()]:
+        env = dict(os.environ, COLLECT_MODO=modo, RAVENNA_SOLO_SUBITO="1", POI_RAVENNA="0",
+                   RAVENNA_VERSIONE=os.environ.get("RAVENNA_VERSIONE", "ra-v2"))
+        subprocess.Popen([sys.executable, "-m", "dealfinder.pipeline.collect", modo], env=env)
+        logging.getLogger("lavoro").warning("LAVORO_SUBITO avviato: %s", modo)
 
 
 @asynccontextmanager
