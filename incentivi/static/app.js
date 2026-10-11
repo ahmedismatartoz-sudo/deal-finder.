@@ -46,73 +46,44 @@ async function home() {
   nav("home");
   if (!S.stato) { try { S.stato = await api("/api/stato"); } catch (e) { S.stato = { visura: {}, demo: [] }; } }
   const last = LS.get("impresa", null);
-  const vis = S.stato.visura || {};
   $app.innerHTML = `
-    <h1>Scopri gli incentivi per la tua attività</h1>
-    <p class="muted">Bastano poche domande semplici. Se hai la visura camerale, caricala: i dati li leggiamo noi.</p>
-    <form class="card" id="f">
-      <div class="field"><label for="piva">Partita IVA <span class="muted small">(facoltativa)</span></label>
-        <input id="piva" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="11 cifre"></div>
-      <div class="field"><label for="vis">Visura camerale <span class="muted small">(facoltativa, PDF)</span></label>
-        <label class="btn sec block" style="cursor:pointer"><span id="visname">📄 Carica la visura</span>
-          <input type="file" id="vis" accept="application/pdf" style="display:none"></label>
-        <span class="small muted">La scarichi <b>gratis</b> dal <a href="https://impresa.italia.it" target="_blank" rel="noopener">Cassetto Digitale dell'Imprenditore</a> con lo SPID (solo il titolare o il legale rappresentante).</span></div>
-      <div id="ferr"></div>
-      <button class="btn block" id="go">Continua</button>
-      ${vis.configurata ? `<p style="margin:10px 0 0"><button type="button" class="btn sec block" id="auto">Recupera la visura in automatico (a pagamento)</button></p>` : ""}
-    </form>
-    ${last ? `<p><a href="#/impresa/${last}">Riprendi l'ultima impresa →</a></p>` : ""}
-    <h2>Oppure prova con un esempio</h2>
-    <div class="demo">${(S.stato.demo || []).map(d => `<button data-demo="${esc(d.id)}"><b>${esc(d.etichetta)}</b><span class="muted small">${esc(d.descrizione)}</span></button>`).join("")}</div>
-    <p class="small muted">I profili di esempio hanno dati inventati, segnati come tali.</p>`;
+    <h1>Quanti soldi stai lasciando sul tavolo?</h1>
+    <p class="muted">Carica la visura: in 10 secondi vedi quanto puoi ottenere, risparmiare e quanto hai già perso.</p>
+    <label class="upload" id="up">
+      <input type="file" id="vis" accept="application/pdf">
+      <span class="up-ic" aria-hidden="true">📄</span>
+      <b id="upt">Carica la visura camerale</b>
+      <span class="small">PDF · la scarichi gratis dal <a href="https://impresa.italia.it" target="_blank" rel="noopener">Cassetto Digitale</a> con lo SPID</span>
+    </label>
+    <div id="ferr"></div>
+    <p class="center"><button type="button" class="linkbtn" id="nodoc">Non ho la visura: rispondo a 6 domande</button></p>
+    ${last ? `<p class="center"><a href="#/risultati/${last}">Riprendi l'ultima impresa →</a></p>` : ""}
+    <details class="esempi"><summary>Prova con un esempio</summary>
+      <div class="demo">${(S.stato.demo || []).map(d => `<button data-demo="${esc(d.id)}"><b>${esc(d.etichetta)}</b><span class="muted small">${esc(d.descrizione)}</span></button>`).join("")}</div>
+    </details>`;
   const inp = document.getElementById("vis");
-  inp.addEventListener("change", () => {
-    const f = inp.files[0];
-    document.getElementById("visname").textContent = f ? "📄 " + f.name : "📄 Carica la visura";
-  });
-  const leggiPiva = () => {
-    const piva = document.getElementById("piva").value.replace(/\D/g, "");
-    if (piva && (!/^\d{11}$/.test(piva) || !pivaOk(piva))) throw new Error("La partita IVA non è valida: controlla le 11 cifre (oppure lasciala vuota).");
-    return piva;
-  };
-  document.getElementById("f").addEventListener("submit", async ev => {
-    ev.preventDefault();
-    const box = document.getElementById("ferr"); box.innerHTML = "";
-    const b = document.getElementById("go");
+  const box = document.getElementById("ferr");
+  inp.addEventListener("change", async () => {
+    const f = inp.files[0]; if (!f) return;
+    box.innerHTML = "";
+    if (f.type !== "application/pdf" || f.size > 8 * 1024 * 1024) { box.innerHTML = `<div class="err">Carica la visura in PDF (massimo 8 MB).</div>`; return; }
+    document.getElementById("upt").innerHTML = `<span class="spin"></span> Leggo la visura…`;
     try {
-      const piva = leggiPiva();
-      const f = inp.files[0];
-      b.disabled = true;
-      let body = { modo: "domande", piva };
-      if (f) {
-        if (f.type !== "application/pdf" || f.size > 8 * 1024 * 1024) throw new Error("La visura deve essere un PDF più piccolo di 8 MB.");
-        b.innerHTML = `<span class="spin"></span> Leggo la visura…`;
-        const dati = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(",")[1]); rd.onerror = ko; rd.readAsDataURL(f); });
-        body = { modo: "visura_pdf", piva, visura: { nome: f.name, dati } };
-      }
-      const imp = await api("/api/impresa", { method: "POST", body });
-      if (body.modo === "visura_pdf" && !(imp.domande_profilo || []).length) {
-        // visura letta per intero: si va dritti ai risultati, le domande restano facoltative
-        S.imp = imp; S.res = null; S.risposte = {}; S.extra = {}; S.prof = {};
-        LS.set("impresa", imp.id);
-        return calcola(imp.id);
-      }
-      apriImpresa(imp);
-    } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; b.disabled = false; b.textContent = "Continua"; }
+      const dati = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(",")[1]); rd.onerror = ko; rd.readAsDataURL(f); });
+      const imp = await api("/api/impresa", { method: "POST", body: { modo: "visura_pdf", visura: { nome: f.name, dati } } });
+      S.imp = imp; S.res = null; S.risposte = {}; S.extra = {}; S.prof = {};
+      LS.set("impresa", imp.id);
+      calcola(imp.id);           // con la visura: nessuna domanda, subito i soldi
+    } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; document.getElementById("upt").textContent = "Carica la visura camerale"; inp.value = ""; }
   });
-  const auto = document.getElementById("auto");
-  if (auto) auto.addEventListener("click", async () => {
-    const box = document.getElementById("ferr"); box.innerHTML = "";
-    try {
-      const piva = leggiPiva();
-      if (!piva) throw new Error("Per il recupero automatico serve la partita IVA.");
-      auto.disabled = true; auto.innerHTML = `<span class="spin"></span> Recupero la visura…`;
-      apriImpresa(await api("/api/impresa", { method: "POST", body: { piva } }));
-    } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; auto.disabled = false; auto.textContent = "Recupera la visura in automatico (a pagamento)"; }
+  document.getElementById("nodoc").addEventListener("click", async ev => {
+    ev.target.disabled = true;
+    try { apriImpresa(await api("/api/impresa", { method: "POST", body: { modo: "domande" } })); }
+    catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; ev.target.disabled = false; }
   });
   $app.querySelectorAll("[data-demo]").forEach(b => b.addEventListener("click", async () => {
     b.disabled = true;
-    try { const imp = await api("/api/impresa", { method: "POST", body: { demo: b.dataset.demo } }); apriImpresa(imp); }
+    try { const imp = await api("/api/impresa", { method: "POST", body: { demo: b.dataset.demo } }); S.imp = imp; S.res = null; S.risposte = {}; LS.set("impresa", imp.id); calcola(imp.id); }
     catch (e) { fail(e); b.disabled = false; }
   }));
 }
@@ -257,28 +228,70 @@ function valoreHtml(r) {
   return "";
 }
 
-function card(r, id) {
-  const n = (r.documenti || []).length, ok = r.documenti_pronti || 0;
-  const prestito = r.tipo === "finanziamento_agevolato" || r.tipo === "garanzia";
+function soldiDi(r) {
   const b = r.beneficio || {};
-  const dubbio = r.etichetta === "da_valutare" ? (r.regole.find(x => x.esito === "dubbio") || {}).testo : null;
-  return `<a class="card opp" href="#/misura/${id}/${encodeURIComponent(r.id)}">
-    <div class="row"><h3>${esc(corto(r.nome))}</h3><span class="lab ${r.etichetta}">${LAB[r.etichetta]}</span></div>
-    <p class="why">${esc(r.in_breve || r.motivo)}</p>
-    ${b.valore ? `<p class="val">fino a ${eur(b.valore)} <span class="tag e">stima</span></p><p class="calc">${esc(frase(b.calcolo))}</p>` : ""}
-    ${dubbio ? `<p class="calc">❓ Da verificare: ${esc(dubbio.toLowerCase())}</p>` : ""}
-    <div class="chips">
-      <span class="chip ${prestito ? "loan" : ""}">${esc(r.tipo_nome)}${prestito ? " · da restituire" : ""}</span>
-      <span class="chip">${esc(r.bando.etichetta)}</span>
-      ${r.copre_magazzino ? `<span class="chip">Aiuta anche con le scorte</span>` : ""}
-    </div>
-    ${n ? `<p class="bartxt">Documenti pronti ${ok}/${n}</p><div class="bar" aria-hidden="true"><i style="width:${Math.round(100 * ok / n)}%"></i></div>` : ""}
+  return b.valore && b.conta ? b.valore : 0;
+}
+
+function card(r, id) {
+  const v = soldiDi(r);
+  const prestito = r.tipo === "finanziamento_agevolato" || r.tipo === "garanzia";
+  return `<a class="row-opp" href="#/misura/${id}/${encodeURIComponent(r.id)}">
+    <span class="ro-main"><b>${esc(corto(r.nome))}</b>
+      <span class="small muted">${esc(r.tipo_nome)}${prestito ? " · da restituire" : ""} · ${esc(r.bando.etichetta)}</span></span>
+    <span class="ro-eur ${v ? "" : "muted"}">${v ? eur(v) : (prestito ? "prestito" : "—")}<i>${r.etichetta === "conviene" ? "🟢" : "🟡"}</i></span>
   </a>`;
 }
 
-function sez(titolo, list, id) {
-  return list.length ? `<h2>${titolo} (${list.length})</h2>` + list.map(r => card(r, id)).join("") : "";
+async function risultati(id) {
+  nav("home");
+  busy("Calcolo i tuoi soldi…");
+  let res;
+  try { res = await ensureRes(id); } catch (e) { $app.innerHTML = ""; fail(e); return; }
+  const m = res.soldi || {};
+  const utili = res.risultati.filter(r => r.etichetta !== "non_fa_per_te");
+  const nofa = res.risultati.filter(r => r.etichetta === "non_fa_per_te");
+  utili.sort((a, b) => (a.etichetta !== "conviene") - (b.etichetta !== "conviene") || soldiDi(b) - soldiDi(a));
+  const nome = (res.impresa || {}).ragione_sociale || (S.imp && S.imp.profilo && S.imp.profilo.ragione_sociale) || "La tua impresa";
+  const assume = utili.some(r => r.tipo === "sgravio_contributivo" && soldiDi(r));
+  $app.innerHTML = `
+    <p class="muted small" style="margin:0">${esc(nome)}</p>
+    <section class="money">
+      <div class="m-tile m-get"><span>Puoi ottenere</span><b>${eur(m.ottenere || 0)}</b><small>contributi a fondo perduto</small></div>
+      <div class="m-tile m-save"><span>Puoi risparmiare</span><b>${eur(m.risparmiare || 0)}</b><small>${assume ? "contributi, se assumi" : "contributi e tasse"}</small></div>
+      <div class="m-tile m-lost"><span>Hai perso negli ultimi ${m.persi_mesi || 6} mesi</span><b>${eur(m.persi || 0)}</b><small>bandi chiusi a cui potevi partecipare</small></div>
+    </section>
+    <p class="small muted center">Stime: i requisiti vanno confermati sui bandi. ${(m.persi_dettaglio || []).length ? `<button type="button" class="linkbtn small" id="vedipersi">Quali ho perso?</button>` : ""}</p>
+    <div id="persi" hidden class="card small">${(m.persi_dettaglio || []).map(x => `<div class="pl"><span>${esc(corto(x.nome))}<br><span class="muted">chiuso il ${dIt(x.chiuso)}</span></span><b>${eur(x.valore)}</b></div>`).join("")}
+      <p class="muted">Calcolato su una spesa tipica di ${eur(m.spesa_tipica || 20000)}. Con noi ricevi l'avviso prima che aprano.</p></div>
+    <button class="btn block big" id="tutto">📨 Manda tutto al commercialista</button>
+    <div id="out"></div>
+    ${res.avviso ? alertHtml(res, id) : ""}
+    <h2>Le tue opportunità (${utili.length})</h2>
+    <section class="card list-opp">${utili.map(r => card(r, id)).join("") || `<p><b>Oggi non c'è nulla di utile per te.</b><br><span class="muted">Ti avvisiamo appena esce qualcosa.</span></p>`}</section>
+    ${Object.keys(res.risposte || {}).length < 2 ? `<p class="center small"><a href="#/impresa/${id}">🎯 Rendi la stima più precisa (3 domande facoltative)</a></p>` : ""}
+    <details class="nofa"><summary>Non fanno per te (${nofa.length})</summary>
+      ${nofa.map(r => `<div class="nofa-item"><b>${esc(corto(r.nome))}</b><span class="muted">${esc(r.motivo)}</span></div>`).join("")}
+    </details>`;
+  const vp = document.getElementById("vedipersi");
+  if (vp) vp.addEventListener("click", () => { const d = document.getElementById("persi"); d.hidden = !d.hidden; });
+  document.getElementById("tutto").addEventListener("click", ev => inviaTutto(id, utili.map(r => r.id), ev.target));
 }
+
+async function inviaTutto(id, misure, btn) {
+  const out = document.getElementById("out");
+  if (!misure.length) { out.innerHTML = `<div class="note">Non ci sono opportunità da inoltrare oggi.</div>`; return; }
+  btn.disabled = true; btn.innerHTML = `<span class="spin"></span> Preparo il file…`;
+  try {
+    const r = await api(`/api/impresa/${id}/inoltra`, { method: "POST", body: { misure } });
+    const mail = `mailto:?subject=${encodeURIComponent(r.oggetto)}&body=${encodeURIComponent(r.testo)}`;
+    const wa = `https://wa.me/?text=${encodeURIComponent(r.testo)}`;
+    btn.hidden = true;
+    out.innerHTML = `<section class="card"><p><b>Pronto.</b> Dentro c'è tutto: dati dell'impresa, visura, opportunità, calcoli e documenti. Link valido fino al ${esc(r.scade)}.</p>
+      <div class="share"><a class="btn" href="${esc(mail)}">✉️ Email</a><a class="btn" href="${esc(wa)}" target="_blank" rel="noopener">💬 WhatsApp</a><a class="btn sec" href="${esc(r.pdf)}" target="_blank" rel="noopener">📄 PDF</a></div></section>`;
+  } catch (e) { out.innerHTML = `<div class="err">${esc(e.message)}</div>`; btn.disabled = false; btn.textContent = "📨 Manda tutto al commercialista"; }
+}
+
 function alertHtml(res, id) {
   const r = res.risultati.find(x => x.id === res.avviso.id) || {};
   const g = res.avviso.giorni;
@@ -286,30 +299,6 @@ function alertHtml(res, id) {
     <span>${esc(corto(r.nome || res.avviso.testo))}: chiude il ${dIt(r.bando && r.bando.chiusura)}${g != null ? ` — mancano ${g} giorni` : ""}</span></a>`;
 }
 
-async function risultati(id) {
-  nav("home");
-  busy("Calcolo i risultati…");
-  let res;
-  try { res = await ensureRes(id); } catch (e) { $app.innerHTML = ""; fail(e); return; }
-  const utili = res.risultati.filter(r => r.etichetta !== "non_fa_per_te");
-  const nofa = res.risultati.filter(r => r.etichetta === "non_fa_per_te");
-  const nome = (res.impresa || {}).ragione_sociale || (S.imp && S.imp.profilo.ragione_sociale) || "";
-  $app.innerHTML = `
-    <a class="back" href="#/impresa/${id}">← Dati e domande</a>
-    <section class="hero"><p class="big">${esc(res.titolo)}</p><p class="sub">${esc(res.sottotitolo)}</p>
-      <p class="small" style="opacity:.85;margin:8px 0 0">${esc(nome)} · controllo del ${dIt(res.data)} · regole versione ${esc(res.versione_catalogo)}</p></section>
-    ${res.avviso ? alertHtml(res, id) : ""}
-    ${Object.keys(res.risposte || {}).length < 2 ? `<a class="card opp" href="#/impresa/${id}" style="display:block"><b>🎯 Vuoi un risultato più preciso?</b><br><span class="muted">Rispondi a 3 domande veloci (assunzioni, spese, officina): dalla visura non si possono sapere.</span></a>` : ""}
-    ${utili.length ? "" : `<div class="card"><p><b>Oggi non c'è nulla di utile per te.</b></p><p class="muted">Ti avvisiamo appena esce qualcosa.</p></div>`}
-    ${sez("Conviene", utili.filter(r => r.etichetta === "conviene"), id)}
-    ${sez("Da valutare", utili.filter(r => r.etichetta === "da_valutare"), id)}
-    <details class="nofa"><summary>Non fa per te (${nofa.length}) — con il motivo</summary>
-      ${nofa.map(r => `<div class="nofa-item"><b>${esc(r.nome)}</b><span class="muted">${esc(r.motivo)}</span> <a class="small" href="#/misura/${id}/${encodeURIComponent(r.id)}">dettagli</a></div>`).join("")}
-    </details>
-    ${utili.length ? `<div class="sticky"><a class="btn block" href="#/inoltra/${id}">📨 Inoltra al commercialista</a></div>` : ""}`;
-}
-
-/* ------------------------------------------------------------- dettaglio */
 async function misura(id, mid) {
   nav("home");
   busy("Apro l'opportunità…");

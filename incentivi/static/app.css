@@ -122,3 +122,34 @@ details.nofa summary{cursor:pointer;font-weight:700;padding:10px 0}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 .yn.wrap{flex-wrap:wrap}.yn.wrap button{flex:1 1 45%;min-height:46px;padding:8px 10px;font-size:15px}
 .sel{width:100%;font:600 17px var(--font);padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+
+.center{text-align:center}
+.linkbtn{background:none;border:0;color:var(--accent);font:700 15px var(--font);text-decoration:underline;cursor:pointer;padding:6px}
+.upload{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:28px 18px;margin:14px 0;
+  border:2px dashed color-mix(in srgb,var(--brand) 55%,var(--line));border-radius:18px;background:var(--card);cursor:pointer}
+.upload input{display:none}
+.upload b{font-size:20px}
+.up-ic{font-size:40px;line-height:1}
+.esempi{margin-top:18px}.esempi summary{cursor:pointer;font-weight:700;color:var(--muted);padding:8px 0}
+.money{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 6px}
+.m-tile{border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.m-tile span{font-size:13px;font-weight:700;opacity:.9}
+.m-tile b{font-size:30px;line-height:1.1;letter-spacing:-.02em}
+.m-tile small{font-size:12px;opacity:.85}
+.m-get{grid-column:1/-1;background:var(--brand);color:var(--brand-ink)}
+.m-get b{font-size:44px}
+.m-save{background:var(--ok-bg);color:var(--ok)}
+.m-lost{background:var(--bad-bg);color:var(--bad)}
+.btn.big{font-size:18px;min-height:56px;margin:10px 0}
+.share{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.share .btn{padding:12px 6px;font-size:15px}
+.pl{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.pl:first-child{border-top:0}
+.list-opp{padding:4px 14px}
+.row-opp{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);text-decoration:none;color:inherit}
+.row-opp:first-child{border-top:0}
+.ro-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ro-eur{font-size:20px;font-weight:800;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ro-eur i{font-style:normal;font-size:12px}
+@media (min-width:640px){.money{grid-template-columns:2fr 1fr 1fr}.m-get{grid-column:auto}}
+[hidden]{display:none!important}

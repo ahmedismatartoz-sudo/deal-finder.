@@ -384,6 +384,53 @@ def valuta_tutto(profilo: dict, risposte: dict, oggi: dt.date | None = None) -> 
             sotto += " (per gli sgravi sulle assunzioni conta il migliore, per una persona)"
     else:
         titolo, sotto = "Oggi non c'è nulla di utile per te.", "Ti avvisiamo appena esce qualcosa."
+    # soldi in chiaro: da ottenere (contributi), da risparmiare (contributi INPS/INAIL, tasse), persi di recente
+    ottenere = sum(v for g, v in gruppi.items() if g != "assunzione"
+                   and next((r for r in candidabili if r["id"] == g), {}).get("tipo") in ("fondo_perduto", "servizio_gratuito"))
+    risparmiare = sum(v for g, v in gruppi.items() if g == "assunzione"
+                      or next((r for r in candidabili if r["id"] == g), {}).get("tipo") in ("riduzione_premio", "credito_imposta"))
+    persi = persi_recenti(profilo, oggi)
     return {"versione_catalogo": cat["versione"], "data": oggi.isoformat(), "titolo": titolo, "sottotitolo": sotto,
             "valore_stimato": valore, "avviso": avviso, "risultati": res,
+            "soldi": {"ottenere": ottenere, "risparmiare": risparmiare, "persi": persi["totale"],
+                      "persi_dettaglio": persi["dettaglio"], "persi_mesi": persi["mesi"],
+                      "spesa_tipica": persi["spesa_tipica"]},
             "conteggi": {k: sum(1 for r in res if r["etichetta"] == k) for k in rank}}
+
+
+SPESA_TIPICA = 20000      # spesa ipotetica di una piccola impresa, per stimare i contributi persi
+
+
+def persi_recenti(profilo: dict, oggi: dt.date, mesi: int = 6) -> dict:
+    """Contributi a fondo perduto CHIUSI negli ultimi mesi a cui l'impresa sembrava avere i requisiti:
+    i soldi "persi" per non essere stati pronti. Stima prudente: si contano solo le misure senza ❌ e senza
+    requisiti specifici da chiedere (veicolo, impianti…), al loro importo massimo."""
+    da = oggi - dt.timedelta(days=round(mesi * 30.4))
+    out = []
+    for m in catalogo()["misure"]:
+        if m.get("tipo_beneficio") != "fondo_perduto":
+            continue
+        d = m.get("date") or {}
+        ch = _d(d.get("chiusura_effettiva")) or _d(d.get("chiusura"))
+        if not ch or not (da <= ch <= oggi):
+            continue
+        regole = [(r, valuta_regola(r, m, profilo, {}, oggi)) for r in m.get("regole") or [] if r["tipo"] != "stato_misura"]
+        if any(e["esito"] == "ko" for _, e in regole):
+            continue
+        if any(e["esito"] == "dubbio" and r["tipo"] == "dato_mancante" for r, e in regole):
+            continue
+        c = m.get("calcolo") or {}
+        if c.get("modo") == "percentuale_spesa" and c.get("percentuale"):
+            v = SPESA_TIPICA * c["percentuale"] / 100
+            if c.get("massimale"):
+                v = min(v, c["massimale"])
+            if c.get("spesa_minima") and SPESA_TIPICA < c["spesa_minima"]:
+                continue
+        else:
+            v = c.get("massimale") or c.get("importo_unitario")
+        if not v:
+            continue
+        out.append({"id": m["id"], "nome": m["nome"], "valore": v, "chiuso": ch.isoformat(),
+                    "fonte": m.get("fonte_url")})
+    out.sort(key=lambda x: -x["valore"])
+    return {"totale": sum(x["valore"] for x in out), "dettaglio": out, "mesi": mesi, "spesa_tipica": SPESA_TIPICA}
