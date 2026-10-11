@@ -67,58 +67,83 @@ def run(fonte: str | None = None, versione: str | None = None) -> dict:
     stats: Counter = Counter()
     with connect() as conn:
         finish = log_job(conn, job_name(versione))
-        rows = conn.execute(
-            f"""SELECT {LIGHT_COLS}, stage_reason FROM listings
-                WHERE status='attivo' AND price_eur BETWEEN 500 AND %s AND seller_type <> 'commerciante'
+        # Memoria limitata (512 MB su Render): prima solo id e chiave del mercato, poi gli annunci a blocchi
+        # senza testi, nell'ordine marca/modello/carburante, tenendo in memoria UN solo mercato alla volta.
+        where = """status='attivo' AND price_eur BETWEEN 500 AND %s AND seller_type <> 'commerciante'
                   AND (province = ANY(%s) OR source='facebook')
                   AND (year IS NULL OR year >= %s)
                   AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia'))
-                  AND (%s::text IS NULL OR source = %s)""",
-            (settings.max_purchase_eur, PROVINCES, scovo.ANNO_MINIMO, fonte, fonte)).fetchall()
-        stats["esaminati"] = len(rows)
-        cache: dict = {}
+                  AND (%s::text IS NULL OR source = %s)"""
+        params = (settings.max_purchase_eur, PROVINCES, scovo.ANNO_MINIMO, fonte, fonte)
+        ids = [r["id"] for r in conn.execute(
+            f"SELECT id FROM listings WHERE {where} ORDER BY make, model, fuel, id", params).fetchall()]
+        stats["esaminati"] = len(ids)
+        cols = LIGHT_COLS.replace("description", "NULL AS description")
+        cur_key, cur_market = None, []
         model = load_active(conn)
         out = []
-        for r in rows:
-            l = row_to_listing(r)
-            if check_consistency(l, fix=True) or "dati_incoerenti" in l.price_flags:
-                stats["dati_incoerenti"] += 1
-                continue
-            km_est = estimate_missing_km(l)
-            if not (l.make and l.model and l.year and l.mileage_km is not None) or l.year < scovo.ANNO_MINIMO:
-                stats["dati_mancanti_o_vecchia"] += 1
-                continue
-            key = (l.make, l.model, l.fuel)
-            if key not in cache:
-                cache[key] = load_market(conn, *key)
-            saved = l.damage_class
-            l.damage_class = "nessuno"
-            v = value_listing(l, cache[key])
-            l.damage_class = saved
-            from_model = False
-            if weak(v):
-                from_model = apply_model(v, l, model)
-                if not from_model:
-                    stats["stima_poco_solida"] += 1
+        BLOCCO = 500
+        for i in range(0, len(ids), BLOCCO):
+            chunk = conn.execute(f"SELECT {cols}, stage_reason FROM listings WHERE id = ANY(%s) "
+                                 "ORDER BY make, model, fuel, id", (ids[i:i + BLOCCO],)).fetchall()
+            for r in chunk:
+                l = row_to_listing(r)
+                if check_consistency(l, fix=True) or "dati_incoerenti" in l.price_flags:
+                    stats["dati_incoerenti"] += 1
                     continue
-            mercato = v.private_median or v.resale_median_private or v.resale_median
-            if not mercato:
-                stats["senza_mercato"] += 1
-                continue
-            sito = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
-            soglia = scovo.soglia(l.price_eur)
-            if sito < soglia:
-                stats["sotto_soglia"] += 1
-                continue
-            out.append((sito / soglia, r, l, v, mercato, sito, soglia, from_model, km_est))
+                km_est = estimate_missing_km(l)
+                if not (l.make and l.model and l.year and l.mileage_km is not None) or l.year < scovo.ANNO_MINIMO:
+                    stats["dati_mancanti_o_vecchia"] += 1
+                    continue
+                key = (l.make, l.model, l.fuel)
+                if key != cur_key:
+                    cur_key, cur_market = key, load_market(conn, *key)
+                saved = l.damage_class
+                l.damage_class = "nessuno"
+                v = value_listing(l, cur_market)
+                l.damage_class = saved
+                from_model = False
+                if weak(v):
+                    from_model = apply_model(v, l, model)
+                    if not from_model:
+                        stats["stima_poco_solida"] += 1
+                        continue
+                mercato = v.private_median or v.resale_median_private or v.resale_median
+                if not mercato:
+                    stats["senza_mercato"] += 1
+                    continue
+                sito = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
+                soglia = scovo.soglia(l.price_eur)
+                if sito < soglia:
+                    stats["sotto_soglia"] += 1
+                    continue
+                # solo numeri: l'annuncio completo si rilegge dopo, per i migliori
+                out.append((sito / soglia, r["id"], r["source"], mercato, sito, soglia, from_model, km_est,
+                            v.n_comparables, list(v.fraud_flags or [])))
+        cur_market = []
         out.sort(key=lambda x: -x[0])
         stats["sopra_soglia"] = len(out)
-        # prima di guardarli: esistono ancora? (solo Subito: il controllo Facebook costa)
         top = out[: int(QUANTI * 1.15)]
-        stats.update(verify_rows(conn, [x[1] for x in top if x[1]["source"] == "subito"]))
+        full = {r["id"]: r for r in conn.execute(
+            f"SELECT {LIGHT_COLS}, stage_reason FROM listings WHERE id = ANY(%s)", ([x[1] for x in top],)).fetchall()}
+        # prima di guardarli: esistono ancora? (solo Subito: il controllo Facebook costa)
+        stats.update(verify_rows(conn, [full[x[1]] for x in top if x[2] == "subito" and x[1] in full]))
         alive = {x["id"] for x in conn.execute(
-            "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'", ([x[1]["id"] for x in top],)).fetchall()}
-        top = [x for x in top if x[1]["id"] in alive][:QUANTI]
+            "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'", ([x[1] for x in top],)).fetchall()}
+        top = [x for x in top if x[1] in alive and x[1] in full][:QUANTI]
+
+        class _V:
+            pass
+
+        def _expand(x):
+            score, lid, _src, mercato, sito, soglia, from_model, km_est, ncomp, flags = x
+            r = full[lid]
+            l = row_to_listing(r)
+            check_consistency(l, fix=True)
+            v = _V()
+            v.n_comparables, v.fraud_flags = ncomp, flags
+            return score, r, l, v, mercato, sito, soglia, from_model, km_est
+        top = [_expand(x) for x in top]
         for score, r, l, v, mercato, sito, soglia, from_model, km_est in top:
             lid = r["id"]
             val = conn.execute("SELECT parts_cost_low, parts_cost_high FROM valuations WHERE listing_id=%s "
