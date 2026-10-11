@@ -98,8 +98,16 @@ async def _json(request: Request) -> dict:
 
 
 # ------------------------------------------------------------------ pagine
+def _versione_statici() -> str:
+    return str(int(max((STATIC / f).stat().st_mtime for f in ("app.js", "app.css"))))
+
+
 async def index(request: Request):
-    return FileResponse(STATIC / "index.html", headers={"cache-control": "no-cache"})
+    """La pagina con i file collegati a una versione: dopo ogni aggiornamento il telefono non usa quelli vecchi."""
+    v = _versione_statici()
+    html = (STATIC / "index.html").read_text().replace("/static/app.js", f"/static/app.js?v={v}") \
+        .replace("/static/app.css", f"/static/app.css?v={v}")
+    return HTMLResponse(html, headers={"cache-control": "no-cache, no-store"})
 
 
 @api
