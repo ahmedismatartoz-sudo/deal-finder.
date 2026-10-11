@@ -22,7 +22,9 @@ GEARBOX_MAP = {"manuale": "manuale", "manual": "manuale",
 
 PROVINCE_REGION = {"MI": "Lombardia", "MB": "Lombardia", "BG": "Lombardia", "BS": "Lombardia",
                    "CO": "Lombardia", "VA": "Lombardia", "LC": "Lombardia", "LO": "Lombardia",
-                   "PV": "Lombardia", "CR": "Lombardia", "MN": "Lombardia", "SO": "Lombardia"}
+                   "PV": "Lombardia", "CR": "Lombardia", "MN": "Lombardia", "SO": "Lombardia",
+                   "RA": "Emilia-Romagna", "FC": "Emilia-Romagna", "RN": "Emilia-Romagna",
+                   "FE": "Emilia-Romagna", "BO": "Emilia-Romagna"}
 
 RE_PLUS_IVA = re.compile(r"\+\s*iva|iva\s*esclusa|esclusa\s*iva|oltre\s*iva", re.I)
 RE_LEASING = re.compile(r"\b(rata|rate|al\s*mese|/\s*mese|leasing|noleggio|anticipo|finanziamento\s+da)\b", re.I)

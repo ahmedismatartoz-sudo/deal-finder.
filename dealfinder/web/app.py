@@ -55,6 +55,15 @@ def current_user(request: Request, admin: bool = False) -> dict:
 PERMESSI = ("auto", "incentivi")
 
 
+def _province_zona(data: dict) -> list[str]:
+    """Zona dell'account: "milano", "ravenna" o "tutte" (oppure province date una per una)."""
+    from ..zone import ZONE, tutte
+    if isinstance(data.get("provinces"), list) and data["provinces"]:
+        return [str(p).upper()[:2] for p in data["provinces"]][:30]
+    z = data.get("zona") or "milano"
+    return tutte() if z == "tutte" else list(ZONE.get(z, ZONE["milano"])["province"])
+
+
 def permessi_di(conn, user: dict) -> list[str]:
     if user.get("role") == "admin":
         return list(PERMESSI)
@@ -446,7 +455,7 @@ async def admin_create_dealer(request: Request):
             "INSERT INTO dealers (name, email, company, phone, password_hash, role, provinces, permessi) "
             "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
             (str(data.get("name") or email)[:120], email, data.get("company"), data.get("phone"),
-             hash_password(pwd), role, data.get("provinces") or ["MI", "MB", "BG", "BS"],
+             hash_password(pwd), role, _province_zona(data),
              [p for p in (data.get("permessi") or ["auto"]) if p in PERMESSI])).fetchone()
         conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
         conn.commit()
@@ -458,6 +467,8 @@ async def admin_update_dealer(request: Request):
     did = int(request.path_params["id"])
     data = await body(request)
     with connect() as conn:
+        if data.get("zona") or isinstance(data.get("provinces"), list):
+            conn.execute("UPDATE dealers SET provinces=%s WHERE id=%s", (_province_zona(data), did))
         if isinstance(data.get("permessi"), list):
             conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
                          ([p for p in data["permessi"] if p in PERMESSI], did))
@@ -727,6 +738,8 @@ def affari(request: Request):
     with connect() as conn:
         dealer = conn.execute("SELECT provinces FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         prov = list((dealer or {}).get("provinces") or [])
+        if user.get("role") == "admin":
+            prov = []                     # l'amministratore vede tutte le zone
         sql = scovo.LIST_SQL
         if prov:
             sql += " AND (l.province = ANY(%(prov)s) OR l.source='facebook' OR l.province IS NULL)"

@@ -74,7 +74,8 @@ def doppione_altro_sito(conn, l, lid) -> bool:
     return True
 
 
-ZONA = {"MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO"}
+from ..zone import tutte as _zone_tutte
+ZONA = set(_zone_tutte())
 
 
 def _norm_city(c: str | None) -> str:
@@ -120,6 +121,25 @@ def run(mode: str) -> Counter:
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
         sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("AUTOSCOUT_MAX_PREZZO", "40000"))})]
+    elif mode == "ravenna":
+        # Ravenna e dintorni (cliente in Romagna): Subito provincia per provincia in fasce strette,
+        # poi AutoScout24 entro RAVENNA_RAGGIO km da Ravenna (privati da proporre, concessionari come prezzi)
+        from ..zone import ZONE
+        z = ZONE["ravenna"]
+        bands = ([(p, p + 249) for p in range(0, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
+                 + [(p, p + 999) for p in range(15000, 30000, 1000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.5"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.5"))
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = z["autoscout_cap"], z["autoscout_raggio"]
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
+        sources = [(sub, {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
+                          "max_price": 30000, "max_pages": 0, "price_bands": bands,
+                          "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
+                   (asc, {"massiva": True, "min_price": 500, "max_price": 30000})]
     elif mode == "autoscout":
         from ..collectors.autoscout import AutoScoutCollector
         bands = ([(p, p + 499) for p in range(500, 5000, 500)] + [(p, p + 999) for p in range(5000, 12000, 1000)]
@@ -180,6 +200,14 @@ def run(mode: str) -> Counter:
             q.update(problem_keywords=list(settings.problem_keywords), problem_pages=settings.problem_pages,
                      cheap_pages=int(os.environ.get("CHEAP_PAGES", "5")))
         sources = [(subito, q)]
+        if mode == "opportunita" and os.environ.get("ZONA_RAVENNA", "1") == "1":
+            # Ravenna e dintorni: ogni giro anche gli annunci più recenti dell'Emilia-Romagna
+            from ..zone import ZONE
+            z = ZONE["ravenna"]
+            sources.append((SubitoCollector(proxy=settings.scraper_proxy),
+                            {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
+                             "max_price": max_price, "max_pages": int(os.environ.get("RAVENNA_PAGINE", "8")),
+                             "cheap_pages": 2}))
 
     with connect() as conn:
         from .ciclo import fb_job
@@ -304,6 +332,19 @@ if __name__ == "__main__":
         log.info("SITO analisi_manuale (dopo la selezione): %s", manuale.run())
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
+        sys.exit(0)
+    if mode == "ravenna":
+        from . import manuale, mille, recheck
+        from ..zone import ZONE
+        from .ciclo import _due
+        versione = os.environ.get("RAVENNA_VERSIONE", "ra-v1")
+        if _due("collect:ravenna", int(os.environ.get("RAVENNA_ORE", "20"))):
+            run("ravenna")
+        if _due(f"mille:{versione}", 24 * 365):
+            # i migliori di Ravenna e dintorni (Subito e AutoScout24) con le foto, per il controllo uno per uno
+            mille.run(versione=versione, province=ZONE["ravenna"]["province"])
+        log.info("RAVENNA analisi_manuale: %s", manuale.run())
+        log.info("RAVENNA verifica: %s", recheck.run())
         sys.exit(0)
     if mode in ("autoscout_massiva", "autoscout"):
         from .ciclo import _due

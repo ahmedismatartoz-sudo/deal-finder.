@@ -52,3 +52,11 @@ def test_obiettivo_ferma_la_raccolta():
 def test_cap_fuori_lombardia():
     assert province_from_cap("28100") == "NO" and province_from_cap("29121") == "PC"
     assert province_from_cap("23900") == "LC" and province_from_cap("20900") == "MB"
+
+
+def test_cap_ravenna_e_dintorni():
+    from dealfinder.collectors.autoscout import province_from_cap as p
+    assert [p(c) for c in ("48121", "47921", "47838", "47121", "47521", "44121", "40026", "20811", "20121")] == \
+        ["RA", "RN", "RN", "FC", "FC", "FE", "BO", "MB", "MI"]
+    from dealfinder.pipeline.collect import ZONA
+    assert {"RA", "FC", "RN", "FE", "BO", "MI"} <= ZONA and "MO" not in ZONA

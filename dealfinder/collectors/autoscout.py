@@ -25,14 +25,17 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML
 # CAP -> provincia (Lombardia), per gli annunci che riportano solo il CAP
 CAP_PROVINCE = [("208", "MB"), ("209", "MB"), ("20", "MI"), ("21", "VA"), ("238", "LC"), ("239", "LC"), ("22", "CO"), ("230", "SO"), ("231", "SO"), ("232", "SO"), ("24", "BG"), ("25", "BS"),
                 ("268", "LO"), ("269", "LO"), ("26", "CR"), ("27", "PV"), ("46", "MN"),
-                ("288", "VB"), ("289", "VB"), ("28", "NO"), ("29", "PC"), ("15", "AL"), ("13", "VC")]
+                ("288", "VB"), ("289", "VB"), ("28", "NO"), ("29", "PC"), ("15", "AL"), ("13", "VC"),
+                # Ravenna e dintorni
+                ("48", "RA"), ("478", "RN"), ("479", "RN"), ("47", "FC"), ("44", "FE"), ("40", "BO"),
+                ("41", "MO"), ("42", "RE"), ("43", "PR"), ("61", "PU")]
 
 
 def province_from_cap(cap: str | None) -> str | None:
     cap = re.sub(r"\D", "", str(cap or ""))
     if len(cap) != 5:
         return None
-    for pre, pv in CAP_PROVINCE:
+    for pre, pv in sorted(CAP_PROVINCE, key=lambda x: -len(x[0])):
         if cap.startswith(pre):
             return pv
     return None

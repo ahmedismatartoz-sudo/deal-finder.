@@ -343,6 +343,13 @@ async function viewProfile() {
 }
 
 /* ---------- gestione (amministratori) ---------- */
+const zonaDi = (prov) => {
+  const p = prov || [];
+  const ra = ["RA", "FC", "RN", "FE", "BO"].some((x) => p.includes(x));
+  const mi = ["MI", "MB", "BG", "BS"].some((x) => p.includes(x));
+  return ra && mi ? "tutte" : ra ? "ravenna" : "milano";
+};
+
 async function viewAdmin() {
   $view.innerHTML = `<h1>Gestione</h1><p class="sub">Stato delle fonti, qualità delle stime, costi AI e commercianti.</p><div id="adm"></div>`;
   const box = document.getElementById("adm");
@@ -371,6 +378,8 @@ async function viewAdmin() {
           : `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email, id: v}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
       ${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
+        ["provinces", "Zona", (v, r) => r.role === "admin" ? "Tutte" : `<select data-zona="${r.id}">${[["milano", "Milano e dintorni"], ["ravenna", "Ravenna e dintorni"], ["tutte", "Tutte"]].map(([k, l]) =>
+          `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"]].map(([k, l]) =>
           `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
         ["active", "Attivo", (v, r) => `<button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Attiva"}</button>`]])}
@@ -382,6 +391,8 @@ async function viewAdmin() {
           <div class="field"><label for="nd-email">Email</label><input id="nd-email" type="email" required></div>
           <div class="field"><label for="nd-pwd">Password iniziale</label><input id="nd-pwd" minlength="8" required></div>
         </div>
+        <div class="field"><label for="nd-zona">Zona</label><select id="nd-zona">
+          <option value="milano">Milano e dintorni</option><option value="ravenna">Ravenna e dintorni</option><option value="tutte">Tutte</option></select></div>
         <fieldset class="field" style="border:0;padding:0"><legend>Accesso a</legend>
           <label style="margin-right:1rem"><input type="checkbox" id="nd-auto" checked> Auto (affari e vendi)</label>
           <label><input type="checkbox" id="nd-inc"> Incentivi</label></fieldset>
@@ -390,6 +401,10 @@ async function viewAdmin() {
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();
+    });
+    box.querySelectorAll("[data-zona]").forEach((sel) => sel.onchange = async () => {
+      try { await api("/api/admin/dealers/" + sel.dataset.zona, { method: "PATCH", body: { zona: sel.value } }); toast("Zona aggiornata"); }
+      catch (err) { toast(err.message); }
     });
     box.querySelectorAll("[data-perm]").forEach((c) => c.onchange = async () => {
       const id = c.dataset.perm;
@@ -410,7 +425,7 @@ async function viewAdmin() {
       e.preventDefault();
       const g = (id) => document.getElementById(id).value;
       try {
-        await api("/api/admin/dealers", { method: "POST", body: { name: g("nd-name"), company: g("nd-company"), email: g("nd-email"), password: g("nd-pwd"),
+        await api("/api/admin/dealers", { method: "POST", body: { name: g("nd-name"), company: g("nd-company"), email: g("nd-email"), password: g("nd-pwd"), zona: g("nd-zona"),
           permessi: [["nd-auto", "auto"], ["nd-inc", "incentivi"]].filter(([i]) => document.getElementById(i).checked).map(([, k]) => k) } });
         if (fromRequest) await api("/api/admin/richieste/" + fromRequest, { method: "POST" });
         toast("Account creato"); viewAdmin();
