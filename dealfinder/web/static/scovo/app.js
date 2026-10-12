@@ -222,7 +222,7 @@ function viewList(){
   const zc = zoneCounts();
   const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
-    `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${k === "italia" ? "altre zone" : "e dintorni"} · ${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
+    `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
   const TIT = {top: "⭐ Le migliori sotto 5.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">

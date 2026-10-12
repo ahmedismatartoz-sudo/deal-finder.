@@ -20,7 +20,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 var(--body);fo
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative}
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--head);border-bottom:1px solid var(--line);color:var(--head-ink);padding:14px 16px 12px;display:flex;flex-direction:column;gap:10px}
+.top{position:relative;padding-top:14px;z-index:5;background:var(--head);border-bottom:1px solid var(--line);color:var(--head-ink);padding-right:16px;padding-bottom:12px;padding-left:16px;display:flex;flex-direction:column;gap:10px}
 .top-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .logo{flex:none;display:block}
@@ -428,10 +428,14 @@ a{color:var(--focus)}
 
 /* Zona: scelta ben visibile (Milano e dintorni / Ravenna e dintorni) */
 .zona-box{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin:2px 0 10px}
-.zona-btn{display:flex;align-items:center;gap:8px;min-height:56px;padding:8px 12px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(18,23,28,.06);transition:background .15s,border-color .15s}
+.zona-btn{display:flex;align-items:center;gap:6px;min-width:0;min-height:56px;padding:8px 10px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(18,23,28,.06);transition:background .15s,border-color .15s}
 .zona-btn svg{flex:none;color:var(--tag)}
 .zona-txt{display:flex;flex-direction:column;line-height:1.15;min-width:0}
 .zona-txt b{font:700 17px var(--disp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zona-txt small{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.zona-txt small{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .zona-btn[aria-pressed="true"]{background:var(--tag);border-color:var(--tag);color:var(--tag-ink);box-shadow:0 4px 12px rgba(0,122,255,.28)}
 .zona-btn[aria-pressed="true"] svg,.zona-btn[aria-pressed="true"] small{color:var(--tag-ink)}
+/* tre zone: niente icona, così i nomi stanno interi */
+.zona-box:has(> :nth-child(3)) .zona-btn{padding:8px 10px;justify-content:flex-start}
+.zona-box:has(> :nth-child(3)) .zona-btn svg{display:none}
+.tabs button{font-size:11px;letter-spacing:-.1px}
