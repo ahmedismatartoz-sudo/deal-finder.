@@ -25,8 +25,26 @@ from .verify import verify_rows
 log = logging.getLogger("cerca")
 
 
+def sito(area: str = "milano") -> list[dict]:
+    """Le auto che sono adesso sul sito (stesse regole dell'elenco Affari), una riga SITO per auto."""
+    with connect() as conn:
+        rows = conn.execute(scovo.LIST_SQL + " LIMIT 4000", {"me": 0}).fetchall()
+    items = [it for it in (scovo.item(r) for r in rows) if scovo.abbastanza(it)]
+    items = [it for it in items if it.get("area") == area and not it.get("incidentata")]
+    for it in items:
+        g = scovo.guadagno_minimo(it)
+        log.info("SITO %s", json.dumps({"id": it["id"], "nome": it["nome"], "anno": it["anno"], "km": it["km"],
+                                        "prezzo": it["prezzo"], "mercato": it["mercato"], "rip": it["rip_hi"],
+                                        "guadagno": g, "zona": it["zona"], "fonte": it["fonte"],
+                                        "verificare": it["verificare"], "foto": it["n_foto"]}, ensure_ascii=False))
+    log.info("SITO_FINE %d", len(items))
+    return items
+
+
 def run(q: dict | None = None) -> list[dict]:
     q = q or json.loads(os.environ.get("CERCA_JSON") or "{}")
+    if q.get("sito"):
+        return sito(q.get("zona") or "milano")
     marca, modello = (q.get("marca") or "").lower(), (q.get("modello") or "").lower()
     prov = list(ZONE.get(q.get("zona") or "milano", ZONE["milano"])["province"])
     out = []
