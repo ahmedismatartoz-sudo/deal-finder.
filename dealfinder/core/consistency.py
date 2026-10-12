@@ -49,9 +49,10 @@ RE_YEAR = re.compile(r"\b((?:19[6-9]|20[0-2])\d)\b")
 
 def text_makes(l: Listing) -> set[str]:
     head = " ".join(filter(None, [l.title, (l.description or "")[:300]])).lower()
-    found = {MAKES[m.group(1).lower()] for m in RE_MAKE.finditer(head)}
+    # .get: con re.I lettere come la "ı" turca combaciano con "i" ma non sono chiavi del dizionario
+    found = {MAKES.get(m.group(1).lower()) for m in RE_MAKE.finditer(head)} - {None}
     if not found:
-        found = {MODEL_MAKE[m.group(1).lower()] for m in RE_MODEL.finditer((l.title or "").lower())}
+        found = {MODEL_MAKE.get(m.group(1).lower()) for m in RE_MODEL.finditer((l.title or "").lower())} - {None}
     return found
 
 

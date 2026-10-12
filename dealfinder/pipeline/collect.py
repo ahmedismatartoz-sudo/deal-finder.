@@ -360,7 +360,12 @@ def run(mode: str) -> Counter:
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
-                    normalize_fields(listing)
+                    try:
+                        normalize_fields(listing)
+                    except Exception as e:          # un testo strano non ferma tutta la raccolta
+                        stats[f"{collector.source}:scartato_dati"] += 1
+                        log.warning("annuncio %s non normalizzato: %r", listing.url, e)
+                        continue
                     if listing.source in ("facebook", "autoscout24"):
                         # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
                         pv = prov_of.get(_norm_city(listing.city))

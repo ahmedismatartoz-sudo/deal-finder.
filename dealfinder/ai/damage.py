@@ -131,6 +131,8 @@ def sanitize_items(items: list[dict]) -> list[dict]:
     """Tiene solo pezzi della tassonomia, con valori ammessi."""
     clean = []
     for it in items or []:
+        if not isinstance(it, dict):        # danni scritti come testo libero nelle analisi a mano
+            continue
         part = it.get("part")
         if part not in PARTS and part not in FAULTS:
             continue
