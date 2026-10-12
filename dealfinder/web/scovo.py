@@ -77,7 +77,7 @@ LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
        l.power_kw, l.city, l.province, l.price_eur, l.damage_class, l.stage_reason, l.first_seen_at, l.deep_at,
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
-       v.n_comparables, v.confidence,
+       v.n_comparables, v.confidence, v.engine_version,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -285,10 +285,12 @@ def item(r: dict) -> dict | None:
         lo = hi = 0
     lo = int(lo if lo is not None else hi)
     n_ph = int(r.get("n_photos") or 0)
-    if troppo_bello(float(mercato), int(price)):
-        return None                           # stima di mercato non credibile: meglio non mostrarla
     grezzo = int(round(float(mercato)))
-    mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
+    if "-a1" not in (r.get("engine_version") or ""):
+        # stima automatica: si rende prudente. Le auto ricontrollate a mano (audit) hanno già la rivendita realistica.
+        if troppo_bello(float(mercato), int(price)):
+            return None                       # stima di mercato non credibile: meglio non mostrarla
+        mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
     return {
         "mercato_grezzo": grezzo,
         "id": r["id"],
