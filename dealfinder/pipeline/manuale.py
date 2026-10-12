@@ -65,11 +65,12 @@ def segna_viste_di_recente(conn) -> dict:
     return out
 
 
-def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False) -> dict:
-    """esiti: importa solo le voci con questi esiti (es. ("incidentata",) all'avvio del sito, veloce)."""
-    if not FILE.exists():
+def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: list | None = None) -> dict:
+    """esiti: importa solo le voci con questi esiti (es. ("incidentata",) all'avvio del sito, veloce).
+    voci: analisi da importare al posto del file (annunci aggiunti a mano)."""
+    if voci is None and not FILE.exists():
         return {"file": "assente"}
-    entries = json.loads(FILE.read_text())
+    entries = voci if voci is not None else json.loads(FILE.read_text())
     if esiti:
         entries = [e for e in entries if e.get("esito") in esiti]
     stats: Counter = Counter()

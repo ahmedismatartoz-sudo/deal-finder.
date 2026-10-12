@@ -1194,7 +1194,11 @@ def _aggiorna_visibili():
     import threading
 
     def loop():
-        from ..pipeline import manuale
+        from ..pipeline import aggiunte, manuale
+        try:
+            logging.getLogger("visibili").warning("AGGIUNTE: %s", aggiunte.run())
+        except Exception as e:
+            logging.getLogger("visibili").warning("aggiunte non importate: %s", str(e)[:300])
         try:
             # sezione Incidentate: le auto scelte a mano entrano subito, senza aspettare il ciclo
             # auto controllate a mano e non ancora importate (nuove selezioni, Incidentate): entrano subito
@@ -1205,6 +1209,7 @@ def _aggiorna_visibili():
             try:
                 with connect() as conn:
                     manuale.segna_viste_di_recente(conn)
+                    aggiunte.tieni_visibili(conn)
             except Exception as e:
                 logging.getLogger("visibili").warning("aggiornamento auto visibili non riuscito: %s", str(e)[:200])
             time.sleep(1800)
