@@ -517,6 +517,21 @@ if __name__ == "__main__":
         log.info("AS5K analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("AS5K verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "fb_grande":
+        # raccolta grande Facebook (Milano, ultimi FB_GIORNI giorni, fino a FB_RIGHE_PER_GIRO righe), poi i migliori
+        # con le foto per il controllo uno per uno (MILLE / MILLEFOTO nei log)
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        versione = os.environ.get("FB_VERSIONE", "fb50-v1")
+        os.environ.setdefault("FB_GIORNI", "30")
+        if _due("collect:fb_grande", int(os.environ.get("FB_GRANDE_ORE", "20"))):
+            os.environ["COLLECT_JOB"] = "collect:fb_grande"
+            run("facebook")
+        if _due(f"mille:{versione}", 24 * 365):
+            mille.run(fonte="facebook", versione=versione, quanti=int(os.environ.get("FB_QUANTI", "600")))
+        log.info("FB_GRANDE analisi_manuale: %s", manuale.run(solo_nuove=True))
+        log.info("FB_GRANDE verifica: %s", recheck.run())
+        sys.exit(0)
     if mode == "cerca":
         # ricerca su richiesta (CERCA_JSON), risultati nei log (CERCA / CERCAFOTO)
         from . import cerca
