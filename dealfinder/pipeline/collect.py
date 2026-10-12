@@ -88,6 +88,29 @@ class _Parole:
         yield from self.sub.search_parole(self.parole, self.bands, int(os.environ.get("INCIDENTATE_PAGINE", "50")))
 
 
+class _Centri:
+    """Stessa ricerca AutoScout24 ripetuta attorno a più città (CAP + raggio); i doppioni li salta il collettore."""
+    def __init__(self, asc, centri, query):
+        self.asc, self.centri, self.query = asc, centri, query
+        self.source = asc.source
+
+    @property
+    def stop(self):
+        return self.asc.stop
+
+    @stop.setter
+    def stop(self, v):
+        self.asc.stop = v
+
+    def search(self, _query):
+        for cap, km in self.centri:
+            if self.asc.stop or self.asc.blocked:
+                break
+            os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = cap, km
+            log.info("as5k: centro %s, raggio %s km", cap, km)
+            yield from self.asc.search_massiva(self.query)
+
+
 def _norm_city(c: str | None) -> str:
     import unicodedata
     c = unicodedata.normalize("NFKD", str(c or "")).encode("ascii", "ignore").decode().lower()
@@ -173,6 +196,17 @@ def run(mode: str) -> Counter:
                    (asc, {"massiva": True, "min_price": 200, "max_price": top, "step": 250})]
         fonti = os.environ.get("ECONOMICHE_FONTI", "subito,autoscout")       # AutoScout può girare a parte, in parallelo
         sources = [x for x in sources if (x[0] is sub and "subito" in fonti) or (x[0] is asc and "autoscout" in fonti)]
+    elif mode == "as5k":
+        # AutoScout24 aggressivo sopra i 5.000 € attorno a Milano, Bergamo e Brescia (AS5K_CENTRI "cap:km,..."),
+        # privati (da proporre) e poi concessionari (prezzi di mercato). Si ferma a AS5K_OBIETTIVO annunci letti.
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "0.8"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.0"))
+        centri = [c.split(":") for c in os.environ.get("AS5K_CENTRI", "20121:60,24121:45,25121:50").split(",")]
+        q = {"massiva": True, "min_price": int(os.environ.get("AS5K_MIN", "5000")),
+             "max_price": int(os.environ.get("AS5K_MAX", "40000")), "step": 1000}
+        sources = [(_Centri(asc, centri, q), {})]
     elif mode == "incidentate":
         # Auto incidentate in TUTTA Italia (sezione Incidentate): Subito con le parole tipiche, AutoScout24 solo
         # annunci "danneggiati" di privati. Obiettivo INCIDENTATE_OBIETTIVO annunci da filtrare.
@@ -348,6 +382,11 @@ def run(mode: str) -> Counter:
                         collector.stop = True
                         log.info("autoscout: obiettivo di %d annunci nuovi raggiunto", obiettivo)
                         break
+                    if mode == "as5k" and sum(v for k, v in stats.items() if k.startswith("autoscout24:")) \
+                            >= int(os.environ.get("AS5K_OBIETTIVO", "60000")):
+                        collector.stop = True
+                        log.info("as5k: obiettivo raggiunto")
+                        break
                     if mode == "economiche" and sum(v for k, v in stats.items() if ":" in k and k.split(":")[0] in ("subito", "autoscout24")) \
                             >= int(os.environ.get("ECONOMICHE_OBIETTIVO", "20000")):
                         collector.stop = True
@@ -416,6 +455,19 @@ if __name__ == "__main__":
         log.info("SITO analisi_manuale (dopo la selezione): %s", manuale.run())
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
+        sys.exit(0)
+    if mode == "as5k":
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        versione = os.environ.get("AS5K_VERSIONE", "as5k-v1")
+        if _due("collect:as5k", int(os.environ.get("AS5K_ORE", "20"))):
+            run("as5k")
+        if _due(f"mille:{versione}", 24 * 365):
+            # auto da 5.000 € in su di Milano, Bergamo, Brescia e dintorni (tutte le fonti), con i nostri margini
+            mille.run(versione=versione, province=["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR"],
+                      min_prezzo=int(os.environ.get("AS5K_MIN", "5000")), promettenti=True)
+        log.info("AS5K analisi_manuale: %s", manuale.run(solo_nuove=True))
+        log.info("AS5K verifica: %s", recheck.run())
         sys.exit(0)
     if mode == "cerca":
         # ricerca su richiesta (CERCA_JSON), risultati nei log (CERCA / CERCAFOTO)

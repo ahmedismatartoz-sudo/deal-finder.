@@ -30,7 +30,7 @@ from .verify import verify_rows
 
 log = logging.getLogger("mille")
 VERSIONE = os.environ.get("MILLE_VERSIONE", "v4")      # v4: rivendita al 10% sotto mercato
-QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))
+QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))      # per as5k: MILLE_QUANTI dal servizio (es. 500)
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]     # Milano e dintorni (selezione di sempre)
 CELLA = (270, 200)
 PEZZO = 12000
@@ -77,7 +77,7 @@ def foglio(images: list[bytes], titolo: str) -> bytes | None:
 
 def run(fonte: str | None = None, versione: str | None = None, province: list[str] | None = None,
         ovunque: bool = False, danneggiate: bool = False, max_prezzo: int | None = None,
-        min_prezzo: int = 500, anche_scartate: bool = False) -> dict:
+        min_prezzo: int = 500, anche_scartate: bool = False, promettenti: bool = False) -> dict:
     """fonte: solo gli annunci di quel sito (es. "autoscout24"); versione: nome del lavoro;
     province: zona da selezionare (predefinita Milano e dintorni);
     max_prezzo/min_prezzo: fascia di prezzo; anche_scartate: riprende anche le auto scartate per danni
@@ -93,9 +93,10 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
                   AND (year IS NULL OR year >= %s)
                   AND (stage <> 'scartato' OR stage_reason IN ('margine_insufficiente','troppo_vecchia') OR %s OR %s)
                   AND (%s::text IS NULL OR source = %s)
-                  AND NOT (id = ANY(%s))"""
+                  AND NOT (id = ANY(%s))
+                  AND (NOT %s OR COALESCE(prescreen, '') <> 'non_interessante')"""
         params = (min_prezzo, max_prezzo or settings.max_purchase_eur, ovunque, list(province or PROVINCES), province is None and not ovunque,
-                  danneggiate, scovo.ANNO_MINIMO, danneggiate, anche_scartate, fonte, fonte, _gia_controllate())
+                  danneggiate, scovo.ANNO_MINIMO, danneggiate, anche_scartate, fonte, fonte, _gia_controllate(), promettenti)
         ids = [r["id"] for r in conn.execute(
             f"SELECT id FROM listings WHERE {where} ORDER BY make, model, fuel, id", params).fetchall()]
         stats["esaminati"] = len(ids)
