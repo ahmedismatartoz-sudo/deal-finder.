@@ -218,6 +218,9 @@ def prescreen(model: dict, l: Listing, rule: PrescreenRule | None = None,
     rule = rule or PrescreenRule()
     if not l.price_eur:
         return {"esito": "dati_insufficienti"}
+    import os
+    if l.mileage_km and l.mileage_km > int(os.environ.get("KM_MASSIMO", "180000")):
+        return {"esito": "non_interessante"}          # regola: oltre 180.000 km non si propone
     p = predict(model, l)
     if not p:
         return {"esito": "nessun_modello"}

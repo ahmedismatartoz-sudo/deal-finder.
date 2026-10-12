@@ -118,6 +118,9 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
                 if not (l.make and l.model and l.year and l.mileage_km is not None) or l.year < scovo.ANNO_MINIMO:
                     stats["dati_mancanti_o_vecchia"] += 1
                     continue
+                if scovo.troppi_km(l.mileage_km):
+                    stats["oltre_km_massimo"] += 1
+                    continue
                 key = (l.make, l.model, l.fuel)
                 if key != cur_key:
                     cur_key, cur_market = key, load_market(conn, *key)

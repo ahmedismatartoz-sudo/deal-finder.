@@ -898,7 +898,7 @@ def _calcola_elenco() -> None:
                                    dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
             for r in eco:
                 it = scovo.item_eco(r)
-                if it and it["id"] not in gia:
+                if it and it["id"] not in gia and not scovo.troppi_km(it.get("km")):
                     items.append(it)
                     opens[it["id"]] = int(r["opens"] or 0)
         except Exception as e:

@@ -91,7 +91,7 @@ def run(q: dict | None = None) -> list[dict]:
                   AND mileage_km IS NOT NULL AND mileage_km <= %s
                   AND (year IS NULL OR year >= %s)
                   AND last_seen_at > now() - interval '10 days'""",
-            (marca, modello, prov, int(q.get("km_max") or 10**7), int(q.get("anno_min") or 2007))).fetchall()
+            (marca, modello, prov, min(int(q.get("km_max") or 10**7), scovo.KM_MASSIMO), int(q.get("anno_min") or 2007))).fetchall()
         log.info("CERCA_TROVATI %d annunci %s %s", len(rows), marca, modello)
         model = load_active(conn)
         markets = {}

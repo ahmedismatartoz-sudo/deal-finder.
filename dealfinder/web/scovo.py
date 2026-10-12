@@ -64,6 +64,12 @@ def troppo_bello(mercato: float, prezzo: int) -> bool:
 
 # auto più vecchie di questo anno non si propongono
 ANNO_MINIMO = int(os.environ.get("ANNO_MINIMO", "2007"))
+# regola del 12/10: niente auto oltre 180.000 km, né sul sito né nelle selezioni delle raccolte
+KM_MASSIMO = int(os.environ.get("KM_MASSIMO", "180000"))
+
+
+def troppi_km(km) -> bool:
+    return km is not None and int(km) > KM_MASSIMO
 
 
 # Sul sito restano le auto che superano la soglia con la stima di mercato di base (come prima del 12/10),
@@ -76,6 +82,8 @@ def abbastanza(it: dict | None) -> bool:
     if not it:
         return False
     if it.get("anno") and it["anno"] < ANNO_MINIMO:
+        return False
+    if troppi_km(it.get("km")):
         return False
     if guadagno_minimo(it) < MIN_MOSTRATO:
         return False
