@@ -524,6 +524,10 @@ if __name__ == "__main__":
         from .ciclo import _due
         versione = os.environ.get("FB_VERSIONE", "fb50-v1")
         os.environ.setdefault("FB_GIORNI", "30")
+        if os.environ.get("FB_ALLENA") == "1" and _due("train", 6):
+            # prima si riaddestra l'agente dei prezzi su tutta la base raccolta
+            from ..pricing.train import run as train_run
+            log.info("FB_GRANDE addestramento prezzi: %s", train_run(force=True))
         if _due("collect:fb_grande", int(os.environ.get("FB_GRANDE_ORE", "20"))):
             os.environ["COLLECT_JOB"] = "collect:fb_grande"
             run("facebook")

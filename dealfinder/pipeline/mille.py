@@ -31,6 +31,11 @@ from .verify import verify_rows
 log = logging.getLogger("mille")
 VERSIONE = os.environ.get("MILLE_VERSIONE", "v4")      # v4: rivendita al 10% sotto mercato
 QUANTI = int(os.environ.get("MILLE_QUANTI", "1000"))      # per as5k: MILLE_QUANTI dal servizio (es. 500)
+# selezione prudente (MILLE_PESSIMISTA=1): mercato realistico × MILLE_PESSIMISMO (0,95)
+PESSIMISTA = os.environ.get("MILLE_PESSIMISTA", "0") == "1"
+PESSIMISMO = float(os.environ.get("MILLE_PESSIMISMO", "0.95"))
+# quota massima di diesel tra le auto scelte (MILLE_MAX_DIESEL=0.3 → 30%), 1 = nessun limite
+MAX_DIESEL = float(os.environ.get("MILLE_MAX_DIESEL", "1"))
 PROVINCES = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV"]     # Milano e dintorni (selezione di sempre)
 CELLA = (270, 200)
 PEZZO = 12000
@@ -103,6 +108,7 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
         stats["esaminati"] = len(ids)
         cols = LIGHT_COLS.replace("description", "NULL AS description")
         cur_key, cur_market = None, []
+        carb: dict = {}
         model = load_active(conn)
         out = []
         BLOCCO = 500
@@ -138,6 +144,9 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
                 if not mercato:
                     stats["senza_mercato"] += 1
                     continue
+                if PESSIMISTA:
+                    # stima prudente: mercato realistico (meno confronti = più sconto, tetto sul prezzo) e un taglio in più
+                    mercato = round(scovo.mercato_realistico(float(mercato), l.price_eur, v.n_comparables) * PESSIMISMO)
                 sito = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
                 soglia = scovo.soglia(l.price_eur)
                 if sito < soglia:
@@ -146,9 +155,25 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
                 # solo numeri: l'annuncio completo si rilegge dopo, per i migliori
                 out.append((sito / soglia, r["id"], r["source"], mercato, sito, soglia, from_model, km_est,
                             v.n_comparables, list(v.fraud_flags or [])))
+                carb[r["id"]] = l.fuel
         cur_market = []
         out.sort(key=lambda x: -x[0])
         stats["sopra_soglia"] = len(out)
+        if MAX_DIESEL < 1:
+            # al massimo MAX_DIESEL (es. 30%) di diesel tra i scelti: il resto benzina, GPL, ibride
+            n_tot = int((quanti or QUANTI) * 1.15)
+            tetto = int(n_tot * MAX_DIESEL)
+            scelti, n_d = [], 0
+            for x in out:
+                if carb.get(x[1]) == "diesel":
+                    if n_d >= tetto:
+                        continue
+                    n_d += 1
+                scelti.append(x)
+                if len(scelti) >= n_tot:
+                    break
+            out = scelti
+            stats["diesel_scelti"] = n_d
         top = out[: int((quanti or QUANTI) * 1.15)]
         full = {r["id"]: r for r in conn.execute(
             f"SELECT {LIGHT_COLS}, stage_reason FROM listings WHERE id = ANY(%s)", ([x[1] for x in top],)).fetchall()}
