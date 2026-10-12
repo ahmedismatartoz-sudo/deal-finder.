@@ -81,11 +81,36 @@ def fasce_disgiunte() -> list[tuple[int, int]]:
     return out
 
 
+def fasce_larghe() -> list[tuple[int, int]]:
+    """Fasce più larghe per le città con meno annunci (meno ricerche, stessa copertura)."""
+    out, p = [], 500
+    for top, step in ((3000, 250), (8000, 500), (20000, 1000)):
+        while p < top:
+            out.append((p, min(p + step, top) - 1))
+            p += step
+    return out
+
+
+def citta_fb() -> list[tuple[str, int]]:
+    """Città Marketplace da leggere (FB_CITTA="milan:60,rome:60,bologna:80"). Solo nomi che Facebook conosce:
+    con un nome sconosciuto Facebook rimanda ai risultati di Milano."""
+    raw = os.environ.get("FB_CITTA", "milan:60,rome:60,bologna:80")
+    out = []
+    for part in raw.split(","):
+        if part.strip():
+            nome, _, raggio = part.strip().partition(":")
+            out.append((nome.strip(), int(raggio or 60)))
+    return out or [("milan", 60)]
+
+
 def searches_senza_doppioni(days: int = 1) -> list[dict]:
-    out = [{"city": "milan", "radius": 60, "min_price": lo, "max_price": hi, "days": days, "kind": "fascia"}
-           for lo, hi in fasce_disgiunte()]
-    # poche ricerche mirate per auto con problemi (le uniche che possono ripetere un annuncio: limite basso)
-    out += [{"city": "milan", "radius": 60, "query": q, "days": days, "kind": "problema"} for q in FB_PROBLEM_QUERIES]
+    out = []
+    for k, (city, radius) in enumerate(citta_fb()):
+        fasce = fasce_disgiunte() if k == 0 else fasce_larghe()       # la prima città (Milano) più fitta
+        out += [{"city": city, "radius": radius, "min_price": lo, "max_price": hi, "days": days, "kind": "fascia"}
+                for lo, hi in fasce]
+        # poche ricerche mirate per auto con problemi (le uniche che possono ripetere un annuncio: limite basso)
+        out += [{"city": city, "radius": radius, "query": q, "days": days, "kind": "problema"} for q in FB_PROBLEM_QUERIES]
     return out
 
 
