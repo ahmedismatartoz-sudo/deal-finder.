@@ -48,6 +48,18 @@ if __name__ == "__main__":
         from .zone import ZONE, tutte
         for c in clienti:
             em, pw = str(c.get("email", "")).strip().lower(), str(c.get("password", "")).strip()
+            if "@" in em and c.get("attivo") is False:
+                # account da spegnere: disattivato e tutte le sessioni aperte chiuse subito
+                row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
+                if row:
+                    conn.execute("UPDATE dealers SET active=false WHERE id=%s", (row["id"],))
+                    try:
+                        from .web import sessions as _sess
+                        _sess.revoke_all(conn, row["id"], "account_disattivato")
+                    except Exception as e:
+                        print("sessioni non chiuse:", str(e)[:120])
+                    print("Account cliente disattivato:", em)
+                continue
             if "@" not in em or len(pw) < 8:
                 continue
             z = c.get("zona") or "milano"
