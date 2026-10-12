@@ -85420,5 +85420,8599 @@
   "controlli": [],
   "aggiorna": true,
   "audit": "a2"
+ },
+ {
+  "id": 136886,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montante_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "portiera sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "braccio/montante sospensione ant sx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "lamierati/ossatura (montante e longherone sx)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "riserva airbag (stato non visibile)",
+    "low": 0,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1220,
+  "ricambi_max": 6000,
+  "guadagno_finale": 1851,
+  "nota": "Urto forte sull'anteriore sinistro con cornice parabrezza/montante piegata e portiera danneggiata; motore e posteriore sani, il margine c'è ma va verificato il telaio.",
+  "controlli": [
+   "montante A e cornice parabrezza sx",
+   "longherone anteriore sx",
+   "airbag esplosi o no",
+   "geometria sospensione ant sx",
+   "annuncio doppio dello stesso venditore (136886/209148)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209148,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montante_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "portiera sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "braccio/montante sospensione ant sx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "lamierati/ossatura (montante e longherone sx)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "riserva airbag (stato non visibile)",
+    "low": 0,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1220,
+  "ricambi_max": 6000,
+  "guadagno_finale": 1851,
+  "nota": "Urto forte sull'anteriore sinistro con cornice parabrezza/montante piegata e portiera danneggiata; motore e posteriore sani, il margine c'è ma va verificato il telaio.",
+  "controlli": [
+   "montante A e cornice parabrezza sx",
+   "longherone anteriore sx",
+   "airbag esplosi o no",
+   "geometria sospensione ant sx",
+   "annuncio doppio dello stesso venditore (136886/209148)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210628,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "fari LED x2",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "radiatori/condensatore + circuito raffreddamento ibrido",
+    "low": 150,
+    "high": 700
+   },
+   {
+    "label": "traversa/supporti frontali",
+    "low": 150,
+    "high": 800
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "riserva airbag (non visibile)",
+    "low": 0,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 740,
+  "ricambi_max": 3950,
+  "guadagno_finale": 3883,
+  "nota": "Frontale senza paraurti con fari e radiatori da rifare; motore, cambio e batteria dichiarati integri, buon margine.",
+  "controlli": [
+   "airbag",
+   "longheroni anteriori",
+   "sistema ibrido senza errori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209722,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "pannello_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "fanali posteriori",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (pannello e pianale posteriore)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "sospensione posteriore",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "riserva danni non visibili",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1130,
+  "ricambi_max": 4850,
+  "guadagno_finale": 2866,
+  "nota": "Danni davanti a destra e dietro forte con pannello posteriore schiacciato; auto 2024 con pochi km, margine sopra soglia anche con l'ossatura.",
+  "controlli": [
+   "pianale posteriore e longheroni",
+   "airbag",
+   "assale posteriore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 212228,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "fanali_posteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "fanali posteriori LED",
+    "low": 100,
+    "high": 400
+   },
+   {
+    "label": "telecamera/sensori",
+    "low": 50,
+    "high": 200
+   },
+   {
+    "label": "riserva lamierati posteriori (danno non fotografato)",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 680,
+  "ricambi_max": 2300,
+  "guadagno_finale": 5409,
+  "nota": "Danno solo dietro secondo il venditore, airbag intatti e 3.760 km: margine buono ma il posteriore non è fotografato.",
+  "controlli": [
+   "foto/visione del posteriore",
+   "pianale e pannello posteriore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209639,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro full LED dx",
+    "low": 250,
+    "high": 800
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "portiera posteriore dx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "fiancata posteriore dx (lamierato da saldare)",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "sospensione ant e post dx",
+    "low": 160,
+    "high": 600
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 1160,
+  "ricambi_max": 3800,
+  "guadagno_finale": 3881,
+  "nota": "Strisciata su tutto il lato destro con faro LED, portiera e fiancata posteriore; airbag intatti e motore ok, margine buono.",
+  "controlli": [
+   "geometria ruote lato dx",
+   "fiancata e sottoporta dx",
+   "rimappatura non omologata"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 220689,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "braccio/montante sospensione ant sx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "traversa anteriore",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "riserva danni non visibili",
+    "low": 0,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 580,
+  "ricambi_max": 2850,
+  "guadagno_finale": 4795,
+  "nota": "Urto anteriore lato sinistro con ruota coinvolta, airbag volante integro in foto: margine buono.",
+  "controlli": [
+   "sospensione e longherone ant sx",
+   "airbag",
+   "radiatori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210076,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fendinebbia",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "longherone",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "fendinebbia",
+    "low": 20,
+    "high": 60
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "riserva radiatori",
+    "low": 0,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura (longheroni disallineati)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "sospensione ant sx",
+    "low": 80,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 700,
+  "ricambi_max": 3210,
+  "guadagno_finale": 4400,
+  "nota": "Anteriore sinistro colpito con longheroni da tirare, airbag integri e motore ok: buon margine.",
+  "controlli": [
+   "longheroni in banco",
+   "sospensione ant sx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 213935,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiere dx x2",
+    "low": 300,
+    "high": 900
+   },
+   {
+    "label": "specchietto dx",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "riserva airbag laterale/tendina",
+    "low": 0,
+    "high": 800
+   },
+   {
+    "label": "riserva montante/sottoporta dx",
+    "low": 0,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 350,
+  "ricambi_max": 2650,
+  "guadagno_finale": 4940,
+  "nota": "Danno sulle due portiere lato passeggero (non fotografato), resto dell'auto integro e motore ok: margine buono se il montante centrale è sano.",
+  "controlli": [
+   "montante B e sottoporta dx",
+   "airbag laterali",
+   "che l'auto non sia già smontata"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209787,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "traversa_longheroni",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "2 fari",
+    "low": 120,
+    "high": 600
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "2 parafanghi",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura frontale (traversa, punte longheroni)",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva airbag (non visibili)",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1140,
+  "ricambi_max": 4000,
+  "guadagno_finale": 1960,
+  "nota": "Frontale distrutto (paraurti, cofano, fari, radiatori) con probabile tocco alle punte dei longheroni: lamierati inclusi. Con 180.000 km il mercato è un po' alto, ma anche con rivendita prudente resta margine sopra soglia.",
+  "controlli": [
+   "stato airbag e spie",
+   "dime/longheroni anteriori",
+   "motore e cambio automatico in moto",
+   "km reali"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 10800
+ },
+ {
+  "id": 208455,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "longherone",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "braccio/montante sx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (longherone sx)",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva airbag",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1100,
+  "ricambi_max": 3500,
+  "guadagno_finale": 2160,
+  "nota": "Urto anteriore sinistro su paraurti, faro, parafango e zona longherone; il resto dell'auto è sano. Anche con rivendita prudente per una 2010 il margine regge.",
+  "controlli": [
+   "airbag e spie",
+   "longherone sx e geometria",
+   "sospensione/sterzo sx",
+   "motore 1.4 TSI (catena)"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 8800
+ },
+ {
+  "id": 210061,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "faro sx",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "griglia",
+    "low": 50,
+    "high": 120
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 900,
+    "high": 2500
+   },
+   {
+    "label": "parabrezza (riserva)",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "traversa anteriore",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1800,
+  "ricambi_max": 5070,
+  "guadagno_finale": 2390,
+  "nota": "Frontale sinistro (cofano, paraurti, faro) con airbag esplosi; motore pulito. Auto 2024 con pochi km: margine buono anche col kit airbag.",
+  "controlli": [
+   "cruscotto e centralina airbag",
+   "traversa e longherone sx",
+   "radiatori e ventola"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 215657,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "faro sx full LED",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "parafango sx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "portiera ant sx",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "parabrezza (con telecamera ADAS)",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "sospensione/cerchio sx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "riserva airbag",
+    "low": 500,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1750,
+  "ricambi_max": 4700,
+  "guadagno_finale": 2706,
+  "nota": "Danno all'anteriore sinistro (parafango, faro, porta) e parabrezza rotto; auto 2025 strafull con pochi km, margine sopra soglia anche con riserva airbag.",
+  "controlli": [
+   "airbag e spie (parabrezza rotto)",
+   "sistema ibrido e batteria 48V",
+   "longherone sx",
+   "se venditore è un commerciante"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209890,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "pannello_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "2 fari",
+    "low": 120,
+    "high": 600
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "fanali posteriori",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (pannello posteriore)",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "riserva airbag/spie",
+    "low": 200,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1230,
+  "ricambi_max": 4200,
+  "guadagno_finale": 3199,
+  "nota": "Danni davanti e dietro (tamponamento a catena): cofano, paraurti, portellone e pannello posteriore. Pezzi comuni e margine sopra soglia.",
+  "controlli": [
+   "pannello posteriore e pianale baule",
+   "airbag e spie in quadro",
+   "telecamere 360",
+   "versione reale (2017 non è MHEV)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 290239,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "traversa",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "2 fari",
+    "low": 150,
+    "high": 700
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "2 parafanghi",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa/lamierati frontali",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva airbag",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1270,
+  "ricambi_max": 4250,
+  "guadagno_finale": 2110,
+  "nota": "Frontale distrutto (muso, cofano, radiatori) su auto quasi nuova; marchio poco richiesto quindi rivendita prudente, ma il margine resta.",
+  "controlli": [
+   "prezzo: nel testo 6.000 non 5.000",
+   "reperibilità ricambi EVO",
+   "airbag",
+   "impianto GPL anteriore"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 11500
+ },
+ {
+  "id": 212104,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "braccio/montante sx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio sx",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva lamierati",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "riserva airbag",
+    "low": 200,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 1190,
+  "ricambi_max": 3450,
+  "guadagno_finale": 3899,
+  "nota": "Urto sull'anteriore sinistro (paraurti, faro, parafango, ruota); il venditore dice meccanica integra. Margine ampio sopra soglia.",
+  "controlli": [
+   "airbag e spie",
+   "geometria e sospensione sx",
+   "trazione 4WD e cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208931,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "2 fari full LED",
+    "low": 200,
+    "high": 800
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "griglia",
+    "low": 40,
+    "high": 120
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 900,
+    "high": 2500
+   },
+   {
+    "label": "traversa/lamierati",
+    "low": 300,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 1800,
+  "ricambi_max": 5120,
+  "guadagno_finale": 2214,
+  "nota": "Urto frontale con airbag esplosi; il resto dell'auto sembra sano. GT Line automatica 2019, margine sopra soglia.",
+  "controlli": [
+   "pezzi già smontati/venduti (vende anche a pezzi)",
+   "traversa e longheroni",
+   "cambio automatico EAT8"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209282,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafanghi",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "specchio",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "montanti_A",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "2 fari",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "2 parafanghi",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "riserva airbag + centralina",
+    "low": 700,
+    "high": 2000
+   },
+   {
+    "label": "specchio dx",
+    "low": 40,
+    "high": 100
+   },
+   {
+    "label": "lamierati/ossatura (montanti, traversa)",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1730,
+  "ricambi_max": 5350,
+  "guadagno_finale": 1982,
+  "nota": "Frontale pesante con parabrezza sfondato e possibile tocco ai montanti; auto 2022 con 14.000 km, pezzi economici: margine sopra soglia.",
+  "controlli": [
+   "montanti A e tetto",
+   "airbag",
+   "sospensioni anteriori",
+   "se venditore è un commerciante"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208574,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fanali_posteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "pannello_posteriore_pianale",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "fanali posteriori",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura (pannello posteriore, pianale, longheroni post)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "sospensione posteriore/differenziale 4x4",
+    "low": 200,
+    "high": 1000
+   },
+   {
+    "label": "scarico",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "rimessa in marcia dopo fermo (batteria, freni)",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1000,
+  "ricambi_max": 4050,
+  "guadagno_finale": 3280,
+  "nota": "Tamponamento posteriore forte con pannello, pianale e sospensione dietro da rifare; airbag integri e motore sano. Margine buono, ma ferma dal 2019.",
+  "controlli": [
+   "pianale e longheroni posteriori",
+   "ponte posteriore 4x4",
+   "stato dopo 6 anni di fermo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210033,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto+testo"
+   },
+   {
+    "part": "pannello_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto+testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "lamierati pannello posteriore",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "fanale posteriore",
+    "low": 40,
+    "high": 150
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2000
+   },
+   {
+    "label": "serbatoio/impianto GPL (controllo)",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "riserva danni anteriori",
+    "low": 100,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 1270,
+  "ricambi_max": 3750,
+  "guadagno_finale": 2510,
+  "nota": "Urto dietro leggero ma airbag esplosi davanti; pezzi soprattutto kit airbag. Auto 2023 in garanzia, margine sopra soglia con rivendita prudente.",
+  "controlli": [
+   "perché airbag frontali con urto posteriore (danni davanti?)",
+   "serbatoio GPL",
+   "cruscotto"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 12000
+ },
+ {
+  "id": 208639,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montante_centrale",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "specchietto",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "parafango ant sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "portiera ant sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "portiera post sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "specchietto sx",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "braccio/montante sosp. ant sx + cerchio",
+    "low": 160,
+    "high": 550
+   },
+   {
+    "label": "airbag laterali/tendina (riserva)",
+    "low": 0,
+    "high": 1500
+   },
+   {
+    "label": "lamierati/ossatura (montante B, sottoporta)",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 950,
+  "ricambi_max": 5050,
+  "guadagno_finale": 2236,
+  "nota": "Fiancata sinistra sfondata (parafango e due portiere) con probabile coinvolgimento di montante e sottoporta; con pezzi usati Dacia economici il margine resta buono.",
+  "controlli": [
+   "montante B e sottoporta sx",
+   "airbag laterali/tendina esplosi?",
+   "geometria ruota ant sx",
+   "motore marciante"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208454,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro xeno sx",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parafango ant sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano (riserva)",
+    "low": 0,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "ossatura frontale/traversa",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "lamierati/ossatura (punte longheroni, riserva)",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1510,
+  "ricambi_max": 5350,
+  "guadagno_finale": 1913,
+  "nota": "Frontale sx distrutto con radiatori e traversa, airbag esplosi; possibile coinvolgimento delle punte longherone. L'auto parte e cammina e il margine resta sopra soglia.",
+  "controlli": [
+   "longheroni anteriori",
+   "airbag passeggero e centralina",
+   "cofano",
+   "trazione quattro e motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 289142,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fanali_posteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "pannello_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portellone + lunotto",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "fanali posteriori x2",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (pannello post., fiancate, pianale)",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "parafango ant dx + paraurti ant",
+    "low": 140,
+    "high": 450
+   },
+   {
+    "label": "faro ant dx",
+    "low": 60,
+    "high": 300
+   },
+   {
+    "label": "sospensione + cerchio ant dx",
+    "low": 160,
+    "high": 550
+   },
+   {
+    "label": "riserva pezzi mancanti",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 970,
+  "ricambi_max": 4300,
+  "guadagno_finale": 2946,
+  "nota": "Posteriore schiacciato con lunotto e pannello coda, più danno ant dx con ruota smontata; strutturale ma riparabile e a 1.500 € il margine c'è.",
+  "controlli": [
+   "pianale e longheroni posteriori",
+   "pezzi già smontati per ricambi",
+   "motore e cambio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 206893,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro ant dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango ant dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori (riserva)",
+    "low": 0,
+    "high": 400
+   },
+   {
+    "label": "traversa (riserva)",
+    "low": 0,
+    "high": 300
+   },
+   {
+    "label": "modanatura paraurti post",
+    "low": 30,
+    "high": 100
+   },
+   {
+    "label": "airbag (riserva, non visibile)",
+    "low": 0,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 330,
+  "ricambi_max": 3450,
+  "guadagno_finale": 3653,
+  "nota": "Frontale dx ammaccato (paraurti, faro, cofano) e piccolo graffio dietro; danno medio su autocarro a 1.200 €, margine ampio anche con riserva airbag.",
+  "controlli": [
+   "km reali (non indicati)",
+   "airbag esplosi?",
+   "radiatori",
+   "uso autocarro/N1"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209232,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro ant dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango ant dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "braccio sosp. ant dx (riserva)",
+    "low": 0,
+    "high": 300
+   },
+   {
+    "label": "riserva airbag/punta longherone",
+    "low": 0,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 520,
+  "ricambi_max": 3650,
+  "guadagno_finale": 3446,
+  "nota": "Frontale destro rotto (paraurti, faro, cofano, parafango); auto recente con pochi km e motore che parte, margine buono anche con riserve.",
+  "controlli": [
+   "airbag esplosi?",
+   "punta longherone dx",
+   "geometria ruota ant dx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209961,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro LED",
+    "low": 200,
+    "high": 800
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafanghi",
+    "low": 60,
+    "high": 400
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (riserva)",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 960,
+  "ricambi_max": 4000,
+  "guadagno_finale": 1860,
+  "nota": "Dichiarata incidentata ma il danno non è fotografato; interni intatti e volante senza airbag esploso. Con riserva prudente e rivendita ridotta per i 240.000 km il margine resta sopra soglia.",
+  "controlli": [
+   "vedere il lato danneggiato dal vivo",
+   "airbag e centralina",
+   "longheroni",
+   "fattura motore rifatto"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 11000
+ },
+ {
+  "id": 207217,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fanali_posteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "avviamento",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "2 fari",
+    "low": 250,
+    "high": 500
+   },
+   {
+    "label": "parafango sx",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "mascherina e staffe",
+    "low": 50,
+    "high": 120
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "fanali posteriori",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "lamierati/ossatura (traversa e pannello posteriore)",
+    "low": 500,
+    "high": 1000
+   },
+   {
+    "label": "riserva auto che non parte",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1860,
+  "ricambi_max": 3820,
+  "guadagno_finale": 3143,
+  "nota": "A4 Avant presa davanti e dietro, con lamierati posteriori da tirare e non parte; airbag non esplosi. Pagata 1.500 € resta un buon margine anche con riserva prudente.",
+  "controlli": [
+   "perché non parte (batteria, centralina, motore)",
+   "dima e longheroni anteriori/posteriori",
+   "airbag e spie",
+   "documenti in regola"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210810,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "faro",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parafango",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "staffe e traversa",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "riserva danni nascosti/sensori",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 930,
+  "ricambi_max": 1950,
+  "guadagno_finale": 5000,
+  "nota": "Nuova C3 2024 con 7.000 km colpita sull'angolo anteriore: paraurti, faro, cofano e parafango. Auto quasi nuova, margine ampio anche col prezzo di 6.000 €.",
+  "controlli": [
+   "airbag esplosi o no",
+   "longherone e traversa anteriore",
+   "radiatori e ventola",
+   "geometria ruota"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 219510,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafanghi_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "frontale_ossatura",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag_laterali",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "pretensionatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "2 fari",
+    "low": 250,
+    "high": 500
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "mascherina",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "2 parafanghi",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 500,
+    "high": 1000
+   },
+   {
+    "label": "airbag laterali dx + tendina + pretensionatori + centralina",
+    "low": 800,
+    "high": 1500
+   },
+   {
+    "label": "riserva meccanica (ventole, accessori motore)",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 2350,
+  "ricambi_max": 4600,
+  "guadagno_finale": 2336,
+  "nota": "Tiguan con frontale pesante, ossatura anteriore da tirare e airbag laterali dx e cinture esplose. Pagata 2.000 € il margine resta sopra soglia anche con stima alta.",
+  "controlli": [
+   "longheroni e dima",
+   "motore e cambio dopo l'urto",
+   "lato destro (perché airbag laterali)",
+   "centralina airbag"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 291478,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "staffe/griglie",
+    "low": 40,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 160,
+  "ricambi_max": 350,
+  "guadagno_finale": 3010,
+  "nota": "SLK 250 con soli 31.000 km e solo paraurti anteriore rotto: danno minimo. Anche con rivendita prudente il margine supera la soglia.",
+  "controlli": [
+   "danno reale al paraurti e sotto",
+   "km reali e libretto tagliandi",
+   "documenti in regola (vende anche a ricambi)"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 15500
+ },
+ {
+  "id": 208677,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ruota_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "faro",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parafango",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "braccio/montante",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "riserva lamierati",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1100,
+  "ricambi_max": 2550,
+  "guadagno_finale": 3310,
+  "nota": "Classe A con angolo anteriore destro rotto (faro, parafango, paraurti), airbag volante integro. Ha tanti km quindi ho usato una rivendita prudente, ma il margine resta buono.",
+  "controlli": [
+   "longherone e passaruota dx",
+   "sospensione e sterzo dx",
+   "radiatori",
+   "km reali 207.000"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 9500
+ },
+ {
+  "id": 212853,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "airbag_laterale",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag_tendina",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "montante_b",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag laterale + tendina + centralina + pretensionatori",
+    "low": 900,
+    "high": 1800
+   },
+   {
+    "label": "portiera anteriore dx",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "portiera posteriore dx",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "portiera/parafango sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "lamierati/ossatura (montante centrale e minigonna)",
+    "low": 400,
+    "high": 800
+   },
+   {
+    "label": "imbottitura/fodera sedile",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "modanature e minigonne",
+    "low": 80,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 2030,
+  "ricambi_max": 4300,
+  "guadagno_finale": 2566,
+  "nota": "Captur 2023 con 32.000 km colpita sui due lati, airbag laterale e tendina lato passeggero esplosi. Il frontale e il motore sono a posto e il margine supera la soglia.",
+  "controlli": [
+   "montante centrale e minigonna dx",
+   "chiusura porte e vetri",
+   "impianto GPL e bombola",
+   "centralina airbag"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208706,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "longherone_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "2 fari",
+    "low": 250,
+    "high": 600
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "mascherina",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "lamierati/ossatura (longherone su dima)",
+    "low": 500,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1310,
+  "ricambi_max": 2750,
+  "guadagno_finale": 4068,
+  "nota": "Countryman D con frontale da rifare e longherone da tirare in dima, airbag integri e motore che gira. Prezzo basso, margine buono.",
+  "controlli": [
+   "dima del longherone",
+   "radiatori e ventola",
+   "faro dx",
+   "motore e cambio su strada"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 220996,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "montante_parabrezza",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parabrezza",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "lamierati/ossatura (montante parabrezza)",
+    "low": 500,
+    "high": 1000
+   },
+   {
+    "label": "parafango",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cerniere e chiusura cofano",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "riserva paraurti",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "riserva faro",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "riserva radiatori",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 1380,
+  "ricambi_max": 3100,
+  "guadagno_finale": 3714,
+  "nota": "3008 con 76.500 km: cofano piegato, parabrezza e montante del parabrezza da sistemare, airbag intatti. Il margine supera la soglia anche con le riserve.",
+  "controlli": [
+   "montante parabrezza e tetto",
+   "traversa e radiatori",
+   "fari e sensori",
+   "airbag e spie"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 211245,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "faro",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parafango",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "traversa e staffe",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "riserva lamierati",
+    "low": 200,
+    "high": 500
+   },
+   {
+    "label": "riserva airbag",
+    "low": 300,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 1300,
+  "ricambi_max": 2900,
+  "guadagno_finale": 3875,
+  "nota": "T-Cross 2021 con frontale destro rotto (faro, cofano, parafango, paraurti). Con 53.000 km e prezzo 7.500 € il margine è buono.",
+  "controlli": [
+   "airbag esplosi o no",
+   "longherone dx",
+   "radiatori e ventola",
+   "sensori frontali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 219276,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "ruota_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "lamierati/ossatura posteriore",
+    "low": 800,
+    "high": 1500
+   },
+   {
+    "label": "sospensione posteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "fanali posteriori",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "portiera posteriore",
+    "low": 150,
+    "high": 250
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "faro",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 100
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 200
+   },
+   {
+    "label": "vetri",
+    "low": 80,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 1870,
+  "ricambi_max": 3550,
+  "guadagno_finale": 1810,
+  "nota": "Terios presa dietro (fiancata e ruota posteriore sx spinte) e davanti; motore e cambio dichiarati buoni. Lavoro di lamierati, ma a 1.000 € il margine resta sopra soglia.",
+  "controlli": [
+   "ossatura posteriore e assale",
+   "impianto GPL e bombola",
+   "cambio automatico",
+   "telaio su dima"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 6500
+ },
+ {
+  "id": 208962,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "airbag_frontali",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1000,
+    "high": 2500
+   },
+   {
+    "label": "faro anteriore dx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "parafango anteriore dx",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "portiera posteriore dx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "riserva lamierati montante dx",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1780,
+  "ricambi_max": 4600,
+  "guadagno_finale": 2122,
+  "nota": "Airbag esplosi, frontale dx leggermente toccato e portiera posteriore dx fuori sede. Motore e cambio dichiarati buoni: anche con kit airbag completo resta margine.",
+  "controlli": [
+   "portiera posteriore dx e montante centrale: verificare se il montante è piegato",
+   "diagnosi airbag e cinture",
+   "allineamento e fari"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 220317,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "tetto_montanti",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parabrezza",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "parafango anteriore dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "riserva lamierati tetto/montanti",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva airbag/varie non visibili",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 710,
+  "ricambi_max": 2500,
+  "guadagno_finale": 4196,
+  "nota": "Cofano schiacciato e parabrezza sfondato su C3 del 2025: frontale e fari sani, i pezzi costano poco e il margine è buono.",
+  "controlli": [
+   "tetto e montanti anteriori (possibile ribaltamento o caduta oggetto)",
+   "airbag esplosi o no",
+   "fari e radiatori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208491,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "airbag_conducente",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiere",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchi_sospensioni",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2000
+   },
+   {
+    "label": "parafango anteriore sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "cerchi x2 lato sx",
+    "low": 160,
+    "high": 500
+   },
+   {
+    "label": "sospensioni ant/post sx",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "lamierati fiancata/sottoporta sx",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1500,
+  "ricambi_max": 4550,
+  "guadagno_finale": 2104,
+  "nota": "Urto laterale sx con ruote sx piegate e airbag esploso, ma motore e interni buoni e solo 37.000 km: riparabile con margine.",
+  "controlli": [
+   "documenti: verificare che non sia radiata (venduta come relitto)",
+   "sottoporta e pianale lato sx",
+   "geometria assali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209272,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "cerchio_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro anteriore dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "parafango anteriore dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "sospensione ant. dx (braccio/montante/fuso)",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "cerchio ant dx",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "riserva lamierati longherone dx",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 830,
+  "ricambi_max": 2400,
+  "guadagno_finale": 2460,
+  "nota": "Urto frontale dx su MX-5 NC con motore sano e 85.000 km: pezzi economici, margine buono anche con rivendita prudente.",
+  "controlli": [
+   "longherone e attacchi sospensione dx",
+   "airbag"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 9000
+ },
+ {
+  "id": 220350,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore + griglia",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari anteriori x2 (LED)",
+    "low": 300,
+    "high": 1200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafanghi x2",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "riserva airbag (non visibili)",
+    "low": 0,
+    "high": 1500
+   },
+   {
+    "label": "traversa/lamierati",
+    "low": 150,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 920,
+  "ricambi_max": 4600,
+  "guadagno_finale": 2046,
+  "nota": "Frontale centrale su DS3 del 2020 che va in moto; danno medio, margine sopra soglia anche con riserva airbag.",
+  "controlli": [
+   "airbag esplosi o no (mancano foto interne)",
+   "fari LED e radar",
+   "traversa"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210173,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montante_centrale",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "airbag_tendina",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiere dx x2",
+    "low": 300,
+    "high": 900
+   },
+   {
+    "label": "airbag tendina + centralina",
+    "low": 700,
+    "high": 1500
+   },
+   {
+    "label": "lamierati/montante centrale dx",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "specchio dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "minigonna dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cerchio dx",
+    "low": 80,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 1500,
+  "ricambi_max": 4000,
+  "guadagno_finale": 2638,
+  "nota": "Urto laterale dx con due portiere e montante da tirare, tendina esplosa; meccanica dichiarata sana, margine sopra soglia.",
+  "controlli": [
+   "montante B e sottoporta dx sul banco",
+   "fanale posteriore dx",
+   "verificare se il venditore è professionale (scrive per operatori del settore)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207689,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montante_centrale",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "fiancata",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiere dx x2",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "lamierati/ossatura montante e tetto",
+    "low": 500,
+    "high": 1500
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "airbag laterali/tendina + centralina",
+    "low": 700,
+    "high": 1500
+   },
+   {
+    "label": "specchio dx",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "minigonna dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "riparazione parti lato sx",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1810,
+  "ricambi_max": 4700,
+  "guadagno_finale": 1907,
+  "nota": "Forte urto laterale dx con montante e tetto coinvolti: lavoro pesante ma prezzo basso, margine di poco sopra soglia.",
+  "controlli": [
+   "montante B e pianale dx",
+   "bombola e impianto metano (collaudo)",
+   "airbag laterali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209472,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore ST",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "faro anteriore sx",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "parafango anteriore sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori (riserva)",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "cerchio/braccio ant sx (riserva)",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "riserva lamierati frontale sx",
+    "low": 300,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 960,
+  "ricambi_max": 2700,
+  "guadagno_finale": 3900,
+  "nota": "Urto frontale sx su Focus ST: paraurti, faro, parafango e cofano; danno dichiarato e riparabile con buon margine.",
+  "controlli": [
+   "airbag",
+   "radiatori e ruota ant sx",
+   "longherone sx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 230404,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "griglia",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "griglia",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "faro",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "braccio sospensione post dx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio post dx",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "riserva airbag (non visibili)",
+    "low": 0,
+    "high": 2000
+   },
+   {
+    "label": "riserva lamierati",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 950,
+  "ricambi_max": 5000,
+  "guadagno_finale": 1588,
+  "nota": "Frontale contro muro e ruota posteriore dx piegata, motore sano: margine appena sopra soglia, dipende dagli airbag.",
+  "controlli": [
+   "airbag esplosi o no",
+   "assale posteriore dx",
+   "radiatori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207523,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafanghi_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "fari anteriori x2",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafanghi x2",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "airbag (riserva)",
+    "low": 700,
+    "high": 2000
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1750,
+  "ricambi_max": 5100,
+  "guadagno_finale": 1466,
+  "nota": "Frontale pesante ma prezzo bassissimo e motore rifatto: anche con riserva airbag e ossatura il margine supera la soglia.",
+  "controlli": [
+   "foto scarse: vedere l'auto dal vivo",
+   "airbag",
+   "longheroni"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210456,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari anteriori x2",
+    "low": 150,
+    "high": 600
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafanghi x2",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "airbag (riserva)",
+    "low": 700,
+    "high": 2000
+   },
+   {
+    "label": "lamierati/traversa frontale",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1620,
+  "ricambi_max": 4800,
+  "guadagno_finale": 1765,
+  "nota": "Frontale distrutto su i20 2022 con 25.000 km; con riserva airbag resta margine sopra soglia.",
+  "controlli": [
+   "airbag",
+   "longheroni"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210887,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "minigonna",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "lamierati fiancata posteriore sx",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "minigonna sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "airbag laterale/tendina (riserva)",
+    "low": 0,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 510,
+  "ricambi_max": 3150,
+  "guadagno_finale": 3399,
+  "nota": "Urto laterale sx su 500 Hybrid 2025: portiera e fiancata da rifare, danno contenuto e margine buono.",
+  "controlli": [
+   "montante B e sottoporta sx",
+   "airbag laterali",
+   "cerchio sx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 214988,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fanale posteriore sx",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "lamierati fiancata/pianale posteriore sx",
+    "low": 500,
+    "high": 1500
+   },
+   {
+    "label": "assale/sospensione post sx",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "cerchio post sx",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "scarico",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cerchio + braccio ant sx",
+    "low": 160,
+    "high": 550
+   }
+  ],
+  "ricambi_min": 1200,
+  "ricambi_max": 3600,
+  "guadagno_finale": 2937,
+  "nota": "Urto posteriore sx su Arkana 2023 con 14.000 km: fiancata e assale da rifare, margine sopra soglia.",
+  "controlli": [
+   "pianale e longherone posteriore sx",
+   "ruota anteriore sx e sterzo",
+   "airbag"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 133320,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "portiere",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "lamierati parafango posteriore sx",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "fanale posteriore sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "riserva danni non visibili (frontale)",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 460,
+  "ricambi_max": 1750,
+  "guadagno_finale": 3610,
+  "nota": "Danni di carrozzeria posteriore sx e strisciate laterali; senza descrizione, margine ampio anche con rivendita prudente per i 220.000 km.",
+  "controlli": [
+   "motore e cambio 9 marce (nessuna descrizione)",
+   "frontale non fotografato",
+   "airbag"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 8500
+ },
+ {
+  "id": 236986,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "airbag_frontali",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro anteriore sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2000
+   },
+   {
+    "label": "braccio/cerchio ant sx (riserva)",
+    "low": 100,
+    "high": 400
+   },
+   {
+    "label": "lamierati longherone sx",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1400,
+  "ricambi_max": 3950,
+  "guadagno_finale": 2575,
+  "nota": "Pandina 2025 con 7.000 km: frontale sx e airbag esplosi, radiatori buoni; pezzi economici e margine sopra soglia.",
+  "controlli": [
+   "longherone sx",
+   "sospensione ant sx",
+   "garanzia FIAT dopo sinistro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 213223,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "riserva staffe/sensori frontali",
+    "low": 50,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 270,
+  "ricambi_max": 700,
+  "guadagno_finale": 3160,
+  "nota": "Danno leggero solo davanti (cofano e paraurti) secondo il testo, dalle foto l'auto appare in ordine. Conviene anche con rivendita prudente, ma nel testo il prezzo indicato è 11.500 euro.",
+  "controlli": [
+   "danno frontale reale (foto attuali)",
+   "prezzo effettivo 10.500 o 11.500",
+   "traversa e radiatori",
+   "impianto GPL"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 14500
+ },
+ {
+  "id": 288169,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari anteriori xeno x2",
+    "low": 200,
+    "high": 800
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura frontale (traversa)",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva parti mancanti/meccanica",
+    "low": 300,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 1230,
+  "ricambi_max": 3550,
+  "guadagno_finale": 2210,
+  "nota": "Frontale danneggiato con fari e radiatori mancanti e traversa da rifare, abitacolo intatto. Prezzo bassissimo: anche con rivendita prudente il margine supera bene la soglia, ma va verificato che il motore ci sia e giri.",
+  "controlli": [
+   "presenza e funzionamento motore 3.0 TDI",
+   "parti già smontate",
+   "airbag non esplosi",
+   "longheroni anteriori",
+   "documenti per reimmatricolare"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 6500
+ },
+ {
+  "id": 208604,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ruota_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "longherone",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro anteriore sx",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "traversa frontale",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cerchio sx",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "braccio + montante + semiasse sx",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura (longherone sx)",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "riserva airbag",
+    "low": 600,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1720,
+  "ricambi_max": 4250,
+  "guadagno_finale": 2133,
+  "nota": "Urto frontale sinistro con ruota spostata, parafango e faro distrutti e probabile longherone sx da tirare. Con soli 40.000 km il valore resta buono e il margine supera la soglia anche con riserva airbag.",
+  "controlli": [
+   "airbag esplosi o no",
+   "longherone sx e attacchi sospensione",
+   "geometria e scatola sterzo",
+   "motore e cambio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 206778,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_frontale",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "faro anteriore dx",
+    "low": 60,
+    "high": 120
+   },
+   {
+    "label": "parafango dx",
+    "low": 50,
+    "high": 120
+   },
+   {
+    "label": "cofano",
+    "low": 80,
+    "high": 180
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "traversa frontale",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "braccio + montante + semiasse dx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "cerchio dx",
+    "low": 60,
+    "high": 120
+   },
+   {
+    "label": "lamierati/ossatura frontale dx",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "riserva airbag",
+    "low": 500,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1460,
+  "ricambi_max": 3790,
+  "guadagno_finale": 1770,
+  "nota": "Urto frontale destro con faro, parafango e sospensione dx da rifare e possibile ossatura. A 500 euro, motore appena sostituito, il margine resta sopra soglia anche con riserva airbag e rivendita prudente.",
+  "controlli": [
+   "km reali della scocca (55.000 sono del motore)",
+   "airbag",
+   "longherone dx",
+   "impianto GPL",
+   "documenti del motore sostituito"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 6200
+ },
+ {
+  "id": 210133,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "griglia",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "fari anteriori x2",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "griglia",
+    "low": 40,
+    "high": 80
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "traversa frontale",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "riserva lamierati nascosti",
+    "low": 200,
+    "high": 500
+   },
+   {
+    "label": "riserva airbag",
+    "low": 600,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1520,
+  "ricambi_max": 3930,
+  "guadagno_finale": 2392,
+  "nota": "Frontale danneggiato (cofano accartocciato, paraurti, fari), fiancate e retro integri. Anche con riserva airbag e ossatura il margine supera la soglia, ma c'è una sola foto.",
+  "controlli": [
+   "altre foto del frontale",
+   "airbag",
+   "traversa e longheroni",
+   "radiatori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207113,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "ossatura_anteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro anteriore dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "luce diurna/fendinebbia dx",
+    "low": 40,
+    "high": 150
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "riserva sospensione anteriore dx",
+    "low": 80,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 840,
+  "ricambi_max": 3500,
+  "guadagno_finale": 2794,
+  "nota": "Frontale destro distrutto (paraurti, faro, parafango, cofano, probabile traversa e lamierati). A 1.200 € il margine resta buono anche con riserva per ossatura e sospensione.",
+  "controlli": [
+   "longherone e traversa anteriore dx",
+   "airbag e spie in quadro",
+   "braccio/montante dx e convergenza",
+   "impianto GPL e bombola",
+   "radiatori e motore in moto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207084,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "pannello_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "montante_parabrezza",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "pannello frontale",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "fari anteriori",
+    "low": 60,
+    "high": 300
+   },
+   {
+    "label": "radiatore",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "portiera sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "pannelli laterali sx",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura cella tridion",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "riserva airbag",
+    "low": 0,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 960,
+  "ricambi_max": 4250,
+  "guadagno_finale": 1610,
+  "nota": "Smart con frontale, portiera sx e parabrezza sfondato; il telaio del parabrezza sembra piegato, quindi c'è una riserva per la cella. Ricambi Smart economici: con valore prudente il margine resta sopra soglia.",
+  "controlli": [
+   "cella tridion e montanti parabrezza a dima",
+   "airbag esplosi o integri",
+   "motore in moto e cambio",
+   "telaio sotto il frontale"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7000
+ },
+ {
+  "id": 208329,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fendinebbia",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "sensori_parcheggio",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "braccio_sospensione",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "fendinebbia dx",
+    "low": 30,
+    "high": 80
+   },
+   {
+    "label": "sensori parcheggio",
+    "low": 40,
+    "high": 120
+   },
+   {
+    "label": "braccio oscillante dx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "riserva montante/ammortizzatore dx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "faro dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "riserva radiatori",
+    "low": 0,
+    "high": 400
+   },
+   {
+    "label": "traversa/supporti",
+    "low": 50,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 480,
+  "ricambi_max": 2200,
+  "guadagno_finale": 4002,
+  "nota": "Urto anteriore destro: paraurti, parafango, fendinebbia, sensori e braccio piegato, airbag integri. Danno da pezzi e il margine è ampio.",
+  "controlli": [
+   "ruota dx e semiasse",
+   "scatola sterzo",
+   "longherone dx",
+   "radiatori",
+   "cambio automatico e trazione integrale"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207858,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "airbag_volante",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva faro sx",
+    "low": 60,
+    "high": 350
+   }
+  ],
+  "ricambi_min": 1050,
+  "ricambi_max": 3750,
+  "guadagno_finale": 1610,
+  "nota": "Danni di carrozzeria anteriore sx e parabrezza rotto; in foto il volante sembra senza airbag, contrariamente a quanto scritto. Con riserva airbag e valore prudente (auto modificata) il margine resta sopra soglia.",
+  "controlli": [
+   "airbag volante e passeggero (foto in contrasto col testo)",
+   "centralina e scarico modificati: rimettere di serie per la revisione",
+   "longherone anteriore sx",
+   "cambio S tronic"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 8000
+ },
+ {
+  "id": 207660,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "interni_cruscotto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "fari anteriori",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "radiatore",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "griglia/supporti",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 1000
+   },
+   {
+    "label": "riserva interni",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1080,
+  "ricambi_max": 3150,
+  "guadagno_finale": 3020,
+  "nota": "Microcar con frontale distrutto (paraurti, fari, cofano, radiatore) e interni smontati, posteriore intatto. Ricambi Ligier più cari ma il margine resta ampio.",
+  "controlli": [
+   "telaio anteriore",
+   "motore DCI in moto",
+   "interni e cruscotto completi",
+   "documenti (anno 2019/2020)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208324,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_anteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa/rinforzo",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 3250,
+  "guadagno_finale": 2913,
+  "nota": "Frontale distrutto con radiatori, faro e traversa, airbag integri e resto dell'auto sano. Pochi km e buon margine anche con riserva per i lamierati.",
+  "controlli": [
+   "longherone anteriore sx",
+   "airbag e spie",
+   "motore e supporti",
+   "sterzo e sospensione sx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209198,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portellone",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "lunotto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fanali_posteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portellone",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "lunotto",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fanali posteriori",
+    "low": 160,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura posteriore (pannello e fiancate)",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 840,
+  "ricambi_max": 2850,
+  "guadagno_finale": 3307,
+  "nota": "Urto posteriore forte: portellone, paraurti, lunotto e pannello posteriore schiacciati, fiancate coinvolte. Davanti sana e airbag integri: con i lamierati il margine resta buono.",
+  "controlli": [
+   "pannello posteriore e longheroni posteriori",
+   "fiancate e pavimento bagagliaio",
+   "sensori e telecamera posteriori"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 206530,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "supporto_motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "faro dx",
+    "low": 60,
+    "high": 350
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "supporto motore",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "traversa/ossatura frontale (riserva)",
+    "low": 100,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 570,
+  "ricambi_max": 2200,
+  "guadagno_finale": 3866,
+  "nota": "Urto anteriore destro: paraurti, faro, parafango, cofano, radiatori e supporto motore; airbag apparentemente integri. A 600 € il margine è molto ampio.",
+  "controlli": [
+   "longherone anteriore dx",
+   "airbag",
+   "impianto GPL",
+   "motore in moto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 230355,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "scatola_sterzo",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "scatola sterzo",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "braccio+montante",
+    "low": 160,
+    "high": 600
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva culla/telaio",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 580,
+  "ricambi_max": 2400,
+  "guadagno_finale": 3660,
+  "nota": "Urto alla ruota anteriore con scatola guida e sospensione rotte, carrozzeria poco toccata. Sono pezzi e il margine è ampio.",
+  "controlli": [
+   "culla/telaio anteriore e duomo",
+   "semiasse",
+   "longherone",
+   "lato del danno (testo dx, foto sx)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210208,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "pannello laterale posteriore sx",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "portiera sx / cerniere",
+    "low": 100,
+    "high": 400
+   },
+   {
+    "label": "griglia/paraurti anteriore",
+    "low": 100,
+    "high": 400
+   },
+   {
+    "label": "riserva telaietto montante",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 700,
+  "ricambi_max": 2000,
+  "guadagno_finale": 1860,
+  "nota": "Urto sul fianco sinistro posteriore con pannello strappato e griglia anteriore mancante; elettrica 2024 quasi nuova, conviene anche con rivendita prudente, ma i ricambi XEV sono rari.",
+  "controlli": [
+   "reperibilità ricambi XEV",
+   "stato batteria trazione e telaio vicino al montante",
+   "airbag e spie"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 9000
+ },
+ {
+  "id": 269208,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro dx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "braccio/montante dx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "riserva lamierino/traverse",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 610,
+  "ricambi_max": 1700,
+  "guadagno_finale": 4289,
+  "nota": "Urto dietro e sull'anteriore destro (paraurti, faro, parafango, forse sospensione), airbag integri: margine buono.",
+  "controlli": [
+   "anno reale (BlueHDi = 2015+, non 2008)",
+   "geometria ruota anteriore dx",
+   "traversa posteriore e pianale bagagliaio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 210176,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1000,
+    "high": 2000
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "faro",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "riserva",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 1670,
+  "ricambi_max": 3600,
+  "guadagno_finale": 2342,
+  "nota": "208 GTi con 51.000 km, airbag esplosi e parabrezza rotto ma frontale poco danneggiato: con kit airbag rimane buon margine.",
+  "controlli": [
+   "danni nascosti sotto il paraurti",
+   "traversa e radiatori",
+   "centralina airbag e cinture"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209374,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1200,
+    "high": 2500
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "riserva",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1620,
+  "ricambi_max": 3550,
+  "guadagno_finale": 2388,
+  "nota": "Airbag esplosi (volante, tendina, cruscotto) con carrozzeria quasi integra; V60 R-design ancora richiesta, margine c'è se l'auto è venduta intera.",
+  "controlli": [
+   "che sia venduta intera e non già smontata (titolo 'ricambi')",
+   "danno frontale reale e traversa",
+   "plancia passeggero"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 206849,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 250
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "riserva traversa",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 520,
+  "ricambi_max": 1550,
+  "guadagno_finale": 3010,
+  "nota": "Frontale sinistro (cofano, faro, paraurti, parafango) da rifare; con 300.000 km uso rivendita prudente ma il prezzo basso lascia margine.",
+  "controlli": [
+   "airbag",
+   "longherone sx",
+   "radiatori e ventola"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 6000
+ },
+ {
+  "id": 206801,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "radiatore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "semiasse",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "radiatore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "semiasse",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "riserva braccio sospensione",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 360,
+  "ricambi_max": 950,
+  "guadagno_finale": 2610,
+  "nota": "Urto basso: radiatore e semiasse da cambiare, paraurti abbassato; pezzi economici e prezzo basso, conviene anche con rivendita prudente.",
+  "controlli": [
+   "sottotelaio e braccio",
+   "motore surriscaldato?"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 5000
+ },
+ {
+  "id": 207672,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "portiere sx x2",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "traversa",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "riserva",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 900,
+  "ricambi_max": 2150,
+  "guadagno_finale": 3210,
+  "nota": "Frontale sinistro e porte sinistre ammaccate; Polo economica da ricambiare, margine buono.",
+  "controlli": [
+   "airbag",
+   "versione reale (foto 5 porte)",
+   "longherone sx"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7500
+ },
+ {
+  "id": 219647,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari x2",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "radiatori",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "parafanghi",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "portiera post sx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "riserva",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 1300,
+  "ricambi_max": 3350,
+  "guadagno_finale": 2559,
+  "nota": "Frontale distrutto (radiatori, traversa, fari) più del 'solo paraurti' descritto; airbag sembrano integri, il margine resta sopra soglia.",
+  "controlli": [
+   "airbag e cinture",
+   "longheroni",
+   "motore e AC dopo l'urto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 219683,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "fari x2",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "traversa",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "riserva",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 760,
+  "ricambi_max": 2150,
+  "guadagno_finale": 3670,
+  "nota": "Frontale da rifare (paraurti, cofano, fari, radiatori) con airbag non esplosi: Polo 2019, margine buono.",
+  "controlli": [
+   "longheroni",
+   "radiatori e ventole",
+   "airbag spie"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207993,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "fari x2 LED",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "parafango sx",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "montante/braccio/semiasse",
+    "low": 250,
+    "high": 500
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "portiera ant sx",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 500,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 1810,
+  "ricambi_max": 4050,
+  "guadagno_finale": 1726,
+  "nota": "Frontale sinistro pesante con ruota spinta e porte sinistre strisciate, probabile longherone; motore intatto e prezzo basso danno margine stretto ma sopra soglia.",
+  "controlli": [
+   "airbag (non citati)",
+   "longherone sx e montante A",
+   "geometria"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208381,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ponte_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "fanale dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "ponte posteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "portellone",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "lamierati/ossatura posteriore",
+    "low": 500,
+    "high": 1000
+   },
+   {
+    "label": "riserva",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1250,
+  "ricambi_max": 2800,
+  "guadagno_finale": 2958,
+  "nota": "Spigolo posteriore destro con parafango e ponte posteriore danneggiati, anteriore leggero; ibrida tagliandata, margine buono.",
+  "controlli": [
+   "pianale bagagliaio e longherone post",
+   "batteria ibrida e cavi",
+   "airbag"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 289111,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "riserva sospensione/airbag",
+    "low": 200,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 620,
+  "ricambi_max": 1700,
+  "guadagno_finale": 4014,
+  "nota": "Frontale sinistro (cofano, parafango, faro) danneggiato; prezzo molto basso, margine buono se l'auto è completa.",
+  "controlli": [
+   "che non sia già smontata (venduta 'per pezzi')",
+   "motore e cambio ETG6",
+   "airbag"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207673,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "fari x2",
+    "low": 120,
+    "high": 500
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa/ossatura frontale",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 630,
+  "ricambi_max": 1900,
+  "guadagno_finale": 3795,
+  "nota": "Frontale da rifare (paraurti, fari, cofano, radiatori), abitacolo e motore integri. Margine ampio sopra soglia.",
+  "controlli": [
+   "airbag non esplosi e spie",
+   "longheroni anteriori dritti",
+   "motore e S tronic in moto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 128823,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "faro dx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "riserva fiancata/porte",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 360,
+  "ricambi_max": 950,
+  "guadagno_finale": 2710,
+  "nota": "Danni leggeri sull'angolo anteriore destro e righe sulla fiancata. Con 300.000 km uso rivendita prudente, il margine resta buono.",
+  "controlli": [
+   "stato cambio EAT6 e motore a 300.000 km",
+   "danno sotto il paraurti dx",
+   "storia manutenzione"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 5000
+ },
+ {
+  "id": 208404,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "cruscotto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "vaschetta_tergi",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "tirante_sospensione",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1200,
+    "high": 2000
+   },
+   {
+    "label": "cruscotto",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "faro sx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "vaschetta tergi",
+    "low": 20,
+    "high": 50
+   },
+   {
+    "label": "tirante/braccio sospensione",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 1960,
+  "ricambi_max": 3700,
+  "guadagno_finale": 1934,
+  "nota": "Urto anteriore sinistro leggero ma airbag esplosi: serve kit airbag, cruscotto e parabrezza. Il margine resta sopra soglia.",
+  "controlli": [
+   "longherone anteriore sx",
+   "geometria sterzo",
+   "codici airbag/centralina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209279,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "radiatore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "ponte/sospensione anteriore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "riserva ossatura/telaio",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 710,
+  "ricambi_max": 1600,
+  "guadagno_finale": 4012,
+  "nota": "Frontale sinistro e ruota anteriore danneggiati, il Jimny ha telaio a longheroni da verificare. Valore alto, margine buono.",
+  "controlli": [
+   "telaio a longheroni dritto",
+   "ponte anteriore",
+   "ricambi già presenti"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 223342,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "braccio/montante sospensione",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "fari",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "radiatore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "riserva frontale non visibile",
+    "low": 300,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 690,
+  "ricambi_max": 1750,
+  "guadagno_finale": 3110,
+  "nota": "Frontale danneggiato con sospensione anteriore rotta, motore posteriore non toccato. Prezzo basso, margine ampio anche con riserva.",
+  "controlli": [
+   "frontale non fotografato",
+   "airbag",
+   "perché non marciante"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 6000
+ },
+ {
+  "id": 219350,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "fari x2",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "traversa/riserva",
+    "low": 100,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 630,
+  "ricambi_max": 1850,
+  "guadagno_finale": 3742,
+  "nota": "Frontale da rifare (paraurti, fari, radiatori), auto marciante. Foto piccole quindi riserva, margine comunque ampio.",
+  "controlli": [
+   "airbag",
+   "longheroni",
+   "foto migliori del danno"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 136158,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "fari x2",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "parafanghi x2",
+    "low": 120,
+    "high": 240
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "braccio/montante sx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "riserva airbag",
+    "low": 300,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 1310,
+  "ricambi_max": 2890,
+  "guadagno_finale": 2679,
+  "nota": "Frontale pesante con ruota anteriore sinistra piegata e ossatura frontale toccata. Auto recente e con pochi km, margine sopra soglia.",
+  "controlli": [
+   "longherone sx",
+   "airbag",
+   "sterzo/semiasse sx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208291,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "fari x2",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "parafango",
+    "low": 60,
+    "high": 120
+   },
+   {
+    "label": "riserva airbag",
+    "low": 700,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1480,
+  "ricambi_max": 3220,
+  "guadagno_finale": 2279,
+  "nota": "Frontale distrutto con ossatura anteriore da rifare; auto recente con 28.000 km. Anche con riserva airbag il margine supera la soglia.",
+  "controlli": [
+   "airbag esplosi?",
+   "longheroni",
+   "cambio ASG"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 219849,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera anteriore sx",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "specchietto",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "riserva",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 540,
+  "ricambi_max": 1200,
+  "guadagno_finale": 4297,
+  "nota": "Danno laterale anteriore sinistro su porta e parafango, auto marciante. Margine ampio.",
+  "controlli": [
+   "venditore: orari ufficio, verificare se è un commerciante",
+   "montante A sx",
+   "airbag laterali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207698,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari x2",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "traversa/ossatura frontale",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "parafanghi",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "riserva",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1070,
+  "ricambi_max": 2550,
+  "guadagno_finale": 2944,
+  "nota": "Frontale da rifare (cofano, paraurti, fari, radiatori), airbag non esplosi. Margine buono.",
+  "controlli": [
+   "longheroni anteriori",
+   "motore dopo urto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 208140,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "fari x2",
+    "low": 200,
+    "high": 500
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "portiera sx",
+    "low": 200,
+    "high": 500
+   },
+   {
+    "label": "radiatore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "riserva telaio/frontale",
+    "low": 400,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1200,
+  "ricambi_max": 2600,
+  "guadagno_finale": 2060,
+  "nota": "Frontale e porta sinistra danneggiati su minicar; ricambi Ligier costosi, ma con rivendita prudente il margine resta sopra soglia.",
+  "controlli": [
+   "telaio in alluminio dritto",
+   "disponibilità ricambi Ligier"
+  ],
+  "aggiorna": true,
+  "rivendita_prudente": 7500
+ },
+ {
+  "id": 219467,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "faro dx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "sospensione anteriore dx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1200,
+    "high": 2000
+   },
+   {
+    "label": "riserva",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1910,
+  "ricambi_max": 3700,
+  "guadagno_finale": 1738,
+  "nota": "Urto anteriore destro con airbag esplosi e ruota dx da verificare. Margine poco sopra soglia.",
+  "controlli": [
+   "versione reale (1.6 TDI vs 1.2 TSI)",
+   "longherone dx",
+   "airbag tendina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 132427,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera sx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "riserva lamierato/vernice",
+    "low": 50,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 500,
+  "guadagno_finale": 4931,
+  "nota": "Solo ammaccatura sulla fiancata sinistra, auto marciante. Margine ampio.",
+  "controlli": [
+   "cambio dualogic",
+   "motivo del prezzo basso"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 206719,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari x2",
+    "low": 200,
+    "high": 700
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "radiatori",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "ossatura frontale",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "riserva airbag",
+    "low": 800,
+    "high": 2000
+   }
+  ],
+  "ricambi_min": 1650,
+  "ricambi_max": 4250,
+  "guadagno_finale": 1161,
+  "nota": "Danno frontale non fotografato: messa riserva prudente anche per airbag; a 900 € il margine resta sopra soglia.",
+  "controlli": [
+   "vedere il frontale prima di trattare",
+   "airbag",
+   "longheroni",
+   "cambio multitronic"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 209762,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro dx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "radiatori",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "sospensione anteriore dx",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "riserva ossatura",
+    "low": 300,
+    "high": 600
+   },
+   {
+    "label": "riserva airbag",
+    "low": 400,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1490,
+  "ricambi_max": 3200,
+  "guadagno_finale": 2208,
+  "nota": "Frontale destro con ruota dx toccata, abitacolo integro. Margine sopra soglia anche con riserve.",
+  "controlli": [
+   "airbag",
+   "longherone dx",
+   "geometria"
+  ],
+  "aggiorna": true
  }
 ]

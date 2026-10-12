@@ -119,7 +119,7 @@ function filtered(over){
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
-    .filter(c => !s.zona || s.zona === "tutte" || (c.area || "milano") === s.zona)
+    .filter(c => inc || !s.zona || s.zona === "tutte" || (c.area || "milano") === s.zona)   // incidentate: tutta Italia
     .filter(c => botMatch(c, s.bot))
     .filter(c => { if (!S.pos || !s.raggio) return true; const d = distKm(c); return d == null || d <= s.raggio; })
     .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax));
