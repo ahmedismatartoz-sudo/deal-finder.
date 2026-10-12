@@ -358,8 +358,28 @@ class SubitoCollector(Collector):
                 break
         return keys
 
+    def _trova_regione(self, wanted: set, lim: int) -> int | None:
+        """Codice regione di Subito non noto (es. Lazio): si prova 1..21 e si tiene quello con annunci delle province volute."""
+        for reg in range(1, 22):
+            r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                params={"c": 2, "r": reg, "t": "s", "lim": lim, "start": 0, "sort": "datedesc"})
+            self.pause()
+            if r.status_code != 200:
+                continue
+            for it in (r.json() or {}).get("ads") or []:
+                sn = (((it.get("geo") or {}).get("city") or {}).get("short_name") or "").upper()
+                if sn in wanted:
+                    log.info("subito: codice regione trovato %s per %s", reg, sorted(wanted))
+                    return reg
+        return None
+
     def _deep(self, query: dict, wanted: set, region: int, lim: int) -> Iterator[Listing]:
         keys = self._province_keys(region, wanted, lim)
+        if not keys:
+            reg = self._trova_regione(wanted, lim)
+            if reg and reg != region:
+                region = reg
+                keys = self._province_keys(region, wanted, lim)
         log.info("subito raccolta profonda: codici province %s", keys)
         missing = wanted - set(keys)
         if missing:
