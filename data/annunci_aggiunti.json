@@ -1,0 +1,49 @@
+[
+ {
+  "nota_interna": "Segnalata da Isma il 12/10/2026 (Facebook Marketplace)",
+  "fino_al": "2026-10-26",
+  "foto": [
+   "fb1498516428743059-1.jpg",
+   "fb1498516428743059-2.jpg",
+   "fb1498516428743059-3.jpg",
+   "fb1498516428743059-4.jpg",
+   "fb1498516428743059-5.jpg"
+  ],
+  "annuncio": {
+   "source": "facebook",
+   "source_id": "1498516428743059",
+   "url": "https://www.facebook.com/marketplace/item/1498516428743059/",
+   "title": "Mercedes CLK 220 CDI Coupé automatica",
+   "description": "Vendo per export: c'è un fermo amministrativo che, se lo si vuole pagare, costa 2.400 €.\nMercedes CLK 220 CDI coupé, anno 2008, 2.2 diesel, cambio automatico, 140.000 km. Navigatore, doppia chiave, sensori di parcheggio, interni in pelle, cerchi in lega. In buone condizioni e funzionante. Prezzo 2.200 €, poco trattabile.",
+   "make": "mercedes",
+   "model": "clk",
+   "version_raw": "CLK 220 CDI Coupé",
+   "year": 2008,
+   "mileage_km": 140000,
+   "fuel": "diesel",
+   "gearbox": "automatico",
+   "price_eur": 2200,
+   "seller_type": "privato"
+  },
+  "analisi": {
+   "esito": "da_verificare",
+   "danno": "nessuno",
+   "danni": [],
+   "ricambi": [
+    {
+     "label": "Fermo amministrativo da pagare per poter fare il passaggio",
+     "low": 2400,
+     "high": 2400
+    }
+   ],
+   "ricambi_min": 2400,
+   "ricambi_max": 2400,
+   "nota": "Foto: carrozzeria argento in ordine, cerchi neri aftermarket, nessun danno visibile. C'è un fermo amministrativo di 2.400 €: senza pagarlo l'auto non si può intestare in Italia (il venditore la propone per l'export). Il guadagno tiene già conto del fermo.",
+   "controlli": [
+    "Fermo amministrativo: farsi dare la visura PRA e l'importo esatto da pagare all'ente",
+    "Chi paga il fermo e quando: solo con ricevuta prima del passaggio",
+    "Città dell'auto da chiedere al venditore"
+   ]
+  }
+ }
+]
