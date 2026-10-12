@@ -43,6 +43,25 @@ def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
     return riv - it["prezzo"] - sum(COSTI_FISSI.values()) - it["rip_hi"]
 
 
+# Prezzo di mercato "realistico" (prudente) mostrato ai commercianti:
+#  - meno annunci simili = stima meno sicura = mercato più basso (−5% / −8% / −12%);
+#  - il mercato non può superare prezzo × 1,45 + 1.200 € (niente guadagni "folli" non giustificati);
+#  - se la stima grezza è oltre prezzo × 2 + 2.500 € l'annuncio non si mostra: dati quasi certamente sbagliati o truffa.
+REALISMO = os.environ.get("MERCATO_REALISTICO", "1") == "1"
+
+
+def mercato_realistico(mercato: float, prezzo: int, confronti: int | None) -> int:
+    if not REALISMO:
+        return int(round(mercato))
+    n = confronti or 0
+    f = 0.95 if n >= 10 else 0.92 if n >= 5 else 0.88
+    return int(round(min(mercato * f, prezzo * 1.45 + 1200)))
+
+
+def troppo_bello(mercato: float, prezzo: int) -> bool:
+    return REALISMO and mercato > prezzo * 2 + 2500
+
+
 # auto più vecchie di questo anno non si propongono
 ANNO_MINIMO = int(os.environ.get("ANNO_MINIMO", "2007"))
 
@@ -266,7 +285,12 @@ def item(r: dict) -> dict | None:
         lo = hi = 0
     lo = int(lo if lo is not None else hi)
     n_ph = int(r.get("n_photos") or 0)
+    if troppo_bello(float(mercato), int(price)):
+        return None                           # stima di mercato non credibile: meglio non mostrarla
+    grezzo = int(round(float(mercato)))
+    mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
     return {
+        "mercato_grezzo": grezzo,
         "id": r["id"],
         "marca": make_name(r.get("make")) or "Altro",
         "nome": nome(r),

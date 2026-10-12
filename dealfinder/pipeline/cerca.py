@@ -41,8 +41,43 @@ def sito(area: str = "milano") -> list[dict]:
     return items
 
 
+def audit(min_guadagno: int = 2500, rapporto: float = 1.6) -> int:
+    """Controllo delle auto sul sito con guadagno alto o mercato molto sopra il prezzo: per ognuna
+    AUDIT {json} (dati, descrizione, mercato grezzo e realistico) e AUDITFOTO (foglio 4 foto)."""
+    with connect() as conn:
+        rows = conn.execute(scovo.LIST_SQL + " LIMIT 5000", {"me": 0}).fetchall()
+        n = 0
+        for r in rows:
+            it = scovo.item(r)
+            if not it or not scovo.abbastanza(it):
+                continue
+            g = scovo.guadagno_minimo(it)
+            if g < min_guadagno and it["mercato_grezzo"] < it["prezzo"] * rapporto:
+                continue
+            d = conn.execute("SELECT url, description, version_raw FROM listings WHERE id=%s", (r["id"],)).fetchone()
+            rec = {"id": it["id"], "nome": it["nome"], "versione": d["version_raw"], "anno": it["anno"], "km": it["km"],
+                   "carburante": it["carb"], "cambio": it["cambio"], "zona": it["zona"], "fonte": it["fonte"],
+                   "url": d["url"], "descrizione": (d["description"] or "")[:800], "prezzo": it["prezzo"],
+                   "mercato_grezzo": it["mercato_grezzo"], "mercato": it["mercato"], "confronti": it["confronti"],
+                   "ricambi_attuali": [it["rip_lo"], it["rip_hi"]], "guadagno_sito": g,
+                   "incidentata": it["incidentata"], "da_verificare": it["verificare"]}
+            log.info("AUDIT %s", json.dumps(rec, ensure_ascii=False, default=str))
+            imgs = [c for c in (foto.fetch_one(conn, it["id"], p) for p in range(min(it["n_foto"], 4))) if c]
+            sheet = foglio(imgs, f"{it['id']} {it['nome'][:40]} {it['anno']} {it['prezzo']}e")
+            if sheet:
+                b64 = base64.b64encode(sheet).decode()
+                parts = [b64[i:i + PEZZO] for i in range(0, len(b64), PEZZO)]
+                for k, p in enumerate(parts, 1):
+                    log.info("AUDITFOTO %s %d/%d %s", it["id"], k, len(parts), p)
+            n += 1
+    log.info("AUDIT_FINE %d", n)
+    return n
+
+
 def run(q: dict | None = None) -> list[dict]:
     q = q or json.loads(os.environ.get("CERCA_JSON") or "{}")
+    if q.get("audit"):
+        return audit(int(q.get("min_guadagno") or 2500), float(q.get("rapporto") or 1.6))
     if q.get("sito"):
         return sito(q.get("zona") or "milano")
     marca, modello = (q.get("marca") or "").lower(), (q.get("modello") or "").lower()

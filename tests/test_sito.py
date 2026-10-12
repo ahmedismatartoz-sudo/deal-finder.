@@ -13,19 +13,25 @@ def _row(**k):
 
 
 def test_item_compatto():
-    it = scovo.item(_row())
+    # mercato 14.369 € per un'auto a 3.000 €: stima non credibile, non si mostra
+    assert scovo.item(_row()) is None
+    r = _row(price_eur=9000)
+    it = scovo.item(r)
     assert it["nome"] == "Mazda MX-5 Roadster 2.0"
-    assert (it["prezzo"], it["mercato"], it["rip_lo"], it["rip_hi"]) == (3000, 14369, 860, 2030)
+    # mercato realistico: sconto per pochi confronti e tetto prezzo × 1,45 + 1.200
+    m = scovo.mercato_realistico(14369, 9000, r.get("n_comparables"))
+    assert m <= 9000 * 1.45 + 1200 and m < 14369
+    assert (it["prezzo"], it["mercato"], it["rip_lo"], it["rip_hi"], it["mercato_grezzo"]) == (9000, m, 860, 2030, 14369)
     assert it["zona"] == "Settala (MI)" and it["foto"].startswith("/api/foto/1/0?s=")
     # guadagno al 10% sotto mercato, come lo calcola il telefono
     assert scovo.SCONTO_DEFAULT == 10
     riv = round(it["mercato"] * 0.9)
-    assert riv - it["prezzo"] - 140 - it["rip_hi"] == 7762
+    assert riv - it["prezzo"] - 140 - it["rip_hi"] == scovo.guadagno_minimo(it)
 
 
 def test_item_scarta_danni_senza_stima():
     assert scovo.item(_row(parts_cost_low=None, parts_cost_high=None)) is None
-    sana = scovo.item(_row(damage_class="nessuno", parts_cost_low=None, parts_cost_high=None))
+    sana = scovo.item(_row(damage_class="nessuno", parts_cost_low=None, parts_cost_high=None, price_eur=9000))
     assert sana["rip_lo"] == sana["rip_hi"] == 0
     assert scovo.item(_row(private_median=None, resale_median_private=None, resale_median=None)) is None
 
