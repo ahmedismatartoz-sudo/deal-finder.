@@ -66,12 +66,23 @@ def troppo_bello(mercato: float, prezzo: int) -> bool:
 ANNO_MINIMO = int(os.environ.get("ANNO_MINIMO", "2007"))
 
 
+# Sul sito restano le auto che superano la soglia con la stima di mercato di base (come prima del 12/10),
+# ma i numeri mostrati sono quelli prudenti (mercato realistico o rivendita del controllo a mano).
+# Il guadagno mostrato deve comunque essere almeno GUADAGNO_MOSTRATO_MINIMO (500 €).
+MIN_MOSTRATO = int(os.environ.get("GUADAGNO_MOSTRATO_MINIMO", "500"))
+
+
 def abbastanza(it: dict | None) -> bool:
     if not it:
         return False
     if it.get("anno") and it["anno"] < ANNO_MINIMO:
         return False
-    return guadagno_minimo(it) >= soglia(it["prezzo"])
+    if guadagno_minimo(it) < MIN_MOSTRATO:
+        return False
+    if it.get("soglia_libera"):            # riammessa dopo il controllo a mano (audit a2): margini già abbassati
+        return True
+    base = dict(it, mercato=it.get("mercato_base") or it["mercato"])
+    return guadagno_minimo(base) >= soglia(it["prezzo"])
 
 LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
@@ -286,13 +297,16 @@ def item(r: dict) -> dict | None:
     lo = int(lo if lo is not None else hi)
     n_ph = int(r.get("n_photos") or 0)
     grezzo = int(round(float(mercato)))
-    if "-a1" not in (r.get("engine_version") or ""):
-        # stima automatica: si rende prudente. Le auto ricontrollate a mano (audit) hanno già la rivendita realistica.
-        if troppo_bello(float(mercato), int(price)):
-            return None                       # stima di mercato non credibile: meglio non mostrarla
+    ev = r.get("engine_version") or ""
+    audit = "-a1" in ev or "-a2" in ev
+    if not audit:
+        # stima automatica: si mostra prudente (anche quando sembra troppo bella: il mercato viene limitato)
         mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
     return {
         "mercato_grezzo": grezzo,
+        "mercato_base": grezzo,
+        "soglia_libera": "-a2" in ev,
+        "soglia_min": MIN_MOSTRATO,
         "id": r["id"],
         "marca": make_name(r.get("make")) or "Altro",
         "nome": nome(r),

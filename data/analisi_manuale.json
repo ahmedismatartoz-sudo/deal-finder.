@@ -78133,7 +78133,7 @@
  },
  {
   "id": 72004,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78142,10 +78142,10 @@
   "rivendita_prudente": 22000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "TT Roadster 2019 con 160.000 km è di nicchia, vale circa 22.000 €; una sola foto scura e guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 22.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 19419,
@@ -78169,7 +78169,7 @@
  },
  {
   "id": 9123,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78178,10 +78178,10 @@
   "rivendita_prudente": 22000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "X5 F15 25d del 2016 vale realisticamente 22.000 €, non 28.000: guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 22.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 127216,
@@ -78204,7 +78204,7 @@
  },
  {
   "id": 222478,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "Faro anteriore sinistro LED",
@@ -78233,14 +78233,14 @@
   "rivendita_prudente": 21500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "In foto è una Gran Coupé, non una Coupé; con fiancata graffiata, bozza sul tetto e faro rotto si rivende sui 21.500 € e i lavori mangiano il margine. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 21.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 120154,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78249,10 +78249,10 @@
   "rivendita_prudente": 18000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "XC90 T8 con 250.000 km: batteria ibrida e meccanica a rischio, vale circa 18.000 €; descrizione vaga, guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 18.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 14503,
@@ -78373,7 +78373,7 @@
  },
  {
   "id": 269081,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "Parafango e porta anteriore destra"
@@ -78390,10 +78390,10 @@
   "rivendita_prudente": 16000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "A7 con 215.000 km, motore cambiato, botta laterale e modifiche estetiche (griglia RS): si rivende solo sui 16.000 € e il margine va sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 16.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 9771,
@@ -78453,7 +78453,7 @@
  },
  {
   "id": 38700,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78462,10 +78462,10 @@
   "rivendita_prudente": 22000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Q3 35 TFSI 2021 con 145.000 km vale circa 22.000 €: guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 22.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 18600,
@@ -78489,7 +78489,7 @@
  },
  {
   "id": 18364,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78498,10 +78498,10 @@
   "rivendita_prudente": 12000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "In foto è un A6 pre-restyling (circa 2011-2014), non 2016: probabile Euro 5 con 190.000 km, vale sui 12.000 €. Dati che non tornano e margine sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 12.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 124430,
@@ -78524,7 +78524,7 @@
  },
  {
   "id": 40151,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78533,10 +78533,10 @@
   "rivendita_prudente": 12500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 2360,
-  "nota": "In foto e nel testo è una Mini Clubman Cooper normale, non una John Cooper Works: vale circa 12.500 € e i dati non tornano. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 12.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 66256,
@@ -78677,7 +78677,7 @@
  },
  {
   "id": 64600,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78686,10 +78686,10 @@
   "rivendita_prudente": 14000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Una 730d del 2015 con 260.000 km si vende a fatica e non oltre i 14.000 €. Il guadagno resta sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 14.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 103252,
@@ -78752,7 +78752,7 @@
  },
  {
   "id": 119693,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78761,10 +78761,10 @@
   "rivendita_prudente": 12500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "La E 220 CDI Coupé è prodotta nel 2011, è un diesel Euro 5 con cambio manuale e si rivende sui 12.500 €. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 12.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 40530,
@@ -78812,7 +78812,7 @@
  },
  {
   "id": 157035,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78821,10 +78821,10 @@
   "rivendita_prudente": 11000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Una 420d Gran Coupé del 2017 con 270.000 km si rivende sui 11.000 €. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 11.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 27806,
@@ -78864,7 +78864,7 @@
  },
  {
   "id": 44201,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -78879,10 +78879,10 @@
   "rivendita_prudente": 19000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "È una A 180 berlina con targa estera da nazionalizzare e si rivende sui 19.000 €. Tolte le spese, il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 19.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 8120,
@@ -78905,7 +78905,7 @@
  },
  {
   "id": 61032,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78914,10 +78914,10 @@
   "rivendita_prudente": 11500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Una Golf 6 GTI DSG del 2012 si rivende sui 11.500 €. Le foto sono notturne o all'autolavaggio e non mostrano bene l'auto. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 11.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 126565,
@@ -78941,7 +78941,7 @@
  },
  {
   "id": 18009,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Segni di grandine sulla carrozzeria"
@@ -78958,14 +78958,14 @@
   "rivendita_prudente": 11500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Una C 220 d SW del 2015 con 210.000 km e segni di grandine si rivende sui 11.500 €. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 11.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 13575,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -78974,10 +78974,10 @@
   "rivendita_prudente": 13500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Ci sono solo foto degli interni e il modello non è indicato con precisione: dovrebbe essere una CLA 2.0 diesel del 2017 con 180.000 km, che vale circa 13.500 €. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 13.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 31947,
@@ -79025,7 +79025,7 @@
  },
  {
   "id": 103190,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79034,10 +79034,10 @@
   "rivendita_prudente": 18000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Dalle foto è una 330d berlina con interni base, non una Touring. Si rivende sui 18.000 € e il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 18.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 59392,
@@ -79129,7 +79129,7 @@
  },
  {
   "id": 27933,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79138,14 +79138,14 @@
   "rivendita_prudente": 10000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Un Voyager 2.8 diesel Euro 5 del 2013 si rivende sui 10.000 € e ha limiti in ZTL. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 10.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 12937,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79154,14 +79154,14 @@
   "rivendita_prudente": 11000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Una Golf Sportsvan 1.4 TSI DSG del 2015 con 89.000 km si rivende sui 11.000 €. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 11.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 42982,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79170,10 +79170,10 @@
   "rivendita_prudente": 10300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Una 525d Touring manuale del 2014 con 163.000 km è un diesel vecchio con poca richiesta e si rivende sui 10.300 €. Il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 10.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 32094,
@@ -79197,7 +79197,7 @@
  },
  {
   "id": 47922,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79206,10 +79206,10 @@
   "rivendita_prudente": 13500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Una T-Roc 2.0 TDI 4Motion DSG del 2020 con 202.000 km si rivende sui 13.500 €. Dalle foto non è una R-Line e il guadagno è sotto la soglia, quindi la togliamo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 13.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 64093,
@@ -79327,7 +79327,7 @@
  },
  {
   "id": 103728,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79336,12 +79336,12 @@
   "rivendita_prudente": 21500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1560,
-  "nota": "X5 40e ibrida plug-in 2018 con 170.000 km è poco richiesta e con rischio batteria; da privato realisticamente 21.500 €, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 21.500 €.",
   "controlli": [
    "Stato batteria alta tensione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 60746,
@@ -79407,7 +79407,7 @@
  },
  {
   "id": 39896,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Interni sporchi e sedili macchiati"
@@ -79424,14 +79424,14 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Golf Plus 1.6 TDI 2013 Euro 5 si rivende sui 9.000 € anche con pochi km; interni da pulire, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 27483,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79440,14 +79440,14 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Duster 1.6 benzina 2017 con 80.000 km si rivende sui 9.000 € da privato; una sola foto dall'alto, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 17546,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [
    "Interni modificati con luci LED"
@@ -79458,10 +79458,10 @@
   "rivendita_prudente": 9500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Dati che non tornano: titolo e-tron ma testo 1.6 TDI, 261.000 km in scheda e 244.000 nel testo. Anche così vale sui 9.500 €, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 32209,
@@ -79501,7 +79501,7 @@
  },
  {
   "id": 58425,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79510,14 +79510,14 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "Cayenne diesel 2009 con 280.000 km: mercato ristretto e manutenzione costosa, da privato sui 9.000 €; margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 19147,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79526,10 +79526,10 @@
   "rivendita_prudente": 15000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "Corsa 1.2 2025 quasi nuova: la concorrenza delle km0 tiene il prezzo da privato sui 15.000 €, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 15.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 18470,
@@ -79569,7 +79569,7 @@
  },
  {
   "id": 22198,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79578,10 +79578,10 @@
   "rivendita_prudente": 14000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1960,
-  "nota": "116d manuale 2019 con 115.000 km si rivende sui 14.000 € da privato; margine poco sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 14.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 96890,
@@ -79605,7 +79605,7 @@
  },
  {
   "id": 123799,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79614,10 +79614,10 @@
   "rivendita_prudente": 9500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "500X 1.0 T3 con GPL aftermarket e 196.000 km si rivende sui 9.500 €; margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 62483,
@@ -79637,7 +79637,7 @@
  },
  {
   "id": 58199,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79646,14 +79646,14 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Smart EQ fortwo 2021: le elettriche piccole usate si svalutano molto, da privato sui 9.000 €; margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 33354,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79662,14 +79662,14 @@
   "rivendita_prudente": 19500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "A 200 automatica 2020 con 109.000 km si rivende sui 19.500 € da privato; margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 19.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 22059,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "Carrozzeria grandinata (dichiarata)"
@@ -79686,10 +79686,10 @@
   "rivendita_prudente": 15000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "3008 automatica 2019 a posto vale sui 15.000 €, ma la grandine costa 1.500-2.500 €: margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 15.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 19755,
@@ -79733,7 +79733,7 @@
  },
  {
   "id": 58042,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79742,10 +79742,10 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1960,
-  "nota": "Ducato cassonato centinato 2011 con 281.000 km si rivende sui 9.000 €: mercato commerciale ristretto, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 101839,
@@ -79791,7 +79791,7 @@
  },
  {
   "id": 43843,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79800,14 +79800,14 @@
   "rivendita_prudente": 16500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "A3 e-tron plug-in (foto: modello pre-restyling) con 98.000 km si rivende sui 16.500 €; plug-in poco richieste, margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 16.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 124142,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79816,10 +79816,10 @@
   "rivendita_prudente": 12000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "500 Hybrid 2023 base con 31.000 km si rivende sui 12.000 € da privato; margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 12.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 63271,
@@ -79859,7 +79859,7 @@
  },
  {
   "id": 60860,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79868,10 +79868,10 @@
   "rivendita_prudente": 10500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "Z4 E85 2.0i del 2008 con 195.000 km: un privato la paga circa 10.500 €, non 14.000. Margine troppo basso, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 10.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 29875,
@@ -79953,7 +79953,7 @@
  },
  {
   "id": 119778,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -79962,10 +79962,10 @@
   "rivendita_prudente": 14500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "XC40 D3 manuale con 226.000 km: con questi km un privato non va oltre 14.500 €. Margine sotto soglia, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 14.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 102604,
@@ -80155,7 +80155,7 @@
  },
  {
   "id": 57337,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80164,10 +80164,10 @@
   "rivendita_prudente": 7500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Vivaro con 320.000 km: un furgone così si rivende sui 7.500 €. Margine sotto soglia, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 57182,
@@ -80243,7 +80243,7 @@
  },
  {
   "id": 56691,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80252,14 +80252,14 @@
   "rivendita_prudente": 7300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1260,
-  "nota": "Vivaro con 377.000 km e motore rifatto, foto davanti a un'officina: rivendita sui 7.300 €, margine troppo basso. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 11927,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80268,14 +80268,14 @@
   "rivendita_prudente": 7000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "Maggiolino 1.6 TDI 2013 con 222.000 km, diesel Euro 5 poco richiesto: rivendita sui 7.000 €. Margine troppo basso, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 12156,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80284,14 +80284,14 @@
   "rivendita_prudente": 10500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 4360,
-  "nota": "208 automatica 2020 a 6.000 € con testo di una riga e interni sporchi: prezzo quasi metà del mercato senza spiegazione, rischio PureTech/EAT8. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 10.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 97725,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80300,14 +80300,14 @@
   "rivendita_prudente": 15000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 2360,
-  "nota": "Il testo parla di CLA e di 13.500 € non trattabili, le foto mostrano una Classe A: dati che non tornano e al prezzo vero il margine è sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 15.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 57701,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "paraurti anteriore inferiore rovinato",
@@ -80330,10 +80330,10 @@
   "rivendita_prudente": 9300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1760,
-  "nota": "Ibiza 1.0 MPI 80 CV base con 95.000 km si rivende sui 9.300 €; con i danni visti in foto il margine scende sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 13649,
@@ -80369,7 +80369,7 @@
  },
  {
   "id": 101877,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80378,14 +80378,14 @@
   "rivendita_prudente": 12000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1870,
-  "nota": "A5 Sportback con cambio multitronic (problematico) e 177.000 km: rivendita sui 12.000 €. Margine sotto soglia, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 12.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 56207,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80394,10 +80394,10 @@
   "rivendita_prudente": 7800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Caddy Maxi furgone 2015 con 165.000 km: rivendita sui 7.800 €. Margine sotto soglia, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100996,
@@ -80438,7 +80438,7 @@
  },
  {
   "id": 46928,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80447,14 +80447,14 @@
   "rivendita_prudente": 7200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "Panda TwinAir 2019 con 127.000 km, motore poco richiesto: rivendita sui 7.200 €. Margine sotto soglia, tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 27208,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "capote da rivedere"
@@ -80471,14 +80471,14 @@
   "rivendita_prudente": 9800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "TT Roadster 2008 vale circa 9.800 €, ma la capote da rivedere costa fino a 1.500 €: margine troppo basso. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 45085,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "mascherina anteriore danneggiata",
@@ -80507,14 +80507,14 @@
   "rivendita_prudente": 9600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "Renegade 1.0 T3 con 129.000 km e piccoli lavori da fare: rivendita prudente 9.600 €, margine sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.600 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 55726,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80523,14 +80523,14 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Daily 2010 con 458.000 km ed ex mezzo aziendale: a un privato si vende sui 6.500 €, il margine resta sotto i 1.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 37500,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80539,10 +80539,10 @@
   "rivendita_prudente": 7000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Pajero 2007 automatico, diesel Euro 4 con 227.000 km: realisticamente 7.000 €, guadagno circa 1.360 € sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 67510,
@@ -80673,7 +80673,7 @@
  },
  {
   "id": 100695,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80682,10 +80682,10 @@
   "rivendita_prudente": 7000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "Dalle foto è un Transit Courier furgone (senza vetri dietro), non un Tourneo: vale circa 7.000 €, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 33032,
@@ -80709,7 +80709,7 @@
  },
  {
   "id": 16590,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80718,14 +80718,14 @@
   "rivendita_prudente": 7000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "X3 2009 diesel Euro 4 con 164.000 km: si vende sui 7.000 €, guadagno circa 1.360 € sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 63088,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80734,14 +80734,14 @@
   "rivendita_prudente": 12800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "116d automatica 2019 con 140.000 km: a privato circa 12.800 €, il guadagno resta sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 12.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 60545,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80750,14 +80750,14 @@
   "rivendita_prudente": 11000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "Ducato 2016 giallo ex flotta, annuncio da rivenditore: realisticamente 11.000 €, guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 11.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 57096,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "calotta specchietto rovinata"
@@ -80774,14 +80774,14 @@
   "rivendita_prudente": 8000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1760,
-  "nota": "Countryman 2012 automatica con 117.000 km, calotta specchietto rovinata: si rivende sugli 8.000 €, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 7566,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80790,14 +80790,14 @@
   "rivendita_prudente": 15000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "A4 Avant 2019 con 212.000 km: i km alti tengono il prezzo sui 15.000 €, guadagno circa 1.860 € sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 15.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 121628,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -80812,14 +80812,14 @@
   "rivendita_prudente": 10500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Discovery 3 2009 diesel Euro 4: vale circa 10.500 € a privato, il guadagno scende sotto i 1.200 €. In più in foto il cambio sembra automatico, non manuale. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 10.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 56419,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80828,14 +80828,14 @@
   "rivendita_prudente": 7200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1310,
-  "nota": "Golf GTI 2008 DSG con 212.000 km e paraurti modificato: realisticamente 7.200 €, guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 39930,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80844,14 +80844,14 @@
   "rivendita_prudente": 8500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Pajero 2007 con 283.000 km, diesel Euro 4: prudente 8.500 €, il guadagno si ferma a circa 1.160 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 26772,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "segni d'usura interni"
@@ -80868,14 +80868,14 @@
   "rivendita_prudente": 8500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1660,
-  "nota": "Clio 2018 con segni d'usura dichiarati: si vende sugli 8.500 €, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 39755,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80884,14 +80884,14 @@
   "rivendita_prudente": 8500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "A4 2014 quattro S tronic con 220.000 km, diesel Euro 5: prudente 8.500 € per km e rischio cambio, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 101253,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80900,14 +80900,14 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1960,
-  "nota": "XC60 2014 con 233.000 km: realisticamente 9.000 €, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100685,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80916,10 +80916,10 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Antara automatica 2015, modello poco richiesto e foto prese da screenshot di un altro annuncio: vale circa 6.500 €, guadagno sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 95064,
@@ -80943,7 +80943,7 @@
  },
  {
   "id": 95068,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -80952,10 +80952,10 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "A 180 CDI 2012 con cambio automatico CVT poco amato: si vende sui 6.000 €, guadagno sotto i 1.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 378,
@@ -80995,7 +80995,7 @@
  },
  {
   "id": 11715,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "graffio spoiler anteriore"
@@ -81006,10 +81006,10 @@
   "rivendita_prudente": 6200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1110,
-  "nota": "159 SW 1750 TBi 2011 con 210.000 km: realisticamente 6.200 €, guadagno circa 1.100 € sotto soglia. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 56908,
@@ -81033,7 +81033,7 @@
  },
  {
   "id": 16442,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81042,14 +81042,14 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "È una Panda VAN (autocarro 2 posti), poco richiesta dai privati: si vende sui 6.500 €, guadagno sotto i 1.500 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 11863,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81058,14 +81058,14 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "MiTo GPL 2016 con 152.000 km: a privato circa 6.500 €, guadagno sotto i 1.500 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 26081,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81074,10 +81074,10 @@
   "rivendita_prudente": 7500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1960,
-  "nota": "3008 prima serie 2016 automatica con 170.000 km: realisticamente 7.500 €, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 252855,
@@ -81123,7 +81123,7 @@
  },
  {
   "id": 57821,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81132,10 +81132,10 @@
   "rivendita_prudente": 8200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1560,
-  "nota": "TT 2007 con 178.000 km e alettone aggiunto: prudente 8.200 €, guadagno sotto i 2.000 €. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 54032,
@@ -81179,7 +81179,7 @@
  },
  {
   "id": 41965,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81188,13 +81188,13 @@
   "rivendita_prudente": 5800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "ML 280 CDI 2009 Euro 4 con 190.000 km e cambio 'da controllare' scritto dal venditore: un privato paga al massimo 5.800 €, il guadagno resta sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.800 €.",
   "controlli": [
    "cambio automatico 7G (il venditore stesso lo segnala)",
    "limitazioni Euro 4 diesel in Lombardia"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 11626,
@@ -81237,7 +81237,7 @@
  },
  {
   "id": 34756,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -81252,14 +81252,14 @@
   "rivendita_prudente": 8200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1920,
-  "nota": "Fiesta ST-Line 2016 3 porte con 85.000 km si vende sugli 8.200 € a un privato: con 5.990 € di prezzo il guadagno resta sotto i 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 58118,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81268,13 +81268,13 @@
   "rivendita_prudente": 8500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "500 Lounge 2017 con cambio Dualogic e adattamenti per disabili: piace a pochi, rivendita realistica 8.500 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.500 €.",
   "controlli": [
    "stato del cambio Dualogic",
    "adattamenti disabili omologati su libretto"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 123271,
@@ -81298,7 +81298,7 @@
  },
  {
   "id": 10186,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81307,12 +81307,12 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "A5 Cabrio 3.0 TDI con 290.000 km: chilometraggio molto alto e capote da verificare, rivendita realistica 6.500 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [
    "capote e cambio S tronic"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53865,
@@ -81356,7 +81356,7 @@
  },
  {
   "id": 57967,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81365,10 +81365,10 @@
   "rivendita_prudente": 8800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1760,
-  "nota": "Golf 6 GTI con 211.000 km si vende sugli 8.800 €: con 6.900 € di prezzo il guadagno resta sotto i 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 45849,
@@ -81412,7 +81412,7 @@
  },
  {
   "id": 11653,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81421,16 +81421,16 @@
   "rivendita_prudente": 5300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "Classe A W169 2010 con cambio Autotronic (CVT delicato): rivendita realistica 5.300 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.300 €.",
   "controlli": [
    "cambio CVT"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100923,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81439,10 +81439,10 @@
   "rivendita_prudente": 7300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "114d 2014 è la versione più debole con 163.000 km: si vende sui 7.300 €, guadagno sotto i 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 34340,
@@ -81466,7 +81466,7 @@
  },
  {
   "id": 26790,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "lievi difetti di carrozzeria dichiarati"
@@ -81483,10 +81483,10 @@
   "rivendita_prudente": 8400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1710,
-  "nota": "EcoSport 2018 con 100.000 km e lievi difetti di carrozzeria si vende sugli 8.400 €: guadagno sotto i 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.400 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 121499,
@@ -81545,7 +81545,7 @@
  },
  {
   "id": 96107,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81554,10 +81554,10 @@
   "rivendita_prudente": 10000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1860,
-  "nota": "MINI One D 2015 con 100.000 km si vende sui 10.000 €: con 8.000 € di prezzo il guadagno resta sotto i 2.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 10.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 46106,
@@ -81628,7 +81628,7 @@
  },
  {
   "id": 125843,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81637,13 +81637,13 @@
   "rivendita_prudente": 5600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "320d Touring 2009 automatica: foto parziali che non mostrano bene l'auto né l'interno, rivendita realistica 5.600 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.600 €.",
   "controlli": [
    "foto parziali",
    "catena N47"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 123221,
@@ -81667,7 +81667,7 @@
  },
  {
   "id": 25113,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81676,16 +81676,16 @@
   "rivendita_prudente": 5300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Terios GPL 2010 con 198.000 km si vende sui 5.300 €: guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.300 €.",
   "controlli": [
    "scadenza bombola GPL"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 25232,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "segni di carrozzeria dichiarati"
@@ -81696,12 +81696,12 @@
   "rivendita_prudente": 5500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "DS3 2015 con cambio robotizzato CMP6 (poco richiesto e delicato) e 'qualche segno': rivendita realistica 5.500 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.500 €.",
   "controlli": [
    "cambio robotizzato"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 54064,
@@ -81725,7 +81725,7 @@
  },
  {
   "id": 15978,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81734,10 +81734,10 @@
   "rivendita_prudente": 5300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1210,
-  "nota": "Espace IV 2013 con 210.000 km (confermati dalle revisioni) è un'auto vecchia di progetto e poco richiesta: rivendita realistica 5.300 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 11671,
@@ -81781,7 +81781,7 @@
  },
  {
   "id": 57090,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81790,16 +81790,16 @@
   "rivendita_prudente": 8300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 2160,
-  "nota": "Jaguar XE manuale (versione poco richiesta) con 156.000 km: solo foto degli interni, nessuna della carrozzeria, a prezzo molto basso; troppo rischioso da mostrare.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.300 €.",
   "controlli": [
    "foto esterne mancanti"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53418,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81808,16 +81808,16 @@
   "rivendita_prudente": 5300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1260,
-  "nota": "Cooper S R56 2009 con 180.000 km ha un motore delicato (catena): rivendita realistica 5.300 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.300 €.",
   "controlli": [
    "catena distribuzione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 126095,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81826,14 +81826,14 @@
   "rivendita_prudente": 6900,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "500L 1.4 2013 con 104.000 km si vende sui 6.900 €: con 5.800 € di prezzo il guadagno è lontano dai 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.900 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 58052,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81842,14 +81842,14 @@
   "rivendita_prudente": 9000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1960,
-  "nota": "Verso diesel 2017 con 168.000 km si vende sui 9.000 €: con 6.900 € di prezzo il guadagno resta sotto i 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 9.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 54025,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81858,10 +81858,10 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Clio IV 0.9 TCe del 2016 con 131.000 km da privato si vende sui 6.000 €. Il guadagno reale (circa 1.360 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53368,
@@ -81881,7 +81881,7 @@
  },
  {
   "id": 121475,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -81901,14 +81901,14 @@
   "rivendita_prudente": 8500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 560,
-  "nota": "C 220 CDI automatica con 203.000 km: rivendita circa 8.500 €. L'auto è ancora in Germania (foto e testo), quindi bisogna aggiungere i costi di importazione e il guadagno scende sotto i 2.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 8.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100491,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "calotta specchietto segnata"
@@ -81930,14 +81930,14 @@
   "rivendita_prudente": 5800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 810,
-  "nota": "Scirocco 2.0 TDI con 226.000 km: rivendita circa 5.800 €. Ha la targa di San Marino e la calotta dello specchietto è rovinata, quindi con i costi di nazionalizzazione il guadagno va sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 55367,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -81946,10 +81946,10 @@
   "rivendita_prudente": 7300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1760,
-  "nota": "520d Touring automatica del 2011 con 225.000 km: rivendita circa 7.300 €. È un diesel Euro 5 che a Milano ha dei limiti e il guadagno (circa 1.760 €) è sotto i 2.000 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 52838,
@@ -81974,7 +81974,7 @@
  },
  {
   "id": 18050,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -81989,14 +81989,14 @@
   "rivendita_prudente": 7800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "A3 g-tron del 2014 con 187.000 km: rivendita circa 7.800 €. C'è una sola foto e il guadagno (circa 1.460 €) è sotto i 2.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 39383,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82005,10 +82005,10 @@
   "rivendita_prudente": 5800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Scirocco 1.4 TSI 160 CV del 2009 con 185.000 km (motore delicato): rivendita circa 5.800 €. Il guadagno (circa 1.160 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100411,
@@ -82028,7 +82028,7 @@
  },
  {
   "id": 15941,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82037,10 +82037,10 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "120d del 2008 diesel Euro 4 (limiti ZTL) con motore revisionato: rivendita circa 4.800 €. Il guadagno (circa 860 €) è molto sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 93368,
@@ -82079,7 +82079,7 @@
  },
  {
   "id": 16192,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -82094,10 +82094,10 @@
   "rivendita_prudente": 5500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 560,
-  "nota": "A1 S tronic con 192.000 km elaborata a 175 CV (stage1, scarico, freni): un'auto modificata così è difficile da vendere e da far passare in revisione. Rivendita circa 5.500 €, guadagno sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53133,
@@ -82117,7 +82117,7 @@
  },
  {
   "id": 52818,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82126,10 +82126,10 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 2860,
-  "nota": "Una Compass 2.2 CRD del 2015 con 191.000 km vale circa 6.500 €, quindi 3.500 € senza spiegazione è sospetto. In più le foto sono poche e confuse: la tolgo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 52959,
@@ -82153,7 +82153,7 @@
  },
  {
   "id": 100567,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82162,10 +82162,10 @@
   "rivendita_prudente": 5000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Cherokee 2.8 CRD automatica del 2010 con 275.000 km: rivendita circa 5.000 €. Il guadagno (circa 1.360 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 95141,
@@ -82240,7 +82240,7 @@
  },
  {
   "id": 11763,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82249,10 +82249,10 @@
   "rivendita_prudente": 6400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "A6 Avant 3.0 TDI quattro del 2010 con 264.000 km: rivendita circa 6.400 €, perché i km sono molti e le riparazioni costano. Il guadagno (circa 1.460 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.400 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 54163,
@@ -82296,7 +82296,7 @@
  },
  {
   "id": 94977,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82305,14 +82305,14 @@
   "rivendita_prudente": 6400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Freemont manuale del 2015 con 240.000 km e 3 proprietari: è curata, ma si rivende sui 6.400 €. Il guadagno (circa 1.360 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.400 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 39251,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82321,14 +82321,14 @@
   "rivendita_prudente": 4300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 910,
-  "nota": "A 160 CDI del 2012 con 224.000 km e una sola foto: rivendita circa 4.300 €. Il guadagno (circa 910 €) è molto sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 11345,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82337,10 +82337,10 @@
   "rivendita_prudente": 4200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 760,
-  "nota": "Qashqai 1.5 dCi del 2008 (Euro 4) con motore rifatto: i 130.000 km dichiarati sono del motore nuovo, quindi il chilometraggio reale non torna. Rivendita circa 4.200 €, guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 419,
@@ -82365,7 +82365,7 @@
  },
  {
   "id": 39239,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82374,10 +82374,10 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "Panda Van 2 posti a metano (autocarro, meno richiesta dai privati) del 2016 con 100.000 km: rivendita circa 4.800 €. Il guadagno (circa 1.460 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 51653,
@@ -82401,7 +82401,7 @@
  },
  {
   "id": 100457,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82410,10 +82410,10 @@
   "rivendita_prudente": 5200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1260,
-  "nota": "Touran 1.6 TDI del 2010 con 183.000 km: rivendita circa 5.200 €. Il guadagno (circa 1.260 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 51649,
@@ -82433,7 +82433,7 @@
  },
  {
   "id": 34209,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82442,10 +82442,10 @@
   "rivendita_prudente": 4000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 710,
-  "nota": "Classe A W169 diesel automatica del 2011 con 200.000 km: rivendita circa 4.000 €. Il guadagno (circa 710 €) è molto sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100514,
@@ -82489,7 +82489,7 @@
  },
  {
   "id": 54702,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82498,14 +82498,14 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "Mokka 1.6 CDTI automatica del 2016 con 245.000 km: rivendita circa 6.500 €. Il guadagno (circa 1.460 €) è sotto la soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 24684,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "faro posteriore da sostituire (già ordinato)"
@@ -82522,17 +82522,17 @@
   "rivendita_prudente": 5000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1480,
-  "nota": "Captiva 2.2 diesel Euro 5 del 2013 con 133.000 km: a un privato si incassa circa 5.000 €, modello poco richiesto. Il guadagno resta sotto i 1.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.000 €.",
   "controlli": [
    "faro posteriore montato",
    "stato frizione e volano"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41752,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82541,12 +82541,12 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1060,
-  "nota": "Dati incoerenti (e-HDi diesel col robotizzato indicato come benzina manuale) e testo minimo; un 3008 2011 si rivende sui 4.500 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [
    "carburante e tipo di cambio reali"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 54074,
@@ -82616,7 +82616,7 @@
  },
  {
   "id": 24258,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82625,16 +82625,16 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Classe A W169 diesel Euro 5 del 2012: a Milano i diesel Euro 5 non entrano più in Area B, si rivende sui 4.500 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [
    "classe Euro"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 24407,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82643,17 +82643,17 @@
   "rivendita_prudente": 4300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Serie 1 118d 2012 con 225.000 km e diesel che non entra a Milano: realisticamente 4.300 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.300 €.",
   "controlli": [
    "frizione e volano",
    "catena distribuzione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 42001,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [],
   "ricambi": [
@@ -82668,16 +82668,16 @@
   "rivendita_prudente": 5800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "A1 1.4 TFSI 2011 con 193.000 km: circa 5.800 € a un privato. Con i lavori da fare il guadagno scende sotto i 1.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.800 €.",
   "controlli": [
    "consumo olio e catena 1.4 TFSI"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 162,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "segni di grandine"
@@ -82688,16 +82688,16 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Octavia 1.6 TDI 2015 con 199.000 km e grandine: a un privato circa 6.000 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [
    "entità della grandine"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 2671,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82706,13 +82706,13 @@
   "rivendita_prudente": 5000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "C 250 CDI 2010 con 290.000 km e cambio automatico: si rivende sui 5.000 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.000 €.",
   "controlli": [
    "cambio automatico",
    "iniettori"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 46092,
@@ -82736,7 +82736,7 @@
  },
  {
   "id": 39417,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -82751,16 +82751,16 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 760,
-  "nota": "2008 PureTech 2017 con 199.000 km: motore con cinghia a bagno d'olio a rischio, si rivende sui 6.000 €. Testo vago e guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [
    "stato cinghia distribuzione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 94268,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82769,16 +82769,16 @@
   "rivendita_prudente": 4600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "5008 2.0 HDi automatica 2011 con 177.000 km, diesel Euro 5: circa 4.600 € realistici. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.600 €.",
   "controlli": [
    "cambio automatico"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53750,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82787,16 +82787,16 @@
   "rivendita_prudente": 5500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "500C 1.3 Multijet 2013 con 160.000 km: circa 5.500 € a un privato. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.500 €.",
   "controlli": [
    "capote"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41591,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "segni di carrozzeria"
@@ -82807,16 +82807,16 @@
   "rivendita_prudente": 4000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Santa Fe 2009 con 180.000 km, diesel vecchio con limiti in città: circa 4.000 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.000 €.",
   "controlli": [
    "classe Euro"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 342,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "tamponamento posteriore: paraurti staccato e fissato col nastro",
@@ -82844,13 +82844,13 @@
   "rivendita_prudente": 7000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Mokka X 2017 tamponata dietro con danni anche sulla fiancata: riparata si rivende sui 7.000 €. Coi ricambi il guadagno scende sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 7.000 €.",
   "controlli": [
    "traversa e longheroni posteriori",
    "portellone"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 94649,
@@ -82900,7 +82900,7 @@
  },
  {
   "id": 54375,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82909,16 +82909,16 @@
   "rivendita_prudente": 5500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 560,
-  "nota": "525d Touring 2007 diesel Euro 4, non entra in molte città: circa 5.500 € realistici. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.500 €.",
   "controlli": [
    "classe Euro"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 15710,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82927,16 +82927,16 @@
   "rivendita_prudente": 4200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "159 1.9 JTDm 2010, diesel vecchio poco richiesto: circa 4.200 € a un privato. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.200 €.",
   "controlli": [
    "classe Euro"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 121100,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "spia airbag passeggero accesa",
@@ -82959,16 +82959,16 @@
   "rivendita_prudente": 5000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1080,
-  "nota": "318d Touring automatica 2010 con 163.000 km: circa 5.000 €. Con spia airbag e maniglia rotta il guadagno scende sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.000 €.",
   "controlli": [
    "spia airbag"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 25049,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -82977,14 +82977,14 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "Kia Rio 1.4 CRDi 2011: circa 4.800 € a un privato, il prezzo richiesto è già vicino al mercato.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 25774,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "cielo scollato",
@@ -83002,14 +83002,14 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 740,
-  "nota": "Golf 6 2.0 TDI 2009 con 105.000 km: circa 6.000 € a un privato. Il prezzo è già quasi di mercato.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 94867,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "minimo irregolare da individuare"
@@ -83026,16 +83026,16 @@
   "rivendita_prudente": 5500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 560,
-  "nota": "C-Max GPL 2014 con 190.000 km e difetto al minimo non individuato: circa 5.500 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.500 €.",
   "controlli": [
    "causa del minimo irregolare"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41489,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "lavori da fare non specificati"
@@ -83052,16 +83052,16 @@
   "rivendita_prudente": 4000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 861,
-  "nota": "Mini Cooper S R56 2007 con 199.000 km: motore delicato e lavori da fare, si rivende sui 4.000 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.000 €.",
   "controlli": [
    "catena distribuzione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 45809,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83070,16 +83070,16 @@
   "rivendita_prudente": 3500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Annunciata come Doblò ma dalle foto è un Qubo, con 280.000 km: si rivende sui 3.500 €. Dati non coerenti e guadagno basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.500 €.",
   "controlli": [
    "modello reale"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50885,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83088,16 +83088,16 @@
   "rivendita_prudente": 3500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Dalle foto è una 320d Touring pre-restyling (fino al 2008, Euro 4) e non sembra Msport, con 273.000 km: circa 3.500 €. Dati non coerenti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.500 €.",
   "controlli": [
    "anno reale e classe Euro"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50482,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "ammaccatura sulla fiancata"
@@ -83114,12 +83114,12 @@
   "rivendita_prudente": 5000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 2060,
-  "nota": "Corsa GPL con targa FH (circa 2017) ma anno indicato 2015, prezzo molto basso senza spiegazione e ammaccatura non dichiarata: dati non tornano.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.000 €.",
   "controlli": [
    "anno reale"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 54384,
@@ -83141,7 +83141,7 @@
  },
  {
   "id": 36316,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83150,16 +83150,16 @@
   "rivendita_prudente": 4000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Classe A 180 benzina 2010 col cambio automatico CVT delicato, 184.000 km: circa 4.000 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.000 €.",
   "controlli": [
    "cambio CVT"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 5671,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "paraurti anteriore segnato"
@@ -83170,14 +83170,14 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Jumpy diesel 2011 con 276.000 km: circa 6.000 €. Guadagno troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 11130,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "cielo leggermente staccato"
@@ -83194,14 +83194,14 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1440,
-  "nota": "Golf 6 1.6 TDI 2011 con 198.000 km: circa 4.500 € a un privato. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 39373,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "ammaccature carrozzeria"
@@ -83218,12 +83218,12 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "ASX 1.8 DI-D 2015 con 218.000 km e ammaccature: circa 6.000 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [
    "volano e DPF"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 25482,
@@ -83269,7 +83269,7 @@
  },
  {
   "id": 20932,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83278,10 +83278,10 @@
   "rivendita_prudente": 4300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "MiTo 155 CV del 2008 con 170.000 km: realisticamente vale circa 4.300 €. Il margine non arriva alla soglia e l'annuncio è vaghissimo.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41626,
@@ -83312,7 +83312,7 @@
  },
  {
   "id": 15587,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Paraurti posteriore graffiato",
@@ -83330,14 +83330,14 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1461,
-  "nota": "320d Touring con 280.000 km e carrozzeria segnata: si rivende sui 4.800 €. Tolti i ritocchi, il margine resta sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 51226,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83346,10 +83346,10 @@
   "rivendita_prudente": 4200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "320d xDrive automatica del 2008 con 233.000 km, diesel probabilmente Euro 4 (limiti in Area B a Milano): non va oltre i 4.200 €. Margine insufficiente.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50401,
@@ -83373,7 +83373,7 @@
  },
  {
   "id": 50424,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Carrozzeria sporca e segnata"
@@ -83384,14 +83384,14 @@
   "rivendita_prudente": 3500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1060,
-  "nota": "Sportage 2.0 benzina del 2008 con 197.000 km: si vende sui 3.500 €. Margine troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 46578,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83400,10 +83400,10 @@
   "rivendita_prudente": 3800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Golf 1.6 benzina 3 porte del 2009 con 200.000 km: si rivende sui 3.800 €. Il margine non arriva a 1.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50210,
@@ -83428,7 +83428,7 @@
  },
  {
   "id": 118935,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -83443,14 +83443,14 @@
   "rivendita_prudente": 5800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Q7 del 2008 con 285.000 km, diesel Euro 4 e sospensioni ad aria: tra privati vale circa 5.800 €. Il margine è troppo basso e i costi possibili sono alti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41988,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83459,10 +83459,10 @@
   "rivendita_prudente": 6000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Sportage 1.7 CRDi con 200.000 km: si vende sui 6.000 €. Il margine non basta, e nel testo il prezzo è 6.000 € invece di 4.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 48178,
@@ -83485,7 +83485,7 @@
  },
  {
   "id": 132691,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83494,10 +83494,10 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Smart Fortwo 84 CV del 2010 con 95.000 km (in foto sembra coupé, non cabrio): si vende sui 4.500 €. Margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50201,
@@ -83541,7 +83541,7 @@
  },
  {
   "id": 25189,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83550,10 +83550,10 @@
   "rivendita_prudente": 5400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Mini Cooper D del 2011 con 145.000 km: tra privati si vende sui 5.400 €. Margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.400 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 45995,
@@ -83573,7 +83573,7 @@
  },
  {
   "id": 11458,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83582,14 +83582,14 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "Polo 1.2 del 2014 con 203.000 km: si rivende sui 4.800 €. Margine troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 52782,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83598,14 +83598,14 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "118d 3 porte del 2008 con 164.000 km: si vende sui 4.500 €. Margine insufficiente.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 23902,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "Chiusura porte difettosa"
@@ -83622,14 +83622,14 @@
   "rivendita_prudente": 3500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 740,
-  "nota": "Nelle foto c'è una Zafira vecchio modello, non la Tourer del 2013 dell'annuncio. Vale circa 3.500 € e ha difetti dichiarati: dati che non tornano.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 24264,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Due ammaccature",
@@ -83647,14 +83647,14 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "3008 1.6 HDi con 217.000 km e segni di carrozzeria: si vende sui 4.500 €. Tolti i lavori, il margine è troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 6289,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83663,14 +83663,14 @@
   "rivendita_prudente": 4200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "118d 5 porte con 250.000 km: tra privati si vende sui 4.200 €. Margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 51699,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83679,14 +83679,14 @@
   "rivendita_prudente": 4300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Mini a benzina del 2011 con 213.000 km (dal badge sembra una One): si vende sui 4.300 €. Margine insufficiente.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53693,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Paraurti posteriore danneggiato"
@@ -83703,14 +83703,14 @@
   "rivendita_prudente": 5600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Zafira Tourer 110 CV con 157.000 km e paraurti posteriore rovinato: si vende sui 5.600 €. Tolti i lavori, il margine non basta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.600 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 53855,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83719,10 +83719,10 @@
   "rivendita_prudente": 5800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1410,
-  "nota": "520d Touring con 320.000 km: con questi km si vende sui 5.800 €. In foto i paraurti non sono M Sport. Margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100228,
@@ -83748,7 +83748,7 @@
  },
  {
   "id": 53792,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83757,14 +83757,14 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "A3 1.8 TFSI con 215.000 km (motore noto per consumare olio): si vende sui 4.800 €. Margine troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 20753,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Cielo scollato",
@@ -83782,10 +83782,10 @@
   "rivendita_prudente": 3800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1010,
-  "nota": "159 SW 2.2 JTS del 2007 con cielo scollato e tetto grandinato: si vende sui 3.800 €. Margine sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 45811,
@@ -83809,7 +83809,7 @@
  },
  {
   "id": 50231,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "Porte posteriori di colore diverso"
@@ -83820,14 +83820,14 @@
   "rivendita_prudente": 3000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Fiorino ex flotta con 450.000 km: non vale più di 3.000 €. Margine troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50056,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83836,10 +83836,10 @@
   "rivendita_prudente": 4000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1861,
-  "nota": "Una sola foto, che sembra presa da internet, con targa coperta e nessuna descrizione, su una Passat con 325.000 km: troppo rischioso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50255,
@@ -83884,7 +83884,7 @@
  },
  {
   "id": 23797,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83893,14 +83893,14 @@
   "rivendita_prudente": 3200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1061,
-  "nota": "V50 1.6 benzina del 2008 con 190.000 km: si vende sui 3.200 €. Margine troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 33541,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -83909,18 +83909,18 @@
   "rivendita_prudente": 3600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1460,
-  "nota": "116d 2010 3 porte con 240.000 km: da privato realisticamente 3.500-3.800 €. Il guadagno resta sotto i 1.500 € richiesti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.600 €.",
   "controlli": [
    "catena distribuzione N47",
    "frizione e volano",
    "FAP/EGR"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 51104,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "ammaccatura profonda parafango posteriore destro"
@@ -83937,17 +83937,17 @@
   "rivendita_prudente": 4500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "116i 2010 con 186.000 km e un bozzo evidente sul parafango posteriore: rivendita sui 4.500 € dopo la riparazione. Tolti i lavori il guadagno è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.500 €.",
   "controlli": [
    "entità del danno al parafango",
    "motore N43 (iniettori, bobine)"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 6587,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "tetto sbiadito",
@@ -83965,17 +83965,17 @@
   "rivendita_prudente": 4200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1260,
-  "nota": "Punto Evo metano 2013 con 130.000 km e tetto sbiadito: realisticamente 4.000-4.300 €. Guadagno sotto i 1.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.200 €.",
   "controlli": [
    "scadenza bombole metano",
    "vernice tetto"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41298,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "leggera grandinata",
@@ -83987,17 +83987,17 @@
   "rivendita_prudente": 3500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1370,
-  "nota": "A 160 CDI 2010 dichiarata leggermente grandinata: un privato la paga circa 3.500 €. Il guadagno resta sotto i 1.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.500 €.",
   "controlli": [
    "entità grandine",
    "frizione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 39530,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84006,14 +84006,14 @@
   "rivendita_prudente": 6500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1360,
-  "nota": "Antara 2.2 CDTI automatica 2013: da privato sui 6.500 €, ha poco margine sui 5.000 € richiesti. Foto da annuncio curato e testo che parla di 4x4 mentre il dato dice 4x2.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 6.500 €.",
   "controlli": [
    "trazione 4x2 o 4x4",
    "cambio automatico",
    "eventuale venditore professionale"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 93343,
@@ -84045,7 +84045,7 @@
  },
  {
   "id": 10829,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "vernice sbiadita paraurti anteriore e porta sinistra",
@@ -84064,17 +84064,17 @@
   "rivendita_prudente": 3300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 760,
-  "nota": "Punto TwinAir 3 porte 2012 con vernice rovinata su più pezzi: rivendita realistica sui 3.300 €. Tolta la carrozzeria il guadagno è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.300 €.",
   "controlli": [
    "motore TwinAir (consumo olio, multiair)",
    "carrozzeria"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 51975,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84083,18 +84083,18 @@
   "rivendita_prudente": 4200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1060,
-  "nota": "A4 Avant multitronic 2009 con 270.000 km: il cambio CVT è un rischio noto e ai privati si vende sui 4.200 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.200 €.",
   "controlli": [
    "cambio multitronic",
    "km reali",
    "FAP"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100381,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "vernice opaca su tetto e cofano"
@@ -84105,17 +84105,17 @@
   "rivendita_prudente": 4800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Octavia Wagon 1.6 TDI 2011 con 176.000 km e vernice rovinata: realisticamente 4.800 €. Guadagno sotto i 1.500 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 4.800 €.",
   "controlli": [
    "vernice",
    "frizione/volano"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 123032,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "graffi di parcheggio"
@@ -84132,18 +84132,18 @@
   "rivendita_prudente": 5000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1260,
-  "nota": "Range Rover Sport 2007 diesel (non è una PHEV 2.0 come nel dato) con 240.000 km e turbo da rivedere: auto costosa da mantenere, da privato al massimo 5.000 €. Dati sbagliati e guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 5.000 €.",
   "controlli": [
    "turbina",
    "sospensioni pneumatiche",
    "motorizzazione reale"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 20796,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84152,13 +84152,13 @@
   "rivendita_prudente": 3800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "Astra Sports Tourer automatica 2012 con 190.000 km; il dato dice 1.4 benzina ma anche diesel: i dati non tornano. Rivendita sui 3.800 €, guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.800 €.",
   "controlli": [
    "motore reale",
    "cambio automatico"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 15086,
@@ -84202,7 +84202,7 @@
  },
  {
   "id": 50079,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84211,13 +84211,13 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "Polo 1.2 3 porte 2007 con 142.000 km: un privato la paga circa 2.600 €. Il guadagno resta sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [
    "catena distribuzione 1.2",
    "venditore privato o salone"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50011,
@@ -84260,7 +84260,7 @@
  },
  {
   "id": 23462,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84269,17 +84269,17 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "B 200 CDI automatica 2008 con 210.000 km: diesel Euro 4 con limiti ZTL e cambio CVT delicato, da privato circa 2.600 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [
    "cambio Autotronic",
    "classe Euro"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 49877,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84288,17 +84288,17 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 970,
-  "nota": "Compass 2.0 diesel 4x4 2010 con 220.000 km: diesel Euro 4 poco richiesto, da privato circa 2.600 €. Il guadagno resta sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [
    "trazione 4x4",
    "frizione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 23375,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "cielo interno scollato"
@@ -84309,13 +84309,13 @@
   "rivendita_prudente": 2400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Golf Plus TSI con 280.000 km, solo foto degli interni e cruscotto che sembra della serie precedente: dati poco credibili e rivendita al massimo 2.400 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.400 €.",
   "controlli": [
    "anno reale",
    "catena distribuzione TSI"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 15145,
@@ -84359,7 +84359,7 @@
  },
  {
   "id": 120823,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84368,17 +84368,17 @@
   "rivendita_prudente": 2000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "Polo 1.4 GPL 2008 con 300.000 km: oltre 2.000 € non si rivende. Il guadagno è troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.000 €.",
   "controlli": [
    "impianto GPL",
    "km reali"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 38909,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84387,13 +84387,13 @@
   "rivendita_prudente": 2200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Ibiza 1.2 2008 con una sola foto: si rivende sui 2.200 €. Il guadagno è sotto i 1.000 € e le foto sono insufficienti.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.200 €.",
   "controlli": [
    "stato generale",
    "fiancate e interni"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50087,
@@ -84425,7 +84425,7 @@
  },
  {
   "id": 93707,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "luce cruscotto debole",
@@ -84443,13 +84443,13 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "B 180 CDI 2011 con 300.000 km e piccoli difetti: da privato al massimo 2.600 €. Guadagno sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [
    "frizione",
    "km reali"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 49884,
@@ -84514,7 +84514,7 @@
  },
  {
   "id": 120825,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84523,17 +84523,17 @@
   "rivendita_prudente": 1800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "Corsa D 3 porte con targa del 2006 (non del 2012 come nel dato) e 272.000 km: i dati non tornano e non si rivende oltre 1.800 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 1.800 €.",
   "controlli": [
    "anno reale",
    "km"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 88086,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -84548,17 +84548,17 @@
   "rivendita_prudente": 2400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Swift 1.3 diesel 2008: un diesel Euro 4 con i blocchi invernali in Lombardia è poco richiesto, da privato circa 2.400 €. Il guadagno resta sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.400 €.",
   "controlli": [
    "classe Euro",
    "frizione"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 23420,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -84573,17 +84573,17 @@
   "rivendita_prudente": 2400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Ypsilon 1.2 2010 con 136.000 km e descrizione vuota: si rivende sui 2.400 €. Guadagno sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.400 €.",
   "controlli": [
    "frizione",
    "stato generale"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50139,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "interni sporchi e trascurati"
@@ -84600,17 +84600,17 @@
   "rivendita_prudente": 2400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "Aveo 1.2 2014 con 250.000 km, interni trascurati e niente foto dell'esterno completo: al massimo 2.400 €. Guadagno sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.400 €.",
   "controlli": [
    "carrozzeria",
    "km"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 23492,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84619,17 +84619,17 @@
   "rivendita_prudente": 2400,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "C1 2010 con 166.000 km, foto sfocate e cerchi rosa: da privato sui 2.400 €. Il guadagno resta sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.400 €.",
   "controlli": [
    "carrozzeria",
    "frizione nuova (fattura)"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 50146,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -84644,14 +84644,14 @@
   "rivendita_prudente": 3000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 1160,
-  "nota": "MINI Cooper 2007 con 187.000 km e solo foto del contachilometri, senza esterni: non si vede l'auto e il motore 1.6 di quegli anni è delicato. Tolta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 3.000 €.",
   "controlli": [
    "foto esterne",
    "catena distribuzione",
    "consumo olio"
   ],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 49898,
@@ -84675,7 +84675,7 @@
  },
  {
   "id": 93723,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "paraurti posteriore ammaccato e graffiato"
@@ -84692,14 +84692,14 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 660,
-  "nota": "Grand C4 Picasso del 2010 con 243.000 km e cambio robotizzato, che fa paura agli acquirenti; c'è anche il paraurti posteriore rovinato. Si rivende sui 2.600 €, quindi il margine è troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 93638,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -84714,14 +84714,14 @@
   "rivendita_prudente": 2500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 910,
-  "nota": "Meriva 1.4 del 2009 con 124.000 km: si rivende sui 2.500 €. Le foto sono poche e scure, il testo è vago e il margine resta sotto i 1.000 €.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 128651,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -84736,14 +84736,14 @@
   "rivendita_prudente": 1900,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Megane SW 1.5 dCi del 2008 con 190.000 km: è un diesel Euro 4 con limiti in ZTL/Area B, quindi si rivende sui 1.900 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 1.900 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 33847,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "parafango anteriore sinistro ammaccato e graffiato"
@@ -84760,14 +84760,14 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 710,
-  "nota": "Golf 5 1.9 TDI Euro 4 con 264.000 km e parafango anteriore rovinato: si rivende sui 2.600 €, quindi il margine è troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 91154,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -84776,10 +84776,10 @@
   "rivendita_prudente": 2500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Golf 5 GT 3 porte con 297.000 km, diesel Euro 4: con quei chilometri si incassano circa 2.500 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100124,
@@ -84867,7 +84867,7 @@
  },
  {
   "id": 49904,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "interni molto sporchi e consumati"
@@ -84889,14 +84889,14 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Freemont del 2011 con quasi 280.000 km, interni sporchi e nessuna descrizione: a 1.200 € il prezzo nasconde probabilmente un problema. Prudenzialmente si rivende sui 2.600 € e il margine non regge.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 20553,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -84911,10 +84911,10 @@
   "rivendita_prudente": 2500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 830,
-  "nota": "C5 Tourer 2.0 HDi con 245.000 km: si rivende sui 2.500 €. Il margine è sotto soglia e l'annuncio diceva 'disponibile fino al 5 ottobre'.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 23225,
@@ -84944,7 +84944,7 @@
  },
  {
   "id": 93623,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "parafango anteriore nero non verniciato (sostituito?)"
@@ -84961,10 +84961,10 @@
   "rivendita_prudente": 2200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 760,
-  "nota": "C1 del 2010 con 190.000 km e parafango anteriore non verniciato (forse ricambio dopo un urto); il cambio non è indicato e potrebbe essere robotizzato. Si rivende sui 2.200 € e il margine è troppo basso.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 38908,
@@ -84990,7 +84990,7 @@
  },
  {
   "id": 15214,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -85005,14 +85005,14 @@
   "rivendita_prudente": 2600,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "Qashqai 2.0 benzina 4WD con 264.000 km, venduto 'per importatori' e 'visto e piaciuto': consuma molto e ha tanti km, quindi si rivende sui 2.600 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.600 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 23465,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "medio",
   "danni": [
    "punterie rumorose a caldo (dichiarate)"
@@ -85029,14 +85029,14 @@
   "rivendita_prudente": 2800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 560,
-  "nota": "Astra GPL in ordine, ma il motore è rumoroso a caldo (punterie) nonostante la testata sia già stata rifatta. Il lavoro da fare si mangia il margine.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 122765,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "tamponamento leggero, paraurti posteriore imbarcato"
@@ -85053,14 +85053,14 @@
   "rivendita_prudente": 2300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 810,
-  "nota": "206 Plus 1.1 con paraurti posteriore rovinato da un tamponamento e motore già sostituito: si rivende sui 2.300 €, quindi il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41192,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -85075,14 +85075,14 @@
   "rivendita_prudente": 2200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 810,
-  "nota": "Classe A 150 coupé 3 porte del 2008 con 180.000 km è poco richiesta; inoltre il testo dice Avantgarde e il titolo Classic. Si rivende sui 2.200 € e il margine non basta.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 33849,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "problema alla ruota anteriore destra",
@@ -85105,14 +85105,14 @@
   "rivendita_prudente": 2300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 811,
-  "nota": "407 SW automatica con 240.000 km, problema alla ruota anteriore e clima da ricaricare: il cambio automatico vecchio spaventa gli acquirenti. Si rivende sui 2.300 € e il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 148989,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -85127,10 +85127,10 @@
   "rivendita_prudente": 2200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 960,
-  "nota": "207 1.4 HDi del 2010 con 165.000 km: è una versione base, diesel probabilmente Euro 4 in zona Milano. Si rivende sui 2.200 € e il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 49879,
@@ -85214,7 +85214,7 @@
  },
  {
   "id": 47940,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -85229,14 +85229,14 @@
   "rivendita_prudente": 2200,
   "mercato_da_rivendita": true,
   "guadagno_finale": 910,
-  "nota": "147 1.6 benzina del 2008 con 160.000 km: si rivende sui 2.200 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.200 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 15125,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "piccoli segni di grandine dichiarati"
@@ -85247,14 +85247,14 @@
   "rivendita_prudente": 2500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "i30 SW diesel Euro 5 ben tenuta, ma con 315.000 km si incassano al massimo 2.500 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 41268,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -85263,10 +85263,10 @@
   "rivendita_prudente": 2500,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Leon 1.6 benzina del 2009 con 222.000 km e testo minimo: si rivende sui 2.500 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.500 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 49915,
@@ -85297,7 +85297,7 @@
  },
  {
   "id": 100017,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "leggero",
   "danni": [
    "paraurti posteriore imbarcato (stessa auto dell'annuncio 122765)"
@@ -85314,10 +85314,10 @@
   "rivendita_prudente": 2300,
   "mercato_da_rivendita": true,
   "guadagno_finale": 810,
-  "nota": "È la stessa 206 blu di Ravenna dell'annuncio 122765 (le foto sono identiche), ha avuto un tamponamento e interni sporchi. Si rivende sui 2.300 € e il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.300 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 100050,
@@ -85385,7 +85385,7 @@
  },
  {
   "id": 41096,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [],
@@ -85394,14 +85394,14 @@
   "rivendita_prudente": 2000,
   "mercato_da_rivendita": true,
   "guadagno_finale": 860,
-  "nota": "Corsa 1.2 3 porte del 2007 con 172.000 km: si rivende sui 2.000 €. Il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 2.000 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  },
  {
   "id": 49900,
-  "esito": "scartata",
+  "esito": "da_verificare",
   "danno": "nessuno",
   "danni": [],
   "ricambi": [
@@ -85416,9 +85416,9 @@
   "rivendita_prudente": 1800,
   "mercato_da_rivendita": true,
   "guadagno_finale": 810,
-  "nota": "Ibiza 1.2 60cv 3 porte del 2007 con 210.000 km e nessuna foto esterna (solo motore e interni): si rivende sui 1.800 € e il margine è sotto soglia.",
+  "nota": "Ricontrollata: margine più basso del calcolo automatico, rivendita prudente 1.800 €.",
   "controlli": [],
   "aggiorna": true,
-  "audit": "a1"
+  "audit": "a2"
  }
 ]

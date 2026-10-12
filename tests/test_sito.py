@@ -13,8 +13,15 @@ def _row(**k):
 
 
 def test_item_compatto():
-    # mercato 14.369 € per un'auto a 3.000 €: stima non credibile, non si mostra
-    assert scovo.item(_row()) is None
+    # mercato 14.369 € per un'auto a 3.000 €: si mostra col mercato limitato (prezzo × 1,45 + 1.200)
+    bella = scovo.item(_row())
+    assert bella["mercato"] == round(3000 * 1.45 + 1200) and bella["mercato_base"] == 14369
+    # resta sul sito se supera la soglia con la stima di base e il guadagno mostrato è almeno 500 €
+    assert scovo.guadagno_minimo(bella) < scovo.soglia(3000)
+    assert scovo.abbastanza(dict(bella, rip_hi=0)) is (scovo.guadagno_minimo(dict(bella, rip_hi=0)) >= scovo.MIN_MOSTRATO)
+    assert scovo.abbastanza(dict(bella, rip_hi=5000)) is False
+    a2 = scovo.item(_row(price_eur=5000, engine_version="x+manuale-v5-a2", private_median=7000, parts_cost_low=0, parts_cost_high=0))
+    assert a2["mercato"] == 7000 and a2["soglia_libera"] and scovo.abbastanza(a2)
     r = _row(price_eur=9000)
     it = scovo.item(r)
     assert it["nome"] == "Mazda MX-5 Roadster 2.0"

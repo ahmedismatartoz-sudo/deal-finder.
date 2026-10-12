@@ -134,6 +134,14 @@ def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: li
                             - int((parts or {}).get("parts_cost_high") or 0))
                     if sito >= scovo.soglia(l.price_eur):
                         m.status = "da_verificare"
+            if m and e.get("audit") == "a2" and m.status == "scartata":
+                # riammessa dopo il controllo: resta sul sito con il margine abbassato (almeno il minimo mostrato)
+                mercato = v.private_median or v.resale_median_private or v.resale_median
+                if mercato and l.price_eur:
+                    sito = (round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
+                            - int((parts or {}).get("parts_cost_high") or 0))
+                    if sito >= scovo.MIN_MOSTRATO:
+                        m.status = "da_verificare"
             if m and e.get("esito") == "opportunita" and m.net_margin >= m.threshold:
                 m.status = "opportunita"           # confermata dall'analisi (stima e testo controllati)
             if m and e.get("esito") == "da_verificare" and m.status == "opportunita":
