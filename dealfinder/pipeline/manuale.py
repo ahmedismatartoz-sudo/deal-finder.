@@ -51,7 +51,7 @@ def applica_scarti(conn) -> int:
 def segna_viste_di_recente(conn) -> dict:
     """Auto approvate e viste dalla raccolta nelle ultime 48 ore: valgono come verificate (sono ancora online).
     Serve a mostrarle subito, senza aspettare il controllo una per una del ciclo."""
-    conn.execute("SET lock_timeout = '10s'")
+    conn.execute("SET LOCAL lock_timeout = '10s'")
     n = conn.execute("""UPDATE listings SET last_checked_at=now()
                         WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
                           AND last_seen_at > now() - interval '48 hours'

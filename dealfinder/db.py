@@ -12,12 +12,66 @@ from .core.normalize import fingerprint, find_plate, plate_hash
 MIGRATIONS = Path(__file__).resolve().parent.parent / "db" / "migrations"
 
 
+# Connessioni riusate (solo nel sito, attivate con usa_pool()): aprire una connessione nuova costa una stretta
+# di mano TLS e un login, lenti quando il database è sotto carico. Le raccolte (processi a parte) non cambiano.
+_pool: list = []
+_pool_on = False
+POOL_MAX = 10
+POOL_ETA = 300                    # secondi: connessioni ferme da più tempo si chiudono
+
+
+def usa_pool(on: bool = True) -> None:
+    global _pool_on
+    _pool_on = on
+
+
+def _prendi():
+    import time
+    while _pool:
+        try:
+            conn, t = _pool.pop()
+        except IndexError:
+            break
+        if not conn.closed and time.time() - t < POOL_ETA:
+            return conn
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return None
+
+
 @contextmanager
 def connect():
     import psycopg
     from psycopg.rows import dict_row
-    with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
+    if not _pool_on:
+        with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
+            yield conn
+        return
+    import time
+    conn = _prendi() or psycopg.connect(settings.database_url, row_factory=dict_row)
+    ok = False
+    try:
         yield conn
+        ok = True
+    finally:
+        try:
+            if ok:
+                conn.commit()
+            else:
+                conn.rollback()
+            riusa = (ok and not conn.closed and not conn.autocommit
+                     and conn.info.transaction_status == psycopg.pq.TransactionStatus.IDLE and len(_pool) < POOL_MAX)
+        except Exception:
+            riusa = False
+        if riusa:
+            _pool.append((conn, time.time()))
+        else:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def migrate(conn) -> list[str]:

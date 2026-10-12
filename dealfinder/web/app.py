@@ -22,7 +22,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from ..config import settings
-from ..db import connect
+from ..db import connect, usa_pool
 from . import abbonamento, cards, foto, scovo, sessions, social
 from .auth import check_link_code, hash_password, make_link_code, make_token, parse_link_code, read_token, verify_password
 
@@ -403,7 +403,7 @@ def notifications_seen(request: Request):
 def admin_overview(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
-        conn.execute("SET statement_timeout = '20s'")        # con tanti annunci: meglio un errore che una pagina ferma
+        conn.execute("SET LOCAL statement_timeout = '20s'")        # con tanti annunci: meglio un errore che una pagina ferma
         out = {
             "listings_by_source": conn.execute(
                 "SELECT source, status, count(*) AS n FROM listings GROUP BY source, status ORDER BY source").fetchall(),
@@ -1024,12 +1024,31 @@ def contatto(request: Request):
     return jsonify({"url": row["url"], "tel": scovo.find_phone(row["description"])})
 
 
+# foto già lette dal database tenute in memoria (fino a FOTO_MEMORIA_MB, 48 MB): la stessa foto vista da più
+# commercianti non passa più dal database
+from collections import OrderedDict
+_foto_mem: OrderedDict = OrderedDict()
+_foto_mem_tot = [0]
+FOTO_MEMORIA = int(os.environ.get("FOTO_MEMORIA_MB", "48")) * 1024 * 1024
+
+
 def foto_auto(request: Request):
     lid, pos = int(request.path_params["id"]), int(request.path_params["pos"])
     if pos >= foto.MAX_PER_AUTO or not foto.check(lid, pos, request.query_params.get("s")):
         return Response(status_code=404)
-    with connect() as conn:
-        content = foto.fetch_one(conn, lid, pos)
+    content = _foto_mem.get((lid, pos))
+    if content is None:
+        with connect() as conn:
+            content = foto.fetch_one(conn, lid, pos)
+        if content:
+            _foto_mem[(lid, pos)] = content
+            _foto_mem_tot[0] += len(content)
+            try:
+                while _foto_mem_tot[0] > FOTO_MEMORIA and _foto_mem:
+                    _, vecchia = _foto_mem.popitem(last=False)
+                    _foto_mem_tot[0] -= len(vecchia)
+            except KeyError:
+                pass
     if not content:
         return Response(status_code=404, headers={"Cache-Control": "no-store"})
     return Response(content, media_type="image/jpeg",
@@ -1108,6 +1127,8 @@ async def admin_request_done(request: Request):
 SITE = STATIC / "scovo"
 NO_CACHE = {"Cache-Control": "no-cache"}
 
+
+usa_pool()                        # il sito riusa le connessioni al database
 
 _index_cache: dict = {}
 
