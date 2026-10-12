@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -869,30 +870,88 @@ def _meno_subito_senza_telefono(items: list[dict]) -> list[dict]:
     return [it for it in items if it["id"] not in via]
 
 
-def affari(request: Request):
-    user = viewer(request, "auto")
+# Elenco auto condiviso: la query pesante gira al massimo una volta ogni ELENCO_SECONDI (90) per tutti,
+# in sottofondo; ogni richiesta aggiunge solo le auto già aperte da quel commerciante (query leggera).
+_elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False}
+_elenco_lock = threading.Lock()
+ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
+
+
+def _calcola_elenco() -> None:
+    t0 = time.time()
     with connect() as conn:
-        dealer = conn.execute("SELECT provinces FROM dealers WHERE id=%s", (user["id"],)).fetchone()
-        prov = list((dealer or {}).get("provinces") or [])
-        prov = []                         # niente più zone fisse: ognuno filtra per distanza dalla sua posizione
-        sql = scovo.LIST_SQL
-        if prov:
-            sql += " AND (l.province = ANY(%(prov)s) OR l.source='facebook' OR l.province IS NULL)"
-        rows = conn.execute(sql + " LIMIT 3000", {"me": user["id"], "prov": prov}).fetchall()
-    items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
+        rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": 0}).fetchall()
+    items, opens = [], {}
+    for r in rows:
+        it = scovo.item(r)
+        if scovo.abbastanza(it):
+            items.append(it)
+            opens[it["id"]] = int(r["opens"] or 0)
     items = _meno_subito_senza_telefono(items)
     # sezione "Sotto 1.000 €": tutte le auto di privati dal 2010, anche senza margine calcolato
     if os.environ.get("ECONOMICHE_SITO", "1") == "1":
         gia = {it["id"] for it in items}
         try:
             with connect() as conn:
-                conn.execute("SET LOCAL statement_timeout = '15s'")
+                conn.execute("SET LOCAL statement_timeout = '20s'")
                 eco = conn.execute(scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s",
-                                   dict(scovo.eco_params(user["id"]), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
-            items += [it for it in (scovo.item_eco(r) for r in eco if scovo.visible(r, settings.max_dealer_opens))
-                      if it and it["id"] not in gia]
+                                   dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
+            for r in eco:
+                it = scovo.item_eco(r)
+                if it and it["id"] not in gia:
+                    items.append(it)
+                    opens[it["id"]] = int(r["opens"] or 0)
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
+    _elenco.update(t=time.time(), items=items, opens=opens)
+    logging.getLogger("scovo").info("ELENCO %d auto in %.1fs", len(items), time.time() - t0)
+
+
+def _aggiorna_elenco(attendi: bool) -> None:
+    with _elenco_lock:
+        if _elenco["busy"]:
+            partito = False
+        else:
+            _elenco["busy"] = partito = True
+    if not partito:
+        if attendi:                       # primo avvio: aspetta chi sta già calcolando
+            while _elenco["busy"] and not _elenco["items"]:
+                time.sleep(.2)
+        return
+
+    def go():
+        try:
+            _calcola_elenco()
+        except Exception as e:
+            logging.getLogger("scovo").warning("elenco non aggiornato: %s", str(e)[:200])
+        finally:
+            _elenco["busy"] = False
+    if attendi:
+        go()
+    else:
+        threading.Thread(target=go, daemon=True, name="elenco").start()
+
+
+def _elenco_per(dealer_id: int) -> list[dict]:
+    eta = time.time() - _elenco["t"]
+    if not _elenco["items"]:
+        _aggiorna_elenco(attendi=True)
+    elif eta > ELENCO_SECONDI:
+        _aggiorna_elenco(attendi=False)   # si serve subito l'elenco di prima, il nuovo arriva in sottofondo
+    with connect() as conn:
+        mie = {r["listing_id"] for r in conn.execute(
+            "SELECT DISTINCT listing_id FROM listing_opens WHERE dealer_id=%s", (dealer_id,)).fetchall()}
+    out, mx = [], settings.max_dealer_opens
+    for it in _elenco["items"]:
+        aperta = it["id"] in mie
+        if aperta or _elenco["opens"].get(it["id"], 0) < mx:
+            out.append(dict(it, aperta=True) if aperta else it)
+    return out
+
+
+def affari(request: Request):
+    user = viewer(request, "auto")
+    items = [dict(it) for it in _elenco_per(user["id"])]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     pos = {i: k for k, i in enumerate(vet.get("ids") or [])}
@@ -1324,6 +1383,7 @@ def _lavoro_subito():
 async def _lifespan(app):
     if os.environ.get("DATABASE_URL"):
         _pulizia_disco()
+        _aggiorna_elenco(attendi=False)       # elenco auto pronto prima del primo visitatore
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
         _aggiorna_visibili()
     if os.environ.get("DATABASE_URL"):
