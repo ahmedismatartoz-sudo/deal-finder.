@@ -81,11 +81,19 @@ def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: li
         done = {(r["listing_id"], r["engine_version"].split("+manuale-v5", 1)[1]) for r in conn.execute(
             "SELECT DISTINCT listing_id, engine_version FROM valuations WHERE engine_version LIKE '%%+manuale-v5%%'"
         ).fetchall()}
+        # scarti già applicati: si saltano senza toccare il database (prima si riscrivevano tutti a ogni avvio)
+        da_scartare = [e["id"] for e in entries
+                       if e.get("esito") == "scartata" or (e.get("danno") == "grave" and e.get("esito") != "incidentata")]
+        gia_scartati = {r["id"] for r in conn.execute(
+            "SELECT id FROM listings WHERE id = ANY(%s) AND stage='scartato'", (da_scartare,)).fetchall()} if da_scartare else set()
         for e in entries:
             lid = e["id"]
             tag = ("-" + e["audit"]) if e.get("audit") else ""
             if (lid, tag) in done and (solo_nuove or not e.get("aggiorna")):
                 stats["gia_importati"] += 1
+                continue
+            if lid in gia_scartati and (e.get("esito") == "scartata" or (e.get("danno") == "grave" and e.get("esito") != "incidentata")):
+                stats["gia_scartate"] += 1
                 continue
             row = conn.execute("SELECT * FROM listings WHERE id=%s", (lid,)).fetchone()
             if not row:
