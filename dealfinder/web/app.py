@@ -1188,6 +1188,44 @@ routes = [
     Route("/", index),
 ]
 
+def _pulizia_disco():
+    """Libera spazio nel database (disco pieno il 12/10): toglie il testo originale della fonte (raw) agli annunci
+    non Facebook e le foto in cache delle auto non più sul sito, a blocchi piccoli, poi VACUUM. Una volta sola."""
+    import threading
+
+    def go():
+        lg = logging.getLogger("pulizia")
+        try:
+            import psycopg
+            from ..config import settings
+            from ..db import log_job
+            with connect() as conn:
+                if conn.execute("SELECT 1 FROM job_runs WHERE job='pulizia:disco:v1' AND ok").fetchone():
+                    return
+                finish = log_job(conn, "pulizia:disco:v1")
+                tot = 0
+                while True:
+                    n = conn.execute("""UPDATE listings SET raw = NULL WHERE id IN (SELECT id FROM listings
+                                        WHERE raw IS NOT NULL AND source <> 'facebook' LIMIT 5000)""").rowcount
+                    conn.commit()
+                    tot += n
+                    if n == 0:
+                        break
+                lg.warning("PULIZIA raw tolti: %d", tot)
+                foto = conn.execute("""DELETE FROM photo_cache WHERE listing_id NOT IN (SELECT id FROM listings
+                                       WHERE status='attivo' AND (stage='approfondito' OR source='facebook'))""").rowcount
+                conn.commit()
+                lg.warning("PULIZIA foto in cache tolte: %d", foto)
+                finish(True, {"raw": tot, "foto": foto})
+            with psycopg.connect(settings.database_url, autocommit=True) as c:
+                for t in ("listings", "photo_cache", "price_events", "valuations"):
+                    c.execute(f"VACUUM {t}")
+                    lg.warning("PULIZIA vacuum %s fatto", t)
+        except Exception as e:
+            lg.warning("pulizia non riuscita: %s", str(e)[:300])
+    threading.Thread(target=go, daemon=True, name="pulizia").start()
+
+
 def _aggiorna_visibili():
     """In sottofondo (ogni 30 minuti): le auto approvate e viste dalla raccolta nelle ultime 48 ore restano visibili,
     anche quando il ciclo notturno è in ritardo. Non blocca mai l'avvio del sito."""
@@ -1234,6 +1272,8 @@ def _lavoro_subito():
 
 @asynccontextmanager
 async def _lifespan(app):
+    if os.environ.get("DATABASE_URL"):
+        _pulizia_disco()
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
         _aggiorna_visibili()
     if os.environ.get("DATABASE_URL"):

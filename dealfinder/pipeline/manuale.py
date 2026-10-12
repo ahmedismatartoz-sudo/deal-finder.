@@ -77,11 +77,14 @@ def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: li
     with connect() as conn:
         finish = log_job(conn, "manuale")
         model = load_active(conn)
-        done = {r["listing_id"] for r in conn.execute(
-            "SELECT DISTINCT listing_id FROM valuations WHERE engine_version LIKE '%%+manuale-v5'").fetchall()}
+        # una revisione nuova (es. "audit": "a1") si importa anche all'avvio: ha un'etichetta sua
+        done = {(r["listing_id"], r["engine_version"].split("+manuale-v5", 1)[1]) for r in conn.execute(
+            "SELECT DISTINCT listing_id, engine_version FROM valuations WHERE engine_version LIKE '%%+manuale-v5%%'"
+        ).fetchall()}
         for e in entries:
             lid = e["id"]
-            if lid in done and (solo_nuove or not e.get("aggiorna")):
+            tag = ("-" + e["audit"]) if e.get("audit") else ""
+            if (lid, tag) in done and (solo_nuove or not e.get("aggiorna")):
                 stats["gia_importati"] += 1
                 continue
             row = conn.execute("SELECT * FROM listings WHERE id=%s", (lid,)).fetchone()
@@ -102,7 +105,7 @@ def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: li
             v = value_listing(l, load_market(conn, l.make, l.model, l.fuel))
             if weak(v):
                 apply_model(v, l, model)
-            v.engine_version += "+manuale-v5"
+            v.engine_version += "+manuale-v5" + tag
             # rivendita corretta a mano (es. allestimento povero, limitazioni di circolazione)
             if e.get("rivendita_prudente") and v.resale_prudent:
                 v.resale_prudent = min(v.resale_prudent, int(e["rivendita_prudente"]))

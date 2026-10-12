@@ -78,7 +78,9 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         seller_type=listing.seller_type, city=listing.city, province=listing.province,
         region=listing.region, damage_declared=listing.damage_declared,
         damage_class=listing.damage_class, damage_items=json.dumps(damage),
-        missing_fields=listing.missing_fields, raw=json.dumps(listing.raw, default=str),
+        missing_fields=listing.missing_fields,
+        # il testo originale della fonte serve solo per Facebook (rilettura): per gli altri occupava GB di disco
+        raw=json.dumps(listing.raw, default=str) if listing.source == "facebook" and listing.raw else None,
         problem_search=listing.problem_search,
     )
     if prev is None:
