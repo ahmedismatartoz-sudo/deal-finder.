@@ -38,12 +38,14 @@
    ],
    "ricambi_min": 2400,
    "ricambi_max": 2400,
-   "nota": "Foto: carrozzeria argento in ordine, cerchi neri aftermarket, nessun danno visibile. C'è un fermo amministrativo di 2.400 €: senza pagarlo l'auto non si può intestare in Italia (il venditore la propone per l'export). Il guadagno tiene già conto del fermo.",
+   "nota": "Foto: carrozzeria argento in ordine, cerchi neri aftermarket, nessun danno visibile. C'è un fermo amministrativo di 2.400 €: senza pagarlo l'auto non si può intestare in Italia (il venditore la propone per l'export). Il guadagno tiene già conto del fermo. Il mercato calcolato (circa 14.000 €) è troppo alto per una CLK 220 CDI del 2008 con 140.000 km: la rivendita è fissata in modo prudente a 6.500 €.",
    "controlli": [
     "Fermo amministrativo: farsi dare la visura PRA e l'importo esatto da pagare all'ente",
     "Chi paga il fermo e quando: solo con ricevuta prima del passaggio",
     "Città dell'auto da chiedere al venditore"
-   ]
+   ],
+   "rivendita_prudente": 6500,
+   "mercato_da_rivendita": true
   }
  }
 ]

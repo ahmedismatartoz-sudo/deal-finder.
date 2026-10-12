@@ -106,6 +106,12 @@ def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: li
             # rivendita corretta a mano (es. allestimento povero, limitazioni di circolazione)
             if e.get("rivendita_prudente") and v.resale_prudent:
                 v.resale_prudent = min(v.resale_prudent, int(e["rivendita_prudente"]))
+            if e.get("mercato_da_rivendita") and e.get("rivendita_prudente"):
+                # anche il mercato mostrato sul sito scende: rivendita prudente = mercato −10%
+                cap = round(int(e["rivendita_prudente"]) / (1 - scovo.SCONTO_DEFAULT / 100))
+                for f in ("private_median", "resale_median_private", "resale_median"):
+                    if getattr(v, f, None) and getattr(v, f) > cap:
+                        setattr(v, f, cap)
             parts = None
             if e.get("ricambi_max") is not None:
                 lines = [{"part": p.get("label"), "label": p.get("label"), "low": p.get("low"), "high": p.get("high"),
