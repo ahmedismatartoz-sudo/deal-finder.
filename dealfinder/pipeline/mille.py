@@ -77,7 +77,8 @@ def foglio(images: list[bytes], titolo: str) -> bytes | None:
 
 def run(fonte: str | None = None, versione: str | None = None, province: list[str] | None = None,
         ovunque: bool = False, danneggiate: bool = False, max_prezzo: int | None = None,
-        min_prezzo: int = 500, anche_scartate: bool = False, promettenti: bool = False) -> dict:
+        min_prezzo: int = 500, anche_scartate: bool = False, promettenti: bool = False,
+        quanti: int | None = None) -> dict:
     """fonte: solo gli annunci di quel sito (es. "autoscout24"); versione: nome del lavoro;
     province: zona da selezionare (predefinita Milano e dintorni);
     max_prezzo/min_prezzo: fascia di prezzo; anche_scartate: riprende anche le auto scartate per danni
@@ -145,14 +146,14 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
         cur_market = []
         out.sort(key=lambda x: -x[0])
         stats["sopra_soglia"] = len(out)
-        top = out[: int(QUANTI * 1.15)]
+        top = out[: int((quanti or QUANTI) * 1.15)]
         full = {r["id"]: r for r in conn.execute(
             f"SELECT {LIGHT_COLS}, stage_reason FROM listings WHERE id = ANY(%s)", ([x[1] for x in top],)).fetchall()}
         # prima di guardarli: esistono ancora? (solo Subito: il controllo Facebook costa)
         stats.update(verify_rows(conn, [full[x[1]] for x in top if x[2] == "subito" and x[1] in full]))
         alive = {x["id"] for x in conn.execute(
             "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'", ([x[1] for x in top],)).fetchall()}
-        top = [x for x in top if x[1] in alive and x[1] in full][:QUANTI]
+        top = [x for x in top if x[1] in alive and x[1] in full][:(quanti or QUANTI)]
 
         class _V:
             pass

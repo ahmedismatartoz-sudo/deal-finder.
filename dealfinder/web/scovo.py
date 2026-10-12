@@ -240,10 +240,12 @@ def _geo(r: dict):
 
 def area(r: dict) -> str:
     """Zona di lavoro: "ravenna" (Ravenna e dintorni) oppure "milano" (Milano e dintorni)."""
-    from ..zone import MILANO, RAVENNA
+    from ..zone import MILANO, RAVENNA, ROMA
     pv = (r.get("province") or "").upper()
     if pv in RAVENNA:
         return "ravenna"
+    if pv in ROMA:
+        return "roma"
     return "milano" if (not pv or pv in MILANO or pv in ("MN", "SO")) else "italia"
 
 

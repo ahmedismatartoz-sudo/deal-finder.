@@ -46,11 +46,13 @@ API_HEADERS = {
 # Interfaccia interna usata dal sito: annunci già strutturati.
 # c=2 auto, t=s vendita, r=4 Lombardia, ordinati dal più recente.
 API_SEARCH = "https://hades.subito.it/v1/search/items"
-REGION_CODES = {"lombardia": 4, "emilia-romagna": int(__import__("os").environ.get("SUBITO_CODICE_EMILIA", "8"))}
+REGION_CODES = {"lombardia": 4, "emilia-romagna": int(__import__("os").environ.get("SUBITO_CODICE_EMILIA", "8")),
+                "lazio": int(__import__("os").environ.get("SUBITO_CODICE_LAZIO", "12"))}
 PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG", "brescia": "BS",
                   "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",
                   "cremona": "CR", "mantova": "MN", "sondrio": "SO",
-                  "ravenna": "RA", "forli-cesena": "FC", "rimini": "RN", "ferrara": "FE", "bologna": "BO"}
+                  "ravenna": "RA", "forli-cesena": "FC", "rimini": "RN", "ferrara": "FE", "bologna": "BO",
+                  "roma": "RM", "latina": "LT", "frosinone": "FR", "viterbo": "VT", "rieti": "RI"}
 
 LABELS = {
     "price": ("prezzo",),

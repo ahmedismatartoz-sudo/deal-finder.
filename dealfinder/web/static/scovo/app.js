@@ -167,9 +167,9 @@ function botMatch(c, b){
 }
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
-const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"],["italia","Resto d'Italia"]];
-function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.italia; return o; }
-function zoneList(){ const sec = sezioneDi(S.route); const a = new Set((S.cars || []).filter(c => sec === "economiche" ? !!c.economica : !c.economica && !!c.incidentata === (sec === "incidentate")).map(c => c.area || "milano")); return ZONE_ALL.filter(([k]) => ["milano","ravenna"].includes(k) || (k === "italia" && a.has(k)) || S.zona === k); }
+const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"],["roma","Roma e dintorni"]];
+function zoneCounts(){ const o = {milano:0, ravenna:0, roma:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.roma; return o; }
+function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","ravenna","roma"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
 function nFiltri(){ return (S.bot ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }

@@ -196,6 +196,25 @@ def run(mode: str) -> Counter:
                    (asc, {"massiva": True, "min_price": 200, "max_price": top, "step": 250})]
         fonti = os.environ.get("ECONOMICHE_FONTI", "subito,autoscout")       # AutoScout può girare a parte, in parallelo
         sources = [x for x in sources if (x[0] is sub and "subito" in fonti) or (x[0] is asc and "autoscout" in fonti)]
+    elif mode == "roma":
+        # Roma e dintorni: Subito (Lazio) provincia per provincia in fasce strette, poi AutoScout24 entro
+        # ROMA_RAGGIO km da Roma (privati da proporre, concessionari come prezzi). Si ferma a ROMA_OBIETTIVO.
+        from ..zone import ZONE
+        z = ZONE["roma"]
+        bands = ([(p, p + 249) for p in range(500, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
+                 + [(p, p + 999) for p in range(15000, 40000, 1000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.2"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.0"))
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "0.8"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.0"))
+        sources = [(sub, {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
+                          "max_price": 40000, "max_pages": 0, "price_bands": bands,
+                          "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
+                   (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
+                            {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
     elif mode == "as5k":
         # AutoScout24 aggressivo sopra i 5.000 € attorno a Milano, Bergamo e Brescia (AS5K_CENTRI "cap:km,..."),
         # privati (da proporre) e poi concessionari (prezzi di mercato). Si ferma a AS5K_OBIETTIVO annunci letti.
@@ -382,6 +401,12 @@ def run(mode: str) -> Counter:
                         collector.stop = True
                         log.info("autoscout: obiettivo di %d annunci nuovi raggiunto", obiettivo)
                         break
+                    if mode == "roma":
+                        letti = sum(v for k, v in stats.items() if k.split(":")[0] == collector.source)
+                        if letti >= int(os.environ.get("ROMA_OBIETTIVO", "60000")) // 2:
+                            collector.stop = True
+                            log.info("roma: %s, obiettivo raggiunto (%d annunci letti)", collector.source, letti)
+                            break
                     if mode == "as5k" and sum(v for k, v in stats.items() if k.startswith("autoscout24:")) \
                             >= int(os.environ.get("AS5K_OBIETTIVO", "60000")):
                         collector.stop = True
@@ -455,6 +480,19 @@ if __name__ == "__main__":
         log.info("SITO analisi_manuale (dopo la selezione): %s", manuale.run())
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
+        sys.exit(0)
+    if mode == "roma":
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        from ..zone import ROMA
+        versione = os.environ.get("ROMA_VERSIONE", "roma-v1")
+        if _due("collect:roma", int(os.environ.get("ROMA_ORE", "20"))):
+            run("roma")
+        if _due(f"mille:{versione}", 24 * 365):
+            mille.run(versione=versione, province=list(ROMA), quanti=int(os.environ.get("ROMA_QUANTI", "1000")),
+                      promettenti=True)
+        log.info("ROMA analisi_manuale: %s", manuale.run(solo_nuove=True))
+        log.info("ROMA verifica: %s", recheck.run())
         sys.exit(0)
     if mode == "as5k":
         from . import manuale, mille, recheck
