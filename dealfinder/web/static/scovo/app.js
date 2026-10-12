@@ -83,6 +83,7 @@ async function api(path, opts = {}) {
   let data = null;
   try { data = await res.json(); } catch (e) {}
   if (res.status === 401 && S.token && !path.includes("/auth/")) { const m = (data && data.error) || "Accesso scaduto: entra di nuovo"; logout(m); throw new Error(m); }
+  if (res.status === 402) { S.paywall = true; if (typeof render === "function") render({keep:true}); }
   if (!res.ok) { const e = new Error((data && (data.error || data.errore)) || "Errore " + res.status); e.data = data; e.status = res.status; throw e; }
   return data;
 }
@@ -461,7 +462,8 @@ function viewProfilo(){
   return svcHead("Profilo", u.email || "") + `<main class="list">
     <div class="sec-title">Account</div>
     <div class="plist"><div><span>Nome</span><span class="v">${esc(u.name || "")}</span></div><div><span>Email</span><span class="v">${esc(u.email || "")}</span></div>
-      <button data-act="pwd"><span>Cambia password</span>${ICON.next}</button></div>
+      <button data-act="pwd"><span>Cambia password</span>${ICON.next}</button>
+      ${u.ha_pagamento ? `<button data-act="portale"><span>Abbonamento: carta, fatture, disdetta</span>${ICON.next}</button>` : ""}</div>
     ${P.open ? `<section class="box form" style="padding:16px">
       <label class="field">Password attuale<input id="p-old" type="password" autocomplete="current-password"></label>
       <label class="field">Nuova password (almeno 8 caratteri)<input id="p-new" type="password" autocomplete="new-password" minlength="8"></label>
@@ -591,6 +593,8 @@ function parseHash(){
   const e = h.match(/^entra(?:\/([\w-]+))?$/);
   if (e) return {route: "entra", esito: e[1] || ""};
   if (h === "prova") return {route: "prova"};
+  const ab = h.match(/^abbonamento\/(ok|annullato)$/);
+  if (ab) return {route: "abbonamento", esito: ab[1]};
   if (!canBrowse()) return {route: "vetrina"};
   if (h === "ricambi") { location.replace("/incentivi/"); }
   return {route: ["vendi","profilo","incidentate","economiche"].includes(h) ? h : "affari", sel: null};
@@ -604,6 +608,12 @@ function applyRoute(){
   const prev = S.route;
   S.scroll[prev === "auto" ? "auto" : prev] = window.scrollY;
   const r = parseHash();
+  if (r.route === "abbonamento") {
+    history.replaceState(null, "", "#/affari");
+    if (r.esito === "ok") { S.paywall = false; toast("Abbonamento attivo: benvenuto in Scovo!"); }
+    else toast("Pagamento annullato");
+    S.route = "affari"; render({top:true}); loadCars(true); return;
+  }
   if (r.route === "accesso") { history.replaceState(null, "", "#/entra"); S.route = "entra"; render({top:true}); redeemCode(r.code); return; }
   if (S.token && ["entra","prova","vetrina"].includes(r.route)) { go("affari", true); return; }
   if (r.route === "entra") { S.esitoAccesso = r.esito; if (r.esito) history.replaceState(null, "", "#/entra"); }
@@ -1002,6 +1012,7 @@ function render(opts){
   let html;
   if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
   else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
+  else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall() + tabBar(); }
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
   if (canBrowse()) {
@@ -1051,6 +1062,30 @@ function shrinkPhoto(file){
     im.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     im.src = url;
   });
+}
+function viewPaywall(){
+  const ab = (S.metodi && S.metodi.abbonamento) || {};
+  const prova = ab.prova_giorni ? `<span class="meta">I primi ${ab.prova_giorni} giorni sono gratis: puoi disdire quando vuoi.</span>` : `<span class="meta">Puoi disdire quando vuoi dal tuo profilo.</span>`;
+  return svcHead("Scovo", "Abbonamento") + `<main class="list"><div class="empty paywall">
+    <strong style="font:800 24px var(--disp)">Le auto sotto prezzo, ogni giorno</strong>
+    <ul class="checks" style="text-align:left;margin:4px 0 6px">
+      <li>Auto di privati sotto il prezzo di mercato a Milano, Ravenna e Roma</li>
+      <li>Guadagno già calcolato, con i pezzi da cambiare</li>
+      <li>Controllo foto e prezzi realistici, aggiornati più volte al giorno</li></ul>
+    ${ab.prezzo ? `<div class="price-big">${esc(ab.prezzo)}</div>` : ""}
+    ${ab.attivo ? `<button class="l-btn l-btn-blue" data-act="abbonati" style="width:100%" ${S.payBusy ? "disabled" : ""}>${S.payBusy ? "Apro il pagamento…" : "Abbonati con carta"}</button>${prova}
+      <span class="meta" style="font-size:13px">Il pagamento è gestito da Stripe: Scovo non vede né salva i dati della tua carta.</span>`
+      : `<span class="meta">I pagamenti online stanno per arrivare. Per attivare l'account scrivici dalla pagina di contatto.</span>`}
+    <button class="link" data-act="logout">Esci</button></div></main>`;
+}
+async function abbonati(){
+  if (S.payBusy) return; S.payBusy = true; render({keep:true});
+  try { const d = await api("/api/abbonamento/checkout", {method: "POST", body: {}}); location.href = d.url; }
+  catch (e) { S.payBusy = false; toast(e.message); render({keep:true}); }
+}
+async function portaleAbbonamento(){
+  try { const d = await api("/api/abbonamento/portale", {method: "POST", body: {}}); location.href = d.url; }
+  catch (e) { toast(e.message); }
 }
 function viewGuestLock(){
   const t = ({vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
@@ -1161,6 +1196,8 @@ $app.addEventListener("click", e => {
     case "comprata-ok": { const p = (document.getElementById("paid") || {}).value; S.sheet = null; sendEsito("comprata", p ? {bought_eur: Number(p)} : {}); return; }
     case "cerca-pezzi": { const d = S.detail[S.sel] || {}; R.pezzi = (d.pezzi || []).map(p => p.pezzo).slice(0, 8); R.stato = "form"; R.err = ""; S.sheet = null; go("ricambi"); return; }
     case "logout": logout(); return;
+    case "abbonati": abbonati(); return;
+    case "portale": portaleAbbonamento(); return;
     case "install": if (installEvt) { installEvt.prompt(); installEvt = null; } break;
     case "pwd": P.open = !P.open; P.err = ""; P.ok = false; break;
     case "pwd-go": pwdGo(); return;
@@ -1243,7 +1280,7 @@ api("/api/auth/metodi").then(m => {
 applyRoute();
 syncCookie();
 
-if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role, permessi: u.permessi}); syncCookie();
+if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role, permessi: u.permessi, ha_pagamento: u.ha_pagamento}); syncCookie();
   if (!S.pos && u.lat != null && u.lon != null) { S.pos = {lat: u.lat, lon: u.lon, t: 0}; store.set("pos", S.pos); }
   if (!perm("auto") && perm("incentivi")) { location.href = "/incentivi/"; return; }
   render({keep:true}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => {});

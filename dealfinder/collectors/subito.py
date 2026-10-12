@@ -386,7 +386,12 @@ class SubitoCollector(Collector):
             log.warning("subito: codice non trovato per %s (saltate nella raccolta profonda)", sorted(missing))
         for sn, key in sorted(keys.items()):
             tot_read = tot_kept = 0
+            from ..pipeline import passi
             for ps, pe in query["price_bands"]:
+                chiave = f"sub:{region}:{sn}:{ps}-{pe}"
+                if passi.fatto(chiave):
+                    continue
+                ok_band = True
                 for page in range(query.get("band_pages", 30)):
                     r = self.client.get(API_SEARCH, headers=API_HEADERS,
                                         params={"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
@@ -394,6 +399,7 @@ class SubitoCollector(Collector):
                     self.pause()
                     if r.status_code != 200:
                         log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
+                        ok_band = False
                         break
                     ads = (r.json() or {}).get("ads") or []
                     for it in ads:
@@ -407,6 +413,8 @@ class SubitoCollector(Collector):
                         yield listing
                     if len(ads) < lim:
                         break
+                if ok_band:
+                    passi.segna(chiave)
             log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot_read, tot_kept,
                      query["price_bands"][-1][1])
 

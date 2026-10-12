@@ -439,3 +439,5 @@ a{color:var(--focus)}
 .zona-box:has(> :nth-child(3)) .zona-btn{padding:8px 10px;justify-content:flex-start}
 .zona-box:has(> :nth-child(3)) .zona-btn svg{display:none}
 .tabs button{font-size:11px;letter-spacing:-.1px}
+.paywall{gap:14px}
+.paywall .price-big{font:800 30px var(--disp);color:var(--ink)}

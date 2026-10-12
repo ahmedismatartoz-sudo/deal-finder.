@@ -253,10 +253,15 @@ class AutoScoutCollector(Collector):
         step = query.get("step", 2000)
         for ctype, seller in query.get("venditori", [("P", "privato"), ("D", "commerciante")]):
             n0 = len(self.visti)
+            from ..pipeline import passi
             for a in range(lo, hi, step):
+                chiave = f"as:{os.environ.get('AUTOSCOUT_CAP', '')}:{os.environ.get('AUTOSCOUT_RAGGIO', '')}:{ctype}:{a}"
+                if passi.fatto(chiave):
+                    continue
                 yield from self._band(a, min(a + step - 1, hi), ctype, seller)
                 if self.blocked or self.stop:
                     break
+                passi.segna(chiave)
             log.info("autoscout massiva %s: %d annunci letti", seller, len(self.visti) - n0)
             if self.blocked or self.stop:
                 break

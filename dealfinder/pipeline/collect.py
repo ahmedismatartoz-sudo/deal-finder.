@@ -138,6 +138,8 @@ def city_provinces(conn) -> dict:
 
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
+    if mode in ("as5k", "roma", "lombardia", "ravenna", "economiche", "incidentate", "massiva"):
+        os.environ["PASSI_JOB"] = f"collect:{mode}"     # dopo un riavvio si riprende da dove si era arrivati
     if mode == "opportunita":
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
     else:
@@ -454,6 +456,9 @@ def run(mode: str) -> Counter:
                      "zona %s, foto %s | privati %s%%", q["source"], q["n"], q["marca"], q["modello"], q["anno"],
                      q["km"], q["prezzo"], q["zona"], q["foto"], q["privati"])
         finish(not any(k.endswith(":errore") for k in stats), dict(stats))
+        if os.environ.get("PASSI_JOB") and not any(k.endswith(":errore") for k in stats):
+            from . import passi
+            passi.finito(os.environ["PASSI_JOB"])
     log.info("raccolta %s: %s", mode, dict(stats))
     return stats
 

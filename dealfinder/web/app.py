@@ -22,7 +22,7 @@ from starlette.staticfiles import StaticFiles
 
 from ..config import settings
 from ..db import connect
-from . import cards, foto, scovo, sessions, social
+from . import abbonamento, cards, foto, scovo, sessions, social
 from .auth import check_link_code, hash_password, make_link_code, make_token, parse_link_code, read_token, verify_password
 
 log = logging.getLogger("web")
@@ -78,6 +78,11 @@ def richiede(request: Request, permesso: str) -> dict:
         with connect() as conn:
             if permesso not in permessi_di(conn, user):
                 err(403, "Il tuo account non ha accesso a questa sezione")
+            if permesso == "auto":
+                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato FROM dealers WHERE id=%s",
+                                   (user["id"],)).fetchone()
+                if not abbonamento.puo_vedere(row):
+                    err(402, "Per vedere le auto serve l'abbonamento")
     return user
 
 
@@ -177,7 +182,9 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts, resale_as, lat, lon FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+                         "preferred_parts, resale_as, lat, lon, richiede_abbonamento, abbonamento_stato, "
+                         "abbonamento_fino, (stripe_customer IS NOT NULL) AS ha_pagamento "
+                         "FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
     if not u:
         err(401, "Account non trovato")
@@ -550,7 +557,47 @@ def health(request: Request):
 # ---------------------------------------------------------------------------
 def auth_metodi(request: Request):
     from . import voce
-    return jsonify({**social.enabled(), "aperto": site_open(), "voce": voce.info()})
+    return jsonify({**social.enabled(), "aperto": site_open(), "voce": voce.info(), "abbonamento": abbonamento.info()})
+
+
+async def abbonamento_checkout(request: Request):
+    user = current_user(request)
+    if not abbonamento.attivo():
+        err(503, "Pagamenti non ancora attivi")
+    with connect() as conn:
+        d = conn.execute("SELECT id, email, stripe_customer FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+    try:
+        url = await run_in_threadpool(abbonamento.checkout, d, social.base_url(request))
+    except RuntimeError as e:
+        err(502, str(e))
+    return jsonify({"url": url})
+
+
+async def abbonamento_portale(request: Request):
+    user = current_user(request)
+    with connect() as conn:
+        d = conn.execute("SELECT stripe_customer FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+    if not d or not d["stripe_customer"]:
+        err(404, "Nessun abbonamento da gestire")
+    try:
+        url = await run_in_threadpool(abbonamento.portale, d["stripe_customer"], social.base_url(request))
+    except RuntimeError as e:
+        err(502, str(e))
+    return jsonify({"url": url})
+
+
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    if not abbonamento.firma_valida(payload, request.headers.get("stripe-signature")):
+        err(400, "firma non valida")
+    evento = json.loads(payload)
+
+    def go():
+        with connect() as conn:
+            return abbonamento.applica(conn, evento)
+    esito = await run_in_threadpool(go)
+    log.info("STRIPE %s -> %s", abbonamento.dump(evento), esito)
+    return jsonify({"ok": True})
 
 
 def auth_start(request: Request):
@@ -1143,6 +1190,9 @@ routes = [
     Route("/health", health),
     Route("/api/auth/login", login, methods=["POST"]),
     Route("/api/auth/metodi", auth_metodi),
+    Route("/api/abbonamento/checkout", abbonamento_checkout, methods=["POST"]),
+    Route("/api/abbonamento/portale", abbonamento_portale, methods=["POST"]),
+    Route("/api/stripe/webhook", stripe_webhook, methods=["POST"]),
     Route("/api/auth/scambio", auth_scambio, methods=["POST"]),
     Route("/api/auth/esci", esci, methods=["POST"]),
     Route("/auth/{provider}", auth_start),

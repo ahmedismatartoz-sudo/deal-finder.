@@ -144,6 +144,16 @@ def find_or_create(conn, provider: str, info: dict, name_hint: str | None = None
                                (d["email"],)).fetchone()
         return d, ("in_attesa" if pending else "disattivato")
     name = (info.get("name") or name_hint or info["email"].split("@")[0])[:120]
+    if os.environ.get("ISCRIZIONE") == "pagamento":
+        # iscrizione libera con abbonamento: l'account è attivo, le auto si vedono dopo il pagamento
+        from ..zone import tutte
+        d = conn.execute(
+            f"""INSERT INTO dealers (name, email, role, active, {col}, richiede_abbonamento, permessi, provinces)
+                VALUES (%s,%s,'commerciante',true,%s,true,'{{auto}}',%s) RETURNING *""",
+            (name, info["email"], info["sub"], tutte())).fetchone()
+        conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s) ON CONFLICT DO NOTHING", (d["id"],))
+        conn.commit()
+        return d, "ok"
     active = signup_open()
     d = conn.execute(
         f"INSERT INTO dealers (name, email, role, active, {col}) VALUES (%s,%s,'commerciante',%s,%s) RETURNING *",
