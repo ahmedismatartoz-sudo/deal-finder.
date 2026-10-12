@@ -1261,6 +1261,7 @@ S.metodi = {};
 api("/api/auth/metodi").then(m => {
   S.metodi = m || {};
   document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
+  document.querySelectorAll("[data-solo-senza-google]").forEach(a => { a.hidden = !!S.metodi.google; });
   if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
   if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|incidentate|economiche)$/.test(h) ? h : "affari", true); }
 }).catch(() => {});
@@ -1276,6 +1277,29 @@ api("/api/auth/metodi").then(m => {
     g.textContent = base - lo <= 0 ? "Nessun guadagno" : base - hi <= 0 ? "fino a +" + eur(base - lo) : "+" + num(base - hi) + "–" + num(base - lo) + " €";
   };
   r.addEventListener("input", upd); upd();
+})();
+(function home(){
+  // pagina d'ingresso: link interni senza toccare l'indirizzo (l'indirizzo #/… è delle pagine del sito),
+  // bordo della barra quando scorri, schede 3D che seguono il puntatore
+  document.querySelectorAll('.hm a[href^="#"]:not([href^="#/"])').forEach(a => a.addEventListener("click", e => {
+    const t = document.getElementById(a.getAttribute("href").slice(1));
+    if (!t) return;
+    e.preventDefault();
+    t.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  }));
+  const nav = document.getElementById("hm-nav"), stage = document.getElementById("hm-stage");
+  if (nav) {
+    const onScroll = () => nav.classList.toggle("is-scrolled", window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, {passive: true}); onScroll();
+  }
+  if (!stage || matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(hover: hover)").matches) return;
+  let raf = 0;
+  stage.addEventListener("pointermove", e => {
+    const b = stage.getBoundingClientRect(), x = (e.clientX - b.left) / b.width - .5, y = (e.clientY - b.top) / b.height - .5;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { stage.style.setProperty("--ry", (x * 14).toFixed(2) + "deg"); stage.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg"); });
+  });
+  stage.addEventListener("pointerleave", () => { stage.style.setProperty("--ry", "0deg"); stage.style.setProperty("--rx", "0deg"); });
 })();
 applyRoute();
 syncCookie();

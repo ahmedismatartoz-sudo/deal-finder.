@@ -1055,7 +1055,7 @@ _index_cache: dict = {}
 
 def index(request: Request):
     """Pagina del sito, con la versione dei file nel link (il telefono non tiene file vecchi)."""
-    files = [SITE / "index.html", SITE / "app.js", SITE / "app.css"]
+    files = [SITE / "index.html", SITE / "app.js", SITE / "app.css", SITE / "home.css"]
     key = tuple(f.stat().st_mtime_ns for f in files)
     if _index_cache.get("key") != key:
         import hashlib
