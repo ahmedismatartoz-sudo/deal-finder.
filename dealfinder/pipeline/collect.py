@@ -417,6 +417,11 @@ if __name__ == "__main__":
         from . import recheck
         log.info("SITO verifica: %s", recheck.run())          # senza verifica recente le auto non si mostrano
         sys.exit(0)
+    if mode == "cerca":
+        # ricerca su richiesta (CERCA_JSON), risultati nei log (CERCA / CERCAFOTO)
+        from . import cerca
+        cerca.run()
+        sys.exit(0)
     if mode == "economiche_as":
         # solo AutoScout24 fino a 1.500 € (in parallelo alla parte Subito), poi le auto già controllate sul sito
         from . import manuale

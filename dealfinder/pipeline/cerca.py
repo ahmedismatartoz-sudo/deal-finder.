@@ -1,0 +1,85 @@
+"""Ricerca su richiesta (CERCA_JSON) tra tutti gli annunci attivi: le auto più sotto il prezzo di mercato.
+
+CERCA_JSON = {"marca": "toyota", "modello": "yaris", "km_max": 80000, "zona": "milano", "quante": 15}
+Scrive nei log, per le migliori:
+  CERCA {json}                         dati, mercato, sconto, guadagno
+  CERCAFOTO <id> <k>/<n> <base64>      foglio con 4 foto per controllare
+"""
+from __future__ import annotations
+
+import base64
+import json
+import logging
+import os
+
+from ..db import connect
+from ..pricing.engine import value_listing
+from ..pricing.fallback import apply_model, weak
+from ..pricing.train import load_active
+from ..store import LIGHT_COLS, load_market, row_to_listing
+from ..web import foto, scovo
+from ..zone import ZONE
+from .mille import PEZZO, foglio
+from .verify import verify_rows
+
+log = logging.getLogger("cerca")
+
+
+def run(q: dict | None = None) -> list[dict]:
+    q = q or json.loads(os.environ.get("CERCA_JSON") or "{}")
+    marca, modello = (q.get("marca") or "").lower(), (q.get("modello") or "").lower()
+    prov = list(ZONE.get(q.get("zona") or "milano", ZONE["milano"])["province"])
+    out = []
+    with connect() as conn:
+        rows = conn.execute(
+            f"""SELECT {LIGHT_COLS}, stage_reason FROM listings
+                WHERE status='attivo' AND make=%s AND model=%s AND province = ANY(%s)
+                  AND COALESCE(seller_type,'privato') <> 'commerciante' AND price_eur >= 1000
+                  AND mileage_km IS NOT NULL AND mileage_km <= %s
+                  AND (year IS NULL OR year >= %s)
+                  AND last_seen_at > now() - interval '10 days'""",
+            (marca, modello, prov, int(q.get("km_max") or 10**7), int(q.get("anno_min") or 2007))).fetchall()
+        log.info("CERCA_TROVATI %d annunci %s %s", len(rows), marca, modello)
+        model = load_active(conn)
+        markets = {}
+        for r in rows:
+            l = row_to_listing(r)
+            key = (l.make, l.model, l.fuel)
+            if key not in markets:
+                markets[key] = load_market(conn, *key)
+            saved = l.damage_class
+            l.damage_class = "nessuno"
+            v = value_listing(l, markets[key])
+            l.damage_class = saved
+            if weak(v) and not apply_model(v, l, model):
+                continue
+            mercato = v.private_median or v.resale_median_private or v.resale_median
+            if not mercato:
+                continue
+            guad = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
+            out.append({"id": r["id"], "fonte": r["source"], "url": r["url"], "titolo": l.title,
+                        "descrizione": (l.description or "")[:700], "versione": l.version_raw, "anno": l.year,
+                        "km": l.mileage_km, "carburante": l.fuel, "cambio": l.gearbox, "citta": l.city,
+                        "provincia": l.province, "prezzo": l.price_eur, "mercato": mercato,
+                        "sconto_pct": round(100 * (1 - l.price_eur / mercato), 1), "guadagno_prima_ricambi": guad,
+                        "confronti": v.n_comparables, "danno": r.get("damage_class"), "esito": r.get("stage_reason"),
+                        "segnali": list(v.fraud_flags or [])})
+        out.sort(key=lambda x: -x["guadagno_prima_ricambi"])
+        top = out[: int(q.get("quante") or 15) * 2]
+        full = {r["id"]: r for r in rows}
+        verify_rows(conn, [full[x["id"]] for x in top if x["fonte"] == "subito"])
+        alive = {x["id"] for x in conn.execute("SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo'",
+                                                ([x["id"] for x in top],)).fetchall()}
+        top = [x for x in top if x["id"] in alive][: int(q.get("quante") or 15)]
+        for x in top:
+            log.info("CERCA %s", json.dumps(x, ensure_ascii=False, default=str))
+            n = conn.execute("SELECT count(*) AS n FROM listing_photos WHERE listing_id=%s", (x["id"],)).fetchone()["n"]
+            imgs = [c for c in (foto.fetch_one(conn, x["id"], p) for p in range(min(n, 4))) if c]
+            sheet = foglio(imgs, f"{x['id']} {marca} {modello} {x['anno']} {x['prezzo']}e")
+            if sheet:
+                b = base64.b64encode(sheet).decode()
+                parts = [b[i:i + PEZZO] for i in range(0, len(b), PEZZO)]
+                for k, p in enumerate(parts, 1):
+                    log.info("CERCAFOTO %s %d/%d %s", x["id"], k, len(parts), p)
+    log.info("CERCA_FINE %d", len(top))
+    return top
