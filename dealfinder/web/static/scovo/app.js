@@ -1292,14 +1292,35 @@ api("/api/auth/metodi").then(m => {
     const onScroll = () => nav.classList.toggle("is-scrolled", window.scrollY > 8);
     window.addEventListener("scroll", onScroll, {passive: true}); onScroll();
   }
-  if (!stage || matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(hover: hover)").matches) return;
-  let raf = 0;
-  stage.addEventListener("pointermove", e => {
-    const b = stage.getBoundingClientRect(), x = (e.clientX - b.left) / b.width - .5, y = (e.clientY - b.top) / b.height - .5;
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => { stage.style.setProperty("--ry", (x * 14).toFixed(2) + "deg"); stage.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg"); });
-  });
-  stage.addEventListener("pointerleave", () => { stage.style.setProperty("--ry", "0deg"); stage.style.setProperty("--rx", "0deg"); });
+  // spessore della targa 3D: fette una dietro l'altra
+  const plate = document.getElementById("hm-p3");
+  if (plate) for (let i = 1; i <= 12; i++) { const d = document.createElement("i"); d.className = "sl"; d.style.setProperty("--i", i); plate.prepend(d); }
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  // profondità che cambia scorrendo: il mazzo ruota, gli strati si separano
+  const layers = document.querySelector(".hm-layers");
+  let sraf = 0;
+  const onDepth = () => {
+    cancelAnimationFrame(sraf);
+    sraf = requestAnimationFrame(() => {
+      const vh = innerHeight;
+      if (stage) stage.style.setProperty("--sp", Math.min(1, Math.max(0, scrollY / (vh * .9))).toFixed(3));
+      if (layers) { const b = layers.getBoundingClientRect(); layers.style.setProperty("--p", Math.min(1, Math.max(0, (vh - b.top) / (vh * .9))).toFixed(3)); }
+    });
+  };
+  if (stage || layers) { addEventListener("scroll", onDepth, {passive: true}); onDepth(); }
+  if (!matchMedia("(hover: hover)").matches) return;
+  const tilt = (el, target, kx, ky, onMove) => {
+    let raf = 0;
+    el.addEventListener("pointermove", e => {
+      const b = el.getBoundingClientRect(), x = (e.clientX - b.left) / b.width - .5, y = (e.clientY - b.top) / b.height - .5;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { if (onMove) onMove(); target.style.setProperty("--ry", (x * kx).toFixed(2) + "deg"); target.style.setProperty("--rx", (-y * ky).toFixed(2) + "deg"); });
+    });
+    el.addEventListener("pointerleave", () => { target.style.setProperty("--ry", "0deg"); target.style.setProperty("--rx", "0deg"); });
+  };
+  if (stage) tilt(stage, stage, 14, 10);
+  const pst = document.getElementById("hm-p3-stage");
+  if (pst && plate) tilt(pst, pst, 50, 26, () => plate.classList.add("is-live"));
 })();
 applyRoute();
 syncCookie();
