@@ -1372,6 +1372,12 @@ def _aggiorna_visibili():
     def loop():
         from ..pipeline import aggiunte, manuale
         try:
+            # prima di tutto (è veloce): le auto approvate viste di recente tornano visibili
+            with connect() as conn:
+                logging.getLogger("visibili").warning("VISIBILI subito: %s", manuale.segna_viste_di_recente(conn))
+        except Exception as e:
+            logging.getLogger("visibili").warning("auto visibili non aggiornate: %s", str(e)[:200])
+        try:
             logging.getLogger("visibili").warning("AGGIUNTE: %s", aggiunte.run())
         except Exception as e:
             logging.getLogger("visibili").warning("aggiunte non importate: %s", str(e)[:300])

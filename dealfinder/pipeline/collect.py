@@ -542,6 +542,14 @@ if __name__ == "__main__":
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "fb_veloce":
+        # selezione veloce di Facebook: solo gli annunci "interessanti" del primo filtro, i migliori con le foto
+        from . import mille
+        os.environ["MILLE_SOLO_INTERESSANTI"] = "1"
+        mille.MAX_DIESEL = float(os.environ.get("MILLE_MAX_DIESEL", "0.3"))
+        mille.run(fonte="facebook", versione=os.environ.get("FB_VELOCE_VERSIONE", "fbv-v1"),
+                  quanti=int(os.environ.get("FB_QUANTI", "300")))
+        sys.exit(0)
     if mode == "fb_grande":
         # raccolta grande Facebook (Milano, ultimi FB_GIORNI giorni, fino a FB_RIGHE_PER_GIRO righe), poi i migliori
         # con le foto per il controllo uno per uno (MILLE / MILLEFOTO nei log)

@@ -101,6 +101,9 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
                   AND (%s::text IS NULL OR source = %s)
                   AND NOT (id = ANY(%s))
                   AND (NOT %s OR COALESCE(prescreen, '') <> 'non_interessante')"""
+        if os.environ.get("MILLE_SOLO_INTERESSANTI") == "1":
+            # selezione veloce: solo gli annunci già segnati "interessanti" dal primo filtro della raccolta
+            where += " AND prescreen = 'interessante' AND last_seen_at > now() - interval '3 days'"
         params = (min_prezzo, max_prezzo or settings.max_purchase_eur, ovunque, list(province or PROVINCES), province is None and not ovunque,
                   danneggiate, scovo.ANNO_MINIMO, danneggiate, anche_scartate, fonte, fonte, _gia_controllate(), promettenti)
         ids = [r["id"] for r in conn.execute(
