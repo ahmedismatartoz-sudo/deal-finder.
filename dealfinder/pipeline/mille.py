@@ -236,3 +236,58 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
     stats["versione"] = versione or VERSIONE
     log.info("MILLE_RIEPILOGO %s", json.dumps(dict(stats)))
     return dict(stats)
+
+
+def lampo(quanti: int = 200, max_diesel: float = 0.3) -> int:
+    """Selezione lampo di Facebook a Milano: niente ricalcolo del mercato (troppo lento col database pieno),
+    si usa la stima del primo filtro già salvata in raccolta (model_p50, prescreen_potential).
+    Scrive MILLE / MILLEFOTO come run(), poi MILLE_RIEPILOGO."""
+    from ..zone import MILANO
+    with connect() as conn:
+        rows = conn.execute(
+            f"""SELECT {LIGHT_COLS}, stage_reason, model_p50, prescreen_potential FROM listings
+                WHERE source='facebook' AND status='attivo' AND prescreen='interessante'
+                  AND last_seen_at > now() - interval '4 days'
+                  AND (province = ANY(%s) OR province IS NULL)
+                  AND price_eur BETWEEN 500 AND 40000
+                  AND (mileage_km IS NULL OR mileage_km <= %s)
+                  AND (year IS NULL OR year >= %s)
+                ORDER BY prescreen_potential DESC NULLS LAST LIMIT %s""",
+            (list(MILANO), scovo.KM_MASSIMO, scovo.ANNO_MINIMO, quanti * 3)).fetchall()
+        scelti, n_d = [], 0
+        for r in rows:
+            if r.get("fuel") == "diesel":
+                if n_d >= int(quanti * max_diesel):
+                    continue
+                n_d += 1
+            scelti.append(r)
+            if len(scelti) >= quanti:
+                break
+        for r in scelti:
+            l = row_to_listing(r)
+            lid = r["id"]
+            mercato = int(r.get("model_p50") or 0)
+            rec = {"id": lid, "fonte": "facebook", "url": r["url"], "titolo": l.title,
+                   "descrizione": (l.description or "")[:900], "marca": l.make, "modello": l.model,
+                   "versione": l.version_raw, "anno": l.year, "km": l.mileage_km, "carburante": l.fuel,
+                   "cambio": l.gearbox, "citta": l.city, "provincia": l.province, "prezzo": l.price_eur,
+                   "mercato": mercato, "stima": "modello", "guadagno_prima_ricambi": int(r.get("prescreen_potential") or 0),
+                   "soglia": scovo.soglia(l.price_eur or 0)}
+            log.info("MILLE %s", json.dumps(rec, ensure_ascii=False, default=str))
+            imgs = []
+            for pos in range(4):
+                try:
+                    c = foto.fetch_one(conn, lid, pos)
+                except Exception:
+                    c = None
+                if c:
+                    imgs.append(c)
+            sheet = foglio(imgs, f"{lid} {l.make} {l.model} {l.year} {l.price_eur}e")
+            if sheet:
+                b = base64.b64encode(sheet).decode()
+                parts = [b[i:i + PEZZO] for i in range(0, len(b), PEZZO)]
+                for k, p in enumerate(parts, 1):
+                    log.info("MILLEFOTO %s %d/%d %s", lid, k, len(parts), p)
+        log.info("MILLE_RIEPILOGO %s", json.dumps({"candidati": len(rows), "esportati": len(scelti),
+                                                  "diesel": n_d, "versione": "fb-lampo"}))
+        return len(scelti)

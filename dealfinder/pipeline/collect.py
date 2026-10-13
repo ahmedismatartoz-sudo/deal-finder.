@@ -542,6 +542,10 @@ if __name__ == "__main__":
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "fb_lampo":
+        from . import mille
+        mille.lampo(int(os.environ.get("FB_QUANTI", "200")))
+        sys.exit(0)
     if mode == "fb_veloce":
         # selezione veloce di Facebook: solo gli annunci "interessanti" del primo filtro, i migliori con le foto
         from . import mille
