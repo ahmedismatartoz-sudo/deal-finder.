@@ -111,6 +111,10 @@ def searches_senza_doppioni(days: int = 1) -> list[dict]:
                 for lo, hi in fasce]
         # poche ricerche mirate per auto con problemi (le uniche che possono ripetere un annuncio: limite basso)
         out += [{"city": city, "radius": radius, "query": q, "days": days, "kind": "problema"} for q in FB_PROBLEM_QUERIES]
+        if k == 0 and os.environ.get("FB_MARCHE") == "1":
+            # Facebook dà al massimo ~200 risultati per ricerca: con marca e modello × fascia si arriva a molti più annunci
+            out += [{"city": city, "radius": radius, "query": q, "min_price": lo, "max_price": hi, "days": days,
+                     "kind": "marca"} for q in FB_BRAND_QUERIES for lo, hi in FB_QUERY_BANDS]
     return out
 
 

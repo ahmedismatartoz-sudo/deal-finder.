@@ -25,6 +25,8 @@ log = logging.getLogger("collect")
 def _recent_facebook() -> bool:
     """Facebook raccolto da poco? Contano solo i giri che hanno davvero portato annunci
     (un giro vuoto per credito finito non deve bloccare la ripresa)."""
+    if os.environ.get("FB_FORZA") == "1":
+        return False                     # raccolta voluta adesso (es. fb_grande su richiesta)
     from .ciclo import facebook_due
     return not facebook_due(max(1, int(os.environ.get("FACEBOOK_ORE", "23")) - 1))
 
@@ -517,6 +519,29 @@ if __name__ == "__main__":
         log.info("AS5K analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("AS5K verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "selezioni":
+        # niente raccolta: si scelgono subito i migliori da quello che Roma, as5k e Ravenna hanno già raccolto,
+        # uno dopo l'altro (un solo processo: memoria limitata)
+        from . import manuale, mille, recheck
+        from .ciclo import _due
+        from ..zone import ROMA, ZONE
+        lavori = [
+            (os.environ.get("ROMA_VERSIONE", "roma-v1"),
+             dict(province=list(ROMA), quanti=int(os.environ.get("ROMA_QUANTI", "1000")), promettenti=True)),
+            (os.environ.get("AS5K_VERSIONE", "as5k-v1"),
+             dict(province=["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR"],
+                  min_prezzo=int(os.environ.get("AS5K_MIN", "5000")), promettenti=True)),
+            (os.environ.get("RAVENNA_SEL_VERSIONE", "ra-v3"), dict(province=ZONE["ravenna"]["province"])),
+        ]
+        for versione, kw in lavori:
+            if _due(f"mille:{versione}", 24 * 365):
+                try:
+                    mille.run(versione=versione, **kw)
+                except Exception as e:
+                    log.error("SELEZIONI %s non riuscita: %s", versione, e)
+        log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
+        log.info("SELEZIONI verifica: %s", recheck.run())
+        sys.exit(0)
     if mode == "fb_grande":
         # raccolta grande Facebook (Milano, ultimi FB_GIORNI giorni, fino a FB_RIGHE_PER_GIRO righe), poi i migliori
         # con le foto per il controllo uno per uno (MILLE / MILLEFOTO nei log)
@@ -524,6 +549,7 @@ if __name__ == "__main__":
         from .ciclo import _due
         versione = os.environ.get("FB_VERSIONE", "fb50-v1")
         os.environ.setdefault("FB_GIORNI", "30")
+        os.environ["FB_FORZA"] = "1"
         if os.environ.get("FB_ALLENA") == "1" and _due("train", 6):
             # prima si riaddestra l'agente dei prezzi su tutta la base raccolta
             from ..pricing.train import run as train_run
