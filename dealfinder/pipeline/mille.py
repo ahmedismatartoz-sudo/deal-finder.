@@ -256,20 +256,23 @@ def e_moto(*testi) -> bool:
 
 def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "facebook",
           ore: int = 96, danneggiate: bool = False, ovunque: bool = False,
-          versione: str = "fb-lampo") -> int:
+          versione: str = "fb-lampo", province: list | None = None, anno: int | None = None,
+          commercianti: bool = False, anche_parole: bool = False) -> int:
     """Selezione lampo: niente ricalcolo del mercato (troppo lento col database pieno), si usa la stima del
     primo filtro già salvata in raccolta (model_p50, prescreen_potential). Preferisce le auto con pochi km,
     toglie moto/scooter, privati soltanto, mai le auto già guardate a mano.
     Scrive MILLE / MILLEFOTO come run(), poi MILLE_RIEPILOGO."""
     from ..zone import MILANO
+    zona = list(province or MILANO)
     with connect() as conn:
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS}, stage_reason, model_p50, prescreen_potential FROM listings
-                WHERE status='attivo' AND COALESCE(seller_type,'') <> 'commerciante'
+                WHERE status='attivo' AND (%s OR COALESCE(seller_type,'') <> 'commerciante')
                   AND (%s::text IS NULL OR source = %s)
                   AND (%s OR prescreen='interessante')
                   AND COALESCE(prescreen_potential, 0) > 0
-                  AND (NOT %s OR damage_declared OR damage_class IN ('leggero','medio','grave','alto_rischio'))
+                  AND (NOT %s OR damage_declared OR damage_class IN ('leggero','medio','grave','alto_rischio')
+                       OR (%s AND problem_search))
                   AND last_seen_at > now() - make_interval(hours => %s)
                   AND (%s OR province = ANY(%s) OR (province IS NULL AND source='facebook'))
                   AND price_eur BETWEEN 400 AND 40000
@@ -280,8 +283,8 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                          + CASE WHEN mileage_km < 80000 THEN 2000 WHEN mileage_km < 120000 THEN 900 ELSE 0 END
                          + CASE WHEN province = ANY(%s) THEN 1500 ELSE 0 END DESC
                 LIMIT %s""",
-            (fonte, fonte, danneggiate, danneggiate, ore, ovunque, list(MILANO), scovo.KM_MASSIMO,
-             scovo.ANNO_MINIMO, _gia_controllate(), list(MILANO), quanti * 4)).fetchall()
+            (commercianti, fonte, fonte, danneggiate, danneggiate, anche_parole, ore, ovunque, zona, scovo.KM_MASSIMO,
+             anno or scovo.ANNO_MINIMO, _gia_controllate(), zona, quanti * 4)).fetchall()
         scelti, n_d, n_moto = [], 0, 0
         for r in rows:
             if e_moto(r.get("title"), (r.get("description") or "")[:300], r.get("model"), r.get("make")):

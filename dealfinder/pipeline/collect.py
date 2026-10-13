@@ -221,6 +221,30 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
                             {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
+    elif mode == "modena_inc":
+        # Incidentate di Modena e dintorni (MODENA_RAGGIO km), dal MODENA_ANNO in poi: AutoScout24 solo danneggiate
+        # (privati e commercianti), Subito Emilia (MO, RE, BO, PR, FE) le più recenti e la ricerca per parole.
+        from ..collectors.subito import REGION_CODES
+        os.environ["ANNO_MINIMO"] = os.environ.get("MODENA_ANNO", "2018")
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "41121", os.environ.get("MODENA_RAGGIO", "100")
+        os.environ["AUTOSCOUT_DANNEGGIATE"] = "only"
+        os.environ.pop("AUTOSCOUT_KM_MAX", None)
+        os.environ["INC_MILANO"], os.environ["INC_REGIONE"] = "1", str(REGION_CODES["emilia-romagna"])
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s, asc.max_delay_s = 0.7, 1.6
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s, sub.max_delay_s = 0.8, 1.8
+        bands = ([(p, p + 999) for p in range(1000, 10000, 1000)] + [(p, p + 1999) for p in range(10000, 30000, 2000)]
+                 + [(30000, 45000)])
+        parole = ["incidentata", "incidentato", "sinistrata", "danneggiata", "da riparare", "non marciante",
+                  "airbag", "grandinata", "frontale", "tamponata", "motore da rifare", "carrozzeria da sistemare"]
+        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": 45000, "step": 2500,
+                          "venditori": [("P", "privato"), ("D", "commerciante")]}),
+                   (_Parole(sub, parole, [(500, 4999), (5000, 9999), (10000, 19999), (20000, 45000)]), {}),
+                   (sub, {"region": "emilia-romagna", "provinces": ["mo", "re", "bo", "pr", "fe"], "max_price": 45000,
+                          "max_pages": 0, "price_bands": bands,
+                          "band_pages": int(os.environ.get("MODENA_PAGINE", "6"))})]
     elif mode == "stasera":
         # Milano, solo le novità (Subito e AutoScout24 ordinati dal più recente): poche pagine per fascia,
         # privati, auto con pochi km su AutoScout24 (AUTOSCOUT_KM_MAX). Veloce: serve entro poche ore.
@@ -401,7 +425,7 @@ def run(mode: str) -> Counter:
                         if pv and not listing.province:
                             listing.province = pv
                         pv = listing.province or pv
-                        if mode != "incidentate" and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
+                        if mode not in ("incidentate", "modena_inc") and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
                             stats[f"{listing.source}:fuori_zona"] += 1
                             continue
                         if listing.province and not listing.region:
@@ -596,6 +620,18 @@ if __name__ == "__main__":
             with connect() as conn:
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
+        sys.exit(0)
+    if mode == "modena_inc":
+        # incidentate di Modena e dintorni dal 2018: raccolta, poi i migliori con le foto per il controllo
+        from . import mille
+        from .ciclo import _due
+        os.environ["PASSI_JOB"] = "collect:modena_inc:" + os.environ.get("MODENA_GIRO", "1")
+        if _due("collect:modena_inc", int(os.environ.get("MODENA_ORE", "10"))):
+            os.environ["COLLECT_JOB"] = "collect:modena_inc"
+            run("modena_inc")
+        mille.lampo(int(os.environ.get("MODENA_QUANTI", "400")), max_diesel=0.6, fonte=None, ore=24 * 20,
+                    danneggiate=True, ovunque=False, versione="modena-inc", province=["MO", "RE", "BO", "PR", "FE", "MN"],
+                    anno=int(os.environ.get("MODENA_ANNO", "2018")), commercianti=True, anche_parole=True)
         sys.exit(0)
     if mode == "inc_milano":
         # incidentate di Milano e dintorni già raccolte e mai guardate: subito al controllo foto (una volta al giorno)
