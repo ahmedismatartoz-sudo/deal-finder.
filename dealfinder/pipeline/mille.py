@@ -269,7 +269,7 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                   AND (%s::text IS NULL OR source = %s)
                   AND (%s OR prescreen='interessante')
                   AND COALESCE(prescreen_potential, 0) > 0
-                  AND (NOT %s OR damage_declared OR problem_search OR damage_class IN ('leggero','medio','grave'))
+                  AND (NOT %s OR damage_declared OR damage_class IN ('leggero','medio','grave','alto_rischio'))
                   AND last_seen_at > now() - make_interval(hours => %s)
                   AND (%s OR province = ANY(%s) OR (province IS NULL AND source='facebook'))
                   AND price_eur BETWEEN 400 AND 40000
