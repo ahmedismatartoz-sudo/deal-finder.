@@ -240,7 +240,8 @@ def run(mode: str) -> Counter:
         parole = ["incidentata", "incidentato", "sinistrata", "danneggiata", "da riparare", "non marciante",
                   "airbag", "grandinata", "frontale", "tamponata", "motore da rifare", "carrozzeria da sistemare"]
         sources = [(asc, {"massiva": True, "min_price": 500, "max_price": 45000, "step": 2500,
-                          "venditori": [("P", "privato"), ("D", "commerciante")]}),
+                          "venditori": [("P", "privato")] + ([("D", "commerciante")]
+                                        if os.environ.get("MODENA_CONCESSIONARI") == "1" else [])}),
                    (_Parole(sub, parole, [(500, 4999), (5000, 9999), (10000, 19999), (20000, 45000)]), {}),
                    (sub, {"region": "emilia-romagna", "provinces": ["mo", "re", "bo", "pr", "fe"], "max_price": 45000,
                           "max_pages": 0, "price_bands": bands,
