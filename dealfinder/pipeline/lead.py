@@ -243,3 +243,82 @@ def compra_da_privati() -> int:
                 break
     log.info("LEADP_FINE autoscout %d, subito %d", n_si, len(visti))
     return n_si + len(visti)
+
+
+def compro_auto() -> int:
+    """Chi compra auto di ogni tipo in provincia di Milano e Monza-Brianza:
+    1) annunci Subito "cerco" (t=k) nella categoria auto, province MI e MB: chi scrive "compro auto ...";
+    2) annunci di vendita Subito MI/MB con parole "compro/acquisto auto ... incidentate/fuse/qualsiasi";
+    3) pagine AutoScout24 degli autosaloni di Monza e Brianza (data/lead_mb.json).
+    Nei log: LEADC {json}."""
+    import time
+    from pathlib import Path
+    from html import unescape
+    from ..collectors.autoscout import AutoScoutCollector
+    from ..collectors.subito import SubitoCollector, API_SEARCH, API_HEADERS
+    sub = SubitoCollector()
+    visti = set()
+    n = 0
+
+    def scrivi(it, origine):
+        nonlocal n
+        adv = it.get("advertiser") or {}
+        testo = f"{it.get('subject') or ''}\n{it.get('body') or ''}"
+        k = it.get("urn") or (it.get("urls") or {}).get("default")
+        if k in visti:
+            return
+        visti.add(k)
+        geo = it.get("geo") or {}
+        town = geo.get("town") if isinstance(geo.get("town"), dict) else {}
+        city = geo.get("city") if isinstance(geo.get("city"), dict) else {}
+        n += 1
+        log.info("LEADC %s", json.dumps({
+            "origine": origine, "nome": adv.get("shop_name") or adv.get("name"), "azienda": adv.get("company") is True,
+            "utente": adv.get("user_id"), "comune": town.get("value"), "provincia": city.get("short_name") or city.get("value"),
+            "titolo": (it.get("subject") or "")[:150], "testo": " ".join((it.get("body") or "").split())[:500],
+            "tel": sorted(set(TEL.findall(testo)))[:3], "url": (it.get("urls") or {}).get("default"),
+            "qualsiasi": bool(QUALSIASI.search(testo)), "compra": bool(COMPRA.search(testo) or re.search(r"\bcompro\b", testo, re.I)),
+            "data": it.get("dates", {}).get("display") if isinstance(it.get("dates"), dict) else None},
+            ensure_ascii=False))
+
+    for ci in (8, 9):                                   # 8 = Milano, 9 = Monza e Brianza
+        for tipo, q in (("k", None), ("k", "compro"), ("s", "compro auto"), ("s", "acquisto auto"),
+                        ("s", "ritiro auto"), ("s", "auto incidentate compro"), ("s", "compro auto fuse")):
+            for page in range(10):
+                params = {"c": 2, "r": 4, "ci": ci, "t": tipo, "lim": 100, "start": page * 100, "sort": "datedesc"}
+                if q:
+                    params["q"] = q
+                try:
+                    r = sub.client.get(API_SEARCH, headers=API_HEADERS, params=params)
+                    ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
+                except Exception:
+                    ads = []
+                log.info("LEADC_PAGINA ci=%s t=%s q=%s pagina=%s annunci=%d", ci, tipo, q, page, len(ads))
+                for it in ads:
+                    testo = f"{it.get('subject') or ''} {it.get('body') or ''}"
+                    if tipo == "k" or re.search(r"\b(compro|compriamo|acquisto|acquistiamo|ritiro|ritiriamo)\b", it.get("subject") or "", re.I):
+                        scrivi(it, f"subito_{'cerco' if tipo == 'k' else 'vendo'}")
+                time.sleep(1.0)
+                if len(ads) < 100:
+                    break
+    lista = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_mb.json").read_text())
+    asc = AutoScoutCollector()
+    for d in lista:
+        try:
+            r = asc.client.get(d["url"])
+            testo = unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else ""
+        except Exception:
+            testo = ""
+        m, qq = COMPRA.search(testo), QUALSIASI.search(testo)
+        frase = ""
+        for x in (qq, m):
+            if x:
+                a, b = max(0, x.start() - 80), x.end() + 80
+                frase = " ".join(testo[a:b].split())[:220]
+                break
+        log.info("LEADC %s", json.dumps({"origine": "autoscout24", "nome": d["nome"], "comune": d["citta"], "provincia": "MB",
+                                         "url": d["url"], "compra": bool(m), "qualsiasi": bool(qq), "testo": frase,
+                                         "tel": d.get("tel") or [], "annunci": d.get("annunci")}, ensure_ascii=False))
+        time.sleep(0.8)
+    log.info("LEADC_FINE subito %d, autoscout MB %d", n, len(lista))
+    return n

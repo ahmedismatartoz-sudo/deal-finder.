@@ -569,6 +569,15 @@ if __name__ == "__main__":
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "lead_compro":
+        from . import lead
+        from .ciclo import _due
+        job = "lead:compro:" + os.environ.get("LEAD_GIRO", "1")
+        if _due(job, 20):
+            with connect() as conn:
+                fin = log_job(conn, job)
+                fin(True, {"trovati": lead.compro_auto()})
+        sys.exit(0)
     if mode == "lead_privati":
         from . import lead
         from .ciclo import _due
