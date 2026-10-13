@@ -162,3 +162,66 @@ def dal_sito() -> int:
         stampati += 1
     log.info("LEAD_FINE %d autosaloni", stampati)
     return stampati
+
+
+COMPRA = re.compile(r"compriamo|acquistiamo|ritiriamo|compro auto|acquisto auto|ritiro auto|acquisto (del )?(vostr|tu)\w* (auto|veicol)|"
+                    r"compr\w* la tua auto|vendi la tua auto|valutazion\w* (gratuit|immediat|in giornata)|"
+                    r"pagamento (immediato|in contanti|contanti)|ritiro (del(l')? )?usato|auto in conto vendita|conto vendita", re.I)
+
+
+def compra_da_privati() -> int:
+    """Autosaloni della provincia di Milano (data/lead_mi.json) che scrivono sulla loro pagina AutoScout24 che
+    comprano/ritirano auto dai privati; poi annunci "compro auto" di attività su Subito, provincia di Milano.
+    Nei log: LEADP {json}."""
+    import time
+    from pathlib import Path
+    from html import unescape
+    from ..collectors.autoscout import AutoScoutCollector
+    from ..collectors.subito import SubitoCollector, API_SEARCH, API_HEADERS
+    lista = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_mi.json").read_text())
+    asc = AutoScoutCollector()
+    n_si = 0
+    for d in lista:
+        try:
+            r = asc.client.get(d["url"])
+            testo = unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else ""
+        except Exception:
+            testo = ""
+        m = COMPRA.search(testo)
+        tel = re.findall(r"\+39[\s\d\-]{8,16}", testo)
+        if m:
+            n_si += 1
+            a, b = max(0, m.start() - 80), m.end() + 80
+            log.info("LEADP %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "citta": d["citta"],
+                                             "url": d["url"], "frase": " ".join(testo[a:b].split())[:220],
+                                             "tel": sorted(set(t.strip() for t in tel))[:3]}, ensure_ascii=False))
+        time.sleep(0.8)
+    log.info("LEADP_AS %d su %d autosaloni", n_si, len(lista))
+    sub = SubitoCollector()
+    visti = set()
+    for q in ("compro auto", "acquisto auto", "ritiro auto", "compriamo auto", "acquistiamo auto"):
+        for page in range(5):
+            try:
+                r = sub.client.get(API_SEARCH, headers=API_HEADERS,
+                                   params={"c": 2, "r": 4, "ci": 8, "t": "s", "q": q, "lim": 100, "start": page * 100})
+                ads = (r.json() or {}).get("ads") or [] if r.status_code == 200 else []
+            except Exception:
+                ads = []
+            for it in ads:
+                adv = it.get("advertiser") or {}
+                if not (adv.get("company") is True or str(adv.get("type")) == "1"):
+                    continue
+                k = adv.get("user_id") or adv.get("shop_id") or adv.get("name")
+                if k in visti:
+                    continue
+                visti.add(k)
+                geo = it.get("geo") or {}
+                citta = ((geo.get("town") or {}).get("value") if isinstance(geo.get("town"), dict) else None)
+                log.info("LEADP %s", json.dumps({"fonte": "subito", "nome": adv.get("shop_name") or adv.get("name"),
+                                                 "citta": citta, "url": (it.get("urls") or {}).get("default"),
+                                                 "frase": (it.get("subject") or "")[:200]}, ensure_ascii=False))
+            time.sleep(1.0)
+            if len(ads) < 100:
+                break
+    log.info("LEADP_FINE autoscout %d, subito %d", n_si, len(visti))
+    return n_si + len(visti)
