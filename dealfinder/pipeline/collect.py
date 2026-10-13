@@ -631,7 +631,8 @@ if __name__ == "__main__":
             run("modena_inc")
         mille.lampo(int(os.environ.get("MODENA_QUANTI", "400")), max_diesel=0.6, fonte=None, ore=24 * 20,
                     danneggiate=True, ovunque=False, versione="modena-inc", province=["MO", "RE", "BO", "PR", "FE", "MN"],
-                    anno=int(os.environ.get("MODENA_ANNO", "2018")), commercianti=True, anche_parole=True)
+                    anno=int(os.environ.get("MODENA_ANNO", "2018")), commercianti=True, anche_parole=True,
+                    danno_dal_testo=True)
         sys.exit(0)
     if mode == "inc_milano":
         # incidentate di Milano e dintorni già raccolte e mai guardate: subito al controllo foto (una volta al giorno)
