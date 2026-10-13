@@ -573,9 +573,10 @@ if __name__ == "__main__":
         # lista commercianti di Milano e province per il commerciale (LEAD nei log), una volta al giorno
         from . import lead
         from .ciclo import _due
-        if _due("lead:commercianti", 20):
+        job = "lead:commercianti:" + os.environ.get("LEAD_GIRO", "1")
+        if _due(job, 20):
             with connect() as conn:
-                fin = log_job(conn, "lead:commercianti")
+                fin = log_job(conn, job)
                 fin(True, {"venditori": lead.run()})
         sys.exit(0)
     if mode == "inc_milano":

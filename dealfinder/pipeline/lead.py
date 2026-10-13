@@ -57,6 +57,7 @@ def run() -> int:
         cur = conn.execute(
             """SELECT source, city, province, price_eur, url, title, left(description, 1500) AS descr,
                       CASE WHEN source='autoscout24' THEN raw->'seller' ELSE raw->'advertiser' END AS s,
+                      (SELECT array_agg(k) FROM jsonb_object_keys(raw) k) AS chiavi,
                       seller_type
                FROM listings
                WHERE source IN ('autoscout24','subito') AND province = ANY(%s)
@@ -64,8 +65,13 @@ def run() -> int:
                  AND seller_type = 'commerciante'""",
             (list(MILANO),))
         n = 0
+        visti_debug: dict = {}
         for r in cur:
             n += 1
+            if visti_debug.get(r["source"], 0) < 3:
+                visti_debug[r["source"]] = visti_debug.get(r["source"], 0) + 1
+                log.info("LEAD_DEBUG %s chiavi=%s venditore=%s", r["source"], r["chiavi"],
+                         json.dumps(r["s"], ensure_ascii=False, default=str)[:700])
             s = r["s"] if isinstance(r["s"], dict) else {}
             k = _chiave(r["source"], s)
             if not k:
