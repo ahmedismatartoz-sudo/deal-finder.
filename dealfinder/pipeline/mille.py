@@ -238,24 +238,54 @@ def run(fonte: str | None = None, versione: str | None = None, province: list[st
     return dict(stats)
 
 
-def lampo(quanti: int = 200, max_diesel: float = 0.3) -> int:
-    """Selezione lampo di Facebook a Milano: niente ricalcolo del mercato (troppo lento col database pieno),
-    si usa la stima del primo filtro già salvata in raccolta (model_p50, prescreen_potential).
+import re as _re
+
+# moto, scooter e quad: il modello dei prezzi li valuta come auto (mercato falso), si tolgono prima
+_MOTO = _re.compile(
+    r"\b(moto|motocicl\w*|scooter|motorino|ciclomotore|quad|motard|enduro|supermotard|minicar|"
+    r"ducati|ktm|kymco|yamaha|kawasaki|piaggio|vespa|aprilia|harley|triumph|husqvarna|benelli|"
+    r"mv agusta|moto guzzi|gilera|malaguti|keeway|zontes|voge|cf ?moto|royal enfield|"
+    r"cbr\s?\d*|crf\s?\d*|cb\s?\d{3}|sh\s?\d{2,3}|x-?adv|adv\s?350|transalp|africa twin|pcx|nc\s?7\d0|hornet|"
+    r"r\s?1[0-2]\d0\s?(gs|rt|r)?|f\s?[789]\d0\s?(r|gs)?|k\s?1[2-6]00|s\s?1000\s?rr?|"
+    r"\d{3,4}\s?(rt|gs)|xp\s?400\w*|burgman|v-?strom|gsx\w*|t-?max|x-?max|mt-?\s?0\d|tracer|ninja|z\s?[0-9]{3,4})\b", _re.I)
+
+
+def e_moto(*testi) -> bool:
+    return bool(_MOTO.search(" ".join(t for t in testi if t)))
+
+
+def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "facebook",
+          ore: int = 96, danneggiate: bool = False, ovunque: bool = False,
+          versione: str = "fb-lampo") -> int:
+    """Selezione lampo: niente ricalcolo del mercato (troppo lento col database pieno), si usa la stima del
+    primo filtro già salvata in raccolta (model_p50, prescreen_potential). Preferisce le auto con pochi km,
+    toglie moto/scooter, privati soltanto, mai le auto già guardate a mano.
     Scrive MILLE / MILLEFOTO come run(), poi MILLE_RIEPILOGO."""
     from ..zone import MILANO
     with connect() as conn:
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS}, stage_reason, model_p50, prescreen_potential FROM listings
-                WHERE source='facebook' AND status='attivo' AND prescreen='interessante'
-                  AND last_seen_at > now() - interval '4 days'
-                  AND (province = ANY(%s) OR province IS NULL)
-                  AND price_eur BETWEEN 500 AND 40000
+                WHERE status='attivo' AND COALESCE(seller_type,'') <> 'commerciante'
+                  AND (%s::text IS NULL OR source = %s)
+                  AND (%s OR prescreen='interessante')
+                  AND COALESCE(prescreen_potential, 0) > 0
+                  AND (NOT %s OR damage_declared OR problem_search OR damage_class IN ('leggero','medio','grave'))
+                  AND last_seen_at > now() - make_interval(hours => %s)
+                  AND (%s OR province = ANY(%s) OR (province IS NULL AND source='facebook'))
+                  AND price_eur BETWEEN 400 AND 40000
                   AND (mileage_km IS NULL OR mileage_km <= %s)
                   AND (year IS NULL OR year >= %s)
-                ORDER BY prescreen_potential DESC NULLS LAST LIMIT %s""",
-            (list(MILANO), scovo.KM_MASSIMO, scovo.ANNO_MINIMO, quanti * 3)).fetchall()
-        scelti, n_d = [], 0
+                  AND NOT (id = ANY(%s))
+                ORDER BY COALESCE(prescreen_potential, 0)
+                         + CASE WHEN mileage_km < 80000 THEN 2000 WHEN mileage_km < 120000 THEN 900 ELSE 0 END DESC
+                LIMIT %s""",
+            (fonte, fonte, danneggiate, danneggiate, ore, ovunque, list(MILANO), scovo.KM_MASSIMO,
+             scovo.ANNO_MINIMO, _gia_controllate(), quanti * 4)).fetchall()
+        scelti, n_d, n_moto = [], 0, 0
         for r in rows:
+            if e_moto(r.get("title"), (r.get("description") or "")[:300], r.get("model"), r.get("make")):
+                n_moto += 1
+                continue
             if r.get("fuel") == "diesel":
                 if n_d >= int(quanti * max_diesel):
                     continue
@@ -267,12 +297,12 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3) -> int:
             l = row_to_listing(r)
             lid = r["id"]
             mercato = int(r.get("model_p50") or 0)
-            rec = {"id": lid, "fonte": "facebook", "url": r["url"], "titolo": l.title,
+            rec = {"id": lid, "fonte": r["source"], "url": r["url"], "titolo": l.title,
                    "descrizione": (l.description or "")[:900], "marca": l.make, "modello": l.model,
                    "versione": l.version_raw, "anno": l.year, "km": l.mileage_km, "carburante": l.fuel,
                    "cambio": l.gearbox, "citta": l.city, "provincia": l.province, "prezzo": l.price_eur,
                    "mercato": mercato, "stima": "modello", "guadagno_prima_ricambi": int(r.get("prescreen_potential") or 0),
-                   "soglia": scovo.soglia(l.price_eur or 0)}
+                   "soglia": scovo.soglia(l.price_eur or 0), "danno_attuale": r.get("damage_class")}
             log.info("MILLE %s", json.dumps(rec, ensure_ascii=False, default=str))
             imgs = []
             for pos in range(4):
@@ -288,6 +318,6 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3) -> int:
                 parts = [b[i:i + PEZZO] for i in range(0, len(b), PEZZO)]
                 for k, p in enumerate(parts, 1):
                     log.info("MILLEFOTO %s %d/%d %s", lid, k, len(parts), p)
-        log.info("MILLE_RIEPILOGO %s", json.dumps({"candidati": len(rows), "esportati": len(scelti),
-                                                  "diesel": n_d, "versione": "fb-lampo"}))
+        log.info("MILLE_RIEPILOGO %s", json.dumps({"candidati": len(rows), "esportati": len(scelti), "moto_tolte": n_moto,
+                                                  "diesel": n_d, "versione": versione}))
         return len(scelti)

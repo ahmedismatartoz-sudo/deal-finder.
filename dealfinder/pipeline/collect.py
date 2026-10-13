@@ -141,7 +141,7 @@ def city_provinces(conn) -> dict:
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode in ("as5k", "roma", "lombardia", "ravenna", "economiche", "incidentate", "massiva"):
-        os.environ["PASSI_JOB"] = f"collect:{mode}"     # dopo un riavvio si riprende da dove si era arrivati
+        os.environ.setdefault("PASSI_JOB", f"collect:{mode}")     # dopo un riavvio si riprende da dove si era arrivati
     if mode == "opportunita":
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
     else:
@@ -219,6 +219,27 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
                             {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
+    elif mode == "stasera":
+        # Milano, solo le novità (Subito e AutoScout24 ordinati dal più recente): poche pagine per fascia,
+        # privati, auto con pochi km su AutoScout24 (AUTOSCOUT_KM_MAX). Veloce: serve entro poche ore.
+        bands = ([(p, p + 499) for p in range(0, 5000, 500)] + [(p, p + 999) for p in range(5000, 15000, 1000)]
+                 + [(15000, 19999), (20000, 30000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "0.8"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "2.0"))
+        from ..collectors.subito import PROVINCE_CODES
+        vicine = os.environ.get("STASERA_PROVINCE", "MI,MB,LO,PV,CO,VA,LC,BG,NO,CR").split(",")
+        prov = [k for k, v in PROVINCE_CODES.items() if v in vicine]
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("STASERA_RAGGIO", "70")
+        os.environ.setdefault("AUTOSCOUT_KM_MAX", "150000")
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "0.8"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.0"))
+        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": 30000, "step": 1000,
+                          "venditori": [("P", "privato")]}),
+                   (sub, {"region": settings.region, "provinces": prov, "max_price": 30000, "max_pages": 0,
+                          "price_bands": bands, "band_pages": int(os.environ.get("STASERA_PAGINE", "4"))})]
     elif mode == "as5k":
         # AutoScout24 aggressivo sopra i 5.000 € attorno a Milano, Bergamo e Brescia (AS5K_CENTRI "cap:km,..."),
         # privati (da proporre) e poi concessionari (prezzi di mercato). Si ferma a AS5K_OBIETTIVO annunci letti.
@@ -541,6 +562,33 @@ if __name__ == "__main__":
                     log.error("SELEZIONI %s non riuscita: %s", versione, e)
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
+        sys.exit(0)
+    if mode in ("stasera", "inc_stasera", "fb_stasera"):
+        # Lavori "entro stasera" (Milano): raccolta delle novità, poi selezione lampo con le stime già salvate
+        # (preferite le auto con pochi km, niente moto), MILLE/MILLEFOTO nei log per il controllo uno per uno
+        from . import mille
+        from .ciclo import _due
+        quanti = int(os.environ.get("STASERA_QUANTI", "250"))
+        if mode == "stasera":
+            if _due("collect:stasera", int(os.environ.get("STASERA_ORE", "6"))):
+                os.environ["PASSI_JOB"] = "collect:stasera:" + os.environ.get("STASERA_GIRO", "1")
+                run("stasera")
+            mille.lampo(quanti, fonte=None, ore=36, versione="stasera")
+        elif mode == "inc_stasera":
+            if _due("collect:inc_stasera", int(os.environ.get("STASERA_ORE", "6"))):
+                os.environ["PASSI_JOB"] = "collect:inc_stasera:" + os.environ.get("STASERA_GIRO", "1")
+                os.environ.setdefault("INCIDENTATE_PAGINE", "8")
+                os.environ["COLLECT_JOB"] = "collect:inc_stasera"
+                run("incidentate")
+            mille.lampo(quanti, max_diesel=0.45, fonte=None, ore=24 * 10, danneggiate=True, ovunque=True,
+                        versione="inc-stasera")
+        else:
+            os.environ["FB_FORZA"] = "1"
+            os.environ.setdefault("FB_GIORNI", "7")
+            if _due("collect:fb_stasera", int(os.environ.get("STASERA_ORE", "6"))):
+                os.environ["COLLECT_JOB"] = "collect:fb_stasera"
+                run("facebook")
+            mille.lampo(quanti, fonte="facebook", ore=48, versione="fb-stasera")
         sys.exit(0)
     if mode == "fb_lampo":
         from . import mille

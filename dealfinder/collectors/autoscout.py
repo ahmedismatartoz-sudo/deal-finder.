@@ -154,6 +154,8 @@ class AutoScoutCollector(Collector):
         anni = f"&fregfrom={y0}" + (f"&fregto={y1}" if y1 else "")
         danni = os.environ.get("AUTOSCOUT_DANNEGGIATE", "include")     # include | only (solo incidentate)
         dove = f"&zip={zip_}&zipr={radius}" if zip_ else ""                # senza CAP: tutta Italia
+        if os.environ.get("AUTOSCOUT_KM_MAX"):                           # solo auto con pochi km
+            dove += f"&kmto={int(os.environ['AUTOSCOUT_KM_MAX'])}"
         return (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing={danni}&custtype={custtype}"
                 f"{dove}&pricefrom={lo}&priceto={hi}{anni}&sort=age&desc=1&page={page}")
 
