@@ -563,6 +563,19 @@ if __name__ == "__main__":
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "inc_milano":
+        # incidentate di Milano e dintorni già raccolte e mai guardate: subito al controllo foto (una volta al giorno)
+        from . import mille
+        from .ciclo import _due
+        if _due("lampo:inc-milano", 20):
+            with connect() as conn:
+                finish = log_job(conn, "lampo:inc-milano")
+            n = mille.lampo(int(os.environ.get("INC_MILANO_QUANTI", "200")), max_diesel=0.45, fonte=None,
+                            ore=24 * 14, danneggiate=True, ovunque=False, versione="inc-milano")
+            with connect() as conn:
+                conn.execute("UPDATE job_runs SET finished_at=now(), ok=true WHERE job='lampo:inc-milano' AND finished_at IS NULL")
+                conn.commit()
+        sys.exit(0)
     if mode == "inc_lampo":
         # incidentate già raccolte (ultimi 10 giorni, tutta Italia) mai guardate: subito al controllo foto
         from . import mille

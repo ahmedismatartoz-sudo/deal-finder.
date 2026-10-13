@@ -277,10 +277,11 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                   AND (year IS NULL OR year >= %s)
                   AND NOT (id = ANY(%s))
                 ORDER BY COALESCE(prescreen_potential, 0)
-                         + CASE WHEN mileage_km < 80000 THEN 2000 WHEN mileage_km < 120000 THEN 900 ELSE 0 END DESC
+                         + CASE WHEN mileage_km < 80000 THEN 2000 WHEN mileage_km < 120000 THEN 900 ELSE 0 END
+                         + CASE WHEN province = ANY(%s) THEN 1500 ELSE 0 END DESC
                 LIMIT %s""",
             (fonte, fonte, danneggiate, danneggiate, ore, ovunque, list(MILANO), scovo.KM_MASSIMO,
-             scovo.ANNO_MINIMO, _gia_controllate(), quanti * 4)).fetchall()
+             scovo.ANNO_MINIMO, _gia_controllate(), list(MILANO), quanti * 4)).fetchall()
         scelti, n_d, n_moto = [], 0, 0
         for r in rows:
             if e_moto(r.get("title"), (r.get("description") or "")[:300], r.get("model"), r.get("make")):
