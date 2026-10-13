@@ -118,6 +118,8 @@ def puo_vedere(row: dict | None) -> bool:
     """Chi si è iscritto da solo vede le auto solo con l'abbonamento attivo (o in prova)."""
     if not row or not row.get("richiede_abbonamento"):
         return True
+    if row.get("con_password") or row.get("role") == "admin":
+        return True              # account creati da noi (con password): accesso completo senza abbonamento
     return (row.get("abbonamento_stato") or "") in STATI_OK
 
 

@@ -80,7 +80,8 @@ def richiede(request: Request, permesso: str) -> dict:
             if permesso not in permessi_di(conn, user):
                 err(403, "Il tuo account non ha accesso a questa sezione")
             if permesso == "auto":
-                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato FROM dealers WHERE id=%s",
+                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) AS con_password, "
+                                   "role FROM dealers WHERE id=%s",
                                    (user["id"],)).fetchone()
                 if not abbonamento.puo_vedere(row):
                     err(402, "Per vedere le auto serve l'abbonamento")
@@ -183,7 +184,7 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts, resale_as, lat, lon, richiede_abbonamento, abbonamento_stato, "
+                         "preferred_parts, resale_as, lat, lon, (richiede_abbonamento AND password_hash IS NULL AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
                          "abbonamento_fino, (stripe_customer IS NOT NULL) AS ha_pagamento "
                          "FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
