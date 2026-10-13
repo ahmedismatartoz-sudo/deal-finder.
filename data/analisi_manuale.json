@@ -104356,5 +104356,6027 @@
   "nota": "VEM RAP è un triciclo elettrico da lavoro, non un'auto: da scartare.",
   "controlli": [],
   "aggiorna": true
+ },
+ {
+  "id": 49908,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "frizione/guarnizioni perdita olio",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "guadagno_finale": 1960,
+  "rivendita_prudente": 3000,
+  "nota": "Pick-up da lavoro con frizione che non stacca per perdita d'olio: guasto meccanico, non incidente, e rivendita reale bassa (circa 3.000 €).",
+  "controlli": [
+   "perdita olio paraolio/cambio",
+   "stato telaio e ruggine"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 68741,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "rivendita_prudente": 18000,
+  "nota": "Mini elettrica sana dalle foto ma prezzo già vicino al mercato reale (2022 con 85.000 km): margine sotto soglia.",
+  "controlli": [
+   "stato batteria (SOH)",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 23849,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2860,
+  "rivendita_prudente": 5000,
+  "nota": "Motore da rivedere dichiarato dal venditore e km incoerenti (20.900 su un 2009): guasto meccanico non quantificabile.",
+  "controlli": [
+   "motore",
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 33708,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "specchietto",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "pulsantiera_alzacristalli",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "vetro/freccia specchietto dx",
+    "low": 30,
+    "high": 60
+   },
+   {
+    "label": "pulsantiere alzacristalli",
+    "low": 30,
+    "high": 90
+   }
+  ],
+  "ricambi_min": 60,
+  "ricambi_max": 150,
+  "guadagno_finale": 1110,
+  "rivendita_prudente": 4400,
+  "nota": "Classe A W169 2012 con 163.000 km, solo piccoli difetti; la rivendita reale è intorno ai 4.400 € quindi il margine non arriva alla soglia.",
+  "controlli": [
+   "alzacristalli",
+   "cambio e frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 387326,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5560,
+  "rivendita_prudente": 12000,
+  "nota": "Il venditore la dichiara demolita/radiata per esportazione in Belgio: non reimmatricolabile in Italia, solo export.",
+  "controlli": [
+   "documenti di radiazione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51794,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2860,
+  "rivendita_prudente": 6000,
+  "nota": "Microcar (quadriciclo leggero), non è un'auto: fuori dalla sezione Incidentate.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50311,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3360,
+  "rivendita_prudente": 5500,
+  "nota": "Renault Twizy è un quadriciclo, non un'auto: fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 25099,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parabrezza",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "fari anteriori",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "parafango sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 900,
+    "high": 2000
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "lamierati/ossatura (riserva frontale)",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1930,
+  "ricambi_max": 4750,
+  "guadagno_finale": 110,
+  "rivendita_prudente": 9000,
+  "nota": "Frontale con airbag esplosi e parabrezza rotto; tra airbag, frontale e riserva per l'ossatura i pezzi mangiano tutto il margine su un'auto che riparata vale circa 9.000 €.",
+  "controlli": [
+   "longheroni e traversa",
+   "centralina airbag",
+   "motore e cambio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 187364,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 30000,
+  "nota": "Foto che sembrano render/immagini promozionali, non l'auto reale; probabile commerciante o annuncio non affidabile.",
+  "controlli": [
+   "foto reali",
+   "venditore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 388265,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "portellone/riserva grandine",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 750,
+  "guadagno_finale": 1010,
+  "rivendita_prudente": 6500,
+  "nota": "Golf 6 1.4 TSI grandinata con 155.000 km: grandine non visibile in foto e rivendita realistica bassa, il margine resta sotto soglia.",
+  "controlli": [
+   "entità grandine",
+   "catena distribuzione TSI",
+   "km reali (annuncio indica 2011)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57073,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "longherone",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "plancia",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "faro LED dx",
+    "low": 350,
+    "high": 800
+   },
+   {
+    "label": "parafango dx",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "portiera ant. dx",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina + pretensionatori + plancia",
+    "low": 1500,
+    "high": 3000
+   },
+   {
+    "label": "parabrezza",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "braccio/montante e cerchio dx",
+    "low": 200,
+    "high": 550
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 700,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 3700,
+  "ricambi_max": 7950,
+  "guadagno_finale": -1090,
+  "rivendita_prudente": 22000,
+  "nota": "Serie 3 2021 con frontale dx pesante, ruota spinta indietro, airbag e plancia esplosi e danni strutturali: a 15.000 € con questi pezzi il conto va in perdita.",
+  "controlli": [
+   "longherone e montante dx",
+   "telaio in dima",
+   "sospensione e sterzo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 38819,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1140,
+  "rivendita_prudente": 0,
+  "nota": "Microcar venduta per pezzi di ricambio, frontale smontato: quadriciclo e auto per pezzi.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 24692,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tirante_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "tirante posteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 200,
+  "guadagno_finale": 1460,
+  "rivendita_prudente": 5000,
+  "nota": "Quadriciclo elettrico ZD, non un'auto: fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 38934,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1940,
+  "rivendita_prudente": 0,
+  "nota": "Microcar Bellier venduta per pezzi di ricambio: quadriciclo, fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 34501,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "termostato",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "termostato",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "portellone",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "riserva grandine (modanature/vetro tetto)",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 560,
+  "ricambi_max": 1400,
+  "guadagno_finale": 2960,
+  "rivendita_prudente": 9500,
+  "nota": "DS5 180 cv grandinata con termostato da cambiare: danno di sola carrozzeria e pezzi contenuti, rivenduta a circa 9.500 € resta un buon margine.",
+  "controlli": [
+   "entità della grandine su tetto e cofano",
+   "tetto in vetro",
+   "termostato e temperatura motore",
+   "cambio EAT6"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 53076,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 5500,
+  "nota": "Renault Twizy è un quadriciclo, non un'auto: fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 224036,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "batteria_trazione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1140,
+  "rivendita_prudente": 0,
+  "nota": "Quadriciclo XEV Yoyo con batteria non funzionante e ferma da due anni: fuori sezione e guasto non da incidente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50155,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva difetti non dichiarati",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 3070,
+  "rivendita_prudente": 5500,
+  "nota": "Korando 2011 automatica 4x4 apparentemente sana a meno di 2.000 €: prezzo troppo basso senza spiegazione, va vista dal vivo.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "motore/turbo e iniettori",
+   "cambio automatico",
+   "documenti e venditore"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 385902,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "sedile",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "fari",
+    "low": 200,
+    "high": 700
+   },
+   {
+    "label": "radiatori",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina (riserva)",
+    "low": 900,
+    "high": 2500
+   },
+   {
+    "label": "sedile",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "lamierati (riserva, frontale non fotografato)",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 2120,
+  "ricambi_max": 5950,
+  "guadagno_finale": 615,
+  "rivendita_prudente": 12705,
+  "nota": "Civic 2021 con frontale e sedile rotti ma senza foto del danno: con la riserva prudente sui pezzi il margine resta sotto soglia.",
+  "controlli": [
+   "foto del frontale",
+   "airbag esplosi",
+   "ossatura anteriore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 384885,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "longherone",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "fari LED",
+    "low": 250,
+    "high": 700
+   },
+   {
+    "label": "parafanghi",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1000,
+    "high": 2500
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 700,
+    "high": 1500
+   },
+   {
+    "label": "accessori motore/supporti (riserva)",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 2690,
+  "ricambi_max": 6600,
+  "guadagno_finale": -240,
+  "rivendita_prudente": 10500,
+  "nota": "Corsa 2022 con frontale distrutto fino al vano motore e airbag esplosi; anche il prezzo nel testo (6.000) non torna con quello esposto: pezzi troppo cari per il margine.",
+  "controlli": [
+   "longheroni",
+   "motore e cambio automatico",
+   "prezzo reale"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50005,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva difetti non dichiarati",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 2760,
+  "rivendita_prudente": 5000,
+  "nota": "Korando 2012 automatica 4x4 con 165.000 km apparentemente sana a 1.800 €: prezzo molto basso, potenziale affare ma va vista dal vivo.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "motore/turbo e iniettori",
+   "cambio automatico",
+   "documenti"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 384477,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "griglia",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari anteriori",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "traversa/lamierati",
+    "low": 300,
+    "high": 800
+   },
+   {
+    "label": "riserva airbag/pretensionatori",
+    "low": 0,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 810,
+  "ricambi_max": 2500,
+  "guadagno_finale": 3260,
+  "rivendita_prudente": 10800,
+  "nota": "i10 2023 con frontale schiacciato (paraurti, cofano, fari, traversa), parabrezza integro e airbag apparentemente non esplosi: pezzi economici e buon margine.",
+  "controlli": [
+   "airbag e pretensionatori",
+   "longheroni e traversa",
+   "radiatori",
+   "venditore privato (cornice targa NARAUTO)"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 184797,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2870,
+  "rivendita_prudente": 24000,
+  "nota": "X1 xDrive25e 2022 apparentemente sana, prezzo sotto mercato di qualche migliaio: margine ok ma poche foto esterne, va vista.",
+  "controlli": [
+   "foto esterne complete",
+   "batteria ibrida e cavo di ricarica",
+   "venditore e documenti"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 388350,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -7640,
+  "rivendita_prudente": 0,
+  "nota": "Furgone da lavoro con frontale distrutto: fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 49936,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3160,
+  "rivendita_prudente": 4500,
+  "nota": "Grecav EKE è un quadriciclo (minicar), non un'auto: fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 389525,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 6000,
+  "nota": "Motore rumoroso (forse catena distribuzione o altro): guasto meccanico non quantificabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 293632,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -2640,
+  "rivendita_prudente": 0,
+  "nota": "Auto alluvionata con acqua nel vano motore e interni smontati: venduta per ricambi.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 21230,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "longherone",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "faro dx",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "parafango dx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "braccio/montante e cerchio dx",
+    "low": 160,
+    "high": 550
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina (riserva)",
+    "low": 700,
+    "high": 2500
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 700,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 2090,
+  "ricambi_max": 6100,
+  "guadagno_finale": -1240,
+  "rivendita_prudente": 10000,
+  "nota": "Leapmotor T03 con frontale dx pesante e struttura coinvolta, ricambi difficili da trovare e vincolo incentivi 24 mesi: non conviene.",
+  "controlli": [
+   "vincolo incentivi",
+   "struttura anteriore dx",
+   "batteria"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52463,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1410,
+  "rivendita_prudente": 5000,
+  "nota": "Renault Twizy Cargo è un quadriciclo, non un'auto: fuori sezione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 385801,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "portellone",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "riserva grandine e altri difetti di carrozzeria",
+    "low": 200,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 480,
+  "ricambi_max": 1500,
+  "guadagno_finale": 1361,
+  "rivendita_prudente": 6000,
+  "nota": "Giulietta 1.4 170 cv grandinata con paraurti anteriore rotto e altri difetti di carrozzeria; meccanica dichiarata a posto e distribuzione fatta: margine sopra soglia ma di poco.",
+  "controlli": [
+   "entità della grandine",
+   "elenco difetti di carrozzeria",
+   "cambio e frizione",
+   "tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 184021,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1640,
+  "rivendita_prudente": 17500,
+  "nota": "ID.3 2021 con 75.000 km apparentemente sana ma prezzo in linea col mercato reale: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 72859,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2460,
+  "rivendita_prudente": 25000,
+  "nota": "Tiguan 2.0 TDI DSG 2023 apparentemente sana, prezzo sotto mercato: margine ok ma targhe coperte in stile commerciante e nessuna descrizione, va verificata.",
+  "controlli": [
+   "venditore privato o commerciante",
+   "tagliandi e km",
+   "DSG"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 184780,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3460,
+  "rivendita_prudente": 24500,
+  "nota": "318d Touring (restyling) apparentemente sana con prezzo sotto mercato: margine buono ma annuncio senza descrizione, va vista dal vivo.",
+  "controlli": [
+   "anno reale (aspetto da restyling 2023)",
+   "venditore e documenti",
+   "tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 159851,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva difetti non visibili",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 3760,
+  "rivendita_prudente": 14000,
+  "nota": "Tivoli AWD automatica 2020 che dalle foto sembra sana, prezzo molto sotto il mercato e annuncio senza descrizione: margine buono ma bisogna capire perché costa così poco.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "storico incidenti e tagliandi",
+   "cambio automatico e trazione 4x4",
+   "libretto e km reali"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 198212,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva carrozzeria anteriore",
+    "low": 100,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 400,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 25000,
+  "nota": "Mini Cooper C 2025 con possibile segno sul frontale sinistro: a 23.900 € il margine di rivendita è troppo basso.",
+  "controlli": [
+   "danno frontale sinistro"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 186875,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva usura",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 3560,
+  "rivendita_prudente": 31000,
+  "nota": "Defender 90 2014 sano nelle foto: i Defender tengono bene il valore e a 27.000 € resta un margine sopra soglia.",
+  "controlli": [
+   "ruggine telaio e paratia",
+   "perdite olio e frizione",
+   "storico tagliandi",
+   "km reali"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 74389,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "rivendita_prudente": 26000,
+  "nota": "TT Roadster 2019 con 108.000 km senza danni evidenti: il prezzo è già allineato al mercato reale, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 387085,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva graffi/paraurti",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 6800,
+  "nota": "C4 Cactus diesel 2016 con solo graffi; i 18.000 km dichiarati sembrano poco credibili (forse 180.000), ma anche con km alti il margine regge.",
+  "controlli": [
+   "km reali e storico revisioni",
+   "graffi carrozzeria",
+   "motore e frizione"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 384557,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -4840,
+  "rivendita_prudente": 0,
+  "nota": "Evoque con motore rotto dichiarato e 180.000 km: non è un danno da incidente, va scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51578,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "rivendita_prudente": 4500,
+  "nota": "Chatenet CH26 è un quadriciclo/microcar, fotografato in un piazzale: rivendita limitata e margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 52366,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 4300,
+  "nota": "Renault Twizy è un quadriciclo elettrico, probabile batteria a noleggio: margine troppo basso per la soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 230665,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -5140,
+  "rivendita_prudente": 0,
+  "nota": "CX-5 con motore KO non marciante: guasto meccanico, non incidente, va scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 24914,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva segni carrozzeria",
+    "low": 0,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 500,
+  "guadagno_finale": 3960,
+  "rivendita_prudente": 8500,
+  "nota": "Alhambra 7 posti 2014 DSG con solo qualche segno di carrozzeria, prezzo molto basso 'per commercianti': margine buono ma va controllato il cambio DSG.",
+  "controlli": [
+   "cambio DSG e frizioni",
+   "porte scorrevoli elettriche",
+   "motivo prezzo basso",
+   "km reali"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 375674,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 4000,
+  "nota": "Alfa 147 2010 sana nelle foto, ma rivenduta vale poco più del prezzo chiesto: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 38816,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -790,
+  "rivendita_prudente": 0,
+  "nota": "BMW 320d 2007 con motore fuso: guasto meccanico, va scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 25245,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria_laterale",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera/parafango",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "paraurti/fanaleria",
+    "low": 80,
+    "high": 350
+   },
+   {
+    "label": "riserva danno non visibile",
+    "low": 200,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 430,
+  "ricambi_max": 1500,
+  "guadagno_finale": 3360,
+  "rivendita_prudente": 9000,
+  "nota": "Mazda 3 2016 dichiarata incidentata ma funzionante; dalle foto il danno non si vede bene, con una riserva prudente sui pezzi il margine resta buono.",
+  "controlli": [
+   "dove è il danno esatto",
+   "km reali (descrizione dice 11500)",
+   "airbag e spie",
+   "allineamento portiere"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 390283,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "fari LED x2",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 1200,
+    "high": 2500
+   },
+   {
+    "label": "parafanghi x2",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 500,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 2650,
+  "ricambi_max": 6550,
+  "guadagno_finale": -590,
+  "rivendita_prudente": 9000,
+  "nota": "Leon 2019 con frontale distrutto fino al vano motore e airbag esplosi, danno strutturale probabile: con i pezzi il guadagno va in negativo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 41183,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1640,
+  "rivendita_prudente": 0,
+  "nota": "Microcar M.Go (quadriciclo) ferma da due anni con problemi elettrici e di avvio non quantificabili: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 384641,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -4140,
+  "rivendita_prudente": 0,
+  "nota": "Fiat Tipo 2016 con motore da sostituire: guasto meccanico, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 72510,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 23000,
+  "nota": "Tiguan 2023 sano, ma il prezzo è già quasi quello di rivendita: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50041,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "fanale posteriore",
+    "low": 60,
+    "high": 120
+   }
+  ],
+  "ricambi_min": 60,
+  "ricambi_max": 120,
+  "guadagno_finale": 1040,
+  "rivendita_prudente": 2800,
+  "nota": "Grand Voyager 2007 diesel con fanale posteriore da cambiare: auto vecchia che rivenduta vale poco, margine sotto soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 215829,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "semiasse",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "scatola_cambio",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "braccio/montante sospensione",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "carter/coperchio cambio",
+    "low": 200,
+    "high": 600
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva carrozzeria",
+    "low": 100,
+    "high": 350
+   }
+  ],
+  "ricambi_min": 460,
+  "ricambi_max": 1500,
+  "guadagno_finale": 1460,
+  "rivendita_prudente": 19500,
+  "nota": "Mini Cooper Cabrio 2023 con sospensione anteriore sinistra strappata e coperchio del cambio rotto: rischio sul cambio e margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 184675,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva usura",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 2160,
+  "rivendita_prudente": 23000,
+  "nota": "Stelvio 2.2 Q4 2022 diesel sana nelle foto, prezzo sotto il mercato: il margine supera la soglia diesel.",
+  "controlli": [
+   "storico tagliandi e richiami",
+   "eventuali incidenti precedenti",
+   "km reali",
+   "motivo del prezzo"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 73253,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1460,
+  "rivendita_prudente": 25500,
+  "nota": "Tonale 2024 sana, ma il prezzo lascia un margine sotto i 1.600 € richiesti.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 41244,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1230,
+  "rivendita_prudente": 0,
+  "nota": "Outlander 2008 con motore da sistemare e grandine: guasto meccanico, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 130884,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 760,
+  "rivendita_prudente": 3200,
+  "nota": "VW Fox 2007 in buono stato ma con rivendita bassa: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 93364,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1660,
+  "rivendita_prudente": 4300,
+  "nota": "Subaru Legacy SW 4x4 automatica GPL con meccanica dichiarata perfetta ma carrozzeria grandinata (lavoro di levabolli, non pezzi): margine sopra soglia se la grandine è leggera.",
+  "controlli": [
+   "entità della grandine su tetto e cofano",
+   "impianto GPL e scadenza bombola",
+   "cambio automatico",
+   "ruggine"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 389333,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1840,
+  "rivendita_prudente": 0,
+  "nota": "Citroen Nemo furgone da lavoro con 280.000 km e frizione da fare: fuori criteri.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 384271,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva carrozzeria da rivedere",
+    "low": 200,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 600,
+  "guadagno_finale": 2060,
+  "rivendita_prudente": 11000,
+  "nota": "Fiat Tipo 2021 61.000 km, meccanica ok e carrozzeria da rivedere (dalle foto non si vedono danni gravi): margine sopra soglia.",
+  "controlli": [
+   "danni carrozzeria esatti",
+   "storico incidenti",
+   "km reali",
+   "venditore privato o commerciante"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 387730,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1360,
+  "rivendita_prudente": 12500,
+  "nota": "Auris Hybrid 2016 sana, ma il prezzo è vicino alla rivendita reale: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 52398,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 110,
+  "rivendita_prudente": 3500,
+  "nota": "Microcar Flex 2007 è un quadriciclo in un piazzale (probabile commerciante): margine nullo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 23716,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -2040,
+  "rivendita_prudente": 0,
+  "nota": "Mini Cooper 2007 con motore rotto: guasto meccanico, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 391405,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1360,
+  "rivendita_prudente": 5000,
+  "nota": "Polo 1.4 DSG Highline 2009 con 79.000 km, sana nelle foto: margine appena sopra soglia, ma foto in un piazzale noleggio e cambio DSG da controllare.",
+  "controlli": [
+   "cambio DSG",
+   "venditore privato o commerciale",
+   "km reali e tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 51796,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 3800,
+  "nota": "Lancia Ypsilon 2007 sana ma con rivendita bassa: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 153277,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -8140,
+  "rivendita_prudente": 0,
+  "nota": "Il titolo dice Partner Tepee ma le foto mostrano un furgone con porte posteriori cieche: furgone da lavoro/dati non coerenti, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 387796,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 14000,
+  "nota": "Tourneo Connect 2016 camperizzato con pochi km: rivendita realistica che lascia margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 208442,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montanti",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "lamierati/ossatura (tetto e montanti)",
+    "low": 800,
+    "high": 1500
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 180
+   },
+   {
+    "label": "faro",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "parabrezza",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1190,
+  "ricambi_max": 2380,
+  "guadagno_finale": -20,
+  "rivendita_prudente": 5500,
+  "nota": "Tetto schiacciato (danno strutturale ai montanti), cofano e frontale piegati; il venditore la vende per ricambi. Con i pezzi e il tetto da rifare il margine sparisce.",
+  "controlli": [
+   "deformazione montanti e tetto",
+   "stato cambio automatico Dualogic",
+   "airbag laterali/tendina"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57504,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "parafango anteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "faro",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "portiera anteriore",
+    "low": 250,
+    "high": 450
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "riserva danni non visibili",
+    "low": 200,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 1250,
+  "ricambi_max": 2550,
+  "guadagno_finale": 1310,
+  "rivendita_prudente": 29000,
+  "nota": "Frontale sinistro colpito (cofano, parafango, faro, portiera). Prezzo 25.000 troppo vicino al valore della Wrangler riparata: il guadagno non arriva alla soglia diesel.",
+  "controlli": [
+   "telaio e geometria",
+   "radiatori",
+   "allestimento reale (Recon vs JK Edition)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 391108,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "pneumatico",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "pneumatico/cerchio",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 150,
+  "guadagno_finale": 3710,
+  "rivendita_prudente": 7500,
+  "nota": "Doblò Cargo furgone da lavoro (con logo aziendale), fuori dalle categorie del sito.",
+  "controlli": [
+   "uso commerciale",
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 224736,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "motore usato",
+    "low": 2500,
+    "high": 5000
+   }
+  ],
+  "ricambi_min": 2500,
+  "ricambi_max": 5000,
+  "guadagno_finale": -340,
+  "rivendita_prudente": 9800,
+  "nota": "Motore da riparare o sostituire: guasto meccanico grave, non è un danno da incidente.",
+  "controlli": [
+   "stato motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51308,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -40,
+  "rivendita_prudente": 3000,
+  "nota": "Nessun danno visibile ma km dichiarati (1.590) incoerenti con un'auto del 2008; il valore reale di una Fusion diesel 2008 è troppo vicino al prezzo.",
+  "controlli": [
+   "km reali",
+   "libretto tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 41088,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "calotta_specchietto",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "faro",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "calotta specchietto",
+    "low": 20,
+    "high": 50
+   },
+   {
+    "label": "batteria",
+    "low": 60,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 140,
+  "ricambi_max": 350,
+  "guadagno_finale": 2510,
+  "rivendita_prudente": 3500,
+  "nota": "Venduta come pezzi: dopo l'incidente al minimo gira a 3 cilindri (motore da rivedere) e serve revisione. Scartata per problema motore.",
+  "controlli": [
+   "perché gira a 3 cilindri",
+   "impianto GPL",
+   "revisione scaduta"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51210,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1460,
+  "rivendita_prudente": 4500,
+  "nota": "Nessun danno visibile; una GT 1.9 JTD del 2007 riparata si rivende circa 4.500 € e il guadagno resta sotto la soglia diesel.",
+  "controlli": [
+   "motore e frizione",
+   "venditore privato o salone"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 387062,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "longherone_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "fari x2",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "parafanghi x2",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "lamierati/ossatura (traversa e longheroni)",
+    "low": 600,
+    "high": 1500
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 1970,
+  "ricambi_max": 4800,
+  "guadagno_finale": -1096,
+  "rivendita_prudente": 7844,
+  "nota": "Frontale distrutto (cofano, fari, radiatori, ossatura anteriore) con probabili airbag esplosi: i pezzi superano il margine.",
+  "controlli": [
+   "longheroni",
+   "airbag",
+   "cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 375253,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "semiasse_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cerchio",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "braccio/montante sospensione",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "semiasse",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cerchio + gomma",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "riserva danni non visibili (culla/sterzo)",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 410,
+  "ricambi_max": 1200,
+  "guadagno_finale": 1360,
+  "rivendita_prudente": 3800,
+  "nota": "Ruota anteriore colpita: asse/sospensione rotti e l'auto non cammina, carrozzeria e interni ok. Con pochi pezzi di sospensione torna in strada e il margine c'è.",
+  "controlli": [
+   "culla motore e scatola sterzo",
+   "geometria ruote",
+   "carburante e km reali"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 56594,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "fanali posteriori LED x2",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 500,
+  "guadagno_finale": 2260,
+  "rivendita_prudente": 12800,
+  "nota": "Grandinata: segni sul tetto (riparabili a levabolli) e fanali posteriori rotti. Pochi pezzi e prezzo basso per una 120d 2018: conviene.",
+  "controlli": [
+   "estensione bolli grandine",
+   "allestimento reale (Urban vs Msport)",
+   "tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 51219,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 200,
+  "guadagno_finale": 1310,
+  "rivendita_prudente": 4500,
+  "nota": "Microcar con paraurti segnato: il valore reale di una Bellier Jade 2011 è molto sotto il mercato stimato e il guadagno non basta.",
+  "controlli": [
+   "frizione/variatore",
+   "venditore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 38866,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "batteria_trazione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 3000,
+  "nota": "Radiata e senza batteria e motore: solo per pezzi.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 388579,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "kit catena + guarnizione testata",
+    "low": 300,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 300,
+  "ricambi_max": 700,
+  "guadagno_finale": 3260,
+  "rivendita_prudente": 7000,
+  "nota": "Catena distribuzione e guarnizione testata da fare: motore da rivedere, scartata.",
+  "controlli": [
+   "stato motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 387058,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "motore usato",
+    "low": 800,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 800,
+  "ricambi_max": 1500,
+  "guadagno_finale": 2560,
+  "rivendita_prudente": 7500,
+  "nota": "Carrozzeria bella ma motore rotto internamente: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 72664,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1940,
+  "rivendita_prudente": 20000,
+  "nota": "Auto sana, prezzo da salone: nessun margine di rivendita.",
+  "controlli": [
+   "venditore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 387112,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3360,
+  "rivendita_prudente": 8000,
+  "nota": "Furgone da lavoro con motore fuso: fuori categoria.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 46300,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "riserva sensori/fendinebbia",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 400,
+  "guadagno_finale": 1460,
+  "rivendita_prudente": 7500,
+  "nota": "Solo paraurti da sistemare, ma una 320d Touring 2012 con 180.000 km riparata si rivende circa 7.500 €: guadagno sotto la soglia diesel.",
+  "controlli": [
+   "km reali",
+   "cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 200644,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "rivendita_prudente": 25000,
+  "nota": "Pick-up sano a prezzo pieno: nessun margine.",
+  "controlli": [
+   "venditore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 200701,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "rivendita_prudente": 25000,
+  "nota": "Stesso L200 dell'annuncio 200644, sano e a prezzo pieno: nessun margine.",
+  "controlli": [
+   "annuncio doppio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 963,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "porta_scorrevole",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "montante_centrale",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera anteriore",
+    "low": 200,
+    "high": 450
+   },
+   {
+    "label": "porta scorrevole",
+    "low": 250,
+    "high": 450
+   },
+   {
+    "label": "lamierati/ossatura (montante centrale)",
+    "low": 300,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 750,
+  "ricambi_max": 1900,
+  "guadagno_finale": 2066,
+  "rivendita_prudente": 12606,
+  "nota": "Fiancata destra urtata: portiera anteriore e porta scorrevole da cambiare, montante centrale da verificare. Combi 9 posti 2021 a 8.500 €: margine buono anche con riserva sull'ossatura.",
+  "controlli": [
+   "montante centrale e soglia",
+   "guida porta scorrevole",
+   "uso (trasporto persone o lavoro)"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 26313,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto_apribile",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "rivendita_prudente": 7000,
+  "nota": "Foto non coerenti (foto da salone di una DS3 diversa) e km dichiarati 1.000 su un'auto del 2013: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 10562,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3360,
+  "rivendita_prudente": 4500,
+  "nota": "Non parte per un problema motore/scarico (FAP su un benzina è incoerente): guasto non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 53195,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 4200,
+  "nota": "Auto sana, prezzo vicino al valore reale: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 375208,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "kit frizione + volano",
+    "low": 300,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 300,
+  "ricambi_max": 700,
+  "guadagno_finale": 2960,
+  "rivendita_prudente": 6800,
+  "nota": "Non si muove (frizione o cambio) e annuncio 'per commercianti o export': guasto non certo e venditore sospetto, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51212,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 3500,
+  "nota": "Auto sana ma il valore reale di una Fox 2008 è troppo vicino al prezzo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 390402,
+  "esito": "incidentata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "traversa_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "fari x2",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 1500
+   },
+   {
+    "label": "lamierati/ossatura (traversa anteriore)",
+    "low": 300,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 1420,
+  "ricambi_max": 3150,
+  "guadagno_finale": 910,
+  "rivendita_prudente": 4800,
+  "nota": "Frontale schiacciato con airbag esplosi; fiancate e posteriore integri. Pagata 600 € resta margine anche con kit airbag e traversa.",
+  "controlli": [
+   "longheroni anteriori",
+   "parabrezza e cruscotto",
+   "motore dopo l'urto"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 23760,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 4500,
+  "nota": "Motore da revisionare: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 389035,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 10000,
+  "nota": "Autocarro furgonato con motore rotto: fuori categoria.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50337,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 2800,
+  "nota": "Auto sana ma il valore reale di una Colt 2007 è troppo vicino al prezzo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 20500,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cambio",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2860,
+  "rivendita_prudente": 3500,
+  "nota": "Cambio automatico guasto e distribuzione da fare, non marciante: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 9660,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "sonda_lambda",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "kit frizione",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "sonda lambda",
+    "low": 40,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 240,
+  "ricambi_max": 500,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 4000,
+  "nota": "Non incidentata: frizione da rifare e sonda lambda, carrozzeria buona. A 1.500 € con pochi pezzi il margine c'è, ma va vista dal vivo.",
+  "controlli": [
+   "diagnosi spia motore",
+   "frizione/volano",
+   "km reali"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 149833,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva difetti non dichiarati",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "guadagno_finale": 2160,
+  "rivendita_prudente": 10000,
+  "nota": "Nessun danno visibile e prezzo basso per una Countryman Cooper D 2016: margine buono ma foto parziali (manca il frontale), da vedere dal vivo.",
+  "controlli": [
+   "frontale e lato destro",
+   "motivo del prezzo basso",
+   "venditore privato o salone"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 55882,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva pannelli grandinati",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 500,
+  "guadagno_finale": 1360,
+  "rivendita_prudente": 6000,
+  "nota": "Grandinata, una sola foto: estensione dei danni non verificabile e margine troppo sottile per la soglia diesel.",
+  "controlli": [
+   "estensione grandine",
+   "tetto e cofano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 384269,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 11500,
+  "guadagno_finale": 2860,
+  "nota": "Guarnizione testata da sostituire: è un guasto motore, non un danno da incidente. Inoltre il cambio in foto sembra manuale, non automatico come scritto.",
+  "controlli": [
+   "stato testata e compressione",
+   "tipo di cambio reale"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 317862,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 16920,
+  "guadagno_finale": 1380,
+  "nota": "Avenger sana e in ordine, ma il prezzo è già vicino a quello di rivendita: margine sotto soglia.",
+  "controlli": [
+   "allestimento reale (Altitude o Longitude)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 388501,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "capote",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "telo capote",
+    "low": 400,
+    "high": 800
+   },
+   {
+    "label": "pompa/attuatori capote",
+    "low": 150,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 550,
+  "ricambi_max": 1500,
+  "rivendita_prudente": 9500,
+  "guadagno_finale": 360,
+  "nota": "Capote non funzionante e telo tagliato: tra telo e meccanismo il costo si mangia quasi tutto il margine.",
+  "controlli": [
+   "funzionamento idraulica capote",
+   "infiltrazioni d'acqua"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 385130,
+  "esito": "incidentata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera posteriore sx",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "riserva lamierato parafango post. sx",
+    "low": 150,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 300,
+  "ricambi_max": 700,
+  "rivendita_prudente": 4800,
+  "guadagno_finale": 2960,
+  "nota": "Urto sul fianco sinistro: porta posteriore e parafango posteriore ammaccati. Pezzi economici e prezzo molto basso, il margine c'è.",
+  "controlli": [
+   "motorizzazione e documenti in regola",
+   "che l'auto sia venduta intera e non smontata",
+   "allineamento ruota post. sx e apertura porte",
+   "km reali"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 50458,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3800,
+  "guadagno_finale": 1160,
+  "nota": "Classe A sana senza descrizione: a questo prezzo il margine resta poco sotto la soglia.",
+  "controlli": [
+   "storico tagliandi",
+   "eventuale venditore commerciante"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 375327,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3000,
+  "guadagno_finale": 1860,
+  "nota": "Il contachilometri segna 300.000 km (oltre il limite) e c'è il gancio cofano da sistemare.",
+  "controlli": [
+   "km reali e documentazione motore sostituito"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52813,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4000,
+  "guadagno_finale": 860,
+  "nota": "Grande Punto sana con pochi km, ma il prezzo lascia un margine sotto soglia.",
+  "controlli": [
+   "storico tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 187749,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 31000,
+  "guadagno_finale": 860,
+  "nota": "CLA 45 AMG sana: prezzo già quasi a valore di rivendita, nessun margine.",
+  "controlli": [
+   "storico e garanzia"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 207272,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "cerchio",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "longherone",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 250
+   },
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "parafango ant. sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "portiera ant. sx",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "faro ant. sx",
+    "low": 60,
+    "high": 200
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "airbag + centralina + pretensionatori",
+    "low": 700,
+    "high": 1800
+   },
+   {
+    "label": "braccio/montante ant. sx",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1730,
+  "ricambi_max": 4650,
+  "rivendita_prudente": 5200,
+  "guadagno_finale": -1090,
+  "nota": "Frontale sinistro pesante con airbag esplosi e ruota piegata: tra airbag, carrozzeria, sospensione e possibile ossatura i pezzi superano il guadagno.",
+  "controlli": [
+   "longherone e duomo ant. sx",
+   "quali airbag sono esplosi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 43107,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano (eventuale)",
+    "low": 150,
+    "high": 350
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 350,
+  "rivendita_prudente": 11426,
+  "guadagno_finale": 936,
+  "nota": "Grandine su tetto e cofano senza vernice rovinata: auto buona ma il margine è sotto soglia.",
+  "controlli": [
+   "entità bolli grandine"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 375251,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5000,
+  "guadagno_finale": -140,
+  "nota": "Testa motore da rifare e consumo d'olio, inoltre 182.000 km reali: fuori limiti.",
+  "controlli": [
+   "stato motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 187498,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 29100,
+  "guadagno_finale": 460,
+  "nota": "A6 Avant sana: prezzo già vicino alla rivendita, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50007,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3600,
+  "guadagno_finale": 1760,
+  "nota": "B 180 CDI apparentemente sana e a prezzo molto basso: il margine c'è, ma senza descrizione va vista dal vivo per capire il perché del prezzo.",
+  "controlli": [
+   "km reali (180.000 al limite)",
+   "motore, turbo e frizione",
+   "eventuale venditore commerciante",
+   "spie accese e FAP"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 19526,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 16640,
+  "guadagno_finale": 1000,
+  "nota": "Stessa Avenger di un altro annuncio, sana: prezzo troppo vicino alla rivendita.",
+  "controlli": [
+   "annuncio doppio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51412,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4800,
+  "guadagno_finale": 1910,
+  "nota": "Kia Rio senza danni evidenti, prezzo basso e margine sopra soglia; foto in un piazzale con altre auto e spia sul quadro, va verificata.",
+  "controlli": [
+   "se il venditore è un commerciante/asta",
+   "spia accesa sul quadro",
+   "storico ex flotta/noleggio"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 50308,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera anteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "portiera posteriore",
+    "low": 150,
+    "high": 300
+   },
+   {
+    "label": "riserva parafango posteriore",
+    "low": 80,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 380,
+  "ricambi_max": 850,
+  "rivendita_prudente": 4000,
+  "guadagno_finale": 710,
+  "nota": "Fiancata con entrambe le porte ammaccate e parafango posteriore segnato: i pezzi lasciano un margine sotto soglia.",
+  "controlli": [
+   "impianto GPL e collaudo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 1004,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 150,
+    "high": 350
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 350,
+  "rivendita_prudente": 9000,
+  "guadagno_finale": -1490,
+  "nota": "Minicar Aixam (quadriciclo, non auto) con paraurti posteriore rovinato; anche il prezzo è incoerente (10.000 e 11.000).",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 52538,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "paraurti anteriore (riserva)",
+    "low": 80,
+    "high": 180
+   },
+   {
+    "label": "riserva supporti/radiatore",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 180,
+  "ricambi_max": 580,
+  "rivendita_prudente": 5900,
+  "guadagno_finale": 1680,
+  "nota": "Cofano ammaccato da urto leggero davanti, il resto sembra integro. Pezzi economici e buon margine.",
+  "controlli": [
+   "traversa e radiatore dietro il paraurti",
+   "chiusura cofano e fari",
+   "storico tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 98530,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2800,
+  "guadagno_finale": 910,
+  "nota": "PT Cruiser sana ma poco richiesta: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 70501,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 18000,
+  "guadagno_finale": 260,
+  "nota": "Golf in targa tedesca, probabile importazione da commerciante, e senza margine reale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 375181,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 9500,
+  "guadagno_finale": 1160,
+  "nota": "Tipo 'da preparare' senza danni evidenti in foto: anche con poca spesa il margine resta sotto soglia.",
+  "controlli": [
+   "cosa c'è da preparare"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 143752,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7800,
+  "guadagno_finale": 1760,
+  "nota": "3008 diesel automatica sana con km alti: margine sotto la soglia diesel.",
+  "controlli": [
+   "cambio automatico EAT6"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 14414,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 17400,
+  "guadagno_finale": 760,
+  "nota": "Clio quasi nuova con cofano riverniciato per grandine: prezzo troppo alto per avere margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 25696,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": true,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "griglia",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "fendinebbia",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "passaruota",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 150,
+    "high": 350
+   },
+   {
+    "label": "griglia",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "fendinebbia dx",
+    "low": 30,
+    "high": 80
+   },
+   {
+    "label": "parafango dx",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "faro dx (riserva)",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "braccio/montante ant. dx",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "cerchio",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori (riserva)",
+    "low": 120,
+    "high": 350
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1030,
+  "ricambi_max": 2830,
+  "rivendita_prudente": 6800,
+  "guadagno_finale": -1070,
+  "nota": "Urto anteriore destro con ruota rientrata: paraurti, griglia, parafango e sospensione, più possibile ossatura; i pezzi DR costano e il margine sparisce.",
+  "controlli": [
+   "longherone e duomo ant. dx",
+   "geometria"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 922,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "climatizzatore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 160,
+  "nota": "Fiesta 2007 con clima da riparare: prezzo già a livello di rivendita, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 64968,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 14600,
+  "guadagno_finale": 860,
+  "nota": "Yaris grandinata venduta con IVA esposta da un commerciante, e margine comunque insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51576,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4200,
+  "guadagno_finale": 1060,
+  "nota": "Mazda 2 sana, una foto è uno screenshot di un altro annuncio; margine sotto soglia.",
+  "controlli": [
+   "annuncio ripubblicato"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 322898,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "portiera posteriore sx",
+    "low": 120,
+    "high": 250
+   },
+   {
+    "label": "parafango ant. dx (riserva)",
+    "low": 60,
+    "high": 120
+   }
+  ],
+  "ricambi_min": 260,
+  "ricambi_max": 520,
+  "rivendita_prudente": 3500,
+  "guadagno_finale": 640,
+  "nota": "Ammaccature su porta posteriore sinistra e paraurti anteriore graffiato: auto di pochi km ma il margine è sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 129771,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3100,
+  "guadagno_finale": 1160,
+  "nota": "Modus sana con fari opachi: margine poco sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 49874,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "fanale posteriore sx",
+    "low": 20,
+    "high": 50
+   },
+   {
+    "label": "paraurti posteriore",
+    "low": 50,
+    "high": 100
+   },
+   {
+    "label": "lamierato parafango post. sx",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 170,
+  "ricambi_max": 450,
+  "rivendita_prudente": 2300,
+  "guadagno_finale": 310,
+  "nota": "Seicento con fianco posteriore sinistro e paraurti ammaccati: auto che vale poco, margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 185292,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 22400,
+  "guadagno_finale": 260,
+  "nota": "X1 diesel sana: prezzo già al livello di rivendita, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51361,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4000,
+  "guadagno_finale": 1060,
+  "nota": "Mazda 3 diesel sana con km alti: margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 15323,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3500,
+  "guadagno_finale": 1760,
+  "nota": "Mini non marciante con problemi meccanici (FAP e altro): guasto non da incidente, da scartare.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 384778,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": true,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "portiera_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "montante_centrale",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag_laterale_tendina",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "portiera anteriore sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "portiera posteriore sx",
+    "low": 150,
+    "high": 450
+   },
+   {
+    "label": "lamierati/ossatura montante B e brancardo",
+    "low": 300,
+    "high": 1500
+   },
+   {
+    "label": "airbag tendina+laterale+centralina+pretensionatore",
+    "low": 700,
+    "high": 2500
+   }
+  ],
+  "ricambi_min": 1300,
+  "ricambi_max": 4900,
+  "rivendita_prudente": 4300,
+  "guadagno_finale": -3140,
+  "nota": "Urto laterale pesante sul lato sinistro: due portiere distrutte, montante centrale piegato e airbag a tendina esploso. I pezzi costano più di quanto renda la Karl riparata.",
+  "controlli": [
+   "montante B e brancardo",
+   "airbag e centralina",
+   "allineamento scocca"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 7755,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva difetto non dichiarato",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 300,
+  "ricambi_max": 1500,
+  "rivendita_prudente": 4300,
+  "guadagno_finale": 660,
+  "nota": "Venduta come auto 'per pezzi di ricambio' senza dire cosa non va; nelle foto il cambio sembra automatico ma l'annuncio dice manuale. Diesel e dati poco chiari: non conviene.",
+  "controlli": [
+   "motivo vendita per pezzi",
+   "motore e cambio",
+   "tipo di cambio reale"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 384986,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria_graffi",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "alzacristallo",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "alzacristallo anteriore dx",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 150,
+  "rivendita_prudente": 3800,
+  "guadagno_finale": 1110,
+  "nota": "Auto sana con graffi da parcheggio e alzacristallo passeggero rotto. Una 147 del 2010 con 143.000 km si rivende sui 3.800 €, margine sotto soglia.",
+  "controlli": [
+   "alimentazione reale (benzina o diesel)",
+   "alzacristallo dx",
+   "graffi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 72906,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 22814,
+  "guadagno_finale": 174,
+  "nota": "Furgone/multispazio quasi nuovo e senza danni; il prezzo è già vicino al valore di mercato, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 23350,
+  "esito": "scartata",
+  "danno": "grave",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2500,
+  "guadagno_finale": 1360,
+  "nota": "Non si accende e perde olio: guasto meccanico non quantificabile, oltre a 170.000 km. Da scartare.",
+  "controlli": [
+   "motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 971,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "specchietto",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "levabolli grandine tetto/cofano (riserva)",
+    "low": 200,
+    "high": 500
+   },
+   {
+    "label": "specchietto dx",
+    "low": 40,
+    "high": 120
+   }
+  ],
+  "ricambi_min": 240,
+  "ricambi_max": 620,
+  "rivendita_prudente": 7700,
+  "guadagno_finale": -60,
+  "nota": "Grandine su tetto e cofano e specchietto dx da sistemare. Prezzo troppo vicino al valore della Karl Rocks: margine insufficiente.",
+  "controlli": [
+   "entità grandine"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 74924,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 28995,
+  "guadagno_finale": -145,
+  "nota": "Golf GTI sana, prezzo già pari al mercato: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 21675,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "levabolli grandine (riserva)",
+    "low": 200,
+    "high": 500
+   }
+  ],
+  "ricambi_min": 200,
+  "ricambi_max": 500,
+  "rivendita_prudente": 8800,
+  "guadagno_finale": 160,
+  "nota": "500 diesel con grandine leggera e segni di carrozzeria; il prezzo è troppo alto rispetto alla rivendita, margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 187795,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 29902,
+  "guadagno_finale": -238,
+  "nota": "Formentor sana, prezzo sopra la rivendita possibile: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 317168,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "griglia",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "griglia/calandra",
+    "low": 50,
+    "high": 150
+   },
+   {
+    "label": "faro (riserva)",
+    "low": 100,
+    "high": 350
+   },
+   {
+    "label": "radiatori/condensatore",
+    "low": 120,
+    "high": 400
+   },
+   {
+    "label": "traversa/staffe",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 450,
+  "ricambi_max": 1350,
+  "rivendita_prudente": 7800,
+  "guadagno_finale": 1110,
+  "nota": "Frontale con paraurti staccato e griglia rotta, possibili radiatori. Diesel con 180.000 km: dopo i pezzi il margine resta sotto la soglia diesel.",
+  "controlli": [
+   "radiatori e condensatore",
+   "traversa anteriore",
+   "fari"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 45555,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 28447,
+  "guadagno_finale": -193,
+  "nota": "Golf 8 sana quasi nuova, prezzo pari al mercato: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 68463,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 16926,
+  "guadagno_finale": 286,
+  "nota": "T-Roc sana, prezzo troppo vicino al mercato: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51092,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 200,
+  "rivendita_prudente": 4200,
+  "guadagno_finale": 910,
+  "nota": "Golf Variant sana con paraurti posteriore graffiato. Una Golf V del 2008 con 160.000 km si rivende sui 4.200 €, margine sotto soglia.",
+  "controlli": [
+   "paraurti posteriore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52589,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5000,
+  "guadagno_finale": 1360,
+  "nota": "Corsa diesel sana senza danni visibili; la rivendita reale è sui 5.000 €, margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 271806,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "fanale_posteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 150
+   },
+   {
+    "label": "lamierato fiancata posteriore sx",
+    "low": 150,
+    "high": 400
+   },
+   {
+    "label": "fanale posteriore sx",
+    "low": 30,
+    "high": 60
+   },
+   {
+    "label": "bracci/sospensione anteriore",
+    "low": 100,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 360,
+  "ricambi_max": 1010,
+  "rivendita_prudente": 1900,
+  "guadagno_finale": 250,
+  "nota": "Tamponamento sul posteriore sinistro e asse anteriore da rivedere. Una Matiz 2008 vale poco: dopo i pezzi il guadagno è troppo basso.",
+  "controlli": [
+   "asse anteriore e convergenza",
+   "fiancata posteriore sx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 73449,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 23986,
+  "guadagno_finale": -154,
+  "nota": "Countryman sana, prezzo pari al mercato: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 53014,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "ritocchi cofano/frontale",
+    "low": 50,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 50,
+  "ricambi_max": 150,
+  "rivendita_prudente": 4700,
+  "guadagno_finale": 910,
+  "nota": "Corsa GPL sostanzialmente sana con piccoli segni sul frontale; rivendita reale sui 4.700 €, margine sotto soglia.",
+  "controlli": [
+   "cofano",
+   "impianto GPL e collaudo"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52717,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano (riserva)",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "rivendita_prudente": 3800,
+  "guadagno_finale": -140,
+  "nota": "Classe A W169 con 170.000 km (anno 2014 poco coerente col modello); rivendita bassa, margine quasi nullo.",
+  "controlli": [
+   "anno immatricolazione",
+   "cofano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 47287,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 660,
+  "nota": "Twizy è un quadriciclo con batteria a noleggio: fuori categoria e margine basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 7673,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "pneumatici_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4500,
+  "guadagno_finale": 1360,
+  "nota": "Spia motore accesa e perdite di potenza: motore da rivedere, problema non quantificabile.",
+  "controlli": [
+   "diagnosi motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 16441,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano",
+    "low": 100,
+    "high": 300
+   },
+   {
+    "label": "riserva paraurti/staffe",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 400,
+  "rivendita_prudente": 6500,
+  "guadagno_finale": 960,
+  "nota": "Cofano incidentato su Aygo 2017 con 116.000 km; spia rossa sul quadro. La rivendita sui 6.500 € lascia un margine sotto soglia.",
+  "controlli": [
+   "spia rossa quadro",
+   "cofano e serratura"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 22392,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": true,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "portiera",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "calotte_specchietti",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "airbag_cruscotto",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "levabolli grandine",
+    "low": 300,
+    "high": 700
+   },
+   {
+    "label": "calotte specchietti",
+    "low": 40,
+    "high": 100
+   },
+   {
+    "label": "diagnosi airbag/centralina",
+    "low": 100,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 440,
+  "ricambi_max": 1600,
+  "rivendita_prudente": 13500,
+  "guadagno_finale": -740,
+  "nota": "Grandine, portiera bozzata, assetto da rivedere e difetto airbag: prezzo troppo alto rispetto alla rivendita, nessun margine.",
+  "controlli": [
+   "airbag",
+   "assetto"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 183968,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 19053,
+  "guadagno_finale": -87,
+  "nota": "S-Cross sana, prezzo pari al mercato: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 388670,
+  "esito": "scartata",
+  "danno": "medio",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "levabolli grandine",
+    "low": 600,
+    "high": 1000
+   }
+  ],
+  "ricambi_min": 600,
+  "ricambi_max": 1000,
+  "rivendita_prudente": 9000,
+  "guadagno_finale": -139,
+  "nota": "118d con 176.000 km e grandine (~1.000 € dichiarati): con la rivendita reale il guadagno è negativo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50295,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3200,
+  "guadagno_finale": 1060,
+  "nota": "207 SW del 2007 senza danni evidenti; rivendita reale sui 3.200 €, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 32292,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 15857,
+  "guadagno_finale": 17,
+  "nota": "Fiesta sana, prezzo pari al mercato: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 131607,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3900,
+  "guadagno_finale": 1260,
+  "nota": "Roomster diesel sana con 170.000 km; rivendita reale sui 3.900 €, margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 49998,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti posteriore",
+    "low": 80,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 150,
+  "rivendita_prudente": 2700,
+  "guadagno_finale": 610,
+  "nota": "Colt del 2007 con paraurti posteriore segnato; vale poco riparata, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 386802,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "riparare",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva diagnosi spia motore",
+    "low": 100,
+    "high": 400
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 400,
+  "rivendita_prudente": 3700,
+  "guadagno_finale": 560,
+  "nota": "Spark GPL con spia motore accesa; anche senza problemi gravi il margine resta sotto soglia.",
+  "controlli": [
+   "diagnosi spia motore"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52241,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4200,
+  "guadagno_finale": 760,
+  "nota": "A180 CDI sana del 2008; rivendita reale sui 4.200 €, margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 72291,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 20873,
+  "guadagno_finale": -267,
+  "nota": "Sportage sana, prezzo sopra la rivendita: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 201714,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 25656,
+  "guadagno_finale": -484,
+  "nota": "Austral sana, prezzo sopra la rivendita: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 202034,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 26123,
+  "guadagno_finale": -517,
+  "nota": "BMW 118d sana, prezzo sopra la rivendita: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 186125,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 23700,
+  "guadagno_finale": -440,
+  "nota": "Solo foto di repertorio/loghi, nessuna foto reale dell'auto; prezzo vicino al mercato, margine nullo.",
+  "controlli": [
+   "foto reali",
+   "stato carrozzeria"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 389545,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 6001,
+  "guadagno_finale": 2361,
+  "nota": "Catena distribuzione rotta, auto non marciante: motore da rivedere con possibili valvole piegate, danno non da incidente.",
+  "controlli": [
+   "stato motore dopo rottura catena"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51432,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3900,
+  "guadagno_finale": 960,
+  "nota": "Auto sana senza danni visibili, ma la Corsa 1.4 automatica 2010 si rivende poco sopra il prezzo: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 3196,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 11800,
+  "guadagno_finale": -90,
+  "nota": "Polo sana con solo un graffio su un parafango, prezzo già allineato al mercato: margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 12542,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva riparazione grandine tetto",
+    "low": 300,
+    "high": 700
+   }
+  ],
+  "ricambi_min": 300,
+  "ricambi_max": 700,
+  "rivendita_prudente": 7898,
+  "guadagno_finale": -442,
+  "nota": "Tetto grandinato, ma il prezzo chiesto è già quasi quello di rivendita: nessun margine dopo la riparazione.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 9642,
+  "esito": "scartata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "impianto_clima",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "fiancata_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva pezzi clima (compressore/ricarica)",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "rivendita_prudente": 3800,
+  "guadagno_finale": 860,
+  "nota": "Classe A W169 in buone condizioni con clima da sistemare e un graffio: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50417,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3200,
+  "guadagno_finale": 910,
+  "nota": "Panda diesel 2008 con 175.000 km apparentemente sana, ma la rivendita realistica lascia margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 52374,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4500,
+  "guadagno_finale": 960,
+  "nota": "Smart fortwo sana senza danni visibili, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 185884,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 24700,
+  "guadagno_finale": 570,
+  "nota": "BMW X1 in showroom, venditore professionale, prezzo già di mercato.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51659,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4300,
+  "guadagno_finale": 1160,
+  "nota": "Classe A 180 CDI sana (contachilometri a 162.744 km), margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 386687,
+  "esito": "incidentata",
+  "danno": "leggero",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [
+   {
+    "part": "portiere_fiancata",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva riparazione grandine fiancata dx (eventuale pannello usato)",
+    "low": 250,
+    "high": 600
+   }
+  ],
+  "ricambi_min": 250,
+  "ricambi_max": 600,
+  "rivendita_prudente": 4600,
+  "guadagno_finale": 1460,
+  "nota": "Fiancata destra grandinata, riparabile con levabolli/verniciatura; con catena e frizione nuove la Yeti si rivende bene e il margine c'è.",
+  "controlli": [
+   "entità reale della grandine su tetto e cofano",
+   "fatture catena distribuzione e frizione",
+   "km reali e tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 50091,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2900,
+  "guadagno_finale": 1260,
+  "nota": "Zafira diesel 2008 con soli 100.000 km a prezzo basso; nessun danno visibile ma c'è una sola foto, va vista dal vivo.",
+  "controlli": [
+   "stato carrozzeria lato anteriore (foto mancanti)",
+   "motore 1.9 CDTI: FAP, EGR, volano",
+   "perché il prezzo è così basso"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 50242,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 860,
+  "nota": "Sirion sana senza danni visibili, rivendita bassa: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 53067,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4600,
+  "guadagno_finale": 960,
+  "nota": "Megane 2011 sana, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 385737,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 10500,
+  "guadagno_finale": 1360,
+  "nota": "Motore da rivedere (non tiene il minimo), vendita a commercianti 'vista e piaciuta': guasto meccanico non quantificabile.",
+  "controlli": [
+   "diagnosi motore e impianto GPL"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50239,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4000,
+  "guadagno_finale": 1570,
+  "nota": "Classe A 160 CDI 2010 apparentemente sana a prezzo basso; margine sopra la soglia diesel ma di poco, va vista dal vivo.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "frizione e cambio",
+   "iniettori/turbo",
+   "venditore privato o commerciante"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 51478,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 360,
+  "nota": "Pick-up Mahindra Goa da lavoro con poco mercato in rivendita: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51828,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4300,
+  "guadagno_finale": 1160,
+  "nota": "Mini Clubman 150.000 km apparentemente sana, margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 53401,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4300,
+  "guadagno_finale": 1260,
+  "nota": "DS3 diesel sana, margine sotto la soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 150894,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8800,
+  "guadagno_finale": 1160,
+  "nota": "Clio 2019 sana, prezzo vicino al mercato: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51680,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3800,
+  "guadagno_finale": 660,
+  "nota": "Colt 2008 sana, rivendita bassa: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50463,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3500,
+  "guadagno_finale": 860,
+  "nota": "Ypsilon 2008 sana, margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50554,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "strutturale": false,
+  "airbag": false,
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva per difetti non dichiarati",
+    "low": 0,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 300,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 1560,
+  "nota": "Ibiza SC 1.2 TDI apparentemente sana a prezzo molto basso: margine buono ma il prezzo fa pensare a un difetto nascosto, va vista dal vivo.",
+  "controlli": [
+   "motore 1.2 TDI: iniettori, EGR, FAP",
+   "angolo paraurti anteriore dx",
+   "motivo del prezzo basso"
+  ],
+  "aggiorna": true,
+  "audit": "incm1",
+  "mercato_da_rivendita": true
  }
 ]
