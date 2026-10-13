@@ -306,7 +306,7 @@ def item(r: dict) -> dict | None:
     n_ph = int(r.get("n_photos") or 0)
     grezzo = int(round(float(mercato)))
     ev = r.get("engine_version") or ""
-    audit = "-a1" in ev or "-a2" in ev
+    audit = "-a1" in ev or "-a2" in ev or "-fb1" in ev   # controllate a mano: rivendita già prudente
     if not audit:
         # stima automatica: si mostra prudente (anche quando sembra troppo bella: il mercato viene limitato)
         mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
