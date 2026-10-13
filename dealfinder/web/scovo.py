@@ -104,7 +104,7 @@ FROM listings l
 JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.stage='approfondito' AND l.status='attivo'
   AND l.stage_reason IN ('opportunita','da_verificare','incidentata')
-  AND l.last_checked_at > now() - interval '48 hours'
+  AND l.last_checked_at > now() - interval '""" + str(int(os.environ.get("FRESCHEZZA_ORE", "48"))) + """ hours'
 """
 
 # Sezione "Sotto 1.000 €": tutte le auto di privati dal 2010 sotto i 1.000 €, senza soglia di guadagno

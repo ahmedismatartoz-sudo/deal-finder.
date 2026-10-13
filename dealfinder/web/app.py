@@ -893,7 +893,7 @@ def _calcola_elenco() -> None:
         gia = {it["id"] for it in items}
         try:
             with connect() as conn:
-                conn.execute("SET LOCAL statement_timeout = '20s'")
+                conn.execute("SET LOCAL statement_timeout = '%ds'" % int(os.environ.get("ECO_TIMEOUT_S", "120")))
                 eco = conn.execute(scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s",
                                    dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
             for r in eco:

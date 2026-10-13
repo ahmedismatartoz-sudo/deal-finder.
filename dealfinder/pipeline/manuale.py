@@ -12,6 +12,7 @@ e ricambi, non il margine.
 from __future__ import annotations
 
 import json
+import os
 import logging
 from collections import Counter
 from dataclasses import asdict
@@ -54,8 +55,9 @@ def segna_viste_di_recente(conn) -> dict:
     conn.execute("SET LOCAL lock_timeout = '10s'")
     n = conn.execute("""UPDATE listings SET last_checked_at=now()
                         WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
-                          AND last_seen_at > now() - interval '48 hours'
-                          AND (last_checked_at IS NULL OR last_checked_at < now() - interval '12 hours')""").rowcount
+                          AND last_seen_at > now() - make_interval(hours => %s)
+                          AND (last_checked_at IS NULL OR last_checked_at < now() - interval '12 hours')""",
+                     (int(os.environ.get("FRESCHEZZA_ORE", "48")),)).rowcount
     rows = conn.execute("""SELECT source, count(*) AS n FROM listings
                            WHERE status='attivo' AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
                              AND last_checked_at > now() - interval '48 hours' GROUP BY source""").fetchall()
