@@ -117,6 +117,13 @@ def run(esiti: tuple[str, ...] | None = None, solo_nuove: bool = False, voci: li
                 apply_model(v, l, model)
             v.engine_version += "+manuale-v5" + tag
             # rivendita corretta a mano (es. allestimento povero, limitazioni di circolazione)
+            if e.get("rivendita_prudente") and not v.resale_prudent:
+                # nessun confronto né modello (es. Facebook senza modello): vale la rivendita stimata a mano
+                rp = int(e["rivendita_prudente"])
+                v.resale_prudent = rp
+                for f in ("private_median", "resale_median_private", "resale_median"):
+                    if hasattr(v, f) and not getattr(v, f, None):
+                        setattr(v, f, round(rp / (1 - scovo.SCONTO_DEFAULT / 100)))
             if e.get("rivendita_prudente") and v.resale_prudent:
                 v.resale_prudent = min(v.resale_prudent, int(e["rivendita_prudente"]))
             if e.get("mercato_da_rivendita") and e.get("rivendita_prudente"):
