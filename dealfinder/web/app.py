@@ -904,7 +904,14 @@ def _calcola_elenco() -> None:
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
     _elenco.update(t=time.time(), items=items, opens=opens)
-    logging.getLogger("scovo").info("ELENCO %d auto in %.1fs", len(items), time.time() - t0)
+    from collections import Counter
+    c = Counter()
+    for it in items:
+        sez = "eco" if it.get("economica") else "inc" if it.get("incidentata") else "affari"
+        c[f"{sez}:{it.get('area') or 'milano'}"] += 1
+        if sez == "affari" and it["prezzo"] < 2000:
+            c[f"affari_sotto_2000:{it.get('area') or 'milano'}"] += 1
+    logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(items), time.time() - t0, dict(sorted(c.items())))
 
 
 def _aggiorna_elenco(attendi: bool) -> None:
