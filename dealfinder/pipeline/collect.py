@@ -577,7 +577,7 @@ if __name__ == "__main__":
         if _due(job, 20):
             with connect() as conn:
                 fin = log_job(conn, job)
-                fin(True, {"venditori": lead.run()})
+                fin(True, {"venditori": lead.dal_sito()})
         sys.exit(0)
     if mode == "inc_milano":
         # incidentate di Milano e dintorni già raccolte e mai guardate: subito al controllo foto (una volta al giorno)

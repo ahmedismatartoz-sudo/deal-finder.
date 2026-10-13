@@ -108,3 +108,57 @@ def run() -> int:
         log.info("LEAD %s", json.dumps(x, ensure_ascii=False, default=str))
     log.info("LEAD_FINE %d venditori", len(righe))
     return len(righe)
+
+
+TIENI = re.compile(r"company|name|phone|callto|number|street|zip|city|url|link|web|id$|type", re.I)
+NO_PERSONA = re.compile(r"contact|person|first|last|surname|nome_|owner", re.I)
+
+
+def dal_sito() -> int:
+    """Gli annunci salvati non hanno più i dati del venditore: si leggono direttamente da AutoScout24
+    (solo concessionari/autosaloni entro LEAD_RAGGIO km da Milano). Dati PUBBLICI dell'attività: ragione
+    sociale, telefono dell'attività, indirizzo, sito; mai il nome di una persona."""
+    import os
+    from ..collectors.autoscout import AutoScoutCollector
+    os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LEAD_RAGGIO", "60")
+    os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
+    os.environ.pop("AUTOSCOUT_KM_MAX", None)
+    os.environ.pop("PASSI_JOB", None)
+    asc = AutoScoutCollector()
+    asc.min_delay_s, asc.max_delay_s = 0.6, 1.4
+    massimo = int(os.environ.get("LEAD_MAX", "900"))
+    g: dict = {}
+    n = 0
+    stampati = 0
+    for l in asc.search({"massiva": True, "min_price": 500, "max_price": 60000, "step": 2500,
+                         "venditori": [("D", "commerciante")]}):
+        n += 1
+        s = (l.raw or {}).get("seller") or {}
+        if n <= 3:
+            log.info("LEAD_DEBUG venditore=%s", json.dumps(s, ensure_ascii=False, default=str)[:900])
+        k = _chiave("as", s) if isinstance(s, dict) else None
+        if not k:
+            continue
+        if k not in g:
+            dati = {kk: vv for kk, vv in _piatto(s).items() if TIENI.search(kk) and not NO_PERSONA.search(kk)}
+            g[k] = {"chiave": k, "dati": dati, "citta": l.city, "provincia": l.province, "annunci": 0,
+                    "prezzi": [], "ritiro": 0, "esempio": l.url}
+        x = g[k]
+        x["annunci"] += 1
+        if l.price_eur:
+            x["prezzi"].append(l.price_eur)
+        if RITIRO.search(f"{l.title or ''} {l.description or ''}"):
+            x["ritiro"] += 1
+        if len(g) >= massimo and n % 200 == 0:
+            asc.stop = True
+            break
+    log.info("LEAD_LETTI %d annunci, %d autosaloni", n, len(g))
+    righe = sorted(g.values(), key=lambda x: -x["annunci"])
+    for x in righe:
+        p = sorted(x.pop("prezzi"))
+        x.update(prezzo_min=p[0] if p else None, prezzo_med=p[len(p) // 2] if p else None,
+                 prezzo_max=p[-1] if p else None)
+        log.info("LEAD %s", json.dumps(x, ensure_ascii=False, default=str))
+        stampati += 1
+    log.info("LEAD_FINE %d autosaloni", stampati)
+    return stampati
