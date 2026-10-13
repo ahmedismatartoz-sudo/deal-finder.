@@ -116,6 +116,8 @@ def applica(conn, evento: dict) -> str:
 
 def puo_vedere(row: dict | None) -> bool:
     """Chi si è iscritto da solo vede le auto solo con l'abbonamento attivo (o in prova)."""
+    if os.environ.get("ABBONAMENTO_OBBLIGATORIO", "1") == "0":
+        return True              # pagamento spento da Render: tutti gli account entrano
     if not row or not row.get("richiede_abbonamento"):
         return True
     if row.get("con_password") or row.get("role") == "admin":
