@@ -563,6 +563,12 @@ if __name__ == "__main__":
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "inc_lampo":
+        # incidentate già raccolte (ultimi 10 giorni, tutta Italia) mai guardate: subito al controllo foto
+        from . import mille
+        mille.lampo(int(os.environ.get("STASERA_QUANTI", "250")), max_diesel=0.45, fonte=None, ore=24 * 10,
+                    danneggiate=True, ovunque=True, versione="inc-lampo")
+        sys.exit(0)
     if mode in ("stasera", "inc_stasera", "fb_stasera"):
         # Lavori "entro stasera" (Milano): raccolta delle novità, poi selezione lampo con le stime già salvate
         # (preferite le auto con pochi km, niente moto), MILLE/MILLEFOTO nei log per il controllo uno per uno
