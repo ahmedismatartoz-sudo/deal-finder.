@@ -569,6 +569,15 @@ if __name__ == "__main__":
         log.info("SELEZIONI analisi_manuale: %s", manuale.run(solo_nuove=True))
         log.info("SELEZIONI verifica: %s", recheck.run())
         sys.exit(0)
+    if mode == "lead_commercianti":
+        # lista commercianti di Milano e province per il commerciale (LEAD nei log), una volta al giorno
+        from . import lead
+        from .ciclo import _due
+        if _due("lead:commercianti", 20):
+            with connect() as conn:
+                fin = log_job(conn, "lead:commercianti")
+                fin(True, {"venditori": lead.run()})
+        sys.exit(0)
     if mode == "inc_milano":
         # incidentate di Milano e dintorni già raccolte e mai guardate: subito al controllo foto (una volta al giorno)
         from . import mille
