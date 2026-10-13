@@ -78,6 +78,19 @@ if __name__ == "__main__":
                 conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
                 print("Creato account cliente", em)
         conn.commit()
+        # ACCOUNT_DISATTIVATI="a@x.it,b@y.it": account spenti (vince su tutto il resto), sessioni chiuse subito
+        for em in [e.strip().lower() for e in os.environ.get("ACCOUNT_DISATTIVATI", "").split(",") if "@" in e]:
+            row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
+            if not row:
+                continue
+            conn.execute("UPDATE dealers SET active=false WHERE id=%s", (row["id"],))
+            try:
+                from .web import sessions as _sess
+                _sess.revoke_all(conn, row["id"], "account_disattivato")
+            except Exception as e:
+                print("sessioni non chiuse:", str(e)[:120])
+            print("Account disattivato:", em)
+        conn.commit()
     # controllo foto delle auto sul sito (una volta per versione), solo sul sito web
     if os.environ.get("RENDER_SERVICE_TYPE", "web") == "web":
         try:
