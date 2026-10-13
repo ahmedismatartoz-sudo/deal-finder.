@@ -312,16 +312,19 @@ class SubitoCollector(Collector):
                     break
             log.info("subito ricerca '%s': %d annunci nelle province", kw, n_kw)
 
-    def search_parole(self, parole: list[str], bands: list[tuple[int, int]], max_pagine: int = 50) -> Iterator[Listing]:
+    def search_parole(self, parole: list[str], bands: list[tuple[int, int]], max_pagine: int = 50,
+                      regione: str | None = None) -> Iterator[Listing]:
         """Tutta Italia: annunci che contengono le parole (es. incidentata), fascia di prezzo per fascia."""
         lim, visti = 100, set()
         for kw in parole:
             n_kw = 0
             for ps, pe in bands:
                 for page in range(max_pagine):
-                    r = self.client.get(API_SEARCH, headers=API_HEADERS,
-                                        params={"c": 2, "t": "s", "q": kw, "ps": ps, "pe": pe, "lim": lim,
-                                                "start": page * lim, "sort": "datedesc"})
+                    params = {"c": 2, "t": "s", "q": kw, "ps": ps, "pe": pe, "lim": lim,
+                              "start": page * lim, "sort": "datedesc"}
+                    if regione:
+                        params["r"] = regione                  # solo quella regione (es. Lombardia)
+                    r = self.client.get(API_SEARCH, headers=API_HEADERS, params=params)
                     self.pause()
                     if r.status_code != 200:
                         log.warning("subito parole '%s' %s-%s: HTTP %s", kw, ps, pe, r.status_code)

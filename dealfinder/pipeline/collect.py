@@ -87,7 +87,9 @@ class _Parole:
         self.source = "subito"
 
     def search(self, query):
-        yield from self.sub.search_parole(self.parole, self.bands, int(os.environ.get("INCIDENTATE_PAGINE", "50")))
+        regione = os.environ.get("INC_REGIONE", "4") if os.environ.get("INC_MILANO") == "1" else None   # 4 = Lombardia
+        yield from self.sub.search_parole(self.parole, self.bands, int(os.environ.get("INCIDENTATE_PAGINE", "50")),
+                                          regione=regione)
 
 
 class _Centri:
@@ -263,7 +265,11 @@ def run(mode: str) -> Counter:
                   "danneggiata,danneggiato,da riparare,non marciante,airbag,botta,urto,grandinata,"
                   "carrozzeria da sistemare,da sistemare,frontale,tamponata,ricambi").split(",") if p.strip()]
         from ..collectors.autoscout import AutoScoutCollector
-        os.environ["AUTOSCOUT_CAP"] = ""
+        if os.environ.get("INC_MILANO") == "1":
+            # solo Milano: AutoScout24 entro 100 km, Subito solo Lombardia
+            os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("INC_RAGGIO", "100")
+        else:
+            os.environ["AUTOSCOUT_CAP"] = ""
         os.environ["AUTOSCOUT_DANNEGGIATE"] = "only"
         asc = AutoScoutCollector()
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
@@ -599,8 +605,8 @@ if __name__ == "__main__":
                 os.environ.setdefault("INCIDENTATE_PAGINE", "8")
                 os.environ["COLLECT_JOB"] = "collect:inc_stasera"
                 run("incidentate")
-            mille.lampo(quanti, max_diesel=0.45, fonte=None, ore=24 * 10, danneggiate=True, ovunque=True,
-                        versione="inc-stasera")
+            mille.lampo(quanti, max_diesel=0.45, fonte=None, ore=24 * 10, danneggiate=True,
+                        ovunque=os.environ.get("INC_MILANO") != "1", versione="inc-stasera")
         else:
             os.environ["FB_FORZA"] = "1"
             os.environ.setdefault("FB_GIORNI", "7")
