@@ -169,6 +169,12 @@ COMPRA = re.compile(r"compriamo|acquistiamo|ritiriamo|compro auto|acquisto auto|
                     r"pagamento (immediato|in contanti|contanti)|ritiro (del(l')? )?usato|auto in conto vendita|conto vendita", re.I)
 
 
+QUALSIASI = re.compile(r"incidentat\w*|motore fus\w*|\bfus[ei]\b|qualsiasi (condizion\w*|stato|tipo)|non marciant\w*|"
+                       r"guast\w*|rott[ae]\b|export|km alti|alto chilometraggio|senza revisione|fermo amministrativo|"
+                       r"grandinat\w*|sinistrat\w*", re.I)
+TEL = re.compile(r"(?:\+39[\s.]?)?(?:3\d{2}|0\d{1,3})[\s./-]?\d{3,4}[\s./-]?\d{3,4}")
+
+
 def compra_da_privati() -> int:
     """Autosaloni della provincia di Milano (data/lead_mi.json) che scrivono sulla loro pagina AutoScout24 che
     comprano/ritirano auto dai privati; poi annunci "compro auto" di attività su Subito, provincia di Milano.
@@ -188,18 +194,25 @@ def compra_da_privati() -> int:
         except Exception:
             testo = ""
         m = COMPRA.search(testo)
-        tel = re.findall(r"\+39[\s\d\-]{8,16}", testo)
-        if m:
-            n_si += 1
-            a, b = max(0, m.start() - 80), m.end() + 80
-            log.info("LEADP %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "citta": d["citta"],
-                                             "url": d["url"], "frase": " ".join(testo[a:b].split())[:220],
-                                             "tel": sorted(set(t.strip() for t in tel))[:3]}, ensure_ascii=False))
+        q = QUALSIASI.search(testo)
+        n_si += bool(m)
+        frase = ""
+        for x in (q, m):
+            if x:
+                a, b = max(0, x.start() - 80), x.end() + 80
+                frase = " ".join(testo[a:b].split())[:220]
+                break
+        log.info("LEADP %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "citta": d["citta"],
+                                         "url": d["url"], "compra": bool(m), "qualsiasi": bool(q), "frase": frase,
+                                         "tel": d.get("tel") or [], "annunci": d.get("annunci")},
+                                        ensure_ascii=False))
         time.sleep(0.8)
     log.info("LEADP_AS %d su %d autosaloni", n_si, len(lista))
     sub = SubitoCollector()
     visti = set()
-    for q in ("compro auto", "acquisto auto", "ritiro auto", "compriamo auto", "acquistiamo auto"):
+    for q in ("compro auto", "acquisto auto", "ritiro auto", "compriamo auto", "acquistiamo auto",
+              "compro auto incidentate", "compro auto fuse", "acquisto auto qualsiasi condizione",
+              "compro auto export", "ritiro auto incidentate", "compro auto non marcianti", "compro furgoni"):
         for page in range(5):
             try:
                 r = sub.client.get(API_SEARCH, headers=API_HEADERS,
@@ -209,7 +222,9 @@ def compra_da_privati() -> int:
                 ads = []
             for it in ads:
                 adv = it.get("advertiser") or {}
-                if not (adv.get("company") is True or str(adv.get("type")) == "1"):
+                testo = f"{it.get('subject') or ''} {it.get('body') or ''}"
+                # chi pubblica "compro auto" lo fa per lavoro anche se il profilo è da privato
+                if not (adv.get("company") is True or str(adv.get("type")) == "1" or COMPRA.search(testo)):
                     continue
                 k = adv.get("user_id") or adv.get("shop_id") or adv.get("name")
                 if k in visti:
@@ -219,7 +234,10 @@ def compra_da_privati() -> int:
                 citta = ((geo.get("town") or {}).get("value") if isinstance(geo.get("town"), dict) else None)
                 log.info("LEADP %s", json.dumps({"fonte": "subito", "nome": adv.get("shop_name") or adv.get("name"),
                                                  "citta": citta, "url": (it.get("urls") or {}).get("default"),
-                                                 "frase": (it.get("subject") or "")[:200]}, ensure_ascii=False))
+                                                 "compra": True, "qualsiasi": bool(QUALSIASI.search(testo)),
+                                                 "azienda": adv.get("company") is True,
+                                                 "frase": (it.get("subject") or "")[:200],
+                                                 "tel": sorted(set(TEL.findall(testo)))[:2]}, ensure_ascii=False))
             time.sleep(1.0)
             if len(ads) < 100:
                 break
