@@ -5,6 +5,7 @@ Avvio:  uvicorn dealfinder.web.app:app --host 0.0.0.0 --port 8000
 from __future__ import annotations
 
 import json
+from html import escape as html_esc
 import logging
 import os
 import threading
@@ -1049,18 +1050,15 @@ def _ospiti_id(conn) -> int:
     return row["id"]
 
 
-def contatto(request: Request):
-    """Parla col venditore: conta l'apertura e restituisce il numero (se scritto nell'annuncio) e il link.
-    Con il sito aperto anche chi non ha un account può contattare (limite per indirizzo, contro gli abusi)."""
-    ospite = not request.headers.get("authorization") and site_open()
+def _apri_contatto(request: Request, user: dict | None) -> dict:
+    """Conta l'apertura (ospite se user è None) e restituisce url e numero dell'annuncio."""
+    ospite = user is None
     if ospite:
         ip, now = client_ip(request), time.time()
         _contatti_ospiti[ip] = [t for t in _contatti_ospiti[ip] if now - t < 3600]
         if len(_contatti_ospiti[ip]) >= int(os.environ.get("CONTATTI_OSPITE_ORA", "30")):
             err(429, "Hai aperto molti contatti: riprova tra un po' oppure crea un account")
         _contatti_ospiti[ip].append(now)
-    else:
-        user = richiede(request, "auto")
     lid = int(request.path_params["id"])
     with connect() as conn:
         uid = _ospiti_id(conn) if ospite else user["id"]
@@ -1073,7 +1071,50 @@ def contatto(request: Request):
         conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
                      (lid, uid))
         conn.commit()
-    return jsonify({"url": row["url"], "tel": scovo.find_phone(row["description"])})
+    return {"url": row["url"], "tel": scovo.find_phone(row["description"])}
+
+
+def contatto(request: Request):
+    """Parla col venditore: conta l'apertura e restituisce il numero (se scritto nell'annuncio) e il link.
+    Con il sito aperto anche chi non ha un account può contattare (limite per indirizzo, contro gli abusi)."""
+    ospite = not request.headers.get("authorization") and site_open()
+    return jsonify(_apri_contatto(request, None if ospite else richiede(request, "auto")))
+
+
+def vai_annuncio(request: Request):
+    """Parla col venditore come link normale (nuova scheda): il sito resta aperto dov'era.
+    Il token arriva dal cookie; conta l'apertura e rimanda all'annuncio originale."""
+    lid = int(request.path_params["id"])
+    tok = request.cookies.get(COOKIE_TOKEN)
+    try:
+        if tok:
+            data = read_token(tok)
+            if not data:
+                err(401, "Accesso scaduto")
+            ok, _ = sessions.check(data.get("sid"), data["id"])
+            if not ok:
+                err(401, "Accesso scaduto")
+            if data.get("role") != "admin":
+                with connect() as conn:
+                    if "auto" not in permessi_di(conn, data):
+                        err(403, "Nessun accesso")
+                    row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) "
+                                       "AS con_password, role FROM dealers WHERE id=%s", (data["id"],)).fetchone()
+                    if not abbonamento.puo_vedere(row):
+                        err(402, "Serve l'abbonamento")
+            r = _apri_contatto(request, data)
+        elif site_open():
+            r = _apri_contatto(request, None)
+        else:
+            err(401, "Accesso richiesto")
+    except HTTPError as e:
+        msg = html_esc(e.message or "")
+        return HTMLResponse(
+            "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+            "<title>Scovo</title><body style='font:17px system-ui;padding:24px'>"
+            f"<p>{msg or 'Annuncio non disponibile'}</p><p><a href='/#/auto/{lid}'>Torna a Scovo</a></p>",
+            status_code=e.status)
+    return RedirectResponse(r["url"], status_code=302)
 
 
 # foto già lette dal database tenute in memoria (fino a FOTO_MEMORIA_MB, 48 MB): la stessa foto vista da più
@@ -1335,6 +1376,7 @@ routes = [
     Route("/api/affari", affari),
     Route("/api/affari/{id:int}", affare),
     Route("/api/affari/{id:int}/contatto", contatto, methods=["POST"]),
+    Route("/api/affari/{id:int}/vai", vai_annuncio),
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
     Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),

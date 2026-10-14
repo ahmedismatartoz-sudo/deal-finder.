@@ -353,7 +353,8 @@ function viewDetail(){
       <span class="where">Annuncio di un ${d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</span>
     </div>
     <div class="dock"><div class="dock-in">
-      <button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}${contact.label}</button>
+      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai" target="_blank" rel="noopener">${contact.icon}${contact.label}</a>`
+          : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}${contact.label}</button>`}
       <span class="talk-note">${contact.note}</span>
     </div></div>
   </div>`;
@@ -1150,20 +1151,20 @@ function viewGuestLock(){
     <a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a><a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a></div></main>`;
 }
 async function talk(){
+  // solo per gli annunci con il numero: chiama senza lasciare la pagina
   if (!S.token && !guest()) { toast("Entra per contattare il venditore"); go("entra"); return; }
   const d = S.detail[S.sel]; if (!d || d.err) return;
-  const btn = document.getElementById("talk");
-  // la finestra si apre subito (dentro il tocco), altrimenti il telefono la blocca
-  const w = d.tel ? null : window.open("", "_blank");
-  if (btn) btn.setAttribute("aria-disabled", "true");
   try {
     const r = await api("/api/affari/" + S.sel + "/contatto", {method: "POST"});
-    const car = (S.cars || []).find(c => c.id === S.sel); if (car) car.aperta = true; d.aperta = true;
-    if (d.tel && r.tel) { location.href = "tel:" + r.tel; }
-    else if (w) { try { w.opener = null; } catch (e) {} w.location.href = r.url; }
-    else { window.location.href = r.url; }
-  } catch (e) { if (w) w.close(); toast(e.message); }
+    segnaAperta();
+    if (r.tel) location.href = "tel:" + r.tel;
+    else window.open(r.url, "_blank", "noopener");
+  } catch (e) { toast(e.message); }
   render({keep:true});
+}
+function segnaAperta(){
+  const car = (S.cars || []).find(c => c.id === S.sel); if (car) car.aperta = true;
+  if (S.detail[S.sel]) S.detail[S.sel].aperta = true;
 }
 async function sendEsito(status, extra){
   const id = S.sel;
@@ -1215,6 +1216,9 @@ $app.addEventListener("click", e => {
     case "back": if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go(S.fromInc || "affari", true); return;
     case "reload": loadCars(true); return;
     case "talk": talk(); return;
+    case "talk-link":  // link vero in una nuova scheda: Scovo resta qui com'era
+      if (!S.token && !guest()) { e.preventDefault(); toast("Entra per contattare il venditore"); go("entra"); return; }
+      segnaAperta(); setTimeout(() => render({keep:true}), 300); return;
     case "desc": S.descOpen = true; break;
     case "brand": S.brands = S.brands.includes(v) ? S.brands.filter(x => x !== v) : S.brands.concat([v]); saveFilters(); break;
     case "band": setBand(v); saveFilters(); break;
