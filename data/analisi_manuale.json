@@ -135990,5 +135990,1114 @@
    "km alti"
   ],
   "aggiorna": true
+ },
+ {
+  "id": 55525,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "rivendita_prudente": 6800,
+  "nota": "Fiat 500L 1.3 Mjt Pop Star 2016 132.000 km: simili su Subito/AutoScout a 7.000-7.800, rivendita prudente 6.800. Foto: auto bianca pulita, nessun danno visibile; diesel con margine sotto la soglia (2.100).",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 60162,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "rivendita_prudente": 9800,
+  "nota": "Mazda CX-5 2.2 Evolve 2WD 2016 160.000 km: simili a 10.000-11.000, rivendita prudente 9.800. Foto in garage: carrozzeria in ordine; diesel con margine stretto, scartata.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 55434,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1110,
+  "rivendita_prudente": 6500,
+  "nota": "Fiat Doblò Cargo 1.9 Mjt 2014 attrezzato: simili a 6.500-7.500 + IVA, rivendita prudente 6.500. Le foto mostrano un furgone da lavoro con cassettiere, prezzo con IVA: non è un'auto per privati.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 63974,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 13000,
+  "nota": "Discovery Sport eD4 Pure 2WD 2018 120.000 km: simili a 13.500-14.500, rivendita prudente 13.000. Foto: bianca, nessun danno visibile; diesel con margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58420,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 8000,
+  "nota": "Renault Koleos 2.0 dCi 4x4 auto 2014 132.000 km: modello poco richiesto, simili a 8.000-9.000, rivendita prudente 8.000. Foto: bianca in buono stato; diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58717,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "rivendita_prudente": 8500,
+  "nota": "Ford Kuga 2.0 TDCi 4WD Powershift 2016 180.000 km: simili a 8.500-9.500, rivendita prudente 8.500. Foto: grigia, interni in pelle in ordine; km al limite e diesel con margine stretto (stessa auto dell'annuncio Subito 12541).",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 12541,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "rivendita_prudente": 8500,
+  "nota": "Ford Kuga 2.0 TDCi 4WD Powershift 2016 180.000 km: simili a 8.500-9.500, rivendita prudente 8.500. Foto: nessun danno visibile; doppione dell'annuncio AutoScout 58717, diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 56978,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 6800,
+  "nota": "Fiat Panda Pop Van 1.3 Mjt 2017 149.700 km: versione autocarro 2 posti, simili a 6.500-7.500, rivendita prudente 6.800. Foto: bianca senza danni evidenti, ma è un veicolo commerciale diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59723,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1170,
+  "rivendita_prudente": 9800,
+  "nota": "BMW 318d Touring 2015 135.000 km: simili a 10.000-11.000, rivendita prudente 9.800. Le foto sono in un salone con logo 'Atlas Auto': venditore commerciante, scartata.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 54026,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "rivendita_prudente": 5700,
+  "nota": "Nissan Note 1.5 dCi Acenta 2015 149.000 km: simili a 5.800-6.500, rivendita prudente 5.700. Foto: bianca, nessun danno grave visibile; diesel con margine sotto soglia (1.700).",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 385401,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "ritocchi carrozzeria",
+    "low": 100,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 200,
+  "guadagno_finale": 870,
+  "rivendita_prudente": 5500,
+  "nota": "Nissan Qashqai 1.5 dCi Tekna 2012 ~172.000 km: simili a 5.500-6.500, rivendita prudente 5.500. Foto: bianca, carrozzeria con segni 'come in foto'; meccanica appena rifatta ma diesel con km alti e margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 64789,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 14000,
+  "nota": "Range Rover Evoque 2018 TD4 auto 129.000 km (il '2.2 Launch Edition' non torna con il 2018): simili a 14.000-15.000, rivendita prudente 14.000. Foto: nera, nessun danno visibile; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 61042,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 10500,
+  "nota": "Jeep Compass 2.0 Mjt 4WD auto 2018 165.000 km: simili a 10.500-11.500, rivendita prudente 10.500. Foto: nera in buono stato; diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 60347,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "rivendita_prudente": 10000,
+  "nota": "Discovery Sport TD4 HSE Luxury 2016 162.000 km: simili a 10.000-11.000, rivendita prudente 10.000. Foto: rossa, carrozzeria in ordine; diesel con margine sotto soglia.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 63153,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 12000,
+  "nota": "Kia Sportage 1.6 CRDi GT Line 2019 156.000 km: simili a 12.000-13.000, rivendita prudente 12.000. Foto: grigia senza danni evidenti; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57390,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 7500,
+  "nota": "Fiat 500X 1.3 Mjt 2017 173.000 km: km alti, simili a 7.500-8.500, rivendita prudente 7.500. Foto: verde opaco (forse pellicola), targa coperta; diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 63972,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 13000,
+  "nota": "Peugeot 508 SW BlueHDi 130 EAT8 2021 150.000 km: simili a 13.000-14.000, rivendita prudente 13.000. Foto: grigia, interni in ordine; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 323063,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 610,
+  "rivendita_prudente": 4000,
+  "nota": "Mercedes A 180 CDI 2008 178.000 km: simili a 3.800-4.500, rivendita prudente 4.000. Foto: grigia pulita senza danni, ma col prezzo chiesto il margine è quasi nullo.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52693,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1160,
+  "rivendita_prudente": 4800,
+  "nota": "Opel Antara 2.2 CDTI 4WD 2011 165.000 km: simili a 4.500-5.200, rivendita prudente 4.800. Foto: grigia in buono stato; diesel con margine sotto soglia (1.700).",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 62750,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 11900,
+  "nota": "Range Rover Evoque 2.2 TD4 Pure Tech auto 2014 146.000 km: simili a 12.000-13.000, rivendita prudente 11.900. Foto in garage: bianca senza danni visibili; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 60632,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 10000,
+  "nota": "Kia Optima SW 1.7 CRDi GT Line DCT 2017 155.000 km: simili a 10.000-11.000, rivendita prudente 10.000. Foto: grigia in buono stato; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 64227,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 460,
+  "rivendita_prudente": 12500,
+  "nota": "BMW 218d Active Tourer auto 2017 122.000 km: simili a 12.500-13.500, rivendita prudente 12.500. Foto in parte in officina sul ponte, carrozzeria in ordine; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 63233,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 12000,
+  "nota": "Range Rover Evoque 2.0 eD4 Pure 2018 174.000 km: km alti, simili a 12.000-13.000, rivendita prudente 12.000. Foto: bianca, nessun danno visibile; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 62132,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 11500,
+  "nota": "Audi A4 2.0 TDI 150 S tronic Business 2015 155.800 km: simili a 11.500-12.500, rivendita prudente 11.500. Foto: nera, interni in ordine; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 54467,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 6000,
+  "nota": "Peugeot 208 1.6 BlueHDi 2017 144.000 km: simili a 6.000-6.800, rivendita prudente 6.000. Foto: bianca, interni puliti, nessun danno evidente; diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 3341,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 15800,
+  "nota": "Mercedes GLA 200d auto 2017 135.000 km: simili a 16.000-17.000, rivendita prudente 15.800. Foto: grigia AMG line in ottimo stato; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58197,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 8300,
+  "nota": "BMW X1 xDrive20d E84 auto 2013 174.000 km: simili a 8.000-9.000, rivendita prudente 8.300. Foto in garage: nera, interni in ordine; diesel con margine stretto.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53408,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 5000,
+  "nota": "Chevrolet Cruze 2.0 TD LT 2013 129.000 km: marchio uscito dall'Italia, simili a 4.800-5.500, rivendita prudente 5.000. Foto: bianca senza danni visibili; diesel con margine sotto soglia.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 64441,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 760,
+  "rivendita_prudente": 13800,
+  "nota": "Range Rover Evoque 2.0 TD4 SE auto 2017 120.000 km: simili a 14.000-15.000, rivendita prudente 13.800. Foto dentro un locale tipo negozio/salone: possibile commerciante; comunque margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 63842,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 760,
+  "rivendita_prudente": 12900,
+  "nota": "Range Rover Evoque TD4 auto 2017 160.000 km (il '2.2 Launch Edition' non torna col 2017): simili a 13.000-14.000, rivendita prudente 12.900. Foto: nera, nessun danno visibile; margine troppo basso.",
+  "controlli": [
+   "storico tagliandi e km reali",
+   "stato cambio/frizione e turbo",
+   "FAP/EGR (diesel)"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57805,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 761,
+  "rivendita_prudente": 7500,
+  "nota": "Doblò Cargo 2019 160.000 km: è un furgone da lavoro (lamierato), simili a 7.000-8.000, rivendita prudente 7.500. Scartata: furgone e diesel con margine stretto.",
+  "controlli": [
+   "veicolo commerciale",
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 66379,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 15800,
+  "nota": "Stelvio 2.2 150cv Super 2018 140.000 km: su AutoScout simili a 15.500-17.000, rivendita prudente 15.800. Foto pulite senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50369,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 960,
+  "rivendita_prudente": 3400,
+  "nota": "MiTo 1.3 JTDm 2009 159.000 km: simili a 2.800-3.800, rivendita prudente 3.400. Carrozzeria ok in foto, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 60848,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 10200,
+  "nota": "500X 1.3 MJT Urban 2020 125.000 km: simili a 10.000-11.500, rivendita prudente 10.200. Auto pulita in foto, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53411,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 760,
+  "rivendita_prudente": 4800,
+  "nota": "Doblò 1.6 MJT 2011 165.000 km: simili a 4.500-5.500, rivendita prudente 4.800. Nessun danno visibile, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 64502,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 460,
+  "rivendita_prudente": 13500,
+  "nota": "Evoque TD4 2018 147.000 km: simili a 13.000-15.000, rivendita prudente 13.500. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59945,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 9000,
+  "nota": "Octavia Wagon 1.6 TDI 2017 149.000 km: simili a 8.500-10.000, rivendita prudente 9.000. Auto in box senza danni visibili, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 104008,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 10500,
+  "nota": "Evoque 2.2 TD4 Pure 2013 175.000 km: simili a 9.500-11.500, rivendita prudente 10.500. Foto ok, ma diesel con margine stretto e km alti.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58490,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 7800,
+  "nota": "308 SW 1.6 BlueHDi EAT6 2017 146.000 km: simili a 7.500-8.500, rivendita prudente 7.800. Poche foto, nessun danno evidente, diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 69009,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 17300,
+  "nota": "Tiguan 2.0 TDI DSG 2019 122.000 km: simili a 17.000-19.000, rivendita prudente 17.300. Foto pulite, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 60991,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 9800,
+  "nota": "320d Touring xDrive 2011 133.000 km: simili a 8.500-10.500, rivendita prudente 9.800. Auto in ordine in foto, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 69593,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -140,
+  "rivendita_prudente": 17000,
+  "nota": "Range Rover Sport TDV6 2015 164.000 km: simili a 16.500-19.000, rivendita prudente 17.000. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59709,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 310,
+  "rivendita_prudente": 8800,
+  "nota": "500X 1.3 MJT Popstar 2016 123.000 km: simili a 8.500-9.500, rivendita prudente 8.800. Auto pulita in foto, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 58015,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 7800,
+  "nota": "Peugeot 2008 BlueHDi MY16 dichiarata anno 2008 ma in foto è il modello 2016 in poi: anno sbagliato. Simili a 7.500-8.500, rivendita prudente 7.800; scartata per dati errati e margine stretto diesel.",
+  "controlli": [
+   "anno immatricolazione reale",
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 56166,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 6000,
+  "nota": "Polo 1.2 TDI 2014 120.000 km: simili a 5.500-6.500, rivendita prudente 6.000. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59023,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 8500,
+  "nota": "500X 1.3 MJT 2016 125.000 km: simili a 8.000-9.500, rivendita prudente 8.500. Nessun danno in foto, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 299484,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 19000,
+  "nota": "A5 Coupé 2.0 TDI quattro 2018 147.000 km: simili a 19.000-21.000, rivendita prudente 19.000. Alcune foto da studio fotografico (possibile commerciante) e diesel con margine stretto.",
+  "controlli": [
+   "venditore privato o commerciante",
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 65227,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 14600,
+  "nota": "Q5 2.0 TDI quattro 2015 150.000 km: simili a 14.000-16.000, rivendita prudente 14.600. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 70695,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 17200,
+  "nota": "A3 Sportback 35 TDI 2020 147.000 km: simili a 17.000-19.000, rivendita prudente 17.200. Auto pulita, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 59614,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 8300,
+  "nota": "A3 Sportback 1.6 TDI 2015 179.000 km: simili a 8.000-9.000, rivendita prudente 8.300. Foto ok, ma km al limite e diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 64963,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 11500,
+  "nota": "Berlingo XL 2020 150.000 km: simili a 11.000-12.500, rivendita prudente 11.500. Foto in piazzale/officina, nessun danno visibile, diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 378454,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 15000,
+  "nota": "Q2 1.6 TDI Sport 2018 122.000 km: simili a 15.000-16.500, rivendita prudente 15.000. Foto parziali senza danni, diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 57382,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 7200,
+  "nota": "RAV4 2.2 D-4D 2010 170.000 km: simili a 7.000-8.000, rivendita prudente 7.200. Auto pulita in foto, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 65031,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 14200,
+  "nota": "Kuga 1.5 EcoBlue auto 2022 160.000 km: simili a 14.000-16.000, rivendita prudente 14.200. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51560,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 3500,
+  "nota": "Clio 3p 1.5 dCi 2012 173.000 km: simili a 3.200-4.000, rivendita prudente 3.500. Foto bagnate in autolavaggio, nessun danno evidente, diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52701,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 4200,
+  "nota": "208 1.4 HDi 2015 180.000 km: simili a 3.800-4.500, rivendita prudente 4.200. Interni un po' sporchi, km al limite, diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 54083,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 5000,
+  "nota": "Astra ST 1.6 CDTi 2015 144.500 km: simili a 4.800-5.500, rivendita prudente 5.000. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 54473,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 410,
+  "rivendita_prudente": 5300,
+  "nota": "Freemont 2.0 MJT 2011 172.000 km: simili a 5.000-6.000, rivendita prudente 5.300. Interni usurati ma ok, diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 53622,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 4700,
+  "nota": "500 1.3 MJT Lounge 2012 162.000 km: simili a 4.500-5.200, rivendita prudente 4.700. Foto senza danni, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50243,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 560,
+  "rivendita_prudente": 2700,
+  "nota": "MiTo 1.3 JTDm 2009 180.000 km: simili a 2.500-3.000, rivendita prudente 2.700. Foto ok, ma diesel con margine stretto.",
+  "controlli": [
+   "tagliandi e storico manutenzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 49953,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 1700,
+  "guadagno_finale": 460,
+  "nota": "Scenic II 1.5 dCi 2008 con 180.000 km: dalle foto carrozzeria in ordine, nessun danno visibile. Simili su Subito a 1.700-2.200, rivendita prudente 1.700; diesel con margine stretto (460 € contro soglia 1.300), scartata.",
+  "controlli": [
+   "km reali (al limite dei 180.000)",
+   "frizione e volano",
+   "iniettori e FAP"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50335,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2500,
+  "guadagno_finale": 360,
+  "nota": "Meriva II 1.3 CDTI Cosmo 2010 159.000 km: foto in garage, carrozzeria nera senza danni evidenti. Simili su Subito a 2.500-3.200, rivendita prudente 2.500; diesel con margine stretto (360 € contro soglia 1.700), scartata.",
+  "controlli": [
+   "catena distribuzione",
+   "FAP e EGR",
+   "frizione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 10842,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2300,
+  "guadagno_finale": 160,
+  "nota": "Ypsilon 1.3 Multijet Momo Design 2008 173.000 km, venditore dice perfettamente funzionante e tagliandata; foto pulite senza danni. Simili su Subito a 2.300-2.800, rivendita prudente 2.300; diesel con margine stretto (160 € contro soglia 1.700), scartata.",
+  "controlli": [
+   "libretto tagliandi",
+   "frizione",
+   "catena distribuzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50250,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2300,
+  "guadagno_finale": 160,
+  "nota": "Ypsilon 1.3 MJT Argento bicolore 2007 145.000 km: carrozzeria e interni in ordine dalle foto. Simili su Subito a 2.300-2.800, rivendita prudente 2.300; diesel con margine stretto (160 € contro soglia 1.700), scartata.",
+  "controlli": [
+   "targa HA recente su auto 2007: verificare reimmatricolazione/provenienza",
+   "frizione",
+   "catena distribuzione"
+  ],
+  "aggiorna": true
  }
 ]
