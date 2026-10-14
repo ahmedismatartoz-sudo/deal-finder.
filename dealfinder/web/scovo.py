@@ -150,7 +150,8 @@ def item_eco(r: dict) -> dict | None:
     lo, hi = r.get("parts_cost_low"), r.get("parts_cost_high")
     n_ph = int(r.get("n_photos") or 0)
     return {
-        "id": r["id"], "marca": make_name(r.get("make")) or "Altro", "nome": nome(r),
+        "id": r["id"], "marca": make_name(r.get("make")) or "Altro", "modello": model_name(r.get("model")) or None,
+        "nome": nome(r),
         "anno": r.get("year"), "km": r.get("mileage_km"),
         "carb": FUEL_NAMES.get(r.get("fuel") or "", r.get("fuel")), "cambio": r.get("gearbox"),
         "zona": zona(r), "area": area(r), "geo": _geo(r),
@@ -317,6 +318,7 @@ def item(r: dict) -> dict | None:
         "soglia_min": MIN_MOSTRATO,
         "id": r["id"],
         "marca": make_name(r.get("make")) or "Altro",
+        "modello": model_name(r.get("model")) or None,
         "nome": nome(r),
         "anno": r.get("year"), "km": r.get("mileage_km"),
         "carb": FUEL_NAMES.get(r.get("fuel") or "", r.get("fuel")),

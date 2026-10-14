@@ -47,7 +47,9 @@ const saved = store.get("filtri", {});
 const S = {
   token: store.get("token", null), user: store.get("user", null),
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
-  brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: "milano", raggio: 0,
+  brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: "tutte",
+  raggio: saved.raggio || 0, centro: saved.centro || "milano", modello: saved.modello || "",
+  kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
   pos: store.get("pos", null),
   sconto: (saved.sv === 2 && saved.sconto != null) ? Number(saved.sconto) : 10, sort: saved.sort || "guadagno",
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
@@ -68,7 +70,9 @@ const perm = p => !!(S.user && (S.user.role === "admin" || (S.user.permessi || [
 const tabOk = id => id === "profilo" || (id === "incentivi" ? perm("incentivi") : (!S.user || !S.user.permessi || perm("auto")));
 const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
-function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, zona:S.zona, sconto:S.sconto, sv:2, sort:S.sort}); }
+function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:2, sort:S.sort,
+  modello:S.modello, kmMin:S.kmMin, kmMax:S.kmMax, annoMin:S.annoMin, annoMax:S.annoMax, carb:S.carb, raggio:S.raggio, centro:S.centro}); }
+function resetFilters(){ Object.assign(S, {brands:[], modello:"", min:"", max:"", kmMin:"", kmMax:"", annoMin:"", annoMax:"", carb:[], raggio:0, stato:"tutte", bot:null}); }
 
 /* ---------- API ---------- */
 async function api(path, opts = {}) {
@@ -118,11 +122,16 @@ function filtered(over){
     .filter(c => eco || c.gain >= (c.soglia_min != null ? Math.min(c.soglia_min, sogliaDi(c.prezzo)) : sogliaDi(c.prezzo)))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
+    .filter(c => !s.modello || (c.modello || "") === s.modello)
+    .filter(c => (s.kmMin === "" || (c.km || 0) >= Number(s.kmMin)) && (s.kmMax === "" || !c.km || c.km <= Number(s.kmMax)))
+    .filter(c => (s.annoMin === "" || (c.anno || 0) >= Number(s.annoMin)) && (s.annoMax === "" || !c.anno || c.anno <= Number(s.annoMax)))
+    .filter(c => !s.carb.length || s.carb.includes(carbKey(c.carb)))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
     .filter(c => inc || !s.zona || s.zona === "tutte" || (c.area || "milano") === s.zona)   // incidentate: tutta Italia
     .filter(c => botMatch(c, s.bot))
-    .filter(c => { if (!S.pos || !s.raggio) return true; const d = distKm(c); return d == null || d <= s.raggio; })
-    .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova)) : b.gainMax - a.gainMax));
+    .filter(c => { if (!s.raggio) return true; const d = distKm(c); return d == null || d <= s.raggio; })
+    .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova))
+      : s.sort === "km" ? (a.km || 9e9) - (b.km || 9e9) : b.gainMax - a.gainMax));
 }
 /* vetrina in testa solo con l'elenco "normale" (nessun filtro, ordine per guadagno) */
 /* Ordine: prima le 15 migliori sotto 5.000 €, poi tutte le altre dalla migliore, le troppo care sempre in fondo */
@@ -136,9 +145,12 @@ function ordinaLista(s, arr){
   }
   return top.concat(rest, care);
 }
+const MILANO_C = {lat: 45.4642, lon: 9.19};
+function centro(){ return S.centro === "pos" && S.pos ? S.pos : MILANO_C; }
 function distKm(c){
-  if (!S.pos || !c.geo) return null;
-  const R = Math.PI / 180, la1 = S.pos.lat * R, la2 = c.geo[0] * R, dla = la2 - la1, dlo = (c.geo[1] - S.pos.lon) * R;
+  const o = centro();
+  if (!c.geo) return null;
+  const R = Math.PI / 180, la1 = o.lat * R, la2 = c.geo[0] * R, dla = la2 - la1, dlo = (c.geo[1] - o.lon) * R;
   const h = Math.sin(dla / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
@@ -172,7 +184,22 @@ const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["rav
 function zoneCounts(){ const o = {milano:0, ravenna:0, roma:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.roma; return o; }
 function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","ravenna","roma"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
-function nFiltri(){ return (S.bot ? 1 : 0) + S.brands.length + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
+const CARB = [["benzina","Benzina"],["diesel","Diesel"],["gpl","GPL"],["metano","Metano"],["ibrida","Ibrida"],["elettrica","Elettrica"]];
+const carbKey = t => { t = String(t || "").toLowerCase(); return t.startsWith("ibrid") ? "ibrida" : t; };
+function nFiltri(){ return S.brands.length + (S.modello ? 1 : 0) + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.kmMin !== "" || S.kmMax !== "" ? 1 : 0)
+  + (S.annoMin !== "" || S.annoMax !== "" ? 1 : 0) + (S.carb.length ? 1 : 0) + (S.raggio ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
+/* filtri attivi come chip che si tolgono con un tocco */
+function activeChips(){
+  const out = [], rng = (a, b, f, u) => a !== "" && b !== "" ? f(a) + "–" + f(b) + u : a !== "" ? "da " + f(a) + u : "fino a " + f(b) + u;
+  if (S.brands.length) out.push(["marca", S.brands[0] + (S.modello ? " " + S.modello : "")]);
+  if (S.min !== "" || S.max !== "") out.push(["prezzo", rng(S.min, S.max, num, " €")]);
+  if (S.kmMin !== "" || S.kmMax !== "") out.push(["km", rng(S.kmMin, S.kmMax, num, " km")]);
+  if (S.annoMin !== "" || S.annoMax !== "") out.push(["anno", rng(S.annoMin, S.annoMax, String, "")]);
+  if (S.carb.length) out.push(["carb", S.carb.map(k => (CARB.find(c => c[0] === k) || [k, k])[1]).join(", ")]);
+  if (S.raggio) out.push(["raggio", "entro " + S.raggio + " km " + (S.centro === "pos" && S.pos ? "da te" : "da Milano")]);
+  if (S.stato !== "tutte") out.push(["stato", S.stato === "sane" ? "Senza danni" : "Con danni"]);
+  return out;
+}
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
@@ -243,13 +270,17 @@ function viewList(){
   const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
-  const right = `<div style="display:flex;gap:8px;align-items:center"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>
-      <button class="chip more" data-act="filters" aria-label="Tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}Filtri${nf ? ` <span class="count-pill">${nf}</span>` : ""}</button></div>`;
+  const right = `<div style="display:flex;gap:8px;align-items:center"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button></div>`;
   const incV = S.route === "incidentate", ecoV = S.route === "economiche";
+  const ac = activeChips();
+  const SORTS = [["guadagno","Più guadagno"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
+  const fbar = `<div class="fbar">
+      <button class="fbtn" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}<span>Filtri</span>${nf ? `<span class="count-pill">${nf}</span>` : ""}</button>
+      <label class="fsort"><span class="sr">Ordina</span><select id="f-sort" aria-label="Ordina">${SORTS.map(([v,l]) => `<option value="${v}" ${S.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    </div>
+    ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
   return header(incV ? "Incidentate" : ecoV ? "Sotto 1.000" : "scovo", incV ? `${list.length} auto incidentate da riparare · rivendita −${S.sconto}%` : ecoV ? `${list.length} auto dal 2010 sotto i 1.000 €` : `${list.length} auto da girare · rivendita −${S.sconto}%`, right) + `
-    ${zoneBar}
-    <div class="chips" role="group" aria-label="Prezzo">${priceChips}</div>
-    <div class="chips" role="group" aria-label="Marca">${brandChips}</div>
+    ${fbar}
   </header>
   <main class="list" aria-live="polite">${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Tutte le auto di privati dal 2010 sotto i 1.000 €.</b> Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
@@ -270,7 +301,7 @@ function botBanner(n){
       ${A.speaking ? `<button class="link bb-stop" data-act="bot-zitto">Basta voce</button>` : b.testo ? `<button class="link bb-stop" data-act="bot-ripeti">Riascolta</button>` : ""}</div>
     ${b.testo ? `<p class="bb-txt${b.open ? " open" : ""}">${esc(b.testo)}</p>${!b.open && b.testo.length > 120 ? `<button class="link bb-more" data-act="bb-more">Leggi tutta la risposta</button>` : ""}` : ""}
     ${bits.length ? `<div class="bb-tags">${bits.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
-    <div class="bb-act"><button class="btn btn-blue bb-ask" data-act="bot">${MIC} Chiedi ancora</button><button class="btn" data-act="reset">Togli filtri</button></div>
+    <div class="bb-act"><button class="btn" data-act="reset">Togli filtri</button></div>
   </section>`;
 }
 
@@ -324,32 +355,51 @@ function viewDetail(){
 }
 
 /* ---------- fogli dal basso ---------- */
+function opts(list, cur, vuoto){ return `<option value="">${vuoto}</option>` + list.map(([v,l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? "selected" : ""}>${esc(l)}</option>`).join(""); }
+const P_STEPS = [500,1000,1500,2000,2500,3000,4000,5000,6000,7000,8000,10000,12500,15000,20000,25000,30000,40000];
+const KM_STEPS = [10000,20000,30000,50000,75000,100000,125000,150000,180000];
 function sheetFilters(){
-  const bid = bandId(), n = filtered().length, counts = brandCounts();
+  const n = filtered().length;
+  const base = filtered({brands: [], modello: ""});
+  const bc = {}; base.forEach(c => bc[c.marca] = (bc[c.marca] || 0) + 1);
+  const marche = Object.keys(bc).sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it"));
+  const mc = {}; if (S.brands.length) filtered({modello: ""}).forEach(c => { if (c.modello) mc[c.modello] = (mc[c.modello] || 0) + 1; });
+  const modelli = Object.keys(mc).sort((a,b) => a.localeCompare(b, "it"));
+  const cc = {}; filtered({carb: []}).forEach(c => { const k = carbKey(c.carb); cc[k] = (cc[k] || 0) + 1; });
+  const anni = []; for (let y = new Date().getFullYear(); y >= 2007; y--) anni.push([y, String(y)]);
   const seg = (items, cur, act, cols) => `<div class="seg" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${items.map(([v,l]) => `<button data-act="${act}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join("")}</div>`;
-  const badRange = S.min !== "" && S.max !== "" && Number(S.min) > Number(S.max);
+  const sel = (id, label, inner) => `<label class="fsel"><span>${label}</span><select id="${id}">${inner}</select></label>`;
   return `
-  <div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="fh">
-    <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="reset">Azzera</button></div>
+  <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
+    <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
     <div class="sheet-body">
-      <section class="sec"><h3>Prezzo</h3>
-        <div class="two">
-          <label class="field">Da (€)<input id="fmin" type="number" inputmode="numeric" min="0" step="100" placeholder="0" value="${esc(S.min)}"></label>
-          <label class="field">A (€)<input id="fmax" type="number" inputmode="numeric" min="0" step="100" placeholder="20000" value="${esc(S.max)}"></label>
-        </div>
-        <span class="err" id="range-err" ${badRange ? "" : "hidden"}>Il prezzo "da" è più alto del prezzo "a".</span>
-        <div class="wrap">${BANDS.map(b => `<button class="pill" data-act="band" data-v="${b.id}" aria-pressed="${bid === b.id}">${b.label}</button>`).join("")}</div>
+      <section class="fgrp"><h3>Marca e modello</h3><div class="fgrid">
+        ${sel("f-marca", "Marca", opts(marche.map(m => [m, m + " (" + bc[m] + ")"]), S.brands[0] || "", "Tutte le marche"))}
+        ${sel("f-modello", "Modello", S.brands.length ? opts(modelli.map(m => [m, m + " (" + mc[m] + ")"]), S.modello, "Tutti i modelli") : `<option value="">Scegli prima la marca</option>`)}
+      </div></section>
+      <section class="fgrp"><h3>Prezzo</h3><div class="fgrid">
+        ${sel("f-pmin", "Da", opts(P_STEPS.map(v => [v, num(v) + " €"]), S.min, "Qualsiasi"))}
+        ${sel("f-pmax", "A", opts(P_STEPS.map(v => [v, num(v) + " €"]), S.max, "Qualsiasi"))}
+      </div></section>
+      <section class="fgrp"><h3>Chilometri</h3><div class="fgrid">
+        ${sel("f-kmin", "Da", opts(KM_STEPS.map(v => [v, num(v) + " km"]), S.kmMin, "Qualsiasi"))}
+        ${sel("f-kmax", "A", opts(KM_STEPS.map(v => [v, num(v) + " km"]), S.kmMax, "Qualsiasi"))}
+      </div></section>
+      <section class="fgrp"><h3>Anno</h3><div class="fgrid">
+        ${sel("f-amin", "Dal", opts(anni.slice().reverse(), S.annoMin, "Qualsiasi"))}
+        ${sel("f-amax", "Al", opts(anni, S.annoMax, "Qualsiasi"))}
+      </div></section>
+      <section class="fgrp"><h3>Alimentazione</h3><div class="fcheck">${CARB.map(([k,l]) =>
+        `<button class="fck" data-act="carb" data-v="${k}" aria-pressed="${S.carb.includes(k)}" ${!cc[k] && !S.carb.includes(k) ? "disabled" : ""}><i aria-hidden="true"></i>${l}<span class="n">${cc[k] || 0}</span></button>`).join("")}</div></section>
+      <section class="fgrp"><h3>Distanza</h3>
+        ${seg([["milano","Da Milano"],["pos","Dalla mia posizione"]], S.centro, "centro", 2)}
+        <div class="fgrid" style="margin-top:10px">${sel("f-raggio", "Entro", opts([[10,"10 km"],[25,"25 km"],[50,"50 km"],[75,"75 km"],[100,"100 km"]], S.raggio || "", "Qualsiasi distanza"))}</div>
       </section>
-      <section class="sec"><h3>Marca</h3>
-        <div class="wrap">${brandsAll().map(b => `<button class="pill" data-act="brand" data-v="${esc(b)}" aria-pressed="${S.brands.includes(b)}" ${!counts[b] && !S.brands.includes(b) ? "disabled" : ""}>${esc(b)}<span class="n">${counts[b] || 0}</span></button>`).join("")}</div>
-      </section>
-      <section class="sec"><h3>Zona</h3>${seg(zoneList().map(([k,l]) => [k, l.replace(" e dintorni","").replace(" le zone","")]), S.zona, "zona", zoneList().length)}</section>
-      <section class="sec"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Sane"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
-      <section class="sec"><h3>Rivendi sotto il prezzo di mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
-        <span class="hint">Rivendita a mercato pieno o al massimo 10% sotto. I guadagni si ricalcolano subito.</span></section>
-      <section class="sec"><h3>Ordine</h3>${seg([["guadagno","Più guadagno"],["prezzo","Più economiche"],["nuove","Più nuove"]], S.sort, "sort", 3)}</section>
+      <section class="fgrp"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Senza danni"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
+      <section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
+        <span class="hint">I guadagni si ricalcolano subito.</span></section>
     </div>
-    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="close" id="show">${n ? `Mostra ${n} auto` : "Nessuna auto: cambia i filtri"}</button></div>
+    <div class="sheet-foot fpanel-foot"><button class="btn" data-act="reset">Azzera</button><button class="btn btn-dark" data-act="close" id="show">${n ? `Mostra ${n} auto` : "Nessuna auto: cambia i filtri"}</button></div>
   </div></div>`;
 }
 function sheetParts(){
@@ -1016,7 +1066,7 @@ function render(opts){
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
   if (canBrowse()) {
-    if (S.route !== "auto" && !S.sheet && !VC.on) html += botFab();
+    // pulsante "Chiedi" tolto (sarà sostituito)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
     html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "bot" ? sheetBot() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", incidentate:"Incidentate", economiche:"Sotto 1.000 €", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
@@ -1185,7 +1235,14 @@ $app.addEventListener("click", e => {
     case "bot-catalogo": { const m = A.msgs[Number(v)]; if (m && m.filtri) showCatalog(m.filtri, m.content); return; }
     case "bot-open": S.sheet = null; S.fromList = true; go("auto/" + v); return;
     case "tip": S.tip = false; store.set("tip", false); break;
-    case "reset": S.brands = []; S.min = ""; S.max = ""; S.stato = "tutte"; S.bot = null; stopVoice(); saveFilters(); break;
+    case "reset": resetFilters(); stopVoice(); saveFilters(); break;
+    case "carb": S.carb = S.carb.includes(v) ? S.carb.filter(x => x !== v) : S.carb.concat([v]); saveFilters(); break;
+    case "centro": if (v === "pos" && !S.pos) chiediPosizione(false); S.centro = v; saveFilters(); break;
+    case "unf": {
+      if (v === "marca") { S.brands = []; S.modello = ""; } else if (v === "prezzo") { S.min = ""; S.max = ""; } else if (v === "km") { S.kmMin = ""; S.kmMax = ""; }
+      else if (v === "anno") { S.annoMin = ""; S.annoMax = ""; } else if (v === "carb") S.carb = []; else if (v === "raggio") S.raggio = 0; else if (v === "stato") S.stato = "tutte";
+      saveFilters(); break;
+    }
     case "stato": S.stato = v; saveFilters(); break;
     case "zona": S.zona = v; saveFilters(); window.scrollTo(0, 0); break;
     case "raggio": S.raggio = Number(v); saveFilters(); window.scrollTo(0, 0); break;
@@ -1221,6 +1278,20 @@ $app.addEventListener("click", e => {
   }
   const sb = document.querySelector(".sheet-body"), sy = sb ? sb.scrollTop : 0;
   render({keep: !["filters","reset"].includes(act) || !!S.sheet});
+  const sb2 = document.querySelector(".sheet-body"); if (sb2) sb2.scrollTop = sy;
+});
+$app.addEventListener("change", e => {
+  const id = e.target.id, v = e.target.value;
+  const map = {"f-pmin": "min", "f-pmax": "max", "f-kmin": "kmMin", "f-kmax": "kmMax", "f-amin": "annoMin", "f-amax": "annoMax"};
+  if (id === "f-marca") { S.brands = v ? [v] : []; S.modello = ""; }
+  else if (id === "f-modello") S.modello = v;
+  else if (id === "f-raggio") S.raggio = v ? Number(v) : 0;
+  else if (id === "f-sort") S.sort = v;
+  else if (map[id]) S[map[id]] = v;
+  else return;
+  saveFilters();
+  const sb = document.querySelector(".sheet-body"), sy = sb ? sb.scrollTop : 0;
+  render({keep: true});
   const sb2 = document.querySelector(".sheet-body"); if (sb2) sb2.scrollTop = sy;
 });
 $app.addEventListener("change", async e => {
