@@ -622,6 +622,23 @@ if __name__ == "__main__":
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
         sys.exit(0)
+    if mode == "pulizia":
+        # verifica TUTTE le auto del sito (Subito e AutoScout24): quelle che non esistono più si tolgono subito
+        from .verify import verify_rows
+        from collections import Counter as _C
+        tot = _C()
+        with connect() as conn:
+            rows = conn.execute("""SELECT id, source, url, price_eur FROM listings
+                                   WHERE status='attivo' AND source IN ('subito','autoscout24')
+                                     AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
+                                   ORDER BY id""").fetchall()
+            log.info("PULIZIA da verificare: %d", len(rows))
+            for k in range(0, len(rows), 200):
+                tot.update(verify_rows(conn, rows[k:k + 200]))
+                conn.commit()
+                log.info("PULIZIA %d/%d %s", min(k + 200, len(rows)), len(rows), dict(tot))
+        log.info("PULIZIA_FINE %s", dict(tot))
+        sys.exit(0)
     if mode == "modena_inc":
         # incidentate di Modena e dintorni dal 2018: raccolta, poi i migliori con le foto per il controllo
         from . import mille

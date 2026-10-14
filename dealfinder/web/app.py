@@ -871,6 +871,24 @@ def _meno_subito_senza_telefono(items: list[dict]) -> list[dict]:
     return [it for it in items if it["id"] not in via]
 
 
+def _solo_con_telefono(items: list[dict]) -> list[dict]:
+    """TELEFONO_OBBLIGATORIO=1: sul sito solo auto che si possono chiamare. AutoScout24 mostra sempre il numero
+    nell'annuncio; Subito e Facebook solo se il numero è scritto nel testo dell'annuncio."""
+    if os.environ.get("TELEFONO_OBBLIGATORIO", "1") != "1":
+        return items
+    ids = [it["id"] for it in items if it.get("fonte") != "AutoScout24"]
+    mancano = [i for i in ids if i not in _tel_cache]
+    for k in range(0, len(mancano), 1000):
+        with connect() as conn:
+            for r in conn.execute("SELECT id, title, description FROM listings WHERE id = ANY(%s)",
+                                  (mancano[k:k + 1000],)).fetchall():
+                t = f"{r.get('title') or ''} {r.get('description') or ''}"
+                _tel_cache[r["id"]] = bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
+    tenute = [it for it in items if it.get("fonte") == "AutoScout24" or _tel_cache.get(it["id"], False)]
+    logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano", len(items) - len(tenute), len(tenute))
+    return tenute
+
+
 # Elenco auto condiviso: la query pesante gira al massimo una volta ogni ELENCO_SECONDI (90) per tutti,
 # in sottofondo; ogni richiesta aggiunge solo le auto già aperte da quel commerciante (query leggera).
 _elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False}
@@ -904,6 +922,7 @@ def _calcola_elenco() -> None:
                     opens[it["id"]] = int(r["opens"] or 0)
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
+    items = _solo_con_telefono(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
     from collections import Counter
     c = Counter()
