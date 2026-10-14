@@ -1258,7 +1258,11 @@ def index(request: Request):
     if _index_cache.get("key") != key:
         import hashlib
         ver = hashlib.sha256(b"".join(f.read_bytes() for f in files[1:])).hexdigest()[:10]
-        _index_cache.update(key=key, html=files[0].read_text().replace("__V__", ver))
+        from . import seo
+        verif = os.environ.get("GOOGLE_SITE_VERIFICATION")
+        testa = (f'<link rel="canonical" href="{seo.BASE}/">'
+                 + (f'<meta name="google-site-verification" content="{verif}">' if verif else "") + seo.jsonld_home())
+        _index_cache.update(key=key, html=files[0].read_text().replace("__V__", ver).replace("<!--SEO-->", testa))
     return HTMLResponse(_index_cache["html"], headers=NO_CACHE)
 
 
@@ -1282,17 +1286,39 @@ def gestione(request: Request):
 
 
 def robots(request: Request):
-    host = request.headers.get("host", "")
-    return Response("User-agent: *\nAllow: /$\nAllow: /chi-siamo\nAllow: /privacy\nAllow: /condizioni\n"
-                    "Disallow: /api/\nDisallow: /gestione\n"
-                    f"Sitemap: https://{host}/sitemap.xml\n", media_type="text/plain")
+    from . import seo
+    return Response("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /gestione\nDisallow: /auth/\n"
+                    "Disallow: /incentivi/\n"
+                    f"Sitemap: {seo.BASE}/sitemap.xml\n", media_type="text/plain")
 
 
 def sitemap(request: Request):
-    host = request.headers.get("host", "")
-    urls = "".join(f"<url><loc>https://{host}{p}</loc></url>" for p in ("/", "/chi-siamo", "/privacy", "/condizioni"))
+    from . import seo
+    urls = "".join(f"<url><loc>{seo.BASE}{p}</loc><lastmod>{seo.OGGI}</lastmod>"
+                   f"<changefreq>{'daily' if p.startswith('/auto') or p == '/' else 'monthly'}</changefreq>"
+                   f"<priority>{'1.0' if p == '/' else '0.8' if p.startswith('/auto') else '0.5'}</priority></url>"
+                   for p in seo.tutti_gli_indirizzi())
     return Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                     + urls + "</urlset>", media_type="application/xml")
+
+
+def seo_citta(request: Request):
+    from . import seo
+    h = seo.pagina_citta(request.path_params["citta"])
+    return HTMLResponse(h, headers={"Cache-Control": "public, max-age=3600"}) if h else HTMLResponse("Pagina non trovata", 404)
+
+
+def seo_argomento(slug: str):
+    def handler(request: Request):
+        from . import seo
+        return HTMLResponse(seo.pagina_argomento(slug), headers={"Cache-Control": "public, max-age=3600"})
+    return handler
+
+
+def seo_guida(request: Request):
+    from . import seo
+    h = seo.pagina_guida(request.path_params["guida"])
+    return HTMLResponse(h, headers={"Cache-Control": "public, max-age=86400"}) if h else HTMLResponse("Pagina non trovata", 404)
 
 
 async def http_error(request: Request, exc: HTTPError):
@@ -1426,6 +1452,14 @@ routes = [
     Route("/sw.js", service_worker),
     Route("/manifest.webmanifest", manifest),
     Route("/robots.txt", robots),
+    Route("/auto-usate/{citta}", seo_citta),
+    Route("/guide/{guida}", seo_guida),
+    Route("/auto-sotto-prezzo-milano", seo_argomento("auto-sotto-prezzo-milano")),
+    Route("/auto-incidentate-milano", seo_argomento("auto-incidentate-milano")),
+    Route("/auto-economiche-sotto-1000-euro-milano", seo_argomento("auto-economiche-sotto-1000-euro-milano")),
+    Route("/comprare-auto-da-privati-per-rivendere", seo_argomento("comprare-auto-da-privati-per-rivendere")),
+    Route("/valutazione-auto-usata-gratis", seo_argomento("valutazione-auto-usata-gratis")),
+
     Route("/sitemap.xml", sitemap),
     Route("/chi-siamo", pagina("chi-siamo")),
     Route("/privacy", pagina("privacy")),

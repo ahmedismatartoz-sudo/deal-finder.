@@ -267,3 +267,7 @@
 .hm-pickbadge{animation:none}
   .hm-deck,.hm-plan{transition:none}
 }
+
+.hm-seo{font-size:13px;line-height:1.7;padding-top:6px;padding-bottom:18px;opacity:.85}
+.hm-seo p{margin:4px 0}
+.hm-seo a{color:inherit}
