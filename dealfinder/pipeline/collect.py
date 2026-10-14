@@ -623,6 +623,22 @@ if __name__ == "__main__":
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
         sys.exit(0)
+    if mode == "conta_as":
+        # quanti annunci ha AutoScout24 entro CONTA_RAGGIO km da Milano (totali del sito, non raccolti da noi)
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("CONTA_RAGGIO", "100")
+        os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
+        asc = AutoScoutCollector()
+        for nome, anno, km in (("tutti", "1900", None), ("regole (dal 2007, max 180000 km)", "2007", "180000")):
+            os.environ["ANNO_MINIMO"] = anno
+            if km:
+                os.environ["AUTOSCOUT_KM_MAX"] = km
+            else:
+                os.environ.pop("AUTOSCOUT_KM_MAX", None)
+            for ct, chi in (("P", "privati"), ("D", "concessionari")):
+                _, tot, ok = asc._page(asc.search_url(1, 10_000_000, 1, ct))
+                log.info("CONTA_AS %s km %s %s: %s", os.environ["AUTOSCOUT_RAGGIO"], nome, chi, tot if ok else "errore")
+        sys.exit(0)
     if mode == "ora200":
         # selezione subito dagli annunci già raccolti: Milano, Bergamo, Brescia, solo con numero di telefono
         from . import mille
