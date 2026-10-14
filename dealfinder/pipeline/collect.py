@@ -222,6 +222,30 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
                             {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
+    elif mode == "milano_full":
+        # Milano entro 100 km, TUTTO: AutoScout24 privati (dal 2007, max 180.000 km) in fasce strette fino a
+        # 60.000 €, poi Subito provincia per provincia (MI, MB, VA, CO, BG, CR, LO, LC, PV) tutte le pagine.
+        os.environ["ANNO_MINIMO"] = os.environ.get("FULL_ANNO", "2007")
+        os.environ["AUTOSCOUT_KM_MAX"] = os.environ.get("FULL_KM", "180000")
+        os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "0.7"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "1.6"))
+        venditori = [("P", "privato")] + ([("D", "commerciante")] if os.environ.get("FULL_CONCESSIONARI") == "1" else [])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "0.8"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "1.8"))
+        from ..collectors.subito import PROVINCE_CODES
+        prov_full = os.environ.get("FULL_PROVINCE", "MI,MB,VA,CO,BG,CR,LO,LC,PV").split(",")
+        bands = ([(p, p + 249) for p in range(0, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
+                 + [(p, p + 999) for p in range(15000, 40000, 1000)] + [(40000, 60000)])
+        sources = [(_Centri(asc, [["20121", os.environ.get("FULL_RAGGIO", "100")]],
+                            {"massiva": True, "min_price": 300, "max_price": 60000, "step": 1000,
+                             "venditori": venditori}), {}),
+                   (sub, {"region": settings.region, "provinces": [k for k, v in PROVINCE_CODES.items() if v in prov_full],
+                          "max_price": 60000, "max_pages": 0, "price_bands": bands,
+                          "band_pages": int(os.environ.get("FULL_PAGINE", "100"))})]
     elif mode == "modena_inc":
         # Incidentate di Modena e dintorni (MODENA_RAGGIO km), dal MODENA_ANNO in poi: AutoScout24 solo danneggiate
         # (privati e commercianti), Subito Emilia (MO, RE, BO, PR, FE) le più recenti e la ricerca per parole.
@@ -623,6 +647,23 @@ if __name__ == "__main__":
             with connect() as conn:
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
+        sys.exit(0)
+    if mode == "spazio":
+        from . import spazio
+        log.info("SPAZIO fine: %s", spazio.run())
+        sys.exit(0)
+    if mode == "milano_full":
+        # raccolta completa di Milano entro 100 km (una al giorno), poi la selezione con le foto per il controllo
+        from . import mille
+        from .ciclo import _due
+        os.environ["PASSI_JOB"] = "collect:milano_full:" + time.strftime("%Y%m%d")
+        if _due("collect:milano_full", int(os.environ.get("FULL_ORE", "18"))):
+            os.environ["COLLECT_JOB"] = "collect:milano_full"
+            run("milano_full")
+            from ..pricing.train import run as train_run
+            log.info("MILANO_FULL modello prezzi: %s", train_run())
+        mille.lampo(int(os.environ.get("FULL_QUANTI", "600")), fonte=None, ore=30, telefono=True,
+                    versione="full-" + time.strftime("%Y%m%d"))
         sys.exit(0)
     if mode == "conta_sub":
         # quanti annunci auto ha Subito nelle province entro ~100 km da Milano (totali del sito)

@@ -17,5 +17,9 @@ ZONE = {
 }
 
 
+# zone su cui si lavora (raccolte e sito): per ora solo Milano e dintorni
+ATTIVE = [z.strip() for z in os.environ.get("ZONE_ATTIVE", "milano").split(",") if z.strip() in ZONE]
+
+
 def tutte() -> list[str]:
-    return sorted({p for z in ZONE.values() for p in z["province"]})
+    return sorted({p for k, z in ZONE.items() if k in ATTIVE for p in z["province"]})

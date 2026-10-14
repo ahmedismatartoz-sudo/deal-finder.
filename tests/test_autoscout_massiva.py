@@ -59,4 +59,5 @@ def test_cap_ravenna_e_dintorni():
     assert [p(c) for c in ("48121", "47921", "47838", "47121", "47521", "44121", "40026", "20811", "20121")] == \
         ["RA", "RN", "RN", "FC", "FC", "FE", "BO", "MB", "MI"]
     from dealfinder.pipeline.collect import ZONA
-    assert {"RA", "FC", "RN", "FE", "BO", "MI"} <= ZONA and "MO" not in ZONA
+    # zona attiva: solo Milano e dintorni (ZONE_ATTIVE)
+    assert {"MI", "MB", "BG", "VA", "CO"} <= ZONA and "RA" not in ZONA and "MO" not in ZONA
