@@ -1097,11 +1097,20 @@ def contatto(request: Request):
     return jsonify(_apri_contatto(request, None if ospite else richiede(request, "auto")))
 
 
+def _cookie_token(request: Request) -> str | None:
+    """Il sito scrive il cookie con encodeURIComponent: "=" diventa %3D e va decodificato."""
+    from urllib.parse import unquote
+    t = request.cookies.get(COOKIE_TOKEN)
+    return unquote(t) if t else None
+
+
 def vai_annuncio(request: Request):
     """Parla col venditore come link normale (nuova scheda): il sito resta aperto dov'era.
     Il token arriva dal cookie; conta l'apertura e rimanda all'annuncio originale."""
     lid = int(request.path_params["id"])
-    tok = request.cookies.get(COOKIE_TOKEN)
+    tok = _cookie_token(request)
+    if tok and not read_token(tok) and site_open():
+        tok = None           # accesso vecchio nel cookie ma sito aperto: si contatta come ospite
     try:
         if tok:
             data = read_token(tok)
@@ -1360,7 +1369,7 @@ COOKIE_TOKEN = "scovo_t"
 def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
     """Il browser apre /incentivi come pagina normale: il token arriva dal cookie che il sito imposta all'accesso."""
     auth = request.headers.get("authorization", "")
-    tok = auth[7:] if auth.lower().startswith("bearer ") else request.cookies.get(COOKIE_TOKEN)
+    tok = auth[7:] if auth.lower().startswith("bearer ") else _cookie_token(request)
     data = read_token(tok)
     if not data:
         return False, 401, "Accesso richiesto"

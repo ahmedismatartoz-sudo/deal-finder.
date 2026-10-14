@@ -1218,7 +1218,7 @@ $app.addEventListener("click", e => {
     case "talk": talk(); return;
     case "talk-link":  // link vero in una nuova scheda: Scovo resta qui com'era
       if (!S.token && !guest()) { e.preventDefault(); toast("Entra per contattare il venditore"); go("entra"); return; }
-      segnaAperta(); setTimeout(() => render({keep:true}), 300); return;
+      syncCookie(); segnaAperta(); setTimeout(() => render({keep:true}), 300); return;
     case "desc": S.descOpen = true; break;
     case "brand": S.brands = S.brands.includes(v) ? S.brands.filter(x => x !== v) : S.brands.concat([v]); saveFilters(); break;
     case "band": setBand(v); saveFilters(); break;
