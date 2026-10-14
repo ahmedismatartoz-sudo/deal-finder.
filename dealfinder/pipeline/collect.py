@@ -717,7 +717,7 @@ if __name__ == "__main__":
         if not _due("collect:filtra", int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
             log.info("FILTRA già fatto nelle ultime ore: niente da fare")
             sys.exit(0)
-        for _ in range(90):        # prima finisce la raccolta di Subito (prezzi più completi)
+        for _ in range(90 if "sub_meta" in os.environ.get("LAVORO_SUBITO", "") else 0):   # prima finisce Subito
             if not _in_corso("collect:sub_meta", 3):
                 break
             log.info("FILTRA aspetta la fine di sub_meta")
