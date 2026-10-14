@@ -7,6 +7,7 @@ Uso:
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -701,6 +702,66 @@ if __name__ == "__main__":
             with connect() as conn:
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
+        sys.exit(0)
+    if mode == "filtra":
+        # 1) media dei prezzi: nuovo modello con tutti gli annunci raccolti; 2) stima rifatta per ogni auto
+        # di Milano e dintorni; 3) selezione larga (tutte le fasce di prezzo, marche popolari prima, pochi km,
+        # benzina) + incidentate, con le foto per il controllo una per una
+        from . import mille
+        from ..pricing.train import run as train_run
+        from ..pricing.train import load_active
+        from ..pricing.model import prescreen
+        from ..store import LIGHT_COLS, row_to_listing
+        from ..zone import MILANO
+        from .ciclo import _due, _in_corso
+        if not _due("collect:filtra", int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
+            log.info("FILTRA già fatto nelle ultime ore: niente da fare")
+            sys.exit(0)
+        for _ in range(90):        # prima finisce la raccolta di Subito (prezzi più completi)
+            if not _in_corso("collect:sub_meta", 3):
+                break
+            log.info("FILTRA aspetta la fine di sub_meta")
+            time.sleep(60)
+        if os.environ.get("FILTRA_SALTA_MODELLO") != "1":
+            log.info("FILTRA modello prezzi: %s", train_run(force=True))
+            with connect() as conn:
+                model = load_active(conn)
+            ultimo, n, cnt = 0, 0, Counter()
+            while True:
+                with connect() as conn:
+                    rows = conn.execute(
+                        f"""SELECT {LIGHT_COLS} FROM listings WHERE id > %s AND status='attivo'
+                            AND COALESCE(seller_type,'') <> 'commerciante'
+                            AND (province = ANY(%s) OR (province IS NULL AND source='facebook'))
+                            AND (year IS NULL OR year >= 2007) AND (mileage_km IS NULL OR mileage_km <= 180000)
+                            ORDER BY id LIMIT 2000""", (ultimo, list(MILANO))).fetchall()
+                    if not rows:
+                        break
+                    for r in rows:
+                        ps = prescreen(model, row_to_listing(r))
+                        cnt[ps["esito"]] += 1
+                        conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "
+                                     "prescreen_potential=%s WHERE id=%s",
+                                     (ps.get("model_p50"), ps.get("model_p25"), ps["esito"], ps.get("potenziale"), r["id"]))
+                    conn.commit()
+                ultimo = rows[-1]["id"]
+                n += len(rows)
+                log.info("FILTRA stima rifatta: %d auto %s", n, dict(cnt))
+        largo = int(os.environ.get("FILTRA_MIN", "500"))
+        ore = int(os.environ.get("FILTRA_ORE", "72"))
+        tot = 0
+        for (pmin, pmax, q) in ((400, 5000, int(os.environ.get("FILTRA_BASSO", "500"))),
+                                (5001, 12000, int(os.environ.get("FILTRA_MEDIO", "450"))),
+                                (12001, 40000, int(os.environ.get("FILTRA_ALTO", "300")))):
+            tot += mille.lampo(q, fonte=None, ore=ore, telefono="fb", prezzo_min=pmin, prezzo_max=pmax, largo=largo,
+                               versione=f"filtra-{pmin}")
+        tot += mille.lampo(int(os.environ.get("FILTRA_INC", "300")), fonte=None, ore=ore, danneggiate=True,
+                           anche_parole=True, danno_dal_testo=True, telefono="fb", largo=0, versione="filtra-inc")
+        log.info("FILTRA fine: %d auto esportate per il controllo", tot)
+        with connect() as conn:
+            conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES ('collect:filtra', now(), true, %s)",
+                         (json.dumps({"esportate": tot}),))
+            conn.commit()
         sys.exit(0)
     if mode == "spazio":
         from . import spazio

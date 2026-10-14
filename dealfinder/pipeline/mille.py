@@ -261,11 +261,17 @@ def e_moto(*testi) -> bool:
     return bool(_MOTO.search(" ".join(t for t in testi if t)))
 
 
+# marche che in Italia si vendono e girano di più (utilitarie e familiari): prima in fila
+POPOLARI = ("fiat", "alfa-romeo", "dacia", "lancia", "volkswagen", "toyota", "renault", "peugeot", "citroen", "opel",
+            "ford", "hyundai", "kia", "suzuki", "smart", "mini", "nissan", "skoda", "seat", "jeep", "mazda", "honda")
+
+
 def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "facebook",
           ore: int = 96, danneggiate: bool = False, ovunque: bool = False,
           versione: str = "fb-lampo", province: list | None = None, anno: int | None = None,
           commercianti: bool = False, anche_parole: bool = False, danno_dal_testo: bool = False,
-          telefono: bool = False) -> int:
+          telefono: bool | str = False, prezzo_min: int = 400, prezzo_max: int = 40000,
+          largo: int | None = None) -> int:
     """Selezione lampo: niente ricalcolo del mercato (troppo lento col database pieno), si usa la stima del
     primo filtro già salvata in raccolta (model_p50, prescreen_potential). Preferisce le auto con pochi km,
     toglie moto/scooter, privati soltanto, mai le auto già guardate a mano.
@@ -277,29 +283,34 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
             f"""SELECT {LIGHT_COLS}, stage_reason, model_p50, prescreen_potential FROM listings
                 WHERE status='attivo' AND (%s OR COALESCE(seller_type,'') <> 'commerciante')
                   AND (%s::text IS NULL OR source = %s)
-                  AND (%s OR prescreen='interessante')
+                  AND (%s OR prescreen='interessante' OR (%s::int IS NOT NULL AND prescreen <> 'modello_incerto'
+                       AND prescreen_potential >= %s::int))
                   AND COALESCE(prescreen_potential, 0) > 0
                   AND (NOT %s OR damage_declared OR damage_class IN ('leggero','medio','grave','alto_rischio')
                        OR (%s AND problem_search))
                   AND last_seen_at > now() - make_interval(hours => %s)
                   AND (%s OR province = ANY(%s) OR (province IS NULL AND source='facebook'))
-                  AND price_eur BETWEEN 400 AND 40000
+                  AND price_eur BETWEEN %s AND %s
                   AND (mileage_km IS NULL OR mileage_km <= %s)
                   AND (year IS NULL OR year >= %s)
                   AND NOT (id = ANY(%s))
                 ORDER BY COALESCE(prescreen_potential, 0)
                          + CASE WHEN mileage_km < 80000 THEN 2000 WHEN mileage_km < 120000 THEN 900 ELSE 0 END
-                         + CASE WHEN province = ANY(%s) THEN 1500 ELSE 0 END DESC
+                         + CASE WHEN province = ANY(%s) THEN 1500 ELSE 0 END
+                         + CASE WHEN make = ANY(%s) THEN 1500 ELSE 0 END
+                         + CASE WHEN make = 'alfa-romeo' THEN 1000 WHEN model ILIKE 'panda%%' THEN 800 ELSE 0 END
+                         + CASE WHEN fuel IN ('benzina','gpl','metano','ibrida') THEN 600 ELSE 0 END DESC
                 LIMIT %s""",
-            (commercianti, fonte, fonte, danneggiate, danneggiate, anche_parole, ore, ovunque, zona, scovo.KM_MASSIMO,
-             anno or scovo.ANNO_MINIMO, _gia_controllate(), zona,
+            (commercianti, fonte, fonte, danneggiate, largo, largo, danneggiate, anche_parole, ore, ovunque, zona,
+             prezzo_min, prezzo_max, scovo.KM_MASSIMO,
+             anno or scovo.ANNO_MINIMO, _gia_controllate(), zona, list(POPOLARI),
              quanti * (40 if danno_dal_testo else 12 if telefono else 4))).fetchall()
         scelti, n_d, n_moto = [], 0, 0
         for r in rows:
             if e_moto(r.get("title"), (r.get("description") or "")[:300], r.get("model"), r.get("make")):
                 n_moto += 1
                 continue
-            if telefono and r.get("source") != "autoscout24":
+            if (telefono is True and r.get("source") != "autoscout24") or (telefono == "fb" and r.get("source") == "facebook"):
                 t = f"{r.get('title') or ''} {r.get('description') or ''}"
                 if not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)):
                     continue                # sul sito solo auto con un numero da chiamare
