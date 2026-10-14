@@ -238,7 +238,7 @@ def run(mode: str) -> Counter:
         bands = ([(p, p + 999) for p in range(1000, 10000, 1000)] + [(p, p + 1999) for p in range(10000, 30000, 2000)]
                  + [(30000, 45000)])
         parole = ["incidentata", "incidentato", "sinistrata", "danneggiata", "da riparare", "non marciante",
-                  "airbag", "grandinata", "frontale", "tamponata", "motore da rifare", "carrozzeria da sistemare"]
+                  "airbag esplosi", "grandinata", "tamponata", "motore da rifare", "carrozzeria da sistemare"]
         sources = [(asc, {"massiva": True, "min_price": 500, "max_price": 45000, "step": 2500,
                           "venditori": [("P", "privato")] + ([("D", "commerciante")]
                                         if os.environ.get("MODENA_CONCESSIONARI") == "1" else [])}),

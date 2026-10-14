@@ -250,8 +250,9 @@ _MOTO = _re.compile(
     r"\d{3,4}\s?(rt|gs)|xp\s?400\w*|burgman|v-?strom|gsx\w*|t-?max|x-?max|mt-?\s?0\d|tracer|ninja|z\s?[0-9]{3,4})\b", _re.I)
 
 
-DANNO = _re.compile(r"incidentat\w*|sinistrat\w*|danneggiat\w*|grandinat\w*|airbag|non marciant\w*|da riparare|"
-                    r"\bbotta\b|\burto\b|motore (rotto|fuso|da rifare|da rivedere|ko)|frontale|tamponat\w*|"
+DANNO = _re.compile(r"incidentat\w*|sinistrat\w*|danneggiat\w*|grandinat\w*|airbag (esplos|apert|scoppiat|da sostituire)\w*|"
+                    r"non marciant\w*|da riparare|\bbotta\b|\burto\b|motore (rotto|fuso|da rifare|da rivedere|ko)|"
+                    r"frontale (danneggiat|distrutt|da rifare|da sistemare|incidentat)\w*|tamponat\w*|"
                     r"carrozzeria da (sistemare|rifare)|ammaccat\w*|ribaltat\w*|alluvionat\w*|per ricambi|riservat\w* a commercianti",
                     _re.I)
 
