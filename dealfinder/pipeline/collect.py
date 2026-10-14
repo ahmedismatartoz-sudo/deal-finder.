@@ -141,6 +141,21 @@ def city_provinces(conn) -> dict:
     return out
 
 
+def _fuori_regole_raccolta(l) -> bool:
+    """Regole della raccolta completa: max 180.000 km, dal 2007, e solo chi lascia il numero
+    (AutoScout24 lo mostra sempre nell'annuncio; Subito solo se scritto nel testo)."""
+    from ..web import scovo
+    if l.mileage_km and l.mileage_km > int(os.environ.get("FULL_KM", "180000")):
+        return True
+    if l.year and l.year < int(os.environ.get("FULL_ANNO", "2007")):
+        return True
+    if l.source == "subito":
+        t = f"{l.title or ''} {l.description or ''}"
+        if not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)):
+            return True
+    return False
+
+
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode in ("as5k", "roma", "lombardia", "ravenna", "economiche", "incidentate", "massiva"):
@@ -222,7 +237,7 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
                             {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
-    elif mode == "milano_full":
+    elif mode in ("milano_full", "full_as", "full_sub"):
         # Milano entro 100 km, TUTTO: AutoScout24 privati (dal 2007, max 180.000 km) in fasce strette fino a
         # 60.000 €, poi Subito provincia per provincia (MI, MB, VA, CO, BG, CR, LO, LC, PV) tutte le pagine.
         os.environ["ANNO_MINIMO"] = os.environ.get("FULL_ANNO", "2007")
@@ -246,6 +261,10 @@ def run(mode: str) -> Counter:
                    (sub, {"region": settings.region, "provinces": [k for k, v in PROVINCE_CODES.items() if v in prov_full],
                           "max_price": 60000, "max_pages": 0, "price_bands": bands,
                           "band_pages": int(os.environ.get("FULL_PAGINE", "100"))})]
+        if mode == "full_as":
+            sources = sources[:1]
+        elif mode == "full_sub":
+            sources = sources[1:]
     elif mode == "modena_inc":
         # Incidentate di Modena e dintorni (MODENA_RAGGIO km), dal MODENA_ANNO in poi: AutoScout24 solo danneggiate
         # (privati e commercianti), Subito Emilia (MO, RE, BO, PR, FE) le più recenti e la ricerca per parole.
@@ -445,6 +464,9 @@ def run(mode: str) -> Counter:
                     except Exception as e:          # un testo strano non ferma tutta la raccolta
                         stats[f"{collector.source}:scartato_dati"] += 1
                         log.warning("annuncio %s non normalizzato: %r", listing.url, e)
+                        continue
+                    if mode in ("milano_full", "full_as", "full_sub") and _fuori_regole_raccolta(listing):
+                        stats[f"{listing.source}:fuori_regole"] += 1
                         continue
                     if listing.source in ("facebook", "autoscout24"):
                         # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
@@ -651,6 +673,13 @@ if __name__ == "__main__":
     if mode == "spazio":
         from . import spazio
         log.info("SPAZIO fine: %s", spazio.run())
+        sys.exit(0)
+    if mode in ("full_as", "full_sub"):
+        # metà della raccolta completa (AutoScout24 o Subito), si possono far girare insieme
+        from .ciclo import _due
+        os.environ["PASSI_JOB"] = f"collect:{mode}:" + time.strftime("%Y%m%d")
+        if _due(f"collect:{mode}", int(os.environ.get("FULL_ORE", "18"))):
+            run(mode)
         sys.exit(0)
     if mode == "milano_full":
         # raccolta completa di Milano entro 100 km (una al giorno), poi la selezione con le foto per il controllo
