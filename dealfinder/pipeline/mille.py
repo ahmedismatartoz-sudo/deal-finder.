@@ -15,6 +15,7 @@ import io
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from collections import Counter
 
@@ -348,6 +349,9 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                 parts = [b[i:i + PEZZO] for i in range(0, len(b), PEZZO)]
                 for k, p in enumerate(parts, 1):
                     log.info("MILLEFOTO %s %d/%d %s", lid, k, len(parts), p)
+            pausa = float(os.environ.get("LAMPO_PAUSA", "0"))
+            if pausa:
+                time.sleep(pausa)       # i log di Render perdono righe se ne arrivano troppe insieme
         log.info("MILLE_RIEPILOGO %s", json.dumps({"candidati": len(rows), "esportati": len(scelti), "moto_tolte": n_moto,
                                                   "diesel": n_d, "versione": versione}))
         return len(scelti)
