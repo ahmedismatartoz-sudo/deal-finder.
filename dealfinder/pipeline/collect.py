@@ -714,7 +714,8 @@ if __name__ == "__main__":
         from ..store import LIGHT_COLS, row_to_listing
         from ..zone import MILANO
         from .ciclo import _due, _in_corso
-        if not _due("collect:filtra", int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
+        job_filtra = "collect:filtra" + os.environ.get("FILTRA_GIRO", "")
+        if not _due(job_filtra, int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
             log.info("FILTRA già fatto nelle ultime ore: niente da fare")
             sys.exit(0)
         for _ in range(90 if "sub_meta" in os.environ.get("LAVORO_SUBITO", "") else 0):   # prima finisce Subito
@@ -754,13 +755,13 @@ if __name__ == "__main__":
                                 (5001, 12000, int(os.environ.get("FILTRA_MEDIO", "450"))),
                                 (12001, 40000, int(os.environ.get("FILTRA_ALTO", "300")))):
             tot += mille.lampo(q, fonte=None, ore=ore, telefono="fb", prezzo_min=pmin, prezzo_max=pmax, largo=largo,
-                               versione=f"filtra-{pmin}")
+                               versione=f"filtra{os.environ.get('FILTRA_GIRO', '')}-{pmin}")
         tot += mille.lampo(int(os.environ.get("FILTRA_INC", "300")), fonte=None, ore=ore, danneggiate=True,
                            anche_parole=True, danno_dal_testo=True, telefono="fb", largo=0, versione="filtra-inc")
         log.info("FILTRA fine: %d auto esportate per il controllo", tot)
         with connect() as conn:
-            conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES ('collect:filtra', now(), true, %s)",
-                         (json.dumps({"esportate": tot}),))
+            conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
+                         (job_filtra, json.dumps({"esportate": tot})))
             conn.commit()
         sys.exit(0)
     if mode == "spazio":
