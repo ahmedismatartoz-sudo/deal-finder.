@@ -889,6 +889,31 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     return tenute
 
 
+def _regole_finali(items: list[dict]) -> list[dict]:
+    """Regole fisse del sito: mai prima del 2007 (ANNO_MINIMO), mai oltre 180.000 km, e in ogni sezione e zona
+    al massimo DIESEL_MAX (30%) di diesel: si tengono i diesel con più guadagno, il resto benzina/GPL/metano/ibride."""
+    anno_min = int(os.environ.get("ANNO_MINIMO_SITO", "2007"))
+    items = [it for it in items if not (it.get("anno") and it["anno"] < anno_min) and not scovo.troppi_km(it.get("km"))]
+    quota = float(os.environ.get("DIESEL_MAX", "0.3"))
+    if quota >= 1:
+        return items
+    gruppi: dict = {}
+    for it in items:
+        sez = "eco" if it.get("economica") else "inc" if it.get("incidentata") else "affari"
+        gruppi.setdefault((sez, it.get("area") or "milano"), []).append(it)
+    via = set()
+    for g in gruppi.values():
+        diesel = [it for it in g if (it.get("carb") or "").lower() == "diesel"]
+        altri = len(g) - len(diesel)
+        tetto = int(altri * quota / (1 - quota))
+        if len(diesel) > tetto:
+            diesel.sort(key=lambda it: -scovo.guadagno_minimo(it))
+            via.update(it["id"] for it in diesel[tetto:])
+    if via:
+        logging.getLogger("scovo").warning("DIESEL: %d diesel tolti per restare al %d%%", len(via), int(quota * 100))
+    return [it for it in items if it["id"] not in via]
+
+
 # Elenco auto condiviso: la query pesante gira al massimo una volta ogni ELENCO_SECONDI (90) per tutti,
 # in sottofondo; ogni richiesta aggiunge solo le auto già aperte da quel commerciante (query leggera).
 _elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False}
@@ -922,7 +947,7 @@ def _calcola_elenco() -> None:
                     opens[it["id"]] = int(r["opens"] or 0)
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
-    items = _solo_con_telefono(items)
+    items = _regole_finali(_solo_con_telefono(items))
     _elenco.update(t=time.time(), items=items, opens=opens)
     from collections import Counter
     c = Counter()
