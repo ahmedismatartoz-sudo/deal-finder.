@@ -287,10 +287,9 @@ def run(mode: str) -> Counter:
         elif mode == "full_sub":
             sources = sources[1:]
         elif mode == "sub_extra":
-            # province entro 100 km da Milano non fatte prima: Brescia (Lombardia), Novara/Vercelli/Alessandria
-            # (Piemonte: codice regione trovato da solo), Piacenza (Emilia). Fino a 100.000 €.
+            # Brescia (mai fatta) e di nuovo Como, Lecco e Bergamo, tutta la provincia, fino a 100.000 €
             bande = bands[:-1] + [(40000, 60000), (60000, 100000)]
-            gruppi = [("lombardia", ["BS"]), ("piemonte", ["NO", "VC", "AL"]), ("emilia-romagna", ["PC"])]
+            gruppi = [("lombardia", os.environ.get("SUB_EXTRA_PROVINCE", "BS,CO,LC,BG").split(","))]
             sources = []
             for reg, prov in gruppi:
                 s2 = SubitoCollector(proxy=settings.scraper_proxy)
