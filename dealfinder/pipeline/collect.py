@@ -258,7 +258,7 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
                             {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
-    elif mode in ("milano_full", "full_as", "full_sub"):
+    elif mode in ("milano_full", "full_as", "full_sub", "sub_extra"):
         # Milano entro 100 km, TUTTO: AutoScout24 privati (dal 2007, max 180.000 km) in fasce strette fino a
         # 60.000 €, poi Subito provincia per provincia (MI, MB, VA, CO, BG, CR, LO, LC, PV) tutte le pagine.
         os.environ["ANNO_MINIMO"] = os.environ.get("FULL_ANNO", "2007")
@@ -286,6 +286,17 @@ def run(mode: str) -> Counter:
             sources = sources[:1]
         elif mode == "full_sub":
             sources = sources[1:]
+        elif mode == "sub_extra":
+            # province entro 100 km da Milano non fatte prima: Brescia (Lombardia), Novara/Vercelli/Alessandria
+            # (Piemonte: codice regione trovato da solo), Piacenza (Emilia). Fino a 100.000 €.
+            bande = bands[:-1] + [(40000, 60000), (60000, 100000)]
+            gruppi = [("lombardia", ["BS"]), ("piemonte", ["NO", "VC", "AL"]), ("emilia-romagna", ["PC"])]
+            sources = []
+            for reg, prov in gruppi:
+                s2 = SubitoCollector(proxy=settings.scraper_proxy)
+                s2.min_delay_s, s2.max_delay_s = sub.min_delay_s, sub.max_delay_s
+                sources.append((s2, {"region": reg, "provinces": prov, "max_price": 100000, "max_pages": 0,
+                                     "price_bands": bande, "band_pages": int(os.environ.get("FULL_PAGINE", "100"))}))
     elif mode == "modena_inc":
         # Incidentate di Modena e dintorni (MODENA_RAGGIO km), dal MODENA_ANNO in poi: AutoScout24 solo danneggiate
         # (privati e commercianti), Subito Emilia (MO, RE, BO, PR, FE) le più recenti e la ricerca per parole.
@@ -487,7 +498,7 @@ def run(mode: str) -> Counter:
                         stats[f"{collector.source}:scartato_dati"] += 1
                         log.warning("annuncio %s non normalizzato: %r", listing.url, e)
                         continue
-                    if mode in ("milano_full", "full_as", "full_sub"):
+                    if mode in ("milano_full", "full_as", "full_sub", "sub_extra"):
                         motivo = _fuori_regole_raccolta(listing)
                         if motivo == "regole":
                             stats[f"{listing.source}:fuori_regole"] += 1
@@ -718,10 +729,12 @@ if __name__ == "__main__":
         if not _due(job_filtra, int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
             log.info("FILTRA già fatto nelle ultime ore: niente da fare")
             sys.exit(0)
-        for _ in range(90 if "sub_meta" in os.environ.get("LAVORO_SUBITO", "") else 0):   # prima finisce Subito
-            if not _in_corso("collect:sub_meta", 3):
+        attesa = [j for j in ("sub_meta", "sub_extra") if j in os.environ.get("LAVORO_SUBITO", "")]
+        time.sleep(120 if attesa else 0)        # il tempo che la raccolta registri il suo inizio
+        for _ in range(120 if attesa else 0):   # prima finisce Subito (prezzi e annunci più completi)
+            if not any(_in_corso(f"collect:{j}", 3) for j in attesa):
                 break
-            log.info("FILTRA aspetta la fine di sub_meta")
+            log.info("FILTRA aspetta la fine di %s", attesa)
             time.sleep(60)
         if os.environ.get("FILTRA_SALTA_MODELLO") != "1":
             log.info("FILTRA modello prezzi: %s", train_run(force=True))
@@ -768,7 +781,7 @@ if __name__ == "__main__":
         from . import spazio
         log.info("SPAZIO fine: %s", spazio.run())
         sys.exit(0)
-    if mode in ("full_as", "full_sub", "sub_meta"):
+    if mode in ("full_as", "full_sub", "sub_meta", "sub_extra"):
         # metà della raccolta completa (AutoScout24 o Subito), si possono far girare insieme.
         # sub_meta: Subito di nuovo, oggi stesso, con la metà migliore degli annunci senza numero
         from .ciclo import _due
@@ -776,6 +789,9 @@ if __name__ == "__main__":
         if _due(f"collect:{mode}", int(os.environ.get("FULL_ORE", "18"))):
             os.environ["COLLECT_JOB"] = f"collect:{mode}"
             run("full_sub" if mode == "sub_meta" else mode)
+            if mode == "sub_extra":
+                from ..pricing.train import run as train_run
+                log.info("SUB_EXTRA modello prezzi: %s", train_run(force=True))
         sys.exit(0)
     if mode == "milano_full":
         # raccolta completa di Milano entro 100 km (una al giorno), poi la selezione con le foto per il controllo

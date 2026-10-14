@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-MILANO = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO"]
+MILANO = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO", "VC", "AL", "PC"]
 RAVENNA = ["RA", "FC", "RN", "FE", "BO"]
 ROMA = ["RM", "LT", "FR", "VT", "RI"]
 

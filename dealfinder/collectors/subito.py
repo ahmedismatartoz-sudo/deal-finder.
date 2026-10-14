@@ -51,6 +51,7 @@ REGION_CODES = {"lombardia": 4, "emilia-romagna": int(__import__("os").environ.g
 PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG", "brescia": "BS",
                   "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",
                   "cremona": "CR", "mantova": "MN", "sondrio": "SO",
+                  "novara": "NO", "vercelli": "VC", "alessandria": "AL", "piacenza": "PC",
                   "ravenna": "RA", "forli-cesena": "FC", "rimini": "RN", "ferrara": "FE", "bologna": "BO",
                   "roma": "RM", "latina": "LT", "frosinone": "FR", "viterbo": "VT", "rieti": "RI"}
 
