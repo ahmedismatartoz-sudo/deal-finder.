@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 import re
 import sys
 from collections import Counter
@@ -622,6 +623,24 @@ if __name__ == "__main__":
             with connect() as conn:
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
+        sys.exit(0)
+    if mode == "conta_sub":
+        # quanti annunci auto ha Subito nelle province entro ~100 km da Milano (totali del sito)
+        from ..collectors.subito import SubitoCollector, API_SEARCH, API_HEADERS
+        sub = SubitoCollector()
+        prov = {"MI": 8, "MB": 9, "LO": 6, "PV": 10, "CO": 3, "VA": 12, "LC": 5, "BG": 1, "CR": 4, "BS": 2}
+        for sigla, ci in prov.items():
+            for nome, extra in (("tutti", {}), ("privati", {"advt": 0}), ("aziende", {"advt": 1})):
+                try:
+                    r = sub.client.get(API_SEARCH, headers=API_HEADERS,
+                                       params={"c": 2, "r": 4, "ci": ci, "t": "s", "lim": 1, **extra})
+                    j = r.json() if r.status_code == 200 else {}
+                    num = {k: v for k, v in j.items() if isinstance(v, (int, float))}
+                    pv = (((j.get("ads") or [{}])[0].get("geo") or {}).get("city") or {}).get("short_name")
+                    log.info("CONTA_SUB %s (ci=%s, prov annuncio=%s) %s: %s", sigla, ci, pv, nome, num)
+                except Exception as e:
+                    log.info("CONTA_SUB %s %s errore %s", sigla, nome, str(e)[:100])
+                time.sleep(1)
         sys.exit(0)
     if mode == "conta_as":
         # quanti annunci ha AutoScout24 entro CONTA_RAGGIO km da Milano (totali del sito, non raccolti da noi)
