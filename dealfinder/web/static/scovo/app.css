@@ -58,7 +58,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .btn{min-height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--ink);background:transparent;font-weight:700;font-size:16px}
 .btn-dark{background:var(--ink);color:var(--bg);border:0}
 /* scheda */
-.detail{display:flex;flex-direction:column;min-height:100%}
+.detail{display:flex;flex-direction:column;min-height:100%;padding-top:env(safe-area-inset-top,0px)}
 .gallery{position:relative}
 .slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .slides::-webkit-scrollbar{display:none}
