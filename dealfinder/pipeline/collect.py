@@ -263,8 +263,9 @@ def run(mode: str) -> Counter:
         asc = AutoScoutCollector()
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "0.8"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.0"))
-        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": 30000, "step": 1000,
-                          "venditori": [("P", "privato")]}),
+        centri = [c.split(":") for c in os.environ.get("STASERA_CENTRI", "20121:" + os.environ.get("STASERA_RAGGIO", "70")).split(",")]
+        sources = [(_Centri(asc, centri, {"massiva": True, "min_price": 500, "max_price": 30000, "step": 1000,
+                                          "venditori": [("P", "privato")]}), {}),
                    (sub, {"region": settings.region, "provinces": prov, "max_price": 30000, "max_pages": 0,
                           "price_bands": bands, "band_pages": int(os.environ.get("STASERA_PAGINE", "4"))})]
     elif mode == "as5k":
@@ -622,6 +623,12 @@ if __name__ == "__main__":
                 fin = log_job(conn, job)
                 fin(True, {"venditori": lead.dal_sito()})
         sys.exit(0)
+    if mode == "ora200":
+        # selezione subito dagli annunci già raccolti: Milano, Bergamo, Brescia, solo con numero di telefono
+        from . import mille
+        mille.lampo(int(os.environ.get("ORA_QUANTI", "600")), fonte=None, ore=int(os.environ.get("ORA_ORE", "120")),
+                    telefono=True, versione="ora200-" + os.environ.get("ORA_GIRO", "a"))
+        sys.exit(0)
     if mode == "pulizia":
         # verifica TUTTE le auto del sito (Subito e AutoScout24): quelle che non esistono più si tolgono subito
         from .verify import verify_rows
@@ -681,7 +688,7 @@ if __name__ == "__main__":
             if _due("collect:stasera", int(os.environ.get("STASERA_ORE", "6"))):
                 os.environ["PASSI_JOB"] = "collect:stasera:" + os.environ.get("STASERA_GIRO", "1")
                 run("stasera")
-            mille.lampo(quanti, fonte=None, ore=36, versione="stasera")
+            mille.lampo(quanti, fonte=None, ore=36, versione="stasera", telefono=True)
         elif mode == "inc_stasera":
             if _due("collect:inc_stasera", int(os.environ.get("STASERA_ORE", "6"))):
                 os.environ["PASSI_JOB"] = "collect:inc_stasera:" + os.environ.get("STASERA_GIRO", "1")

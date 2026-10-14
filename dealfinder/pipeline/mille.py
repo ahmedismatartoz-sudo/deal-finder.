@@ -264,7 +264,8 @@ def e_moto(*testi) -> bool:
 def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "facebook",
           ore: int = 96, danneggiate: bool = False, ovunque: bool = False,
           versione: str = "fb-lampo", province: list | None = None, anno: int | None = None,
-          commercianti: bool = False, anche_parole: bool = False, danno_dal_testo: bool = False) -> int:
+          commercianti: bool = False, anche_parole: bool = False, danno_dal_testo: bool = False,
+          telefono: bool = False) -> int:
     """Selezione lampo: niente ricalcolo del mercato (troppo lento col database pieno), si usa la stima del
     primo filtro già salvata in raccolta (model_p50, prescreen_potential). Preferisce le auto con pochi km,
     toglie moto/scooter, privati soltanto, mai le auto già guardate a mano.
@@ -291,12 +292,17 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                          + CASE WHEN province = ANY(%s) THEN 1500 ELSE 0 END DESC
                 LIMIT %s""",
             (commercianti, fonte, fonte, danneggiate, danneggiate, anche_parole, ore, ovunque, zona, scovo.KM_MASSIMO,
-             anno or scovo.ANNO_MINIMO, _gia_controllate(), zona, quanti * (40 if danno_dal_testo else 4))).fetchall()
+             anno or scovo.ANNO_MINIMO, _gia_controllate(), zona,
+             quanti * (40 if danno_dal_testo else 12 if telefono else 4))).fetchall()
         scelti, n_d, n_moto = [], 0, 0
         for r in rows:
             if e_moto(r.get("title"), (r.get("description") or "")[:300], r.get("model"), r.get("make")):
                 n_moto += 1
                 continue
+            if telefono and r.get("source") != "autoscout24":
+                t = f"{r.get('title') or ''} {r.get('description') or ''}"
+                if not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)):
+                    continue                # sul sito solo auto con un numero da chiamare
             if danno_dal_testo and not DANNO.search(f"{r.get('title') or ''} {r.get('version_raw') or ''} {r.get('description') or ''}"):
                 continue                    # il filtro "danneggiate" del sito non basta: il danno deve essere scritto
             if r.get("fuel") == "diesel":
