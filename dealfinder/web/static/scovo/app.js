@@ -278,6 +278,11 @@ function viewList(){
       <button class="fbtn" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}<span>Filtri</span>${nf ? `<span class="count-pill">${nf}</span>` : ""}</button>
       <label class="fsort"><span class="sr">Ordina</span><select id="f-sort" aria-label="Ordina">${SORTS.map(([v,l]) => `<option value="${v}" ${S.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
     </div>
+    <div class="qf" role="group" aria-label="Filtri veloci">
+      <label class="qsel ${S.max !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="q-pmax">${opts(P_STEPS.map(v => [v, "Fino a " + num(v) + " €"]), S.max, "Prezzo")}</select></label>
+      <label class="qsel ${S.carb.length ? "on" : ""}"><span class="sr">Alimentazione</span><select id="q-carb">${S.carb.length > 1 ? `<option value="__multi" selected>${S.carb.length} alimentazioni</option>` : ""}${opts(CARB, S.carb.length === 1 ? S.carb[0] : "", "Alimentazione")}</select></label>
+      <label class="qsel ${S.kmMax !== "" ? "on" : ""}"><span class="sr">Chilometri massimi</span><select id="q-kmax">${opts(KM_STEPS.map(v => [v, "Fino a " + num(v) + " km"]), S.kmMax, "Km")}</select></label>
+    </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
   return header(incV ? "Incidentate" : ecoV ? "Sotto 1.000" : "scovo", incV ? `${list.length} auto incidentate da riparare · rivendita −${S.sconto}%` : ecoV ? `${list.length} auto dal 2010 sotto i 1.000 €` : `${list.length} auto da girare · rivendita −${S.sconto}%`, right) + `
     ${fbar}
@@ -1287,6 +1292,9 @@ $app.addEventListener("change", e => {
   else if (id === "f-modello") S.modello = v;
   else if (id === "f-raggio") S.raggio = v ? Number(v) : 0;
   else if (id === "f-sort") S.sort = v;
+  else if (id === "q-pmax") S.max = v;
+  else if (id === "q-kmax") S.kmMax = v;
+  else if (id === "q-carb") { if (v === "__multi") return; S.carb = v ? [v] : []; }
   else if (map[id]) S[map[id]] = v;
   else return;
   saveFilters();
