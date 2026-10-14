@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+import zlib
 import re
 import sys
 from collections import Counter
@@ -141,19 +142,38 @@ def city_provinces(conn) -> dict:
     return out
 
 
-def _fuori_regole_raccolta(l) -> bool:
-    """Regole della raccolta completa: max 180.000 km, dal 2007, e solo chi lascia il numero
-    (AutoScout24 lo mostra sempre nell'annuncio; Subito solo se scritto nel testo)."""
+def _fuori_regole_raccolta(l) -> str | None:
+    """Regole della raccolta completa: max 180.000 km, dal 2007. Restituisce il motivo dello scarto:
+    "regole" (km/anno) o "senza_numero" (Subito senza numero scritto nel testo: se ne tiene la metà migliore)."""
     from ..web import scovo
     if l.mileage_km and l.mileage_km > int(os.environ.get("FULL_KM", "180000")):
-        return True
+        return "regole"
     if l.year and l.year < int(os.environ.get("FULL_ANNO", "2007")):
-        return True
+        return "regole"
     if l.source == "subito":
         t = f"{l.title or ''} {l.description or ''}"
         if not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)):
+            return "senza_numero"
+    return None
+
+
+class _MetaMigliore:
+    """Subito senza numero: si tiene circa la METÀ_SENZA_NUMERO (0.5) migliore. Il punteggio è il guadagno
+    stimato dal modello prezzi; si tiene chi sta sopra la mediana dei punteggi visti finora (si aggiusta da sola)."""
+    def __init__(self, quota: float):
+        import bisect
+        self.quota, self.visti, self._bis = quota, [], bisect
+
+    def tieni(self, punteggio: float) -> bool:
+        if self.quota >= 1:
             return True
-    return False
+        if self.quota <= 0:
+            return False
+        self._bis.insort(self.visti, punteggio)
+        if len(self.visti) < 50:
+            return True
+        soglia = self.visti[int(len(self.visti) * (1 - self.quota))]
+        return punteggio >= soglia
 
 
 def run(mode: str) -> Counter:
@@ -456,6 +476,7 @@ def run(mode: str) -> Counter:
                     n += 1
             conn.commit()
             stats["facebook:provincia_aggiunta"] += n
+        meta = _MetaMigliore(float(os.environ.get("META_SENZA_NUMERO", "0.5")))
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
@@ -465,9 +486,20 @@ def run(mode: str) -> Counter:
                         stats[f"{collector.source}:scartato_dati"] += 1
                         log.warning("annuncio %s non normalizzato: %r", listing.url, e)
                         continue
-                    if mode in ("milano_full", "full_as", "full_sub") and _fuori_regole_raccolta(listing):
-                        stats[f"{listing.source}:fuori_regole"] += 1
-                        continue
+                    if mode in ("milano_full", "full_as", "full_sub"):
+                        motivo = _fuori_regole_raccolta(listing)
+                        if motivo == "regole":
+                            stats[f"{listing.source}:fuori_regole"] += 1
+                            continue
+                        if motivo == "senza_numero":
+                            ps = prescreen(model, listing) if model is not None else {}
+                            pot = ps.get("potenziale")
+                            if pot is None:     # niente stima: metà a caso (fissa per annuncio)
+                                pot = -10**6 + (zlib.crc32(listing.url.encode()) % 1000)
+                            if not meta.tieni(pot):
+                                stats["subito:senza_numero_scartate"] += 1
+                                continue
+                            stats["subito:senza_numero_tenute"] += 1
                     if listing.source in ("facebook", "autoscout24"):
                         # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
                         pv = prov_of.get(_norm_city(listing.city))
@@ -674,12 +706,14 @@ if __name__ == "__main__":
         from . import spazio
         log.info("SPAZIO fine: %s", spazio.run())
         sys.exit(0)
-    if mode in ("full_as", "full_sub"):
-        # metà della raccolta completa (AutoScout24 o Subito), si possono far girare insieme
+    if mode in ("full_as", "full_sub", "sub_meta"):
+        # metà della raccolta completa (AutoScout24 o Subito), si possono far girare insieme.
+        # sub_meta: Subito di nuovo, oggi stesso, con la metà migliore degli annunci senza numero
         from .ciclo import _due
         os.environ["PASSI_JOB"] = f"collect:{mode}:" + time.strftime("%Y%m%d")
         if _due(f"collect:{mode}", int(os.environ.get("FULL_ORE", "18"))):
-            run(mode)
+            os.environ["COLLECT_JOB"] = f"collect:{mode}"
+            run("full_sub" if mode == "sub_meta" else mode)
         sys.exit(0)
     if mode == "milano_full":
         # raccolta completa di Milano entro 100 km (una al giorno), poi la selezione con le foto per il controllo

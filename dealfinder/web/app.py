@@ -885,8 +885,22 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
                                   (mancano[k:k + 1000],)).fetchall():
                 t = f"{r.get('title') or ''} {r.get('description') or ''}"
                 _tel_cache[r["id"]] = bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
-    tenute = [it for it in items if it.get("fonte") == "AutoScout24" or _tel_cache.get(it["id"], False)]
-    logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano", len(items) - len(tenute), len(tenute))
+    # Subito senza numero (si contattano dalla chat dell'annuncio): si tiene la metà con più guadagno
+    # (META_SENZA_NUMERO, 0.5), separatamente per ogni sezione (affari, incidentate, economiche...)
+    quota = float(os.environ.get("META_SENZA_NUMERO", "0.5"))
+    meta: set = set()
+    gruppi: dict = defaultdict(list)
+    for it in items:
+        if it.get("fonte") == "Subito" and not _tel_cache.get(it["id"], False):
+            sez = "eco" if it.get("economica") else "inc" if it.get("incidentata") else "affari"
+            gruppi[(sez, it.get("area") or "milano")].append(it)
+    for g in gruppi.values():
+        g.sort(key=lambda it: -scovo.guadagno_minimo(it))
+        meta.update(it["id"] for it in g[:round(len(g) * quota)])
+    tenute = [it for it in items if it.get("fonte") == "AutoScout24" or _tel_cache.get(it["id"], False)
+              or it["id"] in meta]
+    logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
+                                       len(items) - len(tenute), len(tenute), len(meta))
     return tenute
 
 
