@@ -1,0 +1,4247 @@
+{
+"brugherio": {
+"comune": "Brugherio",
+"pv": "MB",
+"km": 12.7
+},
+"novamilanese": {
+"comune": "Nova Milanese",
+"pv": "MB",
+"km": 13.4
+},
+"muggio": {
+"comune": "Muggiò",
+"pv": "MB",
+"km": 14.4
+},
+"monza": {
+"comune": "Monza",
+"pv": "MB",
+"km": 14.6
+},
+"varedo": {
+"comune": "Varedo",
+"pv": "MB",
+"km": 14.8
+},
+"limbiate": {
+"comune": "Limbiate",
+"pv": "MB",
+"km": 16.1
+},
+"siziano": {
+"comune": "Siziano",
+"pv": "PV",
+"km": 16.4
+},
+"bovisiomasciago": {
+"comune": "Bovisio-Masciago",
+"pv": "MB",
+"km": 16.5
+},
+"lissone": {
+"comune": "Lissone",
+"pv": "MB",
+"km": 16.5
+},
+"desio": {
+"comune": "Desio",
+"pv": "MB",
+"km": 17.1
+},
+"vedanoallambro": {
+"comune": "Vedano al Lambro",
+"pv": "MB",
+"km": 17.1
+},
+"agratebrianza": {
+"comune": "Agrate Brianza",
+"pv": "MB",
+"km": 17.3
+},
+"villasanta": {
+"comune": "Villasanta",
+"pv": "MB",
+"km": 17.7
+},
+"concorezzo": {
+"comune": "Concorezzo",
+"pv": "MB",
+"km": 17.9
+},
+"cesanomaderno": {
+"comune": "Cesano Maderno",
+"pv": "MB",
+"km": 18.2
+},
+"landriano": {
+"comune": "Landriano",
+"pv": "PV",
+"km": 18.2
+},
+"caponago": {
+"comune": "Caponago",
+"pv": "MB",
+"km": 18.3
+},
+"caronnopertusella": {
+"comune": "Caronno Pertusella",
+"pv": "VA",
+"km": 18.3
+},
+"merlino": {
+"comune": "Merlino",
+"pv": "LO",
+"km": 19
+},
+"casalmaiocco": {
+"comune": "Casalmaiocco",
+"pv": "LO",
+"km": 19.1
+},
+"mulazzano": {
+"comune": "Mulazzano",
+"pv": "LO",
+"km": 19.3
+},
+"biassono": {
+"comune": "Biassono",
+"pv": "MB",
+"km": 19.4
+},
+"sordio": {
+"comune": "Sordio",
+"pv": "LO",
+"km": 19.6
+},
+"zelobuonpersico": {
+"comune": "Zelo Buon Persico",
+"pv": "LO",
+"km": 19.6
+},
+"vidigulfo": {
+"comune": "Vidigulfo",
+"pv": "PV",
+"km": 19.6
+},
+"cerianolaghetto": {
+"comune": "Ceriano Laghetto",
+"pv": "MB",
+"km": 20
+},
+"origgio": {
+"comune": "Origgio",
+"pv": "VA",
+"km": 20
+},
+"bascape": {
+"comune": "Bascapè",
+"pv": "PV",
+"km": 20.1
+},
+"macherio": {
+"comune": "Macherio",
+"pv": "MB",
+"km": 20.4
+},
+"seregno": {
+"comune": "Seregno",
+"pv": "MB",
+"km": 20.4
+},
+"arcore": {
+"comune": "Arcore",
+"pv": "MB",
+"km": 20.5
+},
+"buragodimolgora": {
+"comune": "Burago di Molgora",
+"pv": "MB",
+"km": 20.5
+},
+"seveso": {
+"comune": "Seveso",
+"pv": "MB",
+"km": 20.5
+},
+"giussago": {
+"comune": "Giussago",
+"pv": "PV",
+"km": 20.6
+},
+"cervignanodadda": {
+"comune": "Cervignano d'Adda",
+"pv": "LO",
+"km": 21
+},
+"sovico": {
+"comune": "Sovico",
+"pv": "MB",
+"km": 21.1
+},
+"saronno": {
+"comune": "Saronno",
+"pv": "VA",
+"km": 21.2
+},
+"rognano": {
+"comune": "Rognano",
+"pv": "PV",
+"km": 21.3
+},
+"vimercate": {
+"comune": "Vimercate",
+"pv": "MB",
+"km": 21.4
+},
+"barlassina": {
+"comune": "Barlassina",
+"pv": "MB",
+"km": 21.5
+},
+"comazzo": {
+"comune": "Comazzo",
+"pv": "LO",
+"km": 21.7
+},
+"cogliate": {
+"comune": "Cogliate",
+"pv": "MB",
+"km": 21.7
+},
+"uboldo": {
+"comune": "Uboldo",
+"pv": "VA",
+"km": 21.7
+},
+"albiate": {
+"comune": "Albiate",
+"pv": "MB",
+"km": 21.8
+},
+"lesmo": {
+"comune": "Lesmo",
+"pv": "MB",
+"km": 21.8
+},
+"cavenagodibrianza": {
+"comune": "Cavenago di Brianza",
+"pv": "MB",
+"km": 21.9
+},
+"meda": {
+"comune": "Meda",
+"pv": "MB",
+"km": 21.9
+},
+"casorateprimo": {
+"comune": "Casorate Primo",
+"pv": "PV",
+"km": 21.9
+},
+"torrevecchiapia": {
+"comune": "Torrevecchia Pia",
+"pv": "PV",
+"km": 22
+},
+"bornasco": {
+"comune": "Bornasco",
+"pv": "PV",
+"km": 22.2
+},
+"triuggio": {
+"comune": "Triuggio",
+"pv": "MB",
+"km": 22.3
+},
+"tavazzanoconvillavesco": {
+"comune": "Tavazzano con Villavesco",
+"pv": "LO",
+"km": 22.8
+},
+"zeccone": {
+"comune": "Zeccone",
+"pv": "PV",
+"km": 22.9
+},
+"galgagnano": {
+"comune": "Galgagnano",
+"pv": "LO",
+"km": 23.1
+},
+"vellezzobellini": {
+"comune": "Vellezzo Bellini",
+"pv": "PV",
+"km": 23.1
+},
+"ornago": {
+"comune": "Ornago",
+"pv": "MB",
+"km": 23.2
+},
+"battuda": {
+"comune": "Battuda",
+"pv": "PV",
+"km": 23.2
+},
+"cabiate": {
+"comune": "Cabiate",
+"pv": "CO",
+"km": 23.3
+},
+"camparada": {
+"comune": "Camparada",
+"pv": "MB",
+"km": 23.3
+},
+"misinto": {
+"comune": "Misinto",
+"pv": "MB",
+"km": 23.3
+},
+"ceranova": {
+"comune": "Ceranova",
+"pv": "PV",
+"km": 23.4
+},
+"casalettolodigiano": {
+"comune": "Casaletto Lodigiano",
+"pv": "LO",
+"km": 23.5
+},
+"trovo": {
+"comune": "Trovo",
+"pv": "PV",
+"km": 23.6
+},
+"caratebrianza": {
+"comune": "Carate Brianza",
+"pv": "MB",
+"km": 23.7
+},
+"rovelloporro": {
+"comune": "Rovello Porro",
+"pv": "CO",
+"km": 23.9
+},
+"lazzate": {
+"comune": "Lazzate",
+"pv": "MB",
+"km": 24
+},
+"correzzana": {
+"comune": "Correzzana",
+"pv": "MB",
+"km": 24.1
+},
+"certosadipavia": {
+"comune": "Certosa di Pavia",
+"pv": "PV",
+"km": 24.1
+},
+"lentatesulseveso": {
+"comune": "Lentate sul Seveso",
+"pv": "MB",
+"km": 24.2
+},
+"gerenzano": {
+"comune": "Gerenzano",
+"pv": "VA",
+"km": 24.3
+},
+"usmatevelate": {
+"comune": "Usmate Velate",
+"pv": "MB",
+"km": 24.4
+},
+"saleranosullambro": {
+"comune": "Salerano sul Lambro",
+"pv": "LO",
+"km": 24.5
+},
+"bellusco": {
+"comune": "Bellusco",
+"pv": "MB",
+"km": 24.5
+},
+"casellelurani": {
+"comune": "Caselle Lurani",
+"pv": "LO",
+"km": 24.6
+},
+"veranobrianza": {
+"comune": "Verano Brianza",
+"pv": "MB",
+"km": 24.6
+},
+"spinodadda": {
+"comune": "Spino d'Adda",
+"pv": "CR",
+"km": 24.7
+},
+"giussano": {
+"comune": "Giussano",
+"pv": "MB",
+"km": 25
+},
+"rovellasca": {
+"comune": "Rovellasca",
+"pv": "CO",
+"km": 25.1
+},
+"rivoltadadda": {
+"comune": "Rivolta d'Adda",
+"pv": "CR",
+"km": 25.1
+},
+"carnate": {
+"comune": "Carnate",
+"pv": "MB",
+"km": 25.2
+},
+"trivolzio": {
+"comune": "Trivolzio",
+"pv": "PV",
+"km": 25.3
+},
+"lodivecchio": {
+"comune": "Lodi Vecchio",
+"pv": "LO",
+"km": 25.4
+},
+"marcignago": {
+"comune": "Marcignago",
+"pv": "PV",
+"km": 25.4
+},
+"borgarello": {
+"comune": "Borgarello",
+"pv": "PV",
+"km": 25.5
+},
+"turate": {
+"comune": "Turate",
+"pv": "CO",
+"km": 25.6
+},
+"marianocomense": {
+"comune": "Mariano Comense",
+"pv": "CO",
+"km": 25.8
+},
+"montanasolombardo": {
+"comune": "Montanaso Lombardo",
+"pv": "LO",
+"km": 25.8
+},
+"roncello": {
+"comune": "Roncello",
+"pv": "MB",
+"km": 25.8
+},
+"marzano": {
+"comune": "Marzano",
+"pv": "PV",
+"km": 25.8
+},
+"aicurzio": {
+"comune": "Aicurzio",
+"pv": "MB",
+"km": 25.9
+},
+"lardirago": {
+"comune": "Lardirago",
+"pv": "PV",
+"km": 25.9
+},
+"sangenesioeduniti": {
+"comune": "San Genesio ed Uniti",
+"pv": "PV",
+"km": 25.9
+},
+"valerafratta": {
+"comune": "Valera Fratta",
+"pv": "LO",
+"km": 26
+},
+"sulbiate": {
+"comune": "Sulbiate",
+"pv": "MB",
+"km": 26
+},
+"mezzago": {
+"comune": "Mezzago",
+"pv": "MB",
+"km": 26.3
+},
+"novedrate": {
+"comune": "Novedrate",
+"pv": "CO",
+"km": 26.4
+},
+"boffaloradadda": {
+"comune": "Boffalora d'Adda",
+"pv": "LO",
+"km": 26.4
+},
+"lomagna": {
+"comune": "Lomagna",
+"pv": "LC",
+"km": 26.5
+},
+"bernareggio": {
+"comune": "Bernareggio",
+"pv": "MB",
+"km": 26.6
+},
+"bereguardo": {
+"comune": "Bereguardo",
+"pv": "PV",
+"km": 26.6
+},
+"carimate": {
+"comune": "Carimate",
+"pv": "CO",
+"km": 26.8
+},
+"torredarese": {
+"comune": "Torre d'Arese",
+"pv": "PV",
+"km": 26.8
+},
+"carugo": {
+"comune": "Carugo",
+"pv": "CO",
+"km": 26.9
+},
+"besanainbrianza": {
+"comune": "Besana in Brianza",
+"pv": "MB",
+"km": 27.1
+},
+"briosco": {
+"comune": "Briosco",
+"pv": "MB",
+"km": 27.1
+},
+"busnago": {
+"comune": "Busnago",
+"pv": "MB",
+"km": 27.2
+},
+"cermenate": {
+"comune": "Cermenate",
+"pv": "CO",
+"km": 27.3
+},
+"santalessioconvialone": {
+"comune": "Sant'Alessio con Vialone",
+"pv": "PV",
+"km": 27.3
+},
+"casatenovo": {
+"comune": "Casatenovo",
+"pv": "LC",
+"km": 27.4
+},
+"cislago": {
+"comune": "Cislago",
+"pv": "VA",
+"km": 27.5
+},
+"roncaro": {
+"comune": "Roncaro",
+"pv": "PV",
+"km": 27.6
+},
+"bregnano": {
+"comune": "Bregnano",
+"pv": "CO",
+"km": 27.7
+},
+"roncobriantino": {
+"comune": "Ronco Briantino",
+"pv": "MB",
+"km": 27.7
+},
+"marudo": {
+"comune": "Marudo",
+"pv": "LO",
+"km": 27.8
+},
+"figinoserenza": {
+"comune": "Figino Serenza",
+"pv": "CO",
+"km": 27.9
+},
+"castellanza": {
+"comune": "Castellanza",
+"pv": "VA",
+"km": 27.9
+},
+"arosio": {
+"comune": "Arosio",
+"pv": "CO",
+"km": 28
+},
+"osnago": {
+"comune": "Osnago",
+"pv": "LC",
+"km": 28.1
+},
+"borgosangiovanni": {
+"comune": "Borgo San Giovanni",
+"pv": "LO",
+"km": 28.1
+},
+"farageradadda": {
+"comune": "Fara Gera d'Adda",
+"pv": "BG",
+"km": 28.3
+},
+"lomazzo": {
+"comune": "Lomazzo",
+"pv": "CO",
+"km": 28.4
+},
+"castiragavidardo": {
+"comune": "Castiraga Vidardo",
+"pv": "LO",
+"km": 28.6
+},
+"monticellobrianza": {
+"comune": "Monticello Brianza",
+"pv": "LC",
+"km": 28.7
+},
+"curacarpignano": {
+"comune": "Cura Carpignano",
+"pv": "PV",
+"km": 28.8
+},
+"agnadello": {
+"comune": "Agnadello",
+"pv": "CR",
+"km": 28.9
+},
+"marnate": {
+"comune": "Marnate",
+"pv": "VA",
+"km": 28.9
+},
+"arzagodadda": {
+"comune": "Arzago d'Adda",
+"pv": "BG",
+"km": 29
+},
+"pandino": {
+"comune": "Pandino",
+"pv": "CR",
+"km": 29.1
+},
+"missaglia": {
+"comune": "Missaglia",
+"pv": "LC",
+"km": 29.1
+},
+"magherno": {
+"comune": "Magherno",
+"pv": "PV",
+"km": 29.1
+},
+"torredisola": {
+"comune": "Torre d'Isola",
+"pv": "PV",
+"km": 29.1
+},
+"cornatedadda": {
+"comune": "Cornate d'Adda",
+"pv": "MB",
+"km": 29.4
+},
+"cirimido": {
+"comune": "Cirimido",
+"pv": "CO",
+"km": 29.5
+},
+"mozzate": {
+"comune": "Mozzate",
+"pv": "CO",
+"km": 29.5
+},
+"casiratedadda": {
+"comune": "Casirate d'Adda",
+"pv": "BG",
+"km": 29.6
+},
+"dovera": {
+"comune": "Dovera",
+"pv": "CR",
+"km": 29.6
+},
+"verderio": {
+"comune": "Verderio",
+"pv": "LC",
+"km": 29.6
+},
+"canonicadadda": {
+"comune": "Canonica d'Adda",
+"pv": "BG",
+"km": 29.7
+},
+"limidocomasco": {
+"comune": "Limido Comasco",
+"pv": "CO",
+"km": 29.7
+},
+"lodi": {
+"comune": "Lodi",
+"pv": "LO",
+"km": 29.7
+},
+"olgiateolona": {
+"comune": "Olgiate Olona",
+"pv": "VA",
+"km": 29.7
+},
+"corneglianolaudense": {
+"comune": "Cornegliano Laudense",
+"pv": "LO",
+"km": 29.8
+},
+"renate": {
+"comune": "Renate",
+"pv": "MB",
+"km": 29.8
+},
+"vistarino": {
+"comune": "Vistarino",
+"pv": "PV",
+"km": 29.8
+},
+"fenegro": {
+"comune": "Fenegrò",
+"pv": "CO",
+"km": 29.9
+},
+"inverigo": {
+"comune": "Inverigo",
+"pv": "CO",
+"km": 29.9
+},
+"cernuscolombardone": {
+"comune": "Cernusco Lombardone",
+"pv": "LC",
+"km": 30
+},
+"gorlaminore": {
+"comune": "Gorla Minore",
+"pv": "VA",
+"km": 30.1
+},
+"vertemateconminoprio": {
+"comune": "Vertemate con Minoprio",
+"pv": "CO",
+"km": 30.4
+},
+"montevecchia": {
+"comune": "Montevecchia",
+"pv": "LC",
+"km": 30.4
+},
+"veduggioconcolzano": {
+"comune": "Veduggio con Colzano",
+"pv": "MB",
+"km": 30.5
+},
+"capriatesangervasio": {
+"comune": "Capriate San Gervasio",
+"pv": "BG",
+"km": 30.7
+},
+"cantu": {
+"comune": "Cantù",
+"pv": "CO",
+"km": 30.7
+},
+"vigano": {
+"comune": "Viganò",
+"pv": "LC",
+"km": 30.7
+},
+"santangelolodigiano": {
+"comune": "Sant'Angelo Lodigiano",
+"pv": "LO",
+"km": 30.7
+},
+"vigevano": {
+"comune": "Vigevano",
+"pv": "PV",
+"km": 30.7
+},
+"villanterio": {
+"comune": "Villanterio",
+"pv": "PV",
+"km": 30.7
+},
+"brenna": {
+"comune": "Brenna",
+"pv": "CO",
+"km": 30.8
+},
+"pievefissiraga": {
+"comune": "Pieve Fissiraga",
+"pv": "LO",
+"km": 30.8
+},
+"bustoarsizio": {
+"comune": "Busto Arsizio",
+"pv": "VA",
+"km": 30.9
+},
+"cadorago": {
+"comune": "Cadorago",
+"pv": "CO",
+"km": 31
+},
+"padernodadda": {
+"comune": "Paderno d'Adda",
+"pv": "LC",
+"km": 31
+},
+"bottanuco": {
+"comune": "Bottanuco",
+"pv": "BG",
+"km": 31.1
+},
+"carbonate": {
+"comune": "Carbonate",
+"pv": "CO",
+"km": 31.1
+},
+"luragomarinone": {
+"comune": "Lurago Marinone",
+"pv": "CO",
+"km": 31.1
+},
+"cucciago": {
+"comune": "Cucciago",
+"pv": "CO",
+"km": 31.3
+},
+"robbiate": {
+"comune": "Robbiate",
+"pv": "LC",
+"km": 31.3
+},
+"palazzopignano": {
+"comune": "Palazzo Pignano",
+"pv": "CR",
+"km": 31.4
+},
+"barzano": {
+"comune": "Barzanò",
+"pv": "LC",
+"km": 31.4
+},
+"merate": {
+"comune": "Merate",
+"pv": "LC",
+"km": 31.4
+},
+"pavia": {
+"comune": "Pavia",
+"pv": "PV",
+"km": 31.4
+},
+"solbiateolona": {
+"comune": "Solbiate Olona",
+"pv": "VA",
+"km": 31.4
+},
+"cassagobrianza": {
+"comune": "Cassago Brianza",
+"pv": "LC",
+"km": 31.5
+},
+"pontirolonuovo": {
+"comune": "Pontirolo Nuovo",
+"pv": "BG",
+"km": 31.6
+},
+"montecremasco": {
+"comune": "Monte Cremasco",
+"pv": "CR",
+"km": 31.6
+},
+"cremella": {
+"comune": "Cremella",
+"pv": "LC",
+"km": 31.6
+},
+"guanzate": {
+"comune": "Guanzate",
+"pv": "CO",
+"km": 31.8
+},
+"cassolnovo": {
+"comune": "Cassolnovo",
+"pv": "PV",
+"km": 31.8
+},
+"treviglio": {
+"comune": "Treviglio",
+"pv": "BG",
+"km": 31.9
+},
+"luragoderba": {
+"comune": "Lurago d'Erba",
+"pv": "CO",
+"km": 31.9
+},
+"albuzzano": {
+"comune": "Albuzzano",
+"pv": "PV",
+"km": 31.9
+},
+"copiano": {
+"comune": "Copiano",
+"pv": "PV",
+"km": 31.9
+},
+"calvenzano": {
+"comune": "Calvenzano",
+"pv": "BG",
+"km": 32
+},
+"sirtori": {
+"comune": "Sirtori",
+"pv": "LC",
+"km": 32
+},
+"locatevaresino": {
+"comune": "Locate Varesino",
+"pv": "CO",
+"km": 32.1
+},
+"torlinovimercati": {
+"comune": "Torlino Vimercati",
+"pv": "CR",
+"km": 32.1
+},
+"zerbolo": {
+"comune": "Zerbolò",
+"pv": "PV",
+"km": 32.1
+},
+"gorlamaggiore": {
+"comune": "Gorla Maggiore",
+"pv": "VA",
+"km": 32.1
+},
+"brembate": {
+"comune": "Brembate",
+"pv": "BG",
+"km": 32.2
+},
+"suisio": {
+"comune": "Suisio",
+"pv": "BG",
+"km": 32.2
+},
+"veniano": {
+"comune": "Veniano",
+"pv": "CO",
+"km": 32.2
+},
+"vailate": {
+"comune": "Vailate",
+"pv": "CR",
+"km": 32.2
+},
+"gerenzago": {
+"comune": "Gerenzago",
+"pv": "PV",
+"km": 32.2
+},
+"nibionno": {
+"comune": "Nibionno",
+"pv": "LC",
+"km": 32.3
+},
+"crespiatica": {
+"comune": "Crespiatica",
+"pv": "LO",
+"km": 32.4
+},
+"massalengo": {
+"comune": "Massalengo",
+"pv": "LO",
+"km": 32.5
+},
+"cerano": {
+"comune": "Cerano",
+"pv": "NO",
+"km": 32.6
+},
+"lambrugo": {
+"comune": "Lambrugo",
+"pv": "CO",
+"km": 32.7
+},
+"bulciago": {
+"comune": "Bulciago",
+"pv": "LC",
+"km": 32.7
+},
+"medolago": {
+"comune": "Medolago",
+"pv": "BG",
+"km": 32.8
+},
+"caluscodadda": {
+"comune": "Calusco d'Adda",
+"pv": "BG",
+"km": 32.9
+},
+"finomornasco": {
+"comune": "Fino Mornasco",
+"pv": "CO",
+"km": 32.9
+},
+"vaianocremasco": {
+"comune": "Vaiano Cremasco",
+"pv": "CR",
+"km": 32.9
+},
+"solza": {
+"comune": "Solza",
+"pv": "BG",
+"km": 33
+},
+"pieranica": {
+"comune": "Pieranica",
+"pv": "CR",
+"km": 33.1
+},
+"imbersago": {
+"comune": "Imbersago",
+"pv": "LC",
+"km": 33.2
+},
+"lavallettabrianza": {
+"comune": "La Valletta Brianza",
+"pv": "LC",
+"km": 33.2
+},
+"vallesalimbene": {
+"comune": "Valle Salimbene",
+"pv": "PV",
+"km": 33.2
+},
+"alzatebrianza": {
+"comune": "Alzate Brianza",
+"pv": "CO",
+"km": 33.4
+},
+"fagnanoolona": {
+"comune": "Fagnano Olona",
+"pv": "VA",
+"km": 33.4
+},
+"misanodigeradadda": {
+"comune": "Misano di Gera d'Adda",
+"pv": "BG",
+"km": 33.5
+},
+"casnateconbernate": {
+"comune": "Casnate con Bernate",
+"pv": "CO",
+"km": 33.5
+},
+"olgiatemolgora": {
+"comune": "Olgiate Molgora",
+"pv": "LC",
+"km": 33.5
+},
+"cortepalasio": {
+"comune": "Corte Palasio",
+"pv": "LO",
+"km": 33.5
+},
+"invernoemonteleone": {
+"comune": "Inverno e Monteleone",
+"pv": "PV",
+"km": 33.5
+},
+"boltiere": {
+"comune": "Boltiere",
+"pv": "BG",
+"km": 33.6
+},
+"sennacomasco": {
+"comune": "Senna Comasco",
+"pv": "CO",
+"km": 33.6
+},
+"barzago": {
+"comune": "Barzago",
+"pv": "LC",
+"km": 33.6
+},
+"filighera": {
+"comune": "Filighera",
+"pv": "PV",
+"km": 33.6
+},
+"borgosansiro": {
+"comune": "Borgo San Siro",
+"pv": "PV",
+"km": 33.7
+},
+"anzanodelparco": {
+"comune": "Anzano del Parco",
+"pv": "CO",
+"km": 33.8
+},
+"calco": {
+"comune": "Calco",
+"pv": "LC",
+"km": 33.8
+},
+"cassinarizzardi": {
+"comune": "Cassina Rizzardi",
+"pv": "CO",
+"km": 33.9
+},
+"quintano": {
+"comune": "Quintano",
+"pv": "CR",
+"km": 33.9
+},
+"santamariahoe": {
+"comune": "Santa Maria Hoè",
+"pv": "LC",
+"km": 33.9
+},
+"filago": {
+"comune": "Filago",
+"pv": "BG",
+"km": 34.1
+},
+"villanovadelsillaro": {
+"comune": "Villanova del Sillaro",
+"pv": "LO",
+"km": 34.1
+},
+"appianogentile": {
+"comune": "Appiano Gentile",
+"pv": "CO",
+"km": 34.3
+},
+"costamasnaga": {
+"comune": "Costa Masnaga",
+"pv": "LC",
+"km": 34.3
+},
+"sanmartinoinstrada": {
+"comune": "San Martino in Strada",
+"pv": "LO",
+"km": 34.3
+},
+"chignolodisola": {
+"comune": "Chignolo d'Isola",
+"pv": "BG",
+"km": 34.4
+},
+"capiagointimiano": {
+"comune": "Capiago Intimiano",
+"pv": "CO",
+"km": 34.4
+},
+"castellodibrianza": {
+"comune": "Castello di Brianza",
+"pv": "LC",
+"km": 34.4
+},
+"madone": {
+"comune": "Madone",
+"pv": "BG",
+"km": 34.5
+},
+"bulgarograsso": {
+"comune": "Bulgarograsso",
+"pv": "CO",
+"km": 34.6
+},
+"luisago": {
+"comune": "Luisago",
+"pv": "CO",
+"km": 34.6
+},
+"trescorecremasco": {
+"comune": "Trescore Cremasco",
+"pv": "CR",
+"km": 34.6
+},
+"ciserano": {
+"comune": "Ciserano",
+"pv": "BG",
+"km": 34.7
+},
+"villadadda": {
+"comune": "Villa d'Adda",
+"pv": "BG",
+"km": 34.7
+},
+"orsenigo": {
+"comune": "Orsenigo",
+"pv": "CO",
+"km": 34.7
+},
+"sanmartinosiccomario": {
+"comune": "San Martino Siccomario",
+"pv": "PV",
+"km": 34.7
+},
+"carvico": {
+"comune": "Carvico",
+"pv": "BG",
+"km": 34.8
+},
+"bagnolocremasco": {
+"comune": "Bagnolo Cremasco",
+"pv": "CR",
+"km": 34.8
+},
+"casalettovaprio": {
+"comune": "Casaletto Vaprio",
+"pv": "CR",
+"km": 34.8
+},
+"garbagnatemonastero": {
+"comune": "Garbagnate Monastero",
+"pv": "LC",
+"km": 34.9
+},
+"gambolo": {
+"comune": "Gambolò",
+"pv": "PV",
+"km": 34.9
+},
+"linarolo": {
+"comune": "Linarolo",
+"pv": "PV",
+"km": 34.9
+},
+"villanovadardenghi": {
+"comune": "Villanova d'Ardenghi",
+"pv": "PV",
+"km": 34.9
+},
+"alserio": {
+"comune": "Alserio",
+"pv": "CO",
+"km": 35
+},
+"carbonaraalticino": {
+"comune": "Carbonara al Ticino",
+"pv": "PV",
+"km": 35
+},
+"arcene": {
+"comune": "Arcene",
+"pv": "BG",
+"km": 35.1
+},
+"travacosiccomario": {
+"comune": "Travacò Siccomario",
+"pv": "PV",
+"km": 35.1
+},
+"castelrozzone": {
+"comune": "Castel Rozzone",
+"pv": "BG",
+"km": 35.2
+},
+"graffignana": {
+"comune": "Graffignana",
+"pv": "LO",
+"km": 35.2
+},
+"belgioioso": {
+"comune": "Belgioioso",
+"pv": "PV",
+"km": 35.2
+},
+"cairate": {
+"comune": "Cairate",
+"pv": "VA",
+"km": 35.2
+},
+"monguzzo": {
+"comune": "Monguzzo",
+"pv": "CO",
+"km": 35.3
+},
+"tradate": {
+"comune": "Tradate",
+"pv": "VA",
+"km": 35.3
+},
+"osiosotto": {
+"comune": "Osio Sotto",
+"pv": "BG",
+"km": 35.4
+},
+"caravaggio": {
+"comune": "Caravaggio",
+"pv": "BG",
+"km": 35.5
+},
+"capralba": {
+"comune": "Capralba",
+"pv": "CR",
+"km": 35.5
+},
+"grandate": {
+"comune": "Grandate",
+"pv": "CO",
+"km": 35.6
+},
+"collebrianza": {
+"comune": "Colle Brianza",
+"pv": "LC",
+"km": 35.6
+},
+"sirone": {
+"comune": "Sirone",
+"pv": "LC",
+"km": 35.6
+},
+"montorfano": {
+"comune": "Montorfano",
+"pv": "CO",
+"km": 35.7
+},
+"dolzago": {
+"comune": "Dolzago",
+"pv": "LC",
+"km": 35.7
+},
+"rogeno": {
+"comune": "Rogeno",
+"pv": "LC",
+"km": 35.7
+},
+"gropellocairoli": {
+"comune": "Gropello Cairoli",
+"pv": "PV",
+"km": 35.7
+},
+"sottoilmontegiovannixxiii": {
+"comune": "Sotto il Monte Giovanni XXIII",
+"pv": "BG",
+"km": 35.8
+},
+"molteno": {
+"comune": "Molteno",
+"pv": "LC",
+"km": 35.8
+},
+"abbadiacerreto": {
+"comune": "Abbadia Cerreto",
+"pv": "LO",
+"km": 35.8
+},
+"trecate": {
+"comune": "Trecate",
+"pv": "NO",
+"km": 35.8
+},
+"ternodisola": {
+"comune": "Terno d'Isola",
+"pv": "BG",
+"km": 35.9
+},
+"cremosano": {
+"comune": "Cremosano",
+"pv": "CR",
+"km": 35.9
+},
+"merone": {
+"comune": "Merone",
+"pv": "CO",
+"km": 36
+},
+"chieve": {
+"comune": "Chieve",
+"pv": "CR",
+"km": 36
+},
+"lonateceppino": {
+"comune": "Lonate Ceppino",
+"pv": "VA",
+"km": 36
+},
+"osiosopra": {
+"comune": "Osio Sopra",
+"pv": "BG",
+"km": 36.1
+},
+"oltronadisanmamette": {
+"comune": "Oltrona di San Mamette",
+"pv": "CO",
+"km": 36.3
+},
+"bonatesotto": {
+"comune": "Bonate Sotto",
+"pv": "BG",
+"km": 36.4
+},
+"verdellino": {
+"comune": "Verdellino",
+"pv": "BG",
+"km": 36.4
+},
+"luratecaccivio": {
+"comune": "Lurate Caccivio",
+"pv": "CO",
+"km": 36.5
+},
+"gravellonalomellina": {
+"comune": "Gravellona Lomellina",
+"pv": "PV",
+"km": 36.5
+},
+"samarate": {
+"comune": "Samarate",
+"pv": "VA",
+"km": 36.5
+},
+"villaguardia": {
+"comune": "Villa Guardia",
+"pv": "CO",
+"km": 36.6
+},
+"brivio": {
+"comune": "Brivio",
+"pv": "LC",
+"km": 36.6
+},
+"romentino": {
+"comune": "Romentino",
+"pv": "NO",
+"km": 36.6
+},
+"garlasco": {
+"comune": "Garlasco",
+"pv": "PV",
+"km": 36.6
+},
+"brignanogeradadda": {
+"comune": "Brignano Gera d'Adda",
+"pv": "BG",
+"km": 36.7
+},
+"albeseconcassano": {
+"comune": "Albese con Cassano",
+"pv": "CO",
+"km": 36.7
+},
+"airuno": {
+"comune": "Airuno",
+"pv": "LC",
+"km": 36.7
+},
+"ossagolodigiano": {
+"comune": "Ossago Lodigiano",
+"pv": "LO",
+"km": 36.7
+},
+"lurano": {
+"comune": "Lurano",
+"pv": "BG",
+"km": 36.8
+},
+"lipomo": {
+"comune": "Lipomo",
+"pv": "CO",
+"km": 36.9
+},
+"cavamanara": {
+"comune": "Cava Manara",
+"pv": "PV",
+"km": 36.9
+},
+"torredenegri": {
+"comune": "Torre de' Negri",
+"pv": "PV",
+"km": 36.9
+},
+"cassanomagnago": {
+"comune": "Cassano Magnago",
+"pv": "VA",
+"km": 36.9
+},
+"borghettolodigiano": {
+"comune": "Borghetto Lodigiano",
+"pv": "LO",
+"km": 37
+},
+"tavernerio": {
+"comune": "Tavernerio",
+"pv": "CO",
+"km": 37.2
+},
+"casalettoceredano": {
+"comune": "Casaletto Ceredano",
+"pv": "CR",
+"km": 37.2
+},
+"corteolonaegenzone": {
+"comune": "Corteolona e Genzone",
+"pv": "PV",
+"km": 37.2
+},
+"albavilla": {
+"comune": "Albavilla",
+"pv": "CO",
+"km": 37.3
+},
+"ferno": {
+"comune": "Ferno",
+"pv": "VA",
+"km": 37.3
+},
+"lonatepozzolo": {
+"comune": "Lonate Pozzolo",
+"pv": "VA",
+"km": 37.3
+},
+"bonatesopra": {
+"comune": "Bonate Sopra",
+"pv": "BG",
+"km": 37.4
+},
+"montanolucino": {
+"comune": "Montano Lucino",
+"pv": "CO",
+"km": 37.4
+},
+"sozzago": {
+"comune": "Sozzago",
+"pv": "NO",
+"km": 37.4
+},
+"verdello": {
+"comune": "Verdello",
+"pv": "BG",
+"km": 37.6
+},
+"cisanobergamasco": {
+"comune": "Cisano Bergamasco",
+"pv": "BG",
+"km": 37.7
+},
+"pognano": {
+"comune": "Pognano",
+"pv": "BG",
+"km": 37.7
+},
+"gallarate": {
+"comune": "Gallarate",
+"pv": "VA",
+"km": 37.7
+},
+"venegonoinferiore": {
+"comune": "Venegono Inferiore",
+"pv": "VA",
+"km": 37.7
+},
+"dalmine": {
+"comune": "Dalmine",
+"pv": "BG",
+"km": 37.8
+},
+"tromello": {
+"comune": "Tromello",
+"pv": "PV",
+"km": 37.8
+},
+"castelseprio": {
+"comune": "Castelseprio",
+"pv": "VA",
+"km": 37.8
+},
+"mezzanino": {
+"comune": "Mezzanino",
+"pv": "PV",
+"km": 37.9
+},
+"valgreghentino": {
+"comune": "Valgreghentino",
+"pv": "LC",
+"km": 38
+},
+"cavenagodadda": {
+"comune": "Cavenago d'Adda",
+"pv": "LO",
+"km": 38
+},
+"cardanoalcampo": {
+"comune": "Cardano al Campo",
+"pv": "VA",
+"km": 38
+},
+"fornovosangiovanni": {
+"comune": "Fornovo San Giovanni",
+"pv": "BG",
+"km": 38.1
+},
+"levate": {
+"comune": "Levate",
+"pv": "BG",
+"km": 38.1
+},
+"campagnolacremasca": {
+"comune": "Campagnola Cremasca",
+"pv": "CR",
+"km": 38.1
+},
+"bosisioparini": {
+"comune": "Bosisio Parini",
+"pv": "LC",
+"km": 38.1
+},
+"pagazzano": {
+"comune": "Pagazzano",
+"pv": "BG",
+"km": 38.2
+},
+"pontida": {
+"comune": "Pontida",
+"pv": "BG",
+"km": 38.2
+},
+"capergnanica": {
+"comune": "Capergnanica",
+"pv": "CR",
+"km": 38.2
+},
+"ello": {
+"comune": "Ello",
+"pv": "LC",
+"km": 38.2
+},
+"oggiono": {
+"comune": "Oggiono",
+"pv": "LC",
+"km": 38.2
+},
+"santacristinaebissone": {
+"comune": "Santa Cristina e Bissone",
+"pv": "PV",
+"km": 38.2
+},
+"castelnuovobozzente": {
+"comune": "Castelnuovo Bozzente",
+"pv": "CO",
+"km": 38.3
+},
+"miradoloterme": {
+"comune": "Miradolo Terme",
+"pv": "PV",
+"km": 38.3
+},
+"presezzo": {
+"comune": "Presezzo",
+"pv": "BG",
+"km": 38.5
+},
+"erba": {
+"comune": "Erba",
+"pv": "CO",
+"km": 38.5
+},
+"sommo": {
+"comune": "Sommo",
+"pv": "PV",
+"km": 38.5
+},
+"caprinobergamasco": {
+"comune": "Caprino Bergamasco",
+"pv": "BG",
+"km": 38.6
+},
+"venegonosuperiore": {
+"comune": "Venegono Superiore",
+"pv": "VA",
+"km": 38.6
+},
+"mapello": {
+"comune": "Mapello",
+"pv": "BG",
+"km": 38.7
+},
+"mairago": {
+"comune": "Mairago",
+"pv": "LO",
+"km": 38.7
+},
+"galliate": {
+"comune": "Galliate",
+"pv": "NO",
+"km": 38.7
+},
+"oggionaconsantostefano": {
+"comune": "Oggiona con Santo Stefano",
+"pv": "VA",
+"km": 38.7
+},
+"tornaco": {
+"comune": "Tornaco",
+"pv": "NO",
+"km": 38.8
+},
+"mozzanica": {
+"comune": "Mozzanica",
+"pv": "BG",
+"km": 39.1
+},
+"beregazzoconfigliaro": {
+"comune": "Beregazzo con Figliaro",
+"pv": "CO",
+"km": 39.1
+},
+"como": {
+"comune": "Como",
+"pv": "CO",
+"km": 39.1
+},
+"annonedibrianza": {
+"comune": "Annone di Brianza",
+"pv": "LC",
+"km": 39.1
+},
+"cilavegna": {
+"comune": "Cilavegna",
+"pv": "PV",
+"km": 39.1
+},
+"rea": {
+"comune": "Rea",
+"pv": "PV",
+"km": 39.1
+},
+"eupilio": {
+"comune": "Eupilio",
+"pv": "CO",
+"km": 39.2
+},
+"pusiano": {
+"comune": "Pusiano",
+"pv": "CO",
+"km": 39.2
+},
+"longonealsegrino": {
+"comune": "Longone al Segrino",
+"pv": "CO",
+"km": 39.3
+},
+"cavariaconpremezzo": {
+"comune": "Cavaria con Premezzo",
+"pv": "VA",
+"km": 39.3
+},
+"olgiatecomasco": {
+"comune": "Olgiate Comasco",
+"pv": "CO",
+"km": 39.4
+},
+"montemarenzo": {
+"comune": "Monte Marenzo",
+"pv": "LC",
+"km": 39.4
+},
+"dorno": {
+"comune": "Dorno",
+"pv": "PV",
+"km": 39.4
+},
+"sanfermodellabattaglia": {
+"comune": "San Fermo della Battaglia",
+"pv": "CO",
+"km": 39.5
+},
+"carnago": {
+"comune": "Carnago",
+"pv": "VA",
+"km": 39.5
+},
+"ambivere": {
+"comune": "Ambivere",
+"pv": "BG",
+"km": 39.6
+},
+"spirano": {
+"comune": "Spirano",
+"pv": "BG",
+"km": 39.6
+},
+"verruapo": {
+"comune": "Verrua Po",
+"pv": "PV",
+"km": 39.7
+},
+"zinasco": {
+"comune": "Zinasco",
+"pv": "PV",
+"km": 39.8
+},
+"gornateolona": {
+"comune": "Gornate Olona",
+"pv": "VA",
+"km": 39.8
+},
+"treviolo": {
+"comune": "Treviolo",
+"pv": "BG",
+"km": 39.9
+},
+"brunate": {
+"comune": "Brunate",
+"pv": "CO",
+"km": 39.9
+},
+"pianengo": {
+"comune": "Pianengo",
+"pv": "CR",
+"km": 39.9
+},
+"terdobbiate": {
+"comune": "Terdobbiate",
+"pv": "NO",
+"km": 40
+},
+"cesanabrianza": {
+"comune": "Cesana Brianza",
+"pv": "LC",
+"km": 40.1
+},
+"parona": {
+"comune": "Parona",
+"pv": "PV",
+"km": 40.1
+},
+"pontesanpietro": {
+"comune": "Ponte San Pietro",
+"pv": "BG",
+"km": 40.2
+},
+"suello": {
+"comune": "Suello",
+"pv": "LC",
+"km": 40.2
+},
+"costadenobili": {
+"comune": "Costa de' Nobili",
+"pv": "PV",
+"km": 40.2
+},
+"sergnano": {
+"comune": "Sergnano",
+"pv": "CR",
+"km": 40.3
+},
+"bariano": {
+"comune": "Bariano",
+"pv": "BG",
+"km": 40.4
+},
+"proserpio": {
+"comune": "Proserpio",
+"pv": "CO",
+"km": 40.4
+},
+"crema": {
+"comune": "Crema",
+"pv": "CR",
+"km": 40.4
+},
+"pontelambro": {
+"comune": "Ponte Lambro",
+"pv": "CO",
+"km": 40.5
+},
+"solbiatearno": {
+"comune": "Solbiate Arno",
+"pv": "VA",
+"km": 40.5
+},
+"comunnuovo": {
+"comune": "Comun Nuovo",
+"pv": "BG",
+"km": 40.6
+},
+"crederarubbiano": {
+"comune": "Credera Rubbiano",
+"pv": "CR",
+"km": 40.6
+},
+"morengo": {
+"comune": "Morengo",
+"pv": "BG",
+"km": 40.7
+},
+"olginate": {
+"comune": "Olginate",
+"pv": "LC",
+"km": 40.7
+},
+"alagna": {
+"comune": "Alagna",
+"pv": "PV",
+"km": 40.7
+},
+"sanciprianopo": {
+"comune": "San Cipriano Po",
+"pv": "PV",
+"km": 40.7
+},
+"lallio": {
+"comune": "Lallio",
+"pv": "BG",
+"km": 40.8
+},
+"castelmarte": {
+"comune": "Castelmarte",
+"pv": "CO",
+"km": 40.8
+},
+"colverde": {
+"comune": "Colverde",
+"pv": "CO",
+"km": 40.8
+},
+"secugnago": {
+"comune": "Secugnago",
+"pv": "LO",
+"km": 40.8
+},
+"campospinosoalbaredo": {
+"comune": "Campospinoso Albaredo",
+"pv": "PV",
+"km": 40.8
+},
+"casalecremascovidolasco": {
+"comune": "Casale Cremasco-Vidolasco",
+"pv": "CR",
+"km": 40.9
+},
+"castelgabbiano": {
+"comune": "Castel Gabbiano",
+"pv": "CR",
+"km": 40.9
+},
+"torredebusi": {
+"comune": "Torre de' Busi",
+"pv": "BG",
+"km": 41
+},
+"binago": {
+"comune": "Binago",
+"pv": "CO",
+"km": 41
+},
+"brembio": {
+"comune": "Brembio",
+"pv": "LO",
+"km": 41
+},
+"castiglioneolona": {
+"comune": "Castiglione Olona",
+"pv": "VA",
+"km": 41
+},
+"jeragoconorago": {
+"comune": "Jerago con Orago",
+"pv": "VA",
+"km": 41
+},
+"solbiateconcagno": {
+"comune": "Solbiate con Cagno",
+"pv": "CO",
+"km": 41.1
+},
+"brembatedisopra": {
+"comune": "Brembate di Sopra",
+"pv": "BG",
+"km": 41.2
+},
+"curno": {
+"comune": "Curno",
+"pv": "BG",
+"km": 41.2
+},
+"garlate": {
+"comune": "Garlate",
+"pv": "LC",
+"km": 41.2
+},
+"livraga": {
+"comune": "Livraga",
+"pv": "LO",
+"km": 41.2
+},
+"caronnovaresino": {
+"comune": "Caronno Varesino",
+"pv": "VA",
+"km": 41.2
+},
+"caslinoderba": {
+"comune": "Caslino d'Erba",
+"pv": "CO",
+"km": 41.3
+},
+"spessa": {
+"comune": "Spessa",
+"pv": "PV",
+"km": 41.3
+},
+"stezzano": {
+"comune": "Stezzano",
+"pv": "BG",
+"km": 41.4
+},
+"turanolodigiano": {
+"comune": "Turano Lodigiano",
+"pv": "LO",
+"km": 41.4
+},
+"cameri": {
+"comune": "Cameri",
+"pv": "NO",
+"km": 41.4
+},
+"mozzo": {
+"comune": "Mozzo",
+"pv": "BG",
+"km": 41.5
+},
+"palazzago": {
+"comune": "Palazzago",
+"pv": "BG",
+"km": 41.5
+},
+"galbiate": {
+"comune": "Galbiate",
+"pv": "LC",
+"km": 41.5
+},
+"casanovalonati": {
+"comune": "Casanova Lonati",
+"pv": "PV",
+"km": 41.5
+},
+"albizzate": {
+"comune": "Albizzate",
+"pv": "VA",
+"km": 41.5
+},
+"barzana": {
+"comune": "Barzana",
+"pv": "BG",
+"km": 41.7
+},
+"urgnano": {
+"comune": "Urgnano",
+"pv": "BG",
+"km": 41.7
+},
+"calolziocorte": {
+"comune": "Calolziocorte",
+"pv": "LC",
+"km": 41.7
+},
+"borgolavezzaro": {
+"comune": "Borgolavezzaro",
+"pv": "NO",
+"km": 41.8
+},
+"besnate": {
+"comune": "Besnate",
+"pv": "VA",
+"km": 41.8
+},
+"casoratesempione": {
+"comune": "Casorate Sempione",
+"pv": "VA",
+"km": 41.8
+},
+"vedanoolona": {
+"comune": "Vedano Olona",
+"pv": "VA",
+"km": 41.9
+},
+"blevio": {
+"comune": "Blevio",
+"pv": "CO",
+"km": 42
+},
+"ripaltacremasca": {
+"comune": "Ripalta Cremasca",
+"pv": "CR",
+"km": 42
+},
+"civate": {
+"comune": "Civate",
+"pv": "LC",
+"km": 42
+},
+"chignolopo": {
+"comune": "Chignolo Po",
+"pv": "PV",
+"km": 42
+},
+"portalbera": {
+"comune": "Portalbera",
+"pv": "PV",
+"km": 42
+},
+"colognoalserio": {
+"comune": "Cologno al Serio",
+"pv": "BG",
+"km": 42.1
+},
+"sanzenonealpo": {
+"comune": "San Zenone al Po",
+"pv": "PV",
+"km": 42.1
+},
+"faloppio": {
+"comune": "Faloppio",
+"pv": "CO",
+"km": 42.2
+},
+"ricengo": {
+"comune": "Ricengo",
+"pv": "CR",
+"km": 42.2
+},
+"albonese": {
+"comune": "Albonese",
+"pv": "PV",
+"km": 42.3
+},
+"cernobbio": {
+"comune": "Cernobbio",
+"pv": "CO",
+"km": 42.4
+},
+"vercurago": {
+"comune": "Vercurago",
+"pv": "LC",
+"km": 42.4
+},
+"garbagnanovarese": {
+"comune": "Garbagna Novarese",
+"pv": "NO",
+"km": 42.4
+},
+"valbrembo": {
+"comune": "Valbrembo",
+"pv": "BG",
+"km": 42.5
+},
+"zerbo": {
+"comune": "Zerbo",
+"pv": "PV",
+"km": 42.6
+},
+"albiolo": {
+"comune": "Albiolo",
+"pv": "CO",
+"km": 42.7
+},
+"mortara": {
+"comune": "Mortara",
+"pv": "PV",
+"km": 42.7
+},
+"carenno": {
+"comune": "Carenno",
+"pv": "LC",
+"km": 42.8
+},
+"vespolate": {
+"comune": "Vespolate",
+"pv": "NO",
+"km": 42.8
+},
+"castronno": {
+"comune": "Castronno",
+"pv": "VA",
+"km": 42.8
+},
+"nibbiola": {
+"comune": "Nibbiola",
+"pv": "NO",
+"km": 43
+},
+"lozza": {
+"comune": "Lozza",
+"pv": "VA",
+"km": 43
+},
+"zanica": {
+"comune": "Zanica",
+"pv": "BG",
+"km": 43.1
+},
+"canzo": {
+"comune": "Canzo",
+"pv": "CO",
+"km": 43.1
+},
+"camisano": {
+"comune": "Camisano",
+"pv": "CR",
+"km": 43.2
+},
+"moscazzano": {
+"comune": "Moscazzano",
+"pv": "CR",
+"km": 43.2
+},
+"mezzanarabattone": {
+"comune": "Mezzana Rabattone",
+"pv": "PV",
+"km": 43.2
+},
+"pievealbignola": {
+"comune": "Pieve Albignola",
+"pv": "PV",
+"km": 43.2
+},
+"maslianico": {
+"comune": "Maslianico",
+"pv": "CO",
+"km": 43.3
+},
+"arenapo": {
+"comune": "Arena Po",
+"pv": "PV",
+"km": 43.3
+},
+"bastidapancarana": {
+"comune": "Bastida Pancarana",
+"pv": "PV",
+"km": 43.3
+},
+"almennosanbartolomeo": {
+"comune": "Almenno San Bartolomeo",
+"pv": "BG",
+"km": 43.4
+},
+"paladina": {
+"comune": "Paladina",
+"pv": "BG",
+"km": 43.4
+},
+"uggiateconronago": {
+"comune": "Uggiate con Ronago",
+"pv": "CO",
+"km": 43.4
+},
+"pescate": {
+"comune": "Pescate",
+"pv": "LC",
+"km": 43.4
+},
+"valeggio": {
+"comune": "Valeggio",
+"pv": "PV",
+"km": 43.4
+},
+"arsagoseprio": {
+"comune": "Arsago Seprio",
+"pv": "VA",
+"km": 43.4
+},
+"vizzolaticino": {
+"comune": "Vizzola Ticino",
+"pv": "VA",
+"km": 43.4
+},
+"azzanosanpaolo": {
+"comune": "Azzano San Paolo",
+"pv": "BG",
+"km": 43.5
+},
+"barbianello": {
+"comune": "Barbianello",
+"pv": "PV",
+"km": 43.5
+},
+"bressanabottarone": {
+"comune": "Bressana Bottarone",
+"pv": "PV",
+"km": 43.5
+},
+"faraolivanaconsola": {
+"comune": "Fara Olivana con Sola",
+"pv": "BG",
+"km": 43.6
+},
+"valmorea": {
+"comune": "Valmorea",
+"pv": "CO",
+"km": 43.6
+},
+"faggetolario": {
+"comune": "Faggeto Lario",
+"pv": "CO",
+"km": 43.7
+},
+"morazzone": {
+"comune": "Morazzone",
+"pv": "VA",
+"km": 43.7
+},
+"pieveportomorone": {
+"comune": "Pieve Porto Morone",
+"pv": "PV",
+"km": 43.8
+},
+"torno": {
+"comune": "Torno",
+"pv": "CO",
+"km": 43.9
+},
+"madignano": {
+"comune": "Madignano",
+"pv": "CR",
+"km": 43.9
+},
+"scaldasole": {
+"comune": "Scaldasole",
+"pv": "PV",
+"km": 43.9
+},
+"ripaltaguerina": {
+"comune": "Ripalta Guerina",
+"pv": "CR",
+"km": 44
+},
+"almennosansalvatore": {
+"comune": "Almenno San Salvatore",
+"pv": "BG",
+"km": 44.1
+},
+"offanengo": {
+"comune": "Offanengo",
+"pv": "CR",
+"km": 44.1
+},
+"badiapavese": {
+"comune": "Badia Pavese",
+"pv": "PV",
+"km": 44.1
+},
+"sumirago": {
+"comune": "Sumirago",
+"pv": "VA",
+"km": 44.1
+},
+"isso": {
+"comune": "Isso",
+"pv": "BG",
+"km": 44.2
+},
+"roncola": {
+"comune": "Roncola",
+"pv": "BG",
+"km": 44.2
+},
+"erve": {
+"comune": "Erve",
+"pv": "LC",
+"km": 44.2
+},
+"cergnago": {
+"comune": "Cergnago",
+"pv": "PV",
+"km": 44.2
+},
+"stradella": {
+"comune": "Stradella",
+"pv": "PV",
+"km": 44.2
+},
+"malnate": {
+"comune": "Malnate",
+"pv": "VA",
+"km": 44.2
+},
+"romanodilombardia": {
+"comune": "Romano di Lombardia",
+"pv": "BG",
+"km": 44.3
+},
+"asso": {
+"comune": "Asso",
+"pv": "CO",
+"km": 44.3
+},
+"valmadrera": {
+"comune": "Valmadrera",
+"pv": "LC",
+"km": 44.3
+},
+"bellinzagonovarese": {
+"comune": "Bellinzago Novarese",
+"pv": "NO",
+"km": 44.4
+},
+"novara": {
+"comune": "Novara",
+"pv": "NO",
+"km": 44.4
+},
+"pinarolopo": {
+"comune": "Pinarolo Po",
+"pv": "PV",
+"km": 44.4
+},
+"moltrasio": {
+"comune": "Moltrasio",
+"pv": "CO",
+"km": 44.5
+},
+"costavalleimagna": {
+"comune": "Costa Valle Imagna",
+"pv": "BG",
+"km": 44.6
+},
+"castellettodibranduzzo": {
+"comune": "Castelletto di Branduzzo",
+"pv": "PV",
+"km": 44.6
+},
+"rezzago": {
+"comune": "Rezzago",
+"pv": "CO",
+"km": 44.7
+},
+"sommalombardo": {
+"comune": "Somma Lombardo",
+"pv": "VA",
+"km": 44.7
+},
+"oriolitta": {
+"comune": "Orio Litta",
+"pv": "LO",
+"km": 44.8
+},
+"ottobiano": {
+"comune": "Ottobiano",
+"pv": "PV",
+"km": 44.9
+},
+"pancarana": {
+"comune": "Pancarana",
+"pv": "PV",
+"km": 44.9
+},
+"alme": {
+"comune": "Almè",
+"pv": "BG",
+"km": 45
+},
+"bergamo": {
+"comune": "Bergamo",
+"pv": "BG",
+"km": 45
+},
+"rodero": {
+"comune": "Rodero",
+"pv": "CO",
+"km": 45.1
+},
+"sangiorgiodilomellina": {
+"comune": "San Giorgio di Lomellina",
+"pv": "PV",
+"km": 45.1
+},
+"brunello": {
+"comune": "Brunello",
+"pv": "VA",
+"km": 45.1
+},
+"bizzarone": {
+"comune": "Bizzarone",
+"pv": "CO",
+"km": 45.2
+},
+"caglio": {
+"comune": "Caglio",
+"pv": "CO",
+"km": 45.2
+},
+"malgrate": {
+"comune": "Malgrate",
+"pv": "LC",
+"km": 45.2
+},
+"gazzadaschianno": {
+"comune": "Gazzada Schianno",
+"pv": "VA",
+"km": 45.2
+},
+"covo": {
+"comune": "Covo",
+"pv": "BG",
+"km": 45.3
+},
+"montodine": {
+"comune": "Montodine",
+"pv": "CR",
+"km": 45.3
+},
+"broni": {
+"comune": "Broni",
+"pv": "PV",
+"km": 45.3
+},
+"ospedalettolodigiano": {
+"comune": "Ospedaletto Lodigiano",
+"pv": "LO",
+"km": 45.4
+},
+"oleggio": {
+"comune": "Oleggio",
+"pv": "NO",
+"km": 45.4
+},
+"orioalserio": {
+"comune": "Orio al Serio",
+"pv": "BG",
+"km": 45.5
+},
+"strozza": {
+"comune": "Strozza",
+"pv": "BG",
+"km": 45.5
+},
+"villadalme": {
+"comune": "Villa d'Almè",
+"pv": "BG",
+"km": 45.5
+},
+"carateurio": {
+"comune": "Carate Urio",
+"pv": "CO",
+"km": 45.5
+},
+"bertonico": {
+"comune": "Bertonico",
+"pv": "LO",
+"km": 45.5
+},
+"nicorvo": {
+"comune": "Nicorvo",
+"pv": "PV",
+"km": 45.5
+},
+"cantello": {
+"comune": "Cantello",
+"pv": "VA",
+"km": 45.6
+},
+"barbata": {
+"comune": "Barbata",
+"pv": "BG",
+"km": 45.7
+},
+"bedulita": {
+"comune": "Bedulita",
+"pv": "BG",
+"km": 45.7
+},
+"ripaltaarpina": {
+"comune": "Ripalta Arpina",
+"pv": "CR",
+"km": 45.7
+},
+"izano": {
+"comune": "Izano",
+"pv": "CR",
+"km": 45.8
+},
+"capizzone": {
+"comune": "Capizzone",
+"pv": "BG",
+"km": 46
+},
+"pognanalario": {
+"comune": "Pognana Lario",
+"pv": "CO",
+"km": 46
+},
+"sormano": {
+"comune": "Sormano",
+"pv": "CO",
+"km": 46
+},
+"lecco": {
+"comune": "Lecco",
+"pv": "LC",
+"km": 46
+},
+"crosiodellavalle": {
+"comune": "Crosio della Valle",
+"pv": "VA",
+"km": 46
+},
+"ghisalba": {
+"comune": "Ghisalba",
+"pv": "BG",
+"km": 46.1
+},
+"sannazzarodeburgondi": {
+"comune": "Sannazzaro de' Burgondi",
+"pv": "PV",
+"km": 46.2
+},
+"mornago": {
+"comune": "Mornago",
+"pv": "VA",
+"km": 46.3
+},
+"martinengo": {
+"comune": "Martinengo",
+"pv": "BG",
+"km": 46.4
+},
+"olevanodilomellina": {
+"comune": "Olevano di Lomellina",
+"pv": "PV",
+"km": 46.4
+},
+"buguggiate": {
+"comune": "Buguggiate",
+"pv": "VA",
+"km": 46.4
+},
+"laglio": {
+"comune": "Laglio",
+"pv": "CO",
+"km": 46.5
+},
+"casalettodisopra": {
+"comune": "Casaletto di Sopra",
+"pv": "CR",
+"km": 46.5
+},
+"azzate": {
+"comune": "Azzate",
+"pv": "VA",
+"km": 46.5
+},
+"grassobbio": {
+"comune": "Grassobbio",
+"pv": "BG",
+"km": 46.6
+},
+"ponteranica": {
+"comune": "Ponteranica",
+"pv": "BG",
+"km": 46.6
+},
+"lasnigo": {
+"comune": "Lasnigo",
+"pv": "CO",
+"km": 46.6
+},
+"valbrona": {
+"comune": "Valbrona",
+"pv": "CO",
+"km": 46.6
+},
+"bosnasco": {
+"comune": "Bosnasco",
+"pv": "PV",
+"km": 46.6
+},
+"cannetopavese": {
+"comune": "Canneto Pavese",
+"pv": "PV",
+"km": 46.6
+},
+"robeccopavese": {
+"comune": "Robecco Pavese",
+"pv": "PV",
+"km": 46.6
+},
+"casatisma": {
+"comune": "Casatisma",
+"pv": "PV",
+"km": 46.7
+},
+"antegnate": {
+"comune": "Antegnate",
+"pv": "BG",
+"km": 46.8
+},
+"santomobonoterme": {
+"comune": "Sant'Omobono Terme",
+"pv": "BG",
+"km": 46.8
+},
+"ferreraerbognone": {
+"comune": "Ferrera Erbognone",
+"pv": "PV",
+"km": 46.8
+},
+"castellodagogna": {
+"comune": "Castello d'Agogna",
+"pv": "PV",
+"km": 47
+},
+"cervesina": {
+"comune": "Cervesina",
+"pv": "PV",
+"km": 47
+},
+"monticellipavese": {
+"comune": "Monticelli Pavese",
+"pv": "PV",
+"km": 47
+},
+"maranoticino": {
+"comune": "Marano Ticino",
+"pv": "NO",
+"km": 47.1
+},
+"cortenuova": {
+"comune": "Cortenuova",
+"pv": "BG",
+"km": 47.2
+},
+"sennalodigiana": {
+"comune": "Senna Lodigiana",
+"pv": "LO",
+"km": 47.3
+},
+"caltignaga": {
+"comune": "Caltignaga",
+"pv": "NO",
+"km": 47.3
+},
+"cerettolomellina": {
+"comune": "Ceretto Lomellina",
+"pv": "PV",
+"km": 47.3
+},
+"zenevredo": {
+"comune": "Zenevredo",
+"pv": "PV",
+"km": 47.3
+},
+"daverio": {
+"comune": "Daverio",
+"pv": "VA",
+"km": 47.3
+},
+"romanengo": {
+"comune": "Romanengo",
+"pv": "CR",
+"km": 47.5
+},
+"rotadimagna": {
+"comune": "Rota d'Imagna",
+"pv": "BG",
+"km": 47.6
+},
+"fontanella": {
+"comune": "Fontanella",
+"pv": "BG",
+"km": 47.7
+},
+"seriate": {
+"comune": "Seriate",
+"pv": "BG",
+"km": 47.7
+},
+"salvirola": {
+"comune": "Salvirola",
+"pv": "CR",
+"km": 47.7
+},
+"redavalle": {
+"comune": "Redavalle",
+"pv": "PV",
+"km": 47.7
+},
+"cavernago": {
+"comune": "Cavernago",
+"pv": "BG",
+"km": 47.8
+},
+"sorisole": {
+"comune": "Sorisole",
+"pv": "BG",
+"km": 47.8
+},
+"verretto": {
+"comune": "Verretto",
+"pv": "PV",
+"km": 47.8
+},
+"gombito": {
+"comune": "Gombito",
+"pv": "CR",
+"km": 47.9
+},
+"pombia": {
+"comune": "Pombia",
+"pv": "NO",
+"km": 47.9
+},
+"lungavilla": {
+"comune": "Lungavilla",
+"pv": "PV",
+"km": 47.9
+},
+"casalpusterlengo": {
+"comune": "Casalpusterlengo",
+"pv": "LO",
+"km": 48
+},
+"vergiate": {
+"comune": "Vergiate",
+"pv": "VA",
+"km": 48
+},
+"fiesco": {
+"comune": "Fiesco",
+"pv": "CR",
+"km": 48.1
+},
+"santagiuletta": {
+"comune": "Santa Giuletta",
+"pv": "PV",
+"km": 48.1
+},
+"galliatelombardo": {
+"comune": "Galliate Lombardo",
+"pv": "VA",
+"km": 48.1
+},
+"ubialeclanezzo": {
+"comune": "Ubiale Clanezzo",
+"pv": "BG",
+"km": 48.2
+},
+"castiglionedadda": {
+"comune": "Castiglione d'Adda",
+"pv": "LO",
+"km": 48.3
+},
+"corana": {
+"comune": "Corana",
+"pv": "PV",
+"km": 48.3
+},
+"terranovadeipasserini": {
+"comune": "Terranova dei Passerini",
+"pv": "LO",
+"km": 48.4
+},
+"cigognola": {
+"comune": "Cigognola",
+"pv": "PV",
+"km": 48.4
+},
+"varese": {
+"comune": "Varese",
+"pv": "VA",
+"km": 48.4
+},
+"berbenno": {
+"comune": "Berbenno",
+"pv": "BG",
+"km": 48.5
+},
+"clivio": {
+"comune": "Clivio",
+"pv": "VA",
+"km": 48.5
+},
+"sedrina": {
+"comune": "Sedrina",
+"pv": "BG",
+"km": 48.6
+},
+"montubeccaria": {
+"comune": "Montù Beccaria",
+"pv": "PV",
+"km": 48.6
+},
+"zelbio": {
+"comune": "Zelbio",
+"pv": "CO",
+"km": 48.7
+},
+"mezzomerico": {
+"comune": "Mezzomerico",
+"pv": "NO",
+"km": 48.7
+},
+"casalelitta": {
+"comune": "Casale Litta",
+"pv": "VA",
+"km": 48.7
+},
+"castelleone": {
+"comune": "Castelleone",
+"pv": "CR",
+"km": 48.8
+},
+"varallopombia": {
+"comune": "Varallo Pombia",
+"pv": "NO",
+"km": 48.8
+},
+"cornaimagna": {
+"comune": "Corna Imagna",
+"pv": "BG",
+"km": 48.9
+},
+"torreboldone": {
+"comune": "Torre Boldone",
+"pv": "BG",
+"km": 48.9
+},
+"velezzolomellina": {
+"comune": "Velezzo Lomellina",
+"pv": "PV",
+"km": 48.9
+},
+"golasecca": {
+"comune": "Golasecca",
+"pv": "VA",
+"km": 48.9
+},
+"gorle": {
+"comune": "Gorle",
+"pv": "BG",
+"km": 49
+},
+"locatello": {
+"comune": "Locatello",
+"pv": "BG",
+"km": 49
+},
+"montescano": {
+"comune": "Montescano",
+"pv": "PV",
+"km": 49
+},
+"veleso": {
+"comune": "Veleso",
+"pv": "CO",
+"km": 49.1
+},
+"pizzale": {
+"comune": "Pizzale",
+"pv": "PV",
+"km": 49.2
+},
+"castelsangiovanni": {
+"comune": "Castel San Giovanni",
+"pv": "PC",
+"km": 49.2
+},
+"brumano": {
+"comune": "Brumano",
+"pv": "BG",
+"km": 49.3
+},
+"abbadialariana": {
+"comune": "Abbadia Lariana",
+"pv": "LC",
+"km": 49.3
+},
+"santangelolomellina": {
+"comune": "Sant'Angelo Lomellina",
+"pv": "PV",
+"km": 49.3
+},
+"castana": {
+"comune": "Castana",
+"pv": "PV",
+"km": 49.4
+},
+"lomello": {
+"comune": "Lomello",
+"pv": "PV",
+"km": 49.4
+},
+"nesso": {
+"comune": "Nesso",
+"pv": "CO",
+"km": 49.5
+},
+"pedrengo": {
+"comune": "Pedrengo",
+"pv": "BG",
+"km": 49.6
+},
+"granozzoconmonticello": {
+"comune": "Granozzo con Monticello",
+"pv": "NO",
+"km": 49.6
+},
+"bodiolomnago": {
+"comune": "Bodio Lomnago",
+"pv": "VA",
+"km": 49.6
+},
+"barni": {
+"comune": "Barni",
+"pv": "CO",
+"km": 49.7
+},
+"brienno": {
+"comune": "Brienno",
+"pv": "CO",
+"km": 49.7
+},
+"pietradegiorgi": {
+"comune": "Pietra de' Giorgi",
+"pv": "PV",
+"km": 49.7
+},
+"saltrio": {
+"comune": "Saltrio",
+"pv": "VA",
+"km": 49.8
+},
+"brusaporto": {
+"comune": "Brusaporto",
+"pv": "BG",
+"km": 49.9
+},
+"somaglia": {
+"comune": "Somaglia",
+"pv": "LO",
+"km": 49.9
+},
+"torricellaverzate": {
+"comune": "Torricella Verzate",
+"pv": "PV",
+"km": 49.9
+},
+"mornicoalserio": {
+"comune": "Mornico al Serio",
+"pv": "BG",
+"km": 50.1
+},
+"ranica": {
+"comune": "Ranica",
+"pv": "BG",
+"km": 50.1
+},
+"inarzo": {
+"comune": "Inarzo",
+"pv": "VA",
+"km": 50.1
+},
+"viggiu": {
+"comune": "Viggiù",
+"pv": "VA",
+"km": 50.1
+},
+"corvinosanquirico": {
+"comune": "Corvino San Quirico",
+"pv": "PV",
+"km": 50.2
+},
+"calcinate": {
+"comune": "Calcinate",
+"pv": "BG",
+"km": 50.3
+},
+"galliavola": {
+"comune": "Galliavola",
+"pv": "PV",
+"km": 50.3
+},
+"valbrembilla": {
+"comune": "Val Brembilla",
+"pv": "BG",
+"km": 50.4
+},
+"sanpietromosezzo": {
+"comune": "San Pietro Mosezzo",
+"pv": "NO",
+"km": 50.5
+},
+"sandamianoalcolle": {
+"comune": "San Damiano al Colle",
+"pv": "PV",
+"km": 50.5
+},
+"blello": {
+"comune": "Blello",
+"pv": "BG",
+"km": 50.6
+},
+"fuipianovalleimagna": {
+"comune": "Fuipiano Valle Imagna",
+"pv": "BG",
+"km": 50.6
+},
+"scanzorosciate": {
+"comune": "Scanzorosciate",
+"pv": "BG",
+"km": 50.6
+},
+"robbio": {
+"comune": "Robbio",
+"pv": "PV",
+"km": 50.6
+},
+"magreglio": {
+"comune": "Magreglio",
+"pv": "CO",
+"km": 50.7
+},
+"arcisate": {
+"comune": "Arcisate",
+"pv": "VA",
+"km": 50.7
+},
+"ticengo": {
+"comune": "Ticengo",
+"pv": "CR",
+"km": 50.8
+},
+"castellettosopraticino": {
+"comune": "Castelletto sopra Ticino",
+"pv": "NO",
+"km": 50.8
+},
+"divignano": {
+"comune": "Divignano",
+"pv": "NO",
+"km": 50.8
+},
+"casteggio": {
+"comune": "Casteggio",
+"pv": "PV",
+"km": 50.8
+},
+"mornicolosana": {
+"comune": "Mornico Losana",
+"pv": "PV",
+"km": 50.8
+},
+"zeme": {
+"comune": "Zeme",
+"pv": "PV",
+"km": 50.8
+},
+"indunoolona": {
+"comune": "Induno Olona",
+"pv": "VA",
+"km": 50.8
+},
+"bagnatica": {
+"comune": "Bagnatica",
+"pv": "BG",
+"km": 50.9
+},
+"morterone": {
+"comune": "Morterone",
+"pv": "LC",
+"km": 50.9
+},
+"momo": {
+"comune": "Momo",
+"pv": "NO",
+"km": 50.9
+},
+"sarmato": {
+"comune": "Sarmato",
+"pv": "PC",
+"km": 50.9
+},
+"cividatealpiano": {
+"comune": "Cividate al Piano",
+"pv": "BG",
+"km": 51
+},
+"villadiserio": {
+"comune": "Villa di Serio",
+"pv": "BG",
+"km": 51
+},
+"trigolo": {
+"comune": "Trigolo",
+"pv": "CR",
+"km": 51
+},
+"castelgerundo": {
+"comune": "Castelgerundo",
+"pv": "LO",
+"km": 51
+},
+"castelnovetto": {
+"comune": "Castelnovetto",
+"pv": "PV",
+"km": 51
+},
+"albanosantalessandro": {
+"comune": "Albano Sant'Alessandro",
+"pv": "BG",
+"km": 51.1
+},
+"alzanolombardo": {
+"comune": "Alzano Lombardo",
+"pv": "BG",
+"km": 51.1
+},
+"ballabio": {
+"comune": "Ballabio",
+"pv": "LC",
+"km": 51.1
+},
+"mandellodellario": {
+"comune": "Mandello del Lario",
+"pv": "LC",
+"km": 51.1
+},
+"cazzagobrabbia": {
+"comune": "Cazzago Brabbia",
+"pv": "VA",
+"km": 51.1
+},
+"varanoborghi": {
+"comune": "Varano Borghi",
+"pv": "VA",
+"km": 51.1
+},
+"silvanopietra": {
+"comune": "Silvano Pietra",
+"pv": "PV",
+"km": 51.2
+},
+"mercallo": {
+"comune": "Mercallo",
+"pv": "VA",
+"km": 51.2
+},
+"olivagessi": {
+"comune": "Oliva Gessi",
+"pv": "PV",
+"km": 51.3
+},
+"semiana": {
+"comune": "Semiana",
+"pv": "PV",
+"km": 51.3
+},
+"calcio": {
+"comune": "Calcio",
+"pv": "BG",
+"km": 51.5
+},
+"schignano": {
+"comune": "Schignano",
+"pv": "CO",
+"km": 51.6
+},
+"confienza": {
+"comune": "Confienza",
+"pv": "PV",
+"km": 51.6
+},
+"bisuschio": {
+"comune": "Bisuschio",
+"pv": "VA",
+"km": 51.6
+},
+"costadimezzate": {
+"comune": "Costa di Mezzate",
+"pv": "BG",
+"km": 51.8
+},
+"borgoticino": {
+"comune": "Borgo Ticino",
+"pv": "NO",
+"km": 51.8
+},
+"zogno": {
+"comune": "Zogno",
+"pv": "BG",
+"km": 51.9
+},
+"vapriodagogna": {
+"comune": "Vaprio d'Agogna",
+"pv": "NO",
+"km": 51.9
+},
+"cornaleebastida": {
+"comune": "Cornale e Bastida",
+"pv": "PV",
+"km": 51.9
+},
+"casciago": {
+"comune": "Casciago",
+"pv": "VA",
+"km": 51.9
+},
+"palosco": {
+"comune": "Palosco",
+"pv": "BG",
+"km": 52
+},
+"cumignanosulnaviglio": {
+"comune": "Cumignano sul Naviglio",
+"pv": "CR",
+"km": 52
+},
+"torrederoveri": {
+"comune": "Torre de' Roveri",
+"pv": "BG",
+"km": 52.1
+},
+"olivetolario": {
+"comune": "Oliveto Lario",
+"pv": "LC",
+"km": 52.1
+},
+"sestocalende": {
+"comune": "Sesto Calende",
+"pv": "VA",
+"km": 52.1
+},
+"bolgare": {
+"comune": "Bolgare",
+"pv": "BG",
+"km": 52.2
+},
+"rovescala": {
+"comune": "Rovescala",
+"pv": "PV",
+"km": 52.2
+},
+"montebellodellabattaglia": {
+"comune": "Montebello della Battaglia",
+"pv": "PV",
+"km": 52.3
+},
+"torrepallavicina": {
+"comune": "Torre Pallavicina",
+"pv": "BG",
+"km": 52.4
+},
+"villabiscossi": {
+"comune": "Villa Biscossi",
+"pv": "PV",
+"km": 52.4
+},
+"ternate": {
+"comune": "Ternate",
+"pv": "VA",
+"km": 52.4
+},
+"besano": {
+"comune": "Besano",
+"pv": "VA",
+"km": 52.5
+},
+"codogno": {
+"comune": "Codogno",
+"pv": "LO",
+"km": 52.6
+},
+"mezzanabigli": {
+"comune": "Mezzana Bigli",
+"pv": "PV",
+"km": 52.6
+},
+"calendasco": {
+"comune": "Calendasco",
+"pv": "PC",
+"km": 52.6
+},
+"comabbio": {
+"comune": "Comabbio",
+"pv": "VA",
+"km": 52.6
+},
+"formigara": {
+"comune": "Formigara",
+"pv": "CR",
+"km": 52.7
+},
+"pontoglio": {
+"comune": "Pontoglio",
+"pv": "BS",
+"km": 52.8
+},
+"montello": {
+"comune": "Montello",
+"pv": "BG",
+"km": 52.9
+},
+"luvinate": {
+"comune": "Luvinate",
+"pv": "VA",
+"km": 53
+},
+"pumenengo": {
+"comune": "Pumenengo",
+"pv": "BG",
+"km": 53.1
+},
+"uragodoglio": {
+"comune": "Urago d'Oglio",
+"pv": "BS",
+"km": 53.1
+},
+"fombio": {
+"comune": "Fombio",
+"pv": "LO",
+"km": 53.2
+},
+"portoceresio": {
+"comune": "Porto Ceresio",
+"pv": "VA",
+"km": 53.3
+},
+"argegno": {
+"comune": "Argegno",
+"pv": "CO",
+"km": 53.4
+},
+"lezzeno": {
+"comune": "Lezzeno",
+"pv": "CO",
+"km": 53.4
+},
+"rosasco": {
+"comune": "Rosasco",
+"pv": "PV",
+"km": 53.4
+},
+"casalino": {
+"comune": "Casalino",
+"pv": "NO",
+"km": 53.5
+},
+"rottofreno": {
+"comune": "Rottofreno",
+"pv": "PC",
+"km": 53.5
+},
+"barasso": {
+"comune": "Barasso",
+"pv": "VA",
+"km": 53.5
+},
+"dizzasco": {
+"comune": "Dizzasco",
+"pv": "CO",
+"km": 53.7
+},
+"sanpaolodargon": {
+"comune": "San Paolo d'Argon",
+"pv": "BG",
+"km": 53.8
+},
+"soncino": {
+"comune": "Soncino",
+"pv": "CR",
+"km": 53.8
+},
+"suno": {
+"comune": "Suno",
+"pv": "NO",
+"km": 53.8
+},
+"calvignano": {
+"comune": "Calvignano",
+"pv": "PV",
+"km": 53.8
+},
+"borgonovovaltidone": {
+"comune": "Borgonovo Val Tidone",
+"pv": "PC",
+"km": 53.8
+},
+"comerio": {
+"comune": "Comerio",
+"pv": "VA",
+"km": 53.8
+},
+"nembro": {
+"comune": "Nembro",
+"pv": "BG",
+"km": 53.9
+},
+"ceranodintelvi": {
+"comune": "Cerano d'Intelvi",
+"pv": "CO",
+"km": 53.9
+},
+"rudiano": {
+"comune": "Rudiano",
+"pv": "BS",
+"km": 54.1
+},
+"santamariadellaversa": {
+"comune": "Santa Maria della Versa",
+"pv": "PV",
+"km": 54.1
+},
+"barengo": {
+"comune": "Barengo",
+"pv": "NO",
+"km": 54.2
+},
+"vallelomellina": {
+"comune": "Valle Lomellina",
+"pv": "PV",
+"km": 54.2
+},
+"biandronno": {
+"comune": "Biandronno",
+"pv": "VA",
+"km": 54.2
+},
+"sanbassano": {
+"comune": "San Bassano",
+"pv": "CR",
+"km": 54.3
+},
+"agrateconturbia": {
+"comune": "Agrate Conturbia",
+"pv": "NO",
+"km": 54.3
+},
+"mede": {
+"comune": "Mede",
+"pv": "PV",
+"km": 54.3
+},
+"montaltopavese": {
+"comune": "Montalto Pavese",
+"pv": "PV",
+"km": 54.3
+},
+"zianopiacentino": {
+"comune": "Ziano Piacentino",
+"pv": "PC",
+"km": 54.3
+},
+"vedeseta": {
+"comune": "Vedeseta",
+"pv": "BG",
+"km": 54.4
+},
+"molinodeitorti": {
+"comune": "Molino dei Torti",
+"pv": "AL",
+"km": 54.5
+},
+"casaleggionovara": {
+"comune": "Casaleggio Novara",
+"pv": "NO",
+"km": 54.5
+},
+"palestro": {
+"comune": "Palestro",
+"pv": "PV",
+"km": 54.5
+},
+"cozzo": {
+"comune": "Cozzo",
+"pv": "PV",
+"km": 54.6
+},
+"voghera": {
+"comune": "Voghera",
+"pv": "PV",
+"km": 54.6
+},
+"carobbiodegliangeli": {
+"comune": "Carobbio degli Angeli",
+"pv": "BG",
+"km": 54.7
+},
+"telgate": {
+"comune": "Telgate",
+"pv": "BG",
+"km": 54.7
+},
+"colonno": {
+"comune": "Colonno",
+"pv": "CO",
+"km": 54.7
+},
+"pigra": {
+"comune": "Pigra",
+"pv": "CO",
+"km": 54.8
+},
+"vinzaglio": {
+"comune": "Vinzaglio",
+"pv": "NO",
+"km": 54.8
+},
+"gorlago": {
+"comune": "Gorlago",
+"pv": "BG",
+"km": 54.9
+},
+"castellazzonovarese": {
+"comune": "Castellazzo Novarese",
+"pv": "NO",
+"km": 55
+},
+"roccadegiorgi": {
+"comune": "Rocca de' Giorgi",
+"pv": "PV",
+"km": 55
+},
+"chiuduno": {
+"comune": "Chiuduno",
+"pv": "BG",
+"km": 55.2
+},
+"guardamiglio": {
+"comune": "Guardamiglio",
+"pv": "LO",
+"km": 55.2
+},
+"caseigerola": {
+"comune": "Casei Gerola",
+"pv": "PV",
+"km": 55.2
+},
+"pievedelcairo": {
+"comune": "Pieve del Cairo",
+"pv": "PV",
+"km": 55.2
+},
+"torrazzacoste": {
+"comune": "Torrazza Coste",
+"pv": "PV",
+"km": 55.2
+},
+"travedonamonate": {
+"comune": "Travedona-Monate",
+"pv": "VA",
+"km": 55.2
+},
+"isolasantantonio": {
+"comune": "Isola Sant'Antonio",
+"pv": "AL",
+"km": 55.3
+},
+"sanpellegrinoterme": {
+"comune": "San Pellegrino Terme",
+"pv": "BG",
+"km": 55.4
+},
+"lierna": {
+"comune": "Lierna",
+"pv": "LC",
+"km": 55.4
+},
+"cuassoalmonte": {
+"comune": "Cuasso al Monte",
+"pv": "VA",
+"km": 55.4
+},
+"alzanoscrivia": {
+"comune": "Alzano Scrivia",
+"pv": "AL",
+"km": 55.5
+},
+"cenatesotto": {
+"comune": "Cenate Sotto",
+"pv": "BG",
+"km": 55.5
+},
+"blessagno": {
+"comune": "Blessagno",
+"pv": "CO",
+"km": 55.5
+},
+"salacomacina": {
+"comune": "Sala Comacina",
+"pv": "CO",
+"km": 55.5
+},
+"soresina": {
+"comune": "Soresina",
+"pv": "CR",
+"km": 55.5
+},
+"montecalvoversiggia": {
+"comune": "Montecalvo Versiggia",
+"pv": "PV",
+"km": 55.5
+},
+"taleggio": {
+"comune": "Taleggio",
+"pv": "BG",
+"km": 55.6
+},
+"sanfiorano": {
+"comune": "San Fiorano",
+"pv": "LO",
+"km": 55.6
+},
+"genivolta": {
+"comune": "Genivolta",
+"pv": "CR",
+"km": 55.7
+},
+"bogogno": {
+"comune": "Bogogno",
+"pv": "NO",
+"km": 55.7
+},
+"borgopriolo": {
+"comune": "Borgo Priolo",
+"pv": "PV",
+"km": 55.7
+},
+"gavirate": {
+"comune": "Gavirate",
+"pv": "VA",
+"km": 55.7
+},
+"taino": {
+"comune": "Taino",
+"pv": "VA",
+"km": 55.7
+},
+"pizzighettone": {
+"comune": "Pizzighettone",
+"pv": "CR",
+"km": 55.8
+},
+"maleo": {
+"comune": "Maleo",
+"pv": "LO",
+"km": 55.8
+},
+"cavaglietto": {
+"comune": "Cavaglietto",
+"pv": "NO",
+"km": 55.8
+},
+"comignago": {
+"comune": "Comignago",
+"pv": "NO",
+"km": 55.9
+},
+"pradalunga": {
+"comune": "Pradalunga",
+"pv": "BG",
+"km": 56
+},
+"selvino": {
+"comune": "Selvino",
+"pv": "BG",
+"km": 56
+},
+"briona": {
+"comune": "Briona",
+"pv": "NO",
+"km": 56
+},
+"palazzolosulloglio": {
+"comune": "Palazzolo sull'Oglio",
+"pv": "BS",
+"km": 56.1
+},
+"bardelloconmalgessoebregano": {
+"comune": "Bardello con Malgesso e Bregano",
+"pv": "VA",
+"km": 56.1
+},
+"valganna": {
+"comune": "Valganna",
+"pv": "VA",
+"km": 56.1
+},
+"cappellacantone": {
+"comune": "Cappella Cantone",
+"pv": "CR",
+"km": 56.2
+},
+"brinzio": {
+"comune": "Brinzio",
+"pv": "VA",
+"km": 56.2
+},
+"cenatesopra": {
+"comune": "Cenate Sopra",
+"pv": "BG",
+"km": 56.3
+},
+"roccafranca": {
+"comune": "Roccafranca",
+"pv": "BS",
+"km": 56.3
+},
+"dormelletto": {
+"comune": "Dormelletto",
+"pv": "NO",
+"km": 56.3
+},
+"cadrezzateconosmate": {
+"comune": "Cadrezzate con Osmate",
+"pv": "VA",
+"km": 56.3
+},
+"grumellodelmonte": {
+"comune": "Grumello del Monte",
+"pv": "BG",
+"km": 56.4
+},
+"centrovalleintelvi": {
+"comune": "Centro Valle Intelvi",
+"pv": "CO",
+"km": 56.4
+},
+"tremezzina": {
+"comune": "Tremezzina",
+"pv": "CO",
+"km": 56.4
+},
+"cassinavalsassina": {
+"comune": "Cassina Valsassina",
+"pv": "LC",
+"km": 56.4
+},
+"casalbeltrame": {
+"comune": "Casalbeltrame",
+"pv": "NO",
+"km": 56.4
+},
+"bracca": {
+"comune": "Bracca",
+"pv": "BG",
+"km": 56.5
+},
+"cremeno": {
+"comune": "Cremeno",
+"pv": "LC",
+"km": 56.5
+},
+"langosco": {
+"comune": "Langosco",
+"pv": "PV",
+"km": 56.5
+},
+"trescorebalneario": {
+"comune": "Trescore Balneario",
+"pv": "BG",
+"km": 56.7
+},
+"moggio": {
+"comune": "Moggio",
+"pv": "LC",
+"km": 56.7
+},
+"biandrate": {
+"comune": "Biandrate",
+"pv": "NO",
+"km": 56.7
+},
+"candialomellina": {
+"comune": "Candia Lomellina",
+"pv": "PV",
+"km": 56.7
+},
+"sartiranalomellina": {
+"comune": "Sartirana Lomellina",
+"pv": "PV",
+"km": 56.8
+},
+"cressa": {
+"comune": "Cressa",
+"pv": "NO",
+"km": 56.9
+},
+"vicolungo": {
+"comune": "Vicolungo",
+"pv": "NO",
+"km": 56.9
+},
+"golferenzo": {
+"comune": "Golferenzo",
+"pv": "PV",
+"km": 56.9
+},
+"codevilla": {
+"comune": "Codevilla",
+"pv": "PV",
+"km": 57
+},
+"zandobbio": {
+"comune": "Zandobbio",
+"pv": "BG",
+"km": 57.1
+},
+"mandellovitta": {
+"comune": "Mandello Vitta",
+"pv": "NO",
+"km": 57.1
+},
+"guazzora": {
+"comune": "Guazzora",
+"pv": "AL",
+"km": 57.2
+},
+"casalvolone": {
+"comune": "Casalvolone",
+"pv": "NO",
+"km": 57.2
+},
+"pasturo": {
+"comune": "Pasturo",
+"pv": "LC",
+"km": 57.3
+},
+"albino": {
+"comune": "Albino",
+"pv": "BG",
+"km": 57.4
+},
+"cavagliodagogna": {
+"comune": "Cavaglio d'Agogna",
+"pv": "NO",
+"km": 57.4
+},
+"algua": {
+"comune": "Algua",
+"pv": "BG",
+"km": 57.5
+},
+"santostefanolodigiano": {
+"comune": "Santo Stefano Lodigiano",
+"pv": "LO",
+"km": 57.5
+},
+"barzio": {
+"comune": "Barzio",
+"pv": "LC",
+"km": 57.6
+},
+"orzinuovi": {
+"comune": "Orzinuovi",
+"pv": "BS",
+"km": 57.7
+},
+"volpara": {
+"comune": "Volpara",
+"pv": "PV",
+"km": 57.7
+},
+"sangiovannibianco": {
+"comune": "San Giovanni Bianco",
+"pv": "BG",
+"km": 57.8
+},
+"faranovarese": {
+"comune": "Fara Novarese",
+"pv": "NO",
+"km": 57.8
+},
+"borgovercelli": {
+"comune": "Borgo Vercelli",
+"pv": "VC",
+"km": 57.8
+},
+"bellagio": {
+"comune": "Bellagio",
+"pv": "CO",
+"km": 58
+},
+"cornogiovine": {
+"comune": "Corno Giovine",
+"pv": "LO",
+"km": 58
+},
+"sanroccoalporto": {
+"comune": "San Rocco al Porto",
+"pv": "LO",
+"km": 58.1
+},
+"laino": {
+"comune": "Laino",
+"pv": "CO",
+"km": 58.2
+},
+"brebbia": {
+"comune": "Brebbia",
+"pv": "VA",
+"km": 58.2
+},
+"cocquiotrevisago": {
+"comune": "Cocquio-Trevisago",
+"pv": "VA",
+"km": 58.2
+},
+"chiari": {
+"comune": "Chiari",
+"pv": "BS",
+"km": 58.3
+},
+"fontanetodagogna": {
+"comune": "Fontaneto d'Agogna",
+"pv": "NO",
+"km": 58.3
+},
+"brusimpiano": {
+"comune": "Brusimpiano",
+"pv": "VA",
+"km": 58.3
+},
+"castellocabiaglio": {
+"comune": "Castello Cabiaglio",
+"pv": "VA",
+"km": 58.3
+},
+"aviatico": {
+"comune": "Aviatico",
+"pv": "BG",
+"km": 58.4
+},
+"breme": {
+"comune": "Breme",
+"pv": "PV",
+"km": 58.4
+},
+"marzio": {
+"comune": "Marzio",
+"pv": "VA",
+"km": 58.4
+},
+"altavalleintelvi": {
+"comune": "Alta Valle Intelvi",
+"pv": "CO",
+"km": 58.5
+},
+"campioneditalia": {
+"comune": "Campione d'Italia",
+"pv": "CO",
+"km": 58.5
+},
+"bederovalcuvia": {
+"comune": "Bedero Valcuvia",
+"pv": "VA",
+"km": 58.5
+},
+"gandosso": {
+"comune": "Gandosso",
+"pv": "BG",
+"km": 58.6
+},
+"ponna": {
+"comune": "Ponna",
+"pv": "CO",
+"km": 58.6
+},
+"gragnanotrebbiense": {
+"comune": "Gragnano Trebbiense",
+"pv": "PC",
+"km": 58.6
+},
+"besozzo": {
+"comune": "Besozzo",
+"pv": "VA",
+"km": 58.6
+},
+"castellicalepio": {
+"comune": "Castelli Calepio",
+"pv": "BG",
+"km": 58.7
+},
+"griante": {
+"comune": "Griante",
+"pv": "CO",
+"km": 58.7
+},
+"casalmorano": {
+"comune": "Casalmorano",
+"pv": "CR",
+"km": 58.7
+},
+"gatticoveruno": {
+"comune": "Gattico-Veruno",
+"pv": "NO",
+"km": 58.7
+},
+"angera": {
+"comune": "Angera",
+"pv": "VA",
+"km": 58.7
+},
+"recetto": {
+"comune": "Recetto",
+"pv": "NO",
+"km": 58.8
+},
+"sillavengo": {
+"comune": "Sillavengo",
+"pv": "NO",
+"km": 58.8
+},
+"retorbido": {
+"comune": "Retorbido",
+"pv": "PV",
+"km": 58.8
+},
+"costaserina": {
+"comune": "Costa Serina",
+"pv": "BG",
+"km": 58.9
+},
+"castelcovati": {
+"comune": "Castelcovati",
+"pv": "BS",
+"km": 58.9
+},
+"gambarana": {
+"comune": "Gambarana",
+"pv": "PV",
+"km": 58.9
+},
+"villachiara": {
+"comune": "Villachiara",
+"pv": "BS",
+"km": 59
+},
+"arona": {
+"comune": "Arona",
+"pv": "NO",
+"km": 59
+},
+"orino": {
+"comune": "Orino",
+"pv": "VA",
+"km": 59.1
+},
+"prarolo": {
+"comune": "Prarolo",
+"pv": "VC",
+"km": 59.2
+},
+"castelnuovoscrivia": {
+"comune": "Castelnuovo Scrivia",
+"pv": "AL",
+"km": 59.3
+},
+"masciagoprimo": {
+"comune": "Masciago Primo",
+"pv": "VA",
+"km": 59.3
+},
+"comezzanocizzago": {
+"comune": "Comezzano-Cizzago",
+"pv": "BS",
+"km": 59.4
+},
+"entratico": {
+"comune": "Entratico",
+"pv": "BG",
+"km": 59.5
+},
+"annicco": {
+"comune": "Annicco",
+"pv": "CR",
+"km": 59.5
+},
+"suardi": {
+"comune": "Suardi",
+"pv": "PV",
+"km": 59.5
+},
+"ispra": {
+"comune": "Ispra",
+"pv": "VA",
+"km": 59.5
+},
+"azzanello": {
+"comune": "Azzanello",
+"pv": "CR",
+"km": 59.6
+},
+"borgorattomormorolo": {
+"comune": "Borgoratto Mormorolo",
+"pv": "PV",
+"km": 59.6
+},
+"esinolario": {
+"comune": "Esino Lario",
+"pv": "LC",
+"km": 59.7
+},
+"azzio": {
+"comune": "Azzio",
+"pv": "VA",
+"km": 59.7
+},
+"cuvio": {
+"comune": "Cuvio",
+"pv": "VA",
+"km": 59.7
+},
+"ranciovalcuvia": {
+"comune": "Rancio Valcuvia",
+"pv": "VA",
+"km": 59.7
+},
+"pezzana": {
+"comune": "Pezzana",
+"pv": "VC",
+"km": 59.7
+},
+"villata": {
+"comune": "Villata",
+"pv": "VC",
+"km": 59.8
+},
+"pontecurone": {
+"comune": "Pontecurone",
+"pv": "AL",
+"km": 59.9
+},
+"sannazzarosesia": {
+"comune": "San Nazzaro Sesia",
+"pv": "NO",
+"km": 59.9
+},
+"introbio": {
+"comune": "Introbio",
+"pv": "LC",
+"km": 60
+},
+"sizzano": {
+"comune": "Sizzano",
+"pv": "NO",
+"km": 60
+}
+}

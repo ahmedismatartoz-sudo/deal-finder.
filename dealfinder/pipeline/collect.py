@@ -258,7 +258,7 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
                    (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
                             {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
-    elif mode in ("milano_full", "full_as", "full_sub", "sub_extra"):
+    elif mode in ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra"):
         # Milano entro 100 km, TUTTO: AutoScout24 privati (dal 2007, max 180.000 km) in fasce strette fino a
         # 60.000 €, poi Subito provincia per provincia (MI, MB, VA, CO, BG, CR, LO, LC, PV) tutte le pagine.
         os.environ["ANNO_MINIMO"] = os.environ.get("FULL_ANNO", "2007")
@@ -282,20 +282,31 @@ def run(mode: str) -> Counter:
                    (sub, {"region": settings.region, "provinces": [k for k, v in PROVINCE_CODES.items() if v in prov_full],
                           "max_price": 60000, "max_pages": 0, "price_bands": bands,
                           "band_pages": int(os.environ.get("FULL_PAGINE", "100"))})]
-        if mode == "full_as":
+        if mode in ("full_as", "as_extra"):
             sources = sources[:1]
         elif mode == "full_sub":
             sources = sources[1:]
-        elif mode == "sub_extra":
-            # Brescia (mai fatta) e di nuovo Como, Lecco e Bergamo, tutta la provincia, fino a 100.000 €
+        if mode in ("sub_extra", "sub_extra2"):
+            # sub_extra: Brescia (mai fatta) e di nuovo Como, Lecco e Bergamo, tutta la provincia, fino a 100.000 €.
+            # sub_extra2: comuni entro 60 km in Piemonte (Novara, Alessandria, Vercelli) ed Emilia (Piacenza): si
+            # leggono le province e si tengono solo i comuni della lista (zone.comune_ok)
             bande = bands[:-1] + [(40000, 60000), (60000, 100000)]
-            gruppi = [("lombardia", os.environ.get("SUB_EXTRA_PROVINCE", "BS,CO,LC,BG").split(","))]
+            if mode == "sub_extra":
+                gruppi = [("lombardia", os.environ.get("SUB_EXTRA_PROVINCE", "BS,CO,LC,BG").split(","))]
+            else:
+                gruppi = [("piemonte", ["NO", "AL", "VC"]), ("emilia-romagna", ["PC"])]
             sources = []
             for reg, prov in gruppi:
                 s2 = SubitoCollector(proxy=settings.scraper_proxy)
                 s2.min_delay_s, s2.max_delay_s = sub.min_delay_s, sub.max_delay_s
                 sources.append((s2, {"region": reg, "provinces": prov, "max_price": 100000, "max_pages": 0,
                                      "price_bands": bande, "band_pages": int(os.environ.get("FULL_PAGINE", "100"))}))
+        if mode == "as_extra":
+            # AutoScout24 privati entro 60 km: nuovi soprattutto i comuni di Novara, Piacenza, Alessandria, Vercelli
+            os.environ.pop("FULL_CONCESSIONARI", None)
+            sources = [(_Centri(asc, [["20121", os.environ.get("AS_EXTRA_RAGGIO", "60")]],
+                                {"massiva": True, "min_price": 300, "max_price": 100000, "step": 1000,
+                                 "venditori": [("P", "privato")]}), {})]
     elif mode == "modena_inc":
         # Incidentate di Modena e dintorni (MODENA_RAGGIO km), dal MODENA_ANNO in poi: AutoScout24 solo danneggiate
         # (privati e commercianti), Subito Emilia (MO, RE, BO, PR, FE) le più recenti e la ricerca per parole.
@@ -497,7 +508,7 @@ def run(mode: str) -> Counter:
                         stats[f"{collector.source}:scartato_dati"] += 1
                         log.warning("annuncio %s non normalizzato: %r", listing.url, e)
                         continue
-                    if mode in ("milano_full", "full_as", "full_sub", "sub_extra"):
+                    if mode in ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra"):
                         motivo = _fuori_regole_raccolta(listing)
                         if motivo == "regole":
                             stats[f"{listing.source}:fuori_regole"] += 1
@@ -523,6 +534,10 @@ def run(mode: str) -> Counter:
                         if listing.province and not listing.region:
                             from ..core.normalize import PROVINCE_REGION
                             listing.region = PROVINCE_REGION.get(listing.province)
+                    from ..zone import comune_ok
+                    if not comune_ok(listing.province, listing.city):
+                        stats[f"{listing.source}:fuori_60km"] += 1
+                        continue
                     try:
                         lid, event = upsert_listing(conn, listing)
                     except Exception as e:          # un annuncio con dati assurdi non ferma la raccolta
@@ -728,7 +743,8 @@ if __name__ == "__main__":
         if not _due(job_filtra, int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
             log.info("FILTRA già fatto nelle ultime ore: niente da fare")
             sys.exit(0)
-        attesa = [j for j in ("sub_meta", "sub_extra") if j in os.environ.get("LAVORO_SUBITO", "")]
+        attesa = [j for j in ("sub_meta", "sub_extra", "sub_extra2", "as_extra")
+                  if j in os.environ.get("LAVORO_SUBITO", "").split(";")]
         time.sleep(120 if attesa else 0)        # il tempo che la raccolta registri il suo inizio
         for _ in range(120 if attesa else 0):   # prima finisce Subito (prezzi e annunci più completi)
             if not any(_in_corso(f"collect:{j}", 3) for j in attesa):
@@ -780,7 +796,7 @@ if __name__ == "__main__":
         from . import spazio
         log.info("SPAZIO fine: %s", spazio.run())
         sys.exit(0)
-    if mode in ("full_as", "full_sub", "sub_meta", "sub_extra"):
+    if mode in ("full_as", "full_sub", "sub_meta", "sub_extra", "sub_extra2", "as_extra"):
         # metà della raccolta completa (AutoScout24 o Subito), si possono far girare insieme.
         # sub_meta: Subito di nuovo, oggi stesso, con la metà migliore degli annunci senza numero
         from .ciclo import _due
@@ -788,7 +804,7 @@ if __name__ == "__main__":
         if _due(f"collect:{mode}", int(os.environ.get("FULL_ORE", "18"))):
             os.environ["COLLECT_JOB"] = f"collect:{mode}"
             run("full_sub" if mode == "sub_meta" else mode)
-            if mode == "sub_extra":
+            if mode in ("sub_extra", "sub_extra2", "as_extra") and os.environ.get("ALLENA_DOPO") == mode:
                 from ..pricing.train import run as train_run
                 log.info("SUB_EXTRA modello prezzi: %s", train_run(force=True))
         sys.exit(0)
