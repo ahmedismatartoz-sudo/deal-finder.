@@ -897,8 +897,10 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     for g in gruppi.values():
         g.sort(key=lambda it: -scovo.guadagno_minimo(it))
         meta.update(it["id"] for it in g[:round(len(g) * quota)])
+    # Facebook: si tengono tutte (si contatta il venditore in chat su Marketplace), FB_SENZA_NUMERO=1
+    fb_tutte = os.environ.get("FB_SENZA_NUMERO", "1") == "1"
     tenute = [it for it in items if it.get("fonte") == "AutoScout24" or _tel_cache.get(it["id"], False)
-              or it["id"] in meta]
+              or it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")]
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
