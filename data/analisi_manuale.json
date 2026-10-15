@@ -188025,5 +188025,816 @@
   "nota": "Foto senza danni visibili, con barre portatutto. GLB 200d 4Matic AMG 7 posti 2024 35.000 km: simili a 40.000-44.000, rivendita prudente 39.000; diesel senza margine.",
   "controlli": [],
   "aggiorna": true
+ },
+ {
+  "id": 430659,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 610,
+  "rivendita_prudente": 1650,
+  "nota": "Meriva 1.7 CDTI 2007 136.000 km, foto ok senza danni visibili; simili a 1.700-2.000, rivendita prudente 1.650. Diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 389649,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -40,
+  "rivendita_prudente": 1850,
+  "nota": "Meriva 1.4 2008 172.000 km, foto in piazzale con altre auto (probabile commerciante); simili a 2.000-2.300, rivendita 1.850: margine nullo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50031,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -41,
+  "rivendita_prudente": 1849,
+  "nota": "i10 2007 165.000 km, sana ma foto in piazzale tipo commerciante; simili a 2.000-2.300, rivendita 1.849: margine nullo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430661,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1560,
+  "rivendita_prudente": 3700,
+  "nota": "Twizy 2012 55.000 km, foto in garage pulita senza danni; simili a 3.800-4.800 con batteria di proprietà, rivendita prudente 3.700 (mercato modello 5.656 gonfiato). Resta solo se la batteria è di proprietà.",
+  "controlli": [
+   "batteria di proprietà o a noleggio",
+   "versione 45 o 80 (patente richiesta)",
+   "stato batteria e autonomia",
+   "libretto e revisione"
+  ],
+  "aggiorna": true,
+  "audit": "fil5",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 15342,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 2400,
+  "nota": "Fiesta 1.4 TDCi 2009: il testo dice 250.000 km totali di scocca (motore sostituito), oltre 180.000 km; diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 130391,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 254,
+  "rivendita_prudente": 2394,
+  "nota": "Idea 1.3 Mjt 2010 180.000 km, foto ok; simili a 2.500-2.800, rivendita 2.394: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 33998,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 604,
+  "rivendita_prudente": 2844,
+  "nota": "Le foto mostrano una Renault Scenic III, non una Kangoo; km 2012 non credibili e prezzo nel testo 2.500 diverso: dati sbagliati, conto non affidabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50385,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 339,
+  "rivendita_prudente": 2629,
+  "nota": "Corsa 1.0 2008 120.000 km, sana; simili a 2.800-3.100, rivendita 2.629: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50297,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 421,
+  "rivendita_prudente": 2761,
+  "nota": "Fiesta Ghia 2007 125.000 km, sana; simili a 2.900-3.200, rivendita 2.761: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50261,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 248,
+  "rivendita_prudente": 2588,
+  "nota": "Fiesta 1.2 2007 135.000 km, sana; simili a 2.700-3.000, rivendita 2.588: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429945,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 239,
+  "rivendita_prudente": 2579,
+  "nota": "Ypsilon 1.2 2009 171.000 km, ben tenuta; simili a 2.700-3.000, rivendita 2.579: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 130639,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -87,
+  "rivendita_prudente": 2253,
+  "nota": "Ka 1.2 2009 170.000 km, sana; simili a 2.400-2.700, rivendita 2.253: margine negativo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 413549,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 381,
+  "rivendita_prudente": 2821,
+  "nota": "Unica foto è un'immagine di catalogo, non l'auto reale: annuncio non verificabile.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50398,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 211,
+  "rivendita_prudente": 2651,
+  "nota": "Nessuna foto: scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50220,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 2700,
+  "nota": "Zafira 1.7 CDTI 2010 150.000 km, sana; simili a 2.800-3.200, rivendita 2.700: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 10947,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 184,
+  "rivendita_prudente": 2724,
+  "nota": "Ka 1.3 TDCi 2009 150.000 km, sana ma targa BY non coerente col 2009; simili a 2.800-3.100, rivendita 2.724: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50236,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 225,
+  "rivendita_prudente": 2815,
+  "nota": "Musa 1.4 2008 156.000 km, sana; simili a 2.900-3.200, rivendita 2.815: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50732,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 195,
+  "rivendita_prudente": 2835,
+  "nota": "Grande Punto 1.2 2007 85.000 km, sana; simili a 3.000-3.300, rivendita 2.835: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 428023,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 639,
+  "rivendita_prudente": 3279,
+  "nota": "Clio 1.2 GPL 2010 140.000 km, sana; simili a 3.400-3.800, rivendita 3.279: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430666,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 586,
+  "rivendita_prudente": 3226,
+  "nota": "Corsa 1.2 2010 132.000 km, sana; simili a 3.400-3.800, rivendita 3.226: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50882,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 295,
+  "rivendita_prudente": 2935,
+  "nota": "Zafira metano 2009: foto sono screenshot di un vecchio annuncio del 2022, non verificabili; margine comunque sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 10942,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 203,
+  "rivendita_prudente": 2843,
+  "nota": "Fiesta 1.2 2010 180.000 km, sana; simili a 3.000-3.300, rivendita 2.843: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50907,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 499,
+  "rivendita_prudente": 3339,
+  "nota": "Seicento con targa BT (circa 2001), non 2007 come dichiarato: immatricolata prima del 2007.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50700,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 347,
+  "rivendita_prudente": 3187,
+  "nota": "Panda 1.2 2007 160.000 km con gancio traino, sana; simili a 3.300-3.600, rivendita 3.187: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50678,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 261,
+  "rivendita_prudente": 3101,
+  "nota": "Ypsilon 1.2 2011 180.000 km, interni sporchi; simili a 3.200-3.500, rivendita 3.101: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50445,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 379,
+  "rivendita_prudente": 3219,
+  "nota": "Fiesta 1.4 TDCi 2011 158.000 km, sana; simili a 3.300-3.700, rivendita 3.219: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 428025,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 336,
+  "rivendita_prudente": 3176,
+  "nota": "Clio 1.5 dCi 2010 165.000 km, sana; simili a 3.300-3.600, rivendita 3.176: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 50540,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 300,
+  "rivendita_prudente": 3140,
+  "nota": "i20 1.6 CRDi 2010 173.000 km, sana; simili a 3.200-3.500, rivendita 3.140: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 131881,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 221,
+  "rivendita_prudente": 3111,
+  "nota": "Picanto 1.1 2007 68.700 km, sana; simili a 3.200-3.500, rivendita 3.111: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51296,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 223,
+  "rivendita_prudente": 3163,
+  "nota": "Clio Storia GPL 2009 118.000 km, sana; simili a 3.200-3.600, rivendita 3.163: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 106721,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore usato",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": -40,
+  "rivendita_prudente": 3000,
+  "nota": "Ammaccatura leggera sul muso visibile in foto, per il resto Panda in ordine. Panda 1.2 2008 165.000 km: su Subito simili a 3.000-3.500, rivendita prudente 3.000; margine troppo basso.",
+  "controlli": [
+   "ammaccatura sul muso",
+   "stato distribuzione"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51211,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 3000,
+  "nota": "Ypsilon azzurra sana nelle foto, senza descrizione. Ypsilon 2011 167.000 km: su AutoScout simili a 3.000-3.500, rivendita prudente 3.000; margine troppo basso.",
+  "controlli": [
+   "km reali",
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51093,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 3200,
+  "nota": "i10 nera sana nelle foto. i10 1.0 2011 135.000 km: simili a 3.300-3.800, rivendita prudente 3.200; margine troppo basso.",
+  "controlli": [
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51390,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 3200,
+  "nota": "Antara fotografata in salone di concessionario (auto di commerciante) e diesel 179.000 km. Simili a 3.500-4.000, rivendita prudente 3.200; scartata per venditore professionale e margine.",
+  "controlli": [
+   "venditore professionale"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 413550,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 3100,
+  "nota": "Corsa diesel bianca sana nelle foto. Corsa 1.3 CDTI 2011 150.000 km: simili a 3.300-3.800, rivendita prudente 3.100; diesel con margine stretto.",
+  "controlli": [
+   "FAP"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51292,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -40,
+  "rivendita_prudente": 2900,
+  "nota": "Astra SW grigia sana nelle foto. Astra SW 1.9 CDTI automatica 2010 148.000 km: simili a 3.000-3.500 e poco richiesta, rivendita prudente 2.900; diesel con margine stretto.",
+  "controlli": [
+   "cambio automatico"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 41523,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -40,
+  "rivendita_prudente": 2900,
+  "nota": "Idea nera in buono stato nelle foto, numero presente. Idea 1.3 Multijet 2010 115.000 km: simili a 3.000-3.500, rivendita prudente 2.900; diesel con margine stretto.",
+  "controlli": [
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 50998,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 3300,
+  "nota": "Una sola foto, Panda grigia senza danni visibili. Panda 1.1 2008 113.000 km: simili a 3.300-3.800, rivendita prudente 3.300; margine troppo basso.",
+  "controlli": [
+   "altre foto",
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51002,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 3200,
+  "nota": "Grande Punto blu sana nelle foto. Grande Punto 1.4 2009 126.000 km: simili a 3.300-3.800, rivendita prudente 3.200; margine troppo basso.",
+  "controlli": [
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51385,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 3100,
+  "nota": "Punto Evo nera senza danni evidenti, foto in controluce. Punto Evo 1.4 2009 160.000 km: simili a 3.200-3.700, rivendita prudente 3.100; margine troppo basso.",
+  "controlli": [
+   "carrozzeria lato dx"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 3298,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -140,
+  "rivendita_prudente": 2900,
+  "nota": "Picanto GPL grigia sana; targa anteriore e posteriore sembrano diverse tra le foto. Picanto 2008 99.000 km: simili a 3.000-3.300, rivendita prudente 2.900; margine troppo basso.",
+  "controlli": [
+   "targhe coerenti",
+   "bombola GPL"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51206,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 170,
+  "rivendita_prudente": 3300,
+  "nota": "Ypsilon bianca/nera sana, interni puliti. Ypsilon 1.3 Multijet 2011 163.000 km: simili a 3.500-4.000, rivendita prudente 3.300; diesel con margine stretto.",
+  "controlli": [
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 323064,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 3400,
+  "nota": "Panda metano nera sana nelle foto. Panda Natural Power 2009 106.000 km: simili a 3.500-4.000, rivendita prudente 3.400; margine troppo basso.",
+  "controlli": [
+   "revisione bombole metano"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 430670,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 460,
+  "rivendita_prudente": 3600,
+  "nota": "Corsa GPL grigia sana nelle foto. Corsa 1.2 GPL 2010 100.000 km: simili a 3.800-4.300, rivendita prudente 3.600; margine 460 sotto soglia.",
+  "controlli": [
+   "impianto GPL"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52010,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 3200,
+  "nota": "Ka grigia in ordine nelle foto. Ka 1.3 2009 115.000 km: simili a 3.300-3.700, rivendita prudente 3.200; margine troppo basso.",
+  "controlli": [
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 429584,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 3200,
+  "nota": "Panda rossa sana, coprisedili. Panda 1.1 2010 136.000 km: simili a 3.300-3.800, rivendita prudente 3.200; margine troppo basso.",
+  "controlli": [
+   "sedili sotto i coprisedili"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51945,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -140,
+  "rivendita_prudente": 3000,
+  "nota": "C4 bianca sana nelle foto. C4 1.6 VTi 2011 142.000 km: poco richiesta, simili a 3.200-3.700, rivendita prudente 3.000; margine troppo basso.",
+  "controlli": [
+   "motore THP/VTi consumo olio"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51577,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -240,
+  "rivendita_prudente": 2900,
+  "nota": "Fiorino furgone con scritte pubblicitarie di un'azienda: furgone da lavoro, non auto da rivendere a privati. Rivendita prudente 2.900; scartato.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 51976,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -40,
+  "rivendita_prudente": 3100,
+  "nota": "Yaris grigia sana, interni e bagagliaio puliti. Yaris 1.3 MMT 2008 150.000 km: simili a 3.300-3.700, il cambio robotizzato frena la vendita, rivendita prudente 3.100; margine troppo basso.",
+  "controlli": [
+   "cambio robotizzato MMT"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 24584,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -140,
+  "rivendita_prudente": 3000,
+  "nota": "Ypsilon bianca sana, interni in ordine, numero presente. Ypsilon 1.2 2011 163.000 km: simili a 3.000-3.500, rivendita prudente 3.000; margine troppo basso.",
+  "controlli": [
+   "km reali"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51999,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 3300,
+  "nota": "DS3 bianca sana nelle foto. DS3 1.4 HDi 2013 177.000 km: simili a 3.500-4.000, rivendita prudente 3.300; diesel con margine stretto.",
+  "controlli": [
+   "km alti"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 51893,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -140,
+  "rivendita_prudente": 3000,
+  "nota": "Polo nera senza danni evidenti. Polo 1.4 TDI 2008 139.000 km: simili a 3.000-3.500, rivendita prudente 3.000; diesel con margine stretto.",
+  "controlli": [
+   "tagliandi"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 52048,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -140,
+  "rivendita_prudente": 3000,
+  "nota": "Punto Evo grigia sana nelle foto. Punto Evo 1.3 Mjt 2013 175.000 km: simili a 3.000-3.500, rivendita prudente 3.000; diesel con margine stretto.",
+  "controlli": [
+   "DPF"
+  ],
+  "aggiorna": true
  }
 ]
