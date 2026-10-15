@@ -87,11 +87,19 @@ def run(q: dict | None = None) -> list[dict]:
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS}, stage_reason FROM listings
                 WHERE status='attivo' AND make=%s AND model=%s AND province = ANY(%s)
-                  AND COALESCE(seller_type,'privato') <> 'commerciante' AND price_eur >= 1000
+                  AND COALESCE(seller_type,'privato') <> 'commerciante' AND price_eur BETWEEN %s AND %s
                   AND mileage_km IS NOT NULL AND mileage_km <= %s
-                  AND (year IS NULL OR year >= %s)
+                  AND (year IS NULL OR year BETWEEN %s AND %s)
+                  AND (%s::text[] IS NULL OR fuel = ANY(%s::text[]))
                   AND last_seen_at > now() - interval '10 days'""",
-            (marca, modello, prov, min(int(q.get("km_max") or 10**7), scovo.KM_MASSIMO), int(q.get("anno_min") or 2007))).fetchall()
+            (marca, modello, prov, int(q.get("prezzo_min") or 1000), int(q.get("prezzo_max") or 10**7),
+             min(int(q.get("km_max") or 10**7), scovo.KM_MASSIMO), int(q.get("anno_min") or 2007),
+             int(q.get("anno_max") or 2100), q.get("carburanti"), q.get("carburanti"))).fetchall()
+        if q.get("telefono"):
+            # solo annunci con un numero da chiamare: AutoScout24 lo mostra sempre, gli altri se scritto nel testo
+            rows = [r for r in rows if r["source"] == "autoscout24" or scovo.RE_MOBILE.search(
+                f"{r.get('title') or ''} {r.get('description') or ''}") or scovo.RE_LANDLINE.search(
+                f"{r.get('title') or ''} {r.get('description') or ''}")]
         log.info("CERCA_TROVATI %d annunci %s %s", len(rows), marca, modello)
         model = load_active(conn)
         markets = {}
@@ -104,11 +112,12 @@ def run(q: dict | None = None) -> list[dict]:
             l.damage_class = "nessuno"
             v = value_listing(l, markets[key])
             l.damage_class = saved
-            if weak(v) and not apply_model(v, l, model):
+            if weak(v) and not apply_model(v, l, model) and not q.get("tutte"):
                 continue
-            mercato = v.private_median or v.resale_median_private or v.resale_median
-            if not mercato:
+            mercato = v.private_median or v.resale_median_private or v.resale_median or r.get("model_p50") or 0
+            if not mercato and not q.get("tutte"):
                 continue
+            mercato = mercato or l.price_eur
             guad = round(mercato * (1 - scovo.SCONTO_DEFAULT / 100)) - l.price_eur - sum(scovo.COSTI_FISSI.values())
             out.append({"id": r["id"], "fonte": r["source"], "url": r["url"], "titolo": l.title,
                         "descrizione": (l.description or "")[:700], "versione": l.version_raw, "anno": l.year,
@@ -116,7 +125,8 @@ def run(q: dict | None = None) -> list[dict]:
                         "provincia": l.province, "prezzo": l.price_eur, "mercato": mercato,
                         "sconto_pct": round(100 * (1 - l.price_eur / mercato), 1), "guadagno_prima_ricambi": guad,
                         "confronti": v.n_comparables, "danno": r.get("damage_class"), "esito": r.get("stage_reason"),
-                        "segnali": list(v.fraud_flags or [])})
+                        "segnali": list(v.fraud_flags or []),
+                        "tel": scovo.find_phone(f"{l.title or ''} {l.description or ''}")})
         out.sort(key=lambda x: -x["guadagno_prima_ricambi"])
         top = out[: int(q.get("quante") or 15) * 2]
         full = {r["id"]: r for r in rows}
