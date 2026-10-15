@@ -106,10 +106,49 @@ def report_mercato(dal: str) -> list:
     return []
 
 
+def report_pulito(dal: str, as_da: str, as_a: str) -> list:
+    """Numeri senza doppioni né annunci vecchi: Subito = visti per la prima volta da "dal";
+    AutoScout24 = solo quelli letti nella raccolta 'online da 2 giorni' (as_da..as_a). Solo privati, solo zona."""
+    from ..zone import MILANO
+    z = list(MILANO)
+    base = """(SELECT * FROM listings WHERE province = ANY(%(z)s) AND COALESCE(seller_type,'') <> 'commerciante' AND (
+                 (source='subito' AND first_seen_at >= %(dal)s) OR
+                 (source='autoscout24' AND last_seen_at BETWEEN %(as_da)s AND %(as_a)s AND first_seen_at >= now() - interval '3 days'))) n"""
+    par = {"z": z, "dal": dal, "as_da": as_da, "as_a": as_a}
+    with connect() as conn:
+        q = lambda sql: [dict(r) for r in conn.execute(sql.replace("NUOVI", base), par).fetchall()]
+        out = {
+            "per_fonte": q("SELECT source, count(*) n FROM NUOVI GROUP BY 1"),
+            "commercianti_subito": q("""SELECT count(*) n FROM listings WHERE source='subito' AND first_seen_at >= %(dal)s
+                                        AND province = ANY(%(z)s) AND seller_type='commerciante'"""),
+            "per_provincia": q("SELECT province, count(*) n FROM NUOVI GROUP BY 1 ORDER BY 2 DESC"),
+            "per_fascia": q("""SELECT CASE WHEN price_eur < 1500 THEN 'a <1.500' WHEN price_eur < 3000 THEN 'b 1.500-3.000'
+                               WHEN price_eur < 6000 THEN 'c 3-6k' WHEN price_eur < 12000 THEN 'd 6-12k'
+                               WHEN price_eur < 20000 THEN 'e 12-20k' ELSE 'f >20k' END f, count(*) n FROM NUOVI GROUP BY 1 ORDER BY 1"""),
+            "carburante": q("SELECT COALESCE(fuel,'?') f, count(*) n FROM NUOVI GROUP BY 1 ORDER BY 2 DESC"),
+            "marche": q("SELECT make, count(*) n FROM NUOVI GROUP BY 1 ORDER BY 2 DESC LIMIT 15"),
+            "stima": q("SELECT prescreen, count(*) n FROM NUOVI GROUP BY 1"),
+            "ribassi_veri": q("""SELECT count(*) n, round(avg(prima - dopo)) calo_medio FROM (
+                                   SELECT pe.listing_id, pe.price_eur dopo,
+                                          lag(pe.price_eur) OVER (PARTITION BY pe.listing_id ORDER BY pe.at) prima, pe.at
+                                   FROM price_events pe JOIN listings l ON l.id=pe.listing_id
+                                   WHERE l.province = ANY(%(z)s) AND COALESCE(l.seller_type,'') <> 'commerciante') x
+                                 WHERE at >= %(dal)s AND prima IS NOT NULL AND dopo < prima AND prima - dopo < prima * 0.5"""),
+            "spariti_confermati": q("""SELECT source, count(*) n FROM listings WHERE disappeared_at >= %(dal)s
+                                       AND province = ANY(%(z)s) AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1"""),
+        }
+    for k, v in out.items():
+        log.info("REPORT2 %s %s", k, json.dumps(v, ensure_ascii=False, default=str))
+    log.info("REPORT2_FINE")
+    return []
+
+
 def run(q: dict | None = None) -> list[dict]:
     q = q or json.loads(os.environ.get("CERCA_JSON") or "{}")
     if q.get("audit"):
         return audit(int(q.get("min_guadagno") or 2500), float(q.get("rapporto") or 1.6))
+    if q.get("report2"):
+        return report_pulito(q["report2"], q["as_da"], q["as_a"])
     if q.get("report"):
         return report_mercato(q["report"])
     if q.get("sito"):
