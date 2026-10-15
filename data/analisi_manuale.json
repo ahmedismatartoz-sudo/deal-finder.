@@ -188836,5 +188836,2541 @@
    "DPF"
   ],
   "aggiorna": true
+ },
+ {
+  "id": 430767,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 900,
+  "guadagno_finale": 360,
+  "nota": "Polo 9N immatricolata nel 2003 (non 2019) con motore guasto e non marciante: prima del 2007 e guasto grave, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430970,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "sedile_guida",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   },
+   {
+    "part": "marmitta",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "marmitta",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "rivestimento sedile",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "riserva lavori non specificati",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 260,
+  "ricambi_max": 700,
+  "rivendita_prudente": 2500,
+  "guadagno_finale": 860,
+  "nota": "118d 2007 Euro 4 diesel con 141.000 km, sedile strappato e lavori vari: diesel Euro 4 non circola a Milano, simili a 2.800-3.200, rivendita prudente 2.500. Margine sotto la soglia diesel, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430772,
+  "esito": "incidentata",
+  "danno": "medio",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": "sx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "cofano usato",
+    "low": 100,
+    "high": 200
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro sx",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "parafango sx",
+    "low": 50,
+    "high": 120
+   },
+   {
+    "label": "radiatori",
+    "low": 120,
+    "high": 300
+   },
+   {
+    "label": "traversa/rinforzo",
+    "low": 60,
+    "high": 150
+   },
+   {
+    "label": "griglia e staffe",
+    "low": 30,
+    "high": 80
+   }
+  ],
+  "ricambi_min": 500,
+  "ricambi_max": 1200,
+  "rivendita_prudente": 5000,
+  "guadagno_finale": 2660,
+  "nota": "Polo 1.2 TDI 2013 116.000 km con frontale sinistro schiacciato (cofano, faro, paraurti), airbag non esplosi da testo: sana simili a 5.500-6.500, ma diesel Euro 5, rivendita prudente 5.000. Margine ampio per carrozzieri.",
+  "controlli": [
+   "verificare longherone e traversa sx",
+   "controllare radiatori e ventola",
+   "verificare che airbag non siano in avaria (spia)"
+  ],
+  "aggiorna": true,
+  "strutturale": false,
+  "airbag": false,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430975,
+  "esito": "incidentata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "faro_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   },
+   {
+    "part": "sospensione_anteriore",
+    "side": "dx",
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag+centralina+pretensionatori",
+    "low": 900,
+    "high": 2500
+   },
+   {
+    "label": "paraurti anteriore",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "faro dx",
+    "low": 80,
+    "high": 200
+   },
+   {
+    "label": "radiatori",
+    "low": 100,
+    "high": 250
+   },
+   {
+    "label": "braccio/sospensione ant. dx",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 1260,
+  "ricambi_max": 3450,
+  "rivendita_prudente": 5800,
+  "guadagno_finale": 1210,
+  "nota": "Tipo berlina 1.4 2016 135.000 km uscita di strada, airbag frontali esplosi e frontale dx danneggiato: sana simili a 6.500-7.500, rivendita prudente 5.800. Margine appena sopra soglia, solo per carrozzieri.",
+  "controlli": [
+   "controllare sottoscocca e geometria (uscita di strada)",
+   "verificare cruscotto e cinture",
+   "verificare che sia vendibile per circolazione e non solo ricambi"
+  ],
+  "aggiorna": true,
+  "strutturale": false,
+  "airbag": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 432220,
+  "esito": "opportunita",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "frizione",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "kit frizione",
+    "low": 120,
+    "high": 200
+   },
+   {
+    "label": "guarnizione perdita olio",
+    "low": 20,
+    "high": 60
+   }
+  ],
+  "ricambi_min": 140,
+  "ricambi_max": 260,
+  "rivendita_prudente": 3700,
+  "guadagno_finale": 1800,
+  "nota": "Picanto 1.1 2010 con soli 45.000 km, piccoli graffi e piccola perdita d'olio: simili a 4.000-4.500, rivendita prudente 3.700. Auto richiesta, margine buono.",
+  "controlli": [
+   "origine perdita olio",
+   "stato frizione",
+   "km reali con storico revisioni"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430775,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "braccetti_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "braccetti anteriori",
+    "low": 80,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 80,
+  "ricambi_max": 150,
+  "rivendita_prudente": 2400,
+  "guadagno_finale": 610,
+  "nota": "147 1.6 2007 158.000 km in ordine nelle foto, braccetti da rifare: simili a 2.500-3.000, rivendita prudente 2.400. Margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430423,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2700,
+  "guadagno_finale": 660,
+  "nota": "147 1.6 Black Line 2008 122.000 km, foto pulite: simili a 2.800-3.300, rivendita prudente 2.700. Margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431015,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "fiancata",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "pezzi carrozzeria fiancate",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 910,
+  "nota": "C1 2009 85.000 km cambio robotizzato, fiancate da rifare (nelle foto segni leggeri): simili a 3.500-4.000, rivendita prudente 3.300. Margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430981,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "batteria e tagliando",
+    "low": 150,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 150,
+  "ricambi_max": 300,
+  "rivendita_prudente": 3200,
+  "guadagno_finale": 760,
+  "nota": "Polo 1.4 2007 ferma da 6 mesi, 20.700 km dichiarati poco credibili, foto notturne: simili a 3.000-3.800, rivendita prudente 3.200 (mercato modello gonfiato). Margine basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430316,
+  "esito": "scartata",
+  "danno": "medio",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3500,
+  "guadagno_finale": 1360,
+  "nota": "Smart fortwo 2010 con targa polacca (da nazionalizzare) venduta per ricambi con lavori non specificati: non quantificabile, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432286,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "centralina_motore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   },
+   {
+    "part": "paraurti_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4200,
+  "guadagno_finale": 2060,
+  "nota": "Spark GPL 2014 non marciante per centralina motore guasta e con botta posteriore sx in foto: guasto non quantificabile (non parte), scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430086,
+  "esito": "incidentata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "frontale",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "airbag",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "ossatura_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "grave",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "airbag+centralina+pretensionatori",
+    "low": 1000,
+    "high": 2500
+   },
+   {
+    "label": "cofano, paraurti, fari LED, parafanghi",
+    "low": 700,
+    "high": 1500
+   },
+   {
+    "label": "radiatori e traversa",
+    "low": 250,
+    "high": 500
+   },
+   {
+    "label": "lamierati/ossatura",
+    "low": 300,
+    "high": 1500
+   }
+  ],
+  "ricambi_min": 2250,
+  "ricambi_max": 6000,
+  "rivendita_prudente": 10000,
+  "guadagno_finale": 1360,
+  "nota": "Polo 1.0 TGI metano 2021 113.000 km con frontale distrutto e airbag esplosi: sana simili a 11.000-12.000, metano meno richiesta, rivendita prudente 10.000. Anche con strutturale il margine resta per carrozzieri.",
+  "controlli": [
+   "misurare longheroni e ossatura",
+   "stato bombole metano e impianto",
+   "verificare cruscotto/airbag passeggero"
+  ],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430038,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2900,
+  "guadagno_finale": 260,
+  "nota": "Seicento 1.1 2009 52.000 km in buono stato: simili a 2.800-3.300, rivendita prudente 2.900. Prezzo già allineato, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431016,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 2600,
+  "guadagno_finale": -40,
+  "nota": "C1 2010 110.000 km con grandine: simili a 2.800-3.200, con grandine rivendita prudente 2.600. Nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432159,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3000,
+  "guadagno_finale": 60,
+  "nota": "Modus 1.6 automatica 2007 108.000 km, graffi: poco richiesta, simili a 3.000-3.500, rivendita prudente 3.000 (mercato modello gonfiato). Nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431471,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3300,
+  "guadagno_finale": 360,
+  "nota": "Meriva 1.4 2010 118.000 km in ordine: simili a 3.300-3.800, rivendita prudente 3.300. Margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430976,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "variatore_fase",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "testo"
+   },
+   {
+    "part": "guarnizione_valvetronic",
+    "side": null,
+    "action": "sostituire",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "solenoide/variatore di fase",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "guarnizione valvetronic",
+    "low": 30,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 110,
+  "ricambi_max": 400,
+  "rivendita_prudente": 4800,
+  "guadagno_finale": 1260,
+  "nota": "Mini One 1.6 2013 147.000 km, catena e frizione nuove ma grandine, problema variatore di fase e perdita olio: sane simili a 6.000-6.500, con grandine rivendita prudente 4.800. Margine appena sopra soglia, da vedere dal vivo.",
+  "controlli": [
+   "diagnosi variatore di fase (rumori a freddo, errori)",
+   "entità grandine",
+   "perdita olio valvetronic"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431502,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "solenoide/variatore di fase",
+    "low": 80,
+    "high": 300
+   },
+   {
+    "label": "guarnizione valvetronic",
+    "low": 30,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 110,
+  "ricambi_max": 400,
+  "rivendita_prudente": 4800,
+  "guadagno_finale": 1260,
+  "nota": "Stessa Mini One (targa ER 279HE, Paderno Dugnano) dell'annuncio Subito 430976 con grandine e difetti al motore: doppione, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429924,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4500,
+  "guadagno_finale": 860,
+  "nota": "Ypsilon 1.2 2010 con 19.888 km dichiarati, solo 2 foto notturne: simili a 4.500-5.000, rivendita prudente 4.500. Margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430280,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "portiera",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4000,
+  "guadagno_finale": 360,
+  "nota": "Sportage 2.0 benzina 4x4 2007 150.000 km, foto in ordine: poco richiesta e consuma, simili a 4.000-4.800, rivendita prudente 4.000. Margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430672,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5000,
+  "guadagno_finale": 1360,
+  "nota": "Polo 1.2 70 CV 5p 2014 150.000 km, una sola foto senza difetti evidenti: simili a 5.300-6.000, rivendita prudente 5.000. Margine sopra soglia ma va vista.",
+  "controlli": [
+   "chiedere altre foto e interni",
+   "storico tagliandi e catena distribuzione",
+   "verificare che sia privato"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430674,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4600,
+  "guadagno_finale": 660,
+  "nota": "B-Max 1.6 TDCi 2014 165.000 km diesel, foto pulite: simili a 4.800-5.500, rivendita prudente 4.600. Margine sotto soglia diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429909,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4300,
+  "guadagno_finale": 360,
+  "nota": "118d 3p 2009 160.000 km diesel Euro 5 (limitato a Milano), graffi: simili a 4.500-5.000, rivendita prudente 4.300. Margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430675,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5200,
+  "guadagno_finale": 1060,
+  "nota": "ix20 1.6 2011 108.000 km in buono stato: simili a 5.500-6.000, rivendita prudente 5.200. Margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430678,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 4500,
+  "guadagno_finale": 360,
+  "nota": "Panda 1.2 Classic 2012 95.000 km pulita: simili a 4.500-5.000, rivendita prudente 4.500. Prezzo già di mercato.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430303,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5200,
+  "guadagno_finale": 660,
+  "nota": "Smart fortwo MHD 2011 91.000 km bella: simili a 5.300-6.000, rivendita prudente 5.200. Margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431056,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 3800,
+  "guadagno_finale": -840,
+  "nota": "Seicento 2009 con 10.000 km dichiarati: simili a 3.500-4.200 anche con pochi km, rivendita prudente 3.800. Prezzo sopra la rivendita.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430681,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5300,
+  "guadagno_finale": 310,
+  "nota": "DS3 1.6 THP 155 2011 130.000 km, foto pulite: motore THP delicato, simili a 5.500-6.000, rivendita prudente 5.300. Nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431552,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7000,
+  "guadagno_finale": 1960,
+  "nota": "Kia Rio 1.2 2016 71.000 km, foto pulite senza danni: simili a 7.500-8.200, rivendita prudente 7.000. Margine buono.",
+  "controlli": [
+   "storico tagliandi",
+   "verificare che sia privato",
+   "km con revisioni"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430506,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [
+   {
+    "label": "riserva rimozione comandi disabili",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "rivendita_prudente": 6800,
+  "guadagno_finale": 1510,
+  "nota": "Panda 0.9 TwinAir Dualogic 2014 19.461 km pulita, con comandi per disabili: simili a 7.500-8.000, rivendita prudente 6.800. Margine c'è ma comandi da togliere e annotazione sul libretto.",
+  "controlli": [
+   "comandi disabili annotati sul libretto (serve collaudo per rimuoverli)",
+   "stato cambio Dualogic",
+   "km reali"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430695,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 6500,
+  "guadagno_finale": 1360,
+  "nota": "Panda 0.9 TwinAir Lounge 2014 automatica con soli 19.500 km: foto pulite, nessun danno visibile. Su Subito simili a 7.000-7.500, rivendita prudente 6.500 (mercato del modello gonfiato); margine sopra soglia ma va confermato il chilometraggio.",
+  "controlli": [
+   "km reali (storico revisioni/tagliandi)",
+   "funzionamento cambio Dualogic",
+   "stato frizione robotizzata"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430430,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5800,
+  "guadagno_finale": 660,
+  "nota": "Jeep Patriot 2.2 CRD 2011 160.000 km, foto ok con qualche segno. Su Subito simili a 5.500-7.000, rivendita prudente 5.800: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430432,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "parafango_posteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5200,
+  "guadagno_finale": 60,
+  "nota": "Polo 1.2 2008 42.000 km, foto buone con piccolo difetto al parafango posteriore. Su Subito simili a 5.000-6.000, rivendita prudente 5.200: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429591,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 5900,
+  "guadagno_finale": 270,
+  "nota": "Polo 1.2 TDI 2014 154.500 km, foto pulite. Su AutoScout simili a 6.000-7.000, rivendita prudente 5.900: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430994,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "tetto_cofano_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva grandine (solo materiali)",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "rivendita_prudente": 6500,
+  "guadagno_finale": 760,
+  "nota": "Dati errati (scheda Renault Austral, in realtà Ford Fiesta 1.2 GPL 2015 88.000 km, leggermente grandinata): mercato 34.900 falso. Fiesta GPL simili a 7.000-7.500, rivendita prudente 6.500: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430690,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 6000,
+  "guadagno_finale": 360,
+  "nota": "Golf 6 2.0 TDI Highline 2011 180.000 km, foto ok. Su Subito simili a 6.000-7.000, rivendita prudente 6.000: diesel con margine stretto e km al limite.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432219,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7000,
+  "guadagno_finale": 1110,
+  "nota": "In realtà Sandero Stepway 1.5 dCi 2017 149.000 km (non Duster come in scheda), foto pulite. Simili a 7.500-8.000, rivendita prudente 7.000: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430702,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8000,
+  "guadagno_finale": 1860,
+  "nota": "Fiat 500 1.2 Lounge 2019 94.000 km: foto solo di interni e vano motore, in ordine. Su Subito simili a 8.500-9.500, rivendita prudente 8.000; margine c'è ma la carrozzeria non si vede.",
+  "controlli": [
+   "carrozzeria esterna (nessuna foto)",
+   "km e tagliandi",
+   "motivo del prezzo basso"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431554,
+  "esito": "scartata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "cambio",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 0,
+  "nota": "Opel Vivaro furgone da lavoro con logo aziendale e cambio da sostituire: non è un'auto da rivendere a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431005,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8000,
+  "guadagno_finale": 1660,
+  "nota": "Juke 1.2 DIG-T Tekna 2016 93.000 km, carrozzeria bianca pulita senza danni visibili. Su Subito simili a 8.500-9.500 (mercato del modello basso), rivendita prudente 8.000: margine sopra soglia.",
+  "controlli": [
+   "consumo olio e catena distribuzione 1.2 DIG-T",
+   "tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430089,
+  "esito": "incidentata",
+  "danno": "grave",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "fari_anteriori",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "radiatori_traversa",
+    "side": null,
+    "action": "sostituire",
+    "severity": "grave",
+    "source": "foto"
+   },
+   {
+    "part": "parafango_anteriore",
+    "side": null,
+    "action": "sostituire",
+    "severity": "medio",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "paraurti anteriore + griglia",
+    "low": 300,
+    "high": 500
+   },
+   {
+    "label": "cofano",
+    "low": 200,
+    "high": 400
+   },
+   {
+    "label": "fari anteriori xenon/led usati",
+    "low": 400,
+    "high": 1000
+   },
+   {
+    "label": "pacco radiatori + traversa",
+    "low": 400,
+    "high": 800
+   },
+   {
+    "label": "parafanghi anteriori",
+    "low": 150,
+    "high": 500
+   },
+   {
+    "label": "lamierati/ossatura frontale",
+    "low": 300,
+    "high": 800
+   }
+  ],
+  "ricambi_min": 1750,
+  "ricambi_max": 4000,
+  "rivendita_prudente": 13000,
+  "guadagno_finale": 2360,
+  "nota": "A5 Sportback 3.0 TDI quattro 2015 160.000 km incidentata solo davanti (foto: frontale distrutto, resto integro), motore e cambio ok. Riparata simili a 15.000-16.000, rivendita prudente 13.000; pezzi frontali usati stimati fino a 4.000.",
+  "controlli": [
+   "airbag esplosi o no",
+   "longheroni anteriori",
+   "solo con carroattrezzi"
+  ],
+  "aggiorna": true,
+  "strutturale": true,
+  "airbag": false,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430088,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 0,
+  "nota": "Doblò GPL 2018: foto su piazzale con altre auto e tappetini di carta, tipico di commerciante; inoltre veicolo semi-commerciale. Scartata come venditore professionale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430697,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7000,
+  "guadagno_finale": 360,
+  "nota": "Smart fortwo 2013 44.000 km, foto pulite. Su Subito simili a 7.000-8.000, rivendita prudente 7.000: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432248,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7400,
+  "guadagno_finale": 760,
+  "nota": "VW Up 1.0 club 2018 95.000 km, foto pulite. Su Subito simili a 7.500-8.500, rivendita prudente 7.400: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430696,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7300,
+  "guadagno_finale": 660,
+  "nota": "Dacia Dokker GPL 2018 139.000 km, foto ok. Simili a 7.500-8.500, rivendita prudente 7.300: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431369,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7000,
+  "guadagno_finale": 360,
+  "nota": "Fiat 500 1.3 Multijet 2017 145.000 km, foto ok. Simili a 7.000-8.000, rivendita prudente 7.000: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430698,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7200,
+  "guadagno_finale": 560,
+  "nota": "Peugeot 308 SW 1.5 BlueHDi 2018 172.000 km, foto ok con piccoli segni sul paraurti. Simili a 7.500-8.500, rivendita prudente 7.200: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430327,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 0,
+  "nota": "Microcar Dué: minicar senza patente, non è un'auto da rivendere nel circuito Scovo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432177,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8000,
+  "guadagno_finale": 1060,
+  "nota": "Golf GTI 6 2009 179.000 km, foto poche e scure, auto con modifiche. Simili a 8.000-9.500, rivendita prudente 8.000: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429565,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_anteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 7500,
+  "guadagno_finale": 460,
+  "nota": "DS3 1.2 So Chic 2013 25.000 km, foto buone con lieve segno al paraurti; mercato del modello (23.905) palesemente sbagliato. Simili a 7.500-8.500, rivendita prudente 7.500: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431581,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 10000,
+  "guadagno_finale": 2660,
+  "nota": "Fiat Tipo Cross 1.3 Multijet 2021 88.000 km, foto curate senza danni visibili. Simili a 11.000-12.000, rivendita prudente 10.000: margine buono anche per un diesel, ma prezzo molto basso da verificare.",
+  "controlli": [
+   "motivo del prezzo basso",
+   "documenti e intestatario privato",
+   "km e tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430706,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8500,
+  "guadagno_finale": 1110,
+  "nota": "Kadjar 1.6 dCi Bose 2017 168.000 km, foto pulite. Simili a 9.000-10.000, rivendita prudente 8.500: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431572,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8300,
+  "guadagno_finale": 760,
+  "nota": "Mazda 3 2.2d automatica 2015 165.000 km, foto ok. Simili a 8.500-9.500, rivendita prudente 8.300: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431582,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 9600,
+  "guadagno_finale": 1760,
+  "nota": "Toyota Aygo x-cool 2019 47.000 km automatica, foto pulite senza danni visibili. Su AutoScout simili a 10.000-11.000, auto molto richiesta: rivendita prudente 9.600, margine sopra soglia.",
+  "controlli": [
+   "cambio x-shift",
+   "tagliandi Toyota"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431578,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8400,
+  "guadagno_finale": 502,
+  "nota": "BMW 320d Touring 2012 177.000 km automatica, foto ok. Simili a 8.500-9.500, rivendita prudente 8.400: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431300,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 9000,
+  "guadagno_finale": 1060,
+  "nota": "Smart forfour 2016 67.000 km, foto pulite. Simili a 9.000-10.000, rivendita prudente 9.000: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430091,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 8300,
+  "guadagno_finale": 360,
+  "nota": "Mercedes B 180 CDI 2014 145.000 km, foto ok. Simili a 8.500-9.500, rivendita prudente 8.300: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430289,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 9000,
+  "guadagno_finale": 960,
+  "nota": "Clio Sporter 1.5 dCi 75 2016 59.000 km, foto pulite. Simili a 9.000-10.000, rivendita prudente 9.000: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430705,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 0,
+  "nota": "Fiat 500X fotografata in salone con insegne SAMAUTO: venditore professionale.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430059,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 9000,
+  "guadagno_finale": 860,
+  "nota": "Panda 1.2 Waze 2018 20.000 km, una sola foto e testo confuso (carrozzeria rifatta, vendita urgente). Simili a 9.000-10.000, rivendita prudente 9.000: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430710,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 8500,
+  "nota": "Renault Trafic autocarro 2010 diesel con vano di carico da lavoro: furgone, non è un'auto da rivendere a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429904,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 610,
+  "rivendita_prudente": 9250,
+  "nota": "Nessuna foto disponibile: annuncio scartato.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431601,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3060,
+  "rivendita_prudente": 11900,
+  "nota": "Foto pulite, Jogger rosso senza danni visibili. Jogger 1.0 TCe GPL Extreme 2022 87.000 km: su Subito/AutoScout simili a 13.000-14.000, rivendita prudente 11.900 (tetto mercato). Prezzo circa -35%, annuncio senza descrizione insieme ad altre Dacia simili: da verificare.",
+  "controlli": [
+   "verificare che sia un privato e non un commerciante (altre Dacia GPL a Milano con stesso schema)",
+   "libretto: anno e km reali",
+   "revisione impianto GPL e bombola",
+   "tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 429955,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6360,
+  "rivendita_prudente": 15400,
+  "nota": "Stessa Puma nera (stesse foto e stesso testo) pubblicata due volte con numeri di telefono diversi a 8.900 e 9.200, circa -50% sul valore reale (2023 30.000 km si vende a 17.000-19.000): schema da truffa.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430268,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "rivendita_prudente": 8500,
+  "nota": "Maggiolino giallo in ordine, solo usura. Maggiolino 1.4 TSI 2012 154.000 km: simili a 8.500-9.500, rivendita prudente 8.500, sotto il prezzo richiesto: margine assente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430269,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 6060,
+  "rivendita_prudente": 15400,
+  "nota": "Stessa Puma nera già pubblicata a 8.900 con altro numero di telefono, prezzo circa -50% sul reale: schema da truffa.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429354,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "cofano",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "tetto",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   },
+   {
+    "part": "portiera_posteriore",
+    "side": "dx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "materiali levabolli/ritocchi portiera post dx",
+    "low": 100,
+    "high": 300
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 300,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 10400,
+  "nota": "Stonic bianca, grandine leggera su cofano e tetto e bozzo portiera post dx (dichiarati). Stonic 1.0 T-GDi Style 2018 63.000 km: pulite a 11.500-12.500, con grandine rivendita prudente 10.400: margine troppo stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429479,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 550,
+  "rivendita_prudente": 10190,
+  "nota": "Mégane Sporter grigia in ordine. Diesel EDC 2019 136.000 km: simili a 11.000-12.000, rivendita prudente 10.190: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430978,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1860,
+  "rivendita_prudente": 11800,
+  "nota": "Classe B grigia pulita, interni in pelle in ordine, nessun danno visibile. B 180 automatica 2014 49.000 km: su Subito simili a 12.500-13.500, rivendita prudente 11.800 (il mercato del modello 16.800 è alto).",
+  "controlli": [
+   "verificare km reali con storico tagliandi",
+   "cambio automatico 7G-DCT: cambi marcia fluidi",
+   "libretto e numero proprietari"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431599,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1880,
+  "rivendita_prudente": 11870,
+  "nota": "B 200 d grigia in ordine. B 200 d automatica 2017 132.000 km: simili a 12.500-13.500, rivendita prudente 11.870 (tetto mercato): diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430717,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 760,
+  "rivendita_prudente": 10800,
+  "nota": "Juke Nismo bianca in ordine. Juke Nismo 4WD CVT 2014 87.000 km è poco richiesta: simili a 11.000-12.500, rivendita prudente 10.800: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429597,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 260,
+  "rivendita_prudente": 10300,
+  "nota": "Octavia Wagon bianca in ordine (in foto si vede leva manuale, annuncio dice DSG). Octavia g-tec 2020 165.000 km: simili a 11.000-12.000, rivendita prudente 10.300: margine assente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431603,
+  "esito": "da_verificare",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "sedile_anteriore",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva pulizia/coprisedili",
+    "low": 0,
+    "high": 100
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 100,
+  "guadagno_finale": 2763,
+  "rivendita_prudente": 13000,
+  "nota": "Stepway nuovo logo, cofano aperto e interni con macchie sui sedili (da igienizzare), nessun danno di carrozzeria visibile. Sandero Stepway Extreme GPL 2023 19.000 km: su Subito simili a 14.000-15.000, rivendita prudente 13.000. Prezzo circa -35% senza descrizione: da verificare.",
+  "controlli": [
+   "verificare che sia un privato e non un commerciante (altre Dacia GPL a Milano con stesso schema)",
+   "libretto: data immatricolazione e km",
+   "foto mancanti della carrozzeria: vedere fiancate e posteriore",
+   "impianto GPL"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431833,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 310,
+  "rivendita_prudente": 10450,
+  "nota": "Qashqai Tekna nero in ordine. Qashqai 1.5 dCi 2015 61.000 km: simili a 11.500-12.500, rivendita prudente 10.450: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430720,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2060,
+  "rivendita_prudente": 12500,
+  "nota": "Tucson nero pulito, nessun danno visibile. Tucson 1.7 CRDi DCT 2016 105.000 km: simili a 13.500-14.500, rivendita prudente 12.500: guadagno sotto la soglia diesel (2.100).",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430263,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -840,
+  "rivendita_prudente": 9800,
+  "nota": "Ypsilon grigia fotografata dentro un'officina, nessun danno visibile. Ypsilon 1.2 2020 20.000 km: simili a 10.500-11.500, rivendita prudente 9.800: sotto il prezzo richiesto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430094,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 10800,
+  "nota": "500C grigia con capote bordeaux in ordine. 500C 1.2 GPL 2018 59.000 km: simili a 11.500-12.500, rivendita prudente 10.800: margine assente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430722,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -640,
+  "rivendita_prudente": 10000,
+  "nota": "Foto con sfondo da salone/rendering (non da privato) e margine assente: Smart EQ 2020 67.000 km simili a 11.000-12.000, rivendita prudente 10.000.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430723,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 306,
+  "rivendita_prudente": 11446,
+  "nota": "Giulietta rossa in ordine (stesse foto dell'annuncio Subito 431993). Giulietta 2.0 JTDm 2019 96.000 km: simili a 12.500-13.500, rivendita prudente 11.446: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431993,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 306,
+  "rivendita_prudente": 11446,
+  "nota": "Giulietta rossa in ordine, stessa auto dell'annuncio AutoScout 430723. 2.0 JTDm 2019 96.000 km: simili a 12.500-13.500, rivendita prudente 11.446: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429340,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 360,
+  "rivendita_prudente": 12000,
+  "nota": "2008 bianca in ordine. 2008 PureTech 82 Active 2019 23.000 km: simili a 12.500-13.500, rivendita prudente 12.000: margine assente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431627,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 11800,
+  "nota": "Nessuna foto disponibile: annuncio scartato.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431628,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3460,
+  "rivendita_prudente": 15300,
+  "nota": "Duster verde con nuovo logo, nessun danno visibile. Duster 1.0 TCe GPL Journey 2023 37.000 km: su Subito/AutoScout simili a 16.500-17.500, rivendita prudente 15.300. Prezzo circa -32% senza descrizione: da verificare.",
+  "controlli": [
+   "verificare che sia un privato e non un commerciante (altre Dacia GPL a Milano con stesso schema)",
+   "libretto: anno e km",
+   "impianto GPL",
+   "garanzia residua e tagliandi"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430309,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -240,
+  "rivendita_prudente": 11800,
+  "nota": "Fiesta Titanium blu in ordine. Fiesta 1.5 EcoBlue 2020 57.000 km: simili a 12.500-13.500, rivendita prudente 11.800: sotto il prezzo richiesto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430045,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 760,
+  "rivendita_prudente": 12800,
+  "nota": "Tucson champagne in ordine. Tucson 1.7 CRDi DCT 2018 155.000 km: simili a 14.000-15.000, rivendita prudente 12.800: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431731,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3360,
+  "rivendita_prudente": 15500,
+  "nota": "Solo 2 foto (fronte e retro), 3008 GT Line bianco senza danni visibili. 3008 BlueHDi 130 EAT8 GT Line 2018 75.000 km: su Subito simili a 17.000-18.500, rivendita prudente 15.500. Prezzo -33% con descrizione scarna: da vedere dal vivo.",
+  "controlli": [
+   "chiedere foto interni e fiancate",
+   "km reali e storico tagliandi",
+   "cambio EAT8 e FAP/AdBlue",
+   "verificare che sia GT Line e non Allure"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430737,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 13000,
+  "nota": "Focus ST-Line grigia in ordine. Focus 1.0 EcoBoost auto 2020 96.000 km: simili a 14.000-15.000, rivendita prudente 13.000: margine insufficiente.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430983,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -340,
+  "rivendita_prudente": 11800,
+  "nota": "Ypsilon rossa in ordine, vano motore pulito. Ypsilon Hybrid 2024 26.000 km: simili a 12.500-13.500, rivendita prudente 11.800: sotto il prezzo richiesto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429603,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 706,
+  "rivendita_prudente": 12846,
+  "nota": "Sportage bianco in ordine. Sportage diesel automatico 2017 95.000 km: simili a 14.500-15.500, rivendita prudente 12.846 (tetto mercato): diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431486,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "sedile_guidatore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "rivestimento sedile guida usato",
+    "low": 100,
+    "high": 250
+   }
+  ],
+  "ricambi_min": 100,
+  "ricambi_max": 250,
+  "guadagno_finale": 610,
+  "rivendita_prudente": 13000,
+  "nota": "Evoque nera, piccoli graffi e sedile guida consumato. Evoque TD4 150 2018 153.000 km: simili a 14.500-15.500, rivendita prudente 13.000: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431624,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 13000,
+  "nota": "Touran 1.2 TSI Trendline 2018 115.000 km, foto pulite senza danni. Su Subito/AutoScout simili a 13.500-14.500, rivendita prudente 13.000: margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431796,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -630,
+  "rivendita_prudente": 12500,
+  "nota": "Lexus RX 450h 2010 118.000 km, foto ok con lievi segni. Simili a 13.000-15.000 ma SUV di lusso vecchio poco richiesto, rivendita prudente 12.500: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429465,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 642,
+  "rivendita_prudente": 13781,
+  "nota": "Renegade presentata con grafica da salone, logo Fiat, garanzia 1 anno e tagliando prima della consegna: è un commerciante. Rivendita prudente 13.800, margine comunque basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431658,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 15500,
+  "nota": "Annuncio senza foto: scartato. Golf 2.0 TDI 2021 144.000 km, simili a 16.000-17.500, rivendita prudente 15.500.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431557,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 60,
+  "rivendita_prudente": 14000,
+  "nota": "Tiguan 1.6 TDI R-Line 2018 165.000 km, foto senza danni evidenti, testo quasi vuoto. Simili a 15.000-16.000, rivendita prudente 14.000: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430314,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1360,
+  "rivendita_prudente": 16000,
+  "nota": "Q2 30 TFSI S tronic 2019 101.000 km, foto pulite senza danni. Simili a 17.500-18.500, rivendita prudente 16.000: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429629,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 160,
+  "rivendita_prudente": 15300,
+  "nota": "Sandero Stepway GPL quasi nuova 9.000 km, foto piccole ma auto sana. Simili a 16.500-17.500, rivendita prudente 15.300: margine quasi nullo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430751,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2860,
+  "rivendita_prudente": 18000,
+  "nota": "Discovery Sport 2.0d MHEV 2020 124.000 km, foto pulite senza danni. Simili (D240 HSE) a 20.000-22.000, il mercato del modello è basso: rivendita prudente 18.000; prezzo molto basso, va verificata versione reale.",
+  "controlli": [
+   "verificare che sia davvero D240 HSE e non D150/D165 base",
+   "storico tagliandi e km",
+   "catena distribuzione/AdBlue e cambio automatico",
+   "motivo del prezzo basso"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430748,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1060,
+  "rivendita_prudente": 16700,
+  "nota": "X1 sDrive18i xLine aut. 2018 82.000 km, solo foto interni (in ordine). Simili a 18.000-19.000, rivendita prudente 16.700: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431339,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -91,
+  "rivendita_prudente": 15749,
+  "nota": "Tiguan 1.5 TSI 2021 107.000 km, foto pulite (frontale ancora pre-restyling). Simili a 17.500-18.500, rivendita prudente 15.749: margine basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430354,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 792,
+  "rivendita_prudente": 16682,
+  "nota": "T-Roc 1.0 TSI 2022 72.000 km, foto senza danni (stessa auto di 430743). Simili a 18.500-19.000, rivendita prudente 16.682: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430743,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 792,
+  "rivendita_prudente": 16682,
+  "nota": "T-Roc 1.0 TSI Life 2022 72.000 km, stessa auto di 430354, foto senza danni. Simili a 18.500-19.000, rivendita prudente 16.682: margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431693,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2910,
+  "rivendita_prudente": 19000,
+  "nota": "Focus Active SW 1.5 EcoBlue aut. 2024 42.000 km, foto pulite senza danni. Simili a 21.000-22.500, il mercato del modello è un po' basso: rivendita prudente 19.000, margine buono anche da diesel.",
+  "controlli": [
+   "verificare che sia privato e non ex noleggio",
+   "tagliandi e garanzia residua",
+   "stato cambio automatico"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 430996,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -630,
+  "rivendita_prudente": 15500,
+  "nota": "Golf 7 GTI Performance DSG 2015 106.000 km con grandine dichiarata e modifiche estetiche (spoiler, diffusore). Simili a 17.000-18.500, con grandine e modifiche rivendita prudente 15.500: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431691,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "paraurti_posteriore",
+    "side": "sx",
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "foto"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "riserva paraurti posteriore",
+    "low": 0,
+    "high": 200
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 200,
+  "guadagno_finale": 460,
+  "rivendita_prudente": 16800,
+  "nota": "BMW 220d GT xDrive M Sport 2018 130.000 km (stessa auto di 430987); in una foto il paraurti posteriore sx sembra segnato. Simili a 18.000-19.000, rivendita prudente 16.800: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430987,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 660,
+  "rivendita_prudente": 16800,
+  "nota": "BMW 220d GT xDrive M Sport 2018 130.000 km, foto in ordine, ben tenuta. Simili a 18.000-19.000, rivendita prudente 16.800: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430754,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 19000,
+  "nota": "Ford Transit Custom Sport: è un furgone, non un'auto da rivendere a privati.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431707,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1361,
+  "rivendita_prudente": 18400,
+  "nota": "Giulia 2.2 160 CV AT8 2021 104.000 km, foto senza danni (stessa auto di 430061). Simili a 20.000-21.000, rivendita prudente 18.400: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 430061,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1360,
+  "rivendita_prudente": 18400,
+  "nota": "Giulia 2.2 160 CV AT8 2021 104.000 km, foto senza danni (stessa auto di 431707). Simili a 20.000-21.000, rivendita prudente 18.400: diesel con margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431797,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -2640,
+  "rivendita_prudente": 14500,
+  "nota": "TT Roadster (non coupé) 2.0 TFSI S tronic 2011 102.000 km, foto in ordine. Simili a 15.000-17.000, mercato del modello gonfiato: rivendita prudente 14.500, nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429607,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3560,
+  "rivendita_prudente": 20700,
+  "nota": "520d Touring Luxury aut. 2019 133.000 km, solo foto interni (pelle chiara in ordine), nessuna foto esterna. Simili a 22.500-23.500, rivendita prudente 20.700; da vedere la carrozzeria dal vivo.",
+  "controlli": [
+   "carrozzeria: mancano foto esterne",
+   "storico tagliandi e km",
+   "cambio automatico e catena",
+   "perché nessuna foto esterna"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 432172,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2360,
+  "rivendita_prudente": 21500,
+  "nota": "Tiguan 2.0 TDI DSG Business 2020 73.000 km, foto pulite senza danni, tagliandi VW e treno gomme invernali. Simili a 23.000-24.500, rivendita prudente 21.500.",
+  "controlli": [
+   "tagliandi certificati",
+   "stato DSG e AdBlue",
+   "gomme invernali incluse"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431413,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 2860,
+  "rivendita_prudente": 22000,
+  "nota": "Stelvio 2.2 160 CV Sprint MY23 2022 65.000 km, foto pulite senza danni. Simili a 24.500-26.000, il mercato del modello è basso: rivendita prudente 22.000.",
+  "controlli": [
+   "storico tagliandi e km",
+   "verificare RWD/allestimento",
+   "usura cerchi da 19"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431756,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 23500,
+  "nota": "Formentor 1.4 e-Hybrid 2021 56.000 km, foto pulite. Simili a 25.000-26.500, rivendita prudente 23.500: margine troppo basso.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 429735,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria_grandine",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 860,
+  "rivendita_prudente": 23500,
+  "nota": "A3 Sportback 30 TFSI 2024 65.000 km con grandine dichiarata (bolli, vetri ok). Simili sani a 26.000-27.500, rivendita prudente 23.500 (riparazione grandine è manodopera): margine sotto soglia.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431755,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 5860,
+  "rivendita_prudente": 29000,
+  "nota": "Forester e-Boxer con foto da studio e targhe/loghi di concessionario: venditore professionale, scartata.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431765,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1361,
+  "rivendita_prudente": 25500,
+  "nota": "Q7 3.0 TDI quattro 2018 143.000 km, foto pulite. Simili a 27.000-29.000, SUV grande diesel: rivendita prudente 25.500, margine stretto.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432126,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1040,
+  "rivendita_prudente": 24000,
+  "nota": "E 220 d 2021 164.000 km, foto in ordine. Simili a 25.500-27.000 con questi km, rivendita prudente 24.000: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431823,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": -1640,
+  "rivendita_prudente": 24000,
+  "nota": "MX-5 1.5 Exceed 2021 36.000 km, foto pulite. Simili a 25.000-27.000, rivendita prudente 24.000: nessun margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431822,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 25,
+  "rivendita_prudente": 25865,
+  "nota": "i30 N Performance DCT 2021 62.000 km, foto pulite. Simili a 27.000-29.000, rivendita prudente 25.865: margine quasi nullo.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431878,
+  "esito": "da_verificare",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 31000,
+  "guadagno_finale": 4060,
+  "nota": "Foto di un Land Cruiser 150 3 porte bianco senza danni visibili, annuncio senza descrizione. Il mercato del modello (68.800) e' gonfiato: Land Cruiser 3p 2.8 D-4D 2017 con 125.000 km su AutoScout sta a 33.000-36.000, rivendita prudente 31.000; resta ma va visto (prezzo basso e nessun testo).",
+  "controlli": [
+   "verificare se e' immatricolato autocarro N1",
+   "km reali e storico tagliandi",
+   "motivo del prezzo basso, documenti e proprieta'",
+   "stato frizione e trasmissione 4x4"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431872,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 31500,
+  "guadagno_finale": 4360,
+  "nota": "M135i bianca in ottime condizioni nelle foto, nessun danno visibile. M135i xDrive 2021 con 60.000 km su AutoScout a 34.000-36.000, rivendita prudente 31.500: margine buono.",
+  "controlli": [
+   "storico tagliandi BMW",
+   "eventuali modifiche/rimappature (auto sportiva)",
+   "usura freni e gomme"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 431881,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 30000,
+  "guadagno_finale": 2610,
+  "nota": "220d Gran Coupe nera pulita nelle foto, nessun danno visibile. 220d GC M Sport 2024 con 35.000 km su AutoScout a 33.000-35.000, rivendita prudente 30.000: margine sopra la soglia diesel (2.100), ma non largo.",
+  "controlli": [
+   "garanzia residua e tagliandi",
+   "ex aziendale/noleggio?",
+   "graffi su carrozzeria nera"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
+ },
+ {
+  "id": 429642,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 27500,
+  "guadagno_finale": -2640,
+  "nota": "Ranger Wildtrak bianco elaborato (bull bar, cerchi), sano nelle foto. Ranger 3.2 Wildtrak aut. 2018 con 106.000 km su Subito a 28.000-32.000, rivendita prudente 27.500: prezzo gia' al mercato, diesel senza margine.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 432077,
+  "esito": "scartata",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 34000,
+  "guadagno_finale": -1040,
+  "nota": "Defender 90 blu molto curato nelle foto, autocarro uso proprio. Defender 90 TD4 2012 con 135.000 km su Subito a 35.000-40.000, rivendita prudente 34.000: prezzo al mercato, nessun margine (diesel).",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431651,
+  "esito": "scartata",
+  "danno": "leggero",
+  "danni": [
+   {
+    "part": "carrozzeria",
+    "side": null,
+    "action": "riparare",
+    "severity": "leggero",
+    "source": "testo"
+   }
+  ],
+  "ricambi": [
+   {
+    "label": "ritocchi segni da parcheggio",
+    "low": 0,
+    "high": 150
+   }
+  ],
+  "ricambi_min": 0,
+  "ricambi_max": 150,
+  "rivendita_prudente": 36500,
+  "guadagno_finale": 210,
+  "nota": "GLA bianca AMG Line in buone condizioni, piccoli segni da parcheggio dichiarati. GLA 200d AMG Line 2024 con 35.000 km su AutoScout a 39.000-42.000, rivendita prudente 36.500: margine troppo basso per un diesel.",
+  "controlli": [],
+  "aggiorna": true
+ },
+ {
+  "id": 431999,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "rivendita_prudente": 42000,
+  "guadagno_finale": 2360,
+  "nota": "M240i coupe nera in ottimo stato nelle foto, nessun danno visibile. M240i xDrive 2022 con 55.000 km su AutoScout a 45.000-49.000, rivendita prudente 42.000: margine sopra soglia ma da contrattare bene.",
+  "controlli": [
+   "storico tagliandi BMW",
+   "eventuali rimappature/modifiche",
+   "usura freni e gomme",
+   "cerchi e paraurti per segni"
+  ],
+  "aggiorna": true,
+  "audit": "fil6",
+  "mercato_da_rivendita": true
  }
 ]
