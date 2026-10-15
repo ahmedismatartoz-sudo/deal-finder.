@@ -899,8 +899,11 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
         meta.update(it["id"] for it in g[:round(len(g) * quota)])
     # Facebook: si tengono tutte (si contatta il venditore in chat su Marketplace), FB_SENZA_NUMERO=1
     fb_tutte = os.environ.get("FB_SENZA_NUMERO", "1") == "1"
+    # sezione economiche (non controllate a mano): solo con il numero, ECO_TELEFONO=1
+    eco_tel = os.environ.get("ECO_TELEFONO", "1") == "1"
     tenute = [it for it in items if it.get("fonte") == "AutoScout24" or _tel_cache.get(it["id"], False)
-              or it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")]
+              or (not (eco_tel and it.get("economica")) and (
+                  it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")))]
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
@@ -959,6 +962,10 @@ def _calcola_elenco() -> None:
                                    dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
             for r in eco:
                 it = scovo.item_eco(r)
+                # sopra ECONOMICHE_LIBERO (1.000 €) si mostrano solo se il modello prezzi vede un guadagno
+                if it and it["prezzo"] > int(os.environ.get("ECONOMICHE_LIBERO", "1000")) and (
+                        not it.get("mercato") or scovo.guadagno_minimo(it) < int(os.environ.get("ECONOMICHE_GUADAGNO", "400"))):
+                    continue
                 if it and it["id"] not in gia and not scovo.troppi_km(it.get("km")):
                     items.append(it)
                     opens[it["id"]] = int(r["opens"] or 0)
