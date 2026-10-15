@@ -147,6 +147,10 @@ def item_eco(r: dict) -> dict | None:
         mercato = 0
     if mercato > price * 12:            # stima assurda (es. modello sbagliato): meglio non mostrarla
         mercato = 0
+    # margini prudenti: il mercato di un'auto economica non si gonfia oltre prezzo × 1,4 + 500 €
+    if mercato:
+        mercato = min(mercato, int(round(price * float(os.environ.get("ECO_CAP_X", "1.4"))
+                                         + int(os.environ.get("ECO_CAP_PIU", "500")), -1)))
     lo, hi = r.get("parts_cost_low"), r.get("parts_cost_high")
     n_ph = int(r.get("n_photos") or 0)
     return {
