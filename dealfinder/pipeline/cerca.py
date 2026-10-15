@@ -111,16 +111,17 @@ def report_pulito(dal: str, as_da: str, as_a: str) -> list:
     AutoScout24 = solo quelli letti nella raccolta 'online da 2 giorni' (as_da..as_a). Solo privati, solo zona."""
     from ..zone import MILANO
     z = list(MILANO)
-    base = """(SELECT * FROM listings WHERE province = ANY(%(z)s) AND COALESCE(seller_type,'') <> 'commerciante' AND (
-                 (source='subito' AND first_seen_at >= %(dal)s) OR
-                 (source='autoscout24' AND last_seen_at BETWEEN %(as_da)s AND %(as_a)s AND first_seen_at >= now() - interval '3 days'))) n"""
+    # gli annunci letti nella raccolta "solo nuovi" (Subito: pubblicati da dal; AutoScout24: online da 2 giorni)
+    base = """(SELECT * FROM listings WHERE province = ANY(%(z)s) AND COALESCE(seller_type,'') <> 'commerciante'
+                 AND source IN ('subito','autoscout24') AND last_seen_at BETWEEN %(as_da)s AND %(as_a)s
+                 AND COALESCE(stage_reason,'') <> 'doppione') n"""
     par = {"z": z, "dal": dal, "as_da": as_da, "as_a": as_a}
     with connect() as conn:
         q = lambda sql: [dict(r) for r in conn.execute(sql.replace("NUOVI", base), par).fetchall()]
         out = {
             "per_fonte": q("SELECT source, count(*) n FROM NUOVI GROUP BY 1"),
-            "commercianti_subito": q("""SELECT count(*) n FROM listings WHERE source='subito' AND first_seen_at >= %(dal)s
-                                        AND province = ANY(%(z)s) AND seller_type='commerciante'"""),
+            "commercianti": q("""SELECT source, count(*) n FROM listings WHERE last_seen_at BETWEEN %(as_da)s AND %(as_a)s
+                                        AND province = ANY(%(z)s) AND seller_type='commerciante' GROUP BY 1"""),
             "per_provincia": q("SELECT province, count(*) n FROM NUOVI GROUP BY 1 ORDER BY 2 DESC"),
             "per_fascia": q("""SELECT CASE WHEN price_eur < 1500 THEN 'a <1.500' WHEN price_eur < 3000 THEN 'b 1.500-3.000'
                                WHEN price_eur < 6000 THEN 'c 3-6k' WHEN price_eur < 12000 THEN 'd 6-12k'
