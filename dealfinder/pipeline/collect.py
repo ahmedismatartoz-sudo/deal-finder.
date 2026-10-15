@@ -779,13 +779,19 @@ if __name__ == "__main__":
         largo = int(os.environ.get("FILTRA_MIN", "500"))
         ore = int(os.environ.get("FILTRA_ORE", "72"))
         tot = 0
-        for (pmin, pmax, q) in ((400, 5000, int(os.environ.get("FILTRA_BASSO", "500"))),
-                                (5001, 12000, int(os.environ.get("FILTRA_MEDIO", "450"))),
+        tel = True if os.environ.get("FILTRA_TEL") == "1" else ("fb" if os.environ.get("FB_SENZA_NUMERO", "1") != "1" else False)
+        bmax = int(os.environ.get("FILTRA_BASSO_MAX", "5000"))
+        for (pmin, pmax, q) in ((int(os.environ.get("FILTRA_BASSO_MIN", "400")), bmax, int(os.environ.get("FILTRA_BASSO", "500"))),
+                                (bmax + 1, 12000, int(os.environ.get("FILTRA_MEDIO", "450"))),
                                 (12001, 40000, int(os.environ.get("FILTRA_ALTO", "300")))):
-            tot += mille.lampo(q, fonte=None, ore=ore, telefono=("fb" if os.environ.get("FB_SENZA_NUMERO", "1") != "1" else False), prezzo_min=pmin, prezzo_max=pmax, largo=largo,
-                               versione=f"filtra{os.environ.get('FILTRA_GIRO', '')}-{pmin}")
-        tot += mille.lampo(int(os.environ.get("FILTRA_INC", "300")), fonte=None, ore=ore, danneggiate=True,
-                           anche_parole=True, danno_dal_testo=True, telefono=("fb" if os.environ.get("FB_SENZA_NUMERO", "1") != "1" else False), largo=0, versione="filtra-inc")
+            if q > 0:
+                tot += mille.lampo(q, fonte=None, ore=ore, telefono=tel, prezzo_min=pmin, prezzo_max=pmax, largo=largo,
+                                   versione=f"filtra{os.environ.get('FILTRA_GIRO', '')}-{pmin}")
+        if int(os.environ.get("FILTRA_INC", "300")) > 0:
+            tot += mille.lampo(int(os.environ.get("FILTRA_INC", "300")), fonte=None, ore=ore, danneggiate=True,
+                               anche_parole=True, danno_dal_testo=os.environ.get("FILTRA_INC_TESTO", "1") == "1",
+                               telefono=tel, largo=0, versione=f"filtra{os.environ.get('FILTRA_GIRO', '')}-inc",
+                               prezzo_max=int(os.environ.get("FILTRA_INC_MAX", "40000")))
         log.info("FILTRA fine: %d auto esportate per il controllo", tot)
         with connect() as conn:
             conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
