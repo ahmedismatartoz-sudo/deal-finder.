@@ -307,6 +307,33 @@ def run(mode: str) -> Counter:
             sources = [(_Centri(asc, [["20121", os.environ.get("AS_EXTRA_RAGGIO", "60")]],
                                 {"massiva": True, "min_price": 300, "max_price": 100000, "step": 1000,
                                  "venditori": [("P", "privato")]}), {})]
+    elif mode == "nuovi":
+        # annunci pubblicati da NUOVI_DAL (es. "2026-10-15 00:00"): Subito Lombardia + Novara, dal più recente
+        dal = os.environ.get("NUOVI_DAL", "")
+        from ..zone import MILANO
+
+        class _Rec:
+            source = "subito"
+
+            def __init__(self, reg, prov):
+                self.reg, self.prov, self.c = reg, prov, SubitoCollector(proxy=settings.scraper_proxy)
+                self.c.min_delay_s, self.c.max_delay_s = 0.8, 1.6
+
+            def search(self, q):
+                yield from self.c.search_recenti(self.reg, self.prov, dal)
+        sources = [(_Rec("lombardia", [p for p in MILANO if p not in ("NO", "AL", "VC", "PC")]), {}),
+                   (_Rec("piemonte", ["NO", "AL", "VC"]), {})]
+    elif mode == "as_nuovi":
+        # AutoScout24 privati entro 100 km, solo annunci online da AUTOSCOUT_ADAGE giorni
+        os.environ.setdefault("AUTOSCOUT_ADAGE", "2")
+        os.environ["ANNO_MINIMO"] = "2007"
+        os.environ["AUTOSCOUT_KM_MAX"] = "180000"
+        os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s, asc.max_delay_s = 0.7, 1.6
+        sources = [(_Centri(asc, [["20121", "100"]], {"massiva": True, "min_price": 300, "max_price": 100000,
+                                                       "step": 2000, "venditori": [("P", "privato")]}), {})]
     elif mode == "modena_inc":
         # Incidentate di Modena e dintorni (MODENA_RAGGIO km), dal MODENA_ANNO in poi: AutoScout24 solo danneggiate
         # (privati e commercianti), Subito Emilia (MO, RE, BO, PR, FE) le più recenti e la ricerca per parole.
@@ -743,7 +770,7 @@ if __name__ == "__main__":
         if not _due(job_filtra, int(os.environ.get("FILTRA_ORE_RIPETI", "12"))):
             log.info("FILTRA già fatto nelle ultime ore: niente da fare")
             sys.exit(0)
-        attesa = [j for j in ("sub_meta", "sub_extra", "sub_extra2", "as_extra")
+        attesa = [j for j in ("sub_meta", "sub_extra", "sub_extra2", "as_extra", "nuovi", "as_nuovi")
                   if j in os.environ.get("LAVORO_SUBITO", "").split(";")]
         time.sleep(120 if attesa else 0)        # il tempo che la raccolta registri il suo inizio
         for _ in range(120 if attesa else 0):   # prima finisce Subito (prezzi e annunci più completi)
@@ -786,13 +813,18 @@ if __name__ == "__main__":
                                 (12001, 40000, int(os.environ.get("FILTRA_ALTO", "300")))):
             if q > 0:
                 tot += mille.lampo(q, fonte=None, ore=ore, telefono=tel, prezzo_min=pmin, prezzo_max=pmax, largo=largo,
+                                   primo_dal=os.environ.get("FILTRA_PRIMO_DAL") or None,
                                    versione=f"filtra{os.environ.get('FILTRA_GIRO', '')}-{pmin}")
         if int(os.environ.get("FILTRA_INC", "300")) > 0:
             tot += mille.lampo(int(os.environ.get("FILTRA_INC", "300")), fonte=None, ore=ore, danneggiate=True,
                                anche_parole=True, danno_dal_testo=os.environ.get("FILTRA_INC_TESTO", "1") == "1",
                                telefono=tel, largo=0, versione=f"filtra{os.environ.get('FILTRA_GIRO', '')}-inc",
+                               primo_dal=os.environ.get("FILTRA_PRIMO_DAL") or None,
                                prezzo_max=int(os.environ.get("FILTRA_INC_MAX", "40000")))
         log.info("FILTRA fine: %d auto esportate per il controllo", tot)
+        if os.environ.get("FILTRA_REPORT"):
+            from . import cerca
+            cerca.report_mercato(os.environ["FILTRA_REPORT"])
         with connect() as conn:
             conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
                          (job_filtra, json.dumps({"esportate": tot})))
@@ -801,6 +833,11 @@ if __name__ == "__main__":
     if mode == "spazio":
         from . import spazio
         log.info("SPAZIO fine: %s", spazio.run())
+        sys.exit(0)
+    if mode in ("nuovi", "as_nuovi"):
+        os.environ["COLLECT_JOB"] = f"collect:{mode}"
+        os.environ["PASSI_JOB"] = f"collect:{mode}:" + time.strftime("%Y%m%d%H")
+        run(mode)
         sys.exit(0)
     if mode in ("full_as", "full_sub", "sub_meta", "sub_extra", "sub_extra2", "as_extra"):
         # metà della raccolta completa (AutoScout24 o Subito), si possono far girare insieme.

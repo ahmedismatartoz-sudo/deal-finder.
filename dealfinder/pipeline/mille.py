@@ -272,7 +272,7 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
           versione: str = "fb-lampo", province: list | None = None, anno: int | None = None,
           commercianti: bool = False, anche_parole: bool = False, danno_dal_testo: bool = False,
           telefono: bool | str = False, prezzo_min: int = 400, prezzo_max: int = 40000,
-          largo: int | None = None) -> int:
+          largo: int | None = None, primo_dal: str | None = None) -> int:
     """Selezione lampo: niente ricalcolo del mercato (troppo lento col database pieno), si usa la stima del
     primo filtro già salvata in raccolta (model_p50, prescreen_potential). Preferisce le auto con pochi km,
     toglie moto/scooter, privati soltanto, mai le auto già guardate a mano.
@@ -290,6 +290,7 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                   AND (NOT %s OR damage_declared OR damage_class IN ('leggero','medio','grave','alto_rischio')
                        OR (%s AND problem_search))
                   AND last_seen_at > now() - make_interval(hours => %s)
+                  AND (%s::timestamptz IS NULL OR first_seen_at >= %s::timestamptz)
                   AND (%s OR province = ANY(%s) OR (province IS NULL AND source='facebook'))
                   AND price_eur BETWEEN %s AND %s
                   AND (mileage_km IS NULL OR mileage_km <= %s)
@@ -302,7 +303,7 @@ def lampo(quanti: int = 200, max_diesel: float = 0.3, fonte: str | None = "faceb
                          + CASE WHEN make = 'alfa-romeo' THEN 1000 WHEN model ILIKE 'panda%%' THEN 800 ELSE 0 END
                          + CASE WHEN fuel IN ('benzina','gpl','metano','ibrida') THEN 600 ELSE 0 END DESC
                 LIMIT %s""",
-            (commercianti, fonte, fonte, danneggiate, largo, largo, danneggiate, anche_parole, ore, ovunque, zona,
+            (commercianti, fonte, fonte, danneggiate, largo, largo, danneggiate, anche_parole, ore, primo_dal, primo_dal, ovunque, zona,
              prezzo_min, prezzo_max, scovo.KM_MASSIMO,
              anno or scovo.ANNO_MINIMO, _gia_controllate(), zona, list(POPOLARI),
              quanti * (40 if danno_dal_testo else 12 if telefono else 4))).fetchall()

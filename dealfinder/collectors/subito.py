@@ -224,6 +224,43 @@ class SubitoCollector(Collector):
         self.pause()
         return r
 
+    def search_recenti(self, region: str, provinces: list[str], dal: str, max_pages: int = 80) -> Iterator[Listing]:
+        """Annunci pubblicati da "dal" (es. '2026-10-15 00:00') in poi: la regione dal più recente, fino alla data."""
+        import re as _re
+        wanted = {p.upper() for p in provinces}
+        reg = REGION_CODES.get(region, None)
+        if reg is None:
+            reg = self._trova_regione(wanted, 100) or 4
+        letti = tenuti = 0
+        for page in range(max_pages):
+            r = self.client.get(API_SEARCH, headers=API_HEADERS,
+                                params={"c": 2, "r": reg, "t": "s", "lim": 100, "start": page * 100, "sort": "datedesc"})
+            self.pause()
+            if r.status_code != 200:
+                log.warning("subito recenti %s: HTTP %s a pagina %s", region, r.status_code, page)
+                break
+            ads = (r.json() or {}).get("ads") or []
+            if not ads:
+                break
+            vecchi = 0
+            for it in ads:
+                d = __import__("json").dumps(it.get("dates") or {})
+                m = _re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", d)
+                if m and f"{m.group(1)} {m.group(2)}" < dal:
+                    vecchi += 1
+                    continue
+                listing = parse_item(it)
+                if not listing:
+                    continue
+                letti += 1
+                if listing.province and listing.province.upper() not in wanted:
+                    continue
+                tenuti += 1
+                yield listing
+            if vecchi >= len(ads) * 0.8:
+                break
+        log.info("subito recenti %s dal %s: %d letti, %d nelle province", region, dal, letti, tenuti)
+
     def search(self, query: dict) -> Iterator[Listing]:
         """query: {region, provinces[], max_price, max_pages}. Usa l'interfaccia interna (100 annunci
         per pagina, dal più recente) e filtra per provincia e prezzo; se non risponde, ripiega sulle pagine web."""

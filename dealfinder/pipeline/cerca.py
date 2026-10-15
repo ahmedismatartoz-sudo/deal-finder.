@@ -74,10 +74,44 @@ def audit(min_guadagno: int = 2500, rapporto: float = 1.6) -> int:
     return n
 
 
+def report_mercato(dal: str) -> list:
+    """Cosa è successo nel mercato da "dal": annunci nuovi, spariti (venduti), ribassi. Righe REPORT nei log."""
+    from ..zone import MILANO
+    z = list(MILANO)
+    with connect() as conn:
+        q = lambda sql, *a: conn.execute(sql, a).fetchall()
+        out = {
+            "nuovi_per_fonte": q("""SELECT source, COALESCE(seller_type,'?') AS chi, count(*) n FROM listings
+                                   WHERE first_seen_at >= %s AND province = ANY(%s) GROUP BY 1,2 ORDER BY 3 DESC""", dal, z),
+            "nuovi_privati_per_provincia": q("""SELECT province, count(*) n FROM listings WHERE first_seen_at >= %s
+                                   AND province = ANY(%s) AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1 ORDER BY 2 DESC""", dal, z),
+            "nuovi_privati_per_fascia": q("""SELECT CASE WHEN price_eur < 1500 THEN 'a <1.500' WHEN price_eur < 3000 THEN 'b 1.500-3.000'
+                                   WHEN price_eur < 6000 THEN 'c 3-6k' WHEN price_eur < 12000 THEN 'd 6-12k' ELSE 'e >12k' END f,
+                                   count(*) n FROM listings WHERE first_seen_at >= %s AND province = ANY(%s)
+                                   AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1 ORDER BY 1""", dal, z),
+            "nuovi_privati_carburante": q("""SELECT COALESCE(fuel,'?') f, count(*) n FROM listings WHERE first_seen_at >= %s
+                                   AND province = ANY(%s) AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1 ORDER BY 2 DESC""", dal, z),
+            "nuovi_privati_marche": q("""SELECT make, count(*) n FROM listings WHERE first_seen_at >= %s AND province = ANY(%s)
+                                   AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1 ORDER BY 2 DESC LIMIT 15""", dal, z),
+            "nuovi_privati_interessanti": q("""SELECT prescreen, count(*) n FROM listings WHERE first_seen_at >= %s
+                                   AND province = ANY(%s) AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1""", dal, z),
+            "spariti_privati": q("""SELECT source, count(*) n FROM listings WHERE disappeared_at >= %s AND province = ANY(%s)
+                                   AND COALESCE(seller_type,'') <> 'commerciante' GROUP BY 1""", dal, z),
+            "ribassi": q("""SELECT count(*) n, round(avg(pe.price_eur)) prezzo_medio FROM price_events pe JOIN listings l ON l.id=pe.listing_id
+                            WHERE pe.event='prezzo' AND pe.at >= %s AND l.province = ANY(%s)""", dal, z),
+        }
+    for k, v in out.items():
+        log.info("REPORT %s %s", k, json.dumps([dict(r) for r in v], ensure_ascii=False, default=str))
+    log.info("REPORT_FINE")
+    return []
+
+
 def run(q: dict | None = None) -> list[dict]:
     q = q or json.loads(os.environ.get("CERCA_JSON") or "{}")
     if q.get("audit"):
         return audit(int(q.get("min_guadagno") or 2500), float(q.get("rapporto") or 1.6))
+    if q.get("report"):
+        return report_mercato(q["report"])
     if q.get("sito"):
         return sito(q.get("zona") or "milano")
     marca, modello = (q.get("marca") or "").lower(), (q.get("modello") or "").lower()

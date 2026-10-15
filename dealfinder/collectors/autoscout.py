@@ -156,6 +156,8 @@ class AutoScoutCollector(Collector):
         dove = f"&zip={zip_}&zipr={radius}" if zip_ else ""                # senza CAP: tutta Italia
         if os.environ.get("AUTOSCOUT_KM_MAX"):                           # solo auto con pochi km
             dove += f"&kmto={int(os.environ['AUTOSCOUT_KM_MAX'])}"
+        if os.environ.get("AUTOSCOUT_ADAGE"):                            # solo annunci online da N giorni
+            dove += f"&adage={int(os.environ['AUTOSCOUT_ADAGE'])}"
         return (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing={danni}&custtype={custtype}"
                 f"{dove}&pricefrom={lo}&priceto={hi}{anni}&sort=age&desc=1&page={page}")
 
