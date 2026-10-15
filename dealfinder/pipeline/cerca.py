@@ -86,13 +86,13 @@ def run(q: dict | None = None) -> list[dict]:
     with connect() as conn:
         rows = conn.execute(
             f"""SELECT {LIGHT_COLS}, stage_reason FROM listings
-                WHERE status='attivo' AND make=%s AND model=%s AND province = ANY(%s)
+                WHERE status='attivo' AND make=%s AND (model=%s OR model = ANY(%s::text[])) AND province = ANY(%s)
                   AND COALESCE(seller_type,'privato') <> 'commerciante' AND price_eur BETWEEN %s AND %s
                   AND mileage_km IS NOT NULL AND mileage_km <= %s
                   AND (year IS NULL OR year BETWEEN %s AND %s)
                   AND (%s::text[] IS NULL OR fuel = ANY(%s::text[]))
                   AND last_seen_at > now() - interval '10 days'""",
-            (marca, modello, prov, int(q.get("prezzo_min") or 1000), int(q.get("prezzo_max") or 10**7),
+            (marca, modello, q.get("modelli") or [], prov, int(q.get("prezzo_min") or 1000), int(q.get("prezzo_max") or 10**7),
              min(int(q.get("km_max") or 10**7), scovo.KM_MASSIMO), int(q.get("anno_min") or 2007),
              int(q.get("anno_max") or 2100), q.get("carburanti"), q.get("carburanti"))).fetchall()
         if q.get("telefono"):
