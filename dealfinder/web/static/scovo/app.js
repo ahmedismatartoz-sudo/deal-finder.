@@ -353,7 +353,7 @@ function viewDetail(){
       <span class="where">Annuncio di un ${d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</span>
     </div>
     <div class="dock"><div class="dock-in">
-      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai" target="_blank" rel="noopener">${contact.icon}${contact.label}</a>`
+      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}${contact.label}</a>`
           : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}${contact.label}</button>`}
       <span class="talk-note">${contact.note}</span>
     </div></div>
@@ -1158,10 +1158,14 @@ async function talk(){
     const r = await api("/api/affari/" + S.sel + "/contatto", {method: "POST"});
     segnaAperta();
     if (r.tel) location.href = "tel:" + r.tel;
+    else if (MOBILE) location.href = r.url;
     else window.open(r.url, "_blank", "noopener");
   } catch (e) { toast(e.message); }
   render({keep:true});
 }
+// Sul telefono l'annuncio si apre nella stessa scheda: Subito, AutoScout24 e Facebook aprono la loro app e
+// una scheda nuova resterebbe vuota (about:blank). Tornando indietro Scovo riapre la stessa auto.
+const MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "") || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform || ""));
 function segnaAperta(){
   const car = (S.cars || []).find(c => c.id === S.sel); if (car) car.aperta = true;
   if (S.detail[S.sel]) S.detail[S.sel].aperta = true;
