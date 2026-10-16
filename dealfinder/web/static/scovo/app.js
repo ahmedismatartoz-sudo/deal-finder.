@@ -103,6 +103,9 @@ function toast(msg){
 /* ---------- conti: rivendita al X% sotto mercato e guadagno da–a ---------- */
 const sezioneDi = r => r === "incidentate" || r === "economiche" ? r : "affari";
 function numeri(c){
+  // policy prudente (pv2): rivendita R e margine operativo arrivano già calcolati dal server, con tutti i costi
+  if (c.pv) return c.pv.margine != null ? {riv: c.pv.R_finale != null ? c.pv.R_finale : c.pv.R, gain: c.pv.margine, gainMax: c.pv.margine}
+                                       : {riv: 0, gain: -1e6, gainMax: -1e6};
   if (c.economica && !c.mercato) return {riv: 0, gain: -1e6, gainMax: -1e6};
   const riv = Math.round(c.mercato * (1 - S.sconto / 100));
   const base = riv - c.prezzo - S.costs;
@@ -119,7 +122,7 @@ function filtered(over){
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
   const sec = s.sezione || sezioneDi(S.route), inc = sec === "incidentate", eco = sec === "economiche";
   return ordinaLista(Object.assign({}, s, {eco}), (S.cars || []).filter(c => eco ? !!c.economica : (!inc && c.vetrina != null) || (!c.economica && !!c.incidentata === inc)).map(c => Object.assign({}, c, numeri(c)))
-    .filter(c => eco || c.gain >= (c.soglia_min != null ? Math.min(c.soglia_min, sogliaDi(c.prezzo)) : sogliaDi(c.prezzo)))
+    .filter(c => eco || c.pv || c.gain >= (c.soglia_min != null ? Math.min(c.soglia_min, sogliaDi(c.prezzo)) : sogliaDi(c.prezzo)))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
     .filter(c => !s.modello || (c.modello || "") === s.modello)
@@ -214,6 +217,7 @@ function activeChips(){
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
+  if (c.pv) return c.pv.margine == null ? "Da valutare" : (c.pv.margine >= 0 ? "+" : "−") + eur(Math.abs(c.pv.margine));
   if (c.economica && (!c.mercato || c.gainMax <= 0)) return "Da valutare";
   const lo = Math.max(c.gain, 0);
   return c.gainMax !== c.gain ? (c.gain < 0 ? "fino a +" + eur(c.gainMax) : "+" + num(lo) + "–" + num(c.gainMax) + " €") : "+" + eur(c.gain);
@@ -228,7 +232,7 @@ async function loadCars(force){
   S.loading = true; S.loadErr = ""; if (isList(S.route)) render({keep:true});
   try {
     const d = await api("/api/affari");
-    S.cars = d.items || []; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now();
+    S.cars = d.items || []; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now(); S.policy = d.policy || null;
     if (d.soglie) S.soglie = d.soglie;
     if (d.costi_fissi) S.costs = Object.values(d.costi_fissi).reduce((a,b) => a + b, 0);
     const known = new Set(S.cars.map(c => c.marca)); S.brands = S.brands.filter(b => known.has(b));
@@ -275,7 +279,7 @@ function viewList(){
           : `<div><span class="lbl">Riparazioni</span><span class="val ${c.rip_hi ? "small warn" : "good"}">${ripTxt(c)}</span></div>
           <div><span class="lbl">Rivendita</span><span class="val">${eur(c.riv)}</span></div>`}
         </div>
-        <div class="gain"><span>${c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
+        <div class="gain"><span>${c.pv ? esc(c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
       </div>
     </button>`).join("");
   const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
@@ -295,7 +299,7 @@ function viewList(){
       <label class="qsel ${S.kmMax !== "" ? "on" : ""}"><span class="sr">Chilometri massimi</span><select id="q-kmax">${opts(KM_STEPS.map(v => [v, "Fino a " + num(v) + " km"]), S.kmMax, "Km")}</select></label>
     </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
-  return header(incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", incV ? `${list.length} auto incidentate da riparare · rivendita −${S.sconto}%` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · rivendita −${S.sconto}%`, right) + `
+  return header(incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
   <main class="list" aria-live="polite">${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Sopra i 1.500 € solo quelle sotto il prezzo di mercato; guadagni stimati prudenti. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
@@ -319,6 +323,50 @@ function botBanner(n){
     ${bits.length ? `<div class="bb-tags">${bits.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
     <div class="bb-act"><button class="btn" data-act="reset">Togli filtri</button></div>
   </section>`;
+}
+
+/* ---------- scheda: conti ---------- */
+function boxV1(c){ return `
+      <div class="box">
+        <div class="row"><span class="k">Prezzo richiesto</span><span class="v">${eur(c.prezzo)}</span></div>
+        <div class="row"><span class="k">Riparazioni (solo pezzi)</span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
+        <div class="row" style="border-bottom:0"><span class="k">Rivendita veloce</span><span class="v">${c.economica && !c.mercato ? "da stimare" : eur(c.riv)}</span></div>
+        <div class="note">${c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`}${c.economica ? " Auto non ancora controllata a mano: guarda bene foto e descrizione." : ""}</div>
+        <div class="row total"><span class="k">Guadagno stimato</span><span class="v">${gainTxt(c)}</span></div>
+        <div class="note" style="border:0;margin-top:-8px">Già tolti passaggio (90 €) e pulizia (50 €).${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}</div>
+      </div>`; }
+const VOCI = {ricambi: "Ricambi", manodopera: "Manodopera e verniciatura", passaggio: "Passaggio e pratiche", trasporto: "Trasporto / ritiro",
+  diagnosi_revisione: "Diagnosi e revisione", preparazione: "Preparazione e pulizia", vendita: "Costi di vendita", garanzia: "Garanzia (accantonamento)",
+  giacenza: "Giacenza", iva_margine: "IVA (regime del margine)"};
+const ORIG = {annuncio: "dall'annuncio", stima_ricambi: "ricerca prezzi pezzi", config: "impostazione", stima: "stima prudente"};
+function pct(x){ return Math.round(x * 1000) / 10 + "%"; }
+function boxPolicy(c, v){
+  const p = c.pv, row = (k, val, cls) => `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${val}</span></div>`;
+  const ok = p.categoria === "opportunita";
+  let h = `<div class="box">
+    <div class="row"><span class="k"><b>${esc(p.etichetta || "")}</b></span><span class="v ${ok ? "" : "warn"}" style="font-size:15px">${esc(p.campione || "")}</span></div>
+    ${row("Prezzo di acquisto", eur(c.prezzo))}
+    ${p.M != null ? row(`Mediana mercato M <small>(${p.n} confronti)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
+    ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
+    ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
+    ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}`;
+  if (v && v.R != null) h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
+  if (v && v.costi) {
+    h += Object.entries(v.costi).filter(([, x]) => x.euro).map(([k, x]) => `<div class="row"><span class="k">${esc(VOCI[k] || k)} <small>· ${esc(ORIG[x.origine] || x.origine)}</small></span><span class="v" style="font-size:16px">−${eur(x.euro)}</span></div>`).join("");
+    if (v.riserva) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
+  } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
+  h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
+    <div class="note" style="border:0;margin-top:-8px">Soglia minima richiesta: ${eur(p.soglia)}. Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
+  h += `</div>`;
+  if (!v) return h + `<div class="skel"><div class="bar"></div></div>`;
+  const li = a => a.map(x => `<li>${esc(x)}</li>`).join("");
+  if ((v.motivi || []).length) h += `<section class="d-sec"><h2>Perché questa qualifica</h2><ul class="checks">${li(v.motivi)}</ul></section>`;
+  if ((v.mancanti || []).length || (v.ipotesi || []).length) h += `<section class="d-sec"><h2>Dati mancanti e ipotesi</h2><ul class="checks">${li((v.mancanti || []).map(x => "Manca: " + x).concat(v.ipotesi || []))}</ul></section>`;
+  if ((v.confronti || []).length) h += `<section class="d-sec"><h2>Confronti usati (${v.n})</h2><ul class="checks">${v.confronti.map(x =>
+      `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit">` : ""}${eur(x.prezzo)} · ${x.anno || "?"} · ${x.km != null ? num(x.km) + " km" : "km ?"}${x.cambio ? " · " + esc(x.cambio) : ""}${x.kw ? " · " + x.kw + " kW" : ""} · ${esc(x.fonte || "")}${x.url ? "</a>" : ""}<br><small>pubblicato ${esc(x.pubblicato || "?")} · verificato ${esc(x.verificato || "?")}</small></li>`).join("")}</ul></section>`;
+  const ex = Object.entries(v.esclusi_motivi || {}).concat(Object.entries(v.non_equivalenti || {}));
+  if (ex.length) h += `<section class="d-sec"><h2>Annunci esclusi dal calcolo</h2><ul class="checks">${ex.sort((a, b) => b[1] - a[1]).slice(0, 8).map(([m, n]) => `<li>${n} × ${esc(m)}</li>`).join("")}</ul></section>`;
+  return h;
 }
 
 /* ---------- viste: scheda auto ---------- */
@@ -348,14 +396,7 @@ function viewDetail(){
     <div class="d-body">
       <div><h1 class="d-name">${esc(c.nome)}</h1><div class="meta" style="margin-top:4px">${esc(meta(c))}</div></div>
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
-      <div class="box">
-        <div class="row"><span class="k">Prezzo richiesto</span><span class="v">${eur(c.prezzo)}</span></div>
-        <div class="row"><span class="k">Riparazioni (solo pezzi)</span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
-        <div class="row" style="border-bottom:0"><span class="k">Rivendita veloce</span><span class="v">${c.economica && !c.mercato ? "da stimare" : eur(c.riv)}</span></div>
-        <div class="note">${c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`}${c.economica ? " Auto non ancora controllata a mano: guarda bene foto e descrizione." : ""}</div>
-        <div class="row total"><span class="k">Guadagno stimato</span><span class="v">${gainTxt(c)}</span></div>
-        <div class="note" style="border:0;margin-top:-8px">Già tolti passaggio (90 €) e pulizia (50 €).${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}</div>
-      </div>
+      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : boxV1(c)}
       <div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
@@ -413,8 +454,9 @@ function sheetFilters(){
         <div class="fgrid" style="margin-top:10px">${sel("f-raggio", "Entro", opts([[10,"10 km"],[25,"25 km"],[50,"50 km"],[75,"75 km"],[100,"100 km"]], S.raggio || "", "Qualsiasi distanza"))}</div>
       </section>
       <section class="fgrp"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Senza danni"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
-      <section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
-        <span class="hint">I guadagni si ricalcolano subito.</span></section>
+      ${S.policy ? `<section class="fgrp"><h3>Rivendita</h3><span class="hint">Rivendita prudente calcolata per ogni auto: il più basso tra la mediana ridotta per fascia e il 25° percentile dei confronti equivalenti, meno tutti i costi.</span></section>`
+        : `<section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
+        <span class="hint">I guadagni si ricalcolano subito.</span></section>`}
     </div>
     <div class="sheet-foot fpanel-foot"><button class="btn" data-act="reset">Azzera</button><button class="btn btn-dark" data-act="close" id="show">${n ? `Mostra ${n} auto` : "Nessuna auto: cambia i filtri"}</button></div>
   </div></div>`;

@@ -945,6 +945,8 @@ def _calcola_elenco() -> None:
     t0 = time.time()
     with connect() as conn:
         rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": 0}).fetchall()
+    # nuova policy attiva appena il ricalcolo ha valutato le auto (prima del primo giro vale la regola precedente)
+    scovo.POLICY_PRONTA["ok"] = sum(1 for r in rows if r.get("pv")) >= max(1, len(rows) // 2)
     items, opens = [], {}
     for r in rows:
         it = scovo.item(r)
@@ -963,8 +965,11 @@ def _calcola_elenco() -> None:
             for r in eco:
                 it = scovo.item_eco(r)
                 # sopra ECONOMICHE_LIBERO (1.000 €) si mostrano solo se il modello prezzi vede un guadagno
-                if it and it["prezzo"] > int(os.environ.get("ECONOMICHE_LIBERO", "1000")) and (
-                        not it.get("mercato") or scovo.guadagno_minimo(it) < int(os.environ.get("ECONOMICHE_GUADAGNO", "400"))):
+                sopra = it and it["prezzo"] > int(os.environ.get("ECONOMICHE_LIBERO", "1000"))
+                if sopra and it.get("pv") is not None:
+                    if it["pv"].get("categoria") not in scovo.CATEGORIE_SITO:     # policy prudente: niente eccezioni
+                        continue
+                elif sopra and (not it.get("mercato") or scovo.guadagno_minimo(it) < int(os.environ.get("ECONOMICHE_GUADAGNO", "400"))):
                     continue
                 if it and it["id"] not in gia and not scovo.troppi_km(it.get("km")):
                     items.append(it)
@@ -1041,7 +1046,8 @@ def affari(request: Request):
     for n, it in enumerate(scelte):
         it["vetrina"] = n
     n = len(scelte)
-    return jsonify({"items": items, "vetrina_titolo": vet.get("titolo") if n else None, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
+    return jsonify({"items": items, "vetrina_titolo": vet.get("titolo") if n else None,
+                    "policy": scovo.POLICY_VERSION if scovo.POLICY_SITO == "pv2" and scovo.POLICY_PRONTA["ok"] else None, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
                     "margine_minimo": scovo.MARGINE_MINIMO, "soglie": [[l if l < 10**9 else None, m] for l, m in scovo.SOGLIE],
                     "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
 
@@ -1555,6 +1561,24 @@ def _aggiorna_visibili():
     threading.Thread(target=loop, daemon=True, name="visibili").start()
 
 
+def _ricalcolo_policy():
+    """Ricalcolo con la policy prudente (pricing/ricalcolo.py): subito dopo l'avvio e poi ogni POLICY_ORE ore;
+    finito il giro, l'elenco del sito si ricalcola con i nuovi numeri."""
+    def loop():
+        time.sleep(int(os.environ.get("POLICY_RITARDO_S", "20")))
+        while True:
+            try:
+                from ..pricing import ricalcolo
+                with connect() as conn:
+                    ricalcolo.esegui(conn)
+                _elenco["t"] = 0.0
+                _aggiorna_elenco(attendi=False)
+            except Exception as e:
+                logging.getLogger("policy").warning("ricalcolo policy non riuscito: %s", str(e)[:300])
+            time.sleep(int(float(os.environ.get("POLICY_ORE", "3")) * 3600))
+    threading.Thread(target=loop, daemon=True, name="policy").start()
+
+
 from contextlib import asynccontextmanager
 
 
@@ -1578,6 +1602,8 @@ async def _lifespan(app):
         _aggiorna_elenco(attendi=False)       # elenco auto pronto prima del primo visitatore
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
         _aggiorna_visibili()
+    if os.environ.get("DATABASE_URL") and os.environ.get("POLICY_RICALCOLO", "1") == "1":
+        _ricalcolo_policy()
     if os.environ.get("DATABASE_URL"):
         try:
             _lavoro_subito()

@@ -17,6 +17,14 @@ import os
 import re
 
 from . import foto
+from ..pricing.policy_v2 import POLICY_VERSION, CATEGORIE
+
+# Policy di valutazione (pricing/policy_v2.py). POLICY_SITO=pv2: sul sito vanno solo le auto che la nuova
+# policy qualifica (categorie in POLICY_CATEGORIE_SITO) e si mostrano i suoi numeri (M, L, R, costi, margine).
+# POLICY_SITO=v1 torna alla regola precedente (mercato −10% − 140 € − ricambi).
+POLICY_SITO = os.environ.get("POLICY_SITO", "pv2")
+CATEGORIE_SITO = set(os.environ.get("POLICY_CATEGORIE_SITO", "opportunita,candidato").split(","))
+POLICY_PRONTA = {"ok": False}     # True quando il ricalcolo ha già valutato le auto (fino ad allora vale la regola v1)
 
 COSTI_FISSI = {"passaggio": 90, "pulizia": 50}
 SCONTO_DEFAULT = int(os.environ.get("SCONTO_RIVENDITA", "10"))   # rivendita: al massimo 10% sotto mercato
@@ -78,13 +86,16 @@ def troppi_km(km) -> bool:
 MIN_MOSTRATO = int(os.environ.get("GUADAGNO_MOSTRATO_MINIMO", "500"))
 
 
-def abbastanza(it: dict | None) -> bool:
+def abbastanza(it: dict | None, policy: bool = True) -> bool:
     if not it:
         return False
     if it.get("anno") and it["anno"] < ANNO_MINIMO:
         return False
     if troppi_km(it.get("km")):
         return False
+    if policy and POLICY_SITO == "pv2" and (POLICY_PRONTA["ok"] or it.get("pv")):
+        pv = it.get("pv") or {}
+        return pv.get("categoria") in CATEGORIE_SITO      # niente soglie abbassate, niente scorciatoie
     if guadagno_minimo(it) < MIN_MOSTRATO:
         return False
     if it.get("soglia_libera"):            # riammessa dopo il controllo a mano (audit a2): margini già abbassati
@@ -97,6 +108,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        l.power_kw, l.city, l.province, l.price_eur, l.damage_class, l.stage_reason, l.first_seen_at, l.deep_at,
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
        v.n_comparables, v.confidence, v.engine_version,
+       (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id AND vp.policy_version='""" + POLICY_VERSION + """') AS pv,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -117,6 +129,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        l.first_seen_at AS deep_at, l.model_p50,
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
        v.n_comparables, v.confidence,
+       (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id AND vp.policy_version='""" + POLICY_VERSION + """') AS pv,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -163,7 +176,7 @@ def item_eco(r: dict) -> dict | None:
         "prezzo": int(price), "mercato": mercato,
         "rip_lo": int(lo if lo is not None else (hi or 0)), "rip_hi": int(hi or 0),
         "danno": r.get("damage_class") or "sconosciuto",
-        "verificare": True, "incidentata": False, "economica": True,
+        "verificare": True, "incidentata": False, "economica": True, "pv": _pv(r),
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),
@@ -173,7 +186,8 @@ def item_eco(r: dict) -> dict | None:
 
 
 DETAIL_EXTRA_SQL = """
-SELECT l.description, l.seller_type, v.parts_detail, v.checks, v.motivation
+SELECT l.description, l.seller_type, v.parts_detail, v.checks, v.motivation,
+       (SELECT dati FROM valutazioni_policy vp WHERE vp.listing_id=l.id AND vp.policy_version='""" + POLICY_VERSION + """') AS pv_dati
 FROM listings l
 LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.id=%s
@@ -316,6 +330,7 @@ def item(r: dict) -> dict | None:
         # stima automatica: si mostra prudente (anche quando sembra troppo bella: il mercato viene limitato)
         mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
     return {
+        "pv": _pv(r),
         "mercato_grezzo": grezzo,
         "mercato_base": grezzo,
         "soglia_libera": "-a2" in ev,
@@ -349,6 +364,14 @@ def _j(v):
     return json.loads(v) if isinstance(v, str) else v
 
 
+def _pv(r: dict) -> dict | None:
+    if POLICY_SITO != "pv2" or not r.get("pv"):
+        return None
+    pv = dict(_j(r["pv"]))
+    pv["etichetta"] = CATEGORIE.get(pv.get("categoria"), pv.get("categoria"))
+    return pv
+
+
 def parts_items(parts) -> list[dict]:
     parts = _j(parts) or {}
     out = []
@@ -375,4 +398,19 @@ def detail(base: dict, extra: dict) -> dict:
     d["controlli"] = [c for c in (extra.get("checks") or []) if not CHECK_SKIP.search(c)][:6]
     d["privato"] = (extra.get("seller_type") or "privato") == "privato"
     d["tel"] = bool(find_phone(extra.get("description")))
+    pv = _j(extra.get("pv_dati")) if POLICY_SITO == "pv2" else None
+    if pv:
+        d["valutazione"] = {k: pv.get(k) for k in (
+            "policy", "categoria", "acquisto", "M", "L", "n", "livello", "campione", "riduzione", "riduzione_base", "fascia",
+            "centrale_ridotto", "R", "R_da", "perdita_storico_danno", "R_finale", "costi", "totale_costi", "riserva",
+            "margine", "soglia", "mancanti", "ipotesi", "motivi", "confronti", "n_esclusi", "non_equivalenti", "venditori")}
+        d["valutazione"]["etichetta"] = CATEGORIE.get(pv.get("categoria"))
+        d["valutazione"]["esclusi_motivi"] = _conta_motivi(pv.get("esclusi") or [])
     return d
+
+
+def _conta_motivi(esclusi: list[dict]) -> dict:
+    out: dict = {}
+    for e in esclusi:
+        out[e.get("motivo")] = out.get(e.get("motivo"), 0) + 1
+    return out

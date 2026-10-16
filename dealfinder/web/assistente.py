@@ -40,7 +40,7 @@ Come parli:
 - puoi rispondere anche a domande generali sul mestiere (trattativa, documenti, passaggio, difetti tipici di un modello).
 Dati: usa SEMPRE gli strumenti per auto, prezzi e guadagni, non inventare mai.
 Quando cerchi auto con cerca_affari, TUTTE le auto trovate compaiono sullo schermo come catalogo: dillo in breve ("te le ho messe sullo schermo"), cita solo la migliore o le due migliori con prezzo e guadagno, senza elencarle tutte.
-Conti di Scovo: rivendita = prezzo di mercato meno lo sconto (10% se non detto; mai più del 10% salvo richiesta esplicita); guadagno = rivendita − prezzo − 140 € (passaggio e pulizia) − ricambi (solo pezzi, mai manodopera); il guadagno si dice da–a.
+Conti di Scovo (policy prudente pv2): M = mediana dei prezzi di auto equivalenti, L = 25° percentile; rivendita prudente R = il più basso tra M ridotto per fascia (30% sotto 5.000 €, 25% fino a 10.000, 20% fino a 15.000, 15% fino a 20.000, 12% fino a 30.000, 10% fino a 50.000) e L; margine operativo prudente = R − prezzo − ripristino (ricambi e manodopera) − altri costi − riserva imprevisti. Usa i numeri che danno gli strumenti, non ricalcolarli; non chiamarlo mai utile netto. Con pochi confronti di' che i dati sono insufficienti.
 Per targhe e ricambi usa gli strumenti dedicati; se mancano km o pezzi, chiedili in una frase.
 Se un dato sembra troppo bello per essere vero (guadagno enorme su un'auto quasi nuova), avvisa che va verificato."""
 
@@ -86,6 +86,9 @@ def _slug_make(text: str | None) -> str | None:
 
 
 def _gain(it: dict, sconto: int) -> tuple[int, int, int]:
+    pv = it.get("pv")
+    if pv and pv.get("margine") is not None:          # policy prudente: numeri già calcolati con tutti i costi
+        return int(pv.get("R_finale") or pv.get("R") or 0), int(pv["margine"]), int(pv["margine"])
     riv = round(it["mercato"] * (1 - sconto / 100))
     base = riv - it["prezzo"] - COSTI
     return riv, base - it["rip_hi"], base - it["rip_lo"]
@@ -100,7 +103,7 @@ def cerca_affari(conn, user: dict, a: dict) -> dict:
     out = []
     for it in items:
         riv, g_lo, g_hi = _gain(it, sconto)
-        if g_lo < scovo.MIN_MOSTRATO:
+        if g_lo < scovo.MIN_MOSTRATO and not it.get("pv"):
             continue
         if marca and scovo.make_name(_slug_make(marca)).lower() != it["marca"].lower():
             continue

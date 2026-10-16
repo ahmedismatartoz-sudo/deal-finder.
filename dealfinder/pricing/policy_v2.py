@@ -1,0 +1,501 @@
+"""Policy di valutazione delle opportunità — versione "pv2" (16/10/2026).
+
+UNICO punto in cui si decide se un'auto è un'opportunità. Sostituisce, per il sito, la vecchia regola
+"mercato × (1 − sconto 10%) − prezzo − 140 € − ricambi" (policy precedente, che resta riconoscibile:
+le valutazioni vecchie sono nella tabella `valuations` con il loro engine_version, quelle nuove in
+`valutazioni_policy` con policy_version = POLICY_VERSION).
+
+Passi (tutti configurabili con variabili d'ambiente POLICY_*, vedi `PolicyConfig`):
+
+1. Confronti equivalenti: stessa marca, modello e carburante; stessa generazione quando nota;
+   stesso cambio e potenza entro ±POTENZA_TOL (motorizzazione); anno ±1 e km ±20.000.
+   Solo auto sane (mai annunci di auto incidentate come prova della rivendita), attive e
+   ricontrollate di recente, nel mercato di casa.
+   Livello 2 (ampliato, ESPLICITO): anno ±2 e km ±35.000, accetta confronti con cambio/potenza
+   non indicati; l'affidabilità scende e la qualifica massima diventa "candidato da approfondire".
+   Mai mescolare carburanti, cambi o potenze diverse, né generazioni diverse quando sono note.
+2. Pulizia: si escludono, con il motivo, l'auto stessa, i doppioni (stessa auto fisica o stessa
+   auto su portali diversi), rate/leasing/anticipi/prezzi civetta, prezzi vincolati al
+   finanziamento, auto importate, annunci spariti o non ricontrollati, prezzi chiaramente errati
+   (simbolici o fuori scala rispetto alla mediana del gruppo). Un prezzo basso ma plausibile resta.
+3. Campione: >= 10 confronti = base preferita; 5–9 = provvisoria; < 5 = dati insufficienti.
+4. M = mediana, L = 25° percentile dei prezzi richiesti. Percentile con interpolazione lineare tra
+   ranghi (Hyndman & Fan tipo 7: è il metodo di default di numpy e PERCENTILE.INC di Excel):
+   posizione h = (n − 1)·q sull'elenco ordinato x[0..n-1], valore = x[⌊h⌋] + (h − ⌊h⌋)·(x[⌊h⌋+1] − x[⌊h⌋]).
+   Sono prezzi richiesti negli annunci, non prezzi di vendita conclusa.
+5. Riduzione prudenziale per fascia di M (tabella FASCE), R = min(M × (1 − riduzione), L).
+   Oltre 50.000 € la tabella non si estende: nessuna valutazione automatica.
+   Transizione graduale (POLICY_TRANSIZIONE=1, spenta di default): subito SOPRA ogni confine b,
+   per M in [b, b + w], la riduzione scende linearmente da quella della fascia inferiore (più severa)
+   a quella della fascia superiore: r(M) = r_inf − (r_inf − r_sup)·(M − b)/w. Così R è continua
+   e non supera mai il valore della tabella base (r(M) >= r_base nella zona di passaggio).
+6. Margine operativo prudente = R − acquisto − ripristino (ricambi + manodopera) − altri costi
+   − IVA (regime del margine) − riserva imprevisti. Un costo sconosciuto non vale zero: si usa una
+   stima dichiarata (origine "stima"), oppure, se manca una base, la qualifica si blocca.
+   NON è un utile netto dopo le imposte.
+7. Auto danneggiate: rivendita = valore da sana (confronti sani) meno la perdita per storico del
+   danno; danni strutturali, airbag o alto rischio richiedono sempre approfondimento.
+8. Categorie: dati_insufficienti | candidato | opportunita | non_conveniente, contro la soglia minima
+   già configurata nel software (scovo.soglia), che qui NON viene abbassata.
+"""
+from __future__ import annotations
+
+import math
+import os
+import re
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+
+POLICY_VERSION = "pv2-2026-10-16"
+
+CATEGORIE = {
+    "opportunita": "Opportunità stimata",
+    "candidato": "Candidato da approfondire",
+    "non_conveniente": "Non conveniente",
+    "dati_insufficienti": "Dati insufficienti",
+}
+
+
+def _e(name, default, cast=float):
+    v = os.environ.get("POLICY_" + name)
+    if v is None or v == "":
+        return default
+    try:
+        return cast(v)
+    except ValueError:
+        return default
+
+
+# (limite superiore di M escluso, riduzione). L'ultima fascia include 50.000 €.
+FASCE_BASE = [(5000, .30), (10000, .25), (15000, .20), (20000, .15), (30000, .12), (50000, .10)]
+
+
+@dataclass
+class PolicyConfig:
+    anni_tol: int = 1
+    km_tol: int = 20000
+    potenza_tol: float = .10          # stessa motorizzazione: potenza entro ±10%
+    amplia: bool = True               # livello 2 esplicito
+    anni_tol_2: int = 2
+    km_tol_2: int = 35000
+    freschezza_giorni: int = 10       # confronto valido se visto online / ricontrollato negli ultimi N giorni
+    prezzo_min: int = 500             # sotto: prezzo simbolico
+    fuori_scala: float = 2.5          # oltre mediana × 2,5 o sotto mediana / 2,5: prezzo chiaramente errato
+    n_preferito: int = 10
+    n_minimo: int = 5
+    m_massimo: int = 50000
+    fasce: list = field(default_factory=lambda: list(FASCE_BASE))
+    transizione: bool = False
+    transizione_w: int = 1000
+    # costi (euro). origine "config" = valore già usato dal software; "stima" = ipotesi prudenziale dichiarata
+    passaggio: int = 90
+    pulizia: int = 50
+    trasporto: int = 100
+    diagnosi_revisione: int = 150     # diagnosi + tagliando/revisione minima
+    vendita: int = 60                 # annunci e commissioni
+    garanzia_pct: float = .03         # accantonamento garanzia legale (vendita da commerciante a privato)
+    garanzia_min: int = 100
+    giacenza_giorni: int = 45
+    giacenza_euro_giorno: float = 3.0
+    iva_margine: bool = True          # regime del margine (art. 36 DL 41/95), aliquota 22%
+    iva_aliquota: float = .22
+    manodopera_su_ricambi: float = .8 # stima manodopera/verniciatura quando non è stimata a parte
+    riserva_pct: float = .05          # riserva imprevisti su acquisto + ripristino, auto senza danni dichiarati
+    riserva_pct_danni: float = .10
+    riserva_pct_alto_rischio: float = .20
+    riserva_min: int = 150
+    perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
+
+    @classmethod
+    def from_env(cls) -> "PolicyConfig":
+        c = cls()
+        for f in c.__dataclass_fields__.values():
+            if f.name == "fasce":
+                continue
+            cur = getattr(c, f.name)
+            cast = (lambda v: v.strip() in ("1", "true", "si", "sì")) if isinstance(cur, bool) else type(cur)
+            setattr(c, f.name, _e(f.name.upper(), cur, cast))
+        raw = os.environ.get("POLICY_FASCE")     # es. "5000:30,10000:25,15000:20,20000:15,30000:12,50000:10"
+        if raw:
+            try:
+                c.fasce = [(int(a), int(b) / 100) for a, b in (x.split(":") for x in raw.split(","))]
+                c.m_massimo = c.fasce[-1][0]
+            except ValueError:
+                pass
+        return c
+
+
+# ---------------------------------------------------------------- statistica
+
+def percentile(values, q: float) -> float | None:
+    """Percentile con interpolazione lineare (Hyndman & Fan tipo 7)."""
+    xs = sorted(float(v) for v in values)
+    if not xs:
+        return None
+    h = (len(xs) - 1) * q
+    lo = math.floor(h)
+    hi = min(lo + 1, len(xs) - 1)
+    return xs[lo] + (h - lo) * (xs[hi] - xs[lo])
+
+
+def riduzione(m: float, cfg: PolicyConfig) -> tuple[float | None, str, float | None]:
+    """(riduzione applicata, descrizione fascia, riduzione della tabella base). None oltre il massimo."""
+    if m is None or m > cfg.m_massimo:
+        return None, f"oltre {cfg.m_massimo:,} €: tabella non estesa".replace(",", "."), None
+    prev = 0
+    for i, (lim, r) in enumerate(cfg.fasce):
+        ultimo = i == len(cfg.fasce) - 1
+        if m < lim or (ultimo and m <= lim):
+            desc = f"{prev:,}–{lim:,} €".replace(",", ".")
+            base = r
+            if cfg.transizione and i > 0 and m < prev + cfg.transizione_w:
+                r_inf = cfg.fasce[i - 1][1]
+                r = r_inf - (r_inf - base) * (m - prev) / cfg.transizione_w
+                desc += " (transizione graduale)"
+            return r, desc, base
+        prev = lim
+    return None, "fuori tabella", None
+
+
+def rivendita(m: float, l: float, cfg: PolicyConfig) -> dict:
+    r, fascia, base = riduzione(m, cfg)
+    if r is None:
+        return {"R": None, "fascia": fascia, "riduzione": None}
+    centrale = m * (1 - r)
+    return {"R": int(round(min(centrale, l))), "centrale_ridotto": int(round(centrale)), "fascia": fascia,
+            "riduzione": round(r, 4), "riduzione_base": base, "R_da": "L" if l < centrale else "M ridotto"}
+
+
+# ---------------------------------------------------------------- confronti
+
+FLAG_ESCLUSI = {"leasing_o_rata": "rata, anticipo o leasing", "prezzo_civetta": "prezzo civetta o incompleto",
+                "importazione": "auto da importare (prezzo estero)", "dati_incoerenti": "dati incoerenti"}
+DANNEGGIATE = {"leggero", "medio", "grave", "alto_rischio"}
+RE_FIN = re.compile(r"(?i)(prezzo|offerta|promo\w*)[^.\n]{0,40}(con|tramite|previo|vincolat\w*)[^.\n]{0,15}finanziament"
+                    r"|solo con finanziament|in caso di finanziament|valid\w* con finanziament")
+
+
+def _norm_gear(g):
+    if not g:
+        return None
+    g = str(g).lower()
+    return "automatico" if g.startswith(("auto", "semi", "sequ", "dsg", "cvt")) else "manuale" if g.startswith("man") else g
+
+
+def _gen(x):
+    vi = x.get("vehicle_identity") or {}
+    if isinstance(vi, str):
+        import json
+        try:
+            vi = json.loads(vi)
+        except ValueError:
+            vi = {}
+    g = (vi or {}).get("generation")
+    return str(g).strip().lower() if g else None
+
+
+def _days(d, now):
+    if not d:
+        return None
+    if isinstance(d, str):
+        d = datetime.fromisoformat(d.replace("Z", "+00:00"))
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return (now - d).total_seconds() / 86400
+
+
+def _equivalente(t, c, cfg, livello):
+    """None se equivalente, altrimenti il motivo dell'esclusione."""
+    if c.get("fuel") != t.get("fuel"):
+        return "carburante diverso"
+    gt, gc = _gen(t), _gen(c)
+    if gt and gc and gt != gc:
+        return "generazione diversa"
+    if t.get("year") is None or c.get("year") is None:
+        return "anno mancante"
+    atol = cfg.anni_tol if livello == 1 else cfg.anni_tol_2
+    if abs(int(c["year"]) - int(t["year"])) > atol:
+        return f"anno oltre ±{atol}"
+    if t.get("mileage_km") is None or c.get("mileage_km") is None:
+        return "km mancanti"
+    ktol = cfg.km_tol if livello == 1 else cfg.km_tol_2
+    if abs(int(c["mileage_km"]) - int(t["mileage_km"])) > ktol:
+        return f"km oltre ±{ktol:,}".replace(",", ".")
+    tg, cg = _norm_gear(t.get("gearbox")), _norm_gear(c.get("gearbox"))
+    if tg and cg and tg != cg:
+        return "cambio diverso"
+    if livello == 1 and tg and not cg:
+        return "cambio non indicato"
+    tp, cp = t.get("power_kw"), c.get("power_kw")
+    if tp and cp and abs(cp - tp) > tp * cfg.potenza_tol:
+        return "motorizzazione diversa (potenza)"
+    if livello == 1 and tp and not cp:
+        return "potenza non indicata"
+    return None
+
+
+def _stessa_auto(a, b) -> bool:
+    """Stessa auto fisica: stesso veicolo riconosciuto, o stessi dati quasi identici (anche su portali diversi)."""
+    if a.get("vehicle_id") and a.get("vehicle_id") == b.get("vehicle_id"):
+        return True
+    if a.get("source") and a.get("source") == b.get("source"):
+        return False                     # stesso portale, annunci diversi: auto diverse salvo veicolo riconosciuto
+    if a.get("year") != b.get("year") or a.get("mileage_km") is None or b.get("mileage_km") is None:
+        return False
+    return (abs(a["mileage_km"] - b["mileage_km"]) <= 1500 and a.get("price_eur") and b.get("price_eur")
+            and abs(a["price_eur"] - b["price_eur"]) <= max(200, .07 * b["price_eur"])
+            and _norm_gear(a.get("gearbox")) == _norm_gear(b.get("gearbox")))
+
+
+def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[list[dict], list[dict]]:
+    """Esclusioni che non dipendono dalla somiglianza. Ritorna (tenuti, esclusi con motivo)."""
+    now = now or datetime.now(timezone.utc)
+    tenuti, esclusi = [], []
+
+    def via(c, why):
+        esclusi.append({"id": c.get("id"), "prezzo": c.get("price_eur"), "motivo": why})
+
+    for c in mercato:
+        if c.get("id") == t.get("id"):
+            continue                                   # l'auto stessa: non conta nemmeno come esclusa
+        if _stessa_auto(c, t):
+            via(c, "stessa auto (doppione dell'auto valutata)")
+            continue
+        if not c.get("price_eur"):
+            via(c, "prezzo mancante")
+            continue
+        fl = [FLAG_ESCLUSI[f] for f in (c.get("price_flags") or []) if f in FLAG_ESCLUSI]
+        if fl:
+            via(c, fl[0])
+            continue
+        if c.get("finanziamento"):
+            via(c, "prezzo vincolato a finanziamento")
+            continue
+        if c.get("price_eur") < cfg.prezzo_min:
+            via(c, f"prezzo simbolico (< {cfg.prezzo_min} €)")
+            continue
+        if c.get("stage_reason") in ("doppione", "truffa", "prezzo_finto"):
+            via(c, {"doppione": "doppione su un altro portale", "truffa": "annuncio sospetto",
+                    "prezzo_finto": "prezzo finto"}[c["stage_reason"]])
+            continue
+        if c.get("status") != "attivo":
+            via(c, "annuncio non più online")
+            continue
+        vis = _days(c.get("last_checked_at") or c.get("last_seen_at"), now)
+        if vis is None or vis > cfg.freschezza_giorni:
+            via(c, f"non ricontrollato negli ultimi {cfg.freschezza_giorni} giorni")
+            continue
+        if (c.get("damage_class") or "sconosciuto") in DANNEGGIATE or c.get("problem_search"):
+            via(c, "auto danneggiata o con problemi (non prova il valore da sana)")
+            continue
+        dup = next((k for k in tenuti if _stessa_auto(c, k)), None)
+        if dup:
+            via(c, "doppione (stessa auto già contata)")
+            continue
+        tenuti.append(c)
+    return tenuti, esclusi
+
+
+def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict:
+    puliti, esclusi = pulisci(t, mercato, cfg, now)
+    livelli = [1, 2] if cfg.amplia else [1]
+    motivi = {}
+    for liv in livelli:            # si amplia SOLO se il livello stretto non arriva al minimo
+        validi, scartati = [], []
+        for c in puliti:
+            why = _equivalente(t, c, cfg, liv)
+            if why:
+                scartati.append((c, why))
+            else:
+                validi.append(c)
+        # prezzi chiaramente errati: fuori scala rispetto alla mediana del gruppo equivalente
+        if len(validi) >= 3:
+            med = percentile([c["price_eur"] for c in validi], .5)
+            ok = [c for c in validi if med / cfg.fuori_scala <= c["price_eur"] <= med * cfg.fuori_scala]
+            for c in validi:
+                if c not in ok:
+                    scartati.append((c, f"prezzo fuori scala (mediana gruppo {int(med)} €): probabile errore"))
+            validi = ok
+        if len(validi) >= cfg.n_minimo:
+            break
+    for c, why in scartati:
+        motivi[why] = motivi.get(why, 0) + 1
+    return {"livello": liv, "validi": validi, "esclusi": esclusi,
+            "non_equivalenti": [{"id": c.get("id"), "prezzo": c.get("price_eur"), "motivo": why} for c, why in scartati],
+            "motivi_non_equivalenti": motivi}
+
+
+# ---------------------------------------------------------------- costi
+
+def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
+    """Costi per voce. Ogni voce: importo, origine (annuncio | stima_ricambi | config | stima), nota."""
+    danno = t.get("damage_class") or "sconosciuto"
+    danneggiata = danno in DANNEGGIATE
+    voci, mancanti, ipotesi = {}, [], []
+    lo, hi = t.get("parts_cost_low"), t.get("parts_cost_high")
+    blocco = None
+    if danneggiata:
+        if hi is None:
+            blocco = "danni dichiarati senza stima dei ricambi: ripristino sconosciuto"
+            mancanti.append("costo dei ricambi")
+            hi = 0
+        voci["ricambi"] = {"euro": int(hi), "origine": "stima_ricambi",
+                           "nota": f"ricerca prezzi pezzi {int(lo if lo is not None else hi)}–{int(hi)} €, si usa il valore alto"}
+        mo = int(round(hi * cfg.manodopera_su_ricambi, -1))
+        voci["manodopera"] = {"euro": mo, "origine": "stima",
+                              "nota": f"manodopera e verniciatura stimate al {int(cfg.manodopera_su_ricambi*100)}% dei ricambi "
+                                      "(anche con officina propria: costo interno), da verificare"}
+        mancanti.append("preventivo di manodopera")
+    else:
+        voci["ricambi"] = {"euro": int(hi or 0), "origine": "annuncio" if not hi else "stima_ricambi",
+                           "nota": "nessun danno dichiarato" if not hi else "ricambi per guasti dichiarati"}
+        if hi:
+            voci["manodopera"] = {"euro": int(round(hi * cfg.manodopera_su_ricambi, -1)), "origine": "stima",
+                                  "nota": "manodopera stimata sui ricambi"}
+        if danno == "sconosciuto":
+            ipotesi.append("condizioni non dichiarate: nessun danno stimato, coperto solo da diagnosi e riserva")
+    voci["passaggio"] = {"euro": cfg.passaggio, "origine": "config", "nota": "pratiche e passaggio a carico del commerciante"}
+    voci["trasporto"] = {"euro": cfg.trasporto, "origine": "stima", "nota": "ritiro dell'auto"}
+    voci["diagnosi_revisione"] = {"euro": cfg.diagnosi_revisione, "origine": "stima", "nota": "diagnosi, tagliando o revisione minima"}
+    voci["preparazione"] = {"euro": cfg.pulizia, "origine": "config", "nota": "pulizia e preparazione"}
+    voci["vendita"] = {"euro": cfg.vendita, "origine": "stima", "nota": "annunci e commissioni"}
+    gar = max(cfg.garanzia_min, int(round(R * cfg.garanzia_pct)))
+    voci["garanzia"] = {"euro": gar, "origine": "stima",
+                        "nota": f"accantonamento garanzia legale {int(cfg.garanzia_pct*100)}% della rivendita (min {cfg.garanzia_min} €)"}
+    voci["giacenza"] = {"euro": int(round(cfg.giacenza_giorni * cfg.giacenza_euro_giorno)), "origine": "stima",
+                        "nota": f"ipotesi {cfg.giacenza_giorni} giorni × {cfg.giacenza_euro_giorno:g} €/giorno"}
+    ripristino = voci["ricambi"]["euro"] + voci.get("manodopera", {}).get("euro", 0)
+    prezzo = int(t["price_eur"])
+    if cfg.iva_margine:
+        base = max(0, R - prezzo - ripristino)
+        voci["iva_margine"] = {"euro": int(round(base * cfg.iva_aliquota / (1 + cfg.iva_aliquota))), "origine": "config",
+                               "nota": "IVA 22% nel regime del margine su (rivendita − acquisto − ripristino)"}
+    alto = danno == "alto_rischio" or bool(t.get("rischio_strutturale"))
+    pct = cfg.riserva_pct_alto_rischio if alto else cfg.riserva_pct_danni if danneggiata or hi else cfg.riserva_pct
+    riserva = max(cfg.riserva_min, int(round(pct * (prezzo + ripristino), -1)))
+    totale = sum(v["euro"] for v in voci.values())
+    return {"voci": voci, "ripristino": ripristino, "totale_costi": totale,
+            "riserva": {"euro": riserva, "pct": pct, "nota": f"imprevisti {int(pct*100)}% di acquisto + ripristino (min {cfg.riserva_min} €)"},
+            "mancanti": mancanti, "ipotesi": ipotesi, "blocco": blocco, "danneggiata": danneggiata, "alto_rischio": alto}
+
+
+# ---------------------------------------------------------------- valutazione
+
+def _comp_json(c, now):
+    return {"id": c.get("id"), "url": c.get("url"), "fonte": c.get("source"), "prezzo": c.get("price_eur"),
+            "anno": c.get("year"), "km": c.get("mileage_km"), "cambio": c.get("gearbox"), "kw": c.get("power_kw"),
+            "versione": (c.get("version_raw") or "")[:40] or None, "venditore": c.get("seller_type"),
+            "pubblicato": str(c.get("first_seen_at"))[:10] if c.get("first_seen_at") else None,
+            "verificato": str(c.get("last_checked_at") or c.get("last_seen_at"))[:10]}
+
+
+def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None = None, now=None) -> dict:
+    """Valutazione completa e verificabile di un'auto. `t` e `mercato` sono righe di `listings` (dict)."""
+    cfg = cfg or PolicyConfig.from_env()
+    now = now or datetime.now(timezone.utc)
+    out = {"policy": POLICY_VERSION, "id": t.get("id"), "acquisto": t.get("price_eur"), "soglia": soglia,
+           "mancanti": [], "ipotesi": [], "motivi": []}
+    for k, nome in (("year", "anno"), ("mileage_km", "km"), ("fuel", "alimentazione"), ("price_eur", "prezzo")):
+        if t.get(k) in (None, ""):
+            out["mancanti"].append(nome)
+    if out["mancanti"]:
+        out.update(categoria="dati_insufficienti", n=0)
+        out["motivi"].append("dati dell'auto incompleti: " + ", ".join(out["mancanti"]))
+        return out
+    if not t.get("gearbox"):
+        out["mancanti"].append("cambio")
+    if not t.get("power_kw"):
+        out["mancanti"].append("potenza (motorizzazione non verificabile)")
+    if set(t.get("price_flags") or []) & set(FLAG_ESCLUSI):
+        out["motivi"].append("prezzo dell'annuncio non affidabile (rata, civetta o importazione)")
+
+    sel = seleziona(t, mercato, cfg, now)
+    validi = sel["validi"]
+    n = len(validi)
+    prezzi = [c["price_eur"] for c in validi]
+    out.update(n=n, livello=sel["livello"], esclusi=sel["esclusi"][:40], n_esclusi=len(sel["esclusi"]),
+               non_equivalenti=sel["motivi_non_equivalenti"],
+               confronti=[_comp_json(c, now) for c in sorted(validi, key=lambda c: c["price_eur"])][:40],
+               venditori={s: sum(1 for c in validi if (c.get("seller_type") or "sconosciuto") == s)
+                          for s in {c.get("seller_type") or "sconosciuto" for c in validi}})
+    out["campione"] = ("base preferita" if n >= cfg.n_preferito else "provvisoria (campione limitato)"
+                       if n >= cfg.n_minimo else "insufficiente")
+    if sel["livello"] == 2:
+        out["ipotesi"].append(f"confronti ampliati (anno ±{cfg.anni_tol_2}, km ±{cfg.km_tol_2:,}, cambio/potenza non sempre indicati): "
+                              "affidabilità ridotta".replace(",", "."))
+    if n:
+        out["M"] = int(round(percentile(prezzi, .5)))
+        out["L"] = int(round(percentile(prezzi, .25)))
+    if n < cfg.n_minimo:
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")
+        return out
+
+    riv = rivendita(out["M"], out["L"], cfg)
+    out.update(riv)
+    if riv["R"] is None:
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append(f"mercato M {out['M']} € oltre {cfg.m_massimo} €: la tabella prudenziale non si estende")
+        return out
+
+    R = riv["R"]
+    danno = t.get("damage_class") or "sconosciuto"
+    if danno in DANNEGGIATE:
+        perdita = int(round(R * cfg.perdita_storico_danno, -1))
+        out["perdita_storico_danno"] = perdita
+        out["ipotesi"].append(f"valore dopo la riparazione da confronti di auto sane, meno {int(cfg.perdita_storico_danno*100)}% "
+                              "per lo storico del danno")
+        R -= perdita
+    tetto = t.get("tetto_rivendita")         # rivendita già abbassata da un controllo a mano: vale la più bassa
+    if tetto and tetto < R:
+        out["ipotesi"].append(f"controllo a mano: rivendita limitata a {int(tetto)} €")
+        R = int(tetto)
+    out["R_finale"] = R
+    cs = costi(t, R, cfg)
+    out["costi"] = cs["voci"]
+    out["totale_costi"] = cs["totale_costi"]
+    out["riserva"] = cs["riserva"]
+    out["mancanti"] += cs["mancanti"]
+    out["ipotesi"] += cs["ipotesi"]
+    margine = R - int(t["price_eur"]) - cs["totale_costi"] - cs["riserva"]["euro"]
+    out["margine"] = int(margine)
+    out["sotto_R"] = int(t["price_eur"]) < R
+
+    if cs["blocco"]:
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append(cs["blocco"])
+        return out
+    if margine < soglia:
+        out["categoria"] = "non_conveniente"
+        out["motivi"].append(f"margine operativo prudente {margine} € sotto la soglia di {soglia} €")
+        return out
+    dubbi = []
+    if n < cfg.n_preferito:
+        dubbi.append(f"campione limitato ({n} confronti)")
+    if sel["livello"] == 2:
+        dubbi.append("confronti ampliati")
+    if not t.get("gearbox") or not t.get("power_kw"):
+        dubbi.append("motorizzazione o cambio non indicati nell'annuncio")
+    if cs["danneggiata"]:
+        dubbi.append("auto danneggiata: ripristino e manodopera da verificare")
+    if cs["alto_rischio"]:
+        dubbi.append("danno strutturale, airbag o guasto grave: serve un controllo approfondito")
+    if set(t.get("price_flags") or []) & set(FLAG_ESCLUSI):
+        dubbi.append("prezzo dell'annuncio da verificare")
+    if dubbi:
+        out["categoria"] = "candidato"
+        out["motivi"] += dubbi
+    else:
+        out["categoria"] = "opportunita"
+        out["motivi"].append(f"margine {margine} € ≥ soglia {soglia} € con {n} confronti equivalenti e costi documentati")
+    return out
+
+
+def riassunto(v: dict) -> dict:
+    """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
+    keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
+            "totale_costi", "campione", "policy")
+    out = {k: v.get(k) for k in keys if v.get(k) is not None}
+    if v.get("riserva"):
+        out["riserva"] = v["riserva"]["euro"]
+    return out
