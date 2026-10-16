@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 import re
@@ -13,7 +14,6 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-import hero
 import scraper
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -31,58 +31,17 @@ _img = httpx.Client(timeout=20, headers={"User-Agent": scraper.UA, "Referer": sc
 def _avvio():
     threading.Thread(target=scraper.ciclo, daemon=True).start()
 
-    def copertina():
-        import time
-        while True:
-            time.sleep(60 if not hero.stato["ok"] else 3600)
-            if scraper.carica().get("auto"):
-                hero.prepara()
-    threading.Thread(target=copertina, daemon=True).start()
 
 
 @app.get("/api/hero")
 def api_hero():
-    return {k: v for k, v in hero.stato.items() if k != "errore"} | {"errore": bool(hero.stato.get("errore"))}
-
-
-@app.get("/hero/{nome}")
-def hero_file(nome: str):
-    if nome not in ("ext.png", "int.jpg"):
-        raise HTTPException(404)
-    f = hero.DIR / nome
-    if not f.exists():
-        raise HTTPException(404)
-    return FileResponse(f, headers={"Cache-Control": "public, max-age=3600"})
-
-
-@app.post("/api/hero/rifai")
-def hero_rifai(t: str = ""):
-    if not TOKEN or t != TOKEN:
-        raise HTTPException(403)
-    threading.Thread(target=hero.prepara, kwargs={"forza": True}, daemon=True).start()
-    return {"ok": True}
-
-
-@app.get("/api/auto")
-def auto():
-    d = scraper.carica()
-    d["in_corso"] = scraper.stato["in_corso"]
-    return JSONResponse(d, headers={"Cache-Control": "public, max-age=300"})
-
-
-@app.get("/api/stato")
-def stato():
-    s = {k: v for k, v in scraper.stato.items() if not k.startswith("_")}
-    s["auto"] = len(scraper.carica().get("auto", []))
-    return s
-
-
-@app.post("/api/aggiorna")
-def aggiorna(t: str = ""):
-    if not TOKEN or t != TOKEN:
-        raise HTTPException(403)
-    threading.Thread(target=scraper.aggiorna, daemon=True).start()
-    return {"ok": True}
+    """Copertina: foto della loro auto salvate nel sito; valida finché l'auto è in vendita."""
+    try:
+        info = json.loads((STATIC / "hero" / "info.json").read_text())
+    except Exception:
+        return {"ok": False}
+    ids = {a["id"] for a in scraper.carica().get("auto", [])}
+    return {"ok": not ids or info["id"] in ids, "id": info["id"][:8], "int": info.get("int", False)}
 
 
 @app.get("/img")

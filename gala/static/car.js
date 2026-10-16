@@ -49,7 +49,7 @@ function init() {
   fetch('/api/hero').then(r => r.json()).then(h => {
     if (!h.ok) return;
     const L = new THREE.TextureLoader();
-    L.load('/hero/ext.png?v=' + h.id, tex => { tex.colorSpace = THREE.SRGBColorSpace; ext.usePhoto(photoCar(tex)); heroOn = true; });
+    L.load('/hero/ext.webp?v=' + h.id, tex => { tex.colorSpace = THREE.SRGBColorSpace; ext.usePhoto(photoCar(tex)); heroOn = true; });
     if (h.int) L.load('/hero/int.jpg?v=' + h.id, tex => { tex.colorSpace = THREE.SRGBColorSpace; heroInt = photoInterior(tex); });
   }).catch(() => {});
 
@@ -142,6 +142,7 @@ function init() {
         rp.scene = heroInt.scene; bokeh.scene = heroInt.scene; renderer.toneMapping = THREE.NoToneMapping;
         camera.fov = 40; camera.near = 0.01;
         heroInt.update(t, u, camera);
+        focus = camera.position.z;
       } else {
         rp.scene = cab.scene; bokeh.scene = cab.scene;
         camera.fov = portrait ? 70 : 52; camera.near = 0.01;
