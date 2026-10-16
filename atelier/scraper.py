@@ -308,6 +308,9 @@ def aggiorna():
         stato["ultimo"] = time.time()
         stato["errore"] = None
         log.info("ATELIER aggiornato: %d auto (prima %d)", len(auto), len(vecchi))
+        for x in auto:
+            log.info("ATELIER auto %s %s %s€ km=%s giudizio=%s foto=%d dot=%d desc=%d", x.get("marca"), x.get("modello"), x.get("prezzo"),
+                     x.get("km"), x.get("giudizio"), len(x.get("foto") or []), len(x.get("dotazioni") or []), len(x.get("descrizione") or ""))
     except Exception as e:
         stato["errore"] = str(e)[:200]
         log.exception("ATELIER aggiornamento fallito")
