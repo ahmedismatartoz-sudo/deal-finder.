@@ -282,7 +282,8 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
         if c.get("status") != "attivo":
             via(c, "annuncio non più online")
             continue
-        vis = _days(c.get("last_checked_at") or c.get("last_seen_at"), now)
+        giorni = [g for g in (_days(c.get("last_checked_at"), now), _days(c.get("last_seen_at"), now)) if g is not None]
+        vis = min(giorni) if giorni else None          # ultima verifica = la più recente tra controllo e lettura
         if vis is None or vis > cfg.freschezza_giorni:
             via(c, f"non ricontrollato negli ultimi {cfg.freschezza_giorni} giorni")
             continue
@@ -387,7 +388,7 @@ def _comp_json(c, now):
             "anno": c.get("year"), "km": c.get("mileage_km"), "cambio": c.get("gearbox"), "kw": c.get("power_kw"),
             "versione": (c.get("version_raw") or "")[:40] or None, "venditore": c.get("seller_type"),
             "pubblicato": str(c.get("first_seen_at"))[:10] if c.get("first_seen_at") else None,
-            "verificato": str(c.get("last_checked_at") or c.get("last_seen_at"))[:10]}
+            "verificato": str(max((d for d in (c.get("last_checked_at"), c.get("last_seen_at")) if d), default=""))[:10] or None}
 
 
 def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None = None, now=None) -> dict:
