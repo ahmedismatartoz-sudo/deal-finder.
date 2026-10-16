@@ -33,6 +33,28 @@ def _avvio():
 
 
 
+@app.get("/api/auto")
+def auto():
+    d = scraper.carica()
+    d["in_corso"] = scraper.stato["in_corso"]
+    return JSONResponse(d, headers={"Cache-Control": "public, max-age=300"})
+
+
+@app.get("/api/stato")
+def stato():
+    s = {k: v for k, v in scraper.stato.items() if not k.startswith("_")}
+    s["auto"] = len(scraper.carica().get("auto", []))
+    return s
+
+
+@app.post("/api/aggiorna")
+def aggiorna(t: str = ""):
+    if not TOKEN or t != TOKEN:
+        raise HTTPException(403)
+    threading.Thread(target=scraper.aggiorna, daemon=True).start()
+    return {"ok": True}
+
+
 @app.get("/api/hero")
 def api_hero():
     """Copertina: foto della loro auto salvate nel sito; valida finché l'auto è in vendita."""
