@@ -46,7 +46,9 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv3-2026-10-16"
+POLICY_VERSION = "pv4-2026-10-16"
+# pv4 (16/10, 23:00): senza IVA del margine e senza accantonamento garanzia (richiesta); anno ±4 e km ±70.000 al
+# secondo livello restano come ampliamento esplicito.
 # pv3 (16/10 sera, su richiesta): confronti più larghi (anno ±3, km ±50.000) ma con i prezzi CORRETTI
 # per anno e km verso l'auto valutata; bastano 2 confronti (2–4 = candidato, ≥ 5 = può essere opportunità).
 # pv2 (stessa giornata): anno ±1, km ±20.000, minimo 5 confronti. Le righe pv2 restano nel database.
@@ -99,11 +101,11 @@ class PolicyConfig:
     trasporto: int = 100
     diagnosi_revisione: int = 150     # diagnosi + tagliando/revisione minima
     vendita: int = 60                 # annunci e commissioni
-    garanzia_pct: float = .03         # accantonamento garanzia legale (vendita da commerciante a privato)
-    garanzia_min: int = 100
+    garanzia_pct: float = 0.0         # tolta il 16/10 (richiesta): i clienti non la accantonano. POLICY_GARANZIA_PCT per rimetterla
+    garanzia_min: int = 0
     giacenza_giorni: int = 45
     giacenza_euro_giorno: float = 3.0
-    iva_margine: bool = True          # regime del margine (art. 36 DL 41/95), aliquota 22%
+    iva_margine: bool = False         # tolta il 16/10 (richiesta); POLICY_IVA_MARGINE=1 la rimette. Regime del margine (art. 36 DL 41/95), aliquota 22%
     iva_aliquota: float = .22
     manodopera_su_ricambi: float = .8 # stima manodopera/verniciatura quando non è stimata a parte
     riserva_pct: float = .05          # riserva imprevisti su acquisto + ripristino, auto senza danni dichiarati
