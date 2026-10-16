@@ -78,6 +78,29 @@ def _find(o, *names):
     return None
 
 
+def _prezzo(it: dict):
+    for src in (it.get("prices"), it.get("price"), it.get("tracking")):
+        if isinstance(src, dict):
+            for d in _walk(src):
+                for k in ("priceRaw", "rawPrice", "amount", "priceValue"):
+                    if isinstance(d.get(k), (int, float)) and d[k] > 0:
+                        return int(d[k])
+    for src in (it.get("tracking") or {}, it.get("price"), it.get("prices")):
+        if isinstance(src, (int, float)) and src > 0:
+            return int(src)
+        if isinstance(src, str):
+            return _num(src.split(",")[0])
+        if isinstance(src, dict):
+            for d in _walk(src):
+                for k in ("price", "priceFormatted", "formatted", "value"):
+                    v = d.get(k)
+                    if isinstance(v, (int, float)) and v > 0:
+                        return int(v)
+                    if isinstance(v, str) and re.search(r"\d", v):
+                        return _num(v.split(",")[0])
+    return None
+
+
 def _norm(it: dict) -> dict:
     veh = it.get("vehicle") or {}
     trk = it.get("tracking") or {}
@@ -85,7 +108,10 @@ def _norm(it: dict) -> dict:
     det = {str(d.get("iconName") or ""): d.get("data") for d in (it.get("vehicleDetails") or []) if isinstance(d, dict)}
     url = it.get("url") or ""
     imgs = [i for i in (it.get("images") or []) if isinstance(i, str) and i.startswith("http")]
-    p = _num(trk.get("price")) or _num(price.get("priceFormatted") if isinstance(price, dict) else price)
+    p = _prezzo(it)
+    if not stato.get("_dbg1"):
+        stato["_dbg1"] = True
+        log.info("ATELIER primo annuncio=%s", json.dumps(it, ensure_ascii=False)[:2500])
     lab = (price.get("priceEvaluation") if isinstance(price, dict) else None) or trk.get("priceLabel")
     return {
         "id": str(it.get("id")),
@@ -115,6 +141,12 @@ def _dettaglio(cl: httpx.Client, a: dict) -> dict:
         if not stato.get("_dbg"):
             stato["_dbg"] = True
             log.info("ATELIER dettaglio chiavi=%s", list(d)[:40] if isinstance(d, dict) else type(d))
+        if not a.get("prezzo"):
+            a["prezzo"] = _prezzo(d)
+        if not stato.get("_dbg2"):
+            stato["_dbg2"] = True
+            log.info("ATELIER dettaglio prezzi=%s veicolo=%s", json.dumps(d.get("prices"), ensure_ascii=False)[:600],
+                     json.dumps(d.get("vehicle"), ensure_ascii=False)[:2500])
         foto = []
         for im in (d.get("images") or []) if isinstance(d, dict) else []:
             u = im if isinstance(im, str) else (im.get("url") or im.get("src") if isinstance(im, dict) else None)
