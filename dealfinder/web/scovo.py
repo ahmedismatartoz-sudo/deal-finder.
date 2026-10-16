@@ -103,6 +103,46 @@ def abbastanza(it: dict | None, policy: bool = True) -> bool:
     base = dict(it, mercato=it.get("mercato_base") or it["mercato"])
     return guadagno_minimo(base) >= soglia(it["prezzo"])
 
+# Copertura delle fasce di prezzo (richiesta del 16/10): se in una fascia di prezzo d'acquisto ci sono meno di
+# COPERTURA_MIN auto qualificate, si aggiungono le migliori "non convenienti" per margine, purché il margine prudente
+# (con tutti i costi) sia almeno COPERTURA_MARGINE_MIN € e almeno COPERTURA_QUOTA della soglia. Sul sito sono
+# segnate "Margine sotto soglia": i numeri restano quelli veri, la soglia non viene cambiata.
+COPERTURA_FASCE = [1500, 3000, 5000, 8000, 12000, 20000, 10**9]
+COPERTURA_MIN = int(os.environ.get("COPERTURA_MIN", "10"))
+COPERTURA_MARGINE_MIN = int(os.environ.get("COPERTURA_MARGINE_MIN", "300"))
+COPERTURA_QUOTA = float(os.environ.get("COPERTURA_QUOTA", "0.4"))
+
+
+def _fascia(prezzo: int) -> int:
+    return next(i for i, lim in enumerate(COPERTURA_FASCE) if prezzo < lim)
+
+
+def di_riserva(it: dict | None) -> bool:
+    if not it or not abbastanza(dict(it, pv=dict(it.get("pv") or {}, categoria="opportunita"))):
+        return False                          # anno, km e altre regole di base valgono sempre
+    pv = it.get("pv") or {}
+    m = pv.get("margine")
+    return (pv.get("categoria") == "non_conveniente" and m is not None and m >= COPERTURA_MARGINE_MIN
+            and m >= COPERTURA_QUOTA * (pv.get("soglia") or 0) and not it.get("incidentata"))
+
+
+def copri_fasce(items: list[dict], riserva: list[dict]) -> list[dict]:
+    if not COPERTURA_MIN or POLICY_SITO != "pv2":
+        return []
+    conta: dict = {}
+    for it in items:
+        if not it.get("incidentata"):
+            conta[_fascia(it["prezzo"])] = conta.get(_fascia(it["prezzo"]), 0) + 1
+    extra = []
+    for it in sorted(riserva, key=lambda x: -(x["pv"]["margine"])):
+        f = _fascia(it["prezzo"])
+        if conta.get(f, 0) < COPERTURA_MIN:
+            conta[f] = conta.get(f, 0) + 1
+            pv = dict(it["pv"], riempimento=True, etichetta="Margine sotto soglia")
+            extra.append(dict(it, pv=pv))
+    return extra
+
+
 LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
        l.power_kw, l.city, l.province, l.price_eur, l.damage_class, l.stage_reason, l.first_seen_at, l.deep_at,

@@ -346,7 +346,7 @@ function boxPolicy(c, v){
   let h = `<div class="box">
     <div class="row"><span class="k"><b>${esc(p.etichetta || "")}</b></span><span class="v ${ok ? "" : "warn"}" style="font-size:15px">${esc(p.campione || "")}</span></div>
     ${row("Prezzo di acquisto", eur(c.prezzo))}
-    ${p.M != null ? row(`Mediana mercato M <small>(${p.n} confronti)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
+    ${p.M != null ? row(`Mediana mercato M <small>(${p.n} confronti, corretti per anno e km)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
     ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
     ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}`;
@@ -356,14 +356,14 @@ function boxPolicy(c, v){
     if (v.riserva) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
   } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
   h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
-    <div class="note" style="border:0;margin-top:-8px">Soglia minima richiesta: ${eur(p.soglia)}. Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
+    <div class="note" style="border:0;margin-top:-8px">${p.riempimento ? `<b>Margine sotto la soglia di ${eur(p.soglia)}</b>: è in elenco per avere abbastanza auto in questa fascia di prezzo.` : `Soglia minima richiesta: ${eur(p.soglia)}.`} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
   h += `</div>`;
   if (!v) return h + `<div class="skel"><div class="bar"></div></div>`;
   const li = a => a.map(x => `<li>${esc(x)}</li>`).join("");
   if ((v.motivi || []).length) h += `<section class="d-sec"><h2>Perché questa qualifica</h2><ul class="checks">${li(v.motivi)}</ul></section>`;
   if ((v.mancanti || []).length || (v.ipotesi || []).length) h += `<section class="d-sec"><h2>Dati mancanti e ipotesi</h2><ul class="checks">${li((v.mancanti || []).map(x => "Manca: " + x).concat(v.ipotesi || []))}</ul></section>`;
   if ((v.confronti || []).length) h += `<section class="d-sec"><h2>Confronti usati (${v.n})</h2><ul class="checks">${v.confronti.map(x =>
-      `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit">` : ""}${eur(x.prezzo)} · ${x.anno || "?"} · ${x.km != null ? num(x.km) + " km" : "km ?"}${x.cambio ? " · " + esc(x.cambio) : ""}${x.kw ? " · " + x.kw + " kW" : ""} · ${esc(x.fonte || "")}${x.url ? "</a>" : ""}<br><small>pubblicato ${esc(x.pubblicato || "?")} · verificato ${esc(x.verificato || "?")}</small></li>`).join("")}</ul></section>`;
+      `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit">` : ""}${eur(x.prezzo)}${x.prezzo_corretto != null && x.prezzo_corretto !== x.prezzo ? ` (→ ${eur(x.prezzo_corretto)})` : ""} · ${x.anno || "?"} · ${x.km != null ? num(x.km) + " km" : "km ?"}${x.cambio ? " · " + esc(x.cambio) : ""}${x.kw ? " · " + x.kw + " kW" : ""} · ${esc(x.fonte || "")}${x.url ? "</a>" : ""}<br><small>pubblicato ${esc(x.pubblicato || "?")} · verificato ${esc(x.verificato || "?")}</small></li>`).join("")}</ul></section>`;
   const ex = Object.entries(v.esclusi_motivi || {}).concat(Object.entries(v.non_equivalenti || {}));
   if (ex.length) h += `<section class="d-sec"><h2>Annunci esclusi dal calcolo</h2><ul class="checks">${ex.sort((a, b) => b[1] - a[1]).slice(0, 8).map(([m, n]) => `<li>${n} × ${esc(m)}</li>`).join("")}</ul></section>`;
   return h;
@@ -379,7 +379,7 @@ function viewDetail(){
       d && d.err ? `<div class="empty"><strong style="font:700 19px var(--disp)">${esc(d.err)}</strong><button class="btn" data-act="back">Torna alle auto</button></div>`
       : `<div class="skel"><div class="photo"></div><div class="bar"></div><div class="bar s"></div></div>`}</main></div>`;
   }
-  const c = Object.assign({}, base, d && !d.err ? d : {}, numeri(base));
+  const c = Object.assign({}, base, d && !d.err ? d : {}, base.pv ? {pv: base.pv} : {}, numeri(base));
   const photos = (d && d.foto_tutte && d.foto_tutte.length) ? d.foto_tutte : (c.foto ? [c.foto] : []);
   const pezzi = (d && d.pezzi) || [];
   const desc = d ? (d.descrizione || "") : "";

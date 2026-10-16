@@ -77,6 +77,7 @@ def esegui(conn, limite: int | None = None) -> dict:
     targets.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
 
     cat, trans, motivi, ns = Counter(), Counter(), Counter(), Counter()
+    fasce = {i: Counter() for i in range(len(scovo.COPERTURA_FASCE))}
     campioni, gruppo, mercato, gruppi = [], None, [], 0
     for r in targets:
         key = (r["make"], r["model"], r["fuel"])
@@ -108,6 +109,13 @@ def esegui(conn, limite: int | None = None) -> dict:
             (r["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
              json.dumps(v, default=str), json.dumps(pr) if pr else None))
         cat[(v["sezione"], v["categoria"])] += 1
+        if v["sezione"] == "affari" and (r["year"] or 0) >= scovo.ANNO_MINIMO and not scovo.troppi_km(r["mileage_km"]):
+            f = scovo._fascia(int(r["price_eur"] or 0))
+            if v["categoria"] in scovo.CATEGORIE_SITO:
+                fasce[f]["ok"] += 1
+            elif (v["categoria"] == "non_conveniente" and v.get("margine") is not None
+                  and v["margine"] >= max(scovo.COPERTURA_MARGINE_MIN, scovo.COPERTURA_QUOTA * soglia)):
+                fasce[f]["riserva"] += 1
         ns["≥10" if v.get("n", 0) >= 10 else "5-9" if v.get("n", 0) >= 5 else "<5"] += 1
         if pr and pr["mostrata"]:
             trans[(v["sezione"], v["categoria"])] += 1
@@ -124,7 +132,8 @@ def esegui(conn, limite: int | None = None) -> dict:
              "prima_mostrate": sum(1 for p in prima.values() if p and p["mostrata"]),
              "categorie": {f"{a}:{b}": n for (a, b), n in sorted(cat.items())},
              "mostrate_prima_ora": {f"{a}:{b}": n for (a, b), n in sorted(trans.items())},
-             "confronti": dict(ns), "motivi_principali": dict(motivi.most_common(12))}
+             "confronti": dict(ns),
+             "fasce_affari": {f"<{lim}": dict(fasce[i]) for i, lim in enumerate(scovo.COPERTURA_FASCE)}, "motivi_principali": dict(motivi.most_common(12))}
     log.warning("POLICY_RIEPILOGO %s", json.dumps(stats, ensure_ascii=False))
     for c in campioni:
         log.warning("POLICY_PRIMA_DOPO %s", json.dumps(c, ensure_ascii=False, default=str))

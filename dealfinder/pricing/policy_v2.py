@@ -46,7 +46,10 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv2-2026-10-16"
+POLICY_VERSION = "pv3-2026-10-16"
+# pv3 (16/10 sera, su richiesta): confronti più larghi (anno ±3, km ±50.000) ma con i prezzi CORRETTI
+# per anno e km verso l'auto valutata; bastano 2 confronti (2–4 = candidato, ≥ 5 = può essere opportunità).
+# pv2 (stessa giornata): anno ±1, km ±20.000, minimo 5 confronti. Le righe pv2 restano nel database.
 
 CATEGORIE = {
     "opportunita": "Opportunità stimata",
@@ -72,17 +75,20 @@ FASCE_BASE = [(5000, .30), (10000, .25), (15000, .20), (20000, .15), (30000, .12
 
 @dataclass
 class PolicyConfig:
-    anni_tol: int = 1
-    km_tol: int = 20000
+    anni_tol: int = 3
+    km_tol: int = 50000
     potenza_tol: float = .10          # stessa motorizzazione: potenza entro ±10%
     amplia: bool = True               # livello 2 esplicito
-    anni_tol_2: int = 2
-    km_tol_2: int = 35000
+    anni_tol_2: int = 4
+    km_tol_2: int = 70000
     freschezza_giorni: int = 10       # confronto valido se visto online / ricontrollato negli ultimi N giorni
     prezzo_min: int = 500             # sotto: prezzo simbolico
     fuori_scala: float = 2.5          # oltre mediana × 2,5 o sotto mediana / 2,5: prezzo chiaramente errato
-    n_preferito: int = 10
-    n_minimo: int = 5
+    n_preferito: int = 5
+    n_minimo: int = 2
+    correzione: bool = True           # prezzi dei confronti portati all'anno e ai km dell'auto valutata
+    svalutazione_anno: float = .08    # per anno di differenza (stimata sul gruppo quando ci sono abbastanza dati)
+    svalutazione_10km: float = .012   # per 10.000 km di differenza
     m_massimo: int = 50000
     fasce: list = field(default_factory=lambda: list(FASCE_BASE))
     transizione: bool = False
@@ -205,6 +211,32 @@ def _days(d, now):
     return (now - d).total_seconds() / 86400
 
 
+def tassi(gruppo: list[dict], cfg: PolicyConfig) -> tuple[float, float, str]:
+    """Svalutazione per anno e per 10.000 km: stimata sul gruppo (regressione del log-prezzo) se ci sono almeno
+    15 annunci e i valori sono sensati, altrimenti quelli configurati."""
+    g = [c for c in gruppo if c.get("year") and c.get("mileage_km") is not None and c.get("price_eur")]
+    if len(g) >= 15:
+        try:
+            import numpy as np
+            y = np.log([c["price_eur"] for c in g])
+            X = np.column_stack([np.ones(len(g)), [c["year"] for c in g], [c["mileage_km"] / 10000 for c in g]])
+            beta = np.linalg.lstsq(X, y, rcond=None)[0]
+            ya, ka = 1 - math.exp(-beta[1]), 1 - math.exp(beta[2])
+            if .02 <= ya <= .25 and 0 <= ka <= .05:
+                return float(ya), float(ka), f"stimata su {len(g)} annunci"
+        except Exception:
+            pass
+    return cfg.svalutazione_anno, cfg.svalutazione_10km, "valori configurati"
+
+
+def prezzo_corretto(c: dict, t: dict, ya: float, ka: float) -> float:
+    """Prezzo del confronto portato all'anno e ai km dell'auto valutata."""
+    p = float(c["price_eur"])
+    p *= (1 - ya) ** (int(c["year"]) - int(t["year"]))                  # confronto più nuovo → vale di più → scendo
+    p *= (1 - ka) ** ((int(t["mileage_km"]) - int(c["mileage_km"])) / 10000)
+    return p
+
+
 def _equivalente(t, c, cfg, livello):
     """None se equivalente, altrimenti il motivo dell'esclusione."""
     if c.get("fuel") != t.get("fuel"):
@@ -300,6 +332,13 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
 
 def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict:
     puliti, esclusi = pulisci(t, mercato, cfg, now)
+    if cfg.correzione and t.get("year") and t.get("mileage_km") is not None:
+        ya, ka, origine = tassi(puliti, cfg)
+        puliti = [dict(c, prezzo=prezzo_corretto(c, t, ya, ka)) for c in puliti]
+    else:
+        ya = ka = 0.0
+        origine = "nessuna correzione"
+        puliti = [dict(c, prezzo=float(c["price_eur"])) for c in puliti]
     livelli = [1, 2] if cfg.amplia else [1]
     motivi = {}
     for liv in livelli:            # si amplia SOLO se il livello stretto non arriva al minimo
@@ -312,8 +351,8 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
                 validi.append(c)
         # prezzi chiaramente errati: fuori scala rispetto alla mediana del gruppo equivalente
         if len(validi) >= 3:
-            med = percentile([c["price_eur"] for c in validi], .5)
-            ok = [c for c in validi if med / cfg.fuori_scala <= c["price_eur"] <= med * cfg.fuori_scala]
+            med = percentile([c["prezzo"] for c in validi], .5)
+            ok = [c for c in validi if med / cfg.fuori_scala <= c["prezzo"] <= med * cfg.fuori_scala]
             for c in validi:
                 if c not in ok:
                     scartati.append((c, f"prezzo fuori scala (mediana gruppo {int(med)} €): probabile errore"))
@@ -323,6 +362,7 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
     for c, why in scartati:
         motivi[why] = motivi.get(why, 0) + 1
     return {"livello": liv, "validi": validi, "esclusi": esclusi,
+            "correzione": {"anno": round(ya, 4), "km_10000": round(ka, 4), "origine": origine},
             "non_equivalenti": [{"id": c.get("id"), "prezzo": c.get("price_eur"), "motivo": why} for c, why in scartati],
             "motivi_non_equivalenti": motivi}
 
@@ -385,6 +425,7 @@ def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
 
 def _comp_json(c, now):
     return {"id": c.get("id"), "url": c.get("url"), "fonte": c.get("source"), "prezzo": c.get("price_eur"),
+            "prezzo_corretto": int(round(c["prezzo"])) if c.get("prezzo") is not None else None,
             "anno": c.get("year"), "km": c.get("mileage_km"), "cambio": c.get("gearbox"), "kw": c.get("power_kw"),
             "versione": (c.get("version_raw") or "")[:40] or None, "venditore": c.get("seller_type"),
             "pubblicato": str(c.get("first_seen_at"))[:10] if c.get("first_seen_at") else None,
@@ -414,10 +455,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     sel = seleziona(t, mercato, cfg, now)
     validi = sel["validi"]
     n = len(validi)
-    prezzi = [c["price_eur"] for c in validi]
+    prezzi = [c["prezzo"] for c in validi]           # prezzi corretti per anno e km
     out.update(n=n, livello=sel["livello"], esclusi=sel["esclusi"][:40], n_esclusi=len(sel["esclusi"]),
                non_equivalenti=sel["motivi_non_equivalenti"],
-               confronti=[_comp_json(c, now) for c in sorted(validi, key=lambda c: c["price_eur"])][:40],
+               confronti=[_comp_json(c, now) for c in sorted(validi, key=lambda c: c["prezzo"])][:40],
+               correzione=sel["correzione"],
                venditori={s: sum(1 for c in validi if (c.get("seller_type") or "sconosciuto") == s)
                           for s in {c.get("seller_type") or "sconosciuto" for c in validi}})
     out["campione"] = ("base preferita" if n >= cfg.n_preferito else "provvisoria (campione limitato)"
@@ -425,6 +467,10 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if sel["livello"] == 2:
         out["ipotesi"].append(f"confronti ampliati (anno ±{cfg.anni_tol_2}, km ±{cfg.km_tol_2:,}, cambio/potenza non sempre indicati): "
                               "affidabilità ridotta".replace(",", "."))
+    if n and cfg.correzione:
+        out["ipotesi"].append(f"prezzi dei confronti corretti verso {t['year']} e {int(t['mileage_km']):,} km: "
+                              f"−{sel['correzione']['anno']*100:.1f}% per anno, −{sel['correzione']['km_10000']*100:.1f}% "
+                              f"ogni 10.000 km ({sel['correzione']['origine']})".replace(",", "."))
     if n:
         out["M"] = int(round(percentile(prezzi, .5)))
         out["L"] = int(round(percentile(prezzi, .25)))

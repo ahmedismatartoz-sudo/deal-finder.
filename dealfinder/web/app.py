@@ -947,12 +947,16 @@ def _calcola_elenco() -> None:
         rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": 0}).fetchall()
     # nuova policy attiva appena il ricalcolo ha valutato le auto (prima del primo giro vale la regola precedente)
     scovo.POLICY_PRONTA["ok"] = sum(1 for r in rows if r.get("pv")) >= max(1, len(rows) // 2)
-    items, opens = [], {}
+    items, opens, riserva = [], {}, []
     for r in rows:
         it = scovo.item(r)
         if scovo.abbastanza(it):
             items.append(it)
             opens[it["id"]] = int(r["opens"] or 0)
+        elif scovo.di_riserva(it):
+            riserva.append(it)
+            opens[it["id"]] = int(r["opens"] or 0)
+    items += scovo.copri_fasce(items, riserva)
     items = _meno_subito_senza_telefono(items)
     # sezione "Sotto 1.000 €": tutte le auto di privati dal 2010, anche senza margine calcolato
     if os.environ.get("ECONOMICHE_SITO", "1") == "1":
