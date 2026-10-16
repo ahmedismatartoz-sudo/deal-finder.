@@ -126,12 +126,9 @@ def prepara(forza: bool = False):
                     cut = cut.crop(bbox)
                 cut.save(DIR / "ext.png")
                 log.info("HERO ritaglio fatto %s", cut.size)
-                bg = Image.new("RGB", cut.size, (40, 30, 70)); bg.paste(cut, mask=cut.getchannel("A"))
-                bg.thumbnail((240, 180)); buf = io.BytesIO(); bg.save(buf, "JPEG", quality=60)
-                s = base64.b64encode(buf.getvalue()).decode()
-                parti = [s[k:k + 1400] for k in range(0, len(s), 1400)]
-                for k, p in enumerate(parti):
-                    log.info("HEROIMG cut %d/%d %s", k + 1, len(parti), p)
+                a = cut.getchannel("A").resize((70, 30))
+                righe = ["".join(" .:-=+*#%@"[min(9, v // 26)] for v in a.getdata()[r * 70:(r + 1) * 70]) for r in range(30)]
+                log.info("HEROMASK\n" + "\n".join(righe))
             if ii is not None:
                 b = _get(cl, foto[min(int(ii), len(foto) - 1)], "1280x960")
                 if b:
