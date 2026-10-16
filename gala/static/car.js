@@ -45,6 +45,14 @@ function init() {
   const cab = buildInterior(envBright, T);
   const bay = buildEngineBay(envStudio, T);
 
+  let heroInt = null, heroOn = false;
+  fetch('/api/hero').then(r => r.json()).then(h => {
+    if (!h.ok) return;
+    const L = new THREE.TextureLoader();
+    L.load('/hero/ext.png?v=' + h.id, tex => { tex.colorSpace = THREE.SRGBColorSpace; ext.usePhoto(photoCar(tex)); heroOn = true; });
+    if (h.int) L.load('/hero/int.jpg?v=' + h.id, tex => { tex.colorSpace = THREE.SRGBColorSpace; heroInt = photoInterior(tex); });
+  }).catch(() => {});
+
   const W = innerWidth, H = innerHeight;
   const rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: MOBILE ? 0 : 4 });
   const composer = new EffectComposer(renderer, rt);
@@ -60,6 +68,9 @@ function init() {
   // fuori: dal 3/4 anteriore fino al finestrino del guidatore
   const [extCam, extLook] = path([V(7.2, 1.7, 6.4), V(3.4, 1.55, 4.4), V(0.4, 1.45, 2.25), V(-0.25, 1.36, 1.25)],
     [V(0, 0.85, 0), V(0, 0.95, 0), V(-0.2, 1.2, 0.3), V(-0.35, 1.2, -0.3)]);
+  // con la foto: davanti all'auto, poi verso il parabrezza
+  const [heroCam, heroLook] = path([V(0, 1.3, 9.2), V(0, 1.35, 7.0), V(0.05, 1.5, 5.0), V(0.1, 1.6, 3.6)],
+    [V(0, 1.05, 0), V(0, 1.1, 0), V(0.05, 1.3, 0), V(0.1, 1.45, 0)]);
   // dentro: dalla portiera aperta al posto di guida, sguardo sulla plancia, poi sul quadro strumenti
   const [cabCam, cabLook] = path([V(-1.25, 1.28, 0.05), V(-0.85, 1.22, 0.18), V(-0.4, 1.17, 0.28), V(-0.3, 1.15, 0.22), V(-0.36, 1.08, 0.02), V(-0.38, 1.04, -0.24)],
     [V(0.3, 0.75, -0.4), V(0.1, 0.85, -0.8), V(-0.15, 0.95, -0.9), V(0.05, 0.97, -0.62), V(-0.36, 1.0, -0.64), V(-0.38, 1.0, -0.66)]);
@@ -112,22 +123,31 @@ function init() {
     const portrait = aspect < 0.8;
     let blur = 0, focus = 4;
 
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     if (p < E1) {
       rp.scene = ext.scene; bokeh.scene = ext.scene;
       const u = ease(clamp(p / E1)) * 0.999;
       camera.fov = portrait ? 46 : 30; camera.near = 0.05;
-      place(extCam, extLook, u, (portrait ? 1.6 : 1) * (1 - u) + u);
+      if (heroOn) place(heroCam, heroLook, u, (portrait ? 1.75 : 1) * (1 - u) + u);
+      else place(extCam, extLook, u, (portrait ? 1.6 : 1) * (1 - u) + u);
       // all'inizio la telecamera ondeggia piano attorno all'auto
-      const sway = (1 - smooth(0, 0.03, p)) * Math.sin(t * 0.18) * 0.35;
+      const sway = (1 - smooth(0, 0.03, p)) * Math.sin(t * 0.18) * (heroOn ? 0.04 : 0.35);
       camera.position.applyAxisAngle(V(0, 1, 0), sway); camera.lookAt(look);
       ext.update(t, intro, u);
       focus = camera.position.distanceTo(look); blur = bell(p, E1, 0.03) * 0.012;
+      if (heroOn) renderer.toneMapping = THREE.NoToneMapping;
     } else if (p < E2) {
-      rp.scene = cab.scene; bokeh.scene = cab.scene;
       const u = clamp((p - E1) / (E2 - E1)) * 0.999;
-      camera.fov = portrait ? 70 : 52; camera.near = 0.01;
-      place(cabCam, cabLook, u, 1);
-      cab.update(t, dt, u, rpm);
+      if (heroInt) {
+        rp.scene = heroInt.scene; bokeh.scene = heroInt.scene; renderer.toneMapping = THREE.NoToneMapping;
+        camera.fov = 40; camera.near = 0.01;
+        heroInt.update(t, u, camera);
+      } else {
+        rp.scene = cab.scene; bokeh.scene = cab.scene;
+        camera.fov = portrait ? 70 : 52; camera.near = 0.01;
+        place(cabCam, cabLook, u, 1);
+        cab.update(t, dt, u, rpm);
+      }
       focus = camera.position.distanceTo(look); blur = bell(p, E1, 0.025) * 0.015 + bell(p, E2, 0.03) * 0.015;
     } else {
       rp.scene = bay.scene; bokeh.scene = bay.scene;
@@ -138,6 +158,7 @@ function init() {
       focus = camera.position.distanceTo(look); blur = bell(p, E2, 0.03) * 0.015 + smooth(0.88, 1, u) * 0.01;
     }
     camera.updateProjectionMatrix();
+    bloom.strength = renderer.toneMapping === THREE.NoToneMapping ? 0.08 : 0.25;
     bokeh.uniforms.focus.value = focus;
     bokeh.uniforms.aperture.value = 0.00025 + blur * 0.02;
     bokeh.uniforms.maxblur.value = 0.004 + blur;
@@ -259,9 +280,11 @@ function buildExterior(env, T) {
 
   const suv = buildSUV(T);
   scene.add(suv.group);
+  let photo = null;
 
   return {
-    scene,
+    scene, suv,
+    usePhoto(ph) { photo = ph; suv.group.visible = false; scene.add(ph.group); },
     update(t, intro, u) {
       const a = smooth(0.0, 0.55, intro), b = smooth(0.45, 1, intro);
       sweep.intensity = 14 * Math.sin(Math.PI * clamp(intro / 0.75));
@@ -271,7 +294,8 @@ function buildExterior(env, T) {
       ringM.opacity = 0.7 * b;
       suv.setLights(smooth(0.6, 1, intro));
       suv.group.rotation.y = (1 - smooth(0, 0.6, u)) * Math.sin(t * 0.12) * 0.08;
-      plate.rotation.y = suv.group.rotation.y;
+      plate.rotation.y = t * 0.05;
+      if (photo) photo.update(t, intro);
     },
   };
 }
@@ -436,6 +460,85 @@ function buildSUV(T) {
     setLights(v) {
       ledW.color.setRGB(1, 1, 1).multiplyScalar(0.2 + v * 5);
       ledR.color.setRGB(1, 0.1, 0.15).multiplyScalar(0.2 + v * 4);
+    },
+  };
+}
+
+// ===================================================================================
+// FOTO VERE dell'auto di Gala (la loro Range Rover Sport su AutoScout): ritaglio sulla pedana e interni
+const photoShader = (tex, flip) => new THREE.ShaderMaterial({
+  uniforms: { map: { value: tex }, uReveal: { value: 0 }, uSweep: { value: -1 }, uFlip: { value: flip ? 1 : 0 } },
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D map; uniform float uReveal, uSweep, uFlip; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(map, vUv);
+      float band = exp(-pow((vUv.x + vUv.y * 0.3 - uSweep) * 6.0, 2.0));
+      vec3 col = c.rgb * (0.06 + 0.94 * uReveal) + vec3(0.92, 0.88, 1.0) * band * 0.5 * c.a;
+      float a = c.a;
+      if (uFlip > 0.5) { a *= 0.32 * (1.0 - smoothstep(0.0, 0.4, vUv.y)); col *= 0.55; }
+      gl_FragColor = vec4(col, a);
+      #include <colorspace_fragment>
+    }`,
+});
+
+function photoCar(tex) {
+  const group = new THREE.Group();
+  const ar = tex.image.width / tex.image.height, h = Math.min(2.3, 5.4 / ar), w = h * ar;
+  const geo = new THREE.PlaneGeometry(w, h);
+  const m1 = photoShader(tex, false), m2 = photoShader(tex, true);
+  const car = new THREE.Mesh(geo, m1); car.position.set(0, 0.06 + h / 2, 0); group.add(car);
+  const refl = new THREE.Mesh(geo, m2); refl.scale.y = -1; refl.position.set(0, 0.06 - h / 2, 0.01); group.add(refl);
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.95, 2.2), new THREE.MeshBasicMaterial({ map: radialTex(), transparent: true, depthWrite: false, opacity: 0.9 }));
+  sh.rotation.x = -Math.PI / 2; sh.position.set(0, 0.065, 0.2); group.add(sh);
+  return {
+    group,
+    update(t, intro) {
+      const rv = smooth(0.15, 0.9, intro);
+      m1.uniforms.uReveal.value = m2.uniforms.uReveal.value = rv;
+      m1.uniforms.uSweep.value = m2.uniforms.uSweep.value = -0.4 + 2.0 * clamp(intro / 0.8) + (intro >= 1 ? ((t * 0.12) % 3) - 0.0 : 0);
+    },
+  };
+}
+function radialTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  const g = x.createRadialGradient(128, 128, 8, 128, 128, 128); g.addColorStop(0, 'rgba(0,0,0,.85)'); g.addColorStop(0.6, 'rgba(0,0,0,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c);
+}
+
+// interni: la foto riempie lo schermo, la telecamera ci entra piano verso volante e plancia
+const INT_FOCUS = [-0.38, 0.06];        // verso il volante (foto 10 di AutoScout)
+function photoInterior(tex) {
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x07060d);
+  const ar = tex.image.width / tex.image.height;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: tex }, uT: { value: 0 }, uU: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform sampler2D map; uniform float uT, uU; varying vec2 vUv;
+      void main(){
+        vec3 c = texture2D(map, vUv).rgb;
+        float leak = exp(-pow((vUv.x - 0.15 - uU * 0.7) * 3.0, 2.0)) * 0.12;
+        c += vec3(0.75, 0.6, 1.0) * leak;
+        float v = smoothstep(0.95, 0.35, distance(vUv, vec2(0.5)));
+        gl_FragColor = vec4(c * (0.55 + 0.45 * v), 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(ar * 2, 2), mat); scene.add(plane);
+  const dust = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(Array.from({ length: 600 }, () => (Math.random() - 0.5) * 3), 3)),
+    new THREE.PointsMaterial({ size: 0.006, color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
+  dust.position.z = 0.6; scene.add(dust);
+  return {
+    scene,
+    update(t, u, cam) {
+      const f = Math.tan(cam.fov * Math.PI / 360);
+      const d0 = Math.min(1 / f, ar / (f * cam.aspect)) * 0.97;     // la foto copre tutto lo schermo
+      const k = ease(u), zoom = 1 + k * 0.9;
+      const fx = INT_FOCUS[0] * ar * k, fy = INT_FOCUS[1] * k;
+      cam.up.set(0, 1, 0);
+      cam.position.set(fx + Math.sin(t * 0.3) * 0.01, fy + Math.cos(t * 0.25) * 0.008, d0 / zoom);
+      cam.lookAt(fx, fy, 0);
+      mat.uniforms.uU.value = u; dust.rotation.z = t * 0.02; dust.position.z = d0 / zoom - 0.4;
     },
   };
 }
