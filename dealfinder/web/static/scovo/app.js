@@ -118,7 +118,7 @@ function filtered(over){
   const s = Object.assign({}, S, over || {});
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
   const sec = s.sezione || sezioneDi(S.route), inc = sec === "incidentate", eco = sec === "economiche";
-  return ordinaLista(Object.assign({}, s, {eco}), (S.cars || []).filter(c => eco ? !!c.economica : !c.economica && !!c.incidentata === inc).map(c => Object.assign({}, c, numeri(c)))
+  return ordinaLista(Object.assign({}, s, {eco}), (S.cars || []).filter(c => eco ? !!c.economica : (!inc && c.vetrina != null) || (!c.economica && !!c.incidentata === inc)).map(c => Object.assign({}, c, numeri(c)))
     .filter(c => eco || c.gain >= (c.soglia_min != null ? Math.min(c.soglia_min, sogliaDi(c.prezzo)) : sogliaDi(c.prezzo)))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
