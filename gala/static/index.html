@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gala Auto · Auto usate multimarca a Rho (MI)</title>
+<meta name="description" content="Gala Auto s.n.c. a Rho (MI), Via Toti 12: auto usate multimarca, vendita, acquisto e contovendita. Tutte le auto disponibili, sempre aggiornate. Roberto 333 628 2206 · Alessandro 349 810 7289.">
+<meta name="theme-color" content="#07060d">
+<meta property="og:title" content="Gala Auto · Auto usate multimarca a Rho">
+<meta property="og:description" content="Vendita, acquisto e contovendita. Tutte le auto disponibili, sempre aggiornate.">
+<meta property="og:image" content="/card.jpg">
+<link rel="icon" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css?v=1">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"AutoDealer","name":"Gala Auto s.n.c.","telephone":["+39 333 628 2206","+39 349 810 7289"],"email":"gala.autorho@gmail.com","vatID":"11180320969",
+ "image":"/card.jpg","sameAs":["https://www.instagram.com/gala__auto__rho/"],
+ "address":{"@type":"PostalAddress","streetAddress":"Via Toti 12","postalCode":"20017","addressLocality":"Rho","addressRegion":"MI","addressCountry":"IT"}}
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+
+<div id="loader"><img src="/logo.png" alt=""><div class="bar"><i></i></div></div>
+
+<header class="nav" id="nav">
+  <a href="#top" class="brand"><img src="/logo.png" alt="Gala Auto"></a>
+  <nav><a href="#auto">Auto</a><a href="#servizi">Servizi</a><a href="#contatti">Contatti</a></nav>
+  <a class="btn btn-grad sm" href="tel:+393336282206"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg><span>Chiama</span></a>
+</header>
+
+<section id="top" class="show">
+  <div class="stage">
+    <canvas id="car3d"></canvas>
+    <div class="vignette"></div>
+    <div class="flash" id="flash"></div>
+    <div class="fade" id="fade"></div>
+
+    <div class="copy c0" data-from="0" data-to="0.045">
+      <div><p class="eyebrow">Rho · Milano</p><h1><span class="grad">GALA</span> AUTO</h1><div class="stripe"></div></div>
+      <div><p class="sub">Auto usate multimarca · Vendita · Acquisto · Contovendita</p>
+      <div class="ctas">
+        <a class="btn btn-grad" href="#auto">Guarda le auto</a>
+        <a class="btn btn-ghost" href="tel:+393336282206">Chiama Roberto</a>
+      </div></div>
+    </div>
+
+    <div class="copy c1 left" data-from="0.1" data-to="0.36">
+      <p class="eyebrow">01 — A bordo</p>
+      <h2>Sali a bordo.<br><span class="grad">Mettiti comodo.</span></h2>
+    </div>
+
+    <div class="copy c2 right" data-from="0.48" data-to="0.9">
+      <p class="eyebrow">02 — Il motore</p>
+      <h2>Ogni auto,<br><span class="grad">controllata dentro.</span></h2>
+      <p class="sub"><b id="nAuto">Tutte le</b> auto disponibili qui sotto</p>
+    </div>
+
+    <div class="scrollhint" id="hint"><span>Scorri</span><i></i></div>
+    <div class="progress"><i id="prog"></i></div>
+  </div>
+</section>
+
+<main>
+  <section id="auto" class="cat">
+    <div class="wrap">
+      <div class="cat-head">
+        <div>
+          <p class="eyebrow">Showroom</p>
+          <h2 class="title">Le nostre <span class="grad">auto</span></h2>
+        </div>
+        <p class="count" id="count"></p>
+      </div>
+      <div class="filters">
+        <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Cerca marca o modello"></label>
+        <select id="fMarca"><option value="">Tutte le marche</option></select>
+        <select id="fFuel"><option value="">Alimentazione</option></select>
+        <select id="fPrezzo">
+          <option value="">Qualsiasi prezzo</option>
+          <option value="3000">Fino a 3.000 €</option>
+          <option value="6000">Fino a 6.000 €</option>
+          <option value="10000">Fino a 10.000 €</option>
+          <option value="20000">Fino a 20.000 €</option>
+        </select>
+        <select id="fSort">
+          <option value="new">Più recenti</option>
+          <option value="pa">Prezzo crescente</option>
+          <option value="pd">Prezzo decrescente</option>
+          <option value="km">Meno km</option>
+          <option value="anno">Più nuove</option>
+        </select>
+      </div>
+
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>Nessuna auto con questi filtri.</p>
+    </div>
+  </section>
+
+  <section id="servizi" class="about">
+    <div class="wrap about-grid">
+      <div>
+        <p class="eyebrow">Servizi</p>
+        <h2 class="title">Auto usate <span class="grad">multimarca</span>,<br>a Rho.</h2>
+        <img src="/card.jpg" alt="Biglietto da visita Gala Auto" class="card-img">
+      </div>
+      <div class="about-cards">
+        <article><span>01</span><h3>Vendita</h3><p>Auto usate di tutte le marche. Le trovi tutte qui sopra, aggiornate in automatico.</p></article>
+        <article><span>02</span><h3>Acquisto</h3><p>Vuoi vendere la tua auto? Chiamaci: la valutiamo e te la compriamo.</p></article>
+        <article><span>03</span><h3>Contovendita</h3><p>Lasci a noi la tua auto e ci pensiamo noi a venderla.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="contatti" class="contact">
+    <div class="wrap contact-grid">
+      <div class="contact-card">
+        <img src="/logo.png" alt="" class="contact-logo">
+        <h2 class="title">Vieni a <span class="grad">trovarci</span></h2>
+        <ul>
+          <li><small>Indirizzo</small>Via Toti n.12<br>20017 Rho (MI)</li>
+          <li><small>Roberto</small><a href="tel:+393336282206">333 628 2206</a></li>
+          <li><small>Alessandro</small><a href="tel:+393498107289">349 810 7289</a></li>
+          <li><small>Email</small><a href="mailto:gala.autorho@gmail.com">gala.autorho@gmail.com</a></li>
+          <li><small>Instagram</small><a href="https://www.instagram.com/gala__auto__rho/" target="_blank" rel="noopener">@gala__auto__rho</a></li>
+        </ul>
+        <div class="ctas">
+          <a class="btn btn-grad" href="tel:+393336282206">Chiama Roberto</a>
+          <a class="btn btn-ghost" href="tel:+393498107289">Chiama Alessandro</a>
+          <a class="btn btn-ghost" href="https://wa.me/393336282206" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="btn btn-ghost" href="https://www.google.com/maps/dir/?api=1&destination=Via+Toti+12+Rho+MI" target="_blank" rel="noopener">Indicazioni</a>
+        </div>
+      </div>
+      <div class="map"><iframe title="Mappa" loading="lazy" src="https://www.google.com/maps?q=Via+Toti+12,+20017+Rho+MI&output=embed"></iframe></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="wrap"><span>© <span id="yr"></span> Gala Auto s.n.c. · Via Toti 12, 20017 Rho (MI) · P.IVA 11180320969</span><span id="upd"></span></div>
+  </footer>
+</main>
+
+<a class="fab" href="tel:+393336282206" aria-label="Chiama"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg> Chiama</a>
+
+<div class="modal" id="modal" hidden>
+  <div class="m-back" data-close></div>
+  <div class="m-box">
+    <button class="m-x" data-close aria-label="Chiudi">×</button>
+    <div class="m-gal">
+      <div class="m-main"><img id="mImg" alt=""><button class="nav-l" id="prev">‹</button><button class="nav-r" id="next">›</button><span class="m-n" id="mN"></span></div>
+      <div class="m-thumbs" id="mThumbs"></div>
+    </div>
+    <div class="m-info">
+      <p class="eyebrow" id="mVer"></p>
+      <h3 id="mTit"></h3>
+      <p class="m-price grad" id="mPrice"></p>
+      <div class="m-specs" id="mSpecs"></div>
+      <div class="ctas">
+        <a class="btn btn-grad" href="tel:+393336282206">Chiama Roberto</a>
+        <a class="btn btn-ghost" href="tel:+393498107289">Chiama Alessandro</a>
+        <a class="btn btn-ghost" id="mWa" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+      <div class="m-desc" id="mDesc"></div>
+      <div class="m-eq" id="mEq"></div>
+      <a class="m-src" id="mSrc" target="_blank" rel="noopener">Vedi l'annuncio su AutoScout24 ↗</a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/car.js?v=1"></script>
+<script src="/app.js?v=1" defer></script>
+</body>
+</html>

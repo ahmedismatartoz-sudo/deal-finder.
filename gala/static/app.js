@@ -1,5 +1,5 @@
 (() => {
-  const TEL = '+393447252930';
+  const TEL = '+393336282206';
   const $ = s => document.querySelector(s);
   const grid = $('#grid'), empty = $('#empty'), count = $('#count');
   let AUTO = [];
@@ -56,7 +56,7 @@
           <h3>${esc(a.marca)} ${esc(a.modello)}</h3>
           <p class="ver">${esc(a.versione)}</p>
           <div class="chips">${[anno(a), kmf(a.km), fuelIt(a.carburante), a.cambio, cv(a)].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div>
-          <div class="bottom"><span class="price chrome">${eur(a.prezzo)}</span><span class="go">→</span></div>
+          <div class="bottom"><span class="price grad">${eur(a.prezzo)}</span><span class="go">→</span></div>
         </div></article>`;
     }).join('');
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
