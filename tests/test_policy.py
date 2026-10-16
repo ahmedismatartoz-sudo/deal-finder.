@@ -5,6 +5,7 @@ from dealfinder.pricing.policy_v2 import (PolicyConfig, percentile, riduzione, r
 
 NOW = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
 CFG = PolicyConfig()
+CFG_DANNI = PolicyConfig(solo_sane=False)
 
 
 def car(i, price, year=2018, km=90000, fuel="diesel", gearbox="manuale", kw=81, **kw2):
@@ -138,25 +139,25 @@ def test_anno_e_km_stretti_poi_ampliamento_esplicito():
 
 def test_costo_mancante_blocca():
     t = car(1, 3000, damage_class="medio", parts_cost_high=None)
-    v = valuta(t, market(BASE), 1500, CFG, NOW)
+    v = valuta(t, market(BASE), 1500, CFG_DANNI, NOW)
     assert v["categoria"] == "dati_insufficienti"
     assert any("ricambi" in m for m in v["motivi"])
 
 
 def test_incidentata_non_vale_come_sana():
-    sana = valuta(car(1, 5600), market(BASE), 1500, CFG, NOW)
-    inc = valuta(car(1, 5600, damage_class="leggero", parts_cost_low=300, parts_cost_high=500), market(BASE), 1500, CFG, NOW)
+    sana = valuta(car(1, 5600), market(BASE), 1500, CFG_DANNI, NOW)
+    inc = valuta(car(1, 5600, damage_class="leggero", parts_cost_low=300, parts_cost_high=500), market(BASE), 1500, CFG_DANNI, NOW)
     assert inc["R_finale"] < sana["R_finale"]
     assert inc["costi"]["ricambi"]["euro"] == 500 and "manodopera" not in inc["costi"]
     assert inc["categoria"] in ("candidato", "non_conveniente")
     # gli annunci di auto incidentate non entrano nei confronti
     m = market(BASE) + [car(700 + n, 2000, damage_class="grave") for n in range(5)]
-    assert all(c["prezzo"] != 2000 for c in valuta(car(1, 3000), m, 1500, CFG, NOW)["confronti"])
+    assert all(c["prezzo"] != 2000 for c in valuta(car(1, 3000), m, 1500, CFG_DANNI, NOW)["confronti"])
 
 
 def test_alto_rischio_sempre_da_approfondire():
     t = car(1, 5600, damage_class="alto_rischio", parts_cost_low=100, parts_cost_high=200)
-    v = valuta(t, market(BASE), 500, CFG, NOW)
+    v = valuta(t, market(BASE), 500, CFG_DANNI, NOW)
     assert v["categoria"] in ("candidato", "non_conveniente")
 
 
@@ -194,9 +195,15 @@ def test_fascia_piu_severa_tra_prezzo_e_mercato():
     assert v["riduzione"] == .25
 
 
-def test_solo_passaggio_pulizia_ricambi():
+def test_nessun_costo_margine_uguale_rivendita_meno_prezzo():
     v = valuta(car(1, 6000), market(BASE), 1500, CFG, NOW)
-    assert v["totale_costi"] == 140 and v["riserva"]["euro"] == 0
+    assert v["totale_costi"] == 0 and v["riserva"]["euro"] == 0
+    assert v["margine"] == v["R_finale"] - 6000
+
+
+def test_solo_auto_sane():
+    v = valuta(car(1, 6000, damage_class="leggero", parts_cost_high=300), market(BASE), 1500, CFG, NOW)
+    assert v["categoria"] == "dati_insufficienti" and "sane" in v["motivi"][-1]
 
 
 def test_correzione_anno_km():

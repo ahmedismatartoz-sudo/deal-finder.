@@ -46,7 +46,9 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv6-2026-10-16"
+POLICY_VERSION = "pv7-2026-10-16"
+# pv7 (16/10, 23:50, richiesta): margine = rivendita prudente − prezzo, NESSUN costo (né passaggio né pulizia);
+# per ora solo auto sane (incidentate, guasti e danni nel testo esclusi dal sito).
 # pv6 (16/10, 23:45): la correzione per anno/km può solo ABBASSARE il prezzo di un confronto (un confronto più
 # vecchio o con più km non viene mai "gonfiato" verso l'auto valutata); carrozzerie diverse (coupé, cabrio,
 # station wagon, monovolume Tourer) non si confrontano.
@@ -103,8 +105,8 @@ class PolicyConfig:
     transizione: bool = False
     transizione_w: int = 1000
     # costi (euro). origine "config" = valore già usato dal software; "stima" = ipotesi prudenziale dichiarata
-    passaggio: int = 90
-    pulizia: int = 50
+    passaggio: int = 0               # tolto il 16/10: margine = rivendita − prezzo
+    pulizia: int = 0
     trasporto: int = 0
     diagnosi_revisione: int = 0       # diagnosi + tagliando/revisione minima (tolta il 16/10)
     vendita: int = 0                  # annunci e commissioni (tolta il 16/10)
@@ -120,6 +122,7 @@ class PolicyConfig:
     riserva_pct_alto_rischio: float = 0.0
     riserva_min: int = 0
     sospetto_sotto_m: float = .55     # prezzo sotto M × 0,55: M non affidabile (versione diversa o errore)
+    solo_sane: bool = True            # per ora solo auto sane
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
 
     @classmethod
@@ -522,6 +525,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
 
     R = riv["R"]
     danno = t.get("damage_class") or "sconosciuto"
+    if cfg.solo_sane and (danno in DANNEGGIATE or t.get("parts_cost_high") or t.get("rischio_strutturale")
+                          or t.get("damage_declared")):
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append("auto incidentata o con guasti: per ora si propongono solo auto sane")
+        return out
     if danno in DANNEGGIATE:
         perdita = int(round(R * cfg.perdita_storico_danno, -1))
         out["perdita_storico_danno"] = perdita

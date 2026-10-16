@@ -155,3 +155,119 @@ if __name__ == "__main__":
     from ..db import connect
     with connect() as conn:
         print(esegui(conn))
+
+
+# ------------------------------------------------------------------ auto da 1.000 a 7.000 € (utilitarie)
+UTILITARIE = {"panda", "punto", "grande-punto", "punto-evo", "500", "ypsilon", "fiesta", "ka", "ka+", "fusion", "polo", "up",
+              "fox", "lupo", "yaris", "aygo", "iq", "clio", "twingo", "modus", "zoe", "208", "207", "206", "107", "108",
+              "c1", "c2", "c3", "c3-picasso", "ds3", "corsa", "agila", "adam", "karl", "micra", "note", "i10", "i20",
+              "getz", "atos", "picanto", "rio", "venga", "ibiza", "mii", "arona", "fabia", "citigo", "roomster", "swift",
+              "splash", "alto", "celerio", "ignis", "jazz", "sandero", "logan", "spark", "matiz", "colt", "space-star",
+              "mito", "a1", "fortwo", "forfour", "one", "cooper", "1-series", "serie-1", "mazda2", "2", "colt", "500l",
+              "500x", "qubo", "fiorino", "idea", "musa", "delta", "stonic", "kalos", "aveo", "duster", "captur", "2008",
+              "juke", "golf", "a-class", "classe-a", "a-klasse", "b-klasse", "classe-b", "auris", "corolla", "megane", "astra",
+              "focus", "bravo", "308", "c4", "leon", "ceed", "i30", "civic"}
+
+UTIL_SQL = ("SELECT {cols}, l.title, l.description, l.telefono_ok, l.damage_declared, l.problem_search FROM listings l "
+            "WHERE l.status='attivo' AND l.seller_type='privato' AND l.price_eur BETWEEN %(lo)s AND %(hi)s "
+            "AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s AND l.province = ANY(%(prov)s) "
+            "AND l.last_seen_at > now() - interval '4 days' AND l.source IN ('subito','autoscout24','facebook') "
+            "AND COALESCE(l.damage_class, 'sconosciuto') IN ('nessuno','sconosciuto') AND NOT COALESCE(l.problem_search, false) "
+            "AND COALESCE(l.damage_declared, false) = false "
+            "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti')")
+
+
+def utilitarie(conn, pubblica: bool = False) -> dict:
+    """Tutte le auto sane di privati da UTIL_MIN a UTIL_MAX € (con il numero): valutazione con la policy e
+    simulazione di quante superano UTIL_MARGINE € di margine con riduzioni diverse sotto i 10.000 €.
+    Con pubblica=True quelle che passano con la tabella in vigore vanno sul sito (stage 'approfondito')."""
+    from ..core.models import Listing
+    from ..core.normalize import problem_hint
+    from ..store import HOME_REGION_SQL
+    from ..web import scovo
+    from ..zone import MILANO
+    from ..pipeline.tempo_reale import ha_numero_testo
+    t0 = time.time()
+    lo, hi = int(os.environ.get("UTIL_MIN", "1000")), int(os.environ.get("UTIL_MAX", "7000"))
+    margine_min = int(os.environ.get("UTIL_MARGINE", "1000"))
+    cfg = P.PolicyConfig.from_env()
+    rows = conn.execute(UTIL_SQL.format(cols=TARGET_COLS), {"lo": lo, "hi": hi, "anno": scovo.ANNO_MINIMO,
+                                                             "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
+    rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+    st, vals, gruppo, mercato = Counter(), [], None, []
+    for r in rows:
+        if r["source"] == "autoscout24":
+            tel = r["telefono_ok"]                       # None = non ancora controllato (lo fa l'agente di verifica)
+        elif r["source"] == "subito":
+            tel = ha_numero_testo(r["title"], r["description"])
+        else:
+            tel = True
+        if tel is False:
+            st["senza_numero"] += 1
+            continue
+        if problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
+            st["danni_nel_testo"] += 1
+            continue
+        if not (r["make"] and r["model"] and r["fuel"]):
+            st["dati_incompleti"] += 1
+            continue
+        key = (r["make"], r["model"], r["fuel"])
+        if key != gruppo:
+            gruppo = key
+            mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                       for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
+        t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
+                 rischio_strutturale=_rischio(r))
+        try:
+            v = P.valuta(t, mercato, margine_min, cfg)
+        except Exception as e:
+            st["errore"] += 1
+            log.warning("utilitarie: %s non valutata: %s", r["id"], str(e)[:120])
+            continue
+        st[f"cat:{v['categoria']}"] += 1
+        if v.get("M"):
+            vals.append({"id": r["id"], "src": r["source"], "p": int(r["price_eur"]), "M": v["M"], "L": v["L"], "n": v["n"],
+                         "tel": tel, "util": (r["model"] or "") in UTILITARIE, "v": v})
+    # simulazione: riduzione unica sotto i 10.000 € (sopra resta la tabella), margine = R − prezzo
+    sim = {}
+    for rid in (.30, .25, .22, .20, .18, .15):
+        ok = [x for x in vals if x["n"] >= cfg.n_minimo and x["p"] >= x["M"] * cfg.sospetto_sotto_m
+              and min(x["M"] * (1 - rid), x["L"]) - x["p"] >= margine_min]
+        sim[f"{int(rid*100)}%"] = {"tutte": len(ok), "n>=5": sum(1 for x in ok if x["n"] >= 5),
+                                   "utilitarie": sum(1 for x in ok if x["util"]),
+                                   "con_numero_certo": sum(1 for x in ok if x["tel"] is True),
+                                   "per_fascia": dict(Counter(f"{(x['p'] // 1000) * 1000}" for x in ok))}
+    out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
+    log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
+    # esempi (solo dati dell'auto) con la riduzione in vigore
+    pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO and (x["v"].get("margine") or 0) >= margine_min]
+    for x in sorted(pass_, key=lambda x: -x["v"]["margine"])[:8]:
+        v = x["v"]
+        log.warning("UTILITARIE_ESEMPIO %s", json.dumps({"id": x["id"], "prezzo": x["p"], "M": x["M"], "L": x["L"], "n": x["n"],
+                    "R": v.get("R_finale"), "rid": v.get("riduzione"), "margine": v.get("margine"), "cat": v["categoria"],
+                    "confronti": [[c["prezzo"], c.get("prezzo_corretto"), c["anno"], c["km"], c["kw"]] for c in (v.get("confronti") or [])[:8]]},
+                    default=str))
+    if pubblica:
+        n = 0
+        for x in pass_:
+            v = x["v"]
+            conn.execute(
+                """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)
+                   VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(),
+                   categoria=EXCLUDED.categoria, margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati""",
+                (x["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
+                 json.dumps(v, default=str)))
+            if not conn.execute("SELECT 1 FROM valuations WHERE listing_id=%s LIMIT 1", (x["id"],)).fetchone():
+                conn.execute(
+                    """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
+                         n_comparables, comparables_used, confidence, parts_cost_low, parts_cost_high)
+                       VALUES (%s,%s,%s,%s,%s,%s,'[]',%s,0,0)""",
+                    (x["id"], P.POLICY_VERSION + "+utilitarie", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
+                     "affidabile" if v["categoria"] == "opportunita" else "da_verificare"))
+            conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
+                         "last_checked_at=now() WHERE id=%s AND stage <> 'approfondito'",
+                         ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", x["id"]))
+            n += 1
+        conn.commit()
+        log.warning("UTILITARIE_PUBBLICATE %d", n)
+    return out

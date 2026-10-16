@@ -42,7 +42,14 @@ SOGLIE = [(10**9, MINIMO_MILLE)] if MODALITA == "mille" else SOGLIE_FASCE
 MARGINE_MINIMO = SOGLIE[0][1]
 
 
+UTIL_MIN, UTIL_MAX = int(os.environ.get("UTIL_MIN", "1000")), int(os.environ.get("UTIL_MAX", "7000"))
+UTIL_MARGINE = int(os.environ.get("UTIL_MARGINE", "1000"))
+
+
 def soglia(prezzo: int) -> int:
+    # auto da 1.000 a 7.000 € (utilitarie, richiesta del 16/10): margine minimo 1.000 € (rivendita prudente − prezzo)
+    if UTIL_MIN <= prezzo <= UTIL_MAX:
+        return UTIL_MARGINE
     return next(m for limite, m in SOGLIE if prezzo <= limite)
 
 

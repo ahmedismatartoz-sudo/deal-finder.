@@ -1629,6 +1629,9 @@ def _ricalcolo_policy():
                 from ..pricing import ricalcolo
                 with connect() as conn:
                     ricalcolo.esegui(conn)
+                if os.environ.get("UTIL_SIM", "1") == "1":
+                    with connect() as conn:
+                        ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "0") == "1")
                 _elenco["t"] = 0.0
                 _aggiorna_elenco(attendi=False)
             except Exception as e:
