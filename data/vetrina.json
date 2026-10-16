@@ -1,7 +1,7 @@
 {
- "titolo": "⭐ Le 15 migliori di oggi · controllate una per una",
+ "titolo": "⭐ Le 15 migliori di oggi · 5 sotto i 3.000 €, tutte controllate una per una",
  "scelte_il": "2026-10-16",
- "quante": 15,
+ "quante": 10,
  "ids": [
   413582,
   375422,
@@ -12,7 +12,6 @@
   385007,
   6580,
   8120,
-  3198,
   63630,
   63577,
   45084,
@@ -46,5 +45,22 @@
   17760,
   60664,
   50904
- ]
+ ],
+ "ids_eco": [
+  432220,
+  3198,
+  421343,
+  392066,
+  51468,
+  33991,
+  15357,
+  20778,
+  50226,
+  10525,
+  48217,
+  51684,
+  50131,
+  50606
+ ],
+ "quante_eco": 5
 }

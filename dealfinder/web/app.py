@@ -1030,12 +1030,17 @@ def affari(request: Request):
     items = [dict(it) for it in _elenco_per(user["id"])]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
-    pos = {i: k for k, i in enumerate(vet.get("ids") or [])}
-    n = 0
-    for it in sorted((it for it in items if it["id"] in pos), key=lambda it: pos[it["id"]]):
-        if n < int(vet.get("quante") or 30):
-            it["vetrina"] = n
-            n += 1
+    per_id = {it["id"]: it for it in items}
+    mid = [per_id[i] for i in (vet.get("ids") or []) if i in per_id][: int(vet.get("quante") or 30)]
+    eco = [per_id[i] for i in (vet.get("ids_eco") or []) if i in per_id and per_id[i] not in mid][: int(vet.get("quante_eco") or 0)]
+    # una sotto i 3.000 € ogni due della fascia media
+    scelte, a, b = [], list(mid), list(eco)
+    while a or b:
+        scelte += a[:2]; a = a[2:]
+        if b: scelte.append(b.pop(0))
+    for n, it in enumerate(scelte):
+        it["vetrina"] = n
+    n = len(scelte)
     return jsonify({"items": items, "vetrina_titolo": vet.get("titolo") if n else None, "costi_fissi": scovo.COSTI_FISSI, "sconto": scovo.SCONTO_DEFAULT,
                     "margine_minimo": scovo.MARGINE_MINIMO, "soglie": [[l if l < 10**9 else None, m] for l, m in scovo.SOGLIE],
                     "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
