@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+import hero
 import scraper
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -29,6 +30,37 @@ _img = httpx.Client(timeout=20, headers={"User-Agent": scraper.UA, "Referer": sc
 @app.on_event("startup")
 def _avvio():
     threading.Thread(target=scraper.ciclo, daemon=True).start()
+
+    def copertina():
+        import time
+        while True:
+            time.sleep(60 if not hero.stato["ok"] else 3600)
+            if scraper.carica().get("auto"):
+                hero.prepara()
+    threading.Thread(target=copertina, daemon=True).start()
+
+
+@app.get("/api/hero")
+def api_hero():
+    return {k: v for k, v in hero.stato.items() if k != "errore"} | {"errore": bool(hero.stato.get("errore"))}
+
+
+@app.get("/hero/{nome}")
+def hero_file(nome: str):
+    if nome not in ("ext.png", "int.jpg"):
+        raise HTTPException(404)
+    f = hero.DIR / nome
+    if not f.exists():
+        raise HTTPException(404)
+    return FileResponse(f, headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.post("/api/hero/rifai")
+def hero_rifai(t: str = ""):
+    if not TOKEN or t != TOKEN:
+        raise HTTPException(403)
+    threading.Thread(target=hero.prepara, kwargs={"forza": True}, daemon=True).start()
+    return {"ok": True}
 
 
 @app.get("/api/auto")
