@@ -45,7 +45,7 @@ em{font-family:var(--serif);font-style:italic;font-weight:300;color:#cfd0ff}
 .nav nav a:hover{color:#fff}
 
 /* 3D show */
-.show{position:relative;height:1000vh}
+.show{position:relative;height:700vh}
 .stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 #car3d{position:absolute;inset:0;width:100%;height:100%;display:block}
 .vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(5,5,7,.85) 100%)}
@@ -54,7 +54,7 @@ em{font-family:var(--serif);font-style:italic;font-weight:300;color:#cfd0ff}
 .copy{position:absolute;left:0;right:0;top:13vh;text-align:center;padding:0 24px;opacity:0;transform:translateY(30px);transition:opacity .6s,transform .8s cubic-bezier(.2,.7,.2,1);pointer-events:none}
 .copy.on{opacity:1;transform:none;pointer-events:auto}
 .copy h1{font-family:var(--serif);font-weight:300;font-size:clamp(84px,15vw,230px);line-height:.85;letter-spacing:-.02em;margin-top:10px}
-.copy h2{font-family:var(--serif);font-weight:400;font-size:clamp(42px,6vw,92px);line-height:.98}
+.copy h2{text-shadow:0 2px 30px rgba(0,0,0,.6);font-family:var(--serif);font-weight:400;font-size:clamp(42px,6vw,92px);line-height:.98}
 .copy h2.big{font-size:clamp(90px,16vw,240px);font-weight:300}
 .copy .sub{color:#b8b9c6;font-size:15px;letter-spacing:.04em;margin-top:18px}
 .copy .sub b{color:#fff;font-weight:600}

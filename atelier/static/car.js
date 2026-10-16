@@ -75,8 +75,8 @@ function init() {
   const path = (pts, looks) => [new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.4), new THREE.CatmullRomCurve3(looks, false, 'catmullrom', 0.4)];
   // showroom: giro attorno all'auto, porte aperte, poi giù fino al cofano motore
   const [carCam, carLook] = path(
-    [V(6.6, 1.55, 6.2), V(1.0, 1.0, 7.8), V(-5.2, 1.9, 5.4), V(2.8, 2.3, 5.8), V(-3.8, 2.7, 2.6), V(-2.9, 2.6, 0.9), V(-2.15, 1.65, 0.12)],
-    [V(0.2, 0.55, 0), V(0, 0.55, 0), V(-0.2, 0.6, 0), V(0, 0.75, 0.2), V(-1.4, 0.8, 0), V(-1.6, 0.8, 0), V(-1.68, 0.85, 0)]);
+    [V(6.6, 1.55, 6.2), V(0.5, 2.3, 7.4), V(-3.8, 2.7, 2.6), V(-2.9, 2.6, 0.9), V(-2.15, 1.65, 0.12)],
+    [V(0.2, 0.55, 0), V(-0.6, 0.6, 0), V(-1.4, 0.8, 0), V(-1.6, 0.8, 0), V(-1.68, 0.85, 0)]);
   // motore: volo tra le bancate e tuffo nella presa d'aria centrale
   const [engCam, engLook] = path(
     [V(9.5, 4.8, 9.5), V(5.5, 2.0, -6.8), V(-6.5, 3.4, -4.2), V(-4.5, 5.6, 3.2), V(-0.6, 6.4, 1.4), V(0, 4.4, 0.25), V(0, 3.0, 0.05)],
@@ -91,7 +91,7 @@ function init() {
     const r = show.getBoundingClientRect();
     target = clamp(-r.top / (r.height - innerHeight));
     nav.classList.toggle('solid', r.bottom < innerHeight * 0.6 || target > 0.05);
-    fab && fab.classList.toggle('on', target > 0.1);
+    fab && fab.classList.toggle('on', target > 0.06);
   }
   addEventListener('scroll', onScroll, { passive: true });
   function resize() {
@@ -124,7 +124,7 @@ function init() {
   const clock = new THREE.Clock();
   let ready = false;
   const bell = (v, c, w) => Math.exp(-Math.pow((v - c) / w, 2));
-  const E1 = 0.6, E2 = 0.82;          // passaggi: auto -> motore -> tunnel
+  const E1 = 0.34, E2 = 0.66;          // passaggi: auto -> motore -> tunnel
 
   function frame() {
     requestAnimationFrame(frame);
@@ -145,19 +145,18 @@ function init() {
       car.setLights(smooth(0.8, 1, intro));
       ringMat.opacity = smooth(0.7, 1, intro) * 0.55;
       ring2.material.opacity = smooth(0.85, 1, intro) * 0.18;
-      const open = ease(smooth(0.22, 0.4, p));
-      car.setDoors(open); cabin.intensity = open * 1.2;
-      car.setEngine(smooth(0.47, E1, p));
-      const u = (p < 0.5 ? p / 0.5 * 0.7 : 0.7 + (p - 0.5) / (E1 - 0.5) * 0.3) * 0.999;
+      car.setDoors(0); cabin.intensity = 0;
+      car.setEngine(smooth(0.2, E1, p));
+      const u = clamp(p / E1) * 0.999;
       carCam.getPoint(u, pos); carLook.getPoint(u, look);
       const far = aspect < 0.8 ? 1.75 : aspect < 1.3 ? 1.3 : 1;
-      const k = 1 + (far - 1) * (1 - smooth(0.4, 0.56, p));
+      const k = 1 + (far - 1) * (1 - smooth(0.12, 0.3, p));
       tmp.copy(pos).sub(look).multiplyScalar(k * (1 + (1 - ease(intro)) * 0.25)).add(look);
-      camera.position.copy(tmp); camera.position.y += Math.sin(t * 0.5) * 0.03 * (1 - smooth(0.4, 0.55, p));
+      camera.position.copy(tmp); camera.position.y += Math.sin(t * 0.5) * 0.03 * (1 - smooth(0.1, 0.25, p));
       camera.up.set(0, 1, 0); camera.lookAt(look);
-      car.group.rotation.y = Math.sin(t * 0.25) * 0.02 * (1 - smooth(0.4, 0.5, p));
+      car.group.rotation.y = Math.sin(t * 0.25) * 0.02 * (1 - smooth(0.1, 0.2, p));
       car.spin(p);
-      bloom.strength = (MOBILE ? 0.45 : 0.6) + smooth(0.575, E1, p) * 1.2;
+      bloom.strength = (MOBILE ? 0.45 : 0.6) + smooth(0.31, E1, p) * 1.2;
     } else if (p < E2) {
       // ---------- motore ----------
       rp.scene = engine.scene; camera.near = 0.05;
