@@ -46,7 +46,11 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv4-2026-10-16"
+POLICY_VERSION = "pv5-2026-10-16"
+# pv5 (16/10, 23:30, richiesta): costi SOLO passaggio 90 + pulizia 50 + ricambi (niente trasporto, diagnosi,
+# vendita, giacenza, manodopera stimata, riserva); riduzione della fascia = la più severa tra la fascia del
+# prezzo di acquisto e quella di M (auto da 5.000 a 10.000 € → almeno 25%); prezzo sotto il 55% di M = dati
+# non affidabili (versione diversa o errore), mai sul sito.
 # pv4 (16/10, 23:00): senza IVA del margine e senza accantonamento garanzia (richiesta); anno ±4 e km ±70.000 al
 # secondo livello restano come ampliamento esplicito.
 # pv3 (16/10 sera, su richiesta): confronti più larghi (anno ±3, km ±50.000) ma con i prezzi CORRETTI
@@ -98,21 +102,21 @@ class PolicyConfig:
     # costi (euro). origine "config" = valore già usato dal software; "stima" = ipotesi prudenziale dichiarata
     passaggio: int = 90
     pulizia: int = 50
-    trasporto: int = 100
-    diagnosi_revisione: int = 150     # diagnosi + tagliando/revisione minima
-    vendita: int = 60                 # annunci e commissioni
+    trasporto: int = 0
+    diagnosi_revisione: int = 0       # diagnosi + tagliando/revisione minima (tolta il 16/10)
+    vendita: int = 0                  # annunci e commissioni (tolta il 16/10)
     garanzia_pct: float = 0.0         # tolta il 16/10 (richiesta): i clienti non la accantonano. POLICY_GARANZIA_PCT per rimetterla
     garanzia_min: int = 0
-    giacenza_giorni: int = 45
+    giacenza_giorni: int = 0
     giacenza_euro_giorno: float = 3.0
     iva_margine: bool = False         # tolta il 16/10 (richiesta); POLICY_IVA_MARGINE=1 la rimette. Regime del margine (art. 36 DL 41/95), aliquota 22%
     iva_aliquota: float = .22
-    manodopera_su_ricambi: float = .8 # stima manodopera/verniciatura quando non è stimata a parte
-    riserva_pct: float = .05          # riserva imprevisti su acquisto + ripristino, auto senza danni dichiarati
-    riserva_pct_danni: float = .10
-    riserva_pct_alto_rischio: float = .20
-    riserva_min: int = 150
-    sospetto_sotto_m: float = .5      # prezzo sotto M × 0,5: troppo bello, sempre da approfondire
+    manodopera_su_ricambi: float = 0.0  # manodopera esclusa (come prima): solo pezzi
+    riserva_pct: float = 0.0          # riserva imprevisti su acquisto + ripristino, auto senza danni dichiarati
+    riserva_pct_danni: float = 0.0
+    riserva_pct_alto_rischio: float = 0.0
+    riserva_min: int = 0
+    sospetto_sotto_m: float = .55     # prezzo sotto M × 0,55: M non affidabile (versione diversa o errore)
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
 
     @classmethod
@@ -166,10 +170,14 @@ def riduzione(m: float, cfg: PolicyConfig) -> tuple[float | None, str, float | N
     return None, "fuori tabella", None
 
 
-def rivendita(m: float, l: float, cfg: PolicyConfig) -> dict:
+def rivendita(m: float, l: float, cfg: PolicyConfig, prezzo: float | None = None) -> dict:
     r, fascia, base = riduzione(m, cfg)
     if r is None:
         return {"R": None, "fascia": fascia, "riduzione": None}
+    if prezzo:                                  # vale la fascia più severa tra prezzo d'acquisto e M
+        rp, fp, bp = riduzione(min(float(prezzo), cfg.m_massimo), cfg)
+        if rp is not None and rp > r:
+            r, base, fascia = rp, bp, fp + " (fascia del prezzo d'acquisto)"
     centrale = m * (1 - r)
     return {"R": int(round(min(centrale, l))), "centrale_ridotto": int(round(centrale)), "fascia": fascia,
             "riduzione": round(r, 4), "riduzione_base": base, "R_da": "L" if l < centrale else "M ridotto"}
@@ -387,18 +395,19 @@ def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
         voci["ricambi"] = {"euro": int(hi), "origine": "stima_ricambi",
                            "nota": f"ricerca prezzi pezzi {int(lo if lo is not None else hi)}–{int(hi)} €, si usa il valore alto"}
         mo = int(round(hi * cfg.manodopera_su_ricambi, -1))
-        voci["manodopera"] = {"euro": mo, "origine": "stima",
-                              "nota": f"manodopera e verniciatura stimate al {int(cfg.manodopera_su_ricambi*100)}% dei ricambi "
-                                      "(anche con officina propria: costo interno), da verificare"}
-        mancanti.append("preventivo di manodopera")
+        if mo:
+            voci["manodopera"] = {"euro": mo, "origine": "stima",
+                                  "nota": f"manodopera e verniciatura stimate al {int(cfg.manodopera_su_ricambi*100)}% dei ricambi"}
+        else:
+            ipotesi.append("manodopera esclusa: si contano solo i pezzi")
     else:
         voci["ricambi"] = {"euro": int(hi or 0), "origine": "annuncio" if not hi else "stima_ricambi",
                            "nota": "nessun danno dichiarato" if not hi else "ricambi per guasti dichiarati"}
-        if hi:
+        if hi and cfg.manodopera_su_ricambi:
             voci["manodopera"] = {"euro": int(round(hi * cfg.manodopera_su_ricambi, -1)), "origine": "stima",
                                   "nota": "manodopera stimata sui ricambi"}
         if danno == "sconosciuto":
-            ipotesi.append("condizioni non dichiarate: nessun danno stimato, coperto solo da diagnosi e riserva")
+            ipotesi.append("condizioni non dichiarate: nessun danno stimato, da guardare dal vivo")
     voci["passaggio"] = {"euro": cfg.passaggio, "origine": "config", "nota": "pratiche e passaggio a carico del commerciante"}
     voci["trasporto"] = {"euro": cfg.trasporto, "origine": "stima", "nota": "ritiro dell'auto"}
     voci["diagnosi_revisione"] = {"euro": cfg.diagnosi_revisione, "origine": "stima", "nota": "diagnosi, tagliando o revisione minima"}
@@ -418,6 +427,7 @@ def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
     alto = danno == "alto_rischio" or bool(t.get("rischio_strutturale"))
     pct = cfg.riserva_pct_alto_rischio if alto else cfg.riserva_pct_danni if danneggiata or hi else cfg.riserva_pct
     riserva = max(cfg.riserva_min, int(round(pct * (prezzo + ripristino), -1)))
+    voci = {k: v for k, v in voci.items() if v["euro"] or k == "ricambi"}     # voci a zero non si mostrano
     totale = sum(v["euro"] for v in voci.values())
     return {"voci": voci, "ripristino": ripristino, "totale_costi": totale,
             "riserva": {"euro": riserva, "pct": pct, "nota": f"imprevisti {int(pct*100)}% di acquisto + ripristino (min {cfg.riserva_min} €)"},
@@ -482,7 +492,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")
         return out
 
-    riv = rivendita(out["M"], out["L"], cfg)
+    riv = rivendita(out["M"], out["L"], cfg, t.get("price_eur"))
     out.update(riv)
     if riv["R"] is None:
         out["categoria"] = "dati_insufficienti"
@@ -516,6 +526,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(cs["blocco"])
         return out
+    if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append(f"prezzo oltre il {int(round((1 - cfg.sospetto_sotto_m) * 100))}% sotto la mediana: il mercato "
+                             "trovato non è affidabile (versione diversa, dati sbagliati o truffa)")
+        return out
     if margine < soglia:
         out["categoria"] = "non_conveniente"
         out["motivi"].append(f"margine operativo prudente {margine} € sotto la soglia di {soglia} €")
@@ -533,8 +548,6 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         dubbi.append("danno strutturale, airbag o guasto grave: serve un controllo approfondito")
     if set(t.get("price_flags") or []) & set(FLAG_ESCLUSI):
         dubbi.append("prezzo dell'annuncio da verificare")
-    if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
-        dubbi.append(f"prezzo oltre il {int((1 - cfg.sospetto_sotto_m) * 100)}% sotto la mediana: verificare dati, versione o truffa")
     if dubbi:
         out["categoria"] = "candidato"
         out["motivi"] += dubbi

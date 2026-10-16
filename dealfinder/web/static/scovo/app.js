@@ -353,7 +353,7 @@ function boxPolicy(c, v){
   if (v && v.R != null) h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
   if (v && v.costi) {
     h += Object.entries(v.costi).filter(([, x]) => x.euro).map(([k, x]) => `<div class="row"><span class="k">${esc(VOCI[k] || k)} <small>· ${esc(ORIG[x.origine] || x.origine)}</small></span><span class="v" style="font-size:16px">−${eur(x.euro)}</span></div>`).join("");
-    if (v.riserva) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
+    if (v.riserva && v.riserva.euro) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
   } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
   h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
     <div class="note" style="border:0;margin-top:-8px">${p.riempimento ? `<b>Margine sotto la soglia di ${eur(p.soglia)}</b>: è in elenco per avere abbastanza auto in questa fascia di prezzo.` : `Soglia minima richiesta: ${eur(p.soglia)}.`} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";

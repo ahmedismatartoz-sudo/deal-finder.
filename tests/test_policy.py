@@ -108,7 +108,7 @@ def test_rate_e_finanziamento():
 def test_pochi_confronti():
     v = valuta(TARGET, market(BASE[:1]), 1500, CFG, NOW)
     assert v["categoria"] == "dati_insufficienti" and "R" not in v
-    v = valuta(car(1, 4000), market(BASE[:3]), 1500, CFG, NOW)
+    v = valuta(car(1, 5600), market(BASE[:3]), 1500, CFG, NOW)
     assert v["campione"].startswith("provvisoria")
     assert v["categoria"] in ("candidato", "non_conveniente")
 
@@ -144,10 +144,10 @@ def test_costo_mancante_blocca():
 
 
 def test_incidentata_non_vale_come_sana():
-    sana = valuta(car(1, 3000), market(BASE), 1500, CFG, NOW)
-    inc = valuta(car(1, 3000, damage_class="leggero", parts_cost_low=300, parts_cost_high=500), market(BASE), 1500, CFG, NOW)
+    sana = valuta(car(1, 5600), market(BASE), 1500, CFG, NOW)
+    inc = valuta(car(1, 5600, damage_class="leggero", parts_cost_low=300, parts_cost_high=500), market(BASE), 1500, CFG, NOW)
     assert inc["R_finale"] < sana["R_finale"]
-    assert inc["costi"]["manodopera"]["euro"] > 0
+    assert inc["costi"]["ricambi"]["euro"] == 500 and "manodopera" not in inc["costi"]
     assert inc["categoria"] in ("candidato", "non_conveniente")
     # gli annunci di auto incidentate non entrano nei confronti
     m = market(BASE) + [car(700 + n, 2000, damage_class="grave") for n in range(5)]
@@ -155,7 +155,7 @@ def test_incidentata_non_vale_come_sana():
 
 
 def test_alto_rischio_sempre_da_approfondire():
-    t = car(1, 1500, damage_class="alto_rischio", parts_cost_low=100, parts_cost_high=200)
+    t = car(1, 5600, damage_class="alto_rischio", parts_cost_low=100, parts_cost_high=200)
     v = valuta(t, market(BASE), 500, CFG, NOW)
     assert v["categoria"] in ("candidato", "non_conveniente")
 
@@ -181,9 +181,22 @@ def test_soglia_non_abbassata():
     assert v["soglia"] == 5000 and v["categoria"] == "non_conveniente"
 
 
-def test_troppo_bello_da_approfondire():
+def test_troppo_bello_mai_sul_sito():
     v = valuta(car(1, 3000), market(BASE), 1500, CFG, NOW)
-    assert v["categoria"] == "candidato" and any("truffa" in m for m in v["motivi"])
+    assert v["categoria"] == "dati_insufficienti" and any("truffa" in m for m in v["motivi"])
+
+
+def test_fascia_piu_severa_tra_prezzo_e_mercato():
+    m = market([21000 + n * 100 for n in range(12)])
+    v = valuta(car(1, 12000), m, 1500, CFG, NOW)
+    assert v["riduzione"] == .20                      # acquisto 12.000 → fascia 10–15k (20%), più severa di M 21k (12%)
+    v = valuta(car(1, 8700), market([12000 + n * 100 for n in range(12)]), 1500, CFG, NOW)
+    assert v["riduzione"] == .25
+
+
+def test_solo_passaggio_pulizia_ricambi():
+    v = valuta(car(1, 6000), market(BASE), 1500, CFG, NOW)
+    assert v["totale_costi"] == 140 and v["riserva"]["euro"] == 0
 
 
 def test_correzione_anno_km():

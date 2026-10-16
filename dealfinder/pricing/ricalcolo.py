@@ -78,6 +78,7 @@ def esegui(conn, limite: int | None = None) -> dict:
 
     cat, trans, motivi, ns = Counter(), Counter(), Counter(), Counter()
     fasce = {i: Counter() for i in range(len(scovo.COPERTURA_FASCE))}
+    sospette = [0]
     campioni, gruppo, mercato, gruppi = [], None, [], 0
     for r in targets:
         key = (r["make"], r["model"], r["fuel"])
@@ -109,6 +110,15 @@ def esegui(conn, limite: int | None = None) -> dict:
             (r["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
              json.dumps(v, default=str), json.dumps(pr) if pr else None))
         cat[(v["sezione"], v["categoria"])] += 1
+        if (v["categoria"] in scovo.CATEGORIE_SITO and v.get("M") and r["price_eur"]
+                and v["M"] > 1.5 * r["price_eur"] and sospette[0] < int(os.environ.get("POLICY_LOG_SOSPETTE", "12"))):
+            sospette[0] += 1         # controllo a vista: mercato molto sopra il prezzo (solo dati dell'auto, niente venditori)
+            log.warning("POLICY_SOSPETTA %s", json.dumps({
+                "id": r["id"], "auto": f"{r['make']} {r['model']} {r['version_raw'] or ''} {r['year']} {r['mileage_km']}km "
+                                      f"{r['fuel']} {r['gearbox']} {r['power_kw']}kW", "prezzo": r["price_eur"],
+                "M": v["M"], "L": v["L"], "R": v.get("R_finale"), "margine": v.get("margine"), "cat": v["categoria"],
+                "confronti": [[c["prezzo"], c.get("prezzo_corretto"), c["anno"], c["km"], c["kw"], (c.get("versione") or "")[:20]]
+                              for c in (v.get("confronti") or [])[:12]]}, ensure_ascii=False, default=str))
         if v["sezione"] == "affari" and (r["year"] or 0) >= scovo.ANNO_MINIMO and not scovo.troppi_km(r["mileage_km"]):
             f = scovo._fascia(int(r["price_eur"] or 0))
             if v["categoria"] in scovo.CATEGORIE_SITO:
