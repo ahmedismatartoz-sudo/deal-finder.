@@ -334,7 +334,8 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
     puliti, esclusi = pulisci(t, mercato, cfg, now)
     if cfg.correzione and t.get("year") and t.get("mileage_km") is not None:
         ya, ka, origine = tassi(puliti, cfg)
-        puliti = [dict(c, prezzo=prezzo_corretto(c, t, ya, ka)) for c in puliti]
+        puliti = [dict(c, prezzo=prezzo_corretto(c, t, ya, ka) if c.get("year") and c.get("mileage_km") is not None
+                       else float(c["price_eur"])) for c in puliti]      # senza anno/km: escluse dopo, non corrette
     else:
         ya = ka = 0.0
         origine = "nessuna correzione"

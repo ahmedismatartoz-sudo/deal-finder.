@@ -192,3 +192,9 @@ def test_correzione_anno_km():
     assert v["M"] < 12000 * 0.85                       # 3 anni e 50.000 km in più: il prezzo scende
     assert all(c["prezzo_corretto"] < c["prezzo"] for c in v["confronti"])
     assert any("corretti" in i for i in v["ipotesi"])
+
+
+def test_confronto_senza_anno_o_km():
+    m = market(BASE) + [car(900, 9000, year=None), car(901, 9000, km=None)]
+    v = valuta(TARGET, m, 1500, CFG, NOW)
+    assert v["n"] == 12
