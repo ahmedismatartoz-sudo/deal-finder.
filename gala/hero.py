@@ -53,7 +53,8 @@ def _ritaglia(im):
         with httpx.Client(timeout=120, follow_redirects=True) as cl:
             f.write_bytes(cl.get(MODELLO_URL).content)
     so = ort.SessionOptions(); so.intra_op_num_threads = 1; so.inter_op_num_threads = 1
-    so.enable_cpu_mem_arena = False
+    so.enable_cpu_mem_arena = False; so.enable_mem_pattern = False
+    so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
     sess = ort.InferenceSession(str(f), so, providers=["CPUExecutionProvider"])
     x = np.asarray(im.resize((320, 320), Image.LANCZOS), dtype=np.float32) / 255.0
     x = (x - np.array([0.485, 0.456, 0.406], dtype=np.float32)) / np.array([0.229, 0.224, 0.225], dtype=np.float32)
@@ -65,6 +66,12 @@ def _ritaglia(im):
     mask = mask.filter(ImageFilter.GaussianBlur(1.2)).point(lambda v: 0 if v < 40 else (255 if v > 215 else int((v - 40) * 255 / 175)))
     rgba = im.convert("RGBA"); rgba.putalpha(mask)
     return rgba
+
+
+def _ritaglia_file(src, dst):
+    from PIL import Image
+    im = Image.open(src).convert("RGB")
+    _ritaglia(im).save(dst)
 
 
 def prepara(forza: bool = False):
@@ -97,15 +104,23 @@ def prepara(forza: bool = False):
             ie = int(os.environ.get("HERO_EXT", "0"))
             ii = os.environ.get("HERO_INT")
             ext = _get(cl, foto[min(ie, len(foto) - 1)], "1280x960")
-            mark = DIR / "in_corso"
-            if ext and mark.exists() and not forza:
-                log.warning("HERO ritaglio saltato: l'ultima volta non è finito")
+            mark = DIR / "tentativi"
+            n = int(mark.read_text()) if mark.exists() else 0
+            if ext and n >= 2 and not forza:
+                log.warning("HERO ritaglio saltato: fallito %d volte", n)
                 ext = None
             if ext:
-                mark.write_text("1")
-                im = Image.open(io.BytesIO(ext)).convert("RGB")
-                cut = _ritaglia(im)
+                mark.write_text(str(n + 1))
+                (DIR / "in.jpg").write_bytes(ext)
+                import subprocess, sys
+                r = subprocess.run([sys.executable, "-c", "import hero, sys; hero._ritaglia_file(sys.argv[1], sys.argv[2])",
+                                    str(DIR / "in.jpg"), str(DIR / "raw.png")], cwd=str(Path(__file__).parent),
+                                   capture_output=True, text=True, timeout=600)
+                if r.returncode != 0 or not (DIR / "raw.png").exists():
+                    log.error("HERO ritaglio fallito (codice %s): %s", r.returncode, (r.stderr or "")[-600:])
+                    raise RuntimeError("ritaglio fallito")
                 mark.unlink(missing_ok=True)
+                cut = Image.open(DIR / "raw.png")
                 bbox = cut.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
                 if bbox:
                     cut = cut.crop(bbox)
