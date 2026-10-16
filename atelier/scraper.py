@@ -109,9 +109,6 @@ def _norm(it: dict) -> dict:
     url = it.get("url") or ""
     imgs = [i for i in (it.get("images") or []) if isinstance(i, str) and i.startswith("http")]
     p = _prezzo(it)
-    if not stato.get("_dbg1"):
-        stato["_dbg1"] = True
-        log.info("ATELIER primo annuncio=%s", json.dumps(it, ensure_ascii=False)[:2500])
     ev = ((it.get("prices") or {}).get("public") or {}).get("priceEvaluation")
     lab = {1: "top", 2: "good"}.get(ev)
     return {
@@ -144,10 +141,6 @@ def _dettaglio(cl: httpx.Client, a: dict) -> dict:
             log.info("ATELIER dettaglio chiavi=%s", list(d)[:40] if isinstance(d, dict) else type(d))
         if not a.get("prezzo"):
             a["prezzo"] = _prezzo(d)
-        if not stato.get("_dbg2"):
-            stato["_dbg2"] = True
-            log.info("ATELIER dettaglio prezzi=%s veicolo=%s", json.dumps(d.get("prices"), ensure_ascii=False)[:600],
-                     json.dumps(d.get("vehicle"), ensure_ascii=False)[:2500])
         foto = []
         for im in (d.get("images") or []) if isinstance(d, dict) else []:
             u = im if isinstance(im, str) else (im.get("url") or im.get("src") if isinstance(im, dict) else None)

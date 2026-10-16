@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 import threading
 from pathlib import Path
 
@@ -60,6 +61,10 @@ def img(u: str = Query(...)):
     f = CACHE / hashlib.sha1(u.encode()).hexdigest()
     if not f.exists():
         r = _img.get(u)
+        for alt in ("720x540", "480x360", "250x188"):           # se una misura non esiste si prova la successiva
+            if r.status_code == 200:
+                break
+            r = _img.get(re.sub(r"/\d+x\d+\.webp$", f"/{alt}.webp", u))
         if r.status_code != 200:
             raise HTTPException(404)
         f.write_bytes(r.content)
