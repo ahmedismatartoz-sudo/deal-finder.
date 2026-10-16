@@ -887,7 +887,8 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
                 _tel_cache[r["id"]] = bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
     # Subito senza numero (si contattano dalla chat dell'annuncio): si tiene la metà con più guadagno
     # (META_SENZA_NUMERO, 0.5), separatamente per ogni sezione (affari, incidentate, economiche...)
-    quota = float(os.environ.get("META_SENZA_NUMERO", "0.5"))
+    # dal 16/10: Subito e AutoScout24 SOLO con il numero (META_SENZA_NUMERO=0); senza numero solo Facebook
+    quota = float(os.environ.get("META_SENZA_NUMERO", "0"))
     meta: set = set()
     gruppi: dict = defaultdict(list)
     for it in items:
@@ -901,8 +902,17 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     fb_tutte = os.environ.get("FB_SENZA_NUMERO", "1") == "1"
     # sezione economiche (non controllate a mano): solo con il numero, ECO_TELEFONO=1
     eco_tel = os.environ.get("ECO_TELEFONO", "1") == "1"
-    tenute = [it for it in items if it.get("fonte") == "AutoScout24" or _tel_cache.get(it["id"], False)
-              or (not (eco_tel and it.get("economica")) and (
+    # AutoScout24: il numero si legge dalla pagina dell'annuncio (agente di verifica, ogni 10 minuti): senza, fuori
+    as_ids = [it["id"] for it in items if it.get("fonte") == "AutoScout24"]
+    as_tel: dict = {}
+    for k in range(0, len(as_ids), 1000):
+        with connect() as conn:
+            for r in conn.execute("SELECT id, telefono_ok FROM listings WHERE id = ANY(%s)", (as_ids[k:k + 1000],)).fetchall():
+                as_tel[r["id"]] = r["telefono_ok"]
+    as_rigido = os.environ.get("AS_SOLO_CON_NUMERO", "1") == "1"
+    tenute = [it for it in items if (it.get("fonte") == "AutoScout24" and (as_tel.get(it["id"]) is True or not as_rigido))
+              or (it.get("fonte") != "AutoScout24" and _tel_cache.get(it["id"], False))
+              or (it.get("fonte") != "AutoScout24" and not (eco_tel and it.get("economica")) and (
                   it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")))]
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
@@ -1567,6 +1577,48 @@ def _aggiorna_visibili():
     threading.Thread(target=loop, daemon=True, name="visibili").start()
 
 
+def _tempo_reale():
+    """Due agenti continui (pipeline/tempo_reale.py): VERIFICA delle auto sul sito e NUOVI annunci, ogni 10 minuti."""
+    from ..pipeline import tempo_reale as tr
+    lg = logging.getLogger("tempo_reale")
+
+    def verifica():
+        time.sleep(int(os.environ.get("TR_RITARDO_S", "90")))
+        while True:
+            t0 = time.time()
+            try:
+                ids = [it["id"] for it in _elenco["items"] if it.get("fonte") in ("Subito", "AutoScout24")]
+                st = tr.con_lucchetto("verifica", tr.giro_verifica, ids)
+                if st is not None:
+                    spariti = set(st.pop("_spariti", []) or [])
+                    if spariti:                    # tolte subito dall'elenco, senza aspettare il ricalcolo
+                        _elenco["items"] = [it for it in _elenco["items"] if it["id"] not in spariti]
+                    _elenco["t"] = 0.0
+                    _aggiorna_elenco(attendi=False)
+                    lg.warning("TR VERIFICA %d auto in %.0fs, tolte %d: %s", len(ids), time.time() - t0, len(spariti), dict(st))
+            except Exception as e:
+                lg.warning("TR verifica non riuscita: %s", str(e)[:300])
+            time.sleep(max(30, float(os.environ.get("TR_VERIFICA_MIN", "10")) * 60 - (time.time() - t0)))
+
+    def nuovi():
+        time.sleep(int(os.environ.get("TR_RITARDO_S", "90")) + 30)
+        while True:
+            t0 = time.time()
+            try:
+                st = tr.con_lucchetto("nuovi", tr.giro_nuovi)
+                if st is not None:
+                    if st.get("pubblicate"):
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False)
+                    lg.warning("TR NUOVI in %.0fs: %s", time.time() - t0, dict(st))
+            except Exception as e:
+                lg.warning("TR nuovi non riuscito: %s", str(e)[:300])
+            time.sleep(max(30, float(os.environ.get("TR_NUOVI_MIN", "10")) * 60 - (time.time() - t0)))
+
+    threading.Thread(target=verifica, daemon=True, name="tr-verifica").start()
+    threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()
+
+
 def _ricalcolo_policy():
     """Ricalcolo con la policy prudente (pricing/ricalcolo.py): subito dopo l'avvio e poi ogni POLICY_ORE ore;
     finito il giro, l'elenco del sito si ricalcola con i nuovi numeri."""
@@ -1610,6 +1662,8 @@ async def _lifespan(app):
         _aggiorna_visibili()
     if os.environ.get("DATABASE_URL") and os.environ.get("POLICY_RICALCOLO", "1") == "1":
         _ricalcolo_policy()
+    if os.environ.get("DATABASE_URL") and os.environ.get("TEMPO_REALE", "1") == "1":
+        _tempo_reale()
     if os.environ.get("DATABASE_URL"):
         try:
             _lavoro_subito()

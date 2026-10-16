@@ -43,7 +43,9 @@ def photos_of(conn, listing_id: int) -> list[str]:
 
 # Base dei prezzi: TUTTI gli annunci delle nostre zone (Milano e dintorni + Ravenna e dintorni), privati e
 # concessionari, Subito, AutoScout24 e Facebook: più annunci = mediane più precise.
-_PROV_BASE = ['MI', 'MB', 'BG', 'BS', 'CO', 'VA', 'LC', 'LO', 'PV', 'CR', 'MN', 'SO', 'NO', 'RA', 'FC', 'RN', 'FE', 'BO', 'RM', 'LT', 'FR', 'VT', 'RI']
+_PROV_BASE = ['MI', 'MB', 'BG', 'BS', 'CO', 'VA', 'LC', 'LO', 'PV', 'CR', 'MN', 'SO', 'NO', 'RA', 'FC', 'RN', 'FE', 'BO', 'RM', 'LT', 'FR', 'VT', 'RI',
+              # entro 150 km da Milano (dal 16/10/2026)
+              'VC', 'BI', 'VB', 'AL', 'AT', 'TO', 'PC', 'PR', 'RE', 'GE']
 HOME_REGION_SQL = ("(province IN (" + ",".join(f"'{p}'" for p in _PROV_BASE) + ") OR (province IS NULL AND "
                    "(region IS NULL OR lower(region) IN ('lombardia','emilia-romagna'))))")
 

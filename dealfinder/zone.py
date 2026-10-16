@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import os
 
-MILANO = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO", "PC", "AL", "VC"]
-# province di confine: si tengono solo i comuni entro 60 km da Milano (data/comuni_60km.json)
-SOLO_COMUNI_LISTA = {"NO", "PC", "AL", "VC"}
+# Milano e dintorni = entro 150 km da Milano (dal 16/10/2026; prima 100 km): Lombardia, Piemonte orientale e
+# Torino, Piacenza-Parma-Reggio Emilia, Genova. ZONA_150=0 torna alla zona stretta.
+_STRETTA = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO", "PC", "AL", "VC"]
+_150 = _STRETTA + ["MN", "SO", "BI", "VB", "AT", "TO", "PR", "RE", "GE"]
+MILANO = _150 if os.environ.get("ZONA_150", "1") == "1" else _STRETTA
+# province di confine: con la zona stretta solo i comuni entro 60 km da Milano (data/comuni_60km.json)
+SOLO_COMUNI_LISTA = set() if os.environ.get("ZONA_150", "1") == "1" else {"NO", "PC", "AL", "VC"}
 
 
 def _carica_comuni() -> dict:
