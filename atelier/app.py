@@ -72,7 +72,7 @@ def robots():
     return Response("User-agent: *\nAllow: /\nDisallow: /api/\n", media_type="text/plain")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
 

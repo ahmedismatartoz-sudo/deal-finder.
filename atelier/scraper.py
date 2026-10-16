@@ -112,7 +112,8 @@ def _norm(it: dict) -> dict:
     if not stato.get("_dbg1"):
         stato["_dbg1"] = True
         log.info("ATELIER primo annuncio=%s", json.dumps(it, ensure_ascii=False)[:2500])
-    lab = (price.get("priceEvaluation") if isinstance(price, dict) else None) or trk.get("priceLabel")
+    ev = ((it.get("prices") or {}).get("public") or {}).get("priceEvaluation")
+    lab = {1: "top", 2: "good"}.get(ev)
     return {
         "id": str(it.get("id")),
         "url": (BASE + url) if url.startswith("/") else url,
@@ -126,7 +127,7 @@ def _norm(it: dict) -> dict:
         "potenza": det.get("speedometer") or veh.get("power"),
         "proprietari": det.get("person") or None,
         "foto": [_img(i) for i in imgs],
-        "giudizio": str(lab) if lab not in (None, "", {}) else None,
+        "giudizio": lab,
     }
 
 
@@ -159,6 +160,25 @@ def _dettaglio(cl: httpx.Client, a: dict) -> dict:
             a["descrizione"] = re.sub(r"<br\s*/?>", "\n", desc)
             a["descrizione"] = re.sub(r"<[^>]+>", "", a["descrizione"]).strip()[:4000]
         veh = d.get("vehicle") if isinstance(d, dict) and isinstance(d.get("vehicle"), dict) else {}
+        fmt = lambda v: (v.get("formatted") if isinstance(v, dict) else v) or None
+        if veh:
+            a["km"] = _num(veh.get("mileageInKmRaw")) or a.get("km")
+            a["immatricolazione"] = veh.get("firstRegistrationDate") or a.get("immatricolazione")
+            a["carburante"] = fmt(veh.get("primaryFuel")) or fmt(veh.get("fuelCategory")) or a.get("carburante")
+            a["cambio"] = veh.get("transmissionType") or a.get("cambio")
+            if veh.get("powerInKw") or veh.get("powerInHp"):
+                a["potenza"] = " ".join(x for x in (veh.get("powerInKw"), f"({veh['powerInHp']})" if veh.get("powerInHp") else None) if x)
+            a["versione"] = veh.get("modelVersionInput") or a.get("versione")
+            a["marca"] = veh.get("make") or a.get("marca")
+            a["modello"] = veh.get("model") or a.get("modello")
+            for k_out, k in (("colore", "bodyColor"), ("carrozzeria", "bodyType"), ("porte", "numberOfDoors"), ("posti", "numberOfSeats"),
+                             ("cilindrata", "displacementInCCM"), ("trazione", "driveTrain"), ("interni", "upholstery")):
+                if veh.get(k) not in (None, "", {}):
+                    a[k_out] = str(veh[k])
+            cons = fmt(veh.get("fuelConsumptionCombined"))
+            if cons:
+                a["consumo"] = cons
+
         for k_out, keys in (("colore", ("bodyColor", "color", "bodyColorOriginal")),
                             ("carrozzeria", ("bodyType",)), ("porte", ("numberOfDoors",)),
                             ("posti", ("numberOfSeats",)), ("cilindrata", ("displacementInCCM", "displacement")),
@@ -171,7 +191,7 @@ def _dettaglio(cl: httpx.Client, a: dict) -> dict:
                     break
             if isinstance(v, dict):
                 v = v.get("formatted") or v.get("value") or v.get("raw")
-            if v not in (None, "", {}, []):
+            if v not in (None, "", {}, []) and not a.get(k_out):
                 a[k_out] = str(v)
         eq = veh.get("equipment") or _find(d, "equipment")
         dot = []
@@ -275,7 +295,7 @@ def aggiorna():
             for i, (aid, a) in enumerate(trovati.items()):
                 v = vecchi.get(aid)
                 if v and v.get("descrizione") is not None and v.get("prezzo") == a.get("prezzo"):
-                    v.update({k: a[k] for k in ("prezzo", "km", "giudizio") if a.get(k) is not None})
+                    v.update({k: a[k] for k in ("prezzo", "giudizio") if k in a})
                     auto.append(v)
                     continue
                 a.setdefault("descrizione", "")
