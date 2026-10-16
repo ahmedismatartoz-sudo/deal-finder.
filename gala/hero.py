@@ -40,6 +40,33 @@ def _get(cl: httpx.Client, u: str, size: str) -> bytes | None:
     return r.content if r.status_code == 200 else None
 
 
+MODELLO_URL = os.environ.get("HERO_MODELLO_URL", "https://github.com/danielgatis/rembg/releases/download/v0.0.0/silueta.onnx")
+
+
+def _ritaglia(im):
+    """Scontorna l'auto: rete U2-Net leggera (silueta) con onnxruntime, senza librerie pesanti."""
+    import numpy as np
+    import onnxruntime as ort
+    from PIL import Image, ImageFilter
+    f = DIR / "modello.onnx"
+    if not f.exists():
+        with httpx.Client(timeout=120, follow_redirects=True) as cl:
+            f.write_bytes(cl.get(MODELLO_URL).content)
+    so = ort.SessionOptions(); so.intra_op_num_threads = 1; so.inter_op_num_threads = 1
+    so.enable_cpu_mem_arena = False
+    sess = ort.InferenceSession(str(f), so, providers=["CPUExecutionProvider"])
+    x = np.asarray(im.resize((320, 320), Image.LANCZOS), dtype=np.float32) / 255.0
+    x = (x - np.array([0.485, 0.456, 0.406], dtype=np.float32)) / np.array([0.229, 0.224, 0.225], dtype=np.float32)
+    x = x.transpose(2, 0, 1)[None].astype(np.float32)
+    out = sess.run(None, {sess.get_inputs()[0].name: x})[0][0, 0]
+    del sess
+    out = (out - out.min()) / max(1e-6, float(out.max() - out.min()))
+    mask = Image.fromarray((out * 255).astype("uint8")).resize(im.size, Image.LANCZOS)
+    mask = mask.filter(ImageFilter.GaussianBlur(1.2)).point(lambda v: 0 if v < 40 else (255 if v > 215 else int((v - 40) * 255 / 175)))
+    rgba = im.convert("RGBA"); rgba.putalpha(mask)
+    return rgba
+
+
 def prepara(forza: bool = False):
     if not _lock.acquire(blocking=False):
         return
@@ -70,11 +97,15 @@ def prepara(forza: bool = False):
             ie = int(os.environ.get("HERO_EXT", "0"))
             ii = os.environ.get("HERO_INT")
             ext = _get(cl, foto[min(ie, len(foto) - 1)], "1280x960")
+            mark = DIR / "in_corso"
+            if ext and mark.exists() and not forza:
+                log.warning("HERO ritaglio saltato: l'ultima volta non è finito")
+                ext = None
             if ext:
-                from rembg import new_session, remove
-                sess = new_session(os.environ.get("HERO_MODELLO", "silueta"))
+                mark.write_text("1")
                 im = Image.open(io.BytesIO(ext)).convert("RGB")
-                cut = remove(im, session=sess, post_process_mask=True)
+                cut = _ritaglia(im)
+                mark.unlink(missing_ok=True)
                 bbox = cut.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
                 if bbox:
                     cut = cut.crop(bbox)
