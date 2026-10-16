@@ -211,3 +211,18 @@ def test_confronto_senza_anno_o_km():
     m = market(BASE) + [car(900, 9000, year=None), car(901, 9000, km=None)]
     v = valuta(TARGET, m, 1500, CFG, NOW)
     assert v["n"] == 12
+
+
+def test_correzione_non_gonfia_i_confronti_peggiori():
+    vecchie = [car(500 + n, 10000 + n * 100, year=2015, km=160000 + n * 500) for n in range(6)]
+    v = valuta(car(1, 9000), vecchie, 1500, CFG, NOW)
+    assert all(c["prezzo_corretto"] <= c["prezzo"] for c in v["confronti"])
+    assert v["M"] <= 10300
+
+
+def test_carrozzerie_diverse():
+    t = car(1, 9000, version_raw="218i Active Tourer Advantage")
+    m = [car(600 + n, 15000, version_raw="218i Coupe M Sport") for n in range(6)] + \
+        [car(700 + n, 12000, version_raw="218i Active Tourer") for n in range(3)]
+    sel = seleziona(t, m, CFG, NOW)
+    assert len(sel["validi"]) == 3 and sel["motivi_non_equivalenti"].get("carrozzeria diversa") == 6

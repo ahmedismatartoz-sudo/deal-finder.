@@ -46,7 +46,10 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv5-2026-10-16"
+POLICY_VERSION = "pv6-2026-10-16"
+# pv6 (16/10, 23:45): la correzione per anno/km può solo ABBASSARE il prezzo di un confronto (un confronto più
+# vecchio o con più km non viene mai "gonfiato" verso l'auto valutata); carrozzerie diverse (coupé, cabrio,
+# station wagon, monovolume Tourer) non si confrontano.
 # pv5 (16/10, 23:30, richiesta): costi SOLO passaggio 90 + pulizia 50 + ricambi (niente trasporto, diagnosi,
 # vendita, giacenza, manodopera stimata, riserva); riduzione della fascia = la più severa tra la fascia del
 # prezzo di acquisto e quella di M (auto da 5.000 a 10.000 € → almeno 25%); prezzo sotto il 55% di M = dati
@@ -244,13 +247,31 @@ def prezzo_corretto(c: dict, t: dict, ya: float, ka: float) -> float:
     p = float(c["price_eur"])
     p *= (1 - ya) ** (int(c["year"]) - int(t["year"]))                  # confronto più nuovo → vale di più → scendo
     p *= (1 - ka) ** ((int(t["mileage_km"]) - int(c["mileage_km"])) / 10000)
-    return p
+    return min(p, float(c["price_eur"]))     # prudenza: si abbassa chi è migliore, non si alza mai chi è peggiore
+
+
+_CARROZZERIE = [("sw", r"sports? ?tourer|station ?wagon|sportswagon|\bsw\b|touring|avant|variant|wagon|kombi|estate|shooting ?brake"),
+                ("monovolume", r"active ?tourer|gran ?tourer|\btourer\b"),
+                ("grancoupe", r"gran ?coup[eé]"),
+                ("cabrio", r"cabrio|cabriolet|roadster|spider|spyder|convertible"),
+                ("coupe", r"coup[eé]")]
+
+
+def carrozzeria(c: dict) -> str | None:
+    txt = f"{c.get('version_raw') or ''} {c.get('title') or ''}".lower()
+    for nome, rx in _CARROZZERIE:
+        if re.search(rx, txt):
+            return nome
+    return None
 
 
 def _equivalente(t, c, cfg, livello):
     """None se equivalente, altrimenti il motivo dell'esclusione."""
     if c.get("fuel") != t.get("fuel"):
         return "carburante diverso"
+    bt, bc = carrozzeria(t), carrozzeria(c)
+    if bt != bc and (bt or bc) and not (bt is None and bc in ("sw",)) and not (bc is None and bt in ("sw",)):
+        return "carrozzeria diversa"
     gt, gc = _gen(t), _gen(c)
     if gt and gc and gt != gc:
         return "generazione diversa"

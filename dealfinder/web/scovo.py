@@ -148,7 +148,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        l.power_kw, l.city, l.province, l.price_eur, l.damage_class, l.stage_reason, l.first_seen_at, l.deep_at,
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
        v.n_comparables, v.confidence, v.engine_version,
-       (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id AND vp.policy_version='""" + POLICY_VERSION + """') AS pv,
+       (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) AS pv,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -169,7 +169,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        l.first_seen_at AS deep_at, l.model_p50,
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
        v.n_comparables, v.confidence,
-       (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id AND vp.policy_version='""" + POLICY_VERSION + """') AS pv,
+       (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) AS pv,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -227,7 +227,7 @@ def item_eco(r: dict) -> dict | None:
 
 DETAIL_EXTRA_SQL = """
 SELECT l.description, l.seller_type, v.parts_detail, v.checks, v.motivation,
-       (SELECT dati FROM valutazioni_policy vp WHERE vp.listing_id=l.id AND vp.policy_version='""" + POLICY_VERSION + """') AS pv_dati
+       (SELECT dati FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) AS pv_dati
 FROM listings l
 LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.id=%s
