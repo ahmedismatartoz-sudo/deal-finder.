@@ -142,6 +142,12 @@ function ordinaLista(s, arr){
   const care = [], rest = [];
   for (const c of arr) (c.prezzo > CARE ? care : rest).push(c);
   let topIds = new Set();
+  const scelte = rest.filter(c => c.vetrina != null);
+  if (!s.eco && s.sort === "guadagno" && scelte.length >= 5) {
+    // le auto scelte a mano (data/vetrina.json), nell'ordine deciso
+    return scelte.sort((a, b) => a.vetrina - b.vetrina).map(c => Object.assign(c, {_grp: "top"}))
+      .concat(rest.filter(c => c.vetrina == null).map(c => Object.assign(c, {_grp: "rest"})), care.map(c => Object.assign(c, {_grp: "care"})));
+  }
   if (!s.eco && s.sort === "guadagno") {
     topIds = new Set(rest.filter(c => c.prezzo >= TOP_MIN && c.prezzo <= TOP_MAX && c.gainMax >= 800 && c.gainMax >= c.prezzo * 0.12)
       .sort((a, b) => topScore(b) - topScore(a)).slice(0, PRIME).map(c => c.id));
@@ -257,7 +263,7 @@ function viewList(){
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
   const TIT = {top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
-  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${TIT[c._grp]}</h2>` : ""}
+  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
       <div class="card-body">
