@@ -104,6 +104,11 @@ def prepara(forza: bool = False):
             ie = int(os.environ.get("HERO_EXT", "0"))
             ii = os.environ.get("HERO_INT")
             ext = _get(cl, foto[min(ie, len(foto) - 1)], "1280x960")
+            if ii is not None:
+                b = _get(cl, foto[min(int(ii), len(foto) - 1)], "1280x960")
+                if b:
+                    Image.open(io.BytesIO(b)).convert("RGB").save(DIR / "int.jpg", quality=88)
+                    stato["int"] = True
             mark = DIR / "tentativi"
             n = int(mark.read_text()) if mark.exists() else 0
             if ext and n >= 2 and not forza:
@@ -126,14 +131,12 @@ def prepara(forza: bool = False):
                     cut = cut.crop(bbox)
                 cut.save(DIR / "ext.png")
                 log.info("HERO ritaglio fatto %s", cut.size)
-                a = cut.getchannel("A").resize((70, 30))
-                righe = ["".join(" .:-=+*#%@"[min(9, v // 26)] for v in a.getdata()[r * 70:(r + 1) * 70]) for r in range(30)]
-                log.info("HEROMASK\n" + "\n".join(righe))
-            if ii is not None:
-                b = _get(cl, foto[min(int(ii), len(foto) - 1)], "1280x960")
-                if b:
-                    Image.open(io.BytesIO(b)).convert("RGB").save(DIR / "int.jpg", quality=88)
-                    stato["int"] = True
+                try:
+                    px = list(cut.getchannel("A").resize((70, 30)).getdata())
+                    for r in range(30):
+                        log.info("HEROMASK %02d |%s|", r, "".join(" .:-=+*#%@"[min(9, v // 26)] for v in px[r * 70:(r + 1) * 70]))
+                except Exception:
+                    pass
         stato.update(ok=(DIR / "ext.png").exists(), id=a["id"], errore=None,
                      nome=f"{a.get('marca')} {a.get('modello')}", prezzo=a.get("prezzo"))
     except Exception as e:
