@@ -107,6 +107,7 @@
     modal.hidden = false; document.body.style.overflow = 'hidden';
     history.replaceState(null, '', '?auto=' + encodeURIComponent(a.id) + '#auto');
   }
+  window.apriAuto = id => openCar(AUTO.find(a => a.id === id));
   function close() { modal.hidden = true; document.body.style.overflow = ''; history.replaceState(null, '', location.pathname + '#auto'); }
   modal.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
   $('#prev').onclick = () => show(gi - 1); $('#next').onclick = () => show(gi + 1);

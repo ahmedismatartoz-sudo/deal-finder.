@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css?v=1">
+<link rel="stylesheet" href="/style.css?v=2">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"AutoDealer","name":"Carrozzeria Atelier srl","telephone":"+39 344 725 2930",
  "image":"/logo.png","address":{"@type":"PostalAddress","streetAddress":"Via Giuseppe di Vittorio, 70","postalCode":"20026","addressLocality":"Novate Milanese","addressRegion":"MI","addressCountry":"IT"},
@@ -37,6 +37,7 @@
   <div class="stage">
     <canvas id="car3d"></canvas>
     <div class="vignette"></div>
+    <div class="flash" id="flash"></div>
     <div class="fade" id="fade"></div>
 
     <div class="copy c0" data-from="0" data-to="0.16">
@@ -48,21 +49,32 @@
       </div></div>
     </div>
 
-    <div class="copy c1 left" data-from="0.2" data-to="0.42">
+    <div class="copy c1 left" data-from="0.09" data-to="0.21">
       <p class="eyebrow">01 — La carrozzeria</p>
       <h2>Ogni auto passa<br><em>dalle nostre mani.</em></h2>
       <p class="sub">Siamo una carrozzeria, non solo un salone: le auto le conosciamo dentro e fuori.</p>
     </div>
 
-    <div class="copy c2 right" data-from="0.47" data-to="0.72">
+    <div class="copy c2 right" data-from="0.25" data-to="0.41">
       <p class="eyebrow">02 — Lo showroom</p>
       <h2>Aprila.<br><em>Guardala da vicino.</em></h2>
-      <p class="sub"><b id="nAuto">Tutte le</b> auto disponibili, sempre aggiornate.</p>
     </div>
 
-    <div class="copy c3" data-from="0.78" data-to="1.01">
-      <h2 class="chrome big">Entra.</h2>
-      <p class="sub">Scorri per vedere le auto</p>
+    <div class="copy c3" data-from="0.46" data-to="0.575">
+      <p class="eyebrow">03 — Il cuore</p>
+      <h2>Adesso<br><em>guarda dentro.</em></h2>
+    </div>
+
+    <div class="copy c4 left" data-from="0.63" data-to="0.79">
+      <p class="eyebrow">04 — Il motore</p>
+      <h2>Dove nasce<br><em>la potenza.</em></h2>
+      <p class="sub">Scorri più veloce: il motore sale di giri.</p>
+    </div>
+
+    <div class="copy c5" data-from="0.845" data-to="0.965">
+      <p class="eyebrow">05 — Le auto</p>
+      <h2 class="chrome big">Le nostre auto</h2>
+      <p class="sub"><b id="nAuto">Tutte le</b> auto disponibili · tocca un'auto per aprirla</p>
     </div>
 
     <div class="scrollhint" id="hint"><span>Scorri</span><i></i></div>
@@ -171,7 +183,7 @@
   </div>
 </div>
 
-<script type="module" src="/car.js?v=1"></script>
-<script src="/app.js?v=1" defer></script>
+<script type="module" src="/car.js?v=2"></script>
+<script src="/app.js?v=2" defer></script>
 </body>
 </html>
