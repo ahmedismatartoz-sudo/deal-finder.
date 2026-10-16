@@ -179,3 +179,8 @@ def test_annunci_vecchi_o_spariti():
 def test_soglia_non_abbassata():
     v = valuta(TARGET, market(BASE), soglia=5000, cfg=CFG, now=NOW)
     assert v["soglia"] == 5000 and v["categoria"] == "non_conveniente"
+
+
+def test_troppo_bello_da_approfondire():
+    v = valuta(car(1, 3000), market(BASE), 1500, CFG, NOW)
+    assert v["categoria"] == "candidato" and any("truffa" in m for m in v["motivi"])

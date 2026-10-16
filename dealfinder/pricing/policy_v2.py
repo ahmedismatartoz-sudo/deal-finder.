@@ -104,6 +104,7 @@ class PolicyConfig:
     riserva_pct_danni: float = .10
     riserva_pct_alto_rischio: float = .20
     riserva_min: int = 150
+    sospetto_sotto_m: float = .5      # prezzo sotto M × 0,5: troppo bello, sempre da approfondire
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
 
     @classmethod
@@ -482,6 +483,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         dubbi.append("danno strutturale, airbag o guasto grave: serve un controllo approfondito")
     if set(t.get("price_flags") or []) & set(FLAG_ESCLUSI):
         dubbi.append("prezzo dell'annuncio da verificare")
+    if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
+        dubbi.append(f"prezzo oltre il {int((1 - cfg.sospetto_sotto_m) * 100)}% sotto la mediana: verificare dati, versione o truffa")
     if dubbi:
         out["categoria"] = "candidato"
         out["motivi"] += dubbi
