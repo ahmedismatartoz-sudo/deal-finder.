@@ -23,8 +23,8 @@ FIN_SQL = (r"COALESCE(description ~* '(solo|vincolat\w*|valid\w*|previo|tramite|
 MARKET_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, fuel, "
               "gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, problem_search, "
               "first_seen_at, last_seen_at, last_checked_at, " + FIN_SQL + " FROM listings "
-              "WHERE make=%s AND model=%s AND fuel IS NOT DISTINCT FROM %s AND price_eur IS NOT NULL "
-              "AND last_seen_at > now() - interval '30 days' AND {home}")
+              "WHERE status='attivo' AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "   # usa listings_cmp_idx
+              "AND {home}")
 RISCHIO = {"telaio_longheroni", "tetto_montanti", "airbag_esplosi", "frontale_profondo", "airbag",
            "modulo_airbag_volante", "modulo_airbag_passeggero", "centralina_airbag", "motore_sostituzione",
            "cambio_sostituzione", "alluvionata", "incendio"}
@@ -52,6 +52,7 @@ def esegui(conn, limite: int | None = None) -> dict:
     from ..store import HOME_REGION_SQL
     from ..web import scovo
     t0 = time.time()
+    conn.execute("SET statement_timeout = '60s'")
     cfg = P.PolicyConfig.from_env()
     # 1) le auto candidate: quelle approfondite (sezioni affari e incidentate) + la sezione economica
     rows = conn.execute(scovo.LIST_SQL + " LIMIT 4000", {"me": 0}).fetchall()
@@ -76,12 +77,16 @@ def esegui(conn, limite: int | None = None) -> dict:
     targets.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
 
     cat, trans, motivi, ns = Counter(), Counter(), Counter(), Counter()
-    campioni, gruppo, mercato = [], None, []
+    campioni, gruppo, mercato, gruppi = [], None, [], 0
     for r in targets:
         key = (r["make"], r["model"], r["fuel"])
         if key != gruppo:
             gruppo = key
-            mercato = conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall() if r["make"] and r["model"] else []
+            mercato = (conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()
+                       if r["make"] and r["model"] and r["fuel"] else [])
+            gruppi += 1
+            if gruppi % 50 == 0:
+                log.warning("POLICY avanzamento: %d gruppi, %d auto, %.0fs", gruppi, sum(cat.values()), time.time() - t0)
         t = dict(r, **{k: v for k, v in info[r["id"]].items() if k.startswith("parts_")})
         t["vehicle_identity"] = _j(t.get("vehicle_identity"))
         t["rischio_strutturale"] = _rischio(r)
