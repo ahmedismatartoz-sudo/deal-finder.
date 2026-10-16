@@ -134,16 +134,21 @@ function filtered(over){
       : s.sort === "km" ? (a.km || 9e9) - (b.km || 9e9) : b.gainMax - a.gainMax));
 }
 /* vetrina in testa solo con l'elenco "normale" (nessun filtro, ordine per guadagno) */
-/* Ordine: prima le 15 migliori sotto 5.000 €, poi tutte le altre dalla migliore, le troppo care sempre in fondo */
-const CARE = 15000, ECONOMICHE = 5000, PRIME = 15;
+/* Ordine: prima le 15 migliori "via di mezzo" (tra 1.500 e 12.000 €, guadagno alto rispetto al prezzo),
+   poi tutte le altre dalla migliore, le troppo care sempre in fondo */
+const CARE = 15000, TOP_MIN = 1500, TOP_MAX = 12000, PRIME = 15;
+const topScore = c => c.gainMax * Math.min(1.6, 0.6 + c.gainMax / c.prezzo);   // guadagno, premiato se rende tanto sul prezzo
 function ordinaLista(s, arr){
-  const top = [], rest = [], care = [];
-  for (const c of arr) {
-    if (c.prezzo > CARE) care.push(Object.assign(c, {_grp: "care"}));
-    else if (!s.eco && s.sort === "guadagno" && c.prezzo < ECONOMICHE && top.length < PRIME) top.push(Object.assign(c, {_grp: "top"}));
-    else rest.push(Object.assign(c, {_grp: "rest"}));
+  const care = [], rest = [];
+  for (const c of arr) (c.prezzo > CARE ? care : rest).push(c);
+  let topIds = new Set();
+  if (!s.eco && s.sort === "guadagno") {
+    topIds = new Set(rest.filter(c => c.prezzo >= TOP_MIN && c.prezzo <= TOP_MAX && c.gainMax >= 800 && c.gainMax >= c.prezzo * 0.12)
+      .sort((a, b) => topScore(b) - topScore(a)).slice(0, PRIME).map(c => c.id));
   }
-  return top.concat(rest, care);
+  const top = rest.filter(c => topIds.has(c.id)).sort((a, b) => topScore(b) - topScore(a)).map(c => Object.assign(c, {_grp: "top"}));
+  const altre = rest.filter(c => !topIds.has(c.id)).map(c => Object.assign(c, {_grp: "rest"}));
+  return top.concat(altre, care.map(c => Object.assign(c, {_grp: "care"})));
 }
 const MILANO_C = {lat: 45.4642, lon: 9.19};
 function centro(){ return S.centro === "pos" && S.pos ? S.pos : MILANO_C; }
@@ -251,7 +256,7 @@ function viewList(){
   const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
-  const TIT = {top: "⭐ Le migliori sotto 5.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
+  const TIT = {top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
