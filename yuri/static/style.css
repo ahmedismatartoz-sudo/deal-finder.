@@ -309,3 +309,4 @@ em{font-style:italic;color:#c8d6ff}
 .call-now.big span{font-size:36px}
 .call-now.big svg{width:28px;height:28px}
 .call-now{background:linear-gradient(90deg,#3a6bff,#1d42dd)}
+.tel-card .tel+.tel{margin-top:4px}
