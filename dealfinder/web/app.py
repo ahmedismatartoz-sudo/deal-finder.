@@ -953,7 +953,7 @@ def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> li
     """17/10 15:07, cliente: utilitarie di Subito fino a 7.000 € anche senza numero (si contattano dalla chat di Subito),
     ma SOLO LE MIGLIORI: margine ≥ soglia piena della fascia, almeno 5 confronti, al massimo UTIL_SENZA_NUMERO_QUOTA
     (20%) delle auto sul sito, dalla più conveniente."""
-    quota = float(os.environ.get("UTIL_SENZA_NUMERO_QUOTA", "0.6"))   # 17/10 17:09: almeno 100 utilitarie in più
+    quota = float(os.environ.get("UTIL_SENZA_NUMERO_QUOTA", "0.2"))   # 17/10 18:22: massimo 20% del sito senza numero   # 17/10 17:09: almeno 100 utilitarie in più
     if quota <= 0:
         return []
     pmax = int(os.environ.get("UTIL_SENZA_NUMERO_MAX", "10000"))   # 17/10 17:40: fino a 10.000 €
