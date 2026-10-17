@@ -99,7 +99,7 @@
     $('#mSpecs').innerHTML = spec.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('');
     $('#mDesc').textContent = a.descrizione || '';
     $('#mEq').innerHTML = (a.dotazioni || []).slice(0, 40).map(x => `<span>${esc(x)}</span>`).join('');
-    $('#mWa').href = `https://wa.me/${TEL.replace('+', '')}?text=` + encodeURIComponent(`Buongiorno, sono interessato alla ${nome} a ${eur(a.prezzo)} vista sul sito di Yuri Car. È ancora disponibile?`);
+    $('#mWa').href = `https://wa.me/${TEL.replace('+', '')}?text=` + encodeURIComponent(`Buongiorno, sono interessato alla ${nome} a ${eur(a.prezzo)} vista sul sito di SabryCar. È ancora disponibile?`);
     $('#mSrc').href = a.url; $('#mSrc').hidden = !a.url;
     modal.hidden = false; document.body.style.overflow = 'hidden';
     history.replaceState(null, '', '?auto=' + encodeURIComponent(a.id) + '#auto');

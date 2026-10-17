@@ -206,7 +206,7 @@ em{font-style:italic;color:#c8d6ff}
 }
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation-duration:.01s!important}}
 
-/* Yuri Car */
+/* SabryCar */
 .brand img{height:44px;border-radius:8px}
 .sosbar{position:fixed;left:0;right:0;bottom:0;z-index:45;display:none}
 .btn-red{background:linear-gradient(90deg,#ff5a4a,#e0182a);color:#fff;box-shadow:0 10px 30px -10px rgba(255,40,40,.8)}

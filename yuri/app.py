@@ -1,4 +1,4 @@
-"""Sito di Yuri Car (Desio): auto prese in automatico dalla loro pagina AutoScout24."""
+"""Sito di SabryCar (Desio): auto prese in automatico dalla loro pagina AutoScout24."""
 from __future__ import annotations
 
 import hashlib
@@ -57,7 +57,7 @@ def _prepara_foto():
                         n += 1
                 except Exception:
                     pass
-    logging.info("YURI foto pronte in cache: %d", n)
+    logging.info("SABRYCAR foto pronte in cache: %d", n)
 
 
 def _ciclo():
@@ -67,7 +67,7 @@ def _ciclo():
             scraper.aggiorna()
             _prepara_foto()
         except Exception:
-            logging.exception("YURI aggiornamento")
+            logging.exception("SABRYCAR aggiornamento")
         import time
         time.sleep(ore * 3600)
 
