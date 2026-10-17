@@ -927,7 +927,7 @@ def _solo_facebook_recenti(items: list[dict]) -> list[dict]:
     """Facebook non si può riaprire annuncio per annuncio (niente account): sul sito solo gli annunci rivisti dalla
     raccolta di Facebook nelle ultime FB_VISTO_ORE ore (36: la raccolta gira 4 volte al giorno). Se un annuncio non
     compare più nella raccolta, probabilmente è stato venduto o tolto."""
-    ore = int(os.environ.get("FB_VISTO_ORE", "36"))
+    ore = int(os.environ.get("FB_VISTO_ORE", "0"))   # 0 = spento: la raccolta FB non aggiorna last_seen (tolte tutte il 17/10)
     fb = [it["id"] for it in items if it.get("fonte") == "Facebook Marketplace"]
     if not fb or ore <= 0:
         return items
