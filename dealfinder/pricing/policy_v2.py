@@ -46,7 +46,9 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv9-2026-10-17"
+POLICY_VERSION = "pv10-2026-10-17"
+# pv10 (17/10, 09:00, cliente: "rivendita troppo pessimista"): riduzione 12% su tutte le fasce e rivendita = M − 12%
+# (L, il 25° percentile, si mostra ma non taglia più la rivendita: con la riduzione era una doppia prudenza).
 # pv9 (17/10, 09:00, regole del cliente): riduzione 20% sotto i 5.000 €, 17% da 5.000 a 10.000 €, 15% sopra;
 # margini minimi 1.500 / 2.200 / 3.200 € e oltre, crescenti col prezzo (web/scovo.py SOGLIE_PV).
 # pv8 (17/10, scelta del cliente): sotto i 10.000 € la riduzione è 25% (prima 30% sotto i 5.000 €).
@@ -84,7 +86,7 @@ def _e(name, default, cast=float):
 
 
 # (limite superiore di M escluso, riduzione). L'ultima fascia include 50.000 €.
-FASCE_BASE = [(5000, .20), (10000, .17), (50000, .15)]      # 17/10: 20% sotto 5.000, 17% fino a 10.000, poi 15%
+FASCE_BASE = [(50000, .12)]      # 17/10 ore 9: 12% su tutte le fasce (prima 20% / 17% / 15%)
 
 
 @dataclass
@@ -105,6 +107,7 @@ class PolicyConfig:
     svalutazione_10km: float = .012   # per 10.000 km di differenza
     m_massimo: int = 50000
     fasce: list = field(default_factory=lambda: list(FASCE_BASE))
+    usa_L: bool = False               # True: R = min(M ridotto, L) come nella policy del documento
     transizione: bool = False
     transizione_w: int = 1000
     # costi (euro). origine "config" = valore già usato dal software; "stima" = ipotesi prudenziale dichiarata
@@ -188,6 +191,8 @@ def rivendita(m: float, l: float, cfg: PolicyConfig, prezzo: float | None = None
         if rp is not None and rp > r:
             r, base, fascia = rp, bp, fp + " (fascia del prezzo d'acquisto)"
     centrale = m * (1 - r)
+    if not cfg.usa_L:
+        l = 10**9
     return {"R": int(round(min(centrale, l))), "centrale_ridotto": int(round(centrale)), "fascia": fascia,
             "riduzione": round(r, 4), "riduzione_base": base, "R_da": "L" if l < centrale else "M ridotto"}
 

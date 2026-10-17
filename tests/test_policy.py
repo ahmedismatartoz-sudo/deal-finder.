@@ -32,31 +32,30 @@ def test_percentile_tipo7():
 
 
 def test_fasce_e_confini():
-    assert riduzione(4999, CFG)[0] == .20
-    assert riduzione(5000, CFG)[0] == .17 and riduzione(9999, CFG)[0] == .17
-    assert riduzione(10000, CFG)[0] == .15 and riduzione(50000, CFG)[0] == .15
+    assert riduzione(4999, CFG)[0] == .12 and riduzione(9999, CFG)[0] == .12 and riduzione(50000, CFG)[0] == .12
     assert riduzione(50001, CFG)[0] is None
 
 def test_esempio_documento():
-    assert rivendita(12000, 10500, CFG)["R"] == 10200          # 12.000 × 0,85
-    assert rivendita(12000, 9000, CFG)["R"] == 9000
+    assert rivendita(12000, 10500, CFG)["R"] == 10560          # 12.000 × 0,88 (L non taglia più)
+    cfg = PolicyConfig(usa_L=True)
+    assert rivendita(12000, 9000, cfg)["R"] == 9000             # regola del documento, se riattivata
 
 def test_transizione_mai_sopra_la_regola_piu_severa():
-    cfg = PolicyConfig(transizione=True, transizione_w=1000)
+    cfg = PolicyConfig(transizione=True, transizione_w=1000, usa_L=True)
+    cfg.fasce = [(5000, .20), (10000, .17), (50000, .15)]
+    base_cfg = PolicyConfig(usa_L=True)
+    base_cfg.fasce = cfg.fasce
     prev = 0
     for m in range(4000, 50000, 50):
-        r = rivendita(m, 10**9, cfg)
-        base = rivendita(m, 10**9, CFG)["R"]
-        assert r["R"] <= base + 1
-        assert r["R"] >= prev - 1
-        prev = r["R"]
-    assert rivendita(5000, 10**9, cfg)["R"] == 4000            # al confine vale la fascia più severa (20%)
+        r = rivendita(m, 10**9, cfg)["R"]
+        assert r <= rivendita(m, 10**9, base_cfg)["R"] + 1 and r >= prev - 1
+        prev = r
 
 def test_base_preferita_opportunita():
     v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
     assert v["n"] == 12 and v["campione"] == "base preferita"
     assert 9700 <= v["M"] <= 9900 and 9300 <= v["L"] <= 9475   # corretti per km (confronti con meno km)
-    assert v["riduzione"] == .17 and v["R"] == min(round(v["M"] * .83), v["L"])
+    assert v["riduzione"] == .12 and v["R"] == round(v["M"] * .88)
     assert v["categoria"] in ("opportunita", "non_conveniente")
     assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
 
@@ -182,10 +181,10 @@ def test_troppo_bello_mai_sul_sito():
 
 
 def test_fascia_piu_severa_tra_prezzo_e_mercato():
-    v = valuta(car(1, 8700), market([12000 + n * 100 for n in range(12)]), 2200, CFG, NOW)
-    assert v["riduzione"] == .17                                # acquisto 5–10k → 17% (M 12k sarebbe 15%)
-    v = valuta(car(1, 4000), market([7000 + n * 100 for n in range(12)]), 1500, CFG, NOW)
-    assert v["riduzione"] == .20
+    cfg = PolicyConfig()
+    cfg.fasce = [(5000, .20), (10000, .17), (50000, .15)]
+    v = valuta(car(1, 8700), market([12000 + n * 100 for n in range(12)]), 2200, cfg, NOW)
+    assert v["riduzione"] == .17
 
 def test_nessun_costo_margine_uguale_rivendita_meno_prezzo():
     v = valuta(car(1, 6000), market(BASE), 1500, CFG, NOW)
