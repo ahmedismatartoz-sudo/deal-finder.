@@ -1578,6 +1578,22 @@ def _aggiorna_visibili():
     threading.Thread(target=loop, daemon=True, name="visibili").start()
 
 
+def _azzera_no_subito():
+    """Una volta: i "senza numero" di Subito decisi solo dal testo tornano "da controllare" (il bottone Chiama si vede
+    solo nella pagina)."""
+    try:
+        with connect() as conn:
+            if not conn.execute("SELECT 1 FROM job_runs WHERE job='subito:telefono:azzera:v1' AND ok").fetchone():
+                from ..db import log_job
+                fine = log_job(conn, "subito:telefono:azzera:v1")
+                n = conn.execute("UPDATE listings SET telefono_ok=NULL WHERE source='subito' AND telefono_ok=false").rowcount
+                conn.commit()
+                fine(True, {"azzerati": n})
+                logging.getLogger("tempo_reale").warning("TR subito: %d 'senza numero' tornano da controllare", n)
+    except Exception as e:
+        logging.getLogger("tempo_reale").warning("azzeramento telefoni subito: %s", str(e)[:200])
+
+
 def _tempo_reale():
     """Due agenti continui (pipeline/tempo_reale.py): VERIFICA delle auto sul sito e NUOVI annunci, ogni 10 minuti."""
     from ..pipeline import tempo_reale as tr
@@ -1642,6 +1658,7 @@ def _tempo_reale():
                 lg.warning("TR telefoni subito non riuscito: %s", str(e)[:300])
             time.sleep(3600)
 
+    _azzera_no_subito()
     threading.Thread(target=verifica, daemon=True, name="tr-verifica").start()
     threading.Thread(target=telefoni_subito, daemon=True, name="tr-telefoni").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()

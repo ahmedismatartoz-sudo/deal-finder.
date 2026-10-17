@@ -293,7 +293,10 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
             tel = r["telefono_ok"]                       # None = non ancora controllato (lo fa l'agente di verifica)
         elif r["source"] == "subito":
             # numero dietro il bottone "Chiama" (telefono_ok) oppure scritto nel testo
-            tel = True if r["telefono_ok"] else ha_numero_testo(r["title"], r["description"])
+            # IMBUTO: su Subito il numero NON filtra all'inizio. Con il numero nel testo = sì; altrimenti "da controllare"
+            # (None): se l'auto viene selezionata, l'agente apre la sua pagina e controlla il bottone Chiama.
+            tel = True if (r["telefono_ok"] or ha_numero_testo(r["title"], r["description"])) else (
+                False if r["telefono_ok"] is False else None)
         else:
             tel = True
         if tel is False:
@@ -363,7 +366,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
              and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
     # Le migliori TOP_N (richiesta del 17/10: "le 250 più convenienti"): oltre a quelle sopra soglia, le migliori per
     # margine rispetto alla soglia della fascia, purché il margine sia almeno TOP_MIN_EURO e TOP_QUOTA della soglia.
-    top_n = int(os.environ.get("TOP_N", "380"))
+    top_n = int(os.environ.get("TOP_N", "550"))      # più largo: una parte cade al controllo del numero
     top_min, top_quota = int(os.environ.get("TOP_MIN_EURO", "800")), float(os.environ.get("TOP_QUOTA", "0.6"))
     gia = {x["id"] for x in pass_}
     extra = [x for x in vals if x["id"] not in gia and x["tel"] is not False and x["v"]["categoria"] == "non_conveniente"

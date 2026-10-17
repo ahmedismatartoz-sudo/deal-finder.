@@ -275,3 +275,11 @@ def test_telefono_subito_dietro_il_bottone():
     assert not telefono_subito({"advertiser": {"phone": ""}})
     assert not telefono_subito({"advertiser": {}})
     assert not telefono_subito(None)
+
+
+def test_telefono_da_pagina_subito():
+    from dealfinder.pipeline.tempo_reale import telefono_da_pagina
+    assert telefono_da_pagina(None, "") is None                                  # pagina bloccata: non si sa
+    assert telefono_da_pagina({"props": {"ad": {"advertiser": {"hasPhone": True}}}}, "") is True
+    assert telefono_da_pagina({"props": {"ad": {"advertiser": {"showPhone": False}}}}, "") is False
+    assert telefono_da_pagina({"props": {}}, "<button>mostra numero</button>") is True

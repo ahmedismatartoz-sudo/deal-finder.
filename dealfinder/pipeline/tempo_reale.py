@@ -180,11 +180,18 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     ids = list(ids) + [r["id"] for r in conn.execute(
         "SELECT id FROM listings WHERE source='autoscout24' AND status='attivo' AND stage='approfondito' "
         "AND telefono_ok IS NULL ORDER BY deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_AS_TELEFONO_GIRO", "250")),)).fetchall()]
+    # IMBUTO, ultimo passo: le auto Subito già selezionate (approfondite) senza numero nel testo si controllano una per
+    # una aprendo la pagina (bottone Chiama), poche per giro. Solo quelle col numero vanno sul sito.
+    sub_ids = [r["id"] for r in conn.execute(
+        "SELECT id FROM listings WHERE source='subito' AND status='attivo' AND stage='approfondito' AND telefono_ok IS NULL "
+        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_SUB_TELEFONO_GIRO", "40")),)).fetchall()]
+    ids = list(ids) + sub_ids
     if not ids:
         return stats
     rows = conn.execute("SELECT id, source, url, price_eur, telefono_ok FROM listings WHERE id = ANY(%s) AND status='attivo' "
                         "AND source IN ('subito','autoscout24')", (ids,)).fetchall()
     cas, csb = _client_as(), _client_subito()
+    sub_set = set(sub_ids)
 
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
@@ -195,6 +202,9 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
                     return r, st, None
             st, det = _as_dettaglio(cas, r["url"])
             return r, st, telefono_autoscout(det) if st == "attivo" else None
+        if r["telefono_ok"] is None and r["id"] in sub_set:
+            st, tel = subito_telefono_pagina(r["url"])
+            return r, st, tel
         return r, _subito_stato(csb, r["url"]), None
 
     spariti = []
@@ -206,9 +216,12 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
             _mark(conn, r["id"], st, r.get("price_eur"))
             if st == "scomparso":
                 spariti.append(r["id"])
+            if tel is None and r["id"] in sub_set:          # pagina non leggibile: si riprova più avanti, dopo gli altri
+                conn.execute("UPDATE listings SET telefono_at=now() WHERE id=%s", (r["id"],))
+                stats["subito:telefono_non_leggibile"] += 1
             if tel is not None:
                 conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, r["id"]))
-                stats[f"autoscout24:telefono_{'si' if tel else 'no'}"] += 1
+                stats[f"{r['source']}:telefono_{'si' if tel else 'no'}"] += 1
     conn.commit()
     stats["_spariti"] = spariti            # type: ignore[assignment]
     return stats
@@ -345,7 +358,7 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
                 conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, lid))
         else:
             conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s",
-                         (tel_sub or ha_numero_testo(l.title, l.description), lid))
+                         (True if (tel_sub or ha_numero_testo(l.title, l.description)) else None, lid))   # Subito: "no" solo dal controllo
         conn.execute("UPDATE listings SET last_checked_at=now() WHERE id=%s", (lid,))
         stats[f"{l.source}:{ev}"] += 1
         if ev in ("prezzo", "riapparso"):
@@ -544,3 +557,64 @@ def _diagnostica_pagina_subito(lst: list) -> None:
                     r.status_code, len(r.text), bool(data), ("mostra numero" in low or "chiama" in low),
                     [w for w in ("captcha", "datadome", "cloudflare", "access denied", "phone", "telefono", "chiama",
                                  "messaggio", "__next_data__") if w in low], trov[:20])
+
+
+_SUB_PAGINA = {"n": 0}
+
+
+def subito_telefono_pagina(url: str) -> tuple[str, bool | None]:
+    """Apre la pagina di UN annuncio Subito (Web Unlocker di Bright Data se configurato, altrimenti proxy o diretto) e
+    dice se c'è il bottone Chiama. Ritorna (stato annuncio, telefono sì/no/None=non leggibile). Il numero non si legge."""
+    from ..collectors.base import next_data
+    from ..collectors.subito import SubitoCollector
+    sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    try:
+        r = sub._get(url)
+    except Exception as e:
+        log.info("TR subito pagina %s: %s", url, str(e)[:100])
+        return "errore", None
+    if r.status_code in (404, 410):
+        return "scomparso", None
+    if r.status_code != 200:
+        return "errore", None
+    low = r.text.lower()
+    if "annuncio non è più disponibile" in low or "questo annuncio è scaduto" in low:
+        return "scomparso", None
+    data = next_data(r.text)
+    tel = telefono_da_pagina(data, low)
+    if _SUB_PAGINA["n"] < 5:
+        _SUB_PAGINA["n"] += 1
+        log.warning("TR subito pagina controllo: dati=%s esito=%s", bool(data), tel)
+    return "attivo", tel
+
+
+def telefono_da_pagina(data: dict | None, low: str) -> bool | None:
+    """Indicatore del bottone Chiama nella pagina. None se la pagina non ha i dati (blocco anti-bot)."""
+    if not data:
+        return None
+    flags = []
+
+    def scan(o, depth=0):
+        if depth > 12:
+            return
+        if isinstance(o, dict):
+            for k, v in o.items():
+                kl = k.lower()
+                if kl in ("phone", "hasphone", "showphone", "phonevisible", "isphonevisible", "phone_visible",
+                          "hasphonenumber", "phonenumberavailable"):
+                    if isinstance(v, bool):
+                        flags.append(v)
+                    elif isinstance(v, str) and v.strip():
+                        flags.append(v.strip() not in ("0", "false", "no"))
+                    elif isinstance(v, (int, float)):
+                        flags.append(v != 0)
+                scan(v, depth + 1)
+        elif isinstance(o, list):
+            for v in o[:30]:
+                scan(v, depth + 1)
+    scan(data)
+    if any(flags):
+        return True
+    if "mostra numero" in low or 'aria-label="chiama' in low:
+        return True
+    return False if flags else None
