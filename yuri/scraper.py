@@ -146,6 +146,10 @@ def _dettaglio(cl: httpx.Client, a: dict) -> dict:
             if a.get("marca") and t.lower().startswith(str(a["marca"]).lower()):
                 t = t[len(a["marca"]):]
             a["modello"] = t.strip()[:40] or None
+        if not a.get("modello"):
+            m = re.search(r"/annunci/[^-]+-([^-]+)-", a.get("url") or "")
+            if m:
+                a["modello"] = m.group(1).capitalize()
         foto = []
         for im in (d.get("images") or []) if isinstance(d, dict) else []:
             u = im if isinstance(im, str) else (im.get("url") or im.get("src") if isinstance(im, dict) else None)
