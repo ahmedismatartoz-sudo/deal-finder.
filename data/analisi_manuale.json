@@ -25889,23 +25889,6 @@
   "aggiorna": true
  },
  {
-  "id": 54275,
-  "esito": "opportunita",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "guadagno_finale": 2050,
-  "nota": "S-Cross bianca in officina, carrozzeria e interni senza danni visibili. Resta.",
-  "controlli": [
-   "motivo per cui è in officina",
-   "tagliandi",
-   "frizione"
-  ],
-  "aggiorna": true
- },
- {
   "id": 53170,
   "esito": "scartata",
   "danno": "nessuno",
@@ -79056,26 +79039,6 @@
   "guadagno_finale": 360,
   "nota": "La Brera 2.2 JTS del 2009 è di nicchia e si rivende sugli 8.500 €. Il guadagno è quasi nullo, quindi la togliamo.",
   "controlli": [],
-  "aggiorna": true,
-  "audit": "a1"
- },
- {
-  "id": 59658,
-  "esito": "da_verificare",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "rivendita_prudente": 10500,
-  "mercato_da_rivendita": true,
-  "guadagno_finale": 2360,
-  "nota": "Una Clio RS Trophy EDC del 2017 con 166.000 km si rivende sui 10.500 €. Le foto sono buone, il margine regge di poco.",
-  "controlli": [
-   "Cambio EDC (frizioni e meccatronica)",
-   "Uso in pista o elaborazioni",
-   "Tagliandi"
-  ],
   "aggiorna": true,
   "audit": "a1"
  },
@@ -191360,5 +191323,100 @@
    "spie accese in prova"
   ],
   "aggiorna": true
+ },
+ {
+  "id": 58886,
+  "esito": "scartata",
+  "motivo": "controllo finale: Peugeot 2008 PureTech GT Line con anno 2008 (modello uscito nel 2013): anno sbagliato"
+ },
+ {
+  "id": 436424,
+  "esito": "scartata",
+  "motivo": "controllo finale: Audi A3 1.9 TDI segnata 2022 (motore fuori produzione dal 2012): anno sbagliato"
+ },
+ {
+  "id": 385022,
+  "esito": "scartata",
+  "motivo": "controllo finale: Ibiza 2015 con 2.000 km: km quasi certamente sbagliati, mercato gonfiato"
+ },
+ {
+  "id": 388280,
+  "esito": "scartata",
+  "motivo": "controllo finale: Polo 2009 con 10.000 km (6 confronti): km poco credibili, mercato gonfiato"
+ },
+ {
+  "id": 375317,
+  "esito": "scartata",
+  "motivo": "controllo finale: Duster GPL 2019 con 10.000 km tondi: km poco credibili, mercato gonfiato"
+ },
+ {
+  "id": 387633,
+  "esito": "scartata",
+  "motivo": "controllo finale: Panda GPL 2019 con 10.000 km tondi: km poco credibili, mercato gonfiato"
+ },
+ {
+  "id": 57136,
+  "esito": "scartata",
+  "motivo": "controllo finale: MINI Cooper 2007 con 3.000 km: km sbagliati"
+ },
+ {
+  "id": 414688,
+  "esito": "scartata",
+  "motivo": "controllo finale: doppione della Macan S 2018 con 63.600 km (id 432000)"
+ },
+ {
+  "id": 304882,
+  "esito": "scartata",
+  "motivo": "controllo finale: doppione del Tourneo Custom 2020 185 CV (id 71551)"
+ },
+ {
+  "id": 385414,
+  "esito": "scartata",
+  "motivo": "controllo finale: doppione della Qashqai GPL 2014 (id 385403)"
+ },
+ {
+  "id": 65384,
+  "esito": "scartata",
+  "motivo": "controllo finale: doppione della MINI John Cooper Works 2015 (id 65383)"
+ },
+ {
+  "id": 72514,
+  "esito": "scartata",
+  "motivo": "controllo finale: Wrangler 2011 2.8 CRD, mercato 29.500 € troppo alto per l'anno"
+ },
+ {
+  "id": 75286,
+  "esito": "scartata",
+  "motivo": "controllo finale: Discovery 5 con solo 3 confronti e margine alto: mercato non affidabile"
+ },
+ {
+  "id": 436297,
+  "esito": "scartata",
+  "motivo": "controllo finale: Evoque 2017 con solo 2 confronti e margine alto: mercato non affidabile"
+ },
+ {
+  "id": 387736,
+  "esito": "scartata",
+  "motivo": "controllo finale: Ducato metano con solo 3 confronti e margine alto: mercato non affidabile"
+ },
+ {
+  "id": 385328,
+  "esito": "scartata",
+  "motivo": "controllo finale: Kangoo benzina con solo 2 confronti e margine alto: mercato non affidabile"
+ },
+ {
+  "id": 54275,
+  "esito": "scartata",
+  "motivo": "controllo finale: SX4 S-Cross con 2 confronti e margine 61% del prezzo: mercato non affidabile"
+ },
+ {
+  "id": 387405,
+  "esito": "scartata",
+  "motivo": "controllo finale: 500C diesel con 4 confronti e margine alto: mercato non affidabile"
+ },
+ {
+  "id": 59658,
+  "esito": "scartata",
+  "motivo": "controllo finale: Clio RS Trophy a 8.000 € con margine 68% del prezzo: troppo bello, sportiva"
  }
 ]
