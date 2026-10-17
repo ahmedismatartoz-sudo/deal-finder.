@@ -3,8 +3,9 @@
   const $ = s => document.querySelector(s);
   const grid = $('#grid'), empty = $('#empty'), count = $('#count');
   let AUTO = [];
-  const eur = n => n == null ? '' : n.toLocaleString('it-IT') + ' €';
-  const kmf = n => n == null ? '' : n.toLocaleString('it-IT') + ' km';
+  const mil = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const eur = n => n == null ? '' : mil(n) + ' €';
+  const kmf = n => n == null ? '' : mil(n) + ' km';
   const img = (u, size) => u ? '/img?u=' + encodeURIComponent(size ? u.replace(/\/\d+x\d+\.webp$/, '/' + size + '.webp') : u) : '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const anno = a => { const m = String(a.immatricolazione || '').match(/(19|20)\d\d/); return m ? +m[0] : null; };

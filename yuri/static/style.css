@@ -294,3 +294,4 @@ em{font-style:italic;color:#c8d6ff}
 .fab{transition:none}
 @media (max-width:720px){.fab{opacity:1;transform:none;pointer-events:auto}}
 .nfoto{background:rgba(0,0,0,.6);padding:4px 9px;border-radius:999px}
+.filters{position:static;backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--card)}
