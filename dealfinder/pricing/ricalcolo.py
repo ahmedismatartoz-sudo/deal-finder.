@@ -30,6 +30,33 @@ RISCHIO = {"telaio_longheroni", "tetto_montanti", "airbag_esplosi", "frontale_pr
            "cambio_sostituzione", "alluvionata", "incendio"}
 
 
+# Ripiego (richiesta del 17/10): se nel mercato di casa ci sono meno di 5 auto equivalenti, si cercano i confronti
+# in tutto il Nord Italia della nostra base prezzi. L'auto proposta resta entro 150 km; la valutazione lo dichiara.
+NORD = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO", "NO", "VC", "BI", "VB", "AL", "AT", "TO",
+        "CN", "AO", "GE", "SV", "IM", "SP", "PC", "PR", "RE", "MO", "BO", "FE", "RA", "FC", "RN", "VR", "VI", "PD", "VE",
+        "TV", "BL", "RO", "TN", "BZ", "UD", "PN", "GO", "TS"]
+NORD_SQL = "province IN (" + ",".join(f"'{p}'" for p in NORD) + ")"
+
+
+def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict) -> dict:
+    v = P.valuta(t, mercato, soglia, cfg)
+    if os.environ.get("POLICY_RIPIEGO_NORD", "1") != "1" or (v.get("n") or 0) >= cfg.n_preferito \
+            or not (t.get("make") and t.get("model") and t.get("fuel")):
+        return v
+    key = (t["make"], t["model"], t["fuel"])
+    if key not in cache:
+        cache.clear()                                    # un gruppo alla volta: poca memoria
+        cache[key] = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                      for m in conn.execute(MARKET_SQL.format(home=NORD_SQL), key).fetchall()]
+    v2 = P.valuta(t, cache[key], soglia, cfg)
+    if (v2.get("n") or 0) > (v.get("n") or 0):
+        v2["fuori_zona"] = True
+        v2.setdefault("ipotesi", []).append("pochi confronti entro 150 km: usati anche annunci uguali nel resto del "
+                                            "Nord Italia (prezzi richiesti, possibili piccole differenze di zona)")
+        return v2
+    return v
+
+
 def _j(v):
     return json.loads(v) if isinstance(v, str) else v
 
@@ -80,6 +107,7 @@ def esegui(conn, limite: int | None = None) -> dict:
     fasce = {i: Counter() for i in range(len(scovo.COPERTURA_FASCE))}
     sospette = [0]
     campioni, gruppo, mercato, gruppi = [], None, [], 0
+    cache_nord: dict = {}
     for r in targets:
         key = (r["make"], r["model"], r["fuel"])
         if key != gruppo:
@@ -96,7 +124,8 @@ def esegui(conn, limite: int | None = None) -> dict:
             t["tetto_rivendita"] = info[r["id"]]["mercato_audit"]
         soglia = scovo.soglia(int(r["price_eur"] or 0))
         try:
-            v = P.valuta(t, [dict(m, vehicle_identity=_j(m.get("vehicle_identity"))) for m in mercato], soglia, cfg)
+            v = valuta_con_ripiego(conn, t, [dict(m, vehicle_identity=_j(m.get("vehicle_identity"))) for m in mercato],
+                                   soglia, cfg, cache_nord)
         except Exception as e:                       # una valutazione sbagliata non ferma le altre
             log.warning("policy: auto %s non valutata: %s", r["id"], str(e)[:200])
             continue
@@ -191,6 +220,9 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
     lo, hi = int(os.environ.get("UTIL_MIN", "1000")), int(os.environ.get("UTIL_MAX", "7000"))
     margine_min = int(os.environ.get("UTIL_MARGINE", "1000"))
     cfg = P.PolicyConfig.from_env()
+    from ..core.dal_testo import completa_db
+    log.warning("DAL_TESTO %s", json.dumps(completa_db(conn)))          # anno, km, alimentazione mancanti: dal testo
+    cache_nord: dict = {}
     rows = conn.execute(UTIL_SQL.format(cols=TARGET_COLS), {"lo": lo, "hi": hi, "anno": scovo.ANNO_MINIMO,
                                                              "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
@@ -219,7 +251,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
                  rischio_strutturale=_rischio(r))
         try:
-            v = P.valuta(t, mercato, margine_min, cfg)
+            v = valuta_con_ripiego(conn, t, mercato, margine_min, cfg, cache_nord)
         except Exception as e:
             st["errore"] += 1
             log.warning("utilitarie: %s non valutata: %s", r["id"], str(e)[:120])

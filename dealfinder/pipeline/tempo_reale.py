@@ -283,6 +283,9 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
     for l in listings:
         tel = (l.raw or {}).get("_telefono") if l.source == "autoscout24" else None
+        from ..core.dal_testo import completa
+        for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km}, l.title, l.description).items():
+            setattr(l, k, v)                      # dati mancanti presi dal testo dell'annuncio
         try:
             normalize_fields(l)
         except Exception:
@@ -336,6 +339,7 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     rows = conn.execute(f"SELECT {TARGET_COLS}, l.title, l.description, l.telefono_ok, l.damage_declared "
                         f"FROM listings l WHERE l.id = ANY(%s)", (ids,)).fetchall()
     gruppi: dict = {}
+    cache_nord: dict = {}
     for r in rows:
         if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"]:
             stats["valuta:senza_numero"] += 1
@@ -354,7 +358,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
                  rischio_strutturale=_rischio(r))
         soglia = scovo.soglia(int(r["price_eur"]))
-        v = P.valuta(t, gruppi[key], soglia, cfg)
+        from ..pricing.ricalcolo import valuta_con_ripiego
+        v = valuta_con_ripiego(conn, t, gruppi[key], soglia, cfg, cache_nord)
         v["sezione"] = "affari"
         stats[f"valuta:{v['categoria']}"] += 1
         conn.execute(
