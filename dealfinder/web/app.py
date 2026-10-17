@@ -915,9 +915,54 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
               or (it.get("fonte") != "AutoScout24" and _tel_cache.get(it["id"], False))
               or (it.get("fonte") != "AutoScout24" and not (eco_tel and it.get("economica")) and (
                   it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")))]
+    tenute += _senza_numero_super(items, tenute)
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
+
+
+# Auto SENZA numero ammesse (richiesta del 17/10): al massimo SENZA_NUMERO_QUOTA (20%) delle auto sul sito, solo se
+# "super valide" (sopra la soglia piena, margine ≥ SENZA_NUMERO_FATTORE × soglia, almeno SENZA_NUMERO_CONFRONTI
+# confronti) e con la TARGA VISIBILE nelle foto: targa coperta + niente numero = possibile truffa, fuori.
+_targhe_da_controllare: list = []
+
+
+def _senza_numero_super(items: list[dict], tenute: list[dict]) -> list[dict]:
+    quota = float(os.environ.get("SENZA_NUMERO_QUOTA", "0.2"))
+    if quota <= 0:
+        return []
+    fattore = float(os.environ.get("SENZA_NUMERO_FATTORE", "1.5"))
+    min_conf = int(os.environ.get("SENZA_NUMERO_CONFRONTI", "5"))
+    dentro = {it["id"] for it in tenute}
+    cand = []
+    for it in items:
+        pv = it.get("pv") or {}
+        if it["id"] in dentro or it.get("economica") or it.get("fonte") not in ("Subito", "AutoScout24"):
+            continue
+        if pv.get("categoria") not in scovo.CATEGORIE_SITO or pv.get("margine") is None:
+            continue
+        if pv["margine"] < fattore * scovo.soglia(it["prezzo"]) or (pv.get("n") or 0) < min_conf:
+            continue
+        cand.append(it)
+    cand.sort(key=lambda it: -(it["pv"]["margine"]))
+    _targhe_da_controllare[:] = [it["id"] for it in cand]
+    if not cand:
+        return []
+    from ..pipeline import tempo_reale as tr
+    try:
+        with connect() as conn:
+            esiti = tr.esiti_targa(conn, [it["id"] for it in cand])
+    except Exception as e:
+        logging.getLogger("scovo").warning("controllo targa non letto: %s", str(e)[:200])
+        return []
+    massimo = int(len(tenute) * quota / (1 - quota))          # così sono al massimo il 20% del totale
+    ok = [it for it in cand if esiti.get(it["id"]) == "visibile"][:massimo]
+    for it in ok:
+        it["senza_numero"] = True
+    from collections import Counter as _C
+    logging.getLogger("scovo").warning("SENZA_NUMERO: candidate super valide=%d, ammesse=%d (massimo %d), targhe: %s",
+                                       len(cand), len(ok), massimo, dict(_C(esiti.get(it["id"], "da_controllare") for it in cand)))
+    return ok
 
 
 def _regole_finali(items: list[dict]) -> list[dict]:
@@ -1700,7 +1745,23 @@ def _tempo_reale():
                 lg.warning("TR telefoni subito non riuscito: %s", str(e)[:300])
             time.sleep(3600)
 
+    def targhe():
+        time.sleep(int(os.environ.get("TR_RITARDO_S", "90")) + 60)
+        while True:
+            try:
+                ids = list(_targhe_da_controllare)
+                st = tr.con_lucchetto("targhe", tr.giro_targhe, ids) if ids else None
+                if st:
+                    lg.warning("TR TARGHE: %s", dict(st))
+                    if any(k in st for k in ("visibile", "coperta", "non_inquadrata", "incerta", "foto_internet")):
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False)
+            except Exception as e:
+                lg.warning("TR targhe non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("TR_TARGHE_MIN", "5")) * 60)
+
     _azzera_no_subito()
+    threading.Thread(target=targhe, daemon=True, name="tr-targhe").start()
     threading.Thread(target=verifica, daemon=True, name="tr-verifica").start()
     threading.Thread(target=telefoni_subito, daemon=True, name="tr-telefoni").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()

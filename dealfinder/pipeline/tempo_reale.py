@@ -31,7 +31,7 @@ REGIONI = {
     "liguria": ["GE"],
 }
 _codici_regione: dict[str, int] = {}
-LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103}
+LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104}
 
 
 # ------------------------------------------------------------------ telefono
@@ -698,3 +698,78 @@ def riepilogo_misure(conn) -> dict:
            FROM misure_vendite WHERE sparita_at > now() - make_interval(days => %s)""",
         (int(os.environ.get("MISURA_GIORNI", "3")),)).fetchone()
     return {k: (round(float(v), 3) if v is not None and not isinstance(v, int) else v) for k, v in dict(r).items()}
+
+
+# ------------------------------------------------------------------ controllo targa (auto senza numero)
+
+TARGA_SYSTEM = """Guardi le foto di un annuncio di auto usata. Devi dire SOLO se la targa si legge in almeno una foto.
+Non scrivere MAI i caratteri della targa. Rispondi solo con questo JSON:
+{"targa": "visibile" | "coperta" | "non_inquadrata" | "incerta", "foto_da_internet": true | false}
+- "visibile": i caratteri della targa si leggono in almeno una foto (anche se piccoli).
+- "coperta": targa oscurata, sfocata, cancellata, coperta da adesivo, scritta, logo o emoji, oppure targa finta o di esempio.
+- "non_inquadrata": nessuna foto mostra il davanti o il dietro dell'auto dove sta la targa.
+- "incerta": foto troppo piccole o scure per dirlo.
+- "foto_da_internet": true se sembrano foto di catalogo, di un concessionario o prese da internet."""
+
+
+def controlla_targa(conn, lid: int) -> str:
+    """Esito del controllo targa sulle foto già salvate dell'auto (mai la targa stessa)."""
+    import base64
+    from ..web import foto
+    from ..ai import client as ai
+    blocks = []
+    for pos in range(foto.MAX_PER_AUTO):
+        try:
+            c = foto.fetch_one(conn, lid, pos)
+        except Exception:
+            c = None
+        if c:
+            blocks.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                                       "data": base64.b64encode(c).decode()}})
+    if not blocks:
+        esito = "senza_foto"
+    else:
+        blocks.append({"type": "text", "text": "Si legge la targa in almeno una di queste foto?"})
+        try:
+            r = ai.ask_json("targa", ai.MODEL_FAST, TARGA_SYSTEM, blocks, max_tokens=120,
+                            usage_sink=ai.db_usage_sink(conn), listing_id=lid)
+            d = r.data if isinstance(r.data, dict) else {}
+            esito = str(d.get("targa") or "incerta")
+            if esito not in ("visibile", "coperta", "non_inquadrata", "incerta"):
+                esito = "incerta"
+            if d.get("foto_da_internet"):
+                esito = "foto_internet"
+        except Exception as e:
+            log.warning("TR targa %s non controllata: %s", lid, str(e)[:150])
+            esito = "errore"
+    conn.execute("INSERT INTO controllo_targa (listing_id, esito, foto) VALUES (%s,%s,%s) ON CONFLICT (listing_id) "
+                 "DO UPDATE SET esito=EXCLUDED.esito, foto=EXCLUDED.foto, checked_at=now()", (lid, esito, len(blocks)))
+    conn.commit()
+    return esito
+
+
+def giro_targhe(conn, ids: list[int]) -> Counter:
+    """Controlla la targa (una volta per auto; "errore" si riprova dopo un giorno) delle auto senza numero candidate."""
+    from ..ai import client as ai
+    stats: Counter = Counter()
+    if not ids:
+        return stats
+    if not ai.available():
+        stats["ai_non_configurata"] = len(ids)
+        return stats
+    if ai.budget_finito(conn):
+        stats["budget_ai_finito"] = len(ids)
+        return stats
+    fatti = {r["listing_id"] for r in conn.execute(
+        "SELECT listing_id FROM controllo_targa WHERE listing_id = ANY(%s) AND (esito <> 'errore' "
+        "OR checked_at > now() - interval '1 day')", (list(ids),)).fetchall()}
+    for lid in [i for i in ids if i not in fatti][:int(os.environ.get("TARGA_PER_GIRO", "40"))]:
+        stats[controlla_targa(conn, lid)] += 1
+    return stats
+
+
+def esiti_targa(conn, ids: list[int]) -> dict:
+    if not ids:
+        return {}
+    return {r["listing_id"]: r["esito"] for r in conn.execute(
+        "SELECT listing_id, esito FROM controllo_targa WHERE listing_id = ANY(%s)", (list(ids),)).fetchall()}

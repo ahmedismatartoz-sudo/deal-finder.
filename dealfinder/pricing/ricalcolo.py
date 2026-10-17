@@ -388,7 +388,9 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                 "tutte": len(ok), "diesel": sum(1 for x in ok if x["fuel"] == "diesel"),
                 "per_fascia": dict(Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 10**9) if x["p"] < lim) for x in ok))}
     log.warning("SOGLIE_SIM %s", json.dumps(soglie_sim, ensure_ascii=False))
-    pass_ = [x for x in vals if x["tel"] is not False and x["v"]["categoria"] in scovo.CATEGORIE_SITO
+    # sopra la soglia piena anche SENZA numero (17/10): sul sito ne entra al massimo il 20%, solo le super valide e con
+    # la targa visibile nelle foto (app._senza_numero_super); le altre restano fuori
+    pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO
              and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
     # Le migliori TOP_N (richiesta del 17/10: "le 250 più convenienti"): oltre a quelle sopra soglia, le migliori per
     # margine rispetto alla soglia della fascia, purché il margine sia almeno TOP_MIN_EURO e TOP_QUOTA della soglia.
