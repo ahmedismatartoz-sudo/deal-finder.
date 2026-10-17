@@ -68,7 +68,15 @@ def telefono_subito(item: dict | None) -> bool:
         return False
     adv = item.get("advertiser") or {}
     ph = adv.get("phone") if isinstance(adv, dict) else None
-    return isinstance(ph, str) and len(re.sub(r"\D", "", ph)) >= 6
+    if isinstance(ph, bool):
+        return ph
+    if isinstance(ph, (int, float)):
+        return ph == 1
+    if not isinstance(ph, str):
+        return False
+    ph = ph.strip().lower()
+    # Subito manda un indicatore di una cifra ("1" = numero disponibile dietro il bottone), non il numero
+    return ph in ("1", "true", "si", "yes") or len(re.sub(r"\D", "", ph)) >= 6
 
 
 def ha_numero_testo(title: str | None, desc: str | None) -> bool:
@@ -475,6 +483,11 @@ def giro_telefoni_subito(conn) -> dict:
             ads = (r.json() or {}).get("ads") or []
             if not ads:
                 break
+            for a in ads:                               # distribuzione dell'indicatore (valore di 1 carattere, non è un numero)
+                v = ((a.get("advertiser") or {}).get("phone"))
+                st[f"indicatore={v if isinstance(v, str) and len(v) <= 2 else type(v).__name__}"] += 1
+                if v is not None and ha_numero_testo(a.get("subject"), a.get("body")):
+                    st[f"numero_nel_testo&indicatore={v if isinstance(v, str) and len(v) <= 2 else '?'}"] += 1
             si = [str(a.get("urn")) for a in ads if a.get("urn") and telefono_subito(a)]
             no = [str(a.get("urn")) for a in ads if a.get("urn") and not telefono_subito(a)]
             st["letti"] += len(ads)

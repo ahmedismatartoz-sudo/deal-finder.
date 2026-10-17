@@ -1623,12 +1623,12 @@ def _tempo_reale():
                 from ..db import connect as _c
                 giorno = time.strftime("%Y-%m-%d")
                 with _c() as conn:
-                    fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("telefoni_subito:" + giorno,)).fetchone()
+                    fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("telefoni_subito:v2:" + giorno,)).fetchone()
                 if not fatto:
                     t0 = time.time()
                     with _c() as conn:
                         from ..db import log_job
-                        fine = log_job(conn, "telefoni_subito:" + giorno)
+                        fine = log_job(conn, "telefoni_subito:v2:" + giorno)
                         st = tr.giro_telefoni_subito(conn)
                         fine(True, st)
                     lg.warning("TR TELEFONI SUBITO in %.0fs: %s", time.time() - t0, st)
