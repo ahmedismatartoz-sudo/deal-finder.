@@ -51,7 +51,7 @@ const S = {
   raggio: saved.raggio || 0, centro: saved.centro || "milano", modello: saved.modello || "",
   kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
   pos: store.get("pos", null),
-  sconto: (saved.sv === 2 && saved.sconto != null) ? Number(saved.sconto) : 10, sort: saved.sort || "guadagno",
+  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: (saved.sv === 3 && saved.sort) || "guadagno",
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
@@ -70,7 +70,7 @@ const perm = p => !!(S.user && (S.user.role === "admin" || (S.user.permessi || [
 const tabOk = id => id === "profilo" || (id === "incentivi" ? perm("incentivi") : (!S.user || !S.user.permessi || perm("auto")));
 const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
-function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:2, sort:S.sort,
+function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:3, sort:S.sort,
   modello:S.modello, kmMin:S.kmMin, kmMax:S.kmMax, annoMin:S.annoMin, annoMax:S.annoMax, carb:S.carb, raggio:S.raggio, centro:S.centro}); }
 function resetFilters(){ Object.assign(S, {brands:[], modello:"", min:"", max:"", kmMin:"", kmMax:"", annoMin:"", annoMax:"", carb:[], raggio:0, stato:"tutte", bot:null}); }
 
@@ -142,6 +142,9 @@ function filtered(over){
 const CARE = 15000, TOP_MIN = 1500, TOP_MAX = 12000, PRIME = 15;
 const topScore = c => c.gainMax * Math.min(1.6, 0.6 + c.gainMax / c.prezzo);   // guadagno, premiato se rende tanto sul prezzo
 function ordinaLista(s, arr){
+  // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
+  // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
+  if (s.sort === "guadagno") return arr.sort((a, b) => b.gainMax - a.gainMax).map(c => Object.assign(c, {_grp: "all"}));
   const care = [], rest = [];
   for (const c of arr) (c.prezzo > CARE ? care : rest).push(c);
   let topIds = new Set();
@@ -266,7 +269,7 @@ function viewList(){
   const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
-  const TIT = {top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
+  const TIT = {all: "Dalla più conveniente: margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : ""}</div>
