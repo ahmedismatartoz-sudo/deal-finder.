@@ -420,7 +420,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     # prezzo: almeno BASSE_EURO € e BASSE_QUOTA del prezzo d'acquisto, con almeno BASSE_N_CONFRONTI confronti.
     b_lo, b_hi = int(os.environ.get("BASSE_MIN", "1000")), int(os.environ.get("BASSE_MAX", "3000"))
     b_n = int(os.environ.get("BASSE_N", "80"))
-    b_euro, b_quota = int(os.environ.get("BASSE_EURO", "700")), float(os.environ.get("BASSE_QUOTA", "0.3"))
+    b_euro, b_quota = int(os.environ.get("BASSE_EURO", "1200")), float(os.environ.get("BASSE_QUOTA", "0.3"))   # 1.200 €: deciso dal cliente
     b_conf = int(os.environ.get("BASSE_N_CONFRONTI", "3"))
     scelti = {x["id"] for x in pass_ + extra}
     b_gia = sum(1 for x in pass_ + extra if b_lo <= x["p"] <= b_hi)
@@ -434,7 +434,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     extra += b_extra
     log.warning("BASSE_1_3K già scelte=%d, aggiunte=%d (margine ≥ %d € e ≥ %.0f%% del prezzo); simulazione: %s", b_gia,
                 len(b_extra), b_euro, b_quota * 100,
-                {f"{e}€/{int(q * 100)}%": len(_basse(e, q)) for e, q in ((600, .25), (700, .3), (800, .3), (900, .35))})
+                {f"{e}€/{int(q * 100)}%": len(_basse(e, q)) for e, q in ((1000, .3), (1100, .3), (1200, .3), (1500, .3))})
     log.warning("TOP_AUTOSCOUT già scelte=%d, aggiunte=%d (con numero già confermato %d)", as_gia, len(as_extra),
                 sum(1 for x in as_extra if x["tel"] is True))
     log.warning("TOP_AUTO sopra soglia=%d, aggiunte tra le migliori=%d (margine minimo %s)", len(pass_), len(extra),
