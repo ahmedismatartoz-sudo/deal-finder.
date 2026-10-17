@@ -113,6 +113,7 @@ def esegui(conn, limite: int | None = None) -> dict:
         key = (r["make"], r["model"], r["fuel"])
         if key != gruppo:
             gruppo = key
+            cache_nord.clear()                       # memoria: il ripiego Nord serve solo al gruppo corrente
             mercato = (conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()
                        if r["make"] and r["model"] and r["fuel"] else [])
             gruppi += 1
@@ -267,7 +268,21 @@ def gemella_rivendita(t: dict, twins: list[dict], M: float | None, sconto: int =
     return None
 
 
+_UTIL_LOCK = __import__("threading").Lock()
+
+
 def utilitarie(conn, pubblica: bool = False) -> dict:
+    """Un solo calcolo completo alla volta nello stesso processo (memoria: 512 MB su Render)."""
+    if not _UTIL_LOCK.acquire(blocking=False):
+        log.warning("UTILITARIE già in corso: salto")
+        return {}
+    try:
+        return _utilitarie(conn, pubblica)
+    finally:
+        _UTIL_LOCK.release()
+
+
+def _utilitarie(conn, pubblica: bool = False) -> dict:
     """Tutte le auto sane di privati da UTIL_MIN a UTIL_MAX € (con il numero): valutazione con la policy e
     simulazione di quante superano UTIL_MARGINE € di margine con riduzioni diverse sotto i 10.000 €.
     Con pubblica=True quelle che passano con la tabella in vigore vanno sul sito (stage 'approfondito')."""
@@ -287,9 +302,15 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
     rows = conn.execute(UTIL_SQL.format(cols=TARGET_COLS), {"lo": lo, "hi": hi, "anno": scovo.ANNO_MINIMO,
                                                              "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+    import gc
+    pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
     st, vals, gruppo, mercato = Counter(), [], None, []
     gsim, gesempi = Counter(), []
-    for r in rows:
+    for i_r in range(len(rows)):
+        r, rows[i_r] = rows[i_r], None                 # memoria: ogni riga si libera dopo l'uso
+        if i_r % 2000 == 0:
+            gc.collect()
+            log.warning("UTILITARIE avanzamento: %d/%d auto, %.0fs", i_r, len(rows), time.time() - t0)
         if r["source"] == "autoscout24":
             tel = r["telefono_ok"]                       # None = non ancora controllato (lo fa l'agente di verifica)
         elif r["source"] == "subito":
@@ -311,6 +332,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         key = (r["make"], r["model"], r["fuel"])
         if key != gruppo:
             gruppo = key
+            cache_nord.clear()                       # memoria (512 MB su Render): solo il gruppo corrente
             mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                        for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
@@ -341,8 +363,11 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
                                 "n_gemelle": g["n_gemelle"], "riv_gemella": g["rivendita"], "margine_gemella": g["rivendita"] - p_,
                                 "M": v.get("M"), "riv_attuale": v.get("R_finale"), "margine_attuale": v.get("margine")})
         if v.get("M"):
+            # memoria: la valutazione completa (con i confronti) si tiene solo per le auto che possono andare sul sito
+            utile = v.get("margine") is not None and v["margine"] >= pavimento
             vals.append({"id": r["id"], "src": r["source"], "p": int(r["price_eur"]), "M": v["M"], "L": v["L"], "n": v["n"],
-                         "tel": tel, "util": (r["model"] or "") in UTILITARIE, "v": v, "fuel": r["fuel"]})
+                         "tel": tel, "util": (r["model"] or "") in UTILITARIE, "fuel": r["fuel"],
+                         "v": v if utile else {"categoria": v["categoria"], "margine": v.get("margine")}})
     sim = {"pubblicabili_per_fascia": dict(Counter(
         next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if x["p"] < lim)
         for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
