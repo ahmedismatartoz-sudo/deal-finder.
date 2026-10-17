@@ -915,13 +915,14 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
               or (it.get("fonte") != "AutoScout24" and _tel_cache.get(it["id"], False))
               or (it.get("fonte") != "AutoScout24" and not (eco_tel and it.get("economica")) and (
                   it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")))]
-    tenute += _senza_numero_super(items, tenute)
-    tenute += _utilitarie_subito_senza_numero(items, tenute)
     tenute = _solo_facebook_recenti(tenute)
     # 17/10 17:08: gli annunci Facebook non si possono verificare senza account e molti risultano "non esiste più"
     # (prova del cliente): fuori dal sito finché non c'è un controllo affidabile (FB_SITO=1 per rimetterli)
     if os.environ.get("FB_SITO", "0") != "1":
         tenute = [it for it in tenute if it.get("fonte") != "Facebook Marketplace"]
+    # le senza numero si contano DOPO aver tolto Facebook: al massimo il 20% del sito vero
+    tenute += _senza_numero_super(items, tenute)
+    tenute += _utilitarie_subito_senza_numero(items, tenute)
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
