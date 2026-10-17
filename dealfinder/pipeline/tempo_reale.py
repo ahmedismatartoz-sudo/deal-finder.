@@ -78,7 +78,7 @@ def ha_numero_testo(title: str | None, desc: str | None) -> bool:
 
 
 _diag = {"n": 0}
-_diag_sub = {"n": 0}
+_diag_sub = {"n": 0}   # diagnostica: forma del campo telefono (cifre → 9, lettere → a), mai il numero
 
 
 def _diagnostica_as(det: dict) -> None:
@@ -295,7 +295,7 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
     for l in listings:
         tel = (l.raw or {}).get("_telefono") if l.source == "autoscout24" else None
         tel_sub = telefono_subito(l.raw) if l.source == "subito" else False
-        if l.source == "subito" and _diag_sub["n"] < 3 and isinstance(l.raw, dict):
+        if l.source == "subito" and _diag_sub["n"] < 12 and isinstance(l.raw, dict):
             _diag_sub["n"] += 1           # solo NOMI dei campi (mai valori): c'è un'indicazione "numero disponibile"?
             adv = l.raw.get("advertiser") or {}
             def _chiavi_tel(o, pre=""):
@@ -307,8 +307,10 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
                         if isinstance(v, (dict, list)) and len(pre) < 40:
                             out += _chiavi_tel(v if isinstance(v, dict) else {}, pre + k + ".")
                 return out
-            log.warning("TR subito campi: annuncio=%s venditore=%s telefono=%s", sorted(l.raw)[:40],
-                        sorted(adv) if isinstance(adv, dict) else type(adv).__name__, _chiavi_tel(l.raw)[:15])
+            ph = adv.get("phone") if isinstance(adv, dict) else None
+            forma = re.sub(r"[A-Za-z]", "a", re.sub(r"\d", "9", ph))[:40] if isinstance(ph, str) else type(ph).__name__
+            log.warning("TR subito telefono: forma=%r lunghezza=%s cifre=%s", forma, len(ph) if isinstance(ph, str) else None,
+                        len(re.sub(r"\D", "", ph)) if isinstance(ph, str) else None)
         from ..core.dal_testo import completa
         for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km}, l.title, l.description).items():
             setattr(l, k, v)                      # dati mancanti presi dal testo dell'annuncio
