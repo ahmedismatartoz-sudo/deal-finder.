@@ -201,7 +201,7 @@ UTILITARIE = {"panda", "punto", "grande-punto", "punto-evo", "500", "ypsilon", "
 UTIL_SQL = ("SELECT {cols}, l.title, l.description, l.telefono_ok, l.damage_declared, l.problem_search FROM listings l "
             "WHERE l.status='attivo' AND l.seller_type='privato' AND l.price_eur BETWEEN %(lo)s AND %(hi)s "
             "AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s AND l.province = ANY(%(prov)s) "
-            "AND l.last_seen_at > now() - interval '4 days' AND l.source IN ('subito','autoscout24','facebook') "
+            "AND l.last_seen_at > now() - make_interval(days => " + os.environ.get("TUTTE_GIORNI", "14") + ") AND l.source IN ('subito','autoscout24','facebook') "
             "AND COALESCE(l.damage_class, 'sconosciuto') IN ('nessuno','sconosciuto') AND NOT COALESCE(l.problem_search, false) "
             "AND COALESCE(l.damage_declared, false) = false "
             "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti')")
@@ -362,7 +362,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
              and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
     # Le migliori TOP_N (richiesta del 17/10: "le 250 più convenienti"): oltre a quelle sopra soglia, le migliori per
     # margine rispetto alla soglia della fascia, purché il margine sia almeno TOP_MIN_EURO e TOP_QUOTA della soglia.
-    top_n = int(os.environ.get("TOP_N", "320"))
+    top_n = int(os.environ.get("TOP_N", "380"))
     top_min, top_quota = int(os.environ.get("TOP_MIN_EURO", "800")), float(os.environ.get("TOP_QUOTA", "0.6"))
     gia = {x["id"] for x in pass_}
     extra = [x for x in vals if x["id"] not in gia and x["tel"] is not False and x["v"]["categoria"] == "non_conveniente"

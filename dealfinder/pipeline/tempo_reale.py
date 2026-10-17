@@ -68,6 +68,7 @@ def ha_numero_testo(title: str | None, desc: str | None) -> bool:
 
 
 _diag = {"n": 0}
+_diag_sub = {"n": 0}
 
 
 def _diagnostica_as(det: dict) -> None:
@@ -283,6 +284,20 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
     for l in listings:
         tel = (l.raw or {}).get("_telefono") if l.source == "autoscout24" else None
+        if l.source == "subito" and _diag_sub["n"] < 3 and isinstance(l.raw, dict):
+            _diag_sub["n"] += 1           # solo NOMI dei campi (mai valori): c'è un'indicazione "numero disponibile"?
+            adv = l.raw.get("advertiser") or {}
+            def _chiavi_tel(o, pre=""):
+                out = []
+                if isinstance(o, dict):
+                    for k, v in o.items():
+                        if any(w in k.lower() for w in ("phone", "tel", "contact", "call", "number")):
+                            out.append(f"{pre}{k}={type(v).__name__}:{'pieno' if v not in (None, '', [], {}, False) else 'vuoto'}")
+                        if isinstance(v, (dict, list)) and len(pre) < 40:
+                            out += _chiavi_tel(v if isinstance(v, dict) else {}, pre + k + ".")
+                return out
+            log.warning("TR subito campi: annuncio=%s venditore=%s telefono=%s", sorted(l.raw)[:40],
+                        sorted(adv) if isinstance(adv, dict) else type(adv).__name__, _chiavi_tel(l.raw)[:15])
         from ..core.dal_testo import completa
         for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km}, l.title, l.description).items():
             setattr(l, k, v)                      # dati mancanti presi dal testo dell'annuncio
