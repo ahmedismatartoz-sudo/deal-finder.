@@ -46,7 +46,11 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv11-2026-10-17"
+POLICY_VERSION = "pv12-2026-10-17"
+# pv12 (17/10, 09:35, cliente: "rivendita ancora troppo bassa, alzala in modo realistico e controllato"):
+# riduzione che dipende da quanto è sicura la stima del mercato: 8% se il modello prezzi è molto preciso
+# (errore tipico ≤ 10% su ≥ 10 annunci), 10% se è abbastanza preciso (≤ 14% su ≥ 6 annunci, o mediana su ≥ 10
+# confronti diretti), 12% negli altri casi. Più dati = rivendita più vicina al mercato.
 # pv11 (17/10, 09:10): prezzo di mercato più preciso con un modello per ogni marca/modello/alimentazione: si stimano
 # insieme l'effetto di anno, km e potenza su TUTTI gli annunci comparabili (anche anni e km lontani) e si calcola il
 # prezzo per l'anno e i km esatti dell'auto. Più auto valutate, meno errori; il modello si usa solo se è preciso.
@@ -116,6 +120,9 @@ class PolicyConfig:
     reg_potenza: float = .25
     reg_errore_max: float = .18       # errore tipico massimo (≈18%) perché il modello sia usato
     reg_tetto_mediana: float = 1.10   # se ci sono anche ≥5 confronti diretti, M non supera la loro mediana +10%
+    adattiva: bool = True             # riduzione secondo la precisione della stima
+    rid_precisa: float = .08
+    rid_buona: float = .10
     usa_L: bool = False               # True: R = min(M ridotto, L) come nella policy del documento
     transizione: bool = False
     transizione_w: int = 1000
@@ -616,6 +623,20 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         return out
 
     riv = rivendita(out["M"], out["L"], cfg, t.get("price_eur"))
+    if cfg.adattiva and riv.get("riduzione") is not None:
+        reg = out.get("modello") or {}
+        err = reg.get("errore_tipico")
+        if out.get("metodo") == "modello" and err is not None and err <= .10 and n >= 10:
+            r_new, perche = cfg.rid_precisa, f"stima molto precisa (modello su {n} annunci, errore ±{err*100:.0f}%)"
+        elif (out.get("metodo") == "modello" and err is not None and err <= .14 and n >= 6) or \
+                (out.get("metodo") == "mediana" and n >= 10):
+            r_new, perche = cfg.rid_buona, f"stima precisa ({n} annunci)"
+        else:
+            r_new, perche = None, None
+        if r_new is not None and r_new < riv["riduzione"]:
+            centrale = out["M"] * (1 - r_new)
+            riv.update(R=int(round(centrale)), centrale_ridotto=int(round(centrale)), riduzione=r_new,
+                       fascia=riv["fascia"] + f" · ridotta a {int(r_new*100)}%: {perche}")
     out.update(riv)
     if riv["R"] is None:
         out["categoria"] = "dati_insufficienti"
@@ -688,7 +709,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
 def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
-            "totale_costi", "campione", "policy")
+            "totale_costi", "campione", "policy", "metodo")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

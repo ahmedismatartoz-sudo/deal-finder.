@@ -356,7 +356,7 @@ function boxPolicy(c, v){
     if (v.riserva && v.riserva.euro) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
   } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
   h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
-    <div class="note" style="border:0;margin-top:-8px">${p.riempimento ? `<b>Margine sotto la soglia di ${eur(p.soglia)}</b>: è in elenco per avere abbastanza auto in questa fascia di prezzo.` : `Soglia minima richiesta: ${eur(p.soglia)}.`} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
+    <div class="note" style="border:0;margin-top:-8px">${p.riempimento || p.top ? `<b>Margine sotto la soglia piena di ${eur(p.soglia)}</b>: è tra le auto più convenienti che abbiamo in questo momento.` : `Soglia minima richiesta: ${eur(p.soglia)}.`} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
   h += `</div>`;
   if (!v) return h + `<div class="skel"><div class="bar"></div></div>`;
   const li = a => a.map(x => `<li>${esc(x)}</li>`).join("");

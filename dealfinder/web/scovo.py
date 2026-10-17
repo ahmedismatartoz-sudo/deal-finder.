@@ -113,7 +113,10 @@ def abbastanza(it: dict | None, policy: bool = True) -> bool:
         return False
     if policy and POLICY_SITO == "pv2" and (POLICY_PRONTA["ok"] or it.get("pv")):
         pv = it.get("pv") or {}
-        return pv.get("categoria") in CATEGORIE_SITO      # niente soglie abbassate, niente scorciatoie
+        if pv.get("categoria") in CATEGORIE_SITO:
+            return True
+        # tra le migliori del ricalcolo completo (top_auto): margine vero, un po' sotto la soglia piena
+        return bool(it.get("top")) and pv.get("categoria") == "non_conveniente" and pv.get("margine") is not None
     if guadagno_minimo(it) < MIN_MOSTRATO:
         return False
     if it.get("soglia_libera"):            # riammessa dopo il controllo a mano (audit a2): margini già abbassati
@@ -167,6 +170,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
        v.n_comparables, v.confidence, v.engine_version,
        (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) AS pv,
+       EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id=l.id) AS top,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -188,6 +192,7 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        v.private_median, v.resale_median_private, v.resale_median, v.parts_cost_low, v.parts_cost_high,
        v.n_comparables, v.confidence,
        (SELECT riassunto FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) AS pv,
+       EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id=l.id) AS top,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
@@ -389,6 +394,7 @@ def item(r: dict) -> dict | None:
         mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
     return {
         "pv": _pv(r),
+        "top": bool(r.get("top")),
         "mercato_grezzo": grezzo,
         "mercato_base": grezzo,
         "soglia_libera": "-a2" in ev,
@@ -427,6 +433,8 @@ def _pv(r: dict) -> dict | None:
         return None
     pv = dict(_j(r["pv"]))
     pv["etichetta"] = CATEGORIE.get(pv.get("categoria"), pv.get("categoria"))
+    if r.get("top") and pv.get("categoria") == "non_conveniente":
+        pv["etichetta"], pv["top"] = "Tra le migliori · margine sotto soglia piena", True
     return pv
 
 

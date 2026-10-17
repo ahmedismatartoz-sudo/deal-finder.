@@ -360,6 +360,18 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
     log.warning("SOGLIE_SIM %s", json.dumps(soglie_sim, ensure_ascii=False))
     pass_ = [x for x in vals if x["tel"] is not False and x["v"]["categoria"] in scovo.CATEGORIE_SITO
              and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
+    # Le migliori TOP_N (richiesta del 17/10: "le 250 più convenienti"): oltre a quelle sopra soglia, le migliori per
+    # margine rispetto alla soglia della fascia, purché il margine sia almeno TOP_MIN_EURO e TOP_QUOTA della soglia.
+    top_n = int(os.environ.get("TOP_N", "320"))
+    top_min, top_quota = int(os.environ.get("TOP_MIN_EURO", "800")), float(os.environ.get("TOP_QUOTA", "0.6"))
+    gia = {x["id"] for x in pass_}
+    extra = [x for x in vals if x["id"] not in gia and x["tel"] is not False and x["v"]["categoria"] == "non_conveniente"
+             and x["v"].get("margine") is not None
+             and x["v"]["margine"] >= max(top_min, top_quota * scovo.soglia(x["p"]))]
+    extra.sort(key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))
+    extra = extra[:max(0, top_n - len(pass_))]
+    log.warning("TOP_AUTO sopra soglia=%d, aggiunte tra le migliori=%d (margine minimo %s)", len(pass_), len(extra),
+                dict(Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 10**9) if x["p"] < lim) for x in extra)))
     for x in sorted(pass_, key=lambda x: -x["v"]["margine"])[:8]:
         v = x["v"]
         log.warning("UTILITARIE_ESEMPIO %s", json.dumps({"id": x["id"], "prezzo": x["p"], "M": x["M"], "L": x["L"], "n": x["n"],
@@ -368,7 +380,11 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
                     default=str))
     if pubblica:
         n = 0
-        for x in pass_:
+        conn.execute("DELETE FROM top_auto")
+        for pos, x in enumerate(sorted(extra, key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))):
+            conn.execute("INSERT INTO top_auto (listing_id, posizione, margine) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING",
+                         (x["id"], pos, x["v"]["margine"]))
+        for x in pass_ + extra:
             v = x["v"]
             conn.execute(
                 """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)

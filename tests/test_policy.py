@@ -55,7 +55,7 @@ def test_base_preferita_opportunita():
     v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
     assert v["n"] == 12 and v["campione"] == "base preferita"
     assert 9700 <= v["M"] <= 9900 and 9300 <= v["L"] <= 9475   # corretti per km (confronti con meno km)
-    assert v["riduzione"] == .12 and v["R"] == round(v["M"] * .88)
+    assert v["riduzione"] == .10 and v["R"] == round(v["M"] * .90)     # 12 confronti diretti: stima precisa → 10%
     assert v["categoria"] in ("opportunita", "non_conveniente")
     assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
 
@@ -181,7 +181,7 @@ def test_troppo_bello_mai_sul_sito():
 
 
 def test_fascia_piu_severa_tra_prezzo_e_mercato():
-    cfg = PolicyConfig()
+    cfg = PolicyConfig(adattiva=False)
     cfg.fasce = [(5000, .20), (10000, .17), (50000, .15)]
     v = valuta(car(1, 8700), market([12000 + n * 100 for n in range(12)]), 2200, cfg, NOW)
     assert v["riduzione"] == .17
@@ -259,3 +259,10 @@ def test_gemella_piu_economica_affidabile():
     assert [c["id"] for c in tw] == [13, 10, 11, 12]
     g = gemella_rivendita(t, tw, 4800)
     assert g["gemella"]["id"] == 10 and g["rivendita"] == 3500
+
+
+def test_riduzione_secondo_la_precisione():
+    v = valuta(car(1, 5600), market(BASE[:4]), 1500, CFG, NOW)
+    assert v["riduzione"] == .12                                   # pochi confronti: prudenza piena
+    v = valuta(car(1, 5600), market(BASE), 1500, CFG, NOW)
+    assert v["riduzione"] == .10
