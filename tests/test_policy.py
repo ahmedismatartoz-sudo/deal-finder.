@@ -295,3 +295,14 @@ def test_showphone_nella_pagina_subito():
 def test_misure_funzioni_presenti():
     from dealfinder.pipeline import tempo_reale as tr
     assert callable(tr.registra_sparita) and callable(tr.riepilogo_misure)
+
+
+def test_km_uguale_anno_non_valutata():
+    from dealfinder.pricing import policy_v2 as P
+    assert P.km_come_anno({"year": 2017, "mileage_km": 2017})
+    assert P.km_come_anno({"year": 2023, "mileage_km": 2025})
+    assert not P.km_come_anno({"year": 2017, "mileage_km": 120000})
+    assert not P.km_come_anno({"year": 2017, "mileage_km": 1000})
+    v = P.valuta({"id": 1, "year": 2017, "mileage_km": 2017, "fuel": "diesel", "price_eur": 9000, "make": "vw", "model": "golf"},
+                 [], 2200, P.PolicyConfig())
+    assert v["categoria"] == "dati_insufficienti"

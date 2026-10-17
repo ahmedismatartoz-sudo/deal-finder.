@@ -403,6 +403,15 @@ def _stessa_auto(a, b) -> bool:
             and _norm_gear(a.get("gearbox")) == _norm_gear(b.get("gearbox")))
 
 
+def km_come_anno(x: dict) -> bool:
+    """Facebook: spesso nel campo km finisce l'anno (2017 km per un'auto del 2017). È un dato sbagliato, non km bassi."""
+    km, anno = x.get("mileage_km"), x.get("year")
+    try:
+        return km is not None and anno is not None and 1990 <= int(km) <= 2035 and abs(int(km) - int(anno)) <= 3
+    except (TypeError, ValueError):
+        return False
+
+
 def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[list[dict], list[dict]]:
     """Esclusioni che non dipendono dalla somiglianza. Ritorna (tenuti, esclusi con motivo)."""
     now = now or datetime.now(timezone.utc)
@@ -419,6 +428,9 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
             continue
         if not c.get("price_eur"):
             via(c, "prezzo mancante")
+            continue
+        if km_come_anno(c):
+            via(c, "km uguali all'anno (dato sbagliato)")
             continue
         fl = [FLAG_ESCLUSI[f] for f in (c.get("price_flags") or []) if f in FLAG_ESCLUSI]
         if fl:
@@ -568,6 +580,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     for k, nome in (("year", "anno"), ("mileage_km", "km"), ("fuel", "alimentazione"), ("price_eur", "prezzo")):
         if t.get(k) in (None, ""):
             out["mancanti"].append(nome)
+    if km_come_anno(t):
+        out["mancanti"].append("km (scritto l'anno al posto dei km)")
     if out["mancanti"]:
         out.update(categoria="dati_insufficienti", n=0)
         out["motivi"].append("dati dell'auto incompleti: " + ", ".join(out["mancanti"]))

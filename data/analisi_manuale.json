@@ -16524,23 +16524,6 @@
   "aggiorna": true
  },
  {
-  "id": 10435,
-  "esito": "opportunita",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "guadagno_finale": 3304,
-  "nota": "A3 Cabrio rossa S line in ottime condizioni nelle foto, capote integra, nessun danno visibile.",
-  "controlli": [
-   "funzionamento capote",
-   "cambio S tronic",
-   "foto molto ritoccate: verificare lo stato reale della vernice"
-  ],
-  "aggiorna": true
- },
- {
   "id": 29030,
   "esito": "scartata",
   "danno": "nessuno",
@@ -18180,23 +18163,6 @@
   "controlli": [],
   "aggiorna": true,
   "rivendita_prudente": 3600
- },
- {
-  "id": 34234,
-  "esito": "opportunita",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "guadagno_finale": 1518,
-  "nota": "500L pulita nelle foto, carrozzeria e interni in ordine. Margine appena sopra soglia per i 180.000 km.",
-  "controlli": [
-   "storico tagliandi e distribuzione",
-   "frizione e volano a 180.000 km",
-   "spie accese in prova"
-  ],
-  "aggiorna": true
  },
  {
   "id": 25845,
@@ -20905,20 +20871,6 @@
   "controlli": [
    "Ruggine telaio",
    "Certificato ASI"
-  ]
- },
- {
-  "id": 10257,
-  "esito": "da_verificare",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "nota": "Km 15.000 dubbi e scarico diretto non omologato.",
-  "controlli": [
-   "Km reali",
-   "Scarico originale per revisione"
   ]
  },
  {
@@ -113600,26 +113552,6 @@
   "aggiorna": true
  },
  {
-  "id": 390299,
-  "esito": "da_verificare",
-  "danno": "nessuno",
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "guadagno_finale": 4125,
-  "rivendita_prudente": 13465,
-  "nota": "Yaris Cross Hybrid 2021 con 76.000 km, foto pulite senza danni. Su Subito simili a 17.000-19.000, ma rivendita limitata a 13.465 dalla stima; prezzo 9.200 molto basso, possibile annuncio esca da verificare.",
-  "controlli": [
-   "documenti e intestatario",
-   "km reali",
-   "prezzo confermato (possibile truffa)"
-  ],
-  "aggiorna": true,
-  "audit": "fbs1",
-  "mercato_da_rivendita": true
- },
- {
   "id": 48662,
   "esito": "scartata",
   "danno": "leggero",
@@ -117587,29 +117519,6 @@
    "controllare libretto tagliandi e km"
   ],
   "aggiorna": true
- },
- {
-  "id": 75441,
-  "esito": "da_verificare",
-  "danno": "nessuno",
-  "strutturale": false,
-  "airbag": false,
-  "danni": [],
-  "ricambi": [],
-  "ricambi_min": 0,
-  "ricambi_max": 0,
-  "rivendita_prudente": 32500,
-  "guadagno_finale": 2660,
-  "nota": "SQ5 Sportback sana nelle foto, prezzo basso per l'auto: anche rivenduta prudente a 32.500 € resta margine, ma il prezzo va capito dal vivo.",
-  "controlli": [
-   "verificare stato reale e assenza di danni non fotografati",
-   "controllare libretto tagliandi e km",
-   "capire perché il prezzo è basso (sinistri pregressi, provenienza, finanziamento)",
-   "diagnosi elettronica e controllo cambio/trazione"
-  ],
-  "aggiorna": true,
-  "audit": "incs1",
-  "mercato_da_rivendita": true
  },
  {
   "id": 72162,
@@ -191372,5 +191281,84 @@
   "aggiorna": true,
   "audit": "fil6",
   "mercato_da_rivendita": true
+ },
+ {
+  "id": 375070,
+  "esito": "scartata",
+  "motivo": "controllo finale: Volvo XC40 2019 con 10.000 km a 16.000 € (margine 63% del prezzo): troppo bello, km o prezzo non credibili"
+ },
+ {
+  "id": 72617,
+  "esito": "scartata",
+  "motivo": "controllo finale: Abarth 695C XSR Yamaha edizione limitata, solo 2 confronti: mercato non affidabile"
+ },
+ {
+  "id": 75441,
+  "esito": "scartata",
+  "motivo": "controllo finale: SQ5 sportiva con 3 confronti; con rivendita prudente (32.500 €) il margine è sotto soglia"
+ },
+ {
+  "id": 390299,
+  "esito": "scartata",
+  "motivo": "controllo finale: è una Yaris Cross Hybrid confrontata con le Yaris normali, e 9.200 € è troppo basso (possibile annuncio esca)"
+ },
+ {
+  "id": 10257,
+  "esito": "scartata",
+  "motivo": "controllo finale: Serie 1 2017 con 15.000 km dubbi e scarico non omologato; mercato 23.800 € non realistico"
+ },
+ {
+  "id": 384354,
+  "esito": "scartata",
+  "motivo": "controllo finale: Ypsilon GPL 2020 a 5.400 € (margine 71% del prezzo): troppo bello per essere vero"
+ },
+ {
+  "id": 59522,
+  "esito": "scartata",
+  "motivo": "controllo finale: Peugeot 2008 PureTech GT Line con anno 2008 (modello uscito nel 2013): anno sbagliato"
+ },
+ {
+  "id": 435618,
+  "esito": "scartata",
+  "motivo": "controllo finale: Peugeot 2008 e-HDi con anno 2008 (modello uscito nel 2013): anno sbagliato"
+ },
+ {
+  "id": 435847,
+  "esito": "scartata",
+  "motivo": "controllo finale: Polo con 'RIPRISTINO' nel titolo e 1.000 km: auto riparata o dati sbagliati"
+ },
+ {
+  "id": 10435,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 3304,
+  "nota": "A3 Cabrio rossa S line in ottime condizioni nelle foto, capote integra, nessun danno visibile.",
+  "controlli": [
+   "funzionamento capote",
+   "cambio S tronic",
+   "foto molto ritoccate: verificare lo stato reale della vernice"
+  ],
+  "aggiorna": true
+ },
+ {
+  "id": 34234,
+  "esito": "opportunita",
+  "danno": "nessuno",
+  "danni": [],
+  "ricambi": [],
+  "ricambi_min": 0,
+  "ricambi_max": 0,
+  "guadagno_finale": 1518,
+  "nota": "500L pulita nelle foto, carrozzeria e interni in ordine. Margine appena sopra soglia per i 180.000 km.",
+  "controlli": [
+   "storico tagliandi e distribuzione",
+   "frizione e volano a 180.000 km",
+   "spie accese in prova"
+  ],
+  "aggiorna": true
  }
 ]
