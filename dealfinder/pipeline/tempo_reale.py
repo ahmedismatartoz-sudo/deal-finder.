@@ -502,7 +502,7 @@ def giro_telefoni_subito(conn) -> dict:
     return dict(st)
 
 
-_diag_pag = {"n": 0}
+_diag_pag = {"n": 0}   # si azzera a ogni avvio: 6 pagine di prova
 
 
 def _diagnostica_pagina_subito(lst: list) -> None:
@@ -512,11 +512,13 @@ def _diagnostica_pagina_subito(lst: list) -> None:
     from ..collectors.base import next_data
     if _diag_pag["n"] >= 6 or not lst:
         return
-    cl = _client_subito()
+    from ..collectors.subito import SubitoCollector
+    sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    via = "unlocker" if (sub.unlocker_zone and sub.unlocker_key) else ("proxy" if os.environ.get("SCRAPER_PROXY") else "diretto")
     for l in lst:
         _diag_pag["n"] += 1
         try:
-            r = cl.get(l.url)
+            r = sub._get(l.url)
         except Exception as e:
             log.warning("TR subito pagina: errore %s", str(e)[:100])
             continue
@@ -538,5 +540,7 @@ def _diagnostica_pagina_subito(lst: list) -> None:
                     scan(v, f"{path}[{i}]")
         scan(data or {})
         low = r.text.lower()
-        log.warning("TR subito pagina: http=%s next_data=%s bottone_chiama=%s campi=%s", r.status_code, bool(data),
-                    ("mostra numero" in low or "chiama" in low), trov[:20])
+        log.warning("TR subito pagina (%s): http=%s byte=%s next_data=%s bottone_chiama=%s parole=%s campi=%s", via,
+                    r.status_code, len(r.text), bool(data), ("mostra numero" in low or "chiama" in low),
+                    [w for w in ("captcha", "datadome", "cloudflare", "access denied", "phone", "telefono", "chiama",
+                                 "messaggio", "__next_data__") if w in low], trov[:20])
