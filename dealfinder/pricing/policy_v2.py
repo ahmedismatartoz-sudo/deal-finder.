@@ -46,7 +46,9 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv8-2026-10-17"
+POLICY_VERSION = "pv9-2026-10-17"
+# pv9 (17/10, 09:00, regole del cliente): riduzione 20% sotto i 5.000 €, 17% da 5.000 a 10.000 €, 15% sopra;
+# margini minimi 1.500 / 2.200 / 3.200 € e oltre, crescenti col prezzo (web/scovo.py SOGLIE_PV).
 # pv8 (17/10, scelta del cliente): sotto i 10.000 € la riduzione è 25% (prima 30% sotto i 5.000 €).
 # pv7 (16/10, 23:50, richiesta): margine = rivendita prudente − prezzo, NESSUN costo (né passaggio né pulizia);
 # per ora solo auto sane (incidentate, guasti e danni nel testo esclusi dal sito).
@@ -82,7 +84,7 @@ def _e(name, default, cast=float):
 
 
 # (limite superiore di M escluso, riduzione). L'ultima fascia include 50.000 €.
-FASCE_BASE = [(5000, .25), (10000, .25), (15000, .20), (20000, .15), (30000, .12), (50000, .10)]
+FASCE_BASE = [(5000, .20), (10000, .17), (50000, .15)]      # 17/10: 20% sotto 5.000, 17% fino a 10.000, poi 15%
 
 
 @dataclass

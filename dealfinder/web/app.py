@@ -983,8 +983,8 @@ def _calcola_elenco() -> None:
                 if sopra and it.get("pv") is not None:
                     if it["pv"].get("categoria") not in scovo.CATEGORIE_SITO:     # policy prudente: niente eccezioni
                         continue
-                elif it and (it.get("pv") or {}).get("categoria") == "non_conveniente":
-                    continue                      # sotto 1.000 €: restano solo quelle da valutare, mai le non convenienti
+                elif it and (it.get("pv") or {}).get("categoria") not in scovo.CATEGORIE_SITO:
+                    continue                      # 17/10: anche sotto 1.000 € solo auto con il margine minimo (1.500 €)
                 elif sopra and (not it.get("mercato") or scovo.guadagno_minimo(it) < int(os.environ.get("ECONOMICHE_GUADAGNO", "400"))):
                     continue
                 if it and it["id"] not in gia and not scovo.troppi_km(it.get("km")):

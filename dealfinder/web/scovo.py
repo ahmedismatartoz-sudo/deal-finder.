@@ -42,14 +42,25 @@ SOGLIE = [(10**9, MINIMO_MILLE)] if MODALITA == "mille" else SOGLIE_FASCE
 MARGINE_MINIMO = SOGLIE[0][1]
 
 
-UTIL_MIN, UTIL_MAX = int(os.environ.get("UTIL_MIN", "1000")), int(os.environ.get("UTIL_MAX", "7000"))
-UTIL_MARGINE = int(os.environ.get("UTIL_MARGINE", "1000"))
+# Margini minimi (regole del cliente, 17/10): margine = rivendita prudente − prezzo, mai sotto 1.500 €.
+# Prezzo d'acquisto fino a 5.000 € → 1.500; 5.000–10.000 → 2.200; 10.000–15.000 → 3.200; 15.000–20.000 → 4.000;
+# 20.000–30.000 → 5.000; oltre → 6.000. Variabile SOGLIE_PV "5000:1500,10000:2200,..." per cambiarle.
+def _soglie_pv():
+    raw = os.environ.get("SOGLIE_PV")
+    if raw:
+        try:
+            return [(int(a), int(b)) for a, b in (x.split(":") for x in raw.split(","))] + [(10**9, int(raw.split(",")[-1].split(":")[1]))]
+        except ValueError:
+            pass
+    return [(5000, 1500), (10000, 2200), (15000, 3200), (20000, 4000), (30000, 5000), (10**9, 6000)]
+
+
+SOGLIE_PV = _soglie_pv()
 
 
 def soglia(prezzo: int) -> int:
-    # auto da 1.000 a 7.000 € (utilitarie, richiesta del 16/10): margine minimo 1.000 € (rivendita prudente − prezzo)
-    if UTIL_MIN <= prezzo <= UTIL_MAX:
-        return UTIL_MARGINE
+    if POLICY_SITO == "pv2":
+        return next(m for limite, m in SOGLIE_PV if prezzo < limite or limite == 10**9)
     return next(m for limite, m in SOGLIE if prezzo <= limite)
 
 
@@ -115,7 +126,7 @@ def abbastanza(it: dict | None, policy: bool = True) -> bool:
 # (con tutti i costi) sia almeno COPERTURA_MARGINE_MIN € e almeno COPERTURA_QUOTA della soglia. Sul sito sono
 # segnate "Margine sotto soglia": i numeri restano quelli veri, la soglia non viene cambiata.
 COPERTURA_FASCE = [1500, 3000, 5000, 8000, 12000, 20000, 10**9]
-COPERTURA_MIN = int(os.environ.get("COPERTURA_MIN", "10"))
+COPERTURA_MIN = int(os.environ.get("COPERTURA_MIN", "0"))     # 17/10: niente auto sotto soglia per riempire le fasce
 COPERTURA_MARGINE_MIN = int(os.environ.get("COPERTURA_MARGINE_MIN", "300"))
 COPERTURA_QUOTA = float(os.environ.get("COPERTURA_QUOTA", "0.4"))
 

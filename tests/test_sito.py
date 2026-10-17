@@ -137,16 +137,10 @@ def test_assistente_capisce_le_domande():
 
 def test_soglie_guadagno_per_prezzo():
     from dealfinder.web import scovo
-    scovo.SOGLIE = scovo.SOGLIE_FASCE
-    # dal 16/10: da 1.000 a 7.000 € basta 1.000 € di margine; fuori da quella fascia le soglie di prima
-    assert scovo.soglia(1800) == 1000 and scovo.soglia(5000) == 1000 and scovo.soglia(6500) == 1000
-    assert scovo.soglia(800) == 1000 or scovo.soglia(800) == scovo.SOGLIE_FASCE[0][1]
-    assert scovo.soglia(15000) == 2000
-    it = {"mercato": 10000, "prezzo": 4000, "rip_hi": 0}
-    assert scovo.guadagno_minimo(it) == 9000 - 4000 - 140     # rivendita al 10% sotto mercato
-    assert scovo.abbastanza(it)                     # 4.860 € ≥ 1.500
-    assert not scovo.abbastanza({"mercato": 15000, "prezzo": 11500, "rip_hi": 0})   # 1.860 € < 2.000
-
+    assert scovo.soglia(800) == 1500 and scovo.soglia(4999) == 1500
+    assert scovo.soglia(5000) == 2200 and scovo.soglia(9999) == 2200
+    assert scovo.soglia(12000) == 3200 and scovo.soglia(18000) == 4000 and scovo.soglia(25000) == 5000
+    assert scovo.soglia(40000) == 6000
 
 def test_niente_auto_prima_del_2007():
     from dealfinder.web import scovo

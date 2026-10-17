@@ -217,8 +217,8 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
     from ..zone import MILANO
     from ..pipeline.tempo_reale import ha_numero_testo
     t0 = time.time()
-    lo, hi = int(os.environ.get("UTIL_MIN", "1000")), int(os.environ.get("UTIL_MAX", "7000"))
-    margine_min = int(os.environ.get("UTIL_MARGINE", "1000"))
+    # dal 17/10: TUTTI gli annunci raccolti entro 150 km (auto sane di privati), da 500 a 50.000 €
+    lo, hi = int(os.environ.get("TUTTE_MIN", "500")), int(os.environ.get("TUTTE_MAX", "50000"))
     cfg = P.PolicyConfig.from_env()
     from ..core.dal_testo import completa_db
     log.warning("DAL_TESTO %s", json.dumps(completa_db(conn)))          # anno, km, alimentazione mancanti: dal testo
@@ -251,7 +251,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
                  rischio_strutturale=_rischio(r))
         try:
-            v = valuta_con_ripiego(conn, t, mercato, margine_min, cfg, cache_nord)
+            v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache_nord)
         except Exception as e:
             st["errore"] += 1
             log.warning("utilitarie: %s non valutata: %s", r["id"], str(e)[:120])
@@ -260,19 +260,14 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         if v.get("M"):
             vals.append({"id": r["id"], "src": r["source"], "p": int(r["price_eur"]), "M": v["M"], "L": v["L"], "n": v["n"],
                          "tel": tel, "util": (r["model"] or "") in UTILITARIE, "v": v})
-    # simulazione: riduzione unica sotto i 10.000 € (sopra resta la tabella), margine = R − prezzo
-    sim = {}
-    for rid in (.30, .25, .22, .20, .18, .15):
-        ok = [x for x in vals if x["n"] >= cfg.n_minimo and x["p"] >= x["M"] * cfg.sospetto_sotto_m
-              and min(x["M"] * (1 - rid), x["L"]) - x["p"] >= margine_min]
-        sim[f"{int(rid*100)}%"] = {"tutte": len(ok), "n>=5": sum(1 for x in ok if x["n"] >= 5),
-                                   "utilitarie": sum(1 for x in ok if x["util"]),
-                                   "con_numero_certo": sum(1 for x in ok if x["tel"] is True),
-                                   "per_fascia": dict(Counter(f"{(x['p'] // 1000) * 1000}" for x in ok))}
+    sim = {"pubblicabili_per_fascia": dict(Counter(
+        next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if x["p"] < lim)
+        for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
     out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
     # esempi (solo dati dell'auto) con la riduzione in vigore
-    pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO and (x["v"].get("margine") or 0) >= margine_min]
+    pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO
+             and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
     for x in sorted(pass_, key=lambda x: -x["v"]["margine"])[:8]:
         v = x["v"]
         log.warning("UTILITARIE_ESEMPIO %s", json.dumps({"id": x["id"], "prezzo": x["p"], "M": x["M"], "L": x["L"], "n": x["n"],
