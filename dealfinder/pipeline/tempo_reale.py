@@ -184,7 +184,7 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     # una aprendo la pagina (bottone Chiama), poche per giro. Solo quelle col numero vanno sul sito.
     sub_ids = [r["id"] for r in conn.execute(
         "SELECT id FROM listings WHERE source='subito' AND status='attivo' AND stage='approfondito' AND telefono_ok IS NULL "
-        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_SUB_TELEFONO_GIRO", "60")),)).fetchall()]
+        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_SUB_TELEFONO_GIRO", "0")),)).fetchall()]
     ids = list(ids) + sub_ids
     if not ids:
         return stats
@@ -621,7 +621,6 @@ def telefono_da_pagina(data: dict | None, low: str, html: str = "") -> bool | No
     if vals:
         # 17/10: "showPhone": false è risultato su TUTTE le pagine controllate (0 su 115): non è un "no" affidabile.
         # Finché non si conferma il segnale giusto, un false non esclude l'auto: resta "da controllare".
-        _diag_struttura(html)
         return None
     if not data:
         return None
