@@ -44,6 +44,11 @@ if __name__ == "__main__":
             clienti = _json.loads(os.environ.get("ACCOUNT_CLIENTI") or "[]")
             # account aggiunti dopo (stesso formato), senza dover riscrivere ACCOUNT_CLIENTI
             clienti += _json.loads(os.environ.get("ACCOUNT_NUOVI") or "[]")
+            # un account per variabile (ACCOUNT_AGG_<NOME>, stesso formato): si aggiunge senza toccare le altre
+            for k in sorted(os.environ):
+                if k.startswith("ACCOUNT_AGG_"):
+                    v = _json.loads(os.environ[k] or "[]")
+                    clienti += v if isinstance(v, list) else [v]
         except ValueError:
             clienti = []
             print("ACCOUNT_CLIENTI non è un JSON valido")
