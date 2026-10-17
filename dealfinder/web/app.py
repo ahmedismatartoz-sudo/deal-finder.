@@ -1617,6 +1617,19 @@ def _azzera_no_subito():
 _misure = {"t": 0.0}
 
 
+def _telefoni_scelte():
+    """Ultimo passo dell'imbuto: numero di telefono controllato UNA volta, solo sulle auto AutoScout24 appena scelte."""
+    from ..pipeline import tempo_reale as tr
+    lg = logging.getLogger("tempo_reale")
+    try:
+        t0 = time.time()
+        st = tr.con_lucchetto("telefoni", tr.controlla_telefoni)
+        if st:
+            lg.warning("TR TELEFONI SCELTE in %.0fs: %s", time.time() - t0, dict(st))
+    except Exception as e:
+        lg.warning("TR telefoni scelte non riuscito: %s", str(e)[:300])
+
+
 def _tempo_reale():
     """Due agenti continui (pipeline/tempo_reale.py): VERIFICA delle auto sul sito e NUOVI annunci, ogni 10 minuti."""
     from ..pipeline import tempo_reale as tr
@@ -1652,6 +1665,7 @@ def _tempo_reale():
                 st = tr.con_lucchetto("nuovi", tr.giro_nuovi)
                 if st is not None:
                     if st.get("pubblicate"):
+                        _telefoni_scelte()
                         _elenco["t"] = 0.0
                         _aggiorna_elenco(attendi=False)
                     lg.warning("TR NUOVI in %.0fs: %s", time.time() - t0, dict(st))
@@ -1679,6 +1693,7 @@ def _tempo_reale():
                         from ..pricing import ricalcolo
                         with _c() as conn:
                             ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
+                        _telefoni_scelte()
                         _elenco["t"] = 0.0
                         _aggiorna_elenco(attendi=False)
             except Exception as e:
@@ -1704,6 +1719,7 @@ def _ricalcolo_policy():
                 if os.environ.get("UTIL_SIM", "1") == "1":
                     with connect() as conn:
                         ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
+                    _telefoni_scelte()
                 _elenco["t"] = 0.0
                 _aggiorna_elenco(attendi=False)
             except Exception as e:

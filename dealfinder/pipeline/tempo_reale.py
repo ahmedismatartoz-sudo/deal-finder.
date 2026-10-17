@@ -31,7 +31,7 @@ REGIONI = {
     "liguria": ["GE"],
 }
 _codici_regione: dict[str, int] = {}
-LOCK = {"nuovi": 734101, "verifica": 734102}
+LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103}
 
 
 # ------------------------------------------------------------------ telefono
@@ -173,38 +173,26 @@ def _client_subito():
 # ------------------------------------------------------------------ agente 1: verifica
 
 def giro_verifica(conn, ids: list[int]) -> Counter:
-    """Riapre gli annunci pubblicati. Ritorna i conteggi; gli id spariti sono in stats['_spariti']."""
+    """AGENTE 1 (ogni 10 minuti): riapre SOLO gli annunci che sono sul sito e toglie quelli che non esistono più.
+    Non controlla numeri di telefono (quello lo fa controlla_telefoni, una volta per auto, solo sulle auto scelte).
+    Ritorna i conteggi; gli id spariti sono in stats['_spariti']."""
     from .verify import _mark
     stats: Counter = Counter()
-    # AutoScout24 approfondite senza controllo del numero: si controllano qui (senza numero non vanno sul sito)
-    ids = list(ids) + [r["id"] for r in conn.execute(
-        "SELECT id FROM listings WHERE source='autoscout24' AND status='attivo' AND stage='approfondito' "
-        "AND telefono_ok IS NULL ORDER BY deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_AS_TELEFONO_GIRO", "250")),)).fetchall()]
-    # IMBUTO, ultimo passo: le auto Subito già selezionate (approfondite) senza numero nel testo si controllano una per
-    # una aprendo la pagina (bottone Chiama), poche per giro. Solo quelle col numero vanno sul sito.
-    sub_ids = [r["id"] for r in conn.execute(
-        "SELECT id FROM listings WHERE source='subito' AND status='attivo' AND stage='approfondito' AND telefono_ok IS NULL "
-        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_SUB_TELEFONO_GIRO", "0")),)).fetchall()]
-    ids = list(ids) + sub_ids
+    ids = list(ids)
     if not ids:
         return stats
     rows = conn.execute("SELECT id, source, url, price_eur, telefono_ok FROM listings WHERE id = ANY(%s) AND status='attivo' "
                         "AND source IN ('subito','autoscout24')", (ids,)).fetchall()
     cas, csb = _client_as(), _client_subito()
-    sub_set = set(sub_ids)
 
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
         if r["source"] == "autoscout24":
-            if r["telefono_ok"] is not None:          # numero già controllato: basta sapere se l'annuncio c'è
-                st = _head_stato(cas, r["url"])
-                if st:
-                    return r, st, None
-            st, det = _as_dettaglio(cas, r["url"])
-            return r, st, telefono_autoscout(det) if st == "attivo" else None
-        if r["telefono_ok"] is None and r["id"] in sub_set:
-            st, tel = subito_telefono_pagina(r["url"])
-            return r, st, tel
+            st = _head_stato(cas, r["url"])           # basta sapere se l'annuncio c'è ancora
+            if st:
+                return r, st, None
+            st, _det = _as_dettaglio(cas, r["url"])
+            return r, st, None
         return r, _subito_stato(csb, r["url"]), None
 
     spariti = []
@@ -217,14 +205,37 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
             if st == "scomparso":
                 spariti.append(r["id"])
                 registra_sparita(conn, r["id"])
-            if tel is None and r["id"] in sub_set:          # pagina non leggibile: si riprova più avanti, dopo gli altri
-                conn.execute("UPDATE listings SET telefono_at=now() WHERE id=%s", (r["id"],))
-                stats["subito:telefono_non_leggibile"] += 1
-            if tel is not None:
-                conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, r["id"]))
-                stats[f"{r['source']}:telefono_{'si' if tel else 'no'}"] += 1
     conn.commit()
     stats["_spariti"] = spariti            # type: ignore[assignment]
+    return stats
+
+
+def controlla_telefoni(conn, limite: int | None = None) -> Counter:
+    """IMBUTO, ultimo passo: SOLO le auto AutoScout24 appena scelte (approfondite) e mai controllate: si apre la pagina
+    una volta per auto e si salva sì/no (mai il numero). Non è un controllo periodico: ogni auto si guarda una volta."""
+    stats: Counter = Counter()
+    lim = limite or int(os.environ.get("TR_AS_TELEFONO_MAX", "400"))
+    rows = conn.execute(
+        "SELECT id, url FROM listings WHERE source='autoscout24' AND status='attivo' AND stage='approfondito' "
+        "AND telefono_ok IS NULL AND (telefono_at IS NULL OR telefono_at < now() - interval '1 day') "
+        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (lim,)).fetchall()
+    if not rows:
+        return stats
+    cas = _client_as()
+
+    def check(r):
+        time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
+        st, det = _as_dettaglio(cas, r["url"])
+        return r, st, telefono_autoscout(det) if st == "attivo" else None
+
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
+        for r, st, tel in ex.map(check, rows):
+            if st == "errore":
+                stats["errore"] += 1
+                continue
+            conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, r["id"]))
+            stats[f"telefono_{'si' if tel else ('no' if tel is False else 'non_leggibile')}"] += 1
+    conn.commit()
     return stats
 
 
