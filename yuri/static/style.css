@@ -301,3 +301,11 @@ em{font-style:italic;color:#c8d6ff}
 .tel-card .tel{font-family:var(--serif);font-style:italic;font-weight:800;font-size:clamp(42px,5vw,70px);line-height:1;color:#fff;white-space:nowrap}
 .tel-card .small{color:#aab8dc;font-size:14px}
 .tel-big{font-family:var(--serif);font-style:italic;font-weight:800;font-size:clamp(30px,3.2vw,42px);line-height:1.1;color:#fff;white-space:nowrap}
+.call-now{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px;padding:12px 16px;border-radius:16px;background:var(--grad);color:#fff;box-shadow:0 10px 30px -12px rgba(47,98,255,.9)}
+.call-now svg{width:22px;height:22px;fill:#fff;flex:none}
+.call-now span{display:flex;flex-direction:column;line-height:1.05;font-family:var(--serif);font-style:italic;font-weight:800;font-size:26px;letter-spacing:.01em;white-space:nowrap}
+.call-now small{font-family:inherit;font-style:normal;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.9;margin-bottom:3px}
+.call-now.big{margin:22px 0 4px;padding:16px 20px}
+.call-now.big span{font-size:36px}
+.call-now.big svg{width:28px;height:28px}
+.call-now{background:linear-gradient(90deg,#3a6bff,#1d42dd)}
