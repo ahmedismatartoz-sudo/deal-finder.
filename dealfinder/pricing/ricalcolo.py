@@ -371,6 +371,21 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
              and x["v"]["margine"] >= max(top_min, top_quota * scovo.soglia(x["p"]))]
     extra.sort(key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))
     extra = extra[:max(0, top_n - len(pass_))]
+    # AutoScout24 (richiesta del 17/10): le migliori AS_TOP_N auto AutoScout analizzate, con margine un po' più flessibile
+    # (almeno AS_TOP_MIN € e AS_TOP_QUOTA della soglia). Quelle col numero non ancora controllato le verifica l'agente
+    # entro pochi giri; senza numero non vanno sul sito.
+    as_n = int(os.environ.get("AS_TOP_N", "160"))
+    as_min, as_quota = int(os.environ.get("AS_TOP_MIN", "600")), float(os.environ.get("AS_TOP_QUOTA", "0.4"))
+    scelti = {x["id"] for x in pass_ + extra}
+    as_gia = sum(1 for x in pass_ + extra if x["src"] == "autoscout24")
+    as_extra = [x for x in vals if x["src"] == "autoscout24" and x["id"] not in scelti and x["tel"] is not False
+                and x["v"]["categoria"] == "non_conveniente" and x["v"].get("margine") is not None
+                and x["v"]["margine"] >= max(as_min, as_quota * scovo.soglia(x["p"]))]
+    as_extra.sort(key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))
+    as_extra = as_extra[:max(0, as_n - as_gia)]
+    extra += as_extra
+    log.warning("TOP_AUTOSCOUT già scelte=%d, aggiunte=%d (con numero già confermato %d)", as_gia, len(as_extra),
+                sum(1 for x in as_extra if x["tel"] is True))
     log.warning("TOP_AUTO sopra soglia=%d, aggiunte tra le migliori=%d (margine minimo %s)", len(pass_), len(extra),
                 dict(Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 10**9) if x["p"] < lim) for x in extra)))
     for x in sorted(pass_, key=lambda x: -x["v"]["margine"])[:8]:
