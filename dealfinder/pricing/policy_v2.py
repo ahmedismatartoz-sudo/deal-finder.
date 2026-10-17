@@ -46,7 +46,10 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv10-2026-10-17"
+POLICY_VERSION = "pv11-2026-10-17"
+# pv11 (17/10, 09:10): prezzo di mercato più preciso con un modello per ogni marca/modello/alimentazione: si stimano
+# insieme l'effetto di anno, km e potenza su TUTTI gli annunci comparabili (anche anni e km lontani) e si calcola il
+# prezzo per l'anno e i km esatti dell'auto. Più auto valutate, meno errori; il modello si usa solo se è preciso.
 # pv10 (17/10, 09:00, cliente: "rivendita troppo pessimista"): riduzione 12% su tutte le fasce e rivendita = M − 12%
 # (L, il 25° percentile, si mostra ma non taglia più la rivendita: con la riduzione era una doppia prudenza).
 # pv9 (17/10, 09:00, regole del cliente): riduzione 20% sotto i 5.000 €, 17% da 5.000 a 10.000 €, 15% sopra;
@@ -107,6 +110,12 @@ class PolicyConfig:
     svalutazione_10km: float = .012   # per 10.000 km di differenza
     m_massimo: int = 50000
     fasce: list = field(default_factory=lambda: list(FASCE_BASE))
+    reg: bool = True                  # modello prezzi per marca/modello (anno, km, potenza)
+    reg_min: int = 8
+    reg_anni: int = 6
+    reg_potenza: float = .25
+    reg_errore_max: float = .18       # errore tipico massimo (≈18%) perché il modello sia usato
+    reg_tetto_mediana: float = 1.10   # se ci sono anche ≥5 confronti diretti, M non supera la loro mediana +10%
     usa_L: bool = False               # True: R = min(M ridotto, L) come nella policy del documento
     transizione: bool = False
     transizione_w: int = 1000
@@ -276,6 +285,69 @@ def carrozzeria(c: dict) -> str | None:
     return None
 
 
+def regressione(t: dict, puliti: list[dict], cfg: PolicyConfig) -> dict | None:
+    """Modello di prezzo del gruppo (stessa marca/modello/alimentazione, stessa carrozzeria e cambio, potenza simile):
+    log(prezzo) = a + b·anno + c·km + (d·log potenza). Robusto: si tolgono i prezzi anomali e si rifà il calcolo.
+    Ritorna il prezzo previsto per l'auto valutata e l'errore tipico (in proporzione), oppure None."""
+    import numpy as np
+    if not (t.get("year") and t.get("mileage_km") is not None):
+        return None
+    tg, bt, tp = _norm_gear(t.get("gearbox")), carrozzeria(t), t.get("power_kw")
+    gt = _gen(t)
+    g = []
+    for c in puliti:
+        if c.get("fuel") != t.get("fuel") or not c.get("year") or c.get("mileage_km") is None or not c.get("price_eur"):
+            continue
+        if abs(int(c["year"]) - int(t["year"])) > cfg.reg_anni:
+            continue
+        cg = _norm_gear(c.get("gearbox"))
+        if tg and cg and tg != cg:
+            continue
+        bc = carrozzeria(c)
+        if bc != bt and not ({bc, bt} <= {None, "sw"}):
+            continue
+        if tp and c.get("power_kw") and abs(c["power_kw"] - tp) > tp * cfg.reg_potenza:
+            continue
+        gc = _gen(c)
+        if gt and gc and gt != gc:
+            continue
+        g.append(c)
+    if len(g) < cfg.reg_min:
+        return None
+    usa_p = bool(tp) and sum(1 for c in g if c.get("power_kw")) >= .8 * len(g) and len({c.get("power_kw") for c in g}) > 1
+    if usa_p:
+        g = [c for c in g if c.get("power_kw")]
+    anni = [int(c["year"]) for c in g]
+    kms = [int(c["mileage_km"]) for c in g]
+    # niente estrapolazioni: l'auto deve stare dentro i dati (con un piccolo margine)
+    if not (min(anni) - 1 <= int(t["year"]) <= max(anni) + 1 and min(kms) - 20000 <= int(t["mileage_km"]) <= max(kms) + 20000):
+        return None
+
+    def riga(c):
+        r = [1.0, int(c["year"]) - 2015, int(c["mileage_km"]) / 10000]
+        if usa_p:
+            r.append(math.log(c["power_kw"]))
+        return r
+    X = np.array([riga(c) for c in g], dtype=float)
+    y = np.log([float(c["price_eur"]) for c in g])
+    mad = 0.0
+    for _ in range(3):
+        if len(y) < cfg.reg_min:
+            return None
+        beta = np.linalg.lstsq(X, y, rcond=None)[0]
+        res = y - X @ beta
+        mad = float(np.median(np.abs(res - np.median(res))) * 1.4826)
+        keep = np.abs(res - np.median(res)) <= max(2.5 * mad, .06)
+        if keep.all():
+            break
+        X, y = X[keep], y[keep]
+    if beta[1] <= 0 or beta[2] > .005:              # più nuova deve valere di più, più km di meno
+        return None
+    prezzo = float(math.exp(float(np.array(riga(t)) @ beta)))
+    return {"prezzo": prezzo, "n": int(len(y)), "errore_tipico": round(mad, 4),
+            "anno_pct": round(1 - math.exp(-beta[1]), 4), "km10k_pct": round(1 - math.exp(beta[2]), 4), "potenza": usa_p}
+
+
 def _equivalente(t, c, cfg, livello):
     """None se equivalente, altrimenti il motivo dell'esclusione."""
     if c.get("fuel") != t.get("fuel"):
@@ -404,7 +476,8 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
             break
     for c, why in scartati:
         motivi[why] = motivi.get(why, 0) + 1
-    return {"livello": liv, "validi": validi, "esclusi": esclusi,
+    reg = regressione(t, puliti, cfg) if cfg.reg else None
+    return {"livello": liv, "validi": validi, "esclusi": esclusi, "regressione": reg,
             "correzione": {"anno": round(ya, 4), "km_10000": round(ka, 4), "origine": origine},
             "non_equivalenti": [{"id": c.get("id"), "prezzo": c.get("price_eur"), "motivo": why} for c, why in scartati],
             "motivi_non_equivalenti": motivi}
@@ -519,7 +592,25 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if n:
         out["M"] = int(round(percentile(prezzi, .5)))
         out["L"] = int(round(percentile(prezzi, .25)))
-    if n < cfg.n_minimo:
+    reg = sel.get("regressione")
+    if reg and reg["errore_tipico"] <= cfg.reg_errore_max:
+        m_reg = reg["prezzo"]
+        if n >= cfg.n_preferito and out.get("M"):
+            m_reg = min(m_reg, out["M"] * cfg.reg_tetto_mediana)      # il modello non va oltre i confronti diretti
+        out["M_confronti"] = out.get("M")
+        out["M"] = int(round(m_reg))
+        out.setdefault("L", int(round(m_reg * (1 - reg["errore_tipico"]))))
+        out["metodo"] = "modello"
+        out["modello"] = reg
+        out["ipotesi"].append(f"mercato stimato con il modello prezzi su {reg['n']} annunci dello stesso modello "
+                              f"(−{reg['anno_pct']*100:.1f}% per anno, −{reg['km10k_pct']*100:.1f}% ogni 10.000 km, "
+                              f"errore tipico ±{reg['errore_tipico']*100:.0f}%)")
+        n = max(n, reg["n"])
+        out["n"] = n
+        out["campione"] = ("base preferita" if n >= cfg.n_preferito else "provvisoria (campione limitato)")
+    else:
+        out["metodo"] = "mediana"
+    if n < cfg.n_minimo or not out.get("M"):
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")
         return out

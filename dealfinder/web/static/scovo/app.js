@@ -346,7 +346,7 @@ function boxPolicy(c, v){
   let h = `<div class="box">
     <div class="row"><span class="k"><b>${esc(p.etichetta || "")}</b></span><span class="v ${ok ? "" : "warn"}" style="font-size:15px">${esc(p.campione || "")}</span></div>
     ${row("Prezzo di acquisto", eur(c.prezzo))}
-    ${p.M != null ? row(`Mediana mercato M <small>(${p.n} confronti, corretti per anno e km)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
+    ${p.M != null ? row(`Prezzo di mercato M <small>(${v && v.metodo === "modello" ? "modello su " + p.n + " annunci dello stesso modello" : p.n + " confronti"}, per anno e km di questa auto)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
     ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
     ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}`;

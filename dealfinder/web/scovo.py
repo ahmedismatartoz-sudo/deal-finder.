@@ -461,7 +461,8 @@ def detail(base: dict, extra: dict) -> dict:
         d["valutazione"] = {k: pv.get(k) for k in (
             "policy", "categoria", "acquisto", "M", "L", "n", "livello", "campione", "riduzione", "riduzione_base", "fascia",
             "centrale_ridotto", "R", "R_da", "perdita_storico_danno", "R_finale", "costi", "totale_costi", "riserva",
-            "margine", "soglia", "mancanti", "ipotesi", "motivi", "confronti", "n_esclusi", "non_equivalenti", "venditori")}
+            "margine", "soglia", "mancanti", "ipotesi", "motivi", "confronti", "n_esclusi", "non_equivalenti", "venditori",
+            "metodo", "modello", "M_confronti")}
         d["valutazione"]["etichetta"] = CATEGORIE.get(pv.get("categoria"))
         d["valutazione"]["esclusi_motivi"] = _conta_motivi(pv.get("esclusi") or [])
     return d

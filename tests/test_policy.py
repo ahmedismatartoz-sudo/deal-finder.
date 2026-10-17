@@ -224,3 +224,23 @@ def test_carrozzerie_diverse():
         [car(700 + n, 12000, version_raw="218i Active Tourer") for n in range(3)]
     sel = seleziona(t, m, CFG, NOW)
     assert len(sel["validi"]) == 3 and sel["motivi_non_equivalenti"].get("carrozzeria diversa") == 6
+
+
+def test_modello_prezzi_preciso_e_piu_auto():
+    import random
+    rnd = random.Random(3)
+    vero = lambda y, km: 15000 * 0.9 ** (2022 - y) * 0.985 ** (km / 10000)
+    m = []
+    for n in range(40):
+        y, km = rnd.randint(2013, 2021), rnd.randint(40, 200) * 1000
+        m.append(car(800 + n, int(vero(y, km) * rnd.uniform(.93, 1.07)), year=y, km=km))
+    t = car(1, 5000, year=2016, km=125000)
+    v = valuta(t, m, 1500, CFG, NOW)
+    assert v["metodo"] == "modello"
+    assert abs(v["M"] - vero(2016, 125000)) / vero(2016, 125000) < .08
+    # auto senza confronti diretti vicini (anno ±3 e km ±50.000): con il modello si valuta lo stesso
+    t2 = car(2, 5000, year=2013, km=60000)
+    m2 = [c for c in m if abs(c["year"] - 2013) > 3 or abs(c["mileage_km"] - 60000) > 50000] + \
+         [car(900 + k, int(vero(2014 + k % 6, 90000 + k * 3000)), year=2014 + k % 6, km=90000 + k * 3000) for k in range(12)]
+    v2 = valuta(t2, m2, 1500, CFG, NOW)
+    assert v2.get("M") and v2["metodo"] == "modello"
