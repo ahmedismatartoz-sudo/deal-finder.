@@ -32,7 +32,7 @@ def test_percentile_tipo7():
 
 
 def test_fasce_e_confini():
-    assert riduzione(4999, CFG)[0] == .30
+    assert riduzione(4999, CFG)[0] == .25          # dal 17/10: 25% sotto i 10.000 €
     assert riduzione(5000, CFG)[0] == .25
     assert riduzione(9999, CFG)[0] == .25 and riduzione(10000, CFG)[0] == .20
     assert riduzione(30000, CFG)[0] == .10 and riduzione(50000, CFG)[0] == .10

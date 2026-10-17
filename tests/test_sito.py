@@ -138,9 +138,10 @@ def test_assistente_capisce_le_domande():
 def test_soglie_guadagno_per_prezzo():
     from dealfinder.web import scovo
     scovo.SOGLIE = scovo.SOGLIE_FASCE
-    assert scovo.soglia(1800) == 1500 and scovo.soglia(2000) == 1500
-    assert scovo.soglia(3000) == 1500 and scovo.soglia(5000) == 1500
-    assert scovo.soglia(6500) == 2000 and scovo.soglia(15000) == 2000
+    # dal 16/10: da 1.000 a 7.000 € basta 1.000 € di margine; fuori da quella fascia le soglie di prima
+    assert scovo.soglia(1800) == 1000 and scovo.soglia(5000) == 1000 and scovo.soglia(6500) == 1000
+    assert scovo.soglia(800) == 1000 or scovo.soglia(800) == scovo.SOGLIE_FASCE[0][1]
+    assert scovo.soglia(15000) == 2000
     it = {"mercato": 10000, "prezzo": 4000, "rip_hi": 0}
     assert scovo.guadagno_minimo(it) == 9000 - 4000 - 140     # rivendita al 10% sotto mercato
     assert scovo.abbastanza(it)                     # 4.860 € ≥ 1.500
@@ -178,7 +179,7 @@ def test_filtro_prima_dell_ai_usa_la_regola_del_sito():
     try:
         ok = Listing(source="subito", source_id="1", url="u", price_eur=3000, year=2012)
         assert quick_potential(ok, None)[0]                        # 9.000 − 3.000 − 140 = 5.860 ≥ 1.500
-        assert quick_potential(Listing(source="subito", source_id="2", url="u", price_eur=7000, year=2012), None)[1] == "margine_insufficiente"
+        assert quick_potential(Listing(source="subito", source_id="2", url="u", price_eur=8000, year=2012), None)[1] == "margine_insufficiente"
         assert quick_potential(Listing(source="subito", source_id="3", url="u", price_eur=3000, year=2005), None)[1] == "troppo_vecchia"
     finally:
         pr.value_listing = old

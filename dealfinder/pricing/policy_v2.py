@@ -46,7 +46,8 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv7-2026-10-16"
+POLICY_VERSION = "pv8-2026-10-17"
+# pv8 (17/10, scelta del cliente): sotto i 10.000 € la riduzione è 25% (prima 30% sotto i 5.000 €).
 # pv7 (16/10, 23:50, richiesta): margine = rivendita prudente − prezzo, NESSUN costo (né passaggio né pulizia);
 # per ora solo auto sane (incidentate, guasti e danni nel testo esclusi dal sito).
 # pv6 (16/10, 23:45): la correzione per anno/km può solo ABBASSARE il prezzo di un confronto (un confronto più
@@ -81,7 +82,7 @@ def _e(name, default, cast=float):
 
 
 # (limite superiore di M escluso, riduzione). L'ultima fascia include 50.000 €.
-FASCE_BASE = [(5000, .30), (10000, .25), (15000, .20), (20000, .15), (30000, .12), (50000, .10)]
+FASCE_BASE = [(5000, .25), (10000, .25), (15000, .20), (20000, .15), (30000, .12), (50000, .10)]
 
 
 @dataclass
