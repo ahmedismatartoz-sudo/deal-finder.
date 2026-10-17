@@ -179,6 +179,51 @@ def _client_subito():
     return httpx.Client(timeout=25, follow_redirects=True, headers=HEADERS, proxy=os.environ.get("SCRAPER_PROXY") or None)
 
 
+_FB_DIAG = [0]
+_FB_VIA = ("non è più disponibile", "non e più disponibile", "this listing is no longer available", "no longer available",
+           "articolo non è più disponibile", "questo annuncio non è più disponibile", "listing has been removed",
+           "contenuto non disponibile", "this content isn't available", "questo contenuto non è disponibile")
+
+
+def _fb_stato(client, url: str) -> str:
+    """Facebook Marketplace: pagina pubblica dell'annuncio (senza account). 'scomparso' solo con prova chiara
+    (404, rimando fuori dall'annuncio, scritta "non più disponibile"); pagina di accesso = 'incerto'."""
+    import re as _re
+    m = _re.search(r"/item/(\d+)", url or "")
+    try:
+        r = client.get(url)
+    except Exception as e:
+        log.info("TR facebook %s", str(e)[:100])
+        return "errore"
+    low = r.text.lower() if r.status_code == 200 else ""
+    fin = str(r.url)
+    if _FB_DIAG[0] < 6:
+        _FB_DIAG[0] += 1
+        log.warning("TR facebook diag: http=%s finale=%s og_title=%s login=%s via=%s", r.status_code,
+                    _re.sub(r"\d{6,}", "<id>", fin.split("?")[0])[:80], 'property="og:title"' in low,
+                    "/login" in fin or 'name="login"' in low, [k for k in _FB_VIA if k in low][:2])
+    if r.status_code in (404, 410):
+        return "scomparso"
+    if r.status_code != 200:
+        return "errore"
+    if any(k in low for k in _FB_VIA):
+        return "scomparso"
+    if "/login" in fin or "/checkpoint" in fin:
+        return "incerto"
+    if m and m.group(1) not in fin:
+        return "scomparso" if "/marketplace" in fin else "incerto"
+    if 'property="og:title"' in low or m and m.group(1) in low:
+        return "attivo"
+    return "incerto"
+
+
+def _client_fb():
+    import httpx
+    return httpx.Client(timeout=25, follow_redirects=True, proxy=os.environ.get("SCRAPER_PROXY") or None, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        "Accept-Language": "it-IT,it;q=0.9", "Accept": "text/html"})
+
+
 # ------------------------------------------------------------------ agente 1: verifica
 
 def giro_verifica(conn, ids: list[int]) -> Counter:
@@ -191,21 +236,24 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     if not ids:
         return stats
     rows = conn.execute("SELECT id, source, url, price_eur, telefono_ok FROM listings WHERE id = ANY(%s) AND status='attivo' "
-                        "AND source IN ('subito','autoscout24')", (ids,)).fetchall()
-    cas, csb = _client_as(), _client_subito()
+                        "AND source IN ('subito','autoscout24','facebook')", (ids,)).fetchall()
+    cas, csb, cfb = _client_as(), _client_subito(), _client_fb()
 
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
         if r["source"] == "autoscout24":
             st, _det = _as_dettaglio(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
             return r, st, None
+        if r["source"] == "facebook":
+            return r, _fb_stato(cfb, r["url"]), None
         return r, _subito_stato(csb, r["url"]), None
 
     spariti = []
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
         for r, st, tel in ex.map(check, rows):
             stats[f"{r['source']}:{st}"] += 1
-            if st == "errore":
+            log.warning("VERIFICA_AUTO %s", json.dumps({"id": r["id"], "fonte": r["source"], "esito": st}))
+            if st in ("errore", "incerto"):
                 continue
             _mark(conn, r["id"], st, r.get("price_eur"))
             if st == "scomparso":

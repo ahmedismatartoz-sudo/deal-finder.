@@ -1743,7 +1743,7 @@ def _tempo_reale():
         while True:
             t0 = time.time()
             try:
-                ids = [it["id"] for it in _elenco["items"] if it.get("fonte") in ("Subito", "AutoScout24")]
+                ids = [it["id"] for it in _elenco["items"] if it.get("fonte") in ("Subito", "AutoScout24", "Facebook Marketplace")]
                 st = tr.con_lucchetto("verifica", tr.giro_verifica, ids)
                 if st is not None:
                     spariti = set(st.pop("_spariti", []) or [])
