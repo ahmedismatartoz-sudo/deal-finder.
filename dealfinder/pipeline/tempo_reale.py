@@ -660,5 +660,6 @@ def riepilogo_misure(conn) -> dict:
                   percentile_cont(.5) WITHIN GROUP (ORDER BY prezzo_finale::numeric / NULLIF(mercato_m, 0)) AS prezzo_su_mercato,
                   avg((ribassi > 0)::int) AS quota_con_ribasso,
                   avg((giorni_sul_sito < 2)::int) AS quota_sparite_entro_2_giorni
-           FROM misure_vendite WHERE sparita_at > now() - interval '30 days'""").fetchone()
+           FROM misure_vendite WHERE sparita_at > now() - make_interval(days => %s)""",
+        (int(os.environ.get("MISURA_GIORNI", "3")),)).fetchone()
     return {k: (round(float(v), 3) if v is not None and not isinstance(v, int) else v) for k, v in dict(r).items()}

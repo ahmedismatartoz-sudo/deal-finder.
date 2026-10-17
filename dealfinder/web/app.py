@@ -1639,7 +1639,7 @@ def _tempo_reale():
                     if time.time() - _misure["t"] > 6 * 3600:          # ogni 6 ore: come stanno andando le stime
                         _misure["t"] = time.time()
                         with connect() as conn:
-                            lg.warning("MISURA_STIME ultimi 30 giorni: %s", tr.riepilogo_misure(conn))
+                            lg.warning("MISURA_STIME ultimi %s giorni: %s", os.environ.get("MISURA_GIORNI", "3"), tr.riepilogo_misure(conn))
             except Exception as e:
                 lg.warning("TR verifica non riuscita: %s", str(e)[:300])
             time.sleep(max(30, float(os.environ.get("TR_VERIFICA_MIN", "10")) * 60 - (time.time() - t0)))
