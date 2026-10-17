@@ -32,11 +32,11 @@ def test_percentile_tipo7():
 
 
 def test_fasce_e_confini():
-    assert riduzione(4999, CFG)[0] == .12 and riduzione(9999, CFG)[0] == .12 and riduzione(50000, CFG)[0] == .12
+    assert riduzione(4999, CFG)[0] == .10 and riduzione(9999, CFG)[0] == .10 and riduzione(50000, CFG)[0] == .10
     assert riduzione(50001, CFG)[0] is None
 
 def test_esempio_documento():
-    assert rivendita(12000, 10500, CFG)["R"] == 10560          # 12.000 × 0,88 (L non taglia più)
+    assert rivendita(12000, 10500, CFG)["R"] == 10800          # 12.000 × 0,90 (L non taglia più)
     cfg = PolicyConfig(usa_L=True)
     assert rivendita(12000, 9000, cfg)["R"] == 9000             # regola del documento, se riattivata
 
@@ -55,7 +55,7 @@ def test_base_preferita_opportunita():
     v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
     assert v["n"] == 12 and v["campione"] == "base preferita"
     assert 9700 <= v["M"] <= 9900 and 9300 <= v["L"] <= 9475   # corretti per km (confronti con meno km)
-    assert v["riduzione"] == .10 and v["R"] == round(v["M"] * .90)     # 12 confronti diretti: stima precisa → 10%
+    assert v["riduzione"] == .07 and v["R"] == round(v["M"] * .93)     # 12 confronti diretti: stima precisa → 7%
     assert v["categoria"] in ("opportunita", "non_conveniente")
     assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
 
@@ -263,9 +263,9 @@ def test_gemella_piu_economica_affidabile():
 
 def test_riduzione_secondo_la_precisione():
     v = valuta(car(1, 5600), market(BASE[:4]), 1500, CFG, NOW)
-    assert v["riduzione"] == .12                                   # pochi confronti: prudenza piena
+    assert v["riduzione"] == .10                                   # pochi confronti: prudenza piena
     v = valuta(car(1, 5600), market(BASE), 1500, CFG, NOW)
-    assert v["riduzione"] == .10
+    assert v["riduzione"] == .07
 
 
 def test_telefono_subito_dietro_il_bottone():

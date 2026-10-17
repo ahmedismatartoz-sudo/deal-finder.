@@ -46,7 +46,9 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv12-2026-10-17"
+POLICY_VERSION = "pv13-2026-10-17"
+# pv13 (17/10, 09:55, cliente: "gonfia un po' la rivendita, 2–5% secondo il tipo, massima prudenza"): rivendita più alta
+# di più dove la stima è più sicura: stima molto precisa 8%→3% (+5%), precisa 10%→7% (+3%), pochi dati 12%→10% (+2%).
 # pv12 (17/10, 09:35, cliente: "rivendita ancora troppo bassa, alzala in modo realistico e controllato"):
 # riduzione che dipende da quanto è sicura la stima del mercato: 8% se il modello prezzi è molto preciso
 # (errore tipico ≤ 10% su ≥ 10 annunci), 10% se è abbastanza preciso (≤ 14% su ≥ 6 annunci, o mediana su ≥ 10
@@ -93,7 +95,7 @@ def _e(name, default, cast=float):
 
 
 # (limite superiore di M escluso, riduzione). L'ultima fascia include 50.000 €.
-FASCE_BASE = [(50000, .12)]      # 17/10 ore 9: 12% su tutte le fasce (prima 20% / 17% / 15%)
+FASCE_BASE = [(50000, .10)]      # 17/10 ore 9: 12% su tutte le fasce (prima 20% / 17% / 15%)
 
 
 @dataclass
@@ -121,8 +123,8 @@ class PolicyConfig:
     reg_errore_max: float = .18       # errore tipico massimo (≈18%) perché il modello sia usato
     reg_tetto_mediana: float = 1.10   # se ci sono anche ≥5 confronti diretti, M non supera la loro mediana +10%
     adattiva: bool = True             # riduzione secondo la precisione della stima
-    rid_precisa: float = .08
-    rid_buona: float = .10
+    rid_precisa: float = .03
+    rid_buona: float = .07
     usa_L: bool = False               # True: R = min(M ridotto, L) come nella policy del documento
     transizione: bool = False
     transizione_w: int = 1000
