@@ -290,3 +290,8 @@ def test_showphone_nella_pagina_subito():
     assert telefono_da_pagina(None, "", 'x\\"username\\":\\"A\\",\\"showPhone\\":true,\\"y') is True
     assert telefono_da_pagina(None, "", 'x\\"showPhone\\":false,\\"isDefaultName') is False
     assert telefono_da_pagina(None, "", "pagina senza dati") is None
+
+
+def test_misure_funzioni_presenti():
+    from dealfinder.pipeline import tempo_reale as tr
+    assert callable(tr.registra_sparita) and callable(tr.riepilogo_misure)

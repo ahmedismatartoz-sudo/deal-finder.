@@ -1614,6 +1614,9 @@ def _azzera_no_subito():
         logging.getLogger("tempo_reale").warning("azzeramento telefoni subito: %s", str(e)[:200])
 
 
+_misure = {"t": 0.0}
+
+
 def _tempo_reale():
     """Due agenti continui (pipeline/tempo_reale.py): VERIFICA delle auto sul sito e NUOVI annunci, ogni 10 minuti."""
     from ..pipeline import tempo_reale as tr
@@ -1633,6 +1636,10 @@ def _tempo_reale():
                     _elenco["t"] = 0.0
                     _aggiorna_elenco(attendi=False)
                     lg.warning("TR VERIFICA %d auto in %.0fs, tolte %d: %s", len(ids), time.time() - t0, len(spariti), dict(st))
+                    if time.time() - _misure["t"] > 6 * 3600:          # ogni 6 ore: come stanno andando le stime
+                        _misure["t"] = time.time()
+                        with connect() as conn:
+                            lg.warning("MISURA_STIME ultimi 30 giorni: %s", tr.riepilogo_misure(conn))
             except Exception as e:
                 lg.warning("TR verifica non riuscita: %s", str(e)[:300])
             time.sleep(max(30, float(os.environ.get("TR_VERIFICA_MIN", "10")) * 60 - (time.time() - t0)))

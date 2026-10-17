@@ -216,6 +216,7 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
             _mark(conn, r["id"], st, r.get("price_eur"))
             if st == "scomparso":
                 spariti.append(r["id"])
+                registra_sparita(conn, r["id"])
             if tel is None and r["id"] in sub_set:          # pagina non leggibile: si riprova più avanti, dopo gli altri
                 conn.execute("UPDATE listings SET telefono_at=now() WHERE id=%s", (r["id"],))
                 stats["subito:telefono_non_leggibile"] += 1
@@ -625,3 +626,39 @@ def telefono_da_pagina(data: dict | None, low: str, html: str = "") -> bool | No
     if "mostra numero" in low or 'aria-label="chiama' in low:
         return True
     return False if flags else None
+
+
+def registra_sparita(conn, lid: int) -> None:
+    """Misura delle stime: un'auto del sito è sparita (probabilmente venduta). Si registra cosa avevamo stimato."""
+    try:
+        conn.execute(
+            """INSERT INTO misure_vendite (listing_id, fonte, make, model, anno, km, prezzo_iniziale, prezzo_finale, ribassi,
+                   mercato_m, rivendita_r, margine, n_confronti, metodo, giorni_online, giorni_sul_sito, policy)
+               SELECT l.id, l.source, l.make, l.model, l.year, l.mileage_km,
+                      (SELECT pe.price_eur FROM price_events pe WHERE pe.listing_id=l.id AND pe.event='apparso' ORDER BY pe.id LIMIT 1),
+                      l.price_eur,
+                      (SELECT count(*) FROM price_events pe WHERE pe.listing_id=l.id AND pe.event='prezzo'),
+                      (vp.riassunto->>'M')::int, COALESCE((vp.riassunto->>'R_finale')::int, (vp.riassunto->>'R')::int),
+                      (vp.riassunto->>'margine')::int, (vp.riassunto->>'n')::int, vp.riassunto->>'metodo',
+                      EXTRACT(EPOCH FROM now() - l.first_seen_at) / 86400,
+                      EXTRACT(EPOCH FROM now() - COALESCE(l.deep_at, l.first_seen_at)) / 86400, vp.policy_version
+               FROM listings l
+               LEFT JOIN LATERAL (SELECT * FROM valutazioni_policy v WHERE v.listing_id=l.id ORDER BY v.computed_at DESC LIMIT 1) vp ON true
+               WHERE l.id=%s
+               ON CONFLICT (listing_id) DO NOTHING""", (lid,))
+    except Exception as e:
+        conn.rollback()
+        log.info("misura vendita %s non registrata: %s", lid, str(e)[:120])
+
+
+def riepilogo_misure(conn) -> dict:
+    """Riepilogo per calibrare: quanto restano online le auto sparite e a che prezzo rispetto al nostro mercato."""
+    r = conn.execute(
+        """SELECT count(*) AS n,
+                  percentile_cont(.5) WITHIN GROUP (ORDER BY giorni_online) AS giorni_online_mediana,
+                  percentile_cont(.5) WITHIN GROUP (ORDER BY giorni_sul_sito) AS giorni_sul_sito_mediana,
+                  percentile_cont(.5) WITHIN GROUP (ORDER BY prezzo_finale::numeric / NULLIF(mercato_m, 0)) AS prezzo_su_mercato,
+                  avg((ribassi > 0)::int) AS quota_con_ribasso,
+                  avg((giorni_sul_sito < 2)::int) AS quota_sparite_entro_2_giorni
+           FROM misure_vendite WHERE sparita_at > now() - interval '30 days'""").fetchone()
+    return {k: (round(float(v), 3) if v is not None and not isinstance(v, int) else v) for k, v in dict(r).items()}
