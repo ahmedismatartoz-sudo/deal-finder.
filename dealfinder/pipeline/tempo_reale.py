@@ -589,6 +589,26 @@ def subito_telefono_pagina(url: str) -> tuple[str, bool | None]:
     return "attivo", tel
 
 
+_diag_str = {"n": 0}
+
+
+def _diag_struttura(html: str) -> None:
+    """Diagnostica sicura: solo i NOMI dei campi intorno a showPhone/phone (ogni valore testo diventa "s", cifre 9)."""
+    if _diag_str["n"] >= 4 or not html:
+        return
+    _diag_str["n"] += 1
+    out = []
+    for m in re.finditer(r'(?i)(showPhone|\\"phone\\")', html):
+        seg = html[max(0, m.start() - 220):m.start() + 120]
+        seg = re.sub(r'\\"([^"\\]{0,80})\\":', lambda x: "<" + x.group(1) + ">:", seg)      # chiavi leggibili
+        seg = re.sub(r'\\"[^"\\]*\\"', '"s"', seg)                                            # valori testo nascosti
+        seg = re.sub(r"\d", "9", seg)
+        out.append(seg[-300:])
+        if len(out) >= 3:
+            break
+    log.warning("TR subito struttura: %s", out)
+
+
 RE_SHOWPHONE = re.compile(r'showPhone\\*"\s*:\s*(true|false)', re.I)
 
 
@@ -596,8 +616,13 @@ def telefono_da_pagina(data: dict | None, low: str, html: str = "") -> bool | No
     """Indicatore del bottone Chiama nella pagina. Subito (Next.js) mette i dati dell'annuncio nell'HTML come JSON
     escapato: il venditore ha "showPhone": true/false. None se la pagina non ha i dati (blocco anti-bot)."""
     vals = [m.group(1).lower() == "true" for m in RE_SHOWPHONE.finditer(html or "")]
+    if any(vals):
+        return True
     if vals:
-        return any(vals)
+        # 17/10: "showPhone": false è risultato su TUTTE le pagine controllate (0 su 115): non è un "no" affidabile.
+        # Finché non si conferma il segnale giusto, un false non esclude l'auto: resta "da controllare".
+        _diag_struttura(html)
+        return None
     if not data:
         return None
     flags = []

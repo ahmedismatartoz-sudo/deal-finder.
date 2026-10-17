@@ -1603,9 +1603,9 @@ def _azzera_no_subito():
     solo nella pagina)."""
     try:
         with connect() as conn:
-            if not conn.execute("SELECT 1 FROM job_runs WHERE job='subito:telefono:azzera:v1' AND ok").fetchone():
+            if not conn.execute("SELECT 1 FROM job_runs WHERE job='subito:telefono:azzera:v2' AND ok").fetchone():
                 from ..db import log_job
-                fine = log_job(conn, "subito:telefono:azzera:v1")
+                fine = log_job(conn, "subito:telefono:azzera:v2")
                 n = conn.execute("UPDATE listings SET telefono_ok=NULL WHERE source='subito' AND telefono_ok=false").rowcount
                 conn.commit()
                 fine(True, {"azzerati": n})
