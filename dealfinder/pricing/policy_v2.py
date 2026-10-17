@@ -46,7 +46,9 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv13-2026-10-17"
+POLICY_VERSION = "pv14-2026-10-17"
+# pv14 (17/10, 14:35, cliente: "più utilitarie"): fino a 3.000 € il blocco "prezzo troppo basso" scatta sotto M × 0,45
+#   invece di 0,55, solo con almeno 5 confronti (le stime non cambiano).
 # pv13 (17/10, 09:55, cliente: "gonfia un po' la rivendita, 2–5% secondo il tipo, massima prudenza"): rivendita più alta
 # di più dove la stima è più sicura: stima molto precisa 8%→3% (+5%), precisa 10%→7% (+3%), pochi dati 12%→10% (+2%).
 # pv12 (17/10, 09:35, cliente: "rivendita ancora troppo bassa, alzala in modo realistico e controllato"):
@@ -146,6 +148,11 @@ class PolicyConfig:
     riserva_pct_alto_rischio: float = 0.0
     riserva_min: int = 0
     sospetto_sotto_m: float = .55     # prezzo sotto M × 0,55: M non affidabile (versione diversa o errore)
+    # utilitarie economiche (17/10): fino a 3.000 € un prezzo molto sotto il mercato è normale (auto vecchie vendute in
+    # fretta); si accetta fino a M × 0,45 purché il mercato venga da almeno 5 confronti
+    sospetto_basse: float = .45
+    sospetto_basse_max: int = 3000
+    sospetto_basse_confronti: int = 5
     solo_sane: bool = True            # per ora solo auto sane
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
 
@@ -691,9 +698,14 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(cs["blocco"])
         return out
-    if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
+    limite = cfg.sospetto_sotto_m
+    if int(t["price_eur"]) <= cfg.sospetto_basse_max and (out.get("n") or 0) >= cfg.sospetto_basse_confronti:
+        limite = min(limite, cfg.sospetto_basse)
+        if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
+            out["ipotesi"].append("prezzo molto sotto il mercato: normale per un'utilitaria economica, ma controllare bene lo stato")
+    if int(t["price_eur"]) < out["M"] * limite:
         out["categoria"] = "dati_insufficienti"
-        out["motivi"].append(f"prezzo oltre il {int(round((1 - cfg.sospetto_sotto_m) * 100))}% sotto la mediana: il mercato "
+        out["motivi"].append(f"prezzo oltre il {int(round((1 - limite) * 100))}% sotto la mediana: il mercato "
                              "trovato non è affidabile (versione diversa, dati sbagliati o truffa)")
         return out
     if margine < soglia:

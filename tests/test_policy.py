@@ -327,3 +327,16 @@ def test_senza_numero_super_quota_e_targa():
     assert [x["id"] for x in ok] == [1, 3]                 # 2: targa coperta; 4: margine non abbastanza alto; 5: pochi confronti
     assert set(app._targhe_da_controllare) == {1, 2, 3}
     app.connect, tr.esiti_targa = vecchi
+
+
+def test_utilitaria_economica_molto_sotto_mercato():
+    prezzi = [4000, 4100, 4200, 4300, 4400, 4500, 4600, 4700]
+    v = valuta(car(1, 2100), market(prezzi), soglia=1500, cfg=CFG, now=NOW)       # ~50% di M, 8 confronti
+    assert v["categoria"] != "dati_insufficienti", v["motivi"]
+    v = valuta(car(1, 1700), market(prezzi), soglia=1500, cfg=CFG, now=NOW)       # sotto il 45%: bloccata
+    assert v["categoria"] == "dati_insufficienti"
+    v = valuta(car(1, 2100), market(prezzi[:3]), soglia=1500, cfg=CFG, now=NOW)   # pochi confronti: regola normale
+    assert v["categoria"] == "dati_insufficienti"
+    caro = [p * 3 for p in prezzi]
+    v = valuta(car(1, 6300), market(caro), soglia=3200, cfg=CFG, now=NOW)         # sopra 3.000 €: regola normale
+    assert v["categoria"] == "dati_insufficienti"
