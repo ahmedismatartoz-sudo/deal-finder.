@@ -61,6 +61,16 @@ def telefono_autoscout(det: dict | None) -> bool | None:
     return False
 
 
+def telefono_subito(item: dict | None) -> bool:
+    """Subito: il venditore ha messo il numero (bottone "Chiama" di fianco a "Messaggio") → advertiser.phone pieno.
+    Si usa SOLO il sì/no: il numero non si salva mai."""
+    if not isinstance(item, dict):
+        return False
+    adv = item.get("advertiser") or {}
+    ph = adv.get("phone") if isinstance(adv, dict) else None
+    return isinstance(ph, str) and len(re.sub(r"\D", "", ph)) >= 6
+
+
 def ha_numero_testo(title: str | None, desc: str | None) -> bool:
     from ..web.scovo import RE_LANDLINE, RE_MOBILE
     t = f"{title or ''} {desc or ''}"
@@ -284,6 +294,7 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
     for l in listings:
         tel = (l.raw or {}).get("_telefono") if l.source == "autoscout24" else None
+        tel_sub = telefono_subito(l.raw) if l.source == "subito" else False
         if l.source == "subito" and _diag_sub["n"] < 3 and isinstance(l.raw, dict):
             _diag_sub["n"] += 1           # solo NOMI dei campi (mai valori): c'è un'indicazione "numero disponibile"?
             adv = l.raw.get("advertiser") or {}
@@ -324,7 +335,7 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
                 conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, lid))
         else:
             conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s",
-                         (ha_numero_testo(l.title, l.description), lid))
+                         (tel_sub or ha_numero_testo(l.title, l.description), lid))
         conn.execute("UPDATE listings SET last_checked_at=now() WHERE id=%s", (lid,))
         stats[f"{l.source}:{ev}"] += 1
         if ev in ("prezzo", "riapparso"):
@@ -435,3 +446,41 @@ def con_lucchetto(nome: str, fn, *a):
                 conn.commit()
             except Exception:
                 pass
+
+
+def giro_telefoni_subito(conn) -> dict:
+    """Una volta al giorno: rilegge le ricerche di Subito (dal più recente, TR_TEL_PAGINE pagine da 100 per regione) e
+    segna per ogni annuncio già salvato se il venditore ha il numero (sì/no). Il numero non si salva mai."""
+    from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector
+    col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    st = Counter()
+    for reg, provs in REGIONI.items():
+        code = REGION_CODES.get(reg) or _codici_regione.get(reg) or col._trova_regione(set(provs), 100)
+        if not code:
+            continue
+        _codici_regione[reg] = REGION_CODES[reg] = code
+        for page in range(int(os.environ.get("TR_TEL_PAGINE", "100"))):
+            try:
+                r = col.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": code, "t": "s", "lim": 100,
+                                                                            "start": page * 100, "sort": "datedesc"})
+            except Exception as e:
+                log.info("TR telefoni subito %s: %s", reg, str(e)[:100])
+                break
+            time.sleep(float(os.environ.get("TR_TEL_PAUSA_S", "1.0")))
+            if r.status_code != 200:
+                st[f"http_{r.status_code}"] += 1
+                break
+            ads = (r.json() or {}).get("ads") or []
+            if not ads:
+                break
+            si = [str(a.get("urn")) for a in ads if a.get("urn") and telefono_subito(a)]
+            no = [str(a.get("urn")) for a in ads if a.get("urn") and not telefono_subito(a)]
+            st["letti"] += len(ads)
+            st["con_numero"] += len(si)
+            st["senza_numero"] += len(no)
+            if si:
+                n = conn.execute("UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE source='subito' "
+                                 "AND source_id = ANY(%s) AND telefono_ok IS DISTINCT FROM true", (si,)).rowcount
+                st["aggiornati_si"] += n
+            conn.commit()
+    return dict(st)

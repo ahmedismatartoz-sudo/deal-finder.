@@ -266,3 +266,11 @@ def test_riduzione_secondo_la_precisione():
     assert v["riduzione"] == .12                                   # pochi confronti: prudenza piena
     v = valuta(car(1, 5600), market(BASE), 1500, CFG, NOW)
     assert v["riduzione"] == .10
+
+
+def test_telefono_subito_dietro_il_bottone():
+    from dealfinder.pipeline.tempo_reale import telefono_subito
+    assert telefono_subito({"advertiser": {"phone": "+39 333 1234567"}})
+    assert not telefono_subito({"advertiser": {"phone": ""}})
+    assert not telefono_subito({"advertiser": {}})
+    assert not telefono_subito(None)

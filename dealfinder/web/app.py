@@ -881,10 +881,11 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     mancano = [i for i in ids if i not in _tel_cache]
     for k in range(0, len(mancano), 1000):
         with connect() as conn:
-            for r in conn.execute("SELECT id, title, description FROM listings WHERE id = ANY(%s)",
+            for r in conn.execute("SELECT id, title, description, telefono_ok FROM listings WHERE id = ANY(%s)",
                                   (mancano[k:k + 1000],)).fetchall():
                 t = f"{r.get('title') or ''} {r.get('description') or ''}"
-                _tel_cache[r["id"]] = bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
+                if r.get("telefono_ok") or scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t):
+                    _tel_cache[r["id"]] = True     # solo i sì restano in memoria: un "no" si ricontrolla (bottone Chiama)
     # Subito senza numero (si contattano dalla chat dell'annuncio): si tiene la metà con più guadagno
     # (META_SENZA_NUMERO, 0.5), separatamente per ogni sezione (affari, incidentate, economiche...)
     # dal 16/10: Subito e AutoScout24 SOLO con il numero (META_SENZA_NUMERO=0); senza numero solo Facebook
@@ -1615,7 +1616,34 @@ def _tempo_reale():
                 lg.warning("TR nuovi non riuscito: %s", str(e)[:300])
             time.sleep(max(30, float(os.environ.get("TR_NUOVI_MIN", "5")) * 60 - (time.time() - t0)))
 
+    def telefoni_subito():
+        time.sleep(int(os.environ.get("TR_TEL_RITARDO_S", "60")))
+        while True:
+            try:
+                from ..db import connect as _c
+                giorno = time.strftime("%Y-%m-%d")
+                with _c() as conn:
+                    fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("telefoni_subito:" + giorno,)).fetchone()
+                if not fatto:
+                    t0 = time.time()
+                    with _c() as conn:
+                        from ..db import log_job
+                        fine = log_job(conn, "telefoni_subito:" + giorno)
+                        st = tr.giro_telefoni_subito(conn)
+                        fine(True, st)
+                    lg.warning("TR TELEFONI SUBITO in %.0fs: %s", time.time() - t0, st)
+                    if os.environ.get("UTIL_SIM", "1") == "1":     # subito il calcolo completo con i numeri nuovi
+                        from ..pricing import ricalcolo
+                        with _c() as conn:
+                            ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False)
+            except Exception as e:
+                lg.warning("TR telefoni subito non riuscito: %s", str(e)[:300])
+            time.sleep(3600)
+
     threading.Thread(target=verifica, daemon=True, name="tr-verifica").start()
+    threading.Thread(target=telefoni_subito, daemon=True, name="tr-telefoni").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()
 
 

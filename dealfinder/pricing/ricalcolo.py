@@ -292,7 +292,8 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         if r["source"] == "autoscout24":
             tel = r["telefono_ok"]                       # None = non ancora controllato (lo fa l'agente di verifica)
         elif r["source"] == "subito":
-            tel = ha_numero_testo(r["title"], r["description"])
+            # numero dietro il bottone "Chiama" (telefono_ok) oppure scritto nel testo
+            tel = True if r["telefono_ok"] else ha_numero_testo(r["title"], r["description"])
         else:
             tel = True
         if tel is False:
