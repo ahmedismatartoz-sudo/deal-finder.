@@ -427,6 +427,7 @@ def giro_nuovi(conn) -> Counter:
     letti = []
     if os.environ.get("TR_SUBITO", "1") == "1":
         letti += _subito_nuovi(_ora_it(dal_dt))
+        _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
     if os.environ.get("TR_AUTOSCOUT", "1") == "1":
         try:
             letti += _autoscout_nuovi(conn)
@@ -499,3 +500,43 @@ def giro_telefoni_subito(conn) -> dict:
                 st["aggiornati_si"] += n
             conn.commit()
     return dict(st)
+
+
+_diag_pag = {"n": 0}
+
+
+def _diagnostica_pagina_subito(lst: list) -> None:
+    """Diagnostica (solo nomi dei campi e forma dei valori, cifre → 9): dove la PAGINA dell'annuncio Subito dice
+    che il venditore ha il numero (bottone Chiama). Mai il numero."""
+    import json as _json
+    from ..collectors.base import next_data
+    if _diag_pag["n"] >= 6 or not lst:
+        return
+    cl = _client_subito()
+    for l in lst:
+        _diag_pag["n"] += 1
+        try:
+            r = cl.get(l.url)
+        except Exception as e:
+            log.warning("TR subito pagina: errore %s", str(e)[:100])
+            continue
+        data = next_data(r.text) if r.status_code == 200 else None
+        trov = []
+
+        def scan(o, path=""):
+            if len(trov) > 25:
+                return
+            if isinstance(o, dict):
+                for k, v in o.items():
+                    p = f"{path}.{k}" if path else k
+                    if any(w in k.lower() for w in ("phone", "tel", "call", "contact")):
+                        forma = re.sub(r"[A-Za-z]", "a", re.sub(r"\d", "9", _json.dumps(v)))[:50] if not isinstance(v, (dict, list)) else type(v).__name__
+                        trov.append(f"{p}={forma}")
+                    scan(v, p)
+            elif isinstance(o, list):
+                for i, v in enumerate(o[:5]):
+                    scan(v, f"{path}[{i}]")
+        scan(data or {})
+        low = r.text.lower()
+        log.warning("TR subito pagina: http=%s next_data=%s bottone_chiama=%s campi=%s", r.status_code, bool(data),
+                    ("mostra numero" in low or "chiama" in low), trov[:20])
