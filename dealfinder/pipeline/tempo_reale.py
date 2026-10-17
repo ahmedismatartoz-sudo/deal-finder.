@@ -553,6 +553,9 @@ def _diagnostica_pagina_subito(lst: list) -> None:
                     scan(v, f"{path}[{i}]")
         scan(data or {})
         low = r.text.lower()
+        pezzi = [re.sub(r"\d", "9", r.text[max(0, m.start() - 25):m.start() + 45]).replace("\n", " ")
+                 for m in re.finditer(r"(?i)phone", r.text)][:6]
+        log.warning("TR subito pagina contesto: %s", pezzi)
         log.warning("TR subito pagina (%s): http=%s byte=%s next_data=%s bottone_chiama=%s parole=%s campi=%s", via,
                     r.status_code, len(r.text), bool(data), ("mostra numero" in low or "chiama" in low),
                     [w for w in ("captcha", "datadome", "cloudflare", "access denied", "phone", "telefono", "chiama",
