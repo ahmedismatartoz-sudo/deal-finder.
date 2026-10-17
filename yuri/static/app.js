@@ -14,9 +14,6 @@
 
   $('#yr').textContent = new Date().getFullYear();
 
-  // loader: via quando l'auto 3D è pronta (o dopo 6 secondi)
-  const out = () => $('#loader').classList.add('out');
-  addEventListener('car-ready', out); setTimeout(out, 6000);
 
   grid.innerHTML = Array.from({ length: 6 }, () => '<div class="skel"></div>').join('');
 
@@ -27,13 +24,12 @@
       AUTO = (d.auto || []).filter(a => a.prezzo);
       if (!AUTO.length && d.in_corso) { setTimeout(load, 8000); return; }
       if (d.aggiornato) $('#upd').textContent = 'Auto aggiornate il ' + new Date(d.aggiornato).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-      $('#nAuto').textContent = AUTO.length ? AUTO.length : 'Tutte le';
       fill('#fMarca', [...new Set(AUTO.map(a => a.marca).filter(Boolean))].sort());
       fill('#fFuel', [...new Set(AUTO.map(a => fuelIt(a.carburante)).filter(Boolean))].sort());
       render();
       const id = new URLSearchParams(location.search).get('auto');
       if (id) { const a = AUTO.find(x => x.id === id); a && openCar(a); }
-    } catch (e) { setTimeout(load, 8000); }
+    } catch (e) { console.error(e); setTimeout(load, 8000); }
   }
   const fill = (sel, vals) => { const s = $(sel); vals.forEach(v => s.insertAdjacentHTML('beforeend', `<option>${esc(v)}</option>`)); };
 
@@ -46,31 +42,29 @@
     count.innerHTML = `<b>${L.length}</b>${L.length === 1 ? 'auto disponibile' : 'auto disponibili'}`;
     empty.hidden = L.length > 0;
     grid.innerHTML = L.map((a, i) => {
-      const g = giud(a.giudizio);
-      return `<article class="car" data-id="${esc(a.id)}" style="transition-delay:${Math.min(i, 8) * 60}ms">
-        <div class="shine"></div>
-        <div class="ph">${a.foto?.[0] ? `<img loading="lazy" src="${img(a.foto[0], '720x540')}" alt="${esc(a.marca + ' ' + a.modello)}" onload="this.classList.add('ok')">` : ''}
+      const g = giud(a.giudizio), F = a.foto || [], alt = esc(a.marca + ' ' + (a.modello || ''));
+      return `<article class="car" data-id="${esc(a.id)}">
+        <div class="ph"><div class="gal">${F.map((u, k) => `<img ${i < 3 && k === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" src="${img(u, '480x360')}" alt="${alt}">`).join('')}</div>
+          ${F.length > 1 ? '<button class="ga l" aria-label="Foto precedente">‹</button><button class="ga r" aria-label="Foto successiva">›</button>' : ''}
           ${g ? `<span class="badge ${g[1]}">${g[0]}</span>` : ''}
-          ${a.foto?.length > 1 ? `<span class="nfoto">▣ ${a.foto.length}</span>` : ''}</div>
+          ${F.length ? `<span class="nfoto"><i>1</i> / ${F.length}</span>` : ''}</div>
         <div class="body">
-          <h3>${esc(a.marca)} ${esc(a.modello)}</h3>
+          <h3>${esc(a.marca)} ${esc(a.modello || '')}</h3>
           <p class="ver">${esc(a.versione)}</p>
           <div class="chips">${[anno(a), kmf(a.km), fuelIt(a.carburante), a.cambio, cv(a)].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div>
           <div class="bottom"><span class="price grad">${eur(a.prezzo)}</span><span class="go">→</span></div>
         </div></article>`;
     }).join('');
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
     grid.querySelectorAll('.car').forEach(el => {
-      io.observe(el);
-      el.addEventListener('click', () => openCar(AUTO.find(a => a.id === el.dataset.id)));
-      if (matchMedia('(hover:hover)').matches) {
-        el.addEventListener('mousemove', e => {
-          const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-          el.style.transform = `rotateY(${(x - .5) * 10}deg) rotateX(${(.5 - y) * 8}deg) translateZ(10px)`;
-          el.style.setProperty('--mx', x * 100 + '%'); el.style.setProperty('--my', y * 100 + '%');
-        });
-        el.addEventListener('mouseleave', () => { el.style.transform = ''; });
-      }
+      const gal = el.querySelector('.gal'), n = el.querySelector('.nfoto i');
+      const idx = () => Math.round(gal.scrollLeft / gal.clientWidth);
+      gal.addEventListener('scroll', () => { if (n) n.textContent = idx() + 1; }, { passive: true });
+      el.querySelectorAll('.ga').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        const tot = gal.children.length; let k = idx() + (b.classList.contains('r') ? 1 : -1);
+        k = (k + tot) % tot; gal.scrollTo({ left: k * gal.clientWidth });
+      }));
+      el.addEventListener('click', () => { const a = AUTO.find(x => x.id === el.dataset.id); openCar(a, idx()); });
     });
   }
   ['#q', '#fMarca', '#fFuel', '#fPrezzo', '#fSort'].forEach(s => $(s).addEventListener('input', render));
@@ -81,18 +75,20 @@
   function show(i) {
     if (!gal.length) return;
     gi = (i + gal.length) % gal.length;
-    $('#mImg').src = img(gal[gi]);
+    const big = innerWidth < 900 ? '720x540' : null;
+    $('#mImg').src = img(gal[gi], big);
+    [1, -1].forEach(d => { const u = gal[(gi + d + gal.length) % gal.length]; if (u) new Image().src = img(u, big); });
     $('#mN').textContent = `${gi + 1} / ${gal.length}`;
     $('#mThumbs').querySelectorAll('img').forEach((t, k) => t.classList.toggle('on', k === gi));
-    $('#mThumbs').children[gi]?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    const t = $('#mThumbs').children[gi]; if (t) $('#mThumbs').scrollLeft = t.offsetLeft - $('#mThumbs').clientWidth / 2 + t.clientWidth / 2;
   }
-  function openCar(a) {
+  function openCar(a, start = 0) {
     if (!a) return;
     gal = a.foto || [];
     $('#mThumbs').innerHTML = gal.map((u, k) => `<img loading="lazy" src="${img(u, '250x188')}" data-k="${k}" alt="">`).join('');
     $('#mThumbs').querySelectorAll('img').forEach(t => t.onclick = () => show(+t.dataset.k));
-    show(0);
-    const nome = `${a.marca} ${a.modello}`;
+    show(start);
+    const nome = `${a.marca} ${a.modello || ''}`.trim();
     $('#mVer').textContent = a.versione || '';
     $('#mTit').textContent = nome;
     $('#mPrice').textContent = eur(a.prezzo);

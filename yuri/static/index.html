@@ -12,8 +12,8 @@
 <link rel="icon" href="/logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css?v=9">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css?v=10">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"AutoDealer","name":"Yuri Car","telephone":"+39 327 877 2949","image":"/logo.jpg",
  "address":{"@type":"PostalAddress","streetAddress":"Via Lavoratori Autobianchi 1","postalCode":"20832","addressLocality":"Desio","addressRegion":"MB","addressCountry":"IT"},
@@ -23,45 +23,30 @@
 </head>
 <body>
 
-<div id="loader"><img src="/logo.webp" alt=""><div class="bar"><i></i></div></div>
 
 <header class="nav" id="nav">
-  <a href="#top" class="brand"><img src="/logo.webp" alt="Yuri Car"></a>
+  <a href="#top" class="brand"><img src="/logo-s.webp" width="72" height="44" alt="Yuri Car"></a>
   <nav><a href="#auto">Auto</a><a href="#servizi">Servizi</a><a href="#soccorso">Soccorso</a><a href="#contatti">Contatti</a></nav>
   <a class="btn btn-grad sm" href="tel:+393278772949"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg><span>327 877 2949</span></a>
 </header>
 
-<section id="top" class="show">
-  <div class="stage">
-    <canvas id="scene"></canvas>
-    <div class="vignette"></div>
-    <div class="flash" id="flash"></div>
-    <div class="fade" id="fade"></div>
-
-    <div class="copy c0" data-from="0" data-to="0.12">
-      <div><p class="eyebrow">Desio · Monza e Brianza</p><img class="logo-hero" src="/logo.webp" alt="Yuri Car — compravendita auto, noleggio, soccorso stradale"></div>
-      <div><p class="sub">Compravendita auto · Noleggio · Soccorso stradale</p>
+<section id="top" class="hero">
+  <div class="wrap hero-in">
+    <div class="hero-txt">
+      <p class="eyebrow">Desio · Monza e Brianza</p>
+      <img class="logo-hero" src="/logo-h.webp" width="440" height="269" alt="Yuri Car — compravendita auto, noleggio, soccorso stradale">
+      <h1>Auto usate, noleggio e <span class="grad">soccorso stradale</span></h1>
       <div class="ctas">
         <a class="btn btn-grad" href="#auto">Guarda le auto</a>
-        <a class="btn btn-red" href="tel:+393278772949">Soccorso stradale</a>
-      </div></div>
+        <a class="btn btn-ghost" href="https://wa.me/393278772949" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
     </div>
-
-    <div class="copy c1 left" data-from="0.18" data-to="0.44">
-      <p class="eyebrow">Compravendita</p>
-      <h2>Auto usate,<br><span class="grad">scelte bene.</span></h2>
-      <p class="sub">Compriamo e vendiamo auto di ogni fascia. <b>Valutiamo anche la tua.</b></p>
-    </div>
-
-    <div class="copy c2 right" data-from="0.56" data-to="0.9">
-      <p class="eyebrow red"><span class="beacon"></span>Soccorso stradale</p>
-      <h2>Fermo per strada?<br><span class="grad">Arriviamo noi.</span></h2>
-      <a class="tel" href="tel:+393278772949">327 877 2949</a>
-      <p class="sub">Carro attrezzi per auto e furgoni</p>
-    </div>
-
-    <div class="scrollhint" id="hint"><span>Scorri</span><i></i></div>
-    <div class="progress"><i id="prog"></i></div>
+    <a class="sos-card" href="tel:+393278772949">
+      <span class="eyebrow red"><span class="beacon"></span>Soccorso stradale</span>
+      <b>Fermo per strada?</b>
+      <span class="tel">327 877 2949</span>
+      <span class="small">Carro attrezzi per auto e furgoni · tocca per chiamare</span>
+    </a>
   </div>
 </section>
 
@@ -137,7 +122,7 @@
   <section id="contatti" class="contact" style="padding-top:110px;border-top:1px solid var(--line)">
     <div class="wrap contact-grid">
       <div class="contact-card">
-        <img src="/logo.webp" alt="" class="contact-logo">
+        <img src="/logo-s.webp" alt="" class="contact-logo" loading="lazy">
         <h2 class="title">Vieni a <span class="grad">trovarci</span></h2>
         <ul>
           <li><small>Indirizzo</small>Via Lavoratori Autobianchi, 1<br>20832 Desio (MB)</li>
@@ -189,8 +174,7 @@
   </div>
 </div>
 
-<script src="/hero.js?v=2" defer></script>
-<script src="/app.js?v=3" defer></script>
+<script src="/app.js?v=4" defer></script>
 <script>
   (function(){var d=new Date().getDay(),li=document.querySelector('#hours li[data-d="'+(d===0||d===6?6:1)+'"]');li&&li.classList.add('today')})();
 </script>

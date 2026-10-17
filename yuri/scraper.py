@@ -138,9 +138,14 @@ def _dettaglio(cl: httpx.Client, a: dict) -> dict:
         d = props.get("listingDetails") or props.get("listing") or props
         if not stato.get("_dbg"):
             stato["_dbg"] = True
-            log.info("ATELIER dettaglio chiavi=%s", list(d)[:40] if isinstance(d, dict) else type(d))
+            log.info("YURI dettaglio chiavi=%s", list(d)[:40] if isinstance(d, dict) else type(d))
         if not a.get("prezzo"):
             a["prezzo"] = _prezzo(d)
+        if not a.get("modello") and isinstance(d, dict):
+            t = str(d.get("title") or (d.get("vehicle") or {}).get("model") or "")
+            if a.get("marca") and t.lower().startswith(str(a["marca"]).lower()):
+                t = t[len(a["marca"]):]
+            a["modello"] = t.strip()[:40] or None
         foto = []
         for im in (d.get("images") or []) if isinstance(d, dict) else []:
             u = im if isinstance(im, str) else (im.get("url") or im.get("src") if isinstance(im, dict) else None)
@@ -213,27 +218,27 @@ def _pagine(cl: httpx.Client):
         url = DEALER_URL + (("&" if "?" in DEALER_URL else "?") + f"page={page}" if page > 1 else "")
         r = cl.get(url)
         if r.status_code != 200:
-            log.warning("ATELIER pagina %s -> HTTP %s", url, r.status_code)
+            log.warning("YURI pagina %s -> HTTP %s", url, r.status_code)
             break
         data = _next(r.text)
         if page == 1:
             pp = (data.get("props") or {}).get("pageProps") or {}
-            log.info("ATELIER pagina concessionario chiavi=%s", list(pp)[:40])
+            log.info("YURI pagina concessionario chiavi=%s", list(pp)[:40])
             for k in ("numberOfResults", "totalResults", "numberOfListings"):
                 v = _find(pp, k)
                 if v:
-                    log.info("ATELIER totale dichiarato %s=%s", k, v)
+                    log.info("YURI totale dichiarato %s=%s", k, v)
                     stato["dichiarati"] = v
                     break
             cid = _find(pp, "customerId", "dealerId", "dealerInfoId")
             stato["cliente"] = cid
-            log.info("ATELIER id cliente=%s", cid)
+            log.info("YURI id cliente=%s", cid)
         nuovi = 0
         for d in _walk(data):
             if _sembra_annuncio(d) and str(d["id"]) not in trovati:
                 trovati[str(d["id"])] = _norm(d)
                 nuovi += 1
-        log.info("ATELIER pagina %d: %d annunci nuovi", page, nuovi)
+        log.info("YURI pagina %d: %d annunci nuovi", page, nuovi)
         if nuovi == 0:
             break
         time.sleep(1.5)
@@ -251,7 +256,7 @@ def _pagine(cl: httpx.Client):
                 items = pp.get("listings") or []
                 tot = _num(_find(pp, "numberOfResults"))
                 if page == 1:
-                    log.info("ATELIER ricerca %s=%s: totale=%s", par, cid, tot)
+                    log.info("YURI ricerca %s=%s: totale=%s", par, cid, tot)
                 if not items or (tot and tot > 2000):         # filtro ignorato: tutta Italia, si scarta
                     break
                 for it in items:
@@ -282,7 +287,7 @@ def aggiorna():
             trovati = _pagine(cl)
             if not trovati:
                 stato["errore"] = "nessun annuncio letto"
-                log.warning("ATELIER nessun annuncio letto: tengo i dati di prima")
+                log.warning("YURI nessun annuncio letto: tengo i dati di prima")
                 return
             auto = []
             for i, (aid, a) in enumerate(trovati.items()):
@@ -300,13 +305,13 @@ def aggiorna():
                                    ensure_ascii=False))
         stato["ultimo"] = time.time()
         stato["errore"] = None
-        log.info("ATELIER aggiornato: %d auto (prima %d)", len(auto), len(vecchi))
+        log.info("YURI aggiornato: %d auto (prima %d)", len(auto), len(vecchi))
         for x in auto:
-            log.info("ATELIER auto %s %s %s€ km=%s giudizio=%s foto=%d dot=%d desc=%d", x.get("marca"), x.get("modello"), x.get("prezzo"),
+            log.info("YURI auto %s %s %s€ km=%s giudizio=%s foto=%d dot=%d desc=%d", x.get("marca"), x.get("modello"), x.get("prezzo"),
                      x.get("km"), x.get("giudizio"), len(x.get("foto") or []), len(x.get("dotazioni") or []), len(x.get("descrizione") or ""))
     except Exception as e:
         stato["errore"] = str(e)[:200]
-        log.exception("ATELIER aggiornamento fallito")
+        log.exception("YURI aggiornamento fallito")
     finally:
         stato["in_corso"] = False
         _lock.release()
