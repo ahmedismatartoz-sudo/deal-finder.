@@ -51,7 +51,7 @@ const S = {
   raggio: saved.raggio || 0, centro: saved.centro || "milano", modello: saved.modello || "",
   kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
   pos: store.get("pos", null),
-  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: (saved.sv === 3 && saved.sort) || "guadagno",
+  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "guadagno",   /* 17/10: si entra SEMPRE con l'ordine per margine, dalla più alta */
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
