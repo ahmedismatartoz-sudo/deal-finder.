@@ -917,9 +917,32 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
                   it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")))]
     tenute += _senza_numero_super(items, tenute)
     tenute += _utilitarie_subito_senza_numero(items, tenute)
+    tenute = _solo_facebook_recenti(tenute)
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
+
+
+def _solo_facebook_recenti(items: list[dict]) -> list[dict]:
+    """Facebook non si può riaprire annuncio per annuncio (niente account): sul sito solo gli annunci rivisti dalla
+    raccolta di Facebook nelle ultime FB_VISTO_ORE ore (36: la raccolta gira 4 volte al giorno). Se un annuncio non
+    compare più nella raccolta, probabilmente è stato venduto o tolto."""
+    ore = int(os.environ.get("FB_VISTO_ORE", "36"))
+    fb = [it["id"] for it in items if it.get("fonte") == "Facebook Marketplace"]
+    if not fb or ore <= 0:
+        return items
+    try:
+        with connect() as conn:
+            ok = {r["id"] for r in conn.execute(
+                "SELECT id FROM listings WHERE id = ANY(%s) AND status='attivo' AND last_seen_at > now() - make_interval(hours => %s)",
+                (fb, ore)).fetchall()}
+    except Exception as e:
+        logging.getLogger("scovo").warning("FB recenti non controllati: %s", str(e)[:200])
+        return items
+    via = set(fb) - ok
+    if via:
+        logging.getLogger("scovo").warning("FACEBOOK: %d annunci non rivisti nelle ultime %d ore tolti, %d restano", len(via), ore, len(ok))
+    return [it for it in items if it["id"] not in via]
 
 
 def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> list[dict]:

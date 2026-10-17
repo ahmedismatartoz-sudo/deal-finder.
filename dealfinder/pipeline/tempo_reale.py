@@ -137,10 +137,16 @@ def _head_stato(client, url: str) -> str | None:
     return None
 
 
+def _stesso_annuncio(url: str, finale: str) -> bool:
+    """Dopo i reindirizzamenti si è ancora sulla pagina dell'annuncio? (un annuncio tolto rimanda alla ricerca)"""
+    from urllib.parse import urlparse
+    a, f = urlparse(url).path.rstrip("/"), urlparse(finale).path.rstrip("/")
+    return a == f or (a.split("/")[-1] and a.split("/")[-1] == f.split("/")[-1])
+
+
 def _subito_stato(client, url: str) -> str:
-    st = _head_stato(client, url)
-    if st:
-        return st
+    # 17/10: niente più controllo "leggero" con le sole intestazioni: un annuncio tolto può rispondere 200 dopo un
+    # rimando alla ricerca. Si apre sempre la pagina e si guarda dove si arriva e cosa c'è scritto.
     try:
         r = client.get(url)
     except Exception as e:
@@ -150,8 +156,11 @@ def _subito_stato(client, url: str) -> str:
         return "scomparso"
     if r.status_code != 200:
         return "errore"
+    if not _stesso_annuncio(url, str(r.url)):
+        return "scomparso"
     low = r.text.lower()
-    if "annuncio non è più disponibile" in low or "questo annuncio è scaduto" in low or "annuncio rimosso" in low:
+    if any(k in low for k in ("annuncio non è più disponibile", "questo annuncio è scaduto", "annuncio rimosso",
+                              "non è più disponibile", "annuncio scaduto", "è stato rimosso", "annuncio non trovato")):
         return "scomparso"
     return "attivo"
 
@@ -188,10 +197,7 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
         if r["source"] == "autoscout24":
-            st = _head_stato(cas, r["url"])           # basta sapere se l'annuncio c'è ancora
-            if st:
-                return r, st, None
-            st, _det = _as_dettaglio(cas, r["url"])
+            st, _det = _as_dettaglio(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
             return r, st, None
         return r, _subito_stato(csb, r["url"]), None
 
