@@ -296,8 +296,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         else:
             tel = True
         if tel is False:
-            st["senza_numero"] += 1
-            continue
+            st["senza_numero"] += 1               # valutata solo per la simulazione, mai pubblicata
         if problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
             st["danni_nel_testo"] += 1
             continue
@@ -338,7 +337,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
                                 "M": v.get("M"), "riv_attuale": v.get("R_finale"), "margine_attuale": v.get("margine")})
         if v.get("M"):
             vals.append({"id": r["id"], "src": r["source"], "p": int(r["price_eur"]), "M": v["M"], "L": v["L"], "n": v["n"],
-                         "tel": tel, "util": (r["model"] or "") in UTILITARIE, "v": v})
+                         "tel": tel, "util": (r["model"] or "") in UTILITARIE, "v": v, "fuel": r["fuel"]})
     sim = {"pubblicabili_per_fascia": dict(Counter(
         next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if x["p"] < lim)
         for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
@@ -348,7 +347,18 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         log.warning("GEMELLA_ESEMPIO %s", json.dumps(e, default=str, ensure_ascii=False))
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
     # esempi (solo dati dell'auto) con la riduzione in vigore
-    pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO
+    # simulazione: quante auto con soglie più basse (stessa rivendita, niente prezzi gonfiati) e anche senza numero
+    soglie_sim = {}
+    for f in (1.0, .85, .7, .6):
+        for senza in (False, True):
+            ok = [x for x in vals if x["v"].get("margine") is not None and (senza or x["tel"] is not False)
+                  and x["v"]["categoria"] in ("opportunita", "candidato", "non_conveniente")
+                  and x["v"]["margine"] >= scovo.soglia(x["p"]) * f]
+            soglie_sim[f"soglie_x{f}{'_anche_senza_numero' if senza else ''}"] = {
+                "tutte": len(ok), "diesel": sum(1 for x in ok if x["fuel"] == "diesel"),
+                "per_fascia": dict(Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 10**9) if x["p"] < lim) for x in ok))}
+    log.warning("SOGLIE_SIM %s", json.dumps(soglie_sim, ensure_ascii=False))
+    pass_ = [x for x in vals if x["tel"] is not False and x["v"]["categoria"] in scovo.CATEGORIE_SITO
              and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
     for x in sorted(pass_, key=lambda x: -x["v"]["margine"])[:8]:
         v = x["v"]

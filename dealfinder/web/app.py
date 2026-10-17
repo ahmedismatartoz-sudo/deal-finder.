@@ -924,7 +924,7 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     al massimo DIESEL_MAX (30%) di diesel: si tengono i diesel con più guadagno, il resto benzina/GPL/metano/ibride."""
     anno_min = int(os.environ.get("ANNO_MINIMO_SITO", "2007"))
     items = [it for it in items if not (it.get("anno") and it["anno"] < anno_min) and not scovo.troppi_km(it.get("km"))]
-    quota = float(os.environ.get("DIESEL_MAX", "0.3"))
+    quota = float(os.environ.get("DIESEL_MAX", "1"))      # 17/10: limite diesel tolto (prima 30%)
     if quota >= 1:
         return items
     gruppi: dict = {}
