@@ -1613,7 +1613,7 @@ def _tempo_reale():
                     lg.warning("TR NUOVI in %.0fs: %s", time.time() - t0, dict(st))
             except Exception as e:
                 lg.warning("TR nuovi non riuscito: %s", str(e)[:300])
-            time.sleep(max(30, float(os.environ.get("TR_NUOVI_MIN", "10")) * 60 - (time.time() - t0)))
+            time.sleep(max(30, float(os.environ.get("TR_NUOVI_MIN", "5")) * 60 - (time.time() - t0)))
 
     threading.Thread(target=verifica, daemon=True, name="tr-verifica").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()

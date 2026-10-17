@@ -6,6 +6,7 @@ in `valutazioni_policy`. Scrive nei log il confronto prima/dopo (policy preceden
 from __future__ import annotations
 
 import json
+import re
 import logging
 import os
 import time
@@ -206,6 +207,65 @@ UTIL_SQL = ("SELECT {cols}, l.title, l.description, l.telefono_ok, l.damage_decl
             "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti')")
 
 
+_CIL = re.compile(r"\b(\d\.\d)\b")
+
+
+def gemelle(t: dict, mercato: list[dict], now=None) -> list[dict]:
+    """Auto IDENTICHE in vendita (idea del cliente, 17/10): stessa marca/modello (gruppo), alimentazione, cambio,
+    carrozzeria, cilindrata scritta e potenza quasi uguale (±5%), anno ±1, km ±20.000; sane, attive, viste di recente."""
+    from datetime import datetime, timezone
+    now = now or datetime.now(timezone.utc)
+    if not (t.get("year") and t.get("mileage_km") is not None):
+        return []
+    tg, bt, tp = P._norm_gear(t.get("gearbox")), P.carrozzeria(t), t.get("power_kw")
+    tc = set(_CIL.findall(t.get("version_raw") or ""))
+    out = []
+    for c in mercato:
+        if c.get("id") == t.get("id") or c.get("status") != "attivo" or not c.get("price_eur") or c["price_eur"] < 500:
+            continue
+        if c.get("fuel") != t.get("fuel") or not c.get("year") or c.get("mileage_km") is None:
+            continue
+        if abs(int(c["year"]) - int(t["year"])) > 1 or abs(int(c["mileage_km"]) - int(t["mileage_km"])) > 20000:
+            continue
+        cg = P._norm_gear(c.get("gearbox"))
+        if (tg or cg) and tg != cg:
+            continue
+        if P.carrozzeria(c) != bt:
+            continue
+        if tp and c.get("power_kw") and abs(c["power_kw"] - tp) > tp * .05:
+            continue
+        if bool(tp) != bool(c.get("power_kw")) and not tc:
+            continue                                          # senza potenza né cilindrata non si può dire "identica"
+        cc = set(_CIL.findall(c.get("version_raw") or ""))
+        if tc and cc and not (tc & cc):
+            continue
+        if (c.get("damage_class") or "sconosciuto") in P.DANNEGGIATE or c.get("problem_search") or c.get("finanziamento"):
+            continue
+        if c.get("stage_reason") in ("doppione", "truffa", "prezzo_finto") or set(c.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
+            continue
+        visto = max((d for d in (c.get("last_checked_at"), c.get("last_seen_at")) if d), default=None)
+        if not visto or (now - visto).days > 7:
+            continue
+        out.append(c)
+    return sorted(out, key=lambda c: c["price_eur"])
+
+
+def gemella_rivendita(t: dict, twins: list[dict], M: float | None, sconto: int = 1000) -> dict | None:
+    """Rivendita = gemella più economica AFFIDABILE − sconto. Protezione contro l'annuncio "strano": la gemella
+    scelta non può stare sotto l'85% della mediana delle gemelle (se sono ≥ 3) né sotto il 70% del mercato M."""
+    if not twins:
+        return None
+    prezzi = [c["price_eur"] for c in twins]
+    med = P.percentile(prezzi, .5)
+    for c in twins:
+        if len(twins) >= 3 and c["price_eur"] < .85 * med:
+            continue
+        if M and c["price_eur"] < .7 * M:
+            continue
+        return {"gemella": c, "rivendita": int(c["price_eur"]) - sconto, "n_gemelle": len(twins)}
+    return None
+
+
 def utilitarie(conn, pubblica: bool = False) -> dict:
     """Tutte le auto sane di privati da UTIL_MIN a UTIL_MAX € (con il numero): valutazione con la policy e
     simulazione di quante superano UTIL_MARGINE € di margine con riduzioni diverse sotto i 10.000 €.
@@ -227,6 +287,7 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
                                                              "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
     st, vals, gruppo, mercato = Counter(), [], None, []
+    gsim, gesempi = Counter(), []
     for r in rows:
         if r["source"] == "autoscout24":
             tel = r["telefono_ok"]                       # None = non ancora controllato (lo fa l'agente di verifica)
@@ -257,6 +318,24 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
             log.warning("utilitarie: %s non valutata: %s", r["id"], str(e)[:120])
             continue
         st[f"cat:{v['categoria']}"] += 1
+        p_ = int(r["price_eur"])
+        if 1000 <= p_ <= 5000:                         # simulazione "gemella più economica − 1.000 €"
+            g = gemella_rivendita(t, gemelle(t, mercato), v.get("M"))
+            ok_now = v["categoria"] in scovo.CATEGORIE_SITO and (v.get("margine") or 0) >= scovo.soglia(p_)
+            ok_g = bool(g) and g["rivendita"] - p_ >= scovo.soglia(p_)
+            gsim["auto_1000_5000"] += 1
+            gsim["con_gemella"] += bool(g)
+            gsim["passano_regola_attuale"] += ok_now
+            gsim["passano_gemella"] += ok_g
+            gsim["passano_entrambe"] += ok_now and ok_g
+            gsim["solo_gemella"] += ok_g and not ok_now
+            gsim["solo_attuale"] += ok_now and not ok_g
+            if g and len(gesempi) < 15 and (ok_g or ok_now):
+                c = g["gemella"]
+                gesempi.append({"id": r["id"], "auto": f"{r['make']} {r['model']} {r['version_raw'] or ''} {r['year']} {r['mileage_km']}km",
+                                "prezzo": p_, "gemella": [c["price_eur"], c["year"], c["mileage_km"], c.get("url")],
+                                "n_gemelle": g["n_gemelle"], "riv_gemella": g["rivendita"], "margine_gemella": g["rivendita"] - p_,
+                                "M": v.get("M"), "riv_attuale": v.get("R_finale"), "margine_attuale": v.get("margine")})
         if v.get("M"):
             vals.append({"id": r["id"], "src": r["source"], "p": int(r["price_eur"]), "M": v["M"], "L": v["L"], "n": v["n"],
                          "tel": tel, "util": (r["model"] or "") in UTILITARIE, "v": v})
@@ -264,6 +343,9 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
         next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if x["p"] < lim)
         for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
     out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
+    log.warning("GEMELLA_SIM %s", json.dumps(dict(gsim)))
+    for e in gesempi:
+        log.warning("GEMELLA_ESEMPIO %s", json.dumps(e, default=str, ensure_ascii=False))
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
     # esempi (solo dati dell'auto) con la riduzione in vigore
     pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO

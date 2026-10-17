@@ -244,3 +244,18 @@ def test_modello_prezzi_preciso_e_piu_auto():
          [car(900 + k, int(vero(2014 + k % 6, 90000 + k * 3000)), year=2014 + k % 6, km=90000 + k * 3000) for k in range(12)]
     v2 = valuta(t2, m2, 1500, CFG, NOW)
     assert v2.get("M") and v2["metodo"] == "modello"
+
+
+def test_gemella_piu_economica_affidabile():
+    from dealfinder.pricing.ricalcolo import gemelle, gemella_rivendita
+    t = car(1, 3000, year=2014, km=120000, version_raw="1.2 Lounge")
+    m = [car(10, 4500, year=2014, km=125000, version_raw="1.2 Lounge"),
+         car(11, 4800, year=2015, km=110000, version_raw="1.2 Pop"),
+         car(12, 5000, year=2013, km=130000, version_raw="1.2"),
+         car(13, 2500, year=2014, km=118000, version_raw="1.2"),            # troppo bassa rispetto alle altre: scartata
+         car(14, 4000, year=2014, km=121000, version_raw="1.4 Sport"),      # cilindrata diversa: non è gemella
+         car(15, 4200, year=2014, km=180000, version_raw="1.2")]            # km troppo diversi
+    tw = gemelle(t, m, NOW)
+    assert [c["id"] for c in tw] == [13, 10, 11, 12]
+    g = gemella_rivendita(t, tw, 4800)
+    assert g["gemella"]["id"] == 10 and g["rivendita"] == 3500
