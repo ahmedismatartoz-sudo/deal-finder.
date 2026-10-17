@@ -283,3 +283,10 @@ def test_telefono_da_pagina_subito():
     assert telefono_da_pagina({"props": {"ad": {"advertiser": {"hasPhone": True}}}}, "") is True
     assert telefono_da_pagina({"props": {"ad": {"advertiser": {"showPhone": False}}}}, "") is False
     assert telefono_da_pagina({"props": {}}, "<button>mostra numero</button>") is True
+
+
+def test_showphone_nella_pagina_subito():
+    from dealfinder.pipeline.tempo_reale import telefono_da_pagina
+    assert telefono_da_pagina(None, "", 'x\\"username\\":\\"A\\",\\"showPhone\\":true,\\"y') is True
+    assert telefono_da_pagina(None, "", 'x\\"showPhone\\":false,\\"isDefaultName') is False
+    assert telefono_da_pagina(None, "", "pagina senza dati") is None

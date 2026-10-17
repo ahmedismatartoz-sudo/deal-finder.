@@ -184,7 +184,7 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     # una aprendo la pagina (bottone Chiama), poche per giro. Solo quelle col numero vanno sul sito.
     sub_ids = [r["id"] for r in conn.execute(
         "SELECT id FROM listings WHERE source='subito' AND status='attivo' AND stage='approfondito' AND telefono_ok IS NULL "
-        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_SUB_TELEFONO_GIRO", "40")),)).fetchall()]
+        "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (int(os.environ.get("TR_SUB_TELEFONO_GIRO", "60")),)).fetchall()]
     ids = list(ids) + sub_ids
     if not ids:
         return stats
@@ -553,9 +553,6 @@ def _diagnostica_pagina_subito(lst: list) -> None:
                     scan(v, f"{path}[{i}]")
         scan(data or {})
         low = r.text.lower()
-        pezzi = [re.sub(r"\d", "9", r.text[max(0, m.start() - 25):m.start() + 45]).replace("\n", " ")
-                 for m in re.finditer(r"(?i)phone", r.text)][:6]
-        log.warning("TR subito pagina contesto: %s", pezzi)
         log.warning("TR subito pagina (%s): http=%s byte=%s next_data=%s bottone_chiama=%s parole=%s campi=%s", via,
                     r.status_code, len(r.text), bool(data), ("mostra numero" in low or "chiama" in low),
                     [w for w in ("captcha", "datadome", "cloudflare", "access denied", "phone", "telefono", "chiama",
@@ -584,15 +581,22 @@ def subito_telefono_pagina(url: str) -> tuple[str, bool | None]:
     if "annuncio non è più disponibile" in low or "questo annuncio è scaduto" in low:
         return "scomparso", None
     data = next_data(r.text)
-    tel = telefono_da_pagina(data, low)
+    tel = telefono_da_pagina(data, low, r.text)
     if _SUB_PAGINA["n"] < 5:
         _SUB_PAGINA["n"] += 1
         log.warning("TR subito pagina controllo: dati=%s esito=%s", bool(data), tel)
     return "attivo", tel
 
 
-def telefono_da_pagina(data: dict | None, low: str) -> bool | None:
-    """Indicatore del bottone Chiama nella pagina. None se la pagina non ha i dati (blocco anti-bot)."""
+RE_SHOWPHONE = re.compile(r'showPhone\\*"\s*:\s*(true|false)', re.I)
+
+
+def telefono_da_pagina(data: dict | None, low: str, html: str = "") -> bool | None:
+    """Indicatore del bottone Chiama nella pagina. Subito (Next.js) mette i dati dell'annuncio nell'HTML come JSON
+    escapato: il venditore ha "showPhone": true/false. None se la pagina non ha i dati (blocco anti-bot)."""
+    vals = [m.group(1).lower() == "true" for m in RE_SHOWPHONE.finditer(html or "")]
+    if vals:
+        return any(vals)
     if not data:
         return None
     flags = []
