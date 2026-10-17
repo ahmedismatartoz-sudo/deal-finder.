@@ -930,7 +930,7 @@ def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> li
     if quota <= 0:
         return []
     pmax = int(os.environ.get("UTIL_SENZA_NUMERO_MAX", "7000"))
-    min_conf = int(os.environ.get("UTIL_SENZA_NUMERO_CONFRONTI", "5"))
+    min_conf = int(os.environ.get("UTIL_SENZA_NUMERO_CONFRONTI", "8"))
     dentro = {it["id"] for it in tenute}
     cand = []
     for it in items:
@@ -939,9 +939,16 @@ def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> li
             continue
         if pv.get("margine") is None or (pv.get("n") or 0) < min_conf or pv["margine"] < scovo.soglia(it["prezzo"]):
             continue
+        # che non sembri una truffa: prezzo non sotto il 55% del mercato, km e anno sensati, almeno 3 foto
+        if pv.get("M") and it["prezzo"] < .55 * pv["M"]:
+            continue
+        if not it.get("km") or it["km"] < 30000 or not it.get("anno"):
+            continue
+        if int(it.get("n_foto") or 0) < 3:
+            continue
         cand.append(it)
     cand.sort(key=lambda it: -(it["pv"]["margine"] / scovo.soglia(it["prezzo"])))
-    massimo = int(len(tenute) * quota / (1 - quota))
+    massimo = min(int(len(tenute) * quota / (1 - quota)), int(os.environ.get("UTIL_SENZA_NUMERO_N", "40")))   # le 40 migliori
     ok = cand[:massimo]
     for it in ok:
         it["senza_numero"] = True
