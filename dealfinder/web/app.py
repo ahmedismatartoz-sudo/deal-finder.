@@ -995,6 +995,7 @@ def _calcola_elenco() -> None:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
     _elenco.update(t=time.time(), items=items, opens=opens)
+    _log_controllo_finale(items)
     from collections import Counter
     c = Counter()
     for it in items:
@@ -1003,6 +1004,25 @@ def _calcola_elenco() -> None:
         if sez == "affari" and it["prezzo"] < 2000:
             c[f"affari_sotto_2000:{it.get('area') or 'milano'}"] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(items), time.time() - t0, dict(sorted(c.items())))
+
+
+_ultimo_controllo = {"t": 0.0}
+
+
+def _log_controllo_finale(items: list[dict]) -> None:
+    """Ogni CONTROLLO_MIN minuti: elenco compatto delle auto sul sito per il controllo finale a mano (solo dati
+    dell'auto, niente venditori): così si rivedono una per una mercato, rivendita e margine."""
+    if time.time() - _ultimo_controllo["t"] < float(os.environ.get("CONTROLLO_MIN", "30")) * 60:
+        return
+    _ultimo_controllo["t"] = time.time()
+    lg = logging.getLogger("controllo")
+    for it in sorted(items, key=lambda x: -((x.get("pv") or {}).get("margine") or 0))[:int(os.environ.get("CONTROLLO_MAX", "400"))]:
+        pv = it.get("pv") or {}
+        lg.warning("CONTROLLO_FINALE %s", json.dumps({
+            "id": it["id"], "auto": it.get("nome"), "anno": it.get("anno"), "km": it.get("km"), "carb": it.get("carb"),
+            "fonte": it.get("fonte"), "prezzo": it.get("prezzo"), "M": pv.get("M"), "n": pv.get("n"), "metodo": pv.get("metodo"),
+            "rid": pv.get("riduzione"), "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine"),
+            "cat": pv.get("categoria"), "top": bool(pv.get("top"))}, ensure_ascii=False))
 
 
 def _aggiorna_elenco(attendi: bool) -> None:

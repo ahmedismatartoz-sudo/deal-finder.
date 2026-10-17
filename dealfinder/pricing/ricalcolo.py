@@ -204,7 +204,8 @@ UTIL_SQL = ("SELECT {cols}, l.title, l.description, l.telefono_ok, l.damage_decl
             "AND l.last_seen_at > now() - make_interval(days => " + os.environ.get("TUTTE_GIORNI", "14") + ") AND l.source IN ('subito','autoscout24','facebook') "
             "AND COALESCE(l.damage_class, 'sconosciuto') IN ('nessuno','sconosciuto') AND NOT COALESCE(l.problem_search, false) "
             "AND COALESCE(l.damage_declared, false) = false "
-            "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti')")
+            "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti') "
+            "AND COALESCE(l.stage_reason, '') NOT LIKE 'analisi_manuale%%'")      # scartate a mano: mai ripubblicate
 
 
 _CIL = re.compile(r"\b(\d\.\d)\b")
