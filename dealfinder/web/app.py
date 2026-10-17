@@ -953,29 +953,30 @@ def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> li
     """17/10 15:07, cliente: utilitarie di Subito fino a 7.000 € anche senza numero (si contattano dalla chat di Subito),
     ma SOLO LE MIGLIORI: margine ≥ soglia piena della fascia, almeno 5 confronti, al massimo UTIL_SENZA_NUMERO_QUOTA
     (20%) delle auto sul sito, dalla più conveniente."""
-    quota = float(os.environ.get("UTIL_SENZA_NUMERO_QUOTA", "0.2"))
+    quota = float(os.environ.get("UTIL_SENZA_NUMERO_QUOTA", "0.5"))   # 17/10 17:09: almeno 100 utilitarie in più
     if quota <= 0:
         return []
     pmax = int(os.environ.get("UTIL_SENZA_NUMERO_MAX", "7000"))
-    min_conf = int(os.environ.get("UTIL_SENZA_NUMERO_CONFRONTI", "8"))
+    min_conf = int(os.environ.get("UTIL_SENZA_NUMERO_CONFRONTI", "5"))
+    m_euro = int(os.environ.get("UTIL_SENZA_NUMERO_MARGINE", "1200"))
     dentro = {it["id"] for it in tenute}
     cand = []
     for it in items:
         pv = it.get("pv") or {}
-        if it["id"] in dentro or it.get("economica") or it.get("fonte") != "Subito" or it["prezzo"] > pmax:
+        if it["id"] in dentro or it.get("economica") or it.get("fonte") not in ("Subito", "AutoScout24") or it["prezzo"] > pmax:
             continue
-        if pv.get("margine") is None or (pv.get("n") or 0) < min_conf or pv["margine"] < scovo.soglia(it["prezzo"]):
+        if pv.get("margine") is None or (pv.get("n") or 0) < min_conf or pv["margine"] < max(m_euro, .2 * it["prezzo"]):
             continue
         # che non sembri una truffa: prezzo non sotto il 55% del mercato, km e anno sensati, almeno 3 foto
-        if pv.get("M") and it["prezzo"] < .55 * pv["M"]:
+        if pv.get("M") and it["prezzo"] < .5 * pv["M"]:
             continue
         if not it.get("km") or it["km"] < 30000 or not it.get("anno"):
             continue
         if int(it.get("n_foto") or 0) < 3:
             continue
         cand.append(it)
-    cand.sort(key=lambda it: -(it["pv"]["margine"] / scovo.soglia(it["prezzo"])))
-    massimo = min(int(len(tenute) * quota / (1 - quota)), int(os.environ.get("UTIL_SENZA_NUMERO_N", "40")))   # le 40 migliori
+    cand.sort(key=lambda it: -it["pv"]["margine"])
+    massimo = min(int(len(tenute) * quota / (1 - quota)), int(os.environ.get("UTIL_SENZA_NUMERO_N", "130")))   # le migliori 130
     ok = cand[:massimo]
     for it in ok:
         it["senza_numero"] = True
