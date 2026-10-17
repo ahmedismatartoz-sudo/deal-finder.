@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yuri Car · Compravendita auto, noleggio e soccorso stradale a Desio</title>
+<meta name="description" content="Yuri Car a Desio (MB): auto usate sempre aggiornate, noleggio e soccorso stradale con carro attrezzi. Chiama il 327 877 2949.">
+<meta name="theme-color" content="#04060d">
+<meta property="og:title" content="Yuri Car · Compravendita, noleggio e soccorso stradale">
+<meta property="og:description" content="Auto usate a Desio, noleggio e carro attrezzi. Chiama il 327 877 2949.">
+<meta property="og:image" content="/logo.jpg">
+<link rel="icon" href="/logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css?v=9">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"AutoDealer","name":"Yuri Car","telephone":"+39 327 877 2949","image":"/logo.jpg",
+ "address":{"@type":"PostalAddress","streetAddress":"Via Lavoratori Autobianchi 1","postalCode":"20832","addressLocality":"Desio","addressRegion":"MB","addressCountry":"IT"},
+ "openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"09:00","closes":"20:00"},
+  {"@type":"OpeningHoursSpecification","dayOfWeek":["Saturday","Sunday"],"opens":"09:00","closes":"18:00"}]}
+</script>
+</head>
+<body>
+
+<div id="loader"><img src="/logo.webp" alt=""><div class="bar"><i></i></div></div>
+
+<header class="nav" id="nav">
+  <a href="#top" class="brand"><img src="/logo.webp" alt="Yuri Car"></a>
+  <nav><a href="#auto">Auto</a><a href="#servizi">Servizi</a><a href="#soccorso">Soccorso</a><a href="#contatti">Contatti</a></nav>
+  <a class="btn btn-grad sm" href="tel:+393278772949"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg><span>327 877 2949</span></a>
+</header>
+
+<section id="top" class="show">
+  <div class="stage">
+    <canvas id="scene"></canvas>
+    <div class="vignette"></div>
+    <div class="flash" id="flash"></div>
+    <div class="fade" id="fade"></div>
+
+    <div class="copy c0" data-from="0" data-to="0.12">
+      <div><p class="eyebrow">Desio · Monza e Brianza</p><img class="logo-hero" src="/logo.webp" alt="Yuri Car — compravendita auto, noleggio, soccorso stradale"></div>
+      <div><p class="sub">Compravendita auto · Noleggio · Soccorso stradale</p>
+      <div class="ctas">
+        <a class="btn btn-grad" href="#auto">Guarda le auto</a>
+        <a class="btn btn-red" href="tel:+393278772949">Soccorso stradale</a>
+      </div></div>
+    </div>
+
+    <div class="copy c1 left" data-from="0.18" data-to="0.44">
+      <p class="eyebrow">Compravendita</p>
+      <h2>Auto usate,<br><span class="grad">scelte bene.</span></h2>
+      <p class="sub">Compriamo e vendiamo auto di ogni fascia. <b>Valutiamo anche la tua.</b></p>
+    </div>
+
+    <div class="copy c2 right" data-from="0.56" data-to="0.9">
+      <p class="eyebrow red"><span class="beacon"></span>Soccorso stradale</p>
+      <h2>Fermo per strada?<br><span class="grad">Arriviamo noi.</span></h2>
+      <a class="tel" href="tel:+393278772949">327 877 2949</a>
+      <p class="sub">Carro attrezzi per auto e furgoni</p>
+    </div>
+
+    <div class="scrollhint" id="hint"><span>Scorri</span><i></i></div>
+    <div class="progress"><i id="prog"></i></div>
+  </div>
+</section>
+
+<main>
+  <section id="auto" class="cat">
+    <div class="wrap">
+      <div class="cat-head">
+        <div>
+          <p class="eyebrow">Showroom · aggiornato in automatico</p>
+          <h2 class="title">Le nostre <span class="grad">auto</span></h2>
+        </div>
+        <p class="count" id="count"></p>
+      </div>
+      <div class="filters">
+        <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Cerca marca o modello"></label>
+        <select id="fMarca"><option value="">Tutte le marche</option></select>
+        <select id="fFuel"><option value="">Alimentazione</option></select>
+        <select id="fPrezzo">
+          <option value="">Qualsiasi prezzo</option>
+          <option value="3000">Fino a 3.000 €</option>
+          <option value="6000">Fino a 6.000 €</option>
+          <option value="10000">Fino a 10.000 €</option>
+          <option value="20000">Fino a 20.000 €</option>
+        </select>
+        <select id="fSort">
+          <option value="new">Più recenti</option>
+          <option value="pa">Prezzo crescente</option>
+          <option value="pd">Prezzo decrescente</option>
+          <option value="km">Meno km</option>
+          <option value="anno">Più nuove</option>
+        </select>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>Nessuna auto con questi filtri.</p>
+    </div>
+  </section>
+
+  <section id="servizi" class="about">
+    <div class="wrap">
+      <p class="eyebrow">Servizi</p>
+      <h2 class="title">Tutto per la tua auto,<br><span class="grad">un solo numero.</span></h2>
+      <div class="svc-grid">
+        <article class="svc"><i><svg viewBox="0 0 24 24"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 12l1.6-4.2A2 2 0 0 1 10.5 6.5h3a2 2 0 0 1 1.9 1.3L17 12"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/></svg></i><h3>Vendita</h3><p>Auto usate di ogni fascia, dall'utilitaria al furgone. Le trovi tutte qui sopra, sempre aggiornate.</p></article>
+        <article class="svc"><i><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></i><h3>Acquisto</h3><p>Vuoi vendere la tua auto? Mandaci le foto su WhatsApp: valutazione rapida e pagamento sicuro.</p></article>
+        <article class="svc"><i><svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l2.5 2.5M14.5 8.5 17 11"/></svg></i><h3>Noleggio</h3><p>Un'auto per qualche giorno, mentre la tua è in officina o per lavoro. Chiamaci e la prepariamo.</p></article>
+        <article class="svc red"><i><svg viewBox="0 0 24 24"><path d="M3 17h2m4 0h6m4 0h2V12l-3-4h-4v9M3 17V9h10v8"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M3 9 9 3"/></svg></i><h3>Soccorso</h3><p>Guasto o incidente: arriviamo con il carro attrezzi e portiamo il veicolo dove serve.</p></article>
+      </div>
+      <div class="extra"><span>Finanziamenti</span><span>Permute</span><span>Assicurazioni</span><span>Carrozzeria</span><span>Verniciatura</span><span>Gommista</span><span>Cristalli</span><span>Tappezzeria</span><span>Sanificazione interni</span></div>
+    </div>
+  </section>
+
+  <section id="soccorso" class="sos">
+    <div class="wrap sos-grid">
+      <div>
+        <p class="eyebrow" style="color:#ff8a7a"><span class="beacon"></span>Soccorso stradale</p>
+        <h2 class="title">Sei fermo?<br><span class="grad">Ti veniamo a prendere.</span></h2>
+        <a class="bigtel" href="tel:+393278772949">327 877 2949</a>
+        <p class="lead">Carro attrezzi per auto e furgoni: recupero dopo guasto o incidente e trasporto in officina, in carrozzeria o a casa. Dicci dove sei e che veicolo hai: ti diamo subito tempi e costo.</p>
+        <div class="ctas">
+          <a class="btn btn-red" href="tel:+393278772949">Chiama il soccorso</a>
+          <a class="btn btn-wa" href="https://wa.me/393278772949?text=Ciao%2C%20mi%20serve%20il%20soccorso%20stradale.%20Sono%20a%3A%20" target="_blank" rel="noopener">Manda la posizione</a>
+        </div>
+      </div>
+      <div class="sos-list">
+        <div><b>01</b><span>Chiami o mandi la posizione su WhatsApp</span></div>
+        <div><b>02</b><span>Ti diciamo subito tempi di arrivo e costo</span></div>
+        <div><b>03</b><span>Carichiamo il veicolo sul carro attrezzi</span></div>
+        <div><b>04</b><span>Lo portiamo in officina, in carrozzeria o a casa</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contatti" class="contact" style="padding-top:110px;border-top:1px solid var(--line)">
+    <div class="wrap contact-grid">
+      <div class="contact-card">
+        <img src="/logo.webp" alt="" class="contact-logo">
+        <h2 class="title">Vieni a <span class="grad">trovarci</span></h2>
+        <ul>
+          <li><small>Indirizzo</small>Via Lavoratori Autobianchi, 1<br>20832 Desio (MB)</li>
+          <li><small>Telefono e WhatsApp</small><a href="tel:+393278772949">327 877 2949</a></li>
+          <li><small>Orari</small>
+            <ul class="hours" id="hours">
+              <li data-d="1"><span>Lunedì – Venerdì</span><span>9:00–12:30 · 14:00–20:00</span></li>
+              <li data-d="6"><span>Sabato e domenica</span><span>9:00–12:30 · 14:00–18:00</span></li>
+            </ul></li>
+        </ul>
+        <div class="ctas">
+          <a class="btn btn-grad" href="tel:+393278772949">Chiama</a>
+          <a class="btn btn-ghost" href="https://wa.me/393278772949" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="btn btn-ghost" href="https://www.google.com/maps/dir/?api=1&destination=Via+Lavoratori+Autobianchi+1+20832+Desio+MB" target="_blank" rel="noopener">Indicazioni</a>
+        </div>
+      </div>
+      <div class="map"><iframe title="Mappa" loading="lazy" src="https://www.google.com/maps?q=Via+Lavoratori+Autobianchi+1,+20832+Desio+MB&output=embed"></iframe></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="wrap"><span>© <span id="yr"></span> Yuri Car · Via Lavoratori Autobianchi 1, 20832 Desio (MB)</span><span id="upd"></span></div>
+  </footer>
+</main>
+
+<a class="fab" href="tel:+393278772949" aria-label="Chiama"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg> Chiama · Soccorso</a>
+
+<div class="modal" id="modal" hidden>
+  <div class="m-back" data-close></div>
+  <div class="m-box">
+    <button class="m-x" data-close aria-label="Chiudi">×</button>
+    <div class="m-gal">
+      <div class="m-main"><img id="mImg" alt=""><button class="nav-l" id="prev">‹</button><button class="nav-r" id="next">›</button><span class="m-n" id="mN"></span></div>
+      <div class="m-thumbs" id="mThumbs"></div>
+    </div>
+    <div class="m-info">
+      <p class="eyebrow" id="mVer"></p>
+      <h3 id="mTit"></h3>
+      <p class="m-price grad" id="mPrice"></p>
+      <div class="m-specs" id="mSpecs"></div>
+      <div class="ctas">
+        <a class="btn btn-grad" href="tel:+393278772949">Chiama</a>
+        <a class="btn btn-ghost" id="mWa" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+      <div class="m-desc" id="mDesc"></div>
+      <div class="m-eq" id="mEq"></div>
+      <a class="m-src" id="mSrc" target="_blank" rel="noopener">Vedi l'annuncio su AutoScout24 ↗</a>
+    </div>
+  </div>
+</div>
+
+<script src="/hero.js?v=2" defer></script>
+<script src="/app.js?v=3" defer></script>
+<script>
+  (function(){var d=new Date().getDay(),li=document.querySelector('#hours li[data-d="'+(d===0||d===6?6:1)+'"]');li&&li.classList.add('today')})();
+</script>
+</body>
+</html>

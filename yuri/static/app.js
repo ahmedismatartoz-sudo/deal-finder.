@@ -1,5 +1,5 @@
 (() => {
-  const TEL = '+393336282206';
+  const TEL = '+393278772949';
   const $ = s => document.querySelector(s);
   const grid = $('#grid'), empty = $('#empty'), count = $('#count');
   let AUTO = [];
@@ -102,7 +102,7 @@
     $('#mSpecs').innerHTML = spec.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('');
     $('#mDesc').textContent = a.descrizione || '';
     $('#mEq').innerHTML = (a.dotazioni || []).slice(0, 40).map(x => `<span>${esc(x)}</span>`).join('');
-    $('#mWa').href = `https://wa.me/${TEL.replace('+', '')}?text=` + encodeURIComponent(`Buongiorno, sono interessato alla ${nome} a ${eur(a.prezzo)} vista sul vostro sito. È ancora disponibile?`);
+    $('#mWa').href = `https://wa.me/${TEL.replace('+', '')}?text=` + encodeURIComponent(`Buongiorno, sono interessato alla ${nome} a ${eur(a.prezzo)} vista sul sito di Yuri Car. È ancora disponibile?`);
     $('#mSrc').href = a.url; $('#mSrc').hidden = !a.url;
     modal.hidden = false; document.body.style.overflow = 'hidden';
     history.replaceState(null, '', '?auto=' + encodeURIComponent(a.id) + '#auto');

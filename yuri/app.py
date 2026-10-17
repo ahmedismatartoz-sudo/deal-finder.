@@ -1,4 +1,4 @@
-"""Sito di Carrozzeria Atelier: auto prese in automatico dalla loro pagina AutoScout24."""
+"""Sito di Yuri Car (Desio): auto prese in automatico dalla loro pagina AutoScout24."""
 from __future__ import annotations
 
 import hashlib
@@ -19,7 +19,7 @@ import scraper
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 QUI = Path(__file__).parent
 STATIC = QUI / "static"
-CACHE = Path(os.environ.get("IMG_CACHE", "/tmp/atelier-img"))
+CACHE = Path(os.environ.get("IMG_CACHE", "/tmp/yuri-img"))
 CACHE.mkdir(parents=True, exist_ok=True)
 TOKEN = os.environ.get("REFRESH_TOKEN", "")
 
@@ -53,17 +53,6 @@ def aggiorna(t: str = ""):
         raise HTTPException(403)
     threading.Thread(target=scraper.aggiorna, daemon=True).start()
     return {"ok": True}
-
-
-@app.get("/api/hero")
-def api_hero():
-    """Copertina: foto della loro auto salvate nel sito; valida finché l'auto è in vendita."""
-    try:
-        info = json.loads((STATIC / "hero" / "info.json").read_text())
-    except Exception:
-        return {"ok": False}
-    ids = {a["id"] for a in scraper.carica().get("auto", [])}
-    return {"ok": not ids or info["id"] in ids, "id": info["id"][:8], "int": info.get("int", False)}
 
 
 @app.get("/img")

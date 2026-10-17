@@ -14,9 +14,9 @@ from pathlib import Path
 
 import httpx
 
-log = logging.getLogger("atelier")
+log = logging.getLogger("yuri")
 BASE = "https://www.autoscout24.it"
-DEALER_URL = os.environ.get("DEALER_URL", BASE + "/concessionari/carrozzeria-atelier-srl")
+DEALER_URL = os.environ.get("DEALER_URL", BASE + "/concessionari/sabrycar-di-sabrina-fedele-desio-mb")
 DATA = Path(os.environ.get("DATA_FILE", Path(__file__).parent / "data.json"))
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
       "Chrome/126.0 Safari/537.36")
