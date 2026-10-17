@@ -418,9 +418,9 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     # UTILITARIE ECONOMICHE (richiesta del 17/10: "almeno 50 auto da 1.000 a 3.000 €, il più discreto possibile"):
     # quota riservata alla fascia, con le stesse stime (nessun prezzo gonfiato) e un margine minimo proporzionato al
     # prezzo: almeno BASSE_EURO € e BASSE_QUOTA del prezzo d'acquisto, con almeno BASSE_N_CONFRONTI confronti.
-    b_lo, b_hi = int(os.environ.get("BASSE_MIN", "1000")), int(os.environ.get("BASSE_MAX", "3000"))
-    b_n = int(os.environ.get("BASSE_N", "80"))
-    b_euro, b_quota = int(os.environ.get("BASSE_EURO", "1200")), float(os.environ.get("BASSE_QUOTA", "0.3"))   # 1.200 €: deciso dal cliente
+    b_lo, b_hi = int(os.environ.get("BASSE_MIN", "500")), int(os.environ.get("BASSE_MAX", "7000"))   # 17/10 15:05: utilitarie 0-7k
+    b_n = int(os.environ.get("BASSE_N", "300"))
+    b_euro, b_quota = int(os.environ.get("BASSE_EURO", "1200")), float(os.environ.get("BASSE_QUOTA", "0.2"))   # 1.200 €: deciso dal cliente
     b_conf = int(os.environ.get("BASSE_N_CONFRONTI", "3"))
     scelti = {x["id"] for x in pass_ + extra}
     b_gia = sum(1 for x in pass_ + extra if b_lo <= x["p"] <= b_hi)
@@ -430,11 +430,11 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                 and x["v"]["categoria"] in ("non_conveniente", "candidato", "opportunita")
                 and x["v"].get("margine") is not None and (x.get("n") or 0) >= b_conf
                 and x["v"]["margine"] >= max(euro, quota * x["p"])]
-    b_extra = sorted(_basse(b_euro, b_quota), key=lambda x: -x["v"]["margine"])[:max(0, b_n - b_gia)]
+    b_extra = sorted(_basse(b_euro, b_quota), key=lambda x: -x["v"]["margine"])[:b_n]
     extra += b_extra
-    log.warning("BASSE_1_3K già scelte=%d, aggiunte=%d (margine ≥ %d € e ≥ %.0f%% del prezzo); simulazione: %s", b_gia,
+    log.warning("BASSE_0_7K già scelte=%d, aggiunte=%d (margine ≥ %d € e ≥ %.0f%% del prezzo); simulazione: %s", b_gia,
                 len(b_extra), b_euro, b_quota * 100,
-                {f"{e}€/{int(q * 100)}%": len(_basse(e, q)) for e, q in ((1000, .3), (1100, .3), (1200, .3), (1500, .3))})
+                {f"{e}€/{int(q * 100)}%": len(_basse(e, q)) for e, q in ((1000, .2), (1200, .2), (1500, .2), (2000, .25))})
     log.warning("TOP_AUTOSCOUT già scelte=%d, aggiunte=%d (con numero già confermato %d)", as_gia, len(as_extra),
                 sum(1 for x in as_extra if x["tel"] is True))
     log.warning("TOP_AUTO sopra soglia=%d, aggiunte tra le migliori=%d (margine minimo %s)", len(pass_), len(extra),
