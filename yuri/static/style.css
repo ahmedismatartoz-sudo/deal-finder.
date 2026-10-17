@@ -295,3 +295,9 @@ em{font-style:italic;color:#c8d6ff}
 @media (max-width:720px){.fab{opacity:1;transform:none;pointer-events:auto}}
 .nfoto{background:rgba(0,0,0,.6);padding:4px 9px;border-radius:999px}
 .filters{position:static;backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--card)}
+.hero-tels{display:grid;gap:16px}
+.tel-card{display:flex;flex-direction:column;gap:8px;padding:28px 30px;border-radius:24px;border:1px solid rgba(47,98,255,.4);background:linear-gradient(150deg,rgba(47,98,255,.2),rgba(47,98,255,.05) 60%),var(--card)}
+.tel-card .eyebrow{color:#9db6ff}
+.tel-card .tel{font-family:var(--serif);font-style:italic;font-weight:800;font-size:clamp(42px,5vw,70px);line-height:1;color:#fff;white-space:nowrap}
+.tel-card .small{color:#aab8dc;font-size:14px}
+.tel-big{font-family:var(--serif);font-style:italic;font-weight:800;font-size:clamp(30px,3.2vw,42px);line-height:1.1;color:#fff;white-space:nowrap}
