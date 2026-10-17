@@ -916,9 +916,37 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
               or (it.get("fonte") != "AutoScout24" and not (eco_tel and it.get("economica")) and (
                   it["id"] in meta or (fb_tutte and it.get("fonte") == "Facebook Marketplace")))]
     tenute += _senza_numero_super(items, tenute)
+    tenute += _utilitarie_subito_senza_numero(items, tenute)
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
+
+
+def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> list[dict]:
+    """17/10 15:07, cliente: utilitarie di Subito fino a 7.000 € anche senza numero (si contattano dalla chat di Subito),
+    ma SOLO LE MIGLIORI: margine ≥ soglia piena della fascia, almeno 5 confronti, al massimo UTIL_SENZA_NUMERO_QUOTA
+    (20%) delle auto sul sito, dalla più conveniente."""
+    quota = float(os.environ.get("UTIL_SENZA_NUMERO_QUOTA", "0.2"))
+    if quota <= 0:
+        return []
+    pmax = int(os.environ.get("UTIL_SENZA_NUMERO_MAX", "7000"))
+    min_conf = int(os.environ.get("UTIL_SENZA_NUMERO_CONFRONTI", "5"))
+    dentro = {it["id"] for it in tenute}
+    cand = []
+    for it in items:
+        pv = it.get("pv") or {}
+        if it["id"] in dentro or it.get("economica") or it.get("fonte") != "Subito" or it["prezzo"] > pmax:
+            continue
+        if pv.get("margine") is None or (pv.get("n") or 0) < min_conf or pv["margine"] < scovo.soglia(it["prezzo"]):
+            continue
+        cand.append(it)
+    cand.sort(key=lambda it: -(it["pv"]["margine"] / scovo.soglia(it["prezzo"])))
+    massimo = int(len(tenute) * quota / (1 - quota))
+    ok = cand[:massimo]
+    for it in ok:
+        it["senza_numero"] = True
+    logging.getLogger("scovo").warning("UTIL_SENZA_NUMERO: candidate=%d, ammesse=%d (massimo %d)", len(cand), len(ok), massimo)
+    return ok
 
 
 # Auto SENZA numero ammesse (richiesta del 17/10): al massimo SENZA_NUMERO_QUOTA (20%) delle auto sul sito, solo se
