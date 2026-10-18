@@ -73,6 +73,27 @@ def ai_di(conn, ids: list) -> dict:
         return {}
 
 
+def targhe_visibili(conn) -> set:
+    """Annunci in cui il controllo delle foto ha visto la targa (tabella controllo_targa)."""
+    try:
+        return {r["listing_id"] for r in conn.execute("SELECT listing_id FROM controllo_targa WHERE esito='visibile'").fetchall()}
+    except Exception:
+        conn.rollback()
+        return set()
+
+
+def targa_e_telefono(r: dict, targhe: set, tel=None) -> bool:
+    """19/10: auto con il numero di telefono E la targa visibile (scritta nell'annuncio o vista nelle foto)."""
+    from ..core.normalize import find_plate
+    from ..web import scovo
+    testo = f"{r.get('title') or ''} {r.get('description') or ''}"
+    if tel is None:
+        tel = bool(r.get("telefono_ok")) or bool(scovo.RE_MOBILE.search(testo) or scovo.RE_LANDLINE.search(testo))
+    if tel is not True:
+        return False
+    return r.get("id") in targhe or bool(find_plate(testo))
+
+
 def _j(v):
     return json.loads(v) if isinstance(v, str) else v
 
@@ -116,7 +137,9 @@ def esegui(conn, limite: int | None = None) -> dict:
                                            or scovo.guadagno_minimo(it) >= int(os.environ.get("ECONOMICHE_GUADAGNO", "400"))))
         info[r["id"]] = {"parts_cost_low": r.get("parts_cost_low"), "parts_cost_high": r.get("parts_cost_high"), "eco": True}
     ids = list(info)[:limite] if limite else list(info)
-    targets = conn.execute(f"SELECT {TARGET_COLS} FROM listings l WHERE l.id = ANY(%s)", (ids,)).fetchall()
+    targets = conn.execute(f"SELECT {TARGET_COLS}, l.title, l.description, l.telefono_ok FROM listings l WHERE l.id = ANY(%s)",
+                           (ids,)).fetchall()
+    targhe = targhe_visibili(conn)
     targets.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
     aimap = ai_di(conn, [r["id"] for r in targets])
     log.warning("POLICY_AI stime AI disponibili per %d auto su %d", len(aimap), len(targets))
@@ -141,6 +164,7 @@ def esegui(conn, limite: int | None = None) -> dict:
         t["vehicle_identity"] = _j(t.get("vehicle_identity"))
         t["rischio_strutturale"] = _rischio(r)
         t["ai"] = aimap.get(r["id"])
+        t["targa_e_telefono"] = targa_e_telefono(r, targhe)
         if info[r["id"]].get("audit") and info[r["id"]].get("mercato_audit"):
             t["tetto_rivendita"] = info[r["id"]]["mercato_audit"]
         soglia = scovo.soglia(int(r["price_eur"] or 0))
@@ -329,6 +353,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                                                              "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
     aimap = ai_di(conn, [r["id"] for r in rows])
+    targhe = targhe_visibili(conn)
     import gc
     pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
     st, vals, gruppo, mercato = Counter(), [], None, []
@@ -365,7 +390,8 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                        for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]))
+                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]),
+                 targa_e_telefono=targa_e_telefono(r, targhe, True if tel is True else False))
         try:
             v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache_nord)
         except Exception as e:

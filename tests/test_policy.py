@@ -374,3 +374,11 @@ def test_ai_non_salva_le_truffe():
     t = dict(TARGET, price_eur=3000, ai={"prezzo": 10000, "errore": .10, "n": 30})
     v = valuta(t, [], 1500, CFG, NOW)
     assert v["categoria"] == "dati_insufficienti"             # prezzo sotto il 55% del mercato: resta fuori
+
+
+def test_prezzo_molto_basso_ammesso_con_targa_e_telefono():
+    m = market(BASE)
+    t = dict(TARGET, price_eur=3000)
+    assert valuta(t, m, 1500, CFG, NOW)["categoria"] == "dati_insufficienti"      # senza targa+numero: fuori
+    v = valuta(dict(t, targa_e_telefono=True), m, 1500, CFG, NOW)
+    assert v["categoria"] == "candidato" and v.get("prezzo_molto_basso_ammesso")

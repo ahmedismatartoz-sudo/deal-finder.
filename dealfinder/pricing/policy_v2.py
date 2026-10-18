@@ -749,7 +749,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         limite = min(limite, cfg.sospetto_basse)
         if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
             out["ipotesi"].append("prezzo molto sotto il mercato: normale per un'utilitaria economica, ma controllare bene lo stato")
-    if int(t["price_eur"]) < out["M"] * limite:
+    if int(t["price_eur"]) < out["M"] * limite and t.get("targa_e_telefono"):
+        # 19/10 (cliente): prezzo molto basso ma con TARGA visibile e NUMERO di telefono -> si tiene, da verificare
+        out["prezzo_molto_basso_ammesso"] = True
+        out["ipotesi"].append("prezzo molto sotto il mercato: ammessa perché l'annuncio mostra la targa e il numero di telefono")
+    elif int(t["price_eur"]) < out["M"] * limite:
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"prezzo oltre il {int(round((1 - limite) * 100))}% sotto la mediana: il mercato "
                              "trovato non è affidabile (versione diversa, dati sbagliati o truffa)")
@@ -759,6 +763,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["motivi"].append(f"margine operativo prudente {margine} € sotto la soglia di {soglia} €")
         return out
     dubbi = []
+    if out.get("prezzo_molto_basso_ammesso"):
+        dubbi.append("prezzo molto sotto il mercato (targa e numero presenti): controllare bene auto e documenti")
     if out.get("solo_ai"):
         dubbi.append("stima del modello AI senza abbastanza confronti diretti: verificare il prezzo")
     elif n < cfg.n_preferito:

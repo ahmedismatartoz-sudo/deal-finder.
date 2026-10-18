@@ -514,8 +514,9 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
                         f"FROM listings l WHERE l.id = ANY(%s)", (ids,)).fetchall()
     gruppi: dict = {}
     cache_nord: dict = {}
-    from ..pricing.ricalcolo import ai_di
+    from ..pricing.ricalcolo import ai_di, targa_e_telefono, targhe_visibili
     aimap = ai_di(conn, [r["id"] for r in rows])
+    targhe = targhe_visibili(conn)
     for r in rows:
         if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"]:
             stats["valuta:senza_numero"] += 1
@@ -532,7 +533,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
             gruppi[key] = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                            for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]))
+                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]),
+                 targa_e_telefono=targa_e_telefono(r, targhe, True if r.get("telefono_ok") else None))
         soglia = scovo.soglia(int(r["price_eur"]))
         from ..pricing.ricalcolo import valuta_con_ripiego
         v = valuta_con_ripiego(conn, t, gruppi[key], soglia, cfg, cache_nord)
