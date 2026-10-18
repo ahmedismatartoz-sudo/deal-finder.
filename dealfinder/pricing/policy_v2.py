@@ -46,7 +46,12 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv14-2026-10-17"
+POLICY_VERSION = "pv15-2026-10-18"
+# pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
+#   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
+#   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
+#   con i confronti, mercato = media pesata confronti/AI; se AI e confronti concordano entro l'8% la stima è
+#   considerata molto precisa (riduzione 3%); se differiscono di oltre il 30% l'auto resta candidato da verificare.
 # pv14 (17/10, 14:35, cliente: "più utilitarie"): fino a 3.000 € il blocco "prezzo troppo basso" scatta sotto M × 0,45
 #   invece di 0,55, solo con almeno 5 confronti (le stime non cambiano).
 # pv13 (17/10, 09:55, cliente: "gonfia un po' la rivendita, 2–5% secondo il tipo, massima prudenza"): rivendita più alta
@@ -155,6 +160,13 @@ class PolicyConfig:
     sospetto_basse_confronti: int = 5
     solo_sane: bool = True            # per ora solo auto sane
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
+    # stima AI (pv15)
+    ai: bool = True
+    ai_errore_max: float = .15        # errore tipico massimo del modello AI per quel modello d'auto
+    ai_n_min: int = 8                 # annunci dello stesso modello su cui l'errore è stato misurato
+    ai_peso: float = .4               # peso dell'AI nella media con i confronti diretti
+    ai_accordo: float = .08           # AI e confronti entro l'8%: stima molto precisa
+    ai_disaccordo: float = .30        # oltre il 30%: candidato da verificare
 
     @classmethod
     def from_env(cls) -> "PolicyConfig":
@@ -640,6 +652,29 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["campione"] = ("base preferita" if n >= cfg.n_preferito else "provvisoria (campione limitato)")
     else:
         out["metodo"] = "mediana"
+    ai = t.get("ai") if cfg.ai else None
+    ai_ok = bool(ai and ai.get("prezzo") and ai.get("errore") is not None and ai["errore"] <= cfg.ai_errore_max
+                 and (ai.get("n") or 0) >= cfg.ai_n_min)
+    if ai_ok:
+        out["ai"] = {"prezzo": int(ai["prezzo"]), "errore": round(float(ai["errore"]), 3), "n": int(ai.get("n") or 0)}
+        if n >= cfg.n_minimo and out.get("M"):
+            diff = ai["prezzo"] / out["M"] - 1
+            out["ai"]["differenza"] = round(diff, 3)
+            out["M_senza_ai"] = out["M"]
+            out["M"] = int(round(out["M"] * (1 - cfg.ai_peso) + ai["prezzo"] * cfg.ai_peso))
+            out["L"] = min(out.get("L") or out["M"], out["M"])
+            out["ai"]["concorda"] = abs(diff) <= cfg.ai_accordo
+            out["ai"]["disaccordo"] = abs(diff) > cfg.ai_disaccordo
+            out["ipotesi"].append(f"mercato = confronti ({out['M_senza_ai']} €) e modello AI ({int(ai['prezzo'])} €, errore "
+                                  f"tipico ±{ai['errore']*100:.0f}% su {int(ai.get('n') or 0)} annunci di questo modello)")
+        else:
+            out["M"] = int(ai["prezzo"])
+            out["L"] = int(round(ai["prezzo"] * (1 - ai["errore"])))
+            out["metodo"] = "ai"
+            out["solo_ai"] = True
+            n = max(n, cfg.n_minimo)
+            out["ipotesi"].append(f"pochi confronti diretti: mercato stimato dal modello AI dei prezzi ({int(ai['prezzo'])} €, "
+                                  f"errore tipico ±{ai['errore']*100:.0f}% misurato su {int(ai.get('n') or 0)} annunci di questo modello)")
     if n < cfg.n_minimo or not out.get("M"):
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")
@@ -651,8 +686,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         err = reg.get("errore_tipico")
         if out.get("metodo") == "modello" and err is not None and err <= .10 and n >= 10:
             r_new, perche = cfg.rid_precisa, f"stima molto precisa (modello su {n} annunci, errore ±{err*100:.0f}%)"
+        elif (out.get("ai") or {}).get("concorda") and n >= cfg.n_preferito:
+            r_new, perche = cfg.rid_precisa, f"stima molto precisa (confronti e modello AI concordano, {n} annunci)"
         elif (out.get("metodo") == "modello" and err is not None and err <= .14 and n >= 6) or \
-                (out.get("metodo") == "mediana" and n >= 10):
+                (out.get("metodo") == "mediana" and n >= 10) or \
+                ((out.get("ai") or {}).get("concorda") and n >= cfg.n_minimo):
             r_new, perche = cfg.rid_buona, f"stima precisa ({n} annunci)"
         else:
             r_new, perche = None, None
@@ -713,8 +751,12 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["motivi"].append(f"margine operativo prudente {margine} € sotto la soglia di {soglia} €")
         return out
     dubbi = []
-    if n < cfg.n_preferito:
+    if out.get("solo_ai"):
+        dubbi.append("stima del modello AI senza abbastanza confronti diretti: verificare il prezzo")
+    elif n < cfg.n_preferito:
         dubbi.append(f"campione limitato ({n} confronti)")
+    if (out.get("ai") or {}).get("disaccordo"):
+        dubbi.append("modello AI e confronti diretti non concordano: verificare versione e stato")
     if sel["livello"] == 2:
         dubbi.append("confronti ampliati")
     if not t.get("gearbox") or not t.get("power_kw"):

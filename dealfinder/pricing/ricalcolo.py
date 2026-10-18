@@ -58,6 +58,21 @@ def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: di
     return v
 
 
+def ai_di(conn, ids: list) -> dict:
+    """Stime del modello AI dei prezzi (tabella stima_ai, scritta dal lavoro programmato) per questi annunci."""
+    if not ids or os.environ.get("POLICY_AI", "1") != "1":
+        return {}
+    try:
+        return {r["listing_id"]: {"prezzo": r["prezzo"], "errore": r["errore"], "n": r["n_gruppo"], "livello": r["livello"]}
+                for r in conn.execute("SELECT listing_id, prezzo, errore, n_gruppo, livello FROM stima_ai "
+                                      "WHERE listing_id = ANY(%s) AND computed_at > now() - interval '2 days'",
+                                      (list(ids),)).fetchall()}
+    except Exception as e:                          # tabella non ancora creata o altro: si valuta senza AI
+        conn.rollback()
+        log.warning("stima AI non letta: %s", str(e)[:150])
+        return {}
+
+
 def _j(v):
     return json.loads(v) if isinstance(v, str) else v
 
@@ -103,8 +118,11 @@ def esegui(conn, limite: int | None = None) -> dict:
     ids = list(info)[:limite] if limite else list(info)
     targets = conn.execute(f"SELECT {TARGET_COLS} FROM listings l WHERE l.id = ANY(%s)", (ids,)).fetchall()
     targets.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+    aimap = ai_di(conn, [r["id"] for r in targets])
+    log.warning("POLICY_AI stime AI disponibili per %d auto su %d", len(aimap), len(targets))
 
     cat, trans, motivi, ns = Counter(), Counter(), Counter(), Counter()
+    aic = Counter()
     fasce = {i: Counter() for i in range(len(scovo.COPERTURA_FASCE))}
     sospette = [0]
     campioni, gruppo, mercato, gruppi = [], None, [], 0
@@ -122,6 +140,7 @@ def esegui(conn, limite: int | None = None) -> dict:
         t = dict(r, **{k: v for k, v in info[r["id"]].items() if k.startswith("parts_")})
         t["vehicle_identity"] = _j(t.get("vehicle_identity"))
         t["rischio_strutturale"] = _rischio(r)
+        t["ai"] = aimap.get(r["id"])
         if info[r["id"]].get("audit") and info[r["id"]].get("mercato_audit"):
             t["tetto_rivendita"] = info[r["id"]]["mercato_audit"]
         soglia = scovo.soglia(int(r["price_eur"] or 0))
@@ -141,6 +160,12 @@ def esegui(conn, limite: int | None = None) -> dict:
             (r["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
              json.dumps(v, default=str), json.dumps(pr) if pr else None))
         cat[(v["sezione"], v["categoria"])] += 1
+        if v.get("ai"):
+            aic["con_ai"] += 1
+            aic["solo_ai" if v.get("solo_ai") else ("ai_concorda" if v["ai"].get("concorda") else
+                ("ai_disaccordo" if v["ai"].get("disaccordo") else "ai_media"))] += 1
+            if v.get("solo_ai"):
+                aic[f"solo_ai:{v['categoria']}"] += 1
         if (v["categoria"] in scovo.CATEGORIE_SITO and v.get("M") and r["price_eur"]
                 and v["M"] > 1.5 * r["price_eur"] and sospette[0] < int(os.environ.get("POLICY_LOG_SOSPETTE", "12"))):
             sospette[0] += 1         # controllo a vista: mercato molto sopra il prezzo (solo dati dell'auto, niente venditori)
@@ -176,6 +201,7 @@ def esegui(conn, limite: int | None = None) -> dict:
              "confronti": dict(ns),
              "fasce_affari": {f"<{lim}": dict(fasce[i]) for i, lim in enumerate(scovo.COPERTURA_FASCE)}, "motivi_principali": dict(motivi.most_common(12))}
     log.warning("POLICY_RIEPILOGO %s", json.dumps(stats, ensure_ascii=False))
+    log.warning("POLICY_AI %s", json.dumps(dict(aic)))
     for c in campioni:
         log.warning("POLICY_PRIMA_DOPO %s", json.dumps(c, ensure_ascii=False, default=str))
     return stats
@@ -302,6 +328,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     rows = conn.execute(UTIL_SQL.format(cols=TARGET_COLS), {"lo": lo, "hi": hi, "anno": scovo.ANNO_MINIMO,
                                                              "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+    aimap = ai_di(conn, [r["id"] for r in rows])
     import gc
     pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
     st, vals, gruppo, mercato = Counter(), [], None, []
@@ -336,7 +363,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                        for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r))
+                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]))
         try:
             v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache_nord)
         except Exception as e:

@@ -655,6 +655,21 @@ def run(mode: str) -> Counter:
     return stats
 
 
+def _ai_prezzi():
+    """Dopo la raccolta (ogni 3 ore e ogni notte): il modello AI dei prezzi si riaddestra su tutti gli annunci e
+    riscrive le stime (tabella stima_ai). Gira qui, nel lavoro programmato, per non pesare sulla memoria del sito."""
+    if os.environ.get("AI_PREZZI", "1") != "1":
+        return
+    try:
+        # il processo della raccolta viene SOSTITUITO da quello dell'AI: la memoria usata dalla raccolta si libera
+        # tutta (contenitore da 512 MB). Dopo questa riga non si torna più qui.
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pricing.ai_prezzi"])
+    except Exception as e:
+        log.warning("AI_PREZZI non avviato: %s", str(e)[:300])
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     mode = sys.argv[1] if len(sys.argv) > 1 else "opportunita"
@@ -1121,6 +1136,7 @@ if __name__ == "__main__":
     if os.environ.get("CICLO_COMPLETO") == "1" and mode == "opportunita":
         from .ciclo import run as ciclo_run
         ciclo_run()
+        _ai_prezzi()
         sys.exit(0)
     run(mode)
     if mode == "mercato":
@@ -1132,3 +1148,5 @@ if __name__ == "__main__":
     if mode in ("opportunita", "facebook") and analisi:
         from .process import run as process_run
         process_run("tutto")
+    if mode in ("opportunita", "mercato"):
+        _ai_prezzi()                       # ultimo passo: sostituisce il processo (memoria pulita)

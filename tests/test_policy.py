@@ -340,3 +340,37 @@ def test_utilitaria_economica_molto_sotto_mercato():
     caro = [p * 3 for p in prezzi]
     v = valuta(car(1, 6300), market(caro), soglia=3200, cfg=CFG, now=NOW)         # sopra 3.000 €: regola normale
     assert v["categoria"] == "dati_insufficienti"
+
+
+# ---------------------------------------------------------------- pv15: stima del modello AI dei prezzi
+
+def test_ai_senza_confronti_valuta_ma_resta_candidato():
+    t = dict(TARGET, ai={"prezzo": 10000, "errore": .10, "n": 30})
+    v = valuta(t, [], 1500, CFG, NOW)
+    assert v["metodo"] == "ai" and v["M"] == 10000 and v.get("solo_ai")
+    assert v["categoria"] == "candidato"                      # mai "opportunità" piena con la sola AI
+    v0 = valuta(TARGET, [], 1500, CFG, NOW)
+    assert v0["categoria"] == "dati_insufficienti"            # senza AI: come prima
+
+
+def test_ai_poco_precisa_non_usata():
+    for ai in ({"prezzo": 10000, "errore": .25, "n": 30}, {"prezzo": 10000, "errore": .10, "n": 3}):
+        v = valuta(dict(TARGET, ai=ai), [], 1500, CFG, NOW)
+        assert v["categoria"] == "dati_insufficienti" and "ai" not in v
+
+
+def test_ai_con_confronti_media_e_accordo():
+    m = market(BASE)
+    v0 = valuta(TARGET, m, 1500, CFG, NOW)
+    v = valuta(dict(TARGET, ai={"prezzo": v0["M"], "errore": .08, "n": 40}), m, 1500, CFG, NOW)
+    assert v["ai"]["concorda"] and v["M"] == v0["M"]
+    assert v["riduzione"] <= v0["riduzione"]                  # stime concordi: prudenza minore o uguale
+    alta = valuta(dict(TARGET, ai={"prezzo": int(v0["M"] * 1.5), "errore": .08, "n": 40}), m, 1500, CFG, NOW)
+    assert alta["ai"]["disaccordo"] and alta["categoria"] in ("candidato", "dati_insufficienti")
+    assert alta["M"] < v0["M"] * 1.5                           # l'AI pesa, non sostituisce i confronti
+
+
+def test_ai_non_salva_le_truffe():
+    t = dict(TARGET, price_eur=3000, ai={"prezzo": 10000, "errore": .10, "n": 30})
+    v = valuta(t, [], 1500, CFG, NOW)
+    assert v["categoria"] == "dati_insufficienti"             # prezzo sotto il 55% del mercato: resta fuori
