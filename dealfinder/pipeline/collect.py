@@ -197,6 +197,16 @@ def run(mode: str) -> Counter:
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
         sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("AUTOSCOUT_MAX_PREZZO", "40000"))})]
+    elif mode == "mercato_nord":
+        # 18/10: SOLO prezzi di mercato per il modello AI e per i confronti (mai auto da proporre): AutoScout24,
+        # privati e concessionari, entro NORD_RAGGIO km da Milano, solo le province del Nord FUORI dalle nostre zone.
+        from ..collectors.autoscout import AutoScoutCollector
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("NORD_RAGGIO", "350")
+        os.environ["PASSI_JOB"] = "collect:mercato_nord:" + time.strftime("%Y-%W")   # si riparte ogni settimana
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
+        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("NORD_MAX_PREZZO", "40000"))})]
     elif mode == "lombardia":
         # Raccolta pesante di tutta la Lombardia: Subito in fasce strette (tutte le province) e AutoScout24 entro
         # LOMBARDIA_RAGGIO km da Milano (privati da proporre, concessionari come prezzi). Si ferma a LOMBARDIA_OBIETTIVO.
@@ -555,7 +565,12 @@ def run(mode: str) -> Counter:
                         if pv and not listing.province:
                             listing.province = pv
                         pv = listing.province or pv
-                        if mode not in ("incidentate", "modena_inc") and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
+                        if mode == "mercato_nord":
+                            from ..pricing.ricalcolo import NORD
+                            if not pv or pv not in NORD or pv in ZONA:
+                                stats["mercato_nord:fuori"] += 1
+                                continue
+                        elif mode not in ("incidentate", "modena_inc") and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
                             stats[f"{listing.source}:fuori_zona"] += 1
                             continue
                         if listing.province and not listing.region:
@@ -572,6 +587,8 @@ def run(mode: str) -> Counter:
                         stats[f"{collector.source}:scartato_dati"] += 1
                         log.warning("annuncio %s non salvato: %s", listing.url, str(e)[:120])
                         continue
+                    if mode == "mercato_nord":           # solo prezzo di riferimento: mai proposta
+                        conn.execute("UPDATE listings SET stage='mercato', stage_reason='mercato_nord' WHERE id=%s", (lid,))
                     if model is not None and event in ("nuovo", "prezzo", "riapparso"):
                         ps = prescreen(model, listing)
                         conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "
@@ -1143,6 +1160,16 @@ if __name__ == "__main__":
         # dopo la raccolta notturna: riaddestra il modello se ha più di 7 giorni
         from ..pricing.train import run as train_run
         train_run()
+        # una volta a settimana: prezzi di mercato da tutto il Nord (AutoScout24) per il modello AI e i confronti
+        from .ciclo import _due as _due_job
+        if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6):
+            from ..db import connect as _cn
+            st_n = run("mercato_nord")
+            with _cn() as _c:
+                _c.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
+                           ("collect:mercato_nord", json.dumps(dict(st_n), default=str)))
+                _c.commit()
+            log.warning("MERCATO_NORD %s", dict(st_n))
     # L'analisi parte se non è esclusa dal comando, oppure se ANALISI_ATTIVA=1 (impostabile da Render)
     analisi = "--senza-analisi" not in sys.argv or os.environ.get("ANALISI_ATTIVA") == "1"
     if mode in ("opportunita", "facebook") and analisi:
