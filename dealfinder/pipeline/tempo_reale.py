@@ -303,7 +303,7 @@ def _ora_it(dt: datetime) -> str:
         return (dt + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
 
-def _subito_nuovi(dal: str) -> list:
+def _subito_nuovi(dal: str, pagine: int | None = None) -> list:
     from ..collectors.subito import REGION_CODES, SubitoCollector
     col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
     col.min_delay_s, col.max_delay_s = float(os.environ.get("TR_SUBITO_PAUSA_MIN", "1.2")), float(os.environ.get("TR_SUBITO_PAUSA_MAX", "2.5"))
@@ -316,7 +316,7 @@ def _subito_nuovi(dal: str) -> list:
                     log.warning("TR subito: codice regione non trovato per %s", reg)
                     continue
                 _codici_regione[reg] = REGION_CODES[reg] = code
-            for l in col.search_recenti(reg, provs, dal, max_pages=int(os.environ.get("TR_SUBITO_PAGINE", "6"))):
+            for l in col.search_recenti(reg, provs, dal, max_pages=pagine or int(os.environ.get("TR_SUBITO_PAGINE", "40"))):
                 out.append(l)
         except Exception as e:
             log.warning("TR subito %s: %s", reg, str(e)[:150])
@@ -356,7 +356,12 @@ def _autoscout_nuovi(conn) -> list:
         if len(noti) >= len(ids):          # pagina tutta già vista: i successivi sono più vecchi
             break
         time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
-    # pagina dell'annuncio: dati completi e numero di telefono
+    return _as_completa(client, out)
+
+
+def _as_completa(client, out: list) -> list:
+    """Pagina dell'annuncio: dati completi e numero di telefono."""
+    from ..collectors.autoscout import parse_item
     for l in out:
         st, det = _as_dettaglio(client, l.url)
         if st == "attivo" and det:
@@ -368,6 +373,58 @@ def _autoscout_nuovi(conn) -> list:
             l.raw = {"_telefono": telefono_autoscout(det)}
         time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     return out
+
+
+# fasce di prezzo per la lettura completa: AutoScout mostra al massimo 20 pagine (400 annunci) per ricerca
+FASCE_AS = [(300, 2000), (2000, 3500), (3500, 5000), (5000, 7000), (7000, 9500), (9500, 13000),
+            (13000, 18000), (18000, 26000), (26000, 150000)]
+
+
+def _autoscout_tutti(conn) -> list:
+    """Lettura COMPLETA: tutti gli annunci di privati delle ultime 24 ore nel raggio, fascia di prezzo per fascia,
+    tutte le pagine (non si ferma alla prima pagina già vista). Si apre il dettaglio solo dei nuovi in zona."""
+    from ..collectors.autoscout import BASE, parse_item
+    from ..collectors.base import next_data
+    from ..zone import MILANO
+    zona = set(MILANO)
+    client = _client_as()
+    visti, out, pagine, fuori = set(), [], 0, 0
+    for lo, hi in FASCE_AS:
+        for page in range(1, 21):
+            url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include&custtype=P&zip=20121"
+                   f"&zipr={os.environ.get('TR_RAGGIO', '150')}&adage=1&pricefrom={lo}&priceto={hi}"
+                   f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
+            try:
+                r = client.get(url)
+            except Exception as e:
+                log.warning("TR completo autoscout: %s", str(e)[:120])
+                break
+            if r.status_code != 200:
+                log.warning("TR completo autoscout HTTP %s (fascia %s-%s pagina %s)", r.status_code, lo, hi, page)
+                break
+            pagine += 1
+            items = [it for it in ((((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}).get("listings") or [])
+                     if isinstance(it, dict)]
+            if not items:
+                break
+            ids = [str(it.get("id")) for it in items]
+            noti = {x["source_id"] for x in conn.execute(
+                "SELECT source_id FROM listings WHERE source='autoscout24' AND source_id = ANY(%s)", (ids,)).fetchall()}
+            for it in items:
+                l = parse_item(it)
+                if not l or l.source_id in noti or l.source_id in visti:
+                    continue
+                visti.add(l.source_id)
+                if l.province and l.province.upper() not in zona:
+                    fuori += 1                 # fuori zona: niente dettaglio
+                    continue
+                l.seller_type = "privato"
+                out.append(l)
+            if len(items) < 20:
+                break
+            time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
+    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona", pagine, len(out), fuori)
+    return _as_completa(client, out)
 
 
 def _salva(conn, listings: list, stats: Counter) -> list[int]:
@@ -497,19 +554,24 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
         conn.commit()
 
 
-def giro_nuovi(conn) -> Counter:
+def giro_nuovi(conn, completo: bool = False) -> Counter:
+    """completo=False: solo il nuovo dall'ultimo giro (ogni 5 minuti).
+    completo=True: rilettura di TUTTI gli annunci delle ultime TR_COMPLETO_ORE ore (ogni ora), cosi' non se ne perde nessuno."""
     stats: Counter = Counter()
     row = conn.execute("SELECT ultimo_at FROM tempo_reale WHERE giro='nuovi'").fetchone()
     inizio = datetime.now(timezone.utc)
     dal_dt = (row["ultimo_at"] if row and row["ultimo_at"] else inizio - timedelta(minutes=int(os.environ.get("TR_PRIMO_GIRO_MIN", "60"))))
     dal_dt -= timedelta(minutes=int(os.environ.get("TR_MARGINE_MIN", "10")))       # sovrapposizione: nessun buco
+    if completo:
+        dal_dt = inizio - timedelta(hours=float(os.environ.get("TR_COMPLETO_ORE", "24")))
+        stats["completo"] = 1
     letti = []
     if os.environ.get("TR_SUBITO", "1") == "1":
-        letti += _subito_nuovi(_ora_it(dal_dt))
+        letti += _subito_nuovi(_ora_it(dal_dt), int(os.environ.get("TR_COMPLETO_SUB_PAGINE", "150")) if completo else None)
         _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
     if os.environ.get("TR_AUTOSCOUT", "1") == "1":
         try:
-            letti += _autoscout_nuovi(conn)
+            letti += _autoscout_tutti(conn) if completo else _autoscout_nuovi(conn)
         except Exception as e:
             log.warning("TR autoscout: %s", str(e)[:200])
     stats["letti"] = len(letti)

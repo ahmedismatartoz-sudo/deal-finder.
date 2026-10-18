@@ -1768,10 +1768,15 @@ def _tempo_reale():
 
     def nuovi():
         time.sleep(int(os.environ.get("TR_RITARDO_S", "90")) + 30)
+        ultimo_completo = 0.0
         while True:
             t0 = time.time()
             try:
-                st = tr.con_lucchetto("nuovi", tr.giro_nuovi)
+                # ogni TR_COMPLETO_MIN minuti (e al primo giro) si rilegge TUTTO il nuovo delle ultime 24 ore
+                completo = t0 - ultimo_completo >= float(os.environ.get("TR_COMPLETO_MIN", "60")) * 60
+                st = tr.con_lucchetto("nuovi", tr.giro_nuovi, completo)
+                if st is not None and completo:
+                    ultimo_completo = t0
                 if st is not None:
                     if st.get("pubblicate"):
                         _telefoni_scelte()
