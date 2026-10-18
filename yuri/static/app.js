@@ -54,7 +54,7 @@
           <p class="ver">${esc(a.versione)}</p>
           <div class="chips">${[anno(a), kmf(a.km), fuelIt(a.carburante), a.cambio, cv(a)].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div>
           <div class="bottom"><span class="price grad">${eur(a.prezzo)}</span><span class="go">→</span></div>
-          <a class="call-now" href="tel:+393334014268" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg><span><small>Chiamaci subito</small>333 401 4268</span></a>
+          <a class="call-now" href="tel:+393278772949" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg><span><small>Chiamaci subito</small>327 877 2949</span></a>
         </div></article>`;
     }).join('');
     grid.querySelectorAll('.car').forEach(el => {
