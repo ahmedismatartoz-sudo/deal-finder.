@@ -1840,6 +1840,28 @@ def _tempo_reale():
     threading.Thread(target=telefoni_subito, daemon=True, name="tr-telefoni").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()
 
+    def ai_decisionale():
+        """AI decisionale (TypeSafe Jev, pricing/jev.py): ogni JEV_MIN minuti sulle auto migliori non ancora decise.
+        Parte solo con la chiave TYPESAFE_API_KEY; non gira mentre c'è il calcolo grande (memoria)."""
+        from ..pricing import jev
+        time.sleep(int(os.environ.get("JEV_RITARDO_S", "240")))
+        while True:
+            try:
+                if jev.attiva() and not _calcolo["in_corso"]:
+                    with connect() as conn:
+                        if conn.execute("SELECT pg_try_advisory_lock(734105) AS ok").fetchone()["ok"]:
+                            try:
+                                jev.giro(conn)
+                                lg.warning("JEV_RIEPILOGO 3 giorni: %s", jev.riepilogo(conn))
+                            finally:
+                                conn.rollback()
+                                conn.execute("SELECT pg_advisory_unlock(734105)")
+                                conn.commit()
+            except Exception as e:
+                lg.warning("JEV non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("JEV_MIN", "60")) * 60)
+    threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
