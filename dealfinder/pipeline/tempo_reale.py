@@ -303,12 +303,14 @@ def _ora_it(dt: datetime) -> str:
         return (dt + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
 
 
-def _subito_nuovi(dal: str, pagine: int | None = None) -> list:
+def _subito_nuovi(dal: str, pagine: int | None = None, solo: str | None = None) -> list:
     from ..collectors.subito import REGION_CODES, SubitoCollector
     col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
     col.min_delay_s, col.max_delay_s = float(os.environ.get("TR_SUBITO_PAUSA_MIN", "1.2")), float(os.environ.get("TR_SUBITO_PAUSA_MAX", "2.5"))
     out = []
     for reg, provs in REGIONI.items():
+        if solo and reg != solo:
+            continue
         try:
             if reg not in REGION_CODES:           # codice regione trovato una volta sola e poi ricordato
                 code = _codici_regione.get(reg) or col._trova_regione(set(provs), 100)
@@ -565,18 +567,39 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
     if completo:
         dal_dt = inizio - timedelta(hours=float(os.environ.get("TR_COMPLETO_ORE", "24")))
         stats["completo"] = 1
-    letti = []
-    if os.environ.get("TR_SUBITO", "1") == "1":
-        letti += _subito_nuovi(_ora_it(dal_dt), int(os.environ.get("TR_COMPLETO_SUB_PAGINE", "150")) if completo else None)
-        _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
-    if os.environ.get("TR_AUTOSCOUT", "1") == "1":
-        try:
-            letti += _autoscout_tutti(conn) if completo else _autoscout_nuovi(conn)
-        except Exception as e:
-            log.warning("TR autoscout: %s", str(e)[:200])
-    stats["letti"] = len(letti)
-    ids = _salva(conn, letti, stats)
-    valuta_e_pubblica(conn, ids, stats)
+    if completo:
+        # a pezzi (una regione alla volta, poi AutoScout): letto, salvato, valutato e buttato, per non riempire la memoria
+        import gc
+        pezzi = [("subito", r) for r in REGIONI] if os.environ.get("TR_SUBITO", "1") == "1" else []
+        if os.environ.get("TR_AUTOSCOUT", "1") == "1":
+            pezzi.append(("autoscout", None))
+        for fonte, reg in pezzi:
+            try:
+                letti = (_subito_nuovi(_ora_it(dal_dt), int(os.environ.get("TR_COMPLETO_SUB_PAGINE", "150")), reg)
+                         if fonte == "subito" else _autoscout_tutti(conn))
+            except Exception as e:
+                log.warning("TR completo %s %s: %s", fonte, reg or "", str(e)[:200])
+                continue
+            stats["letti"] += len(letti)
+            stats[f"letti_{fonte}"] += len(letti)
+            ids = _salva(conn, letti, stats)
+            del letti
+            valuta_e_pubblica(conn, ids, stats)
+            conn.commit()
+            gc.collect()
+    else:
+        letti = []
+        if os.environ.get("TR_SUBITO", "1") == "1":
+            letti += _subito_nuovi(_ora_it(dal_dt))
+            _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
+        if os.environ.get("TR_AUTOSCOUT", "1") == "1":
+            try:
+                letti += _autoscout_nuovi(conn)
+            except Exception as e:
+                log.warning("TR autoscout: %s", str(e)[:200])
+        stats["letti"] = len(letti)
+        ids = _salva(conn, letti, stats)
+        valuta_e_pubblica(conn, ids, stats)
     conn.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES ('nuovi', %s, %s) ON CONFLICT (giro) DO UPDATE "
                  "SET ultimo_at=EXCLUDED.ultimo_at, stats=EXCLUDED.stats", (inizio, json.dumps(dict(stats))))
     conn.commit()

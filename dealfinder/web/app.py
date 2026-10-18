@@ -1773,8 +1773,13 @@ def _tempo_reale():
             t0 = time.time()
             try:
                 # ogni TR_COMPLETO_MIN minuti (e al primo giro) si rilegge TUTTO il nuovo delle ultime 24 ore
-                completo = t0 - ultimo_completo >= float(os.environ.get("TR_COMPLETO_MIN", "60")) * 60
-                st = tr.con_lucchetto("nuovi", tr.giro_nuovi, completo)
+                completo = (t0 - ultimo_completo >= float(os.environ.get("TR_COMPLETO_MIN", "60")) * 60
+                            and not _calcolo["in_corso"] and os.environ.get("TR_COMPLETO", "1") == "1")
+                _calcolo["completo"] = completo
+                try:
+                    st = tr.con_lucchetto("nuovi", tr.giro_nuovi, completo)
+                finally:
+                    _calcolo["completo"] = False
                 if st is not None and completo:
                     ultimo_completo = t0
                 if st is not None:
@@ -1836,6 +1841,9 @@ def _tempo_reale():
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()
 
 
+_calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
+
+
 def _ricalcolo_policy():
     """Ricalcolo con la policy prudente (pricing/ricalcolo.py): subito dopo l'avvio e poi ogni POLICY_ORE ore;
     finito il giro, l'elenco del sito si ricalcola con i nuovi numeri."""
@@ -1844,15 +1852,22 @@ def _ricalcolo_policy():
         while True:
             try:
                 from ..pricing import ricalcolo
+                for _ in range(120):                 # se sta girando la lettura completa, si aspetta che finisca
+                    if not _calcolo["completo"]:
+                        break
+                    time.sleep(15)
+                _calcolo["in_corso"] = True
                 with connect() as conn:
                     ricalcolo.esegui(conn)
                 if os.environ.get("UTIL_SIM", "1") == "1":
                     with connect() as conn:
                         ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
                     _telefoni_scelte()
+                _calcolo["in_corso"] = False
                 _elenco["t"] = 0.0
                 _aggiorna_elenco(attendi=False)
             except Exception as e:
+                _calcolo["in_corso"] = False
                 logging.getLogger("policy").warning("ricalcolo policy non riuscito: %s", str(e)[:300])
             time.sleep(int(float(os.environ.get("POLICY_ORE", "3")) * 3600))
     threading.Thread(target=loop, daemon=True, name="policy").start()
