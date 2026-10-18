@@ -634,6 +634,14 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if n:
         out["M"] = int(round(percentile(prezzi, .5)))
         out["L"] = int(round(percentile(prezzi, .25)))
+    # prezzi a cui VENDONO i commercianti (confronti di concessionari) e quelli dei privati, separati: solo informazione
+    # (18/10, prova "prezzi dei commercianti"), non cambiano ancora la rivendita
+    p_comm = [c["prezzo"] for c in validi if c.get("seller_type") == "commerciante"]
+    p_priv = [c["prezzo"] for c in validi if c.get("seller_type") != "commerciante"]
+    if p_comm:
+        out["M_commercianti"], out["n_commercianti"] = int(round(percentile(p_comm, .5))), len(p_comm)
+    if p_priv:
+        out["M_privati"], out["n_privati"] = int(round(percentile(p_priv, .5))), len(p_priv)
     reg = sel.get("regressione")
     if reg and reg["errore_tipico"] <= cfg.reg_errore_max:
         m_reg = reg["prezzo"]

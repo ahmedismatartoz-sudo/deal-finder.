@@ -333,6 +333,8 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
     st, vals, gruppo, mercato = Counter(), [], None, []
     gsim, gesempi = Counter(), []
+    csim, crapporti, crapporti_m = Counter(), [], []
+    csim_min = int(os.environ.get("SIM_COMMERCIANTI_MIN", "3"))
     for i_r in range(len(rows)):
         r, rows[i_r] = rows[i_r], None                 # memoria: ogni riga si libera dopo l'uso
         if i_r % 2000 == 0:
@@ -372,6 +374,21 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             continue
         st[f"cat:{v['categoria']}"] += 1
         p_ = int(r["price_eur"])
+        # PROVA "prezzi dei commercianti" (18/10): rivendita = prezzo a cui i concessionari vendono la stessa auto,
+        # meno la trattativa; quante auto passerebbero rispetto a oggi (il sito non cambia)
+        if (v.get("n_commercianti") or 0) >= csim_min and tel is not False:
+            mc = v["M_commercianti"]
+            csim["con_prezzo_commercianti"] += 1
+            if v.get("M_privati") and (v.get("n_privati") or 0) >= 3:
+                crapporti.append(mc / v["M_privati"])
+            if v.get("M"):
+                crapporti_m.append(mc / v["M"])
+            ok_now = v["categoria"] in scovo.CATEGORIE_SITO and (v.get("margine") or 0) >= scovo.soglia(p_)
+            for tr in (.05, .10, .15):
+                ok_c = v["categoria"] not in ("dati_insufficienti",) and mc * (1 - tr) - p_ >= scovo.soglia(p_)
+                csim[f"passano_trattativa_{int(tr*100)}%"] += ok_c
+                csim[f"in_piu_trattativa_{int(tr*100)}%"] += ok_c and not ok_now
+            csim["passano_oggi"] += ok_now
         if 1000 <= p_ <= 5000:                         # simulazione "gemella più economica − 1.000 €"
             g = gemella_rivendita(t, gemelle(t, mercato), v.get("M"))
             ok_now = v["categoria"] in scovo.CATEGORIE_SITO and (v.get("margine") or 0) >= scovo.soglia(p_)
@@ -400,6 +417,12 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
         for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
     out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
     log.warning("GEMELLA_SIM %s", json.dumps(dict(gsim)))
+    if crapporti or crapporti_m:
+        import statistics as _stt
+        csim["commercianti_su_privati_mediana_pct"] = round((_stt.median(crapporti) - 1) * 100, 1) if crapporti else None
+        csim["commercianti_su_mercato_usato_oggi_pct"] = round((_stt.median(crapporti_m) - 1) * 100, 1) if crapporti_m else None
+        csim["auto_con_entrambi"] = len(crapporti)
+    log.warning("SIM_COMMERCIANTI %s", json.dumps(dict(csim)))
     for e in gesempi:
         log.warning("GEMELLA_ESEMPIO %s", json.dumps(e, default=str, ensure_ascii=False))
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
