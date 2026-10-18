@@ -138,10 +138,11 @@ def foto_base64(conn, listing_id: int, client) -> dict:
                         (listing_id, N_FOTO)).fetchall() if N_FOTO > 0 else []
     for i, r in enumerate(rows):
         try:
-            g = client.get(r["source_url"], timeout=15, headers={"Authorization": ""})
-            if g.status_code != 200:
+            from ..web.foto import download        # sa trasformare gli "imgid:" di Subito nel link vero
+            dati = download(r["source_url"], client)
+            if not dati:
                 continue
-            im = Image.open(io.BytesIO(g.content)).convert("RGB")
+            im = Image.open(io.BytesIO(dati)).convert("RGB")
             im.thumbnail((1024, 1024))
             if min(im.size) < 280:
                 continue                                   # Jev vuole almeno 280 px per lato
