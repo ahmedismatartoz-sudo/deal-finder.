@@ -227,6 +227,8 @@ JOIN LATERAL (SELECT dati, categoria, margine FROM valutazioni_policy v WHERE v.
               ORDER BY v.computed_at DESC LIMIT 1) vp ON true
 LEFT JOIN decisione_ai d ON d.listing_id = l.id
 WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.computed_at < now() - interval '7 days'
+   OR (d.risposta->'targa_visibile' IS NULL AND d.computed_at < now() - interval '1 hour'
+       AND EXISTS (SELECT 1 FROM listing_photos p WHERE p.listing_id = l.id))      -- rifatte con le foto
 LIMIT 3000"""
 
 
