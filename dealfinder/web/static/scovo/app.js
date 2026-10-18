@@ -51,7 +51,7 @@ const S = {
   raggio: saved.raggio || 0, centro: saved.centro || "milano", modello: saved.modello || "",
   kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
   pos: store.get("pos", null),
-  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "guadagno",   /* 17/10: si entra SEMPRE con l'ordine per margine, dalla più alta */
+  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "guadagno",   /* si entra SEMPRE con l'ordine per guadagno in percentuale sul prezzo, dalla più alta */
   cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
@@ -134,17 +134,21 @@ function filtered(over){
     .filter(c => botMatch(c, s.bot))
     .filter(c => { if (!s.raggio) return true; const d = distKm(c); return d == null || d <= s.raggio; })
     .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova))
-      : s.sort === "km" ? (a.km || 9e9) - (b.km || 9e9) : b.gainMax - a.gainMax));
+      : s.sort === "km" ? (a.km || 9e9) - (b.km || 9e9) : perPct(a, b)));
 }
 /* vetrina in testa solo con l'elenco "normale" (nessun filtro, ordine per guadagno) */
 /* Ordine: prima le 15 migliori "via di mezzo" (tra 1.500 e 12.000 €, guadagno alto rispetto al prezzo),
    poi tutte le altre dalla migliore, le troppo care sempre in fondo */
 const CARE = 15000, TOP_MIN = 1500, TOP_MAX = 12000, PRIME = 15;
 const topScore = c => c.gainMax * Math.min(1.6, 0.6 + c.gainMax / c.prezzo);   // guadagno, premiato se rende tanto sul prezzo
+/* 18/10: "Più guadagno" = guadagno in percentuale sul prezzo (5.000 € su 3.000 € = 167%), dalla più alta;
+   a parità di percentuale vince il guadagno in euro */
+const rendePct = c => c.gainMax / Math.max(c.prezzo || 0, 1);
+const perPct = (a, b) => (rendePct(b) - rendePct(a)) || (b.gainMax - a.gainMax);
 function ordinaLista(s, arr){
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
-  if (s.sort === "guadagno") return arr.sort((a, b) => b.gainMax - a.gainMax).map(c => Object.assign(c, {_grp: "all"}));
+  if (s.sort === "guadagno") return arr.sort(perPct).map(c => Object.assign(c, {_grp: "all"}));
   const care = [], rest = [];
   for (const c of arr) (c.prezzo > CARE ? care : rest).push(c);
   let topIds = new Set();
@@ -291,7 +295,7 @@ function viewList(){
   const right = `<div style="display:flex;gap:8px;align-items:center"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button></div>`;
   const incV = S.route === "incidentate", ecoV = S.route === "economiche";
   const ac = activeChips();
-  const SORTS = [["guadagno","Più guadagno"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
+  const SORTS = [["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
   const fbar = `<div class="fbar">
       <button class="fbtn" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}<span>Filtri</span>${nf ? `<span class="count-pill">${nf}</span>` : ""}</button>
       <label class="fsort"><span class="sr">Ordina</span><select id="f-sort" aria-label="Ordina">${SORTS.map(([v,l]) => `<option value="${v}" ${S.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
