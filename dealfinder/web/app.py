@@ -1846,20 +1846,29 @@ def _tempo_reale():
         from ..pricing import jev
         time.sleep(int(os.environ.get("JEV_RITARDO_S", "240")))
         while True:
+            attesa = float(os.environ.get("JEV_MIN", "60")) * 60
             try:
-                if jev.attiva() and not _calcolo["in_corso"]:
+                if jev.attiva() and _calcolo["in_corso"]:
+                    attesa = 300                       # calcolo grande in corso: si riprova tra 5 minuti
+                elif jev.attiva():
                     with connect() as conn:
                         if conn.execute("SELECT pg_try_advisory_lock(734105) AS ok").fetchone()["ok"]:
                             try:
-                                jev.giro(conn)
+                                res = jev.giro(conn)
                                 lg.warning("JEV_RIEPILOGO 3 giorni: %s", jev.riepilogo(conn))
+                                if res.get("pubblicate"):
+                                    _telefoni_scelte()
+                                    _elenco["t"] = 0.0
+                                    _aggiorna_elenco(attendi=False)
+                                if res.get("candidate", 0) >= int(os.environ.get("JEV_PER_GIRO", "300")):
+                                    attesa = 120               # ce ne sono ancora: giro successivo subito
                             finally:
                                 conn.rollback()
                                 conn.execute("SELECT pg_advisory_unlock(734105)")
                                 conn.commit()
             except Exception as e:
                 lg.warning("JEV non riuscito: %s", str(e)[:300])
-            time.sleep(float(os.environ.get("JEV_MIN", "60")) * 60)
+            time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
 
