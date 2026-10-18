@@ -514,7 +514,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
                         f"FROM listings l WHERE l.id = ANY(%s)", (ids,)).fetchall()
     gruppi: dict = {}
     cache_nord: dict = {}
-    from ..pricing.ricalcolo import ai_di, targa_e_telefono, targhe_visibili
+    from ..pricing.ricalcolo import ai_di, carica_taratura, targa_e_telefono, targhe_visibili
+    carica_taratura(conn)
     aimap = ai_di(conn, [r["id"] for r in rows])
     targhe = targhe_visibili(conn)
     for r in rows:

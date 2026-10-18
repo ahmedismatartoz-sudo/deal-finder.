@@ -73,6 +73,53 @@ def ai_di(conn, ids: list) -> dict:
         return {}
 
 
+def carica_taratura(conn) -> None:
+    """Fattori di taratura dell'ultimo ricalcolo (tabella taratura) dentro la policy."""
+    try:
+        rows = conn.execute("SELECT chiave, fattore FROM taratura WHERE at > now() - interval '3 days'").fetchall()
+        P.TARATURA.clear()
+        P.TARATURA.update({r["chiave"]: float(r["fattore"]) for r in rows})
+    except Exception:
+        conn.rollback()
+
+
+def salva_taratura(conn, campioni: list) -> dict:
+    """campioni: (metodo, n, M_grezzo, prezzo, anno, km, carburante, fonte, livello, fuori_zona).
+    Per ogni gruppo il rapporto mediano prezzo vero / valore calcolato SENZA guardare l'annuncio: se è 0,92 il sistema
+    sopravvaluta del 8% e il fattore 0,92 lo corregge dal calcolo successivo. Nei log anche il dettaglio per età, km,
+    carburante, sito e tipo di confronto, per capire DOVE sbaglia."""
+    import statistics as stt
+    from collections import defaultdict
+    g, diag = defaultdict(list), defaultdict(list)
+    anno_ora = time.gmtime().tm_year
+    for metodo, n, m, p, anno, km, fuel, src, liv, fz in campioni:
+        if not m or not p:
+            continue
+        x = p / m
+        if not (.3 <= x <= 2.5):
+            continue
+        g[P.chiave_taratura(metodo, n, m)].append(x)
+        g[f"{metodo}|*|{P.fascia_m(m)}"].append(x)
+        eta = anno_ora - (anno or anno_ora)
+        for k in (f"tutte", f"metodo:{metodo}", f"confronti:{P.nb(n)}", f"fascia:{P.fascia_m(m)}",
+                  f"eta:{'0-5' if eta <= 5 else '6-10' if eta <= 10 else '11-15' if eta <= 15 else '16+'}",
+                  f"km:{'<80k' if (km or 0) < 80000 else '80-150k' if km < 150000 else '150-200k' if km < 200000 else '200k+'}",
+                  f"carb:{fuel}", f"sito:{src}", f"livello:{liv}", f"nord:{bool(fz)}"):
+            diag[k].append(x)
+    minimo = int(os.environ.get("TARATURA_MIN_N", "120"))
+    fattori = {k: round(stt.median(v), 4) for k, v in g.items() if len(v) >= minimo}
+    for k, f in fattori.items():
+        conn.execute("INSERT INTO taratura (chiave, fattore, n, at) VALUES (%s,%s,%s, now()) ON CONFLICT (chiave) DO UPDATE "
+                     "SET fattore=EXCLUDED.fattore, n=EXCLUDED.n, at=now()", (k, f, len(g[k])))
+    conn.commit()
+    rep = {k: {"n": len(v), "prezzo_su_stima_pct": round((stt.median(v) - 1) * 100, 1)}
+           for k, v in sorted(diag.items()) if len(v) >= 30}
+    log.warning("TARATURA_DIAGNOSI %s", json.dumps(rep, ensure_ascii=False))
+    log.warning("TARATURA_FATTORI %s", json.dumps({k: {"fattore": f, "n": len(g[k])} for k, f in sorted(fattori.items())},
+                                                   ensure_ascii=False))
+    return fattori
+
+
 def targhe_visibili(conn) -> set:
     """Annunci in cui il controllo delle foto ha visto la targa (tabella controllo_targa)."""
     try:
@@ -118,6 +165,7 @@ def esegui(conn, limite: int | None = None) -> dict:
     t0 = time.time()
     conn.execute("SET statement_timeout = '60s'")
     cfg = P.PolicyConfig.from_env()
+    carica_taratura(conn)
     # 1) le auto candidate: quelle approfondite (sezioni affari e incidentate) + la sezione economica
     rows = conn.execute(scovo.LIST_SQL + " LIMIT 4000", {"me": 0}).fetchall()
     eco = conn.execute(scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s",
@@ -354,6 +402,8 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
     aimap = ai_di(conn, [r["id"] for r in rows])
     targhe = targhe_visibili(conn)
+    carica_taratura(conn)
+    campioni_tar = []
     import gc
     pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
     st, vals, gruppo, mercato = Counter(), [], None, []
@@ -400,6 +450,9 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             continue
         st[f"cat:{v['categoria']}"] += 1
         p_ = int(r["price_eur"])
+        if v.get("M_grezzo") and (v.get("n") or 0) >= 2 and not set(r.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
+            campioni_tar.append((v.get("metodo") or "mediana", int(v.get("n") or 0), v["M_grezzo"], p_, r.get("year"),
+                                 r.get("mileage_km"), r.get("fuel"), r.get("source"), v.get("livello"), v.get("fuori_zona")))
         # PROVA "prezzi dei commercianti" (18/10): rivendita = prezzo a cui i concessionari vendono la stessa auto,
         # meno la trattativa; quante auto passerebbero rispetto a oggi (il sito non cambia)
         if (v.get("n_commercianti") or 0) >= csim_min and tel is not False:
@@ -443,6 +496,12 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
         for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
     out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
     log.warning("GEMELLA_SIM %s", json.dumps(dict(gsim)))
+    try:
+        salva_taratura(conn, campioni_tar)
+    except Exception as e:
+        conn.rollback()
+        log.warning("taratura non salvata: %s", str(e)[:200])
+    del campioni_tar
     if crapporti or crapporti_m:
         import statistics as _stt
         csim["commercianti_su_privati_mediana_pct"] = round((_stt.median(crapporti) - 1) * 100, 1) if crapporti else None

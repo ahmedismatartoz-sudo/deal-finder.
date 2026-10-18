@@ -160,6 +160,7 @@ class PolicyConfig:
     sospetto_basse_confronti: int = 5
     solo_sane: bool = True            # per ora solo auto sane
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
+    taratura: bool = True             # correzione automatica degli errori sistematici del valore di mercato (19/10)
     # stima AI (pv15)
     ai: bool = True
     ai_errore_max: float = .15        # errore tipico massimo del modello AI per quel modello d'auto
@@ -185,6 +186,31 @@ class PolicyConfig:
             except ValueError:
                 pass
         return c
+
+
+# ---------------------------------------------------------------- taratura automatica (19/10)
+# Fattori per gruppo, calcolati a ogni ricalcolo sugli annunci veri (pricing/ricalcolo.py) e caricati qui prima di valutare.
+TARATURA: dict = {}
+TARATURA_MIN, TARATURA_MAX = .85, 1.08        # correzione massima: −15% / +8% (si scende più volentieri che salire)
+
+
+def fascia_m(m: float) -> str:
+    return next(f for lim, f in ((3000, "<3k"), (6000, "3-6k"), (10000, "6-10k"), (20000, "10-20k"), (10**12, ">20k")) if m < lim)
+
+
+def nb(n: int) -> str:
+    return "<5" if n < 5 else "5-9" if n < 10 else "≥10"
+
+
+def chiave_taratura(metodo: str, n: int, m: float) -> str:
+    return f"{metodo}|{nb(n)}|{fascia_m(m)}"
+
+
+def fattore_taratura(metodo: str, n: int, m: float) -> float | None:
+    if not TARATURA:
+        return None
+    f = TARATURA.get(chiave_taratura(metodo, n, m)) or TARATURA.get(f"{metodo}|*|{fascia_m(m)}")
+    return None if f is None else max(TARATURA_MIN, min(TARATURA_MAX, f))
 
 
 # ---------------------------------------------------------------- statistica
@@ -683,6 +709,16 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             n = max(n, cfg.n_minimo)
             out["ipotesi"].append(f"pochi confronti diretti: mercato stimato dal modello AI dei prezzi ({int(ai['prezzo'])} €, "
                                   f"errore tipico ±{ai['errore']*100:.0f}% misurato su {int(ai.get('n') or 0)} annunci di questo modello)")
+    if out.get("M"):
+        out["M_grezzo"] = out["M"]                 # valore prima della taratura (serve a misurare l'errore)
+        f = fattore_taratura(out.get("metodo") or "mediana", n, out["M"]) if cfg.taratura else None
+        if f and abs(f - 1) >= .01:
+            out["M"] = int(round(out["M"] * f))
+            if out.get("L"):
+                out["L"] = min(out["L"], out["M"])
+            out["taratura"] = round(f, 3)
+            out["ipotesi"].append(f"valore di mercato tarato {'−' if f < 1 else '+'}{abs(f - 1) * 100:.0f}%: in questo gruppo "
+                                  "di auto il calcolo sbagliava in modo sistematico rispetto ai prezzi veri degli annunci")
     if n < cfg.n_minimo or not out.get("M"):
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")

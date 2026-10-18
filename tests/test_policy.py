@@ -382,3 +382,18 @@ def test_prezzo_molto_basso_ammesso_con_targa_e_telefono():
     assert valuta(t, m, 1500, CFG, NOW)["categoria"] == "dati_insufficienti"      # senza targa+numero: fuori
     v = valuta(dict(t, targa_e_telefono=True), m, 1500, CFG, NOW)
     assert v["categoria"] == "candidato" and v.get("prezzo_molto_basso_ammesso")
+
+
+def test_taratura_corregge_il_valore_di_mercato():
+    from dealfinder.pricing import policy_v2 as P
+    m = market(BASE)
+    v0 = valuta(TARGET, m, 1500, CFG, NOW)
+    P.TARATURA.clear()
+    P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 0.90
+    try:
+        v = valuta(TARGET, m, 1500, CFG, NOW)
+        assert v["M_grezzo"] == v0["M"] and v["M"] == round(v0["M"] * .9) and v["taratura"] == .9
+        P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 0.5      # mai oltre −15%
+        assert valuta(TARGET, m, 1500, CFG, NOW)["M"] == round(v0["M"] * .85)
+    finally:
+        P.TARATURA.clear()
