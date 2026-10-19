@@ -377,23 +377,36 @@ def compra_dintorni() -> int:
         visti_t.update(ts)
         return True
 
-    with connect() as conn:
-        rows = conn.execute("""SELECT raw->'seller' AS s, city, province FROM listings
-                               WHERE source='autoscout24' AND status='attivo' AND province = ANY(%s)
-                                 AND raw ? 'seller'""", (PROV_DINTORNI,)).fetchall()
+    # autosaloni dalle ricerche AutoScout24 (concessionari entro LEAD_RAGGIO km da Milano): il DB non tiene i dati del venditore
+    import os
+    os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LEAD_RAGGIO", "70")
+    os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
+    os.environ.pop("AUTOSCOUT_KM_MAX", None)
+    os.environ.pop("PASSI_JOB", None)
+    ricerca = AutoScoutCollector()
+    ricerca.min_delay_s, ricerca.max_delay_s = 0.6, 1.4
+    massimo = int(os.environ.get("LEAD_MAX_AUTOSALONI", "3500"))
     dealers: dict = {}
-    for r in rows:
-        s = r["s"] if isinstance(r["s"], dict) else {}
-        if str(s.get("type") or "").lower() not in ("dealer", "d") and not s.get("isDealer"):
+    n_ann = 0
+    for l in ricerca.search({"massiva": True, "min_price": 300, "max_price": 80000, "step": 2500,
+                             "venditori": [("D", "commerciante")]}):
+        n_ann += 1
+        s = (l.raw or {}).get("seller") or {}
+        if not isinstance(s, dict) or (l.province and l.province.upper() not in PROV_DINTORNI):
             continue
-        url = ((s.get("links") or {}).get("infoPage") or "") if isinstance(s.get("links"), dict) else ""
+        links = s.get("links") if isinstance(s.get("links"), dict) else {}
+        url = (links.get("infoPage") or "").split("?")[0]
         nome = s.get("companyName")
         if not url or not nome:
             continue
-        d = dealers.setdefault(url.split("?")[0], {"nome": nome, "citta": r["city"], "prov": r["province"], "n": 0,
-                                                    "tel": [p.get("formattedNumber") for p in (s.get("phones") or [])
-                                                            if isinstance(p, dict) and p.get("formattedNumber")]})
+        d = dealers.setdefault(url, {"nome": nome, "citta": l.city, "prov": l.province, "n": 0,
+                                     "tel": [p.get("formattedNumber") for p in (s.get("phones") or [])
+                                             if isinstance(p, dict) and p.get("formattedNumber")]})
         d["n"] += 1
+        if len(dealers) >= massimo:
+            ricerca.stop = True
+            break
+    log.warning("LEADN_RICERCA %d annunci letti", n_ann)
     log.warning("LEADN_AS %d autosaloni in zona da controllare", len(dealers))
     asc = AutoScoutCollector()
     trovati, controllati, esclusi = 0, 0, 0
@@ -437,12 +450,11 @@ def compra_dintorni() -> int:
                     adv = it.get("advertiser") or {}
                     sogg = it.get("subject") or ""
                     testo = f"{sogg}\n{it.get('body') or ''}"
-                    compra = re.search(r"\b(compro|compriamo|acquisto|acquistiamo|ritiro|ritiriamo)\b", sogg, re.I) \
-                        or (tipo == "k" and re.search(r"\b(compro|acquisto|ritiro)\b", testo, re.I)) or COMPRA.search(sogg)
-                    if not compra:
+                    # deve dire nel TITOLO che compra auto (non "cerco Ferrari 458"), e il testo deve essere da commerciante
+                    if not re.search(r"\b(compro|compriamo|acquisto|acquistiamo|ritiro|ritiriamo)\b[^.\n]{0,25}\b(auto|veicol|macchin|vettur|usat)", sogg, re.I):
                         continue
-                    # chi pubblica "compro auto" in modo continuativo lo fa per lavoro: azienda o testo da commerciante
-                    if not (adv.get("company") is True or COMPRA.search(testo) or re.search(r"pagamento|contanti|ritiro a domicilio|passaggio", testo, re.I)):
+                    if not (adv.get("company") is True or COMPRA.search(testo) or
+                            re.search(r"pagamento (immediato|in contanti)|contanti|ritiro a domicilio|passaggio (di proprietà )?(a nostro carico|gratuito|incluso)|qualsiasi (marca|condizione|stato)", testo, re.I)):
                         continue
                     nome = adv.get("shop_name") or adv.get("name") or ""
                     tels = sorted(set(TEL.findall(testo)))[:3]
