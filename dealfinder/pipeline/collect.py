@@ -768,6 +768,16 @@ if __name__ == "__main__":
                 fin = log_job(conn, job)
                 fin(True, {"trovati": lead.compro_auto()})
         sys.exit(0)
+    if mode == "lead_dintorni":
+        # 19/10: commercianti di Milano e dintorni che dichiarano di comprare dai privati (LEADN nei log), una tantum
+        from . import lead
+        from .ciclo import _due
+        job = "lead:dintorni_cron:" + os.environ.get("LEAD_GIRO", "1")
+        if _due(job, 10000):
+            with connect() as conn:
+                fin = log_job(conn, job)
+                fin(True, {"trovati": lead.compra_dintorni()})
+        sys.exit(0)
     if mode == "lead_privati":
         from . import lead
         from .ciclo import _due

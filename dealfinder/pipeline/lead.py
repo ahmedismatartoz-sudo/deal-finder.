@@ -403,6 +403,8 @@ def compra_dintorni() -> int:
                                      "tel": [p.get("formattedNumber") for p in (s.get("phones") or [])
                                              if isinstance(p, dict) and p.get("formattedNumber")]})
         d["n"] += 1
+        if n_ann % 2000 == 0:
+            log.warning("LEADN_RICERCA avanzamento: %d annunci, %d autosaloni in zona", n_ann, len(dealers))
         if len(dealers) >= massimo:
             ricerca.stop = True
             break
@@ -420,6 +422,8 @@ def compra_dintorni() -> int:
         except Exception:
             testo = ""
         controllati += 1
+        if controllati % 100 == 0:
+            log.warning("LEADN_AS avanzamento: %d pagine controllate, %d trovati", controllati, trovati)
         m = COMPRA.search(testo)
         if m and nuovo(d["nome"], d["tel"]):
             q = QUALSIASI.search(testo)
