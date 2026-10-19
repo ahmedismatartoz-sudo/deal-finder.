@@ -332,9 +332,9 @@ def _autoscout_nuovi(conn) -> list:
     client = _client_as()
     noti = set()
     out = []
-    for page in range(1, int(os.environ.get("TR_AS_PAGINE", "8")) + 1):
-        url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include&custtype=P&zip=20121"
-               f"&zipr={os.environ.get('TR_RAGGIO', '150')}&adage=1&pricefrom=300&priceto=150000"
+    for page in range(1, int(os.environ.get("TR_AS_PAGINE", "30")) + 1):
+        url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
+               f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom=300&priceto=150000"
                f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
         try:
             r = client.get(url)
@@ -353,12 +353,23 @@ def _autoscout_nuovi(conn) -> list:
         for it in items:
             l = parse_item(it)
             if l and l.source_id not in noti:
-                l.seller_type = "privato"
+                if _solo_privati():
+                    l.seller_type = "privato"
                 out.append(l)
         if len(noti) >= len(ids):          # pagina tutta già vista: i successivi sono più vecchi
             break
         time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     return _as_completa(client, out)
+
+
+def _solo_privati() -> bool:
+    """19/10, cliente: "raccogliere TUTTI gli annunci pubblicati in Lombardia negli ultimi 5 minuti": ora anche i
+    concessionari (TR_SOLO_PRIVATI=1 torna ai soli privati)."""
+    return os.environ.get("TR_SOLO_PRIVATI", "0") == "1"
+
+
+def _ct() -> str:
+    return "&custtype=P" if _solo_privati() else ""
 
 
 def _as_completa(client, out: list) -> list:
@@ -369,7 +380,7 @@ def _as_completa(client, out: list) -> list:
         if st == "attivo" and det:
             full = parse_item(det)
             if full:
-                full.seller_type = "privato"
+                full.seller_type = "privato" if _solo_privati() else (full.seller_type or l.seller_type)
                 full.photos = full.photos or l.photos
                 l.__dict__.update({k: v for k, v in full.__dict__.items() if v not in (None, "", [])})
             l.raw = {"_telefono": telefono_autoscout(det)}
@@ -393,8 +404,8 @@ def _autoscout_tutti(conn) -> list:
     visti, out, pagine, fuori = set(), [], 0, 0
     for lo, hi in FASCE_AS:
         for page in range(1, 21):
-            url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include&custtype=P&zip=20121"
-                   f"&zipr={os.environ.get('TR_RAGGIO', '150')}&adage=1&pricefrom={lo}&priceto={hi}"
+            url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
+                   f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom={lo}&priceto={hi}"
                    f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
             try:
                 r = client.get(url)
@@ -420,7 +431,8 @@ def _autoscout_tutti(conn) -> list:
                 if l.province and l.province.upper() not in zona:
                     fuori += 1                 # fuori zona: niente dettaglio
                     continue
-                l.seller_type = "privato"
+                if _solo_privati():
+                    l.seller_type = "privato"
                 out.append(l)
             if len(items) < 20:
                 break
@@ -493,7 +505,7 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
             conn.commit()
             continue
         conn.commit()
-        if ev in ("nuovo", "prezzo", "riapparso") and l.seller_type == "privato" \
+        if ev in ("nuovo", "prezzo", "riapparso") and (l.seller_type == "privato" or not _solo_privati()) \
                 and (l.year or 0) >= anno_min and not (l.mileage_km and l.mileage_km > km_max) and (l.price_eur or 0) >= 300:
             da_valutare.append(lid)
     return da_valutare
