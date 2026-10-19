@@ -1113,6 +1113,23 @@ def _calcola_elenco() -> None:
         if sez == "affari" and it["prezzo"] < 2000:
             c[f"affari_sotto_2000:{it.get('area') or 'milano'}"] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(items), time.time() - t0, dict(sorted(c.items())))
+    try:      # 19/10: auto sul sito a metà prezzo (o meno) rispetto al mercato, e quante entrate nelle ultime 14 ore
+        from datetime import datetime, timedelta, timezone
+        dal = datetime.now(timezone.utc) - timedelta(hours=14)
+        sotto = []
+        for it in items:
+            m = (it.get("pv") or {}).get("M") or it.get("mercato")
+            if m and it["prezzo"] <= .5 * m:
+                nv = it.get("nuova")
+                nv = datetime.fromisoformat(nv) if isinstance(nv, str) else nv
+                sotto.append({"id": it["id"], "auto": f"{it.get('nome')} {it.get('anno')} {it.get('km')}km", "prezzo": it["prezzo"],
+                              "M": int(m), "pct": round(it["prezzo"] / m * 100), "n": (it.get("pv") or {}).get("n"),
+                              "cat": (it.get("pv") or {}).get("categoria"), "fonte": it.get("fonte"),
+                              "notte": bool(nv and nv.tzinfo and nv >= dal)})
+        logging.getLogger("scovo").warning("ELENCO_SOTTO50 totale=%d notte=%d %s", len(sotto),
+                                           sum(x["notte"] for x in sotto), json.dumps(sotto[:60], ensure_ascii=False, default=str))
+    except Exception as e:
+        logging.getLogger("scovo").warning("ELENCO_SOTTO50 errore: %s", str(e)[:200])
 
 
 _ultimo_controllo = {"t": 0.0}
