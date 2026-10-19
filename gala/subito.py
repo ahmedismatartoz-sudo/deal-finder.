@@ -248,6 +248,14 @@ def leggi() -> list[dict]:
         if mancanti:
             log.info("GALA_SB id del negozio: %d, non trovati: %s", len(ids),
                      [i for _, i in ids if "sb-" + i not in trovati][:30])
+        prova = next((a["foto"][0] for a in trovati.values() if a.get("foto")), None)
+        if prova and not stato.get("_foto_ok"):
+            try:
+                r = cl.get(prova, headers={"User-Agent": UA, "Referer": "https://www.subito.it/"})
+                stato["_foto_ok"] = r.status_code == 200
+                log.info("GALA_SB prova foto HTTP %s %s %d byte", r.status_code, r.headers.get("content-type"), len(r.content))
+            except Exception as e:
+                log.info("GALA_SB prova foto errore %s", str(e)[:120])
     auto = [a for a in trovati.values() if a.get("prezzo")]
     log.info("GALA_SB totale %d auto da Subito (metodo parametro=%s)", len(auto), stato.get("parametro"))
     for a in auto:
