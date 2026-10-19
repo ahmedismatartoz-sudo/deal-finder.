@@ -322,3 +322,142 @@ def compro_auto() -> int:
         time.sleep(0.8)
     log.info("LEADC_FINE subito %d, autoscout MB %d", n, len(lista))
     return n
+
+
+# ---------------------------------------------------------------- 19/10: nuovi lead "compriamo la tua auto"
+PROV_DINTORNI = ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "NO"]
+CI_SUBITO = {"BG": 1, "CO": 3, "CR": 4, "LC": 5, "LO": 6, "MI": 8, "MB": 9, "PV": 10, "VA": 12}
+
+
+def _h(s: str) -> str:
+    import hashlib
+    return hashlib.sha1(s.encode()).hexdigest()[:16]
+
+
+def _nu(u):
+    u = (u or "").strip().lower().split("?")[0].rstrip("/")
+    return re.sub(r"^https?://(www\.)?", "", u)
+
+
+def _nn(n):
+    return re.sub(r"[^a-z0-9]", "", (n or "").lower())
+
+
+def _tel9(t):
+    d = re.sub(r"\D", "", str(t or ""))
+    if d.startswith("39") and len(d) > 10:
+        d = d[2:]
+    return d[-9:] if len(d) >= 8 else None
+
+
+def compra_dintorni() -> int:
+    """Commercianti di Milano e dintorni che DICHIARANO di comprare auto dai privati (pagina AutoScout24 o annunci
+    Subito "compro auto"), esclusi quelli già consegnati (data/lead_esclusi.json, solo hash). Nei log: LEADN {json}.
+    Solo attività: nome dell'attività, comune, telefoni pubblicati dall'attività, link, la frase in cui lo dichiarano."""
+    import time
+    from pathlib import Path
+    from html import unescape
+    from ..collectors.autoscout import AutoScoutCollector
+    from ..collectors.subito import SubitoCollector, API_SEARCH, API_HEADERS
+    es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_esclusi.json").read_text())
+    EU, ET, EN = set(es["url"]), set(es["tel"]), set(es["nome"])
+
+    def gia(nome, url, tels):
+        return (_h(_nn(nome)) in EN if nome else False) or (url and _h(_nu(url)) in EU) or \
+            any(t and _h(t) in ET for t in (_tel9(x) for x in tels))
+
+    visti_n, visti_t = set(), set()
+
+    def nuovo(nome, tels):
+        k = _nn(nome)
+        ts = {t for t in (_tel9(x) for x in tels) if t}
+        if (k and k in visti_n) or (ts & visti_t):
+            return False
+        visti_n.add(k)
+        visti_t.update(ts)
+        return True
+
+    with connect() as conn:
+        rows = conn.execute("""SELECT raw->'seller' AS s, city, province FROM listings
+                               WHERE source='autoscout24' AND status='attivo' AND province = ANY(%s)
+                                 AND raw ? 'seller'""", (PROV_DINTORNI,)).fetchall()
+    dealers: dict = {}
+    for r in rows:
+        s = r["s"] if isinstance(r["s"], dict) else {}
+        if str(s.get("type") or "").lower() not in ("dealer", "d") and not s.get("isDealer"):
+            continue
+        url = ((s.get("links") or {}).get("infoPage") or "") if isinstance(s.get("links"), dict) else ""
+        nome = s.get("companyName")
+        if not url or not nome:
+            continue
+        d = dealers.setdefault(url.split("?")[0], {"nome": nome, "citta": r["city"], "prov": r["province"], "n": 0,
+                                                    "tel": [p.get("formattedNumber") for p in (s.get("phones") or [])
+                                                            if isinstance(p, dict) and p.get("formattedNumber")]})
+        d["n"] += 1
+    log.warning("LEADN_AS %d autosaloni in zona da controllare", len(dealers))
+    asc = AutoScoutCollector()
+    trovati, controllati, esclusi = 0, 0, 0
+    for url, d in sorted(dealers.items(), key=lambda kv: -kv[1]["n"]):
+        if gia(d["nome"], url, d["tel"]):
+            esclusi += 1
+            continue
+        try:
+            r = asc.client.get(url)
+            testo = unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else ""
+        except Exception:
+            testo = ""
+        controllati += 1
+        m = COMPRA.search(testo)
+        if m and nuovo(d["nome"], d["tel"]):
+            q = QUALSIASI.search(testo)
+            a, b = max(0, m.start() - 90), m.end() + 90
+            trovati += 1
+            log.warning("LEADN %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "comune": d["citta"], "prov": d["prov"],
+                                             "tel": sorted(set(d["tel"]))[:3], "url": url, "annunci": d["n"],
+                                             "qualsiasi": bool(q), "frase": " ".join(testo[a:b].split())[:240]},
+                                            ensure_ascii=False))
+        time.sleep(0.9)
+    log.warning("LEADN_AS_FINE controllati %d, già consegnati %d, trovati %d", controllati, esclusi, trovati)
+    sub = SubitoCollector()
+    n_sub = 0
+    for prov, ci in CI_SUBITO.items():
+        for tipo, q in (("k", None), ("k", "compro"), ("s", "compro auto"), ("s", "acquisto auto"), ("s", "ritiro auto"),
+                        ("s", "compriamo auto"), ("s", "acquistiamo auto"), ("s", "compro auto incidentate"),
+                        ("s", "compro auto fuse"), ("s", "compro auto qualsiasi condizione"), ("s", "valutazione gratuita auto")):
+            for page in range(6):
+                params = {"c": 2, "r": 4, "ci": ci, "t": tipo, "lim": 100, "start": page * 100, "sort": "datedesc"}
+                if q:
+                    params["q"] = q
+                try:
+                    r = sub.client.get(API_SEARCH, headers=API_HEADERS, params=params)
+                    ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
+                except Exception:
+                    ads = []
+                for it in ads:
+                    adv = it.get("advertiser") or {}
+                    sogg = it.get("subject") or ""
+                    testo = f"{sogg}\n{it.get('body') or ''}"
+                    compra = re.search(r"\b(compro|compriamo|acquisto|acquistiamo|ritiro|ritiriamo)\b", sogg, re.I) \
+                        or (tipo == "k" and re.search(r"\b(compro|acquisto|ritiro)\b", testo, re.I)) or COMPRA.search(sogg)
+                    if not compra:
+                        continue
+                    # chi pubblica "compro auto" in modo continuativo lo fa per lavoro: azienda o testo da commerciante
+                    if not (adv.get("company") is True or COMPRA.search(testo) or re.search(r"pagamento|contanti|ritiro a domicilio|passaggio", testo, re.I)):
+                        continue
+                    nome = adv.get("shop_name") or adv.get("name") or ""
+                    tels = sorted(set(TEL.findall(testo)))[:3]
+                    link = (it.get("urls") or {}).get("default")
+                    if gia(nome, link, tels) or not nuovo(nome or link, tels):
+                        continue
+                    geo = it.get("geo") or {}
+                    town = geo.get("town") if isinstance(geo.get("town"), dict) else {}
+                    n_sub += 1
+                    log.warning("LEADN %s", json.dumps({"fonte": "subito", "nome": nome, "azienda": adv.get("company") is True,
+                                                     "comune": town.get("value"), "prov": prov, "tel": tels, "url": link,
+                                                     "qualsiasi": bool(QUALSIASI.search(testo)), "frase": sogg[:200]},
+                                                    ensure_ascii=False))
+                time.sleep(1.0)
+                if len(ads) < 100:
+                    break
+    log.warning("LEADN_FINE autoscout %d, subito %d", trovati, n_sub)
+    return trovati + n_sub

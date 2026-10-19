@@ -1894,6 +1894,25 @@ def _tempo_reale():
             time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
+    def lead_dintorni():
+        """19/10: lista lead una tantum (LEAD_GIRO_WEB=n): commercianti di Milano e dintorni che comprano dai privati."""
+        giro = os.environ.get("LEAD_GIRO_WEB")
+        if not giro:
+            return
+        time.sleep(180)
+        from ..pipeline import lead
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        job = f"lead:dintorni:{giro}"
+        try:
+            if _due(job, 10000):
+                with connect() as conn:
+                    fin = log_job(conn, job)
+                    fin(True, {"trovati": lead.compra_dintorni()})
+        except Exception as e:
+            lg.warning("LEADN non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_dintorni, daemon=True, name="lead").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
