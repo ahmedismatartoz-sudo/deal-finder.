@@ -350,6 +350,18 @@ def _tel9(t):
     return d[-9:] if len(d) >= 8 else None
 
 
+def _cellulari(tels) -> list:
+    """Solo numeri di cellulare italiani (3xx), mai fissi (19/10, cliente)."""
+    out = []
+    for t in tels or []:
+        d = re.sub(r"\D", "", str(t))
+        if d.startswith("39") and len(d) > 10:
+            d = d[2:]
+        if d.startswith("3") and 9 <= len(d) <= 10 and d not in out:
+            out.append(d)
+    return out
+
+
 def compra_dintorni() -> int:
     """Commercianti di Milano e dintorni che DICHIARANO di comprare auto dai privati (pagina AutoScout24 o annunci
     Subito "compro auto"), esclusi quelli già consegnati (data/lead_esclusi.json, solo hash). Nei log: LEADN {json}.
@@ -425,14 +437,17 @@ def compra_dintorni() -> int:
         if controllati % 100 == 0:
             log.warning("LEADN_AS avanzamento: %d pagine controllate, %d trovati", controllati, trovati)
         m = COMPRA.search(testo)
-        if m and nuovo(d["nome"], d["tel"]):
+        cell = _cellulari(d["tel"])
+        if cell and nuovo(d["nome"], d["tel"]):
             q = QUALSIASI.search(testo)
-            a, b = max(0, m.start() - 90), m.end() + 90
+            frase = ""
+            if m:
+                a, b = max(0, m.start() - 90), m.end() + 90
+                frase = " ".join(testo[a:b].split())[:240]
             trovati += 1
             log.warning("LEADN %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "comune": d["citta"], "prov": d["prov"],
-                                             "tel": sorted(set(d["tel"]))[:3], "url": url, "annunci": d["n"],
-                                             "qualsiasi": bool(q), "frase": " ".join(testo[a:b].split())[:240]},
-                                            ensure_ascii=False))
+                                             "cell": cell[:2], "url": url, "annunci": d["n"], "dichiara": bool(m),
+                                             "qualsiasi": bool(q), "frase": frase}, ensure_ascii=False))
         time.sleep(0.9)
     log.warning("LEADN_AS_FINE controllati %d, già consegnati %d, trovati %d", controllati, esclusi, trovati)
     sub = SubitoCollector()
@@ -462,6 +477,8 @@ def compra_dintorni() -> int:
                         continue
                     nome = adv.get("shop_name") or adv.get("name") or ""
                     tels = sorted(set(TEL.findall(testo)))[:3]
+                    if not _cellulari(tels):
+                        continue
                     link = (it.get("urls") or {}).get("default")
                     if gia(nome, link, tels) or not nuovo(nome or link, tels):
                         continue
@@ -469,7 +486,7 @@ def compra_dintorni() -> int:
                     town = geo.get("town") if isinstance(geo.get("town"), dict) else {}
                     n_sub += 1
                     log.warning("LEADN %s", json.dumps({"fonte": "subito", "nome": nome, "azienda": adv.get("company") is True,
-                                                     "comune": town.get("value"), "prov": prov, "tel": tels, "url": link,
+                                                     "comune": town.get("value"), "prov": prov, "cell": _cellulari(tels)[:2], "url": link, "dichiara": True,
                                                      "qualsiasi": bool(QUALSIASI.search(testo)), "frase": sogg[:200]},
                                                     ensure_ascii=False))
                 time.sleep(1.0)
