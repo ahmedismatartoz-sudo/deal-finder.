@@ -100,10 +100,25 @@ def _norm(it: dict) -> dict | None:
         return None
     f = _feats(it)
     foto = []
+    if not stato.get("_dbg_img"):
+        stato["_dbg_img"] = True
+        log.info("GALA_SB immagini esempio %s", json.dumps(it.get("images"))[:900])
     for im in it.get("images") or []:
-        b = (im.get("cdnBaseUrl") or im.get("url") or im.get("uri")) if isinstance(im, dict) else im
-        if isinstance(b, str) and b.startswith("http"):
-            foto.append(b.split("?")[0] + "?rule=gallery-desktop-2x-auto")
+        u = None
+        if isinstance(im, str):
+            u = im
+        elif isinstance(im, dict):
+            u = im.get("cdnBaseUrl") or im.get("cdn_base_url") or im.get("url") or im.get("uri")
+            if not (isinstance(u, str) and u.startswith("http")):
+                cand = [d for d in _walk(im) if isinstance(d.get("uri") or d.get("url"), str)]
+                cand = [d.get("uri") or d.get("url") for d in cand]
+                cand = [c for c in cand if c.startswith("http")]
+                big = [c for c in cand if re.search(r"big|large|gallery|2x", c)]
+                u = (big or cand or [None])[-1]
+        if isinstance(u, str) and u.startswith("http"):
+            if "images.sbito.it" in u and "rule=" not in u:
+                u = u.split("?")[0] + "?rule=gallery-desktop-2x-auto"
+            foto.append(u)
     anno = _pick(f, "immatricolazione", "anno")
     km = _pick(f, "km", "chilometr")
     a = {
@@ -135,6 +150,14 @@ def _norm(it: dict) -> dict | None:
         if len(n) >= 2:
             a["km"] = (n[0] + n[1]) // 2
             a["km_fascia"] = True
+    if a["modello"]:
+        a["modello"] = re.sub(r"\s*\(.*?\)|\s*\d+\s*ª\s*s(erie|\.).*$", "", a["modello"]).strip() or a["modello"]
+        a["modello"] = re.sub(r"^RR\b", "Range Rover", a["modello"])
+    if a["marca"] and a["marca"].isupper():
+        a["marca"] = a["marca"].title()
+    t = a["titolo"]
+    if not a["versione"] and a["marca"] and t.lower().startswith(a["marca"].lower()):
+        a["versione"] = t[len(a["marca"]):].strip()
     if not a["marca"]:
         a["marca"] = (a["titolo"].split() or [""])[0]
     return a

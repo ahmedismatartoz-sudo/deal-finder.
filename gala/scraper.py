@@ -278,11 +278,13 @@ def _stessa_auto(sb: dict, au: dict) -> bool:
     m2, o2, y2 = _chiave(au)
     if not m1 or m1 != m2:
         return False
+    k1, k2 = sb.get("km"), au.get("km")
+    if y1 and y1 == y2 and k1 and k2 and abs(k1 - k2) <= 1500:     # stesso anno e stessi km: stessa auto anche se il modello è scritto diverso
+        return True
     if not (o1 and o2 and (o1.startswith(o2) or o2.startswith(o1))):
         return False
     if y1 and y2 and abs(y1 - y2) > 1:
         return False
-    k1, k2 = sb.get("km"), au.get("km")
     if k1 and k2:
         tol = 12000 if sb.get("km_fascia") else 4000
         if abs(k1 - k2) <= tol:
