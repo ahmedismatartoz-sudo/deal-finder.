@@ -242,7 +242,8 @@ def giro(conn, massimo: int | None = None) -> dict:
     if budget <= 0:
         return {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
     righe = conn.execute(CAND_SQL, {"quota": float(os.environ.get("JEV_QUOTA_SOGLIA", "0.7"))}).fetchall()
-    righe.sort(key=lambda r: -((r["margine"] or 0) / max(r["price_eur"] or 1, 1)))   # prima le più promettenti
+    # prima le auto troppo sotto prezzo (19/10: Jev cerca la targa nelle foto per recuperarle), poi le più promettenti
+    righe.sort(key=lambda r: (r["cat"] != "dati_insufficienti", -((r["margine"] or 0) / max(r["price_eur"] or 1, 1))))
     from ..web import scovo
 
     def _tel(r):

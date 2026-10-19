@@ -1862,7 +1862,7 @@ def _tempo_reale():
         Parte solo con la chiave TYPESAFE_API_KEY; non gira mentre c'è il calcolo grande (memoria)."""
         from ..pricing import jev
         time.sleep(int(os.environ.get("JEV_RITARDO_S", "240")))
-        saltati = 0
+        saltati = int(os.environ.get("JEV_SALTATI_INIZIO", "8"))     # al riavvio parte subito (lotto piccolo)
         while True:
             attesa = float(os.environ.get("JEV_MIN", "60")) * 60
             try:
