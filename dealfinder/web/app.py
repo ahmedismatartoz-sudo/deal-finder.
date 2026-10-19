@@ -1916,7 +1916,8 @@ def _tempo_reale():
             try:
                 # 19/10: con la base più grande il calcolo dura ~1 ora e riparte subito, e Jev non girava mai.
                 # Dopo 40 minuti di attesa gira lo stesso, con un lotto piccolo (poca memoria: solo richieste e 4 foto).
-                piccolo = _calcolo["in_corso"] and saltati >= 8
+                # 19/10 sera: con 38.000 auto il calcolo va in OOM (512 MB) se Jev gira insieme: di base Jev aspetta
+                piccolo = _calcolo["in_corso"] and saltati >= 8 and os.environ.get("JEV_DURANTE_CALCOLO", "0") == "1"
                 if jev.attiva() and _calcolo["in_corso"] and not piccolo:
                     attesa = 300                       # calcolo grande in corso: si riprova tra 5 minuti
                     saltati += 1

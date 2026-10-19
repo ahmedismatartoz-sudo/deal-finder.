@@ -304,7 +304,7 @@ UTILITARIE = {"panda", "punto", "grande-punto", "punto-evo", "500", "ypsilon", "
               "juke", "golf", "a-class", "classe-a", "a-klasse", "b-klasse", "classe-b", "auris", "corolla", "megane", "astra",
               "focus", "bravo", "308", "c4", "leon", "ceed", "i30", "civic"}
 
-UTIL_SQL = ("SELECT {cols}, l.title, l.description, l.telefono_ok, l.damage_declared, l.problem_search FROM listings l "
+UTIL_SQL = ("SELECT {cols}, l.title, left(l.description, 1200) AS description, l.telefono_ok, l.damage_declared, l.problem_search FROM listings l "
             "WHERE l.status='attivo' AND l.seller_type='privato' AND l.price_eur BETWEEN %(lo)s AND %(hi)s "
             "AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s AND l.province = ANY(%(prov)s) "
             "AND l.last_seen_at > now() - make_interval(days => " + os.environ.get("TUTTE_GIORNI", "14") + ") AND l.source IN ('subito','autoscout24','facebook') "
