@@ -416,3 +416,10 @@ def test_vendita_veloce_piu_prudente_con_pochi_confronti():
     v = valuta(TARGET, m, 1500, CFG, NOW)
     if v.get("V") and v.get("modello") is None:
         assert v["V"] <= round(v["M"] * .92) + 1
+
+
+def test_prezzo_assurdo_mai_sul_sito_anche_con_targa():
+    m = market(BASE)
+    t = dict(TARGET, price_eur=500, targa_e_telefono=True)
+    v = valuta(t, m, 1500, CFG, NOW)
+    assert v["categoria"] == "dati_insufficienti"

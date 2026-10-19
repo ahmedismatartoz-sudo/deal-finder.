@@ -160,6 +160,7 @@ class PolicyConfig:
     sospetto_basse: float = .45
     sospetto_basse_max: int = 3000
     sospetto_basse_confronti: int = 5
+    prezzo_minimo_reale: float = .20  # sotto il 20% del mercato il prezzo non è vero (rata, anticipo, errore): mai sul sito
     solo_sane: bool = True            # per ora solo auto sane
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
     # 19/10, cliente: "non voglio un prezzo medio di rivendita ma un prezzo realistico a cui si vende velocemente".
@@ -816,6 +817,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         limite = min(limite, cfg.sospetto_basse)
         if int(t["price_eur"]) < out["M"] * cfg.sospetto_sotto_m:
             out["ipotesi"].append("prezzo molto sotto il mercato: normale per un'utilitaria economica, ma controllare bene lo stato")
+    if int(t["price_eur"]) < out["M"] * cfg.prezzo_minimo_reale:
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append(f"prezzo sotto il {int(cfg.prezzo_minimo_reale*100)}% del mercato: non è un prezzo vero "
+                             "(rata, anticipo, errore o truffa)")
+        return out
     if int(t["price_eur"]) < out["M"] * limite and t.get("targa_e_telefono"):
         # 19/10 (cliente): prezzo molto basso ma con TARGA visibile e NUMERO di telefono -> si tiene, da verificare
         out["prezzo_molto_basso_ammesso"] = True
