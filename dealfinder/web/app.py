@@ -1085,7 +1085,9 @@ def _forzate_sito(gia: set, opens: dict) -> list:
             it = scovo.item_eco(r)
             if not it:
                 continue
-            marg = int(e["R"]) - int(r["price_eur"]) - costi
+            prezzo = int(r["price_eur"]) - int(e.get("sconto") or 0)    # prezzo già trattato col venditore
+            it["prezzo"] = prezzo
+            marg = int(e["R"]) - prezzo - costi
             it.update(economica=False, verificare=True, mercato=int(e["M"]), top=True,
                       pv={"categoria": "candidato", "etichetta": "Selezione Porsche · da verificare", "M": int(e["M"]),
                           "R": int(e["R"]), "R_finale": int(e["R"]), "margine": marg, "n": int(e.get("n") or 0),
