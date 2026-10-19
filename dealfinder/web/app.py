@@ -1061,6 +1061,43 @@ _elenco_lock = threading.Lock()
 ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
 
+def _forzate_sito(gia: set, opens: dict) -> list:
+    """19/10 (cliente: "mettimeli tutti sul sito"): auto scelte a mano (data/forzate_sito.json, per link) sempre sul
+    sito finché l'annuncio è attivo, con il mercato e la rivendita veloce calcolati sulle auto uguali."""
+    from pathlib import Path
+    f = Path(__file__).resolve().parents[2] / "data" / "forzate_sito.json"
+    try:
+        voci = {e["url"]: e for e in json.loads(f.read_text())}
+    except Exception:
+        return []
+    if not voci:
+        return []
+    out = []
+    try:
+        with connect() as conn:
+            rows = conn.execute(scovo.ECO_SQL.split("WHERE l.status='attivo'")[0] + " WHERE l.url = ANY(%(urls)s) AND l.status='attivo'",
+                                {"me": 0, "urls": list(voci)}).fetchall()
+        costi = int(os.environ.get("POLICY_PASSAGGIO", "90")) + int(os.environ.get("POLICY_PULIZIA", "10"))
+        for r in rows:
+            if r["id"] in gia:
+                continue
+            e = voci[r["url"]]
+            it = scovo.item_eco(r)
+            if not it:
+                continue
+            marg = int(e["R"]) - int(r["price_eur"]) - costi
+            it.update(economica=False, verificare=True, mercato=int(e["M"]), top=True,
+                      pv={"categoria": "candidato", "etichetta": "Selezione Porsche · da verificare", "M": int(e["M"]),
+                          "R": int(e["R"]), "R_finale": int(e["R"]), "margine": marg, "n": int(e.get("n") or 0),
+                          "totale_costi": costi, "metodo": "confronti"})
+            out.append(it)
+            opens[it["id"]] = int(r["opens"] or 0)
+    except Exception as ex:
+        logging.getLogger("scovo").warning("forzate sito non caricate: %s", str(ex)[:200])
+    logging.getLogger("scovo").warning("FORZATE_SITO %d su %d", len(out), len(voci))
+    return out
+
+
 def _calcola_elenco() -> None:
     t0 = time.time()
     with connect() as conn:
@@ -1103,6 +1140,7 @@ def _calcola_elenco() -> None:
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
+    items += _forzate_sito({it["id"] for it in items}, opens)
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
