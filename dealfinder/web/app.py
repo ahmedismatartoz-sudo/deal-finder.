@@ -1262,6 +1262,14 @@ def affare(request: Request):
         if not row:
             eco = row = conn.execute(scovo.ECO_SQL + " AND l.id=%(id)s", dict(scovo.eco_params(user["id"]), id=lid)).fetchone()
         extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() if row else None
+        if not row:
+            # auto scelte a mano (data/forzate_sito.json): la scheda viene dall'elenco del sito
+            forz = next((it for it in (_elenco.get("items") or []) if it.get("id") == lid
+                         and "Selezione" in str((it.get("pv") or {}).get("etichetta") or "")), None)
+            if forz:
+                extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone()
+                d = scovo.detail(dict(forz), dict(extra or {}, pv_dati=None))
+                return jsonify(d)
     if not row or not scovo.visible(row, settings.max_dealer_opens):
         err(404, "Questa auto non è più disponibile")
     base = scovo.item_eco(row) if eco else scovo.item(row)
