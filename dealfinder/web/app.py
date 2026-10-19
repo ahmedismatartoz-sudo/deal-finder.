@@ -1894,6 +1894,46 @@ def _tempo_reale():
             time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
+    def scan_49k():
+        """19/10 (cliente): auto da 49.000 € in su (Porsche prima) molto sotto il prezzo delle auto uguali. Solo log."""
+        if not os.environ.get("SCAN_49K"):
+            return
+        time.sleep(60)
+        sql = """
+        SELECT t.id, t.source, t.url, t.make, t.model, t.version_raw, t.year, t.mileage_km, t.fuel, t.power_kw,
+               t.price_eur, t.province, t.seller_type, t.damage_class, t.price_flags,
+               c.n, c.med, c.p25
+        FROM listings t
+        JOIN LATERAL (
+          SELECT count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY o.price_eur) AS med,
+                 percentile_cont(.25) WITHIN GROUP (ORDER BY o.price_eur) AS p25
+          FROM listings o
+          WHERE o.status='attivo' AND o.id<>t.id AND o.make=t.make AND o.model=t.model
+            AND o.fuel IS NOT DISTINCT FROM t.fuel AND o.year BETWEEN t.year-1 AND t.year+1
+            AND o.price_eur > 5000
+            AND (t.mileage_km IS NULL OR o.mileage_km BETWEEN t.mileage_km*0.6-5000 AND t.mileage_km*1.4+10000)
+            AND (t.power_kw IS NULL OR o.power_kw IS NULL OR o.power_kw BETWEEN t.power_kw*0.92 AND t.power_kw*1.08)
+        ) c ON true
+        WHERE t.status='attivo' AND t.price_eur >= %(min)s AND t.year IS NOT NULL
+          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+          AND c.n >= 3 AND t.price_eur < c.med * 0.92
+        ORDER BY (t.make ILIKE 'porsche') DESC, t.price_eur / c.med ASC
+        LIMIT 60"""
+        try:
+            with connect() as conn:
+                conn.execute("SET LOCAL statement_timeout = '300s'")
+                tot = conn.execute("SELECT count(*) AS n, count(*) FILTER (WHERE make ILIKE 'porsche') AS p FROM listings "
+                                   "WHERE status='attivo' AND price_eur >= %(min)s", {"min": int(os.environ.get("SCAN_49K_MIN", "49000"))}).fetchone()
+                lg.warning("SCAN49K_BASE %s", json.dumps(dict(tot)))
+                for r in conn.execute(sql, {"min": int(os.environ.get("SCAN_49K_MIN", "49000"))}).fetchall():
+                    d = dict(r)
+                    d["sotto_pct"] = round((1 - float(d["price_eur"]) / float(d["med"])) * 100, 1)
+                    d["med"], d["p25"] = int(d["med"]), int(d["p25"])
+                    lg.warning("SCAN49K %s", json.dumps(d, default=str, ensure_ascii=False))
+        except Exception as e:
+            lg.warning("SCAN49K errore: %s", str(e)[:300])
+    threading.Thread(target=scan_49k, daemon=True, name="scan49k").start()
+
     def lead_dintorni():
         """19/10: lista lead una tantum (LEAD_GIRO_WEB=n): commercianti di Milano e dintorni che comprano dai privati."""
         giro = os.environ.get("LEAD_GIRO_WEB")
