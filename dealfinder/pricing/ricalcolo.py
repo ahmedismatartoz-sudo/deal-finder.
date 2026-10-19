@@ -112,7 +112,14 @@ def salva_taratura(conn, campioni: list) -> dict:
         conn.execute("INSERT INTO taratura (chiave, fattore, n, at) VALUES (%s,%s,%s, now()) ON CONFLICT (chiave) DO UPDATE "
                      "SET fattore=EXCLUDED.fattore, n=EXCLUDED.n, at=now()", (k, f, len(g[k])))
     conn.commit()
-    rep = {k: {"n": len(v), "prezzo_su_stima_pct": round((stt.median(v) - 1) * 100, 1)}
+    def _prec(v):
+        # PRECISIONE (19/10): quanto sbaglia la stima su ogni singola auto, tolto l'errore medio del gruppo
+        m = stt.median(v)
+        e = sorted(abs(x / m - 1) for x in v)
+        return {"errore_tipico_pct": round(e[len(e) // 2] * 100, 1),
+                "entro_10pct": round(sum(1 for x in e if x <= .10) / len(e) * 100),
+                "oltre_25pct": round(sum(1 for x in e if x > .25) / len(e) * 100)}
+    rep = {k: {"n": len(v), "prezzo_su_stima_pct": round((stt.median(v) - 1) * 100, 1), **_prec(v)}
            for k, v in sorted(diag.items()) if len(v) >= 30}
     log.warning("TARATURA_DIAGNOSI %s", json.dumps(rep, ensure_ascii=False))
     log.warning("TARATURA_FATTORI %s", json.dumps({k: {"fattore": f, "n": len(g[k])} for k, f in sorted(fattori.items())},
