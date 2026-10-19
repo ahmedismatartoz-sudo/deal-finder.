@@ -5,6 +5,7 @@
   let AUTO = [];
   const eur = n => n == null ? '' : n.toLocaleString('it-IT') + ' €';
   const kmf = n => n == null ? '' : n.toLocaleString('it-IT') + ' km';
+  const kmA = a => a.km_fascia && a.km_testo ? a.km_testo + ' km' : kmf(a.km);
   const img = (u, size) => u ? '/img?u=' + encodeURIComponent(size ? u.replace(/\/\d+x\d+\.webp$/, '/' + size + '.webp') : u) : '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const anno = a => { const m = String(a.immatricolazione || '').match(/(19|20)\d\d/); return m ? +m[0] : null; };
@@ -55,7 +56,7 @@
         <div class="body">
           <h3>${esc(a.marca)} ${esc(a.modello)}</h3>
           <p class="ver">${esc(a.versione)}</p>
-          <div class="chips">${[anno(a), kmf(a.km), fuelIt(a.carburante), a.cambio, cv(a)].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div>
+          <div class="chips">${[anno(a), kmA(a), fuelIt(a.carburante), a.cambio, cv(a)].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div>
           <div class="bottom"><span class="price grad">${eur(a.prezzo)}</span><span class="go">→</span></div>
         </div></article>`;
     }).join('');
@@ -96,7 +97,7 @@
     $('#mVer').textContent = a.versione || '';
     $('#mTit').textContent = nome;
     $('#mPrice').textContent = eur(a.prezzo);
-    const spec = [['Immatricolazione', a.immatricolazione], ['Chilometri', kmf(a.km)], ['Alimentazione', fuelIt(a.carburante)], ['Cambio', a.cambio],
+    const spec = [['Immatricolazione', a.immatricolazione], ['Chilometri', kmA(a)], ['Alimentazione', fuelIt(a.carburante)], ['Cambio', a.cambio],
       ['Potenza', a.potenza], ['Proprietari', a.proprietari], ['Colore', a.colore], ['Carrozzeria', a.carrozzeria], ['Porte', a.porte], ['Posti', a.posti],
       ['Cilindrata', a.cilindrata], ['Classe emissioni', a.classe], ['Consumo', a.consumo]].filter(x => x[1]);
     $('#mSpecs').innerHTML = spec.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('');
@@ -104,6 +105,7 @@
     $('#mEq').innerHTML = (a.dotazioni || []).slice(0, 40).map(x => `<span>${esc(x)}</span>`).join('');
     $('#mWa').href = `https://wa.me/${TEL.replace('+', '')}?text=` + encodeURIComponent(`Buongiorno, sono interessato alla ${nome} a ${eur(a.prezzo)} vista sul vostro sito. È ancora disponibile?`);
     $('#mSrc').href = a.url; $('#mSrc').hidden = !a.url;
+    $('#mSrc').textContent = a.fonte === 'subito' ? "Vedi l'annuncio su Subito ↗" : "Vedi l'annuncio su AutoScout24 ↗";
     modal.hidden = false; document.body.style.overflow = 'hidden';
     history.replaceState(null, '', '?auto=' + encodeURIComponent(a.id) + '#auto');
   }

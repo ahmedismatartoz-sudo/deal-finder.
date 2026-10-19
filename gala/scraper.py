@@ -265,6 +265,57 @@ def _pagine(cl: httpx.Client):
     return trovati
 
 
+def _chiave(a: dict):
+    marca = re.sub(r"[^a-z]", "", str(a.get("marca") or "").lower())
+    mod = re.sub(r"[^a-z0-9]", "", (str(a.get("modello") or "").lower().split() or [""])[0])
+    m = re.search(r"(19|20)\d\d", str(a.get("immatricolazione") or ""))
+    return marca, mod, int(m.group(0)) if m else None
+
+
+def _stessa_auto(sb: dict, au: dict) -> bool:
+    """Stessa auto su Subito e su AutoScout: stessa marca, modello, anno e km vicini (o prezzo quasi uguale)."""
+    m1, o1, y1 = _chiave(sb)
+    m2, o2, y2 = _chiave(au)
+    if not m1 or m1 != m2:
+        return False
+    if not (o1 and o2 and (o1.startswith(o2) or o2.startswith(o1))):
+        return False
+    if y1 and y2 and abs(y1 - y2) > 1:
+        return False
+    k1, k2 = sb.get("km"), au.get("km")
+    if k1 and k2:
+        tol = 12000 if sb.get("km_fascia") else 4000
+        if abs(k1 - k2) <= tol:
+            return True
+    p1, p2 = sb.get("prezzo"), au.get("prezzo")
+    return bool(p1 and p2 and abs(p1 - p2) <= max(500, 0.05 * p2))
+
+
+def _con_subito(auto: list[dict], vecchie_sb: list[dict]) -> list[dict]:
+    """Aggiunge le auto di Subito che non sono già sul sito (quelle doppie restano con la scheda AutoScout)."""
+    try:
+        import subito
+        sb = subito.leggi()
+    except Exception:
+        log.exception("GALA_SB lettura Subito fallita")
+        sb = []
+    if not sb:
+        sb = vecchie_sb                                   # Subito non ha risposto: si tengono quelle di prima
+    nuove, doppie = [], []
+    for a in sb:
+        gemella = next((x for x in auto if x.get("fonte") != "subito" and _stessa_auto(a, x)), None)
+        if gemella:
+            gemella.setdefault("url_subito", a.get("url"))
+            doppie.append(f"{a.get('marca')} {a.get('modello')}")
+        else:
+            nuove.append(a)
+    log.info("GALA_SB unione: %d da AutoScout, %d da Subito, %d già presenti (%s), %d aggiunte",
+             len(auto), len(sb), len(doppie), ", ".join(doppie), len(nuove))
+    for a in nuove:
+        log.info("GALA_SB aggiunta %s %s %s€", a.get("marca"), a.get("modello"), a.get("prezzo"))
+    return auto + nuove
+
+
 def carica() -> dict:
     try:
         return json.loads(DATA.read_text())
@@ -295,6 +346,7 @@ def aggiorna():
                 auto.append(_dettaglio(cl, a))
                 time.sleep(1.2)
         auto = [a for a in auto if a.get("prezzo")]
+        auto = _con_subito(auto, [a for a in vecchi.values() if a.get("fonte") == "subito"])
         auto.sort(key=lambda a: -(a.get("prezzo") or 0))
         DATA.write_text(json.dumps({"auto": auto, "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%S%z")},
                                    ensure_ascii=False))

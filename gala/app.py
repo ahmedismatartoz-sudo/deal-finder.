@@ -1,4 +1,4 @@
-"""Sito di Carrozzeria Atelier: auto prese in automatico dalla loro pagina AutoScout24."""
+"""Sito di Gala Auto: auto prese in automatico dalle loro pagine AutoScout24 e Subito."""
 from __future__ import annotations
 
 import hashlib
@@ -69,11 +69,12 @@ def api_hero():
 @app.get("/img")
 def img(u: str = Query(...)):
     """Foto delle auto servite dal nostro dominio (con copia locale)."""
-    if not u.startswith("https://prod.pictures.autoscout24.net/"):
+    sb = u.startswith("https://images.sbito.it/")
+    if not (u.startswith("https://prod.pictures.autoscout24.net/") or sb):
         raise HTTPException(400)
     f = CACHE / hashlib.sha1(u.encode()).hexdigest()
     if not f.exists():
-        r = _img.get(u)
+        r = _img.get(u, headers={"Referer": "https://www.subito.it/"} if sb else None)
         for alt in ("720x540", "480x360", "250x188"):           # se una misura non esiste si prova la successiva
             if r.status_code == 200:
                 break
@@ -81,7 +82,9 @@ def img(u: str = Query(...)):
         if r.status_code != 200:
             raise HTTPException(404)
         f.write_bytes(r.content)
-    return Response(f.read_bytes(), media_type="image/webp",
+    b = f.read_bytes()
+    mt = "image/jpeg" if b[:3] == b"\xff\xd8\xff" else "image/png" if b[:4] == b"\x89PNG" else "image/webp"
+    return Response(b, media_type=mt,
                     headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
