@@ -399,3 +399,13 @@ def test_taratura_corregge_il_valore_di_mercato():
         assert valuta(TARGET, m, 1500, CFG, NOW)["M"] == v0["M"]
     finally:
         P.TARATURA.clear()
+
+
+def test_rivendita_vendita_veloce():
+    m = market(BASE)
+    v = valuta(TARGET, m, 1500, CFG, NOW)
+    assert v.get("V") and v["R"] <= v["V"] <= round(v["M"] * .97) and v["V"] >= round(v["M"] * .80)
+    from dealfinder.pricing.policy_v2 import PolicyConfig
+    import dataclasses
+    v0 = valuta(TARGET, m, 1500, dataclasses.replace(CFG, vendita_veloce=False), NOW)
+    assert v["R"] <= v0["R"]

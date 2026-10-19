@@ -46,12 +46,14 @@ import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
-POLICY_VERSION = "pv15-2026-10-18"
+POLICY_VERSION = "pv16-2026-10-19"
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
 #   con i confronti, mercato = media pesata confronti/AI; se AI e confronti concordano entro l'8% la stima è
 #   considerata molto precisa (riduzione 3%); se differiscono di oltre il 30% l'auto resta candidato da verificare.
+# pv16 (19/10, 02:10, cliente: "prezzo realistico a cui si vende velocemente, non medio"): rivendita = al massimo il
+#   30° percentile dei confronti (riportato sul valore di mercato), tra −3% e −20% del mercato.
 # pv14 (17/10, 14:35, cliente: "più utilitarie"): fino a 3.000 € il blocco "prezzo troppo basso" scatta sotto M × 0,45
 #   invece di 0,55, solo con almeno 5 confronti (le stime non cambiano).
 # pv13 (17/10, 09:55, cliente: "gonfia un po' la rivendita, 2–5% secondo il tipo, massima prudenza"): rivendita più alta
@@ -160,6 +162,13 @@ class PolicyConfig:
     sospetto_basse_confronti: int = 5
     solo_sane: bool = True            # per ora solo auto sane
     perdita_storico_danno: float = .08  # perdita di valore per storico incidente (su R), auto danneggiate
+    # 19/10, cliente: "non voglio un prezzo medio di rivendita ma un prezzo realistico a cui si vende velocemente".
+    # Rivendita = prezzo che mette l'auto tra le più economiche del suo gruppo (q_veloce: 30% dei confronti costa
+    # meno, 70% di più), non la mediana dei prezzi chiesti. Mai più del 3% sotto… e mai oltre il 20% sotto il mercato.
+    vendita_veloce: bool = True
+    q_veloce: float = .30
+    veloce_max: float = .97
+    veloce_min: float = .80
     taratura: bool = True             # correzione automatica degli errori sistematici del valore di mercato (19/10)
     # stima AI (pv15)
     ai: bool = True
@@ -745,6 +754,21 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             centrale = out["M"] * (1 - r_new)
             riv.update(R=int(round(centrale)), centrale_ridotto=int(round(centrale)), riduzione=r_new,
                        fascia=riv["fascia"] + f" · ridotta a {int(r_new*100)}%: {perche}")
+    if cfg.vendita_veloce and riv.get("R") is not None:
+        if len(prezzi) >= 2:
+            rapp = percentile(prezzi, cfg.q_veloce) / max(percentile(prezzi, .5), 1)
+            come = f"il {int(cfg.q_veloce*100)}% dei {len(prezzi)} confronti costa meno, il {100-int(cfg.q_veloce*100)}% di più"
+        else:
+            err = (out.get("modello") or {}).get("errore_tipico") or .12
+            rapp = 1 - .78 * err
+            come = f"stimato dall'errore del modello (±{err*100:.0f}%)"
+        rapp = max(cfg.veloce_min, min(cfg.veloce_max, rapp))
+        v = int(round(out["M"] * rapp))
+        out["V"] = v
+        if v < riv["R"]:
+            riv.update(R=v, R_da="vendita veloce",
+                       fascia=riv["fascia"] + f" · prezzo di vendita veloce −{(1-rapp)*100:.0f}%")
+            out["ipotesi"].append(f"rivendita = prezzo per vendere in fretta ({v} €, −{(1-rapp)*100:.0f}% sul mercato): {come}")
     out.update(riv)
     if riv["R"] is None:
         out["categoria"] = "dati_insufficienti"
