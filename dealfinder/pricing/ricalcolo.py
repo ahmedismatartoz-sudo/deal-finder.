@@ -415,6 +415,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
     st, vals, gruppo, mercato = Counter(), [], None, []
     gsim, gesempi = Counter(), []
+    meta = Counter()
     csim, crapporti, crapporti_m = Counter(), [], []
     csim_min = int(os.environ.get("SIM_COMMERCIANTI_MIN", "3"))
     for i_r in range(len(rows)):
@@ -492,6 +493,14 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                                 "prezzo": p_, "gemella": [c["price_eur"], c["year"], c["mileage_km"], c.get("url")],
                                 "n_gemelle": g["n_gemelle"], "riv_gemella": g["rivendita"], "margine_gemella": g["rivendita"] - p_,
                                 "M": v.get("M"), "riv_attuale": v.get("R_finale"), "margine_attuale": v.get("margine")})
+        if v.get("M") and p_ <= .5 * v["M"]:      # 19/10: dove finiscono le auto a metà prezzo o meno
+            meta["totale"] += 1
+            meta["con_numero" if tel else "senza_numero" if tel is False else "numero_sconosciuto"] += 1
+            if v["categoria"] in scovo.CATEGORIE_SITO:
+                meta["passano_" + v["categoria"]] += 1
+            else:
+                mot = (v.get("motivi") or ["?"])[0]
+                meta["fuori: " + re.sub(r"\d[\d.]*", "N", mot)[:70]] += 1
         if v.get("M"):
             # memoria: la valutazione completa (con i confronti) si tiene solo per le auto che possono andare sul sito
             utile = v.get("margine") is not None and v["margine"] >= pavimento
@@ -502,6 +511,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
         next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if x["p"] < lim)
         for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
     out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
+    log.warning("META_PREZZO %s", json.dumps(dict(meta.most_common(25)), ensure_ascii=False))
     log.warning("GEMELLA_SIM %s", json.dumps(dict(gsim)))
     try:
         salva_taratura(conn, campioni_tar)
