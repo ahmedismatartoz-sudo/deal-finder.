@@ -409,3 +409,10 @@ def test_rivendita_vendita_veloce():
     import dataclasses
     v0 = valuta(TARGET, m, 1500, dataclasses.replace(CFG, vendita_veloce=False), NOW)
     assert v["R"] <= v0["R"]
+
+
+def test_vendita_veloce_piu_prudente_con_pochi_confronti():
+    m = market(BASE)[:3]
+    v = valuta(TARGET, m, 1500, CFG, NOW)
+    if v.get("V") and v.get("modello") is None:
+        assert v["V"] <= round(v["M"] * .92) + 1

@@ -232,7 +232,7 @@ WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.computed_at < now() -
 LIMIT 3000"""
 
 
-def giro(conn) -> dict:
+def giro(conn, massimo: int | None = None) -> dict:
     """Un giro dell'AI decisionale sulle auto migliori non ancora decise."""
     if not attiva():
         return {"spenta": "manca TYPESAFE_API_KEY"}
@@ -250,7 +250,7 @@ def giro(conn) -> dict:
         return bool(r.get("telefono_ok")) or bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
     # le auto "troppo sotto prezzo" si guardano solo se hanno il numero (la regola le ammette con targa + numero)
     righe = [r for r in righe if r["cat"] != "dati_insufficienti" or _tel(r)]
-    righe = righe[:min(budget, int(os.environ.get("JEV_PER_GIRO", "300")))]
+    righe = righe[:min(budget, massimo or int(os.environ.get("JEV_PER_GIRO", "300")))]
     st, token = Counter(), 0
     nuove_targhe: list[int] = []
     import httpx

@@ -169,6 +169,7 @@ class PolicyConfig:
     q_veloce: float = .30
     veloce_max: float = .97
     veloce_min: float = .80
+    veloce_max_incerto: float = .92   # pochi confronti (<5) o confronti ampliati: errore tipico misurato 14–16%
     taratura: bool = True             # correzione automatica degli errori sistematici del valore di mercato (19/10)
     # stima AI (pv15)
     ai: bool = True
@@ -762,7 +763,10 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             err = (out.get("modello") or {}).get("errore_tipico") or .12
             rapp = 1 - .78 * err
             come = f"stimato dall'errore del modello (±{err*100:.0f}%)"
-        rapp = max(cfg.veloce_min, min(cfg.veloce_max, rapp))
+        incerto = n < 5 or sel["livello"] == 2
+        rapp = max(cfg.veloce_min, min(cfg.veloce_max_incerto if incerto else cfg.veloce_max, rapp))
+        if incerto:
+            come += "; stima incerta (pochi confronti o confronti ampliati): almeno −8%"
         v = int(round(out["M"] * rapp))
         out["V"] = v
         if v < riv["R"]:

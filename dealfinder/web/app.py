@@ -1845,16 +1845,22 @@ def _tempo_reale():
         Parte solo con la chiave TYPESAFE_API_KEY; non gira mentre c'è il calcolo grande (memoria)."""
         from ..pricing import jev
         time.sleep(int(os.environ.get("JEV_RITARDO_S", "240")))
+        saltati = 0
         while True:
             attesa = float(os.environ.get("JEV_MIN", "60")) * 60
             try:
-                if jev.attiva() and _calcolo["in_corso"]:
+                # 19/10: con la base più grande il calcolo dura ~1 ora e riparte subito, e Jev non girava mai.
+                # Dopo 40 minuti di attesa gira lo stesso, con un lotto piccolo (poca memoria: solo richieste e 4 foto).
+                piccolo = _calcolo["in_corso"] and saltati >= 8
+                if jev.attiva() and _calcolo["in_corso"] and not piccolo:
                     attesa = 300                       # calcolo grande in corso: si riprova tra 5 minuti
+                    saltati += 1
                 elif jev.attiva():
+                    saltati = 0
                     with connect() as conn:
                         if conn.execute("SELECT pg_try_advisory_lock(734105) AS ok").fetchone()["ok"]:
                             try:
-                                res = jev.giro(conn)
+                                res = jev.giro(conn, int(os.environ.get("JEV_LOTTO_PICCOLO", "60")) if piccolo else None)
                                 lg.warning("JEV_RIEPILOGO 3 giorni: %s", jev.riepilogo(conn))
                                 if res.get("pubblicate"):
                                     _telefoni_scelte()
