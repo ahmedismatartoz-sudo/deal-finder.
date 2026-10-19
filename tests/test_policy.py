@@ -395,5 +395,7 @@ def test_taratura_corregge_il_valore_di_mercato():
         assert v["M_grezzo"] == v0["M"] and v["M"] == round(v0["M"] * .9) and v["taratura"] == .9
         P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 0.5      # mai oltre −15%
         assert valuta(TARGET, m, 1500, CFG, NOW)["M"] == round(v0["M"] * .85)
+        P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 1.2      # mai alzare la rivendita
+        assert valuta(TARGET, m, 1500, CFG, NOW)["M"] == v0["M"]
     finally:
         P.TARATURA.clear()

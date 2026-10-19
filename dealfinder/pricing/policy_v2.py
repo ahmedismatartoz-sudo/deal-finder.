@@ -191,7 +191,10 @@ class PolicyConfig:
 # ---------------------------------------------------------------- taratura automatica (19/10)
 # Fattori per gruppo, calcolati a ogni ricalcolo sugli annunci veri (pricing/ricalcolo.py) e caricati qui prima di valutare.
 TARATURA: dict = {}
-TARATURA_MIN, TARATURA_MAX = .85, 1.08        # correzione massima: −15% / +8% (si scende più volentieri che salire)
+# 19/10: la taratura può solo ABBASSARE la rivendita, mai alzarla. I prezzi degli annunci sono prezzi
+# CHIESTI (le auto si vendono sotto): alzare la stima perché gli annunci sono più cari gonfierebbe i margini.
+TARATURA_MIN = float(os.environ.get("TARATURA_MIN", ".85"))
+TARATURA_MAX = float(os.environ.get("TARATURA_MAX", "1.0"))
 
 
 def fascia_m(m: float) -> str:
