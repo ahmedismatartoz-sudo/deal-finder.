@@ -322,7 +322,13 @@ def lead_sportive() -> int:
     def testo_di(cl, u):
         try:
             r = cl.get(u, timeout=15)
-            return unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else "", r.text if r.status_code == 200 else ""
+            if r.status_code != 200:
+                return "", ""
+            t = unescape(re.sub(r"<[^>]+>", " ", r.text))
+            t = re.sub(r"reviewText.{0,900}?(?=author|ratingValue|datePublished|$)", " ", t, flags=re.S)   # niente recensioni dei clienti
+            return t, r.text
+        except Exception:
+            return "", ""
         except Exception:
             return "", ""
 
