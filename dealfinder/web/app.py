@@ -2082,6 +2082,31 @@ def _tempo_reale():
                 lg.warning("LUSSO %s non riuscito: %s", nome, str(e)[:300])
     threading.Thread(target=lusso, daemon=True, name="lusso").start()
 
+    def benzina_mi():
+        """20/10 (cliente), una tantum (BENZ_GIRO=n): auto a benzina 3.000-15.000 € in provincia di Milano (BENZ)."""
+        giro = os.environ.get("BENZ_GIRO")
+        if not giro:
+            return
+        time.sleep(90)
+        from ..pipeline import benzina_mi as B
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        job = f"benzina_mi:{giro}"
+        try:
+            if _due(job, 10000):
+                with connect() as conn:
+                    fin = log_job(conn, job)
+                    fin(True, B.giro())
+                _telefoni_scelte()
+                _elenco["t"] = 0.0
+                _aggiorna_elenco(attendi=True)
+                sito = [it for it in (_elenco.get("items") or []) if (it.get("carb") or "").lower().startswith("benzina")
+                        and "(MI)" in str(it.get("zona") or "") and 3000 <= (it.get("prezzo") or 0) <= 15000]
+                lg.warning("BENZ_SITO %d auto a benzina 3.000-15.000 € in provincia di Milano sul sito", len(sito))
+        except Exception as e:
+            lg.warning("BENZ non riuscito: %s", str(e)[:300])
+    threading.Thread(target=benzina_mi, daemon=True, name="benzina").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
