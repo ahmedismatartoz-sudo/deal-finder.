@@ -37,7 +37,7 @@ function init() {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !MOBILE, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.3 : 1.75));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 0.8;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = !MOBILE;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -145,11 +145,13 @@ function init() {
     p += (target - p) * (REDUCED || FORCE != null ? 1 : 1 - Math.pow(0.02, dt));
     const e = clamp(p);
     if (!envSalone && caricata) {                     // riflessi del salone sull'auto
-      auto.visible = false; cuboCam.update(renderer, scene); auto.visible = true;
+      auto.visible = false; mondo.rifP.visible = mondo.rif.visible = false;
+      cuboCam.update(renderer, scene); auto.visible = true;
       envSalone = cubo.texture;
       for (const k of ['carrozzeria', 'dettagli', 'vetro']) { mat[k].envMap = envSalone; mat[k].needsUpdate = true; }
       mat.carrozzeria.envMapIntensity = 1.3;
     }
+    mondo.rifP.visible = camera.position.z > -2; mondo.rif.visible = camera.position.z < 9;   // un solo specchio alla volta
     P.getPointAt(Math.min(e, 0.9999), pos); L.getPointAt(Math.min(e, 0.9999), look);
     const seduto = smooth(0.66, 0.7, e) * (1 - smooth(0.8, 0.84, e));
     const vivo = REDUCED ? 0 : (1 - seduto * 0.7);
@@ -183,7 +185,7 @@ function costruisci(scene, T) {
     navyOpaco: new THREE.MeshStandardMaterial({ color: 0x16223a, roughness: 0.7 }),
     bianco: new THREE.MeshStandardMaterial({ color: 0xf3f1ec, roughness: 0.6 }),
     travertino: new THREE.MeshStandardMaterial({ color: 0xd9cfbf, roughness: 0.85, map: T.travertino }),
-    pietra: new THREE.MeshStandardMaterial({ color: 0xc9cdd2, roughness: 0.55, map: T.pietra, transparent: true, opacity: 0.82 }),
+    pietra: new THREE.MeshStandardMaterial({ color: 0x8e949c, roughness: 0.5, map: T.pietra, transparent: true, opacity: 0.78 }),
     marmo: new THREE.MeshPhysicalMaterial({ map: T.marmo, roughness: 0.12, clearcoat: 0.8, clearcoatRoughness: 0.08, transparent: true, opacity: 0.8 }),
     marmoPieno: new THREE.MeshPhysicalMaterial({ map: T.marmo, roughness: 0.18, clearcoat: 0.6 }),
     vetro: new THREE.MeshPhysicalMaterial({ color: 0x9fb6cf, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.14, envMapIntensity: 2, side: THREE.DoubleSide, depthWrite: false }),
@@ -220,20 +222,20 @@ function costruisci(scene, T) {
   add(new THREE.PlaneGeometry(600, 40), new THREE.MeshBasicMaterial({ color: 0x0f1726, fog: false }), 0, -6, -200);   // colline lontane
 
   // ---- luci ----
-  scene.add(new THREE.HemisphereLight(0x5f7398, 0x1b1712, 0.55));
+  scene.add(new THREE.HemisphereLight(0x4b5d80, 0x15120e, 0.35));
   const luna = new THREE.DirectionalLight(0x9db4d8, 0.5); luna.position.set(-30, 40, 40); scene.add(luna);
   const caldo = 0xffd9a8;
-  for (const [x, z] of [[0, -8], [0, -20], [-12, -14], [12, -14], [0, -30]]) {
-    const ra = new THREE.RectAreaLight(caldo, 2.6, 8, 2.2); ra.position.set(x, 8.9, z); ra.lookAt(x, 0, z); scene.add(ra);
+  for (const [x, z] of [[0, -9], [0, -24]]) {
+    const ra = new THREE.RectAreaLight(caldo, 4.2, 22, 6); ra.position.set(x, 8.9, z); ra.lookAt(x, 0, z); scene.add(ra);
   }
   const faro = new THREE.SpotLight(0xfff1dc, 260, 30, 0.42, 0.6, 1.4);         // luce sulla Ferrari
   faro.position.set(-2.5, 8.8, -11); faro.target.position.set(0, 0.5, -14);
   faro.castShadow = !MOBILE; faro.shadow.mapSize.set(1024, 1024); faro.shadow.bias = -0.0005; scene.add(faro, faro.target);
   const luceAbitacolo = new THREE.PointLight(0xbcd2ec, 0, 2.2, 1.5); luceAbitacolo.position.set(-0.1, 1.3, -13.8); scene.add(luceAbitacolo);
-  const ingresso = new THREE.PointLight(caldo, 30, 26, 1.6); ingresso.position.set(0, 4.2, 3.5); scene.add(ingresso);
+  const ingresso = new THREE.PointLight(caldo, 14, 18, 1.8); ingresso.position.set(0, 4.2, 3.5); scene.add(ingresso);
 
   // ---- piazzale bagnato che riflette ----
-  const rifP = new Reflector(new THREE.PlaneGeometry(140, 70), { textureWidth: MOBILE ? 512 : 1024, textureHeight: MOBILE ? 512 : 1024, color: 0x6f7c8f, clipBias: 0.003 });
+  const rifP = new Reflector(new THREE.PlaneGeometry(140, 70), { textureWidth: MOBILE ? 512 : 1024, textureHeight: MOBILE ? 512 : 1024, color: 0x4d586a, clipBias: 0.003 });
   rifP.rotation.x = -Math.PI / 2; rifP.position.set(0, 0.003, 35); scene.add(rifP);
   add(new THREE.PlaneGeometry(140, 70).rotateX(-Math.PI / 2), m.pietra, 0, 0.01, 35, false, true);
   const lucine = [];
@@ -242,13 +244,14 @@ function costruisci(scene, T) {
     const l = add(new THREE.CylinderGeometry(0.075, 0.075, 0.12, 12), m.led.clone(), sx * 6, 0.6, z); l.material.transparent = true; lucine.push(l);
   }
   // alberi: cipressi e ulivi illuminati dal basso
+  const alone = new THREE.MeshBasicMaterial({ map: T.alone, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 });
   const ulivo = (x, z, s = 1) => {
     add(new THREE.CylinderGeometry(0.12 * s, 0.2 * s, 2.2 * s, 8), m.tronco, x, 1.1 * s, z, true);
     for (let k = 0; k < 6; k++) {
       const a = k * 1.05, r = (0.6 + (k % 3) * 0.25) * s;
       add(new THREE.IcosahedronGeometry(0.75 * s, 1), m.foglia, x + Math.cos(a) * r, (2.4 + (k % 2) * 0.5) * s, z + Math.sin(a) * r, true);
     }
-    const su = new THREE.SpotLight(caldo, 22 * s, 7, 0.7, 0.8, 1.6); su.position.set(x, 0.2, z + 0.8); su.target.position.set(x, 3 * s, z); scene.add(su, su.target);
+    const al = new THREE.Mesh(new THREE.PlaneGeometry(3.2 * s, 4.2 * s), alone); al.position.set(x, 2.2 * s, z + 1.3); scene.add(al);   // luce calda dal basso, finta
   };
   for (const sx of [-1, 1]) {
     ulivo(sx * 13, 4.5); ulivo(sx * 27, 9, 1.2);
@@ -327,7 +330,7 @@ function costruisci(scene, T) {
   for (const [x, z, s] of [[17.5, -2.5, 0.8], [-17.5, -22, 0.8], [5.2, -30, 0.7]]) {
     ulivo(x, z, s); add(new THREE.CylinderGeometry(0.6, 0.5, 0.7, 24), m.nero, x, 0.35, z, true, true);
   }
-  return { porte, luceAbitacolo, lucine };
+  return { porte, luceAbitacolo, lucine, rifP, rif };
 }
 
 // ===================================================================================
@@ -370,5 +373,10 @@ function textures() {
     const nome = ((CFG.nome || 'Salone') + ' SAS').toUpperCase().split('').join(String.fromCharCode(8202, 8202));
     g.font = '400 118px "Cormorant Garamond", Georgia, serif'; g.fillText(nome, w / 2, h / 2 + 6);
   });
-  return { marmo, pietra, travertino, insegna };
+  const alone = tela(128, 256, (g, w, h) => {
+    const gr = g.createRadialGradient(w / 2, h, 4, w / 2, h * 0.75, h * 0.8);
+    gr.addColorStop(0, 'rgba(255,214,160,.9)'); gr.addColorStop(0.4, 'rgba(255,214,160,.25)'); gr.addColorStop(1, 'rgba(255,214,160,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  return { marmo, pietra, travertino, insegna, alone };
 }
