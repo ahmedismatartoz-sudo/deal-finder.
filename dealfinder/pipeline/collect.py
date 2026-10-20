@@ -717,6 +717,9 @@ if __name__ == "__main__":
                         os.environ.pop("ANNO_MINIMO", None)
                     else:
                         os.environ["ANNO_MINIMO"] = anno
+            elif voce.startswith("privlusso"):                             # 20/10: privati 60-200k contro la base prezzi
+                from . import privati_lusso as P
+                esito = P.giro()
             elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
