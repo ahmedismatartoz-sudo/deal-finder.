@@ -1054,6 +1054,35 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     return [it for it in items if it["id"] not in via]
 
 
+def _margine_recenti(items: list[dict]) -> list[dict]:
+    """20/10 (cliente): le auto dal 2017 in poi restano sul sito solo con almeno 3.500 € di margine
+    (lo stesso margine mostrato sul sito). Le auto più vecchie non cambiano."""
+    dal = int(os.environ.get("MARGINE_RECENTI_DAL", "2017"))
+    minimo = int(os.environ.get("MARGINE_RECENTI_MIN", "3500"))
+    if minimo <= 0:
+        return items
+
+    def margine(it):
+        pv = it.get("pv") or {}
+        if pv:
+            return pv.get("margine")
+        try:
+            return scovo.guadagno_minimo(it)
+        except Exception:
+            return None
+
+    tenute, tolte = [], 0
+    for it in items:
+        m = margine(it)
+        if it.get("anno") and it["anno"] >= dal and (m is None or m < minimo):
+            tolte += 1
+            continue
+        tenute.append(it)
+    logging.getLogger("scovo").warning("MARGINE_RECENTI dal %d con almeno %d €: %d tolte, %d restano",
+                                       dal, minimo, tolte, len(tenute))
+    return tenute
+
+
 # Elenco auto condiviso: la query pesante gira al massimo una volta ogni ELENCO_SECONDI (90) per tutti,
 # in sottofondo; ogni richiesta aggiunge solo le auto già aperte da quel commerciante (query leggera).
 _elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False}
@@ -1143,6 +1172,7 @@ def _calcola_elenco() -> None:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
+    items = _margine_recenti(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
