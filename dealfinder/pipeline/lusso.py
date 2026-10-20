@@ -37,7 +37,7 @@ def _ricerca(min_p: int, venditori, fasce):
             return
 
 
-FASCE = [(50000, 100000, 5000), (100000, 200000, 10000), (200000, 400000, 25000), (400000, 3000000, 2600000)]
+FASCE = [(50000, 100000, 5000), (100000, 200000, 10000)]          # tetto 200.000 € (cliente 20/10)
 
 
 def lead_supercar() -> int:
@@ -115,8 +115,8 @@ def raccolta_60k() -> int:
         if not pv or pv not in PROV_DINTORNI or not comune_ok(pv, l.city):
             st["fuori_zona"] += 1
             return
-        if not l.price_eur or l.price_eur < 60000:
-            st["sotto_60k"] += 1
+        if not l.price_eur or l.price_eur < 60000 or l.price_eur > 200000:
+            st["fuori_fascia"] += 1
             return
         try:
             lid, ev = upsert_listing(conn, l)
@@ -155,6 +155,8 @@ def raccolta_60k() -> int:
                         continue
                     if not l.price_eur or l.price_eur < 60000:
                         sotto += 1
+                        continue
+                    if l.price_eur > 200000:
                         continue
                     l.province = l.province or prov
                     salva(conn, l)
