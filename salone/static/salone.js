@@ -104,7 +104,7 @@ function init() {
   // ---- la ripresa: un'unica curva per la posizione e una per lo sguardo ----
   auto.updateMatrixWorld(true);
   const AW = v => auto.localToWorld(v.clone());
-  const occhio = AW(V(-0.36, 1.07, 0.12)), avanti = AW(V(-0.36, 0.98, -4));        // posto di guida (guida a sinistra)
+  const occhio = AW(V(-0.36, 1.13, 0.24)), avanti = AW(V(-0.36, 0.92, -4));        // posto di guida (guida a sinistra)
   const P = new THREE.CatmullRomCurve3([
     V(0, 1.9, 52), V(0, 1.75, 34), V(0, 1.65, 17), V(0, 1.65, 6), V(0, 1.7, -2),
     V(-4.2, 1.75, -7.5), AW(V(-4.8, 1.55, 1.2)), AW(V(-3.6, 1.35, 3.4)), AW(V(-1.55, 1.15, 0.25)), occhio, occhio.clone().add(V(0, 0.01, 0)),
