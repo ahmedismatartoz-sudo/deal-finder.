@@ -696,6 +696,28 @@ if __name__ == "__main__":
         sys.exit(0)
     # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
     mode = os.environ.get("COLLECT_MODO") or mode
+    # COLLECT_PRIMA (da Render), es. "leadsp:3,benzina_mi:5": giri pesanti una tantum fatti qui, in un processo
+    # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
+    for voce in [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]:
+        try:
+            from .ciclo import _due
+            from ..db import connect, log_job
+            if not _due(voce, 10000):
+                continue
+            if voce.startswith("leadsp"):
+                from . import lusso as L
+                esito = {"trovati": L.lead_sportive()}
+            elif voce.startswith("benzina_mi"):
+                from . import benzina_mi as B
+                esito = B.giro()
+            else:
+                continue
+            with connect() as conn:
+                fin = log_job(conn, voce)
+                fin(True, esito)
+            log.warning("PRIMA %s fatto: %s", voce, esito)
+        except Exception as e:
+            log.warning("PRIMA %s non riuscito: %s", voce, str(e)[:300])
     if mode == "sito":
         # Accelerazione: mette subito sul sito le auto già controllate a mano, poi prepara la selezione
         # dei migliori di Subito (stessa del ciclo: se la fa prima questo lavoro, il ciclo la salta)
