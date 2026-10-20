@@ -30,6 +30,34 @@ _img = httpx.Client(timeout=20, headers={"User-Agent": scraper.UA, "Referer": sc
 @app.on_event("startup")
 def _avvio():
     threading.Thread(target=scraper.ciclo, daemon=True).start()
+    threading.Thread(target=_prova_foto, daemon=True).start()
+
+
+def _prova_foto():
+    """Controllo nei log: misure vere delle foto AutoScout (per non tagliarle)."""
+    import time as _t, struct as _s
+    _t.sleep(40)
+    for a in scraper.carica().get("auto", [])[:2]:
+        for u in (a.get("foto") or [])[:2]:
+            base = re.sub(r"/\d+x\d+\.webp$", "", u)
+            for v in (u, base, base + "/1920x1080.webp", base + "/1280x960.webp"):
+                try:
+                    r = _img.get(v)
+                    b = r.content
+                    dim = None
+                    if b[:4] == b"RIFF" and b[12:16] == b"VP8X":
+                        dim = (1 + int.from_bytes(b[24:27], "little"), 1 + int.from_bytes(b[27:30], "little"))
+                    elif b[:4] == b"RIFF" and b[12:16] == b"VP8 ":
+                        dim = (_s.unpack("<H", b[26:28])[0] & 0x3FFF, _s.unpack("<H", b[28:30])[0] & 0x3FFF)
+                    elif b[:3] == b"\xff\xd8\xff":
+                        i = 2
+                        while i < len(b) - 9:
+                            if b[i] == 0xFF and b[i + 1] in (0xC0, 0xC2):
+                                dim = (_s.unpack(">H", b[i + 7:i + 9])[0], _s.unpack(">H", b[i + 5:i + 7])[0]); break
+                            i += 2 + _s.unpack(">H", b[i + 2:i + 4])[0]
+                    logging.info("FOTO_PROVA %s %s %s %s byte=%d", a.get("modello"), v[-60:], r.status_code, dim, len(b))
+                except Exception as e:
+                    logging.info("FOTO_PROVA errore %s %s", v[-60:], str(e)[:80])
 
 
 
