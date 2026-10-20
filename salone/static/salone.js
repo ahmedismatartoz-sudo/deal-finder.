@@ -104,18 +104,14 @@ function init() {
   // ---- la ripresa: un'unica curva per la posizione e una per lo sguardo ----
   auto.updateMatrixWorld(true);
   const AW = v => auto.localToWorld(v.clone());
-  const occhio = AW(V(-0.36, 1.13, 0.24)), avanti = AW(V(-0.36, 0.92, -4));        // posto di guida (guida a sinistra)
+  // due momenti soli: si arriva e si entra dalla vetrata, poi si cammina fino alla Ferrari (vista di tre quarti)
   const P = new THREE.CatmullRomCurve3([
-    V(0, 1.9, 52), V(0, 1.75, 34), V(0, 1.65, 17), V(0, 1.65, 6), V(0, 1.7, -2),
-    V(-4.2, 1.75, -7.5), AW(V(-4.8, 1.55, 1.2)), AW(V(-3.6, 1.35, 3.4)), AW(V(-1.55, 1.15, 0.25)), occhio, occhio.clone().add(V(0, 0.01, 0)),
-    AW(V(-0.36, 1.25, -2.2)), V(0, 2.6, -24), V(0, 3.2, -31)], false, 'centripetal', 0.5);
+    V(0, 1.9, 40), V(0, 1.7, 16), V(0, 1.65, 4), V(-1.5, 1.7, -5), AW(V(-4.6, 1.4, -1.5)), AW(V(-3.4, 1.15, -3.9))], false, 'centripetal', 0.5);
   const L = new THREE.CatmullRomCurve3([
-    V(0, 4.2, 0), V(0, 3.6, 0), V(0, 3.0, -2), V(0, 2.4, -10), V(0, 1.4, -14),
-    V(0, 0.9, -14), AUTO.pos.clone().add(V(0, 0.75, 0)), AUTO.pos.clone().add(V(0, 0.8, 0)), AW(V(-0.36, 1.0, -0.6)), avanti, avanti,
-    AW(V(-0.36, 1.2, -8)), V(0, 3.2, -36), V(0, 3.4, -40)], false, 'centripetal', 0.5);
+    V(0, 3.4, 0), V(0, 3.0, 0), V(0, 2.4, -8), AUTO.pos.clone().add(V(0, 0.9, 0)), AW(V(0, 0.7, 0)), AW(V(0, 0.6, 0))], false, 'centripetal', 0.5);
 
   // a che punto dello scorrimento si arriva a ogni tappa della ripresa (stesso numero di punti delle curve)
-  const TAPPE = [0, 0.08, 0.16, 0.22, 0.3, 0.38, 0.46, 0.54, 0.62, 0.69, 0.79, 0.85, 0.93, 1];
+  const TAPPE = [0, 0.22, 0.42, 0.62, 0.82, 1];
   function tappa(e) {
     let i = 0; while (i < TAPPE.length - 2 && e > TAPPE[i + 1]) i++;
     const f = clamp((e - TAPPE[i]) / (TAPPE[i + 1] - TAPPE[i]));
@@ -160,7 +156,7 @@ function init() {
     }
     mondo.rifP.visible = camera.position.z > -2; mondo.rif.visible = camera.position.z < 9;   // un solo specchio alla volta
     const u = tappa(e); P.getPoint(u, pos); L.getPoint(u, look);
-    const seduto = smooth(0.66, 0.7, e) * (1 - smooth(0.8, 0.84, e));
+    const seduto = 0;
     const vivo = REDUCED ? 0 : (1 - seduto * 0.7);
     camera.position.copy(pos).add(V(mx * 0.25 * vivo + Math.sin(t * 0.3) * 0.02 * vivo, -my * 0.12 * vivo + Math.sin(t * 0.4) * 0.015 * vivo, 0));
     if (!lookPronto || FORCE != null) { lookS.copy(look); lookPronto = true; } else lookS.lerp(look, 1 - Math.pow(0.002, dt));
@@ -168,10 +164,10 @@ function init() {
     if (seduto > 0 && !REDUCED) camera.rotateY(Math.sin(t * 0.35) * 0.05 * seduto - mx * 0.25 * seduto);   // ci si guarda attorno
 
     // porte di vetro, luci dell'abitacolo, paletti del viale
-    const ap = smooth(0.15, 0.27, e);
+    const ap = smooth(0.15, 0.36, e);
     mondo.porte[0].position.x = -1.5 - ap * 3.0; mondo.porte[1].position.x = 1.5 + ap * 3.0;
-    const acceso = smooth(0.7, 0.76, e);
-    const dentro = smooth(0.6, 0.67, e) * (1 - smooth(0.8, 0.85, e));
+    const acceso = 0;
+    const dentro = 0;
     mat.vetro.opacity = 0.16 * (1 - dentro * 0.85);                                  // da dentro il vetro non fa nebbia
     for (const m of interni) { m.emissive.setHex(0x0a1426); m.emissiveIntensity = acceso * 0.5; }
     mondo.luceAbitacolo.intensity = acceso * 1.6;
@@ -179,7 +175,7 @@ function init() {
 
     for (const el of copies) el.classList.toggle('on', e >= +el.dataset.da && e <= +el.dataset.a);
     prog.style.transform = `scaleX(${e})`;
-    velo.style.opacity = smooth(0.93, 1, e);
+    velo.style.opacity = smooth(0.9, 1, e);
     composer.render();
     fotogrammi++;
     if (primo) { primo = false; pronto(); }
