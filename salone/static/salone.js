@@ -85,8 +85,8 @@ function init() {
       if (!o.isMesh) return;
       o.castShadow = true;
       const n = (o.material?.name || '').toLowerCase();
-      if (n === 'leather_red') { o.material = o.material.clone(); o.material.color = new THREE.Color(0x1d2c4a); interni.push(o.material); }   // pelle blu notte come nelle foto
-      else if (n === 'leather' || n === 'interior_light') { o.material = o.material.clone(); o.material.color = new THREE.Color(0xe6e0d4); interni.push(o.material); }  // pelle chiara
+      if (n === 'leather_red' || n === 'leather' || n === 'interior_dark') { o.material = o.material.clone(); o.material.color = new THREE.Color(0x1b2945); o.material.roughness = 0.55; interni.push(o.material); }   // pelle blu notte
+      else if (n === 'interior_light') { o.material = o.material.clone(); o.material.color = new THREE.Color(0xd9d2c4); o.material.roughness = 0.6; interni.push(o.material); }  // pelle crema
     });
     const ombra = new THREE.Mesh(new THREE.PlaneGeometry(0.655 * 4, 1.3 * 4), new THREE.MeshBasicMaterial({
       map: new THREE.TextureLoader().load(OMBRA_AUTO), blending: THREE.MultiplyBlending, toneMapped: false, transparent: true }));
@@ -171,7 +171,9 @@ function init() {
     const ap = smooth(0.15, 0.27, e);
     mondo.porte[0].position.x = -1.5 - ap * 3.0; mondo.porte[1].position.x = 1.5 + ap * 3.0;
     const acceso = smooth(0.7, 0.76, e);
-    for (const m of interni) { m.emissive.setHex(0x0e1d36); m.emissiveIntensity = acceso * 0.8; }
+    const dentro = smooth(0.6, 0.67, e) * (1 - smooth(0.8, 0.85, e));
+    mat.vetro.opacity = 0.16 * (1 - dentro * 0.85);                                  // da dentro il vetro non fa nebbia
+    for (const m of interni) { m.emissive.setHex(0x0a1426); m.emissiveIntensity = acceso * 0.5; }
     mondo.luceAbitacolo.intensity = acceso * 1.6;
     if (!REDUCED) mondo.lucine.forEach((l, i) => { l.material.opacity = 0.65 + 0.35 * Math.sin(t * (0.8 + (i % 5) * 0.2) + i); });
 
