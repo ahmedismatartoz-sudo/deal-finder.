@@ -313,11 +313,12 @@ def lead_sportive() -> int:
     dealers: dict = {}
     n = 0
     diag = 0
+    zona_lead = [p.strip() for p in os.environ["LEADSP_PROVINCE"].split(",")] if os.environ.get("LEADSP_PROVINCE") else PROV_DINTORNI
     da, a_, passo = (int(os.environ.get(k, v)) for k, v in (("LEADSP_DA", "12000"), ("LEADSP_A", "300000"), ("LEADSP_PASSO", "4000")))
     for l in bande_parallele(da, a_, passo, [("D", "commerciante")]):
         n += 1
         s = (l.raw or {}).get("seller") or {}
-        if not isinstance(s, dict) or (l.province and l.province.upper() not in PROV_DINTORNI):
+        if not isinstance(s, dict) or (l.province and l.province.upper() not in zona_lead):
             continue
         links = s.get("links") if isinstance(s.get("links"), dict) else {}
         if diag < 2:
