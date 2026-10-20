@@ -155,6 +155,8 @@ def raccolta_60k() -> int:
             return
         st[f"{l.source}:{ev}"] += 1
         st["tenute"] += 1
+        if os.environ.get("LUSSO_LOG", "1") == "0" and ev != "nuovo":
+            return
         log.warning("LUSSO %s", json.dumps({"id": lid, "fonte": l.source, "auto": " ".join(x for x in (l.make, l.model, l.version_raw) if x)[:90],
                                            "anno": l.year, "km": l.mileage_km, "carb": l.fuel, "kw": l.power_kw, "prezzo": l.price_eur,
                                            "prov": pv, "comune": l.city, "venditore": l.seller_type, "url": l.url}, ensure_ascii=False))

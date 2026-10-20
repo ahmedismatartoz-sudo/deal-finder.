@@ -702,9 +702,14 @@ if __name__ == "__main__":
         try:
             from .ciclo import _due
             from ..db import connect, log_job
-            if not _due(voce, 10000):
+            ore = int(voce.split("@")[1]) if "@" in voce else 10000      # "nome@2": si ripete ogni 2 ore (a ogni giro)
+            if not _due(voce, ore):
                 continue
-            if voce.startswith("leadsp"):
+            if voce.startswith("lusso60"):                                 # 20/10: auto 60-200k di continuo
+                from . import lusso as L
+                os.environ.setdefault("LUSSO_LOG", "0")
+                esito = {"tenute": L.raccolta_60k()}
+            elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
             elif voce.startswith("benzina_mi"):
