@@ -2101,8 +2101,8 @@ def _tempo_reale():
                 _elenco["t"] = 0.0
                 _aggiorna_elenco(attendi=True)
                 sito = [it for it in (_elenco.get("items") or []) if (it.get("carb") or "").lower().startswith("benzina")
-                        and "(MI)" in str(it.get("zona") or "") and 3000 <= (it.get("prezzo") or 0) <= 15000]
-                lg.warning("BENZ_SITO %d auto a benzina 3.000-15.000 € in provincia di Milano sul sito", len(sito))
+                        and 3000 <= (it.get("prezzo") or 0) <= 15000]
+                lg.warning("BENZ_SITO %d auto a benzina 3.000-15.000 € sul sito", len(sito))
         except Exception as e:
             lg.warning("BENZ non riuscito: %s", str(e)[:300])
     threading.Thread(target=benzina_mi, daemon=True, name="benzina").start()
