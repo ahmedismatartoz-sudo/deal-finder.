@@ -86,13 +86,14 @@ def _stat(cl, url: str) -> dict:
         metodo = "annunci"
     else:
         prezzi, mc = _annunci_testo(html)
-        lusso = sum(1 for p in prezzi if p >= 45000) + sum(mc[m] for m in LUSSO if m in mc)
+        lusso = sum(1 for p in prezzi if p >= 45000)
         marche = mc
         metodo = "testo"
     if len(prezzi) < 3:
         return {"metodo": metodo, "n": len(prezzi), "lusso_marche": sum(marche[m] for m in LUSSO if m in marche)}
     return {"metodo": metodo, "n": len(prezzi), "mediana": int(statistics.median(prezzi)),
-            "quota_lusso": round(lusso / len(prezzi), 2), "marche": [m for m, _ in marche.most_common(5) if _]}
+            "quota_lusso": round(lusso / len(prezzi), 2), "lusso_marche": sum(marche[m] for m in LUSSO if m in marche),
+            "marche": [m for m, _ in marche.most_common(5) if _]}
 
 
 def giro() -> dict:
@@ -100,14 +101,28 @@ def giro() -> dict:
     from concurrent.futures import ThreadPoolExecutor
     voci = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_fascia.json").read_text())
 
+    import time, random
+
     def uno(v):
         with httpx.Client(headers={"User-Agent": UA, "Accept-Language": "it-IT,it;q=0.9"}, follow_redirects=True) as cl:
-            return v, _stat(cl, v["url"])
+            for t in range(4):
+                time.sleep(random.uniform(1.5, 3.0))
+                s = _stat(cl, v["url"])
+                if "429" not in str(s.get("errore", "")):
+                    return v, s
+                time.sleep(40 * (t + 1))
+            return v, s
 
     st: Counter = Counter()
-    with ThreadPoolExecutor(4) as ex:
+    riga = []
+    with ThreadPoolExecutor(2) as ex:
         for v, s in ex.map(uno, voci):
             st[s.get("metodo", "errore")] += 1
-            log.warning("FASCIA %s", json.dumps({"i": v["i"], **s}, ensure_ascii=False))
+            riga.append([v["i"], s.get("mediana"), s.get("quota_lusso"), s.get("lusso_marche"), s.get("n"),
+                         ",".join(s.get("marche") or []), s.get("errore")])
+            if len(riga) >= 20:
+                log.warning("FASCIA2 %s", json.dumps(riga, ensure_ascii=False)); riga = []
+    if riga:
+        log.warning("FASCIA2 %s", json.dumps(riga, ensure_ascii=False))
     log.warning("FASCIA_FINE %s", json.dumps(dict(st)))
     return dict(st)
