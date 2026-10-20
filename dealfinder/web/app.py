@@ -2126,6 +2126,25 @@ def _tempo_reale():
             lg.warning("PRIV60 non riuscito: %s", str(e)[:300])
     threading.Thread(target=privati_60k, daemon=True, name="privati60").start()
 
+    def lead_sport():
+        """20/10 (cliente), una tantum (LEADSP_GIRO=n): lead di commercianti di auto sportive che comprano dai privati."""
+        giro = os.environ.get("LEADSP_GIRO")
+        if not giro:
+            return
+        time.sleep(200)
+        from ..pipeline import lusso as L
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        job = f"leadsp:{giro}"
+        try:
+            if _due(job, 10000):
+                with connect() as conn:
+                    fin = log_job(conn, job)
+                    fin(True, {"trovati": L.lead_sportive()})
+        except Exception as e:
+            lg.warning("LEADSP non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_sport, daemon=True, name="leadsp").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 

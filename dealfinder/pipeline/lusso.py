@@ -255,3 +255,129 @@ def privati_lombardia() -> int:
                 break
     log.warning("PRIV60_FINE %s", dict(st))
     return st["tenute"]
+
+
+SPORTIVE_MARCHE = {"porsche", "ferrari", "lamborghini", "maserati", "mclaren", "aston martin", "bentley", "lotus", "alpine",
+                   "jaguar", "corvette", "chevrolet", "dodge", "nissan", "abarth", "cupra", "alfa romeo", "audi", "bmw",
+                   "mercedes-benz", "ford", "toyota", "honda", "subaru", "morgan", "ktm", "lexus"}
+SPORTIVE_MODELLI = re.compile(r"\b(911|99[1-9]|718|cayman|boxster|carrera|gt[234]?|gts|turbo s|amg|rs ?\d|r8|tt ?rs|ttrs|"
+                              r"m[2-8]\b|m\d{3}|z4|i8|sls|slk|sl\b|f-?type|gt-?r|370z|nismo|supra|gr86|gt86|mustang|camaro|"
+                              r"corvette|viper|giulia quadrifoglio|quadrifoglio|qv\b|4c|695|124 spider|leon cupra|cupra|type r|"
+                              r"wrx|sti|lc ?500|rc ?f|huracan|urus|gallardo|aventador|488|458|f8|roma|portofino|california|"
+                              r"812|296|sf90|mc20|granturismo|grancabrio|ghibli trofeo|vantage|db11|db9|continental|elise|"
+                              r"exige|evora|emira|a110|giulietta qv|focus rs|fiesta st|golf r|gti|clubsport|scirocco r)\b", re.I)
+ACQ_DIRETTO = re.compile(r"acquistiamo|compriamo|compro auto|acquisto auto|acquisto (del )?(vostr|tu)\w* (auto|veicol)|"
+                         r"compr\w* (la )?(tua|vostra) auto|acquist\w* (la )?(tua|vostra) auto|"
+                         r"anche senza (permuta|acquisto|obbligo)|senza (obbligo di )?(permuta|acquist\w* (un|di)\w*)|"
+                         r"pagamento (immediato|in contanti|contanti)|vendi(ci)? la tua auto|valutazione e acquisto", re.I)
+SENZA_PERMUTA = re.compile(r"senza (obbligo di )?(permuta|acquist)|anche senza (permuta|acquisto)|pagamento (immediato|in contanti)|"
+                           r"contanti|acquisto diretto|compriamo (la tua|auto)|acquistiamo (la tua|auto)", re.I)
+
+
+def lead_sportive() -> int:
+    """20/10 (cliente): commercianti di Milano e province che trattano auto SPORTIVE e dichiarano di comprare auto
+    dai privati (meglio se anche senza permuta). Pagina AutoScout24 e, se c'è, il sito dell'attività.
+    Solo cellulari pubblicati dall'attività. Esclusi quelli già consegnati. Nei log: LEADSP {json}."""
+    import httpx
+    from concurrent.futures import ThreadPoolExecutor
+    from .lead import PROV_DINTORNI, _cellulari, _h, _nn, _nu, _tel9, TEL
+    es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_esclusi.json").read_text())
+    EU, ET, EN = set(es["url"]), set(es["tel"]), set(es["nome"])
+    os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LEADSP_RAGGIO", "70")
+    os.environ.pop("PASSI_JOB", None)
+    dealers: dict = {}
+    n = 0
+    diag = 0
+    for l in bande_parallele(12000, 300000, 4000, [("D", "commerciante")]):
+        n += 1
+        s = (l.raw or {}).get("seller") or {}
+        if not isinstance(s, dict) or (l.province and l.province.upper() not in PROV_DINTORNI):
+            continue
+        links = s.get("links") if isinstance(s.get("links"), dict) else {}
+        if diag < 2:
+            diag += 1
+            log.warning("LEADSP_CAMPI venditore=%s link=%s", sorted(s)[:30], sorted(links)[:20])
+        url = (links.get("infoPage") or "").split("?")[0]
+        nome = s.get("companyName")
+        if not url or not nome:
+            continue
+        sito = next((v for k, v in links.items() if isinstance(v, str) and v.startswith("http") and "autoscout24" not in v), None)
+        d = dealers.setdefault(url, {"nome": nome, "citta": l.city, "prov": l.province, "n": 0, "sport": 0, "esempi": [], "sito": sito,
+                                     "tel": [p.get("formattedNumber") for p in (s.get("phones") or []) if isinstance(p, dict) and p.get("formattedNumber")]})
+        d["n"] += 1
+        testo = f"{l.model or ''} {l.version_raw or ''} {l.title or ''}"
+        if (l.make or "").lower() in ("porsche", "ferrari", "lamborghini", "mclaren", "aston martin", "lotus", "maserati") or SPORTIVE_MODELLI.search(testo):
+            d["sport"] += 1
+            if len(d["esempi"]) < 4:
+                d["esempi"].append(f"{l.make} {l.model}".strip())
+    scelti = [(u, d) for u, d in dealers.items() if d["sport"] >= int(os.environ.get("LEADSP_MIN_SPORT", "2"))]
+    log.warning("LEADSP_RICERCA %d annunci, %d autosaloni in zona, %d con almeno 2 sportive", n, len(dealers), len(scelti))
+
+    def gia(nome, url, tels):
+        return (_h(_nn(nome)) in EN if nome else False) or (url and _h(_nu(url)) in EU) or \
+            any(t and _h(t) in ET for t in (_tel9(x) for x in tels))
+
+    hdr = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0 Safari/537.36", "Accept-Language": "it-IT,it;q=0.9"}
+
+    def testo_di(cl, u):
+        try:
+            r = cl.get(u, timeout=15)
+            return unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else "", r.text if r.status_code == 200 else ""
+        except Exception:
+            return "", ""
+
+    def controlla(item):
+        url, d = item
+        with httpx.Client(headers=hdr, follow_redirects=True) as cl:
+            t, _ = testo_di(cl, url)
+            fonte, m = url, ACQ_DIRETTO.search(t)
+            tel_extra = []
+            if d["sito"]:
+                ts, html = testo_di(cl, d["sito"])
+                tel_extra = TEL.findall(ts)
+                if not m:
+                    m = ACQ_DIRETTO.search(ts)
+                    fonte = d["sito"] if m else fonte
+                if not m and html:                      # pagina "acquistiamo / vendi la tua auto" del sito
+                    for h in re.findall(r'href="([^"#]+)"', html)[:400]:
+                        if re.search(r"acquist|compr|vendi|valutaz|ritir", h, re.I):
+                            u2 = h if h.startswith("http") else d["sito"].rstrip("/") + "/" + h.lstrip("/")
+                            t2, _ = testo_di(cl, u2)
+                            m = ACQ_DIRETTO.search(t2)
+                            if m:
+                                fonte, ts = u2, t2
+                                tel_extra += TEL.findall(t2)
+                                break
+                if m and fonte != url:
+                    t = ts
+        frase = ""
+        if m:
+            a, b = max(0, m.start() - 100), m.end() + 100
+            frase = " ".join(t[a:b].split())[:260]
+        return url, d, bool(m), bool(SENZA_PERMUTA.search(t)) if m else False, frase, fonte, tel_extra
+
+    trovati = dich = esclusi = 0
+    visti_t: set = set()
+    da_controllare = []
+    for url, d in sorted(scelti, key=lambda kv: -kv[1]["sport"]):
+        if gia(d["nome"], url, d["tel"]):
+            esclusi += 1
+            continue
+        da_controllare.append((url, d))
+    with ThreadPoolExecutor(8) as ex:
+        for url, d, dichiara, senza, frase, fonte, tel_extra in ex.map(controlla, da_controllare):
+            cell = _cellulari(list(d["tel"]) + tel_extra)
+            if gia(d["nome"], url, cell):
+                esclusi += 1
+                continue
+            if cell and set(cell) & visti_t:
+                continue
+            visti_t.update(cell)
+            trovati += 1
+            dich += dichiara
+            log.warning("LEADSP %s", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2],
+                                                 "url": url, "sito": d["sito"], "sportive": d["sport"], "annunci": d["n"],
+                                                 "esempi": d["esempi"], "dichiara": dichiara, "senza_permuta": senza,
+                                                 "frase": frase, "fonte": fonte}, ensure_ascii=False))
+    log.warning("LEADSP_FINE controllati %d, già consegnati %d, nuovi %d, dichiarano di comprare %d", len(da_controllare), esclusi, trovati, dich)
+    return trovati
