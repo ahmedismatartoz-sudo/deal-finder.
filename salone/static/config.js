@@ -3,9 +3,9 @@
 window.SALONE = {
   nome: 'Prestige Service',
   sottotitolo: 'Auto di prestigio',
-  citta: '',
+  citta: 'Cologno Monzese',
   indirizzo: 'Via Esempio 1',
-  cap: '20100',
+  cap: '20093',
   provincia: 'MI',
   telefono: '+39 000 000 0000',
   whatsapp: '390000000000',
