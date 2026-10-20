@@ -2107,6 +2107,25 @@ def _tempo_reale():
             lg.warning("BENZ non riuscito: %s", str(e)[:300])
     threading.Thread(target=benzina_mi, daemon=True, name="benzina").start()
 
+    def privati_60k():
+        """20/10 (cliente), una tantum (PRIV60_GIRO=n): solo privati, tutta la Lombardia, da 60.000 € in su (PRIV60)."""
+        giro = os.environ.get("PRIV60_GIRO")
+        if not giro:
+            return
+        time.sleep(150)
+        from ..pipeline import lusso as L
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        job = f"privati60:{giro}"
+        try:
+            if _due(job, 10000):
+                with connect() as conn:
+                    fin = log_job(conn, job)
+                    fin(True, {"tenute": L.privati_lombardia()})
+        except Exception as e:
+            lg.warning("PRIV60 non riuscito: %s", str(e)[:300])
+    threading.Thread(target=privati_60k, daemon=True, name="privati60").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 

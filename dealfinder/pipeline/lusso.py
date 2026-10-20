@@ -166,3 +166,67 @@ def raccolta_60k() -> int:
             log.warning("LUSSO_SUBITO %s fatto: %s", prov, dict(st))
     log.warning("LUSSO_FINE %s", dict(st))
     return st["tenute"]
+
+
+LOMBARDIA = {"MI", "MB", "VA", "CO", "LC", "BG", "BS", "LO", "PV", "CR", "MN", "SO"}
+
+
+def privati_lombardia() -> int:
+    """20/10 (cliente): solo PRIVATI, tutta la Lombardia, auto da 60.000 € in su (AutoScout24 e Subito).
+    Salvate nel database per analizzarle. Nei log: PRIV60 {json} e PRIV60_FINE."""
+    from ..db import connect, upsert_listing
+    from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
+    st = Counter()
+
+    def salva(conn, l):
+        pv = (l.province or "").upper()
+        if pv not in LOMBARDIA:
+            st["fuori_lombardia"] += 1
+            return
+        if l.seller_type != "privato":
+            st["non_privato"] += 1
+            return
+        if not l.price_eur or l.price_eur < 60000:
+            st["sotto_60k"] += 1
+            return
+        try:
+            lid, ev = upsert_listing(conn, l)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            st["errore"] += 1
+            return
+        st[f"{l.source}:{ev}"] += 1
+        st["tenute"] += 1
+        log.warning("PRIV60 %s", json.dumps({"id": lid, "fonte": l.source, "auto": " ".join(x for x in (l.make, l.model, l.version_raw) if x)[:90],
+                                            "anno": l.year, "km": l.mileage_km, "carb": l.fuel, "prezzo": l.price_eur,
+                                            "prov": pv, "comune": l.city, "url": l.url}, ensure_ascii=False))
+
+    os.environ["LUSSO_RAGGIO"] = os.environ.get("PRIV60_RAGGIO", "150")
+    fasce = [(60000, 100000, 10000), (100000, 200000, 25000), (200000, 3000000, 2800000)]
+    with connect() as conn:
+        for l in _ricerca(60000, [("P", "privato")], fasce):
+            salva(conn, l)
+        log.warning("PRIV60_AUTOSCOUT %s", dict(st))
+        sub = SubitoCollector()
+        for page in range(int(os.environ.get("PRIV60_SUB_PAGINE", "60"))):
+            try:
+                r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": 4, "t": "s", "lim": 100, "start": page * 100,
+                                                                             "ps": 60000, "sort": "pricedesc"})
+                ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
+            except Exception:
+                ads = []
+            sotto = 0
+            for it in ads:
+                l = parse_item(it)
+                if not l:
+                    continue
+                if not l.price_eur or l.price_eur < 60000:
+                    sotto += 1
+                    continue
+                salva(conn, l)
+            time.sleep(1.0)
+            if len(ads) < 100 or sotto > 80:
+                break
+    log.warning("PRIV60_FINE %s", dict(st))
+    return st["tenute"]
