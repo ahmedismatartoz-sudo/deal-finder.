@@ -31,7 +31,11 @@
   // attesa: via quando la scena è pronta (o dopo 6 secondi)
   const via = () => $('#attesa').classList.add('via');
   addEventListener('salone-pronto', via); setTimeout(via, 6000);
-  addEventListener('scroll', () => { $('#scorri').style.opacity = scrollY > 40 ? 0 : 1; }, { passive: true });
+  addEventListener('scroll', () => {
+    $('#scorri').style.opacity = scrollY > 40 ? 0 : 1;
+    const r = $('#apertura').getBoundingClientRect();                      // barra in alto piena appena finisce l'apertura
+    $('#nav').classList.toggle('pieno', r.bottom < innerHeight * 0.6); $('#nav').classList.toggle('su-foto', r.bottom >= innerHeight * 0.6);
+  }, { passive: true });
 
   // ---- auto ----
   const griglia = $('#griglia');
@@ -92,10 +96,10 @@
       const f = a.foto?.[0] ? img(a.foto[0], '720x540') : '';
       const dati = [anno(a), kmf(a), fuelIt(a.carburante), a.cambio].filter(Boolean);
       return `<article class="pezzo" data-i="${i}">
-        <button type="button" class="pezzo-foto" aria-label="Apri la scheda: ${esc(a.marca + ' ' + a.modello)}">
+        <div class="pezzo-foto" role="button" tabindex="0" aria-label="Apri la scheda: ${esc(a.marca + ' ' + a.modello)}">
           ${f ? `<img src="${f}" alt="" loading="${i < 3 ? 'eager' : 'lazy'}" draggable="false" onload="this.classList.add('ok')">` : ''}
-          ${a.esempio ? '<span class="etichetta">Esempio</span>' : ''}
-        </button>
+          ${a.esempio ? '<span class="etichetta">Esempio</span>' : ''}<i class="lampo" aria-hidden="true"></i>
+        </div>
         <div class="pezzo-riga">
           <div class="pezzo-nome"><h3>${esc(a.marca)} ${esc(a.modello)}</h3><p>${esc(a.versione || '')}</p></div>
           <p class="pezzo-prezzo">${eur(a.prezzo)}</p>
@@ -104,7 +108,12 @@
       </article>`;
     }).join('');
     PEZZI = [...vetrina.children];
-    PEZZI.forEach(p => p.querySelector('.pezzo-foto').addEventListener('click', () => { if (!trascinato) apri(LISTA[+p.dataset.i]); }));
+    PEZZI.forEach((p, i) => {
+      const f = p.querySelector('.pezzo-foto');
+      f.addEventListener('click', () => { if (!trascinato) apri(LISTA[+p.dataset.i]); });
+      f.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); apri(LISTA[+p.dataset.i]); } });
+      p.style.setProperty('--ritardo', Math.min(i, 4) * 0.12 + 's');
+    });
     vetrina.scrollLeft = 0; aggiorna();
   }
   function aggiorna() {                       // l'auto al centro è piena, le altre leggermente più piccole e chiare
@@ -115,6 +124,9 @@
       if (d < dmin) { dmin = d; migliore = i; }
       p.style.setProperty('--v', v.toFixed(3));
     });
+    if (migliore !== corrente || !PEZZI[migliore]?.classList.contains('centro')) {        // un lampo di luce sull'auto che arriva al centro
+      PEZZI.forEach((p, i) => p.classList.toggle('centro', i === migliore));
+    }
     corrente = migliore;
     $('#srN').textContent = LISTA.length ? `${corrente + 1} di ${LISTA.length}` : '';
     $('#srPrec').disabled = corrente <= 0; $('#srSucc').disabled = corrente >= LISTA.length - 1;
@@ -210,6 +222,18 @@
       descrizione: 'Auto di esempio. Quando colleghiamo AutoScout24 e Subito, qui compaiono le auto vere del salone con foto, descrizione e dotazioni.',
     }));
   }
+
+  // ---- animazioni quando le sezioni arrivano sullo schermo ----
+  document.documentElement.classList.add('js');
+  const RID = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const io = new IntersectionObserver(es => es.forEach(x => {
+    if (!x.isIntersecting) return;
+    x.target.classList.add('vis'); io.unobserve(x.target);
+    if (x.target === vetrina) setTimeout(() => vai(corrente), 50);
+  }), { threshold: 0.18 });
+  if (RID) document.documentElement.classList.add('fermo');
+  ['.riga-testa', '#vetrina', '.dichiarazione', '.servizi', '.visita-testo', '.mappa'].forEach(s => { const el = $(s); if (el) io.observe(el); });
+  $$('.servizi li').forEach((li, i) => li.style.setProperty('--ritardo', i * 0.12 + 's'));
 
   carica();
 })();
