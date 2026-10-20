@@ -141,6 +141,8 @@ def raccolta_60k() -> int:
     from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
     st = Counter()
     zona = [p.strip() for p in os.environ["LUSSO_PROVINCE"].split(",")] if os.environ.get("LUSSO_PROVINCE") else None
+    solo_privati = os.environ.get("LUSSO_SOLO_PRIVATI") == "1"        # 20/10 (cliente): solo privati
+    anno_min = int(os.environ.get("LUSSO_ANNO_MIN", "0") or 0)
     ci_sub = dict(CI_SUBITO)
     if zona:
         ci_sub.update({p: c for p, c in (("BS", 2), ("MN", 7), ("SO", 11)) if p in zona})
@@ -156,6 +158,12 @@ def raccolta_60k() -> int:
             return
         if not l.price_eur or l.price_eur < 60000 or l.price_eur > 200000:
             st["fuori_fascia"] += 1
+            return
+        if solo_privati and l.seller_type != "privato":
+            st["non_privato"] += 1
+            return
+        if anno_min and l.year and l.year < anno_min:
+            st["troppo_vecchia"] += 1
             return
         try:
             lid, ev = upsert_listing(conn, l)
@@ -174,7 +182,8 @@ def raccolta_60k() -> int:
                                            "prov": pv, "comune": l.city, "venditore": l.seller_type, "url": l.url}, ensure_ascii=False))
 
     with connect() as conn:
-        for l in _ricerca(60000, [("P", "privato"), ("D", "commerciante")], FASCE):
+        venditori = [("P", "privato")] if solo_privati else [("P", "privato"), ("D", "commerciante")]
+        for l in _ricerca(60000, venditori, FASCE):
             salva(conn, l)
         log.warning("LUSSO_AUTOSCOUT %s", dict(st))
         sub = SubitoCollector()
