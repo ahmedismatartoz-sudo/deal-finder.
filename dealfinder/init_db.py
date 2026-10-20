@@ -90,6 +90,13 @@ if __name__ == "__main__":
             if fino:
                 print("Accesso fino al", fino, "per", em)
         conn.commit()
+        try:                                                   # abbonamenti da non rinnovare (STRIPE_NON_RINNOVARE)
+            import logging as _lg
+            _lg.basicConfig(level=_lg.INFO)
+            from .web import abbonamento as _abb
+            _abb.non_rinnovare(conn)
+        except Exception as e:
+            print("non_rinnovare:", str(e)[:200])
         # ACCOUNT_DISATTIVATI="a@x.it,b@y.it": account spenti (vince su tutto il resto), sessioni chiuse subito
         for em in [e.strip().lower() for e in os.environ.get("ACCOUNT_DISATTIVATI", "").split(",") if "@" in e]:
             row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()

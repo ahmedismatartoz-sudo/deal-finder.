@@ -44,6 +44,47 @@ def _post(path: str, data: dict, http=None) -> dict:
     return r.json()
 
 
+def _get(path: str, params: dict) -> dict:
+    import httpx
+    r = httpx.get(API + path, params=params, auth=(os.environ["STRIPE_SECRET_KEY"], ""), timeout=20)
+    if r.status_code >= 400:
+        raise RuntimeError(f"stripe {path} -> {r.status_code} {r.text[:200]}")
+    return r.json()
+
+
+def non_rinnovare(conn) -> None:
+    """STRIPE_NON_RINNOVARE="a@x.it,b@y.it": l'abbonamento resta attivo fino alla fine del mese già pagato,
+    poi si chiude da solo. Nessun altro addebito."""
+    emails = [e.strip().lower() for e in os.environ.get("STRIPE_NON_RINNOVARE", "").split(",") if "@" in e]
+    if not emails or not os.environ.get("STRIPE_SECRET_KEY"):
+        return
+    for em in emails:
+        try:
+            row = conn.execute("SELECT stripe_customer FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
+            clienti = [row["stripe_customer"]] if row and row.get("stripe_customer") else []
+            if not clienti:
+                clienti = [c["id"] for c in _get("/customers", {"email": em, "limit": 10}).get("data", [])]
+            if not clienti:
+                log.warning("NON_RINNOVA %s: nessun cliente su Stripe", em)
+                continue
+            trovati = 0
+            for cu in clienti:
+                for sub in _get("/subscriptions", {"customer": cu, "status": "all", "limit": 20}).get("data", []):
+                    if sub.get("status") not in ("active", "trialing", "past_due"):
+                        continue
+                    trovati += 1
+                    if not sub.get("cancel_at_period_end"):
+                        sub = _post(f"/subscriptions/{sub['id']}", {"cancel_at_period_end": "true"})
+                    fine = sub.get("current_period_end") or (sub.get("items", {}).get("data") or [{}])[0].get("current_period_end")
+                    log.warning("NON_RINNOVA %s: abbonamento %s stato=%s rinnovo_spento=%s attivo_fino=%s", em, sub.get("id"),
+                                sub.get("status"), sub.get("cancel_at_period_end"),
+                                time.strftime("%Y-%m-%d", time.localtime(fine)) if fine else "?")
+            if not trovati:
+                log.warning("NON_RINNOVA %s: nessun abbonamento attivo da fermare", em)
+        except Exception as e:
+            log.warning("NON_RINNOVA %s: errore %s", em, str(e)[:300])
+
+
 def checkout(dealer: dict, base: str, http=None) -> str:
     """Pagina di pagamento Stripe per abbonarsi: ritorna l'indirizzo dove mandare il cliente."""
     data = {"mode": "subscription", "line_items[0][price]": os.environ["STRIPE_PRICE_ID"],
