@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salone · Auto selezionate</title>
+<meta name="description" content="Auto selezionate, controllate una per una. Vendita, permuta e finanziamenti.">
+<meta name="theme-color" content="#fbfcfd">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css?v=1">
+<script src="/config.js?v=1"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+
+<div id="attesa" aria-hidden="true"><span class="sigla" data-nome></span><i></i></div>
+
+<header class="nav" id="nav">
+  <a href="#apertura" class="marchio" data-nome></a>
+  <nav aria-label="Sezioni"><a href="#auto">Auto</a><a href="#salone">Il salone</a><a href="#visita">Contatti</a></nav>
+  <a class="tasto piccolo" data-tel>Chiama</a>
+</header>
+
+<section id="apertura" class="apertura" aria-label="Il salone">
+  <div class="palco">
+    <canvas id="scena" aria-hidden="true"></canvas>
+    <div class="alone" aria-hidden="true"></div>
+    <div class="racconto">
+      <div class="voce v0" data-da="0" data-a="0.085">
+        <h1 data-nome></h1>
+        <p class="sotto"><span data-sottotitolo></span> a <span data-citta></span></p>
+      </div>
+      <div class="voce v1" data-da="0.29" data-a="0.42">
+        <h2>Entrate pure.</h2>
+        <p>Un salone pieno di luce, dove ogni auto ha il suo spazio.</p>
+      </div>
+      <div class="voce v2" data-da="0.5" data-a="0.66">
+        <h2>Scelte una per una.</h2>
+        <p>Le controlliamo prima di metterle in vendita e vi raccontiamo tutto quello che sappiamo.</p>
+      </div>
+      <div class="voce v3" data-da="0.8" data-a="0.93">
+        <h2>La collezione</h2>
+        <p><span id="nAuto">Le</span> auto disponibili adesso.</p>
+        <a class="tasto" href="#auto">Vedi le auto</a>
+      </div>
+    </div>
+    <p class="scorri" id="scorri">Scorri per entrare</p>
+    <div class="linea" aria-hidden="true"><i id="avanzamento"></i></div>
+    <div class="velo" id="velo" aria-hidden="true"></div>
+  </div>
+</section>
+
+<main>
+  <section id="auto" class="collezione">
+    <div class="riga-testa">
+      <div>
+        <h2 class="titolo">La collezione</h2>
+        <p class="conta" id="conta"></p>
+      </div>
+      <form class="filtri" onsubmit="return false" aria-label="Filtra le auto">
+        <label class="cerca"><span class="sr">Cerca</span><input id="q" type="search" placeholder="Cerca marca o modello"></label>
+        <label><span class="sr">Marca</span><select id="fMarca"><option value="">Tutte le marche</option></select></label>
+        <label><span class="sr">Alimentazione</span><select id="fFuel"><option value="">Ogni alimentazione</option></select></label>
+        <label><span class="sr">Prezzo massimo</span><select id="fPrezzo">
+          <option value="">Ogni prezzo</option><option value="10000">Fino a 10.000 €</option><option value="20000">Fino a 20.000 €</option>
+          <option value="35000">Fino a 35.000 €</option><option value="60000">Fino a 60.000 €</option></select></label>
+        <label><span class="sr">Ordina</span><select id="fSort">
+          <option value="new">Ultime arrivate</option><option value="pa">Prezzo crescente</option><option value="pd">Prezzo decrescente</option>
+          <option value="km">Meno chilometri</option><option value="anno">Più recenti</option></select></label>
+      </form>
+    </div>
+    <p class="avviso-esempi" id="avvisoEsempi" hidden>Auto di esempio: le auto vere arrivano qui da sole quando colleghiamo AutoScout24 e Subito.</p>
+    <div class="griglia" id="griglia"></div>
+    <p class="vuoto" id="vuoto" hidden>Nessuna auto con questi filtri. <button type="button" id="azzera">Togli i filtri</button></p>
+  </section>
+
+  <section id="salone" class="salone">
+    <p class="dichiarazione">Compriamo, vendiamo e seguiamo ogni auto come se fosse la nostra.</p>
+    <ul class="servizi">
+      <li><h3>Vendita</h3><p>Auto usate e a chilometri zero, controllate prima di arrivare in salone.</p></li>
+      <li><h3>Permuta</h3><p>Portate la vostra auto: la valutiamo subito e la scaliamo dal prezzo.</p></li>
+      <li><h3>Finanziamenti</h3><p>Rate su misura, con la risposta in giornata.</p></li>
+      <li><h3>Garanzia</h3><p>Ogni auto esce dal salone con la sua garanzia e i documenti in ordine.</p></li>
+    </ul>
+  </section>
+
+  <section id="visita" class="visita">
+    <div class="visita-testo">
+      <h2 class="titolo">Venite a trovarci</h2>
+      <a class="telefono" data-tel data-tel-testo></a>
+      <address><span data-indirizzo></span></address>
+      <table class="orari" id="orari"></table>
+      <div class="tasti">
+        <a class="tasto" data-tel>Chiama</a>
+        <a class="tasto chiaro" data-wa target="_blank" rel="noopener">Scrivi su WhatsApp</a>
+        <a class="tasto chiaro" data-mappa target="_blank" rel="noopener">Indicazioni</a>
+      </div>
+    </div>
+    <div class="mappa"><iframe title="Mappa del salone" loading="lazy" data-mappa-src></iframe></div>
+  </section>
+
+  <footer class="piede">
+    <span>© <span id="anno"></span> <span data-nome></span><span data-piva></span></span>
+    <span id="agg"></span>
+  </footer>
+</main>
+
+<div class="scheda" id="scheda" hidden role="dialog" aria-modal="true" aria-labelledby="sTit">
+  <div class="scheda-fondo" data-chiudi></div>
+  <div class="scheda-box">
+    <button class="chiudi" data-chiudi aria-label="Chiudi">×</button>
+    <div class="galleria">
+      <div class="foto-grande"><img id="sImg" alt=""><button class="frecce sx" id="prec" aria-label="Foto precedente">‹</button><button class="frecce dx" id="succ" aria-label="Foto successiva">›</button><span class="n-foto" id="sN"></span></div>
+      <div class="miniature" id="sMini"></div>
+    </div>
+    <div class="scheda-info">
+      <p class="versione" id="sVer"></p>
+      <h3 id="sTit"></h3>
+      <p class="prezzo" id="sPrezzo"></p>
+      <dl class="dati" id="sDati"></dl>
+      <div class="tasti">
+        <a class="tasto" data-tel>Chiama</a>
+        <a class="tasto chiaro" id="sWa" target="_blank" rel="noopener">Chiedi su WhatsApp</a>
+      </div>
+      <div class="descrizione" id="sDesc"></div>
+      <ul class="dotazioni" id="sDot"></ul>
+      <a class="fonte" id="sFonte" target="_blank" rel="noopener"></a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/salone.js?v=1"></script>
+<script src="/app.js?v=1" defer></script>
+</body>
+</html>
