@@ -2149,6 +2149,25 @@ def _tempo_reale():
             lg.warning("LEADSP non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_sport, daemon=True, name="leadsp").start()
 
+    def fascia_lead():
+        """20/10 (cliente), una tantum (FASCIA_LEAD=n): quali lead vendono auto di fascia medio-bassa (FASCIA)."""
+        giro = os.environ.get("FASCIA_LEAD")
+        if not giro:
+            return
+        time.sleep(30)
+        from ..pipeline import fascia_lead as F
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        job = f"fascia_lead:{giro}"
+        try:
+            if _due(job, 10000):
+                esito = F.giro()
+                with connect() as conn:
+                    log_job(conn, job)(True, esito)
+        except Exception as e:
+            lg.warning("FASCIA non riuscito: %s", str(e)[:300])
+    threading.Thread(target=fascia_lead, daemon=True, name="fascia").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
