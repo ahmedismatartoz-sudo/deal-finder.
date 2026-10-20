@@ -50,6 +50,8 @@
     riempi('#fMarca', [...new Set(AUTO.map(a => a.marca).filter(Boolean))].sort());
     riempi('#fFuel', [...new Set(AUTO.map(a => fuelIt(a.carburante)).filter(Boolean))].sort());
     disegna();
+    window.SALONE_AUTO_FOTO = AUTO.filter(x => x.foto?.[0]).map(x => img(x.foto[0], '480x360'));
+    window.dispatchEvent(new CustomEvent('auto-pronte', { detail: window.SALONE_AUTO_FOTO }));
     const id = new URLSearchParams(location.search).get('auto');
     if (id) apri(AUTO.find(x => x.id === id));
   }
@@ -127,22 +129,26 @@
   addEventListener('scroll', leggiSalone, { passive: true });
   addEventListener('resize', () => { if (LISTA.length) salone(LISTA); leggiSalone(); });
   function passo() {
-    if (!attivo) return;
+    if (!attivo && ingresso >= 1) return;
     posa(false);
     requestAnimationFrame(passo);
   }
+  let ingresso = RIDOTTO ? 1 : 0, ingressoT0 = 0;
+  new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting && !ingressoT0) { ingressoT0 = performance.now(); if (!attivo) { attivo = true; requestAnimationFrame(passo); } } }), { threshold: 0.15 }).observe(showroom);
   function posa(subito) {
     k += (kT - k) * (subito || RIDOTTO ? 1 : 0.1);
+    if (ingressoT0 && ingresso < 1) ingresso = Math.min(1, (performance.now() - ingressoT0) / 2200);
     const stretto = innerWidth < 820, passoX = stretto ? innerWidth * 0.62 : Math.min(innerWidth * 0.3, 430);
     BAIE.forEach((b, i) => {
       const d = i - k, ad = Math.abs(d);
       if (ad > 4.5) { b.style.visibility = 'hidden'; return; }
       b.style.visibility = '';
       const rot = Math.max(-58, Math.min(58, -d * (stretto ? 22 : 34)));
-      b.style.transform = `translate(-50%,-46%) translateX(${d * passoX}px) translateZ(${-ad * (stretto ? 160 : 260)}px) rotateY(${rot}deg)`;
+      const q = Math.max(0, Math.min(1, ingresso * 1.6 - ad * 0.14)), qe = 1 - Math.pow(1 - q, 3);   // ogni auto arriva dal fondo
+      b.style.transform = `translate(-50%,-46%) translateX(${d * passoX * qe}px) translateZ(${-ad * (stretto ? 160 : 260) - (1 - qe) * 2200}px) rotateY(${rot * qe}deg)`;
       b.style.zIndex = 100 - Math.round(ad * 10);
       b.style.setProperty('--l', Math.max(0, 1 - ad).toFixed(3));
-      b.style.opacity = Math.max(0, Math.min(1, 1.6 - ad * 0.35)).toFixed(3);
+      b.style.opacity = (Math.max(0, Math.min(1, 1.6 - ad * 0.35)) * Math.min(1, q * 2.5)).toFixed(3);
     });
     $('#srFondo').style.transform = `scale(1.12) translateX(${-(LISTA.length > 1 ? k / (LISTA.length - 1) : 0) * 6}%)`;
     $('#srN').textContent = LISTA.length ? `${Math.min(LISTA.length, Math.round(k) + 1)} di ${LISTA.length}` : '';

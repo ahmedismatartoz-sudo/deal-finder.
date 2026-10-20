@@ -6,8 +6,8 @@
   --margine:clamp(20px,5vw,72px);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;background:var(--porcellana)}
-body{background:var(--porcellana);color:var(--inchiostro);font:300 17px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+html{scroll-behavior:smooth;background:var(--porcellana);overflow-x:clip}
+body{background:var(--porcellana);color:var(--inchiostro);font:300 17px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip;max-width:100vw}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button,input,select{font:inherit;color:inherit}
@@ -46,8 +46,8 @@ button,input,select{font:inherit;color:inherit}
 .nav nav a:hover::after{transform:scaleX(1)}
 
 /* apertura 3D */
-.apertura{position:relative;height:640vh}
-.palco{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:var(--notte)}
+.apertura{position:relative;height:900vh}
+.palco{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;clip-path:inset(0);background:var(--notte)}
 #scena{position:absolute;inset:0;width:100%;height:100%;display:block}
 .alone{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(15,26,46,.45),transparent 22%,transparent 62%,rgba(15,26,46,.55))}
 .velo{position:absolute;inset:0;background:var(--porcellana);opacity:0;pointer-events:none}
@@ -63,6 +63,8 @@ button,input,select{font:inherit;color:inherit}
 .v1,.v2{left:var(--margine);bottom:14vh;padding:34px 38px 36px;border-radius:28px;background:rgba(15,26,46,.42);box-shadow:inset 0 0 0 1px rgba(214,230,244,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .v2{left:auto;right:var(--margine)}
 .v3{left:0;right:0;top:22vh;text-align:center}
+.v4{left:0;right:0;top:16vh;text-align:center}
+.v4 p{margin-inline:auto}
 .v3 p{margin-inline:auto}
 .v3 .tasto{margin-top:28px;background:#fff;color:var(--notte)}
 .v3 .tasto:hover{background:var(--azzurro-chiaro)}
@@ -168,7 +170,7 @@ address{margin-top:22px;font-style:normal;color:#46596b}
 .vista button{border:0;background:transparent;padding:8px 20px;border-radius:999px;font-size:14px;color:var(--acciaio);cursor:pointer;transition:background .3s,color .3s}
 .vista button.on{background:var(--notte);color:#fff}
 .showroom{position:relative;margin:28px calc(-1 * var(--margine)) 0}
-.sr-palco{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:var(--notte);perspective:1500px;perspective-origin:50% 42%}
+.sr-palco{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;clip-path:inset(0);background:var(--notte);perspective:1500px;perspective-origin:50% 42%}
 .sr-fondo{position:absolute;inset:-8%;background:url(/foto/sala.webp) center 40%/cover;filter:blur(8px) brightness(.38) saturate(.85);will-change:transform}
 .sr-soffitto{position:absolute;left:0;right:0;top:0;height:30%;pointer-events:none}
 .sr-soffitto i{position:absolute;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,236,205,.85),transparent);box-shadow:0 0 18px 2px rgba(255,226,180,.35)}
