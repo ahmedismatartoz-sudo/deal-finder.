@@ -19,6 +19,36 @@ from pathlib import Path
 log = logging.getLogger("lusso")
 
 
+def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None = None):
+    """Ricerca AutoScout24 aggressiva: tante fasce di prezzo lette insieme (più collegamenti in parallelo)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from ..collectors.autoscout import AutoScoutCollector
+    workers = workers or int(os.environ.get("RACCOLTA_PARALLELI", "6"))
+    pausa = (float(os.environ.get("RACCOLTA_PAUSA_MIN", "0.25")), float(os.environ.get("RACCOLTA_PAUSA_MAX", "0.6")))
+    compiti = [(a, min(a + step - 1, hi), ct, sel) for ct, sel in venditori for a in range(lo, hi, step)]
+
+    def leggi(c):
+        col = AutoScoutCollector()
+        col.min_delay_s, col.max_delay_s = pausa
+        try:
+            return list(col._band(*c)), col.blocked
+        except Exception as e:
+            log.warning("fascia %s: %s", c, str(e)[:120])
+            return [], False
+
+    visti = set()
+    bloccate = 0
+    with ThreadPoolExecutor(workers) as ex:
+        for out, blocc in ex.map(leggi, compiti):
+            bloccate += bool(blocc)
+            for l in out:
+                if l.source_id in visti:
+                    continue
+                visti.add(l.source_id)
+                yield l
+    log.warning("RACCOLTA_VELOCE %d fasce, %d annunci, %d fasce bloccate", len(compiti), len(visti), bloccate)
+
+
 def _ricerca(min_p: int, venditori, fasce):
     """Annunci AutoScout24 entro 70 km da Milano, a fasce di prezzo (ogni fascia sotto i 400 risultati)."""
     from ..collectors.autoscout import AutoScoutCollector
@@ -26,15 +56,10 @@ def _ricerca(min_p: int, venditori, fasce):
     os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
     os.environ.pop("AUTOSCOUT_KM_MAX", None)
     os.environ.pop("PASSI_JOB", None)
-    col = AutoScoutCollector()
-    col.min_delay_s, col.max_delay_s = 0.6, 1.4
     for lo, hi, step in fasce:
         if hi <= min_p:
             continue
-        yield from col.search({"massiva": True, "min_price": max(lo, min_p), "max_price": hi, "step": step, "venditori": venditori})
-        if col.blocked:
-            log.warning("LUSSO autoscout bloccato")
-            return
+        yield from bande_parallele(max(lo, min_p), hi, step, venditori)
 
 
 FASCE = [(50000, 100000, 5000), (100000, 200000, 10000)]          # tetto 200.000 € (cliente 20/10)

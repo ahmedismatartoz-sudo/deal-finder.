@@ -46,7 +46,7 @@ def giro() -> dict:
     letti = []
     # 1a. Subito: tutta la provincia di Milano, dal più recente
     sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
-    sub.min_delay_s, sub.max_delay_s = 1.0, 2.0
+    sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
     try:
         for l in sub.search_recenti("lombardia", ["MI"], os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
                                     max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "150"))):
@@ -56,15 +56,13 @@ def giro() -> dict:
         log.warning("BENZ subito: %s", str(e)[:200])
     st["letti_subito"] = len(letti)
     log.warning("BENZ subito letti %d (3.000-15.000 €, provincia di Milano)", len(letti))
-    # 1b. AutoScout24: entro 30 km da Milano, a fasce di 500 €
+    # 1b. AutoScout24: entro 30 km da Milano, a fasce di 500 €, molte fasce insieme
+    from .lusso import bande_parallele
     os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("BENZ_RAGGIO", "30")
     os.environ.pop("PASSI_JOB", None)
-    asc = AutoScoutCollector()
-    asc.min_delay_s, asc.max_delay_s = 0.6, 1.3
     n0 = len(letti)
     try:
-        for l in asc.search({"massiva": True, "min_price": 3000, "max_price": 15000, "step": 500,
-                             "venditori": [("P", "privato"), ("D", "commerciante")]}):
+        for l in bande_parallele(3000, 15000, 500, [("P", "privato"), ("D", "commerciante")]):
             letti.append(l)
     except Exception as e:
         log.warning("BENZ autoscout: %s", str(e)[:200])
@@ -82,19 +80,22 @@ def giro() -> dict:
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))
         # 3. numero del venditore sugli annunci AutoScout24 non ancora controllati
-        cl = tr._client_as()
-        for r in cand:
-            if r["source"] != "autoscout24" or r["telefono_ok"] is not None:
-                continue
+        from concurrent.futures import ThreadPoolExecutor
+        da_fare = [r for r in cand if r["source"] == "autoscout24" and r["telefono_ok"] is None]
+
+        def numero(r):
+            cl = tr._client_as()
             stato, det = tr._as_dettaglio(cl, r["url"])
-            if stato == "scomparso":
-                st["autoscout_sparite"] += 1
-            elif det is not None:
-                tel = tr.telefono_autoscout(det)
-                conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, r["id"]))
-                st[f"autoscout_telefono_{tel}"] += 1
-            conn.commit()
-            time.sleep(0.8)
+            return r["id"], stato, (tr.telefono_autoscout(det) if det is not None else None)
+
+        with ThreadPoolExecutor(6) as ex:
+            for lid, stato, tel in ex.map(numero, da_fare):
+                if stato == "scomparso":
+                    st["autoscout_sparite"] += 1
+                elif tel is not None or stato == "attivo":
+                    conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, lid))
+                    st[f"autoscout_telefono_{tel}"] += 1
+        conn.commit()
         # 4. valutazione prudente e pubblicazione
         ids = [r["id"] for r in cand]
         tr.valuta_e_pubblica(conn, ids, st)
