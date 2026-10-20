@@ -141,6 +141,9 @@ def raccolta_60k() -> int:
     from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
     st = Counter()
     zona = [p.strip() for p in os.environ["LUSSO_PROVINCE"].split(",")] if os.environ.get("LUSSO_PROVINCE") else None
+    italia = os.environ.get("LUSSO_TUTTA_ITALIA") == "1"           # 20/10 (cliente): base prezzi 60-200k, tutta Italia
+    if italia:
+        zona = None
     solo_privati = os.environ.get("LUSSO_SOLO_PRIVATI") == "1"        # 20/10 (cliente): solo privati
     anno_min = int(os.environ.get("LUSSO_ANNO_MIN", "0") or 0)
     ci_sub = dict(CI_SUBITO)
@@ -149,7 +152,9 @@ def raccolta_60k() -> int:
 
     def salva(conn, l):
         pv = (l.province or "").upper()
-        if zona:
+        if italia:
+            pass
+        elif zona:
             if pv not in zona:
                 st["fuori_zona"] += 1
                 return
@@ -183,14 +188,21 @@ def raccolta_60k() -> int:
 
     with connect() as conn:
         venditori = [("P", "privato")] if solo_privati else [("P", "privato"), ("D", "commerciante")]
-        for l in _ricerca(60000, venditori, FASCE):
+        ricerca = _ricerca(60000, venditori, FASCE)
+        if italia:                                                   # senza CAP: AutoScout24 cerca in tutta Italia
+            os.environ.pop("PASSI_JOB", None)
+            os.environ["AUTOSCOUT_CAP"] = ""
+            ricerca = (l for lo, hi, step in FASCE if hi > 60000
+                       for l in bande_parallele(max(lo, 60000), hi, int(os.environ.get("LUSSO_PASSO_ITALIA", "2500")), venditori))
+        for l in ricerca:
             salva(conn, l)
         log.warning("LUSSO_AUTOSCOUT %s", dict(st))
         sub = SubitoCollector()
-        for prov, ci in ci_sub.items():
-            for page in range(20):
+        giri_sub = [("IT", None)] if italia else list(ci_sub.items())
+        for prov, ci in giri_sub:
+            for page in range(int(os.environ.get("LUSSO_SUB_PAGINE", "100")) if italia else 20):
                 try:
-                    r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": 4, "ci": ci, "t": "s", "lim": 100,
+                    r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={**({"r": 4, "ci": ci} if ci else {}), "c": 2, "t": "s", "lim": 100,
                                                                                  "start": page * 100, "ps": 60000, "sort": "pricedesc"})
                     ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
                 except Exception:
