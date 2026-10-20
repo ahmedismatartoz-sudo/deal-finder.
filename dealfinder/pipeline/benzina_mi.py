@@ -21,21 +21,21 @@ log = logging.getLogger("benzina_mi")
 PROVINCE_100 = [p.strip() for p in os.environ.get("BENZ_PROVINCE", "MI,MB,VA,CO,LC,BG,LO,PV,CR,NO,VB,PC,AL,VC,BS").split(",")]
 
 CANDIDATI_SQL = """
-SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, c.n, c.med
+WITH g AS (                     -- prezzo mediano per marca, modello, alimentazione e anno: una sola passata
+  SELECT make, model, fuel, year, count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY price_eur) AS med
+  FROM listings
+  WHERE price_eur BETWEEN 800 AND 60000 AND year >= 2005 AND make IS NOT NULL AND model IS NOT NULL
+  GROUP BY make, model, fuel, year
+)
+SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, g.n, g.med
 FROM listings t
-JOIN LATERAL (
-  SELECT count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY o.price_eur) AS med
-  FROM listings o
-  WHERE o.id<>t.id AND o.make=t.make AND o.model=t.model AND o.fuel IS NOT DISTINCT FROM t.fuel
-    AND o.year BETWEEN t.year-1 AND t.year+1 AND o.price_eur BETWEEN 800 AND 60000
-    AND (t.mileage_km IS NULL OR o.mileage_km BETWEEN t.mileage_km*0.6-5000 AND t.mileage_km*1.4+10000)
-) c ON true
+JOIN g ON g.make=t.make AND g.model=t.model AND g.fuel IS NOT DISTINCT FROM t.fuel AND g.year=t.year
 WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s) AND t.fuel ILIKE 'benzina%%'
   AND t.price_eur BETWEEN 3000 AND 15000 AND t.year >= 2007 AND coalesce(t.mileage_km, 0) <= 180000
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
-  AND c.n >= 5 AND t.price_eur < c.med * %(soglia)s
-ORDER BY t.price_eur / c.med ASC
+  AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
+ORDER BY t.price_eur / g.med ASC
 LIMIT %(lim)s"""
 
 
@@ -55,13 +55,14 @@ def giro() -> dict:
                 conn.commit()
                 pacco.clear()
 
+        solo_valuta = os.environ.get("BENZ_SOLO_VALUTA") == "1"   # annunci già raccolti: si passa subito alla scelta
         # 1a. Subito: Lombardia entro 100 km, dal più recente
         sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
         sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
         n = 0
         try:
-            for l in sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
-                                        max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300"))):
+            for l in ([] if solo_valuta else sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
+                                        max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300")))):
                 if l.price_eur and 3000 <= l.price_eur <= 15000:
                     pacco.append(l); n += 1
                     salva()
@@ -76,7 +77,7 @@ def giro() -> dict:
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
-            for l in bande_parallele(3000, 15000, 500, [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4"))):
+            for l in ([] if solo_valuta else bande_parallele(3000, 15000, 500, [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
                 pacco.append(l); n += 1
                 salva()
         except Exception as e:
@@ -85,7 +86,7 @@ def giro() -> dict:
         st["letti_autoscout"] = n
         log.warning("BENZ autoscout letti %d", n)
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
-        conn.execute("SET statement_timeout = '300s'")
+        conn.execute("SET statement_timeout = '900s'")
         cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
                                             "lim": int(os.environ.get("BENZ_MAX", "500"))}).fetchall()
         conn.execute("SET statement_timeout = 0")
