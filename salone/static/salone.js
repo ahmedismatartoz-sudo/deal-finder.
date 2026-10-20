@@ -61,7 +61,7 @@ function init() {
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), MOBILE ? 0.45 : 0.6, 0.55, 0.82));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), MOBILE ? 0.35 : 0.45, 0.5, 0.96));
   composer.addPass(new OutputPass());
 
   // ---- la Ferrari ----
@@ -114,6 +114,13 @@ function init() {
     V(0, 0.9, -14), AUTO.pos.clone().add(V(0, 0.75, 0)), AUTO.pos.clone().add(V(0, 0.8, 0)), AW(V(-0.36, 1.0, -0.6)), avanti, avanti,
     AW(V(-0.36, 1.2, -8)), V(0, 3.2, -36), V(0, 3.4, -40)], false, 'centripetal', 0.5);
 
+  // a che punto dello scorrimento si arriva a ogni tappa della ripresa (stesso numero di punti delle curve)
+  const TAPPE = [0, 0.08, 0.16, 0.22, 0.3, 0.38, 0.46, 0.54, 0.62, 0.69, 0.79, 0.85, 0.93, 1];
+  function tappa(e) {
+    let i = 0; while (i < TAPPE.length - 2 && e > TAPPE[i + 1]) i++;
+    const f = clamp((e - TAPPE[i]) / (TAPPE[i + 1] - TAPPE[i]));
+    return (i + f * f * (3 - 2 * f) * 0.5 + f * 0.5) / (TAPPE.length - 1);
+  }
   const copies = [...document.querySelectorAll('.racconto [data-da]')];
   const prog = document.getElementById('avanzamento'), velo = document.getElementById('velo'), nav = document.getElementById('nav');
   let target = FORCE ?? 0, p = target, w = 0, h = 0, visibile = true, mx = 0, my = 0;
@@ -152,7 +159,7 @@ function init() {
       mat.carrozzeria.envMapIntensity = 1.3;
     }
     mondo.rifP.visible = camera.position.z > -2; mondo.rif.visible = camera.position.z < 9;   // un solo specchio alla volta
-    P.getPointAt(Math.min(e, 0.9999), pos); L.getPointAt(Math.min(e, 0.9999), look);
+    const u = tappa(e); P.getPoint(u, pos); L.getPoint(u, look);
     const seduto = smooth(0.66, 0.7, e) * (1 - smooth(0.8, 0.84, e));
     const vivo = REDUCED ? 0 : (1 - seduto * 0.7);
     camera.position.copy(pos).add(V(mx * 0.25 * vivo + Math.sin(t * 0.3) * 0.02 * vivo, -my * 0.12 * vivo + Math.sin(t * 0.4) * 0.015 * vivo, 0));
@@ -183,10 +190,10 @@ function costruisci(scene, T) {
   const m = {
     navy: new THREE.MeshStandardMaterial({ color: NAVY, roughness: 0.35, metalness: 0.3 }),
     navyOpaco: new THREE.MeshStandardMaterial({ color: 0x16223a, roughness: 0.7 }),
-    bianco: new THREE.MeshStandardMaterial({ color: 0xf3f1ec, roughness: 0.6 }),
+    bianco: new THREE.MeshStandardMaterial({ color: 0xc9c6c0, roughness: 0.7 }),
     travertino: new THREE.MeshStandardMaterial({ color: 0xd9cfbf, roughness: 0.85, map: T.travertino }),
     pietra: new THREE.MeshStandardMaterial({ color: 0x8e949c, roughness: 0.5, map: T.pietra, transparent: true, opacity: 0.78 }),
-    marmo: new THREE.MeshPhysicalMaterial({ map: T.marmo, roughness: 0.12, clearcoat: 0.8, clearcoatRoughness: 0.08, transparent: true, opacity: 0.8 }),
+    marmo: new THREE.MeshPhysicalMaterial({ map: T.marmo, color: 0xbdbab4, roughness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.08, transparent: true, opacity: 0.84 }),
     marmoPieno: new THREE.MeshPhysicalMaterial({ map: T.marmo, roughness: 0.18, clearcoat: 0.6 }),
     vetro: new THREE.MeshPhysicalMaterial({ color: 0x9fb6cf, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.14, envMapIntensity: 2, side: THREE.DoubleSide, depthWrite: false }),
     led: new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe2b8).multiplyScalar(2.2) }),
@@ -226,9 +233,9 @@ function costruisci(scene, T) {
   const luna = new THREE.DirectionalLight(0x9db4d8, 0.5); luna.position.set(-30, 40, 40); scene.add(luna);
   const caldo = 0xffd9a8;
   for (const [x, z] of [[0, -9], [0, -24]]) {
-    const ra = new THREE.RectAreaLight(caldo, 4.2, 22, 6); ra.position.set(x, 8.9, z); ra.lookAt(x, 0, z); scene.add(ra);
+    const ra = new THREE.RectAreaLight(caldo, 1.6, 22, 6); ra.position.set(x, 8.9, z); ra.lookAt(x, 0, z); scene.add(ra);
   }
-  const faro = new THREE.SpotLight(0xfff1dc, 260, 30, 0.42, 0.6, 1.4);         // luce sulla Ferrari
+  const faro = new THREE.SpotLight(0xfff1dc, 140, 30, 0.42, 0.6, 1.4);         // luce sulla Ferrari
   faro.position.set(-2.5, 8.8, -11); faro.target.position.set(0, 0.5, -14);
   faro.castShadow = !MOBILE; faro.shadow.mapSize.set(1024, 1024); faro.shadow.bias = -0.0005; scene.add(faro, faro.target);
   const luceAbitacolo = new THREE.PointLight(0xbcd2ec, 0, 2.2, 1.5); luceAbitacolo.position.set(-0.1, 1.3, -13.8); scene.add(luceAbitacolo);
