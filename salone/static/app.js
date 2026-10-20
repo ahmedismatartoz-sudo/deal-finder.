@@ -71,6 +71,7 @@
         <p class="ver">${esc(a.versione)}</p>
         <p class="dati">${[anno(a), kmf(a), fuelIt(a.carburante), a.cambio, cv(a)].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</p>
       </article>`).join('');
+    salone(L);
     griglia.querySelectorAll('.auto').forEach(el => {
       const go = () => apri(AUTO.find(a => a.id === el.dataset.id));
       el.addEventListener('click', go);
@@ -78,6 +79,83 @@
     });
   }
   ['#q', '#fMarca', '#fFuel', '#fPrezzo', '#fSort'].forEach(s => $(s).addEventListener('input', disegna));
+
+  // ---- showroom: si cammina lungo le auto, ognuna sulla sua pedana con il faretto ----
+  const showroom = $('#showroom'), pista = $('#srPista');
+  let BAIE = [], k = 0, kT = 0, attivo = false, LISTA = [];
+  const RIDOTTO = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function salone(L) {
+    LISTA = L;
+    pista.innerHTML = L.map((a, i) => {
+      const f = a.foto?.[0] ? img(a.foto[0], '720x540') : '';
+      return `<article class="baia" data-i="${i}" data-id="${esc(a.id)}">
+        <div class="cono"></div>
+        <div class="quadro">${f ? `<img src="${f}" alt="${esc(a.marca + ' ' + a.modello)}" loading="${i < 4 ? 'eager' : 'lazy'}">` : ''}${a.esempio ? '<span class="etichetta">Esempio</span>' : ''}</div>
+        <div class="pedana"></div>
+        <div class="riflesso" aria-hidden="true">${f ? `<img src="${f}" alt="" loading="lazy">` : ''}</div>
+        <div class="targa">
+          <p class="t-ver">${esc([anno(a), kmf(a), fuelIt(a.carburante)].filter(Boolean).join('   '))}</p>
+          <h3>${esc(a.marca)} ${esc(a.modello)}</h3>
+          <p class="t-prezzo">${eur(a.prezzo)}</p>
+          <button type="button" class="tasto piccolo">Apri la scheda</button>
+        </div>
+      </article>`;
+    }).join('');
+    BAIE = [...pista.children];
+    showroom.style.height = `calc(100vh + ${Math.max(0, L.length - 1)} * ${innerWidth < 820 ? 62 : 46}vh)`;
+    BAIE.forEach(b => b.addEventListener('click', e => {
+      const i = +b.dataset.i;
+      if (Math.abs(i - k) < 0.5 || e.target.closest('button')) apri(LISTA[i]); else vai(i);
+    }));
+    k = kT = 0; posa(true);
+  }
+  function vai(i) {
+    i = Math.max(0, Math.min(LISTA.length - 1, i));
+    const r = showroom.getBoundingClientRect(), corsa = r.height - innerHeight;
+    scrollTo({ top: scrollY + r.top + (LISTA.length > 1 ? corsa * i / (LISTA.length - 1) : 0) + 2, behavior: RIDOTTO ? 'auto' : 'smooth' });
+  }
+  $('#srPrec').onclick = () => vai(Math.round(k) - 1);
+  $('#srSucc').onclick = () => vai(Math.round(k) + 1);
+  showroom.addEventListener('keydown', e => { if (e.key === 'ArrowRight') vai(Math.round(k) + 1); if (e.key === 'ArrowLeft') vai(Math.round(k) - 1); });
+  function leggiSalone() {
+    const r = showroom.getBoundingClientRect(), corsa = Math.max(1, r.height - innerHeight);
+    kT = Math.max(0, Math.min(1, -r.top / corsa)) * Math.max(0, LISTA.length - 1);
+    const dentro = r.bottom > 0 && r.top < innerHeight && !showroom.hidden;
+    if (dentro && !attivo) { attivo = true; requestAnimationFrame(passo); }
+    attivo = dentro;
+  }
+  addEventListener('scroll', leggiSalone, { passive: true });
+  addEventListener('resize', () => { if (LISTA.length) salone(LISTA); leggiSalone(); });
+  function passo() {
+    if (!attivo) return;
+    posa(false);
+    requestAnimationFrame(passo);
+  }
+  function posa(subito) {
+    k += (kT - k) * (subito || RIDOTTO ? 1 : 0.1);
+    const stretto = innerWidth < 820, passoX = stretto ? innerWidth * 0.62 : Math.min(innerWidth * 0.3, 430);
+    BAIE.forEach((b, i) => {
+      const d = i - k, ad = Math.abs(d);
+      if (ad > 4.5) { b.style.visibility = 'hidden'; return; }
+      b.style.visibility = '';
+      const rot = Math.max(-58, Math.min(58, -d * (stretto ? 22 : 34)));
+      b.style.transform = `translate(-50%,-46%) translateX(${d * passoX}px) translateZ(${-ad * (stretto ? 160 : 260)}px) rotateY(${rot}deg)`;
+      b.style.zIndex = 100 - Math.round(ad * 10);
+      b.style.setProperty('--l', Math.max(0, 1 - ad).toFixed(3));
+      b.style.opacity = Math.max(0, Math.min(1, 1.6 - ad * 0.35)).toFixed(3);
+    });
+    $('#srFondo').style.transform = `scale(1.12) translateX(${-(LISTA.length > 1 ? k / (LISTA.length - 1) : 0) * 6}%)`;
+    $('#srN').textContent = LISTA.length ? `${Math.min(LISTA.length, Math.round(k) + 1)} di ${LISTA.length}` : '';
+  }
+  // vista showroom / elenco
+  function vista(elenco) {
+    showroom.hidden = elenco; griglia.hidden = !elenco;
+    $('#vSalone').classList.toggle('on', !elenco); $('#vElenco').classList.toggle('on', elenco);
+    $('#vSalone').setAttribute('aria-pressed', !elenco); $('#vElenco').setAttribute('aria-pressed', elenco);
+    leggiSalone();
+  }
+  $('#vSalone').onclick = () => vista(false);
+  $('#vElenco').onclick = () => vista(true);
   $('#azzera').onclick = () => { ['#q', '#fMarca', '#fFuel', '#fPrezzo'].forEach(s => $(s).value = ''); disegna(); };
 
   // ---- scheda auto ----

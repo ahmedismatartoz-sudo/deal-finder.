@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css?v=2">
+<link rel="stylesheet" href="/style.css?v=3">
 <script src="/config.js?v=2"></script>
 </head>
 <body>
@@ -72,7 +72,24 @@
       </form>
     </div>
     <p class="avviso-esempi" id="avvisoEsempi" hidden>Auto di esempio: le auto vere arrivano qui da sole quando colleghiamo AutoScout24 e Subito.</p>
-    <div class="griglia" id="griglia"></div>
+    <div class="vista" role="group" aria-label="Come vedere le auto">
+      <button type="button" id="vSalone" class="on" aria-pressed="true">Showroom</button>
+      <button type="button" id="vElenco" aria-pressed="false">Elenco</button>
+    </div>
+    <div class="showroom" id="showroom">
+      <div class="sr-palco">
+        <div class="sr-fondo" id="srFondo" aria-hidden="true"></div>
+        <div class="sr-soffitto" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="sr-pavimento" aria-hidden="true"></div>
+        <div class="sr-pista" id="srPista"></div>
+        <div class="sr-guida">
+          <button type="button" id="srPrec" aria-label="Auto precedente">‹</button>
+          <span id="srN" aria-live="polite"></span>
+          <button type="button" id="srSucc" aria-label="Auto successiva">›</button>
+        </div>
+      </div>
+    </div>
+    <div class="griglia" id="griglia" hidden></div>
     <p class="vuoto" id="vuoto" hidden>Nessuna auto con questi filtri. <button type="button" id="azzera">Togli i filtri</button></p>
   </section>
 
@@ -132,6 +149,6 @@
 </div>
 
 <script src="/salone.js?v=2" defer></script>
-<script src="/app.js?v=2" defer></script>
+<script src="/app.js?v=3" defer></script>
 </body>
 </html>
