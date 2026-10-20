@@ -31,7 +31,11 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
         col = AutoScoutCollector()
         col.min_delay_s, col.max_delay_s = pausa
         try:
-            return list(col._band(*c)), col.blocked
+            out = list(col._band(*c))
+            for l in out:                     # memoria (512 MB): dell'annuncio originale serve solo il venditore
+                if isinstance(l.raw, dict):
+                    l.raw = {k: l.raw[k] for k in ("seller", "_telefono") if k in l.raw}
+            return out, col.blocked
         except Exception as e:
             log.warning("fascia %s: %s", c, str(e)[:120])
             return [], False
