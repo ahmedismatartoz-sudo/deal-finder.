@@ -318,6 +318,20 @@ def _con_subito(auto: list[dict], vecchie_sb: list[dict]) -> list[dict]:
     return auto + nuove
 
 
+def _senza_doppioni(auto: list[dict]) -> list[dict]:
+    """La stessa auto pubblicata due volte (stessa marca, modello, anno e chilometri): resta una sola, la prima in elenco."""
+    visti, out = {}, []
+    for a in auto:
+        if a.get("km"):
+            k = _chiave(a) + (a.get("km"),)
+            if k in visti:
+                log.info("SALONE doppione tolto: %s %s %s€ (resta quella a %s€)", a.get("marca"), a.get("modello"), a.get("prezzo"), visti[k].get("prezzo"))
+                continue
+            visti[k] = a
+        out.append(a)
+    return out
+
+
 def carica() -> dict:
     try:
         return json.loads(DATA.read_text())
@@ -348,6 +362,7 @@ def aggiorna():
                 auto.append(_dettaglio(cl, a))
                 time.sleep(1.2)
         auto = [a for a in auto if a.get("prezzo")]
+        auto = _senza_doppioni(auto)
         auto = _con_subito(auto, [a for a in vecchi.values() if a.get("fonte") == "subito"])
         auto.sort(key=lambda a: -(a.get("prezzo") or 0))
         DATA.write_text(json.dumps({"auto": auto, "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%S%z")},

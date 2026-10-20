@@ -30,7 +30,6 @@ _img = httpx.Client(timeout=20, headers={"User-Agent": scraper.UA, "Referer": sc
 @app.on_event("startup")
 def _avvio():
     threading.Thread(target=scraper.ciclo, daemon=True).start()
-    threading.Thread(target=_prova_foto, daemon=True).start()
 
 
 def _prova_foto():
