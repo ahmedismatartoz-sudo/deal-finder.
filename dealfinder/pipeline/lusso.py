@@ -1,0 +1,166 @@
+"""20/10 (cliente): auto di fascia alta a Milano e dintorni.
+
+lead_supercar(): commercianti di Milano e dintorni che vendono auto usate da 50.000 € in su e dichiarano di
+    comprare auto dai privati. Solo dati pubblicati dall'attività. Nei log: LEADS {json}.
+raccolta_60k(): tutte le auto da 60.000 € in su in vendita a Milano e dintorni (AutoScout24 e Subito, privati e
+    commercianti), salvate nel database per analizzarle. Nei log: LUSSO {json} e LUSSO_FINE.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import os
+import re
+import time
+from collections import Counter
+from html import unescape
+from pathlib import Path
+
+log = logging.getLogger("lusso")
+
+
+def _ricerca(min_p: int, venditori, fasce):
+    """Annunci AutoScout24 entro 70 km da Milano, a fasce di prezzo (ogni fascia sotto i 400 risultati)."""
+    from ..collectors.autoscout import AutoScoutCollector
+    os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LUSSO_RAGGIO", "70")
+    os.environ["AUTOSCOUT_DANNEGGIATE"] = "include"
+    os.environ.pop("AUTOSCOUT_KM_MAX", None)
+    os.environ.pop("PASSI_JOB", None)
+    col = AutoScoutCollector()
+    col.min_delay_s, col.max_delay_s = 0.6, 1.4
+    for lo, hi, step in fasce:
+        if hi <= min_p:
+            continue
+        yield from col.search({"massiva": True, "min_price": max(lo, min_p), "max_price": hi, "step": step, "venditori": venditori})
+        if col.blocked:
+            log.warning("LUSSO autoscout bloccato")
+            return
+
+
+FASCE = [(50000, 100000, 5000), (100000, 200000, 10000), (200000, 400000, 25000), (400000, 3000000, 2600000)]
+
+
+def lead_supercar() -> int:
+    from .lead import COMPRA, QUALSIASI, PROV_DINTORNI, _cellulari, _h, _nn, _nu, _tel9
+    from ..collectors.autoscout import AutoScoutCollector
+    es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_esclusi.json").read_text())
+    EU, ET, EN = set(es["url"]), set(es["tel"]), set(es["nome"])
+
+    def gia(nome, url, tels):
+        return (_h(_nn(nome)) in EN if nome else False) or (url and _h(_nu(url)) in EU) or \
+            any(t and _h(t) in ET for t in (_tel9(x) for x in tels))
+
+    dealers: dict = {}
+    n = 0
+    for l in _ricerca(50000, [("D", "commerciante")], FASCE):
+        n += 1
+        s = (l.raw or {}).get("seller") or {}
+        if not isinstance(s, dict) or (l.province and l.province.upper() not in PROV_DINTORNI):
+            continue
+        links = s.get("links") if isinstance(s.get("links"), dict) else {}
+        url = (links.get("infoPage") or "").split("?")[0]
+        nome = s.get("companyName")
+        if not url or not nome:
+            continue
+        d = dealers.setdefault(url, {"nome": nome, "citta": l.city, "prov": l.province, "n": 0, "marche": Counter(), "max": 0,
+                                     "tel": [p.get("formattedNumber") for p in (s.get("phones") or []) if isinstance(p, dict) and p.get("formattedNumber")]})
+        d["n"] += 1
+        d["marche"][l.make or "?"] += 1
+        d["max"] = max(d["max"], l.price_eur or 0)
+    log.warning("LEADS_RICERCA %d annunci da 50.000 € in su, %d autosaloni in zona", n, len(dealers))
+    asc = AutoScoutCollector()
+    trovati = dich = controllati = esclusi = 0
+    visti_t: set = set()
+    for url, d in sorted(dealers.items(), key=lambda kv: -kv[1]["n"]):
+        if d["n"] < int(os.environ.get("LEADS_MIN_AUTO", "2")):
+            continue
+        if gia(d["nome"], url, d["tel"]):
+            esclusi += 1
+            continue
+        cell = _cellulari(d["tel"])
+        if not cell or set(cell) & visti_t:
+            continue
+        try:
+            r = asc.client.get(url)
+            testo = unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else ""
+        except Exception:
+            testo = ""
+        controllati += 1
+        m = COMPRA.search(testo)
+        frase = ""
+        if m:
+            a, b = max(0, m.start() - 90), m.end() + 90
+            frase = " ".join(testo[a:b].split())[:240]
+            dich += 1
+        visti_t.update(cell)
+        trovati += 1
+        log.warning("LEADS %s", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2], "url": url,
+                                           "auto_50k": d["n"], "prezzo_max": d["max"], "marche": [k for k, _ in d["marche"].most_common(5)],
+                                           "dichiara": bool(m), "qualsiasi": bool(QUALSIASI.search(testo)) if testo else False,
+                                           "frase": frase}, ensure_ascii=False))
+        time.sleep(0.9)
+    log.warning("LEADS_FINE controllati %d, già consegnati %d, con cellulare %d, dichiarano di comprare %d", controllati, esclusi, trovati, dich)
+    return trovati
+
+
+def raccolta_60k() -> int:
+    from ..db import connect, upsert_listing
+    from ..zone import comune_ok
+    from .lead import PROV_DINTORNI, CI_SUBITO
+    from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
+    st = Counter()
+
+    def salva(conn, l):
+        pv = (l.province or "").upper()
+        if not pv or pv not in PROV_DINTORNI or not comune_ok(pv, l.city):
+            st["fuori_zona"] += 1
+            return
+        if not l.price_eur or l.price_eur < 60000:
+            st["sotto_60k"] += 1
+            return
+        try:
+            lid, ev = upsert_listing(conn, l)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            st["errore"] += 1
+            log.warning("LUSSO non salvato %s: %s", l.url, str(e)[:120])
+            return
+        st[f"{l.source}:{ev}"] += 1
+        st["tenute"] += 1
+        log.warning("LUSSO %s", json.dumps({"id": lid, "fonte": l.source, "auto": " ".join(x for x in (l.make, l.model, l.version_raw) if x)[:90],
+                                           "anno": l.year, "km": l.mileage_km, "carb": l.fuel, "kw": l.power_kw, "prezzo": l.price_eur,
+                                           "prov": pv, "comune": l.city, "venditore": l.seller_type, "url": l.url}, ensure_ascii=False))
+
+    with connect() as conn:
+        for l in _ricerca(60000, [("P", "privato"), ("D", "commerciante")], FASCE):
+            salva(conn, l)
+        log.warning("LUSSO_AUTOSCOUT %s", dict(st))
+        sub = SubitoCollector()
+        for prov, ci in CI_SUBITO.items():
+            for page in range(20):
+                try:
+                    r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": 4, "ci": ci, "t": "s", "lim": 100,
+                                                                                 "start": page * 100, "ps": 60000, "sort": "pricedesc"})
+                    ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
+                except Exception:
+                    ads = []
+                sotto = 0
+                if page == 0:
+                    pr = [x for x in (parse_item(a) for a in ads) if x and x.price_eur]
+                    log.warning("LUSSO_SUBITO_PROVA %s: %d annunci, prezzo minimo %s", prov, len(ads), min((x.price_eur for x in pr), default=None))
+                for it in ads:
+                    l = parse_item(it)
+                    if not l:
+                        continue
+                    if not l.price_eur or l.price_eur < 60000:
+                        sotto += 1
+                        continue
+                    l.province = l.province or prov
+                    salva(conn, l)
+                time.sleep(1.0)
+                if len(ads) < 100 or sotto > 80:       # il filtro di prezzo non c'è o siamo scesi sotto 60.000 €
+                    break
+            log.warning("LUSSO_SUBITO %s fatto: %s", prov, dict(st))
+    log.warning("LUSSO_FINE %s", dict(st))
+    return st["tenute"]

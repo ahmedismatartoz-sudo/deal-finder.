@@ -2061,6 +2061,27 @@ def _tempo_reale():
             lg.warning("LEADN non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_dintorni, daemon=True, name="lead").start()
 
+    def lusso():
+        """20/10 (cliente), una tantum (LUSSO_GIRO=n): lead di commercianti di supercar che comprano dai privati (LEADS)
+        e raccolta di tutte le auto da 60.000 € in su a Milano e dintorni (LUSSO)."""
+        giro = os.environ.get("LUSSO_GIRO")
+        if not giro:
+            return
+        time.sleep(120)
+        from ..pipeline import lusso as L
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        for nome, fn in (("lead", L.lead_supercar), ("raccolta", L.raccolta_60k)):
+            job = f"lusso:{nome}:{giro}"
+            try:
+                if _due(job, 10000):
+                    with connect() as conn:
+                        fin = log_job(conn, job)
+                        fin(True, {"trovati": fn()})
+            except Exception as e:
+                lg.warning("LUSSO %s non riuscito: %s", nome, str(e)[:300])
+    threading.Thread(target=lusso, daemon=True, name="lusso").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
