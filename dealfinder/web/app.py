@@ -1054,6 +1054,28 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     return [it for it in items if it["id"] not in via]
 
 
+def _prezzi_cliente() -> dict:
+    """data/prezzi_sito.json {"id auto": prezzo}: prezzo già trattato col venditore (richiesta del cliente)."""
+    from pathlib import Path
+    try:
+        return {str(k): int(v) for k, v in json.loads((Path(__file__).resolve().parents[2] / "data" / "prezzi_sito.json").read_text()).items()}
+    except Exception:
+        return {}
+
+
+def _prezzi_trattati(items: list[dict]) -> None:
+    prezzi = _prezzi_cliente()
+    for it in items:
+        nuovo = prezzi.get(str(it.get("id")))
+        if not nuovo or not it.get("prezzo") or nuovo == it["prezzo"]:
+            continue
+        diff = it["prezzo"] - nuovo
+        it["prezzo"] = nuovo
+        pv = it.get("pv")
+        if isinstance(pv, dict) and pv.get("margine") is not None:
+            it["pv"] = dict(pv, margine=pv["margine"] + diff)
+
+
 def _margine_recenti(items: list[dict]) -> list[dict]:
     """20/10 (cliente): le auto dal 2017 in poi restano sul sito solo con almeno 3.500 € di margine
     (lo stesso margine mostrato sul sito). Le auto più vecchie non cambiano."""
@@ -1172,6 +1194,7 @@ def _calcola_elenco() -> None:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
+    _prezzi_trattati(items)
     items = _margine_recenti(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
@@ -1294,6 +1317,12 @@ def affare(request: Request):
         if not row:
             eco = row = conn.execute(scovo.ECO_SQL + " AND l.id=%(id)s", dict(scovo.eco_params(user["id"]), id=lid)).fetchone()
         extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() if row else None
+        if str(lid) in _prezzi_cliente():
+            # prezzo trattato: la scheda usa i dati dell'elenco, già con il prezzo nuovo e il margine giusto
+            tr = next((it for it in (_elenco.get("items") or []) if it.get("id") == lid), None)
+            if tr:
+                extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone()
+                return jsonify(scovo.detail(dict(tr), dict(extra or {}, pv_dati=None)))
         if not row:
             # auto scelte a mano (data/forzate_sito.json): la scheda viene dall'elenco del sito
             forz = next((it for it in (_elenco.get("items") or []) if it.get("id") == lid
