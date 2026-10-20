@@ -1,0 +1,11 @@
+[
+ {"marca": "mini", "anno": 2016, "km": 83000, "prezzo": 15500},
+ {"marca": "peugeot", "anno": 2021, "km": 60000, "prezzo": 12800},
+ {"marca": "mercedes", "anno": 2013, "km": 175000, "prezzo": 10000},
+ {"marca": "audi", "anno": 2011, "km": 112400, "prezzo": 14400},
+ {"marca": "jaguar", "anno": 2016, "km": 4000, "prezzo": 15000},
+ {"marca": "mercedes", "anno": 2013, "km": 120000, "prezzo": 10000},
+ {"marca": "jaguar", "anno": 2016, "km": 104000, "prezzo": 10000},
+ {"marca": "alfa", "anno": 2008, "km": 138000, "prezzo": 10400},
+ {"marca": "ford", "anno": 2022, "km": 10000, "prezzo": 11686}
+]

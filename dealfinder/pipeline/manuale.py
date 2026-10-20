@@ -33,9 +33,31 @@ log = logging.getLogger("manuale")
 FILE = Path(__file__).resolve().parents[2] / "data" / "analisi_manuale.json"
 
 
+def applica_scarti_cliente(conn) -> int:
+    """Auto che il cliente ha chiesto di togliere dal sito (data/scarti_sito.json: marca, anno, km, prezzo).
+    Si riconoscono da marca + anno + km + prezzo; non tornano più sul sito."""
+    f = FILE.parent / "scarti_sito.json"
+    if not f.exists():
+        return 0
+    n = 0
+    for e in json.loads(f.read_text()):
+        n += conn.execute("UPDATE listings SET stage='scartato', stage_reason='analisi_manuale: tolta dal cliente' "
+                          "WHERE make ILIKE %s AND year=%s AND mileage_km=%s AND price_eur=%s "
+                          "AND stage IS DISTINCT FROM 'scartato'",
+                          (e["marca"] + "%", e["anno"], e["km"], e["prezzo"])).rowcount
+    conn.commit()
+    log.warning("SCARTI_CLIENTE %d auto tolte dal sito", n)
+    return n
+
+
 def applica_scarti(conn) -> int:
     """Toglie subito dal sito le auto scartate a mano (foto: incidenti gravi, airbag, ecc.).
     Leggero: solo un aggiornamento dello stato, si fa a ogni avvio del sito senza aspettare il ciclo."""
+    try:
+        applica_scarti_cliente(conn)
+    except Exception as ex:
+        conn.rollback()
+        log.warning("SCARTI_CLIENTE non riuscito: %s", str(ex)[:200])
     if not FILE.exists():
         return 0
     ids = [e["id"] for e in json.loads(FILE.read_text())
