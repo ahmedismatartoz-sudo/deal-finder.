@@ -140,10 +140,18 @@ def raccolta_60k() -> int:
     from .lead import PROV_DINTORNI, CI_SUBITO
     from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
     st = Counter()
+    zona = [p.strip() for p in os.environ["LUSSO_PROVINCE"].split(",")] if os.environ.get("LUSSO_PROVINCE") else None
+    ci_sub = dict(CI_SUBITO)
+    if zona:
+        ci_sub.update({p: c for p, c in (("BS", 2), ("MN", 7), ("SO", 11)) if p in zona})
 
     def salva(conn, l):
         pv = (l.province or "").upper()
-        if not pv or pv not in PROV_DINTORNI or not comune_ok(pv, l.city):
+        if zona:
+            if pv not in zona:
+                st["fuori_zona"] += 1
+                return
+        elif not pv or pv not in PROV_DINTORNI or not comune_ok(pv, l.city):
             st["fuori_zona"] += 1
             return
         if not l.price_eur or l.price_eur < 60000 or l.price_eur > 200000:
@@ -170,7 +178,7 @@ def raccolta_60k() -> int:
             salva(conn, l)
         log.warning("LUSSO_AUTOSCOUT %s", dict(st))
         sub = SubitoCollector()
-        for prov, ci in CI_SUBITO.items():
+        for prov, ci in ci_sub.items():
             for page in range(20):
                 try:
                     r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": 4, "ci": ci, "t": "s", "lim": 100,

@@ -708,7 +708,15 @@ if __name__ == "__main__":
             if voce.startswith("lusso60"):                                 # 20/10: auto 60-200k di continuo
                 from . import lusso as L
                 os.environ.setdefault("LUSSO_LOG", "0")
-                esito = {"tenute": L.raccolta_60k()}
+                anno = os.environ.get("ANNO_MINIMO")
+                os.environ["ANNO_MINIMO"] = os.environ.get("LUSSO_ANNO_MIN", "1990")     # anche auto d'epoca e youngtimer
+                try:
+                    esito = {"tenute": L.raccolta_60k()}
+                finally:
+                    if anno is None:
+                        os.environ.pop("ANNO_MINIMO", None)
+                    else:
+                        os.environ["ANNO_MINIMO"] = anno
             elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
