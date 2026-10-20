@@ -16,8 +16,9 @@
 
   const carica = src => new Promise((ok, ko) => { const i = new Image(); i.decoding = 'async'; i.onload = () => ok(i); i.onerror = ko; i.src = src; });
   const puntiP = window.SALONE_PUNTI ? Promise.resolve(window.SALONE_PUNTI) : fetch('/foto/punti.json').then(r => r.json()).catch(() => ({}));
-  Promise.all([carica(FOTO.esterno), carica(FOTO.sala), carica(FOTO.vetrata), puntiP])
-    .then(([esterno, sala, vetrata, punti]) => avvia({ esterno, sala, vetrata }, punti))
+  const interno = carica(FOTO.interno || '/foto/interno.webp').catch(() => null);      // foto degli interni (facoltativa)
+  Promise.all([carica(FOTO.esterno), carica(FOTO.sala), carica(FOTO.vetrata), puntiP, interno])
+    .then(([esterno, sala, vetrata, punti, interno]) => avvia({ esterno, sala, vetrata, interno }, punti))
     .catch(e => { console.warn('foto non caricate', e); document.documentElement.classList.add('nogl'); pronto(); });
 
   function avvia(IMG, PUNTI) {
@@ -242,7 +243,14 @@
 
       // ---- 4. dentro l'auto: il cruscotto si accende ----
       const aC = smooth(0.65, 0.7, e) * (1 - smooth(0.9, 0.97, e));
-      if (aC > 0) abitacolo(aC, smooth(0.69, 0.76, e), smooth(0.71, 0.75, e) - 0.75 * smooth(0.76, 0.81, e), t, smooth(0.8, 0.97, e));
+      if (aC > 0 && IMG.interno) {                  // foto vera degli interni: ci si siede (la foto si allarga), le luci si accendono
+        const I = IMG.interno, gI = piazza(I, 1.5 - 0.38 * smooth(0.65, 0.78, e) + 0.12 * smooth(0.8, 0.97, e) + respiro, 0.5, 0.5);
+        foto(I, gI, aC);
+        luci(PUNTI.interno, gI, aC * smooth(0.7, 0.77, e), t);
+      } else if (aC > 0) {                          // senza foto: la sala vista dal buio dell'auto
+        const g = piazza(IMG.sala, 1.15 + 0.25 * smooth(0.8, 0.97, e), 0.53, 0.5);
+        foto(IMG.sala, g, aC * 0.55); luci(PUNTI.sala, g, aC * 0.7, t);
+      }
       // ---- 5. dal parabrezza escono le auto del salone ----
       const vola = smooth(0.8, 0.98, e);
       if (vola > 0) volano(vola, t);
