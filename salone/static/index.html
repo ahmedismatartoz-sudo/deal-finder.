@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css?v=4">
+<link rel="stylesheet" href="/style.css?v=5">
 <script src="/config.js?v=2"></script>
 </head>
 <body>
@@ -39,6 +39,9 @@
       <div class="voce v2" data-da="0.47" data-a="0.56">
         <h2>Scelte una per una.</h2>
         <p>Le controlliamo prima di metterle in vendita e vi raccontiamo tutto quello che sappiamo.</p>
+      </div>
+      <div class="voce v4" data-da="0.8" data-a="0.88">
+        <h2>Mettetevi comodi.</h2>
       </div>
       <div class="voce v3" data-da="0.9" data-a="0.985">
         <h2>La collezione</h2>
@@ -72,23 +75,18 @@
       </form>
     </div>
     <p class="avviso-esempi" id="avvisoEsempi" hidden>Auto di esempio: le auto vere arrivano qui da sole quando colleghiamo AutoScout24 e Subito.</p>
-    <div class="vista" role="group" aria-label="Come vedere le auto">
-      <button type="button" id="vSalone" class="on" aria-pressed="true">Showroom</button>
-      <button type="button" id="vElenco" aria-pressed="false">Elenco</button>
-    </div>
-    <div class="showroom" id="showroom">
-      <div class="sr-palco">
-        <div class="sr-fondo" id="srFondo" aria-hidden="true"></div>
-        <div class="sr-soffitto" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div class="sr-pavimento" aria-hidden="true"></div>
-        <div class="sr-pista" id="srPista"></div>
-        <div class="sr-guida">
-          <button type="button" id="srPrec" aria-label="Auto precedente">‹</button>
-          <span id="srN" aria-live="polite"></span>
-          <button type="button" id="srSucc" aria-label="Auto successiva">›</button>
-        </div>
+    <div class="barra-vetrina">
+      <div class="vista" role="group" aria-label="Come vedere le auto">
+        <button type="button" id="vSalone" class="on" aria-pressed="true">Showroom</button>
+        <button type="button" id="vElenco" aria-pressed="false">Elenco</button>
+      </div>
+      <div class="guida" id="guida">
+        <span id="srN" aria-live="polite"></span>
+        <button type="button" id="srPrec" aria-label="Auto precedente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button type="button" id="srSucc" aria-label="Auto successiva"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
     </div>
+    <div class="vetrina" id="vetrina" tabindex="0" aria-label="Le auto del salone, una accanto all'altra"></div>
     <div class="griglia" id="griglia" hidden></div>
     <p class="vuoto" id="vuoto" hidden>Nessuna auto con questi filtri. <button type="button" id="azzera">Togli i filtri</button></p>
   </section>
@@ -148,7 +146,7 @@
   </div>
 </div>
 
-<script src="/salone.js?v=4" defer></script>
-<script src="/app.js?v=4" defer></script>
+<script src="/salone.js?v=5" defer></script>
+<script src="/app.js?v=5" defer></script>
 </body>
 </html>

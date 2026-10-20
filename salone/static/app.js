@@ -82,83 +82,64 @@
   }
   ['#q', '#fMarca', '#fFuel', '#fPrezzo', '#fSort'].forEach(s => $(s).addEventListener('input', disegna));
 
-  // ---- showroom: si cammina lungo le auto, ognuna sulla sua pedana con il faretto ----
-  const showroom = $('#showroom'), pista = $('#srPista');
-  let BAIE = [], k = 0, kT = 0, attivo = false, LISTA = [];
+  // ---- showroom: le auto una accanto all'altra, grandi e pulite; si scorre col dito, con le frecce o trascinando ----
+  const vetrina = $('#vetrina');
+  let LISTA = [], PEZZI = [], corrente = 0;
   const RIDOTTO = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function salone(L) {
     LISTA = L;
-    pista.innerHTML = L.map((a, i) => {
+    vetrina.innerHTML = L.map((a, i) => {
       const f = a.foto?.[0] ? img(a.foto[0], '720x540') : '';
-      return `<article class="baia" data-i="${i}" data-id="${esc(a.id)}">
-        <div class="cono"></div>
-        <div class="quadro">${f ? `<img src="${f}" alt="${esc(a.marca + ' ' + a.modello)}" loading="${i < 4 ? 'eager' : 'lazy'}">` : ''}${a.esempio ? '<span class="etichetta">Esempio</span>' : ''}</div>
-        <div class="pedana"></div>
-        <div class="riflesso" aria-hidden="true">${f ? `<img src="${f}" alt="" loading="lazy">` : ''}</div>
-        <div class="targa">
-          <p class="t-ver">${esc([anno(a), kmf(a), fuelIt(a.carburante)].filter(Boolean).join('   '))}</p>
-          <h3>${esc(a.marca)} ${esc(a.modello)}</h3>
-          <p class="t-prezzo">${eur(a.prezzo)}</p>
-          <button type="button" class="tasto piccolo">Apri la scheda</button>
+      const dati = [anno(a), kmf(a), fuelIt(a.carburante), a.cambio].filter(Boolean);
+      return `<article class="pezzo" data-i="${i}">
+        <button type="button" class="pezzo-foto" aria-label="Apri la scheda: ${esc(a.marca + ' ' + a.modello)}">
+          ${f ? `<img src="${f}" alt="" loading="${i < 3 ? 'eager' : 'lazy'}" draggable="false" onload="this.classList.add('ok')">` : ''}
+          ${a.esempio ? '<span class="etichetta">Esempio</span>' : ''}
+        </button>
+        <div class="pezzo-riga">
+          <div class="pezzo-nome"><h3>${esc(a.marca)} ${esc(a.modello)}</h3><p>${esc(a.versione || '')}</p></div>
+          <p class="pezzo-prezzo">${eur(a.prezzo)}</p>
         </div>
+        <p class="pezzo-dati">${dati.map(x => `<span>${esc(x)}</span>`).join('')}</p>
       </article>`;
     }).join('');
-    BAIE = [...pista.children];
-    showroom.style.height = `calc(100vh + ${Math.max(0, L.length - 1)} * ${innerWidth < 820 ? 62 : 46}vh)`;
-    BAIE.forEach(b => b.addEventListener('click', e => {
-      const i = +b.dataset.i;
-      if (Math.abs(i - k) < 0.5 || e.target.closest('button')) apri(LISTA[i]); else vai(i);
-    }));
-    k = kT = 0; posa(true);
+    PEZZI = [...vetrina.children];
+    PEZZI.forEach(p => p.querySelector('.pezzo-foto').addEventListener('click', () => { if (!trascinato) apri(LISTA[+p.dataset.i]); }));
+    vetrina.scrollLeft = 0; aggiorna();
   }
-  function vai(i) {
-    i = Math.max(0, Math.min(LISTA.length - 1, i));
-    const r = showroom.getBoundingClientRect(), corsa = r.height - innerHeight;
-    scrollTo({ top: scrollY + r.top + (LISTA.length > 1 ? corsa * i / (LISTA.length - 1) : 0) + 2, behavior: RIDOTTO ? 'auto' : 'smooth' });
-  }
-  $('#srPrec').onclick = () => vai(Math.round(k) - 1);
-  $('#srSucc').onclick = () => vai(Math.round(k) + 1);
-  showroom.addEventListener('keydown', e => { if (e.key === 'ArrowRight') vai(Math.round(k) + 1); if (e.key === 'ArrowLeft') vai(Math.round(k) - 1); });
-  function leggiSalone() {
-    const r = showroom.getBoundingClientRect(), corsa = Math.max(1, r.height - innerHeight);
-    kT = Math.max(0, Math.min(1, -r.top / corsa)) * Math.max(0, LISTA.length - 1);
-    const dentro = r.bottom > 0 && r.top < innerHeight && !showroom.hidden;
-    if (dentro && !attivo) { attivo = true; requestAnimationFrame(passo); }
-    attivo = dentro;
-  }
-  addEventListener('scroll', leggiSalone, { passive: true });
-  addEventListener('resize', () => { if (LISTA.length) salone(LISTA); leggiSalone(); });
-  function passo() {
-    if (!attivo && ingresso >= 1) return;
-    posa(false);
-    requestAnimationFrame(passo);
-  }
-  let ingresso = RIDOTTO ? 1 : 0, ingressoT0 = 0;
-  new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting && !ingressoT0) { ingressoT0 = performance.now(); if (!attivo) { attivo = true; requestAnimationFrame(passo); } } }), { threshold: 0.15 }).observe(showroom);
-  function posa(subito) {
-    k += (kT - k) * (subito || RIDOTTO ? 1 : 0.1);
-    if (ingressoT0 && ingresso < 1) ingresso = Math.min(1, (performance.now() - ingressoT0) / 2200);
-    const stretto = innerWidth < 820, passoX = stretto ? innerWidth * 0.62 : Math.min(innerWidth * 0.3, 430);
-    BAIE.forEach((b, i) => {
-      const d = i - k, ad = Math.abs(d);
-      if (ad > 4.5) { b.style.visibility = 'hidden'; return; }
-      b.style.visibility = '';
-      const rot = Math.max(-58, Math.min(58, -d * (stretto ? 22 : 34)));
-      const q = Math.max(0, Math.min(1, ingresso * 1.6 - ad * 0.14)), qe = 1 - Math.pow(1 - q, 3);   // ogni auto arriva dal fondo
-      b.style.transform = `translate(-50%,-46%) translateX(${d * passoX * qe}px) translateZ(${-ad * (stretto ? 160 : 260) - (1 - qe) * 2200}px) rotateY(${rot * qe}deg)`;
-      b.style.zIndex = 100 - Math.round(ad * 10);
-      b.style.setProperty('--l', Math.max(0, 1 - ad).toFixed(3));
-      b.style.opacity = (Math.max(0, Math.min(1, 1.6 - ad * 0.35)) * Math.min(1, q * 2.5)).toFixed(3);
+  function aggiorna() {                       // l'auto al centro è piena, le altre leggermente più piccole e chiare
+    const c = vetrina.scrollLeft + vetrina.clientWidth / 2;
+    let migliore = 0, dmin = 1e9;
+    PEZZI.forEach((p, i) => {
+      const m = p.offsetLeft + p.offsetWidth / 2, d = Math.abs(m - c), v = Math.max(0, 1 - d / (p.offsetWidth * 1.1));
+      if (d < dmin) { dmin = d; migliore = i; }
+      p.style.setProperty('--v', v.toFixed(3));
     });
-    $('#srFondo').style.transform = `scale(1.12) translateX(${-(LISTA.length > 1 ? k / (LISTA.length - 1) : 0) * 6}%)`;
-    $('#srN').textContent = LISTA.length ? `${Math.min(LISTA.length, Math.round(k) + 1)} di ${LISTA.length}` : '';
+    corrente = migliore;
+    $('#srN').textContent = LISTA.length ? `${corrente + 1} di ${LISTA.length}` : '';
+    $('#srPrec').disabled = corrente <= 0; $('#srSucc').disabled = corrente >= LISTA.length - 1;
   }
+  let raf = 0;
+  vetrina.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; aggiorna(); }); }, { passive: true });
+  addEventListener('resize', aggiorna);
+  function vai(i) {
+    const p = PEZZI[Math.max(0, Math.min(PEZZI.length - 1, i))]; if (!p) return;
+    vetrina.scrollTo({ left: p.offsetLeft + p.offsetWidth / 2 - vetrina.clientWidth / 2, behavior: RIDOTTO ? 'auto' : 'smooth' });
+  }
+  $('#srPrec').onclick = () => vai(corrente - 1);
+  $('#srSucc').onclick = () => vai(corrente + 1);
+  vetrina.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { e.preventDefault(); vai(corrente + 1); } if (e.key === 'ArrowLeft') { e.preventDefault(); vai(corrente - 1); } });
+  // trascinare col mouse (sul telefono basta il dito)
+  let giu = null, trascinato = false;
+  vetrina.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') return; giu = { x: e.clientX, s: vetrina.scrollLeft }; trascinato = false; vetrina.classList.add('presa'); });
+  addEventListener('pointermove', e => { if (!giu) return; const dx = e.clientX - giu.x; if (Math.abs(dx) > 6) trascinato = true; vetrina.scrollLeft = giu.s - dx; });
+  addEventListener('pointerup', () => { if (!giu) return; giu = null; vetrina.classList.remove('presa'); if (trascinato) vai(corrente); setTimeout(() => { trascinato = false; }, 0); });
   // vista showroom / elenco
   function vista(elenco) {
-    showroom.hidden = elenco; griglia.hidden = !elenco;
+    vetrina.hidden = elenco; $('#guida').hidden = elenco; griglia.hidden = !elenco;
     $('#vSalone').classList.toggle('on', !elenco); $('#vElenco').classList.toggle('on', elenco);
     $('#vSalone').setAttribute('aria-pressed', !elenco); $('#vElenco').setAttribute('aria-pressed', elenco);
-    leggiSalone();
+    if (!elenco) aggiorna();
   }
   $('#vSalone').onclick = () => vista(false);
   $('#vElenco').onclick = () => vista(true);
