@@ -292,7 +292,8 @@ def lead_sportive() -> int:
     dealers: dict = {}
     n = 0
     diag = 0
-    for l in bande_parallele(12000, 300000, 4000, [("D", "commerciante")]):
+    da, a_, passo = (int(os.environ.get(k, v)) for k, v in (("LEADSP_DA", "12000"), ("LEADSP_A", "300000"), ("LEADSP_PASSO", "4000")))
+    for l in bande_parallele(da, a_, passo, [("D", "commerciante")]):
         n += 1
         s = (l.raw or {}).get("seller") or {}
         if not isinstance(s, dict) or (l.province and l.province.upper() not in PROV_DINTORNI):
@@ -314,7 +315,11 @@ def lead_sportive() -> int:
             d["sport"] += 1
             if len(d["esempi"]) < 4:
                 d["esempi"].append(f"{l.make} {l.model}".strip())
-    scelti = [(u, d) for u, d in dealers.items() if d["sport"] >= int(os.environ.get("LEADSP_MIN_SPORT", "2"))]
+    if os.environ.get("LEADSP_FASCIA") == "1":      # 20/10 (cliente): chi tratta auto da 60.000 a 200.000 € (tutte quelle lette sono in fascia)
+        scelti = [(u, d) for u, d in dealers.items() if d["n"] >= int(os.environ.get("LEADSP_MIN_AUTO", "2"))]
+        scelti.sort(key=lambda kv: -kv[1]["n"])
+    else:
+        scelti = [(u, d) for u, d in dealers.items() if d["sport"] >= int(os.environ.get("LEADSP_MIN_SPORT", "2"))]
     log.warning("LEADSP_RICERCA %d annunci, %d autosaloni in zona, %d con almeno 2 sportive", n, len(dealers), len(scelti))
 
     def gia(nome, url, tels):
@@ -369,7 +374,7 @@ def lead_sportive() -> int:
     trovati = dich = esclusi = 0
     visti_t: set = set()
     da_controllare = []
-    for url, d in sorted(scelti, key=lambda kv: -kv[1]["sport"]):
+    for url, d in scelti if os.environ.get("LEADSP_FASCIA") == "1" else sorted(scelti, key=lambda kv: -kv[1]["sport"]):
         if gia(d["nome"], url, d["tel"]):
             esclusi += 1
             continue
