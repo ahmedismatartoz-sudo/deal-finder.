@@ -2088,6 +2088,10 @@ def _tempo_reale():
         if not giro:
             return
         time.sleep(90)
+        for _ in range(240):                                   # mai insieme ad altri giri pesanti (memoria)
+            if not any(t.name in ("leadsp", "privati60", "lusso") and t.is_alive() for t in threading.enumerate()):
+                break
+            time.sleep(15)
         from ..pipeline import benzina_mi as B
         from ..pipeline.ciclo import _due
         from ..db import log_job

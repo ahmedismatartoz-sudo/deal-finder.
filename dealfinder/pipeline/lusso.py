@@ -23,7 +23,7 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
     """Ricerca AutoScout24 aggressiva: tante fasce di prezzo lette insieme (più collegamenti in parallelo)."""
     from concurrent.futures import ThreadPoolExecutor
     from ..collectors.autoscout import AutoScoutCollector
-    workers = workers or int(os.environ.get("RACCOLTA_PARALLELI", "6"))
+    workers = workers or int(os.environ.get("RACCOLTA_PARALLELI", "4"))
     pausa = (float(os.environ.get("RACCOLTA_PAUSA_MIN", "0.25")), float(os.environ.get("RACCOLTA_PAUSA_MAX", "0.6")))
     compiti = [(a, min(a + step - 1, hi), ct, sel) for ct, sel in venditori for a in range(lo, hi, step)]
 
@@ -39,13 +39,15 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
     visti = set()
     bloccate = 0
     with ThreadPoolExecutor(workers) as ex:
-        for out, blocc in ex.map(leggi, compiti):
-            bloccate += bool(blocc)
-            for l in out:
-                if l.source_id in visti:
-                    continue
-                visti.add(l.source_id)
-                yield l
+        for i in range(0, len(compiti), workers):            # un gruppo di fasce alla volta: in memoria solo quel gruppo
+            for out, blocc in ex.map(leggi, compiti[i:i + workers]):
+                bloccate += bool(blocc)
+                for l in out:
+                    if l.source_id in visti:
+                        continue
+                    visti.add(l.source_id)
+                    yield l
+                del out
     log.warning("RACCOLTA_VELOCE %d fasce, %d annunci, %d fasce bloccate", len(compiti), len(visti), bloccate)
 
 

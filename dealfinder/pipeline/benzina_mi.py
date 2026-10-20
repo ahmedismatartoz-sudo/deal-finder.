@@ -45,35 +45,45 @@ def giro() -> dict:
     from ..collectors.subito import SubitoCollector
     from ..collectors.autoscout import AutoScoutCollector
     st: Counter = Counter()
-    letti = []
-    # 1a. Subito: tutta la provincia di Milano, dal più recente
-    sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
-    sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
-    try:
-        for l in sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
-                                    max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300"))):
-            if l.price_eur and 3000 <= l.price_eur <= 15000:
-                letti.append(l)
-    except Exception as e:
-        log.warning("BENZ subito: %s", str(e)[:200])
-    st["letti_subito"] = len(letti)
-    log.warning("BENZ subito letti %d (3.000-15.000 €, entro 100 km da Milano)", len(letti))
-    # 1b. AutoScout24: entro 30 km da Milano, a fasce di 500 €, molte fasce insieme
-    from .lusso import bande_parallele
-    os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("BENZ_RAGGIO", "100")
-    os.environ.pop("PASSI_JOB", None)
-    n0 = len(letti)
-    try:
-        for l in bande_parallele(3000, 15000, 500, [("P", "privato"), ("D", "commerciante")]):
-            letti.append(l)
-    except Exception as e:
-        log.warning("BENZ autoscout: %s", str(e)[:200])
-    st["letti_autoscout"] = len(letti) - n0
-    log.warning("BENZ autoscout letti %d", len(letti) - n0)
+    # salvataggio a pacchetti: in memoria non resta mai più di un pacchetto di annunci (512 MB di memoria)
     with connect() as conn:
-        tr._salva(conn, letti, st)
-        conn.commit()
-        del letti
+        pacco: list = []
+
+        def salva(forza=False):
+            if pacco and (forza or len(pacco) >= 150):
+                tr._salva(conn, pacco, st)
+                conn.commit()
+                pacco.clear()
+
+        # 1a. Subito: Lombardia entro 100 km, dal più recente
+        sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+        sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
+        n = 0
+        try:
+            for l in sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
+                                        max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300"))):
+                if l.price_eur and 3000 <= l.price_eur <= 15000:
+                    pacco.append(l); n += 1
+                    salva()
+        except Exception as e:
+            log.warning("BENZ subito: %s", str(e)[:200])
+        salva(True)
+        st["letti_subito"] = n
+        log.warning("BENZ subito letti %d (3.000-15.000 €, entro 100 km da Milano)", n)
+        # 1b. AutoScout24: entro 100 km da Milano, a fasce di 500 €, più fasce insieme
+        from .lusso import bande_parallele
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("BENZ_RAGGIO", "100")
+        os.environ.pop("PASSI_JOB", None)
+        n = 0
+        try:
+            for l in bande_parallele(3000, 15000, 500, [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4"))):
+                pacco.append(l); n += 1
+                salva()
+        except Exception as e:
+            log.warning("BENZ autoscout: %s", str(e)[:200])
+        salva(True)
+        st["letti_autoscout"] = n
+        log.warning("BENZ autoscout letti %d", n)
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
         conn.execute("SET statement_timeout = '300s'")
         cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
