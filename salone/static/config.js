@@ -1,9 +1,9 @@
 // Dati del salone: si compilano qui (nome, contatti, indirizzo). Le auto arrivano da sole da AutoScout24 e Subito
 // (sul server: DEALER_URL e SUBITO_SHOP_ID). Finché non ci sono auto vere, il sito mostra auto di esempio.
 window.SALONE = {
-  nome: 'Nome Salone',
-  sottotitolo: 'Auto selezionate',
-  citta: 'Milano',
+  nome: 'Prestige Service',
+  sottotitolo: 'Auto di prestigio',
+  citta: '',
   indirizzo: 'Via Esempio 1',
   cap: '20100',
   provincia: 'MI',

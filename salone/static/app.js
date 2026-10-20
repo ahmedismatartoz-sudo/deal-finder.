@@ -13,10 +13,11 @@
   const tel = (S.telefono || '').replace(/[^\d+]/g, '');
   const indirizzo = [S.indirizzo, [S.cap, S.citta].filter(Boolean).join(' ') + (S.provincia ? ` (${S.provincia})` : '')].filter(Boolean).join(', ');
   const mappaQ = encodeURIComponent(indirizzo);
-  document.title = `${S.nome || 'Salone'} · ${S.sottotitolo || 'Auto selezionate'} a ${S.citta || ''}`.trim();
+  document.title = `${S.nome || 'Salone'} · ${S.sottotitolo || 'Auto selezionate'}${S.citta ? ' a ' + S.citta : ''}`;
   $$('[data-nome]').forEach(e => e.textContent = S.nome || 'Salone');
   $$('[data-sottotitolo]').forEach(e => e.textContent = S.sottotitolo || 'Auto selezionate');
   $$('[data-citta]').forEach(e => e.textContent = S.citta || '');
+  $$('[data-sottotitolo-completo]').forEach(e => e.textContent = (S.sottotitolo || 'Auto selezionate') + (S.citta ? ' a ' + S.citta : ''));
   $$('[data-indirizzo]').forEach(e => e.textContent = indirizzo);
   $$('[data-tel]').forEach(e => e.href = 'tel:' + tel);
   $$('[data-tel-testo]').forEach(e => e.textContent = S.telefono || '');
