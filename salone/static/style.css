@@ -62,7 +62,7 @@ button,input,select{font:inherit;color:inherit}
 .v0 .sotto{margin-inline:auto}
 .v1,.v2{left:var(--margine);bottom:14vh;padding:34px 38px 36px;border-radius:28px;background:rgba(15,26,46,.42);box-shadow:inset 0 0 0 1px rgba(214,230,244,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .v2{left:auto;right:var(--margine)}
-.v3{left:0;right:0;top:22vh;text-align:center}
+.v3{left:0;right:0;top:11vh;text-align:center}
 .v4{left:0;right:0;top:16vh;text-align:center}
 .v4 p{margin-inline:auto}
 .v3 p{margin-inline:auto}
