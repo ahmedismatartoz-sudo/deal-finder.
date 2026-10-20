@@ -22,6 +22,7 @@ REVOKED_MSG = {
     "uscita": "Sei uscito: entra di nuovo",
     "account_disattivato": "Il tuo account non è attivo",
     "password_cambiata": "La password è cambiata: entra di nuovo",
+    "scaduto": "Il periodo di accesso è finito: contattaci per continuare",
 }
 
 
@@ -65,7 +66,8 @@ def check(sid: str | None, dealer_id: int) -> tuple[bool, str | None]:
         with connect() as conn:
             row = conn.execute(
                 "UPDATE dealer_sessions s SET last_seen_at=now() FROM dealers d WHERE s.id=%s AND d.id=s.dealer_id "
-                "RETURNING s.dealer_id, s.revoked_why, (s.revoked_at IS NULL) AS open, d.active",
+                "RETURNING s.dealer_id, s.revoked_why, (s.revoked_at IS NULL) AS open, d.active, "
+                "(d.accesso_fino IS NOT NULL AND d.accesso_fino < now()) AS scaduto",
                 (sid,)).fetchone()
             conn.commit()
         _cache[sid] = (now, row)
@@ -76,6 +78,8 @@ def check(sid: str | None, dealer_id: int) -> tuple[bool, str | None]:
         return False, None
     if not row["active"]:
         return False, "account_disattivato"
+    if row.get("scaduto"):
+        return False, "scaduto"
     if not row["open"]:
         return False, row["revoked_why"]
     return True, None

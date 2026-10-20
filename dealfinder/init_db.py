@@ -73,6 +73,7 @@ if __name__ == "__main__":
             prov = tutte() if z == "tutte" else list(ZONE.get(z, ZONE["milano"])["province"])
             perm = [x for x in (c.get("permessi") or ["auto"]) if x in ("auto", "incentivi")]
             row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
+            fino = str(c.get("fino") or "").strip()[:10] or None          # "AAAA-MM-GG": accesso fino a quel giorno compreso
             if row:
                 conn.execute("UPDATE dealers SET password_hash=%s, active=true, provinces=%s, permessi=%s WHERE id=%s",
                              (hash_password(pw), prov, perm, row["id"]))
@@ -84,6 +85,10 @@ if __name__ == "__main__":
                     (str(c.get("nome") or em)[:120], em, hash_password(pw), prov, perm)).fetchone()
                 conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s)", (row["id"],))
                 print("Creato account cliente", em)
+            conn.execute("UPDATE dealers SET accesso_fino = CASE WHEN %s::date IS NULL THEN NULL "
+                         "ELSE (%s::date + interval '1 day') AT TIME ZONE 'Europe/Rome' END WHERE id=%s", (fino, fino, row["id"]))
+            if fino:
+                print("Accesso fino al", fino, "per", em)
         conn.commit()
         # ACCOUNT_DISATTIVATI="a@x.it,b@y.it": account spenti (vince su tutto il resto), sessioni chiuse subito
         for em in [e.strip().lower() for e in os.environ.get("ACCOUNT_DISATTIVATI", "").split(",") if "@" in e]:

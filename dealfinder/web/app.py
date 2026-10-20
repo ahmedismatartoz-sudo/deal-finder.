@@ -164,7 +164,7 @@ async def login(request: Request):
         err(429, "Troppi tentativi, riprova tra 15 minuti")
     def check():
         with connect() as conn:
-            u = conn.execute("SELECT * FROM dealers WHERE email=%s AND active", (email,)).fetchone()
+            u = conn.execute("SELECT * FROM dealers WHERE email=%s AND active AND (accesso_fino IS NULL OR accesso_fino > now())", (email,)).fetchone()
         pw = str(data.get("password", ""))[:200]
         # spazi in più copiati dal messaggio con la password: si prova anche senza
         return u, bool(u) and (verify_password(pw, u["password_hash"]) or
