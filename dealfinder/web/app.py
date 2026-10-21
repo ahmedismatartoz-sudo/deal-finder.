@@ -2168,6 +2168,31 @@ def _tempo_reale():
             lg.warning("FASCIA non riuscito: %s", str(e)[:300])
     threading.Thread(target=fascia_lead, daemon=True, name="fascia").start()
 
+    def diag_plus():
+        """21/10: perché i privati 60-200k risultano "dati insufficienti" (solo lettura, DIAG_PLUS=1)."""
+        if os.environ.get("DIAG_PLUS") != "1":
+            return
+        time.sleep(40)
+        try:
+            with connect() as conn:
+                rows = conn.execute("""
+                    SELECT l.id, l.source, l.make, l.model, l.year, l.mileage_km, l.fuel, l.gearbox, l.power_kw, l.price_eur,
+                           v.categoria, v.dati->'mancanti' AS mancanti, v.dati->'motivi' AS motivi, v.dati->>'n' AS n,
+                           v.dati->>'n_esclusi' AS n_esclusi, v.dati->'non_equivalenti' AS non_eq, v.dati->>'livello' AS livello,
+                           v.dati->'esclusi' AS esclusi
+                    FROM valutazioni_policy v JOIN listings l ON l.id=v.listing_id
+                    WHERE v.computed_at > now() - interval '8 hours' AND l.seller_type='privato'
+                      AND l.price_eur BETWEEN 60000 AND 200000 AND v.categoria='dati_insufficienti'
+                    ORDER BY v.computed_at DESC LIMIT 25""").fetchall()
+            for r in rows:
+                d = dict(r)
+                d["esclusi"] = (d.get("esclusi") or [])[:4]
+                lg.warning("DIAG_PLUS %s", json.dumps(d, default=str, ensure_ascii=False)[:1500])
+            lg.warning("DIAG_PLUS_FINE %d", len(rows))
+        except Exception as e:
+            lg.warning("DIAG_PLUS non riuscito: %s", str(e)[:300])
+    threading.Thread(target=diag_plus, daemon=True, name="diagplus").start()
+
 
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
