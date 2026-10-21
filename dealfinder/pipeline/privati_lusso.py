@@ -24,7 +24,7 @@ SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, t.ver
        t.province, g.n, g.med, g.p25
 FROM listings t
 JOIN g ON g.mk=lower(t.make) AND g.md=lower(t.model) AND g.fu=lower(coalesce(t.fuel,'')) AND g.year=t.year
-WHERE t.status='attivo' AND t.seller_type='privato' AND upper(t.province) = ANY(%(prov)s)
+WHERE t.status='attivo' AND t.seller_type = ANY(%(venditori)s) AND upper(t.province) = ANY(%(prov)s)
   AND t.price_eur BETWEEN 60000 AND 200000 AND t.year >= %(anno)s
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
@@ -50,7 +50,9 @@ def giro() -> dict:
                 os.environ["AUTOSCOUT_CAP"] = cap
     with connect() as conn:
         conn.execute("SET statement_timeout = '900s'")
-        cand = conn.execute(CANDIDATI_SQL, {"prov": LOMBARDIA, "anno": int(os.environ.get("PLUS_ANNO", "2010")),
+        prov = [p.strip() for p in os.environ["PLUS_PROVINCE"].split(",")] if os.environ.get("PLUS_PROVINCE") else LOMBARDIA
+        venditori = [v.strip() for v in os.environ.get("PLUS_VENDITORI", "privato").split(",")]
+        cand = conn.execute(CANDIDATI_SQL, {"prov": prov, "venditori": venditori, "anno": int(os.environ.get("PLUS_ANNO", "2010")),
                                             "nmin": int(os.environ.get("PLUS_NMIN", "4")),
                                             "soglia": float(os.environ.get("PLUS_SOGLIA", "0.92")),
                                             "lim": int(os.environ.get("PLUS_MAX", "400"))}).fetchall()
