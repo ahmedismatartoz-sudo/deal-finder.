@@ -1133,7 +1133,9 @@ def _margine_alta(items: list[dict]) -> list[dict]:
                 tolte += 1
                 continue
         tenute.append(it)
-    logging.getLogger("scovo").warning("MARGINE_ALTA da %d € con almeno %d €: %d tolte, %d restano", da, minimo, tolte, len(tenute))
+    alte = sum(1 for it in tenute if (it.get("prezzo") or 0) >= da)
+    logging.getLogger("scovo").warning("MARGINE_ALTA da %d € con almeno %d €, solo privati: %d tolte, %d restano (%d da %d € in su)",
+                                       da, minimo, tolte, len(tenute), alte, da)
     return tenute
 
 
