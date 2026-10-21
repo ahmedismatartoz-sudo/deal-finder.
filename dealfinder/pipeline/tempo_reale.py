@@ -532,7 +532,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     targhe = targhe_visibili(conn)
     for r in rows:
         if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not (
-                os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1" and (r["price_eur"] or 0) >= 60000):
+                os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1"
+                and (r["price_eur"] or 0) >= int(os.environ.get("TR_SENZA_NUMERO_DA", "60000"))):
             # 21/10 (cliente): per le auto da 60.000 € in su si valutano anche quelle senza numero; sul sito
             # resta la regola di sempre (al massimo il 20% delle auto senza numero)
             stats["valuta:senza_numero"] += 1
