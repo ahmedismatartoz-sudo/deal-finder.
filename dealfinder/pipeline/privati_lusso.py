@@ -11,7 +11,7 @@ from collections import Counter
 log = logging.getLogger("privati_lusso")
 LOMBARDIA = ["MI", "MB", "VA", "CO", "LC", "BG", "BS", "LO", "PV", "CR", "MN", "SO"]
 
-CANDIDATI_SQL = """
+CANDIDATI_SQL = r"""
 WITH g AS (              -- base prezzi: stessa marca, modello, alimentazione e anno, fascia 60-200k (privati e concessionari)
   SELECT lower(make) AS mk, lower(model) AS md, lower(coalesce(fuel,'')) AS fu, year,
          count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY price_eur) AS med,
