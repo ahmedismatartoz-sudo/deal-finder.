@@ -85,7 +85,7 @@ def giro() -> dict:
         conn.commit()
         # 21/10 (cliente): fuori le auto vendute solo con leasing/finanziamento. Su AutoScout24 la descrizione non è
         # nella ricerca: si legge dalla pagina dell'annuncio, solo per le auto da 50.000 € in su già sul sito
-        from ..web.app import FIN_SOLO_RE
+        from ..web.scovo import FIN_SOLO_RE
         da_leggere = conn.execute("""SELECT id, url FROM listings WHERE source='autoscout24' AND status='attivo'
                                      AND stage='approfondito' AND price_eur >= 50000 AND description IS NULL
                                      LIMIT %s""", (int(os.environ.get("PLUS_DESC_MAX", "800")),)).fetchall()

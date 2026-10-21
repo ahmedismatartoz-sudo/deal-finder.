@@ -481,3 +481,12 @@ def _conta_motivi(esclusi: list[dict]) -> dict:
     for e in esclusi:
         out[e.get("motivo")] = out.get(e.get("motivo"), 0) + 1
     return out
+
+
+# 21/10 (cliente): fuori dal sito le auto vendute SOLO con leasing o finanziamento (prezzo vincolato, subentro, rate)
+FIN_SOLO_RE = (r"((solo|esclusivamente|unicamente|vincolat\w*|valid\w*|previo|subordinat\w*|obbligatori\w*|necessari\w*)"
+               r"\s+(solo\s+)?(con\s+|a\s+|al\s+|il\s+|un\s+|tramite\s+|in\s+)?(finanziament|leasing|noleggio|rate))"
+               r"|(prezzo\s+(valido\s+)?(con|in|tramite)\s+(finanziament|leasing))"
+               r"|(subentro|cessione)\s+(del\s+|di\s+)?(contratto\s+)?(leasing|noleggio|finanziament)"
+               r"|leasing\s+in\s+corso|maxi\s*rata|rata\s+finale|riscatto\s+finale|canone\s+mensile"
+               r"|(prezzo|importo)\s+finanziat|finanziamento\s+obbligatorio|non\s+si\s+vende\s+(in\s+)?contanti")

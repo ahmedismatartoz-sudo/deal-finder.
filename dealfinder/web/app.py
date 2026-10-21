@@ -1076,13 +1076,7 @@ def _prezzi_trattati(items: list[dict]) -> None:
             it["pv"] = dict(pv, margine=pv["margine"] + diff)
 
 
-# 21/10 (cliente): fuori dal sito le auto vendute SOLO con leasing o finanziamento (prezzo vincolato, subentro, rate)
-FIN_SOLO_RE = (r"((solo|esclusivamente|unicamente|vincolat\w*|valid\w*|previo|subordinat\w*|obbligatori\w*|necessari\w*)"
-               r"\s+(solo\s+)?(con\s+|a\s+|al\s+|il\s+|un\s+|tramite\s+|in\s+)?(finanziament|leasing|noleggio|rate))"
-               r"|(prezzo\s+(valido\s+)?(con|in|tramite)\s+(finanziament|leasing))"
-               r"|(subentro|cessione)\s+(del\s+|di\s+)?(contratto\s+)?(leasing|noleggio|finanziament)"
-               r"|leasing\s+in\s+corso|maxi\s*rata|rata\s+finale|riscatto\s+finale|canone\s+mensile"
-               r"|(prezzo|importo)\s+finanziat|finanziamento\s+obbligatorio|non\s+si\s+vende\s+(in\s+)?contanti")
+from .scovo import FIN_SOLO_RE  # noqa: E402  (21/10: auto solo leasing/finanziamento)
 
 
 def _senza_solo_finanziamento(items: list[dict]) -> list[dict]:
