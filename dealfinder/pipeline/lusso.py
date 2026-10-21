@@ -140,6 +140,7 @@ def raccolta_60k() -> int:
     from .lead import PROV_DINTORNI, CI_SUBITO
     from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
     st = Counter()
+    LMIN = int(os.environ.get("LUSSO_MIN", "60000"))          # 21/10: da 50.000 € (cliente)
     zona = [p.strip() for p in os.environ["LUSSO_PROVINCE"].split(",")] if os.environ.get("LUSSO_PROVINCE") else None
     italia = os.environ.get("LUSSO_TUTTA_ITALIA") == "1"           # 20/10 (cliente): base prezzi 60-200k, tutta Italia
     if italia:
@@ -161,7 +162,7 @@ def raccolta_60k() -> int:
         elif not pv or pv not in PROV_DINTORNI or not comune_ok(pv, l.city):
             st["fuori_zona"] += 1
             return
-        if not l.price_eur or l.price_eur < 60000 or l.price_eur > 200000:
+        if not l.price_eur or l.price_eur < LMIN or l.price_eur > 200000:
             st["fuori_fascia"] += 1
             return
         if solo_privati and l.seller_type != "privato":
@@ -188,12 +189,12 @@ def raccolta_60k() -> int:
 
     with connect() as conn:
         venditori = [("P", "privato")] if solo_privati else [("P", "privato"), ("D", "commerciante")]
-        ricerca = _ricerca(60000, venditori, FASCE)
+        ricerca = _ricerca(LMIN, venditori, FASCE)
         if italia:                                                   # senza CAP: AutoScout24 cerca in tutta Italia
             os.environ.pop("PASSI_JOB", None)
             os.environ["AUTOSCOUT_CAP"] = ""
-            ricerca = (l for lo, hi, step in FASCE if hi > 60000
-                       for l in bande_parallele(max(lo, 60000), hi, int(os.environ.get("LUSSO_PASSO_ITALIA", "2500")), venditori))
+            ricerca = (l for lo, hi, step in FASCE if hi > LMIN
+                       for l in bande_parallele(max(lo, LMIN), hi, int(os.environ.get("LUSSO_PASSO_ITALIA", "2500")), venditori))
         for l in ricerca:
             salva(conn, l)
         log.warning("LUSSO_AUTOSCOUT %s", dict(st))
@@ -203,7 +204,7 @@ def raccolta_60k() -> int:
             for page in range(int(os.environ.get("LUSSO_SUB_PAGINE", "100")) if italia else 20):
                 try:
                     r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={**({"r": 4, "ci": ci} if ci else {}), "c": 2, "t": "s", "lim": 100,
-                                                                                 "start": page * 100, "ps": 60000, "sort": "pricedesc"})
+                                                                                 "start": page * 100, "ps": LMIN, "sort": "pricedesc"})
                     ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
                 except Exception:
                     ads = []
@@ -215,7 +216,7 @@ def raccolta_60k() -> int:
                     l = parse_item(it)
                     if not l:
                         continue
-                    if not l.price_eur or l.price_eur < 60000:
+                    if not l.price_eur or l.price_eur < LMIN:
                         sotto += 1
                         continue
                     if l.price_eur > 200000:

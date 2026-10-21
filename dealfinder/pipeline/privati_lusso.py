@@ -17,7 +17,7 @@ WITH g AS (              -- base prezzi: stessa marca, modello, alimentazione e 
          count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY price_eur) AS med,
          percentile_cont(.25) WITHIN GROUP (ORDER BY price_eur) AS p25
   FROM listings
-  WHERE price_eur BETWEEN 50000 AND 230000 AND year >= 2009 AND make IS NOT NULL AND model IS NOT NULL
+  WHERE price_eur BETWEEN 40000 AND 230000 AND year >= 2009 AND make IS NOT NULL AND model IS NOT NULL
   GROUP BY 1, 2, 3, 4
 )
 SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, t.version_raw, t.year, t.mileage_km,
@@ -25,7 +25,7 @@ SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, t.ver
 FROM listings t
 JOIN g ON g.mk=lower(t.make) AND g.md=lower(t.model) AND g.fu=lower(coalesce(t.fuel,'')) AND g.year=t.year
 WHERE t.status='attivo' AND t.seller_type = ANY(%(venditori)s) AND upper(t.province) = ANY(%(prov)s)
-  AND t.price_eur BETWEEN 60000 AND 200000 AND t.year >= %(anno)s
+  AND t.price_eur BETWEEN %(pmin)s AND 200000 AND t.year >= %(anno)s
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= %(nmin)s AND t.price_eur < g.med * %(soglia)s
@@ -53,7 +53,7 @@ def giro() -> dict:
         prov = [p.strip() for p in os.environ["PLUS_PROVINCE"].split(",")] if os.environ.get("PLUS_PROVINCE") else LOMBARDIA
         venditori = [v.strip() for v in os.environ.get("PLUS_VENDITORI", "privato").split(",")]
         cand = conn.execute(CANDIDATI_SQL, {"prov": prov, "venditori": venditori, "anno": int(os.environ.get("PLUS_ANNO", "2010")),
-                                            "nmin": int(os.environ.get("PLUS_NMIN", "4")),
+                                            "nmin": int(os.environ.get("PLUS_NMIN", "4")), "pmin": int(os.environ.get("PLUS_MIN", "60000")),
                                             "soglia": float(os.environ.get("PLUS_SOGLIA", "0.92")),
                                             "lim": int(os.environ.get("PLUS_MAX", "400"))}).fetchall()
         conn.execute("SET statement_timeout = 0")
