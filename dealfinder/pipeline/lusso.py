@@ -360,6 +360,8 @@ def lead_sportive() -> int:
     log.warning("LEADSP_RICERCA %d annunci, %d autosaloni in zona, %d con almeno 2 sportive", n, len(dealers), len(scelti))
 
     def gia(nome, url, tels):
+        if os.environ.get("LEADSP_TUTTI") == "1":       # 21/10 (cliente): anche quelli già consegnati
+            return False
         return (_h(_nn(nome)) in EN if nome else False) or (url and _h(_nu(url)) in EU) or \
             any(t and _h(t) in ET for t in (_tel9(x) for x in tels))
 
