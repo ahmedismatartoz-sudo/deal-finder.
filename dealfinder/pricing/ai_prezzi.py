@@ -49,8 +49,9 @@ def _righe(conn) -> list[dict]:
           AND year BETWEEN 1990 AND 2027 AND mileage_km IS NOT NULL AND mileage_km BETWEEN 0 AND 500000
           AND {NORD_SQL}
           AND (status = 'attivo' OR disappeared_at > now() - interval '120 days')
-        ORDER BY last_seen_at DESC
+        ORDER BY (price_eur <= %s) DESC, last_seen_at DESC     -- 21/10: prima tutte le utilitarie, poi il resto
         LIMIT %s""", (int(os.environ.get("AI_PREZZO_MAX", "120000")),       # 21/10: anche la fascia alta
+                      int(os.environ.get("AI_UTILITARIE_MAX", "20000")),
                       int(os.environ.get("AI_MAX_RIGHE", "120000")),)).fetchall()
 
 

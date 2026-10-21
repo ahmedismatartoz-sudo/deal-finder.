@@ -1162,6 +1162,61 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
     return tenute
 
 
+def _margini_gonfiati(items: list[dict]) -> list[dict]:
+    """21/10 sera (cliente): ricontrollo di tutte le auto del sito con il modello AI dei prezzi (tabella stima_ai,
+    addestrato su tutta la base, prima le utilitarie). Dove il modello è affidabile per quel modello d'auto, la
+    rivendita non può superare il prezzo AI meno la sua incertezza (almeno −8%); se con quella rivendita il margine
+    non regge più, l'auto ha un margine gonfiato ed esce dal sito."""
+    if os.environ.get("SITO_CONTROLLO_AI", "1") != "1" or not items:
+        return items
+    ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
+    try:
+        with connect() as conn:
+            ai = {r["listing_id"]: r for r in conn.execute(
+                "SELECT listing_id, prezzo, errore, n_gruppo FROM stima_ai WHERE listing_id = ANY(%s) "
+                "AND computed_at > now() - interval '2 days'", (ids,)).fetchall()}
+    except Exception as e:
+        logging.getLogger("scovo").warning("CONTROLLO_AI non applicato: %s", str(e)[:200])
+        return items
+    err_max = float(os.environ.get("AI_ERRORE_MAX_SITO", "0.18"))
+    n_min = int(os.environ.get("AI_N_MIN_SITO", "8"))
+    da, alta_min = int(os.environ.get("ALTA_DA", "50000")), int(os.environ.get("ALTA_MARGINE_MIN", "0"))
+    from collections import Counter
+    c, tenute, esempi = Counter(), [], []
+    for it in items:
+        a = ai.get(it.get("id"))
+        pv = it.get("pv") or {}
+        prezzo = it.get("prezzo") or pv.get("acquisto") or 0
+        if not a or not pv or pv.get("margine") is None or not prezzo:
+            c["senza_stima"] += 1
+            tenute.append(it)
+            continue
+        if a["errore"] is None or a["errore"] > err_max or (a["n_gruppo"] or 0) < n_min:
+            c["stima_poco_sicura"] += 1
+            tenute.append(it)
+            continue
+        R = pv.get("R_finale") or pv.get("R")
+        if not R:
+            c["senza_rivendita"] += 1
+            tenute.append(it)
+            continue
+        r_ai = a["prezzo"] * (1 - max(0.08, float(a["errore"])))
+        m_ai = pv["margine"] - max(0, R - r_ai)
+        minimo = alta_min if prezzo >= da and alta_min else max(int(os.environ.get("AI_MARGINE_MIN", "1000")), int(prezzo * .1))
+        if m_ai < minimo:
+            c["margine_gonfiato"] += 1
+            if len(esempi) < 15:
+                esempi.append({"id": it["id"], "auto": str(it.get("nome") or "")[:50], "prezzo": prezzo, "R": int(R),
+                               "ai": int(a["prezzo"]), "err": round(float(a["errore"]), 2),
+                               "margine": pv["margine"], "margine_ai": int(m_ai)})
+            continue
+        c["confermata"] += 1
+        tenute.append(it)
+    logging.getLogger("scovo").warning("CONTROLLO_AI %d tolte, %d restano %s %s", len(items) - len(tenute), len(tenute),
+                                       json.dumps(dict(c)), json.dumps(esempi, ensure_ascii=False))
+    return tenute
+
+
 def _senza_solo_finanziamento(items: list[dict]) -> list[dict]:
     if os.environ.get("SITO_NO_SOLO_FIN", "1") != "1" or not items:
         return items
@@ -1359,7 +1414,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))
+    items = _margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
