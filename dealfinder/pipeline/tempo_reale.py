@@ -531,7 +531,10 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     aimap = ai_di(conn, [r["id"] for r in rows])
     targhe = targhe_visibili(conn)
     for r in rows:
-        if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"]:
+        if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not (
+                os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1" and (r["price_eur"] or 0) >= 60000):
+            # 21/10 (cliente): per le auto da 60.000 € in su si valutano anche quelle senza numero; sul sito
+            # resta la regola di sempre (al massimo il 20% delle auto senza numero)
             stats["valuta:senza_numero"] += 1
             continue
         if r["damage_declared"] or problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"],
