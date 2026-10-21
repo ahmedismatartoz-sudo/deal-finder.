@@ -432,3 +432,94 @@ def lead_sportive() -> int:
                                                  "frase": frase, "fonte": fonte}, ensure_ascii=False))
     log.warning("LEADSP_FINE controllati %d, già consegnati %d, nuovi %d, dichiarano di comprare %d", len(da_controllare), esclusi, trovati, dich)
     return trovati
+
+
+def lead_subito_alta() -> int:
+    """21/10 (cliente): commercianti di auto di ALTA GAMMA di Milano e dintorni (no Bergamo/Brescia) presi da Subito:
+    attività con annunci da LEADSUB_MIN € in su; cellulare scritto dall'attività negli annunci o sulla sua vetrina
+    impresapiu; segnato chi scrive di comprare auto dai privati. Esclusi i numeri già consegnati. Nei log: LEADSUB {json}."""
+    import httpx
+    from .lead import TEL, _cellulari, _h, _nn, _tel9
+    from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
+    es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_esclusi.json").read_text())
+    ET, EN = set(es["tel"]), set(es["nome"])
+    zona = [p.strip() for p in os.environ.get("LEADSUB_PROVINCE", "MI,MB,VA,CO,LC,LO,PV,CR").split(",")]
+    minimo = int(os.environ.get("LEADSUB_MIN", "50000"))
+    sub = SubitoCollector()
+    shops: dict = {}
+    letti = 0
+    for page in range(int(os.environ.get("LEADSUB_PAGINE", "80"))):
+        try:
+            r = sub.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": 4, "t": "s", "lim": 100, "start": page * 100,
+                                                                         "ps": minimo, "sort": "pricedesc"})
+            ads = ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
+        except Exception:
+            ads = []
+        sotto = 0
+        for it in ads:
+            letti += 1
+            l = parse_item(it)
+            if not l or not l.price_eur:
+                continue
+            if l.price_eur < minimo:
+                sotto += 1
+                continue
+            if l.seller_type != "commerciante" or (l.province or "").upper() not in zona:
+                continue
+            adv = it.get("advertiser") or {}
+            sid = str(adv.get("shop_id") or adv.get("user_id") or "")
+            nome = adv.get("shop_name") or adv.get("name") or ""
+            if not sid or not nome:
+                continue
+            d = shops.setdefault(sid, {"nome": nome, "prov": l.province, "comune": l.city, "n": 0, "esempi": [], "testo": "",
+                                       "shop": bool(adv.get("shop_id"))})
+            d["n"] += 1
+            if len(d["esempi"]) < 4:
+                d["esempi"].append(f"{l.make or ''} {l.model or ''} {l.price_eur}€".strip())
+            if len(d["testo"]) < 20000:
+                d["testo"] += " " + (l.title or "") + " " + (l.description or "")
+        time.sleep(0.8)
+        if len(ads) < 100 or sotto > 90:
+            break
+    log.warning("LEADSUB_RICERCA %d annunci letti, %d attività in zona con auto da %d €", letti, len(shops), minimo)
+    trovati = dich = gia = 0
+    visti: set = set()
+    with httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0 Safari/537.36",
+                               "Accept-Language": "it-IT"}, follow_redirects=True, timeout=15) as cl:
+        for sid, d in sorted(shops.items(), key=lambda kv: -kv[1]["n"]):
+            testo = d["testo"]
+            fonte = "annunci Subito"
+            cell = _cellulari(TEL.findall(testo))
+            if d["shop"]:
+                try:
+                    rr = cl.get(f"https://impresapiu.subito.it/shops/{sid}")
+                    if rr.status_code == 200:
+                        t2 = unescape(re.sub(r"<[^>]+>", " ", rr.text))
+                        c2 = _cellulari(TEL.findall(t2))
+                        if c2 and not cell:
+                            fonte = "vetrina impresapiu"
+                        cell = cell or c2
+                        testo += " " + t2[:20000]
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            if not cell:
+                continue
+            if _h(_nn(d["nome"])) in EN or any(_h(_tel9(c)) in ET for c in cell):
+                gia += 1
+                continue
+            if set(cell) & visti:
+                continue
+            visti.update(cell)
+            m = ACQ_DIRETTO.search(testo)
+            frase = " ".join(testo[max(0, m.start() - 100):m.end() + 100].split())[:250] if m else ""
+            trovati += 1
+            dich += bool(m)
+            log.warning("LEADSUB %s", json.dumps({"nome": d["nome"], "comune": d["comune"], "prov": d["prov"], "cell": cell[:2],
+                                                  "url": f"https://impresapiu.subito.it/shops/{sid}" if d["shop"] else "",
+                                                  "annunci_alta": d["n"], "esempi": d["esempi"], "dichiara": bool(m),
+                                                  "senza_permuta": bool(SENZA_PERMUTA.search(testo)) if m else False,
+                                                  "frase": frase, "fonte": fonte}, ensure_ascii=False))
+    log.warning("LEADSUB_FINE attività %d, già consegnate %d, nuove con cellulare %d, dichiarano di comprare %d",
+                len(shops), gia, trovati, dich)
+    return trovati

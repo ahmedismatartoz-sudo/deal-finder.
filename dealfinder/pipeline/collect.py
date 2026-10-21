@@ -720,6 +720,9 @@ if __name__ == "__main__":
             elif voce.startswith("privlusso"):                             # 20/10: privati 60-200k contro la base prezzi
                 from . import privati_lusso as P
                 esito = P.giro()
+            elif voce.startswith("leadsub"):                               # 21/10: alta gamma da Subito
+                from . import lusso as L
+                esito = {"trovati": L.lead_subito_alta()}
             elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
