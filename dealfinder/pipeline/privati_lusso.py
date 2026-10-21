@@ -58,7 +58,7 @@ def giro() -> dict:
                                             "lim": int(os.environ.get("PLUS_MAX", "400"))}).fetchall()
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
-        for r in cand[:40]:
+        for r in cand[:int(os.environ.get("PLUS_LOG", "40"))]:
             log.warning("PLUS_CAND %s", json.dumps({"id": r["id"], "auto": f"{r['make']} {r['model']} {r['version_raw'] or ''}"[:80],
                                                    "anno": r["year"], "km": r["mileage_km"], "prezzo": r["price_eur"],
                                                    "mediana": int(r["med"]), "p25": int(r["p25"]), "n": r["n"],
