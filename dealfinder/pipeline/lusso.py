@@ -321,6 +321,8 @@ def lead_sportive() -> int:
     es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_esclusi.json").read_text())
     EU, ET, EN = set(es["url"]), set(es["tel"]), set(es["nome"])
     os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("LEADSP_RAGGIO", "70")
+    if os.environ.get("LEADSP_ITALIA") == "1":          # 21/10: tutta Italia (poi si filtra per LEADSP_PROVINCE)
+        os.environ["AUTOSCOUT_CAP"] = ""
     os.environ.pop("PASSI_JOB", None)
     dealers: dict = {}
     n = 0
