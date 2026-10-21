@@ -1076,6 +1076,31 @@ def _prezzi_trattati(items: list[dict]) -> None:
             it["pv"] = dict(pv, margine=pv["margine"] + diff)
 
 
+# 21/10 (cliente): fuori dal sito le auto vendute SOLO con leasing o finanziamento (prezzo vincolato, subentro, rate)
+FIN_SOLO_RE = (r"((solo|esclusivamente|unicamente|vincolat\w*|valid\w*|previo|subordinat\w*|obbligatori\w*|necessari\w*)"
+               r"\s+(solo\s+)?(con\s+|a\s+|al\s+|il\s+|un\s+|tramite\s+|in\s+)?(finanziament|leasing|noleggio|rate))"
+               r"|(prezzo\s+(valido\s+)?(con|in|tramite)\s+(finanziament|leasing))"
+               r"|(subentro|cessione)\s+(del\s+|di\s+)?(contratto\s+)?(leasing|noleggio|finanziament)"
+               r"|leasing\s+in\s+corso|maxi\s*rata|rata\s+finale|riscatto\s+finale|canone\s+mensile"
+               r"|(prezzo|importo)\s+finanziat|finanziamento\s+obbligatorio|non\s+si\s+vende\s+(in\s+)?contanti")
+
+
+def _senza_solo_finanziamento(items: list[dict]) -> list[dict]:
+    if os.environ.get("SITO_NO_SOLO_FIN", "1") != "1" or not items:
+        return items
+    ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
+    try:
+        with connect() as conn:
+            via = {r["id"] for r in conn.execute(
+                "SELECT id FROM listings WHERE id = ANY(%s) AND (coalesce(description,'') || ' ' || coalesce(title,'')) ~* %s",
+                (ids, FIN_SOLO_RE)).fetchall()}
+    except Exception as e:
+        logging.getLogger("scovo").warning("SOLO_FIN non controllato: %s", str(e)[:200])
+        return items
+    logging.getLogger("scovo").warning("SOLO_FIN %d auto tolte (solo leasing/finanziamento)", len(via))
+    return [it for it in items if it.get("id") not in via]
+
+
 def _margine_alta(items: list[dict]) -> list[dict]:
     """21/10 (cliente): le auto da ALTA_DA (50.000 €) in su restano sul sito solo con almeno ALTA_MARGINE_MIN € di
     margine (lo stesso margine mostrato sul sito)."""
@@ -1224,7 +1249,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _margine_alta(_margine_recenti(items))
+    items = _senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
