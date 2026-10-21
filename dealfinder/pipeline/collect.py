@@ -726,6 +726,20 @@ if __name__ == "__main__":
             elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
+            elif voce.startswith("benzval"):                               # 21/10: rivaluta la base benzina col modello nuovo
+                from . import benzina_mi as B
+                vecchi = {k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_MAX", "BENZ_SOGLIA")}
+                os.environ["BENZ_SOLO_VALUTA"] = "1"
+                os.environ["BENZ_MAX"] = os.environ.get("BENZ_VAL_MAX", "15000")
+                os.environ["BENZ_SOGLIA"] = os.environ.get("BENZ_VAL_SOGLIA", "0.95")
+                try:
+                    esito = B.giro()
+                finally:
+                    for k, v in vecchi.items():
+                        if v is None:
+                            os.environ.pop(k, None)
+                        else:
+                            os.environ[k] = v
             elif voce.startswith("benzina_mi"):
                 from . import benzina_mi as B
                 esito = B.giro()

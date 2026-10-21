@@ -50,6 +50,9 @@ def giro() -> dict:
     global PMIN, PMAX, SOLO_P
     PMIN, PMAX = int(os.environ.get("BENZ_MIN", "3000")), int(os.environ.get("BENZ_PMAX", "15000"))
     SOLO_P = os.environ.get("BENZ_SOLO_PRIVATI") == "1"
+    # 21/10 sera (cliente): si raccolgono TUTTI gli annunci (anche concessionari) per la base prezzi del modello;
+    # sul sito vanno comunque solo i privati (le candidate restano filtrate con SOLO_P)
+    racc_p = SOLO_P and os.environ.get("BENZ_RACCOLTA_TUTTI") != "1"
     # salvataggio a pacchetti: in memoria non resta mai più di un pacchetto di annunci (512 MB di memoria)
     with connect() as conn:
         pacco: list = []
@@ -68,21 +71,21 @@ def giro() -> dict:
         try:
             for l in ([] if solo_valuta else sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
                                         max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300")))):
-                if l.price_eur and PMIN <= l.price_eur <= PMAX and (not SOLO_P or l.seller_type == "privato"):
+                if l.price_eur and PMIN <= l.price_eur <= PMAX and (not racc_p or l.seller_type == "privato"):
                     pacco.append(l); n += 1
                     salva()
         except Exception as e:
             log.warning("BENZ subito: %s", str(e)[:200])
         salva(True)
         st["letti_subito"] = n
-        log.warning("BENZ subito letti %d (3.000-15.000 €, entro 100 km da Milano)", n)
+        log.warning("BENZ subito letti %d (%d-%d €)", n, PMIN, PMAX)
         # 1b. AutoScout24: entro 100 km da Milano, a fasce di 500 €, più fasce insieme
         from .lusso import bande_parallele
         os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("BENZ_RAGGIO", "100")
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
-            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, 500, [("P", "privato")] if SOLO_P else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
+            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, 500, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
                 pacco.append(l); n += 1
                 salva()
         except Exception as e:
