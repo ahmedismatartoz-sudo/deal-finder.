@@ -1076,6 +1076,35 @@ def _prezzi_trattati(items: list[dict]) -> None:
             it["pv"] = dict(pv, margine=pv["margine"] + diff)
 
 
+def _margine_alta(items: list[dict]) -> list[dict]:
+    """21/10 (cliente): le auto da ALTA_DA (50.000 €) in su restano sul sito solo con almeno ALTA_MARGINE_MIN € di
+    margine (lo stesso margine mostrato sul sito)."""
+    da = int(os.environ.get("ALTA_DA", "50000"))
+    minimo = int(os.environ.get("ALTA_MARGINE_MIN", "0"))
+    if minimo <= 0:
+        return items
+
+    def margine(it):
+        pv = it.get("pv") or {}
+        if pv:
+            return pv.get("margine")
+        try:
+            return scovo.guadagno_minimo(it)
+        except Exception:
+            return None
+
+    tenute, tolte = [], 0
+    for it in items:
+        if (it.get("prezzo") or 0) >= da:
+            m = margine(it)
+            if m is None or m < minimo:
+                tolte += 1
+                continue
+        tenute.append(it)
+    logging.getLogger("scovo").warning("MARGINE_ALTA da %d € con almeno %d €: %d tolte, %d restano", da, minimo, tolte, len(tenute))
+    return tenute
+
+
 def _margine_recenti(items: list[dict]) -> list[dict]:
     """20/10 (cliente): le auto dal 2017 in poi restano sul sito solo con almeno 3.500 € di margine
     (lo stesso margine mostrato sul sito). Le auto più vecchie non cambiano."""
@@ -1195,7 +1224,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _margine_recenti(items)
+    items = _margine_alta(_margine_recenti(items))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
