@@ -1210,6 +1210,17 @@ def _margini_gonfiati(items: list[dict]) -> list[dict]:
                                "ai": int(a["prezzo"]), "err": round(float(a["errore"]), 2),
                                "margine": pv["margine"], "margine_ai": int(m_ai)})
             continue
+        # 21/10 sera (cliente: "le auto con margini bassi che dovrebbero essere alzate, alzale"): rialzo controllato
+        # solo dove il modello AI è molto preciso per quel modello d'auto E i confronti sono tanti; la rivendita resta
+        # sotto il prezzo AI meno l'incertezza e sotto il 95% del mercato, e sale al massimo di AI_RIALZO_MAX euro
+        M = pv.get("M") or 0
+        if (float(a["errore"]) <= float(os.environ.get("AI_RIALZO_ERR", "0.10")) and (a["n_gruppo"] or 0) >= 30
+                and (pv.get("n") or 0) >= 10 and M):
+            tetto = min(r_ai, M * .95)
+            su = int(min(tetto - R, int(os.environ.get("AI_RIALZO_MAX", "1500"))))
+            if su >= 100:
+                it["pv"] = dict(pv, R_finale=int(R + su), margine=int(pv["margine"] + su), rialzo_ai=su)
+                c["rialzate"] += 1
         c["confermata"] += 1
         tenute.append(it)
     logging.getLogger("scovo").warning("CONTROLLO_AI %d tolte, %d restano %s %s", len(items) - len(tenute), len(tenute),

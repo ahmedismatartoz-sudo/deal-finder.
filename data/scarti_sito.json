@@ -64,5 +64,169 @@
  {
   "id": 567896,
   "motivo": "tolta dal cliente (Porsche 992 GT3 a 100.000 €, prezzo non credibile)"
+ },
+ {
+  "id": 586773,
+  "motivo": "controllo margini 21/10: auto da pista (Supertrofeo), confronti con auto stradali: margine finto"
+ },
+ {
+  "id": 583460,
+  "motivo": "controllo margini 21/10: Ferrari 488 Challenge da pista, 3 confronti: margine finto"
+ },
+ {
+  "id": 604519,
+  "motivo": "controllo margini 21/10: 296 GTB confrontata con versioni più care: margine gonfiato"
+ },
+ {
+  "id": 574848,
+  "motivo": "controllo margini 21/10: G 400 d con 151.000 km confrontata con auto meno usate: margine gonfiato"
+ },
+ {
+  "id": 575074,
+  "motivo": "controllo margini 21/10: G 400 d 2022 125.000 km: mercato reale più basso, margine gonfiato"
+ },
+ {
+  "id": 588107,
+  "motivo": "controllo margini 21/10: G 400 d 2022 130.000 km: margine gonfiato"
+ },
+ {
+  "id": 570681,
+  "motivo": "controllo margini 21/10: 911 991 2014 135.000 km: mercato reale ~70k, margine gonfiato"
+ },
+ {
+  "id": 429131,
+  "motivo": "controllo margini 21/10: Cayenne Turbo con 3 confronti: margine non affidabile"
+ },
+ {
+  "id": 596448,
+  "motivo": "controllo margini 21/10: Range Rover Sport P400e: margine reale sotto 8.000"
+ },
+ {
+  "id": 572947,
+  "motivo": "controllo margini 21/10: Urus 2020 75.000 km: prezzo in linea col mercato, margine gonfiato"
+ },
+ {
+  "id": 569017,
+  "motivo": "controllo margini 21/10: 911 4S 2019 165.000 km: margine reale sotto 8.000"
+ },
+ {
+  "id": 415308,
+  "motivo": "controllo margini 21/10: Taycan Cross Turismo: prezzo in linea, margine gonfiato"
+ },
+ {
+  "id": 429014,
+  "motivo": "controllo margini 21/10: 718 Boxster 2023: margine gonfiato"
+ },
+ {
+  "id": 570537,
+  "motivo": "controllo margini 21/10: Portofino M: prezzo in linea col mercato"
+ },
+ {
+  "id": 570522,
+  "motivo": "controllo margini 21/10: Granturismo Modena 2025 con 60.000 km: confronti con auto nuove"
+ },
+ {
+  "id": 415261,
+  "motivo": "controllo margini 21/10: 718 Boxster 2017: rivendita uguale al mercato, margine gonfiato"
+ },
+ {
+  "id": 415139,
+  "motivo": "controllo margini 21/10: 997 Cabrio con 3 confronti: margine gonfiato"
+ },
+ {
+  "id": 434279,
+  "motivo": "controllo margini 21/10: Bentley GT Speed 2011 con 4 confronti: margine non affidabile"
+ },
+ {
+  "id": 488923,
+  "motivo": "controllo margini 21/10: 911 Carrera 4 2018: prezzo in linea col mercato"
+ },
+ {
+  "id": 570527,
+  "motivo": "controllo margini 21/10: 992 Carrera T: margine reale sotto 8.000"
+ },
+ {
+  "id": 604482,
+  "motivo": "controllo margini 21/10: Huracán 580 RWD confrontata con EVO: margine gonfiato"
+ },
+ {
+  "id": 429217,
+  "motivo": "controllo margini 21/10: 911 991.1 Carrera S confrontata con 991.2: margine gonfiato"
+ },
+ {
+  "id": 460024,
+  "motivo": "controllo margini 21/10: Range Rover 2019 a 31.900: troppo bello per essere vero"
+ },
+ {
+  "id": 454223,
+  "motivo": "controllo margini 21/10: Evoque Cabrio a 12.500 con 3 confronti: troppo bello per essere vero"
+ },
+ {
+  "id": 456320,
+  "motivo": "controllo margini 21/10: Stelvio 2022 a 16.900: troppo bello per essere vero"
+ },
+ {
+  "id": 69073,
+  "motivo": "controllo margini 21/10: BMW 118d 2023 a 16.900: troppo bello per essere vero"
+ },
+ {
+  "id": 489944,
+  "motivo": "controllo margini 21/10: F-Pace a 9.000: troppo bello per essere vero"
+ },
+ {
+  "id": 451967,
+  "motivo": "controllo margini 21/10: Boxer 2019 con 10.300 km a 8.300: dati non credibili"
+ },
+ {
+  "id": 451679,
+  "motivo": "controllo margini 21/10: Peugeot 2008 con anno 2008 (anno sbagliato): confronti sbagliati"
+ },
+ {
+  "id": 452141,
+  "motivo": "controllo margini 21/10: Peugeot 2008 con anno 2008 (anno sbagliato): confronti sbagliati"
+ },
+ {
+  "id": 440788,
+  "motivo": "controllo margini 21/10: Peugeot 2008 con anno 2008 (anno sbagliato): confronti sbagliati"
+ },
+ {
+  "id": 453078,
+  "motivo": "controllo margini 21/10: Ducato 2018 con 2.000 km: km sbagliati"
+ },
+ {
+  "id": 452494,
+  "motivo": "controllo margini 21/10: Movano 2023 a 9.000: troppo bello per essere vero"
+ },
+ {
+  "id": 451432,
+  "motivo": "controllo margini 21/10: Brera con 5 confronti: mercato reale più basso"
+ },
+ {
+  "id": 26179,
+  "motivo": "controllo margini 21/10: Classe A 2010 con 6 confronti: mercato reale più basso"
+ },
+ {
+  "id": 451212,
+  "motivo": "controllo margini 21/10: X5 2007 con 5 confronti: margine gonfiato"
+ },
+ {
+  "id": 51412,
+  "motivo": "controllo margini 21/10: Kia Rio 58% sotto il mercato: troppo bello per essere vero"
+ },
+ {
+  "id": 50162,
+  "motivo": "controllo margini 21/10: Kia Rio 64% sotto il mercato: troppo bello per essere vero"
+ },
+ {
+  "id": 50130,
+  "motivo": "controllo margini 21/10: Mito 66% sotto il mercato: troppo bello per essere vero"
+ },
+ {
+  "id": 58189,
+  "motivo": "controllo margini 21/10: Great Wall Steed con 2 confronti: margine non affidabile"
+ },
+ {
+  "id": 487872,
+  "motivo": "controllo margini 21/10: doppione di 487871"
  }
 ]
