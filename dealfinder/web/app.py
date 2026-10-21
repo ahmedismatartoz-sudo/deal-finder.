@@ -1079,6 +1079,23 @@ def _prezzi_trattati(items: list[dict]) -> None:
 from .scovo import FIN_SOLO_RE  # noqa: E402  (21/10: auto solo leasing/finanziamento)
 
 
+def _solo_privati(items: list[dict]) -> list[dict]:
+    """21/10 sera (cliente): sul sito SOLO auto messe in vendita da privati (venditore segnato come privato)."""
+    if os.environ.get("SITO_SOLO_PRIVATI", "1") != "1" or not items:
+        return items
+    ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
+    try:
+        with connect() as conn:
+            ok = {r["id"] for r in conn.execute("SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='privato'",
+                                                (ids,)).fetchall()}
+    except Exception as e:
+        logging.getLogger("scovo").warning("SOLO_PRIVATI non controllato: %s", str(e)[:200])
+        return items
+    tenute = [it for it in items if it.get("id") in ok]
+    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano", len(items) - len(tenute), len(tenute))
+    return tenute
+
+
 def _senza_solo_finanziamento(items: list[dict]) -> list[dict]:
     if os.environ.get("SITO_NO_SOLO_FIN", "1") != "1" or not items:
         return items
@@ -1276,7 +1293,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))
+    items = _solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
