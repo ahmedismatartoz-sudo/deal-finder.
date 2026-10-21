@@ -347,6 +347,7 @@ def lead_sportive() -> int:
         d = dealers.setdefault(url, {"nome": nome, "citta": l.city, "prov": l.province, "n": 0, "sport": 0, "esempi": [], "sito": sito,
                                      "tel": [p.get("formattedNumber") for p in (s.get("phones") or []) if isinstance(p, dict) and p.get("formattedNumber")]})
         d["n"] += 1
+        d["max"] = max(d.get("max") or 0, l.price_eur or 0)
         testo = f"{l.model or ''} {l.version_raw or ''} {l.title or ''}"
         if (l.make or "").lower() in ("porsche", "ferrari", "lamborghini", "mclaren", "aston martin", "lotus", "maserati") or SPORTIVE_MODELLI.search(testo):
             d["sport"] += 1
@@ -430,7 +431,7 @@ def lead_sportive() -> int:
             trovati += 1
             dich += dichiara
             log.warning("LEADSP %s", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2],
-                                                 "url": url, "sito": d["sito"], "sportive": d["sport"], "annunci": d["n"],
+                                                 "url": url, "sito": d["sito"], "sportive": d["sport"], "annunci": d["n"], "prezzo_max": d.get("max"),
                                                  "esempi": d["esempi"], "dichiara": dichiara, "senza_permuta": senza,
                                                  "frase": frase, "fonte": fonte}, ensure_ascii=False))
     log.warning("LEADSP_FINE controllati %d, già consegnati %d, nuovi %d, dichiarano di comprare %d", len(da_controllare), esclusi, trovati, dich)
