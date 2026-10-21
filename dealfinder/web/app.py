@@ -1140,7 +1140,7 @@ def _forzate_sito(gia: set, opens: dict) -> list:
             it["prezzo"] = prezzo
             marg = int(e["R"]) - prezzo - costi
             it.update(economica=False, verificare=True, mercato=int(e["M"]), top=True,
-                      pv={"categoria": "candidato", "etichetta": "Selezione Porsche · da verificare", "M": int(e["M"]),
+                      pv={"categoria": "candidato", "etichetta": "Selezione · da verificare", "M": int(e["M"]),
                           "R": int(e["R"]), "R_finale": int(e["R"]), "margine": marg, "n": int(e.get("n") or 0),
                           "totale_costi": costi, "metodo": "confronti"})
             out.append(it)
