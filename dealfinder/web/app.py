@@ -8,6 +8,7 @@ import json
 from html import escape as html_esc
 import logging
 import os
+import re
 import threading
 import time
 from collections import defaultdict
@@ -1086,8 +1087,13 @@ def _solo_privati(items: list[dict]) -> list[dict]:
     ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
     try:
         with connect() as conn:
-            ok = {r["id"] for r in conn.execute("SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='privato'",
-                                                (ids,)).fetchall()}
+            # anche i commercianti che si segnano come privati: nome o segni da rivenditore nel testo dell'annuncio
+            nomi = os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte")
+            marchi = r"(\ms\.?\s?r\.?\s?l\.?s?\M|\ms\.?p\.?a\.?\M|concessionari|autosalone|rivenditor|garanzia\s+(di\s+)?12\s+mesi|iva\s+esposta|esposta\s+iva|iva\s+deducibile|finanziamenti\s+in\s+sede|nostro\s+(parco|salone)|" \
+                     + "|".join(re.escape(n.strip()) for n in nomi.split(",") if n.strip()) + ")"
+            ok = {r["id"] for r in conn.execute(
+                "SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='privato' "
+                "AND NOT ((coalesce(title,'') || ' ' || coalesce(description,'')) ~* %s)", (ids, marchi)).fetchall()}
     except Exception as e:
         logging.getLogger("scovo").warning("SOLO_PRIVATI non controllato: %s", str(e)[:200])
         return items

@@ -18,6 +18,7 @@ from collections import Counter
 
 log = logging.getLogger("benzina_mi")
 # entro circa 100 km da Milano (cliente 20/10)
+PMIN, PMAX, SOLO_P = 3000, 15000, False
 PROVINCE_100 = [p.strip() for p in os.environ.get("BENZ_PROVINCE", "MI,MB,VA,CO,LC,BG,LO,PV,CR,NO,VB,PC,AL,VC,BS").split(",")]
 
 CANDIDATI_SQL = """
@@ -31,7 +32,8 @@ SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, g.n, g.med
 FROM listings t
 JOIN g ON g.make=t.make AND g.model=t.model AND g.fuel IS NOT DISTINCT FROM t.fuel AND g.year=t.year
 WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s) AND t.fuel ILIKE 'benzina%%'
-  AND t.price_eur BETWEEN 3000 AND 15000 AND t.year >= 2007 AND coalesce(t.mileage_km, 0) <= 180000
+  AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s AND t.year >= 2007
+  AND (%(solo_privati)s = false OR t.seller_type = 'privato') AND coalesce(t.mileage_km, 0) <= 180000
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
@@ -45,6 +47,9 @@ def giro() -> dict:
     from ..collectors.subito import SubitoCollector
     from ..collectors.autoscout import AutoScoutCollector
     st: Counter = Counter()
+    global PMIN, PMAX, SOLO_P
+    PMIN, PMAX = int(os.environ.get("BENZ_MIN", "3000")), int(os.environ.get("BENZ_PMAX", "15000"))
+    SOLO_P = os.environ.get("BENZ_SOLO_PRIVATI") == "1"
     # salvataggio a pacchetti: in memoria non resta mai più di un pacchetto di annunci (512 MB di memoria)
     with connect() as conn:
         pacco: list = []
@@ -63,7 +68,7 @@ def giro() -> dict:
         try:
             for l in ([] if solo_valuta else sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
                                         max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300")))):
-                if l.price_eur and 3000 <= l.price_eur <= 15000:
+                if l.price_eur and PMIN <= l.price_eur <= PMAX and (not SOLO_P or l.seller_type == "privato"):
                     pacco.append(l); n += 1
                     salva()
         except Exception as e:
@@ -77,7 +82,7 @@ def giro() -> dict:
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
-            for l in ([] if solo_valuta else bande_parallele(3000, 15000, 500, [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
+            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, 500, [("P", "privato")] if SOLO_P else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
                 pacco.append(l); n += 1
                 salva()
         except Exception as e:
@@ -88,7 +93,7 @@ def giro() -> dict:
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
         conn.execute("SET statement_timeout = '900s'")
         cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
-                                            "lim": int(os.environ.get("BENZ_MAX", "500"))}).fetchall()
+                                            "lim": int(os.environ.get("BENZ_MAX", "500")), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P}).fetchall()
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))
