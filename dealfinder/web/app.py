@@ -1203,7 +1203,7 @@ def _margini_gonfiati(items: list[dict]) -> list[dict]:
         r_ai = a["prezzo"] * (1 - max(0.08, float(a["errore"])))
         m_ai = pv["margine"] - max(0, R - r_ai)
         minimo = alta_min if prezzo >= da and alta_min else max(int(os.environ.get("AI_MARGINE_MIN", "1000")), int(prezzo * .1))
-        if m_ai < minimo:
+        if R > r_ai and m_ai < minimo:            # solo se l'AI dice davvero che la rivendita è troppo alta
             c["margine_gonfiato"] += 1
             if len(esempi) < 15:
                 esempi.append({"id": it["id"], "auto": str(it.get("nome") or "")[:50], "prezzo": prezzo, "R": int(R),
