@@ -11,8 +11,8 @@
 
   // ---- dati del salone nella pagina ----
   const tel = (S.telefono || '').replace(/[^\d+]/g, '');
-  const indirizzo = [S.indirizzo, [S.cap, S.citta].filter(Boolean).join(' ') + (S.provincia ? ` (${S.provincia})` : '')].filter(Boolean).join(', ');
-  const mappaQ = encodeURIComponent(indirizzo);
+  const indirizzo = S.indirizzo_completo || [S.indirizzo, [S.cap, S.citta].filter(Boolean).join(' ') + (S.provincia ? ` (${S.provincia})` : '')].filter(Boolean).join(', ');
+  const mappaQ = encodeURIComponent(S.mappa || indirizzo);
   document.title = `${S.nome || 'Salone'} · ${S.sottotitolo || 'Auto selezionate'}${S.citta ? ' a ' + S.citta : ''}`;
   $$('[data-nome]').forEach(e => e.textContent = S.nome || 'Salone');
   $$('[data-sottotitolo]').forEach(e => e.textContent = S.sottotitolo || 'Auto selezionate');
