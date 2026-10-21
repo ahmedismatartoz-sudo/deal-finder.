@@ -29,6 +29,9 @@ WHERE t.status='attivo' AND t.seller_type='privato' AND upper(t.province) = ANY(
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= %(nmin)s AND t.price_eur < g.med * %(soglia)s
+  AND t.price_eur >= g.med * 0.6                 -- oltre il 40% sotto: quasi sempre anno o modello sbagliato nell'annuncio
+  AND NOT (t.year > 2012 AND (coalesce(t.url,'') || ' ' || coalesce(t.title,'') || ' ' || coalesce(t.version_raw,''))
+           ~* '(\m(996|993|964|930|911 sc|3\.2)\M|-asi-|\masi\M|epoca|youngtimer)')
 ORDER BY t.price_eur / g.med ASC
 LIMIT %(lim)s"""
 
