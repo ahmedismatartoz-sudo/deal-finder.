@@ -1122,13 +1122,31 @@ def _margine_alta(items: list[dict]) -> list[dict]:
                                                          (ids,)).fetchall()}
         except Exception as e:
             logging.getLogger("scovo").warning("ALTA_SOLO_PRIVATI non controllato: %s", str(e)[:200])
+    # 21/10 (cliente): i commercianti restano solo con deal molto grossi (ALTA_MARGINE_COMM, es. 15.000 €);
+    # auto tenute a mano per marca/modello/prezzo (data/tieni_sito.json)
+    comm_min = int(os.environ.get("ALTA_MARGINE_COMM", "0"))
+    try:
+        from pathlib import Path
+        tieni = json.loads((Path(__file__).resolve().parents[2] / "data" / "tieni_sito.json").read_text())
+    except Exception:
+        tieni = []
+
+    def tenuta(it):
+        testo = f"{it.get('marca') or ''} {it.get('modello') or ''} {it.get('nome') or ''}".lower()
+        return any(all(w.lower() in testo for w in t.get("parole", [])) and
+                   t.get("prezzo_min", 0) <= (it.get("prezzo") or 0) <= t.get("prezzo_max", 10**9) for t in tieni)
+
     tenute, tolte = [], 0
     for it in items:
         if (it.get("prezzo") or 0) >= da:
-            if privati is not None and it.get("id") not in privati:
-                tolte += 1
+            if tenuta(it):
+                tenute.append(it)
                 continue
             m = margine(it)
+            if privati is not None and it.get("id") not in privati:
+                if not comm_min or m is None or m < comm_min:
+                    tolte += 1
+                    continue
             if m is None or m < minimo:
                 tolte += 1
                 continue
