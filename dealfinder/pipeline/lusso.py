@@ -221,7 +221,7 @@ def raccolta_60k() -> int:
                     if not l.price_eur or l.price_eur < LMIN:
                         sotto += 1
                         continue
-                    if l.price_eur > 200000:
+                    if l.price_eur > int(os.environ.get("LUSSO_MAX", "200000")):
                         continue
                     l.province = l.province or prov
                     salva(conn, l)
