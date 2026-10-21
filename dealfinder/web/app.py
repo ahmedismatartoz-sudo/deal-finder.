@@ -1102,6 +1102,66 @@ def _solo_privati(items: list[dict]) -> list[dict]:
     return tenute
 
 
+def _decisioni_jev(items: list[dict]) -> list[dict]:
+    """21/10 sera (cliente): decide Jev (AI decisionale TypeSafe, JEV_MODO=attiva). Valgono solo le decisioni prese sul
+    prezzo attuale. Fuori dal sito: probabile truffa, scarta con confidenza alta, danni evidenti nelle foto, e le auto
+    che con la correzione di Jev alla rivendita (solo al ribasso) non hanno più margine. Le altre restano come sono."""
+    if os.environ.get("JEV_MODO", "prova") != "attiva" or not items:
+        return items
+    ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
+    try:
+        with connect() as conn:
+            dec = {r["listing_id"]: r for r in conn.execute(
+                "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.correzione_pct, "
+                "(d.risposta->'answers'->'danni_foto'->>'noul')::float AS danni "
+                "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
+                "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
+    except Exception as e:
+        logging.getLogger("scovo").warning("JEV_SITO non applicato: %s", str(e)[:200])
+        return items
+    conf = float(os.environ.get("JEV_CONF_SCARTA", "0.6"))
+    tr = float(os.environ.get("JEV_TRUFFA", "0.7"))
+    m_min = int(os.environ.get("JEV_MARGINE_MIN", "300"))
+    da, alta_min = int(os.environ.get("ALTA_DA", "50000")), int(os.environ.get("ALTA_MARGINE_MIN", "0"))
+    from collections import Counter
+    c, tenute = Counter(), []
+    for it in items:
+        d = dec.get(it.get("id"))
+        if not d:
+            c["non_decise"] += 1
+            tenute.append(it)
+            continue
+        if (d["truffa"] or 0) >= tr:
+            c["truffa"] += 1
+            continue
+        if d["decisione"] == "scarta" and (d["confidenza"] or 0) >= conf:
+            c["scarta"] += 1
+            continue
+        if (d["danni"] or 0) >= .7:
+            c["danni_foto"] += 1
+            continue
+        corr = min(0.0, float(d["correzione_pct"] or 0))
+        pv = it.get("pv") or {}
+        m = pv.get("margine") if pv else None
+        if m is None:
+            try:
+                m = scovo.guadagno_minimo(it)
+            except Exception:
+                m = None
+        if m is not None and corr < 0:
+            prezzo = it.get("prezzo") or 0
+            m2 = m + (prezzo + m) * corr / 100
+            soglia = alta_min if prezzo >= da and alta_min else m_min
+            if m2 < soglia:
+                c["margine_dopo_correzione"] += 1
+                continue
+        c[f"tenuta_{d['decisione']}"] += 1
+        tenute.append(it)
+    logging.getLogger("scovo").warning("JEV_SITO %d tolte, %d restano %s", len(items) - len(tenute), len(tenute),
+                                       json.dumps(dict(c)))
+    return tenute
+
+
 def _senza_solo_finanziamento(items: list[dict]) -> list[dict]:
     if os.environ.get("SITO_NO_SOLO_FIN", "1") != "1" or not items:
         return items
@@ -1299,7 +1359,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))
+    items = _decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
