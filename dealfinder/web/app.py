@@ -1112,9 +1112,22 @@ def _margine_alta(items: list[dict]) -> list[dict]:
         except Exception:
             return None
 
+    # 21/10 (cliente): sopra ALTA_DA solo auto messe in vendita da PRIVATI
+    privati = None
+    if os.environ.get("ALTA_SOLO_PRIVATI", "1") == "1":
+        ids = [it["id"] for it in items if (it.get("prezzo") or 0) >= da and isinstance(it.get("id"), int)]
+        try:
+            with connect() as conn:
+                privati = {r["id"] for r in conn.execute("SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='privato'",
+                                                         (ids,)).fetchall()}
+        except Exception as e:
+            logging.getLogger("scovo").warning("ALTA_SOLO_PRIVATI non controllato: %s", str(e)[:200])
     tenute, tolte = [], 0
     for it in items:
         if (it.get("prezzo") or 0) >= da:
+            if privati is not None and it.get("id") not in privati:
+                tolte += 1
+                continue
             m = margine(it)
             if m is None or m < minimo:
                 tolte += 1
