@@ -69,6 +69,8 @@ def _ricerca(min_p: int, venditori, fasce):
 
 
 FASCE = [(50000, 100000, 5000), (100000, 200000, 10000)]          # tetto 200.000 € (cliente 20/10)
+if int(os.environ.get("LUSSO_MAX", "200000")) > 200000:             # 21/10: anche auto più care
+    FASCE.append((200000, int(os.environ["LUSSO_MAX"]), 20000))
 
 
 def lead_supercar() -> int:
@@ -162,7 +164,7 @@ def raccolta_60k() -> int:
         elif not pv or pv not in PROV_DINTORNI or not comune_ok(pv, l.city):
             st["fuori_zona"] += 1
             return
-        if not l.price_eur or l.price_eur < LMIN or l.price_eur > 200000:
+        if not l.price_eur or l.price_eur < LMIN or l.price_eur > int(os.environ.get("LUSSO_MAX", "200000")):
             st["fuori_fascia"] += 1
             return
         if solo_privati and l.seller_type != "privato":
