@@ -729,6 +729,12 @@ if __name__ == "__main__":
             elif voce.startswith("benzina_mi"):
                 from . import benzina_mi as B
                 esito = B.giro()
+            elif voce.startswith("aiprezzi"):                              # 21/10: modello AI prezzi su tutta la base letta
+                import subprocess                                          # processo a parte: memoria pulita a fine giro
+                sys.stdout.flush()
+                rc = subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"],
+                                    timeout=int(os.environ.get("AI_PREZZI_TIMEOUT", "5400"))).returncode
+                esito = {"codice_uscita": rc}
             else:
                 continue
             with connect() as conn:

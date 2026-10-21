@@ -45,12 +45,13 @@ def _righe(conn) -> list[dict]:
         SELECT id, make, model, fuel, gearbox, power_kw, year, mileage_km, price_eur, price_flags, seller_type,
                source, damage_class, status
         FROM listings
-        WHERE price_eur BETWEEN 300 AND 120000 AND make IS NOT NULL AND model IS NOT NULL
+        WHERE price_eur BETWEEN 300 AND %s AND make IS NOT NULL AND model IS NOT NULL
           AND year BETWEEN 1990 AND 2027 AND mileage_km IS NOT NULL AND mileage_km BETWEEN 0 AND 500000
           AND {NORD_SQL}
           AND (status = 'attivo' OR disappeared_at > now() - interval '120 days')
         ORDER BY last_seen_at DESC
-        LIMIT %s""", (int(os.environ.get("AI_MAX_RIGHE", "120000")),)).fetchall()
+        LIMIT %s""", (int(os.environ.get("AI_PREZZO_MAX", "120000")),       # 21/10: anche la fascia alta
+                      int(os.environ.get("AI_MAX_RIGHE", "120000")),)).fetchall()
 
 
 def _sana(r: dict) -> bool:

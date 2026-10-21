@@ -709,7 +709,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             diff = ai["prezzo"] / out["M"] - 1
             out["ai"]["differenza"] = round(diff, 3)
             out["M_senza_ai"] = out["M"]
-            out["M"] = int(round(out["M"] * (1 - cfg.ai_peso) + ai["prezzo"] * cfg.ai_peso))
+            # 21/10 (cliente: rivendita prudente, mai alzata): l'AI può solo abbassare il mercato dei confronti
+            out["M"] = min(out["M"], int(round(out["M"] * (1 - cfg.ai_peso) + ai["prezzo"] * cfg.ai_peso)))
             out["L"] = min(out.get("L") or out["M"], out["M"])
             out["ai"]["concorda"] = abs(diff) <= cfg.ai_accordo
             out["ai"]["disaccordo"] = abs(diff) > cfg.ai_disaccordo
