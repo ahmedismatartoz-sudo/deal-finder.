@@ -26,6 +26,11 @@ MARKET_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model
               "first_seen_at, last_seen_at, last_checked_at, " + FIN_SQL + " FROM listings "
               "WHERE status='attivo' AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "   # usa listings_cmp_idx
               "AND {home}")
+MARKET_ITALIA_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, fuel, "
+                     "gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, problem_search, "
+                     "first_seen_at, last_seen_at, last_checked_at, " + FIN_SQL + " FROM listings "
+                     "WHERE status='attivo' AND lower(make)=lower(%s) AND lower(model)=lower(%s) AND lower(fuel)=lower(%s) "
+                     "AND price_eur BETWEEN 25000 AND 400000")
 RISCHIO = {"telaio_longheroni", "tetto_montanti", "airbag_esplosi", "frontale_profondo", "airbag",
            "modulo_airbag_volante", "modulo_airbag_passeggero", "centralina_airbag", "motore_sostituzione",
            "cambio_sostituzione", "alluvionata", "incendio"}
@@ -54,7 +59,24 @@ def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: di
         v2["fuori_zona"] = True
         v2.setdefault("ipotesi", []).append("pochi confronti entro 150 km: usati anche annunci uguali nel resto del "
                                             "Nord Italia (prezzi richiesti, possibili piccole differenze di zona)")
-        return v2
+        v = v2
+    # 21/10 (cliente): auto di fascia alta (da 50.000 €): pochi esemplari uguali per zona, si usa la base prezzi
+    # 60-200k di tutta Italia (privati e concessionari), con marca/modello/alimentazione scritti in modo diverso
+    # tra AutoScout24 e Subito ("PORSCHE"/"Porsche", "Benzina"/"benzina")
+    if os.environ.get("POLICY_ITALIA") != "1" or (v.get("n") or 0) >= cfg.n_preferito \
+            or (t.get("price_eur") or 0) < int(os.environ.get("POLICY_ITALIA_DA", "50000")):
+        return v
+    chiave = ("IT",) + tuple(str(x).lower() for x in key)
+    if chiave not in cache:
+        cache.clear()
+        cache[chiave] = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                         for m in conn.execute(MARKET_ITALIA_SQL, key).fetchall()]
+    v3 = P.valuta(t, cache[chiave], soglia, cfg)
+    if (v3.get("n") or 0) > (v.get("n") or 0):
+        v3["fuori_zona"] = True
+        v3.setdefault("ipotesi", []).append("auto di fascia alta con pochi confronti vicini: usati gli annunci uguali "
+                                            "di tutta Italia della base prezzi (prezzi richiesti, privati e concessionari)")
+        return v3
     return v
 
 
