@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from collections import Counter
 
 log = logging.getLogger("privati_lusso")
@@ -81,6 +82,33 @@ def giro() -> dict:
                     st[f"autoscout_telefono_{tel}"] += 1
         conn.commit()
         tr.valuta_e_pubblica(conn, [r["id"] for r in cand], st)
+        conn.commit()
+        # 21/10 (cliente): fuori le auto vendute solo con leasing/finanziamento. Su AutoScout24 la descrizione non è
+        # nella ricerca: si legge dalla pagina dell'annuncio, solo per le auto da 50.000 € in su già sul sito
+        from ..web.app import FIN_SOLO_RE
+        da_leggere = conn.execute("""SELECT id, url FROM listings WHERE source='autoscout24' AND status='attivo'
+                                     AND stage='approfondito' AND price_eur >= 50000 AND description IS NULL
+                                     LIMIT %s""", (int(os.environ.get("PLUS_DESC_MAX", "800")),)).fetchall()
+
+        def descrizione(r):
+            cl = tr._client_as()
+            stato, det = tr._as_dettaglio(cl, r["url"])
+            d = (det or {}).get("description") if isinstance(det, dict) else None
+            if isinstance(d, dict):
+                d = d.get("text") or d.get("html") or ""
+            return r["id"], stato, re.sub(r"<[^>]+>", " ", str(d or ""))[:8000]
+
+        with ThreadPoolExecutor(4) as ex:
+            for lid, stato, d in ex.map(descrizione, da_leggere):
+                if stato == "scomparso":
+                    conn.execute("UPDATE listings SET status='scomparso' WHERE id=%s", (lid,))
+                    continue
+                if d:
+                    conn.execute("UPDATE listings SET description=%s WHERE id=%s", (d, lid))
+                    if re.search(FIN_SOLO_RE, d, re.I):
+                        conn.execute("UPDATE listings SET stage='scartato', stage_reason='solo_finanziamento' WHERE id=%s", (lid,))
+                        st["solo_finanziamento"] += 1
+                st["descrizioni_lette"] += 1
         conn.commit()
     log.warning("PLUS_FINE %s", json.dumps(dict(st)))
     return dict(st)
