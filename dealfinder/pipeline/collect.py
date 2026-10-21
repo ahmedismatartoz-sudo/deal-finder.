@@ -698,6 +698,8 @@ if __name__ == "__main__":
     mode = os.environ.get("COLLECT_MODO") or mode
     # COLLECT_PRIMA (da Render), es. "leadsp:3,benzina_mi:5": giri pesanti una tantum fatti qui, in un processo
     # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
+    import time
+    _t0_loop = time.time()
     for voce in [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]:
         try:
             from .ciclo import _due
@@ -726,6 +728,19 @@ if __name__ == "__main__":
             elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
+            elif voce.startswith("benzloop"):                              # 21/10 sera: raccolta benzina senza fermarsi
+                import subprocess
+                from . import benzina_mi as B
+                fine_loop = _t0_loop + int(os.environ.get("BENZ_LOOP_MIN", "165")) * 60
+                giri, esito = 0, {}
+                while time.time() < fine_loop - 20 * 60:
+                    giri += 1
+                    esito[f"giro{giri}"] = {k: v for k, v in B.giro().items()
+                                            if k in ("letti_subito", "letti_autoscout", "candidate", "pubblicate")}
+                    if time.time() < fine_loop - 10 * 60:          # modello riaddestrato sui nuovi annunci
+                        sys.stdout.flush()
+                        subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"], timeout=1800)
+                    log.warning("BENZ_LOOP giro %d fatto: %s", giri, esito[f"giro{giri}"])
             elif voce.startswith("benzval"):                               # 21/10: rivaluta la base benzina col modello nuovo
                 from . import benzina_mi as B
                 vecchi = {k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_MAX", "BENZ_SOGLIA")}
@@ -757,6 +772,9 @@ if __name__ == "__main__":
             log.warning("PRIMA %s fatto: %s", voce, esito)
         except Exception as e:
             log.warning("PRIMA %s non riuscito: %s", voce, str(e)[:300])
+    if os.environ.get("COLLECT_SOLO_PRIMA") == "1":           # 21/10 sera: solo i giri di COLLECT_PRIMA (benzina senza sosta)
+        log.warning("COLLECT_SOLO_PRIMA: fine giro")
+        sys.exit(0)
     if mode == "sito":
         # Accelerazione: mette subito sul sito le auto già controllate a mano, poi prepara la selezione
         # dei migliori di Subito (stessa del ciclo: se la fa prima questo lavoro, il ciclo la salta)

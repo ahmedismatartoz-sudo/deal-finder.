@@ -77,6 +77,29 @@ def giro() -> dict:
         except Exception as e:
             log.warning("BENZ subito: %s", str(e)[:200])
         salva(True)
+        # 1a-bis (21/10 sera, cliente: "tutti gli annunci del mercato, solo privati, a benzina"): raccolta profonda
+        # di Subito provincia per provincia e fascia di prezzo per fascia (la ricerca per data si ferma prima),
+        # in Lombardia, Piemonte ed Emilia entro il raggio
+        if not solo_valuta and os.environ.get("BENZ_SUB_PROFONDA") == "1":
+            passo = int(os.environ.get("BENZ_SUB_PASSO", "500"))
+            fasce = [(a, min(a + passo, PMAX)) for a in range(PMIN, PMAX, passo)]
+            regioni = [(4, ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "SO", "MN"]),
+                       (2, ["NO", "VB", "VC", "BI", "AL", "AT", "TO"]), (8, ["PC", "PR", "RE"])]
+            for reg, provs in regioni:
+                provs = [p for p in provs if p in PROVINCE_100]
+                if not provs:
+                    continue
+                try:
+                    for l in sub._deep({"price_bands": fasce, "band_pages": int(os.environ.get("BENZ_SUB_PAG_FASCIA", "30"))},
+                                       set(provs), reg, 100):
+                        if (l.price_eur and PMIN <= l.price_eur <= PMAX and (not racc_p or l.seller_type == "privato")
+                                and "benzina" in (l.fuel or "").lower()):
+                            pacco.append(l); n += 1
+                            salva()
+                except Exception as e:
+                    log.warning("BENZ subito profonda regione %s: %s", reg, str(e)[:200])
+                salva(True)
+                log.warning("BENZ subito profonda regione %s: letti finora %d", reg, n)
         st["letti_subito"] = n
         log.warning("BENZ subito letti %d (%d-%d €)", n, PMIN, PMAX)
         # 1b. AutoScout24: entro 100 km da Milano, a fasce di 500 €, più fasce insieme
