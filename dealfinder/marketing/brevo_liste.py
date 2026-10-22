@@ -133,11 +133,22 @@ def _sostituisci(gruppo: str, html: str, items: list[dict], usate: set) -> tuple
             and lo <= (x.get("prezzo") or 0) <= hi and (x.get("margine") or 0) >= 1500
             and x.get("R") and x.get("anno")]
     cand.sort(key=lambda x: -(x.get("margine") or 0))
+    def _n(f):
+        try:
+            return sum(1 for x in items if f(x))
+        except Exception as e:
+            return type(e).__name__
+    lg.warning("BREVO_CAMPAGNA %s ricerca sostituti: elenco=%d km<=100k=%s n>=20=%s fascia=%s margine>=1500=%s non_usate=%s esempio=%s",
+               gruppo, len(items), _n(lambda x: (x.get("km") or 10**9) <= 100000), _n(lambda x: (x.get("n") or 0) >= 20),
+               _n(lambda x: lo <= (x.get("prezzo") or 0) <= hi), _n(lambda x: (x.get("margine") or 0) >= 1500),
+               len(cand), {k: items[0].get(k) for k in ("id", "km", "n", "prezzo", "R", "margine", "anno")} if items else None)
     scelte = []
     for x in cand:
         prova = _card(x)
         if _foto_ok(prova):
             scelte.append(x)
+        else:
+            lg.warning("BREVO_CAMPAGNA %s sostituto %s senza foto", gruppo, x.get("id"))
         if len(scelte) == 2:
             break
     if len(scelte) < 2:
