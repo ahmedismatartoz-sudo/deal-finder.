@@ -55,6 +55,47 @@ def _aggiungi(d, prezzo, marca, carb):
         d["benz"] += 1
 
 
+SENZA_CELL: dict = {}
+
+
+def _chi_siamo(dealers: dict) -> int:
+    """22/10 (cliente): per i commercianti senza cellulare negli annunci, il cellulare pubblicato nella loro
+    pagina AutoScout24 ("chi siamo" o pagina del concessionario). Solo numeri dell'attività."""
+    from html import unescape
+    from ..collectors.autoscout import AutoScoutCollector
+    asc = AutoScoutCollector()
+    asc.min_delay_s, asc.max_delay_s = 0.8, 1.6
+    trovati = 0
+    for i, (url, d) in enumerate(sorted(SENZA_CELL.items(), key=lambda kv: -len(kv[1]["prezzi"]))):
+        if "/concessionari/" not in url:
+            continue
+        cell = []
+        for u in (url.rstrip("/") + "/chi-siamo", url):
+            try:
+                r = asc.client.get(u)
+                testo = unescape(re.sub(r"<[^>]+>", " ", r.text)) if r.status_code == 200 else ""
+            except Exception:
+                testo = ""
+            cell = _cellulari(TEL.findall(testo))
+            asc.pause()
+            if cell:
+                break
+        if cell:
+            d["cell"] = cell
+            k = cell[0]
+            if k in dealers:
+                dealers[k]["prezzi"] += d["prezzi"]
+                dealers[k]["marche"].update(d["marche"])
+                dealers[k]["benz"] += d["benz"]
+            else:
+                dealers[k] = d
+            trovati += 1
+        if (i + 1) % 200 == 0:
+            log.warning("LEADT avanzamento chi siamo: %d pagine, %d cellulari trovati", i + 1, trovati)
+    log.warning("LEADT chi siamo: %d commercianti senza cellulare negli annunci, %d trovati nella pagina", len(SENZA_CELL), trovati)
+    return trovati
+
+
 def _autoscout(dealers: dict, massimo: int) -> int:
     from ..collectors.autoscout import AutoScoutCollector
     os.environ["AUTOSCOUT_CAP"] = "20099"                       # Sesto San Giovanni
@@ -76,11 +117,17 @@ def _autoscout(dealers: dict, massimo: int) -> int:
             continue
         cell = _cellulari([p.get("callTo") or p.get("formattedNumber") for p in (s.get("phones") or []) if isinstance(p, dict)])
         nome = s.get("companyName") or (s.get("dealer") or {}).get("companyName")
-        if not cell or not nome:
+        if not nome:
             continue
         links = s.get("links") if isinstance(s.get("links"), dict) else {}
         info = links.get("infoPage") or ""
         link = info if info.startswith("http") else "https://www.autoscout24.it" + info
+        if not cell:
+            # nessun cellulare negli annunci: si cerca dopo nella sua pagina "chi siamo"
+            senza = SENZA_CELL.setdefault(link.split("?")[0], _nuovo_dealer(nome, l.city, (l.province or "").upper(), [],
+                                                                             link.split("?")[0], "autoscout24"))
+            _aggiungi(senza, l.price_eur, l.make, l.fuel)
+            continue
         k = cell[0]
         d = dealers.get(k) or dealers.setdefault(k, _nuovo_dealer(nome, l.city, (l.province or "").upper(), cell, link.split("?")[0], "autoscout24"))
         d["fonti"].add("autoscout24")
@@ -144,6 +191,7 @@ def giro() -> dict:
     from ..db import connect
     dealers: dict = {}
     n_as = _autoscout(dealers, int(os.environ.get("LEADT_MAX_ANNUNCI", "250000")))
+    n_cs = _chi_siamo(dealers) if os.environ.get("LEADT_CHI_SIAMO", "1") == "1" else 0
     n_sub = _subito(dealers, int(os.environ.get("LEADT_SUBITO_PAGINE", "30")))
     ET, EN, EU = _esclusi()
     # doppioni: stesso numero (chiave) oppure stesso nome normalizzato
@@ -188,7 +236,7 @@ def giro() -> dict:
             "SELECT fascia, count(*) AS n FROM lead_tutti WHERE NOT consegnato GROUP BY 1").fetchall()}
         prov = {r["prov"]: r["n"] for r in conn.execute(
             "SELECT prov, count(*) AS n FROM lead_tutti WHERE NOT consegnato GROUP BY 1").fetchall()}
-    esito = {"annunci_autoscout": n_as, "annunci_subito": n_sub, "commercianti_con_cell": len(dealers),
+    esito = {"annunci_autoscout": n_as, "annunci_subito": n_sub, "da_pagina_chi_siamo": n_cs, "commercianti_con_cell": len(dealers),
              "gia_consegnati_esclusi": gia, "doppioni_per_nome": len(dealers) - gia - len(righe),
              "nuovi_nel_database": tot, "fasce": fasce, "province": prov}
     log.warning("LEADT_FINE %s", json.dumps(esito, ensure_ascii=False))
