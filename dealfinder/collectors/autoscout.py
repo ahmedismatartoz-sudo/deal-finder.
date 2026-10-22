@@ -75,6 +75,17 @@ def _year(*vals) -> int | None:
 FUEL = {"b": "benzina", "d": "diesel", "l": "gpl", "c": "metano", "e": "elettrica", "2": "ibrida", "3": "ibrida"}
 
 
+def _senza_telefoni(it: dict) -> dict:
+    """Per i log di debug: mai numeri di telefono dei venditori."""
+    try:
+        it = json.loads(json.dumps(it))
+        if isinstance(it.get("seller"), dict):
+            it["seller"].pop("phones", None)
+        return it
+    except Exception:
+        return {"id": it.get("id") if isinstance(it, dict) else None}
+
+
 def parse_item(it: dict) -> Listing | None:
     if not isinstance(it, dict):
         return None
@@ -204,7 +215,7 @@ class AutoScoutCollector(Collector):
         if self.debug and not self._debug_done and items:
             self._debug_done = True
             log.info("AUTOSCOUT_DEBUG chiavi pagina=%s totale=%s", list(props)[:40], self._total(props))
-            log.info("AUTOSCOUT_DEBUG primo annuncio=%s", json.dumps(items[0], ensure_ascii=False)[:3000])
+            log.info("AUTOSCOUT_DEBUG primo annuncio=%s", json.dumps(_senza_telefoni(items[0]), ensure_ascii=False)[:3000])
         if not items and not data:
             log.warning("autoscout: pagina senza dati (struttura cambiata o blocco) %s", url)
         return items, self._total(props), True
@@ -300,7 +311,7 @@ class AutoScoutCollector(Collector):
                 items = props.get("listings") or []
                 if debug and tot == 0 and items:
                     log.info("AUTOSCOUT_DEBUG chiavi pagina=%s", list(props)[:40])
-                    log.info("AUTOSCOUT_DEBUG primo annuncio=%s", json.dumps(items[0], ensure_ascii=False)[:3000])
+                    log.info("AUTOSCOUT_DEBUG primo annuncio=%s", json.dumps(_senza_telefoni(items[0]), ensure_ascii=False)[:3000])
                 if not items:
                     if page == 1 and not data:
                         log.warning("autoscout: pagina senza dati (struttura cambiata o blocco) %s", url)

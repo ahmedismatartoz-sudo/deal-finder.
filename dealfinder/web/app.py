@@ -1691,6 +1691,21 @@ def foto_auto(request: Request):
                     headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
+def commercianti_tel(request: Request):
+    """22/10 (cliente): CSV dei piccoli commercianti di utilitarie con cellulare aziendale da AutoScout24.
+    Si scarica solo con la chiave COMMERCIANTI_KEY (link dato al cliente). Nei log solo il conteggio."""
+    import hmac
+    chiave = os.environ.get("COMMERCIANTI_KEY") or ""
+    if not chiave or not hmac.compare_digest(chiave, str(request.query_params.get("k") or "")):
+        return Response(status_code=404)
+    from ..marketing import commercianti_tel as ct
+    with connect() as conn:
+        rows = ct.righe(conn, int(os.environ.get("COMMERCIANTI_MAX_AUTO", "40")))
+    logging.getLogger("dealfinder.marketing").warning("COMMERCIANTI_TEL scaricati %d", len(rows))
+    return Response(ct.csv_bytes(rows), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": "attachment; filename=commercianti_cellulari.csv", "Cache-Control": "no-store"})
+
+
 def foto_email(request: Request):
     """22/10 (cliente): foto delle auto del sito per le email ai commercianti (indirizzo fisso, senza firma),
     solo per le auto che sono sul sito in questo momento e solo le prime 4 foto."""
@@ -1964,6 +1979,7 @@ routes = [
     Route("/api/affari/{id:int}/vai", vai_annuncio),
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
     Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
+    Route("/admin/commercianti-tel.csv", commercianti_tel),
     Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),
     Route("/api/opportunities/{id:int}", opportunity_detail),
