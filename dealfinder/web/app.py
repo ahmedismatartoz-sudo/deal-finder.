@@ -2249,6 +2249,18 @@ def _tempo_reale():
             time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
+    def brevo_liste():
+        """22/10 (cliente): carica una volta in Brevo le 6 liste dei commercianti (data/marketing_gruppi.json)."""
+        if os.environ.get("BREVO_IMPORT_LISTE") != "1":
+            return
+        time.sleep(20)
+        try:
+            from ..marketing import brevo_liste as bl
+            bl.importa()
+        except Exception as e:
+            lg.warning("BREVO_LISTE non riuscito: %s", str(e)[:300])
+    threading.Thread(target=brevo_liste, daemon=True, name="brevo-liste").start()
+
     def scan_49k():
         """19/10 (cliente): auto da 49.000 € in su (Porsche prima) molto sotto il prezzo delle auto uguali. Solo log."""
         if not os.environ.get("SCAN_49K"):
