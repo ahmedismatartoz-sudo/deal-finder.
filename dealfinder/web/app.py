@@ -2257,6 +2257,9 @@ def _tempo_reale():
         try:
             from ..marketing import brevo_liste as bl
             bl.importa()
+            if os.environ.get("BREVO_CAMPAGNE") == "1":
+                time.sleep(120)  # Brevo finisce di importare i contatti
+                bl.campagne()
         except Exception as e:
             lg.warning("BREVO_LISTE non riuscito: %s", str(e)[:300])
     threading.Thread(target=brevo_liste, daemon=True, name="brevo-liste").start()
