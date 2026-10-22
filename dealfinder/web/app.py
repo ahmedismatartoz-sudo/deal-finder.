@@ -1691,6 +1691,22 @@ def foto_auto(request: Request):
                     headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
+def foto_email(request: Request):
+    """22/10 (cliente): foto delle auto del sito per le email ai commercianti (indirizzo fisso, senza firma),
+    solo per le auto che sono sul sito in questo momento e solo le prime 4 foto."""
+    lid, pos = int(request.path_params["id"]), int(request.path_params["pos"])
+    if pos >= 4 or lid not in {it.get("id") for it in (_elenco.get("items") or [])}:
+        return Response(status_code=404)
+    request.path_params["id"], request.path_params["pos"] = lid, pos
+    content = _foto_mem.get((lid, pos))
+    if content is None:
+        with connect() as conn:
+            content = foto.fetch_one(conn, lid, pos)
+    if not content:
+        return Response(status_code=404, headers={"Cache-Control": "no-store"})
+    return Response(content, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})
+
+
 async def cambia_password(request: Request):
     user = current_user(request)
     data = await body(request)
@@ -1947,6 +1963,7 @@ routes = [
     Route("/api/affari/{id:int}/contatto", contatto, methods=["POST"]),
     Route("/api/affari/{id:int}/vai", vai_annuncio),
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
+    Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
     Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),
     Route("/api/opportunities/{id:int}", opportunity_detail),
