@@ -86,6 +86,50 @@ def _senza_telefoni(it: dict) -> dict:
         return {"id": it.get("id") if isinstance(it, dict) else None}
 
 
+def _salva_commercianti(items) -> None:
+    """22/10 (cliente): dai risultati di ricerca tiene solo i COMMERCIANTI con un cellulare aziendale
+    (mai i privati) in commercianti_as24, per la lista della prova WhatsApp. Mai nei log."""
+    try:
+        righe, annunci = {}, []
+        for it in items or []:
+            s = (it or {}).get("seller") or {}
+            if str(s.get("type") or "").lower().startswith("priv") or not s.get("id"):
+                continue
+            cell = []
+            for p in s.get("phones") or []:
+                g = str((p or {}).get("callTo") or "").strip()
+                n = re.sub(r"\D", "", g)
+                if g.startswith("+"):
+                    if not n.startswith("39"):
+                        continue
+                    n = n[2:]
+                if n.startswith("3") and 9 <= len(n) <= 10 and n not in cell:
+                    cell.append(n)
+            if not cell:
+                continue
+            d = s.get("dealer") or {}
+            nome = d.get("companyName") or s.get("companyName") or d.get("contactName") or s.get("contactName") or ""
+            righe[str(s["id"])] = (str(s["id"]), str(nome)[:120], cell)
+            veh, loc, trk = it.get("vehicle") or {}, it.get("location") or {}, it.get("tracking") or {}
+            annunci.append((str(s["id"]), str(it.get("id")), _num(trk.get("price")), veh.get("make"), veh.get("fuel"),
+                            loc.get("city"), province_from_cap(loc.get("zip"))))
+        if not righe:
+            return
+        from ..db import connect
+        with connect() as conn:
+            conn.cursor().executemany(
+                "INSERT INTO commercianti_as24 (seller_id, nome, cellulari) VALUES (%s,%s,%s) "
+                "ON CONFLICT (seller_id) DO UPDATE SET nome=EXCLUDED.nome, cellulari=EXCLUDED.cellulari, aggiornato=now()",
+                list(righe.values()))
+            conn.cursor().executemany(
+                "INSERT INTO commercianti_as24_annunci (seller_id, listing_id, prezzo, marca, carburante, comune, prov) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (seller_id, listing_id) DO UPDATE SET prezzo=EXCLUDED.prezzo, visto=now()",
+                annunci)
+            conn.commit()
+    except Exception as e:
+        log.warning("commercianti_as24 non salvati: %s", type(e).__name__)
+
+
 def parse_item(it: dict) -> Listing | None:
     if not isinstance(it, dict):
         return None
@@ -218,6 +262,7 @@ class AutoScoutCollector(Collector):
             log.info("AUTOSCOUT_DEBUG primo annuncio=%s", json.dumps(_senza_telefoni(items[0]), ensure_ascii=False)[:3000])
         if not items and not data:
             log.warning("autoscout: pagina senza dati (struttura cambiata o blocco) %s", url)
+        _salva_commercianti(items)
         return items, self._total(props), True
 
     def _emit(self, items, ctype: str, seller: str):
