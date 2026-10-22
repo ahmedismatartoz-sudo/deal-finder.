@@ -127,3 +127,23 @@ def a_brevo(rows: list[dict]) -> None:
         s = c.post(f"{API}/contacts/import", json={"jsonBody": corpo, "listIds": [lid], "updateExistingContacts": True,
                                                   "emptyContactsAttributes": False})
         lg.warning("COMMERCIANTI_TEL lista Brevo id=%s contatti=%d esito=%s %s", lid, len(corpo), s.status_code, s.text[:200])
+
+
+def diagnosi(conn) -> dict:
+    """Solo conteggi e nomi dei campi (mai numeri): per capire perche' l'elenco e' vuoto."""
+    q = lambda s: list(conn.execute(s).fetchone().values())[0]
+    d = {
+        "as24_comm_90g": q("SELECT count(*) FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND last_seen_at > now()-interval '90 days'"),
+        "con_raw": q("SELECT count(*) FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND last_seen_at > now()-interval '90 days' AND raw IS NOT NULL"),
+        "con_seller_id": q("SELECT count(*) FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND last_seen_at > now()-interval '90 days' AND raw->'seller'->>'id' IS NOT NULL"),
+        "con_phones": q("SELECT count(*) FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND last_seen_at > now()-interval '90 days' AND jsonb_array_length(coalesce(raw->'seller'->'phones','[]'::jsonb))>0"),
+        "tipi_seller": [list(r.values()) for r in conn.execute("SELECT raw->'seller'->>'type' t, count(*) n FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND last_seen_at > now()-interval '90 days' GROUP BY 1 ORDER BY 2 DESC LIMIT 5").fetchall()],
+        "province": [list(r.values()) for r in conn.execute("SELECT province, count(*) FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND last_seen_at > now()-interval '90 days' GROUP BY 1 ORDER BY 2 DESC LIMIT 8").fetchall()],
+        "chiavi_raw": list((conn.execute("SELECT raw FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND raw IS NOT NULL ORDER BY last_seen_at DESC LIMIT 1").fetchone() or {}).get("raw", {}) or {})[:30],
+    }
+    r = conn.execute("SELECT raw->'seller' s FROM listings WHERE source='autoscout24' AND seller_type='commerciante' AND raw ? 'seller' ORDER BY last_seen_at DESC LIMIT 1").fetchone()
+    s = (r or {}).get("s") or {}
+    d["chiavi_seller"] = list(s) if isinstance(s, dict) else str(type(s))
+    d["chiavi_dealer"] = list((s.get("dealer") or {})) if isinstance(s, dict) else None
+    d["tipi_telefono"] = [p.get("phoneType") for p in (s.get("phones") or [])] if isinstance(s, dict) else None
+    return d

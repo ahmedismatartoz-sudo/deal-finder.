@@ -2301,6 +2301,8 @@ def _tempo_reale():
             from ..marketing import commercianti_tel as ct
             with connect() as conn:
                 rows = ct.righe(conn, int(os.environ.get("COMMERCIANTI_MAX_AUTO", "40")))
+                if not rows:
+                    lg.warning("COMMERCIANTI_TEL diagnosi %s", json.dumps(ct.diagnosi(conn), default=str)[:3000])
             ct.a_brevo(rows)
         except Exception as e:
             lg.warning("COMMERCIANTI_TEL non riuscito: %s", str(e)[:300])
