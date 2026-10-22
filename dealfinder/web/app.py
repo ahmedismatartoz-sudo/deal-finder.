@@ -2474,6 +2474,25 @@ def _tempo_reale():
             lg.warning("FASCIA non riuscito: %s", str(e)[:300])
     threading.Thread(target=fascia_lead, daemon=True, name="fascia").start()
 
+    def lead_utilitarie():
+        """22/10 (cliente), una tantum (LEAD_UTILITARIE=n): piccoli commercianti di utilitarie con cellulare (LEADWA)."""
+        giro = os.environ.get("LEAD_UTILITARIE")
+        if not giro:
+            return
+        time.sleep(30)
+        from ..pipeline import lead_utilitarie as LU
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        job = f"lead_utilitarie:{giro}"
+        try:
+            if _due(job, 10000):
+                esito = LU.giro()
+                with connect() as conn:
+                    log_job(conn, job)(True, esito)
+        except Exception as e:
+            lg.warning("LEADWA non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_utilitarie, daemon=True, name="leadwa").start()
+
     def diag_plus():
         """21/10: perché i privati 60-200k risultano "dati insufficienti" (solo lettura, DIAG_PLUS=1)."""
         if os.environ.get("DIAG_PLUS") != "1":
