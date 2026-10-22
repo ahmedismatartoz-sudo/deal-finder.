@@ -2263,7 +2263,15 @@ def _tempo_reale():
                     if _elenco.get("items"):
                         break
                     time.sleep(60)
-                bl.campagne(lambda: list(_elenco.get("items") or []))
+                def piatte():
+                    out = []
+                    for it in list(_elenco.get("items") or []):
+                        pv = it.get("pv") or {}
+                        out.append({"id": it.get("id"), "auto": it.get("nome"), "anno": it.get("anno"), "km": it.get("km"),
+                                    "carb": it.get("carb"), "prezzo": it.get("prezzo"), "n": pv.get("n"),
+                                    "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine")})
+                    return out
+                bl.campagne(piatte)
         except Exception as e:
             lg.warning("BREVO_LISTE non riuscito: %s", str(e)[:300])
     threading.Thread(target=brevo_liste, daemon=True, name="brevo-liste").start()
