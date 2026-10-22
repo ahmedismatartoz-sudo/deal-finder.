@@ -121,7 +121,7 @@ def _card(x: dict) -> str:
         '</td></tr></table>')
 
 
-FASCE = {"utilitarie": (2500, 7000), "medie": (5000, 11000), "premium": (7000, 25000)}
+FASCE = {"utilitarie": (2500, 7000), "medie": (5000, 11000), "premium": (5000, 25000)}
 
 
 def _sostituisci(gruppo: str, html: str, items: list[dict], usate: set) -> tuple[str, str] | None:
@@ -151,6 +151,9 @@ def _sostituisci(gruppo: str, html: str, items: list[dict], usate: set) -> tuple
     return nuovo, f"{nomi[0]} e {nomi[1]} da privati sotto mercato"
 
 
+_usate_oggi: set = set()  # auto messe nelle email rifatte in questo giro (le due email della stessa fascia restano diverse)
+
+
 def campagne(elenco=None) -> None:
     """22/10 (cliente): crea e invia subito le 6 campagne (una per lista). Non rimanda quelle gia' create."""
     key = _chiave()
@@ -170,12 +173,14 @@ def campagne(elenco=None) -> None:
             if not _foto_ok(html):
                 import re
                 usate = {int(v) for v in re.findall(r"/email-foto/(\d+)/", "".join(
-                    f.read_text() for f in CARTELLA_EMAIL.glob("*.html")))}
+                    f.read_text() for f in CARTELLA_EMAIL.glob(f"{gruppo.split('_')[0]}_*.html")))}
+                usate |= _usate_oggi
                 rifatta = _sostituisci(gruppo, html, list(elenco() if elenco else []), usate)
                 if rifatta is None:
                     lg.warning("BREVO_CAMPAGNA %s NON inviata: auto non piu' sul sito e nessun sostituto", gruppo)
                     continue
                 html, oggetto = rifatta
+                _usate_oggi.update(usate)
             r = c.post(f"{API}/emailCampaigns", json={
                 "name": nome, "subject": oggetto, "sender": MITTENTE, "replyTo": MITTENTE["email"],
                 "htmlContent": html, "recipients": {"listIds": [lid]},
