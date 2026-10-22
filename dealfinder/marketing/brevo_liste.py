@@ -36,6 +36,12 @@ def _liste(c: httpx.Client) -> dict[str, int]:
 
 def importa() -> None:
     key = (os.environ.get("BREVO_API_KEY") or "").strip().strip('"').strip("'")
+    if key.startswith("eyJ"):  # chiave "MCP" di Brevo: base64 di {"api_key": "xkeysib-..."}
+        try:
+            import base64
+            key = json.loads(base64.b64decode(key + "=" * (-len(key) % 4)))["api_key"].strip()
+        except Exception as e:
+            lg.warning("BREVO_LISTE: chiave MCP non decodificabile: %s", type(e).__name__)
     if not key or not FILE.exists():
         lg.warning("BREVO_LISTE: chiave o file mancante")
         return
