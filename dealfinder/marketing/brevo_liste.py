@@ -35,12 +35,17 @@ def _liste(c: httpx.Client) -> dict[str, int]:
 
 
 def importa() -> None:
-    key = os.environ.get("BREVO_API_KEY")
+    key = (os.environ.get("BREVO_API_KEY") or "").strip().strip('"').strip("'")
     if not key or not FILE.exists():
         lg.warning("BREVO_LISTE: chiave o file mancante")
         return
     gruppi = json.loads(FILE.read_text())
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        prova = c.get(f"{API}/account")
+        if prova.status_code != 200:
+            lg.warning("BREVO_LISTE chiave rifiutata: tipo=%s lung=%d risposta=%s",
+                       key[:8], len(key), prova.text[:200])
+            return
         cartella = _cartella(c)
         esistenti = _liste(c)
         for nome, emails in gruppi.items():
