@@ -91,3 +91,39 @@ def csv_bytes(rows: list[dict]) -> bytes:
     for x in rows:
         w.writerow(x)
     return ("﻿" + buf.getvalue()).encode("utf-8")
+
+
+ATTRIBUTI = {"AZIENDA": "text", "COMUNE": "text", "PROV": "text", "FASCIA": "text", "PREZZO_MEDIANO": "float",
+             "AUTO_IN_VENDITA": "float", "QUOTA_SOTTO_15K": "float", "MARCHE": "text", "FONTE": "text"}
+LISTA = "Skovo WhatsApp candidati"
+
+
+def a_brevo(rows: list[dict]) -> None:
+    """Mette i commercianti trovati in una lista Brevo (solo archivio, nessun invio): cosi' Claude li legge
+    con il collegamento Brevo e il cliente vede la lista. Il numero va nell'attributo SMS."""
+    import logging
+    import httpx
+    from collections import Counter
+    from .brevo_liste import API, _chiave
+
+    lg = logging.getLogger("dealfinder.marketing")
+    lg.warning("COMMERCIANTI_TEL trovati %d per fascia=%s per prov=%s", len(rows),
+               dict(Counter(r["fascia"] for r in rows)), dict(Counter(r["prov"] for r in rows)))
+    if not rows:
+        return
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
+        for nome, tipo in ATTRIBUTI.items():
+            c.post(f"{API}/contacts/attributes/normal/{nome}", json={"type": tipo})  # gia' esistente: ignorato
+        liste = {x["name"]: x["id"] for x in (c.get(f"{API}/contacts/lists", params={"limit": 50}).json().get("lists") or [])}
+        lid = liste.get(LISTA)
+        if lid is None:
+            cart = c.get(f"{API}/contacts/folders", params={"limit": 50}).json().get("folders") or [{"id": 1}]
+            lid = c.post(f"{API}/contacts/lists", json={"name": LISTA, "folderId": cart[0]["id"]}).json()["id"]
+        corpo = [{"attributes": {"SMS": "+39" + r["cellulare"], "AZIENDA": (r["commerciante"] or "")[:80],
+                                 "COMUNE": r["comune"] or "", "PROV": r["prov"], "FASCIA": r["fascia"],
+                                 "PREZZO_MEDIANO": r["prezzo_mediano"], "AUTO_IN_VENDITA": r["auto_in_vendita"],
+                                 "QUOTA_SOTTO_15K": r["quota_sotto_15k"], "MARCHE": r["marche"][:200],
+                                 "FONTE": r["pagina_autoscout"]}} for r in rows]
+        s = c.post(f"{API}/contacts/import", json={"jsonBody": corpo, "listIds": [lid], "updateExistingContacts": True,
+                                                  "emptyContactsAttributes": False})
+        lg.warning("COMMERCIANTI_TEL lista Brevo id=%s contatti=%d esito=%s %s", lid, len(corpo), s.status_code, s.text[:200])

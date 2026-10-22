@@ -2292,6 +2292,20 @@ def _tempo_reale():
             lg.warning("BREVO_LISTE non riuscito: %s", str(e)[:300])
     threading.Thread(target=brevo_liste, daemon=True, name="brevo-liste").start()
 
+    def commercianti_brevo():
+        """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
+        if os.environ.get("COMMERCIANTI_BREVO") != "1":
+            return
+        time.sleep(30)
+        try:
+            from ..marketing import commercianti_tel as ct
+            with connect() as conn:
+                rows = ct.righe(conn, int(os.environ.get("COMMERCIANTI_MAX_AUTO", "40")))
+            ct.a_brevo(rows)
+        except Exception as e:
+            lg.warning("COMMERCIANTI_TEL non riuscito: %s", str(e)[:300])
+    threading.Thread(target=commercianti_brevo, daemon=True, name="commercianti-brevo").start()
+
     def scan_49k():
         """19/10 (cliente): auto da 49.000 € in su (Porsche prima) molto sotto il prezzo delle auto uguali. Solo log."""
         if not os.environ.get("SCAN_49K"):
