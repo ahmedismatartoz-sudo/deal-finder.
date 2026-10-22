@@ -2259,7 +2259,11 @@ def _tempo_reale():
             bl.importa()
             if os.environ.get("BREVO_CAMPAGNE") == "1":
                 time.sleep(120)  # Brevo finisce di importare i contatti
-                bl.campagne()
+                for _ in range(60):  # aspetta che l'elenco del sito sia pronto (le foto valgono solo per le auto pubblicate)
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                bl.campagne(lambda: list(_elenco.get("items") or []))
         except Exception as e:
             lg.warning("BREVO_LISTE non riuscito: %s", str(e)[:300])
     threading.Thread(target=brevo_liste, daemon=True, name="brevo-liste").start()
