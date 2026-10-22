@@ -2493,6 +2493,36 @@ def _tempo_reale():
             lg.warning("LEADWA non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_utilitarie, daemon=True, name="leadwa").start()
 
+    def lead_tutti():
+        """22/10 (cliente): tutti i commercianti con cellulare entro 50 km da Sesto (LEAD_TUTTI=n, una tantum)
+        e consegna a blocchi (LEADT_ESPORTA=blocco:quanti)."""
+        from ..pipeline import lead_tutti as LT
+        from ..pipeline.ciclo import _due
+        from ..db import log_job
+        time.sleep(40)
+        esp = os.environ.get("LEADT_ESPORTA") or ""
+        if ":" in esp:
+            job = f"lead_tutti_esporta:{esp}"
+            try:
+                if _due(job, 100000):
+                    k = LT.esporta(int(esp.split(":")[1]))
+                    with connect() as conn:
+                        log_job(conn, job)(True, {"esportati": k})
+            except Exception as e:
+                lg.warning("LEADT esportazione non riuscita: %s", str(e)[:300])
+        giro = os.environ.get("LEAD_TUTTI")
+        if not giro:
+            return
+        job = f"lead_tutti:{giro}"
+        try:
+            if _due(job, 100000):
+                esito = LT.giro()
+                with connect() as conn:
+                    log_job(conn, job)(True, esito)
+        except Exception as e:
+            lg.warning("LEADT non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_tutti, daemon=True, name="leadt").start()
+
     def diag_plus():
         """21/10: perché i privati 60-200k risultano "dati insufficienti" (solo lettura, DIAG_PLUS=1)."""
         if os.environ.get("DIAG_PLUS") != "1":
