@@ -1907,11 +1907,26 @@ def vetrina(request: Request):
     return FileResponse(f, media_type="text/html; charset=utf-8", headers={"cache-control": "public, max-age=600"})
 
 
+def vetrina_pagina(request: Request):
+    """23/10: pagine SEO dei siti vetrina (data/vetrine/<nome>/<pagina>.html e sitemap.xml)."""
+    nome, pagina = request.path_params["nome"], request.path_params["pagina"]
+    if not re.fullmatch(r"[a-z0-9-]{2,40}", nome) or not re.fullmatch(r"[a-z0-9-]{2,80}(\.xml)?", pagina):
+        return Response("Pagina non trovata", status_code=404)
+    d = Path(__file__).resolve().parents[2] / "data" / "vetrine" / nome
+    if pagina.endswith(".xml"):
+        f = d / pagina
+        return FileResponse(f, media_type="application/xml") if f.exists() else Response("Pagina non trovata", status_code=404)
+    f = d / f"{pagina}.html"
+    if not f.exists():
+        return Response("Pagina non trovata", status_code=404)
+    return FileResponse(f, media_type="text/html; charset=utf-8", headers={"cache-control": "public, max-age=600"})
+
+
 def robots(request: Request):
     from . import seo
     return Response("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /gestione\nDisallow: /auth/\n"
                     "Disallow: /incentivi/\n"
-                    f"Sitemap: {seo.BASE}/sitemap.xml\n", media_type="text/plain")
+                    f"Sitemap: {seo.BASE}/sitemap.xml\nSitemap: {seo.BASE}/vetrina/marconi1/sitemap.xml\n", media_type="text/plain")
 
 
 def sitemap(request: Request):
@@ -2082,6 +2097,7 @@ routes = [
     Route("/manifest.webmanifest", manifest),
     Route("/robots.txt", robots),
     Route("/vetrina/{nome}", vetrina),
+    Route("/vetrina/{nome}/{pagina}", vetrina_pagina),
     Route("/auto-usate/{citta}", seo_citta),
     Route("/guide/{guida}", seo_guida),
     Route("/auto-sotto-prezzo-milano", seo_argomento("auto-sotto-prezzo-milano")),
