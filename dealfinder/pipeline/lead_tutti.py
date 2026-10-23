@@ -314,3 +314,58 @@ def esporta(quanti: int) -> int:
             conn.commit()
     log.warning("LEADT_ESPORTATI %d", len(rows))
     return len(rows)
+
+
+def esporta_tutti() -> dict:
+    """23/10 (cliente): mega lista completa. Tutti i commercianti con cellulare raccolti (stesso unire per
+    telefono e per nome), togliendo SOLO i numeri gia' chiamati (data/lead_chiamati.json, hash dei telefoni).
+    Righe nei log: LEADA {json}; non scrive nel database."""
+    from ..db import connect
+    es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())
+    CH = set(es["tel"])
+    with connect() as conn:
+        dealers = conn.execute("SELECT chiave, nome, comune, prov, cell, fonte FROM lead_tutti_dealer "
+                               "WHERE cardinality(cell) > 0").fetchall()
+        ann: dict = {}
+        for r in conn.execute("SELECT chiave, prezzo, marca, carb FROM lead_tutti_ann").fetchall():
+            ann.setdefault(r["chiave"], []).append((r["prezzo"], r["marca"], r["carb"]))
+    per_tel: dict = {}
+    for d in dealers:
+        cell = list(d["cell"])
+        g = per_tel.setdefault(cell[0], {"nome": d["nome"], "comune": d["comune"], "prov": d["prov"], "cell": [],
+                                         "link": None, "fonti": set(), "ann": []})
+        g["cell"] += [c for c in cell if c not in g["cell"]]
+        g["fonti"].add(d["fonte"])
+        if d["chiave"].startswith("http") and not g["link"]:
+            g["link"] = d["chiave"]
+        g["ann"] += ann.get(d["chiave"], [])
+    per_nome: dict = {}
+    righe = []
+    for g in per_tel.values():
+        nn = _nn(g["nome"])
+        if nn and nn in per_nome:
+            altro = per_nome[nn]
+            altro["cell"] += [c for c in g["cell"] if c not in altro["cell"]]
+            altro["ann"] += g["ann"]
+            altro["fonti"] |= g["fonti"]
+            continue
+        per_nome[nn or id(g)] = g
+        righe.append(g)
+    chiamati = 0
+    for g in righe:
+        if any(_h(t) in CH for t in (_tel9(x) for x in g["cell"]) if t):
+            chiamati += 1
+            continue
+        p = [a[0] for a in g["ann"] if a[0]]
+        marche = Counter(a[1] for a in g["ann"] if a[1])
+        benz = sum(1 for a in g["ann"] if "benz" in str(a[2] or "").lower())
+        log.warning("LEADA %s", json.dumps({
+            "tel": g["cell"][0], "altri_tel": " ".join(g["cell"][1:4]), "nome": (g["nome"] or "")[:150],
+            "comune": g["comune"], "prov": g["prov"], "fonti": ",".join(sorted(f for f in g["fonti"] if f)),
+            "link": g["link"], "auto": len(g["ann"]), "prezzi": sorted(p)[:200],
+            "quota_benzina": round(benz / len(g["ann"]), 2) if g["ann"] else None,
+            "marche": ", ".join(m for m, _ in marche.most_common(6))}, ensure_ascii=False, default=str))
+    esito = {"commercianti_con_cell": len(per_tel), "dopo_doppioni": len(righe), "gia_chiamati_tolti": chiamati,
+             "da_chiamare": len(righe) - chiamati}
+    log.warning("LEADA_FINE %s", json.dumps(esito))
+    return esito

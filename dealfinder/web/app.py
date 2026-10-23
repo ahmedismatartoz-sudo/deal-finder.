@@ -2574,6 +2574,13 @@ def _tempo_reale():
                         log_job(conn, job)(True, {"esportati": k})
             except Exception as e:
                 lg.warning("LEADT esportazione non riuscita: %s", str(e)[:300])
+        tag = os.environ.get("LEADA") or ""
+        if tag and _due(f"lead_tutti_tutti:{tag}", 100000):
+            try:
+                with connect() as conn:
+                    log_job(conn, f"lead_tutti_tutti:{tag}")(True, LT.esporta_tutti())
+            except Exception as e:
+                lg.warning("LEADA non riuscito: %s", str(e)[:300])
         giro = os.environ.get("LEAD_TUTTI")
         if not giro:
             return
