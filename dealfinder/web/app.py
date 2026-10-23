@@ -2608,6 +2608,25 @@ def _tempo_reale():
             lg.warning("FOTODEALER non riuscito: %s", str(e)[:300])
     threading.Thread(target=foto_dealer, daemon=True, name="fotodealer").start()
 
+    def lead_comuni():
+        """23/10 (cliente): saloni dei comuni del suo elenco, da AutoScout24 (LEADC=etichetta, una volta)."""
+        tag = os.environ.get("LEADC")
+        if not tag:
+            return
+        time.sleep(30)
+        try:
+            from ..pipeline import lead_comuni as LC
+            from ..pipeline.ciclo import _due
+            from ..db import log_job
+            job = f"lead_comuni:{tag}"
+            if _due(job, 100000):
+                esito = LC.giro()
+                with connect() as conn:
+                    log_job(conn, job)(True, esito)
+        except Exception as e:
+            lg.warning("LEADC non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_comuni, daemon=True, name="leadc").start()
+
     def diag_plus():
         """21/10: perché i privati 60-200k risultano "dati insufficienti" (solo lettura, DIAG_PLUS=1)."""
         if os.environ.get("DIAG_PLUS") != "1":
