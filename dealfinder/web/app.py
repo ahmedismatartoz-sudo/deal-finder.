@@ -1377,6 +1377,18 @@ _elenco_lock = threading.Lock()
 ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
 
+def _margine_minimo_sito(items: list) -> list:
+    """23/10 10:59, cliente: sul sito solo auto con margine (quello mostrato, dopo prezzi trattati e controlli)
+    di almeno MARGINE_MIN_SITO €."""
+    m = int(os.environ.get("MARGINE_MIN_SITO", "0"))
+    if m <= 0:
+        return items
+    out = [it for it in items if ((it.get("pv") or {}).get("margine") or 0) >= m]
+    if len(out) != len(items):
+        logging.getLogger("scovo").warning("MARGINE_MIN_SITO %d auto tolte (margine sotto %d €), %d restano", len(items) - len(out), m, len(out))
+    return out
+
+
 def _senza_scarti_id(items: list) -> list:
     """23/10: le auto tolte a mano per id (data/scarti_sito.json) escono dal sito da qualunque strada arrivino
     (anche le utilitarie economiche, che non guardano lo stato 'scartato')."""
@@ -1475,7 +1487,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))
+    items = _margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
