@@ -228,5 +228,85 @@
  {
   "id": 487872,
   "motivo": "controllo margini 21/10: doppione di 487871"
+ },
+ {
+  "id": 31872,
+  "motivo": "verifica 23/10: Range Rover 2018 a 15.000 € (43% del mercato), troppo bello per essere vero"
+ },
+ {
+  "id": 627662,
+  "motivo": "verifica 23/10: Mercedes C 220 d 2023 a 22.390 €, solo 2 confronti, prezzo non credibile"
+ },
+ {
+  "id": 629192,
+  "motivo": "verifica 23/10: Dacia Duster 2022 a 8.750 € (57% del mercato con 213 confronti), sospetto"
+ },
+ {
+  "id": 434381,
+  "motivo": "verifica 23/10: Sandero Stepway 2022 22.000 km a 8.500 € (60% del mercato), sospetto"
+ },
+ {
+  "id": 415302,
+  "motivo": "verifica 23/10: Volvo XC90 2026 8.000 km a 54.500 €, molto sotto il nuovo, sospetto"
+ },
+ {
+  "id": 621591,
+  "motivo": "verifica 23/10: Ford Fiesta 2024 confrontata con mercato sbagliato (27.000 €), margine gonfiato"
+ },
+ {
+  "id": 391430,
+  "motivo": "verifica 23/10: Suzuki Jimny Pro confrontato con mercato troppo alto, margine gonfiato"
+ },
+ {
+  "id": 75719,
+  "motivo": "verifica 23/10: Porsche Cayman S 2008 con mercato 50.000 € (confronti con modelli piu' recenti), margine gonfiato"
+ },
+ {
+  "id": 71373,
+  "motivo": "verifica 23/10: Ford Mustang 2012 180.000 km, rivendita gonfiata"
+ },
+ {
+  "id": 454710,
+  "motivo": "verifica 23/10: Ford Mustang 2012 descrizione dubbia, rivendita gonfiata"
+ },
+ {
+  "id": 63402,
+  "motivo": "verifica 23/10: Iveco Daily, solo 2 confronti"
+ },
+ {
+  "id": 12347,
+  "motivo": "verifica 23/10: modello non indicato (Fiat Altro Modello), mercato non affidabile"
+ },
+ {
+  "id": 445240,
+  "motivo": "verifica 23/10: modello non indicato (Ford Altro Modello), mercato non affidabile"
+ },
+ {
+  "id": 33852,
+  "motivo": "verifica 23/10: Suzuki Swift 2007 a 1.200 € (38% del mercato), non un affare affidabile"
+ },
+ {
+  "id": 435505,
+  "motivo": "verifica 23/10: Opel Astra motore nuovo, 4 confronti e margine basso"
+ },
+ {
+  "id": 571901,
+  "motivo": "verifica 23/10: margine sotto 1.000 €, non e' un affare"
+ },
+ {
+  "id": 54098,
+  "motivo": "verifica 23/10: margine circa 1.000 € su 4.500 €, non e' un affare"
+ },
+ {
+  "id": 620158,
+  "motivo": "verifica 23/10: margine circa 1.100 € su 7.000 €, non e' un affare"
+ },
+ {
+  "id": 615243,
+  "motivo": "verifica 23/10: margine circa 1.100 € su 7.000 €, non e' un affare"
+ },
+ {
+  "id": 630297,
+  "motivo": "verifica 23/10: margine circa 1.100 € su 6.500 €, non e' un affare"
  }
 ]

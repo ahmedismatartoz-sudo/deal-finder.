@@ -1375,6 +1375,21 @@ _elenco_lock = threading.Lock()
 ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
 
+def _senza_scarti_id(items: list) -> list:
+    """23/10: le auto tolte a mano per id (data/scarti_sito.json) escono dal sito da qualunque strada arrivino
+    (anche le utilitarie economiche, che non guardano lo stato 'scartato')."""
+    from pathlib import Path
+    try:
+        ids = {int(e["id"]) for e in json.loads((Path(__file__).resolve().parents[2] / "data" / "scarti_sito.json").read_text())
+               if e.get("id")}
+    except Exception:
+        return items
+    out = [it for it in items if it.get("id") not in ids]
+    if len(out) != len(items):
+        logging.getLogger("scovo").warning("SCARTI_ID %d auto tolte dal sito", len(items) - len(out))
+    return out
+
+
 def _forzate_sito(gia: set, opens: dict) -> list:
     """19/10 (cliente: "mettimeli tutti sul sito"): auto scelte a mano (data/forzate_sito.json, per link) sempre sul
     sito finché l'annuncio è attivo, con il mercato e la rivendita veloce calcolati sulle auto uguali."""
@@ -1458,7 +1473,7 @@ def _calcola_elenco() -> None:
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
-    items = _margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))
+    items = _senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))
     _elenco.update(t=time.time(), items=items, opens=opens)
     _log_controllo_finale(items)
     from collections import Counter
