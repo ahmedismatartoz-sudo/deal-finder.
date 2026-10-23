@@ -1898,6 +1898,15 @@ def gestione(request: Request):
     return FileResponse(STATIC / "gestione" / "index.html", headers=NO_CACHE)
 
 
+def vetrina(request: Request):
+    """23/10: siti vetrina dei commercianti (data/vetrine/<nome>.html)."""
+    nome = request.path_params["nome"]
+    f = Path(__file__).resolve().parents[2] / "data" / "vetrine" / f"{nome}.html"
+    if not re.fullmatch(r"[a-z0-9-]{2,40}", nome) or not f.exists():
+        return Response("Pagina non trovata", status_code=404)
+    return FileResponse(f, media_type="text/html; charset=utf-8", headers={"cache-control": "public, max-age=600"})
+
+
 def robots(request: Request):
     from . import seo
     return Response("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /gestione\nDisallow: /auth/\n"
@@ -1985,7 +1994,12 @@ class SecurityMiddleware:
         async def send_wrapper(message):
             if message["type"] == "http.response.start":
                 h = list(message.get("headers") or [])
-                h += SECURITY_HEADERS
+                if scope["path"].startswith("/vetrina/"):   # 23/10: siti vetrina dei commercianti clienti
+                    h += [x for x in SECURITY_HEADERS if x[0] != b"content-security-policy"] + [(b"content-security-policy",
+                          b"default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                          b"font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; frame-src https://maps.google.com https://www.google.com")]
+                else:
+                    h += SECURITY_HEADERS
                 if https:
                     h.append((b"strict-transport-security", b"max-age=31536000; includeSubDomains"))
                 if scope["path"].startswith("/api/") and not scope["path"].startswith("/api/foto/"):
@@ -2067,6 +2081,7 @@ routes = [
     Route("/sw.js", service_worker),
     Route("/manifest.webmanifest", manifest),
     Route("/robots.txt", robots),
+    Route("/vetrina/{nome}", vetrina),
     Route("/auto-usate/{citta}", seo_citta),
     Route("/guide/{guida}", seo_guida),
     Route("/auto-sotto-prezzo-milano", seo_argomento("auto-sotto-prezzo-milano")),
