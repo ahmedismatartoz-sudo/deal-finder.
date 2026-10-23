@@ -1079,7 +1079,9 @@ def _regole_finali(items: list[dict]) -> list[dict]:
         gruppi.setdefault((sez, it.get("area") or "milano"), []).append(it)
     via = set()
     for g in gruppi.values():
-        diesel = [it for it in g if (it.get("carb") or "").lower() == "diesel"]
+        # 23/10 (cliente): i diesel Euro 6 (immatricolati dal 2016) vanno benissimo, fuori dal tetto
+        euro6 = int(os.environ.get("DIESEL_EURO6_DAL", "2016"))
+        diesel = [it for it in g if (it.get("carb") or "").lower() == "diesel" and (it.get("anno") or 0) < euro6]
         altri = len(g) - len(diesel)
         tetto = int(altri * quota / (1 - quota))
         if len(diesel) > tetto:
