@@ -85,7 +85,8 @@ def giro() -> dict:
             passo = int(os.environ.get("BENZ_SUB_PASSO", "500"))
             fasce = [(a, min(a + passo, PMAX)) for a in range(PMIN, PMAX, passo)]
             regioni = [(4, ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "SO", "MN"]),
-                       (2, ["NO", "VB", "VC", "BI", "AL", "AT", "TO"]), (8, ["PC", "PR", "RE"])]
+                       (2, ["NO", "VB", "VC", "BI", "AL", "AT", "TO"]), (8, ["PC", "PR", "RE"]),
+                       (int(os.environ.get("SUBITO_CODICE_LIGURIA", "3")), ["GE"])]   # 23/10: zona 150 km del sito
             for reg, provs in regioni:
                 provs = [p for p in provs if p in PROVINCE_100]
                 if not provs:
@@ -94,7 +95,7 @@ def giro() -> dict:
                     for l in sub._deep({"price_bands": fasce, "band_pages": int(os.environ.get("BENZ_SUB_PAG_FASCIA", "30"))},
                                        set(provs), reg, 100):
                         if (l.price_eur and PMIN <= l.price_eur <= PMAX and (not racc_p or l.seller_type == "privato")
-                                and "benzina" in (l.fuel or "").lower()):
+                                and (os.environ.get("BENZ_TUTTI_CARB", "1") == "1" or "benzina" in (l.fuel or "").lower())):
                             pacco.append(l); n += 1
                             salva()
                 except Exception as e:
