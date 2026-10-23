@@ -31,7 +31,8 @@ WITH g AS (                     -- prezzo mediano per marca, modello, alimentazi
 SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, g.n, g.med
 FROM listings t
 JOIN g ON g.make=t.make AND g.model=t.model AND g.fuel IS NOT DISTINCT FROM t.fuel AND g.year=t.year
-WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s) AND t.fuel ILIKE 'benzina%%'
+WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
+  AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')   -- 23/10: con BENZ_TUTTI_CARB=1 tutte le alimentazioni (tetto diesel 30% sul sito)
   AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s AND t.year >= 2007
   AND (%(solo_privati)s = false OR t.seller_type = 'privato') AND coalesce(t.mileage_km, 0) <= 180000
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
@@ -120,7 +121,8 @@ def giro() -> dict:
         conn.execute("SET statement_timeout = '900s'")
         cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
                                             "lim": int(os.environ.get("BENZ_MAX", "500")), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
-                                            "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000"))}).fetchall()
+                                            "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
+                                            "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))
