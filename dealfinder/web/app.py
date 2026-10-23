@@ -2585,6 +2585,20 @@ def _tempo_reale():
             lg.warning("LEADT non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_tutti, daemon=True, name="leadt").start()
 
+    def foto_dealer():
+        """23/10 (cliente): foto delle auto di un commerciante per il suo sito (data/foto_dealer.json, una volta)."""
+        f = Path(__file__).resolve().parents[2] / "data" / "foto_dealer.json"
+        if not f.exists():
+            return
+        time.sleep(20)
+        try:
+            from ..marketing import foto_dealer as FD
+            cfg = json.loads(f.read_text())
+            FD.giro(cfg["pagina"], int(cfg.get("max", 10)))
+        except Exception as e:
+            lg.warning("FOTODEALER non riuscito: %s", str(e)[:300])
+    threading.Thread(target=foto_dealer, daemon=True, name="fotodealer").start()
+
     def diag_plus():
         """21/10: perché i privati 60-200k risultano "dati insufficienti" (solo lettura, DIAG_PLUS=1)."""
         if os.environ.get("DIAG_PLUS") != "1":
