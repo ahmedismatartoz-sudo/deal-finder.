@@ -728,6 +728,10 @@ if __name__ == "__main__":
             elif voce.startswith("leadsp"):
                 from . import lusso as L
                 esito = {"trovati": L.lead_sportive()}
+            elif voce.startswith("leadtutti"):                             # 23/10: tutti i commercianti con cellulare (riprende)
+                from . import lead_tutti as LT
+                os.environ.setdefault("LEADT_GIRO", voce.split(":")[1].split("@")[0] if ":" in voce else "1")
+                esito = LT.giro()
             elif voce.startswith("benzloop"):                              # 21/10 sera: raccolta benzina senza fermarsi
                 import subprocess
                 from . import benzina_mi as B
