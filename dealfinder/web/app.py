@@ -924,6 +924,7 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     # le senza numero si contano DOPO aver tolto Facebook: al massimo il 20% del sito vero
     tenute += _senza_numero_super(items, tenute)
     tenute += _utilitarie_subito_senza_numero(items, tenute)
+    tenute += _senza_numero_margini_enormi(items, tenute)
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
@@ -983,6 +984,38 @@ def _utilitarie_subito_senza_numero(items: list[dict], tenute: list[dict]) -> li
     for it in ok:
         it["senza_numero"] = True
     logging.getLogger("scovo").warning("UTIL_SENZA_NUMERO: candidate=%d, ammesse=%d (massimo %d)", len(cand), len(ok), massimo)
+    return ok
+
+
+def _senza_numero_margini_enormi(items: list[dict], tenute: list[dict]) -> list[dict]:
+    """23/10 10:04, cliente: oltre al 20%, al massimo SENZA_NUMERO_EXTRA (50) auto senza numero in più, SOLO quelle
+    con i margini più alti (margine ≥ SENZA_NUMERO_EXTRA_MARGINE e ≥ 2 × soglia della fascia, almeno 8 confronti).
+    Restano i controlli anti-truffa (prezzo non sotto il 55% del mercato, km e anno sensati, almeno 3 foto) e Jev dopo."""
+    extra = int(os.environ.get("SENZA_NUMERO_EXTRA", "0"))
+    if extra <= 0:
+        return []
+    m_min = int(os.environ.get("SENZA_NUMERO_EXTRA_MARGINE", "2500"))
+    dentro = {it["id"] for it in tenute}
+    cand = []
+    for it in items:
+        pv = it.get("pv") or {}
+        if it["id"] in dentro or it.get("fonte") not in ("Subito", "AutoScout24") or pv.get("margine") is None:
+            continue
+        if pv.get("categoria") not in scovo.CATEGORIE_SITO:
+            continue
+        if pv["margine"] < max(m_min, 2 * scovo.soglia(it["prezzo"])) or (pv.get("n") or 0) < 8:
+            continue
+        if pv.get("M") and it["prezzo"] < .55 * pv["M"]:
+            continue
+        if not it.get("km") or it["km"] < 20000 or not it.get("anno") or int(it.get("n_foto") or 0) < 3:
+            continue
+        cand.append(it)
+    cand.sort(key=lambda it: -it["pv"]["margine"])
+    ok = cand[:extra]
+    for it in ok:
+        it["senza_numero"] = True
+    logging.getLogger("scovo").warning("SENZA_NUMERO_EXTRA: candidate=%d, ammesse=%d (massimo %d, margine minimo %d)",
+                                       len(cand), len(ok), extra, m_min)
     return ok
 
 
