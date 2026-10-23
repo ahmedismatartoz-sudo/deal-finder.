@@ -995,6 +995,8 @@ def _senza_numero_margini_enormi(items: list[dict], tenute: list[dict]) -> list[
     if extra <= 0:
         return []
     m_min = int(os.environ.get("SENZA_NUMERO_EXTRA_MARGINE", "2500"))
+    fattore = float(os.environ.get("SENZA_NUMERO_EXTRA_FATTORE", "2"))
+    min_conf = int(os.environ.get("SENZA_NUMERO_EXTRA_CONFRONTI", "8"))
     dentro = {it["id"] for it in tenute}
     cand = []
     for it in items:
@@ -1003,7 +1005,7 @@ def _senza_numero_margini_enormi(items: list[dict], tenute: list[dict]) -> list[
             continue
         if pv.get("categoria") not in scovo.CATEGORIE_SITO:
             continue
-        if pv["margine"] < max(m_min, 2 * scovo.soglia(it["prezzo"])) or (pv.get("n") or 0) < 8:
+        if pv["margine"] < max(m_min, fattore * scovo.soglia(it["prezzo"])) or (pv.get("n") or 0) < min_conf:
             continue
         if pv.get("M") and it["prezzo"] < .55 * pv["M"]:
             continue
