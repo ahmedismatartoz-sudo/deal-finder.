@@ -1168,9 +1168,13 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
             c["non_decise"] += 1
             tenute.append(it)
             continue
+        # 24/10 sera (cliente): se c'è il numero del venditore l'auto resta anche se il prezzo sembra troppo basso;
+        # il sospetto truffa toglie solo le auto senza numero.
         if (d["truffa"] or 0) >= tr:
-            c["truffa"] += 1
-            continue
+            if it.get("senza_numero") or os.environ.get("JEV_TRUFFA_SOLO_SENZA_NUMERO", "1") != "1":
+                c["truffa"] += 1
+                continue
+            c["truffa_tenuta_col_numero"] += 1
         if d["decisione"] == "scarta" and (d["confidenza"] or 0) >= conf:
             c["scarta"] += 1
             continue
