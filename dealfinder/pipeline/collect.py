@@ -732,6 +732,18 @@ if __name__ == "__main__":
                 from . import lead_tutti as LT
                 os.environ.setdefault("LEADT_GIRO", voce.split(":")[1].split("@")[0] if ":" in voce else "1")
                 esito = LT.giro()
+            elif voce.startswith("ricalcolo"):                             # 24/10 sera: ricalcolo policy qui, non sul sito (512 MB)
+                from ..pricing import ricalcolo
+                with connect() as conn:
+                    pol = ricalcolo.esegui(conn)
+                with connect() as conn:
+                    ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
+                try:
+                    from . import tempo_reale as tr
+                    tr.con_lucchetto("telefoni", tr.controlla_telefoni)
+                except Exception as e:
+                    log.warning("RICALCOLO telefoni non riuscito: %s", str(e)[:200])
+                esito = {k: v for k, v in (pol or {}).items() if isinstance(v, (int, float, str))} or {"fatto": True}
             elif voce.startswith("benzloop"):                              # 21/10 sera: raccolta benzina senza fermarsi
                 import subprocess
                 from . import benzina_mi as B
