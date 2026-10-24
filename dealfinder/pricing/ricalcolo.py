@@ -167,6 +167,9 @@ def targa_e_telefono(r: dict, targhe: set, tel=None) -> bool:
         tel = bool(r.get("telefono_ok")) or bool(scovo.RE_MOBILE.search(testo) or scovo.RE_LANDLINE.search(testo))
     if tel is not True:
         return False
+    # 24/10 sera (cliente): basta il numero del venditore, la targa non serve più per tenere i prezzi molto bassi
+    if os.environ.get("BASSO_SOLO_TELEFONO", "1") == "1":
+        return True
     return r.get("id") in targhe or bool(find_plate(testo))
 
 
