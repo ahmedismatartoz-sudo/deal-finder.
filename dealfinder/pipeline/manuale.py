@@ -55,9 +55,35 @@ def applica_scarti_cliente(conn) -> int:
     return n
 
 
+RIPRISTINO_SI = ("%troppo bello%", "%sotto mercato%", "%sotto il mercato%", "%del mercato%", "%sospett%",
+                 "%prezzo non credibile%", "%troppo sotto%", "%non un affare affidabile%")
+RIPRISTINO_NO = ("%tolta dal cliente%", "%anno sbagliato%", "%km sbagliati%", "%dati non credibili%",
+                 "%doppione%", "%pista%", "%noleggio%")
+
+
+def ripristina_prezzo_basso(conn) -> int:
+    """24/10 sera (cliente): le auto tolte a mano solo perché il prezzo era troppo basso tornano sul sito
+    (basta il numero del venditore). Restano fuori quelle tolte dal cliente e quelle con dati sbagliati."""
+    if os.environ.get("RIPRISTINO_PREZZO_BASSO", "1") != "1":
+        return 0
+    si = " OR ".join(["stage_reason ILIKE %s"] * len(RIPRISTINO_SI))
+    no = " AND ".join(["stage_reason NOT ILIKE %s"] * len(RIPRISTINO_NO))
+    rows = conn.execute(f"UPDATE listings SET stage='approfondito', stage_reason='da_verificare', last_checked_at=now() "
+                        f"WHERE stage='scartato' AND stage_reason LIKE 'analisi_manuale:%%' AND ({si}) AND {no} "
+                        f"RETURNING id", (*RIPRISTINO_SI, *RIPRISTINO_NO)).fetchall()
+    conn.commit()
+    log.warning("RIPRISTINO_PREZZO_BASSO %d auto rimesse: %s", len(rows), [r["id"] for r in rows][:200])
+    return len(rows)
+
+
 def applica_scarti(conn) -> int:
     """Toglie subito dal sito le auto scartate a mano (foto: incidenti gravi, airbag, ecc.).
     Leggero: solo un aggiornamento dello stato, si fa a ogni avvio del sito senza aspettare il ciclo."""
+    try:
+        ripristina_prezzo_basso(conn)
+    except Exception as ex:
+        conn.rollback()
+        log.warning("RIPRISTINO_PREZZO_BASSO non riuscito: %s", str(ex)[:200])
     try:
         applica_scarti_cliente(conn)
     except Exception as ex:
