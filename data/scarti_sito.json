@@ -154,26 +154,6 @@
   "motivo": "controllo margini 21/10: 911 991.1 Carrera S confrontata con 991.2: margine gonfiato"
  },
  {
-  "id": 460024,
-  "motivo": "controllo margini 21/10: Range Rover 2019 a 31.900: troppo bello per essere vero"
- },
- {
-  "id": 454223,
-  "motivo": "controllo margini 21/10: Evoque Cabrio a 12.500 con 3 confronti: troppo bello per essere vero"
- },
- {
-  "id": 456320,
-  "motivo": "controllo margini 21/10: Stelvio 2022 a 16.900: troppo bello per essere vero"
- },
- {
-  "id": 69073,
-  "motivo": "controllo margini 21/10: BMW 118d 2023 a 16.900: troppo bello per essere vero"
- },
- {
-  "id": 489944,
-  "motivo": "controllo margini 21/10: F-Pace a 9.000: troppo bello per essere vero"
- },
- {
   "id": 451967,
   "motivo": "controllo margini 21/10: Boxer 2019 con 10.300 km a 8.300: dati non credibili"
  },
@@ -194,10 +174,6 @@
   "motivo": "controllo margini 21/10: Ducato 2018 con 2.000 km: km sbagliati"
  },
  {
-  "id": 452494,
-  "motivo": "controllo margini 21/10: Movano 2023 a 9.000: troppo bello per essere vero"
- },
- {
   "id": 451432,
   "motivo": "controllo margini 21/10: Brera con 5 confronti: mercato reale più basso"
  },
@@ -210,44 +186,12 @@
   "motivo": "controllo margini 21/10: X5 2007 con 5 confronti: margine gonfiato"
  },
  {
-  "id": 51412,
-  "motivo": "controllo margini 21/10: Kia Rio 58% sotto il mercato: troppo bello per essere vero"
- },
- {
-  "id": 50162,
-  "motivo": "controllo margini 21/10: Kia Rio 64% sotto il mercato: troppo bello per essere vero"
- },
- {
-  "id": 50130,
-  "motivo": "controllo margini 21/10: Mito 66% sotto il mercato: troppo bello per essere vero"
- },
- {
   "id": 58189,
   "motivo": "controllo margini 21/10: Great Wall Steed con 2 confronti: margine non affidabile"
  },
  {
   "id": 487872,
   "motivo": "controllo margini 21/10: doppione di 487871"
- },
- {
-  "id": 31872,
-  "motivo": "verifica 23/10: Range Rover 2018 a 15.000 € (43% del mercato), troppo bello per essere vero"
- },
- {
-  "id": 627662,
-  "motivo": "verifica 23/10: Mercedes C 220 d 2023 a 22.390 €, solo 2 confronti, prezzo non credibile"
- },
- {
-  "id": 629192,
-  "motivo": "verifica 23/10: Dacia Duster 2022 a 8.750 € (57% del mercato con 213 confronti), sospetto"
- },
- {
-  "id": 434381,
-  "motivo": "verifica 23/10: Sandero Stepway 2022 22.000 km a 8.500 € (60% del mercato), sospetto"
- },
- {
-  "id": 415302,
-  "motivo": "verifica 23/10: Volvo XC90 2026 8.000 km a 54.500 €, molto sotto il nuovo, sospetto"
  },
  {
   "id": 621591,
@@ -280,10 +224,6 @@
  {
   "id": 445240,
   "motivo": "verifica 23/10: modello non indicato (Ford Altro Modello), mercato non affidabile"
- },
- {
-  "id": 33852,
-  "motivo": "verifica 23/10: Suzuki Swift 2007 a 1.200 € (38% del mercato), non un affare affidabile"
  },
  {
   "id": 435505,
@@ -346,59 +286,7 @@
   "motivo": "controllo 23/10 sera: Opel Corsa: solo 2 confronti, margine basso"
  },
  {
-  "id": 449929,
-  "motivo": "controllo 23/10 sera: Opel Mokka: prezzo troppo sotto mercato, sospetto"
- },
- {
-  "id": 53589,
-  "motivo": "controllo 23/10 sera: C4 Cactus 3.000 €: troppo sotto mercato, sospetto"
- },
- {
-  "id": 20976,
-  "motivo": "controllo 23/10 sera: New Beetle: pochi confronti, prezzo sospetto"
- },
- {
   "id": 50311,
   "motivo": "controllo 23/10 sera: Renault Twizy: batteria a noleggio, prezzo non confrontabile"
- },
- {
-  "id": 34066,
-  "motivo": "controllo 23/10 sera: DS3 2.300 €: troppo sotto mercato"
- },
- {
-  "id": 50294,
-  "motivo": "controllo 23/10 sera: Fiat 500 2007: troppo sotto mercato"
- },
- {
-  "id": 628785,
-  "motivo": "controllo 23/10 sera: Ibiza ST 2010: troppo sotto mercato"
- },
- {
-  "id": 612990,
-  "motivo": "controllo 23/10 sera: Grande Punto 1.800 €: troppo sotto mercato"
- },
- {
-  "id": 610573,
-  "motivo": "controllo 23/10 sera: Peugeot 308 2008: 3 confronti, prezzo sospetto"
- },
- {
-  "id": 613182,
-  "motivo": "controllo 23/10 sera: Panda 2007: troppo sotto mercato"
- },
- {
-  "id": 438444,
-  "motivo": "controllo 23/10 sera: Grande Punto 2008: troppo sotto mercato"
- },
- {
-  "id": 434363,
-  "motivo": "controllo 23/10 sera: Panda 4x4 con 22.000 km a 6.600 €: troppo bello, sospetto"
- },
- {
-  "id": 63944,
-  "motivo": "controllo 24/10 sera: Discovery Sport 2017 a 12.000 € (mercato 21.500): troppo sotto mercato, sospetto"
- },
- {
-  "id": 1986,
-  "motivo": "controllo 24/10 sera: Cupra Leon e-Hybrid 2023 a 16.900 € con solo 5 auto di confronto: margine gonfiato"
  }
 ]
