@@ -1070,6 +1070,25 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     al massimo DIESEL_MAX (30%) di diesel: si tengono i diesel con più guadagno, il resto benzina/GPL/metano/ibride."""
     anno_min = int(os.environ.get("ANNO_MINIMO_SITO", "2007"))
     items = [it for it in items if not (it.get("anno") and it["anno"] < anno_min) and not scovo.troppi_km(it.get("km"))]
+    # 24/10 sera (cliente): niente auto oltre 150.000 km; sopra i 2.000 € almeno 1.500 € di margine
+    km_max = int(os.environ.get("KM_MASSIMO_SITO", "150000"))
+    p_lim, m_min = int(os.environ.get("SITO_PREZZO_LIMITE", "2000")), int(os.environ.get("SITO_MARGINE_MIN_SOPRA", "1500"))
+
+    def _marg(it):
+        m = (it.get("pv") or {}).get("margine")
+        if m is None:
+            try:
+                m = scovo.guadagno_minimo(it)
+            except Exception:
+                m = None
+        return m
+
+    prima = len(items)
+    items = [it for it in items if not (it.get("km") and int(it["km"]) > km_max)]
+    dopo_km = len(items)
+    items = [it for it in items if not ((it.get("prezzo") or 0) > p_lim and (_marg(it) is None or _marg(it) < m_min))]
+    logging.getLogger("scovo").warning("REGOLE_KM_MARGINE tolte: %d oltre %d km, %d sopra %d € con margine < %d €",
+                                       prima - dopo_km, km_max, dopo_km - len(items), p_lim, m_min)
     quota = float(os.environ.get("DIESEL_MAX", "0.3"))    # massimo 30% di diesel (confermato dal cliente il 17/10)
     if quota >= 1:
         return items
