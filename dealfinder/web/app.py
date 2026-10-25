@@ -1089,6 +1089,27 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     items = [it for it in items if not ((it.get("prezzo") or 0) > p_lim and (_marg(it) is None or _marg(it) < m_min))]
     logging.getLogger("scovo").warning("REGOLE_KM_MARGINE tolte: %d oltre %d km, %d sopra %d € con margine < %d €",
                                        prima - dopo_km, km_max, dopo_km - len(items), p_lim, m_min)
+    # 25/10 (cliente: "prezzi e margini sballati"): il margine vale solo se viene da abbastanza auto uguali,
+    # e i dati dell'annuncio devono essere coerenti (modello indicato, anno possibile per quel modello)
+    n_min = int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
+
+    def _dati_ok(it):
+        nome = (it.get("nome") or "").lower()
+        if "altro modello" in nome:
+            return False
+        anno = it.get("anno") or 0
+        for mod, dal in (("2008", 2013), ("3008", 2009), ("5008", 2009), ("308", 2007), ("208", 2012), ("108", 2014)):
+            if "peugeot" in nome and f" {mod}" in f" {nome}" and anno and anno < dal:
+                return False
+        return True
+
+    prima = len(items)
+    pochi = [it for it in items if it.get("pv") and (it["pv"].get("n") or 0) < n_min]
+    items = [it for it in items if not (it.get("pv") and (it["pv"].get("n") or 0) < n_min)]
+    dopo_n = len(items)
+    items = [it for it in items if _dati_ok(it)]
+    logging.getLogger("scovo").warning("REGOLE_AFFIDABILITA tolte: %d con meno di %d auto uguali, %d con dati incoerenti",
+                                       len(pochi), n_min, dopo_n - len(items))
     quota = float(os.environ.get("DIESEL_MAX", "0.3"))    # massimo 30% di diesel (confermato dal cliente il 17/10)
     if quota >= 1:
         return items
