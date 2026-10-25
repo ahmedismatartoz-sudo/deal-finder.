@@ -642,6 +642,10 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     targhe = targhe_visibili(conn)
     for r in rows:
         if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not (
+                # 25/10 21:00 (cliente: "fallo, ti dirò io quali togliere"): Subito si valuta anche senza numero
+                # (il numero su Subito non si legge dalle pagine pubbliche); sul sito si contatta in chat
+                r["source"] == "subito" and r["telefono_ok"] is None
+                and os.environ.get("TR_SUBITO_SENZA_NUMERO", "0") == "1") and not (
                 os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1"
                 and (r["price_eur"] or 0) >= int(os.environ.get("TR_SENZA_NUMERO_DA", "60000"))):
             # 21/10 (cliente): per le auto da 60.000 € in su si valutano anche quelle senza numero; sul sito
