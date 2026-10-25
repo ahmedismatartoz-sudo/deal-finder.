@@ -136,3 +136,78 @@ def varianti(conn) -> dict:
                 out[nome]["dettagli"] = dett
     log.warning("ESAME_VARIANTI %s", json.dumps(out, ensure_ascii=False))
     return out
+
+
+VENDUTI_SQL = """
+SELECT {cols}, l.disappeared_at, l.first_seen_at FROM listings l
+WHERE l.status = 'scomparso' AND l.seller_type = 'commerciante'
+  AND l.disappeared_at > now() - interval '60 days'
+  AND l.disappeared_at - l.first_seen_at BETWEEN interval '1 day' AND make_interval(days => %(giorni)s)
+  AND l.price_eur BETWEEN 1500 AND 60000 AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
+  AND l.damage_class IN ('nessuno', 'sconosciuto') AND NOT COALESCE(l.damage_declared, false)
+  AND l.mileage_km IS NOT NULL AND l.year IS NOT NULL AND {home}
+ORDER BY md5(l.id::text) LIMIT %(lim)s"""
+
+VARIANTI_VENDUTI = ("attuale", "senza_riduzione_q40", "commercianti_5", "commercianti_8", "commercianti_12")
+
+
+def venduti(conn) -> dict:
+    """25/10 (cliente: "come risolviamo questi errori"): esame grande e automatico, senza valutazioni a mano.
+    Auto di concessionari della zona sparite in poco tempo (venduta in fretta, ESAME_VENDUTI_GIORNI, default 30):
+    il loro ultimo prezzo è il prezzo vero a cui un commerciante vende quella macchina. Il software le valuta
+    con il mercato di oggi (loro non ci sono più, quindi non si confrontano con se stesse) e si misura l'errore,
+    per ogni variante e per ogni modello. Solo lettura: non cambia niente nel database."""
+    import copy
+    import os
+    import statistics as stx
+    from collections import defaultdict
+    from . import policy_v2 as P
+    from .ricalcolo import MARKET_SQL, TARGET_COLS, _j, _rischio, valuta_con_ripiego
+    from ..store import HOME_REGION_SQL
+    from ..web import scovo
+    rows = conn.execute(VENDUTI_SQL.format(cols=TARGET_COLS, home=HOME_REGION_SQL),
+                        {"giorni": int(os.environ.get("ESAME_VENDUTI_GIORNI", "30")),
+                         "lim": int(os.environ.get("ESAME_VENDUTI_MAX", "400"))}).fetchall()
+    rows = sorted(rows, key=lambda r: (r["make"], r["model"], r["fuel"]))
+    base = P.PolicyConfig.from_env()
+    cfgs = {}
+    for nome in VARIANTI_VENDUTI:
+        c = copy.deepcopy(base)
+        for k, v in VARIANTI[nome].items():
+            setattr(c, k, v)
+        cfgs[nome] = c
+    errs = defaultdict(list)
+    per_modello = defaultdict(list)
+    chiave, mercato, cache = None, [], {}
+    for r in rows:
+        key = (r["make"], r["model"], r["fuel"])
+        if key != chiave:
+            chiave = key
+            mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                       for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
+            cache = {}
+        t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
+                 rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True, seller_type="privato")
+        vero = float(r["price_eur"])
+        for nome, cfg in cfgs.items():
+            try:
+                v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(vero)), cfg, cache)
+            except Exception:
+                continue
+            R = v.get("R_finale") or v.get("R")
+            if not R or (v.get("n") or 0) < cfg.n_minimo:
+                continue
+            e = (R - vero) / vero * 100
+            errs[nome].append(e)
+            if nome == "attuale":
+                per_modello[f"{r['make']} {r['model']}"].append(e)
+    out = {"casi": len(rows)}
+    for nome, es in errs.items():
+        a = [abs(e) for e in es]
+        out[nome] = {"n": len(es), "medio": round(stx.mean(a), 1), "mediano": round(stx.median(a), 1),
+                     "con_segno": round(stx.mean(es), 1), "entro10": round(100 * sum(1 for x in a if x <= 10) / len(a)),
+                     "sopra10": round(100 * sum(1 for x in es if x > 10) / len(es))}
+    mod = {k: (len(v), round(stx.mean(v), 1)) for k, v in per_modello.items() if len(v) >= 4}
+    out["modelli_peggiori"] = sorted(mod.items(), key=lambda kv: -abs(kv[1][1]))[:10]
+    log.warning("ESAME_VENDUTI %s", json.dumps(out, ensure_ascii=False))
+    return out

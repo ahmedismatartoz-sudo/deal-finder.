@@ -2483,6 +2483,9 @@ def _tempo_reale():
                     esame.esegui(conn)
                 with connect() as conn:
                     esame.varianti(conn)
+                if os.environ.get("ESAME_VENDUTI", "1") == "1":
+                    with connect() as conn:
+                        esame.venduti(conn)
             except Exception as e:
                 lg.warning("ESAME non riuscito: %s", str(e)[:300])
             time.sleep(float(os.environ.get("ESAME_ORE", "3")) * 3600)
