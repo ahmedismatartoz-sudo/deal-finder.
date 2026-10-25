@@ -201,14 +201,14 @@ def venduti(conn) -> dict:
             e = (R - vero) / vero * 100
             errs[nome].append(e)
             if nome == "attuale":
-                per_modello[(r["make"], r["model"])].append((int(r["id"]), R, vero))
+                per_modello[(r["make"], r["model"])].append((int(r["id"]), R, vero, r.get("year")))
     out = {"casi": len(rows)}
     for nome, es in errs.items():
         a = [abs(e) for e in es]
         out[nome] = {"n": len(es), "medio": round(stx.mean(a), 1), "mediano": round(stx.median(a), 1),
                      "con_segno": round(stx.mean(es), 1), "entro10": round(100 * sum(1 for x in a if x <= 10) / len(a)),
                      "sopra10": round(100 * sum(1 for x in es if x > 10) / len(es))}
-    mod = {f"{k[0]} {k[1]}": (len(v), round(stx.mean((R - x) / x * 100 for _, R, x in v), 1))
+    mod = {f"{k[0]} {k[1]}": (len(v), round(stx.mean((c[1] - c[2]) / c[2] * 100 for c in v), 1))
            for k, v in per_modello.items() if len(v) >= 4}
     out["modelli_peggiori"] = sorted(mod.items(), key=lambda kv: -abs(kv[1][1]))[:10]
     try:
@@ -220,23 +220,23 @@ def venduti(conn) -> dict:
     return out
 
 
-def _fattori(casi: dict) -> dict:
-    """casi: {(make, model): [(id, R, prezzo_venduto)]} → {(make, model): {n, errore_pct, fattore}}.
+def _fattori(casi: dict, nmin: int | None = None, peso: int = 8) -> dict:
+    """casi: {chiave: [(id, R, prezzo_venduto, anno)]} → {chiave: {n, errore_pct, fattore}}.
     Obiettivo: R = prezzo di vendita del concessionario meno CORR_PRUDENZA (8%), così la correzione non toglie
     la prudenza ("prezzi bassi per non gonfiare i margini"). Con pochi casi la correzione si riduce
-    (n/(n+8)); al massimo +10% in su e −20% in giù; sotto il 2% non si corregge."""
+    (n/(n+peso)); al massimo +10% in su e −20% in giù; sotto il 2% non si corregge."""
     import os
     import statistics as stx
     prud = float(os.environ.get("CORR_PRUDENZA", "0.08"))
-    nmin = int(os.environ.get("CORR_N_MIN", "5"))
+    nmin = nmin or int(os.environ.get("CORR_N_MIN", "5"))
     su, giu = float(os.environ.get("CORR_MAX_SU", "0.10")), float(os.environ.get("CORR_MAX_GIU", "0.20"))
     out = {}
     for k, v in casi.items():
         if len(v) < nmin:
             continue
-        errs = [(R - x * (1 - prud)) / (x * (1 - prud)) for _, R, x in v]
+        errs = [(c[1] - c[2] * (1 - prud)) / (c[2] * (1 - prud)) for c in v]
         e = stx.median(errs)
-        f = -e * len(v) / (len(v) + 8)
+        f = -e * len(v) / (len(v) + peso)
         f = max(-giu, min(su, f))
         if abs(f) < .02:
             continue
@@ -244,30 +244,60 @@ def _fattori(casi: dict) -> dict:
     return out
 
 
+def _per_segmento(casi: dict) -> dict:
+    """Stesse auto raggruppate per segmento (età × fascia di prezzo): più auto per gruppo dei singoli modelli."""
+    from collections import defaultdict
+    from .policy_v2 import segmento
+    out = defaultdict(list)
+    for v in casi.values():
+        for c in v:
+            out[("*SEG", segmento(c[3], c[1]))].append(c)
+    return dict(out)
+
+
+def _strategia(fm: dict, fs: dict, k_mod, c) -> float:
+    from .policy_v2 import segmento
+    if k_mod in fm:
+        return fm[k_mod]["fattore"]
+    return fs.get(("*SEG", segmento(c[3], c[1])), {}).get("fattore", 0.0)
+
+
 def correzioni(conn, casi: dict) -> dict:
-    """Calcola le correzioni per modello, misura onestamente se servono (si calcolano su metà delle auto vendute
-    e si provano sull'altra metà) e le scrive nella tabella correzioni_modello."""
+    """Correzioni automatiche misurate onestamente: si calcolano su metà delle auto vendute e si provano
+    sull'altra metà. Si provano 3 strategie (nessuna, per segmento, per modello+segmento) e si scrive nella
+    tabella correzioni_modello SOLO quella che sbaglia meno sulla metà di prova (se nessuna aiuta, tabella vuota)."""
+    import os
     import statistics as stx
+    q = 1 - float(os.environ.get("CORR_PRUDENZA", "0.08"))      # obiettivo: prezzo venduto meno la prudenza
     a = {k: [c for c in v if c[0] % 2 == 0] for k, v in casi.items()}
     b = {k: [c for c in v if c[0] % 2 == 1] for k, v in casi.items()}
-    import os
-    fa = _fattori(a)
-    q = 1 - float(os.environ.get("CORR_PRUDENZA", "0.08"))      # obiettivo: prezzo venduto meno la prudenza
-    prima, dopo = [], []
+    sn, sp = int(os.environ.get("CORR_SEG_N_MIN", "12")), int(os.environ.get("CORR_SEG_PESO", "15"))
+    fm_a, fs_a = _fattori(a), _fattori(_per_segmento(a), sn, sp)
+    err = {"nessuna": [], "segmento": [], "modello": [], "modello_segmento": []}
     for k, v in b.items():
-        f = fa.get(k, {}).get("fattore", 0.0)
-        for _, R, x in v:
-            prima.append(abs(R - x * q) / (x * q) * 100)
-            dopo.append(abs(R * (1 + f) - x * q) / (x * q) * 100)
-    prova = {"auto_prova": len(prima), "errore_prima": round(stx.mean(prima), 1) if prima else None,
-             "errore_dopo": round(stx.mean(dopo), 1) if dopo else None}
-    tutte = _fattori(casi)
+        for c in v:
+            R, x = c[1], c[2] * q
+            err["nessuna"].append(abs(R - x) / x * 100)
+            err["segmento"].append(abs(R * (1 + _strategia({}, fs_a, k, c)) - x) / x * 100)
+            err["modello"].append(abs(R * (1 + _strategia(fm_a, {}, k, c)) - x) / x * 100)
+            err["modello_segmento"].append(abs(R * (1 + _strategia(fm_a, fs_a, k, c)) - x) / x * 100)
+    prova = {k: round(stx.mean(v), 2) for k, v in err.items() if v}
+    prova["auto_prova"] = len(err["nessuna"])
+    migliore = min((k for k in prova if k != "auto_prova"), key=lambda k: prova[k]) if err["nessuna"] else "nessuna"
+    if migliore != "nessuna" and prova[migliore] > prova["nessuna"] - float(os.environ.get("CORR_GUADAGNO_MIN", "0.2")):
+        migliore = "nessuna"                                # deve migliorare davvero, non per caso
+    fm, fs = _fattori(casi), _fattori(_per_segmento(casi), sn, sp)
+    scrivi = {}
+    if migliore in ("modello", "modello_segmento"):
+        scrivi.update(fm)
+    if migliore in ("segmento", "modello_segmento"):
+        scrivi.update(fs)
     conn.execute("""CREATE TABLE IF NOT EXISTS correzioni_modello (make TEXT, model TEXT, n INT, errore_pct REAL,
                     fattore REAL, computed_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY (make, model))""")
     conn.execute("DELETE FROM correzioni_modello")
-    for (mk, md), d in tutte.items():
+    for (mk, md), d in scrivi.items():
         conn.execute("INSERT INTO correzioni_modello (make, model, n, errore_pct, fattore) VALUES (%s,%s,%s,%s,%s)",
                      (mk, md, d["n"], d["errore_pct"], d["fattore"]))
     conn.commit()
-    return {"modelli_corretti": len(tutte), "prova_su_meta": prova,
-            "esempi": sorted(((f"{k[0]} {k[1]}", d["fattore"]) for k, d in tutte.items()), key=lambda z: -abs(z[1]))[:8]}
+    return {"scelta": migliore, "prova_su_meta": prova, "gruppi_corretti": len(scrivi),
+            "segmenti": sorted(((k[1], d["n"], d["fattore"]) for k, d in fs.items()), key=lambda z: -abs(z[2]))[:10]}

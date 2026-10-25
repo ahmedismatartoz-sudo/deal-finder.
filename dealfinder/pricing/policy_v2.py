@@ -817,12 +817,12 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
 
     R = riv["R"]
     if cfg.correzione_modello:
-        f = correzione_modello(t.get("make"), t.get("model"))
+        f = correzione_modello(t.get("make"), t.get("model")) or correzione_modello("*SEG", segmento(t.get("year"), R))
         if f:
             R2 = int(round(R * (1 + f["fattore"])))
             out["correzione_modello"] = f
             out["ipotesi"].append(f"correzione del modello {'+' if f['fattore'] > 0 else ''}{f['fattore']*100:.0f}%: "
-                                  f"su {f['n']} auto uguali vendute dai concessionari il calcolo sbagliava di "
+                                  f"su {f['n']} auto simili vendute dai concessionari il calcolo sbagliava di "
                                   f"{f['errore_pct']:+.0f}% ({R} → {R2} €)")
             R = R2
             out["R"] = R
@@ -938,3 +938,19 @@ def correzione_modello(make, model) -> dict | None:
         except Exception:
             pass
     return _CORR["dati"].get((str(make).lower(), str(model).lower()))
+
+
+def segmento(anno, R) -> str:
+    """Segmento per la correzione automatica: età (≤5, 6–10, 11–15, oltre) × fascia di rivendita."""
+    from datetime import date
+    try:
+        eta = date.today().year - int(anno)
+    except (TypeError, ValueError):
+        eta = 99
+    e = "0-5" if eta <= 5 else "6-10" if eta <= 10 else "11-15" if eta <= 15 else "16+"
+    try:
+        r = float(R)
+    except (TypeError, ValueError):
+        r = 0
+    b = "<5k" if r < 5000 else "5-10k" if r < 10000 else "10-20k" if r < 20000 else "20k+"
+    return f"{e}|{b}"
