@@ -1239,7 +1239,9 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
         if d.get("versione_ok") is not None and d["versione_ok"] < float(os.environ.get("JEV_VERSIONE_MIN", "0.4")):
             c["confronti_non_uguali"] += 1
             continue
-        corr = min(0.0, float(d["correzione_pct"] or 0))
+        # 25/10: l'esame ha mostrato che il calcolo è già prudente (−4%) e la correzione dell'AI lo portava a −8%:
+        # di base Jev non abbassa più la rivendita (JEV_CORREGGI=1 per riaccenderla)
+        corr = min(0.0, float(d["correzione_pct"] or 0)) if os.environ.get("JEV_CORREGGI", "0") == "1" else 0.0
         pv = it.get("pv") or {}
         m = pv.get("margine") if pv else None
         if m is None:

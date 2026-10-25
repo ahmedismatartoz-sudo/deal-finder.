@@ -46,7 +46,8 @@ def esegui(conn) -> dict:
         if not R:
             mancanti += 1
             continue
-        c = min(0.0, float(corr.get(int(x["id"])) or 0))          # correzione dell'AI controllore (solo al ribasso)
+        import os
+        c = min(0.0, float(corr.get(int(x["id"])) or 0)) if os.environ.get("JEV_CORREGGI", "0") == "1" else 0.0
         R = R * (1 + c / 100)
         rif = float(x["rivendita"])
         e = (R - rif) / rif * 100
