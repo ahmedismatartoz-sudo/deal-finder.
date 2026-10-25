@@ -577,6 +577,27 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
         conn.commit()
 
 
+def _lettore_nuovi(conn, ids: list[int], stats: Counter) -> None:
+    """25/10: l'agente lettore legge subito gli annunci nuovi di privati con il numero (versione, kW, cambio,
+    prezzo vero, danni) prima della valutazione, così le occasioni vanno sul sito già con i dati giusti."""
+    if not ids or os.environ.get("LETTORE_NUOVI", "1") != "1":
+        return
+    try:
+        con_num = [r["id"] for r in conn.execute(
+            "SELECT id, title, description, telefono_ok FROM listings WHERE id = ANY(%s) "
+            "AND COALESCE(seller_type, 'privato') <> 'commerciante'", (ids,)).fetchall()
+            if r["telefono_ok"] or ha_numero_testo(r["title"], r["description"])]
+        if not con_num:
+            return
+        from ..ai import lettore
+        res = lettore.giro(conn, ids=con_num, limite=int(os.environ.get("LETTORE_NUOVI_MAX", "60")), rivaluta=False)
+        stats["lettore:letti"] += int(res.get("lette") or 0)
+        stats["lettore:cambiati"] += sum(v for k, v in res.items() if k.startswith("cambiato:"))
+    except Exception as e:
+        conn.rollback()
+        log.warning("TR lettore nuovi: %s", str(e)[:200])
+
+
 def giro_nuovi(conn, completo: bool = False) -> Counter:
     """completo=False: solo il nuovo dall'ultimo giro (ogni 5 minuti).
     completo=True: rilettura di TUTTI gli annunci delle ultime TR_COMPLETO_ORE ore (ogni ora), cosi' non se ne perde nessuno."""
@@ -605,6 +626,7 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
             stats[f"letti_{fonte}"] += len(letti)
             ids = _salva(conn, letti, stats)
             del letti
+            _lettore_nuovi(conn, ids, stats)
             valuta_e_pubblica(conn, ids, stats)
             conn.commit()
             gc.collect()
@@ -620,6 +642,7 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
                 log.warning("TR autoscout: %s", str(e)[:200])
         stats["letti"] = len(letti)
         ids = _salva(conn, letti, stats)
+        _lettore_nuovi(conn, ids, stats)
         valuta_e_pubblica(conn, ids, stats)
     conn.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES ('nuovi', %s, %s) ON CONFLICT (giro) DO UPDATE "
                  "SET ultimo_at=EXCLUDED.ultimo_at, stats=EXCLUDED.stats", (inizio, json.dumps(dict(stats))))

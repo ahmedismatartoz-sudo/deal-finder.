@@ -172,6 +172,16 @@ def chiedi(client, stato: dict, assets: dict | None = None) -> dict:
         r = client.post(u, json=body, headers=headers)
         if r.status_code in (400, 422) and assets and "asset" in r.text.lower():
             return chiedi(client, {k: v for k, v in stato.items() if k != "foto"}, None)
+        if r.status_code == 400 and "max_tokens" in r.text:
+            # 25/10: richiesta troppo lunga. Prima meno foto (2), poi niente foto e testo più corto.
+            if assets and len(assets) > 2:
+                return chiedi(client, stato, dict(list(assets.items())[:2]))
+            if assets:
+                return chiedi(client, {k: v for k, v in stato.items() if k != "foto"}, None)
+            ann = dict(stato.get("annuncio") or {})
+            if len(ann.get("descrizione") or "") > 600:
+                ann["descrizione"] = ann["descrizione"][:600]
+                return chiedi(client, dict(stato, annuncio=ann, confronti=(stato.get("confronti") or [])[:6]), None)
         if r.status_code in (404, 405):
             ultimo = f"{u} -> HTTP {r.status_code}"
             continue

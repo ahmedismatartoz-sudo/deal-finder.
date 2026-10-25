@@ -1189,7 +1189,7 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
     try:
         with connect() as conn:
             dec = {r["listing_id"]: r for r in conn.execute(
-                "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.correzione_pct, "
+                "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.correzione_pct, d.versione_ok, "
                 "(d.risposta->'answers'->'danni_foto'->>'noul')::float AS danni "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
                 "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
@@ -1221,6 +1221,11 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
         if (d["danni"] or 0) >= .7:
             c["danni_foto"] += 1
             continue
+        # 25/10 (cliente): agente controllore. Se l'AI dice che le auto di confronto non sono la stessa auto
+        # (motore, versione, allestimento diversi) il margine non è affidabile: l'auto resta fuori.
+        if d.get("versione_ok") is not None and d["versione_ok"] < float(os.environ.get("JEV_VERSIONE_MIN", "0.4")):
+            c["confronti_non_uguali"] += 1
+            continue
         corr = min(0.0, float(d["correzione_pct"] or 0))
         pv = it.get("pv") or {}
         m = pv.get("margine") if pv else None
@@ -1236,6 +1241,16 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
             if m2 < soglia:
                 c["margine_dopo_correzione"] += 1
                 continue
+            # 25/10: vale la stima più prudente. Il margine mostrato è quello corretto dall'AI e deve rispettare
+            # la regola del sito (sopra 2.000 € almeno 1.500 € di margine).
+            if prezzo > int(os.environ.get("SITO_PREZZO_LIMITE", "2000")) and m2 < int(os.environ.get("SITO_MARGINE_MIN_SOPRA", "1500")):
+                c["margine_dopo_correzione"] += 1
+                continue
+            if isinstance(it.get("pv"), dict) and it["pv"].get("margine") is not None:
+                it["pv"] = dict(it["pv"], margine=int(round(m2)), margine_calcoli=int(m), correzione_ai_pct=corr)
+                for k in ("R", "R_finale"):
+                    if it["pv"].get(k) is not None:
+                        it["pv"][k] = int(round(it["pv"][k] + (m2 - m)))
         c[f"tenuta_{d['decisione']}"] += 1
         tenute.append(it)
     logging.getLogger("scovo").warning("JEV_SITO %d tolte, %d restano %s", len(items) - len(tenute), len(tenute),
@@ -2403,6 +2418,42 @@ def _tempo_reale():
                 lg.warning("JEV non riuscito: %s", str(e)[:300])
             time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
+
+    def lettore_annunci():
+        """25/10 (cliente): agente lettore (ai/lettore.py) sulle auto candidate, ogni LETTORE_MIN minuti."""
+        from ..ai import lettore
+        time.sleep(int(os.environ.get("LETTORE_RITARDO_S", "180")))
+        while True:
+            try:
+                with connect() as conn:
+                    if conn.execute("SELECT pg_try_advisory_lock(734106) AS ok").fetchone()["ok"]:
+                        try:
+                            res = lettore.giro(conn)
+                            if res.get("pubblicate"):
+                                _elenco["t"] = 0.0
+                                _aggiorna_elenco(attendi=False)
+                        finally:
+                            conn.execute("SELECT pg_advisory_unlock(734106)")
+            except Exception as e:
+                lg.warning("LETTORE non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("LETTORE_MIN", "5")) * 60)
+
+    if os.environ.get("LETTORE", "1") == "1":
+        threading.Thread(target=lettore_annunci, daemon=True, name="lettore").start()
+
+    def esame_software():
+        """25/10: esame del calcolo sulle auto valutate a mano (pricing/esame.py), all'avvio e ogni ESAME_ORE ore."""
+        from ..pricing import esame
+        time.sleep(int(os.environ.get("ESAME_RITARDO_S", "300")))
+        while True:
+            try:
+                with connect() as conn:
+                    esame.esegui(conn)
+            except Exception as e:
+                lg.warning("ESAME non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("ESAME_ORE", "3")) * 3600)
+
+    threading.Thread(target=esame_software, daemon=True, name="esame").start()
 
     def brevo_liste():
         """22/10 (cliente): carica una volta in Brevo le 6 liste dei commercianti (data/marketing_gruppi.json)."""
