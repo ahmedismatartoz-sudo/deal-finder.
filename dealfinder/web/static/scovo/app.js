@@ -344,7 +344,7 @@ function boxV1(c){ return `
       </div>`; }
 const VOCI = {ricambi: "Ricambi", manodopera: "Manodopera e verniciatura", passaggio: "Passaggio e pratiche", trasporto: "Trasporto / ritiro",
   diagnosi_revisione: "Diagnosi e revisione", preparazione: "Preparazione e pulizia", vendita: "Costi di vendita", garanzia: "Garanzia (accantonamento)",
-  giacenza: "Giacenza", iva_margine: "IVA (regime del margine)", costi_commerciante: "Costi per rivendere"};
+  giacenza: "Giacenza", iva_margine: "IVA (regime del margine)", costi_commerciante: "Tagliando e pulizia"};
 const ORIG = {annuncio: "dall'annuncio", stima_ricambi: "ricerca prezzi pezzi", config: "impostazione", stima: "stima prudente"};
 function pct(x){ return Math.round(x * 1000) / 10 + "%"; }
 function boxPolicy(c, v){

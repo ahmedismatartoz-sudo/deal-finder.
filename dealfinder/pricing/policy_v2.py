@@ -607,7 +607,7 @@ def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
                         "nota": f"accantonamento garanzia legale {int(cfg.garanzia_pct*100)}% della rivendita (min {cfg.garanzia_min} €)"}
     cf = cfg.costo_fisso_alto if int(t["price_eur"]) > cfg.costo_alto_da else cfg.costo_fisso
     voci["costi_commerciante"] = {"euro": int(cf), "origine": "config",
-                                  "nota": "passaggio, tagliando, pulizia, piccoli ritocchi e garanzia"}
+                                  "nota": "tagliando 150 € e pulizia 50 €"}
     voci["giacenza"] = {"euro": int(round(cfg.giacenza_giorni * cfg.giacenza_euro_giorno)), "origine": "stima",
                         "nota": f"ipotesi {cfg.giacenza_giorni} giorni × {cfg.giacenza_euro_giorno:g} €/giorno"}
     ripristino = voci["ricambi"]["euro"] + voci.get("manodopera", {}).get("euro", 0)
