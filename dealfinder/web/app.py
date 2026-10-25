@@ -2377,15 +2377,18 @@ def _tempo_reale():
                 from ..db import connect as _c
                 giorno = time.strftime("%Y-%m-%d")
                 with _c() as conn:
-                    fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("telefoni_subito:v2:" + giorno,)).fetchone()
+                    fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("telefoni_subito:v3:" + giorno,)).fetchone()
                 if not fatto:
                     t0 = time.time()
                     with _c() as conn:
                         from ..db import log_job
-                        fine = log_job(conn, "telefoni_subito:v2:" + giorno)
+                        fine = log_job(conn, "telefoni_subito:v3:" + giorno)
                         st = tr.giro_telefoni_subito(conn)
                         fine(True, st)
                     lg.warning("TR TELEFONI SUBITO in %.0fs: %s", time.time() - t0, st)
+                    _tel_cache.clear()
+                    _elenco["t"] = 0.0
+                    _aggiorna_elenco(attendi=False)
                     if os.environ.get("UTIL_SIM", "1") == "1":     # subito il calcolo completo con i numeri nuovi
                         from ..pricing import ricalcolo
                         with _c() as conn:

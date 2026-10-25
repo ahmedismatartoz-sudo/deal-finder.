@@ -74,9 +74,10 @@ def telefono_subito(item: dict | None) -> bool:
         return ph == 1
     if not isinstance(ph, str):
         return False
-    ph = ph.strip().lower()
-    # Subito manda un indicatore di una cifra ("1" = numero disponibile dietro il bottone), non il numero
-    return ph in ("1", "true", "si", "yes") or len(re.sub(r"\D", "", ph)) >= 6
+    # 25/10 21:40 (prova su 8 annunci + screenshot del cliente): Subito mette advertiser.phone (una cifra, "0")
+    # SOLO quando il venditore ha il numero (pulsante "Mostra numero", classe phoneSkeleton nella pagina);
+    # senza numero il campo manca. Quindi: campo presente = ha il numero. Il numero non si legge mai.
+    return ph.strip() != "" or ph == "0"
 
 
 def ha_numero_testo(title: str | None, desc: str | None) -> bool:
@@ -1011,6 +1012,8 @@ RE_SHOWPHONE = re.compile(r'showPhone\\*"\s*:\s*(true|false)', re.I)
 def telefono_da_pagina(data: dict | None, low: str, html: str = "") -> bool | None:
     """Indicatore del bottone Chiama nella pagina. Subito (Next.js) mette i dati dell'annuncio nell'HTML come JSON
     escapato: il venditore ha "showPhone": true/false. None se la pagina non ha i dati (blocco anti-bot)."""
+    if "phoneSkeleton" in (html or "") or re.search(r'\\*"phone\\*"\s*:\s*\\*"', html or ""):
+        return True                      # 25/10: segno del pulsante "Mostra numero" (solo se il venditore ha il numero)
     vals = [m.group(1).lower() == "true" for m in RE_SHOWPHONE.finditer(html or "")]
     if any(vals):
         return True
