@@ -293,6 +293,60 @@ def controlla_telefoni(conn, limite: int | None = None) -> Counter:
     return stats
 
 
+_diag_tel_sub = {"n": 0}
+
+
+def _maschera(v) -> str:
+    import json as _json
+    t = v if isinstance(v, str) else _json.dumps(v, default=str)
+    return re.sub(r"[A-Za-z]", "a", re.sub(r"\d", "9", t))[:60]
+
+
+def diag_subito_telefono(sub, urn, url) -> None:
+    """Diagnostica (25/10): dove Subito dice se il venditore ha il numero (bottone Chiama). Nei log solo i NOMI dei
+    campi e la FORMA dei valori (cifre → 9, lettere → a): il numero non si legge e non si salva mai."""
+    from ..collectors.subito import API_HEADERS
+    prove = []
+    for ep in (f"https://hades.subito.it/v1/ads/{urn}", f"https://hades.subito.it/v1/items/{urn}"):
+        try:
+            r = sub.client.get(ep, headers=API_HEADERS)
+            campi = []
+
+            def scan(o, p=""):
+                if len(campi) > 15:
+                    return
+                if isinstance(o, dict):
+                    for k, v in o.items():
+                        q = f"{p}.{k}" if p else k
+                        if any(w in k.lower() for w in ("phone", "tel", "call", "contact", "show")):
+                            campi.append(f"{q}={_maschera(v) if not isinstance(v, (dict, list)) else type(v).__name__}")
+                        scan(v, q)
+                elif isinstance(o, list):
+                    for i, v in enumerate(o[:3]):
+                        scan(v, f"{p}[{i}]")
+            try:
+                scan(r.json())
+            except Exception:
+                pass
+            prove.append(f"{ep.split('/v1/')[1].split('/')[0]}: http={r.status_code} campi={campi}")
+        except Exception as e:
+            prove.append(f"{ep}: errore {str(e)[:60]}")
+    try:
+        h = sub._get(url).text
+        ctx = []
+        for m in re.finditer(r"(?i)(showphone|phone|telefono|chiama)", h):
+            seg = h[max(0, m.start() - 80):m.end() + 60]
+            seg = re.sub(r"\d", "9", seg)
+            seg = re.sub(r'"[^"]{25,}"', '"…"', seg)
+            ctx.append(seg.replace("\n", " "))
+            if len(ctx) >= 6:
+                break
+        prove.append(f"pagina contesti={ctx}")
+    except Exception as e:
+        prove.append(f"pagina errore {str(e)[:60]}")
+    log.warning("DIAG_SUBITO_TEL %s", prove)
+
+
 def telefoni_candidate(conn, ids) -> Counter:
     """25/10 (cliente: "ci servono più auto, trova un'altra soluzione"): le auto che sarebbero sul sito ma sono state
     tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi
@@ -303,7 +357,7 @@ def telefoni_candidate(conn, ids) -> Counter:
     if not ids:
         return stats
     rows = conn.execute(
-        "SELECT id, source, url FROM listings WHERE id = ANY(%s) AND status='attivo' AND source IN ('autoscout24','subito') "
+        "SELECT id, source, source_id, url FROM listings WHERE id = ANY(%s) AND status='attivo' AND source IN ('autoscout24','subito') "
         "AND telefono_ok IS NOT TRUE AND (telefono_at IS NULL OR telefono_at < now() - make_interval(hours => %s)) "
         "ORDER BY telefono_at NULLS FIRST LIMIT %s",
         (ids, int(os.environ.get("TEL_CAND_ORE", "12")), int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
@@ -325,12 +379,13 @@ def telefoni_candidate(conn, ids) -> Counter:
                 if sub is None:
                     from ..collectors.subito import SubitoCollector
                     sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
-                l = sub.fetch(r["url"])
-                raw = getattr(l, "raw", None) if l else None
-                if isinstance(raw, dict) and isinstance(raw.get("advertiser"), dict) and "phone" in raw["advertiser"]:
-                    tel = telefono_subito(raw)
-                if l and ha_numero_testo(l.title, l.description):
-                    tel = True
+                if _diag_tel_sub["n"] < 3:
+                    _diag_tel_sub["n"] += 1
+                    diag_subito_telefono(sub, r.get("source_id"), r["url"])
+                st, tel = subito_telefono_pagina(r["url"])
+                if st == "errore":
+                    stats["errore"] += 1
+                    continue
         except Exception as e:
             stats["errore"] += 1
             if stats["errore"] <= 2:
