@@ -873,6 +873,9 @@ def _meno_subito_senza_telefono(items: list[dict]) -> list[dict]:
     return [it for it in items if it["id"] not in via]
 
 
+_tel_da_controllare: set = set()     # 25/10: auto tolte solo per il numero mai controllato (vedi telefoni_candidate)
+
+
 def _solo_con_telefono(items: list[dict]) -> list[dict]:
     """TELEFONO_OBBLIGATORIO=1: sul sito solo auto che si possono chiamare. AutoScout24 mostra sempre il numero
     nell'annuncio; Subito e Facebook solo se il numero è scritto nel testo dell'annuncio."""
@@ -925,6 +928,9 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     tenute += _senza_numero_super(items, tenute)
     tenute += _utilitarie_subito_senza_numero(items, tenute)
     tenute += _senza_numero_margini_enormi(items, tenute)
+    tenute_ids = {it["id"] for it in tenute}
+    _tel_da_controllare.update(it["id"] for it in items if it["id"] not in tenute_ids
+                               and it.get("fonte") in ("AutoScout24", "Subito"))
     logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
                                        len(items) - len(tenute), len(tenute), len(meta))
     return tenute
@@ -2472,6 +2478,29 @@ def _tempo_reale():
 
     if os.environ.get("LETTORE", "1") == "1":
         threading.Thread(target=lettore_annunci, daemon=True, name="lettore").start()
+
+    def telefoni_candidate():
+        """25/10 (cliente: "più auto sul sito"): controlla il numero delle auto tolte dal sito solo perché il numero
+        non era mai stato letto; quelle con il numero tornano sul sito al giro dopo."""
+        from ..pipeline import tempo_reale as tr
+        time.sleep(int(os.environ.get("TEL_CAND_RITARDO_S", "240")))
+        while True:
+            try:
+                ids = list(_tel_da_controllare)
+                if ids:
+                    with connect() as conn:
+                        st = tr.telefoni_candidate(conn, ids)
+                    lg.warning("TEL_CANDIDATE %s", dict(st))
+                    if any(k.endswith(":si") for k in st):
+                        _tel_cache.clear()
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False)
+            except Exception as e:
+                lg.warning("TEL_CANDIDATE non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("TEL_CAND_MIN", "10")) * 60)
+
+    if os.environ.get("TEL_CANDIDATE", "1") == "1":
+        threading.Thread(target=telefoni_candidate, daemon=True, name="tel_candidate").start()
 
     def esame_software():
         """25/10: esame del calcolo sulle auto valutate a mano (pricing/esame.py), all'avvio e ogni ESAME_ORE ore."""

@@ -293,6 +293,61 @@ def controlla_telefoni(conn, limite: int | None = None) -> Counter:
     return stats
 
 
+def telefoni_candidate(conn, ids) -> Counter:
+    """25/10 (cliente: "ci servono più auto, trova un'altra soluzione"): le auto che sarebbero sul sito ma sono state
+    tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi
+    oltre le pagine del giro giornaliero). Si apre la pagina una volta e si salva sì/no (mai il numero).
+    Ogni auto al massimo una volta ogni TEL_CAND_ORE ore (12)."""
+    stats: Counter = Counter()
+    ids = [int(i) for i in ids][:5000]
+    if not ids:
+        return stats
+    rows = conn.execute(
+        "SELECT id, source, url FROM listings WHERE id = ANY(%s) AND status='attivo' AND source IN ('autoscout24','subito') "
+        "AND telefono_ok IS NOT TRUE AND (telefono_at IS NULL OR telefono_at < now() - make_interval(hours => %s)) "
+        "ORDER BY telefono_at NULLS FIRST LIMIT %s",
+        (ids, int(os.environ.get("TEL_CAND_ORE", "12")), int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
+    if not rows:
+        return stats
+    cas = _client_as() if any(r["source"] == "autoscout24" for r in rows) else None
+    sub = None
+    for r in rows:
+        time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
+        tel = None
+        try:
+            if r["source"] == "autoscout24":
+                st, det = _as_dettaglio(cas, r["url"])
+                if st == "errore":
+                    stats["errore"] += 1
+                    continue
+                tel = telefono_autoscout(det) if st == "attivo" else None
+            else:
+                if sub is None:
+                    from ..collectors.subito import SubitoCollector
+                    sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+                l = sub.fetch(r["url"])
+                raw = getattr(l, "raw", None) if l else None
+                if isinstance(raw, dict) and isinstance(raw.get("advertiser"), dict) and "phone" in raw["advertiser"]:
+                    tel = telefono_subito(raw)
+                if l and ha_numero_testo(l.title, l.description):
+                    tel = True
+        except Exception as e:
+            stats["errore"] += 1
+            if stats["errore"] <= 2:
+                log.warning("TEL_CANDIDATE %s: %s", r["source"], str(e)[:150])
+            continue
+        if tel is True:
+            conn.execute("UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE id=%s", (r["id"],))
+        elif tel is False:
+            conn.execute("UPDATE listings SET telefono_ok=false, telefono_at=now() WHERE id=%s", (r["id"],))
+        else:
+            conn.execute("UPDATE listings SET telefono_at=now() WHERE id=%s", (r["id"],))
+        stats[f"{r['source']}:{'si' if tel else ('no' if tel is False else 'non_leggibile')}"] += 1
+        conn.commit()
+    conn.commit()
+    return stats
+
+
 # ------------------------------------------------------------------ agente 2: nuovi
 
 def _ora_it(dt: datetime) -> str:
