@@ -2530,6 +2530,29 @@ def _tempo_reale():
 
     threading.Thread(target=icona_telefono, daemon=True, name="icona_tel").start()
 
+    def subito_completo():
+        """25/10: lettura completa di Subito entro 100 km (una volta, SUBITO_COMPLETO=1), poi si rimette a 0."""
+        if os.environ.get("SUBITO_COMPLETO", "0") != "1":
+            return
+        time.sleep(int(os.environ.get("SUBITO_COMPLETO_RITARDO_S", "120")))
+        try:
+            from ..db import connect as _c, log_job
+            from ..pipeline import tempo_reale as tr
+            giorno = time.strftime("%Y-%m-%d")
+            with _c() as conn:
+                if conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("subito_completo:" + giorno,)).fetchone():
+                    return
+                fine = log_job(conn, "subito_completo:" + giorno)
+                st = tr.subito_completo(conn)
+                fine(True, st)
+            _tel_cache.clear()
+            _elenco["t"] = 0.0
+            _aggiorna_elenco(attendi=False)
+        except Exception as e:
+            lg.warning("SUBITO_COMPLETO non riuscito: %s", str(e)[:300])
+
+    threading.Thread(target=subito_completo, daemon=True, name="subito_completo").start()
+
     if os.environ.get("TEL_CANDIDATE", "1") == "1":
         threading.Thread(target=telefoni_candidate, daemon=True, name="tel_candidate").start()
 

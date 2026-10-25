@@ -436,6 +436,74 @@ def diag_indicatore_subito(n: int = 4) -> None:
     log.warning("INDICATORE_TEL_CONTI privati=%s con_indicatore=%s senza=%s", len(con) + len(senza), len(con), len(senza))
 
 
+PROVINCE_100KM = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "NO", "PC", "AL", "VC", "BI", "VB"]
+FASCE_SUBITO = [(0, 1500), (1500, 2500), (2500, 3500), (3500, 5000), (5000, 6500), (6500, 8000), (8000, 10000),
+                (10000, 13000), (13000, 17000), (17000, 22000), (22000, 30000), (30000, 45000), (45000, 80000)]
+
+
+def subito_completo(conn) -> dict:
+    """25/10 (cliente: "leggi TUTTE le auto di Subito con le nostre regole nel raggio dei 100 km"): rilegge Subito
+    provincia per provincia e fascia di prezzo per fascia (così non c'è il tetto delle 10.000 auto più recenti),
+    salva gli annunci nuovi o cambiati e segna chi ha il numero (sì/no, mai il numero). La valutazione la fa poi
+    il ricalcolo del cron. Le province sono quelle entro circa 100 km da Milano (SUBITO_PROVINCE per cambiarle)."""
+    from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector, parse_item
+    col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    province = [p.strip().upper() for p in os.environ.get("SUBITO_PROVINCE", ",".join(PROVINCE_100KM)).split(",") if p.strip()]
+    st = Counter()
+    t0 = time.time()
+    for reg, provs in REGIONI.items():
+        voluti = set(provs) & set(province)
+        if not voluti:
+            continue
+        code = REGION_CODES.get(reg) or _codici_regione.get(reg) or col._trova_regione(set(provs), 100)
+        if not code:
+            continue
+        _codici_regione[reg] = REGION_CODES[reg] = code
+        chiavi = col._province_keys(code, voluti, 100)
+        for sn, key in sorted(chiavi.items()):
+            for ps, pe in FASCE_SUBITO:
+                for page in range(int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))):
+                    try:
+                        r = col.client.get(API_SEARCH, headers=API_HEADERS, params={
+                            "c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
+                            "start": page * 100, "sort": "datedesc"})
+                    except Exception as e:
+                        st["errore"] += 1
+                        log.info("SUBITO_COMPLETO %s %s-%s: %s", sn, ps, pe, str(e)[:100])
+                        break
+                    time.sleep(float(os.environ.get("TR_TEL_PAUSA_S", "1.0")))
+                    if r.status_code != 200:
+                        st[f"http_{r.status_code}"] += 1
+                        break
+                    ads = (r.json() or {}).get("ads") or []
+                    st["letti"] += len(ads)
+                    lst = []
+                    for a in ads:
+                        l = parse_item(a)
+                        if l:
+                            lst.append(l)
+                        st["con_numero" if telefono_subito(a) else "senza_numero"] += 1
+                    if lst:
+                        try:
+                            _salva(conn, lst, st)
+                            conn.commit()
+                        except Exception as e:
+                            conn.rollback()
+                            st["errore_salva"] += 1
+                            log.info("SUBITO_COMPLETO salva: %s", str(e)[:150])
+                    si = [str(a.get("urn")) for a in ads if a.get("urn") and telefono_subito(a)]
+                    if si:
+                        st["aggiornati_si"] += conn.execute(
+                            "UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE source='subito' "
+                            "AND source_id = ANY(%s) AND telefono_ok IS DISTINCT FROM true", (si,)).rowcount
+                        conn.commit()
+                    if len(ads) < 100:
+                        break
+            log.warning("SUBITO_COMPLETO %s fatto in %.0fs: %s", sn, time.time() - t0, dict(st))
+    log.warning("SUBITO_COMPLETO_FINE in %.0fs: %s", time.time() - t0, dict(st))
+    return dict(st)
+
+
 def telefoni_candidate(conn, ids) -> Counter:
     """25/10 (cliente: "ci servono più auto, trova un'altra soluzione"): le auto che sarebbero sul sito ma sono state
     tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi
