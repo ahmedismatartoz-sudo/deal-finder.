@@ -2376,7 +2376,8 @@ def _tempo_reale():
             time.sleep(float(os.environ.get("TR_TARGHE_MIN", "5")) * 60)
 
     _azzera_no_subito()
-    threading.Thread(target=targhe, daemon=True, name="tr-targhe").start()
+    if os.environ.get("TR_TARGHE", "0") == "1":     # 25/10 (cliente): le targhe non servono, conta solo il numero
+        threading.Thread(target=targhe, daemon=True, name="tr-targhe").start()
     threading.Thread(target=verifica, daemon=True, name="tr-verifica").start()
     threading.Thread(target=telefoni_subito, daemon=True, name="tr-telefoni").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()
