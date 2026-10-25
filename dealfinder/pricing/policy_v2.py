@@ -446,6 +446,17 @@ def _equivalente(t, c, cfg, livello):
     if livello == 1 and tg and not cg:
         return "cambio non indicato"
     tp, cp = t.get("power_kw"), c.get("power_kw")
+    if not tp and os.environ.get("POLICY_MOTORE_SENZA_KW", "1") == "1":
+        # 25/10 (cliente: "stesso motore"): se l'annuncio non dice i kW, il motore si riconosce dalla cilindrata
+        # scritta (1.2, 2.0…); senza né kW né cilindrata non si può dire che le auto siano uguali
+        import re as _re
+        cil = _re.compile(r"\b(\d\.\d)\b")
+        tc = set(cil.findall(f"{t.get('version_raw') or ''} {t.get('title') or ''}"))
+        cc = set(cil.findall(f"{c.get('version_raw') or ''} {c.get('title') or ''}"))
+        if not tc:
+            return "motore non indicato (né kW né cilindrata)"
+        if not cc or not (tc & cc):
+            return "motorizzazione diversa (cilindrata)"
     if tp and cp and abs(cp - tp) > tp * cfg.potenza_tol:
         return "motorizzazione diversa (potenza)"
     if livello == 1 and tp and not cp:
