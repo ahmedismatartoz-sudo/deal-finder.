@@ -15,6 +15,10 @@ TOKEN_DAYS = int(os.environ.get("TOKEN_GIORNI", "3650"))   # resta collegato: si
 def _secret() -> bytes:
     s = os.environ.get("SECRET_KEY")
     if not s:
+        # 25/10: il cron (ricalcolo prezzi) firma i link foto solo per confronti interni, mai salvati né mostrati:
+        # lì basta una chiave locale. Il sito web resta obbligato ad avere SECRET_KEY.
+        if os.environ.get("RENDER_SERVICE_TYPE") == "cron":
+            return b"solo-cron-confronti-interni"
         if os.environ.get("RENDER"):
             raise RuntimeError("SECRET_KEY mancante")
         s = "solo-sviluppo-locale"
