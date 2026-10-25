@@ -2515,6 +2515,19 @@ def _tempo_reale():
 
     threading.Thread(target=link_annunci, daemon=True, name="link_annunci").start()
 
+    def icona_telefono():
+        if os.environ.get("DIAG_ICONA_TEL", "0") != "1":
+            return
+        time.sleep(60)
+        try:
+            from ..pipeline import tempo_reale as tr
+            with connect() as conn:
+                tr.diag_icona_telefono(conn, int(os.environ.get("DIAG_ICONA_N", "20")))
+        except Exception as e:
+            lg.warning("ICONA_TEL non riuscito: %s", str(e)[:200])
+
+    threading.Thread(target=icona_telefono, daemon=True, name="icona_tel").start()
+
     if os.environ.get("TEL_CANDIDATE", "1") == "1":
         threading.Thread(target=telefoni_candidate, daemon=True, name="tel_candidate").start()
 

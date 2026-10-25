@@ -347,6 +347,61 @@ def diag_subito_telefono(sub, urn, url) -> None:
     log.warning("DIAG_SUBITO_TEL %s", prove)
 
 
+_RE_MARK_ATTR = re.compile(r'(class|aria-label|data-testid|id|name|title|alt|href)="([^"]{0,120}?(?:phone|Phone|PHONE|tel:|call|Call|chiama|Chiama|numero|Numero)[^"]{0,60}?)"')
+_RE_MARK_JSON = re.compile(r'\\*"(\w{0,40}(?:phone|Phone)\w{0,40})\\*"\s*:\s*(true|false|null|\\*"[^"\\]{0,3}|\d+|\{|\[)')
+
+
+_PAROLE_UI = {"mostra", "numero", "telefono", "chiama", "chiamare", "venditore", "contatta", "contattare", "il", "di",
+              "del", "al", "phone", "call", "show", "number", "icon", "button", "telefonico", "visualizza", "vedi"}
+
+
+def marcatori_telefono_subito(html: str) -> list[str]:
+    """Solo i NOMI tecnici (classi, aria-label, chiavi JSON) che parlano di telefono, con le cifre → 9 e senza
+    testi liberi: servono a trovare il segno grafico del telefono. Mai numeri o nomi del venditore."""
+    out = set()
+    for m in _RE_MARK_ATTR.finditer(html or ""):
+        a, v = m.group(1), m.group(2)
+        if v.startswith("tel:"):
+            out.add("href=tel:")
+            continue
+        if a in ("aria-label", "title", "alt", "name", "href"):
+            # testo libero: restano solo parole tecniche/di interfaccia, il resto (es. nomi) diventa "_"
+            v = " ".join(w if w.lower().strip(".,:") in _PAROLE_UI else "_" for w in v.split())
+        out.add(f"{a}:" + re.sub(r"\d", "9", v)[:60])
+    for m in _RE_MARK_JSON.finditer(html or ""):
+        val = m.group(2)
+        val = "s" if val.startswith(("\\", '"')) else val
+        out.add(f"json:{m.group(1)}={val}")
+    return sorted(out)[:40]
+
+
+def diag_icona_telefono(conn, n: int = 20) -> None:
+    """25/10 (cliente: "il software deve entrare nell'annuncio e vedere lo stemma del telefono"): apre N annunci
+    Subito di privati e scrive nei log quali segni tecnici del telefono ci sono in ciascuno, per capire quale
+    segno c'è SOLO negli annunci con il numero. Nei log: id dell'annuncio, se il numero è scritto nel testo (sì/no)
+    e i nomi tecnici. Mai il numero, mai il nome del venditore."""
+    from ..collectors.subito import SubitoCollector
+    sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    rows = conn.execute("SELECT id, url, title, description FROM listings WHERE source='subito' AND status='attivo' "
+                        "AND COALESCE(seller_type,'privato') <> 'commerciante' ORDER BY first_seen_at DESC LIMIT %s",
+                        (n,)).fetchall()
+    from collections import Counter as _C
+    tutti = _C()
+    for r in rows:
+        time.sleep(1.5)
+        try:
+            resp = sub._get(r["url"])
+            html = resp.text if resp.status_code == 200 else ""
+        except Exception as e:
+            log.warning("ICONA_TEL %s errore %s", r["id"], str(e)[:80])
+            continue
+        mk = marcatori_telefono_subito(html)
+        tutti.update(mk)
+        log.warning("ICONA_TEL %s http=%s byte=%s numero_nel_testo=%s segni=%s", r["id"], resp.status_code, len(html),
+                    ha_numero_testo(r["title"], r["description"]), mk)
+    log.warning("ICONA_TEL_RIASSUNTO pagine=%s segni=%s", len(rows), dict(tutti.most_common(40)))
+
+
 def telefoni_candidate(conn, ids) -> Counter:
     """25/10 (cliente: "ci servono più auto, trova un'altra soluzione"): le auto che sarebbero sul sito ma sono state
     tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi
