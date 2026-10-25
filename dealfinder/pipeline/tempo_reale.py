@@ -402,6 +402,39 @@ def diag_icona_telefono(conn, n: int = 20) -> None:
     log.warning("ICONA_TEL_RIASSUNTO pagine=%s segni=%s", len(rows), dict(tutti.most_common(40)))
 
 
+def diag_indicatore_subito(n: int = 4) -> None:
+    """25/10 (cliente, screenshot: "Mostra numero" visibile anche senza accesso): verifica se l'indicatore della
+    ricerca Subito (advertiser.phone = "0" oppure assente) dice chi ha il numero. Scrive nei log il LINK di n annunci
+    con indicatore "0" e n senza indicatore, con i segni tecnici della pagina, così si confrontano con quello che
+    si vede aprendo l'annuncio. Nei log: solo link, indicatore e nomi tecnici. Mai numeri o nomi."""
+    from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector
+    col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    r = col.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": 4, "t": "s", "lim": 100, "start": 0,
+                                                                 "sort": "datedesc"})
+    ads = (r.json() or {}).get("ads") or []
+    con, senza = [], []
+    for a in ads:
+        adv = a.get("advertiser") or {}
+        if adv.get("company"):
+            continue
+        v = adv.get("phone") if isinstance(adv, dict) else None
+        url = (a.get("urls") or {}).get("default")
+        if not url:
+            continue
+        (con if v is not None else senza).append((url, "nessuno" if v is None else re.sub(r"\d", "9", str(v))[:3],
+                                                  ha_numero_testo(a.get("subject"), a.get("body"))))
+    for url, ind, testo in con[:n] + senza[:n]:
+        time.sleep(1.5)
+        try:
+            h = col._get(url).text
+        except Exception:
+            h = ""
+        low = h.lower()
+        log.warning("INDICATORE_TEL indicatore=%s numero_nel_testo=%s mostra_numero=%s segni=%s link=%s", ind, testo,
+                    "mostra numero" in low, marcatori_telefono_subito(h)[:15], url)
+    log.warning("INDICATORE_TEL_CONTI privati=%s con_indicatore=%s senza=%s", len(con) + len(senza), len(con), len(senza))
+
+
 def telefoni_candidate(conn, ids) -> Counter:
     """25/10 (cliente: "ci servono più auto, trova un'altra soluzione"): le auto che sarebbero sul sito ma sono state
     tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi

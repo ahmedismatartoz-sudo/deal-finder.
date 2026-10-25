@@ -2518,11 +2518,10 @@ def _tempo_reale():
     def icona_telefono():
         if os.environ.get("DIAG_ICONA_TEL", "0") != "1":
             return
-        time.sleep(60)
+        time.sleep(20)
         try:
             from ..pipeline import tempo_reale as tr
-            with connect() as conn:
-                tr.diag_icona_telefono(conn, int(os.environ.get("DIAG_ICONA_N", "20")))
+            tr.diag_indicatore_subito(int(os.environ.get("DIAG_ICONA_N", "4")))
         except Exception as e:
             lg.warning("ICONA_TEL non riuscito: %s", str(e)[:200])
 
