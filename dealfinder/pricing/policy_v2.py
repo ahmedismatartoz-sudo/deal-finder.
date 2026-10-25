@@ -147,6 +147,10 @@ class PolicyConfig:
     garanzia_min: int = 0
     giacenza_giorni: int = 0
     giacenza_euro_giorno: float = 3.0
+    # 25/10 (cliente): costi del commerciante per rivendere (passaggio, tagliando, pulizia, ritocchi, garanzia)
+    costo_fisso: int = 600
+    costo_fisso_alto: int = 1000
+    costo_alto_da: int = 20000
     iva_margine: bool = False         # tolta il 16/10 (richiesta); POLICY_IVA_MARGINE=1 la rimette. Regime del margine (art. 36 DL 41/95), aliquota 22%
     iva_aliquota: float = .22
     manodopera_su_ricambi: float = 0.0  # manodopera esclusa (come prima): solo pezzi
@@ -601,6 +605,9 @@ def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
     gar = max(cfg.garanzia_min, int(round(R * cfg.garanzia_pct)))
     voci["garanzia"] = {"euro": gar, "origine": "stima",
                         "nota": f"accantonamento garanzia legale {int(cfg.garanzia_pct*100)}% della rivendita (min {cfg.garanzia_min} €)"}
+    cf = cfg.costo_fisso_alto if int(t["price_eur"]) > cfg.costo_alto_da else cfg.costo_fisso
+    voci["costi_commerciante"] = {"euro": int(cf), "origine": "config",
+                                  "nota": "passaggio, tagliando, pulizia, piccoli ritocchi e garanzia"}
     voci["giacenza"] = {"euro": int(round(cfg.giacenza_giorni * cfg.giacenza_euro_giorno)), "origine": "stima",
                         "nota": f"ipotesi {cfg.giacenza_giorni} giorni × {cfg.giacenza_euro_giorno:g} €/giorno"}
     ripristino = voci["ricambi"]["euro"] + voci.get("manodopera", {}).get("euro", 0)
