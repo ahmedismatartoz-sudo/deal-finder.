@@ -109,6 +109,14 @@ DOMANDE = {
     "dati_coerenti": {"type": "noul", "instructions": "Anno, chilometri, prezzo e descrizione dell'annuncio sono "
                       "coerenti e credibili tra loro?"},
     "stato": {"type": "score", "instructions": "In che stato è l'auto secondo l'annuncio?", "criteria": STATO},
+    # 25/10 (cliente): Jev fa anche da "lettore di annunci" sui dati che creano affari finti
+    "guasto": {"type": "noul", "instructions": "L'annuncio dice che l'auto non è marciante, ha guasti a motore, cambio "
+               "o frizione, spie accese, danni da riparare o è venduta per ricambi / così com'è?"},
+    "prezzo_rata": {"type": "noul", "instructions": "Il prezzo indicato NON è il prezzo intero dell'auto (è una rata "
+                    "mensile, un anticipo, un prezzo 'a partire da', un prezzo con permuta obbligatoria o un prezzo finto)?"},
+    "km_credibili": {"type": "noul", "instructions": "I chilometri dichiarati sono credibili per l'anno e per quello che "
+                     "dice la descrizione (non un errore di battitura, non un valore finto tipo 19.999 o 1.000, non in "
+                     "contraddizione con il testo)?"},
     "correzione": {"type": "score", "instructions": ISTRUZIONI + " Rispetto alla 'rivendita_stimata' dei calcoli, "
                    "a quanto si rivende realisticamente questa auto considerando stato, versione, km e annuncio?",
                    "criteria": CORREZIONE_LIVELLI},
@@ -215,6 +223,8 @@ def leggi(risposta: dict) -> dict:
             "targa_visibile": (a.get("targa_visibile") or {}).get("noul"),
             "danni_foto": (a.get("danni_foto") or {}).get("noul"),
             "foto_internet": (a.get("foto_internet") or {}).get("noul"),
+            "guasto": (a.get("guasto") or {}).get("noul"), "prezzo_rata": (a.get("prezzo_rata") or {}).get("noul"),
+            "km_credibili": (a.get("km_credibili") or {}).get("noul"),
             "token": ((risposta.get("usage") or {}).get("input_tokens") or 0)}
 
 
@@ -237,6 +247,7 @@ JOIN LATERAL (SELECT dati, categoria, margine FROM valutazioni_policy v WHERE v.
               ORDER BY v.computed_at DESC LIMIT 1) vp ON true
 LEFT JOIN decisione_ai d ON d.listing_id = l.id
 WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.computed_at < now() - interval '7 days'
+   OR d.risposta->'guasto' IS NULL                                                  -- 25/10: nuove domande
    OR (d.risposta->'targa_visibile' IS NULL AND d.computed_at < now() - interval '1 hour'
        AND EXISTS (SELECT 1 FROM listing_photos p WHERE p.listing_id = l.id))      -- rifatte con le foto
 LIMIT 3000"""

@@ -1190,6 +1190,8 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
         with connect() as conn:
             dec = {r["listing_id"]: r for r in conn.execute(
                 "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.correzione_pct, d.versione_ok, "
+                "(d.risposta->'guasto'->>'noul')::float AS guasto, (d.risposta->'prezzo_rata'->>'noul')::float AS rata, "
+                "(d.risposta->'km_credibili'->>'noul')::float AS km_ok, "
                 "(d.risposta->'answers'->'danni_foto'->>'noul')::float AS danni "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
                 "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
@@ -1220,6 +1222,17 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
             continue
         if (d["danni"] or 0) >= .7:
             c["danni_foto"] += 1
+            continue
+        # 25/10 (cliente): Jev come lettore di annunci. Fuori le auto non marcianti o con guasti dichiarati, quelle
+        # con un prezzo che non è il prezzo intero (rata, anticipo) e quelle con i km non credibili: affari finti.
+        if (d.get("guasto") or 0) >= .7:
+            c["guasto_dichiarato"] += 1
+            continue
+        if (d.get("rata") or 0) >= .7:
+            c["prezzo_non_vero"] += 1
+            continue
+        if d.get("km_ok") is not None and d["km_ok"] <= .3:
+            c["km_non_credibili"] += 1
             continue
         # 25/10 (cliente): agente controllore. Se l'AI dice che le auto di confronto non sono la stessa auto
         # (motore, versione, allestimento diversi) il margine non è affidabile: l'auto resta fuori.
