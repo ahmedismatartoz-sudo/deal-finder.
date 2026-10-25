@@ -175,6 +175,7 @@ def venduti(conn) -> dict:
         c = copy.deepcopy(base)
         for k, v in VARIANTI[nome].items():
             setattr(c, k, v)
+        c.correzione_modello = False          # l'esame misura il calcolo senza correzione (niente circolo)
         cfgs[nome] = c
     errs = defaultdict(list)
     per_modello = defaultdict(list)
@@ -200,14 +201,73 @@ def venduti(conn) -> dict:
             e = (R - vero) / vero * 100
             errs[nome].append(e)
             if nome == "attuale":
-                per_modello[f"{r['make']} {r['model']}"].append(e)
+                per_modello[(r["make"], r["model"])].append((int(r["id"]), R, vero))
     out = {"casi": len(rows)}
     for nome, es in errs.items():
         a = [abs(e) for e in es]
         out[nome] = {"n": len(es), "medio": round(stx.mean(a), 1), "mediano": round(stx.median(a), 1),
                      "con_segno": round(stx.mean(es), 1), "entro10": round(100 * sum(1 for x in a if x <= 10) / len(a)),
                      "sopra10": round(100 * sum(1 for x in es if x > 10) / len(es))}
-    mod = {k: (len(v), round(stx.mean(v), 1)) for k, v in per_modello.items() if len(v) >= 4}
+    mod = {f"{k[0]} {k[1]}": (len(v), round(stx.mean((R - x) / x * 100 for _, R, x in v), 1))
+           for k, v in per_modello.items() if len(v) >= 4}
     out["modelli_peggiori"] = sorted(mod.items(), key=lambda kv: -abs(kv[1][1]))[:10]
+    try:
+        out["correzione"] = correzioni(conn, per_modello)
+    except Exception as e:
+        conn.rollback()
+        out["correzione"] = {"errore": str(e)[:200]}
     log.warning("ESAME_VENDUTI %s", json.dumps(out, ensure_ascii=False))
     return out
+
+
+def _fattori(casi: dict) -> dict:
+    """casi: {(make, model): [(id, R, prezzo_venduto)]} → {(make, model): {n, errore_pct, fattore}}.
+    Obiettivo: R = prezzo di vendita del concessionario meno CORR_PRUDENZA (8%), così la correzione non toglie
+    la prudenza ("prezzi bassi per non gonfiare i margini"). Con pochi casi la correzione si riduce
+    (n/(n+8)); al massimo +10% in su e −20% in giù; sotto il 2% non si corregge."""
+    import os
+    import statistics as stx
+    prud = float(os.environ.get("CORR_PRUDENZA", "0.08"))
+    nmin = int(os.environ.get("CORR_N_MIN", "5"))
+    su, giu = float(os.environ.get("CORR_MAX_SU", "0.10")), float(os.environ.get("CORR_MAX_GIU", "0.20"))
+    out = {}
+    for k, v in casi.items():
+        if len(v) < nmin:
+            continue
+        errs = [(R - x * (1 - prud)) / (x * (1 - prud)) for _, R, x in v]
+        e = stx.median(errs)
+        f = -e * len(v) / (len(v) + 8)
+        f = max(-giu, min(su, f))
+        if abs(f) < .02:
+            continue
+        out[k] = {"n": len(v), "errore_pct": round(e * 100, 1), "fattore": round(f, 3)}
+    return out
+
+
+def correzioni(conn, casi: dict) -> dict:
+    """Calcola le correzioni per modello, misura onestamente se servono (si calcolano su metà delle auto vendute
+    e si provano sull'altra metà) e le scrive nella tabella correzioni_modello."""
+    import statistics as stx
+    a = {k: [c for c in v if c[0] % 2 == 0] for k, v in casi.items()}
+    b = {k: [c for c in v if c[0] % 2 == 1] for k, v in casi.items()}
+    import os
+    fa = _fattori(a)
+    q = 1 - float(os.environ.get("CORR_PRUDENZA", "0.08"))      # obiettivo: prezzo venduto meno la prudenza
+    prima, dopo = [], []
+    for k, v in b.items():
+        f = fa.get(k, {}).get("fattore", 0.0)
+        for _, R, x in v:
+            prima.append(abs(R - x * q) / (x * q) * 100)
+            dopo.append(abs(R * (1 + f) - x * q) / (x * q) * 100)
+    prova = {"auto_prova": len(prima), "errore_prima": round(stx.mean(prima), 1) if prima else None,
+             "errore_dopo": round(stx.mean(dopo), 1) if dopo else None}
+    tutte = _fattori(casi)
+    conn.execute("""CREATE TABLE IF NOT EXISTS correzioni_modello (make TEXT, model TEXT, n INT, errore_pct REAL,
+                    fattore REAL, computed_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY (make, model))""")
+    conn.execute("DELETE FROM correzioni_modello")
+    for (mk, md), d in tutte.items():
+        conn.execute("INSERT INTO correzioni_modello (make, model, n, errore_pct, fattore) VALUES (%s,%s,%s,%s,%s)",
+                     (mk, md, d["n"], d["errore_pct"], d["fattore"]))
+    conn.commit()
+    return {"modelli_corretti": len(tutte), "prova_su_meta": prova,
+            "esempi": sorted(((f"{k[0]} {k[1]}", d["fattore"]) for k, d in tutte.items()), key=lambda z: -abs(z[1]))[:8]}

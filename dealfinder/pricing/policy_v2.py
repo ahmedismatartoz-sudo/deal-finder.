@@ -176,6 +176,9 @@ class PolicyConfig:
     rivendita_commercianti: bool = False
     commercianti_min: int = 3
     commercianti_sconto: float = .08
+    # 25/10 (cliente: "metti il punto due"): correzione automatica per modello misurata sulle auto vendute in fretta
+    # dai concessionari (esame.correzioni, tabella correzioni_modello). Spenta finché POLICY_CORREZIONE_MODELLO=1.
+    correzione_modello: bool = False
     q_veloce: float = .30
     veloce_max: float = .97
     veloce_min: float = .80
@@ -813,6 +816,16 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         return out
 
     R = riv["R"]
+    if cfg.correzione_modello:
+        f = correzione_modello(t.get("make"), t.get("model"))
+        if f:
+            R2 = int(round(R * (1 + f["fattore"])))
+            out["correzione_modello"] = f
+            out["ipotesi"].append(f"correzione del modello {'+' if f['fattore'] > 0 else ''}{f['fattore']*100:.0f}%: "
+                                  f"su {f['n']} auto uguali vendute dai concessionari il calcolo sbagliava di "
+                                  f"{f['errore_pct']:+.0f}% ({R} → {R2} €)")
+            R = R2
+            out["R"] = R
     danno = t.get("damage_class") or "sconosciuto"
     if cfg.solo_sane and (danno in DANNEGGIATE or t.get("parts_cost_high") or t.get("rischio_strutturale")
                           or t.get("damage_declared")):
@@ -903,3 +916,25 @@ def riassunto(v: dict) -> dict:
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]
     return out
+
+
+_CORR = {"t": 0.0, "dati": {}}
+
+
+def correzione_modello(make, model) -> dict | None:
+    """Correzione per modello (tabella correzioni_modello, scritta da esame.correzioni ogni ESAME_ORE ore).
+    Letta dal database al massimo ogni 30 minuti; se il database non risponde non corregge niente."""
+    import time as _t
+    if not make or not model:
+        return None
+    if _t.time() - _CORR["t"] > 1800:
+        _CORR["t"] = _t.time()
+        try:
+            from ..db import connect
+            with connect() as conn:
+                rows = conn.execute("SELECT make, model, n, errore_pct, fattore FROM correzioni_modello").fetchall()
+            _CORR["dati"] = {(r["make"].lower(), r["model"].lower()): {"n": r["n"], "errore_pct": r["errore_pct"],
+                                                                       "fattore": r["fattore"]} for r in rows}
+        except Exception:
+            pass
+    return _CORR["dati"].get((str(make).lower(), str(model).lower()))
