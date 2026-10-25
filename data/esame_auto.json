@@ -1,1 +1,102 @@
-[]
+[
+ {
+  "id": 50283,
+  "rivendita": 2400,
+  "nota": "bassa: 1 confronto GPL + 7 Spark 1.0 benzina; quasi tutte Centro-Sud"
+ },
+ {
+  "id": 50688,
+  "rivendita": 3800,
+  "nota": "bassa: Musa GPL: 3 confronti, allestimenti più alti"
+ },
+ {
+  "id": 646151,
+  "rivendita": 8200,
+  "nota": "bassa: 3 Lounge da concessionario (più ricche della Young): stima forse un po' alta"
+ },
+ {
+  "id": 610712,
+  "rivendita": 5800,
+  "nota": "bassa: 3 Punto 1.2 in Lombardia"
+ },
+ {
+  "id": 434343,
+  "rivendita": 7600,
+  "nota": "bassa: BlueHDi 100 manuale, 3 confronti molto distanti (5.800–9.700 €)"
+ },
+ {
+  "id": 16442,
+  "rivendita": 9000,
+  "nota": "alta: 6 confronti quasi tutti in Lombardia"
+ },
+ {
+  "id": 55024,
+  "rivendita": 7900,
+  "nota": "media: CV non indicati (75 o 90): misti"
+ },
+ {
+  "id": 9020,
+  "rivendita": 8600,
+  "nota": "bassa: Dolcevita su 2016 = errore annuncio, usata Lounge"
+ },
+ {
+  "id": 34793,
+  "rivendita": 13100,
+  "nota": "bassa: TD4 150 automatico presunto"
+ },
+ {
+  "id": 39811,
+  "rivendita": 11000,
+  "nota": "media: manuale, confronti Centro-Sud"
+ },
+ {
+  "id": 451588,
+  "rivendita": 17200,
+  "nota": "bassa: versione non indicata (furgone 2.2 MJT); prezzo 7.500 anomalo"
+ },
+ {
+  "id": 615581,
+  "rivendita": 9100,
+  "nota": "media: 1.2 83 CV manuale, nessuna GS Line nei km"
+ },
+ {
+  "id": 431601,
+  "rivendita": 13100,
+  "nota": "media: Jogger GPL 100 CV"
+ },
+ {
+  "id": 629192,
+  "rivendita": 15650,
+  "nota": "media: Duster GPL Extreme 2022-23"
+ },
+ {
+  "id": 489944,
+  "rivendita": 14550,
+  "nota": "alta: F-Pace 2.0d 180 AWD auto, 9 confronti"
+ },
+ {
+  "id": 31602,
+  "rivendita": 15600,
+  "nota": "media: Evoque TD4 150, manuali+automatiche"
+ },
+ {
+  "id": 442308,
+  "rivendita": 17300,
+  "nota": "bassa: versione non indicata, usato 1.6 TDI 116 CV; cambio misto; annunci soprattutto Sud"
+ },
+ {
+  "id": 63944,
+  "rivendita": 15000,
+  "nota": "bassa: TD4 150 CV automatico, 4 confronti 13.200–17.300 €"
+ },
+ {
+  "id": 30905,
+  "rivendita": 19100,
+  "nota": "bassa: versione non indicata, usato 2.0 TDI 150 DSG"
+ },
+ {
+  "id": 640315,
+  "rivendita": 17700,
+  "nota": "bassa: 116 CV DSG, presa Wagon"
+ }
+]
