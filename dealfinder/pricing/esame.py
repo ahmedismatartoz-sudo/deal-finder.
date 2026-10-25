@@ -65,3 +65,68 @@ def esegui(conn) -> dict:
                "peggiori": sorted(dettagli, key=lambda z: -abs(z["errore_pct"]))[:8]}
     log.warning("ESAME %s", json.dumps(res, ensure_ascii=False))
     return res
+
+
+VARIANTI = {
+    "attuale": {},
+    "senza_riduzione_q27": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .27, "adattiva": False},
+    "senza_riduzione_q30": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .30, "adattiva": False},
+    "senza_riduzione_q35": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False},
+    "senza_riduzione_q40": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .40, "adattiva": False},
+    "senza_riduzione_q45": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .45, "adattiva": False},
+    "mediana": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .50, "adattiva": False, "veloce_max": 1.0},
+}
+
+
+def varianti(conn) -> dict:
+    """Ricalcola le auto dell'esame con diverse impostazioni del calcolo e misura l'errore di ciascuna.
+    Non cambia niente nel database: serve a scegliere la taratura con i numeri."""
+    import copy
+    import os
+    import statistics as stx
+    from . import policy_v2 as P
+    from .ricalcolo import MARKET_SQL, TARGET_COLS, _j, _rischio, valuta_con_ripiego
+    from ..store import HOME_REGION_SQL
+    from ..web import scovo
+    auto = carica()
+    if not auto:
+        return {}
+    rif = {int(x["id"]): float(x["rivendita"]) for x in auto}
+    rows = conn.execute(f"SELECT {TARGET_COLS}, l.title, l.description, l.telefono_ok FROM listings l "
+                        f"WHERE l.id = ANY(%s)", (list(rif),)).fetchall()
+    base = P.PolicyConfig.from_env()
+    mercati = {}
+    out = {}
+    for nome, over in VARIANTI.items():
+        cfg = copy.deepcopy(base)
+        for k, v in over.items():
+            setattr(cfg, k, v)
+        errs, dett = [], []
+        for r in rows:
+            key = (r["make"], r["model"], r["fuel"])
+            if not all(key):
+                continue
+            if key not in mercati:
+                mercati[key] = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                                for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
+            t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
+                     rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True)
+            try:
+                v = valuta_con_ripiego(conn, t, mercati[key], scovo.soglia(int(r["price_eur"] or 0)), cfg, {})
+            except Exception as e:
+                log.warning("ESAME_VARIANTI %s %s: %s", nome, r["id"], str(e)[:120])
+                continue
+            R = v.get("R_finale") or v.get("R")
+            if not R:
+                continue
+            e = (R - rif[r["id"]]) / rif[r["id"]] * 100
+            errs.append(e)
+            dett.append((r["id"], int(R), round(e)))
+        if errs:
+            a = [abs(e) for e in errs]
+            out[nome] = {"n": len(errs), "medio": round(stx.mean(a), 1), "mediano": round(stx.median(a), 1),
+                         "con_segno": round(stx.mean(errs), 1), "entro10": sum(1 for x in a if x <= 10)}
+            if os.environ.get("ESAME_DETTAGLI") == "1":
+                out[nome]["dettagli"] = dett
+    log.warning("ESAME_VARIANTI %s", json.dumps(out, ensure_ascii=False))
+    return out

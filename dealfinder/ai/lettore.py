@@ -103,8 +103,8 @@ def applica(conn, r: dict, d: dict) -> dict:
         cambi["version_raw"] = f"{cil.strip()} {versione}".strip()[:200]
     if d.get("prezzo_vero") is False:
         flags = list(r.get("price_flags") or [])
-        if "rata" not in flags:
-            cambi["price_flags"] = flags + ["rata"]
+        if "leasing_o_rata" not in flags:
+            cambi["price_flags"] = flags + ["leasing_o_rata"]
     if d.get("danni") is True:
         cambi["damage_declared"] = True
     if cambi:

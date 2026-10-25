@@ -1093,8 +1093,17 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     # e i dati dell'annuncio devono essere coerenti (modello indicato, anno possibile per quel modello)
     n_min = int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
 
+    from datetime import date as _date
+    km_anno_min = int(os.environ.get("SITO_KM_ANNO_MIN", "1500"))
+
     def _dati_ok(it):
         nome = (it.get("nome") or "").lower()
+        # km non credibili: un'auto di 6+ anni con meno di 1.500 km l'anno è quasi sempre un errore dell'annuncio
+        # (esame 25/10: Panda 2012 con 16.200 km, 500 del 2008 con 19.999 km)
+        anni = _date.today().year - int(it.get("anno") or _date.today().year)
+        km = it.get("km")
+        if km is not None and anni >= 6 and int(km) < km_anno_min * anni:
+            return False
         if "altro modello" in nome:
             return False
         anno = it.get("anno") or 0
@@ -1104,8 +1113,15 @@ def _regole_finali(items: list[dict]) -> list[dict]:
         return True
 
     prima = len(items)
-    pochi = [it for it in items if it.get("pv") and (it["pv"].get("n") or 0) < n_min]
-    items = [it for it in items if not (it.get("pv") and (it["pv"].get("n") or 0) < n_min)]
+    # 25/10: sotto i 3.000 € le auto uguali in vendita sono poche e la stima è debole (esame: Spark +25%, Musa +16%):
+    # lì servono almeno 8 confronti
+    n_min_eco, p_eco = int(os.environ.get("SITO_CONFRONTI_MIN_ECO", "8")), int(os.environ.get("SITO_ECO_DA", "3000"))
+
+    def _n_serve(it):
+        return n_min_eco if (it.get("prezzo") or 0) < p_eco else n_min
+
+    pochi = [it for it in items if it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it)]
+    items = [it for it in items if not (it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it))]
     dopo_n = len(items)
     items = [it for it in items if _dati_ok(it)]
     logging.getLogger("scovo").warning("REGOLE_AFFIDABILITA tolte: %d con meno di %d auto uguali, %d con dati incoerenti",
@@ -2465,6 +2481,8 @@ def _tempo_reale():
             try:
                 with connect() as conn:
                     esame.esegui(conn)
+                with connect() as conn:
+                    esame.varianti(conn)
             except Exception as e:
                 lg.warning("ESAME non riuscito: %s", str(e)[:300])
             time.sleep(float(os.environ.get("ESAME_ORE", "3")) * 3600)
