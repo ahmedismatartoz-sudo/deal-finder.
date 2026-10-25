@@ -171,6 +171,11 @@ class PolicyConfig:
     # Rivendita = prezzo che mette l'auto tra le più economiche del suo gruppo (q_veloce: 30% dei confronti costa
     # meno, 70% di più), non la mediana dei prezzi chiesti. Mai più del 3% sotto… e mai oltre il 20% sotto il mercato.
     vendita_veloce: bool = True
+    # 25/10 (cliente): rivendita dai prezzi dei COMMERCIANTI (sono loro che rivendono): mediana dei confronti di
+    # concessionari meno uno sconto per vendere in fretta. Usata solo se ci sono abbastanza confronti di commercianti.
+    rivendita_commercianti: bool = False
+    commercianti_min: int = 3
+    commercianti_sconto: float = .08
     q_veloce: float = .30
     veloce_max: float = .97
     veloce_min: float = .80
@@ -793,6 +798,14 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             riv.update(R=v, R_da="vendita veloce",
                        fascia=riv["fascia"] + f" · prezzo di vendita veloce −{(1-rapp)*100:.0f}%")
             out["ipotesi"].append(f"rivendita = prezzo per vendere in fretta ({v} €, −{(1-rapp)*100:.0f}% sul mercato): {come}")
+    if cfg.rivendita_commercianti and riv.get("R") is not None:
+        pc = [c["prezzo"] for c in validi if c.get("seller_type") == "commerciante"]
+        if len(pc) >= cfg.commercianti_min:
+            rc = int(round(percentile(pc, .5) * (1 - cfg.commercianti_sconto)))
+            riv.update(R=rc, R_da="commercianti",
+                       fascia=riv.get("fascia", "") + f" · rivendita dai prezzi di {len(pc)} commercianti −{int(cfg.commercianti_sconto*100)}%")
+            out["ipotesi"].append(f"rivendita = mediana di {len(pc)} auto uguali in vendita da commercianti "
+                                  f"({int(round(percentile(pc, .5)))} €) meno {int(cfg.commercianti_sconto*100)}% per vendere in fretta")
     out.update(riv)
     if riv["R"] is None:
         out["categoria"] = "dati_insufficienti"

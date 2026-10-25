@@ -74,6 +74,12 @@ VARIANTI = {
     "senza_riduzione_q35": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False},
     "senza_riduzione_q40": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .40, "adattiva": False},
     "senza_riduzione_q45": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .45, "adattiva": False},
+    "commercianti_5": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
+                       "rivendita_commercianti": True, "commercianti_sconto": .05},
+    "commercianti_8": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
+                       "rivendita_commercianti": True, "commercianti_sconto": .08},
+    "commercianti_12": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
+                        "rivendita_commercianti": True, "commercianti_sconto": .12},
     "mediana": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .50, "adattiva": False, "veloce_max": 1.0},
 }
 
