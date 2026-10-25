@@ -357,10 +357,12 @@ def telefoni_candidate(conn, ids) -> Counter:
     if not ids:
         return stats
     rows = conn.execute(
-        "SELECT id, source, source_id, url FROM listings WHERE id = ANY(%s) AND status='attivo' AND source IN ('autoscout24','subito') "
+        "SELECT id, source, source_id, url FROM listings WHERE id = ANY(%s) AND status='attivo' "
+        "AND (source = 'autoscout24' OR (source = 'subito' AND %s)) "
         "AND telefono_ok IS NOT TRUE AND (telefono_at IS NULL OR telefono_at < now() - make_interval(hours => %s)) "
         "ORDER BY telefono_at NULLS FIRST LIMIT %s",
-        (ids, int(os.environ.get("TEL_CAND_ORE", "12")), int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
+        (ids, os.environ.get("TEL_CAND_SUBITO", "0") == "1",       # Subito: la pagina pubblica dice sempre showPhone=false
+         int(os.environ.get("TEL_CAND_ORE", "12")), int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
     if not rows:
         return stats
     cas = _client_as() if any(r["source"] == "autoscout24" for r in rows) else None
@@ -379,9 +381,7 @@ def telefoni_candidate(conn, ids) -> Counter:
                 if sub is None:
                     from ..collectors.subito import SubitoCollector
                     sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
-                if _diag_tel_sub["n"] < 3:
-                    _diag_tel_sub["n"] += 1
-                    diag_subito_telefono(sub, r.get("source_id"), r["url"])
+                # 25/10 20:55: diagnostica tolta (scriveva nei log il nome utente del venditore: mai dati personali)
                 st, tel = subito_telefono_pagina(r["url"])
                 if st == "errore":
                     stats["errore"] += 1
