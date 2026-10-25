@@ -460,6 +460,8 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             tel = True
         if tel is False:
             st["senza_numero"] += 1               # valutata solo per la simulazione, mai pubblicata
+            if os.environ.get("UTIL_SALTA_SENZA_NUMERO", "1") == "1":
+                continue                          # 25/10: senza numero non va mai sul sito: non si ricalcola (tempo)
         if problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
             st["danni_nel_testo"] += 1
             continue
