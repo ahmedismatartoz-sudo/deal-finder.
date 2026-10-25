@@ -2499,6 +2499,22 @@ def _tempo_reale():
                 lg.warning("TEL_CANDIDATE non riuscito: %s", str(e)[:300])
             time.sleep(float(os.environ.get("TEL_CAND_MIN", "10")) * 60)
 
+    def link_annunci():
+        """25/10: link originali (pagina pubblica dell'annuncio) delle auto in LOG_URL_IDS, per il cliente."""
+        ids = [int(x) for x in os.environ.get("LOG_URL_IDS", "").split(",") if x.strip().isdigit()]
+        if not ids:
+            return
+        time.sleep(30)
+        try:
+            with connect() as conn:
+                for r in conn.execute("SELECT id, source, status, price_eur, url FROM listings WHERE id = ANY(%s)",
+                                      (ids,)).fetchall():
+                    lg.warning("URL_ANNUNCIO %s %s %s %s € %s", r["id"], r["source"], r["status"], r["price_eur"], r["url"])
+        except Exception as e:
+            lg.warning("URL_ANNUNCIO non riuscito: %s", str(e)[:200])
+
+    threading.Thread(target=link_annunci, daemon=True, name="link_annunci").start()
+
     if os.environ.get("TEL_CANDIDATE", "1") == "1":
         threading.Thread(target=telefoni_candidate, daemon=True, name="tel_candidate").start()
 
