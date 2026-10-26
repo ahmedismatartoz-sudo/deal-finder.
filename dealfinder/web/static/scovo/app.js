@@ -144,7 +144,12 @@ const topScore = c => c.gainMax * Math.min(1.6, 0.6 + c.gainMax / c.prezzo);   /
 /* 18/10: "Più guadagno" = guadagno in percentuale sul prezzo (5.000 € su 3.000 € = 167%), dalla più alta;
    a parità di percentuale vince il guadagno in euro */
 const rendePct = c => c.gainMax / Math.max(c.prezzo || 0, 1);
-const perPct = (a, b) => (rendePct(b) - rendePct(a)) || (b.gainMax - a.gainMax);
+/* 26/10 (cliente): per prime le marche più note, che si vendono più in fretta; dentro ogni gruppo vale il guadagno */
+const MARCHE_1 = ["bmw","mercedes","fiat","volkswagen","vw","audi","toyota"];
+const MARCHE_2 = ["renault","peugeot","ford","opel","citro","dacia","jeep","kia","hyundai","skoda","škoda","seat","cupra","nissan","mini","lancia","alfa","volvo","land rover","suzuki","mazda","smart"];
+const gruppoMarca = c => { const m = String(c.marca || c.nome || "").toLowerCase();
+  return MARCHE_1.some(x => m.startsWith(x)) ? 0 : MARCHE_2.some(x => m.startsWith(x)) ? 1 : 2; };
+const perPct = (a, b) => (gruppoMarca(a) - gruppoMarca(b)) || (rendePct(b) - rendePct(a)) || (b.gainMax - a.gainMax);
 function ordinaLista(s, arr){
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
