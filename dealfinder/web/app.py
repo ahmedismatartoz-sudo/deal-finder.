@@ -1584,10 +1584,10 @@ def _forzate_sito(gia: set, opens: dict) -> list:
     return out
 
 
-_dump_fatto = {"ok": False}
+_dump_fatto = {"t": 0.0}
 
 
-def _dump_candidati(pool: list[dict]) -> None:
+def _dump_candidati(pool: list[dict], sul_sito: set | None = None) -> None:
     """26/10 (cliente: "analizza e sceglimi tu 100 auto dei candidati"): una volta, nei log, tutte le auto di privati
     con il numero e fino a 150.000 km, con i numeri del calcolo e il link dell'annuncio. Niente dati del venditore."""
     lg = logging.getLogger("scovo")
@@ -1599,7 +1599,9 @@ def _dump_candidati(pool: list[dict]) -> None:
         righe.append({"id": it["id"], "auto": it.get("nome"), "anno": it.get("anno"),
                       "km": it.get("km"), "carb": it.get("carb"), "fonte": it.get("fonte"), "prezzo": it.get("prezzo"),
                       "M": pv.get("M"), "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine"),
-                      "n": pv.get("n"), "cat": pv.get("categoria"), "zona": it.get("zona")})
+                      "n": pv.get("n"), "cat": pv.get("categoria"), "zona": it.get("zona"),
+                      "sito": (it["id"] in sul_sito) if sul_sito is not None else None,
+                      "metodo": pv.get("metodo"), "livello": pv.get("livello")})
     for k in range(0, len(righe), 40):
         lg.warning("DUMP_CANDIDATI %d/%d %s", k, len(righe), json.dumps(righe[k:k + 40], ensure_ascii=False))
     lg.warning("DUMP_CANDIDATI_FINE %d", len(righe))
@@ -1646,10 +1648,11 @@ def _calcola_elenco() -> None:
                     opens[it["id"]] = int(r["opens"] or 0)
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
-    if os.environ.get("DUMP_CANDIDATI") == "1" and not _dump_fatto["ok"]:
-        _dump_fatto["ok"] = True
+    _pool_revisione = None
+    if os.environ.get("DUMP_CANDIDATI") == "1" and time.time() - _dump_fatto.get("t", 0) > float(os.environ.get("DUMP_ORE", "3")) * 3600:
+        _dump_fatto["t"] = time.time()
         try:
-            _dump_candidati(_solo_privati(_solo_con_telefono([dict(it) for it in items])))
+            _pool_revisione = _solo_privati(_solo_con_telefono([dict(it) for it in items]))
         except Exception as e:
             logging.getLogger("scovo").warning("DUMP_CANDIDATI non riuscito: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
@@ -1661,6 +1664,11 @@ def _calcola_elenco() -> None:
     _prezzi_trattati(items)
     items = _margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))
     _elenco.update(t=time.time(), items=items, opens=opens)
+    if _pool_revisione is not None:
+        try:
+            _dump_candidati(_pool_revisione, {it["id"] for it in items})
+        except Exception as e:
+            logging.getLogger("scovo").warning("DUMP_CANDIDATI non riuscito: %s", str(e)[:200])
     _log_controllo_finale(items)
     from collections import Counter
     c = Counter()
@@ -2723,25 +2731,30 @@ def _tempo_reale():
     threading.Thread(target=icona_telefono, daemon=True, name="icona_tel").start()
 
     def subito_completo():
-        """25/10: lettura completa di Subito entro 100 km (una volta, SUBITO_COMPLETO=1), poi si rimette a 0."""
+        """26/10 (cliente: "in modo permanente"): lettura completa di Subito entro 100 km ogni notte
+        (SUBITO_COMPLETO=1, dopo le SUBITO_COMPLETO_ORA UTC, default 1), una volta al giorno, prima del ricalcolo delle 6."""
         if os.environ.get("SUBITO_COMPLETO", "0") != "1":
             return
         time.sleep(int(os.environ.get("SUBITO_COMPLETO_RITARDO_S", "120")))
-        try:
-            from ..db import connect as _c, log_job
-            from ..pipeline import tempo_reale as tr
-            giorno = time.strftime("%Y-%m-%d")
-            with _c() as conn:
-                if conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("subito_completo:" + giorno,)).fetchone():
-                    return
-                fine = log_job(conn, "subito_completo:" + giorno)
-                st = tr.subito_completo(conn)
-                fine(True, st)
-            _tel_cache.clear()
-            _elenco["t"] = 0.0
-            _aggiorna_elenco(attendi=False)
-        except Exception as e:
-            lg.warning("SUBITO_COMPLETO non riuscito: %s", str(e)[:300])
+        while True:
+            try:
+                from ..db import connect as _c, log_job
+                from ..pipeline import tempo_reale as tr
+                giorno = time.strftime("%Y-%m-%d", time.gmtime())
+                if time.gmtime().tm_hour >= int(os.environ.get("SUBITO_COMPLETO_ORA", "1")):
+                    with _c() as conn:
+                        fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("subito_completo:" + giorno,)).fetchone()
+                    if not fatto:
+                        with _c() as conn:
+                            fine = log_job(conn, "subito_completo:" + giorno)
+                            st = tr.subito_completo(conn)
+                            fine(True, st)
+                        _tel_cache.clear()
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False)
+            except Exception as e:
+                lg.warning("SUBITO_COMPLETO non riuscito: %s", str(e)[:300])
+            time.sleep(1800)
 
     threading.Thread(target=subito_completo, daemon=True, name="subito_completo").start()
 
