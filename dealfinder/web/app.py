@@ -1563,6 +1563,27 @@ def _forzate_sito(gia: set, opens: dict) -> list:
     return out
 
 
+_dump_fatto = {"ok": False}
+
+
+def _dump_candidati(pool: list[dict]) -> None:
+    """26/10 (cliente: "analizza e sceglimi tu 100 auto dei candidati"): una volta, nei log, tutte le auto di privati
+    con il numero e fino a 150.000 km, con i numeri del calcolo e il link dell'annuncio. Niente dati del venditore."""
+    lg = logging.getLogger("scovo")
+    righe = []
+    for it in pool:
+        pv = it.get("pv") or {}
+        if (it.get("km") or 0) > 150000 or not pv.get("M"):
+            continue
+        righe.append({"id": it["id"], "auto": it.get("nome"), "anno": it.get("anno"),
+                      "km": it.get("km"), "carb": it.get("carb"), "fonte": it.get("fonte"), "prezzo": it.get("prezzo"),
+                      "M": pv.get("M"), "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine"),
+                      "n": pv.get("n"), "cat": pv.get("categoria"), "zona": it.get("zona")})
+    for k in range(0, len(righe), 40):
+        lg.warning("DUMP_CANDIDATI %d/%d %s", k, len(righe), json.dumps(righe[k:k + 40], ensure_ascii=False))
+    lg.warning("DUMP_CANDIDATI_FINE %d", len(righe))
+
+
 def _calcola_elenco() -> None:
     t0 = time.time()
     with connect() as conn:
@@ -1604,6 +1625,12 @@ def _calcola_elenco() -> None:
                     opens[it["id"]] = int(r["opens"] or 0)
         except Exception as e:
             logging.getLogger("scovo").warning("sotto 1.000 non caricate: %s", str(e)[:200])
+    if os.environ.get("DUMP_CANDIDATI") == "1" and not _dump_fatto["ok"]:
+        _dump_fatto["ok"] = True
+        try:
+            _dump_candidati(_solo_privati(_solo_con_telefono([dict(it) for it in items])))
+        except Exception as e:
+            logging.getLogger("scovo").warning("DUMP_CANDIDATI non riuscito: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
     items += _forzate_sito({it["id"] for it in items}, opens)
     _prezzi_trattati(items)
