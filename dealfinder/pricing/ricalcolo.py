@@ -458,6 +458,12 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                 False if r["telefono_ok"] is False else None)
         else:
             tel = True
+        # 26/10 (cliente: "il ricalcolo mi serve prima delle 15"): UTIL_SOLO_SITO=1 valuta solo le auto che possono
+        # andare sul sito (privati; Subito solo con il numero). I confronti restano tutti (mercato completo).
+        if os.environ.get("UTIL_SOLO_SITO", "0") == "1" and (
+                r.get("seller_type") == "commerciante" or (r["source"] == "subito" and tel is not True)):
+            st["saltata_non_da_sito"] += 1
+            continue
         if tel is False:
             st["senza_numero"] += 1               # valutata solo per la simulazione, mai pubblicata
             if os.environ.get("UTIL_SALTA_SENZA_NUMERO", "1") == "1":
