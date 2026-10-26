@@ -1665,8 +1665,9 @@ def _calcola_elenco() -> None:
     _forz = _forzate_sito(set(), opens)
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
-    _prezzi_trattati(items)
     items = _margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))
+    # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
+    _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
     if _pool_revisione is not None:
         try:

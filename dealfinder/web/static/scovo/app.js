@@ -153,7 +153,13 @@ const perPct = (a, b) => (gruppoMarca(a) - gruppoMarca(b)) || (rendePct(b) - ren
 function ordinaLista(s, arr){
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
-  if (s.sort === "guadagno") return arr.sort(perPct).map(c => Object.assign(c, {_grp: "all"}));
+  if (s.sort === "guadagno") {
+    // 26/10 (cliente): in cima le nostre migliori scelte a mano (data/vetrina.json), poi tutte le altre dalla migliore
+    const vet = arr.filter(c => c.vetrina != null).sort((a, b) => a.vetrina - b.vetrina);
+    const altre = arr.filter(c => c.vetrina == null).sort(perPct);
+    if (!vet.length) return altre.map(c => Object.assign(c, {_grp: "all"}));
+    return vet.map(c => Object.assign(c, {_grp: "top"})).concat(altre.map(c => Object.assign(c, {_grp: "rest"})));
+  }
   const care = [], rest = [];
   for (const c of arr) (c.prezzo > CARE ? care : rest).push(c);
   let topIds = new Set();
