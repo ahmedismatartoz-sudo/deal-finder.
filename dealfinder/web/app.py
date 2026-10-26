@@ -2645,6 +2645,46 @@ def _tempo_reale():
 
     threading.Thread(target=rivaluta_pochi_confronti, daemon=True, name="rivaluta_pochi").start()
 
+    def rivaluta_sito_vecchie():
+        """26/10 (cliente: "c'erano tantissime auto valide sul sito, perché le hai tolte? ricontrollale"): una volta,
+        le auto di privati che il 24 e il 25/10 erano opportunità/candidate si rivalutano col metodo di oggi; nei log
+        quante tornano e, per le altre, il motivo."""
+        if os.environ.get("RIVALUTA_VECCHIE", "0") != "1":
+            return
+        time.sleep(60)
+        try:
+            from collections import Counter
+            from ..pipeline.tempo_reale import valuta_e_pubblica
+            with connect() as conn:
+                ids = [r["listing_id"] for r in conn.execute("""
+                    SELECT DISTINCT v.listing_id FROM valutazioni_policy v
+                    JOIN listings l ON l.id = v.listing_id AND l.status = 'attivo'
+                     AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
+                    WHERE v.computed_at >= '2026-10-24' AND v.computed_at < '2026-10-26 06:00'
+                      AND v.categoria IN ('opportunita', 'candidato')""").fetchall()]
+            tot = Counter()
+            for k in range(0, len(ids), 150):
+                with connect() as conn:
+                    st = Counter()
+                    valuta_e_pubblica(conn, ids[k:k + 150], st)
+                    conn.commit()
+                    tot.update(st)
+                time.sleep(2)
+            with connect() as conn:
+                mot = conn.execute(r"""
+                    SELECT u.categoria, regexp_replace(COALESCE(u.dati->'motivi'->>0, ''), '\d+', 'N', 'g') AS m, count(*) AS n
+                    FROM (SELECT DISTINCT ON (listing_id) listing_id, categoria, dati FROM valutazioni_policy
+                          WHERE listing_id = ANY(%s) ORDER BY listing_id, computed_at DESC) u
+                    GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 20""", (ids,)).fetchall()
+            lg.warning("RIVALUTA_VECCHIE %d auto ricontrollate: %s motivi=%s", len(ids), dict(tot),
+                       json.dumps([[r["categoria"], r["m"][:90], r["n"]] for r in mot], ensure_ascii=False))
+            _elenco["t"] = 0.0
+            _aggiorna_elenco(attendi=False)
+        except Exception as e:
+            lg.warning("RIVALUTA_VECCHIE non riuscito: %s", str(e)[:300])
+
+    threading.Thread(target=rivaluta_sito_vecchie, daemon=True, name="rivaluta_vecchie").start()
+
     def icona_telefono():
         if os.environ.get("DIAG_ICONA_TEL", "0") != "1":
             return
