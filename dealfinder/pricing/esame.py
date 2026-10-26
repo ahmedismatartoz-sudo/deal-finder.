@@ -81,6 +81,10 @@ VARIANTI = {
     "commercianti_12": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
                         "rivendita_commercianti": True, "commercianti_sconto": .12},
     "mediana": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .50, "adattiva": False, "veloce_max": 1.0},
+    # 26/10 (cliente: "allarga un po' la ricerca delle auto uguali"): se le auto uguali strette sono meno di 5,
+    # si prendono anche anno ±2 e km ±40.000 (sempre stesso motore, prezzi corretti per anno e km)
+    "amplia_2_40": {"amplia": True, "anni_tol_2": 2, "km_tol_2": 40000},
+    "amplia_2_50": {"amplia": True, "anni_tol_2": 2, "km_tol_2": 50000},
 }
 
 
@@ -148,7 +152,7 @@ WHERE l.status = 'scomparso' AND l.seller_type = 'commerciante'
   AND l.mileage_km IS NOT NULL AND l.year IS NOT NULL AND {home}
 ORDER BY md5(l.id::text) LIMIT %(lim)s"""
 
-VARIANTI_VENDUTI = ("attuale", "senza_riduzione_q40", "commercianti_5", "commercianti_8", "commercianti_12")
+VARIANTI_VENDUTI = ("attuale", "amplia_2_40", "amplia_2_50")
 
 
 def venduti(conn) -> dict:
