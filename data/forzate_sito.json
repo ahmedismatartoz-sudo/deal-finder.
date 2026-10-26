@@ -510,14 +510,6 @@
   "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 50688,
-  "M": 6308,
-  "R": 5046,
-  "n": 5,
-  "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
- },
- {
   "id": 613398,
   "M": 4611,
   "R": 4315,
@@ -826,14 +818,6 @@
   "M": 19487,
   "R": 17928,
   "n": 6,
-  "sconto": 0,
-  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 628422,
-  "M": 45930,
-  "R": 43633,
-  "n": 5,
   "sconto": 0,
   "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
  },
@@ -1276,5 +1260,29 @@
   "n": 19,
   "sconto": 0,
   "nota": "revisione 26/10 21:20"
+ },
+ {
+  "id": 648244,
+  "M": 32129,
+  "R": 28273,
+  "n": 6,
+  "sconto": 0,
+  "nota": "controllo 26/10 22:15: pochi confronti, rivendita prudente = mercato −12%"
+ },
+ {
+  "id": 640021,
+  "M": 31822,
+  "R": 28003,
+  "n": 5,
+  "sconto": 0,
+  "nota": "controllo 26/10 22:15: pochi confronti, rivendita prudente = mercato −12%"
+ },
+ {
+  "id": 628422,
+  "M": 45930,
+  "R": 40418,
+  "n": 5,
+  "sconto": 0,
+  "nota": "controllo 26/10 22:15: pochi confronti, rivendita prudente = mercato −12%"
  }
 ]
