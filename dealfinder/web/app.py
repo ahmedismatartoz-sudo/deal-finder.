@@ -2612,6 +2612,39 @@ def _tempo_reale():
 
     threading.Thread(target=diag_motivi, daemon=True, name="diag_motivi").start()
 
+    def rivaluta_pochi_confronti():
+        """26/10 (cliente: "servono molte più auto"): una volta, subito, rivaluta con la ricerca allargata
+        (anno ±2, km ±50.000) le auto di privati rimaste "dati insufficienti" per pochi confronti, a blocchi."""
+        if os.environ.get("RIVALUTA_POCHI", "0") != "1":
+            return
+        time.sleep(90)
+        try:
+            from collections import Counter
+            from ..pipeline.tempo_reale import valuta_e_pubblica
+            with connect() as conn:
+                ids = [r["listing_id"] for r in conn.execute("""
+                    SELECT u.listing_id FROM (SELECT DISTINCT ON (listing_id) listing_id, categoria, dati
+                          FROM valutazioni_policy WHERE computed_at > now() - interval '40 hours'
+                          ORDER BY listing_id, computed_at DESC) u
+                    JOIN listings l ON l.id = u.listing_id AND l.status = 'attivo'
+                     AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
+                    WHERE u.categoria = 'dati_insufficienti' AND u.dati::text LIKE '%%confronti validi%%'""").fetchall()]
+            tot = Counter()
+            for k in range(0, len(ids), 150):
+                with connect() as conn:
+                    st = Counter()
+                    valuta_e_pubblica(conn, ids[k:k + 150], st)
+                    conn.commit()
+                    tot.update(st)
+                time.sleep(2)
+            lg.warning("RIVALUTA_POCHI %d auto rivalutate: %s", len(ids), dict(tot))
+            _elenco["t"] = 0.0
+            _aggiorna_elenco(attendi=False)
+        except Exception as e:
+            lg.warning("RIVALUTA_POCHI non riuscito: %s", str(e)[:300])
+
+    threading.Thread(target=rivaluta_pochi_confronti, daemon=True, name="rivaluta_pochi").start()
+
     def icona_telefono():
         if os.environ.get("DIAG_ICONA_TEL", "0") != "1":
             return
