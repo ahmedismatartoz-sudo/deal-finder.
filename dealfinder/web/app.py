@@ -1109,6 +1109,17 @@ def _regole_finali(items: list[dict]) -> list[dict]:
                 it["pv"] = dict(pv, margine=m2, R=cap, R_finale=cap, margine_prima_tetto=int(pv["margine"]))
         tenute_t.append(it)
     items = tenute_t
+    # 26/10 (cliente: "togli quelle gonfiate"): margine oltre il 100% del prezzo E oltre 3.000 € = quasi sempre
+    # truffa o confronto sbagliato (es. Maggiolino Cabrio a 4.999 € con 13.000 € di margine). Le auto economiche
+    # molto sotto il mercato (margine fino a 3.000 €) restano, come da regola del cliente.
+    g_pct = float(os.environ.get("SITO_GONFIATE_PCT", "100")) / 100
+    g_eur = int(os.environ.get("SITO_GONFIATE_EURO", "3000"))
+    prima_g = len(items)
+    items = [it for it in items if not (
+        (it.get("pv") or {}).get("margine") is not None and it.get("prezzo")
+        and int(it["pv"]["margine"]) > g_eur and int(it["pv"]["margine"]) > g_pct * int(it["prezzo"]))]
+    logging.getLogger("scovo").warning("GONFIATE tolte %d (margine oltre %d%% del prezzo e oltre %d €)",
+                                       prima_g - len(items), int(g_pct * 100), g_eur)
     logging.getLogger("scovo").warning("TETTO_RIVENDITA %d abbassate a M−%d%%, %d tolte perché il margine non basta più",
                                        abbassate, int(tetto_pct * 100), tolte_tetto)
     prima = len(items)
