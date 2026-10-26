@@ -2592,6 +2592,26 @@ def _tempo_reale():
 
     threading.Thread(target=link_annunci, daemon=True, name="link_annunci").start()
 
+    def diag_motivi():
+        """26/10: perché tante auto restano "dati insufficienti" (63% delle valutate): conteggio dei motivi."""
+        if os.environ.get("DIAG_MOTIVI", "0") != "1":
+            return
+        time.sleep(45)
+        try:
+            with connect() as conn:
+                rows = conn.execute(r"""
+                    SELECT regexp_replace(COALESCE(u.dati->'motivi'->>0, '?'), '\d+', 'N', 'g') AS m,
+                           COALESCE(l.seller_type, 'privato') AS st, count(*) AS n
+                    FROM (SELECT DISTINCT ON (listing_id) listing_id, categoria, dati FROM valutazioni_policy
+                          WHERE computed_at > now() - interval '30 hours' ORDER BY listing_id, computed_at DESC) u
+                    JOIN listings l ON l.id = u.listing_id AND l.status = 'attivo'
+                    WHERE u.categoria = 'dati_insufficienti' GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 30""").fetchall()
+            lg.warning("DIAG_MOTIVI %s", json.dumps([[r["m"][:110], r["st"], r["n"]] for r in rows], ensure_ascii=False))
+        except Exception as e:
+            lg.warning("DIAG_MOTIVI non riuscito: %s", str(e)[:200])
+
+    threading.Thread(target=diag_motivi, daemon=True, name="diag_motivi").start()
+
     def icona_telefono():
         if os.environ.get("DIAG_ICONA_TEL", "0") != "1":
             return
