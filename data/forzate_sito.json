@@ -500,5 +500,109 @@
   "n": 13,
   "sconto": 0,
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 30913,
+  "M": 19200,
+  "R": 17234,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 55043,
+  "M": 9819,
+  "R": 8641,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 186875,
+  "M": 38500,
+  "R": 33880,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 435964,
+  "M": 12550,
+  "R": 10534,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 450072,
+  "M": 7780,
+  "R": 6846,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 637227,
+  "M": 29500,
+  "R": 26895,
+  "n": 12,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 1986,
+  "M": 25700,
+  "R": 23385,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 13550,
+  "M": 18994,
+  "R": 16925,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 50352,
+  "M": 4126,
+  "R": 3919,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 644300,
+  "M": 4900,
+  "R": 4655,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 50688,
+  "M": 6308,
+  "R": 5046,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 24034,
+  "M": 5900,
+  "R": 5373,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 9502,
+  "M": 4523,
+  "R": 3904,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
  }
 ]
