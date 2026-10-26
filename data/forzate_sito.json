@@ -318,34 +318,10 @@
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 595617,
-  "M": 25732,
-  "R": 23159,
-  "n": 6,
-  "sconto": 0,
-  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
   "id": 453032,
   "M": 13729,
   "R": 12240,
   "n": 9,
-  "sconto": 0,
-  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 452306,
-  "M": 12200,
-  "R": 10948,
-  "n": 6,
-  "sconto": 0,
-  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 60545,
-  "M": 17000,
-  "R": 12222,
-  "n": 7,
   "sconto": 0,
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  },
@@ -370,14 +346,6 @@
   "M": 8300,
   "R": 6873,
   "n": 10,
-  "sconto": 0,
-  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 646977,
-  "M": 6022,
-  "R": 4818,
-  "n": 12,
   "sconto": 0,
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  },
@@ -410,14 +378,6 @@
   "M": 13259,
   "R": 10607,
   "n": 36,
-  "sconto": 0,
-  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 58672,
-  "M": 11122,
-  "R": 10010,
-  "n": 7,
   "sconto": 0,
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  },
@@ -478,14 +438,6 @@
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 434903,
-  "M": 4900,
-  "R": 4410,
-  "n": 5,
-  "sconto": 0,
-  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
   "id": 23617,
   "M": 3646,
   "R": 3281,
@@ -500,14 +452,6 @@
   "n": 13,
   "sconto": 0,
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 30913,
-  "M": 19200,
-  "R": 17234,
-  "n": 6,
-  "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
  },
  {
   "id": 55043,
@@ -566,22 +510,6 @@
   "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 50352,
-  "M": 4126,
-  "R": 3919,
-  "n": 10,
-  "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
- },
- {
-  "id": 644300,
-  "M": 4900,
-  "R": 4655,
-  "n": 5,
-  "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
- },
- {
   "id": 50688,
   "M": 6308,
   "R": 5046,
@@ -590,19 +518,763 @@
   "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 24034,
-  "M": 5900,
-  "R": 5373,
-  "n": 5,
+  "id": 613398,
+  "M": 4611,
+  "R": 4315,
+  "n": 7,
   "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 9502,
-  "M": 4523,
-  "R": 3904,
+  "id": 571143,
+  "M": 13400,
+  "R": 12215,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 62930,
+  "M": 13500,
+  "R": 12668,
+  "n": 12,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 450785,
+  "M": 10061,
+  "R": 8049,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 454319,
+  "M": 19329,
+  "R": 15772,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 453545,
+  "M": 15500,
+  "R": 13397,
   "n": 5,
   "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 450181,
+  "M": 8100,
+  "R": 7138,
+  "n": 28,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 613550,
+  "M": 4500,
+  "R": 4275,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 2860,
+  "M": 3080,
+  "R": 2849,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 23638,
+  "M": 3252,
+  "R": 3089,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 442925,
+  "M": 3875,
+  "R": 3681,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 435468,
+  "M": 4351,
+  "R": 3971,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 57096,
+  "M": 9201,
+  "R": 7760,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 58894,
+  "M": 10649,
+  "R": 9756,
+  "n": 12,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 62666,
+  "M": 15563,
+  "R": 13606,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 63555,
+  "M": 14300,
+  "R": 13254,
+  "n": 9,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 436183,
+  "M": 16384,
+  "R": 15564,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 66378,
+  "M": 17918,
+  "R": 16815,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 70761,
+  "M": 22160,
+  "R": 21052,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 438595,
+  "M": 31940,
+  "R": 30244,
+  "n": 34,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 76087,
+  "M": 46000,
+  "R": 41150,
+  "n": 15,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 43843,
+  "M": 19000,
+  "R": 17830,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 26911,
+  "M": 9850,
+  "R": 8119,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 59384,
+  "M": 10611,
+  "R": 9762,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 456954,
+  "M": 23159,
+  "R": 21016,
+  "n": 9,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 458943,
+  "M": 31090,
+  "R": 28723,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 18723,
+  "M": 15006,
+  "R": 13316,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 439189,
+  "M": 4837,
+  "R": 4517,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 454680,
+  "M": 17000,
+  "R": 15326,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 458939,
+  "M": 31103,
+  "R": 29497,
+  "n": 30,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 459791,
+  "M": 33771,
+  "R": 32082,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 68811,
+  "M": 28739,
+  "R": 27302,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 19682,
+  "M": 18973,
+  "R": 17455,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 653490,
+  "M": 27742,
+  "R": 26354,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 639954,
+  "M": 22729,
+  "R": 19890,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 454062,
+  "M": 17500,
+  "R": 16100,
+  "n": 17,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 22586,
+  "M": 18376,
+  "R": 16906,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 638737,
+  "M": 28557,
+  "R": 27129,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 69215,
+  "M": 31927,
+  "R": 29304,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 652028,
+  "M": 22000,
+  "R": 20240,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 654351,
+  "M": 9500,
+  "R": 8457,
+  "n": 9,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 19680,
+  "M": 19487,
+  "R": 17928,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 628422,
+  "M": 45930,
+  "R": 43633,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 457102,
+  "M": 22874,
+  "R": 21594,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 61512,
+  "M": 12930,
+  "R": 11896,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 36199,
+  "M": 23743,
+  "R": 21787,
+  "n": 18,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 433617,
+  "M": 21905,
+  "R": 20153,
+  "n": 14,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 72200,
+  "M": 23326,
+  "R": 21887,
+  "n": 17,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 43562,
+  "M": 17413,
+  "R": 16020,
+  "n": 18,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 595676,
+  "M": 26750,
+  "R": 25412,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 649716,
+  "M": 5848,
+  "R": 5436,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 654124,
+  "M": 8291,
+  "R": 7700,
+  "n": 36,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 643647,
+  "M": 20901,
+  "R": 17888,
+  "n": 13,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 643016,
+  "M": 26677,
+  "R": 25343,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 93349,
+  "M": 17292,
+  "R": 15909,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 15745,
+  "M": 4550,
+  "R": 4014,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 652016,
+  "M": 23317,
+  "R": 21316,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 414469,
+  "M": 18324,
+  "R": 17186,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 72098,
+  "M": 25244,
+  "R": 23224,
+  "n": 11,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 616113,
+  "M": 13200,
+  "R": 11343,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 613265,
+  "M": 4600,
+  "R": 4370,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 638688,
+  "M": 5507,
+  "R": 4942,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 619807,
+  "M": 5474,
+  "R": 5200,
+  "n": 12,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 615069,
+  "M": 9924,
+  "R": 8602,
+  "n": 11,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 28632,
+  "M": 14985,
+  "R": 12396,
+  "n": 14,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 619889,
+  "M": 11750,
+  "R": 10885,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 543830,
+  "M": 9450,
+  "R": 8280,
+  "n": 23,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 610645,
+  "M": 5675,
+  "R": 5230,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 450690,
+  "M": 8900,
+  "R": 7876,
+  "n": 21,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 614617,
+  "M": 8100,
+  "R": 7140,
+  "n": 28,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 58477,
+  "M": 10565,
+  "R": 9181,
+  "n": 29,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 444637,
+  "M": 9112,
+  "R": 7290,
+  "n": 31,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 628785,
+  "M": 4300,
+  "R": 4085,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 55813,
+  "M": 7891,
+  "R": 7260,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 9020,
+  "M": 8490,
+  "R": 7727,
+  "n": 59,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 451907,
+  "M": 10666,
+  "R": 9813,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 570945,
+  "M": 9300,
+  "R": 8154,
+  "n": 82,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 449338,
+  "M": 5730,
+  "R": 4946,
+  "n": 9,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 449488,
+  "M": 5384,
+  "R": 4996,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 541969,
+  "M": 3950,
+  "R": 3752,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 571262,
+  "M": 15445,
+  "R": 14067,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 38606,
+  "M": 26950,
+  "R": 24191,
+  "n": 11,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 49558,
+  "M": 36221,
+  "R": 33500,
+  "n": 14,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 35497,
+  "M": 18837,
+  "R": 16468,
+  "n": 7,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 460200,
+  "M": 38950,
+  "R": 37002,
+  "n": 11,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 434391,
+  "M": 16245,
+  "R": 15132,
+  "n": 44,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 72793,
+  "M": 26342,
+  "R": 24930,
+  "n": 14,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 458476,
+  "M": 27038,
+  "R": 25686,
+  "n": 23,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 434363,
+  "M": 11182,
+  "R": 9075,
+  "n": 12,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 32039,
+  "M": 19000,
+  "R": 17835,
+  "n": 9,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 453908,
+  "M": 16500,
+  "R": 14108,
+  "n": 5,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 626071,
+  "M": 14557,
+  "R": 13715,
+  "n": 36,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 37817,
+  "M": 21954,
+  "R": 18090,
+  "n": 10,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 647157,
+  "M": 21819,
+  "R": 20073,
+  "n": 8,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 23984,
+  "M": 4500,
+  "R": 4050,
+  "n": 6,
+  "sconto": 0,
+  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
  }
 ]
