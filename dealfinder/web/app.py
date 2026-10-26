@@ -1569,7 +1569,7 @@ def _forzate_sito(gia: set, opens: dict) -> list:
             opens[it["id"]] = int(r["opens"] or 0)
     except Exception as ex:
         logging.getLogger("scovo").warning("forzate sito non caricate: %s", str(ex)[:200])
-    logging.getLogger("scovo").warning("FORZATE_SITO %d su %d", len(out), len(voci))
+    logging.getLogger("scovo").warning("FORZATE_SITO %d su %d", len(out), len(voci) + len(per_id))
     return out
 
 
@@ -1642,7 +1642,11 @@ def _calcola_elenco() -> None:
         except Exception as e:
             logging.getLogger("scovo").warning("DUMP_CANDIDATI non riuscito: %s", str(e)[:200])
     items = _regole_finali(_solo_con_telefono(items))
-    items += _forzate_sito({it["id"] for it in items}, opens)
+    # 26/10: le auto scelte a mano sostituiscono la stessa auto arrivata dal calcolo (così Jev non le toglie per
+    # "confronti non uguali": restano col margine prudente scelto a mano, min(calcolo, mercato −5%))
+    _forz = _forzate_sito(set(), opens)
+    _ids_f = {f["id"] for f in _forz}
+    items = [it for it in items if it["id"] not in _ids_f] + _forz
     _prezzi_trattati(items)
     items = _margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))
     _elenco.update(t=time.time(), items=items, opens=opens)
