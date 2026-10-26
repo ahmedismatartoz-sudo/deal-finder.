@@ -2685,6 +2685,31 @@ def _tempo_reale():
 
     threading.Thread(target=rivaluta_sito_vecchie, daemon=True, name="rivaluta_vecchie").start()
 
+    def diag_campi():
+        """26/10 (cliente: "lo scraper legge male? AutoScout dà tutte le informazioni"): quanti annunci attivi hanno
+        i dati che servono al confronto (kW, cambio, versione/cilindrata, km, anno), per sito."""
+        if os.environ.get("DIAG_CAMPI", "0") != "1":
+            return
+        time.sleep(40)
+        try:
+            with connect() as conn:
+                rows = conn.execute(r"""
+                    SELECT source, COALESCE(seller_type,'?') AS st, count(*) AS n,
+                      round(100.0*avg((power_kw IS NOT NULL)::int)) AS kw,
+                      round(100.0*avg((gearbox IS NOT NULL)::int)) AS cambio,
+                      round(100.0*avg((version_raw IS NOT NULL AND version_raw <> '')::int)) AS versione,
+                      round(100.0*avg((COALESCE(version_raw,'') || ' ' || COALESCE(title,'') ~ '\m\d\.\d\M')::int)) AS cilindrata,
+                      round(100.0*avg((power_kw IS NOT NULL OR (COALESCE(version_raw,'') || ' ' || COALESCE(title,'') ~ '\m\d\.\d\M'))::int)) AS motore,
+                      round(100.0*avg((mileage_km IS NOT NULL)::int)) AS km, round(100.0*avg((year IS NOT NULL)::int)) AS anno,
+                      round(100.0*avg((fuel IS NOT NULL)::int)) AS carb
+                    FROM listings WHERE status='attivo' AND last_seen_at > now() - interval '14 days'
+                    GROUP BY 1, 2 ORDER BY 3 DESC""").fetchall()
+            lg.warning("DIAG_CAMPI %s", json.dumps([dict(r) for r in rows], default=str, ensure_ascii=False))
+        except Exception as e:
+            lg.warning("DIAG_CAMPI non riuscito: %s", str(e)[:300])
+
+    threading.Thread(target=diag_campi, daemon=True, name="diag_campi").start()
+
     def icona_telefono():
         if os.environ.get("DIAG_ICONA_TEL", "0") != "1":
             return
