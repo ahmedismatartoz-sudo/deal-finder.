@@ -1254,6 +1254,11 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
             c["non_decise"] += 1
             tenute.append(it)
             continue
+        if str((it.get("pv") or {}).get("etichetta") or "").startswith("Selezione") and not (
+                float(d.get("guasto") or 0) >= 0.7):
+            c["selezione_a_mano"] += 1          # 26/10: scelte a mano, Jev toglie solo i guasti dichiarati
+            tenute.append(it)
+            continue
         # 24/10 sera (cliente): se c'è il numero del venditore l'auto resta anche se il prezzo sembra troppo basso;
         # il sospetto truffa toglie solo le auto senza numero.
         if (d["truffa"] or 0) >= tr:
