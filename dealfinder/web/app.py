@@ -1126,6 +1126,10 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     items = [it for it in items if not (it.get("km") and int(it["km"]) > km_max)]
     dopo_km = len(items)
     items = [it for it in items if not ((it.get("prezzo") or 0) > p_lim and (_marg(it) is None or _marg(it) < m_min))]
+    # 26/10 (cliente): sotto il limite (4.000 €) basta un margine minimo più basso (SITO_MARGINE_MIN_SOTTO, 800 €)
+    m_sotto = int(os.environ.get("SITO_MARGINE_MIN_SOTTO", "0"))
+    if m_sotto:
+        items = [it for it in items if (it.get("prezzo") or 0) > p_lim or (_marg(it) is not None and _marg(it) >= m_sotto)]
     logging.getLogger("scovo").warning("REGOLE_KM_MARGINE tolte: %d oltre %d km, %d sopra %d € con margine < %d €",
                                        prima - dopo_km, km_max, dopo_km - len(items), p_lim, m_min)
     # 25/10 (cliente: "prezzi e margini sballati"): il margine vale solo se viene da abbastanza auto uguali,
