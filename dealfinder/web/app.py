@@ -1530,21 +1530,26 @@ def _forzate_sito(gia: set, opens: dict) -> list:
     from pathlib import Path
     f = Path(__file__).resolve().parents[2] / "data" / "forzate_sito.json"
     try:
-        voci = {e["url"]: e for e in json.loads(f.read_text())}
+        tutte = json.loads(f.read_text())
+        voci = {e["url"]: e for e in tutte if e.get("url")}
+        per_id = {int(e["id"]): e for e in tutte if e.get("id") and not e.get("url")}   # 26/10: scelte per id
     except Exception:
         return []
-    if not voci:
+    if not voci and not per_id:
         return []
     out = []
     try:
         with connect() as conn:
-            rows = conn.execute(scovo.ECO_SQL.split("WHERE l.status='attivo'")[0] + " WHERE l.url = ANY(%(urls)s) AND l.status='attivo'",
-                                {"me": 0, "urls": list(voci)}).fetchall()
-        costi = int(os.environ.get("POLICY_PASSAGGIO", "90")) + int(os.environ.get("POLICY_PULIZIA", "10"))
+            rows = conn.execute(scovo.ECO_SQL.split("WHERE l.status='attivo'")[0]
+                                + " WHERE (l.url = ANY(%(urls)s) OR l.id = ANY(%(ids)s)) AND l.status='attivo'",
+                                {"me": 0, "urls": list(voci), "ids": list(per_id)}).fetchall()
+        costi = int(os.environ.get("POLICY_COSTO_FISSO", "200"))      # 26/10: tagliando 150 € + pulizia 50 €
         for r in rows:
             if r["id"] in gia:
                 continue
-            e = voci[r["url"]]
+            e = voci.get(r["url"]) or per_id.get(r["id"])
+            if not e:
+                continue
             it = scovo.item_eco(r)
             if not it:
                 continue

@@ -268,5 +268,237 @@
   "R": 74800,
   "n": 7,
   "sconto": 0
+ },
+ {
+  "id": 14475,
+  "M": 25772,
+  "R": 23093,
+  "n": 7,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 34066,
+  "M": 4532,
+  "R": 4013,
+  "n": 5,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 436245,
+  "M": 39451,
+  "R": 36689,
+  "n": 14,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 441459,
+  "M": 9000,
+  "R": 8116,
+  "n": 39,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 3614,
+  "M": 12990,
+  "R": 11856,
+  "n": 44,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 639487,
+  "M": 6828,
+  "R": 5862,
+  "n": 29,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 595617,
+  "M": 25732,
+  "R": 23159,
+  "n": 6,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 453032,
+  "M": 13729,
+  "R": 12240,
+  "n": 9,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 452306,
+  "M": 12200,
+  "R": 10948,
+  "n": 6,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 60545,
+  "M": 17000,
+  "R": 12222,
+  "n": 7,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 452466,
+  "M": 12834,
+  "R": 11649,
+  "n": 11,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 74706,
+  "M": 34800,
+  "R": 31320,
+  "n": 5,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 450036,
+  "M": 8300,
+  "R": 6873,
+  "n": 10,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 646977,
+  "M": 6022,
+  "R": 4818,
+  "n": 12,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 10966,
+  "M": 4900,
+  "R": 4554,
+  "n": 11,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 63944,
+  "M": 20000,
+  "R": 17222,
+  "n": 11,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 638692,
+  "M": 8085,
+  "R": 7519,
+  "n": 29,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 544079,
+  "M": 13259,
+  "R": 10607,
+  "n": 36,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 58672,
+  "M": 11122,
+  "R": 10010,
+  "n": 7,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 444953,
+  "M": 12920,
+  "R": 11951,
+  "n": 10,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 640088,
+  "M": 6278,
+  "R": 5839,
+  "n": 11,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 640669,
+  "M": 7200,
+  "R": 6184,
+  "n": 13,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 639653,
+  "M": 9572,
+  "R": 7979,
+  "n": 22,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 614267,
+  "M": 7194,
+  "R": 6500,
+  "n": 52,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 647446,
+  "M": 6514,
+  "R": 5741,
+  "n": 25,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 644176,
+  "M": 7645,
+  "R": 6324,
+  "n": 28,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 434903,
+  "M": 4900,
+  "R": 4410,
+  "n": 5,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 23617,
+  "M": 3646,
+  "R": 3281,
+  "n": 5,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
+ },
+ {
+  "id": 608723,
+  "M": 23200,
+  "R": 20831,
+  "n": 13,
+  "sconto": 0,
+  "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  }
 ]
