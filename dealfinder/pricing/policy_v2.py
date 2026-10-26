@@ -176,6 +176,7 @@ class PolicyConfig:
     rivendita_commercianti: bool = False
     commercianti_min: int = 3
     commercianti_sconto: float = .08
+    commercianti_solo_ribasso: bool = True
     # 25/10 (cliente: "metti il punto due"): correzione automatica per modello misurata sulle auto vendute in fretta
     # dai concessionari (esame.correzioni, tabella correzioni_modello). Spenta finché POLICY_CORREZIONE_MODELLO=1.
     correzione_modello: bool = False
@@ -805,6 +806,12 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         pc = [c["prezzo"] for c in validi if c.get("seller_type") == "commerciante"]
         if len(pc) >= cfg.commercianti_min:
             rc = int(round(percentile(pc, .5) * (1 - cfg.commercianti_sconto)))
+            if cfg.commercianti_solo_ribasso and rc >= riv["R"]:
+                # 26/10 (cliente: "margini molto gonfiati"): i commercianti chiedono più dei privati (garanzia,
+                # preparazione); sulle auto vecchie ed economiche la loro mediana superava perfino il mercato M.
+                # I prezzi dei commercianti possono solo ABBASSARE la rivendita prudente, mai alzarla.
+                rc = None
+        if len(pc) >= cfg.commercianti_min and rc:
             riv.update(R=rc, R_da="commercianti",
                        fascia=riv.get("fascia", "") + f" · rivendita dai prezzi di {len(pc)} commercianti −{int(cfg.commercianti_sconto*100)}%")
             out["ipotesi"].append(f"rivendita = mediana di {len(pc)} auto uguali in vendita da commercianti "

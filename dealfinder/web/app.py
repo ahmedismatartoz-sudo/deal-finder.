@@ -1089,6 +1089,28 @@ def _regole_finali(items: list[dict]) -> list[dict]:
                 m = None
         return m
 
+    # 26/10 (cliente: "margini molto gonfiati"): la rivendita sul sito non supera mai il mercato dei privati M meno
+    # SITO_TETTO_PCT (10%). Vale subito anche per le auto già valutate (il ricalcolo del cron poi fa lo stesso).
+    tetto_pct = float(os.environ.get("SITO_TETTO_PCT", "10")) / 100
+    abbassate = tolte_tetto = 0
+    tenute_t = []
+    for it in items:
+        pv = it.get("pv") if isinstance(it.get("pv"), dict) else None
+        if pv and pv.get("M") and pv.get("margine") is not None:
+            R = pv.get("R_finale") or pv.get("R")
+            cap = int(round(float(pv["M"]) * (1 - tetto_pct)))
+            if R and R > cap:
+                m2 = int(pv["margine"]) - (int(R) - cap)
+                abbassate += 1
+                prezzo = it.get("prezzo") or 0
+                if m2 < scovo.soglia(int(prezzo)) or (prezzo > p_lim and m2 < m_min):
+                    tolte_tetto += 1
+                    continue
+                it["pv"] = dict(pv, margine=m2, R=cap, R_finale=cap, margine_prima_tetto=int(pv["margine"]))
+        tenute_t.append(it)
+    items = tenute_t
+    logging.getLogger("scovo").warning("TETTO_RIVENDITA %d abbassate a M−%d%%, %d tolte perché il margine non basta più",
+                                       abbassate, int(tetto_pct * 100), tolte_tetto)
     prima = len(items)
     items = [it for it in items if not (it.get("km") and int(it["km"]) > km_max)]
     dopo_km = len(items)
