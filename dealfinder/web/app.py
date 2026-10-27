@@ -2846,6 +2846,20 @@ def _tempo_reale():
             lg.warning("BREVO_LISTE non riuscito: %s", str(e)[:300])
     threading.Thread(target=brevo_liste, daemon=True, name="brevo-liste").start()
 
+    def lead_email_subito():
+        """27/10 sera (cliente: "ci servono piu' in fretta"): cerca le email dei commercianti anche qui, subito,
+        senza aspettare il cron. Solo richieste web leggere; nei log solo conteggi + righe LEADE a fine giro."""
+        if os.environ.get("LEADE_SUBITO") != "1":
+            return
+        time.sleep(90)
+        try:
+            from ..pipeline import lead_email as LE
+            LE.giro()
+            LE.esporta()
+        except Exception as e:
+            lg.warning("LEADE_SUBITO non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_email_subito, daemon=True, name="lead-email").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":
