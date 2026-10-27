@@ -2093,9 +2093,14 @@ def vetrina(request: Request):
 def vetrina_pagina(request: Request):
     """23/10: pagine SEO dei siti vetrina (data/vetrine/<nome>/<pagina>.html e sitemap.xml)."""
     nome, pagina = request.path_params["nome"], request.path_params["pagina"]
-    if not re.fullmatch(r"[a-z0-9-]{2,40}", nome) or not re.fullmatch(r"[a-z0-9-]{2,80}(\.xml)?", pagina):
+    if not re.fullmatch(r"[a-z0-9-]{2,40}", nome) or not re.fullmatch(r"[a-z0-9-]{2,80}(\.xml|\.webp|\.jpg|\.png)?", pagina):
         return Response("Pagina non trovata", status_code=404)
     d = Path(__file__).resolve().parents[2] / "data" / "vetrine" / nome
+    if pagina.endswith((".webp", ".jpg", ".png")):  # 27/10: foto reali del cliente
+        f = d / "img" / pagina
+        tipo = {"webp": "image/webp", "jpg": "image/jpeg", "png": "image/png"}[pagina.rsplit(".", 1)[1]]
+        return (FileResponse(f, media_type=tipo, headers={"cache-control": "public, max-age=86400"})
+                if f.exists() else Response("Pagina non trovata", status_code=404))
     if pagina.endswith(".xml"):
         f = d / pagina
         return FileResponse(f, media_type="application/xml") if f.exists() else Response("Pagina non trovata", status_code=404)
