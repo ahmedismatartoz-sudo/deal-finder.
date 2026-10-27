@@ -732,6 +732,12 @@ if __name__ == "__main__":
                 from . import lead_tutti as LT
                 os.environ.setdefault("LEADT_GIRO", voce.split(":")[1].split("@")[0] if ":" in voce else "1")
                 esito = LT.giro()
+            elif voce.startswith("leadeexp"):                              # 27/10: consegna email commercianti (una volta)
+                from . import lead_email as LE
+                esito = {"esportati": LE.esporta()}
+            elif voce.startswith("leademail"):                             # 27/10: email aziendali dei commercianti
+                from . import lead_email as LE
+                esito = LE.giro()
             elif voce.startswith("leadmaps"):                              # 26/10 notte: commercianti da Google Maps via Apify
                 from . import lead_maps as LM
                 esito = LM.giro()
