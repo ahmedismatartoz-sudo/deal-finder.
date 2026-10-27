@@ -790,14 +790,6 @@
   "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 638737,
-  "M": 28557,
-  "R": 27129,
-  "n": 10,
-  "sconto": 0,
-  "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
- },
- {
   "id": 69215,
   "M": 31927,
   "R": 29304,
@@ -1178,14 +1170,6 @@
   "M": 3800,
   "R": 3314,
   "n": 7,
-  "sconto": 0,
-  "nota": "revisione 26/10 18:10"
- },
- {
-  "id": 428212,
-  "M": 3157,
-  "R": 2753,
-  "n": 17,
   "sconto": 0,
   "nota": "revisione 26/10 18:10"
  },
