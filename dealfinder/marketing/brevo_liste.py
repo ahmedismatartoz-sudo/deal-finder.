@@ -14,7 +14,9 @@ import httpx
 
 lg = logging.getLogger("dealfinder.marketing")
 API = "https://api.brevo.com/v3"
-FILE = Path(__file__).resolve().parents[2] / "data" / "marketing_gruppi.json"
+TAG = os.environ.get("BREVO_TAG", "").strip()  # 27/10: campagna nuova in cartella e liste proprie (es. "27-10")
+_DATA = Path(__file__).resolve().parents[2] / "data"
+FILE = _DATA / (f"marketing_gruppi_{TAG}.json" if TAG else "marketing_gruppi.json")
 
 
 def _cartella(c: httpx.Client) -> int:
@@ -60,6 +62,7 @@ def importa() -> None:
         cartella = _cartella(c)
         esistenti = _liste(c)
         for nome, emails in gruppi.items():
+            nome = f"{nome} {TAG}" if TAG else nome
             lid = esistenti.get(nome)
             if lid is None:
                 r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": cartella})
@@ -74,7 +77,7 @@ def importa() -> None:
             lg.warning("BREVO_LISTE %s id=%s contatti=%d esito=%s", nome, lid, len(emails), r.status_code)
 
 
-CARTELLA_EMAIL = FILE.parent / "marketing_email"
+CARTELLA_EMAIL = _DATA / "marketing_email" / TAG if TAG else _DATA / "marketing_email"
 MITTENTE = {"name": "Skovo", "email": "ahmedisma545@gmail.com"}
 
 
@@ -175,8 +178,8 @@ def campagne(elenco=None) -> None:
         r.raise_for_status()
         fatte = {x["name"] for x in r.json().get("campaigns") or []}
         for gruppo, oggetto in oggetti.items():
-            nome = f"Skovo {gruppo} 22-10"
-            lid = liste.get(f"Skovo {gruppo}")
+            nome = f"Skovo {gruppo} {TAG or '22-10'}"
+            lid = liste.get(f"Skovo {gruppo} {TAG}" if TAG else f"Skovo {gruppo}")
             if nome in fatte or lid is None:
                 lg.warning("BREVO_CAMPAGNA %s saltata (gia' fatta o lista assente)", gruppo)
                 continue
