@@ -67,6 +67,13 @@ def _sito(html: str, base: str) -> str | None:
     return None
 
 
+def _sicuro(f, *a):
+    try:
+        return f(*a)
+    except Exception as e:
+        log.warning("LEADE errore: %s", type(e).__name__)
+
+
 def giro() -> dict:
     from ..collectors.autoscout import AutoScoutCollector
     from ..db import connect
@@ -112,9 +119,10 @@ def giro() -> dict:
             time.sleep(0.4)
         return [], None
 
-    for url in da_fare:
+    def uno(url):
+        nonlocal provati, trovati
         if pagine >= massimo:
-            break
+            return
         provati += 1
         email, sito, fonte = [], None, None
         for u in (url.rstrip("/") + "/chi-siamo", url.rstrip("/") + "/informazioni"):
@@ -137,6 +145,17 @@ def giro() -> dict:
         if provati % 100 == 0:
             log.warning("LEADE avanzamento: %d commercianti, %d con email, %d pagine, %ds", provati, trovati, pagine,
                         int(time.time() - t0))
+
+    par = int(os.environ.get("LEADE_PARALLELI", "1"))      # 28/10 notte (cliente: "in modo aggressivo")
+    if par > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(par) as ex:
+            list(ex.map(lambda u: _sicuro(uno, u), da_fare))
+    else:
+        for url in da_fare:
+            if pagine >= massimo:
+                break
+            uno(url)
     for pid, sito in maps:
         if pagine >= massimo:
             break

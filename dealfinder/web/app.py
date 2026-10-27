@@ -2884,6 +2884,31 @@ def _tempo_reale():
             lg.warning("LEADE_SUBITO non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_email_subito, daemon=True, name="lead-email").start()
 
+    def auto_invio():
+        """28/10 notte (cliente): raccolta email aggressiva + invio subito appena arrivano (marketing/auto_invio.py)."""
+        if os.environ.get("AUTO_INVIO") != "1":
+            return
+        time.sleep(120)
+        for _ in range(60):
+            if _elenco.get("items"):
+                break
+            time.sleep(60)
+
+        def piatte():
+            out = []
+            for it in list(_elenco.get("items") or []):
+                pv = it.get("pv") or {}
+                out.append({"id": it.get("id"), "auto": it.get("nome"), "anno": it.get("anno"), "km": it.get("km"),
+                            "carb": it.get("carb"), "prezzo": it.get("prezzo"), "n": pv.get("n"), "zona": it.get("zona"),
+                            "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine")})
+            return out
+        try:
+            from ..marketing import auto_invio as AI
+            AI.ciclo(piatte)
+        except Exception as e:
+            lg.warning("AUTO_INVIO non riuscito: %s", str(e)[:300])
+    threading.Thread(target=auto_invio, daemon=True, name="auto-invio").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":
