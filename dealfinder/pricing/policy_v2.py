@@ -449,6 +449,12 @@ def _equivalente(t, c, cfg, livello):
     ktol = cfg.km_tol if livello == 1 else cfg.km_tol_2
     if abs(int(c["mileage_km"]) - int(t["mileage_km"])) > ktol:
         return f"km oltre ±{ktol:,}".replace(",", ".")
+    if os.environ.get("POLICY_TRAZIONE", "0") == "1":    # 27/10 sera (cliente): stessa trazione (4x4 con 4x4)
+        import re as _re2
+        t4 = _re2.compile(r"(?i)\b(4x4|4wd|awd|xdrive|quattro|4motion|q4|all4|4matic|integrale)\b")
+        if bool(t4.search(f"{t.get('version_raw') or ''} {t.get('title') or ''}")) != \
+                bool(t4.search(f"{c.get('version_raw') or ''} {c.get('title') or ''}")):
+            return "trazione diversa"
     tg, cg = _norm_gear(t.get("gearbox")), _norm_gear(c.get("gearbox"))
     if tg and cg and tg != cg:
         return "cambio diverso"
