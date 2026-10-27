@@ -78,7 +78,7 @@ def importa() -> None:
 
 
 CARTELLA_EMAIL = _DATA / "marketing_email" / TAG if TAG else _DATA / "marketing_email"
-MITTENTE = {"name": "Skovo", "email": "ahmedisma545@gmail.com"}
+MITTENTE = {"name": "Skovo", "email": os.environ.get("BREVO_MITTENTE", "info@skovo.app")}  # 27/10: dominio skovo.app, mai il Gmail
 
 
 def _foto_ok(html: str) -> bool:
