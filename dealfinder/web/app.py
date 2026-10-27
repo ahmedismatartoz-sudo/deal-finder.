@@ -1524,6 +1524,28 @@ _elenco_lock = threading.Lock()
 ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
 
+def _rivendita_prudente(items: list) -> list:
+    """27/10 sera (cliente): rivendita abbassata del RIVENDITA_SCONTO (5%) su tutte le auto, per stare sicuri;
+    poi restano solo quelle con il margine delle regole (sopra 4.000 € almeno 1.500 €, fino a 4.000 € almeno 800 €)."""
+    sc = float(os.environ.get("RIVENDITA_SCONTO", "0") or 0)
+    if sc <= 0:
+        return items
+    out = []
+    for it in items:
+        pv = it.get("pv")
+        R = (pv or {}).get("R_finale") or (pv or {}).get("R") if isinstance(pv, dict) else None
+        if not R or pv.get("margine") is None:
+            out.append(it)            # sezioni senza calcolo (economiche): invariate
+            continue
+        giu = int(round(R * sc))
+        it = dict(it, pv=dict(pv, R=int(R - giu), R_finale=int(R - giu), margine=int(pv["margine"] - giu)))
+        soglia = 1500 if (it.get("prezzo") or 0) > 4000 else 800
+        if it["pv"]["margine"] >= soglia:
+            out.append(it)
+    logging.getLogger("scovo").warning("RIVENDITA_PRUDENTE -%d%%: %d auto prima, %d restano", round(sc * 100), len(items), len(out))
+    return out
+
+
 def _margine_minimo_sito(items: list) -> list:
     """23/10 10:59, cliente: sul sito solo auto con margine (quello mostrato, dopo prezzi trattati e controlli)
     di almeno MARGINE_MIN_SITO €."""
@@ -1672,7 +1694,7 @@ def _calcola_elenco() -> None:
     _forz = _forzate_sito(set(), opens)
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
-    items = _margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))
+    items = _rivendita_prudente(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))))
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
