@@ -1014,14 +1014,6 @@
   "nota": "revisione 26/10 15:05: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 638936,
-  "M": 4000,
-  "R": 3728,
-  "n": 7,
-  "sconto": 0,
-  "nota": "revisione 26/10 18:10"
- },
- {
   "id": 41381,
   "M": 3800,
   "R": 3314,
@@ -1034,14 +1026,6 @@
   "M": 3646,
   "R": 3463,
   "n": 5,
-  "sconto": 0,
-  "nota": "revisione 26/10 18:10"
- },
- {
-  "id": 655364,
-  "M": 4217,
-  "R": 4006,
-  "n": 7,
   "sconto": 0,
   "nota": "revisione 26/10 18:10"
  },
@@ -1134,46 +1118,6 @@
   "nota": "27/10 06:40 Fiat Idea 2010 Motta Visconti, margine 894 (sotto 4.000 €)"
  },
  {
-  "id": 668273,
-  "M": 32200,
-  "R": 29624,
-  "n": 17,
-  "sconto": 0,
-  "nota": "27/10 15:55 Defender 110 2010 Sondrio, margine 8.700 (priorità)"
- },
- {
-  "id": 390924,
-  "M": 13488,
-  "R": 11797,
-  "n": 49,
-  "sconto": 0,
-  "nota": "27/10 15:55 Evoque 2017 Milano, 49 confronti"
- },
- {
-  "id": 58725,
-  "M": 10332,
-  "R": 9302,
-  "n": 16,
-  "sconto": 0,
-  "nota": "27/10 15:55 Doblò 2021 Milano"
- },
- {
-  "id": 56969,
-  "M": 10795,
-  "R": 9398,
-  "n": 20,
-  "sconto": 0,
-  "nota": "27/10 15:55 Fiat 500 2021 Cantello"
- },
- {
-  "id": 58476,
-  "M": 10900,
-  "R": 10249,
-  "n": 9,
-  "sconto": 0,
-  "nota": "27/10 15:55 Dacia Spring 2024 Meda"
- },
- {
   "id": 76188,
   "M": 39917,
   "R": 37862,
@@ -1182,44 +1126,12 @@
   "nota": "27/10 15:55 Maserati Levante 2021 Bergamo"
  },
  {
-  "id": 43183,
-  "M": 14300,
-  "R": 12748,
-  "n": 9,
-  "sconto": 0,
-  "nota": "27/10 15:55 Golf eTSI DSG 2019 Varese"
- },
- {
-  "id": 28228,
-  "M": 12015,
-  "R": 11144,
-  "n": 9,
-  "sconto": 0,
-  "nota": "27/10 15:55 Peugeot 2008 2021 Milano"
- },
- {
   "id": 434363,
   "M": 11176,
   "R": 8997,
   "n": 12,
   "sconto": 0,
   "nota": "27/10 15:55 Panda 4x4 2016 22.600 km Milano"
- },
- {
-  "id": 60075,
-  "M": 12837,
-  "R": 10511,
-  "n": 10,
-  "sconto": 0,
-  "nota": "27/10 15:55 Smart EQ 2022 Brescia"
- },
- {
-  "id": 1118,
-  "M": 3300,
-  "R": 3135,
-  "n": 8,
-  "sconto": 0,
-  "nota": "27/10 15:55 Lancia Musa 2009 Milano (sotto 4.000)"
  },
  {
   "id": 672253,
