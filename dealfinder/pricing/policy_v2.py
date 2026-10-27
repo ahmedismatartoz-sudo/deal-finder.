@@ -845,6 +845,21 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["ipotesi"].append(f"valore dopo la riparazione da confronti di auto sane, meno {int(cfg.perdita_storico_danno*100)}% "
                               "per lo storico del danno")
         R -= perdita
+    # 27/10 sera (cliente): "la rivendita vera deve stare sulle auto uguali MENO costose, fai la media di quelle,
+    # non prendere quelle più costose". Rivendita = media della metà più economica dei confronti uguali (prezzi
+    # corretti per anno e km); se ci sono almeno 3 privati si usano i privati (i commercianti gonfiano i prezzi).
+    # Può solo ABBASSARE la rivendita.
+    if os.environ.get("POLICY_R_BASSI", "0") == "1" and len(prezzi) >= 3:
+        pp = sorted(c["prezzo"] for c in validi if c.get("seller_type") != "commerciante")
+        base_b, chi = (pp, "privati") if len(pp) >= 3 else (sorted(prezzi), "annunci")
+        k = max(2, len(base_b) // 2)
+        rb = int(round(sum(base_b[:k]) / k))
+        out["R_bassi"] = rb
+        if rb < R:
+            out["ipotesi"].append(f"rivendita = media dei {k} {chi} uguali più economici su {len(base_b)} ({rb} €)")
+            R = rb
+            out["R"] = R
+            out["R_da"] = "media dei più economici"
     tetto = t.get("tetto_rivendita")         # rivendita già abbassata da un controllo a mano: vale la più bassa
     if tetto and tetto < R:
         out["ipotesi"].append(f"controllo a mano: rivendita limitata a {int(tetto)} €")
