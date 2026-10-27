@@ -120,7 +120,7 @@ def giro() -> dict:
         return [], None
 
     def uno(url):
-        nonlocal provati, trovati
+        nonlocal provati, trovati, pagine
         if pagine >= massimo:
             return
         provati += 1
