@@ -36,7 +36,7 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,10}")
 NO_DOMINI = re.compile(r"(autoscout24|scout24|subito\.it|example\.|sentry|wixpress|wix\.com|godaddy|aruba\.it$|"
                        r"register\.it|squarespace|wordpress|w3\.org|schema\.org|google|facebook|instagram|"
                        r"cloudflare|jquery|bootstrap|domain\.|yourdomain|email\.com$|sito\.it$|tuodominio|"
-                       r"motork|dealerk|automobile\.it|autosupermarket|mobile\.de|png$|jpg$|gif$|webp$|svg$)", re.I)
+                       r"motork|dealerk|webador|jimdo|sitonline|altervista|myshopify|weebly|automobile\.it|autosupermarket|mobile\.de|png$|jpg$|gif$|webp$|svg$)", re.I)
 NO_UTENTI = re.compile(r"^(noreply|no-reply|donotreply|privacy|dpo|gdpr|webmaster|postmaster|abuse|info@example)", re.I)
 NO_SITI = re.compile(r"(autoscout24|scout24|facebook|instagram|google|youtube|tiktok|linkedin|whatsapp|wa\.me|"
                      r"twitter|x\.com|apple\.com|play\.google|subito|automobile\.it|mobile\.de|trustpilot|"
