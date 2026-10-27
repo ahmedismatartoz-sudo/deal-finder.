@@ -103,7 +103,9 @@ def _card(x: dict) -> str:
     """Stessa scheda delle email del 22/10: prezzo 1.500 € sotto l'annuncio (concordato), margine al netto di 100 €."""
     from html import escape
 
-    p = round((x["prezzo"] - 1500) / 100) * 100
+    v = x["prezzo"]
+    rib = 1500 if v < 8000 else 3000 if v < 15000 else 4000 if v < 50000 else 5000   # 27/10: ribasso per fascia (cliente)
+    p = round(max(v - rib, v * 0.6) / 100) * 100
     m = round((x["R"] - p - 100) / 5) * 5
     n = escape(str(x["auto"]))
     imgs = "".join(
