@@ -1200,10 +1200,17 @@ def _prezzi_cliente() -> dict:
         return {}
 
 
+def _ribasso_fascia(prezzo: int) -> int:
+    """27/10 (cliente): prezzo mostrato = annuncio meno il ribasso della sua fascia, mai sotto il 60% dell'annuncio."""
+    r = 1500 if prezzo < 8000 else 3000 if prezzo < 15000 else 4000 if prezzo < 50000 else 5000
+    return int(round(max(prezzo - r, prezzo * 0.6) / 100) * 100)
+
+
 def _prezzi_trattati(items: list[dict]) -> None:
     prezzi = _prezzi_cliente()
+    tutte = os.environ.get("RIBASSO_FASCE") == "1"   # 27/10: ribasso per fascia su tutto il sito (temporaneo)
     for it in items:
-        nuovo = prezzi.get(str(it.get("id")))
+        nuovo = _ribasso_fascia(it["prezzo"]) if tutte and it.get("prezzo") else prezzi.get(str(it.get("id")))
         if not nuovo or not it.get("prezzo") or nuovo == it["prezzo"]:
             continue
         diff = it["prezzo"] - nuovo
