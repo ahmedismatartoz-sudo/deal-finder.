@@ -195,13 +195,18 @@ def campagne(elenco=None) -> None:
                     continue
                 html, oggetto = rifatta
                 _usate_oggi.update(usate)
-            r = c.post(f"{API}/emailCampaigns", json={
-                "name": nome, "subject": oggetto, "sender": MITTENTE, "replyTo": MITTENTE["email"],
-                "htmlContent": html, "recipients": {"listIds": [lid]},
-            })
+            quando = (os.environ.get("BREVO_PROGRAMMA") or "").strip()  # 27/10: es. 2026-10-28T09:30:00+01:00 (invio programmato)
+            corpo = {"name": nome, "subject": oggetto, "sender": MITTENTE, "replyTo": MITTENTE["email"],
+                     "htmlContent": html, "recipients": {"listIds": [lid]}}
+            if quando:
+                corpo["scheduledAt"] = quando
+            r = c.post(f"{API}/emailCampaigns", json=corpo)
             if r.status_code >= 300:
                 lg.warning("BREVO_CAMPAGNA %s creazione fallita: %s", gruppo, r.text[:300])
                 continue
             cid = r.json()["id"]
+            if quando:
+                lg.warning("BREVO_CAMPAGNA %s id=%s lista=%s programmata per %s", gruppo, cid, lid, quando)
+                continue
             s = c.post(f"{API}/emailCampaigns/{cid}/sendNow")
             lg.warning("BREVO_CAMPAGNA %s id=%s lista=%s invio=%s %s", gruppo, cid, lid, s.status_code, s.text[:200])
