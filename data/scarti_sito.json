@@ -384,5 +384,33 @@
  {
   "id": 23927,
   "motivo": "sotto il 50% del mercato (revisione 27/10 17:55 UTC): probabile incidentata o guasta"
+ },
+ {
+  "id": 452698,
+  "motivo": "margine reale ~700 € (controllo perito 27/10)"
+ },
+ {
+  "id": 50352,
+  "motivo": "107 2tronic: rivendita gonfiata, margine reale ~600 €"
+ },
+ {
+  "id": 457919,
+  "motivo": "Tiguan 2016: rivendita gonfiata, margine reale negativo"
+ },
+ {
+  "id": 443900,
+  "motivo": "Panda Alessi 2007: margine reale ~900 €"
+ },
+ {
+  "id": 53802,
+  "motivo": "Twingo 150.000 km: margine reale ~400 €"
+ },
+ {
+  "id": 607127,
+  "motivo": "dati incoerenti: 500 hybrid del 2015 non esiste"
+ },
+ {
+  "id": 672253,
+  "motivo": "dati incoerenti: versione non esistente per l'anno"
  }
 ]
