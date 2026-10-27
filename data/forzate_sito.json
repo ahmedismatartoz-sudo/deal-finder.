@@ -454,14 +454,6 @@
   "nota": "26/10 scelta a mano dai candidati: rivendita = min(calcolo, mercato −5%)"
  },
  {
-  "id": 55043,
-  "M": 9819,
-  "R": 8641,
-  "n": 5,
-  "sconto": 0,
-  "nota": "revisione 26/10 12:45: rivendita = min(calcolo, mercato −5%)"
- },
- {
   "id": 186875,
   "M": 38500,
   "R": 33880,
@@ -1228,14 +1220,6 @@
   "n": 5,
   "sconto": 0,
   "nota": "controllo 26/10 22:15: pochi confronti, rivendita prudente = mercato −12%"
- },
- {
-  "id": 570945,
-  "M": 9300,
-  "R": 8175,
-  "n": 83,
-  "sconto": 0,
-  "nota": "27/10 06:40 Panda Hybrid 2021 Milano, 83 confronti, margine 1.525"
  },
  {
   "id": 8221,
