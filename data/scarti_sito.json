@@ -412,5 +412,13 @@
  {
   "id": 672253,
   "motivo": "dati incoerenti: versione non esistente per l'anno"
+ },
+ {
+  "id": 445705,
+  "motivo": "BMW 116d 2014 150.000 km: mercato irrealistico (segnalata dal cliente)"
+ },
+ {
+  "id": 638692,
+  "motivo": "Panda 2019: rivendita troppo alta (segnalata dal cliente)"
  }
 ]

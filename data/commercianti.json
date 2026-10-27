@@ -1,0 +1,2264 @@
+[
+ {
+  "nome": "Soccol Cars Milano Srl",
+  "email": "info@soccol.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "land rover",
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "J.B. Cars Srl",
+  "email": "bdc@jbcars.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "jaguar",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Matarese Automobili",
+  "email": "matareseautomobili@gmail.com",
+  "comune": "Cusago",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "audi",
+    "land rover",
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "Autonovara Srl",
+  "email": "concierge.autonovara@landroverdealers.it",
+  "comune": "Seregno",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "AutoPiva SAS",
+  "email": "piva@piva-auto.it",
+  "comune": "Abbiategrasso",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "jaguar",
+    "land rover",
+    "suzuki"
+   ]
+  }
+ },
+ {
+  "nome": "AutoNova Retail Srl",
+  "email": "info@autonovaretail.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "bmw",
+    "land rover",
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "Car & Car Srl",
+  "email": "info@carecar.it",
+  "comune": "Zibido San Giacomo",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Motors Monza Srl",
+  "email": "giorgio.cascella@motorsmonza.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Le Mans Srl",
+  "email": "lemanssrls@gmail.com",
+  "comune": "Besana in Brianza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "bentley"
+   ]
+  }
+ },
+ {
+  "nome": "GoldenCars (Golden Cars 2 Srl)",
+  "email": "goldencars2@libero.it",
+  "comune": "San Giuliano Milanese",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 99000,
+   "marchi": [
+    "audi",
+    "bentley"
+   ]
+  }
+ },
+ {
+  "nome": "Avenuecar Srl",
+  "email": "info@avenuecar.com",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Tomasi Auto srl - Milano",
+  "email": "customercare@tomasiauto.com",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "STZauto Srl",
+  "email": "vendita@stzauto.com",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 249000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Viesse Auto Srl",
+  "email": "info@viesseauto.com",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Busnelli Auto Srl",
+  "email": "info@busnelliauto.it",
+  "comune": "Giussano (Birone)",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 199000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Automobili Valentino srl",
+  "email": "info@automobilivalentino.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 135000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Giunima Auto Srl",
+  "email": "autogiunima@gmail.com",
+  "comune": "Settimo Milanese",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "Pachimotors srl",
+  "email": "pachimotors@outlook.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Emmepi Motori di Pedetti Matteo Giovanni",
+  "email": "info@emmepimotori.com",
+  "comune": "Bovisio Masciago",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "M.sportcar srl",
+  "email": "info@msportcarmilano.com",
+  "comune": "Cesano Maderno",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 124000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Timeless Car Srl",
+  "email": "timelesscar22@gmail.com",
+  "comune": "Locate di Triulzi",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Dacar Srl",
+  "email": "davide@dacarmilano.it",
+  "comune": "Sesto San Giovanni",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 180000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Next Garage Cars srl",
+  "email": "nextgarage@icloud.com",
+  "comune": "Paderno Dugnano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Sy Srl - Automobili Milanesi",
+  "email": "info@automobilimilanesi.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 155000,
+   "marchi": [
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "Ad Motors Milano di Alessandro Di Modica",
+  "email": "ad.motors10@gmail.com",
+  "comune": "Bareggio",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 89000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Scuderia 76 srl",
+  "email": "info@scuderia76.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Vogue Cars sas",
+  "email": "ufficiocommerciale@voguecars.com",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 160000,
+   "marchi": [
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "Auton-line di Politino Sebastiano",
+  "email": "info@auton-line.it",
+  "comune": "Trezzano Rosa",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 94000,
+   "marchi": [
+    "audi"
+   ]
+  }
+ },
+ {
+  "nome": "Auto Pancotti Sas Di Pancotti Alessandro E C.",
+  "email": "info@autopancotti.it",
+  "comune": "Castiglione d'Adda",
+  "prov": "LO",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 92000,
+   "marchi": [
+    "land rover",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Eurotopcar by Starcom srl",
+  "email": "eurotopcarmilano@gmail.com",
+  "comune": "Truccazzano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 90000,
+   "marchi": [
+    "bmw",
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "Stelauto srl",
+  "email": "stelautosrl@gmail.com",
+  "comune": "Cologno Monzese",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 86000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Parisi Dakar",
+  "email": "vendite@parisidakar.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 85000,
+   "marchi": [
+    "audi"
+   ]
+  }
+ },
+ {
+  "nome": "Real Car Srl",
+  "email": "info@realcarsrl.com",
+  "comune": "Desio",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 74000,
+   "marchi": [
+    "bmw",
+    "maserati",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Cappa Business srls (KB Group / KB Luxury)",
+  "email": "info@kbsuperbroker.com",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Autosantasofia Srl",
+  "email": "info@autosantasofia.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Assetto Corsa - Gruppo G.V.S. Srl",
+  "email": "info@assettocorsa.store",
+  "comune": "Sesto San Giovanni",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "fiat",
+    "lancia"
+   ]
+  }
+ },
+ {
+  "nome": "Starmotors Srl",
+  "email": "info@starmotors.it",
+  "comune": "Cernusco sul Naviglio",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "ferrari"
+   ]
+  }
+ },
+ {
+  "nome": "Rossi Garage Srls",
+  "email": "info.rossigaragesrl@gmail.com",
+  "comune": "Vimodrone",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 141000,
+   "marchi": [
+    "audi"
+   ]
+  }
+ },
+ {
+  "nome": "L.E. Car",
+  "email": "l.e.car@live.it",
+  "comune": "Giussano",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 77000,
+   "marchi": [
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Fratelli Carfora Snc (Carforauto)",
+  "email": "info@carforauto.it",
+  "comune": "Melegnano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 86000,
+   "marchi": [
+    "nissan"
+   ]
+  }
+ },
+ {
+  "nome": "Auto & Motori snc",
+  "email": "info@autoemotorisnc.com",
+  "comune": "Rho",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 94000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Team Car Brevi S.A.S. Di Riccardo Pellegrino & C.",
+  "email": "info@teamcarbrevi.it",
+  "comune": "Cinisello Balsamo",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 64000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Auto4you srl",
+  "email": "info@auto4you.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 64000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Eleauto srl",
+  "email": "info@eleauto.it",
+  "comune": "Sedriano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 63000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Sorbara Auto Srl",
+  "email": "vendita@sorbaraauto.it",
+  "comune": "Varedo",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 96000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Cavauto Srl",
+  "email": "vendita@cavauto.com",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 180000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Auto Attiva Srl",
+  "email": "vendite@autoattiva.it",
+  "comune": "Cesano Maderno",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 120000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "2 B Auto Srl",
+  "email": "info@2bauto.it",
+  "comune": "Nova Milanese",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 70000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Progetto Auto Snc",
+  "email": "progettoautomilano@gmail.com",
+  "comune": "Pieve Emanuele",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 110000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Rango E&M Srl",
+  "email": "commerciale@rangosrl.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 105000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Autoriparazioni Maffio Srl",
+  "email": "info@maffioauto.it",
+  "comune": "Cesano Maderno",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 99000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "CS-Lan srl",
+  "email": "info@cs-lan.srl",
+  "comune": "Misinto",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 82000,
+   "marchi": [
+    "bmw"
+   ]
+  }
+ },
+ {
+  "nome": "Asso Car Service Srl",
+  "email": "assocarsrl@gmail.com",
+  "comune": "Rosate",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 80000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Emme Motors Srl",
+  "email": "emmemotors.srl@gmail.com",
+  "comune": "Sesto San Giovanni",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 72000,
+   "marchi": [
+    "bmw"
+   ]
+  }
+ },
+ {
+  "nome": "Ab Motors Srl",
+  "email": "info@abmotors.it",
+  "comune": "San Giuliano Milanese",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 70000,
+   "marchi": [
+    "ferrari"
+   ]
+  }
+ },
+ {
+  "nome": "G.V. Auto SRL",
+  "email": "info@gvauto.it",
+  "comune": "Meda",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 66000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "thegaragemilanoautomobili",
+  "email": "thegaragemilano5@gmail.com",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 65000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Easy Go srl",
+  "email": "commerciale@easy-go.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 64000,
+   "marchi": [
+    "bentley"
+   ]
+  }
+ },
+ {
+  "nome": "Automilano srl",
+  "email": "info@automilano.it",
+  "comune": "Robecco sul Naviglio",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 64000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Abuonvendere.it - A Brand of Kiso Srl",
+  "email": "info@abuonvendere.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 63000,
+   "marchi": [
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "2F Drive - Rossocorsa Milano Nord",
+  "email": "info@2fdrive.com",
+  "comune": "Cinisello Balsamo",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 330000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Aston Martin Milano",
+  "email": "info@astonmartinmilano.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "aston martin",
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "Fassina Spa",
+  "email": "infoauto@fassina.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 249000,
+   "marchi": [
+    "bentley",
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Rossocorsa Ferrari",
+  "email": "servizioclienti@rossocorsa.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "ferrari",
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "Merbag S.p.A. | Mercedes-Benz Vetture Milano",
+  "email": "richieste.web@merbag.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 195000,
+   "marchi": [
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "Sesto Autoveicoli Spa",
+  "email": "bdc-vendita@sestoautoveicoli.it",
+  "comune": "Sesto San Giovanni",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 140000,
+   "marchi": [
+    "audi",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Fratelli Giacomel Spa",
+  "email": "usato@fratelligiacomel.it",
+  "comune": "Assago",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "aston martin",
+    "audi",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Lombarda Motori S.p.A.",
+  "email": "usatoaudi@lombardamotori.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 133000,
+   "marchi": [
+    "audi",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Carteni spa",
+  "email": "info@carteni.com",
+  "comune": "Lodi",
+  "prov": "LO",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "bmw",
+    "hyundai",
+    "mini",
+    "peugeot"
+   ]
+  }
+ },
+ {
+  "nome": "Cozzi Giulio Srl",
+  "email": "info.maserati@cozzigiulioauto.com",
+  "comune": "Canegrate",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "fiat",
+    "lancia",
+    "maserati"
+   ]
+  }
+ },
+ {
+  "nome": "AutoVanti Monza",
+  "email": "info@autovanti.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "bmw",
+    "mini"
+   ]
+  }
+ },
+ {
+  "nome": "Ellemotors srl",
+  "email": "info@ellemotors.com",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 90000,
+   "marchi": [
+    "ds",
+    "jeep",
+    "lancia"
+   ]
+  }
+ },
+ {
+  "nome": "Romeo Ferraris Srl",
+  "email": "info@romeoferraris.com",
+  "comune": "Opera",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 205000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "F.lli Cozzi Spa",
+  "email": "contatto@fratellicozzi.it",
+  "comune": "Legnano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 230000,
+   "marchi": [
+    "alfa romeo"
+   ]
+  }
+ },
+ {
+  "nome": "Burni e C. Srl",
+  "email": "info@burniautomobili.it",
+  "comune": "Cassano d'Adda",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 145000,
+   "marchi": [
+    "fiat",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Treviglio Auto Srl",
+  "email": "commerciale@treviglioauto.it",
+  "comune": "Cassano d'Adda",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 100000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Denicar Spa",
+  "email": "info@denicar.it",
+  "comune": "Milano",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 92000,
+   "marchi": [
+    "jeep"
+   ]
+  }
+ },
+ {
+  "nome": "Ricchi Auto S.r.l.",
+  "email": "accoglienza@ricchiauto.it",
+  "comune": "Barlassina",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 76000,
+   "marchi": [
+    "cupra",
+    "seat"
+   ]
+  }
+ },
+ {
+  "nome": "Venus Spa",
+  "email": "info@venus-spa.it",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 75000,
+   "marchi": [
+    "mercedes",
+    "smart"
+   ]
+  }
+ },
+ {
+  "nome": "Chioda Srl",
+  "email": "lead@autochioda.it",
+  "comune": "Melzo",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 67000,
+   "marchi": [
+    "fiat",
+    "hyundai",
+    "jeep",
+    "peugeot"
+   ]
+  }
+ },
+ {
+  "nome": "Maffini Srl",
+  "email": "maffini@maffini.com",
+  "comune": "Bresso",
+  "prov": "MI",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 66000,
+   "marchi": [
+    "audi",
+    "skoda",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Sangalli Sas",
+  "email": "info@sangalliauto.it",
+  "comune": "Besana in Brianza",
+  "prov": "MB",
+  "gruppo": "primo_invio",
+  "consenso": true,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 63000,
+   "marchi": [
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Centro Porsche Como – Techno Motori srl",
+  "email": "magazzino@technomotori.it",
+  "comune": "Grandate",
+  "prov": "CO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 245000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Centro Porsche Varese - Delcar Spa",
+  "email": "centroporschevarese@delcarspa.it",
+  "comune": "Varese",
+  "prov": "VA",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 235000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "San Matteo spa",
+  "email": "smg@sanmatteogarage.com",
+  "comune": "Pavia",
+  "prov": "PV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "bentley",
+    "ferrari",
+    "maserati",
+    "mercedes",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "YouCars Srl",
+  "email": "info@youcars.it",
+  "comune": "Lecco",
+  "prov": "LC",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 185000,
+   "marchi": [
+    "mercedes",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Grimaldi Auto Spa",
+  "email": "info@grimaldiauto.it",
+  "comune": "Vigevano",
+  "prov": "PV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "ferrari",
+    "seat",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Zetacars Srls",
+  "email": "info@zetacars.it",
+  "comune": "Malnate",
+  "prov": "VA",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 185000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Soluzione Spa Jaguar Land Rover",
+  "email": "soluzionespa@landroverdealers.it",
+  "comune": "Novara",
+  "prov": "NO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "jaguar",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Ideal-Car.Net Srl",
+  "email": "info@ideal-car.net",
+  "comune": "Senna Comasco",
+  "prov": "CO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "aston martin"
+   ]
+  }
+ },
+ {
+  "nome": "Project911 sas di Marco Ponzetto",
+  "email": "am.project911@gmail.com",
+  "comune": "Cureggio/Cavallirio",
+  "prov": "NO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 142000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Serratore Spa",
+  "email": "info.usato@serratoreauto.it",
+  "comune": "Erba",
+  "prov": "CO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "jeep",
+    "peugeot"
+   ]
+  }
+ },
+ {
+  "nome": "Italiana Automobili srl",
+  "email": "info@italianaautomobili.it",
+  "comune": "Caronno Pertusella",
+  "prov": "VA",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 129000,
+   "marchi": [
+    "fiat",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Gruppo Iperauto Spa",
+  "email": "info@iperauto.it",
+  "comune": "Cava Manara",
+  "prov": "PV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "maserati",
+    "porsche",
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Clerici Auto Spa",
+  "email": "info@clericiauto.it",
+  "comune": "Lurate Caccivio",
+  "prov": "CO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 90000,
+   "marchi": [
+    "land rover",
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Bolidea Spa",
+  "email": "concierge.bolidea@landroverdealers.it",
+  "comune": "Savona - SV",
+  "prov": "SV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "jaguar",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Tricars di Michelangelo Tricarico",
+  "email": "info@tricars.it",
+  "comune": "Parma - Pr",
+  "prov": "PR",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Autoazzurra Store Srl",
+  "email": "servizioclienti@autoazzurra.it",
+  "comune": "Suzzara - Mantova - Mn",
+  "prov": "MN",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "bentley"
+   ]
+  }
+ },
+ {
+  "nome": "Autocomevorrei srl",
+  "email": "vendite@autocomevorrei.com",
+  "comune": "Viadana - Mantova - MN",
+  "prov": "MN",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Scuderia Srl",
+  "email": "commerciale@scuderiasrl.it",
+  "comune": "Castiglione Delle Stiviere - Mantova - Mn",
+  "prov": "MN",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 100000,
+   "marchi": [
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Biesse Auto Srl",
+  "email": "vendite@biesseauto.com",
+  "comune": "Flero - Brescia",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 155000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Victoria Srl",
+  "email": "info@gruppovictoria.it",
+  "comune": "Brescia - BS",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "nissan"
+   ]
+  }
+ },
+ {
+  "nome": "Fantini Auto srl",
+  "email": "info@fantiniauto.com",
+  "comune": "Brescia",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "ferrari",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "M Motors srl",
+  "email": "info@mmotors.it",
+  "comune": "Brescia",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "CDA Automobili SRL",
+  "email": "info@cda-auto.it",
+  "comune": "Rovato - Brescia - Bs",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "TuaCar Brescia - Pavoni Auto Srl",
+  "email": "info.brescia@tua-car.it",
+  "comune": "Mazzano - Brescia - BS",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "25039 Store di Zogno Duilio",
+  "email": "info@25039store.com",
+  "comune": "Travagliato – Brescia",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "bentley",
+    "ferrari",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Link Motors Brescia",
+  "email": "info@linkmotors.it",
+  "comune": "Flero - Brescia - BS",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "ferrari"
+   ]
+  }
+ },
+ {
+  "nome": "Sinauto Srl",
+  "email": "info@sinauto.it",
+  "comune": "Molinetto Di Mazzano - Brescia - Bs",
+  "prov": "BS",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "honda"
+   ]
+  }
+ },
+ {
+  "nome": "Dream Garage Automobili",
+  "email": "info@dreamgarageitalia.it",
+  "comune": "Trento - TN",
+  "prov": "TN",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Schiatti Class Srl",
+  "email": "schiatticlass2@landroverdealers.it",
+  "comune": "Reggio Emilia - Re",
+  "prov": "RE",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "jaguar",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Gianni Marchiaro & C. Sas",
+  "email": "segreteria@giannimarchiaro.it",
+  "comune": "Monticello d'Alba - Cuneo - Cn",
+  "prov": "CN",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Car & Car Srl F.lli Carrirolo",
+  "email": "info@carecarsrl.com",
+  "comune": "Gaglianico - Biella - Bi",
+  "prov": "VC",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Intercars Srl",
+  "email": "info@intercars.it",
+  "comune": "Denno - Trento - TN",
+  "prov": "TN",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Ac Motors Srl",
+  "email": "info@acmotors.it",
+  "comune": "Savona - SV",
+  "prov": "SV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Heritage Car Srl",
+  "email": "info@heritage.it",
+  "comune": "Bussolengo - Verona",
+  "prov": "VR",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Sordo Auto Srl",
+  "email": "info@sordoauto.it",
+  "comune": "Castagnaro - Verona - Vr",
+  "prov": "VR",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Tuacar Piacenza - Parma - Reggio Emilia",
+  "email": "info.parma@tua-car.it",
+  "comune": "Parma - PR",
+  "prov": "PR",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Overdrive / Mocauto Group - Milano Palmanova",
+  "email": "lead@mocautogroup.com",
+  "comune": "Milano - Lambrate/Cimiano (via Palmanova 183)",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Lario Mi Auto - Honda Milano Fulvio Testi",
+  "email": "concierge.lariomiauto-milano@landroverdealers.it",
+  "comune": "Milano - Niguarda/Fulvio Testi (viale Fulvio Testi 25)",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "honda",
+    "jaguar",
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Autonobile",
+  "email": "info@autonobile.it",
+  "comune": "Pioltello",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 52000,
+   "marchi": [
+    "porsche",
+    "tesla"
+   ]
+  }
+ },
+ {
+  "nome": "Il Valutatore Point Milano (G.T.R. Car Service)",
+  "email": "info@ilvalutatore.it",
+  "comune": "Milano (via Polidoro da Caravaggio, zona Quarto Oggiaro/Certosa)",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": [
+    "ferrari",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Cavauto (Gruppo Cavauto)",
+  "email": "info@cavauto.com",
+  "comune": "Monza",
+  "prov": "MB",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 150000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Sarco di Arrigoni Srl",
+  "email": "info@sarcodiarrigoni.com",
+  "comune": "Seriate",
+  "prov": "BG",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "lexus",
+    "toyota"
+   ]
+  }
+ },
+ {
+  "nome": "Autopremier4",
+  "email": "info@autopremier4.it",
+  "comune": "Como",
+  "prov": "CO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 95000,
+   "marchi": [
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Emme-Bi Motori (sede Garlate)",
+  "email": "emmebi@emmebimotori.com",
+  "comune": "Garlate",
+  "prov": "LC",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Morganti Automobili Snc",
+  "email": "info@morgantiauto.it",
+  "comune": "Lecco",
+  "prov": "LC",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 37000,
+   "marchi": [
+    "audi"
+   ]
+  }
+ },
+ {
+  "nome": "Autoberetta SRL",
+  "email": "richieste@autoberetta.it",
+  "comune": "Casalpusterlengo",
+  "prov": "LO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "premium",
+   "prezzo_min": 20000,
+   "prezzo_max": 60000,
+   "marchi": [
+    "audi",
+    "jaguar",
+    "porsche"
+   ]
+  }
+ },
+ {
+  "nome": "Totauto Srl",
+  "email": "info@totauto.it",
+  "comune": "Novara",
+  "prov": "NO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "suzuki",
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Maga Auto Srl Unipersonale",
+  "email": "info@magaauto.it",
+  "comune": "Stradella",
+  "prov": "PV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 31000,
+   "marchi": [
+    "land rover"
+   ]
+  }
+ },
+ {
+  "nome": "Checchi Auto (Automoda Srl)",
+  "email": "giuseppe@automodasrl.it",
+  "comune": "Stradella",
+  "prov": "PV",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 43000,
+   "marchi": [
+    "cupra"
+   ]
+  }
+ },
+ {
+  "nome": "Rossomandi Auto Srl",
+  "email": "bdc@rossomandi.com",
+  "comune": "Pieve Emanuele",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": []
+  }
+ },
+ {
+  "nome": "Pogliano Auto Srl",
+  "email": "poglianoauto@gmail.com",
+  "comune": "Pogliano Milanese - Milano",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "hyundai",
+    "kia",
+    "nissan",
+    "suzuki"
+   ]
+  }
+ },
+ {
+  "nome": "Nuova Rosate di Garavaglia Enrico E C. Snc",
+  "email": "nuova.rosate@nuovarosate.it",
+  "comune": "Rosate - Milano",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 18000,
+   "marchi": [
+    "skoda",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Ambrostore Spa",
+  "email": "info@ambrostore.it",
+  "comune": "Segrate",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "ford"
+   ]
+  }
+ },
+ {
+  "nome": "FM Automobili",
+  "email": "info@fmautomobili.net",
+  "comune": "Sesto San Giovanni - Milano",
+  "prov": "MI",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 46000,
+   "marchi": [
+    "audi"
+   ]
+  }
+ },
+ {
+  "nome": "AB Cars di Bonati Alex",
+  "email": "info@abcarsofficial.com",
+  "comune": "Bergamo -  BG",
+  "prov": "BG",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "bmw",
+    "ford"
+   ]
+  }
+ },
+ {
+  "nome": "Tasca Srl",
+  "email": "vendita@tascasrl.it",
+  "comune": "Bottanuco - Bergamo",
+  "prov": "BG",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "audi",
+    "cupra",
+    "seat",
+    "volkswagen"
+   ]
+  }
+ },
+ {
+  "nome": "Autostore Bergamo srl",
+  "email": "info@autostorebergamo.it",
+  "comune": "Curno - Bergamo",
+  "prov": "BG",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 41000,
+   "marchi": [
+    "audi",
+    "mercedes",
+    "volvo"
+   ]
+  }
+ },
+ {
+  "nome": "Corini Motori di Corini Stefano",
+  "email": "info@corinimotori.it",
+  "comune": "Fornovo San Giovanni - Bergamo",
+  "prov": "BG",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 27000,
+   "marchi": [
+    "audi",
+    "bmw",
+    "mercedes"
+   ]
+  }
+ },
+ {
+  "nome": "Sr Auto Srl",
+  "email": "info@srauto.it",
+  "comune": "Osio Sopra - Bergamo",
+  "prov": "BG",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 36000,
+   "marchi": [
+    "mercedes",
+    "porsche",
+    "tesla"
+   ]
+  }
+ },
+ {
+  "nome": "Santin Srl",
+  "email": "info@ilmeccanicosantin.it",
+  "comune": "Arosio - Como",
+  "prov": "CO",
+  "gruppo": "secondo_gruppo",
+  "consenso": false,
+  "profilo": {
+   "tipo": "misto",
+   "prezzo_min": 2500,
+   "prezzo_max": 30000,
+   "marchi": [
+    "audi",
+    "mercedes"
+   ]
+  }
+ }
+]
