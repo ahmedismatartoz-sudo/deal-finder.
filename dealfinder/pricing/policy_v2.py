@@ -852,11 +852,17 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if os.environ.get("POLICY_R_BASSI", "0") == "1" and len(prezzi) >= 3:
         pp = sorted(c["prezzo"] for c in validi if c.get("seller_type") != "commerciante")
         base_b, chi = (pp, "privati") if len(pp) >= 3 else (sorted(prezzi), "annunci")
+        # solo auto VENDIBILI (cliente, 27/10 sera): fuori quelle troppo basse rispetto al gruppo (sotto il 75% della
+        # mediana: quasi sempre guaste, incidentate o prezzi finti). Danneggiate, sparite e doppioni sono già fuori.
+        med_b = percentile(base_b, .5)
+        vend = [x for x in base_b if x >= med_b * float(os.environ.get("POLICY_R_BASSI_MIN", "0.75"))]
+        if len(vend) >= 2:
+            base_b = vend
         k = max(2, len(base_b) // 2)
         rb = int(round(sum(base_b[:k]) / k))
         out["R_bassi"] = rb
         if rb < R:
-            out["ipotesi"].append(f"rivendita = media dei {k} {chi} uguali più economici su {len(base_b)} ({rb} €)")
+            out["ipotesi"].append(f"rivendita = media dei {k} {chi} uguali più economici tra i {len(base_b)} vendibili ({rb} €)")
             R = rb
             out["R"] = R
             out["R_da"] = "media dei più economici"
