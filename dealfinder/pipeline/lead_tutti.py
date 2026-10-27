@@ -22,7 +22,7 @@ from .lead import CI_SUBITO, TEL, _cellulari, _h, _nn, _nu, _tel9
 log = logging.getLogger("lead")
 
 PROV_SUBITO = ["MI", "MB", "LO", "CO", "LC", "BG", "PV", "VA"]     # province (anche in parte) entro ~50 km da Sesto
-PROV_AS = {"MI", "MB", "LO", "CO", "LC", "BG", "PV", "VA", "NO", "CR"}
+PROV_AS = set((os.environ.get("LEADT_PROV") or "MI,MB,LO,CO,LC,BG,PV,VA,NO,CR").split(","))  # 27/10: zona allargabile da Render
 
 SQL_TAB = """
 CREATE TABLE IF NOT EXISTS lead_tutti (
