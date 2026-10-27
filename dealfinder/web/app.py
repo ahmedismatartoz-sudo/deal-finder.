@@ -1537,12 +1537,36 @@ def _rivendita_prudente(items: list) -> list:
         if not R or pv.get("margine") is None:
             out.append(it)            # sezioni senza calcolo (economiche): invariate
             continue
-        giu = int(round(R * sc))
+        extra = 0.0
+        nome = str(it.get("nome") or "").lower()
+        for voce in (os.environ.get("RIVENDITA_MARCA") or "").split(","):    # 27/10 sera: es. "fiat:0.2,lancia:0.15"
+            if ":" in voce:
+                marca, pct = voce.split(":", 1)
+                if marca.strip() and nome.startswith(marca.strip().lower()):
+                    extra += float(pct)
+        anni_v = int(os.environ.get("RIVENDITA_VECCHIE_ANNI", "10"))
+        if it.get("anno") and (time.localtime().tm_year - int(it["anno"])) >= anni_v:
+            extra += float(os.environ.get("RIVENDITA_VECCHIE", "0") or 0)   # auto vecchie: si rivendono peggio
+        giu = int(round(R * min(sc + extra, 0.6)))
         it = dict(it, pv=dict(pv, R=int(R - giu), R_finale=int(R - giu), margine=int(pv["margine"] - giu)))
         soglia = 1500 if (it.get("prezzo") or 0) > 4000 else 800
         if it["pv"]["margine"] >= soglia:
             out.append(it)
     logging.getLogger("scovo").warning("RIVENDITA_PRUDENTE -%d%%: %d auto prima, %d restano", round(sc * 100), len(items), len(out))
+    return out
+
+
+def _zona_sito(items: list) -> list:
+    """27/10 sera (cliente): sul sito solo le province accettate (Lombardia + Novara, Pavia, Piacenza)."""
+    ok = {p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()}
+    if not ok:
+        return items
+    out = []
+    for it in items:
+        m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
+        if not m or m.group(1).upper() in ok:
+            out.append(it)
+    logging.getLogger("scovo").warning("ZONA_SITO %d auto prima, %d restano", len(items), len(out))
     return out
 
 
@@ -1694,7 +1718,7 @@ def _calcola_elenco() -> None:
     _forz = _forzate_sito(set(), opens)
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
-    items = _rivendita_prudente(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))))
+    items = _zona_sito(_rivendita_prudente(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))))
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
