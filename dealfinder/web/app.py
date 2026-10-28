@@ -1613,6 +1613,42 @@ def _senza_scarti_id(items: list) -> list:
     return out
 
 
+def _supercar_europa(gia: set, opens: dict) -> list:
+    """28/10 sera: auto di privati da 70.000 € in su in 8 paesi europei con margine ≥ 5.000 € (tabella supercar_eu).
+    Il prezzo di rivendita e il margine sono quelli calcolati sui confronti europei, con i costi di import se all'estero."""
+    if os.environ.get("SUPERCAR_SITO", "1") != "1":
+        return []
+    from ..pipeline.supercar_eu import SITO_SQL
+    out = []
+    try:
+        with connect() as conn:
+            if not conn.execute("SELECT to_regclass('supercar_eu') AS t").fetchone()["t"]:
+                return []
+            val = {r["listing_id"]: r for r in conn.execute(SITO_SQL, {"lim": int(os.environ.get("SUPERCAR_QUANTE", "300"))}).fetchall()}
+            if not val:
+                return []
+            rows = conn.execute(scovo.ECO_SQL.split("WHERE l.status='attivo'")[0] + " WHERE l.id = ANY(%(ids)s) AND l.status='attivo'",
+                                {"me": 0, "ids": list(val)}).fetchall()
+        for r in rows:
+            if r["id"] in gia:
+                continue
+            v = val[r["id"]]
+            it = scovo.item_eco(r)
+            if not it:
+                continue
+            it.update(economica=False, verificare=True, mercato=int(v["m"]), top=True, supercar=True,
+                      zona=" · ".join(x for x in (r.get("city"), v["paese"]) if x),
+                      pv={"categoria": "opportunita", "etichetta": "Selezione Supercar Europa", "M": int(v["m"]),
+                          "R": int(v["r"]), "R_finale": int(v["r"]), "margine": int(v["margine"]), "n": int(v["n"]),
+                          "totale_costi": int(v["costi"]), "metodo": "confronti Europa"})
+            out.append(it)
+            opens[it["id"]] = int(r["opens"] or 0)
+    except Exception as ex:
+        logging.getLogger("scovo").warning("SUPERCAR_SITO non caricate: %s", str(ex)[:200])
+    logging.getLogger("scovo").warning("SUPERCAR_SITO %d auto", len(out))
+    return out
+
+
 def _forzate_sito(gia: set, opens: dict) -> list:
     """19/10 (cliente: "mettimeli tutti sul sito"): auto scelte a mano (data/forzate_sito.json, per link) sempre sul
     sito finché l'annuncio è attivo, con il mercato e la rivendita veloce calcolati sulle auto uguali."""
@@ -1737,6 +1773,8 @@ def _calcola_elenco() -> None:
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
     items = _zona_sito(_rivendita_prudente(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))))
+    # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
+    items += _senza_scarti_id(_supercar_europa({it["id"] for it in items}, opens))
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
@@ -3200,6 +3238,25 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("LUSSO %s non riuscito: %s", nome, str(e)[:300])
     threading.Thread(target=lusso, daemon=True, name="lusso").start()
+
+    def supercar_eu():
+        """28/10 sera (cliente): supercar e auto di lusso da 70.000 € in su in tutta Europa (AutoScout24, 8 paesi),
+        valutate sui confronti europei col metodo del cliente; sul sito quelle di privati con margine ≥ 5.000 €.
+        SUPERCAR_EU=1 avvia; si ripete ogni SUPERCAR_EU_ORE ore. SUPERCAR_SOLO_VALUTA=1: solo il calcolo."""
+        if os.environ.get("SUPERCAR_EU") != "1":
+            return
+        time.sleep(int(os.environ.get("SUPERCAR_ATTESA", "60")))
+        from ..pipeline import supercar_eu as S
+        while True:
+            try:
+                if os.environ.get("SUPERCAR_SOLO_VALUTA") != "1":
+                    S.raccolta()
+                S.valuta()
+                _elenco["t"] = 0                       # il sito si ricalcola subito con le nuove auto
+            except Exception as e:
+                lg.warning("SUPERCAR non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("SUPERCAR_EU_ORE", "6")) * 3600)
+    threading.Thread(target=supercar_eu, daemon=True, name="supercar_eu").start()
 
     def benzina_mi():
         """20/10 (cliente), una tantum (BENZ_GIRO=n): auto a benzina 3.000-15.000 € in provincia di Milano (BENZ)."""
