@@ -16,6 +16,30 @@ FUEL_MAP = {
     "ibrida": "ibrida", "hybrid": "ibrida", "elettrica/benzina": "ibrida", "elettrica/diesel": "ibrida",
     "elettrica": "elettrica", "electric": "elettrica",
 }
+def norm_fuel(f: str | None) -> str | None:
+    """28/10 (controllo scraper): alimentazione standard anche per le voci composte delle fonti
+    ("mild-hybrid-benzina", "Elettrica/Benzina", "plug-in-hybrid-diesel", "elettrica-bev"), così i confronti
+    non si dividono in gruppi diversi per la stessa auto."""
+    if not f:
+        return f
+    x = f.strip().lower()
+    if x in FUEL_MAP:
+        return FUEL_MAP[x]
+    if "hybrid" in x or "ibrid" in x or ("elettr" in x and ("benz" in x or "dies" in x or "gasol" in x)):
+        return "ibrida"
+    if "gpl" in x or "lpg" in x:
+        return "gpl"
+    if "metano" in x or "cng" in x:
+        return "metano"
+    if "elettr" in x or "electric" in x or "bev" in x:
+        return "elettrica"
+    if "dies" in x or "gasol" in x:
+        return "diesel"
+    if "benz" in x or "petrol" in x or "gasoline" in x:
+        return "benzina"
+    return slug(f)
+
+
 GEARBOX_MAP = {"manuale": "manuale", "manual": "manuale",
                "automatico": "automatico", "automatic": "automatico",
                "semiautomatico": "automatico", "sequenziale": "automatico"}
@@ -86,7 +110,7 @@ def normalize_price(listing: Listing) -> Listing:
     flags = set(listing.price_flags)
     price = listing.price_eur if listing.price_eur is not None else parse_int(listing.price_raw)
 
-    if price is not None and RE_PLUS_IVA.search(text):
+    if price is not None and RE_PLUS_IVA.search(text) and "plus_iva" not in flags:   # 28/10: mai due volte
         flags.add("plus_iva")
         price = round(price * 1.22)
     if RE_LEASING.search(text):
@@ -125,7 +149,7 @@ def normalize_fields(listing: Listing) -> Listing:
     listing.make = slug(listing.make)
     listing.model = slug(listing.model)
     if listing.fuel:
-        listing.fuel = FUEL_MAP.get(listing.fuel.strip().lower(), slug(listing.fuel))
+        listing.fuel = norm_fuel(listing.fuel)
     if listing.gearbox:
         listing.gearbox = GEARBOX_MAP.get(listing.gearbox.strip().lower(), slug(listing.gearbox))
     if listing.province and not listing.region:

@@ -188,6 +188,7 @@ class AutoScoutCollector(Collector):
         self.stop = False            # messo a True da chi raccoglie quando l'obiettivo è raggiunto
         self.visti: set[str] = set()
         self.errori_blocco = 0
+        self.incompleta = False
         self.debug = False
         self._debug_done = False
 
@@ -234,14 +235,28 @@ class AutoScoutCollector(Collector):
         return None
 
     def _page(self, url: str):
-        """(annunci, totale, ok). ok=False: errore o blocco."""
-        try:
-            r = self.client.get(url)
-        except Exception as e:
-            log.warning("autoscout %s: %s", url, str(e)[:120])
+        """(annunci, totale, ok). ok=False: errore o blocco.
+        28/10 (controllo scraper): errori temporanei (429/5xx, rete) si riprovano con attesa crescente invece di
+        perdere il resto della fascia; se la pagina non arriva, la fascia viene segnata come incompleta."""
+        import time
+        r = None
+        for tentativo in range(int(os.environ.get("AUTOSCOUT_RIPROVE", "3")) + 1):
+            try:
+                r = self.client.get(url)
+            except Exception as e:
+                log.warning("autoscout %s: %s (tentativo %d)", url, str(e)[:120], tentativo + 1)
+                r = None
+            if r is not None and r.status_code not in (429, 500, 502, 503, 504):
+                break
+            if r is not None and r.status_code == 429 and self.errori_blocco >= 2:
+                break
+            time.sleep(min(90, 10 * (2 ** tentativo)))
+        if r is None:
+            self.incompleta = True
             return [], None, False
         self.pause()
         if r.status_code != 200:
+            self.incompleta = True
             log.warning("autoscout -> HTTP %s su %s", r.status_code, url)
             if r.status_code in (403, 429):
                 self.errori_blocco += 1
@@ -293,6 +308,8 @@ class AutoScoutCollector(Collector):
                 for ys in self.ANNI:
                     yield from self._band(lo, hi, ctype, seller, ys)
                 return
+            log.warning("autoscout: fascia %s-%s anni %s oltre %s risultati (%s): letti solo i primi 400",
+                        lo, hi, years, self.TETTO, total)
         yield from self._emit(items, ctype, seller)
         page, last = 1, items
         while len(last) >= 20 and page < 20 and not (self.blocked or self.stop):
@@ -318,9 +335,13 @@ class AutoScoutCollector(Collector):
                 chiave = f"as:{os.environ.get('AUTOSCOUT_CAP', '')}:{os.environ.get('AUTOSCOUT_RAGGIO', '')}:{ctype}:{a}"
                 if passi.fatto(chiave):
                     continue
+                self.incompleta = False
                 yield from self._band(a, min(a + step - 1, hi), ctype, seller)
                 if self.blocked or self.stop:
                     break
+                if self.incompleta:                      # 28/10: si rilegge al prossimo giro
+                    log.warning("autoscout massiva: fascia %s incompleta, non segnata come fatta", chiave)
+                    continue
                 passi.segna(chiave)
             log.info("autoscout massiva %s: %d annunci letti", seller, len(self.visti) - n0)
             if self.blocked or self.stop:

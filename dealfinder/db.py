@@ -117,6 +117,9 @@ def upsert_vehicle(conn, listing: Listing) -> int:
     return row["id"]
 
 
+_LETTURA_OK = False
+
+
 def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     """Salva o aggiorna un annuncio. Ritorna (id, evento): nuovo | prezzo | invariato | riapparso."""
     prev = conn.execute("SELECT id, price_eur, status FROM listings WHERE source=%s AND source_id=%s",
@@ -147,7 +150,23 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         return lid, "nuovo"
 
     lid = prev["id"]
-    sets = ", ".join(f"{k} = %({k})s" for k in params if k not in ("source", "source_id"))
+    # 28/10 (controllo scraper): le correzioni del lettore AI (kW, cambio, versione, rata, danni) non vanno perse
+    # alla rilettura successiva dell'annuncio: si tengono quelle salvate in lettura_ai.cambiati
+    global _LETTURA_OK
+    if not _LETTURA_OK:
+        conn.execute("""CREATE TABLE IF NOT EXISTS lettura_ai (
+            listing_id BIGINT PRIMARY KEY, prezzo INTEGER, dati JSONB, cambiati JSONB, computed_at TIMESTAMPTZ DEFAULT now())""")
+        _LETTURA_OK = True
+    _ai = "(SELECT a.cambiati FROM lettura_ai a WHERE a.listing_id = listings.id)"
+    _tenere = {
+        "power_kw": f"COALESCE(({_ai}->>'power_kw')::int, %(power_kw)s)",
+        "gearbox": f"COALESCE({_ai}->>'gearbox', %(gearbox)s)",
+        "version_raw": f"COALESCE({_ai}->>'version_raw', %(version_raw)s)",
+        "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
+        "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
+    }
+    sets = ", ".join(f"{k} = {_tenere[k]}" if k in _tenere else f"{k} = %({k})s"
+                     for k in params if k not in ("source", "source_id"))
     conn.execute(f"UPDATE listings SET {sets}, last_seen_at = now(), status='attivo', disappeared_at=NULL "
                  f"WHERE id = %(id)s", {**params, "id": lid})
     event = "invariato"

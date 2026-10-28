@@ -7,6 +7,8 @@ raccolta_60k(): tutte le auto da 60.000 € in su in vendita a Milano e dintorni
 """
 from __future__ import annotations
 
+from ..core.normalize import normalize_fields
+
 import json
 import logging
 import os
@@ -174,7 +176,7 @@ def raccolta_60k() -> int:
             st["troppo_vecchia"] += 1
             return
         try:
-            lid, ev = upsert_listing(conn, l)
+            lid, ev = upsert_listing(conn, normalize_fields(l))
             conn.commit()
         except Exception as e:
             conn.rollback()
@@ -255,7 +257,7 @@ def privati_lombardia() -> int:
             st["sotto_60k"] += 1
             return
         try:
-            lid, ev = upsert_listing(conn, l)
+            lid, ev = upsert_listing(conn, normalize_fields(l))
             conn.commit()
         except Exception as e:
             conn.rollback()

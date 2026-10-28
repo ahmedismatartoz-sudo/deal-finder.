@@ -61,7 +61,9 @@ def text_year(l: Listing) -> int | None:
     years = [int(y) for y in RE_YEAR_EXPLICIT.findall(l.description or "")]
     years += [int(y) for y in RE_YEAR_EXPLICIT.findall(l.title or "")]
     if not years:
-        years = [int(y) for y in RE_YEAR.findall(l.title or "")]
+        # 28/10: "Peugeot 2008/3008", "BMW 2002": il nome del modello non è l'anno
+        modello = re.sub(r"\D", " ", f"{l.model or ''} {l.version_raw or ''}").split()
+        years = [int(y) for y in RE_YEAR.findall(l.title or "") if y not in modello]
     years = [y for y in years if y <= datetime.date.today().year]
     return years[0] if len(set(years)) == 1 else None
 
@@ -70,7 +72,10 @@ def check(l: Listing, fix: bool = True) -> list[str]:
     """Problemi di coerenza (lista vuota = coerente). Con fix=True corregge l'anno dal testo."""
     problems = []
     makes = text_makes(l)
-    if l.make and makes and l.make not in makes:
+    # 28/10: marca del campo nella stessa forma del testo ("mercedes-benz" -> "mercedes", "land-rover" -> "land-rover")
+    mk = (l.make or "").lower()
+    mk = MAKES.get(mk.replace("-", " "), MAKES.get(mk, mk))
+    if l.make and makes and mk not in makes:
         problems.append("marca_diversa_dal_testo")
     ty = text_year(l)
     if ty and l.year and abs(ty - l.year) >= 2:

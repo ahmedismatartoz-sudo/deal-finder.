@@ -3010,6 +3010,47 @@ def _tempo_reale():
             lg.warning("CALIBRA non riuscita: %s", str(e)[:300])
     threading.Thread(target=calibra, daemon=True, name="calibra").start()
 
+    def normalizza_db():
+        """28/10 (controllo scraper): pulizia una tantum dei dati già salvati (NORMALIZZA_DB=1) e elenco dei nomi
+        di modello per fonte (per unire "320"/"serie-3", "classe-a"/"a-class")."""
+        if os.environ.get("NORMALIZZA_DB") != "1":
+            return
+        time.sleep(30)
+        try:
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '900s'")
+                n1 = conn.execute("""UPDATE listings SET fuel='ibrida' WHERE fuel IS NOT NULL AND fuel <> 'ibrida' AND
+                    (fuel ~* '(hybrid|ibrid)' OR (fuel ~* 'elettr' AND fuel ~* '(benz|dies|gasol)'))""").rowcount
+                n2 = conn.execute("""UPDATE listings SET fuel='elettrica' WHERE fuel IS NOT NULL AND fuel <> 'elettrica'
+                    AND fuel ~* '(elettr|electric|bev)' AND fuel !~* '(benz|dies|gasol|hybrid|ibrid)'""").rowcount
+                n3 = conn.execute("""UPDATE listings SET fuel=lower(fuel) WHERE fuel <> lower(fuel)""").rowcount
+                n4 = conn.execute("""UPDATE listings SET make=lower(replace(make,' ','-')) WHERE make <> lower(replace(make,' ','-'))""").rowcount
+                n5 = conn.execute("""UPDATE listings SET model=lower(replace(model,' ','-')) WHERE model <> lower(replace(model,' ','-'))""").rowcount
+                n6 = conn.execute("""UPDATE listings SET price_flags=array_remove(price_flags,'dati_incoerenti')
+                    WHERE make IN ('mercedes-benz','mercedes') AND 'dati_incoerenti' = ANY(price_flags)
+                    AND title ~* 'mercedes' AND title !~* '(bmw|audi|volkswagen|fiat|ford|opel|renault|peugeot|toyota)'""").rowcount
+                conn.commit()
+                lg.warning("NORMALIZZA_DB alimentazione ibrida %d, elettrica %d, minuscole %d, marche %d, modelli %d, "
+                           "mercedes sbloccate %d", n1, n2, n3, n4, n5, n6)
+                for mk in os.environ.get("NORMALIZZA_MARCHE", "bmw,mercedes-benz,mercedes,audi,volkswagen,land-rover,mini,"
+                                         "fiat,alfa-romeo,porsche,volvo,peugeot,citroen,toyota,ford,opel,renault").split(","):
+                    rows = conn.execute("""SELECT source, model, count(*) AS n FROM listings WHERE make=%s
+                        AND first_seen_at > now() - interval '120 days' GROUP BY 1,2 HAVING count(*) >= 15
+                        ORDER BY 3 DESC LIMIT 80""", (mk,)).fetchall()
+                    lg.warning("MODELLI_FONTE %s %s", mk, json.dumps([[r["source"][:2], r["model"], r["n"]] for r in rows]))
+                rows = conn.execute("""SELECT make, count(*) AS n FROM listings WHERE first_seen_at > now() - interval '120 days'
+                    GROUP BY 1 ORDER BY 2 DESC LIMIT 80""").fetchall()
+                lg.warning("MARCHE_FONTE %s", json.dumps([[r["make"], r["n"]] for r in rows]))
+                st = conn.execute("""SELECT count(*) AS tot, count(*) FILTER (WHERE status='attivo') AS attivi,
+                    count(*) FILTER (WHERE status='attivo' AND seller_type='privato') AS privati,
+                    count(*) FILTER (WHERE status='attivo' AND upper(province) IN ('MI','MB','BG','BS','CO','CR','LC','LO','MN','PV','SO','VA','NO','PC')) AS zona,
+                    count(*) FILTER (WHERE status='scomparso' AND disappeared_at > now() - interval '60 days') AS vendute60
+                    FROM listings""").fetchone()
+                lg.warning("CONTEGGI_DB %s", json.dumps(dict(st)))
+        except Exception as e:
+            lg.warning("NORMALIZZA_DB non riuscita: %s", str(e)[:300])
+    threading.Thread(target=normalizza_db, daemon=True, name="normalizza-db").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":
