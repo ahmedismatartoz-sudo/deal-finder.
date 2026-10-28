@@ -564,7 +564,10 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
         ya = ka = 0.0
         origine = "nessuna correzione"
         puliti = [dict(c, prezzo=float(c["price_eur"])) for c in puliti]
-    livelli = [1, 2] if cfg.amplia else [1]
+    # 28/10 (cliente: "mettimele sul sito"): solo per la fascia alta (POLICY_AMPLIA_DA, es. 25.000 €) si
+    # ammette il livello 2 (anno ±2, km ±35.000) quando il livello stretto non arriva al minimo: stima ampliata
+    _da = int(os.environ.get("POLICY_AMPLIA_DA", "0") or 0)
+    livelli = [1, 2] if (cfg.amplia or (_da and (t.get("price_eur") or 0) >= _da)) else [1]
     motivi = {}
     for liv in livelli:            # si amplia SOLO se il livello stretto non arriva al minimo
         validi, scartati = [], []
