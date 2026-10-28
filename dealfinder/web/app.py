@@ -1533,7 +1533,10 @@ def _rivendita_prudente(items: list) -> list:
     """27/10 sera (cliente): rivendita abbassata del RIVENDITA_SCONTO (5%) su tutte le auto, per stare sicuri;
     poi restano solo quelle con il margine delle regole (sopra 4.000 € almeno 1.500 €, fino a 4.000 € almeno 800 €)."""
     sc = float(os.environ.get("RIVENDITA_SCONTO", "0") or 0)
-    if sc <= 0:
+    # 28/10 13:55 (cliente): da RIVENDITA_SOPRA € (20.000) in su rivendita −RIVENDITA_SOPRA_PCT (10%)
+    r_sopra = int(os.environ.get("RIVENDITA_SOPRA", "0") or 0)
+    r_pct = float(os.environ.get("RIVENDITA_SOPRA_PCT", "0") or 0)
+    if sc <= 0 and not (r_sopra and r_pct):
         return items
     out = []
     for it in items:
@@ -1552,6 +1555,11 @@ def _rivendita_prudente(items: list) -> list:
         anni_v = int(os.environ.get("RIVENDITA_VECCHIE_ANNI", "10"))
         if it.get("anno") and (time.localtime().tm_year - int(it["anno"])) >= anni_v:
             extra += float(os.environ.get("RIVENDITA_VECCHIE", "0") or 0)   # auto vecchie: si rivendono peggio
+        if r_sopra and r_pct and (it.get("prezzo") or 0) >= r_sopra:
+            extra += r_pct
+        if sc + extra <= 0:
+            out.append(it)
+            continue
         giu = int(round(R * min(sc + extra, 0.6)))
         it = dict(it, pv=dict(pv, R=int(R - giu), R_finale=int(R - giu), margine=int(pv["margine"] - giu)))
         soglia = 1500 if (it.get("prezzo") or 0) > 4000 else 800
