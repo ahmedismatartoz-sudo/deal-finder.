@@ -80,6 +80,11 @@ def _sito(html: str, base: str) -> str | None:
     return None
 
 
+def _marca() -> str:
+    """Segno dei siti già riprovati: cambia quando c'è la ricerca web, così si riprovano anche con quella."""
+    return "riprova3" if (os.environ.get("BRAVE_API_KEY") or "").strip() else "riprova2"
+
+
 def _sicuro(f, *a):
     try:
         return f(*a)
@@ -112,8 +117,8 @@ def giro() -> dict:
         with connect() as conn:
             riprova = [(r["chiave"], r["sito"], r["nome"], r["comune"]) for r in conn.execute(
                 "SELECT e.chiave, e.sito, d.nome, d.comune FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
-                "WHERE cardinality(e.email) = 0 AND e.fonte IS DISTINCT FROM 'riprova2' "
-                "AND (%(p)s::text[] IS NULL OR upper(d.prov) = ANY(%(p)s))", {"p": prov}).fetchall()]
+                "WHERE cardinality(e.email) = 0 AND e.fonte IS DISTINCT FROM %(m)s "
+                "AND (%(p)s::text[] IS NULL OR upper(d.prov) = ANY(%(p)s))", {"p": prov, "m": _marca()}).fetchall()]
         log.warning("LEADE_RIPROVA %d siti da riprovare", len(riprova))
     pagine = trovati = provati = 0
     t0 = time.time()
@@ -275,7 +280,7 @@ def giro() -> dict:
                 email, fonte = dal_sito(sw)
                 if email:
                     sito = sw
-        salva(chiave, email, sito, fonte or "riprova2")
+        salva(chiave, email, sito, fonte or _marca())
         trovati += bool(email)
         if provati % 100 == 0:
             log.warning("LEADE avanzamento: %d commercianti, %d con email, %d pagine, %ds", provati, trovati, pagine,
