@@ -2911,6 +2911,29 @@ def _tempo_reale():
             lg.warning("AUTO_INVIO non riuscito: %s", str(e)[:300])
     threading.Thread(target=auto_invio, daemon=True, name="auto-invio").start()
 
+    def raccolta_zona():
+        """28/10 (cliente: "auto sul sito tra un'ora intorno a Grumello del Monte, 50 km, da 1.000 € a infinito"):
+        un giro di raccolta+valutazione+pubblicazione qui sul web, con le impostazioni RZ_* (non tocca il cron)."""
+        if os.environ.get("RACCOLTA_ZONA") != "1":
+            return
+        time.sleep(60)
+        for k, v in {"BENZ_CAP": os.environ.get("RZ_CAP", "24064"), "BENZ_RAGGIO": os.environ.get("RZ_RAGGIO", "50"),
+                     "BENZ_MIN": os.environ.get("RZ_MIN", "1000"), "BENZ_PMAX": os.environ.get("RZ_MAX", "300000"),
+                     "BENZ_PROVINCE": os.environ.get("RZ_PROVINCE", "BG,BS,CR,LC,MI,MB"), "BENZ_PASSO": os.environ.get("RZ_PASSO", "1000"),
+                     "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": "0", "BENZ_TUTTI_CARB": "1",
+                     "BENZ_DAL": os.environ.get("RZ_DAL", "2026-09-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("RZ_SUB_PAGINE", "200"),
+                     "BENZ_MAX": os.environ.get("RZ_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("RZ_SOGLIA", "0.9"),
+                     "BENZ_PARALLELI": os.environ.get("RZ_PARALLELI", "4")}.items():
+            os.environ[k] = v
+        try:
+            from ..pipeline import benzina_mi as B
+            esito = B.giro()
+            lg.warning("RACCOLTA_ZONA fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+            _aggiorna_elenco(False)
+        except Exception as e:
+            lg.warning("RACCOLTA_ZONA non riuscita: %s", str(e)[:300])
+    threading.Thread(target=raccolta_zona, daemon=True, name="raccolta-zona").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":

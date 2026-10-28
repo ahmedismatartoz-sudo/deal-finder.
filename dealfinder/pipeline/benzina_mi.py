@@ -106,7 +106,7 @@ def giro() -> dict:
         log.warning("BENZ subito letti %d (%d-%d €)", n, PMIN, PMAX)
         # 1b. AutoScout24: entro 100 km da Milano, a fasce di 500 €, più fasce insieme
         from .lusso import bande_parallele
-        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("BENZ_RAGGIO", "100")
+        os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = os.environ.get("BENZ_CAP", "20121"), os.environ.get("BENZ_RAGGIO", "100")   # 28/10: BENZ_CAP (es. 24064 Grumello)
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
