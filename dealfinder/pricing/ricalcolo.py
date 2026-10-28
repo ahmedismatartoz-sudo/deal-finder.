@@ -21,16 +21,21 @@ TARGET_COLS = ("l.id, l.source, l.url, l.make, l.model, l.version_raw, l.year, l
                "l.vehicle_identity, l.stage_reason")
 FIN_SQL = (r"COALESCE(description ~* '(solo|vincolat\w*|valid\w*|previo|tramite|con)\s+(a\s+|al\s+|il\s+|un\s+)?"
            r"finanziament', false) AS finanziamento")
+# 28/10 (cliente: "margini non precisi"): tra i confronti anche le auto VENDUTE (annunci spariti negli ultimi
+# POLICY_VENDUTE_GIORNI giorni): dicono il prezzo a cui il mercato compra davvero, non solo quello richiesto.
+_VEND_GG = int(os.environ.get("POLICY_VENDUTE_GIORNI", "0") or 0)
+_STATO_SQL = ("(status='attivo' OR (status='scomparso' AND disappeared_at > now() - interval '%d days'))" % _VEND_GG
+              if _VEND_GG > 0 else "status='attivo'")
 MARKET_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, fuel, "
               "gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, problem_search, "
-              "first_seen_at, last_seen_at, last_checked_at, " + FIN_SQL + " FROM listings "
-              "WHERE status='attivo' AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "   # usa listings_cmp_idx
+              "first_seen_at, last_seen_at, last_checked_at, disappeared_at, " + FIN_SQL + " FROM listings "
+              "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "
               "AND {home}")
 MARKET_ITALIA_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, fuel, "
                      "gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, problem_search, "
-                     "first_seen_at, last_seen_at, last_checked_at, " + FIN_SQL + " FROM listings "
-                     "WHERE status='attivo' AND lower(make)=lower(%s) AND lower(model)=lower(%s) AND lower(fuel)=lower(%s) "
-                     "AND price_eur BETWEEN 25000 AND 400000")
+                     "first_seen_at, last_seen_at, last_checked_at, disappeared_at, " + FIN_SQL + " FROM listings "
+                     "WHERE " + _STATO_SQL + " AND lower(make)=lower(%s) AND lower(model)=lower(%s) AND lower(fuel)=lower(%s) "
+                     "AND price_eur BETWEEN " + str(int(os.environ.get("POLICY_ITALIA_PMIN", "25000"))) + " AND 400000")
 RISCHIO = {"telaio_longheroni", "tetto_montanti", "airbag_esplosi", "frontale_profondo", "airbag",
            "modulo_airbag_volante", "modulo_airbag_passeggero", "centralina_airbag", "motore_sostituzione",
            "cambio_sostituzione", "alluvionata", "incendio"}

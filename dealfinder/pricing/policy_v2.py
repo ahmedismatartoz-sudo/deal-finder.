@@ -535,12 +535,19 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
             via(c, {"doppione": "doppione su un altro portale", "truffa": "annuncio sospetto",
                     "prezzo_finto": "prezzo finto"}[c["stage_reason"]])
             continue
+        venduta = False
         if c.get("status") != "attivo":
-            via(c, "annuncio non più online")
-            continue
+            # 28/10: auto sparita di recente = venduta, è un confronto valido (POLICY_VENDUTE_GIORNI)
+            gg_v = int(os.environ.get("POLICY_VENDUTE_GIORNI", "0") or 0)
+            d_v = _days(c.get("disappeared_at"), now) if c.get("disappeared_at") else None
+            if not (gg_v > 0 and c.get("status") == "scomparso" and d_v is not None and d_v <= gg_v):
+                via(c, "annuncio non più online")
+                continue
+            venduta = True
+            c["venduta"] = True
         giorni = [g for g in (_days(c.get("last_checked_at"), now), _days(c.get("last_seen_at"), now)) if g is not None]
         vis = min(giorni) if giorni else None          # ultima verifica = la più recente tra controllo e lettura
-        if vis is None or vis > cfg.freschezza_giorni:
+        if not venduta and (vis is None or vis > cfg.freschezza_giorni):
             via(c, f"non ricontrollato negli ultimi {cfg.freschezza_giorni} giorni")
             continue
         if (c.get("damage_class") or "sconosciuto") in DANNEGGIATE or c.get("problem_search"):
