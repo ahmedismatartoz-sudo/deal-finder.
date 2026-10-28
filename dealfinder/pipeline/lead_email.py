@@ -177,7 +177,7 @@ def giro() -> dict:
                     r = asc.client.get(u, timeout=8, follow_redirects=True)
                     pagine += 1
                     t = r.text.lower() if r.status_code == 200 else ""
-                    if t and re.search(r"\bauto|veicol|usato|concessionari", t) and ((com and com in t) or n[0] in t):
+                    if t and re.search(r"\bauto|veicol|usato|concessionari", t) and ((com and len(com) > 3 and com in t) or any(w in t for w in n if len(w) >= 5 and w not in ("auto", "motor", "motors", "group", "service", "trade", "italia", "milano"))):
                         return str(r.url)
                 except Exception:
                     pagine += 1
