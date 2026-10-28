@@ -1565,7 +1565,7 @@ def _rivendita_prudente(items: list) -> list:
         soglia = 1500 if (it.get("prezzo") or 0) > 4000 else 800
         # 28/10 13:58 (cliente: "rimettile"): le auto da RIVENDITA_SOPRA in su restano anche sotto soglia (margine > 0)
         if r_sopra and os.environ.get("RIVENDITA_SOPRA_TIENI") == "1" and (it.get("prezzo") or 0) >= r_sopra:
-            soglia = 1
+            soglia = 1 - int(os.environ.get("RIBASSO_EURO", "0") or 0)   # col ribasso del prezzo il margine torna positivo
         if it["pv"]["margine"] >= soglia:
             out.append(it)
     logging.getLogger("scovo").warning("RIVENDITA_PRUDENTE -%d%%: %d auto prima, %d restano", round(sc * 100), len(items), len(out))
