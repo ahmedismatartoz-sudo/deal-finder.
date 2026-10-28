@@ -165,7 +165,9 @@ def ciclo(elenco=None) -> None:
         try:
             with connect() as conn:
                 rows = conn.execute(
-                    "SELECT e.chiave, e.email, e.sito FROM lead_email e WHERE cardinality(e.email) > 0").fetchall()
+                    "SELECT e.chiave, e.email, e.sito FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
+                    "WHERE cardinality(e.email) > 0 AND (%(prov)s::text[] IS NULL OR upper(d.prov) = ANY(%(prov)s))",
+                    {"prov": [x.strip().upper() for x in os.environ["AUTO_PROV"].split(",")] if os.environ.get("AUTO_PROV") else None}).fetchall()
                 ann: dict = {}
                 for r in conn.execute("SELECT chiave, prezzo FROM lead_tutti_ann").fetchall():
                     ann.setdefault(r["chiave"], []).append(r["prezzo"])
