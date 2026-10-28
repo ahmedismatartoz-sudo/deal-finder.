@@ -1667,7 +1667,9 @@ def _dump_candidati(pool: list[dict], sul_sito: set | None = None) -> None:
 def _calcola_elenco() -> None:
     t0 = time.time()
     with connect() as conn:
-        rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": 0}).fetchall()
+        # 28/10: senza ORDER BY il LIMIT prendeva ogni volta 3000 righe a caso: il sito oscillava tra 70 e 170 auto
+        rows = conn.execute(scovo.LIST_SQL + " ORDER BY l.id DESC LIMIT %(lim)s",
+                            {"me": 0, "lim": int(os.environ.get("ELENCO_LIMITE", "8000"))}).fetchall()
     # nuova policy attiva appena il ricalcolo ha valutato le auto (prima del primo giro vale la regola precedente)
     scovo.POLICY_PRONTA["ok"] = sum(1 for r in rows if r.get("pv")) >= max(1, len(rows) // 2)
     items, opens, riserva = [], {}, []
