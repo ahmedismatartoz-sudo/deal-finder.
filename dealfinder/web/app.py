@@ -2937,6 +2937,32 @@ def _tempo_reale():
             lg.warning("RACCOLTA_ZONA non riuscita: %s", str(e)[:300])
     threading.Thread(target=raccolta_zona, daemon=True, name="raccolta-zona").start()
 
+    def casi_studio():
+        """28/10 (cliente): casi studio per la presentazione: auto di fascia alta passate sul sito e vendute presto."""
+        if os.environ.get("CASI_STUDIO") != "1":
+            return
+        time.sleep(20)
+        try:
+            from . import foto as FO
+            with connect() as conn:
+                rows = conn.execute(
+                    """SELECT m.listing_id AS id, m.make, m.model, m.anno, m.km, m.prezzo_iniziale, m.prezzo_finale, m.ribassi,
+                              m.mercato_m, m.rivendita_r, m.margine, m.n_confronti, m.metodo,
+                              round(m.giorni_online, 1) AS giorni_online, round(m.giorni_sul_sito, 1) AS giorni_sito,
+                              m.sparita_at::date AS sparita, l.title, l.province, l.city, l.fuel, l.seller_type, l.source,
+                              (SELECT count(*) FROM listing_photos p WHERE p.listing_id = m.listing_id) AS n_foto
+                       FROM misure_vendite m JOIN listings l ON l.id = m.listing_id
+                       WHERE m.prezzo_finale >= %s AND m.margine > 0
+                       ORDER BY m.margine DESC LIMIT 40""", (int(os.environ.get("CASI_DA", "20000")),)).fetchall()
+            for r in rows:
+                d = {k: (v if isinstance(v, (int, float, str, type(None))) else str(v)) for k, v in dict(r).items()}
+                d["foto"] = [FO.url_for(r["id"], i) for i in range(min(int(r["n_foto"] or 0), 3))]
+                lg.warning("CASO_STUDIO %s", json.dumps(d, default=str, ensure_ascii=False))
+            lg.warning("CASI_STUDIO fatti: %d", len(rows))
+        except Exception as e:
+            lg.warning("CASI_STUDIO non riusciti: %s", str(e)[:300])
+    threading.Thread(target=casi_studio, daemon=True, name="casi-studio").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":
