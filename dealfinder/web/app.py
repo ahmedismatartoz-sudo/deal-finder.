@@ -2959,6 +2959,24 @@ def _tempo_reale():
                 d["foto"] = [FO.url_for(r["id"], i) for i in range(min(int(r["n_foto"] or 0), 3))]
                 lg.warning("CASO_STUDIO %s", json.dumps(d, default=str, ensure_ascii=False))
             lg.warning("CASI_STUDIO fatti: %d", len(rows))
+            # foto per la presentazione: piccole (900 px), in base64 a pezzi nei log
+            import base64, io
+            from PIL import Image
+            for voce in [x for x in os.environ.get("CASI_FOTO", "").split(",") if ":" in x]:
+                lid, pos = (int(x) for x in voce.split(":"))
+                with connect() as conn:
+                    raw = FO.fetch_one(conn, lid, pos)
+                if not raw:
+                    lg.warning("CASO_FOTO %d:%d assente", lid, pos)
+                    continue
+                im = Image.open(io.BytesIO(raw)).convert("RGB")
+                im.thumbnail((900, 900))
+                buf = io.BytesIO()
+                im.save(buf, "JPEG", quality=72)
+                b = base64.b64encode(buf.getvalue()).decode()
+                pezzi = [b[i:i + 6000] for i in range(0, len(b), 6000)]
+                for i, pz in enumerate(pezzi):
+                    lg.warning("CASO_FOTO %d:%d %d/%d %s", lid, pos, i + 1, len(pezzi), pz)
         except Exception as e:
             lg.warning("CASI_STUDIO non riusciti: %s", str(e)[:300])
     threading.Thread(target=casi_studio, daemon=True, name="casi-studio").start()
