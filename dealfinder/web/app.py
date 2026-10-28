@@ -1211,6 +1211,11 @@ def _prezzi_trattati(items: list[dict]) -> None:
     tutte = os.environ.get("RIBASSO_FASCE") == "1"   # 27/10: ribasso per fascia su tutto il sito (temporaneo)
     for it in items:
         nuovo = _ribasso_fascia(it["prezzo"]) if tutte and it.get("prezzo") else prezzi.get(str(it.get("id")))
+        # 28/10 13:50 (cliente, scelta esplicita "dal prezzo originale"): sopra RIBASSO_SOPRA € si mostra il prezzo
+        # dell'annuncio meno RIBASSO_EURO (es. 20.000 / 3.000)
+        sopra, rib = int(os.environ.get("RIBASSO_SOPRA", "0") or 0), int(os.environ.get("RIBASSO_EURO", "0") or 0)
+        if not nuovo and sopra and rib and (it.get("prezzo") or 0) > sopra:
+            nuovo = it["prezzo"] - rib
         if not nuovo or not it.get("prezzo") or nuovo == it["prezzo"]:
             continue
         diff = it["prezzo"] - nuovo
