@@ -95,4 +95,11 @@ def misura(conn) -> dict:
                            "errore_R_pct": round(median(d["err_R"]), 1),
                            "copertura_R": round(d["coperte"] / d["n"], 2)}
     log.warning("CALIBRA_RISULTATO %s", json.dumps(out, ensure_ascii=False))
+    try:      # 28/10 sera: il sito corregge il mercato con questi valori (vedi app._mercato_calibrato)
+        conn.execute("CREATE TABLE IF NOT EXISTS calibrazione (at TIMESTAMPTZ PRIMARY KEY DEFAULT now(), dati JSONB)")
+        conn.execute("INSERT INTO calibrazione (dati) VALUES (%s)", (json.dumps(out),))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        log.warning("CALIBRA non salvata: %s", str(e)[:120])
     return out

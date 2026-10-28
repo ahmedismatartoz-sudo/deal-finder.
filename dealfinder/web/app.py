@@ -1577,6 +1577,101 @@ def _rivendita_prudente(items: list) -> list:
     return out
 
 
+_calib_cache = {"t": 0.0, "f": None}
+_FASCE_CALIB = [(5000, "<5k"), (10000, "5-10k"), (20000, "10-20k"), (35000, "20-35k"), (60000, "35-60k"), (10**9, ">60k")]
+
+
+def _fattori_calibra() -> list:
+    """28/10 sera (cliente: "non voglio più margini gonfiati"): per fascia, prezzo di vendita vero / mediana degli annunci,
+    misurato sulle auto vendute (tabella calibrazione, aggiornata dalla misura CALIBRA). Mai sopra 1, mai sotto 0,8;
+    fasce con meno di CALIBRA_N_MIN auto misurate: si usa il valore di riserva CALIBRA_FATTORI."""
+    if time.time() - _calib_cache["t"] < 1800 and _calib_cache["f"] is not None:
+        return _calib_cache["f"]
+    riserva = {}
+    for voce in (os.environ.get("CALIBRA_FATTORI") or "<5k:0.87,5-10k:0.915,10-20k:0.97").split(","):
+        if ":" in voce:
+            k, v = voce.split(":", 1)
+            riserva[k.strip()] = float(v)
+    fasce = {}
+    try:
+        with connect() as conn:
+            if conn.execute("SELECT to_regclass('calibrazione') AS t").fetchone()["t"]:
+                r = conn.execute("SELECT dati FROM calibrazione ORDER BY at DESC LIMIT 1").fetchone()
+                d = r["dati"] if r else None
+                fasce = (json.loads(d) if isinstance(d, str) else d or {}).get("fasce") or {}
+    except Exception as e:
+        logging.getLogger("scovo").warning("CALIBRA fattori non letti: %s", str(e)[:120])
+    nmin = int(os.environ.get("CALIBRA_N_MIN", "20"))
+    out = []
+    for lim, nome in _FASCE_CALIB:
+        f = fasce.get(nome) or {}
+        x = f.get("prezzo_su_M") if (f.get("n") or 0) >= nmin else None
+        x = riserva.get(nome, 1.0) if x is None else x
+        out.append((lim, nome, max(0.8, min(1.0, float(x)))))
+    _calib_cache.update(t=time.time(), f=out)
+    logging.getLogger("scovo").warning("CALIBRA_FATTORI %s", {n: x for _, n, x in out})
+    return out
+
+
+def _mercato_calibrato(items: list) -> list:
+    """28/10 sera (cliente): 1) il mercato è la mediana dei prezzi CHIESTI: si porta al prezzo di vendita vero col
+    fattore misurato della sua fascia, e la rivendita diventa min(rivendita, mercato corretto × 0,95);
+    2) sotto CONFRONTI_MIN_SOTTO € (10.000) servono almeno CONFRONTI_MIN_ECO (8) auto uguali;
+    3) difetti scritti nell'annuncio (lettura AI, tabella ai_difetti): costo tolto dal margine, gravi fuori dal sito.
+    Poi il margine minimo delle regole (sopra 4.000 € almeno 1.500 €, fino a 4.000 € almeno 800 €)."""
+    if os.environ.get("MERCATO_CALIBRATO", "1") != "1" or not items:
+        return items
+    fatt = _fattori_calibra()
+    lim_eco, n_eco = int(os.environ.get("CONFRONTI_MIN_SOTTO", "10000")), int(os.environ.get("CONFRONTI_MIN_ECO", "8"))
+    difetti = _difetti_letti([it["id"] for it in items if isinstance(it.get("id"), int)])
+    out, st = [], {"corretti": 0, "pochi_confronti": 0, "difetto_grave": 0, "sotto_soglia": 0, "difetto_costo": 0}
+    for it in items:
+        pv = it.get("pv")
+        if not isinstance(pv, dict) or pv.get("margine") is None or not pv.get("M") or it.get("supercar"):
+            out.append(it)
+            continue
+        prezzo = it.get("prezzo") or 0
+        if prezzo and prezzo < lim_eco and (pv.get("n") or 0) and pv["n"] < n_eco and pv.get("metodo") != "confronti Europa":
+            st["pochi_confronti"] += 1
+            continue
+        M = float(pv["M"])
+        f = next(x for lim, _, x in fatt if M < lim)
+        R = float(pv.get("R_finale") or pv.get("R") or 0)
+        R2 = min(R, M * f * 0.95) if f < 1 else R
+        giu = int(round(R - R2))
+        d = difetti.get(it["id"])
+        if d and d.get("grave"):
+            st["difetto_grave"] += 1
+            continue
+        costo = int(d.get("costo") or 0) if d else 0
+        if giu > 0 or costo:
+            st["corretti"] += 1
+            st["difetto_costo"] += bool(costo)
+            pv = dict(pv, M=int(round(M * f)), M_annunci=int(M), R=int(R2), R_finale=int(R2),
+                      margine=int(pv["margine"] - giu - costo), calibrato=round(f, 3),
+                      difetto=(d or {}).get("motivo") if costo else None)
+            it = dict(it, pv=pv, mercato=int(round(M * f)))
+        soglia = 1500 if prezzo > 4000 else 800
+        if it["pv"]["margine"] >= soglia or (it.get("prezzo") or 0) >= int(os.environ.get("RIVENDITA_SOPRA", "0") or 10**9) \
+                and os.environ.get("RIVENDITA_SOPRA_TIENI") == "1" and it["pv"]["margine"] > 0:
+            out.append(it)
+        else:
+            st["sotto_soglia"] += 1
+    logging.getLogger("scovo").warning("MERCATO_CALIBRATO %d auto prima, %d restano %s", len(items), len(out), st)
+    return out
+
+
+def _difetti_letti(ids: list) -> dict:
+    try:
+        with connect() as conn:
+            if not conn.execute("SELECT to_regclass('ai_difetti') AS t").fetchone()["t"]:
+                return {}
+            return {r["listing_id"]: dict(r) for r in conn.execute(
+                "SELECT listing_id, costo, grave, motivo FROM ai_difetti WHERE listing_id = ANY(%s)", (ids,)).fetchall()}
+    except Exception:
+        return {}
+
+
 def _zona_sito(items: list) -> list:
     """27/10 sera (cliente): sul sito solo le province accettate (Lombardia + Novara, Pavia, Piacenza)."""
     ok = {p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()}
@@ -1777,7 +1872,7 @@ def _calcola_elenco() -> None:
     _forz = _forzate_sito(set(), opens)
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
-    items = _zona_sito(_rivendita_prudente(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))))
+    items = _zona_sito(_rivendita_prudente(_mercato_calibrato(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))))))
     # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
     items += _senza_scarti_id(_supercar_europa({it["id"] for it in items}, opens))
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
@@ -3262,6 +3357,23 @@ def _tempo_reale():
                 lg.warning("SUPERCAR non riuscito: %s", str(e)[:300])
             time.sleep(float(os.environ.get("SUPERCAR_EU_ORE", "6")) * 3600)
     threading.Thread(target=supercar_eu, daemon=True, name="supercar_eu").start()
+
+    def difetti_annunci():
+        """28/10 sera (cliente): l'AI legge i difetti dichiarati negli annunci delle auto sul sito (DIFETTI=1, predefinito)."""
+        if os.environ.get("DIFETTI", "1") != "1":
+            return
+        time.sleep(int(os.environ.get("DIFETTI_ATTESA", "180")))
+        from ..ai import difetti as D
+        while True:
+            try:
+                ids = [it["id"] for it in list(_elenco.get("items") or []) if isinstance(it.get("id"), int) and not it.get("supercar")]
+                st = D.giro(ids)
+                if st.get("difetti") or st.get("gravi"):
+                    _elenco["t"] = 0                       # il sito si ricalcola togliendo il costo dei difetti
+            except Exception as e:
+                lg.warning("DIFETTI non riuscito: %s", str(e)[:300])
+            time.sleep(int(os.environ.get("DIFETTI_MIN", "15")) * 60)
+    threading.Thread(target=difetti_annunci, daemon=True, name="difetti").start()
 
     def benzina_mi():
         """20/10 (cliente), una tantum (BENZ_GIRO=n): auto a benzina 3.000-15.000 € in provincia di Milano (BENZ)."""
