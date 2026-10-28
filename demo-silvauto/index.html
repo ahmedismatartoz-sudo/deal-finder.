@@ -90,7 +90,10 @@ nav a:hover,nav button:hover{border-color:var(--giallo);color:#fff}
 .carta{background:var(--antracite2);border:1px solid var(--linea);border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;transition:border-color .3s,transform .4s var(--curva)}
 .carta:hover{border-color:rgba(242,195,24,.6);transform:translateY(-3px)}
 .carta .img{aspect-ratio:3/2;background:#191b21;position:relative;overflow:hidden}
-.carta .img img{width:100%;height:100%;object-fit:cover}
+.carta .img img{width:100%;height:100%;object-fit:cover;object-position:50% 55%;transition:transform .8s var(--curva)}
+.carta:hover .img img{transform:scale(1.04)}
+.carta.prima{opacity:0;transform:translateY(22px)}
+.carta.vista{opacity:1;transform:none;transition:opacity .7s var(--curva),transform .7s var(--curva),border-color .3s}
 .carta .tag{position:absolute;left:10px;top:10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:rgba(12,14,18,.8);padding:6px 10px;border-radius:999px;color:var(--caldo)}
 .carta .testo{padding:14px 16px 16px}
 .carta h4{font-family:var(--serif);font-weight:500;font-size:23px;line-height:1.12}
@@ -102,10 +105,17 @@ footer{max-width:1260px;margin:60px auto 0;padding:22px clamp(16px,3vw,40px) 40p
 footer a{color:#b5bac1}
 
 /* ---------- scheda auto ---------- */
-#dettaglio{position:fixed;inset:0;z-index:50;background:rgba(10,11,14,.97);display:none;overflow:auto}
+#dettaglio{position:fixed;inset:0;z-index:50;background:#0d0e12;display:none;overflow:auto}
 #dettaglio.on{display:block}
 #dettaglio .corpo{max-width:1320px;margin:0 auto;padding:88px clamp(16px,3vw,40px) 40px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;align-items:start}
-#dettaglio .grande{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:10px;background:#15171c}
+#dettaglio .palco{position:relative;width:100%;aspect-ratio:3/2;max-height:68vh;border-radius:12px;overflow:hidden;background:radial-gradient(90% 90% at 50% 45%,#22252c,#121418)}
+#dettaglio .grande{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .45s var(--curva),transform .6s var(--curva)}
+#dettaglio .grande.cambia{opacity:0;transform:scale(.985)}
+#dettaglio .freccia{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(12,14,18,.6);border:1px solid var(--linea);font-size:18px;z-index:2}
+#dettaglio .freccia.s{left:10px} #dettaglio .freccia.d{right:10px}
+#dettaglio .conta{position:absolute;right:12px;bottom:10px;font-size:11px;letter-spacing:.12em;background:rgba(12,14,18,.6);padding:4px 9px;border-radius:999px}
+#dettaglio.on .corpo > *{animation:sale .6s var(--curva) both} #dettaglio.on #schedaD{animation-delay:.12s}
+#dettaglio{transition:opacity .35s} 
 #dettaglio .strip{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
 #dettaglio .strip button{width:110px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--linea);opacity:.65}
 #dettaglio .strip button.att,#dettaglio .strip button:hover{opacity:1;border-color:var(--giallo)}
@@ -156,6 +166,7 @@ footer a{color:#b5bac1}
   .cap p{font-size:14px}
   #tappe{display:none}
   #schede{top:73px}
+  #dettaglio .palco{aspect-ratio:4/3;max-height:52vh}
   #dettaglio .corpo{grid-template-columns:1fr;padding-top:76px} #schedaD{position:static} #dettaglio .strip button{width:74px;height:50px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -221,7 +232,7 @@ footer a{color:#b5bac1}
 <section id="dettaglio" aria-modal="true" aria-label="Scheda auto">
   <button class="indietro" id="indietroD">← Tutte le auto</button>
   <button class="chiudi" id="chiudiD" aria-label="Chiudi">×</button>
-  <div class="corpo"><div><img class="grande" id="fotoD" alt="" width="1200" height="800" referrerpolicy="no-referrer"><div class="strip" id="stripD"></div></div><aside id="schedaD"></aside></div>
+  <div class="corpo"><div><div class="palco" id="palco"><img class="grande" id="fotoD" alt="" referrerpolicy="no-referrer"><button class="freccia s" id="fotoPrec" aria-label="Foto precedente">‹</button><button class="freccia d" id="fotoSucc" aria-label="Foto successiva">›</button><span class="conta" id="contaD"></span></div><div class="strip" id="stripD"></div></div><aside id="schedaD"></aside></div>
 </section>
 <section id="cassetto" aria-modal="true" aria-label="Menu"><button class="chiudi" id="chiudiCassetto" aria-label="Chiudi">×</button><div id="cassettoCorpo"></div></section>
 
@@ -378,6 +389,13 @@ const km = n => n === 0 ? 'Km 0' : n.toLocaleString('it-IT') + ' km';
   // categoria attiva nella barra mentre si scorre
   const io = new IntersectionObserver(v => v.forEach(x => { if (x.isIntersecting) link.querySelectorAll('a').forEach(a => a.classList.toggle('att', a.dataset.cat === x.target.id)); }), { rootMargin: '-45% 0px -50% 0px' });
   box.querySelectorAll('.categoria').forEach(s => io.observe(s));
+  const fermoC = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!fermoC && 'IntersectionObserver' in window) {
+    const carte = [...box.querySelectorAll('.carta')]; carte.forEach(c => c.classList.add('prima'));
+    const ioC = new IntersectionObserver(v => v.forEach(x => { if (!x.isIntersecting) return; const c = x.target, i = [...c.parentNode.children].indexOf(c);
+      setTimeout(() => c.classList.add('vista'), (i % 4) * 90); ioC.unobserve(c); }), { rootMargin: '0px 0px -8% 0px' });
+    carte.forEach(c => ioC.observe(c));
+  }
 })();
 
 /* ================= SCHEDA AUTO ================= */
@@ -397,15 +415,27 @@ function schedaHTML(a){
 }
 function vaiA(i){
   const n = AUTO.length; i = ((i % n) + n) % n; attuale = i; const a = AUTO[i];
-  const f = document.getElementById('fotoD'); f.src = a.foto[0]; f.alt = a.nome;
+  const f = document.getElementById('fotoD'); f.src = a.foto[0]; f.alt = a.nome; fotoK = 0; contaFoto();
   document.getElementById('stripD').innerHTML = a.foto.map((x, k) => `<button class="${k ? '' : 'att'}" data-k="${k}" aria-label="Foto ${k + 1}"><img src="${x}" alt="" width="110" height="72" loading="lazy" referrerpolicy="no-referrer"></button>`).join('');
   document.getElementById('schedaD').innerHTML = schedaHTML(a);
   const d = document.getElementById('dettaglio'); d.classList.add('on'); d.scrollTop = 0; document.body.style.overflow = 'hidden';
 }
 function chiudiDettaglio(){ document.getElementById('dettaglio').classList.remove('on'); document.body.style.overflow = ''; }
-document.getElementById('stripD').onclick = e => { const b = e.target.closest('button'); if (!b) return;
-  document.getElementById('fotoD').src = AUTO[attuale].foto[+b.dataset.k];
-  document.querySelectorAll('#stripD button').forEach(x => x.classList.toggle('att', x === b)); };
+// foto: cambio con dissolvenza, frecce, miniature e scorrimento col dito
+let fotoK = 0;
+function contaFoto(){ document.getElementById('contaD').textContent = (fotoK + 1) + ' / ' + AUTO[attuale].foto.length; }
+function mostraFoto(k){
+  const fs = AUTO[attuale].foto; fotoK = ((k % fs.length) + fs.length) % fs.length;
+  const f = document.getElementById('fotoD'); f.classList.add('cambia');
+  setTimeout(() => { f.src = fs[fotoK]; f.onload = () => f.classList.remove('cambia'); setTimeout(() => f.classList.remove('cambia'), 600); }, 220);
+  document.querySelectorAll('#stripD button').forEach((x, i) => x.classList.toggle('att', i === fotoK)); contaFoto();
+}
+document.getElementById('stripD').onclick = e => { const b = e.target.closest('button'); if (b) mostraFoto(+b.dataset.k); };
+document.getElementById('fotoPrec').onclick = () => mostraFoto(fotoK - 1);
+document.getElementById('fotoSucc').onclick = () => mostraFoto(fotoK + 1);
+let xTocco = null;
+document.getElementById('palco').addEventListener('touchstart', e => { xTocco = e.touches[0].clientX; }, { passive:true });
+document.getElementById('palco').addEventListener('touchend', e => { if (xTocco == null) return; const dx = e.changedTouches[0].clientX - xTocco; if (Math.abs(dx) > 40) mostraFoto(fotoK + (dx < 0 ? 1 : -1)); xTocco = null; }, { passive:true });
 document.getElementById('chiudiD').onclick = chiudiDettaglio; document.getElementById('indietroD').onclick = chiudiDettaglio;
 
 /* ================= MENU LATERALE (testi dal sito Silvauto) ================= */
@@ -444,7 +474,7 @@ document.addEventListener('click', e => {
 });
 addEventListener('keydown', e => {
   const aperto = document.getElementById('dettaglio').classList.contains('on');
-  if (aperto && e.key === 'ArrowRight') vaiA(attuale + 1); else if (aperto && e.key === 'ArrowLeft') vaiA(attuale - 1);
+  if (aperto && e.key === 'ArrowRight') mostraFoto(fotoK + 1); else if (aperto && e.key === 'ArrowLeft') mostraFoto(fotoK - 1);
   else if (e.key === 'Escape') { chiudiDettaglio(); chiudiCassetto(); }
 });
 </script>
