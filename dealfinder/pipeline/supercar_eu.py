@@ -67,16 +67,31 @@ def raccolta() -> dict:
     t0 = time.time()
 
     def leggi(c):
+        """Una fascia: ogni annuncio si salva appena letto (memoria: mai migliaia di annunci insieme)."""
         m, p, a, b, ct, sel = c
         col = _collettore(m, p)
+        loc = Counter()
         try:
-            out = list(col._band(a, b, ct, sel))
-            for l in out:
-                l.raw = None
-            return out, col.blocked
+            with connect() as cc:
+                for l in col._band(a, b, ct, sel):
+                    l.raw = None
+                    if not l.price_eur or l.price_eur < lo:
+                        continue
+                    try:
+                        _, ev = upsert_listing(cc, normalize_fields(l))
+                        cc.commit()
+                        loc[ev] += 1
+                        loc[l.seller_type] += 1
+                    except Exception as e:
+                        cc.rollback()
+                        loc["errore"] += 1
+                        if loc["errore"] < 3:
+                            log.warning("SUPERCAR non salvato %s: %s", l.url, str(e)[:160])
+                    del l
         except Exception as e:
             log.warning("SUPERCAR fascia %s: %s", c, str(e)[:120])
-            return [], False
+            return loc, True
+        return loc, col.blocked
 
     workers = int(os.environ.get("SUPERCAR_PARALLELI", "4"))
     # si riprende da dove era arrivata dopo un riavvio (stesso giro: blocco di SUPERCAR_EU_ORE ore)
@@ -92,25 +107,14 @@ def raccolta() -> dict:
     with connect() as conn, ThreadPoolExecutor(workers) as ex:
         for i in range(0, len(compiti), workers):
             gruppo = compiti[i:i + workers]
-            for c, (out, blocc) in zip(gruppo, ex.map(leggi, gruppo)):
+            for c, (loc, blocc) in zip(gruppo, ex.map(leggi, gruppo)):
                 st["bloccate"] += bool(blocc)
-                for l in out:
-                    if not l.price_eur or l.price_eur < lo:
-                        continue
-                    try:
-                        _, ev = upsert_listing(conn, normalize_fields(l))
-                        conn.commit()
-                        st[ev] += 1
-                        st[l.seller_type] += 1
-                    except Exception as e:
-                        conn.rollback()
-                        st["errore"] += 1
-                        if st["errore"] < 5:
-                            log.warning("SUPERCAR non salvato %s: %s", l.url, str(e)[:160])
+                st.update(loc)
                 if not blocc:
                     conn.execute("INSERT INTO supercar_passi (giro, chiave) VALUES (%s,%s) ON CONFLICT DO NOTHING", (giro, chiave(c)))
                     conn.commit()
-                del out
+            import gc
+            gc.collect()
             if (i // workers) % 25 == 0:
                 log.warning("SUPERCAR_RACCOLTA %d/%d fasce, %s, %ds", i + workers, len(compiti), dict(st), time.time() - t0)
     log.warning("SUPERCAR_RACCOLTA_FINE %s in %ds", json.dumps(dict(st)), time.time() - t0)
