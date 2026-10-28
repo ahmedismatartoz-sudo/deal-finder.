@@ -110,9 +110,9 @@ def giro() -> dict:
     if os.environ.get("LEADE_RIPROVA") == "1":                  # 28/10: siti già visti senza email, con le pagine nuove
         prov = [x.strip().upper() for x in (os.environ.get("LEADE_PROV") or "").split(",") if x.strip()] or None
         with connect() as conn:
-            riprova = [(r["chiave"], r["sito"]) for r in conn.execute(
-                "SELECT e.chiave, e.sito FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
-                "WHERE cardinality(e.email) = 0 AND e.sito IS NOT NULL AND e.fonte IS DISTINCT FROM 'riprova' "
+            riprova = [(r["chiave"], r["sito"], r["nome"], r["comune"]) for r in conn.execute(
+                "SELECT e.chiave, e.sito, d.nome, d.comune FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
+                "WHERE cardinality(e.email) = 0 AND e.fonte IS DISTINCT FROM 'riprova2' "
                 "AND (%(p)s::text[] IS NULL OR upper(d.prov) = ANY(%(p)s))", {"p": prov}).fetchall()]
         log.warning("LEADE_RIPROVA %d siti da riprovare", len(riprova))
     pagine = trovati = provati = 0
@@ -125,21 +125,63 @@ def giro() -> dict:
                          "fonte = EXCLUDED.fonte, tentato = now()", (chiave, email, sito, fonte))
             conn.commit()
 
+    PAROLE = re.compile(r"(contatt|contact|privacy|note-legali|legal|chi-siamo|azienda|about|dove|info|impressum|cookie)", re.I)
+
     def dal_sito(sito):
+        """Home + pagine fisse + (28/10) i link interni della home che sembrano contatti/privacy, fino a LEADE_PAGINE."""
         nonlocal pagine
-        for p in PAGINE_SITO:
+        dom = urlparse(sito).netloc.lower().removeprefix("www.")
+        coda, visti = [urljoin(sito, p) for p in PAGINE_SITO], set()
+        massimo_p = int(os.environ.get("LEADE_PAGINE", "16"))
+        while coda and len(visti) < massimo_p:
+            u = coda.pop(0)
+            if u in visti:
+                continue
+            visti.add(u)
             try:
-                r = asc.client.get(urljoin(sito, p), timeout=15)
+                r = asc.client.get(u, timeout=15, follow_redirects=True)
                 pagine += 1
                 if r.status_code == 200 and "html" in (r.headers.get("content-type") or ""):
                     em = _email(r.text) + [m.lower() for m in re.findall(r'mailto:([^"?>\s]+)', r.text)]
                     em = [e for e in dict.fromkeys(em) if e in _email(e)]
                     if em:
-                        return em[:3], urljoin(sito, p)
+                        return em[:3], u
+                    if len(visti) <= 1:                      # solo dalla home: link interni utili, in testa alla coda
+                        utili = []
+                        for h in re.findall(r'href="([^"#]+)"', r.text):
+                            v = urljoin(u, h)
+                            if urlparse(v).netloc.lower().removeprefix("www.") == dom and PAROLE.search(v) and v not in visti:
+                                utili.append(v)
+                        coda = list(dict.fromkeys(utili))[:8] + coda
             except Exception:
                 pagine += 1
-            time.sleep(0.4)
+            time.sleep(0.3)
         return [], None
+
+    def indovina_sito(nome, comune):
+        """28/10: commercianti senza sito su AutoScout24: prova il dominio dal nome (es. "Auto Lanza Snc" -> autolanza.it)
+        e lo tiene solo se la pagina parla di auto e cita il comune o il nome."""
+        nonlocal pagine
+        n = re.sub(r"(?i)\b(s\.?r\.?l\.?s?|s\.?n\.?c\.?|s\.?a\.?s\.?|s\.?p\.?a\.?|di|&|e|c\.?|sas|snc|srl|spa|srls)\b", " ", nome or "")
+        n = re.sub(r"[^a-z0-9 ]", " ", n.lower()).split()
+        if not n:
+            return None
+        base = ["".join(n), "".join(n[:2]), "-".join(n)] if len(n) > 1 else [n[0]]
+        com = (comune or "").split("-")[0].strip().lower()
+        for b in dict.fromkeys(base):
+            if len(b) < 5:
+                continue
+            for tld in (".it", ".com"):
+                u = f"https://www.{b}{tld}/"
+                try:
+                    r = asc.client.get(u, timeout=8, follow_redirects=True)
+                    pagine += 1
+                    t = r.text.lower() if r.status_code == 200 else ""
+                    if t and re.search(r"\bauto|veicol|usato|concessionari", t) and ((com and com in t) or n[0] in t):
+                        return str(r.url)
+                except Exception:
+                    pagine += 1
+        return None
 
     def uno(url):
         nonlocal provati, trovati, pagine
@@ -180,12 +222,13 @@ def giro() -> dict:
             uno(url)
     def di_nuovo(cs):
         nonlocal provati, trovati
-        chiave, sito = cs
+        chiave, sito, nome, comune = cs
         if pagine >= massimo:
             return
         provati += 1
-        email, fonte = dal_sito(sito)
-        salva(chiave, email, sito, fonte or "riprova")
+        sito = sito or indovina_sito(nome, comune)
+        email, fonte = dal_sito(sito) if sito else ([], None)
+        salva(chiave, email, sito, fonte or "riprova2")
         trovati += bool(email)
         if provati % 100 == 0:
             log.warning("LEADE avanzamento: %d commercianti, %d con email, %d pagine, %ds", provati, trovati, pagine,
