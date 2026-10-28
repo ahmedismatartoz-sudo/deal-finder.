@@ -48,7 +48,8 @@ def giro() -> dict:
     from ..collectors.subito import SubitoCollector
     from ..collectors.autoscout import AutoScoutCollector
     st: Counter = Counter()
-    global PMIN, PMAX, SOLO_P
+    global PMIN, PMAX, SOLO_P, PROVINCE_100
+    PROVINCE_100 = [p.strip() for p in os.environ.get("BENZ_PROVINCE", ",".join(PROVINCE_100)).split(",") if p.strip()]
     PMIN, PMAX = int(os.environ.get("BENZ_MIN", "3000")), int(os.environ.get("BENZ_PMAX", "15000"))
     SOLO_P = os.environ.get("BENZ_SOLO_PRIVATI") == "1"
     # 21/10 sera (cliente): si raccolgono TUTTI gli annunci (anche concessionari) per la base prezzi del modello;
