@@ -3080,6 +3080,22 @@ def _tempo_reale():
             lg.warning("NORMALIZZA_MODELLI non riuscita: %s", str(e)[:300])
     threading.Thread(target=normalizza_modelli, daemon=True, name="normalizza-modelli").start()
 
+    def indice_confronti():
+        """28/10 sera: i confronti ora usano anche le auto vendute e la base Italia: serve un indice su
+        marca/modello/alimentazione valido per tutti gli stati (quello vecchio copre solo gli annunci attivi)."""
+        if os.environ.get("INDICE_CONFRONTI", "1") != "1":
+            return
+        time.sleep(5)
+        try:
+            import psycopg
+            from ..config import settings
+            with psycopg.connect(settings.database_url, autocommit=True) as c:
+                c.execute("CREATE INDEX CONCURRENTLY IF NOT EXISTS listings_mmf_tutti_idx ON listings (make, model, fuel)")
+            lg.warning("INDICE_CONFRONTI pronto")
+        except Exception as e:
+            lg.warning("INDICE_CONFRONTI non riuscito: %s", str(e)[:300])
+    threading.Thread(target=indice_confronti, daemon=True, name="indice-confronti").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":
