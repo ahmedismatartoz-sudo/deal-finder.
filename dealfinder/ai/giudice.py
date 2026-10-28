@@ -54,7 +54,7 @@ def _tabella(conn):
 
 
 def _chiedi(conn, t: dict, confronti: list[dict]) -> str:
-    resp = AI.client().messages.create(
+    resp = AI.crea(
         model=AI.MODEL_FAST, max_tokens=int(os.environ.get("GIUDICE_MAX_TOKENS", "1200")), system=SYSTEM,
         messages=[{"role": "user", "content": _riga_auto(t) + "\n\nCONFRONTI:\n" + _righe_confronti(confronti)}])
     testo = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")

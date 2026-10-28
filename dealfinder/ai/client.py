@@ -85,6 +85,20 @@ def client():
     return _client
 
 
+def crea(**kwargs):
+    """28/10: i modelli nuovi "ragionano" prima di rispondere (blocchi thinking): per letture brevi è tempo e denaro
+    sprecato e a volte finiscono i token prima della risposta. Si spegne (AI_THINKING=off); se il modello non
+    accetta l'opzione si richiama senza."""
+    if os.environ.get("AI_THINKING", "off") == "off" and "thinking" not in kwargs:
+        try:
+            return client().messages.create(thinking={"type": "disabled"}, **kwargs)
+        except Exception as e:
+            if "thinking" not in str(e).lower():
+                raise
+            log.warning("AI: thinking disabled non accettato (%s), riprovo senza", str(e)[:120])
+    return client().messages.create(**kwargs)
+
+
 def extract_json(text: str):
     """Estrae il primo oggetto/array JSON dalla risposta."""
     text = text.strip()
@@ -218,7 +232,7 @@ def ask_json(task: str, model: str, system: str, content: list[dict], max_tokens
                   messages=[{"role": "user", "content": content}])
     if web_search is not None:
         kwargs["tools"] = [{"type": WEB_SEARCH_TOOL, "name": "web_search", **web_search}]
-    resp = client().messages.create(**kwargs)
+    resp = crea(**kwargs)
 
     texts, sources = [], []
     for block in resp.content:
