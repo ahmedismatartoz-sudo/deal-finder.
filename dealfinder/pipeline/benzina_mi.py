@@ -25,10 +25,10 @@ CANDIDATI_SQL = """
 WITH g AS (                     -- prezzo mediano per marca, modello, alimentazione e anno: una sola passata
   SELECT make, model, fuel, year, count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY price_eur) AS med
   FROM listings
-  WHERE price_eur BETWEEN 800 AND 60000 AND year >= 2005 AND make IS NOT NULL AND model IS NOT NULL
+  WHERE price_eur BETWEEN 800 AND %(gmax)s AND year >= 2005 AND make IS NOT NULL AND model IS NOT NULL
   GROUP BY make, model, fuel, year
 )
-SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, g.n, g.med
+SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, g.n, g.med
 FROM listings t
 JOIN g ON g.make=t.make AND g.model=t.model AND g.fuel IS NOT DISTINCT FROM t.fuel AND g.year=t.year
 WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
@@ -122,6 +122,7 @@ def giro() -> dict:
         conn.execute("SET statement_timeout = '900s'")
         cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
                                             "lim": int(os.environ.get("BENZ_MAX", "500")), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
+                                            "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
                                             "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
         conn.execute("SET statement_timeout = 0")
@@ -136,7 +137,7 @@ def giro() -> dict:
             stato, det = tr._as_dettaglio(cl, r["url"])
             return r["id"], stato, (tr.telefono_autoscout(det) if det is not None else None)
 
-        with ThreadPoolExecutor(6) as ex:
+        with ThreadPoolExecutor(int(os.environ.get("BENZ_TEL_PARALLELI", "6"))) as ex:
             for lid, stato, tel in ex.map(numero, da_fare):
                 if stato == "scomparso":
                     st["autoscout_sparite"] += 1
@@ -145,8 +146,18 @@ def giro() -> dict:
                     st[f"autoscout_telefono_{tel}"] += 1
         conn.commit()
         # 4. valutazione prudente e pubblicazione
+        # 28/10: a pezzi (stessa marca/modello insieme), memoria liberata a ogni pezzo: con 1.500 candidate
+        # in un colpo solo il web (512 MB) andava fuori memoria e ripartiva da capo
+        import gc
+        cand = sorted(cand, key=lambda r: (str(r.get("make") or ""), str(r.get("model") or "")))
         ids = [r["id"] for r in cand]
-        tr.valuta_e_pubblica(conn, ids, st)
-        conn.commit()
+        del cand
+        pezzo = int(os.environ.get("BENZ_VAL_PEZZO", "0")) or len(ids) or 1
+        for i in range(0, len(ids), pezzo):
+            tr.valuta_e_pubblica(conn, ids[i:i + pezzo], st)
+            conn.commit()
+            gc.collect()
+            if pezzo < len(ids):
+                log.warning("BENZ valutate %d/%d, pubblicate finora %d", min(i + pezzo, len(ids)), len(ids), st.get("pubblicate", 0))
     log.warning("BENZ_FINE %s", json.dumps(dict(st)))
     return dict(st)

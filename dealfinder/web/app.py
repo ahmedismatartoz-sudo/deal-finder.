@@ -2923,7 +2923,10 @@ def _tempo_reale():
                      "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": "0", "BENZ_TUTTI_CARB": "1",
                      "BENZ_DAL": os.environ.get("RZ_DAL", "2026-09-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("RZ_SUB_PAGINE", "200"),
                      "BENZ_MAX": os.environ.get("RZ_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("RZ_SOGLIA", "0.9"),
-                     "BENZ_PARALLELI": os.environ.get("RZ_PARALLELI", "4")}.items():
+                     "BENZ_PARALLELI": os.environ.get("RZ_PARALLELI", "4"),
+                     "BENZ_SOLO_VALUTA": os.environ.get("RZ_SOLO_VALUTA", "0"), "BENZ_VAL_PEZZO": os.environ.get("RZ_VAL_PEZZO", "80"),
+                     "BENZ_TEL_PARALLELI": os.environ.get("RZ_TEL_PARALLELI", "3"),
+                     "BENZ_G_MAX": os.environ.get("RZ_G_MAX", "300000")}.items():
             os.environ[k] = v
         try:
             from ..pipeline import benzina_mi as B
