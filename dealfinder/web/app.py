@@ -1536,7 +1536,10 @@ def _rivendita_prudente(items: list) -> list:
     # 28/10 13:55 (cliente): da RIVENDITA_SOPRA € (20.000) in su rivendita −RIVENDITA_SOPRA_PCT (10%)
     r_sopra = int(os.environ.get("RIVENDITA_SOPRA", "0") or 0)
     r_pct = float(os.environ.get("RIVENDITA_SOPRA_PCT", "0") or 0)
-    if sc <= 0 and not (r_sopra and r_pct):
+    # 28/10 22:06 (cliente, dalla misura su 327 auto vendute): sotto RIVENDITA_SOTTO € (10.000) rivendita −RIVENDITA_SOTTO_PCT (5%)
+    r_sotto = int(os.environ.get("RIVENDITA_SOTTO", "0") or 0)
+    r_sotto_pct = float(os.environ.get("RIVENDITA_SOTTO_PCT", "0") or 0)
+    if sc <= 0 and not (r_sopra and r_pct) and not (r_sotto and r_sotto_pct):
         return items
     out = []
     for it in items:
@@ -1557,6 +1560,8 @@ def _rivendita_prudente(items: list) -> list:
             extra += float(os.environ.get("RIVENDITA_VECCHIE", "0") or 0)   # auto vecchie: si rivendono peggio
         if r_sopra and r_pct and (it.get("prezzo") or 0) >= r_sopra:
             extra += r_pct
+        if r_sotto and r_sotto_pct and 0 < (it.get("prezzo") or 0) < r_sotto:
+            extra += r_sotto_pct
         if sc + extra <= 0:
             out.append(it)
             continue
