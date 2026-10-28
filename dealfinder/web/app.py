@@ -3090,8 +3090,17 @@ def _tempo_reale():
             import psycopg
             from ..config import settings
             with psycopg.connect(settings.database_url, autocommit=True) as c:
+                r = c.execute("""SELECT i.indisvalid FROM pg_class x JOIN pg_index i ON i.indexrelid = x.oid
+                                 WHERE x.relname = 'listings_mmf_tutti_idx'""").fetchone()
+                if r is not None and r[0]:
+                    lg.warning("INDICE_CONFRONTI già pronto")
+                    return
+                if r is not None:                       # rimasto a metà da un riavvio: si rifà
+                    c.execute("DROP INDEX CONCURRENTLY IF EXISTS listings_mmf_tutti_idx")
+                    lg.warning("INDICE_CONFRONTI non valido, lo rifaccio")
+                t0 = time.time()
                 c.execute("CREATE INDEX CONCURRENTLY IF NOT EXISTS listings_mmf_tutti_idx ON listings (make, model, fuel)")
-            lg.warning("INDICE_CONFRONTI pronto")
+            lg.warning("INDICE_CONFRONTI pronto in %.0f s", time.time() - t0)
         except Exception as e:
             lg.warning("INDICE_CONFRONTI non riuscito: %s", str(e)[:300])
     threading.Thread(target=indice_confronti, daemon=True, name="indice-confronti").start()
