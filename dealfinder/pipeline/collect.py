@@ -710,6 +710,28 @@ if __name__ == "__main__":
                 SE.valuta()
         except Exception as e:
             log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
+    # 28/10 22:08 (cliente: "300 auto medie e basse, supercar a parte, base di tutte le auto e quelle nuove"): raccolta
+    # degli annunci nuovi della zona + scelta sulla base di TUTTE le auto del database + valutazione e pubblicazione,
+    # qui nel cron (prima girava sul sito e lo mandava in crash per memoria). Impostazioni ZC_* (fascia media e bassa).
+    if os.environ.get("ZONA_CRON") == "1":
+        try:
+            from .ciclo import _due
+            if _due("zona_cron", int(os.environ.get("ZC_ORE", "3"))):
+                for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"),
+                             "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "50000"),
+                             "BENZ_PROVINCE": os.environ.get("ZC_PROVINCE", "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"),
+                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": "0", "BENZ_TUTTI_CARB": "1",
+                             "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
+                             "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
+                             "BENZ_PARALLELI": os.environ.get("ZC_PARALLELI", "3"), "BENZ_SOLO_VALUTA": os.environ.get("ZC_SOLO_VALUTA", "0"),
+                             "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"), "BENZ_TEL_PARALLELI": os.environ.get("ZC_TEL_PARALLELI", "3"),
+                             "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
+                    os.environ[k] = v
+                from . import benzina_mi as B
+                esito = B.giro()
+                log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+        except Exception as e:
+            log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
     for voce in [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]:
         try:
             from .ciclo import _due
