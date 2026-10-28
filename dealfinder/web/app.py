@@ -2997,6 +2997,19 @@ def _tempo_reale():
             lg.warning("CASI_STUDIO non riusciti: %s", str(e)[:300])
     threading.Thread(target=casi_studio, daemon=True, name="casi-studio").start()
 
+    def calibra():
+        """28/10: misura una tantum della precisione della rivendita sulle auto vendute (CALIBRA=1)."""
+        if os.environ.get("CALIBRA") != "1":
+            return
+        time.sleep(int(os.environ.get("CALIBRA_ATTESA", "120")))
+        try:
+            from ..pricing import calibra as CB
+            with connect() as conn:
+                CB.misura(conn)
+        except Exception as e:
+            lg.warning("CALIBRA non riuscita: %s", str(e)[:300])
+    threading.Thread(target=calibra, daemon=True, name="calibra").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":
