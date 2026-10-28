@@ -3051,6 +3051,35 @@ def _tempo_reale():
             lg.warning("NORMALIZZA_DB non riuscita: %s", str(e)[:300])
     threading.Thread(target=normalizza_db, daemon=True, name="normalizza-db").start()
 
+    def normalizza_modelli():
+        """28/10: stessa marca/modello tra AutoScout e Subito anche per gli annunci già salvati (NORMALIZZA_MODELLI=1)."""
+        if os.environ.get("NORMALIZZA_MODELLI") != "1":
+            return
+        time.sleep(20)
+        try:
+            from ..core.normalize import canon_make, canon_model
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '900s'")
+                n_marche = 0
+                for vecchia, nuova in (("mercedes", "mercedes-benz"), ("ds", "ds-automobiles"), ("dr", "dr-automobiles")):
+                    n_marche += conn.execute("UPDATE listings SET make=%s WHERE make=%s", (nuova, vecchia)).rowcount
+                conn.commit()
+                coppie = conn.execute("""SELECT DISTINCT make, model FROM listings WHERE make IN
+                    ('bmw','mercedes-benz','porsche','mini','volkswagen') AND model IS NOT NULL""").fetchall()
+                n_mod, cambi = 0, {}
+                for r in coppie:
+                    nuovo = canon_model(r["make"], r["model"])
+                    if nuovo and nuovo != r["model"]:
+                        n_mod += conn.execute("UPDATE listings SET model=%s WHERE make=%s AND model=%s",
+                                              (nuovo, r["make"], r["model"])).rowcount
+                        cambi[f"{r['make']}:{r['model']}"] = nuovo
+                        conn.commit()
+                lg.warning("NORMALIZZA_MODELLI marche %d righe, modelli %d righe, %d nomi unificati: %s",
+                           n_marche, n_mod, len(cambi), json.dumps(dict(list(cambi.items())[:60])))
+        except Exception as e:
+            lg.warning("NORMALIZZA_MODELLI non riuscita: %s", str(e)[:300])
+    threading.Thread(target=normalizza_modelli, daemon=True, name="normalizza-modelli").start()
+
     def commercianti_brevo():
         """22/10 (cliente): una volta all'avvio, i piccoli commercianti con cellulare nella lista Brevo (nessun invio)."""
         if os.environ.get("COMMERCIANTI_BREVO") != "1":

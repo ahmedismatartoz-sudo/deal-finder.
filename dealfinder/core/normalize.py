@@ -146,8 +146,8 @@ def problem_hint(listing: Listing) -> list[str]:
 
 
 def normalize_fields(listing: Listing) -> Listing:
-    listing.make = slug(listing.make)
-    listing.model = slug(listing.model)
+    listing.make = canon_make(slug(listing.make))
+    listing.model = canon_model(listing.make, slug(listing.model))
     if listing.fuel:
         listing.fuel = norm_fuel(listing.fuel)
     if listing.gearbox:
@@ -210,3 +210,71 @@ def hamming(a: str, b: str) -> int:
 
 def same_photo(phash_a: str, phash_b: str, max_distance: int = 6) -> bool:
     return hamming(phash_a, phash_b) <= max_distance
+
+# 28/10 (controllo scraper): AutoScout e Subito chiamano lo stesso modello in modo diverso ("320" / "serie-3",
+# "a-180" / "classe-a", "992" / "911", "cooper-s" / "mini"): così i confronti si dividevano in due.
+# Si usa il nome di FAMIGLIA (quello di Subito); motore e allestimento li distinguono kW, versione e il giudice AI.
+MAKE_CANON = {"mercedes": "mercedes-benz", "ds": "ds-automobiles", "dr": "dr-automobiles", "vw": "volkswagen",
+              "alfa": "alfa-romeo"}
+_MB_CLASSI = {"a", "b", "c", "e", "s", "g", "v", "r", "x", "t"}
+_MB_FAMIGLIE = ("cla", "gla", "glc", "gle", "glb", "gls", "cle", "cls", "slk", "slc", "sl", "clk", "glk")
+
+
+def canon_make(make: str | None) -> str | None:
+    return MAKE_CANON.get(make, make) if make else make
+
+
+def canon_model(make: str | None, model: str | None) -> str | None:
+    if not make or not model:
+        return model
+    m = model
+    if make == "bmw":
+        r = re.fullmatch(r"([1-8])\d{2}[a-z]?", m)
+        if r:
+            return f"serie-{r.group(1)}"
+        r = re.fullmatch(r"serie-([1-8])(-.*)?", m)
+        if r and r.group(2) and r.group(2) not in ("-active-tourer", "-gran-tourer"):
+            return f"serie-{r.group(1)}"
+        return m
+    if make == "mercedes-benz":
+        r = re.fullmatch(r"([a-z]{1,3})-?(\d{2,3})(-.*)?", m)
+        if r and r.group(1) in _MB_CLASSI:
+            return f"classe-{r.group(1)}"
+        if r and r.group(1) in _MB_FAMIGLIE:
+            return {"glk": "classe-glk", "clk": "classe-clk"}.get(r.group(1), r.group(1))
+        r = re.fullmatch(r"ml-?\d{3}.*", m)
+        if r:
+            return "classe-m"
+        r = re.fullmatch(r"serie-(s|e|sl)", m)
+        if r:
+            return "sl" if r.group(1) == "sl" else f"classe-{r.group(1)}"
+        return m
+    if make == "porsche":
+        if m in ("991", "992", "993", "996", "997", "964", "901-911-912", "901/911/912", "targa"):
+            return "911"
+        if m in ("718-cayman", "cayman"):
+            return "cayman"
+        if m in ("718-boxster", "boxster"):
+            return "boxster"
+        return m
+    if make == "mini":
+        if "countryman" in m:
+            return "mini-countryman"
+        if "clubman" in m:
+            return "mini-clubman"
+        if "paceman" in m:
+            return "mini-paceman"
+        if "aceman" in m:
+            return "mini-aceman"
+        if re.fullmatch(r"(cooper|one|john-cooper-works|jcw)(-.*)?|mini-cabrio.*|mini-coupe|mini-roadster", m):
+            return "mini"
+        return m
+    if make == "volkswagen":
+        if re.fullmatch(r"golf-(gti|gtd|gte|r|variant)", m):
+            return "golf"
+        if m in ("passat-variant",):
+            return "passat"
+        if m in ("polo-gti",):
+            return "polo"
+        return m
+    return m
