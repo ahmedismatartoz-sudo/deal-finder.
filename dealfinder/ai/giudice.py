@@ -14,6 +14,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 
 from . import client as AI
 
@@ -28,7 +29,9 @@ Scarta un confronto SOLO se c'è un motivo concreto e leggibile nei dati:
 - veicolo commerciale/furgone/autocarro contro auto, o viceversa;
 - prezzo non reale (rata, anticipo, "prezzo con permuta/finanziamento", noleggio) o auto incidentata/guasta.
 NON scartare per piccole differenze di km/anno o colore. Se i dati non bastano, tieni il confronto.
-Rispondi SOLO con JSON: {"via": [{"id": <id>, "motivo": "<max 8 parole>"}], "nota": "<max 15 parole>"}"""
+Rispondi SOLO con righe di testo, niente altro:
+VIA <id> <motivo in max 8 parole>      (una riga per ogni confronto da scartare; nessuna riga VIA se sono tutti validi)
+NOTA <giudizio in max 15 parole>       (sempre, ultima riga)"""
 
 
 def _riga_auto(t: dict) -> str:
@@ -50,6 +53,24 @@ def _tabella(conn):
         PRIMARY KEY (listing_id, chiave))""")
 
 
+def _chiedi(conn, t: dict, confronti: list[dict]) -> str:
+    resp = AI.client().messages.create(
+        model=AI.MODEL_FAST, max_tokens=int(os.environ.get("GIUDICE_MAX_TOKENS", "1200")), system=SYSTEM,
+        messages=[{"role": "user", "content": _riga_auto(t) + "\n\nCONFRONTI:\n" + _righe_confronti(confronti)}])
+    testo = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
+    try:
+        AI.db_usage_sink(conn)("giudice_confronti", AI.AIResult(data=None, model=AI.MODEL_FAST,
+                                                                input_tokens=resp.usage.input_tokens,
+                                                                output_tokens=resp.usage.output_tokens),
+                               t.get("id"))
+    except Exception:
+        pass
+    if not testo.strip():
+        log.warning("GIUDICE_AI %s risposta vuota (stop=%s, blocchi=%s)", t.get("id"), getattr(resp, "stop_reason", None),
+                    [getattr(b, "type", "") for b in resp.content])
+    return testo
+
+
 def giudica(conn, t: dict, confronti: list[dict]) -> dict | None:
     """Restituisce {"via": {id: motivo}, "nota": str} oppure None (AI non disponibile / budget finito / errore)."""
     if not confronti or not AI.available():
@@ -65,14 +86,20 @@ def giudica(conn, t: dict, confronti: list[dict]) -> dict | None:
             return {"via": {int(k): v for k, v in via.items()}, "nota": r["nota"], "da_archivio": True}
         if AI.budget_finito(conn):
             return None
-        res = AI.ask_json("giudice_confronti", AI.MODEL_FAST, SYSTEM,
-                          [{"type": "text", "text": _riga_auto(t) + "\n\nCONFRONTI:\n" + _righe_confronti(confronti)}],
-                          max_tokens=700, usage_sink=AI.db_usage_sink(conn), listing_id=t.get("id"))
-        data = res.data if isinstance(res.data, dict) else {}
+        testo = _chiedi(conn, t, confronti)
         validi = set(ids)
-        via = {int(x["id"]): str(x.get("motivo") or "")[:80] for x in (data.get("via") or [])
-               if isinstance(x, dict) and str(x.get("id", "")).isdigit() and int(x["id"]) in validi}
-        nota = str(data.get("nota") or "")[:200]
+        via, nota = {}, ""
+        for riga in testo.splitlines():
+            m = re.match(r"\s*[*_#\-]*\s*VIA[*_]*\s*:?\s*(?:id\s*)?(\d+)\s*[-:|]?\s*(.*)", riga, re.I)
+            if m and int(m.group(1)) in validi:
+                via[int(m.group(1))] = m.group(2).strip()[:80]
+                continue
+            m = re.match(r"\s*[*_#\-]*\s*NOTA[*_]*\s*:?\s*(.*)", riga, re.I)
+            if m:
+                nota = m.group(1).strip()[:200]
+        if not via and not nota:
+            log.warning("GIUDICE_AI %s risposta non leggibile: %s", t.get("id"), testo[:300].replace("\n", " | "))
+            return None
         conn.execute("INSERT INTO ai_giudizi (listing_id, chiave, via, nota) VALUES (%s,%s,%s,%s) "
                      "ON CONFLICT (listing_id, chiave) DO NOTHING",
                      (t.get("id"), chiave, json.dumps({str(k): v for k, v in via.items()}), nota))
