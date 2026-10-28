@@ -41,10 +41,23 @@ NO_UTENTI = re.compile(r"^(noreply|no-reply|donotreply|privacy|dpo|gdpr|webmaste
 NO_SITI = re.compile(r"(autoscout24|scout24|facebook|instagram|google|youtube|tiktok|linkedin|whatsapp|wa\.me|"
                      r"twitter|x\.com|apple\.com|play\.google|subito|automobile\.it|mobile\.de|trustpilot|"
                      r"iubenda|cookie|w3\.org|schema\.org|cloudflare|gstatic|doubleclick|youtu\.be)", re.I)
-PAGINE_SITO = ["", "contatti", "contact", "contatti/", "chi-siamo", "dove-siamo", "contattaci"]
+PAGINE_SITO = ["", "contatti", "contact", "contatti/", "chi-siamo", "dove-siamo", "contattaci",
+               # 28/10: la privacy policy per legge riporta i contatti del titolare (spesso l'unico posto con l'email)
+               "privacy", "privacy-policy", "informativa-privacy", "note-legali", "cookie-policy", "contatti.html",
+               "contact-us", "azienda", "about"]
+
+
+def _cf(hexs: str) -> str:
+    """Email nascoste da Cloudflare (data-cfemail): XOR con il primo byte."""
+    try:
+        k = int(hexs[:2], 16)
+        return "".join(chr(int(hexs[i:i + 2], 16) ^ k) for i in range(2, len(hexs), 2))
+    except ValueError:
+        return ""
 
 
 def _email(testo: str) -> list[str]:
+    testo = testo + " " + " ".join(_cf(h) for h in re.findall(r'(?:data-cfemail="|email-protection#)([0-9a-fA-F]{6,})', testo))
     testo = unescape(testo).replace("[at]", "@").replace("(at)", "@").replace(" @ ", "@")
     out = []
     for e in EMAIL.findall(testo):
@@ -93,6 +106,15 @@ def giro() -> dict:
         except Exception:
             conn.rollback()
             maps = []
+    riprova = []
+    if os.environ.get("LEADE_RIPROVA") == "1":                  # 28/10: siti già visti senza email, con le pagine nuove
+        prov = [x.strip().upper() for x in (os.environ.get("LEADE_PROV") or "").split(",") if x.strip()] or None
+        with connect() as conn:
+            riprova = [(r["chiave"], r["sito"]) for r in conn.execute(
+                "SELECT e.chiave, e.sito FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
+                "WHERE cardinality(e.email) = 0 AND e.sito IS NOT NULL AND e.fonte IS DISTINCT FROM 'riprova' "
+                "AND (%(p)s::text[] IS NULL OR upper(d.prov) = ANY(%(p)s))", {"p": prov}).fetchall()]
+        log.warning("LEADE_RIPROVA %d siti da riprovare", len(riprova))
     pagine = trovati = provati = 0
     t0 = time.time()
 
@@ -156,6 +178,22 @@ def giro() -> dict:
             if pagine >= massimo:
                 break
             uno(url)
+    def di_nuovo(cs):
+        nonlocal provati, trovati
+        chiave, sito = cs
+        if pagine >= massimo:
+            return
+        provati += 1
+        email, fonte = dal_sito(sito)
+        salva(chiave, email, sito, fonte or "riprova")
+        trovati += bool(email)
+        if provati % 100 == 0:
+            log.warning("LEADE avanzamento: %d commercianti, %d con email, %d pagine, %ds", provati, trovati, pagine,
+                        int(time.time() - t0))
+    if riprova:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max(1, int(os.environ.get("LEADE_PARALLELI", "1")))) as ex:
+            list(ex.map(lambda x: _sicuro(di_nuovo, x), riprova))
     for pid, sito in maps:
         if pagine >= massimo:
             break
