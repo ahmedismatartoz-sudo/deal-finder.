@@ -164,9 +164,13 @@ def ciclo(elenco=None) -> None:
             lg.warning("AUTO_INVIO ricerca email non riuscita: %s", str(e)[:200])
         try:
             with connect() as conn:
+                from ..pipeline.lead_maps import SQL as _MAPS_SQL
+                conn.execute(_MAPS_SQL)                   # tabella dei commercianti da Google Maps (vuota se non c'è Apify)
                 rows = conn.execute(
+                    # 28/10 sera: anche i commercianti trovati su Google Maps (chiave "maps:<place_id>"), stessa zona
                     "SELECT e.chiave, e.email, e.sito FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
-                    "WHERE cardinality(e.email) > 0 AND (%(prov)s::text[] IS NULL OR upper(d.prov) = ANY(%(prov)s))",
+                    "LEFT JOIN lead_maps m ON e.chiave = 'maps:' || m.place_id "
+                    "WHERE cardinality(e.email) > 0 AND (%(prov)s::text[] IS NULL OR upper(COALESCE(d.prov, m.prov)) = ANY(%(prov)s))",
                     {"prov": [x.strip().upper() for x in os.environ["AUTO_PROV"].split(",")] if os.environ.get("AUTO_PROV") else None}).fetchall()
                 ann: dict = {}
                 for r in conn.execute("SELECT chiave, prezzo FROM lead_tutti_ann").fetchall():
