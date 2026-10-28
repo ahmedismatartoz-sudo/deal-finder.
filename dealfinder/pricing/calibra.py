@@ -44,7 +44,7 @@ LIMIT %(lim)s"""
 
 def misura(conn) -> dict:
     from . import policy_v2 as P
-    from .ricalcolo import MARKET_SQL, NORD_SQL, TARGET_COLS, _j, _rischio, valuta_con_ripiego
+    from .ricalcolo import MARKET_SQL, TARGET_COLS, _j, _rischio, _valuta_base
     from ..store import HOME_REGION_SQL
     from ..web import scovo
 
@@ -71,7 +71,7 @@ def misura(conn) -> dict:
                  rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True)
         confronti = [m for m in mercato if m.get("id") != r["id"]]
         try:
-            v = valuta_con_ripiego(conn, t, confronti, scovo.soglia(int(prezzo)), cfg, cache)
+            v, _ = _valuta_base(conn, t, confronti, scovo.soglia(int(prezzo)), cfg, cache)
         except Exception as e:
             log.warning("CALIBRA errore %s: %s", r["id"], str(e)[:120])
             continue

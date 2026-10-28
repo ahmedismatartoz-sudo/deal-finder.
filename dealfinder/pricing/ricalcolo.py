@@ -50,10 +50,47 @@ NORD_SQL = "province IN (" + ",".join(f"'{p}'" for p in NORD) + ")"
 
 
 def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict) -> dict:
+    v, lista = _valuta_base(conn, t, mercato, soglia, cfg, cache)
+    return _giudice_ai(conn, t, v, lista, soglia, cfg)
+
+
+def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg) -> dict:
+    """28/10: l'AI toglie i confronti che non sono davvero la stessa auto, poi si rifà il calcolo (POLICY_GIUDICE_AI=1).
+    Solo per le auto che andrebbero sul sito: le altre non costano niente."""
+    if os.environ.get("POLICY_GIUDICE_AI") != "1" or v.get("categoria") not in ("opportunita", "candidato") \
+            or not v.get("confronti"):
+        return v
+    from ..ai import giudice
+    g = giudice.giudica(conn, t, v["confronti"])
+    if not g:
+        return v
+    if not g["via"]:
+        v.setdefault("ipotesi", []).append(f"confronti controllati dall'AI: tutti validi ({v.get('n')})")
+        v["ai_confronti"] = {"tolti": 0, "nota": g.get("nota")}
+        return v
+    via = set(g["via"])
+    v2 = P.valuta(t, [m for m in lista if m.get("id") not in via], soglia, cfg)
+    for k in ("fuori_zona",):
+        if v.get(k):
+            v2[k] = v[k]
+    v2["ai_confronti"] = {"tolti": len(via), "motivi": {str(k): m for k, m in list(g["via"].items())[:15]},
+                          "nota": g.get("nota"), "prima": {"M": v.get("M"), "R": v.get("R_finale") or v.get("R"),
+                                                           "margine": v.get("margine"), "n": v.get("n")}}
+    v2.setdefault("ipotesi", []).append(f"l'AI ha tolto {len(via)} confronti non uguali (versione/allestimento/prezzo): "
+                                        f"ricalcolato su {v2.get('n')}")
+    import logging as _lg
+    _lg.getLogger("giudice").warning("GIUDICE_AI %s tolti %d: M %s→%s, margine %s→%s, %s→%s",
+                                     t.get("id"), len(via), v.get("M"), v2.get("M"), v.get("margine"),
+                                     v2.get("margine"), v.get("categoria"), v2.get("categoria"))
+    return v2
+
+
+def _valuta_base(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
     v = P.valuta(t, mercato, soglia, cfg)
+    lista = mercato
     if os.environ.get("POLICY_RIPIEGO_NORD", "1") != "1" or (v.get("n") or 0) >= cfg.n_preferito \
             or not (t.get("make") and t.get("model") and t.get("fuel")):
-        return v
+        return v, lista
     key = (t["make"], t["model"], t["fuel"])
     if key not in cache:
         cache.clear()                                    # un gruppo alla volta: poca memoria
@@ -65,12 +102,13 @@ def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: di
         v2.setdefault("ipotesi", []).append("pochi confronti entro 150 km: usati anche annunci uguali nel resto del "
                                             "Nord Italia (prezzi richiesti, possibili piccole differenze di zona)")
         v = v2
+        lista = cache[key]
     # 21/10 (cliente): auto di fascia alta (da 50.000 €): pochi esemplari uguali per zona, si usa la base prezzi
     # 60-200k di tutta Italia (privati e concessionari), con marca/modello/alimentazione scritti in modo diverso
     # tra AutoScout24 e Subito ("PORSCHE"/"Porsche", "Benzina"/"benzina")
     if os.environ.get("POLICY_ITALIA") != "1" or (v.get("n") or 0) >= cfg.n_preferito \
             or (t.get("price_eur") or 0) < int(os.environ.get("POLICY_ITALIA_DA", "50000")):
-        return v
+        return v, lista
     chiave = ("IT",) + tuple(str(x).lower() for x in key)
     if chiave not in cache:
         cache.clear()
@@ -81,8 +119,8 @@ def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: di
         v3["fuori_zona"] = True
         v3.setdefault("ipotesi", []).append("auto di fascia alta con pochi confronti vicini: usati gli annunci uguali "
                                             "di tutta Italia della base prezzi (prezzi richiesti, privati e concessionari)")
-        return v3
-    return v
+        return v3, cache[chiave]
+    return v, lista
 
 
 def ai_di(conn, ids: list) -> dict:
