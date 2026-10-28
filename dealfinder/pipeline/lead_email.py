@@ -158,6 +158,43 @@ def giro() -> dict:
             time.sleep(0.3)
         return [], None
 
+    _brave_lock = __import__("threading").Lock()
+    _brave_t = [0.0]
+
+    def cerca_web(nome, comune):
+        """28/10 (cliente: "deve cercare anche normalmente sul web"): ricerca web del commerciante con Brave Search API
+        (BRAVE_API_KEY su Render, piano gratuito). Ritorna (email trovate negli estratti, siti candidati)."""
+        key = (os.environ.get("BRAVE_API_KEY") or "").strip()
+        if not key or not nome:
+            return [], []
+        com = (comune or "").split("-")[0].strip()
+        with _brave_lock:                                   # massimo 1 richiesta al secondo
+            attesa = 1.05 - (time.time() - _brave_t[0])
+            if attesa > 0:
+                time.sleep(attesa)
+            _brave_t[0] = time.time()
+        try:
+            r = asc.client.get("https://api.search.brave.com/res/v1/web/search",
+                               params={"q": f'"{nome}" {com} auto email', "count": 10, "country": "it", "search_lang": "it"},
+                               headers={"X-Subscription-Token": key, "Accept": "application/json"}, timeout=15)
+            if r.status_code != 200:
+                log.warning("LEADE web: risposta %s", r.status_code)
+                return [], []
+            ris = (r.json().get("web") or {}).get("results") or []
+        except Exception as e:
+            log.warning("LEADE web: %s", type(e).__name__)
+            return [], []
+        testo = " ".join(f"{x.get('title','')} {x.get('description','')} {' '.join(x.get('extra_snippets') or [])}" for x in ris)
+        siti = []
+        for x in ris:
+            u = x.get("url") or ""
+            d = urlparse(u).netloc.lower()
+            if d and not NO_SITI.search(d) and not re.search(r"(paginegialle|paginebianche|tuttocitta|infobel|kompass|virgilio|"
+                                                             r"cylex|prontopro|yelp|tripadvisor|registroimprese|ufficiocamerale|"
+                                                             r"reportaziende|atoka|quattroruote|autouncle|motori\.|wikipedia)", d):
+                siti.append(f"{urlparse(u).scheme}://{d}/")
+        return _email(testo), list(dict.fromkeys(siti))[:2]
+
     def indovina_sito(nome, comune):
         """28/10: commercianti senza sito su AutoScout24: prova il dominio dal nome (es. "Auto Lanza Snc" -> autolanza.it)
         e lo tiene solo se la pagina parla di auto e cita il comune o il nome."""
@@ -228,6 +265,16 @@ def giro() -> dict:
         provati += 1
         sito = sito or indovina_sito(nome, comune)
         email, fonte = dal_sito(sito) if sito else ([], None)
+        if not email:                                        # 28/10: ricerca web normale
+            em_web, siti_web = cerca_web(nome, comune)
+            if em_web:
+                email, fonte = em_web, "web"
+            for sw in siti_web:
+                if email:
+                    break
+                email, fonte = dal_sito(sw)
+                if email:
+                    sito = sw
         salva(chiave, email, sito, fonte or "riprova2")
         trovati += bool(email)
         if provati % 100 == 0:
