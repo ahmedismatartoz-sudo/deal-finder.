@@ -79,9 +79,20 @@ def raccolta() -> dict:
             return [], False
 
     workers = int(os.environ.get("SUPERCAR_PARALLELI", "4"))
+    # si riprende da dove era arrivata dopo un riavvio (stesso giro: blocco di SUPERCAR_EU_ORE ore)
+    giro = os.environ.get("SUPERCAR_GIRO") or str(int(time.time() // (float(os.environ.get("SUPERCAR_EU_ORE", "6")) * 3600)))
+    with connect() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS supercar_passi (giro TEXT, chiave TEXT, PRIMARY KEY (giro, chiave))")
+        conn.commit()
+        fatte = {r["chiave"] for r in conn.execute("SELECT chiave FROM supercar_passi WHERE giro=%s", (giro,)).fetchall()}
+    chiave = lambda c: "|".join(map(str, c))
+    if fatte:
+        log.warning("SUPERCAR_RACCOLTA riprendo il giro %s: %d fasce già fatte", giro, len(fatte))
+    compiti = [c for c in compiti if chiave(c) not in fatte]
     with connect() as conn, ThreadPoolExecutor(workers) as ex:
         for i in range(0, len(compiti), workers):
-            for out, blocc in ex.map(leggi, compiti[i:i + workers]):
+            gruppo = compiti[i:i + workers]
+            for c, (out, blocc) in zip(gruppo, ex.map(leggi, gruppo)):
                 st["bloccate"] += bool(blocc)
                 for l in out:
                     if not l.price_eur or l.price_eur < lo:
@@ -96,6 +107,10 @@ def raccolta() -> dict:
                         st["errore"] += 1
                         if st["errore"] < 5:
                             log.warning("SUPERCAR non salvato %s: %s", l.url, str(e)[:160])
+                if not blocc:
+                    conn.execute("INSERT INTO supercar_passi (giro, chiave) VALUES (%s,%s) ON CONFLICT DO NOTHING", (giro, chiave(c)))
+                    conn.commit()
+                del out
             if (i // workers) % 25 == 0:
                 log.warning("SUPERCAR_RACCOLTA %d/%d fasce, %s, %ds", i + workers, len(compiti), dict(st), time.time() - t0)
     log.warning("SUPERCAR_RACCOLTA_FINE %s in %ds", json.dumps(dict(st)), time.time() - t0)

@@ -700,6 +700,16 @@ if __name__ == "__main__":
     # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
     import time
     _t0_loop = time.time()
+    # 28/10 sera: supercar da 70.000 € in tutta Europa anche qui (processo separato dal sito, 512 MB); riprende le fasce già fatte
+    if os.environ.get("SUPERCAR_EU_CRON") == "1":
+        try:
+            from .ciclo import _due
+            if _due("supercar_eu", int(os.environ.get("SUPERCAR_EU_ORE", "6"))):
+                from . import supercar_eu as SE
+                SE.raccolta()
+                SE.valuta()
+        except Exception as e:
+            log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
     for voce in [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]:
         try:
             from .ciclo import _due
