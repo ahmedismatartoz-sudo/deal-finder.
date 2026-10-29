@@ -194,8 +194,12 @@ def escludi_aperti(orig: int, nuova: int) -> dict:
         rl = c.post(f"{API}/contacts/lists", json={"name": f"Aperti campagna {orig}", "folderId": _cartella(c)})
         rl.raise_for_status()
         lid = rl.json()["id"]
-        r = c.post(f"{API}/contacts/lists/{lid}/contacts/add", json={"emails": sorted(aperti)})
-        esito["aggiunti"] = r.status_code
+        cod = []
+        for i in range(0, len(aperti), 150):                      # Brevo: al massimo 150 indirizzi per chiamata
+            r = c.post(f"{API}/contacts/lists/{lid}/contacts/add", json={"emails": sorted(aperti)[i:i + 150]})
+            cod.append(r.status_code if r.status_code < 300 else f"{r.status_code} {r.text[:120]}")
+        esito["aggiunti"] = cod
+        time.sleep(20)
         r = c.put(f"{API}/emailCampaigns/{nuova}", json={
             "sender": {"name": "Skovo", "email": "info@skovo.app"},
             "recipients": {"listIds": [lista], "exclusionListIds": [lid]}})
