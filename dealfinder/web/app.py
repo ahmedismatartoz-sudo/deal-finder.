@@ -3430,6 +3430,7 @@ def _tempo_reale():
                         conn.commit()
                         fin(True, {"inseriti": n})
                     lg.warning("DANNI_AI recupero: %s annunci con danni scritti da leggere", n)
+                with connect() as conn:
                     ids = [x["listing_id"] for x in conn.execute(
                         """SELECT a.listing_id FROM analisi_danni a JOIN listings l ON l.id=a.listing_id
                            WHERE l.status='attivo' ORDER BY a.at DESC LIMIT %s""", (int(os.environ.get("DANNI_PEZZO", "60")),)).fetchall()]
