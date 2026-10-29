@@ -3495,6 +3495,24 @@ def _tempo_reale():
             lg.warning("RINVIO_INVIA non riuscito: %s", str(e)[:300])
     threading.Thread(target=rinvio_invia, daemon=True, name="rinvio_invia").start()
 
+    def rinvio_non_aperti():
+        """30/10 (cliente): rimanda alle 8 la campagna a chi non l'ha aperta (RINVIO_NONAPERTI=<id>, RINVIO_ORA=<ISO>), una volta."""
+        cid, quando = os.environ.get("RINVIO_NONAPERTI"), os.environ.get("RINVIO_ORA")
+        if not cid or not quando:
+            return
+        time.sleep(50)
+        from ..db import log_job
+        from ..pipeline.ciclo import _due
+        from ..marketing import rinvio
+        try:
+            if _due(f"rinvio_nonaperti:{cid}", 100000):
+                with connect() as conn:
+                    fin = log_job(conn, f"rinvio_nonaperti:{cid}")
+                    fin(True, rinvio.non_aperti(int(cid), quando))
+        except Exception as e:
+            lg.warning("RINVIO_NONAPERTI non riuscito: %s", str(e)[:300])
+    threading.Thread(target=rinvio_non_aperti, daemon=True, name="rinvio_nonaperti").start()
+
     def cerca_numero():
         """29/10 (cliente): a chi corrisponde un numero tra i COMMERCIANTI già nelle nostre liste (CERCA_NUMERO).
         Solo tabelle dei commercianti (mai annunci di privati); nel log nome, comune, provincia e fonte."""
