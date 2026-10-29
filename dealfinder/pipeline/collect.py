@@ -722,6 +722,18 @@ if __name__ == "__main__":
                 log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
+    # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
+    if os.environ.get("CONFRONTI_EXTRA") == "1":
+        try:
+            from .ciclo import _due
+            if _due("confronti_extra", int(os.environ.get("CE_ORE", "48"))):
+                from ..db import connect as _cn, log_job as _lj
+                from . import confronti_extra as CE
+                with _cn() as _c:
+                    _fin = _lj(_c, "confronti_extra")
+                    _fin(True, CE.giro())
+        except Exception as e:
+            log.warning("CONFRONTI_EXTRA non riuscito: %s", str(e)[:300])
     # 29/10: dopo la zona (le auto medie e basse prima) e una volta al giorno.
     # 28/10 sera: supercar da 70.000 € in tutta Europa anche qui (processo separato dal sito, 512 MB); riprende le fasce già fatte
     if os.environ.get("SUPERCAR_EU_CRON") == "1":
