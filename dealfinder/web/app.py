@@ -3517,6 +3517,49 @@ def _tempo_reale():
         lg.warning("CERCA_NUMERO %d risultati: %s", len(out), json.dumps(out, ensure_ascii=False, default=str)[:3000])
     threading.Thread(target=cerca_numero, daemon=True, name="cerca_numero").start()
 
+    def diagnosi_dati():
+        """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
+        (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
+        tag = os.environ.get("DIAGNOSI_DATI")
+        if not tag:
+            return
+        time.sleep(90)
+        try:
+            from ..pipeline.ciclo import _due
+            from ..db import log_job
+            from ..zone import tutte
+            if not _due(f"diagnosi:{tag}", 100000):
+                return
+            with connect() as conn:
+                fin = log_job(conn, f"diagnosi:{tag}")
+                conn.execute("SET LOCAL statement_timeout = '600s'")
+                rows = conn.execute("""
+                    SELECT DISTINCT ON (vp.listing_id) vp.listing_id, vp.categoria, vp.dati->'motivi'->>0 AS motivo,
+                           l.source, l.power_kw IS NULL AS senza_kw, l.gearbox IS NULL AS senza_cambio,
+                           l.version_raw IS NULL AS senza_versione, l.mileage_km IS NULL AS senza_km
+                    FROM valutazioni_policy vp JOIN listings l ON l.id = vp.listing_id
+                    WHERE vp.computed_at > now() - interval '3 days' AND l.status='attivo' AND l.seller_type='privato'
+                      AND upper(l.province) = ANY(%s) AND l.price_eur BETWEEN 1000 AND 50000
+                    ORDER BY vp.listing_id, vp.computed_at DESC""", (list(tutte()),)).fetchall()
+            from collections import Counter as _C
+            cat, mot, fonte, campi = _C(), _C(), _C(), _C()
+            for r in rows:
+                cat[r["categoria"]] += 1
+                if r["categoria"] != "dati_insufficienti":
+                    continue
+                m = re.sub(r"\d+", "N", (r["motivo"] or "nessun motivo"))[:70]
+                mot[m] += 1; fonte[r["source"]] += 1
+                for k in ("senza_kw", "senza_cambio", "senza_versione", "senza_km"):
+                    campi[k] += bool(r[k])
+            out = {"auto": len(rows), "categorie": dict(cat), "motivi": dict(mot.most_common(15)), "fonti": dict(fonte), "campi_mancanti": dict(campi)}
+            lg.warning("DIAGNOSI_DATI %s", json.dumps(out, ensure_ascii=False))
+            with connect() as conn:
+                fin2 = log_job(conn, f"diagnosi:{tag}")
+                fin2(True, {"auto": len(rows)})
+        except Exception as e:
+            lg.warning("DIAGNOSI_DATI non riuscita: %s", str(e)[:300])
+    threading.Thread(target=diagnosi_dati, daemon=True, name="diagnosi").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
