@@ -20,7 +20,8 @@
 }
 :root[data-theme="dark"]{--bg:#0f1318;--card:#161b22;--testo:#e8ebef;--tenue:#98a1ac;--riga:#262d37}
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;overflow-x:clip}
+html{scroll-behavior:smooth;overflow-x:clip;scroll-snap-type:y proximity}
+.fermata{position:absolute;left:0;width:1px;height:1px;scroll-snap-align:start}
 body{font-family:Barlow,system-ui,sans-serif;background:var(--bg);color:var(--testo);font-size:17px;line-height:1.55;overflow-x:clip;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 img{display:block;max-width:100%}
@@ -44,7 +45,7 @@ h1,h2,h3{overflow-wrap:anywhere}
 .menu{display:none;margin-left:auto;background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:10px;padding:9px 14px;cursor:pointer}
 
 /* storia 3D */
-#storia{position:relative;height:520vh;background:var(--cabina);color:#fff}
+#storia{position:relative;height:400vh;background:var(--cabina);color:#fff}
 .palco{position:sticky;top:0;height:100svh;overflow:hidden}
 #tela3d{position:absolute;inset:0}
 #tela3d canvas{display:block;width:100%!important;height:100%!important}
@@ -146,6 +147,7 @@ footer .w{border-top:1px solid var(--riga);padding-top:24px;display:flex;justify
 </header>
 
 <section id="storia" aria-label="La carrozzeria in 3D">
+  <i class="fermata" style="top:0"></i><i class="fermata" style="top:100vh"></i><i class="fermata" style="top:200vh"></i><i class="fermata" style="top:300vh"></i>
   <div class="palco">
     <div id="tela3d" aria-hidden="true"></div>
     <div class="capitoli">
@@ -246,7 +248,7 @@ footer .w{border-top:1px solid var(--riga);padding-top:24px;display:flex;justify
 
 <script>
 // testata piena dopo l'apertura, stato del giorno, auto da AutoScout24
-addEventListener('scroll',()=>document.getElementById('top').classList.toggle('pieno',scrollY>innerHeight*4.6),{passive:true});
+addEventListener('scroll',()=>document.getElementById('top').classList.toggle('pieno',scrollY>innerHeight*2.9),{passive:true});
 document.querySelectorAll('.top nav a').forEach(a=>a.onclick=()=>document.getElementById('top').classList.remove('aperto'));
 (()=>{const g=new Date().getDay();document.querySelectorAll('#orari tr').forEach(r=>{if(r.dataset.g.split(',').includes(String(g)))r.classList.add('oggi')})})();
 (()=>{
@@ -6570,17 +6572,23 @@ function cabina(){
 }
 
 function pistolaSpruzzo(){
-  // pistola che passa sopra l'auto e nebbia di vernice
+  // pistola che passa sopra l'auto: più spruzza quanto più veloce si scorre
   pistola = new THREE.Group(); scene.add(pistola);
-  const met = new THREE.MeshStandardMaterial({ color: 0xbfc5cc, metalness: 1, roughness: .25, envMap: ENV });
-  const corpo = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, .5, 16), met); corpo.rotation.z = Math.PI / 2; pistola.add(corpo);
-  const ugello = new THREE.Mesh(new THREE.ConeGeometry(.07, .18, 16), met); ugello.rotation.x = Math.PI; ugello.position.y = -.12; pistola.add(ugello);
-  const asta = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 3, 8), new THREE.MeshStandardMaterial({ color: 0x3a3f46, metalness: .6, roughness: .5 })); asta.position.y = 1.5; pistola.add(asta);
-  const N = piccolo ? 900 : 2200, pos = new Float32Array(N * 3), vel = new Float32Array(N * 3), vita = new Float32Array(N);
+  const met = new THREE.MeshStandardMaterial({ color: 0xc9ced4, metalness: 1, roughness: .22, envMap: ENV });
+  const nero = new THREE.MeshStandardMaterial({ color: 0x23272d, metalness: .5, roughness: .5 });
+  const corpo = new THREE.Mesh(new THREE.CylinderGeometry(.09, .12, .62, 20), met); corpo.rotation.z = Math.PI / 2; pistola.add(corpo);
+  const serbatoio = new THREE.Mesh(new THREE.CylinderGeometry(.13, .11, .3, 20), new THREE.MeshPhysicalMaterial({ color: VERNICE, metalness: .4, roughness: .2, clearcoat: 1, envMap: ENV })); serbatoio.position.set(-.08, .24, 0); pistola.add(serbatoio);
+  const ugello = new THREE.Mesh(new THREE.ConeGeometry(.1, .24, 20), met); ugello.rotation.x = Math.PI; ugello.position.y = -.16; pistola.add(ugello);
+  const asta = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 3.4, 10), nero); asta.position.y = 1.85; pistola.add(asta);
+  // cono di vernice nebulizzata sotto l'ugello
+  const cono = new THREE.Mesh(new THREE.ConeGeometry(.55, 1.25, 32, 1, true), new THREE.MeshBasicMaterial({ color: VERNICE.clone().lerp(new THREE.Color(0xffffff), .35), transparent: true, opacity: .18, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false }));
+  cono.position.y = -.88; pistola.add(cono); pistola.userData.cono = cono;
+  const luce = new THREE.PointLight(0x5c86ff, 0, 4, 1.6); luce.position.y = -.6; pistola.add(luce); pistola.userData.luce = luce;
+  const N = piccolo ? 1400 : 3600, pos = new Float32Array(N * 3), vel = new Float32Array(N * 3), vita = new Float32Array(N);
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const punto = tela(64, 64, (x, w, h) => { const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.4, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
-  spruzzo = new THREE.Points(geo, new THREE.PointsMaterial({ map: punto, size: piccolo ? .12 : .09, color: VERNICE.clone().lerp(new THREE.Color(0xffffff), .25), transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending }));
-  spruzzo.userData = { vel, vita, N }; scene.add(spruzzo);
+  spruzzo = new THREE.Points(geo, new THREE.PointsMaterial({ map: punto, size: .13, color: VERNICE.clone().lerp(new THREE.Color(0xffffff), .2), transparent: true, opacity: .85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  spruzzo.userData = { vel, vita, N, ultimo: 0 }; spruzzo.frustumCulled = false; scene.add(spruzzo);
 }
 
 async function caricaAuto(){
@@ -6613,21 +6621,21 @@ async function caricaAuto(){
 
 // ===== percorso della camera: un punto per capitolo =====
 const TAPPE = [
-  { p: 0,    pos: [7.2, 2.1, 8.6],  guarda: [0, .7, 0] },     // apertura: auto grezza in cabina
-  { p: .25,  pos: [4.2, 3.4, 5.6],  guarda: [0, .8, -.2] },   // la pistola inizia a verniciare
-  { p: .5,   pos: [-6.2, 1.8, 5.2], guarda: [0, .7, .3] },    // vernice finita, riflessi
-  { p: .66,  pos: [-3.9, 1.05, 4.9], guarda: [.2, .5, .6] },
-  { p: .8,   pos: [-4.5, 2.2, 6.5], guarda: [0, .6, 0] }, // dettaglio: ruota e fiancata
-  { p: 1,    pos: [1.5, 6.4, 12.5], guarda: [0, .8, 0] }      // soccorso: lampeggianti, vista alta
+  { p: 0,    pos: [7.2, 2.1, 8.6],   guarda: [0, .7, 0] },     // apertura: auto grezza in cabina
+  { p: .2,   pos: [3.6, 3.6, 4.6],   guarda: [0, .9, -.3] },   // la pistola vernicia, vista dall'alto
+  { p: .38,  pos: [-4.6, 2.4, 4.4],  guarda: [0, .8, .2] },    // vernice finita, riflessi
+  { p: .62,  pos: [-3.9, 1.05, 4.9], guarda: [.2, .5, .6] },   // ruota e fiancata
+  { p: .8,   pos: [-4.5, 2.2, 6.5],  guarda: [0, .6, 0] },
+  { p: 1,    pos: [1.5, 6.4, 12.5],  guarda: [0, .8, 0] }      // soccorso: lampeggianti, vista alta
 ];
 const curva = new THREE.CatmullRomCurve3(TAPPE.map(t => new THREE.Vector3(...t.pos)), false, 'centripetal');
 const curvaG = new THREE.CatmullRomCurve3(TAPPE.map(t => new THREE.Vector3(...t.guarda)), false, 'centripetal');
-let pScroll = 0, pDolce = 0, tempo = 0;
+let pScroll = 0, pDolce = 0, tempo = 0, pPrima = 0, velScroll = 0;
 function leggiScroll(){
   const sez = document.getElementById('storia'); if (!sez) return;
   const r = sez.getBoundingClientRect(), tot = r.height - innerHeight;
   pScroll = Math.min(1, Math.max(0, -r.top / Math.max(1, tot)));
-  const cap = pScroll < .17 ? 0 : pScroll < .5 ? 1 : pScroll < .76 ? 2 : 3;
+  const cap = pScroll < .14 ? 0 : pScroll < .48 ? 1 : pScroll < .8 ? 2 : 3;
   document.documentElement.classList.toggle('dentro', pScroll > .03);
   document.querySelectorAll('.capitolo').forEach((c, i) => c.classList.toggle('on', i === cap));
   document.querySelectorAll('.tacche i').forEach((c, i) => c.classList.toggle('on', i <= cap));
@@ -6639,6 +6647,8 @@ function aggiorna(dt){
   tempo += dt;
   pDolce = ridotto ? pScroll : pDolce + (pScroll - pDolce) * Math.min(1, dt * 3.2);
   const p = pDolce;
+  velScroll += (Math.abs(pScroll - pPrima) / Math.max(dt, .001) - velScroll) * Math.min(1, dt * 6); pPrima = pScroll;
+  const forza = THREE.MathUtils.clamp(.45 + velScroll * 5, .45, 2.6);       // scorri più forte = spruzza di più
   let i = 0; while (i < TAPPE.length - 2 && p > TAPPE[i + 1].p) i++;
   const tl = THREE.MathUtils.smoothstep((p - TAPPE[i].p) / (TAPPE[i + 1].p - TAPPE[i].p), 0, 1), u = (i + tl) / (TAPPE.length - 1);
   camera.position.copy(curva.getPoint(u));
@@ -6648,36 +6658,43 @@ function aggiorna(dt){
   camera.lookAt(mira);
   if (!pronto) return;
   // la piattaforma gira piano, si ferma durante la verniciatura
-  const fermo = p > .12 && p < .48;
+  const fermo = p > .02 && p < .44;
   piatto.rotation.y += dt * (fermo ? 0 : (ridotto ? 0 : .22));
   // verniciatura: da p .12 a .46 la pistola percorre l'auto da dietro a davanti
-  const k = THREE.MathUtils.clamp((p - .12) / .34, 0, 1), L = auto.userData.lung;
+  const k = THREE.MathUtils.clamp((p - .03) / .37, 0, 1), L = auto.userData.lung;
   dirAuto.set(0, 0, -1).applyQuaternion(piatto.quaternion);                       // dal muso verso il retro
   puntoTaglio.set(0, 0, 0).addScaledVector(dirAuto, L / 2 - k * (L + .2));
-  pianoTaglio.setFromNormalAndCoplanarPoint(dirAuto, puntoTaglio);               // vernice dove il piano è "dietro" la pistola
+  pianoTaglio.setFromNormalAndCoplanarPoint(dirAuto, puntoTaglio);               // vernice dove la pistola è già passata
   const opp = corpoFondo.material.clippingPlanes[0]; opp.copy(pianoTaglio).negate();
   pistola.visible = k > 0 && k < 1;
-  pistola.position.copy(puntoTaglio).setY(1.9 + Math.sin(tempo * 9) * .05).addScaledVector(new THREE.Vector3(dirAuto.z, 0, -dirAuto.x), Math.sin(tempo * 3.2) * .55);
-  // nebbia di vernice
-  const { vel, vita, N } = spruzzo.userData, pos = spruzzo.geometry.attributes.position.array;
+  const lato = new THREE.Vector3(dirAuto.z, 0, -dirAuto.x), osc = tempo * (3 + forza * 2.2);
+  pistola.position.copy(puntoTaglio).setY(1.95 + Math.sin(tempo * 11) * .03 * forza).addScaledVector(lato, Math.sin(osc) * .85);
+  pistola.rotation.set(Math.sin(osc) * .22, 0, Math.cos(osc) * .12 + (Math.random() - .5) * .04 * forza);
+  pistola.userData.cono.material.opacity = .1 + .14 * forza; pistola.userData.cono.scale.set(.8 + .25 * forza, 1, .8 + .25 * forza);
+  pistola.userData.luce.intensity = pistola.visible ? 6 * forza : 0;
+  spruzzo.material.size = (piccolo ? .16 : .12) * (.8 + .3 * forza);
+  // nebbia di vernice: quante particelle nuove dipende da quanto forte si scorre
+  const sd = spruzzo.userData, { vel, vita, N } = sd, pos = spruzzo.geometry.attributes.position.array;
+  let quota = pistola.visible ? Math.round((piccolo ? 900 : 2200) * forza * dt) : 0;
   for (let i = 0; i < N; i++){
     vita[i] -= dt;
-    if (!pistola.visible && vita[i] > 0) { vita[i] = 0; }
+    if (!pistola.visible && vita[i] > 0) vita[i] = 0;
     if (vita[i] <= 0){
-      if (!pistola.visible) { pos[i * 3 + 1] = -10; vita[i] = 0; continue; }
-      vita[i] = .35 + Math.random() * .4;
-      pos[i * 3] = pistola.position.x; pos[i * 3 + 1] = pistola.position.y - .2; pos[i * 3 + 2] = pistola.position.z;
-      vel[i * 3] = (Math.random() - .5) * 1.6; vel[i * 3 + 1] = -2.6 - Math.random() * 1.6; vel[i * 3 + 2] = (Math.random() - .5) * 1.6;
+      if (quota <= 0) { pos[i * 3 + 1] = -10; continue; }
+      quota--; vita[i] = .5 + Math.random() * .7;
+      pos[i * 3] = pistola.position.x; pos[i * 3 + 1] = pistola.position.y - .28; pos[i * 3 + 2] = pistola.position.z;
+      const a = Math.random() * Math.PI * 2, r = Math.random() * (1 + .5 * forza);
+      vel[i * 3] = Math.cos(a) * r; vel[i * 3 + 1] = -3 - Math.random() * 2 * forza; vel[i * 3 + 2] = Math.sin(a) * r;
     }
     pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] += vel[i * 3 + 1] * dt; pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
-    if (pos[i * 3 + 1] < .55) { vel[i * 3 + 1] *= -.05; vel[i * 3] *= 1.02; vel[i * 3 + 2] *= 1.02; }
+    if (pos[i * 3 + 1] < .6) { vel[i * 3 + 1] = Math.abs(vel[i * 3 + 1]) * .08; vel[i * 3] *= 1.04; vel[i * 3 + 2] *= 1.04; }   // rimbalza e si allarga sulla carrozzeria
   }
   spruzzo.geometry.attributes.position.needsUpdate = true;
   // ruote: girano nel capitolo del dettaglio
-  const giroRuote = THREE.MathUtils.smoothstep(p, .58, .7) * (1 - THREE.MathUtils.smoothstep(p, .86, .95));
+  const giroRuote = THREE.MathUtils.smoothstep(p, .48, .6) * (1 - THREE.MathUtils.smoothstep(p, .84, .94));
   ruote.forEach(r => r.rotation.x -= dt * 9 * giroRuote);
   // soccorso 24 ore: le luci bianche si abbassano, i lampeggianti ambra ruotano
-  const socc = THREE.MathUtils.smoothstep(p, .8, .96);
+  const socc = THREE.MathUtils.smoothstep(p, .78, .95);
   luciCabina.forEach(m => m.material.color.setScalar(1 - socc * .7));
   lampeggianti.forEach((b, i) => {
     if (b.m){ b.m.material.opacity = 1; b.m.material.color.copy(AMBRA).multiplyScalar(b.base + socc * (.65 + .35 * Math.sin(tempo * 8))); return; }
