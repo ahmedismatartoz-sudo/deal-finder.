@@ -62,3 +62,11 @@ def lista(nome: str) -> int:
             time.sleep(5)
     lg.warning("RINVIO_LISTA %s (id %s): %d commercianti, %d tolti (cancellati, rimbalzati, risposto no)", nome, lid, len(buoni), tolti)
     return lid
+
+
+def invia(campagna: int) -> int:
+    """Manda subito la campagna già preparata e provata (RINVIO_INVIA=<id campagna>), una volta sola."""
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
+        r = c.post(f"{API}/emailCampaigns/{campagna}/sendNow")
+    lg.warning("RINVIO_INVIA campagna %s: esito %s %s", campagna, r.status_code, r.text[:200] if r.status_code >= 300 else "")
+    return r.status_code

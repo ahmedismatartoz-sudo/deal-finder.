@@ -3475,6 +3475,25 @@ def _tempo_reale():
             lg.warning("RINVIO_LISTA non riuscita: %s", str(e)[:300])
     threading.Thread(target=rinvio_lista, daemon=True, name="rinvio").start()
 
+    def rinvio_invia():
+        """29/10 (cliente: "rimandala a tutti"): manda una volta la campagna preparata (RINVIO_INVIA=<id campagna>)."""
+        cid = os.environ.get("RINVIO_INVIA")
+        if not cid:
+            return
+        time.sleep(45)
+        from ..db import log_job
+        from ..pipeline.ciclo import _due
+        from ..marketing import rinvio
+        try:
+            if _due(f"rinvio_invia:{cid}", 100000):
+                with connect() as conn:
+                    fin = log_job(conn, f"rinvio_invia:{cid}")
+                    esito = rinvio.invia(int(cid))
+                    fin(esito < 300, {"esito": esito})
+        except Exception as e:
+            lg.warning("RINVIO_INVIA non riuscito: %s", str(e)[:300])
+    threading.Thread(target=rinvio_invia, daemon=True, name="rinvio_invia").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
