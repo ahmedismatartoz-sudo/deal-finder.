@@ -3453,6 +3453,24 @@ def _tempo_reale():
             time.sleep(int(os.environ.get("DANNI_MIN", "15")) * 60)
     threading.Thread(target=danni_in_attesa, daemon=True, name="danni_ai").start()
 
+    def rinvio_lista():
+        """29/10 (cliente): lista Brevo per rimandare l'email a tutti i commercianti (RINVIO_LISTA=<nome>), una volta."""
+        nome = os.environ.get("RINVIO_LISTA")
+        if not nome:
+            return
+        time.sleep(60)
+        from ..db import log_job
+        from ..pipeline.ciclo import _due
+        from ..marketing import rinvio
+        try:
+            if _due(f"rinvio:{nome}", 100000):
+                with connect() as conn:
+                    fin = log_job(conn, f"rinvio:{nome}")
+                    fin(True, {"lista": rinvio.lista(nome)})
+        except Exception as e:
+            lg.warning("RINVIO_LISTA non riuscita: %s", str(e)[:300])
+    threading.Thread(target=rinvio_lista, daemon=True, name="rinvio").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
