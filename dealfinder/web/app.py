@@ -3513,6 +3513,25 @@ def _tempo_reale():
             lg.warning("RINVIO_NONAPERTI non riuscito: %s", str(e)[:300])
     threading.Thread(target=rinvio_non_aperti, daemon=True, name="rinvio_nonaperti").start()
 
+    def rinvio_escludi():
+        """30/10: toglie dal rinvio programmato chi ha aperto la campagna (RINVIO_ESCLUDI=<orig>:<nuova>), una volta."""
+        v = os.environ.get("RINVIO_ESCLUDI")
+        if not v or ":" not in v:
+            return
+        time.sleep(40)
+        from ..db import log_job
+        from ..pipeline.ciclo import _due
+        from ..marketing import rinvio
+        try:
+            if _due(f"rinvio_escludi:{v}", 100000):
+                with connect() as conn:
+                    fin = log_job(conn, f"rinvio_escludi:{v}")
+                    a, b = v.split(":")
+                    fin(True, rinvio.escludi_aperti(int(a), int(b)))
+        except Exception as e:
+            lg.warning("RINVIO_ESCLUDI non riuscito: %s", str(e)[:300])
+    threading.Thread(target=rinvio_escludi, daemon=True, name="rinvio_escludi").start()
+
     def cerca_numero():
         """29/10 (cliente): a chi corrisponde un numero tra i COMMERCIANTI già nelle nostre liste (CERCA_NUMERO).
         Solo tabelle dei commercianti (mai annunci di privati); nel log nome, comune, provincia e fonte."""

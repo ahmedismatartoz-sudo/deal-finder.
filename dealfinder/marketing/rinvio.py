@@ -133,3 +133,54 @@ def non_aperti(campagna: int, quando: str) -> dict:
              "campagna": cid, "quando": quando}
     lg.warning("RINVIO_NONAPERTI %s", esito)
     return esito
+
+
+def _esporta(c, campagna: int, tipo: str) -> set:
+    import io, re, zipfile
+    r = c.post(f"{API}/emailCampaigns/{campagna}/exportRecipients", json={"recipientsType": tipo})
+    r.raise_for_status()
+    pid = r.json()["processId"]
+    for _ in range(60):
+        time.sleep(10)
+        p = c.get(f"{API}/processes/{pid}").json()
+        if p.get("status") == "completed":
+            dati = httpx.get(p["export_url"], timeout=90).content
+            if dati[:2] == b"PK":
+                z = zipfile.ZipFile(io.BytesIO(dati))
+                dati = z.read(z.namelist()[0])
+            testo = dati.decode("utf-8", "ignore")
+            return {m.lower() for m in re.findall(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)+", testo)}, testo.splitlines()[:1]
+    raise RuntimeError(f"esportazione {tipo} non pronta")
+
+
+def escludi_aperti(orig: int, nuova: int) -> dict:
+    """30/10: l'esportazione 'nonOpeners' di Brevo ha restituito tutti i destinatari. Si esportano chi HA APERTO la campagna
+    orig (aperture e clic) e si mettono in una lista di esclusione della campagna nuova, che resta programmata. Mittente 'Skovo'."""
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=90) as c:
+        aperti, testa = _esporta(c, orig, "openers")
+        clic, _ = _esporta(c, orig, "clickers")
+        aperti |= clic
+        aperti.discard("info@skovo.app")
+        esito = {"aperti": len(aperti), "intestazione": (testa or [""])[0][:120]}
+        if not aperti or len(aperti) > 900:
+            esito["fermo"] = "numero di aperture non credibile, campagna sospesa"
+            c.put(f"{API}/emailCampaigns/{nuova}/status", json={"status": "suspended"})
+            lg.warning("RINVIO_ESCLUDI %s", esito)
+            return esito
+        rl = c.post(f"{API}/contacts/lists", json={"name": f"Aperti campagna {orig}", "folderId": _cartella(c)})
+        rl.raise_for_status()
+        lid = rl.json()["id"]
+        for i in range(0, len(aperti), 500):
+            c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in sorted(aperti)[i:i + 500]], "listIds": [lid],
+                                                   "updateExistingContacts": False, "emptyContactsAttributes": False})
+            time.sleep(5)
+        time.sleep(90)
+        cur = c.get(f"{API}/emailCampaigns/{nuova}").json()
+        r = c.put(f"{API}/emailCampaigns/{nuova}", json={
+            "sender": {"name": "Skovo", "email": "info@skovo.app"},
+            "recipients": {"listIds": cur["recipients"]["lists"], "exclusionListIds": [lid]}})
+        esito.update({"lista_esclusione": lid, "aggiornata": r.status_code})
+        n = c.get(f"{API}/contacts/lists/{lid}").json()
+        esito["in_lista"] = n.get("uniqueSubscribers")
+    lg.warning("RINVIO_ESCLUDI %s", esito)
+    return esito
