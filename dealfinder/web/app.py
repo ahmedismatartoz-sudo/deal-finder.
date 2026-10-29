@@ -2463,7 +2463,10 @@ def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
     return False, 403, "Il tuo account non comprende gli Incentivi. Chiedi all'amministratore di attivarli"
 
 
+from .vetrina import api_vetrina
+
 routes = [
+    Route("/api/vetrina/{slug}", api_vetrina),
     Route("/health", health),
     Route("/api/auth/login", login, methods=["POST"]),
     Route("/api/auth/metodi", auth_metodi),
