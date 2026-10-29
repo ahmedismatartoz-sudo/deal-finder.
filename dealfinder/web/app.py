@@ -3526,7 +3526,7 @@ def _tempo_reale():
             if _due(f"rinvio_escludi:{v}", 100000):
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_escludi:{v}")
-                    a, b = v.split(":")
+                    a, b = v.split(":")[:2]
                     fin(True, rinvio.escludi_aperti(int(a), int(b)))
         except Exception as e:
             lg.warning("RINVIO_ESCLUDI non riuscito: %s", str(e)[:300])

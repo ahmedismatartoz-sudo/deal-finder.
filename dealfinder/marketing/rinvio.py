@@ -154,31 +154,51 @@ def _esporta(c, campagna: int, tipo: str) -> set:
 
 
 def escludi_aperti(orig: int, nuova: int) -> dict:
-    """30/10: l'esportazione 'nonOpeners' di Brevo ha restituito tutti i destinatari. Si esportano chi HA APERTO la campagna
-    orig (aperture e clic) e si mettono in una lista di esclusione della campagna nuova, che resta programmata. Mittente 'Skovo'."""
-    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=90) as c:
-        aperti, testa = _esporta(c, orig, "openers")
-        clic, _ = _esporta(c, orig, "clickers")
-        aperti |= clic
-        aperti.discard("info@skovo.app")
-        esito = {"aperti": len(aperti), "intestazione": (testa or [""])[0][:120]}
-        if not aperti or len(aperti) > 900:
-            esito["fermo"] = "numero di aperture non credibile, campagna sospesa"
-            c.put(f"{API}/emailCampaigns/{nuova}/status", json={"status": "suspended"})
+    """30/10: l'esportazione 'nonOpeners' di Brevo ha restituito tutti i destinatari. Per ogni contatto della lista del rinvio si
+    leggono le sue statistiche (aperture e clic per campagna) e chi ha aperto o cliccato la campagna orig va in una lista di
+    esclusione della campagna nuova, che resta programmata. Mittente 'Skovo'. Se i numeri non tornano la campagna si sospende."""
+    from urllib.parse import quote
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
+        cur = c.get(f"{API}/emailCampaigns/{nuova}").json()
+        lista = cur["recipients"]["lists"][0]
+        emails, off = [], 0
+        while True:
+            r = c.get(f"{API}/contacts/lists/{lista}/contacts", params={"limit": 500, "offset": off})
+            r.raise_for_status()
+            cs = r.json().get("contacts") or []
+            emails += [x["email"].lower() for x in cs if x.get("email")]
+            if len(cs) < 500:
+                break
+            off += 500
+        aperti, errori = set(), 0
+        for e in emails:
+            for prova in range(3):
+                r = c.get(f"{API}/contacts/{quote(e)}/campaignStats")
+                if r.status_code == 429:
+                    time.sleep(2 + prova * 3)
+                    continue
+                break
+            if r.status_code >= 300:
+                errori += 1
+                continue
+            d = r.json() or {}
+            if any(int(x.get("campaignId") or 0) == orig for k in ("opened", "clicked") for x in (d.get(k) or [])):
+                aperti.add(e)
+            time.sleep(0.12)
+        esito = {"contatti": len(emails), "aperti": len(aperti), "errori": errori}
+        if errori > 50 or not aperti or len(aperti) > 700:
+            esito["fermo"] = "numeri non credibili, campagna sospesa"
+            esito["sospesa"] = c.put(f"{API}/emailCampaigns/{nuova}/status", json={"status": "suspended"}).status_code
             lg.warning("RINVIO_ESCLUDI %s", esito)
             return esito
         rl = c.post(f"{API}/contacts/lists", json={"name": f"Aperti campagna {orig}", "folderId": _cartella(c)})
         rl.raise_for_status()
         lid = rl.json()["id"]
-        for i in range(0, len(aperti), 500):
-            c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in sorted(aperti)[i:i + 500]], "listIds": [lid],
-                                                   "updateExistingContacts": False, "emptyContactsAttributes": False})
-            time.sleep(5)
-        time.sleep(90)
-        cur = c.get(f"{API}/emailCampaigns/{nuova}").json()
+        r = c.post(f"{API}/contacts/lists/{lid}/contacts/add", json={"emails": sorted(aperti)})
+        esito["aggiunti"] = r.status_code
         r = c.put(f"{API}/emailCampaigns/{nuova}", json={
             "sender": {"name": "Skovo", "email": "info@skovo.app"},
-            "recipients": {"listIds": cur["recipients"]["lists"], "exclusionListIds": [lid]}})
+            "recipients": {"listIds": [lista], "exclusionListIds": [lid]}})
         esito.update({"lista_esclusione": lid, "aggiornata": r.status_code})
         n = c.get(f"{API}/contacts/lists/{lid}").json()
         esito["in_lista"] = n.get("uniqueSubscribers")
