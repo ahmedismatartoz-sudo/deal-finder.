@@ -710,7 +710,7 @@ if __name__ == "__main__":
                 for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"),
                              "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "50000"),
                              "BENZ_PROVINCE": os.environ.get("ZC_PROVINCE", "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"),
-                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": "0", "BENZ_TUTTI_CARB": "1",
+                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
                              "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
                              "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
                              "BENZ_PARALLELI": os.environ.get("ZC_PARALLELI", "3"), "BENZ_SOLO_VALUTA": os.environ.get("ZC_SOLO_VALUTA", "0"),
