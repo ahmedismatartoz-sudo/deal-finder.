@@ -2017,8 +2017,9 @@ def affare(request: Request):
         if not row:
             eco = row = conn.execute(scovo.ECO_SQL + " AND l.id=%(id)s", dict(scovo.eco_params(user["id"]), id=lid)).fetchone()
         extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() if row else None
-        if str(lid) in _prezzi_cliente():
-            # prezzo trattato: la scheda usa i dati dell'elenco, già con il prezzo nuovo e il margine giusto
+        if str(lid) in _prezzi_cliente() or int(os.environ.get("RIBASSO_EURO", "0") or 0):
+            # prezzo trattato (o ribasso su tutte le auto, 29/10): la scheda usa i dati dell'elenco, già con il prezzo
+            # nuovo e il margine giusto, così nella scheda si vede lo stesso prezzo dell'elenco
             tr = next((it for it in (_elenco.get("items") or []) if it.get("id") == lid), None)
             if tr:
                 extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone()
