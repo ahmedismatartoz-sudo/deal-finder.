@@ -1718,8 +1718,9 @@ def _supercar_europa(gia: set, opens: dict) -> list:
     Il prezzo di rivendita e il margine sono quelli calcolati sui confronti europei, con i costi di import se all'estero."""
     if os.environ.get("SUPERCAR_SITO", "1") != "1":
         return []
+    from collections import Counter
     from ..pipeline.supercar_eu import SITO_SQL
-    out = []
+    out, scarti = [], Counter()
     try:
         with connect() as conn:
             if not conn.execute("SELECT to_regclass('supercar_eu') AS t").fetchone()["t"]:
@@ -1729,13 +1730,23 @@ def _supercar_europa(gia: set, opens: dict) -> list:
                 return []
             rows = conn.execute(scovo.ECO_SQL.split("WHERE l.status='attivo'")[0] + " WHERE l.id = ANY(%(ids)s) AND l.status='attivo'",
                                 {"me": 0, "ids": list(val)}).fetchall()
+            # 29/10 notte (cliente: "solo quelle davvero in vendita, margini giusti, niente leasing/finanziamenti, niente foto da internet")
+            from ..ai import supercar_vero as SV
+            desc = {x["id"]: x["description"] for x in conn.execute("SELECT id, description FROM listings WHERE id = ANY(%s)", (list(val),)).fetchall()}
+            controllo = SV.letti(conn, list(val))
         for r in rows:
             if r["id"] in gia:
                 continue
-            from ..pipeline.supercar_eu import LEASING_RE
-            if LEASING_RE.search(f"{r.get('title') or ''} {r.get('version_raw') or ''} {(r.get('description') or '')[:1500]}"):
-                continue                                         # subentro leasing: prezzo non reale
-            v = val[r["id"]]
+            v = dict(val[r["id"]])
+            motivo, corr = SV.filtra(dict(r, description=desc.get(r["id"])), v, int(r.get("n_photos") or 0))
+            if motivo:
+                scarti[motivo] += 1
+                continue
+            c = controllo.get(r["id"])
+            if not c or not c["ok"]:
+                scarti["non_controllata_ai" if not c else "scartata_ai"] += 1
+                continue
+            v.update(r=corr["R"], margine=corr["margine"])
             it = scovo.item_eco(r)
             if not it:
                 continue
@@ -1748,7 +1759,7 @@ def _supercar_europa(gia: set, opens: dict) -> list:
             opens[it["id"]] = int(r["opens"] or 0)
     except Exception as ex:
         logging.getLogger("scovo").warning("SUPERCAR_SITO non caricate: %s", str(ex)[:200])
-    logging.getLogger("scovo").warning("SUPERCAR_SITO %d auto", len(out))
+    logging.getLogger("scovo").warning("SUPERCAR_SITO %d auto, tolte %s", len(out), dict(scarti))
     return out
 
 
@@ -3377,6 +3388,22 @@ def _tempo_reale():
                 lg.warning("DIFETTI non riuscito: %s", str(e)[:300])
             time.sleep(int(os.environ.get("DIFETTI_MIN", "15")) * 60)
     threading.Thread(target=difetti_annunci, daemon=True, name="difetti").start()
+
+    def supercar_vere():
+        """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
+        if os.environ.get("SC_CONTROLLO", "1") != "1":
+            return
+        time.sleep(int(os.environ.get("SC_ATTESA", "60")))
+        from ..ai import supercar_vero as SV
+        while True:
+            try:
+                st = SV.giro(int(os.environ.get("SUPERCAR_QUANTE", "300")) + 200)
+                if st.get("vere") or st.get("scartate_ai"):
+                    _elenco["t"] = 0
+            except Exception as e:
+                lg.warning("SUPERCAR_VERO non riuscito: %s", str(e)[:300])
+            time.sleep(int(os.environ.get("SC_MIN", "20")) * 60)
+    threading.Thread(target=supercar_vere, daemon=True, name="supercar_vere").start()
 
     def benzina_mi():
         """20/10 (cliente), una tantum (BENZ_GIRO=n): auto a benzina 3.000-15.000 € in provincia di Milano (BENZ)."""

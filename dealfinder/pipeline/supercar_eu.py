@@ -22,8 +22,7 @@ from statistics import median
 log = logging.getLogger("supercar_eu")
 
 import re
-# 29/10: subentro leasing / noleggio / rate: il prezzo dell'annuncio non è il prezzo d'acquisto dell'auto
-LEASING_RE = re.compile(r"leasing|übernahme|uebernahme|subentro|noleggio|renting|lease|anzahlung|rata mensile|al mese|monatlich|/mese|/monat|mensualit|loyer|financement|finanziamento", re.I)
+from ..ai.supercar_vero import LEASING_RE  # 29/10: subentro leasing / rate / noleggio: prezzo non reale
 
 PAESI = {"D": "Germania", "A": "Austria", "B": "Belgio", "E": "Spagna", "F": "Francia", "I": "Italia",
          "L": "Lussemburgo", "NL": "Paesi Bassi"}
