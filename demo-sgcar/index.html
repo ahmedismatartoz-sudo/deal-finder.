@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>SG Car Solution · Vendi la tua auto senza pensieri · Segrate</title>
+<meta name="description" content="SG Car Solution, Segrate: valutiamo, fotografiamo e vendiamo la tua auto al posto tuo. Trattativa, pagamento sicuro e passaggio di proprietà inclusi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --carta:#f2ede3; --carta2:#e9e2d4; --ink:#14130f; --ink2:#3b3830; --grigio:#7a7466;
+  --rosso:#e0452a; --verde:#1f6b4a; --linea:rgba(20,19,15,.14);
+  --serif:"Instrument Serif",Georgia,serif; --sans:"Inter Tight",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;overflow-x:clip}
+body{background:var(--carta);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.55;overflow-x:clip;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit}
+.w{max-width:1240px;margin:0 auto;padding:0 28px}
+.proto{background:var(--ink);color:#f2ede3;text-align:center;font-size:12.5px;letter-spacing:.04em;padding:7px 16px}
+
+/* top */
+.top{position:sticky;top:0;z-index:40;background:rgba(242,237,227,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.top.giu{border-color:var(--linea)}
+.top .w{display:flex;align-items:center;justify-content:space-between;height:72px;gap:20px}
+.logo{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:800;letter-spacing:-.02em;font-size:19px}
+.logo b{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--carta);font-family:var(--serif);font-style:italic;font-weight:400;font-size:21px}
+.logo small{display:block;font-weight:500;font-size:11.5px;color:var(--grigio);letter-spacing:.06em;text-transform:uppercase}
+nav{display:flex;gap:30px;font-size:15px;font-weight:500}
+nav a{text-decoration:none;opacity:.78}
+nav a:hover{opacity:1}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--carta);text-decoration:none;font-weight:600;font-size:15.5px;padding:13px 22px;border-radius:999px;border:0;cursor:pointer;font-family:inherit;transition:transform .2s, background .2s;white-space:nowrap}
+.btn:hover{transform:translateY(-2px);background:#000}
+.btn.rosso{background:var(--rosso);color:#fff}
+.btn.rosso:hover{background:#c93a21}
+.btn.vuoto{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.btn svg{width:18px;height:18px}
+.stato{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--ink2)}
+.stato i{width:8px;height:8px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 4px rgba(31,107,74,.18)}
+.stato.chiuso i{background:#b9b2a2;box-shadow:none}
+
+/* hero */
+.hero{padding:70px 0 40px;position:relative;overflow-x:clip}
+.hero .w{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:60px;align-items:center}
+.occhiello{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--rosso);display:flex;align-items:center;gap:12px}
+.occhiello:before{content:"";width:28px;height:1.5px;background:currentColor}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(52px,7.6vw,112px);line-height:.92;letter-spacing:-.025em;margin:22px 0 26px}
+h1 em{color:var(--rosso)}
+h1 .riga{display:block;overflow:hidden}
+h1 .riga span{display:block;transform:translateY(105%);animation:su .9s cubic-bezier(.2,.8,.2,1) forwards}
+h1 .riga:nth-child(2) span{animation-delay:.09s}
+h1 .riga:nth-child(3) span{animation-delay:.18s}
+@keyframes su{to{transform:none}}
+.lead{font-size:20px;color:var(--ink2);max-width:560px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.fiducia{display:flex;flex-wrap:wrap;gap:28px;margin-top:44px;padding-top:26px;border-top:1px solid var(--linea)}
+.fiducia div{font-size:14px;color:var(--grigio);line-height:1.35}
+.fiducia strong{display:block;font-family:var(--serif);font-weight:400;font-size:38px;color:var(--ink);line-height:1}
+
+/* pratica card */
+.pratica{position:relative;background:#fffdf8;border-radius:26px;padding:28px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 30px 60px -30px rgba(20,19,15,.35);transform:rotate(1.6deg);border:1px solid var(--linea)}
+.pratica:before{content:"";position:absolute;inset:14px -14px -14px 14px;border-radius:26px;background:var(--carta2);z-index:-1;transform:rotate(-3deg)}
+.pratica header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:18px;border-bottom:1px dashed var(--linea)}
+.pratica h3{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--grigio);font-weight:600}
+.pratica .auto{font-family:var(--serif);font-size:32px;line-height:1.05;margin-top:6px}
+.timbro{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--verde);border:2px solid var(--verde);border-radius:8px;padding:5px 9px;transform:rotate(-8deg);opacity:0;transition:opacity .4s, transform .4s}
+.timbro.si{opacity:1;transform:rotate(-8deg) scale(1)}
+.fasi{list-style:none;margin-top:18px;display:grid;gap:4px}
+.fasi li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 0;font-size:15.5px;color:var(--grigio);transition:color .4s}
+.fasi li .p{width:26px;height:26px;border-radius:50%;border:1.5px solid #cfc7b6;display:grid;place-items:center;transition:all .4s}
+.fasi li .p svg{width:13px;height:13px;opacity:0;stroke:#fff;transition:opacity .3s}
+.fasi li small{font-size:12.5px;color:#a39c8c}
+.fasi li.fatto{color:var(--ink)}
+.fasi li.fatto .p{background:var(--verde);border-color:var(--verde)}
+.fasi li.fatto .p svg{opacity:1}
+.fasi li.ora{color:var(--ink);font-weight:600}
+.fasi li.ora .p{border-color:var(--rosso);box-shadow:0 0 0 5px rgba(224,69,42,.15)}
+.pratica footer{margin-top:16px;padding-top:16px;border-top:1px dashed var(--linea);display:flex;justify-content:space-between;align-items:baseline}
+.pratica footer span{font-size:13.5px;color:var(--grigio)}
+.pratica footer b{font-family:var(--serif);font-weight:400;font-size:34px}
+
+/* marquee */
+.nastro{border-block:1px solid var(--linea);overflow:hidden;padding:18px 0;margin-top:60px;background:var(--carta2)}
+.nastro div{display:flex;gap:56px;width:max-content;animation:scorri 38s linear infinite;font-family:var(--serif);font-size:28px;font-style:italic;color:var(--ink2)}
+.nastro span{display:flex;align-items:center;gap:56px;white-space:nowrap}
+.nastro span:after{content:"✦";font-style:normal;font-size:16px;color:var(--rosso)}
+@keyframes scorri{to{transform:translateX(-50%)}}
+
+/* sections */
+section{padding:120px 0}
+.tit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:60px;align-items:end;margin-bottom:64px}
+h2{font-family:var(--serif);font-weight:400;font-size:clamp(40px,5.4vw,76px);line-height:.98;letter-spacing:-.02em}
+h2 em{color:var(--rosso)}
+.tit p{color:var(--ink2);font-size:18.5px;max-width:520px}
+
+/* metodo */
+.passi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-top:1.5px solid var(--ink)}
+.passo{padding:30px 26px 34px 0;border-right:1px solid var(--linea);position:relative}
+.passo+.passo{padding-left:26px}
+.passo:last-child{border-right:0}
+.passo .n{font-family:var(--serif);font-size:64px;line-height:1;color:var(--rosso)}
+.passo h3{font-size:21px;font-weight:700;letter-spacing:-.01em;margin:18px 0 10px}
+.passo p{color:var(--ink2);font-size:15.5px}
+.passo .t{display:inline-block;margin-top:18px;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--grigio)}
+
+/* confronto */
+.scuro{background:var(--ink);color:var(--carta)}
+.scuro .tit p{color:#bdb6a6}
+.tabella{border-radius:22px;overflow:hidden;border:1px solid rgba(242,237,227,.14)}
+.riga-t{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));border-top:1px solid rgba(242,237,227,.1)}
+.riga-t:first-child{border-top:0}
+.riga-t>div{padding:20px 22px;font-size:15.5px;display:flex;align-items:center;gap:10px}
+.riga-t.testa>div{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#a49d8d;font-weight:600}
+.riga-t .noi{background:rgba(224,69,42,.12);color:#fff;font-weight:600}
+.riga-t.testa .noi{background:var(--rosso);color:#fff}
+.riga-t>div:first-child{color:#d8d1c1}
+.si,.no,.forse{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:13px;font-weight:800}
+.si{background:#2f8a61;color:#fff}.no{background:rgba(242,237,227,.12);color:#8f887a}.forse{background:rgba(242,237,227,.12);color:#d8b25a}
+
+/* stima */
+.stima{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:70px;align-items:start}
+.stima .tit{display:block;margin:0}
+.stima .tit p{margin-top:22px}
+.punti{list-style:none;margin-top:34px;display:grid;gap:14px}
+.punti li{display:flex;gap:14px;align-items:flex-start;font-size:16.5px;color:var(--ink2)}
+.punti li:before{content:"";flex:none;width:9px;height:9px;margin-top:9px;border-radius:50%;background:var(--rosso)}
+form{background:#fffdf8;border:1px solid var(--linea);border-radius:26px;padding:34px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+form .tutto{grid-column:1/-1}
+label{display:grid;gap:7px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--grigio)}
+input,select,textarea{font:inherit;font-size:16.5px;text-transform:none;letter-spacing:0;color:var(--ink);background:var(--carta);border:1.5px solid transparent;border-radius:14px;padding:14px 16px;width:100%;min-width:0;outline:none;transition:border-color .2s, background .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--ink);background:#fff}
+textarea{resize:vertical;min-height:90px}
+.scelte{display:flex;flex-wrap:wrap;gap:8px}
+.scelte input{display:none}
+.scelte span{display:inline-block;padding:10px 16px;border-radius:999px;background:var(--carta);font-size:15px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:500;cursor:pointer;transition:all .2s}
+.scelte input:checked+span{background:var(--ink);color:var(--carta)}
+form .btn{justify-content:center;padding:17px 24px;font-size:16.5px}
+.nota{font-size:13px;color:var(--grigio);text-transform:none;letter-spacing:0;font-weight:400}
+
+/* recensioni */
+.voto{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:70px;align-items:center}
+.grande{font-family:var(--serif);font-size:clamp(120px,17vw,230px);line-height:.8;letter-spacing:-.04em}
+.grande small{font-size:.28em;color:var(--grigio);letter-spacing:0}
+.stelle{display:flex;gap:4px;margin:22px 0 10px;color:var(--rosso)}
+.stelle svg{width:26px;height:26px}
+.temi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tema{background:#fffdf8;border:1px solid var(--linea);border-radius:20px;padding:24px}
+.tema b{display:block;font-size:18px;margin-bottom:6px}
+.tema p{color:var(--ink2);font-size:15.5px}
+
+/* faq */
+.faq{max-width:900px}
+details{border-top:1px solid var(--linea);padding:4px 0}
+details:last-child{border-bottom:1px solid var(--linea)}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:20px;align-items:center;padding:22px 0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+summary::-webkit-details-marker{display:none}
+summary i{flex:none;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--ink);position:relative;transition:transform .3s, background .3s}
+summary i:before,summary i:after{content:"";position:absolute;left:50%;top:50%;width:12px;height:1.5px;background:var(--ink);transform:translate(-50%,-50%)}
+summary i:after{transform:translate(-50%,-50%) rotate(90deg);transition:transform .3s}
+details[open] summary i{background:var(--ink)}
+details[open] summary i:before{background:var(--carta)}
+details[open] summary i:after{transform:translate(-50%,-50%) rotate(0);background:var(--carta)}
+details p{padding:0 60px 26px 0;color:var(--ink2);font-size:16.5px;max-width:760px}
+
+/* dove */
+.dove{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:0;border-radius:28px;overflow:hidden;background:var(--ink);color:var(--carta)}
+.dove .info{padding:52px}
+.dove h2{font-size:clamp(38px,4.4vw,60px)}
+.dove dl{margin-top:34px;display:grid;gap:22px}
+.dove dt{font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:#a49d8d;font-weight:600;margin-bottom:4px}
+.dove dd{font-size:18px}
+.dove dd a{text-decoration:none;border-bottom:1px solid rgba(242,237,227,.3)}
+.orari{display:grid;grid-template-columns:auto auto;gap:4px 26px;font-size:16px;width:max-content;max-width:100%}
+.orari .oggi{color:#fff;font-weight:700}
+.dove .cta .btn{background:var(--carta);color:var(--ink)}
+.dove .cta .btn.rosso{background:var(--rosso);color:#fff}
+.mappa{min-height:460px;position:relative;background:#2a2822}
+.mappa iframe{position:absolute;inset:0;width:100%;height:100%;border:0;filter:grayscale(.85) contrast(1.05)}
+
+footer.piede{padding:60px 0 120px;font-size:14px;color:var(--grigio)}
+footer.piede .w{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px}
+
+/* sticky mobile */
+.barra{position:fixed;left:12px;right:12px;bottom:12px;z-index:50;display:none;gap:8px;padding:8px;background:var(--ink);border-radius:999px;box-shadow:0 20px 40px -10px rgba(0,0,0,.4)}
+.barra a{flex:1;justify-content:center;padding:13px 10px;font-size:15px}
+.barra a.chiama{background:transparent;color:var(--carta)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.2,.8,.2,1), transform .9s cubic-bezier(.2,.8,.2,1)}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}h1 .riga span{transform:none}}
+
+@media (max-width:980px){
+  nav{display:none}
+  .hero .w,.tit,.stima,.voto,.dove{grid-template-columns:minmax(0,1fr)}
+  .hero .w{gap:56px}
+  .tit{gap:20px}
+  .pratica{transform:none;max-width:520px}
+  .passi{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .passo:nth-child(2){border-right:0}
+  .passo:nth-child(3){padding-left:0}
+  .passo:nth-child(n+3){border-top:1px solid var(--linea)}
+  .stima,.voto{gap:44px}
+  .mappa{min-height:340px}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .w{padding:0 18px}
+  .top .w{height:64px}
+  .top .btn,.top .stato{display:none}
+  .hero{padding:44px 0 20px}
+  .lead{font-size:18px}
+  section{padding:84px 0}
+  .tit{margin-bottom:40px}
+  .passi{grid-template-columns:minmax(0,1fr)}
+  .passo,.passo+.passo{padding:26px 0;border-right:0;border-top:1px solid var(--linea)}
+  .passo:first-child{border-top:0}
+  .tabella{border-radius:16px}
+  .riga-t{grid-template-columns:minmax(0,1.2fr) repeat(3,minmax(0,.8fr))}
+  .riga-t>div{padding:14px 10px;font-size:13.5px}
+  .riga-t.testa>div{font-size:10.5px;letter-spacing:.04em}
+  form{grid-template-columns:minmax(0,1fr);padding:22px;border-radius:20px}
+  .temi{grid-template-columns:minmax(0,1fr)}
+  .dove .info{padding:32px 22px}
+  details p{padding-right:0}
+  summary{font-size:17.5px}
+  .barra{display:flex}
+  .nastro div{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div class="proto">Prototipo proposto a SG Car Solution, non è il sito ufficiale</div>
+
+<header class="top" id="top">
+  <div class="w">
+    <a class="logo" href="#"><b>sg</b><span>SG Car Solution<small>Segrate · Milano Est</small></span></a>
+    <nav>
+      <a href="#metodo">Come funziona</a>
+      <a href="#perche">Perché noi</a>
+      <a href="#stima">Valutazione</a>
+      <a href="#domande">Domande</a>
+      <a href="#dove">Dove siamo</a>
+    </nav>
+    <span class="stato" id="stato"><i></i><span>…</span></span>
+    <a class="btn" href="#stima">Valuta la tua auto</a>
+  </div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="w">
+    <div>
+      <div class="occhiello">Vendita auto per conto di privati</div>
+      <h1><span class="riga"><span>La tua auto,</span></span><span class="riga"><span><em>venduta.</em></span></span><span class="riga"><span>Zero pensieri.</span></span></h1>
+      <p class="lead">Valutiamo la tua auto, la presentiamo al meglio, trattiamo con i compratori e seguiamo pagamento e passaggio di proprietà. Tu firmi e incassi.</p>
+      <div class="cta">
+        <a class="btn rosso" href="#stima">Chiedi una valutazione gratuita
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn vuoto wa" href="#">Scrivici su WhatsApp</a>
+      </div>
+      <div class="fiducia">
+        <div><strong>4,9</strong>su Google, 23 recensioni</div>
+        <div><strong>0 €</strong>per la valutazione</div>
+        <div><strong>1</strong>solo referente: Gianni</div>
+      </div>
+    </div>
+
+    <aside class="pratica rv" aria-label="Esempio di pratica di vendita">
+      <header>
+        <div><h3>Pratica di vendita</h3><div class="auto">La tua auto</div></div>
+        <span class="timbro" id="timbro">Venduta</span>
+      </header>
+      <ol class="fasi" id="fasi">
+        <li><span class="p"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Valutazione sul mercato reale<small>giorno 1</small></li>
+        <li><span class="p"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Foto e annuncio professionale<small>giorno 2</small></li>
+        <li><span class="p"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Telefonate e visite filtrate<small>da noi</small></li>
+        <li><span class="p"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Trattativa sul prezzo<small>da noi</small></li>
+        <li><span class="p"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Pagamento verificato e passaggio<small>in agenzia</small></li>
+      </ol>
+      <footer><span>Il tuo impegno</span><b>una firma</b></footer>
+    </aside>
+  </div>
+
+  <div class="nastro" aria-hidden="true"><div>
+    <span>Niente perditempo al telefono</span><span>Niente truffe sul pagamento</span><span>Niente svendite al concessionario</span><span>Passaggio di proprietà incluso</span>
+    <span>Niente perditempo al telefono</span><span>Niente truffe sul pagamento</span><span>Niente svendite al concessionario</span><span>Passaggio di proprietà incluso</span>
+  </div></div>
+</div>
+
+<section id="metodo">
+  <div class="w">
+    <div class="tit rv">
+      <h2>Quattro passi.<br><em>Uno solo</em> è tuo.</h2>
+      <p>Vendere un'auto da privato vuol dire settimane di messaggi, appuntamenti a vuoto e il dubbio sul bonifico. Con SG Car Solution tutto questo lo facciamo noi, dall'inizio alla fine.</p>
+    </div>
+    <div class="passi">
+      <div class="passo rv"><div class="n">01</div><h3>Valutiamo</h3><p>Guardiamo l'auto e la confrontiamo con quelle davvero in vendita oggi, per darti un prezzo realistico, né gonfiato né svenduto.</p><span class="t">Gratis e senza impegno</span></div>
+      <div class="passo rv"><div class="n">02</div><h3>Presentiamo</h3><p>Foto curate, descrizione completa e annuncio pubblicato dove i compratori cercano davvero.</p><span class="t">Ci pensiamo noi</span></div>
+      <div class="passo rv"><div class="n">03</div><h3>Trattiamo</h3><p>Rispondiamo a chiamate e messaggi, scartiamo i perditempo e mostriamo l'auto solo a chi è interessato sul serio.</p><span class="t">Tu non rispondi a nessuno</span></div>
+      <div class="passo rv"><div class="n">04</div><h3>Chiudiamo</h3><p>Verifichiamo il pagamento e seguiamo il passaggio di proprietà. A te resta solo la firma.</p><span class="t">Il tuo unico passo</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="perche" class="scuro">
+  <div class="w">
+    <div class="tit rv">
+      <h2>Più di un permuta,<br><em>meno fatica</em> del fai da te.</h2>
+      <p>Il concessionario ti dà poco perché deve rivendere. Da solo rischi tempo e brutte sorprese. Noi stiamo nel mezzo: il prezzo del mercato privato, con la tranquillità di un professionista.</p>
+    </div>
+    <div class="tabella rv" role="table">
+      <div class="riga-t testa" role="row"><div>&nbsp;</div><div>Da solo</div><div>Permuta</div><div class="noi">SG Car</div></div>
+      <div class="riga-t" role="row"><div>Prezzo vicino al mercato</div><div><span class="si">✓</span></div><div><span class="no">✕</span></div><div class="noi"><span class="si">✓</span></div></div>
+      <div class="riga-t" role="row"><div>Nessuna telefonata da gestire</div><div><span class="no">✕</span></div><div><span class="si">✓</span></div><div class="noi"><span class="si">✓</span></div></div>
+      <div class="riga-t" role="row"><div>Pagamento verificato</div><div><span class="forse">?</span></div><div><span class="si">✓</span></div><div class="noi"><span class="si">✓</span></div></div>
+      <div class="riga-t" role="row"><div>Passaggio di proprietà seguito</div><div><span class="no">✕</span></div><div><span class="si">✓</span></div><div class="noi"><span class="si">✓</span></div></div>
+      <div class="riga-t" role="row"><div>Non devi comprare un'altra auto</div><div><span class="si">✓</span></div><div><span class="no">✕</span></div><div class="noi"><span class="si">✓</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="stima">
+  <div class="w stima">
+    <div class="tit rv">
+      <h2>Quanto vale<br><em>la tua auto?</em></h2>
+      <p>Raccontaci due cose sulla tua auto: Gianni ti risponde con una prima valutazione e ti propone un appuntamento per vederla.</p>
+      <ul class="punti">
+        <li>Nessun costo per la valutazione</li>
+        <li>Nessun obbligo di affidarci la vendita</li>
+        <li>Risposta su WhatsApp, nel giorno lavorativo</li>
+      </ul>
+    </div>
+    <form id="modulo" class="rv" novalidate>
+      <label class="tutto">Marca e modello<input name="modello" placeholder="Es. Volkswagen Golf 1.6 TDI" required></label>
+      <label>Anno<input name="anno" inputmode="numeric" placeholder="2018" maxlength="4"></label>
+      <label>Chilometri<input name="km" inputmode="numeric" placeholder="95.000"></label>
+      <label class="tutto">Alimentazione
+        <span class="scelte">
+          <label><input type="radio" name="alim" value="Benzina"><span>Benzina</span></label>
+          <label><input type="radio" name="alim" value="Diesel"><span>Diesel</span></label>
+          <label><input type="radio" name="alim" value="Ibrida"><span>Ibrida</span></label>
+          <label><input type="radio" name="alim" value="GPL / Metano"><span>GPL / Metano</span></label>
+          <label><input type="radio" name="alim" value="Elettrica"><span>Elettrica</span></label>
+        </span>
+      </label>
+      <label class="tutto">Note<textarea name="note" placeholder="Tagliandi, eventuali graffi, quando vorresti venderla…"></textarea></label>
+      <button class="btn rosso tutto" type="submit">Invia su WhatsApp
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <span class="nota tutto">Il modulo apre WhatsApp con il messaggio già scritto: nessun dato viene salvato su questo sito.</span>
+    </form>
+  </div>
+</section>
+
+<section id="recensioni" style="padding-top:0">
+  <div class="w voto">
+    <div class="rv">
+      <div class="grande">4,9<small>/5</small></div>
+      <div class="stelle" aria-label="5 stelle">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 17l-6.5 4 2-7.5L2 9h7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 17l-6.5 4 2-7.5L2 9h7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 17l-6.5 4 2-7.5L2 9h7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 17l-6.5 4 2-7.5L2 9h7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 17l-6.5 4 2-7.5L2 9h7z"/></svg>
+      </div>
+      <p style="color:var(--ink2)">Media di 23 recensioni su Google.</p>
+      <a class="btn vuoto" style="margin-top:22px" href="https://www.google.com/maps/search/?api=1&query=SG+CAR+SOLUTION+Via+Roma+78+Segrate&query_place_id=ChIJdYR-DjbJhkcRY1cAAmer3K8" target="_blank" rel="noopener">Leggile su Google</a>
+    </div>
+    <div>
+      <h2 class="rv" style="margin-bottom:34px">Cosa dicono<br><em>i clienti</em></h2>
+      <div class="temi">
+        <div class="tema rv"><b>Disponibilità</b><p>Gianni è il riferimento dall'inizio alla fine e risponde sempre.</p></div>
+        <div class="tema rv"><b>Trasparenza</b><p>Valutazione chiara e niente sorprese sul prezzo concordato.</p></div>
+        <div class="tema rv"><b>Velocità</b><p>Dalla valutazione alla vendita in tempi rapidi.</p></div>
+        <div class="tema rv"><b>Zero pensieri</b><p>Pratiche e passaggio di proprietà seguiti fino alla fine.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="domande" style="padding-top:0">
+  <div class="w">
+    <div class="tit rv"><h2>Domande<br><em>frequenti</em></h2><p>Se non trovi la risposta, scrivici: ti rispondiamo noi, non un centralino.</p></div>
+    <div class="faq rv">
+      <details><summary>Quanto costa il servizio?<i></i></summary><p>La valutazione è gratuita. Il compenso per la vendita si concorda prima, in modo chiaro, senza costi nascosti.</p></details>
+      <details><summary>Devo lasciarvi l'auto?<i></i></summary><p>Si decide insieme: puoi tenerla tu e la mostriamo su appuntamento, oppure lasciarla da noi a Segrate per le visite.</p></details>
+      <details><summary>Come vengo pagato?<i></i></summary><p>Il pagamento del compratore viene verificato prima della consegna dell'auto e prima del passaggio di proprietà. Niente assegni dubbi, niente bonifici "in arrivo".</p></details>
+      <details><summary>Chi si occupa del passaggio di proprietà?<i></i></summary><p>Lo seguiamo noi in agenzia. Tu firmi l'atto di vendita e consegni i documenti, il resto è a carico nostro.</p></details>
+      <details><summary>Ritirate anche auto con finanziamento in corso?<i></i></summary><p>Raccontaci la situazione: valutiamo insieme come gestire il finanziamento residuo al momento della vendita.</p></details>
+      <details><summary>In che zona lavorate?<i></i></summary><p>Siamo a Segrate e seguiamo clienti di Milano e dell'hinterland est: Pioltello, Cernusco, Vimodrone, Peschiera Borromeo, Linate e dintorni.</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="dove" style="padding-top:0">
+  <div class="w">
+    <div class="dove rv">
+      <div class="info">
+        <span class="stato" id="stato2" style="color:#d8d1c1"><i></i><span>…</span></span>
+        <h2 style="margin-top:16px">Passa a trovarci<br><em>a Segrate</em></h2>
+        <dl>
+          <div><dt>Indirizzo</dt><dd>Via Roma 78/A, 20054 Segrate (MI)</dd></div>
+          <div><dt>Telefono</dt><dd><a class="tel" href="tel:+393773940411">377 394 0411</a></dd></div>
+          <div><dt>Orari</dt><dd><div class="orari" id="orari"></div></dd></div>
+        </dl>
+        <div class="cta">
+          <a class="btn rosso wa" href="#">WhatsApp</a>
+          <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=SG+CAR+SOLUTION+Via+Roma+78A+Segrate&destination_place_id=ChIJdYR-DjbJhkcRY1cAAmer3K8" target="_blank" rel="noopener">Indicazioni</a>
+        </div>
+      </div>
+      <div class="mappa"><iframe loading="lazy" title="Mappa SG Car Solution" src="https://maps.google.com/maps?q=45.4953864,9.2912826&z=15&output=embed"></iframe></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="w">
+    <span>© SG Car Solution di Schillaci Giovanni · P.IVA 11617330961 · Via Roma 78/A, Segrate (MI)</span>
+    <span>Prototipo dimostrativo</span>
+  </div>
+</footer>
+
+<div class="barra">
+  <a class="btn chiama tel" href="tel:+393773940411">Chiama</a>
+  <a class="btn rosso wa" href="#">WhatsApp</a>
+</div>
+
+<script>
+const NUMERO = "393773940411";
+const wa = t => "https://wa.me/" + NUMERO + "?text=" + encodeURIComponent(t);
+document.querySelectorAll("a.wa").forEach(a => { a.href = wa("Ciao Gianni, vorrei vendere la mia auto. Mi fai una valutazione?"); a.target = "_blank"; a.rel = "noopener"; });
+
+document.getElementById("modulo").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = new FormData(e.target), m = (f.get("modello") || "").trim();
+  if (!m) { e.target.modello.focus(); e.target.modello.style.borderColor = "var(--rosso)"; return; }
+  const r = ["Ciao Gianni, vorrei una valutazione per vendere la mia auto:", "• " + m];
+  if (f.get("anno")) r.push("• Anno: " + f.get("anno"));
+  if (f.get("km")) r.push("• Km: " + f.get("km"));
+  if (f.get("alim")) r.push("• Alimentazione: " + f.get("alim"));
+  if ((f.get("note") || "").trim()) r.push("• Note: " + f.get("note").trim());
+  window.open(wa(r.join("\n")), "_blank", "noopener");
+});
+
+// orari e stato
+const ORARI = {1:[9.5,19.5],2:[9.5,19.5],3:[9.5,19.5],4:[9.5,19.5],5:[9.5,19.5],6:[9.5,19.5],0:null};
+const GIORNI = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+const ora = new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Rome"}));
+const g = ora.getDay(), h = ora.getHours() + ora.getMinutes() / 60, o = ORARI[g];
+const aperto = o && h >= o[0] && h < o[1];
+let testo;
+if (aperto) testo = "Aperto ora · chiude alle 19:30";
+else if (o && h < o[0]) testo = "Chiuso · apre alle 9:30";
+else { let k = (g + 1) % 7; while (!ORARI[k]) k = (k + 1) % 7; testo = "Chiuso · riapre " + (k === (g + 1) % 7 ? "domani" : GIORNI[k].toLowerCase()) + " alle 9:30"; }
+["stato", "stato2"].forEach(id => { const s = document.getElementById(id); s.lastElementChild.textContent = testo; s.classList.toggle("chiuso", !aperto); });
+document.getElementById("orari").innerHTML = [1,2,3,4,5,6,0].map(d =>
+  `<span class="${d===g?"oggi":""}">${GIORNI[d]}</span><span class="${d===g?"oggi":""}">${ORARI[d] ? "9:30 – 19:30" : "Chiuso"}</span>`).join("");
+
+// header
+const testa = document.getElementById("top");
+addEventListener("scroll", () => testa.classList.toggle("giu", scrollY > 10), {passive: true});
+
+// reveal
+const io = new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } }), {threshold: .12, rootMargin: "0px 0px -40px 0px"});
+document.querySelectorAll(".rv").forEach((el, i) => { el.style.transitionDelay = (el.closest(".passi,.temi") ? (i % 4) * 90 : 0) + "ms"; io.observe(el); });
+
+// pratica animata
+const fasi = [...document.querySelectorAll("#fasi li")], timbro = document.getElementById("timbro");
+let passo = 0;
+function avanza() {
+  fasi.forEach((li, i) => { li.classList.toggle("fatto", i < passo); li.classList.toggle("ora", i === passo); });
+  timbro.classList.toggle("si", passo >= fasi.length);
+  passo = passo > fasi.length ? 0 : passo + 1;
+  setTimeout(avanza, passo === 0 ? 2600 : 1100);
+}
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(avanza, 900);
+else { passo = fasi.length; fasi.forEach(li => li.classList.add("fatto")); timbro.classList.add("si"); }
+</script>
+</body>
+</html>
