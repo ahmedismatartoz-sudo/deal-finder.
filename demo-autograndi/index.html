@@ -5,347 +5,437 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Auto Grandi · Vizzolo Predabissi</title>
-<meta name="description" content="Auto Grandi Srl, Vizzolo Predabissi (MI): auto nuove e usate, concessionaria dal 1974.">
+<meta name="description" content="Auto Grandi, Vizzolo Predabissi (MI): auto nuove, km 0 e usate. Concessionaria di famiglia dal 1974.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f6f7f9; --card:#ffffff; --ink:#101623; --muted:#5d6676; --line:#e3e6eb;
-  --brand:#0f2a4a; --brand2:#163a66; --accent:#d62828; --accent2:#b51f1f; --ok:#1b8a4b;
-  --shadow:0 10px 30px rgba(16,22,35,.08); --r:16px;
+  --ink:#131c28;        /* blu notte del salone */
+  --steel:#2b3748;      /* lamiera */
+  --mist:#e8ecf0;       /* vetrina */
+  --paper:#f7f8fa;
+  --white:#ffffff;
+  --amber:#e9a23b;      /* luce di posizione */
+  --text:#131c28; --soft:#5a6574; --line:#d5dbe2;
+  --bg:var(--paper); --card:var(--white);
+  --wide:"Archivo",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--bg:#0d1118;--card:#151b25;--ink:#eef2f7;--muted:#9aa4b4;--line:#253042;--shadow:0 10px 30px rgba(0,0,0,.35)}
+  :root:not([data-theme="light"]){--bg:#0f1620;--card:#161f2b;--text:#e9edf2;--soft:#9aa6b5;--line:#273345;--mist:#1b2533}
 }
+:root[data-theme="dark"]{--bg:#0f1620;--card:#161f2b;--text:#e9edf2;--soft:#9aa6b5;--line:#273345;--mist:#1b2533}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:Manrope,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
+body{font-family:var(--wide);font-variation-settings:"wdth" 100;background:var(--bg);color:var(--text);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%}
-.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
-.proto{background:#fff3cd;color:#5c4400;font-size:12.5px;text-align:center;padding:6px 12px}
-/* header */
-header{position:sticky;top:0;z-index:40;background:rgba(15,42,74,.96);backdrop-filter:blur(8px);color:#fff}
-.nav{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:.3px}
-.logo b{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--accent);font-size:17px}
-.logo small{display:block;font-size:11px;font-weight:600;opacity:.7;letter-spacing:1.5px;text-transform:uppercase}
-.links{display:flex;gap:26px;font-weight:600;font-size:15px}
-.links a{opacity:.85;transition:opacity .2s}
-.links a:hover{opacity:1}
-.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:inherit;font-weight:700;border-radius:999px;padding:12px 22px;transition:transform .2s,background .2s,box-shadow .2s}
-.btn-r{background:var(--accent);color:#fff}
-.btn-r:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 8px 20px rgba(214,40,40,.3)}
-.btn-w{background:#fff;color:var(--brand)}
-.btn-o{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.5)}
-.btn-o:hover{border-color:#fff}
-.burger{display:none;background:none;border:0;color:#fff;font-size:26px;cursor:pointer}
-/* hero */
-.hero{position:relative;color:#fff;background:linear-gradient(120deg,#0b1f38 0%,#0f2a4a 45%,#1d4b80 100%);overflow:hidden}
-.hero:after{content:"";position:absolute;right:-180px;top:-160px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(214,40,40,.35),transparent 65%);animation:float 9s ease-in-out infinite}
-@keyframes float{50%{transform:translate(-30px,30px)}}
-.hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding-top:72px;padding-bottom:84px}
-.eyebrow{display:inline-block;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;letter-spacing:.5px}
-.hero h1{font-size:clamp(34px,5vw,56px);line-height:1.08;margin:18px 0 16px;font-weight:800}
-.hero h1 span{color:#ff6b6b}
-.hero p{font-size:18px;opacity:.85;max-width:520px}
-.hero .cta{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
-.stats{display:flex;gap:34px;margin-top:40px}
-.stats div b{display:block;font-size:30px;font-weight:800}
-.stats div span{font-size:13px;opacity:.7}
-.hero-car{border-radius:22px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.35);aspect-ratio:4/3;background:#1d3557;position:relative}
-.hero-car img{width:100%;height:100%;object-fit:cover;transition:opacity .8s}
-.hero-car .tag{position:absolute;left:14px;bottom:14px;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:12px;font-weight:700;font-size:14px}
-/* brands */
-.brands{background:var(--card);border-bottom:1px solid var(--line)}
-.brands .wrap{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;padding-top:20px;padding-bottom:20px}
-.brands span{font-weight:800;color:var(--muted);letter-spacing:1px;font-size:14px;padding:8px 16px;border:1px solid var(--line);border-radius:999px;text-transform:uppercase}
-.brands span.uff{color:var(--brand);border-color:var(--brand)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .brands span.uff{color:#8fb7ff;border-color:#8fb7ff}}
-/* sections */
-section{padding:72px 0;scroll-margin-top:68px}
-.h2{font-size:clamp(26px,3.4vw,38px);font-weight:800;line-height:1.15}
-.sub{color:var(--muted);margin-top:8px;font-size:16.5px}
-/* filters */
-.filtri{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 24px;align-items:center}
-.chip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 18px;font:inherit;font-weight:700;cursor:pointer;transition:all .2s}
-.chip.on,.chip:hover{border-color:var(--brand);background:var(--brand);color:#fff}
-select,.cerca{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 16px;font:inherit;font-weight:600}
-.cerca{flex:1;min-width:180px}
-.conta{color:var(--muted);font-weight:600;margin-left:auto}
-/* grid */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:22px}
-.car{background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:transform .3s,box-shadow .3s;display:flex;flex-direction:column}
-.car:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(16,22,35,.14)}
-.car .ph{aspect-ratio:4/3;background:#dfe4ea;position:relative;overflow:hidden}
-.car .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
-.car:hover .ph img{transform:scale(1.05)}
-.car .ph .bd{position:absolute;left:12px;top:12px;background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:5px 10px;border-radius:8px;letter-spacing:.5px}
-.car .ph .bd.u{background:var(--brand)}
-.car .ph .nf{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:4px 9px;border-radius:8px}
-.car .bo{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
-.car h3{font-size:17px;font-weight:800;line-height:1.25}
-.car .ver{color:var(--muted);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.specs{display:flex;flex-wrap:wrap;gap:6px}
-.specs span{background:var(--bg);border-radius:8px;padding:4px 9px;font-size:12.5px;font-weight:600;color:var(--muted)}
-.prz{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--line)}
-.prz b{font-size:22px;font-weight:800;color:var(--accent)}
-.prz span{font-size:13px;font-weight:700;color:var(--brand)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .prz span{color:#8fb7ff}}
-.vuoto{text-align:center;color:var(--muted);padding:40px}
-.skel{height:360px;border-radius:var(--r);background:linear-gradient(90deg,var(--card),var(--line),var(--card));background-size:200% 100%;animation:sk 1.4s infinite}
-@keyframes sk{to{background-position:-200% 0}}
-/* services */
-.serv{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;margin-top:32px}
-.sv{background:var(--card);border-radius:var(--r);padding:22px;box-shadow:var(--shadow);transition:transform .3s}
-.sv:hover{transform:translateY(-4px)}
-.sv i{font-style:normal;font-size:26px}
-.sv h4{margin:10px 0 4px;font-size:16px}
-.sv p{color:var(--muted);font-size:14px}
-/* about */
-.about{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center}
-.about .box{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:22px;padding:36px}
-.about .box b{font-size:60px;font-weight:800;line-height:1}
-.about ul{list-style:none;margin-top:18px;display:grid;gap:10px}
-.about li:before{content:"✓";color:var(--accent);font-weight:800;margin-right:10px}
-/* contacts */
-.cont{display:grid;grid-template-columns:1fr 1.2fr;gap:24px;margin-top:30px}
-.cbox{background:var(--card);border-radius:var(--r);padding:26px;box-shadow:var(--shadow)}
-.cbox h4{font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:16px 0 6px}
-.cbox h4:first-child{margin-top:0}
-.ore{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;font-size:15px}
-.map{border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);min-height:320px;background:#dfe4ea}
-.map iframe{width:100%;height:100%;min-height:320px;border:0}
-footer{background:#0b1f38;color:rgba(255,255,255,.75);padding:34px 0;font-size:14px}
-footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
-/* overlay */
-.ov{position:fixed;inset:0;z-index:60;background:rgba(5,10,18,.75);display:none;align-items:center;justify-content:center;padding:18px}
-.ov.on{display:flex;animation:fi .25s}
-@keyframes fi{from{opacity:0}}
-.det{background:var(--card);border-radius:20px;max-width:1000px;width:100%;max-height:92vh;overflow:auto;display:grid;grid-template-columns:1.25fr 1fr;animation:up .3s}
-@keyframes up{from{transform:translateY(20px);opacity:.6}}
-.gal{position:relative;background:#0d1118;min-height:300px}
-.gal .palco{aspect-ratio:4/3;width:100%}
-.gal .palco img{width:100%;height:100%;object-fit:contain;transition:opacity .3s}
-.gal button{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.9);font-size:22px;cursor:pointer}
-.gal .pr{left:12px}.gal .nx{right:12px}
-.gal .cnt{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:13px;padding:4px 12px;border-radius:999px}
-.thumbs{display:flex;gap:6px;overflow-x:auto;padding:8px;background:#0d1118}
-.thumbs img{width:76px;height:57px;object-fit:cover;border-radius:6px;opacity:.55;cursor:pointer;flex:none}
-.thumbs img.on{opacity:1;outline:2px solid var(--accent)}
-.info{padding:26px;position:relative}
-.x{position:absolute;right:16px;top:14px;background:var(--bg);border:0;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;color:var(--ink)}
-.info h3{font-size:24px;font-weight:800;padding-right:40px}
-.info .pz{font-size:32px;font-weight:800;color:var(--accent);margin:10px 0 16px}
-.tab{width:100%;border-collapse:collapse;font-size:15px;margin-bottom:20px}
-.tab td{padding:9px 0;border-bottom:1px solid var(--line)}
-.tab td:first-child{color:var(--muted)}
-.tab td:last-child{text-align:right;font-weight:700}
-.info .btn{width:100%;justify-content:center;margin-top:8px}
-.btn-b{background:var(--brand);color:#fff}
-/* reveal */
-.rv{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
-.rv.in{opacity:1;transform:none}
-@media (prefers-reduced-motion: reduce){.rv{opacity:1;transform:none}.hero:after{animation:none}}
-@media (max-width:900px){
-  .hero .wrap,.about,.cont,.det{grid-template-columns:1fr}
-  .hero .wrap{padding-top:44px;padding-bottom:56px}
-  .links{display:none;position:absolute;top:68px;left:0;right:0;background:var(--brand);flex-direction:column;padding:18px 20px;gap:16px}
-  .links.on{display:flex}
-  .burger{display:block}
-  .nav .btn-r{display:none}
-  section{padding:52px 0}
-  .stats{gap:22px}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
+.w{max-width:1240px;margin:0 auto;padding:0 32px}
+.x{font-variation-settings:"wdth" 125}       /* larghezza da catalogo auto */
+
+/* ---------- testata ---------- */
+.top{position:absolute;inset:0 0 auto;z-index:20;color:#fff}
+.top .w{display:flex;align-items:center;gap:28px;height:84px}
+.mark{text-decoration:none;font-weight:800;font-size:19px;letter-spacing:.06em;font-variation-settings:"wdth" 125;white-space:nowrap}
+.mark span{font-weight:400;opacity:.65;letter-spacing:0;font-variation-settings:"wdth" 100;font-size:13px;margin-left:10px}
+.top nav{display:flex;gap:30px;margin-left:auto;font-size:15px}
+.top nav a{text-decoration:none;opacity:.8}
+.top nav a:hover{opacity:1}
+.stato{font-size:13.5px;display:flex;align-items:center;gap:8px;opacity:.9;white-space:nowrap}
+.stato i{width:8px;height:8px;border-radius:50%;background:#6fcf97;box-shadow:0 0 0 4px rgba(111,207,151,.18)}
+.stato.chiuso i{background:#c9cfd7;box-shadow:none}
+.menu{display:none;margin-left:auto;background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:8px 16px;cursor:pointer}
+
+/* ---------- apertura ---------- */
+.hero{background:var(--ink);color:#fff;min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;position:relative}
+.hero:before{content:"";position:absolute;inset:0;background:radial-gradient(1200px 500px at 80% 10%,#22324a 0%,transparent 60%);pointer-events:none}
+.hero .w{position:relative;padding-top:128px;width:100%}
+.hero h1{font-weight:800;font-variation-settings:"wdth" 125;font-size:clamp(42px,7.2vw,108px);line-height:.92;letter-spacing:-.02em;max-width:12ch}
+.hero h1 .r{display:block;overflow:hidden}
+.hero h1 .r span{display:block;transform:translateY(105%);animation:sale 1s cubic-bezier(.2,.7,.1,1) forwards}
+.hero h1 .r:nth-child(2) span{animation-delay:.12s}
+@keyframes sale{to{transform:none}}
+.hero .lead{display:flex;gap:48px;align-items:flex-end;justify-content:space-between;margin:28px 0 34px;flex-wrap:wrap;opacity:0;animation:appare .8s .5s forwards}
+@keyframes appare{to{opacity:1}}
+.hero .lead p{max-width:46ch;color:rgba(255,255,255,.72);font-size:18px}
+.cta{display:inline-flex;align-items:center;gap:12px;text-decoration:none;background:var(--amber);color:#1a1206;font-weight:700;padding:16px 26px;border-radius:999px;border:0;cursor:pointer;transition:transform .2s}
+.cta:hover{transform:translateY(-2px)}
+.cta.lin{background:transparent;color:inherit;border:1px solid currentColor;opacity:.85}
+.ctas{display:flex;gap:12px;flex-wrap:wrap}
+
+/* nastro del salone: l'elemento che si ricorda */
+.nastro{position:relative;padding:0 0 46px;opacity:0;transform:translateX(60px);animation:entra 1.1s .7s cubic-bezier(.2,.7,.1,1) forwards}
+@keyframes entra{to{opacity:1;transform:none}}
+.nastro .info{display:flex;justify-content:space-between;align-items:baseline;color:rgba(255,255,255,.6);font-size:14px;margin-bottom:16px}
+.nastro .info b{color:#fff;font-weight:600}
+.pista{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 32px 8px max(32px,calc((100vw - 1240px)/2 + 32px));scrollbar-width:none;cursor:grab}
+.pista::-webkit-scrollbar{display:none}
+.pista.drag{cursor:grabbing;scroll-snap-type:none}
+.slot{flex:0 0 clamp(260px,30vw,400px);scroll-snap-align:start;text-decoration:none;color:#fff;background:none;border:0;text-align:left;cursor:pointer}
+.slot .f{aspect-ratio:3/2;border-radius:14px;overflow:hidden;background:var(--steel)}
+.slot .f img{width:100%;height:100%;object-fit:cover;transition:transform .7s}
+.slot:hover .f img{transform:scale(1.04)}
+.slot .t{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:15px}
+.slot .t b{font-weight:600}
+.slot .t em{font-style:normal;color:var(--amber);font-weight:700;white-space:nowrap}
+.frecce{display:flex;gap:8px}
+.frecce button{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;cursor:pointer;font-size:18px}
+.frecce button:hover{border-color:#fff}
+
+/* ---------- sezioni ---------- */
+.sez{padding:120px 0}
+.tit{font-weight:800;font-variation-settings:"wdth" 118;font-size:clamp(34px,4.6vw,60px);line-height:1;letter-spacing:-.015em}
+.intro{color:var(--soft);max-width:52ch;margin-top:18px;font-size:18px}
+.testa{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;flex-wrap:wrap;margin-bottom:44px}
+
+/* stock */
+.barra{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tab{background:none;border:1px solid var(--line);border-radius:999px;padding:10px 18px;cursor:pointer;font-weight:600;font-size:15px;color:var(--soft)}
+.tab[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.barra select{background:none;border:1px solid var(--line);border-radius:999px;padding:10px 16px;font:inherit;font-size:15px;color:var(--text)}
+.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:48px 28px}
+.auto{background:none;border:0;text-align:left;cursor:pointer;display:flex;flex-direction:column}
+.auto .f{aspect-ratio:3/2;border-radius:12px;overflow:hidden;background:var(--mist);position:relative}
+.auto .f img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.1,1)}
+.auto:hover .f img{transform:scale(1.035)}
+.auto .stato-a{position:absolute;left:14px;top:14px;background:var(--white);color:var(--ink);font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px}
+.auto .stato-a.n{background:var(--amber);color:#1a1206}
+.auto h3{font-weight:700;font-variation-settings:"wdth" 112;font-size:22px;line-height:1.15;margin-top:18px}
+.auto .v{color:var(--soft);font-size:15px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.auto .d{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--soft);font-size:14.5px;margin-top:12px}
+.auto .p{margin-top:14px;font-weight:800;font-variation-settings:"wdth" 118;font-size:26px}
+.auto.grande{grid-column:span 2;grid-row:span 2}
+.auto.grande h3{font-size:30px}
+.auto.grande .p{font-size:34px}
+.vuoto{grid-column:1/-1;color:var(--soft);padding:40px 0}
+.att{aspect-ratio:3/2;border-radius:12px;background:var(--mist);animation:pulsa 1.4s ease-in-out infinite}
+@keyframes pulsa{50%{opacity:.55}}
+
+/* marchi */
+.marchi{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.marchi .w{display:grid;grid-template-columns:repeat(4,1fr)}
+.marchio{padding:34px 0;border-right:1px solid var(--line);padding-left:24px}
+.marchio:first-child{padding-left:0}
+.marchio:last-child{border-right:0}
+.marchio b{display:block;font-weight:800;font-variation-settings:"wdth" 125;font-size:clamp(20px,2.2vw,30px);letter-spacing:-.01em}
+.marchio span{color:var(--soft);font-size:14px}
+
+/* officina */
+.off{display:grid;grid-template-columns:5fr 7fr;gap:60px;align-items:start}
+.servizi{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+.servizi div{padding:22px 0;border-top:1px solid var(--line)}
+.servizi b{display:block;font-weight:700;font-size:18px}
+.servizi span{color:var(--soft);font-size:15.5px}
+
+/* storia */
+.storia{background:var(--ink);color:#fff}
+.storia .w{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:end}
+.anno{font-weight:900;font-variation-settings:"wdth" 125;font-size:clamp(110px,19vw,260px);line-height:.8;letter-spacing:-.04em;color:var(--amber)}
+.storia p{color:rgba(255,255,255,.75);font-size:19px;max-width:44ch}
+.storia p+p{margin-top:16px}
+
+/* visita */
+.visita{display:grid;grid-template-columns:5fr 7fr;gap:60px}
+.ind{font-weight:800;font-variation-settings:"wdth" 118;font-size:clamp(28px,3.4vw,44px);line-height:1.05;margin:22px 0 30px}
+.orari{width:100%;border-collapse:collapse;font-size:16px}
+.orari td{padding:13px 0;border-top:1px solid var(--line)}
+.orari td:last-child{text-align:right;color:var(--soft)}
+.orari tr.oggi td{font-weight:700;color:var(--text)}
+.orari tr.oggi td:first-child:after{content:"oggi";margin-left:10px;font-size:12px;font-weight:700;background:var(--amber);color:#1a1206;border-radius:999px;padding:2px 9px}
+.mappa{border-radius:16px;overflow:hidden;min-height:440px;background:var(--mist)}
+.mappa iframe{width:100%;height:100%;min-height:440px;border:0;filter:grayscale(.35)}
+.visita .ctas{margin-top:30px}
+.visita .ctas .cta.lin{color:var(--text)}
+
+footer{padding:40px 0 90px;color:var(--soft);font-size:14px}
+footer .w{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:28px}
+.proto{position:fixed;left:16px;bottom:16px;z-index:50;background:rgba(19,28,40,.9);color:#fff;font-size:12.5px;padding:8px 14px;border-radius:999px;backdrop-filter:blur(6px)}
+
+/* scheda auto */
+.scheda{position:fixed;inset:0;z-index:80;background:var(--bg);display:none;overflow-y:auto}
+.scheda.on{display:block;animation:apri .35s cubic-bezier(.2,.7,.1,1)}
+@keyframes apri{from{opacity:0;transform:translateY(24px)}}
+.scheda .w{padding-top:26px;padding-bottom:60px}
+.chiudi{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.chiudi button{background:none;border:1px solid var(--line);border-radius:999px;padding:10px 18px;cursor:pointer;font-weight:600}
+.sc{display:grid;grid-template-columns:7fr 4fr;gap:44px}
+.gal .palco{position:relative;aspect-ratio:3/2;border-radius:14px;overflow:hidden;background:var(--mist)}
+.gal .palco img{width:100%;height:100%;object-fit:cover;transition:opacity .35s}
+.gal .palco button{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:var(--ink);cursor:pointer;font-size:20px}
+.gal .prev{left:16px}.gal .next{right:16px}
+.gal .n{position:absolute;right:16px;bottom:16px;background:rgba(19,28,40,.75);color:#fff;font-size:13px;padding:5px 12px;border-radius:999px}
+.mini{display:flex;gap:8px;overflow-x:auto;margin-top:10px;scrollbar-width:thin}
+.mini img{width:92px;height:62px;object-fit:cover;border-radius:8px;opacity:.5;cursor:pointer;flex:none;transition:opacity .2s}
+.mini img.on{opacity:1}
+.sc h2{font-weight:800;font-variation-settings:"wdth" 118;font-size:clamp(30px,3.4vw,44px);line-height:1.02}
+.sc .ver{color:var(--soft);margin-top:8px}
+.sc .prezzo{font-weight:900;font-variation-settings:"wdth" 125;font-size:46px;margin:24px 0 8px}
+.dati{width:100%;border-collapse:collapse;margin:20px 0 28px}
+.dati td{padding:12px 0;border-top:1px solid var(--line);font-size:16px}
+.dati td:last-child{text-align:right;font-weight:600}
+.dati td:first-child{color:var(--soft)}
+.sc .cta{width:100%;justify-content:center}
+.sc .cta+.cta{margin-top:10px}
+.sc .cta.lin{color:var(--text)}
+
+@media (max-width:1000px){
+  .stock{grid-template-columns:repeat(2,1fr)}
+  .off,.storia .w,.visita,.sc{grid-template-columns:1fr}
+  .marchi .w{grid-template-columns:1fr 1fr}
+  .marchio:nth-child(2){border-right:0}
+  .marchio:nth-child(3){padding-left:0}
+  .marchio:nth-child(-n+2){border-bottom:1px solid var(--line)}
 }
-@media (max-width:520px){.wrap{padding:0 16px}.grid{grid-template-columns:1fr}.conta{margin-left:0;width:100%}}
+@media (max-width:760px){
+  .w{padding:0 20px}
+  .top nav,.top .stato{display:none}
+  .menu{display:block}
+  .top.aperto nav{display:flex;position:absolute;top:76px;left:20px;right:20px;flex-direction:column;gap:0;background:var(--ink);border-radius:16px;padding:8px 20px}
+  .top.aperto nav a{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+  .hero .w{padding-top:120px}
+  .pista{padding-left:20px;padding-right:20px}
+  .frecce{display:none}
+  .sez{padding:80px 0}
+  .stock{grid-template-columns:1fr;gap:40px}
+  .auto.grande{grid-column:auto;grid-row:auto}
+  .auto.grande h3{font-size:24px}.auto.grande .p{font-size:28px}
+  .servizi{grid-template-columns:1fr}
+  .mappa,.mappa iframe{min-height:320px}
+  .sc .prezzo{font-size:38px}
+  .proto{left:50%;transform:translateX(-50%);bottom:12px;white-space:nowrap}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*:before,*:after{animation-duration:.01ms!important;animation-delay:0s!important;transition:none!important}
+  .hero h1 .r span{transform:none}.hero .lead,.nastro{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
-<div class="proto">Prototipo grafico proposto ad Auto Grandi Srl · non è il sito ufficiale</div>
-<header>
-  <div class="wrap nav">
-    <a class="logo" href="#top"><b>AG</b><span>Auto Grandi<small>Vizzolo Predabissi · dal 1974</small></span></a>
-    <nav class="links" id="links">
-      <a href="#auto">Le nostre auto</a><a href="#servizi">Servizi</a><a href="#chi">Chi siamo</a><a href="#contatti">Contatti</a>
+
+<header class="top" id="top">
+  <div class="w">
+    <a class="mark" href="#">AUTO GRANDI<span>Vizzolo Predabissi</span></a>
+    <nav aria-label="Sezioni">
+      <a href="#auto">Auto in salone</a><a href="#officina">Officina</a><a href="#storia">Chi siamo</a><a href="#visita">Orari e indirizzo</a>
     </nav>
-    <a class="btn btn-r" href="#contatti">Vieni a trovarci</a>
-    <button class="burger" aria-label="Menu" onclick="document.getElementById('links').classList.toggle('on')">☰</button>
+    <span class="stato" id="stato"><i></i><span></span></span>
+    <button class="menu" aria-expanded="false" onclick="const t=document.getElementById('top');const o=t.classList.toggle('aperto');this.setAttribute('aria-expanded',o)">Menu</button>
   </div>
 </header>
 
-<div class="hero" id="top">
-  <div class="wrap">
-    <div class="rv">
-      <span class="eyebrow">Concessionaria dal 1974</span>
-      <h1>La tua prossima auto, <span>nuova o usata</span>, a Vizzolo Predabissi</h1>
-      <p>Concessionaria ufficiale SsangYong, Great Wall e Mahindra, officina autorizzata e tutti i servizi in un unico posto. Da oltre 50 anni una famiglia al servizio dei clienti.</p>
-      <div class="cta"><a class="btn btn-r" href="#auto">Guarda le auto disponibili</a><a class="btn btn-o" href="#contatti">Orari e contatti</a></div>
-      <div class="stats"><div><b id="nAuto">16</b><span>auto disponibili</span></div><div><b>1974</b><span>dal</span></div><div><b>19</b><span>recensioni su AutoScout24</span></div></div>
+<section class="hero" aria-label="Apertura">
+  <div class="w">
+    <h1 class="x"><span class="r"><span>Cinquant'anni</span></span><span class="r"><span>di auto, scelte bene.</span></span></h1>
+    <div class="lead">
+      <p>Concessionaria di famiglia dal 1974 a Vizzolo Predabissi. Auto nuove, km 0 e usate, officina autorizzata e tutto quello che serve dopo l'acquisto.</p>
+      <div class="ctas"><a class="cta" href="#auto">Guarda le auto</a><a class="cta lin" href="#visita">Vieni in salone</a></div>
     </div>
-    <div class="hero-car rv"><img id="heroImg" alt="" src="https://prod.pictures.autoscout24.net/listing-images/4ae3777f-21f2-4d79-b3ff-e305acacfac1_d35b79d2-7cad-49aa-adfb-e92c3578be36.jpg/720x540.webp"><div class="tag" id="heroTag">In evidenza</div></div>
+  </div>
+  <div class="nastro">
+    <div class="w info"><span><b id="quante">16 auto</b> in salone adesso, aggiornate dal nostro stock</span>
+      <span class="frecce"><button aria-label="Auto precedenti" onclick="scorri(-1)">‹</button><button aria-label="Auto successive" onclick="scorri(1)">›</button></span></div>
+    <div class="pista" id="pista"></div>
+  </div>
+</section>
+
+<section class="sez" id="auto">
+  <div class="w">
+    <div class="testa">
+      <div><h2 class="tit">In salone</h2><p class="intro">Ogni auto con foto, chilometri e prezzo reali. Scegli quella che ti interessa e vieni a provarla.</p></div>
+      <div class="barra" role="group" aria-label="Filtra le auto">
+        <button class="tab" data-f="tutte" aria-pressed="true">Tutte</button>
+        <button class="tab" data-f="nuove" aria-pressed="false">Nuove e km 0</button>
+        <button class="tab" data-f="usate" aria-pressed="false">Usate</button>
+        <select id="ordina" aria-label="Ordina"><option value="">In evidenza</option><option value="pa">Prezzo più basso</option><option value="pd">Prezzo più alto</option><option value="km">Meno chilometri</option></select>
+      </div>
+    </div>
+    <div class="stock" id="stock"><div class="att"></div><div class="att"></div><div class="att"></div></div>
+  </div>
+</section>
+
+<div class="marchi" aria-label="Marchi">
+  <div class="w">
+    <div class="marchio"><b>SsangYong</b><span>Concessionaria ufficiale</span></div>
+    <div class="marchio"><b>Mahindra</b><span>Concessionaria ufficiale</span></div>
+    <div class="marchio"><b>Great Wall</b><span>Concessionaria ufficiale</span></div>
+    <div class="marchio"><b>Hyundai</b><span>Officina autorizzata</span></div>
   </div>
 </div>
 
-<div class="brands"><div class="wrap">
-  <span class="uff">SsangYong</span><span class="uff">Great Wall</span><span class="uff">Mahindra</span><span>Hyundai</span><span>EMC</span><span>DFSK</span><span>Hongqi</span>
-</div></div>
-
-<section id="auto">
-  <div class="wrap">
-    <div class="rv"><h2 class="h2">Le nostre auto</h2><p class="sub">Auto nuove, km 0 e usate, aggiornate in tempo reale dal nostro salone.</p></div>
-    <div class="filtri rv">
-      <button class="chip on" data-f="tutte">Tutte</button><button class="chip" data-f="nuove">Nuove e km 0</button><button class="chip" data-f="usate">Usate</button>
-      <select id="marca" aria-label="Marca"><option value="">Tutte le marche</option></select>
-      <select id="ordina" aria-label="Ordina"><option value="rec">In evidenza</option><option value="pa">Prezzo crescente</option><option value="pd">Prezzo decrescente</option><option value="km">Meno km</option></select>
-      <input class="cerca" id="cerca" placeholder="Cerca modello…" aria-label="Cerca">
-      <span class="conta" id="conta"></span>
-    </div>
-    <div class="grid" id="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
-  </div>
-</section>
-
-<section id="servizi" style="background:var(--card)">
-  <div class="wrap">
-    <div class="rv"><h2 class="h2">Tutto in un unico posto</h2><p class="sub">Dalla scelta dell'auto alla manutenzione, ci pensiamo noi.</p></div>
-    <div class="serv">
-      <div class="sv rv"><i>🔧</i><h4>Officina autorizzata</h4><p>Tagliandi, riparazioni meccaniche e motore.</p></div>
-      <div class="sv rv"><i>🚗</i><h4>Carrozzeria</h4><p>Riparazioni di carrozzeria e sostituzione cristalli.</p></div>
-      <div class="sv rv"><i>🛞</i><h4>Gommista</h4><p>Cambio gomme e servizio pneumatici.</p></div>
-      <div class="sv rv"><i>💶</i><h4>Finanziamenti</h4><p>Soluzioni su misura per l'acquisto della tua auto.</p></div>
-      <div class="sv rv"><i>🛡️</i><h4>Assicurazioni</h4><p>Copertura per la tua auto nuova o usata.</p></div>
-      <div class="sv rv"><i>🔑</i><h4>Auto sostitutiva</h4><p>Non resti mai a piedi durante gli interventi.</p></div>
-      <div class="sv rv"><i>📄</i><h4>Pratiche auto</h4><p>Immatricolazioni e passaggi di proprietà.</p></div>
-      <div class="sv rv"><i>🫧</i><h4>Autolavaggio e accessori</h4><p>Lavaggio, navigatori e accessori auto.</p></div>
+<section class="sez" id="officina">
+  <div class="w off">
+    <div><h2 class="tit">Dopo l'acquisto, sempre qui</h2><p class="intro">Officina, carrozzeria e pratiche sotto lo stesso tetto. Lasci l'auto e ti diamo quella sostitutiva.</p></div>
+    <div class="servizi">
+      <div><b>Officina autorizzata</b><span>Tagliandi, meccanica e motore</span></div>
+      <div><b>Carrozzeria</b><span>Riparazioni e sostituzione cristalli</span></div>
+      <div><b>Gommista</b><span>Cambio stagionale e pneumatici nuovi</span></div>
+      <div><b>Auto sostitutiva</b><span>Durante ogni intervento</span></div>
+      <div><b>Finanziamenti e assicurazioni</b><span>Preparati insieme a te in sede</span></div>
+      <div><b>Pratiche auto</b><span>Immatricolazioni e passaggi di proprietà</span></div>
+      <div><b>Accessori e navigatori</b><span>Vendita e installazione</span></div>
+      <div><b>Autolavaggio</b><span>Per riconsegnarti l'auto come nuova</span></div>
     </div>
   </div>
 </section>
 
-<section id="chi">
-  <div class="wrap about">
-    <div class="rv">
-      <h2 class="h2">Una famiglia, dal 1974</h2>
-      <p class="sub">Auto Grandi nasce nel 1974 come azienda di famiglia a Vizzolo Predabissi. Il titolare e il suo staff sono sempre disponibili per ogni esigenza: dalla scelta dell'auto all'assistenza dopo l'acquisto.</p>
-      <ul>
-        <li>Concessionaria ufficiale SsangYong, Great Wall e Mahindra</li>
-        <li>Officina autorizzata Hyundai</li>
-        <li>Auto nuove, km 0 e usate garantite</li>
-        <li>Vendita anche a distanza, per telefono</li>
-      </ul>
+<section class="sez storia" id="storia">
+  <div class="w">
+    <div class="anno x" aria-hidden="true">1974</div>
+    <div>
+      <h2 class="tit">Una famiglia, lo stesso indirizzo</h2>
+      <p style="margin-top:22px">Auto Grandi nasce nel 1974 come azienda di famiglia. Da allora il titolare e il suo staff seguono ogni cliente di persona, dalla prima prova su strada all'ultimo tagliando.</p>
+      <p>Oggi siamo concessionaria ufficiale SsangYong, Mahindra e Great Wall e officina autorizzata Hyundai.</p>
     </div>
-    <div class="box rv"><b>50+</b><p style="margin-top:10px;font-size:18px;opacity:.9">anni di esperienza nel mondo dell'auto, con la stessa passione del primo giorno.</p></div>
   </div>
 </section>
 
-<section id="contatti" style="background:var(--card)">
-  <div class="wrap">
-    <div class="rv"><h2 class="h2">Vieni a trovarci</h2><p class="sub">Via Giuseppe Di Vittorio, 19 · 20070 Vizzolo Predabissi (MI)</p></div>
-    <div class="cont">
-      <div class="cbox rv">
-        <h4>Orari</h4>
-        <div class="ore"><span>Lun – Ven</span><b>08:00–12:00 · 14:00–19:00</b><span>Sabato</span><b>08:30–12:00 · 15:00–19:00</b><span>Domenica</span><b>09:00–12:00</b></div>
-        <h4>Referente</h4><p>Giovanni Grandolfo</p>
-        <h4>Contatti</h4>
-        <a class="btn btn-r" style="margin-top:6px" href="https://www.autoscout24.it/concessionari/auto-grandi-srl" target="_blank" rel="noopener">Chiama o scrivi dalla nostra pagina AutoScout24</a>
-        <a class="btn btn-b" style="margin-top:10px" href="https://www.google.com/maps/search/?api=1&query=Via+Giuseppe+Di+Vittorio+19+Vizzolo+Predabissi" target="_blank" rel="noopener">Indicazioni stradali</a>
+<section class="sez" id="visita">
+  <div class="w visita">
+    <div>
+      <h2 class="tit">Vieni in salone</h2>
+      <p class="ind">Via Giuseppe Di Vittorio, 19<br>20070 Vizzolo Predabissi (MI)</p>
+      <table class="orari" id="orari">
+        <tr data-g="1,2,3,4,5"><td>Lunedì – venerdì</td><td>8:00–12:00, 14:00–19:00</td></tr>
+        <tr data-g="6"><td>Sabato</td><td>8:30–12:00, 15:00–19:00</td></tr>
+        <tr data-g="0"><td>Domenica</td><td>9:00–12:00</td></tr>
+      </table>
+      <div class="ctas">
+        <a class="cta" href="https://www.google.com/maps/dir/?api=1&destination=Via+Giuseppe+Di+Vittorio+19+Vizzolo+Predabissi" target="_blank" rel="noopener">Indicazioni stradali</a>
+        <a class="cta lin" href="https://www.autoscout24.it/concessionari/auto-grandi-srl" target="_blank" rel="noopener">Chiama o scrivi</a>
       </div>
-      <div class="map rv"><iframe loading="lazy" title="Mappa" src="https://maps.google.com/maps?q=Via%20Giuseppe%20Di%20Vittorio%2019%20Vizzolo%20Predabissi&z=15&output=embed"></iframe></div>
     </div>
+    <div class="mappa"><iframe loading="lazy" title="Mappa di Auto Grandi" src="https://maps.google.com/maps?q=Via%20Giuseppe%20Di%20Vittorio%2019%20Vizzolo%20Predabissi&z=15&output=embed"></iframe></div>
   </div>
 </section>
 
-<footer><div class="wrap"><span>© Auto Grandi Srl · Via Giuseppe Di Vittorio 19, Vizzolo Predabissi (MI)</span><span>Auto aggiornate dalla pagina AutoScout24 del concessionario</span></div></footer>
+<footer><div class="w"><span>Auto Grandi Srl, Via Giuseppe Di Vittorio 19, Vizzolo Predabissi (MI)</span><span>Referente: Giovanni Grandolfo</span></div></footer>
+<div class="proto">Prototipo proposto ad Auto Grandi, non è il sito ufficiale</div>
 
-<div class="ov" id="ov" onclick="if(event.target===this)chiudi()">
-  <div class="det">
-    <div class="gal"><div class="palco"><img id="dImg" alt=""></div><button class="pr" onclick="foto(-1)" aria-label="Foto precedente">‹</button><button class="nx" onclick="foto(1)" aria-label="Foto successiva">›</button><div class="cnt" id="dCnt"></div><div class="thumbs" id="dTh"></div></div>
-    <div class="info"><button class="x" onclick="chiudi()" aria-label="Chiudi">×</button><h3 id="dT"></h3><div class="sub" id="dV"></div><div class="pz" id="dP"></div><table class="tab" id="dTab"></table>
-      <a class="btn btn-r" id="dLink" target="_blank" rel="noopener">Contatta il venditore</a>
-      <a class="btn btn-b" href="#contatti" onclick="chiudi()">Vieni a vederla in salone</a>
+<div class="scheda" id="scheda" role="dialog" aria-modal="true" aria-labelledby="sT">
+  <div class="w">
+    <div class="chiudi"><span class="mark" style="color:var(--text)">AUTO GRANDI</span><button onclick="chiudi()">Chiudi</button></div>
+    <div class="sc">
+      <div class="gal"><div class="palco"><img id="sImg" alt=""><button class="prev" onclick="vai(k-1)" aria-label="Foto precedente">‹</button><button class="next" onclick="vai(k+1)" aria-label="Foto successiva">›</button><span class="n" id="sN"></span></div><div class="mini" id="sMini"></div></div>
+      <div>
+        <h2 id="sT"></h2><p class="ver" id="sV"></p>
+        <div class="prezzo" id="sP"></div>
+        <table class="dati" id="sD"></table>
+        <a class="cta" id="sL" target="_blank" rel="noopener">Chiedi informazioni su questa auto</a>
+        <a class="cta lin" href="#visita" onclick="chiudi()">Prenota una visita in salone</a>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 const API = "https://scovo.onrender.com/api/vetrina/auto-grandi-srl";
-// riserva se il collegamento non risponde: le auto lette dalla pagina AutoScout24 del concessionario il 29/10
+const AS = "https://www.autoscout24.it/concessionari/auto-grandi-srl";
+// riserva se il collegamento non risponde (stock letto il 29/10)
 const RISERVA = [
- ["DFSK","Fengon 500","Standard 1.5 mt",14700,null,10,"Benzina","Manuale","78 kW (106 CV)",1,"https://prod.pictures.autoscout24.net/listing-images/4ae3777f-21f2-4d79-b3ff-e305acacfac1_d35b79d2-7cad-49aa-adfb-e92c3578be36.jpg/720x540.webp"],
- ["Fiat","Tipo SW","1.4 Lounge 95cv",8300,"01/2018",85000,"Benzina","Manuale","70 kW (95 CV)",0,"https://prod.pictures.autoscout24.net/listing-images/c4f0631f-c5a7-47ff-b490-da847f404325_2d77e595-2e4c-451f-ac9c-969749efed2f.jpg/720x540.webp"],
- ["Renault","Talisman Sporter","1.7 blue dci Business 120cv",12100,"01/2019",87000,"Diesel","Manuale","88 kW (120 CV)",0],
+ ["DFSK","Fengon 500","Standard 1.5 mt",14700,"",10,"Benzina","Manuale","78 kW (106 CV)",1,"https://prod.pictures.autoscout24.net/listing-images/4ae3777f-21f2-4d79-b3ff-e305acacfac1_d35b79d2-7cad-49aa-adfb-e92c3578be36.jpg/1280x960.webp"],
  ["SsangYong","Rexton","2.2 e-xdi Icon 4wd auto",25900,"07/2022",44000,"Diesel","Automatico","149 kW (203 CV)",0],
- ["EMC","SEI","1.5 113cv Mt",15900,null,10,"Benzina","Manuale","83 kW (113 CV)",1],
+ ["Hongqi","HS5","2.0 tgdi 4wd 8at",44900,"",12,"Benzina","Automatico","180 kW (245 CV)",1],
+ ["Ford","Puma","1.0 EcoBoost Hybrid ST-Line X",21990,"05/2023",1,"Ibrida/Benzina","Manuale","92 kW (125 CV)",1],
+ ["Fiat","Tipo SW","1.4 Lounge 95cv",8300,"01/2018",85000,"Benzina","Manuale","70 kW (95 CV)",0,"https://prod.pictures.autoscout24.net/listing-images/c4f0631f-c5a7-47ff-b490-da847f404325_2d77e595-2e4c-451f-ac9c-969749efed2f.jpg/1280x960.webp"],
+ ["Renault","Talisman Sporter","1.7 Blue dCi Business 120cv",12100,"01/2019",87000,"Diesel","Manuale","88 kW (120 CV)",0],
+ ["EMC","SEI","1.5 113cv",15900,"",10,"Benzina","Manuale","83 kW (113 CV)",1],
  ["Opel","Crossland","1.2 Design GPL",12790,"01/2023",80350,"GPL","Manuale","61 kW (83 CV)",0],
- ["Hongqi","HS3","1.5 tgdi 7dct",29900,null,10,"Benzina","Automatico","115 kW (156 CV)",1],
- ["Hongqi","HS5","2.0 tgdi 4wd 8at",44900,null,12,"Benzina","Automatico","180 kW (245 CV)",1],
- ["EMC","QUATTRO","1.5 103cv",14200,null,10,"Benzina","Manuale","76 kW (103 CV)",1],
- ["EMC","SETTE","1.5t gdi dct",20800,null,10,"Benzina","Automatico","128 kW (174 CV)",1],
- ["Kia","Sorento","2.5 crdi 16v vgt Active",4200,"12/2008",240000,"Diesel","Manuale","125 kW (170 CV)",0],
- ["SsangYong","Korando","2.0 e-xdi Premium awd 175cv auto",7900,"10/2015",177558,"Diesel","Automatico","129 kW (175 CV)",0],
- ["Ford","Puma","1.0 ecoboost h ST-Line X",21990,"05/2023",1,"Elettrica/Benzina","Manuale","92 kW (125 CV)",1],
- ["Ford","EcoSport","1.0 ecoboost ST-Line s",13900,"05/2018",87600,"Benzina","Automatico","92 kW (125 CV)",0],
- ["Dacia","Duster","1.0 tce Prestige Eco-g 4x2 100cv",15000,"06/2021",58677,"GPL","Manuale","74 kW (101 CV)",0],
- ["Fiat","Panda","1.2 natural power Dynamic",3900,"07/2007",200000,"Metano","Manuale","44 kW (60 CV)",0]
-].map((a,i)=>({id:"r"+i,marca:a[0],modello:a[1],versione:a[2],prezzo:a[3],immatricolazione:a[4],km:a[5],carburante:a[6],cambio:a[7],potenza:a[8],nuova:!!a[9],foto:a[10]?[a[10]]:[],link:"https://www.autoscout24.it/concessionari/auto-grandi-srl"}));
+ ["Hongqi","HS3","1.5 tgdi 7dct",29900,"",10,"Benzina","Automatico","115 kW (156 CV)",1],
+ ["EMC","QUATTRO","1.5 103cv",14200,"",10,"Benzina","Manuale","76 kW (103 CV)",1],
+ ["EMC","SETTE","1.5t gdi dct",20800,"",10,"Benzina","Automatico","128 kW (174 CV)",1],
+ ["Dacia","Duster","1.0 TCe Prestige Eco-G 4x2",15000,"06/2021",58677,"GPL","Manuale","74 kW (101 CV)",0],
+ ["Ford","EcoSport","1.0 EcoBoost ST-Line",13900,"05/2018",87600,"Benzina","Automatico","92 kW (125 CV)",0],
+ ["SsangYong","Korando","2.0 e-xdi Premium awd auto",7900,"10/2015",177558,"Diesel","Automatico","129 kW (175 CV)",0],
+ ["Kia","Sorento","2.5 CRDi Active",4200,"12/2008",240000,"Diesel","Manuale","125 kW (170 CV)",0],
+ ["Fiat","Panda","1.2 Natural Power Dynamic",3900,"07/2007",200000,"Metano","Manuale","44 kW (60 CV)",0]
+].map((a,i)=>({id:"r"+i,marca:a[0],modello:a[1],versione:a[2],prezzo:a[3],immatricolazione:a[4],km:a[5],carburante:a[6],cambio:a[7],potenza:a[8],nuova:!!a[9],foto:a[10]?[a[10]]:[],link:AS}));
 
 let AUTO=[], filtro="tutte", cur=null, k=0;
 const eur=n=>n==null?"":"€ "+Number(n).toLocaleString("it-IT");
 const kmf=n=>n==null?"":Number(n).toLocaleString("it-IT")+" km";
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const anno=a=>a.immatricolazione&&/\d{4}/.test(a.immatricolazione)?a.immatricolazione.match(/\d{4}/)[0]:(a.anno||"");
+const anno=a=>{const m=String(a.immatricolazione||"").match(/\d{4}/);return m?m[0]:(a.anno||"")};
+const nome=a=>esc(a.marca)+" "+esc(a.modello);
+const pic=(a,i=0)=>a.foto&&a.foto[i]?a.foto[i]:"";
+// ordine "in evidenza": prima le auto con più foto, nuove e di valore
+const peso=a=>(a.foto?Math.min(a.foto.length,10):0)*3+(a.nuova?6:0)+Math.min((a.prezzo||0)/5000,8);
 
 function carica(){
-  fetch(API).then(r=>r.ok?r.json():Promise.reject()).then(d=>{ if(d.auto&&d.auto.length){AUTO=d.auto;} else AUTO=RISERVA; pronto(); })
-   .catch(()=>{AUTO=RISERVA;pronto();});
-  setTimeout(()=>{ if(!AUTO.length){AUTO=RISERVA;pronto();} },12000);
+  let fatto=false;
+  const usa=l=>{ if(fatto) return; fatto=true; AUTO=l.slice().sort((a,b)=>peso(b)-peso(a)); pronto(); };
+  fetch(API).then(r=>r.ok?r.json():Promise.reject()).then(d=>usa(d.auto&&d.auto.length?d.auto:RISERVA)).catch(()=>usa(RISERVA));
+  setTimeout(()=>usa(RISERVA),15000);
 }
 function pronto(){
-  document.getElementById("nAuto").textContent=AUTO.length;
-  const m=document.getElementById("marca"); m.length=1;
-  [...new Set(AUTO.map(a=>a.marca).filter(Boolean))].sort().forEach(x=>m.add(new Option(x,x)));
-  const conFoto=AUTO.filter(a=>a.foto&&a.foto.length);
-  if(conFoto.length){ let i=0; const giro=()=>{const a=conFoto[i%conFoto.length]; const im=document.getElementById("heroImg"); im.style.opacity=0; setTimeout(()=>{im.src=a.foto[0]; im.style.opacity=1; document.getElementById("heroTag").textContent=a.marca+" "+a.modello+" · "+eur(a.prezzo);},400); i++;}; giro(); setInterval(giro,5000); }
+  document.getElementById("quante").textContent=AUTO.length+(AUTO.length===1?" auto":" auto");
+  document.getElementById("pista").innerHTML=AUTO.filter(a=>pic(a)).slice(0,12).map(a=>`
+    <button class="slot" onclick="apri('${a.id}')"><div class="f"><img src="${esc(pic(a))}" alt="${nome(a)}" loading="lazy" onerror="this.remove()"></div>
+    <div class="t"><b>${nome(a)}</b><em>${eur(a.prezzo)}</em></div></button>`).join("");
   disegna();
 }
 function disegna(){
-  const q=document.getElementById("cerca").value.toLowerCase().trim(), mar=document.getElementById("marca").value, ord=document.getElementById("ordina").value;
-  let l=AUTO.filter(a=>(filtro==="tutte"||(filtro==="nuove")===!!a.nuova)&&(!mar||a.marca===mar)&&(!q||(a.marca+" "+a.modello+" "+(a.versione||"")).toLowerCase().includes(q)));
-  if(ord==="pa") l.sort((a,b)=>a.prezzo-b.prezzo); if(ord==="pd") l.sort((a,b)=>b.prezzo-a.prezzo); if(ord==="km") l.sort((a,b)=>(a.km||0)-(b.km||0));
-  document.getElementById("conta").textContent=l.length+(l.length===1?" auto":" auto");
-  const g=document.getElementById("grid");
-  g.innerHTML=l.length?l.map(a=>`<article class="car rv" onclick="apri('${a.id}')">
-    <div class="ph">${a.foto&&a.foto[0]?`<img loading="lazy" onerror="this.remove()" src="${esc(a.foto[0])}" alt="${esc(a.marca+' '+a.modello)}">`:""}<span class="bd ${a.nuova?"":"u"}">${a.nuova?"NUOVA / KM 0":"USATA"}</span>${a.foto&&a.foto.length>1?`<span class="nf">📷 ${a.foto.length}</span>`:""}</div>
-    <div class="bo"><h3>${esc(a.marca)} ${esc(a.modello)}</h3><div class="ver">${esc(a.versione||"")}</div>
-    <div class="specs">${anno(a)?`<span>${anno(a)}</span>`:""}<span>${kmf(a.km)}</span><span>${esc(a.carburante||"")}</span><span>${esc(a.cambio||"")}</span></div>
-    <div class="prz"><b>${eur(a.prezzo)}</b><span>Dettagli →</span></div></div></article>`).join(""):`<div class="vuoto">Nessuna auto con questi filtri.</div>`;
-  osserva();
+  const ord=document.getElementById("ordina").value;
+  let l=AUTO.filter(a=>filtro==="tutte"||(filtro==="nuove")===!!a.nuova);
+  if(ord==="pa") l=l.slice().sort((a,b)=>a.prezzo-b.prezzo);
+  if(ord==="pd") l=l.slice().sort((a,b)=>b.prezzo-a.prezzo);
+  if(ord==="km") l=l.slice().sort((a,b)=>(a.km||0)-(b.km||0));
+  const s=document.getElementById("stock");
+  if(!l.length){ s.innerHTML=`<p class="vuoto">In questo momento non ci sono auto in questa categoria. Guarda tutte le auto o chiedici quella che cerchi.</p>`; return; }
+  s.innerHTML=l.map((a,i)=>`
+    <button class="auto${i===0&&!ord&&pic(a)?" grande":""}" onclick="apri('${a.id}')">
+      <div class="f">${pic(a)?`<img src="${esc(pic(a))}" alt="${nome(a)}" loading="lazy" onerror="this.remove()">`:""}<span class="stato-a${a.nuova?" n":""}">${a.nuova?"Nuova o km 0":"Usata"}</span></div>
+      <h3>${nome(a)}</h3><span class="v">${esc(a.versione||"")}</span>
+      <span class="d">${anno(a)?`<span>${anno(a)}</span>`:""}<span>${kmf(a.km)}</span><span>${esc(a.carburante||"")}</span><span>${esc(a.cambio||"")}</span></span>
+      <span class="p">${eur(a.prezzo)}</span>
+    </button>`).join("");
 }
-function apri(id){ cur=AUTO.find(a=>a.id===id); if(!cur) return; k=0;
-  document.getElementById("dT").textContent=cur.marca+" "+cur.modello;
-  document.getElementById("dV").textContent=cur.versione||"";
-  document.getElementById("dP").textContent=eur(cur.prezzo);
-  const righe=[["Stato",cur.nuova?"Nuova / km 0":"Usata"],["Immatricolazione",cur.immatricolazione||anno(cur)||"—"],["Chilometri",kmf(cur.km)],["Alimentazione",cur.carburante],["Cambio",cur.cambio],["Potenza",cur.potenza]];
-  document.getElementById("dTab").innerHTML=righe.filter(r=>r[1]).map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join("");
-  document.getElementById("dLink").href=cur.link;
-  document.getElementById("dTh").innerHTML=(cur.foto||[]).map((f,i)=>`<img src="${esc(f.replace('/1280x960.','/250x188.'))}" onclick="vai(${i})" alt="">`).join("");
-  vai(0); document.getElementById("ov").classList.add("on"); document.body.style.overflow="hidden"; }
-function vai(i){ const f=cur.foto||[]; const im=document.getElementById("dImg");
-  if(!f.length){ im.removeAttribute("src"); document.getElementById("dCnt").textContent="Foto in arrivo"; return; }
-  k=(i+f.length)%f.length; im.style.opacity=.2; im.onload=()=>im.style.opacity=1; im.src=f[k];
-  document.getElementById("dCnt").textContent=(k+1)+" / "+f.length;
-  document.querySelectorAll("#dTh img").forEach((t,j)=>t.classList.toggle("on",j===k)); }
-function foto(d){ vai(k+d); }
-function chiudi(){ document.getElementById("ov").classList.remove("on"); document.body.style.overflow=""; }
-document.addEventListener("keydown",e=>{ if(!document.getElementById("ov").classList.contains("on")) return; if(e.key==="Escape") chiudi(); if(e.key==="ArrowRight") foto(1); if(e.key==="ArrowLeft") foto(-1); });
-let x0=null; document.querySelector(".gal").addEventListener("touchstart",e=>x0=e.touches[0].clientX,{passive:true});
-document.querySelector(".gal").addEventListener("touchend",e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40) foto(dx<0?1:-1); x0=null; });
-document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on")); c.classList.add("on"); filtro=c.dataset.f; disegna(); });
-["marca","ordina"].forEach(i=>document.getElementById(i).onchange=disegna);
-document.getElementById("cerca").oninput=disegna;
-document.querySelectorAll("#links a").forEach(a=>a.onclick=()=>document.getElementById("links").classList.remove("on"));
-let io; function osserva(){ if(!("IntersectionObserver" in window)){document.querySelectorAll(".rv").forEach(e=>e.classList.add("in"));return;}
-  io=io||new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){e.target.classList.add("in"); io.unobserve(e.target);} }),{threshold:.08});
-  document.querySelectorAll(".rv:not(.in)").forEach((e,i)=>{ e.style.transitionDelay=Math.min(i%6,5)*60+"ms"; io.observe(e); }); }
-osserva(); carica();
+function apri(id){
+  cur=AUTO.find(a=>a.id===id); if(!cur) return; k=0;
+  document.getElementById("sT").innerHTML=nome(cur);
+  document.getElementById("sV").textContent=cur.versione||"";
+  document.getElementById("sP").textContent=eur(cur.prezzo);
+  const r=[["Condizione",cur.nuova?"Nuova o km 0":"Usata"],["Immatricolazione",cur.immatricolazione||anno(cur)],["Chilometri",kmf(cur.km)],["Alimentazione",cur.carburante],["Cambio",cur.cambio],["Potenza",cur.potenza]];
+  document.getElementById("sD").innerHTML=r.filter(x=>x[1]).map(x=>`<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join("");
+  document.getElementById("sL").href=cur.link||AS;
+  document.getElementById("sMini").innerHTML=(cur.foto||[]).map((f,i)=>`<img src="${esc(f.replace(/\/\d+x\d+\.(webp|jpg)$/,"/250x188.webp"))}" alt="Foto ${i+1}" onclick="vai(${i})">`).join("");
+  vai(0);
+  const sc=document.getElementById("scheda"); sc.classList.add("on"); sc.scrollTop=0; document.body.style.overflow="hidden";
+}
+function vai(i){
+  const f=(cur&&cur.foto)||[], im=document.getElementById("sImg");
+  document.querySelectorAll(".gal .palco button").forEach(b=>b.hidden=f.length<2);
+  if(!f.length){ im.removeAttribute("src"); im.alt=""; document.getElementById("sN").textContent="Foto in arrivo"; return; }
+  k=(i+f.length)%f.length; im.style.opacity=.15; im.onload=()=>im.style.opacity=1; im.src=f[k]; im.alt=cur.marca+" "+cur.modello+", foto "+(k+1);
+  document.getElementById("sN").textContent=(k+1)+" di "+f.length;
+  document.querySelectorAll("#sMini img").forEach((t,j)=>t.classList.toggle("on",j===k));
+}
+function chiudi(){ document.getElementById("scheda").classList.remove("on"); document.body.style.overflow=""; }
+function scorri(d){ const p=document.getElementById("pista"); p.scrollBy({left:d*p.clientWidth*.8,behavior:"smooth"}); }
+document.addEventListener("keydown",e=>{ if(!document.getElementById("scheda").classList.contains("on")) return;
+  if(e.key==="Escape") chiudi(); if(e.key==="ArrowRight") vai(k+1); if(e.key==="ArrowLeft") vai(k-1); });
+// trascinamento del nastro col mouse
+(()=>{ const p=document.getElementById("pista"); let x0=0,s0=0,giu=false,mosso=false;
+  p.addEventListener("mousedown",e=>{giu=true;mosso=false;x0=e.pageX;s0=p.scrollLeft;});
+  addEventListener("mouseup",()=>{giu=false;p.classList.remove("drag");});
+  p.addEventListener("mousemove",e=>{ if(!giu) return; const dx=e.pageX-x0; if(Math.abs(dx)>5){mosso=true;p.classList.add("drag");} p.scrollLeft=s0-dx; });
+  p.addEventListener("click",e=>{ if(mosso){e.stopPropagation();e.preventDefault();} },true); })();
+// swipe nella galleria
+(()=>{ const g=document.querySelector(".gal .palco"); let x0=null;
+  g.addEventListener("touchstart",e=>x0=e.touches[0].clientX,{passive:true});
+  g.addEventListener("touchend",e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40) vai(k+(dx<0?1:-1)); x0=null; }); })();
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{ document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-pressed","false")); t.setAttribute("aria-pressed","true"); filtro=t.dataset.f; disegna(); });
+document.getElementById("ordina").onchange=disegna;
+document.querySelectorAll(".top nav a").forEach(a=>a.onclick=()=>document.getElementById("top").classList.remove("aperto"));
+// aperto adesso? (orari del salone)
+(()=>{ const O={1:[[480,720],[840,1140]],2:[[480,720],[840,1140]],3:[[480,720],[840,1140]],4:[[480,720],[840,1140]],5:[[480,720],[840,1140]],6:[[510,720],[900,1140]],0:[[540,720]]};
+  const d=new Date(), g=d.getDay(), m=d.getHours()*60+d.getMinutes(), f=O[g].find(([a,b])=>m>=a&&m<b);
+  const s=document.getElementById("stato"), hh=v=>Math.floor(v/60)+":"+String(v%60).padStart(2,"0");
+  if(f){ s.querySelector("span").textContent="Aperto ora, fino alle "+hh(f[1]); }
+  else { s.classList.add("chiuso"); const p=O[g].find(([a])=>a>m); s.querySelector("span").textContent=p?"Chiuso, riapre alle "+hh(p[0]):"Chiuso ora"; }
+  document.querySelectorAll("#orari tr").forEach(r=>{ if(r.dataset.g.split(",").includes(String(g))) r.classList.add("oggi"); }); })();
+carica();
 </script>
 </body>
 </html>
