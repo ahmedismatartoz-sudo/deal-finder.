@@ -3494,6 +3494,28 @@ def _tempo_reale():
             lg.warning("RINVIO_INVIA non riuscito: %s", str(e)[:300])
     threading.Thread(target=rinvio_invia, daemon=True, name="rinvio_invia").start()
 
+    def cerca_numero():
+        """29/10 (cliente): a chi corrisponde un numero tra i COMMERCIANTI già nelle nostre liste (CERCA_NUMERO).
+        Solo tabelle dei commercianti (mai annunci di privati); nel log nome, comune, provincia e fonte."""
+        n = re.sub(r"\D", "", os.environ.get("CERCA_NUMERO") or "")[-10:]
+        if len(n) < 9:
+            return
+        time.sleep(30)
+        out = []
+        q = [("lead_tutti", "SELECT nome, comune, prov, fonti AS fonte, link FROM lead_tutti WHERE tel LIKE %(p)s OR altri_tel LIKE %(p)s"),
+             ("lead_tutti_dealer", "SELECT nome, comune, prov, fonte, chiave AS link FROM lead_tutti_dealer WHERE array_to_string(cell, ',') LIKE %(p)s"),
+             ("lead_maps", "SELECT nome, comune, prov, categoria AS fonte, sito AS link FROM lead_maps WHERE regexp_replace(COALESCE(tel,''), '\\D', '', 'g') LIKE %(p)s"),
+             ("commercianti_as24", "SELECT nome, NULL AS comune, NULL AS prov, 'autoscout24' AS fonte, seller_id AS link FROM commercianti_as24 WHERE array_to_string(cellulari, ',') LIKE %(p)s")]
+        for tab, sql in q:
+            try:
+                with connect() as conn:
+                    for r in conn.execute(sql, {"p": f"%{n}%"}).fetchall():
+                        out.append(dict(r, tabella=tab))
+            except Exception as e:
+                lg.warning("CERCA_NUMERO %s: %s", tab, str(e)[:120])
+        lg.warning("CERCA_NUMERO %d risultati: %s", len(out), json.dumps(out, ensure_ascii=False, default=str)[:3000])
+    threading.Thread(target=cerca_numero, daemon=True, name="cerca_numero").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
