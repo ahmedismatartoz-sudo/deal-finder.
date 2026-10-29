@@ -811,8 +811,24 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
             continue
         if r["damage_declared"] or problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"],
                                                         description=r["description"])):
-            stats["valuta:danni_nel_testo_ad_analisi"] += 1      # restano all'analisi completa (AI o a mano)
-            continue
+            # 29/10 (cliente: "servono molte più auto medie e basse"): l'annuncio con danni scritti non resta più fermo.
+            # L'AI lo legge (sul sito, dove c'è la chiave): se il danno è grave resta fuori, altrimenti si valuta e il
+            # costo stimato della riparazione viene tolto dal margine sul sito (ai_difetti).
+            letto = None
+            try:
+                letto = conn.execute("SELECT grave FROM ai_difetti WHERE listing_id=%s", (r["id"],)).fetchone()
+            except Exception:
+                conn.rollback()
+            if letto is None or letto["grave"]:
+                try:
+                    conn.execute("CREATE TABLE IF NOT EXISTS analisi_danni (listing_id BIGINT PRIMARY KEY, at TIMESTAMPTZ DEFAULT now())")
+                    if letto is None:
+                        conn.execute("INSERT INTO analisi_danni (listing_id) VALUES (%s) ON CONFLICT DO NOTHING", (r["id"],))
+                except Exception:
+                    conn.rollback()
+                stats["valuta:danni_nel_testo_ad_analisi" if letto is None else "valuta:danno_grave_ai"] += 1
+                continue
+            stats["valuta:danni_letti_ai_non_gravi"] += 1
         if not (r["make"] and r["model"] and r["fuel"]):
             stats["valuta:dati_incompleti"] += 1
             continue

@@ -3389,6 +3389,70 @@ def _tempo_reale():
             time.sleep(int(os.environ.get("DIFETTI_MIN", "15")) * 60)
     threading.Thread(target=difetti_annunci, daemon=True, name="difetti").start()
 
+    def danni_in_attesa():
+        """29/10 (cliente: "servono molte più auto medie e basse"): gli annunci con danni scritti, fermati dalla
+        valutazione nel cron (lì non c'è la chiave AI), li legge l'AI qui; quelli non gravi si valutano subito con la
+        policy di sempre e il costo della riparazione si toglie dal margine sul sito (DANNI_AI=1, predefinito)."""
+        if os.environ.get("DANNI_AI", "1") != "1":
+            return
+        time.sleep(int(os.environ.get("DANNI_ATTESA", "240")))
+        from collections import Counter as _Cn
+        from ..ai import difetti as D
+        from ..pipeline import tempo_reale as tr
+        from ..pipeline.ciclo import _due
+        while True:
+            try:
+                with connect() as conn:
+                    conn.execute("CREATE TABLE IF NOT EXISTS analisi_danni (listing_id BIGINT PRIMARY KEY, at TIMESTAMPTZ DEFAULT now())")
+                    conn.commit()
+                if _due("danni_ai_recupero", 24):
+                    # una volta al giorno: gli annunci di privati della zona con danni scritti, mai letti dall'AI
+                    from ..zone import tutte
+                    from ..db import log_job
+                    with connect() as conn:
+                        D._tabella(conn)
+                        conn.commit()
+                        fin = log_job(conn, "danni_ai_recupero")
+                        conn.execute("SET LOCAL statement_timeout = '300s'")
+                        n = conn.execute("""INSERT INTO analisi_danni (listing_id)
+                            SELECT l.id FROM listings l
+                            WHERE l.status='attivo' AND l.seller_type='privato' AND l.last_seen_at > now() - interval '5 days'
+                              AND upper(l.province) = ANY(%s) AND l.price_eur BETWEEN 1000 AND 50000 AND l.year >= 2007
+                              AND COALESCE(l.mileage_km, 0) <= 150000
+                              AND (COALESCE(l.damage_declared, false) OR (COALESCE(l.title,'') || ' ' || COALESCE(l.description,'')) ~*
+                                   '(incident|sinistrat|danneggiat|grandinat|da sistemare|da riparare|da rivedere|guast|spia|frizione|distribuzione da|perde olio|cos[iì] com)')
+                              AND NOT EXISTS (SELECT 1 FROM ai_difetti d WHERE d.listing_id=l.id)
+                            ORDER BY l.first_seen_at DESC LIMIT %s
+                            ON CONFLICT DO NOTHING""", (list(tutte()), int(os.environ.get("DANNI_RECUPERO", "800")))).rowcount
+                        conn.commit()
+                        fin(True, {"inseriti": n})
+                    lg.warning("DANNI_AI recupero: %s annunci con danni scritti da leggere", n)
+                    ids = [x["listing_id"] for x in conn.execute(
+                        """SELECT a.listing_id FROM analisi_danni a JOIN listings l ON l.id=a.listing_id
+                           WHERE l.status='attivo' ORDER BY a.at DESC LIMIT %s""", (int(os.environ.get("DANNI_PEZZO", "60")),)).fetchall()]
+                if ids:
+                    st_d = D.giro(ids)
+                    st = _Cn()
+                    with connect() as conn:
+                        letti = [x["listing_id"] for x in conn.execute(
+                            "SELECT listing_id FROM ai_difetti WHERE listing_id = ANY(%s)", (ids,)).fetchall()]
+                        if letti:
+                            tr.valuta_e_pubblica(conn, letti, st)
+                            conn.execute("DELETE FROM analisi_danni WHERE listing_id = ANY(%s)", (letti,))
+                        conn.execute("DELETE FROM analisi_danni WHERE listing_id IN (SELECT a.listing_id FROM analisi_danni a "
+                                     "JOIN listings l ON l.id=a.listing_id WHERE l.status <> 'attivo')")
+                        conn.commit()
+                    lg.warning("DANNI_AI %d letti %s, valutazione %s", len(ids), st_d, dict(st))
+                    if st.get("pubblicate"):
+                        _elenco["t"] = 0
+                    if letti and len(ids) >= int(os.environ.get("DANNI_PEZZO", "60")):
+                        time.sleep(30)
+                        continue
+            except Exception as e:
+                lg.warning("DANNI_AI non riuscito: %s", str(e)[:300])
+            time.sleep(int(os.environ.get("DANNI_MIN", "15")) * 60)
+    threading.Thread(target=danni_in_attesa, daemon=True, name="danni_ai").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
