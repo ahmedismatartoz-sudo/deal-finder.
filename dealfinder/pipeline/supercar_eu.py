@@ -21,6 +21,10 @@ from statistics import median
 
 log = logging.getLogger("supercar_eu")
 
+import re
+# 29/10: subentro leasing / noleggio / rate: il prezzo dell'annuncio non è il prezzo d'acquisto dell'auto
+LEASING_RE = re.compile(r"leasing|übernahme|uebernahme|subentro|noleggio|renting|lease|anzahlung|rata mensile|al mese|monatlich|/mese|/monat|mensualit|loyer|financement|finanziamento", re.I)
+
 PAESI = {"D": "Germania", "A": "Austria", "B": "Belgio", "E": "Spagna", "F": "Francia", "I": "Italia",
          "L": "Lussemburgo", "NL": "Paesi Bassi"}
 MARCHE = ["ferrari", "lamborghini", "mclaren", "porsche", "aston-martin", "bentley", "rolls-royce", "maserati",
@@ -187,6 +191,12 @@ def valuta() -> dict:
             costi = costi_base + (costi_est if estero else 0)
             if not t.get("model") or not t.get("year"):
                 st["dati_mancanti"] += 1
+                continue
+            testo = f"{t.get('title') or ''} {t.get('version_raw') or ''} {(t.get('description') or '')[:1500]}".lower()
+            if LEASING_RE.search(testo):
+                st["leasing"] += 1                               # subentro leasing / noleggio: il prezzo non è quello d'acquisto
+                conn.execute("""INSERT INTO supercar_eu (listing_id, categoria, paese, computed_at) VALUES (%s,'leasing',%s,now())
+                                ON CONFLICT (listing_id) DO UPDATE SET categoria='leasing', computed_at=now()""", (t["id"], paese))
                 continue
             rows = conn.execute(CONFRONTI_SQL, {"make": t["make"], "model": t["model"], "fuel": t["fuel"], "id": t["id"],
                                                 "y0": t["year"] - 1, "y1": t["year"] + 1, "km": t.get("mileage_km")}).fetchall()

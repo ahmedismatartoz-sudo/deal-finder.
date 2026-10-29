@@ -1732,6 +1732,9 @@ def _supercar_europa(gia: set, opens: dict) -> list:
         for r in rows:
             if r["id"] in gia:
                 continue
+            from ..pipeline.supercar_eu import LEASING_RE
+            if LEASING_RE.search(f"{r.get('title') or ''} {r.get('version_raw') or ''} {(r.get('description') or '')[:1500]}"):
+                continue                                         # subentro leasing: prezzo non reale
             v = val[r["id"]]
             it = scovo.item_eco(r)
             if not it:
