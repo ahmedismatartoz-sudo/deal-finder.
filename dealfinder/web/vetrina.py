@@ -79,8 +79,58 @@ def leggi(slug: str) -> list:
     return out
 
 
+QR = "https://www.quattroruote.it"
+
+
+def leggi_qr(conc: str) -> list:
+    """30/10 (cliente: "metti le foto delle loro macchine"): concessionari senza pagina AutoScout24, letti dalla loro pagina
+    pubblica su Quattroruote (/auto-usate/concessionario/<conc>): per ogni annuncio titolo, prezzo e foto (og:image e galleria)."""
+    import html as H
+    import httpx
+    from ..collectors.autoscout import UA
+    out = []
+    with httpx.Client(timeout=30, follow_redirects=True, headers={"User-Agent": UA, "Accept-Language": "it-IT,it;q=0.9"}) as c:
+        r = c.get(f"{QR}/auto-usate/concessionario/{conc}")
+        log.warning("VETRINA_QR %s pagina concessionario HTTP %s, %d caratteri", conc, r.status_code, len(r.text))
+        link = []
+        for m in re.findall(r'/auto-usate/annuncio/[a-z0-9\-]+-\d+', r.text):
+            if m not in link:
+                link.append(m)
+        for u in link[:40]:
+            try:
+                p = c.get(QR + u)
+                t = p.text
+                og = re.search(r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"', t)
+                titolo = H.unescape(og.group(1)) if og else u.rsplit("/", 1)[-1]
+                imgs = []
+                for f in re.findall(r'https?://[^"\'\s)]+?\.(?:jpe?g|webp|png)(?:\?[^"\'\s)]*)?', t):
+                    f = H.unescape(f).replace("\\/", "/")
+                    if any(x in f.lower() for x in ("logo", "icon", "sprite", "banner", "placeholder", "avatar", "favicon")):
+                        continue
+                    if f not in imgs:
+                        imgs.append(f)
+                ogi = re.search(r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"', t)
+                if ogi:
+                    f = H.unescape(ogi.group(1))
+                    imgs = [f] + [x for x in imgs if x != f]
+                pr = re.search(r'(\d{1,3}(?:\.\d{3})+)\s*(?:€|&euro;)', t)
+                km = re.search(r'(\d{1,3}(?:\.\d{3})*)\s*[Kk]m\b', t)
+                anno = re.search(r'\b(20[12]\d)\b', titolo)
+                out.append({"id": u.rsplit("-", 1)[-1], "titolo": titolo, "prezzo": int(pr.group(1).replace(".", "")) if pr else None,
+                            "km": int(km.group(1).replace(".", "")) if km else None, "anno": int(anno.group(1)) if anno else None,
+                            "foto": imgs[:20], "link": QR + u})
+                time.sleep(0.7)
+            except Exception as e:
+                log.warning("VETRINA_QR annuncio %s: %s", u, str(e)[:120])
+    log.warning("VETRINA_QR %s: %d auto, foto per auto %s, esempio %s", conc, len(out), [len(a["foto"]) for a in out],
+                (out[0]["foto"][:3] if out else None))
+    return out
+
+
 def _leggi_uno(slug: str) -> list:
     with _lock:
+        if slug.startswith("qr-"):
+            return leggi_qr(slug[3:])
         return leggi(slug)
 
 
