@@ -230,10 +230,52 @@ footer .w{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;bor
   *,*:before,*:after{animation-duration:.01ms!important;animation-delay:0s!important;transition:none!important}
   .hero h1 .r span{transform:none}.hero .lead,.nastro{opacity:1;transform:none}
 }
+
+/* === intro pesante === */
+#intro{position:fixed;inset:0;z-index:200;display:grid;place-items:center;pointer-events:auto;cursor:pointer}
+#intro .lato{position:absolute;top:0;bottom:0;width:50.5%;background:#0d0e10;transition:transform 1.1s cubic-bezier(.77,0,.18,1)}
+#intro .sx{left:0}#intro .dx{right:0}
+#intro.via .sx{transform:translateX(-101%)}#intro.via .dx{transform:translateX(101%)}
+#intro canvas{position:absolute;inset:0;width:100%;height:100%;transition:opacity .5s}
+#intro.via canvas,#intro.via .cuore{opacity:0}
+#intro .cuore{position:relative;display:grid;justify-items:center;gap:18px;transition:opacity .4s}
+#intro svg{width:min(46vw,230px);overflow:visible;filter:drop-shadow(0 0 22px rgba(242,105,27,.65))}
+#intro .tr{fill:none;stroke:#f2691b;stroke-width:11;stroke-linecap:round;stroke-dasharray:900;stroke-dashoffset:900;animation:traccia 1.3s .15s cubic-bezier(.6,0,.2,1) forwards}
+#intro .ce{fill:none;stroke:#ff9a52;stroke-width:7;stroke-dasharray:420;stroke-dashoffset:420;animation:traccia 1s .5s cubic-bezier(.6,0,.2,1) forwards}
+#intro .pulsa{animation:pulsa 1.4s 1.3s ease-out}
+@keyframes traccia{to{stroke-dashoffset:0}}
+@keyframes pulsa{0%{transform:scale(1)}18%{transform:scale(1.12)}100%{transform:scale(1)}}
+#intro .scritta{display:flex;gap:.06em;font-family:var(--wide);font-weight:900;font-variation-settings:"wdth" 125;color:#fff;font-size:clamp(34px,7vw,74px);letter-spacing:.08em}
+#intro .scritta span{display:inline-block;opacity:0;transform:translateY(60px) rotateX(80deg) scale(1.6);filter:blur(10px);animation:sbatti .55s cubic-bezier(.2,1.4,.3,1) forwards}
+#intro .scritta span.o{color:#f2691b}
+@keyframes sbatti{to{opacity:1;transform:none;filter:none}}
+#intro .riga{width:0;height:3px;background:linear-gradient(90deg,transparent,#f2691b,transparent);animation:riga .9s 1.6s ease-out forwards}
+@keyframes riga{to{width:min(70vw,520px)}}
+#intro .salta{position:absolute;bottom:26px;right:26px;color:rgba(255,255,255,.45);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+body.intro-on{overflow:hidden}
+/* scintille nell'hero */
+#scintille{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.9}
+.hero .w,.hero .nastro{z-index:1}
+.hero:after{content:"";position:absolute;inset:auto -10% -30% -10%;height:70%;background:radial-gradient(closest-side,rgba(242,105,27,.28),transparent);pointer-events:none;animation:respira 5s ease-in-out infinite}
+@keyframes respira{50%{opacity:.45;transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){#intro{display:none}}
 </style>
 </head>
 <body>
 
+<div id="intro" aria-hidden="true">
+  <div class="lato sx"></div><div class="lato dx"></div>
+  <canvas id="introC"></canvas>
+  <div class="cuore">
+    <svg viewBox="0 0 200 200" class="pulsa">
+      <circle class="ce" cx="100" cy="108" r="46"/>
+      <path class="tr" d="M100 22 C 150 70, 168 120, 172 150 C 130 160, 70 160, 28 150 C 32 120, 50 70, 100 22 Z M100 22 C 120 90, 150 130, 172 150 M28 150 C 70 120, 130 120, 172 150 M100 22 C 80 90, 50 130, 28 150"/>
+    </svg>
+    <div class="scritta"><span style="animation-delay:1.05s">I</span><span style="animation-delay:1.15s">G</span><span style="animation-delay:1.25s">W</span><span style="animation-delay:1.45s;margin-left:.35em" class="o">A</span><span style="animation-delay:1.52s" class="o">U</span><span style="animation-delay:1.59s" class="o">T</span><span style="animation-delay:1.66s" class="o">O</span></div>
+    <div class="riga"></div>
+  </div>
+  <span class="salta">Tocca per entrare</span>
+</div>
 <header class="top" id="top">
   <div class="w">
     <a class="mark" href="#">IGW AUTO<span>Cusano Milanino</span></a>
@@ -246,6 +288,7 @@ footer .w{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;bor
 </header>
 
 <section class="hero" aria-label="Apertura">
+  <canvas id="scintille"></canvas>
   <div class="w">
     <h1 class="x"><span class="r"><span>Usato scelto</span></span><span class="r"><span>da una persona sola.</span></span></h1>
     <div class="lead">
@@ -434,6 +477,52 @@ document.querySelectorAll(".top nav a").forEach(a=>a.onclick=()=>document.getEle
 (()=>{ const s=document.getElementById("stato"); s.querySelector("span").textContent="Su appuntamento · 351 776 6518"; })();
 document.querySelectorAll("a.wa").forEach(a=>{a.href=WA("Ciao Ivan, ho visto le tue auto e vorrei qualche informazione.");a.target="_blank";a.rel="noopener";});
 document.querySelectorAll("a.wa-vendi").forEach(a=>{a.href=WA("Ciao Ivan, vorrei una valutazione per vendere la mia auto.");a.target="_blank";a.rel="noopener";});
+
+// === intro pesante: logo che si disegna, esplosione di scintille, sipario che si apre ===
+(()=>{
+  const I=document.getElementById("intro"); if(!I||matchMedia("(prefers-reduced-motion: reduce)").matches){I&&I.remove();return;}
+  document.body.classList.add("intro-on");
+  const c=document.getElementById("introC"), x=c.getContext("2d"); let W,H,P=[],fine=false;
+  const dim=()=>{W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio;}; dim(); addEventListener("resize",dim);
+  const scoppio=(n,f)=>{for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=(2+Math.random()*f)*devicePixelRatio;
+    P.push({x:W/2,y:H/2-40*devicePixelRatio,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2,l:1,d:.006+Math.random()*.012,r:(1+Math.random()*2.6)*devicePixelRatio,h:18+Math.random()*28});}};
+  // scintille che girano attorno al logo mentre si disegna
+  let t0=performance.now();
+  (function giro(t){
+    if(fine) return;
+    x.globalCompositeOperation="source-over"; x.fillStyle="rgba(13,14,16,.28)"; x.fillRect(0,0,W,H);
+    const e=(t-t0)/1000;
+    if(e<1.4){for(let i=0;i<4;i++){const a=e*9+i*Math.PI/2,R=(150-60*e)*devicePixelRatio;
+      P.push({x:W/2+Math.cos(a)*R,y:H/2-40*devicePixelRatio+Math.sin(a)*R,vx:-Math.sin(a)*2,vy:Math.cos(a)*2,l:1,d:.03,r:2.2*devicePixelRatio,h:25});}}
+    x.globalCompositeOperation="lighter";
+    P=P.filter(p=>p.l>0); for(const p of P){p.x+=p.vx;p.y+=p.vy;p.vy+=.06*devicePixelRatio;p.vx*=.985;p.l-=p.d;
+      x.fillStyle=`hsla(${p.h},100%,${55+p.l*20}%,${p.l})`; x.beginPath(); x.arc(p.x,p.y,p.r*p.l+.3,0,7); x.fill();}
+    requestAnimationFrame(giro);
+  })(t0);
+  setTimeout(()=>scoppio(420,11),1300);
+  setTimeout(()=>scoppio(160,6),1700);
+  const apri=()=>{ if(I.classList.contains("via")) return; I.classList.add("via"); document.body.classList.remove("intro-on");
+    setTimeout(()=>{fine=true;I.remove();},1200); };
+  I.addEventListener("click",apri); setTimeout(apri,2900);
+})();
+// === scintille nell'hero che seguono il mouse ===
+(()=>{
+  const c=document.getElementById("scintille"); if(!c||matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const x=c.getContext("2d"), h=c.parentElement; let W,H,S=[],mx=.5,my=.5,vis=true;
+  const dim=()=>{W=c.width=h.clientWidth*devicePixelRatio;H=c.height=h.clientHeight*devicePixelRatio;}; dim(); addEventListener("resize",dim);
+  h.addEventListener("pointermove",e=>{const r=h.getBoundingClientRect();mx=(e.clientX-r.left)/r.width;my=(e.clientY-r.top)/r.height;});
+  new IntersectionObserver(e=>vis=e[0].isIntersecting).observe(h);
+  for(let i=0;i<140;i++) S.push({x:Math.random(),y:Math.random(),z:.2+Math.random()*.8,v:.0008+Math.random()*.0025});
+  (function giro(){
+    requestAnimationFrame(giro); if(!vis) return;
+    x.clearRect(0,0,W,H); x.globalCompositeOperation="lighter";
+    for(const s of S){ s.x+=s.v*s.z*3; s.y-=s.v*.6; if(s.x>1.05||s.y<-.05){s.x=-.05;s.y=Math.random()*1.1;}
+      const px=(s.x+(mx-.5)*.06*s.z)*W, py=(s.y+(my-.5)*.06*s.z)*H, L=60*s.z*devicePixelRatio;
+      const g=x.createLinearGradient(px-L,py+L*.12,px,py); g.addColorStop(0,"rgba(242,105,27,0)"); g.addColorStop(1,`rgba(255,${140+s.z*60|0},70,${.25+s.z*.6})`);
+      x.strokeStyle=g; x.lineWidth=(.6+s.z*1.8)*devicePixelRatio; x.beginPath(); x.moveTo(px-L,py+L*.12); x.lineTo(px,py); x.stroke();
+      x.fillStyle=`rgba(255,200,140,${.4+s.z*.5})`; x.beginPath(); x.arc(px,py,(.6+s.z*1.4)*devicePixelRatio,0,7); x.fill(); }
+  })();
+})();
 carica();
 </script>
 </body>
