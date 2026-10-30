@@ -27,7 +27,7 @@ from ..ai.supercar_vero import LEASING_RE  # 29/10: subentro leasing / rate / no
 PAESI = {"D": "Germania", "A": "Austria", "B": "Belgio", "E": "Spagna", "F": "Francia", "I": "Italia",
          "L": "Lussemburgo", "NL": "Paesi Bassi"}
 MARCHE = ["ferrari", "lamborghini", "mclaren", "porsche", "aston-martin", "bentley", "rolls-royce", "maserati",
-          "bugatti", "lotus", "mercedes-benz", "bmw", "audi", "land-rover"]
+          "bugatti", "lotus", "mercedes-benz", "bmw", "audi", "land-rover", "pagani", "koenigsegg", "maybach", "alpina"]
 
 
 def _collettore(marca: str, paese: str):
