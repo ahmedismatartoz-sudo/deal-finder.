@@ -40,7 +40,7 @@ def _tabella(conn):
         listing_id BIGINT PRIMARY KEY, chiave TEXT, ok BOOLEAN, motivo TEXT, computed_at TIMESTAMPTZ DEFAULT now())""")
 
 
-def filtra(r: dict, v: dict, n_foto: int) -> tuple[str | None, dict]:
+def filtra(r: dict, v: dict, n_foto: int, minimo: int | None = None, nmin: int | None = None) -> tuple[str | None, dict]:
     """r: annuncio (title, version_raw, description, price_eur); v: valutazione (m, r, n, costi).
     Ritorna (motivo_esclusione | None, valori corretti {R, margine})."""
     testo = f"{r.get('title') or ''} {r.get('version_raw') or ''} {(r.get('description') or '')[:3000]}"
@@ -48,7 +48,7 @@ def filtra(r: dict, v: dict, n_foto: int) -> tuple[str | None, dict]:
         return "leasing_finanziamento", {}
     if n_foto < int(os.environ.get("SC_FOTO_MIN", "5")):
         return "poche_foto", {}
-    if int(v.get("n") or 0) < int(os.environ.get("SC_NMIN", "8")):
+    if int(v.get("n") or 0) < (nmin if nmin is not None else int(os.environ.get("SC_NMIN", "8"))):
         return "pochi_confronti", {}
     prezzo, M = int(r["price_eur"]), int(v["m"])
     if prezzo < 0.70 * M:
@@ -56,7 +56,7 @@ def filtra(r: dict, v: dict, n_foto: int) -> tuple[str | None, dict]:
     f = float(os.environ.get("SC_FATTORE", "0.92"))           # da prezzo chiesto a prezzo di vendita reale
     R = min(int(v["r"]), int(M * f * 0.95))
     marg = R - prezzo - int(v.get("costi") or 0)
-    if marg < int(os.environ.get("SUPERCAR_MARGINE_MIN", "5000")):
+    if marg < (minimo if minimo is not None else int(os.environ.get("SUPERCAR_MARGINE_MIN", "5000"))):
         return "margine_basso", {}
     if marg > 0.25 * prezzo:
         return "margine_irreale", {}

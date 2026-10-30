@@ -1763,6 +1763,66 @@ def _supercar_europa(gia: set, opens: dict) -> list:
     return out
 
 
+def _supercar_lusso(gia: set, opens: dict) -> list:
+    """30/10 (cliente: "tantissime supercar strafusso, da 150.000 € in su, in tutta Europa, in una sezione a parte").
+    Auto di PRIVATI da SC_LUSSO_MIN (150.000 €) in su negli 8 paesi AutoScout24 (tabella supercar_eu), con gli stessi
+    controlli onesti delle supercar: niente leasing/rate, almeno 5 foto, non "troppo belle per essere vere", non scartate
+    dal controllo AI; rivendita prudente R = min(R, M×0,92×0,95) meno i costi di import. Entrano quelle SOTTO mercato
+    (margine prudente > 0): etichetta "Opportunità" dai 5.000 € di margine, "Sotto mercato" sotto. Sezione Supercar del sito."""
+    if os.environ.get("SC_LUSSO", "1") != "1":
+        return []
+    from collections import Counter
+    out, scarti = [], Counter()
+    try:
+        with connect() as conn:
+            if not conn.execute("SELECT to_regclass('supercar_eu') AS t").fetchone()["t"]:
+                return []
+            val = {r["listing_id"]: r for r in conn.execute("""
+                SELECT s.listing_id, s.m, s.r, s.n, s.margine, s.costi, s.paese
+                FROM supercar_eu s JOIN listings l ON l.id = s.listing_id
+                WHERE s.computed_at > now() - interval '4 days' AND l.status = 'attivo' AND l.seller_type = 'privato'
+                  AND l.price_eur >= %(min)s AND s.m IS NOT NULL AND s.m > l.price_eur
+                ORDER BY (s.m - l.price_eur)::float / l.price_eur DESC LIMIT %(lim)s""",
+                {"min": int(os.environ.get("SC_LUSSO_MIN", "150000")), "lim": int(os.environ.get("SC_LUSSO_QUANTE", "600"))}).fetchall()}
+            if not val:
+                return []
+            rows = conn.execute(scovo.ECO_SQL.split("WHERE l.status='attivo'")[0] + " WHERE l.id = ANY(%(ids)s) AND l.status='attivo'",
+                                {"me": 0, "ids": list(val)}).fetchall()
+            from ..ai import supercar_vero as SV
+            desc = {x["id"]: x["description"] for x in conn.execute("SELECT id, description FROM listings WHERE id = ANY(%s)", (list(val),)).fetchall()}
+            controllo = SV.letti(conn, list(val))
+        for r in rows:
+            if r["id"] in gia:
+                continue
+            v = dict(val[r["id"]])
+            motivo, corr = SV.filtra(dict(r, description=desc.get(r["id"])), v, int(r.get("n_photos") or 0),
+                                     minimo=int(os.environ.get("SC_LUSSO_MARGINE", "1")), nmin=int(os.environ.get("SC_LUSSO_NMIN", "5")))
+            if motivo:
+                scarti[motivo] += 1
+                continue
+            c = controllo.get(r["id"])
+            if c and not c["ok"]:
+                scarti["scartata_ai"] += 1
+                continue
+            it = scovo.item_eco(r)
+            if not it:
+                continue
+            opp = corr["margine"] >= int(os.environ.get("SUPERCAR_MARGINE_MIN", "5000"))
+            it.update(economica=False, verificare=True, mercato=int(v["m"]), top=True, supercar=True, lusso=True,
+                      zona=" · ".join(x for x in (r.get("city"), v["paese"]) if x),
+                      pv={"categoria": "opportunita" if opp else "sotto_mercato",
+                          "etichetta": "Opportunità Supercar Europa" if opp else "Sotto mercato · Supercar Europa",
+                          "M": int(v["m"]), "R": int(corr["R"]), "R_finale": int(corr["R"]), "margine": int(corr["margine"]),
+                          "n": int(v["n"]), "totale_costi": int(v["costi"]), "metodo": "confronti Europa"})
+            out.append(it)
+            scarti["opportunita" if opp else "sotto_mercato"] += 1
+            opens[it["id"]] = int(r["opens"] or 0)
+    except Exception as ex:
+        logging.getLogger("scovo").warning("SUPERCAR_LUSSO non caricate: %s", str(ex)[:200])
+    logging.getLogger("scovo").warning("SUPERCAR_LUSSO %d auto da %s €, conteggi %s", len(out), os.environ.get("SC_LUSSO_MIN", "150000"), dict(scarti))
+    return out
+
+
 def _forzate_sito(gia: set, opens: dict) -> list:
     """19/10 (cliente: "mettimeli tutti sul sito"): auto scelte a mano (data/forzate_sito.json, per link) sempre sul
     sito finché l'annuncio è attivo, con il mercato e la rivendita veloce calcolati sulle auto uguali."""
@@ -1889,6 +1949,7 @@ def _calcola_elenco() -> None:
     items = _zona_sito(_rivendita_prudente(_mercato_calibrato(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))))))
     # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
     items += _senza_scarti_id(_supercar_europa({it["id"] for it in items}, opens))
+    items += _senza_scarti_id(_supercar_lusso({it["id"] for it in items}, opens))
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
