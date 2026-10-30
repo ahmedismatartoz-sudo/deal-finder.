@@ -1812,7 +1812,7 @@ def _supercar_lusso(gia: set, opens: dict) -> list:
                 continue
             if solo_sconto:
                 pct = round((1 - int(r["price_eur"]) / int(v["m"])) * 100)
-                if pct < 1:
+                if pct < int(os.environ.get("SC_LUSSO_SCONTO_MIN", "8")):     # 30/10 (cliente): solo da −8% sulla media
                     continue
                 it.update(economica=False, verificare=True, mercato=int(v["m"]), top=True, supercar=True, lusso=True,
                           zona=" · ".join(x for x in (r.get("city"), v["paese"]) if x),
