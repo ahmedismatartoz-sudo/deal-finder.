@@ -59,7 +59,7 @@ def raccolta() -> dict:
     from ..db import connect, upsert_listing
     st = Counter()
     lo = int(os.environ.get("SUPERCAR_MIN_RACCOLTA", "60000"))           # un po' sotto: confronti per le auto da 70k
-    hi = int(os.environ.get("SUPERCAR_MAX", "2000000"))
+    hi = int(os.environ.get("SUPERCAR_MAX", "100000000"))   # 30/10 (cliente): nessun tetto, anche auto da milioni
     passo = int(os.environ.get("SUPERCAR_PASSO", "40000"))
     paesi = [p.strip() for p in os.environ.get("SUPERCAR_PAESI", ",".join(PAESI)).split(",") if p.strip()]
     marche = [m.strip() for m in os.environ.get("SUPERCAR_MARCHE", ",".join(MARCHE)).split(",") if m.strip()]

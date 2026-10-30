@@ -235,6 +235,7 @@ function activeChips(){
 function statoTxt(c){ if (c.incidentata) return c.danno === "grave" ? "Incidente pesante" : c.danno === "leggero" ? "Danno leggero" : "Incidentata"; return c.rip_hi === 0 ? (c.danno === "sconosciuto" ? "Senza danni dichiarati" : "Sana") : c.danno === "leggero" ? "Danno leggero" : "Da sistemare"; }
 function ripTxt(c){ return c.rip_hi ? num(c.rip_lo) + "–" + num(c.rip_hi) + " €" : "Nessuna"; }
 function gainTxt(c){
+  if (c.pv && c.pv.sconto_pct != null && c.pv.margine == null) return "−" + c.pv.sconto_pct + "% sulla media";
   if (c.pv) return c.pv.margine == null ? "Da valutare" : (c.pv.margine >= 0 ? "+" : "−") + eur(Math.abs(c.pv.margine));
   if (c.economica && (!c.mercato || c.gainMax <= 0)) return "Da valutare";
   const lo = Math.max(c.gain, 0);
@@ -297,7 +298,7 @@ function viewList(){
           : `<div><span class="lbl">Riparazioni</span><span class="val ${c.rip_hi ? "small warn" : "good"}">${ripTxt(c)}</span></div>
           <div><span class="lbl">Rivendita</span><span class="val">${eur(c.riv)}</span></div>`}
         </div>
-        <div class="gain"><span>${c.pv ? esc(c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
+        <div class="gain"><span>${c.pv ? esc(c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
       </div>
     </button>`).join("");
   const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
@@ -375,6 +376,7 @@ function boxPolicy(c, v){
   } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
   h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
     <div class="note" style="border:0;margin-top:-8px">${p.riempimento || p.top ? `<b>Margine sotto la soglia piena di ${eur(p.soglia)}</b>: è tra le auto più convenienti che abbiamo in questo momento.` : `Soglia minima richiesta: ${eur(p.soglia)}.`} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
+  if (p.sconto_pct != null && p.margine == null) h += `<div class="note" style="border:0">Prezzo ${p.sconto_pct}% sotto la media di ${p.n} annunci uguali in Europa. Con la rivendita prudente e i costi di import il margine non è garantito: è un'auto da trattare.</div>`;
   h += `</div>`;
   if (!v) return h + `<div class="skel"><div class="bar"></div></div>`;
   const li = a => a.map(x => `<li>${esc(x)}</li>`).join("");

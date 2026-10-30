@@ -1797,7 +1797,10 @@ def _supercar_lusso(gia: set, opens: dict) -> list:
             v = dict(val[r["id"]])
             motivo, corr = SV.filtra(dict(r, description=desc.get(r["id"])), v, int(r.get("n_photos") or 0),
                                      minimo=int(os.environ.get("SC_LUSSO_MARGINE", "1")), nmin=int(os.environ.get("SC_LUSSO_NMIN", "5")))
-            if motivo:
+            # 30/10 (cliente: "mostrale con etichetta"): sotto la media degli annunci ma senza margine prudente → entrano
+            # SENZA promettere un guadagno, solo con lo sconto sulla media
+            solo_sconto = motivo == "margine_basso"
+            if motivo and not solo_sconto:
                 scarti[motivo] += 1
                 continue
             c = controllo.get(r["id"])
@@ -1806,6 +1809,19 @@ def _supercar_lusso(gia: set, opens: dict) -> list:
                 continue
             it = scovo.item_eco(r)
             if not it:
+                continue
+            if solo_sconto:
+                pct = round((1 - int(r["price_eur"]) / int(v["m"])) * 100)
+                if pct < 1:
+                    continue
+                it.update(economica=False, verificare=True, mercato=int(v["m"]), top=True, supercar=True, lusso=True,
+                          zona=" · ".join(x for x in (r.get("city"), v["paese"]) if x),
+                          pv={"categoria": "sotto_media", "etichetta": f"Sotto la media degli annunci del {pct}%",
+                              "M": int(v["m"]), "R": None, "R_finale": None, "margine": None, "sconto_pct": pct,
+                              "n": int(v["n"]), "totale_costi": int(v["costi"]), "metodo": "confronti Europa"})
+                out.append(it)
+                scarti["sotto_media"] += 1
+                opens[it["id"]] = int(r["opens"] or 0)
                 continue
             opp = corr["margine"] >= int(os.environ.get("SUPERCAR_MARGINE_MIN", "5000"))
             it.update(economica=False, verificare=True, mercato=int(v["m"]), top=True, supercar=True, lusso=True,
