@@ -153,3 +153,16 @@ async def api_vetrina(request):
             if not c:
                 return JSONResponse({"errore": "non disponibile ora"}, status_code=503, headers=h)
     return JSONResponse({"aggiornato": int(c["t"]), "auto": c["auto"]}, headers=h)
+
+
+def _preriscalda():
+    """30/10: legge subito all'avvio le vetrine in VETRINA_PRERISCALDA (così la cache è pronta e i log mostrano le foto)."""
+    time.sleep(20)
+    for slug in [s.strip() for s in (os.environ.get("VETRINA_PRERISCALDA") or "").split(",") if s.strip()]:
+        try:
+            _cache[slug] = {"t": time.time(), "auto": _leggi_uno(slug)}
+        except Exception as e:
+            log.warning("VETRINA preriscaldo %s: %s", slug, str(e)[:200])
+
+
+threading.Thread(target=_preriscalda, daemon=True, name="vetrina_preriscalda").start()
