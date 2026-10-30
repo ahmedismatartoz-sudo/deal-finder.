@@ -89,7 +89,7 @@ h2 em{font-style:normal;color:var(--rosso)}
 .filtri button{font:inherit;font-size:14.5px;font-weight:600;padding:10px 18px;border-radius:999px;border:1px solid var(--linea);background:transparent;color:var(--grigio2);cursor:pointer;transition:all .2s}
 .filtri button.on{background:var(--bianco);color:var(--notte);border-color:var(--bianco)}
 .gamma{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.auto{background:var(--notte2);border:1px solid var(--linea);border-radius:22px;padding:22px;cursor:pointer;position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .3s;text-align:left;font:inherit;color:inherit}
+.auto{overflow:hidden;background:var(--notte2);border:1px solid var(--linea);border-radius:22px;padding:22px;cursor:pointer;position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .3s;text-align:left;font:inherit;color:inherit}
 .auto:hover{transform:translateY(-6px);border-color:rgba(244,242,238,.25)}
 .auto .tag{display:flex;gap:6px;flex-wrap:wrap}
 .auto .tag span{font-family:var(--m);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:7px;background:var(--notte3);color:var(--grigio2)}
@@ -115,6 +115,13 @@ h2 em{font-style:normal;color:var(--rosso)}
 .scheda .x{position:absolute;top:18px;right:18px;width:40px;height:40px;border-radius:50%;border:1px solid var(--linea);background:transparent;color:var(--bianco);font-size:20px;cursor:pointer}
 .scheda .sag{height:200px;display:grid;place-items:center}
 .scheda .sag svg{width:90%}
+.auto .sag.foto{height:auto;aspect-ratio:4/3;margin:14px -22px 10px;display:block}
+.auto .sag.foto:before{display:none}
+.auto .sag.foto img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.auto:hover .sag.foto img{transform:scale(1.05)}
+.auto .sag.foto svg{width:92%;margin:30px auto}
+.galleria{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:18px -30px 18px;padding:0 30px}
+.galleria img{flex:none;width:86%;aspect-ratio:4/3;object-fit:cover;border-radius:16px;scroll-snap-align:center}
 .scheda h3{font-size:36px;font-weight:800;letter-spacing:-.035em;line-height:1}
 .righe{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:22px 0}
 .righe div{background:var(--notte3);border-radius:12px;padding:12px 14px}
@@ -383,12 +390,12 @@ const wa = t => "https://wa.me/" + WA + "?text=" + encodeURIComponent(t);
 document.querySelectorAll("a.wa").forEach(a => { a.href = wa("Buongiorno, vorrei prenotare un test drive."); a.target = "_blank"; a.rel = "noopener"; });
 
 const AUTO = [
-  {m:"DR", n:"DR 6.0", v:"1.5 Turbo Bi-Fuel GPL", p:26900, t:["Nuova","gpl"], c:"#c9ccd2", f:"suv", cambio:"Manuale", alim:"Benzina / GPL"},
-  {m:"DR", n:"DR 5.0", v:"1.5 Unica Bi-Fuel GPL", p:19900, t:["Km 0","gpl"], c:"#e5322d", f:"suv", cambio:"Manuale", alim:"Benzina / GPL", km:"10 km"},
-  {m:"DR", n:"DR 1.0 EV", v:"Elettrica, ideale per la città", p:17700, t:["Km 0","ev"], c:"#3ccf8e", f:"city", cambio:"Automatico", alim:"Elettrica", km:"10 km"},
-  {m:"EVO", n:"EVO 5", v:"1.5 Turbo", p:16900, t:["Nuova"], c:"#4a6fa5", f:"suv", cambio:"Manuale", alim:"Benzina"},
-  {m:"EVO", n:"EVO 4", v:"1.6", p:15900, t:["Nuova"], c:"#f4f2ee", f:"suv", cambio:"Manuale", alim:"Benzina"},
-  {m:"EVO", n:"EVO 3", v:"1.5", p:14900, t:["Nuova"], c:"#ffc531", f:"city", cambio:"Manuale", alim:"Benzina"}
+  {m:"DR", id:107194775, n:"DR 6.0", v:"1.5 Turbo Bi-Fuel GPL", p:26900, t:["Nuova","gpl"], c:"#c9ccd2", f:"suv", cambio:"Manuale", alim:"Benzina / GPL"},
+  {m:"DR", id:107840874, n:"DR 5.0", v:"1.5 Unica Bi-Fuel GPL", p:19900, t:["Km 0","gpl"], c:"#e5322d", f:"suv", cambio:"Manuale", alim:"Benzina / GPL", km:"10 km"},
+  {m:"DR", id:107840870, n:"DR 1.0 EV", v:"Elettrica, ideale per la città", p:17700, t:["Km 0","ev"], c:"#3ccf8e", f:"city", cambio:"Automatico", alim:"Elettrica", km:"10 km"},
+  {m:"EVO", id:106976421, n:"EVO 5", v:"1.5 Turbo", p:16900, t:["Nuova"], c:"#4a6fa5", f:"suv", cambio:"Manuale", alim:"Benzina"},
+  {m:"EVO", id:106976423, n:"EVO 4", v:"1.6", p:15900, t:["Nuova"], c:"#f4f2ee", f:"suv", cambio:"Manuale", alim:"Benzina"},
+  {m:"EVO", id:106976422, n:"EVO 3", v:"1.5", p:14900, t:["Nuova"], c:"#ffc531", f:"city", cambio:"Manuale", alim:"Benzina"}
 ];
 const SUV = 'M18 112 L24 84 Q30 72 62 70 L112 67 L152 38 Q162 31 178 31 L284 31 Q304 31 316 44 L344 68 L372 74 Q390 78 390 96 L390 113 Q390 120 382 120 L352 120 A32 32 0 0 0 288 120 L122 120 A32 32 0 0 0 58 120 L26 120 Q18 120 18 112 Z';
 const CITY = 'M30 114 L34 88 Q38 76 66 72 L118 66 L160 36 Q172 28 190 28 L266 28 Q288 28 302 44 L332 72 L356 78 Q372 82 372 98 L372 114 Q372 120 364 120 L340 120 A30 30 0 0 0 280 120 L126 120 A30 30 0 0 0 66 120 L38 120 Q30 120 30 114 Z';
@@ -405,6 +412,10 @@ function sagoma(a){
     ${ruota(r1)}${ruota(r2)}
     <defs><linearGradient id="luce" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs></svg>`;
 }
+const FOTO = (a, i) => `https://www.quattroruote.it/auto-usate/images/quattroruote-storage/site/${a.id}/${i}.jpg`;
+function foto(a){
+  return `<img src="${FOTO(a,0)}" alt="${a.n}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createRange().createContextualFragment(sagoma(AUTO[${AUTO.indexOf(a)}])))">`;
+}
 const eur = n => n.toLocaleString("it-IT") + " €";
 const tagHtml = a => a.t.map(t => t === "gpl" ? '<span class="gpl">Bi-Fuel GPL</span>' : t === "ev" ? '<span class="ev">Elettrica</span>' : t === "usato" ? '<span class="us">Usato</span>' : `<span>${t}</span>`).join("");
 function disegna(f){
@@ -412,7 +423,7 @@ function disegna(f){
   document.getElementById("lista").innerHTML = L.map(a => `
     <button class="auto rv" data-i="${AUTO.indexOf(a)}">
       <div class="tag">${tagHtml(a)}</div>
-      <div class="sag">${sagoma(a)}</div>
+      <div class="sag foto">${foto(a)}</div>
       <h3>${a.n}</h3><div class="ver">${a.v}</div>
       <div class="prezzo"><small>${a.t.includes("usato") ? "Prezzo" : "Da"}</small><b>${eur(a.p)}</b></div>
     </button>`).join("");
@@ -422,7 +433,7 @@ const velo = document.getElementById("velo"), scheda = document.getElementById("
 function apri(a){
   scheda.innerHTML = `<button class="x" aria-label="Chiudi">×</button>
     <div class="tag" style="display:flex;gap:6px">${tagHtml(a).replaceAll('<span', '<span style="font-family:var(--m);font-size:11px;font-weight:700;padding:5px 9px;border-radius:7px;background:var(--notte3)"')}</div>
-    <div class="sag">${sagoma(a)}</div>
+    <div class="galleria">${Array.from({length:12},(_,i)=>`<img src="${FOTO(a,i)}" alt="${a.n} foto ${i+1}" referrerpolicy="no-referrer" onerror="this.remove()">`).join("")}</div>
     <h3>${a.n}</h3><div style="color:var(--grigio2);margin-top:6px">${a.v}</div>
     <div class="righe">
       <div><small>Marchio</small><b>${a.m === "DR" ? "DR Automobiles" : "EVO"}</b></div>
