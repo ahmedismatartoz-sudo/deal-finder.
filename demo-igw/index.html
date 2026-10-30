@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>IGW Auto · Cusano Milanino</title>
+<meta name="description" content="IGW Auto di Ivan Galli, Cusano Milanino (MI): auto usate selezionate, valutazione e acquisto della tua auto, permute.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#17191c;        /* antracite del logo */
+  --steel:#2a2e33;      /* lamiera */
+  --mist:#e8ecf0;       /* vetrina */
+  --paper:#f7f8fa;
+  --white:#ffffff;
+  --amber:#f2691b;      /* arancio IGW */
+  --text:#17191c; --soft:#5a6574; --line:#d5dbe2;
+  --bg:var(--paper); --card:var(--white);
+  --wide:"Archivo",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0f1620;--card:#161f2b;--text:#e9edf2;--soft:#9aa6b5;--line:#273345;--mist:#1b2533}
+}
+:root[data-theme="dark"]{--bg:#0f1620;--card:#161f2b;--text:#e9edf2;--soft:#9aa6b5;--line:#273345;--mist:#1b2533}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;overflow-x:clip}
+body{overflow-x:clip;max-width:100vw}
+h1,h2,h3,.anno,.ind,.marchio b,.prezzo{overflow-wrap:anywhere;hyphens:manual}
+body{font-family:var(--wide);font-variation-settings:"wdth" 100;background:var(--bg);color:var(--text);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
+.w{max-width:1240px;margin:0 auto;padding:0 32px}
+.x{font-variation-settings:"wdth" 125}       /* larghezza da catalogo auto */
+
+/* ---------- testata ---------- */
+.top{position:absolute;inset:0 0 auto;z-index:20;color:#fff}
+.top .w{display:flex;align-items:center;gap:28px;height:84px}
+.mark{text-decoration:none;font-weight:800;font-size:19px;letter-spacing:.06em;font-variation-settings:"wdth" 125;white-space:nowrap}
+.mark span{font-weight:400;opacity:.65;letter-spacing:0;font-variation-settings:"wdth" 100;font-size:13px;margin-left:10px}
+.top nav{display:flex;gap:30px;margin-left:auto;font-size:15px}
+.top nav a{text-decoration:none;opacity:.8}
+.top nav a:hover{opacity:1}
+.stato{font-size:13.5px;display:flex;align-items:center;gap:8px;opacity:.9;white-space:nowrap}
+.stato i{width:8px;height:8px;border-radius:50%;background:#6fcf97;box-shadow:0 0 0 4px rgba(111,207,151,.18)}
+.stato.chiuso i{background:#c9cfd7;box-shadow:none}
+.menu{display:none;margin-left:auto;background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:8px 16px;cursor:pointer}
+
+/* ---------- apertura ---------- */
+.hero{background:var(--ink);color:#fff;min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;position:relative}
+.hero:before{content:"";position:absolute;inset:0;background:radial-gradient(1200px 500px at 80% 10%,#22324a 0%,transparent 60%);pointer-events:none}
+.hero .w{position:relative;padding-top:128px;width:100%}
+.hero h1{font-weight:800;font-variation-settings:"wdth" 125;font-size:clamp(42px,7.2vw,108px);line-height:.92;letter-spacing:-.02em;max-width:12ch}
+.hero h1 .r{display:block;overflow:hidden}
+.hero h1 .r span{display:block;transform:translateY(105%);animation:sale 1s cubic-bezier(.2,.7,.1,1) forwards}
+.hero h1 .r:nth-child(2) span{animation-delay:.12s}
+@keyframes sale{to{transform:none}}
+.hero .lead{display:flex;gap:48px;align-items:flex-end;justify-content:space-between;margin:28px 0 34px;flex-wrap:wrap;opacity:0;animation:appare .8s .5s forwards}
+@keyframes appare{to{opacity:1}}
+.hero .lead p{max-width:46ch;color:rgba(255,255,255,.72);font-size:18px}
+.cta{display:inline-flex;align-items:center;gap:12px;text-decoration:none;background:var(--amber);color:#fff;font-weight:700;padding:16px 26px;border-radius:999px;border:0;cursor:pointer;transition:transform .2s}
+.cta:hover{transform:translateY(-2px)}
+.cta.lin{background:transparent;color:inherit;border:1px solid currentColor;opacity:.85}
+.ctas{display:flex;gap:12px;flex-wrap:wrap}
+
+/* nastro del salone: l'elemento che si ricorda */
+.nastro{position:relative;padding:0 0 46px;opacity:0;transform:translateX(60px);animation:entra 1.1s .7s cubic-bezier(.2,.7,.1,1) forwards}
+@keyframes entra{to{opacity:1;transform:none}}
+.nastro .info{display:flex;justify-content:space-between;align-items:baseline;color:rgba(255,255,255,.6);font-size:14px;margin-bottom:16px}
+.nastro .info b{color:#fff;font-weight:600}
+.pista{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 32px 8px max(32px,calc((100vw - 1240px)/2 + 32px));scrollbar-width:none;cursor:grab}
+.pista::-webkit-scrollbar{display:none}
+.pista.drag{cursor:grabbing;scroll-snap-type:none}
+.slot{flex:0 0 clamp(260px,30vw,400px);scroll-snap-align:start;text-decoration:none;color:#fff;background:none;border:0;text-align:left;cursor:pointer}
+.slot .f{aspect-ratio:3/2;border-radius:14px;overflow:hidden;background:var(--steel)}
+.slot .f img{width:100%;height:100%;object-fit:cover;transition:transform .7s}
+.slot:hover .f img{transform:scale(1.04)}
+.slot .t{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:15px}
+.slot .t b{font-weight:600}
+.slot .t em{font-style:normal;color:var(--amber);font-weight:700;white-space:nowrap}
+.frecce{display:flex;gap:8px}
+.frecce button{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;cursor:pointer;font-size:18px}
+.frecce button:hover{border-color:#fff}
+
+/* ---------- sezioni ---------- */
+.sez{padding:120px 0}
+.tit{font-weight:800;font-variation-settings:"wdth" 118;font-size:clamp(34px,4.6vw,60px);line-height:1;letter-spacing:-.015em}
+.intro{color:var(--soft);max-width:52ch;margin-top:18px;font-size:18px}
+.testa{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;flex-wrap:wrap;margin-bottom:44px}
+
+/* stock */
+.barra{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tab{background:none;border:1px solid var(--line);border-radius:999px;padding:10px 18px;cursor:pointer;font-weight:600;font-size:15px;color:var(--soft)}
+.tab[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.barra select{background:none;border:1px solid var(--line);border-radius:999px;padding:10px 16px;font:inherit;font-size:15px;color:var(--text)}
+.stock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:48px 28px}
+.auto{background:none;border:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;min-width:0}
+.auto .f{aspect-ratio:3/2;border-radius:12px;overflow:hidden;background:var(--mist);position:relative}
+.auto .f img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.1,1)}
+.auto:hover .f img{transform:scale(1.035)}
+.auto .stato-a{position:absolute;left:14px;top:14px;background:var(--white);color:var(--ink);font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px}
+.auto .stato-a.n{background:var(--amber);color:#fff}
+.auto h3{font-weight:700;font-variation-settings:"wdth" 112;font-size:22px;line-height:1.15;margin-top:18px}
+.auto .v{color:var(--soft);font-size:15px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.auto .d{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--soft);font-size:14.5px;margin-top:12px}
+.auto .p{margin-top:14px;font-weight:800;font-variation-settings:"wdth" 118;font-size:26px}
+.auto.grande{grid-column:span 2;grid-row:span 2}
+.auto.grande h3{font-size:30px}
+.auto.grande .p{font-size:34px}
+.vuoto{grid-column:1/-1;color:var(--soft);padding:40px 0}
+.att{aspect-ratio:3/2;border-radius:12px;background:var(--mist);animation:pulsa 1.4s ease-in-out infinite}
+@keyframes pulsa{50%{opacity:.55}}
+
+/* marchi */
+.marchi{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.marchi .w{display:grid;grid-template-columns:repeat(4,1fr)}
+.marchio{padding:34px 0;border-right:1px solid var(--line);padding-left:24px}
+.marchio:first-child{padding-left:0}
+.marchio:last-child{border-right:0}
+.marchio b{display:block;font-weight:800;font-variation-settings:"wdth" 125;font-size:clamp(20px,2.2vw,30px);letter-spacing:-.01em}
+.marchio span{color:var(--soft);font-size:14px}
+
+/* officina */
+.off{display:grid;grid-template-columns:5fr 7fr;gap:60px;align-items:start}
+.servizi{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+.servizi div{padding:22px 0;border-top:1px solid var(--line)}
+.servizi b{display:block;font-weight:700;font-size:18px}
+.servizi span{color:var(--soft);font-size:15.5px}
+
+/* storia */
+.storia{background:var(--ink);color:#fff}
+.storia .w{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:end}
+.anno{font-weight:900;font-variation-settings:"wdth" 125;font-size:clamp(110px,19vw,260px);line-height:.8;letter-spacing:-.04em;color:var(--amber)}
+.storia p{color:rgba(255,255,255,.75);font-size:19px;max-width:44ch}
+.storia p+p{margin-top:16px}
+
+/* visita */
+.visita{display:grid;grid-template-columns:5fr 7fr;gap:60px}
+.ind{font-weight:800;font-variation-settings:"wdth" 118;font-size:clamp(28px,3.4vw,44px);line-height:1.05;margin:22px 0 30px}
+.orari{width:100%;border-collapse:collapse;font-size:16px}
+.orari td{padding:13px 0;border-top:1px solid var(--line)}
+.orari td:last-child{text-align:right;color:var(--soft)}
+.orari tr.oggi td{font-weight:700;color:var(--text)}
+.orari tr.oggi td:first-child:after{content:"oggi";margin-left:10px;font-size:12px;font-weight:700;background:var(--amber);color:#fff;border-radius:999px;padding:2px 9px}
+.mappa{border-radius:16px;overflow:hidden;min-height:440px;background:var(--mist)}
+.mappa iframe{width:100%;height:100%;min-height:440px;border:0;filter:grayscale(.35)}
+.visita .ctas{margin-top:30px}
+.visita .ctas .cta.lin{color:var(--text)}
+
+footer{padding:40px 0 90px;color:var(--soft);font-size:14px}
+footer .w{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:28px}
+.proto{position:fixed;left:16px;bottom:16px;z-index:50;background:rgba(19,28,40,.9);color:#fff;font-size:12.5px;padding:8px 14px;border-radius:999px;backdrop-filter:blur(6px)}
+
+/* scheda auto */
+.scheda{position:fixed;inset:0;z-index:80;background:var(--bg);display:none;overflow-y:auto}
+.scheda.on{display:block;animation:apri .35s cubic-bezier(.2,.7,.1,1)}
+@keyframes apri{from{opacity:0;transform:translateY(24px)}}
+.scheda .w{padding-top:26px;padding-bottom:60px}
+.chiudi{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.chiudi button{background:none;border:1px solid var(--line);border-radius:999px;padding:10px 18px;cursor:pointer;font-weight:600}
+.sc{display:grid;grid-template-columns:7fr 4fr;gap:44px}
+.gal .palco{position:relative;aspect-ratio:3/2;border-radius:14px;overflow:hidden;background:var(--mist)}
+.gal .palco img{width:100%;height:100%;object-fit:cover;transition:opacity .35s}
+.gal .palco button{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:var(--ink);cursor:pointer;font-size:20px}
+.gal .prev{left:16px}.gal .next{right:16px}
+.gal .n{position:absolute;right:16px;bottom:16px;background:rgba(19,28,40,.75);color:#fff;font-size:13px;padding:5px 12px;border-radius:999px}
+.mini{display:flex;gap:8px;overflow-x:auto;margin-top:10px;scrollbar-width:thin}
+.mini img{width:92px;height:62px;object-fit:cover;border-radius:8px;opacity:.5;cursor:pointer;flex:none;transition:opacity .2s}
+.mini img.on{opacity:1}
+.sc h2{font-weight:800;font-variation-settings:"wdth" 118;font-size:clamp(30px,3.4vw,44px);line-height:1.02}
+.sc .ver{color:var(--soft);margin-top:8px}
+.sc .prezzo{font-weight:900;font-variation-settings:"wdth" 125;font-size:46px;margin:24px 0 8px}
+.dati{width:100%;border-collapse:collapse;margin:20px 0 28px}
+.dati td{padding:12px 0;border-top:1px solid var(--line);font-size:16px}
+.dati td:last-child{text-align:right;font-weight:600}
+.dati td:first-child{color:var(--soft)}
+.sc .cta{width:100%;justify-content:center}
+.sc .cta+.cta{margin-top:10px}
+.sc .cta.lin{color:var(--text)}
+
+@media (max-width:1180px){.top .stato{display:none}}
+@media (max-width:900px){
+  .top nav{display:none}
+  .menu{display:block}
+  .top.aperto nav{display:flex;position:absolute;top:76px;left:20px;right:20px;flex-direction:column;gap:0;background:var(--ink);border-radius:16px;padding:8px 20px}
+  .top.aperto nav a{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+}
+@media (max-width:1000px){
+  .stock{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .off,.storia .w,.visita,.sc{grid-template-columns:1fr}
+  .marchi .w{grid-template-columns:1fr 1fr}
+  .marchio:nth-child(2){border-right:0}
+  .marchio:nth-child(3){padding-left:0}
+  .marchio:nth-child(-n+2){border-bottom:1px solid var(--line)}
+}
+@media (max-width:760px){
+  .x,.hero h1,.tit,.anno,.marchio b,.sc h2,.sc .prezzo,.auto .p,.auto h3,.ind{font-variation-settings:"wdth" 100!important}
+  .hero h1{font-size:clamp(34px,10.5vw,52px);letter-spacing:-.01em}
+  .tit{font-size:clamp(28px,8.4vw,40px)}
+  .anno{font-size:clamp(84px,26vw,130px)}
+  .ind{font-size:clamp(22px,6.4vw,30px)}
+  .marchio{padding-left:16px}
+  .marchio b{font-size:19px}
+  .nastro{transform:none;animation-name:appare}
+  .slot{flex-basis:78vw}
+  .mark{font-size:16px}
+  .mark span{display:none}
+  .w{padding:0 20px}
+  .top nav,.top .stato{display:none}
+  .menu{display:block}
+  .top.aperto nav{display:flex;position:absolute;top:76px;left:20px;right:20px;flex-direction:column;gap:0;background:var(--ink);border-radius:16px;padding:8px 20px}
+  .top.aperto nav a{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+  .hero .w{padding-top:120px}
+  .pista{padding-left:20px;padding-right:20px}
+  .frecce{display:none}
+  .sez{padding:80px 0}
+  .stock{grid-template-columns:minmax(0,1fr);gap:40px}
+  .auto.grande{grid-column:auto;grid-row:auto}
+  .auto.grande h3{font-size:24px}.auto.grande .p{font-size:28px}
+  .servizi{grid-template-columns:1fr}
+  .mappa,.mappa iframe{min-height:320px}
+  .sc .prezzo{font-size:38px}
+  .proto{left:12px;right:12px;bottom:12px;text-align:center;font-size:11.5px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*:before,*:after{animation-duration:.01ms!important;animation-delay:0s!important;transition:none!important}
+  .hero h1 .r span{transform:none}.hero .lead,.nastro{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top" id="top">
+  <div class="w">
+    <a class="mark" href="#">IGW AUTO<span>Cusano Milanino</span></a>
+    <nav aria-label="Sezioni">
+      <a href="#auto">Auto in vendita</a><a href="#officina">Vendi la tua auto</a><a href="#storia">Chi siamo</a><a href="#visita">Dove siamo</a>
+    </nav>
+    <span class="stato" id="stato"><i></i><span></span></span>
+    <button class="menu" aria-expanded="false" onclick="const t=document.getElementById('top');const o=t.classList.toggle('aperto');this.setAttribute('aria-expanded',o)">Menu</button>
+  </div>
+</header>
+
+<section class="hero" aria-label="Apertura">
+  <div class="w">
+    <h1 class="x"><span class="r"><span>Usato scelto</span></span><span class="r"><span>da una persona sola.</span></span></h1>
+    <div class="lead">
+      <p>A Cusano Milanino, Ivan Galli seleziona auto usate e le segue di persona: prova su strada, documenti, passaggio di proprietà. E se vuoi vendere la tua, te la valutiamo noi.</p>
+      <div class="ctas"><a class="cta" href="#auto">Guarda le auto</a><a class="cta lin wa" href="#">Scrivi a Ivan</a></div>
+    </div>
+  </div>
+  <div class="nastro">
+    <div class="w info"><span><b id="quante">Le auto</b> in vendita adesso, aggiornate da sole</span>
+      <span class="frecce"><button aria-label="Auto precedenti" onclick="scorri(-1)">‹</button><button aria-label="Auto successive" onclick="scorri(1)">›</button></span></div>
+    <div class="pista" id="pista"></div>
+  </div>
+</section>
+
+<section class="sez" id="auto">
+  <div class="w">
+    <div class="testa">
+      <div><h2 class="tit">In vendita</h2><p class="intro">Ogni auto con foto, chilometri e prezzo reali. Scegli quella che ti interessa e fissa una prova con Ivan.</p></div>
+      <div class="barra" role="group" aria-label="Filtra le auto">
+        <button class="tab" data-f="tutte" aria-pressed="true">Tutte</button>
+        <button class="tab" data-f="b" aria-pressed="false">Fino a 10.000 €</button>
+        <button class="tab" data-f="a" aria-pressed="false">Oltre 10.000 €</button>
+        <select id="ordina" aria-label="Ordina"><option value="">In evidenza</option><option value="pa">Prezzo più basso</option><option value="pd">Prezzo più alto</option><option value="km">Meno chilometri</option></select>
+      </div>
+    </div>
+    <div class="stock" id="stock"><div class="att"></div><div class="att"></div><div class="att"></div></div>
+  </div>
+</section>
+
+<div class="marchi" aria-label="Perché IGW">
+  <div class="w">
+    <div class="marchio"><b>4,7 ★</b><span>15 recensioni su Google</span></div>
+    <div class="marchio"><b>Indipendente</b><span>Usato di tutte le marche</span></div>
+    <div class="marchio"><b>Prova</b><span>Su strada, con calma</span></div>
+    <div class="marchio"><b>Permuta</b><span>Valutiamo la tua auto</span></div>
+  </div>
+</div>
+
+<section class="sez" id="officina">
+  <div class="w off">
+    <div><h2 class="tit">Vendi la tua auto a noi</h2><p class="intro">Valutazione in linea con il mercato, pratiche seguite da noi e pagamento sicuro. Senza annunci, senza telefonate di sconosciuti.</p>
+      <div class="ctas" style="margin-top:26px"><a class="cta wa-vendi" href="#">Chiedi una valutazione</a></div></div>
+    <div class="servizi">
+      <div><b>Valutazione onesta</b><span>Un prezzo in linea con il mercato</span></div>
+      <div><b>Acquisto diretto</b><span>Compriamo noi la tua auto</span></div>
+      <div><b>Permuta</b><span>La scaliamo dal prezzo della prossima</span></div>
+      <div><b>Passaggio di proprietà</b><span>Pratiche seguite da noi</span></div>
+      <div><b>Prova su strada</b><span>Tutto il tempo che ti serve</span></div>
+      <div><b>Ricerca su misura</b><span>Ti cerchiamo l'auto che vuoi</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sez storia" id="storia">
+  <div class="w">
+    <div class="anno x" aria-hidden="true">IGW</div>
+    <div>
+      <h2 class="tit">Parli sempre con Ivan</h2>
+      <p style="margin-top:22px">IGW Auto è il salone di Ivan Galli a Cusano Milanino: un dealer indipendente, senza intermediari. Chi compra o vende un'auto qui tratta con una persona sola, dalla prima telefonata al passaggio di proprietà.</p>
+      <p>I clienti lo raccontano nelle recensioni: disponibilità, trasparenza e tutto il tempo per vedere e provare l'auto.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sez" id="visita">
+  <div class="w visita">
+    <div>
+      <h2 class="tit">Vieni in salone</h2>
+      <p class="ind">Via Caveto, 33<br>20095 Cusano Milanino (MI)</p>
+      <table class="orari" id="orari">
+        <tr data-g=""><td>Visite e prove</td><td>Su appuntamento</td></tr>
+        <tr data-g=""><td>Telefono e WhatsApp</td><td><a href="tel:+393517766518" style="color:inherit">351 776 6518</a></td></tr>
+      </table>
+      <div class="ctas">
+        <a class="cta" href="https://www.google.com/maps/dir/?api=1&destination=IGW+AUTO+Via+Caveto+33+Cusano+Milanino&destination_place_id=ChIJdZoauOK_hkcRlTR8_fFqTRI" target="_blank" rel="noopener">Indicazioni stradali</a>
+        <a class="cta lin" href="tel:+393517766518">Chiama Ivan</a>
+      </div>
+    </div>
+    <div class="mappa"><iframe loading="lazy" title="Mappa di IGW Auto" src="https://maps.google.com/maps?q=45.5448994,9.1804877&z=15&output=embed"></iframe></div>
+  </div>
+</section>
+
+<footer><div class="w"><span>IGW Auto di Galli Ivan, Via Caveto 33, Cusano Milanino (MI)</span><span>Referente: Ivan Galli</span></div></footer>
+<div class="proto">Prototipo proposto a IGW Auto, non è il sito ufficiale</div>
+
+<div class="scheda" id="scheda" role="dialog" aria-modal="true" aria-labelledby="sT">
+  <div class="w">
+    <div class="chiudi"><span class="mark" style="color:var(--text)">IGW AUTO</span><button onclick="chiudi()">Chiudi</button></div>
+    <div class="sc">
+      <div class="gal"><div class="palco"><img id="sImg" alt=""><button class="prev" onclick="vai(k-1)" aria-label="Foto precedente">‹</button><button class="next" onclick="vai(k+1)" aria-label="Foto successiva">›</button><span class="n" id="sN"></span></div><div class="mini" id="sMini"></div></div>
+      <div>
+        <h2 id="sT"></h2><p class="ver" id="sV"></p>
+        <div class="prezzo" id="sP"></div>
+        <table class="dati" id="sD"></table>
+        <a class="cta" id="sL" target="_blank" rel="noopener">Chiedi informazioni su questa auto</a>
+        <a class="cta lin" id="sW" target="_blank" rel="noopener">Prenota una prova su WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "https://scovo.onrender.com/api/vetrina/galli-ivan-igw-auto";
+const AS = "https://www.autoscout24.it/concessionari/galli-ivan-igw-auto";
+const WA = t => "https://wa.me/393517766518?text=" + encodeURIComponent(t);
+// riserva se il collegamento non risponde (stock letto il 29/10)
+const RISERVA = [];
+
+let AUTO=[], filtro="tutte", cur=null, k=0;
+const eur=n=>n==null?"":"€ "+Number(n).toLocaleString("it-IT");
+const kmf=n=>n==null?"":Number(n).toLocaleString("it-IT")+" km";
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const anno=a=>{const m=String(a.immatricolazione||"").match(/\d{4}/);return m?m[0]:(a.anno||"")};
+const nome=a=>esc(a.marca)+" "+esc(a.modello);
+const pic=(a,i=0)=>a.foto&&a.foto[i]?a.foto[i]:"";
+// ordine "in evidenza": prima le auto con più foto, nuove e di valore
+const peso=a=>(a.foto?Math.min(a.foto.length,10):0)*3+(a.nuova?6:0)+Math.min((a.prezzo||0)/5000,8);
+
+function carica(){
+  let fatto=false;
+  const usa=l=>{ if(fatto) return; fatto=true; AUTO=l.slice().sort((a,b)=>peso(b)-peso(a)); pronto(); };
+  fetch(API).then(r=>r.ok?r.json():Promise.reject()).then(d=>usa(d.auto||[])).catch(()=>usa(RISERVA));
+  setTimeout(()=>usa(RISERVA),25000);
+}
+function pronto(){
+  document.getElementById("quante").textContent=AUTO.length+(AUTO.length===1?" auto":" auto");
+  document.getElementById("pista").innerHTML=AUTO.filter(a=>pic(a)).slice(0,12).map(a=>`
+    <button class="slot" onclick="apri('${a.id}')"><div class="f"><img src="${esc(pic(a))}" alt="${nome(a)}" loading="lazy" onerror="this.remove()"></div>
+    <div class="t"><b>${nome(a)}</b><em>${eur(a.prezzo)}</em></div></button>`).join("");
+  disegna();
+}
+function disegna(){
+  const ord=document.getElementById("ordina").value;
+  let l=AUTO.filter(a=>filtro==="tutte"||(filtro==="b")===((a.prezzo||0)<=10000));
+  if(ord==="pa") l=l.slice().sort((a,b)=>a.prezzo-b.prezzo);
+  if(ord==="pd") l=l.slice().sort((a,b)=>b.prezzo-a.prezzo);
+  if(ord==="km") l=l.slice().sort((a,b)=>(a.km||0)-(b.km||0));
+  const s=document.getElementById("stock");
+  if(!l.length){ s.innerHTML=`<p class="vuoto">Stiamo caricando le auto in vendita. Se non compaiono, scrivi a Ivan su WhatsApp: ti manda le foto delle auto disponibili.</p>`; return; }
+  s.innerHTML=l.map((a,i)=>`
+    <button class="auto${i===0&&!ord&&pic(a)?" grande":""}" onclick="apri('${a.id}')">
+      <div class="f">${pic(a)?`<img src="${esc(pic(a))}" alt="${nome(a)}" loading="lazy" onerror="this.remove()">`:""}<span class="stato-a${a.nuova?" n":""}">${a.nuova?"Nuova o km 0":"Usata"}</span></div>
+      <h3>${nome(a)}</h3><span class="v">${esc(a.versione||"")}</span>
+      <span class="d">${anno(a)?`<span>${anno(a)}</span>`:""}<span>${kmf(a.km)}</span><span>${esc(a.carburante||"")}</span><span>${esc(a.cambio||"")}</span></span>
+      <span class="p">${eur(a.prezzo)}</span>
+    </button>`).join("");
+}
+function apri(id){
+  cur=AUTO.find(a=>a.id===id); if(!cur) return; k=0;
+  document.getElementById("sT").innerHTML=nome(cur);
+  document.getElementById("sV").textContent=cur.versione||"";
+  document.getElementById("sP").textContent=eur(cur.prezzo);
+  const r=[["Condizione",cur.nuova?"Nuova o km 0":"Usata"],["Immatricolazione",cur.immatricolazione||anno(cur)],["Chilometri",kmf(cur.km)],["Alimentazione",cur.carburante],["Cambio",cur.cambio],["Potenza",cur.potenza]];
+  document.getElementById("sD").innerHTML=r.filter(x=>x[1]).map(x=>`<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join("");
+  document.getElementById("sL").href=cur.link||AS;
+  document.getElementById("sW").href=WA("Ciao Ivan, vorrei provare la "+cur.marca+" "+cur.modello+" a "+eur(cur.prezzo)+".");
+  document.getElementById("sMini").innerHTML=(cur.foto||[]).map((f,i)=>`<img src="${esc(f.replace(/\/\d+x\d+\.(webp|jpg)$/,"/250x188.webp"))}" alt="Foto ${i+1}" onclick="vai(${i})">`).join("");
+  vai(0);
+  const sc=document.getElementById("scheda"); sc.classList.add("on"); sc.scrollTop=0; document.body.style.overflow="hidden";
+}
+function vai(i){
+  const f=(cur&&cur.foto)||[], im=document.getElementById("sImg");
+  document.querySelectorAll(".gal .palco button").forEach(b=>b.hidden=f.length<2);
+  if(!f.length){ im.removeAttribute("src"); im.alt=""; document.getElementById("sN").textContent="Foto in arrivo"; return; }
+  k=(i+f.length)%f.length; im.style.opacity=.15; im.onload=()=>im.style.opacity=1; im.src=f[k]; im.alt=cur.marca+" "+cur.modello+", foto "+(k+1);
+  document.getElementById("sN").textContent=(k+1)+" di "+f.length;
+  document.querySelectorAll("#sMini img").forEach((t,j)=>t.classList.toggle("on",j===k));
+}
+function chiudi(){ document.getElementById("scheda").classList.remove("on"); document.body.style.overflow=""; }
+function scorri(d){ const p=document.getElementById("pista"); p.scrollBy({left:d*p.clientWidth*.8,behavior:"smooth"}); }
+document.addEventListener("keydown",e=>{ if(!document.getElementById("scheda").classList.contains("on")) return;
+  if(e.key==="Escape") chiudi(); if(e.key==="ArrowRight") vai(k+1); if(e.key==="ArrowLeft") vai(k-1); });
+// trascinamento del nastro col mouse
+(()=>{ const p=document.getElementById("pista"); let x0=0,s0=0,giu=false,mosso=false;
+  p.addEventListener("mousedown",e=>{giu=true;mosso=false;x0=e.pageX;s0=p.scrollLeft;});
+  addEventListener("mouseup",()=>{giu=false;p.classList.remove("drag");});
+  p.addEventListener("mousemove",e=>{ if(!giu) return; const dx=e.pageX-x0; if(Math.abs(dx)>5){mosso=true;p.classList.add("drag");} p.scrollLeft=s0-dx; });
+  p.addEventListener("click",e=>{ if(mosso){e.stopPropagation();e.preventDefault();} },true); })();
+// swipe nella galleria
+(()=>{ const g=document.querySelector(".gal .palco"); let x0=null;
+  g.addEventListener("touchstart",e=>x0=e.touches[0].clientX,{passive:true});
+  g.addEventListener("touchend",e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40) vai(k+(dx<0?1:-1)); x0=null; }); })();
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{ document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-pressed","false")); t.setAttribute("aria-pressed","true"); filtro=t.dataset.f; disegna(); });
+document.getElementById("ordina").onchange=disegna;
+document.querySelectorAll(".top nav a").forEach(a=>a.onclick=()=>document.getElementById("top").classList.remove("aperto"));
+(()=>{ const s=document.getElementById("stato"); s.querySelector("span").textContent="Su appuntamento · 351 776 6518"; })();
+document.querySelectorAll("a.wa").forEach(a=>{a.href=WA("Ciao Ivan, ho visto le tue auto e vorrei qualche informazione.");a.target="_blank";a.rel="noopener";});
+document.querySelectorAll("a.wa-vendi").forEach(a=>{a.href=WA("Ciao Ivan, vorrei una valutazione per vendere la mia auto.");a.target="_blank";a.rel="noopener";});
+carica();
+</script>
+</body>
+</html>
