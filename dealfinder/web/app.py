@@ -3631,6 +3631,81 @@ def _tempo_reale():
         lg.warning("CERCA_NUMERO %d risultati: %s", len(out), json.dumps(out, ensure_ascii=False, default=str)[:3000])
     threading.Thread(target=cerca_numero, daemon=True, name="cerca_numero").start()
 
+    def diagnosi_sito():
+        """31/10 notte (cliente: "perché le auto normali non aumentano mai? guarda il software"): una volta (DIAGNOSI_SITO=<tag>),
+        conta quante auto di privati della zona si perdono a ogni passo, dal database al sito. Solo conteggi nel log."""
+        tag = os.environ.get("DIAGNOSI_SITO")
+        if not tag:
+            return
+        time.sleep(150)
+        from collections import Counter
+        from ..pipeline.ciclo import _due
+        L = logging.getLogger("scovo")
+        try:
+            if not _due(f"diagnosi_sito:{tag}", 100000):
+                return
+            prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+            with connect() as conn:
+                conn.execute("SET LOCAL statement_timeout = '300s'")
+                q = conn.execute("""
+                    WITH ult AS (SELECT DISTINCT ON (listing_id) listing_id, riassunto->>'categoria' AS cat, computed_at
+                                 FROM valutazioni_policy ORDER BY listing_id, computed_at DESC)
+                    SELECT count(*) AS tot,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato')) AS buone,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.stage='approfondito') AS buone_approf,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.stage_reason IN ('opportunita','da_verificare','incidentata')) AS buone_reason,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.last_checked_at > now() - interval '48 hours') AS buone_fresche,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.last_seen_at > now() - interval '48 hours') AS buone_viste48,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.stage='approfondito'
+                                         AND l.stage_reason IN ('opportunita','da_verificare','incidentata')
+                                         AND l.last_checked_at > now() - interval '48 hours') AS buone_in_lista
+                    FROM listings l JOIN ult u ON u.listing_id = l.id
+                    WHERE l.status='attivo' AND COALESCE(l.seller_type,'privato') <> 'commerciante' AND l.province = ANY(%(p)s)""",
+                    {"p": prov}).fetchone()
+                L.warning("DIAGNOSI_SITO db zona privati attivi: %s", dict(q))
+                q2 = conn.execute("""
+                    WITH ult AS (SELECT DISTINCT ON (listing_id) listing_id, riassunto->>'categoria' AS cat
+                                 FROM valutazioni_policy ORDER BY listing_id, computed_at DESC)
+                    SELECT l.stage, l.stage_reason, (l.last_checked_at > now() - interval '48 hours') AS fresca, count(*) AS n
+                    FROM listings l JOIN ult u ON u.listing_id = l.id
+                    WHERE l.status='attivo' AND COALESCE(l.seller_type,'privato') <> 'commerciante' AND l.province = ANY(%(p)s)
+                      AND u.cat IN ('opportunita','candidato')
+                    GROUP BY 1,2,3 ORDER BY n DESC LIMIT 15""", {"p": prov}).fetchall()
+                L.warning("DIAGNOSI_SITO buone per stato: %s", [dict(r) for r in q2])
+                tot_lista = conn.execute("SELECT count(*) AS n FROM (" + scovo.LIST_SQL + ") z",
+                                         {"me": 0}).fetchone()["n"]
+                rows = conn.execute(scovo.LIST_SQL + " ORDER BY l.id DESC LIMIT %(lim)s",
+                                    {"me": 0, "lim": int(os.environ.get("ELENCO_LIMITE", "8000"))}).fetchall()
+            zona = lambda it: bool(re.search(r"\((" + "|".join(prov) + r")\)\s*$", str(it.get("zona") or "")))
+            c = Counter(lista_sql_tutte=tot_lista, lista_sql_lette=len(rows))
+            items = []
+            for r in rows:
+                it = scovo.item(r)
+                c["item_ok" if it else "item_none"] += 1
+                if it and scovo.abbastanza(it):
+                    items.append(it)
+                elif it:
+                    c["non_abbastanza:" + str((it.get("pv") or {}).get("categoria"))] += 1
+            def passo(nome, f, x):
+                y = f(x)
+                c[f"{nome}"] = sum(1 for i in y if zona(i))
+                return y
+            c["abbastanza_zona"] = sum(1 for i in items if zona(i))
+            items = passo("meno_subito_senza_tel", _meno_subito_senza_telefono, items)
+            items = passo("solo_con_telefono", _solo_con_telefono, items)
+            items = passo("regole_finali", _regole_finali, items)
+            for nome, f in [("margine_recenti", _margine_recenti), ("margine_alta", _margine_alta),
+                            ("senza_solo_finanz", _senza_solo_finanziamento), ("solo_privati", _solo_privati),
+                            ("decisioni_jev", _decisioni_jev), ("margini_gonfiati", _margini_gonfiati),
+                            ("senza_scarti_id", _senza_scarti_id), ("margine_minimo_sito", _margine_minimo_sito),
+                            ("mercato_calibrato", _mercato_calibrato), ("rivendita_prudente", _rivendita_prudente),
+                            ("zona_sito", _zona_sito)]:
+                items = passo(nome, f, items)
+            L.warning("DIAGNOSI_SITO passi (auto della zona rimaste dopo ogni passo): %s", dict(c))
+        except Exception as e:
+            L.warning("DIAGNOSI_SITO non riuscita: %s", str(e)[:300])
+    threading.Thread(target=diagnosi_sito, daemon=True, name="diagnosi_sito").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
