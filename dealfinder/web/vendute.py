@@ -119,6 +119,12 @@ def _calcola() -> dict:
             auto[r["id"]] = dict(d, id=r["id"], giorni=_giorni(r["first_seen_at"], r["disappeared_at"]),
                                  sparita=r["disappeared_at"].isoformat() if r["disappeared_at"] else None,
                                  foto=foto.url_for(r["id"], 0) if r["n_foto"] else None, origine="sito")
+        if prov and not _diag_fatta["ok"]:
+            _diag_fatta["ok"] = True
+            try:
+                _diagnosi(conn, giorni, prov)
+            except Exception as e:
+                log.warning("VENDUTE_DIAGNOSI errore: %s", str(e)[:200])
         if prov:
             for r in conn.execute(_SQL_RICOSTRUITE, {"giorni": giorni, "prov": prov, "cat": sorted(scovo.CATEGORIE_SITO)}).fetchall():
                 if r["id"] in auto:
@@ -148,6 +154,27 @@ def _calcola() -> dict:
                 len(auto), tot, sum(1 for a in scelte if a["origine"] == "sito"))
     return {"items": scelte, "giorni": giorni, "margine_totale": tot, "totale_sparite": len(auto),
             "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+
+def _diagnosi(conn, giorni, prov) -> None:
+    """Una volta: quante auto restano a ogni filtro (per capire perché la ricostruzione ne trova poche)."""
+    q = conn.execute("""
+SELECT count(*) AS sparite,
+  count(*) FILTER (WHERE l.seller_type = 'privato') AS privati,
+  count(*) FILTER (WHERE l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)) AS zona,
+  count(*) FILTER (WHERE l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)
+                   AND EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = l.id)) AS con_policy,
+  count(*) FILTER (WHERE l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)
+                   AND EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = l.id
+                               AND vp.riassunto->>'categoria' IN ('opportunita','candidato'))) AS cat_sito,
+  count(*) FILTER (WHERE EXISTS (SELECT 1 FROM sito_storico s WHERE s.listing_id = l.id)) AS gia_sul_sito
+FROM listings l WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days => %(giorni)s)""",
+                     {"giorni": giorni, "prov": prov}).fetchone()
+    st = conn.execute("SELECT seller_type, count(*) AS n FROM listings WHERE status='scomparso' AND disappeared_at > now() - interval '7 days' GROUP BY 1").fetchall()
+    log.warning("VENDUTE_DIAGNOSI %s venditori=%s", dict(q), [(r["seller_type"], r["n"]) for r in st])
+
+
+_diag_fatta = {"ok": False}
 
 
 def dati() -> dict:
