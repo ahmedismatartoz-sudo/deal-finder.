@@ -355,7 +355,7 @@ function viewVendute(){
     </div>`).join("");
   return header("Già vendute", sub, back) + `</header>
   <main class="list" aria-live="polite">
-    <div class="tip inc-tip"><span class="eur" aria-hidden="true">✓</span><span><b>Affari passati da Skovo negli ultimi ${(v && v.giorni) || 7} giorni e già spariti dagli annunci.</b> Quasi sempre vuol dire venduti: qualcuno li ha presi prima. Prezzo, mercato e margine sono quelli calcolati quando l'auto era online. Contatti e annunci non sono più disponibili.</span></div>
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">✓</span><span><b>Affari trovati da Skovo negli ultimi ${(v && v.giorni) || 7} giorni e già spariti dagli annunci.</b> Auto di privati della zona con il margine minimo del sito. Quasi sempre vuol dire vendute: qualcuno le ha prese prima. Prezzo, mercato e margine sono quelli calcolati quando l'auto era online. Contatti e annunci non sono più disponibili.</span></div>
     ${!v ? `<div class="empty"><span class="meta">Carico le auto vendute…</span></div>` : l.length ? cards : `<div class="empty"><strong style="font:700 19px var(--disp)">Nessuna auto in questo momento</strong><span class="meta">${esc(v.errore || "Riprova più tardi.")}</span></div>`}
   </main>`;
 }
