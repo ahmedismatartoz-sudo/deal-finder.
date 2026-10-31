@@ -81,20 +81,19 @@ WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days =
 # della zona che avevano il margine minimo del sito con la stessa regola (rivendita prudente − prezzo − costi fissi)
 _SQL_RICOSTRUITE = """
 SELECT l.id, l.make, l.model, l.version_raw, l.title, l.year, l.mileage_km, l.fuel, l.province, l.price_eur,
-       l.first_seen_at, l.disappeared_at, v.resale_prudent, v.private_median, v.n_comparables,
+       l.first_seen_at, l.disappeared_at, vp.r AS pv,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id = l.id) AS n_foto
 FROM listings l
-JOIN LATERAL (SELECT resale_prudent, private_median, n_comparables, fraud_flags FROM valuations
-              WHERE listing_id = l.id ORDER BY created_at DESC LIMIT 1) v ON true
+JOIN LATERAL (SELECT riassunto AS r FROM valutazioni_policy WHERE listing_id = l.id
+              ORDER BY computed_at DESC LIMIT 1) vp ON true
 WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days => %(giorni)s)
   AND l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)
   AND l.price_eur BETWEEN 1000 AND 300000 AND coalesce(l.mileage_km, 0) <= 150000
   AND coalesce(l.damage_class, 'nessuno') IN ('nessuno', 'leggero')
   AND NOT ('leasing' = ANY(l.price_flags))
-  AND v.n_comparables >= 5 AND v.resale_prudent IS NOT NULL
-  AND coalesce(array_length(v.fraud_flags, 1), 0) = 0
-  AND l.price_eur >= 0.5 * coalesce(v.private_median, 0)     -- metà prezzo o meno: spesso truffa o prezzo sbagliato
-  AND v.resale_prudent - l.price_eur - %(costi)s >= CASE WHEN l.price_eur <= 4000 THEN 800 ELSE 1500 END
+  AND vp.r->>'categoria' = ANY(%(cat)s)
+  AND (vp.r->>'margine')::numeric >= CASE WHEN l.price_eur <= 4000 THEN 800 ELSE 1500 END
+  AND l.price_eur >= 0.5 * coalesce((vp.r->>'M')::numeric, 0)   -- metà prezzo o meno: spesso truffa o prezzo sbagliato
 """
 
 
@@ -121,14 +120,14 @@ def _calcola() -> dict:
                                  sparita=r["disappeared_at"].isoformat() if r["disappeared_at"] else None,
                                  foto=foto.url_for(r["id"], 0) if r["n_foto"] else None, origine="sito")
         if prov:
-            for r in conn.execute(_SQL_RICOSTRUITE, {"giorni": giorni, "prov": prov, "costi": costi}).fetchall():
+            for r in conn.execute(_SQL_RICOSTRUITE, {"giorni": giorni, "prov": prov, "cat": sorted(scovo.CATEGORIE_SITO)}).fetchall():
                 if r["id"] in auto:
                     continue
                 nome = " ".join(x for x in [r["make"], r["model"], r["version_raw"]] if x) or r["title"]
                 auto[r["id"]] = {
                     "id": r["id"], "nome": nome, "marca": r["make"], "anno": r["year"], "km": r["mileage_km"],
                     "carb": r["fuel"], "prov": (r["province"] or "").upper() or None, "prezzo": int(r["price_eur"]),
-                    "mercato": r["private_median"], "margine": int(r["resale_prudent"] - r["price_eur"] - costi),
+                    "mercato": (r["pv"] or {}).get("M"), "margine": int(float((r["pv"] or {}).get("margine") or 0)),
                     "giorni": _giorni(r["first_seen_at"], r["disappeared_at"]),
                     "sparita": r["disappeared_at"].isoformat() if r["disappeared_at"] else None,
                     "foto": foto.url_for(r["id"], 0) if r["n_foto"] else None, "origine": "calcolo"}
