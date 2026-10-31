@@ -1317,12 +1317,19 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
             continue
         # 25/10 (cliente): agente controllore. Se l'AI dice che le auto di confronto non sono la stessa auto
         # (motore, versione, allestimento diversi) il margine non è affidabile: l'auto resta fuori.
-        if d.get("versione_ok") is not None and d["versione_ok"] < float(os.environ.get("JEV_VERSIONE_MIN", "0.4")):
+        non_uguali = d.get("versione_ok") is not None and d["versione_ok"] < float(os.environ.get("JEV_VERSIONE_MIN", "0.4"))
+        if non_uguali and os.environ.get("JEV_NONUGUALI_RICALCOLA", "1") != "1":
             c["confronti_non_uguali"] += 1
             continue
         # 25/10: l'esame ha mostrato che il calcolo è già prudente (−4%) e la correzione dell'AI lo portava a −8%:
         # di base Jev non abbassa più la rivendita (JEV_CORREGGI=1 per riaccenderla)
         corr = min(0.0, float(d["correzione_pct"] or 0)) if os.environ.get("JEV_CORREGGI", "0") == "1" else 0.0
+        # 31/10 (cliente: "rifare il conto invece di scartare"): confronti non della stessa versione → invece di togliere
+        # l'auto si rifà il conto più prudente: rivendita abbassata della correzione dell'AI, e almeno JEV_NONUGUALI_PCT
+        # (8%). Resta sul sito solo se con il conto più basso il margine rispetta ancora tutte le soglie di sempre.
+        if non_uguali:
+            corr = min(corr, float(d["correzione_pct"] or 0), -float(os.environ.get("JEV_NONUGUALI_PCT", "8")))
+            c["confronti_non_uguali_ricalcolate"] += 1
         pv = it.get("pv") or {}
         m = pv.get("margine") if pv else None
         if m is None:
@@ -3710,6 +3717,41 @@ def _tempo_reale():
         except Exception as e:
             L.warning("DIAGNOSI_SITO non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_sito, daemon=True, name="diagnosi_sito").start()
+
+    def diagnosi_scarti_foto():
+        """31/10 (cliente: "ricontrolla le auto scartate dal controllo foto"): una volta (DIAGNOSI_SCARTI=<tag>) elenca nel
+        log le auto di privati della zona con margine buono tolte dall'analisi manuale, con il motivo scritto allora."""
+        tag = os.environ.get("DIAGNOSI_SCARTI")
+        if not tag:
+            return
+        time.sleep(200)
+        from ..pipeline.ciclo import _due
+        from ..pipeline.manuale import FILE as _F
+        L = logging.getLogger("scovo")
+        try:
+            if not _due(f"diagnosi_scarti:{tag}", 100000):
+                return
+            prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+            note = {e["id"]: e for e in json.loads(_F.read_text())}
+            with connect() as conn:
+                rows = conn.execute("""
+                    WITH ult AS (SELECT DISTINCT ON (listing_id) listing_id, riassunto->>'categoria' AS cat,
+                                        (riassunto->>'margine')::float AS marg FROM valutazioni_policy ORDER BY listing_id, computed_at DESC)
+                    SELECT l.id, l.price_eur, l.year, l.mileage_km, l.make, l.model, u.marg
+                    FROM listings l JOIN ult u ON u.listing_id=l.id
+                    WHERE l.status='attivo' AND COALESCE(l.seller_type,'privato') <> 'commerciante' AND l.province = ANY(%s)
+                      AND u.cat IN ('opportunita','candidato') AND l.stage='scartato'
+                      AND l.stage_reason='analisi_manuale: controllo foto'""", (prov,)).fetchall()
+            out = []
+            for r in rows:
+                e = note.get(r["id"]) or {}
+                out.append([r["id"], r["make"], r["model"], r["year"], r["mileage_km"], r["price_eur"], int(r["marg"] or 0),
+                            e.get("esito"), e.get("danno"), (e.get("nota") or "")[:140]])
+            for i in range(0, len(out), 25):
+                L.warning("DIAGNOSI_SCARTI %d/%d %s", i, len(out), json.dumps(out[i:i + 25], ensure_ascii=False, default=str))
+        except Exception as e:
+            L.warning("DIAGNOSI_SCARTI non riuscita: %s", str(e)[:300])
+    threading.Thread(target=diagnosi_scarti_foto, daemon=True, name="diagnosi_scarti").start()
 
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti

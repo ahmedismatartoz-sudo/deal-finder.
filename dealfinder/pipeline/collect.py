@@ -708,7 +708,7 @@ if __name__ == "__main__":
             from .ciclo import _due
             if _due("zona_cron", int(os.environ.get("ZC_ORE", "3"))):
                 for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"), "BENZ_CAP_EXTRA": os.environ.get("ZC_CAP_EXTRA", "25121:90"),
-                             "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "50000"),
+                             "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "70000"),   # 31/10: anche 50-70k (prima nessuno le guardava)
                              "BENZ_PROVINCE": os.environ.get("ZC_PROVINCE", "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"),
                              "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
                              "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
