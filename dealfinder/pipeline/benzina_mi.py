@@ -117,6 +117,22 @@ def giro() -> dict:
         except Exception as e:
             log.warning("BENZ autoscout: %s", str(e)[:200])
         salva(True)
+        # 31/10 (cliente: "più a fondo sul mercato, senza cambiare regole"): Milano + 130 km non copre tutta la zona
+        # (Mantova e la bassa bresciana sono oltre): ricerche AutoScout24 in più da altri centri (BENZ_CAP_EXTRA,
+        # "cap:raggio,..."). Stesse fasce, stessi venditori; gli annunci fuori zona vengono comunque scartati al salvataggio.
+        for voce in [v.strip() for v in os.environ.get("BENZ_CAP_EXTRA", "").split(",") if ":" in v]:
+            cap, rag = voce.split(":", 1)
+            os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = cap.strip(), rag.strip()
+            n0 = n
+            try:
+                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, int(os.environ.get("BENZ_PASSO", "500")), [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
+                    pacco.append(l); n += 1
+                    salva()
+            except Exception as e:
+                log.warning("BENZ autoscout %s: %s", voce, str(e)[:200])
+            salva(True)
+            st[f"letti_autoscout_{cap.strip()}"] = n - n0
+            log.warning("BENZ autoscout centro %s letti %d", voce, n - n0)
         st["letti_autoscout"] = n
         log.warning("BENZ autoscout letti %d", n)
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
