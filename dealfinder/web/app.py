@@ -1981,6 +1981,12 @@ def _calcola_elenco() -> None:
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
+    try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute"
+        from . import vendute
+        vendute.salva_sito(items)
+        threading.Thread(target=vendute.dati, daemon=True).start()    # la sezione è pronta al primo clic
+    except Exception as e:
+        logging.getLogger("scovo").warning("VENDUTE storico: %s", str(e)[:200])
     if _pool_revisione is not None:
         try:
             _dump_candidati(_pool_revisione, {it["id"] for it in items})
@@ -2073,6 +2079,17 @@ def _elenco_per(dealer_id: int) -> list[dict]:
         if aperta or _elenco["opens"].get(it["id"], 0) < mx:
             out.append(dict(it, aperta=True) if aperta else it)
     return out
+
+
+def api_vendute(request: Request):
+    """31/10: auto passate sul sito e sparite dagli annunci negli ultimi 7 giorni (senza contatti)."""
+    viewer(request, "auto")
+    from . import vendute
+    try:
+        return jsonify(vendute.dati())
+    except Exception as e:
+        logging.getLogger("scovo").warning("VENDUTE errore: %s", str(e)[:300])
+        return jsonify({"items": [], "errore": "non disponibile"})
 
 
 def affari(request: Request):
@@ -2570,6 +2587,7 @@ routes = [
     Route("/api/me", me, methods=["GET"]),
     Route("/api/me", update_me, methods=["PUT"]),
     Route("/api/me/password", cambia_password, methods=["PUT"]),
+    Route("/api/vendute", api_vendute),
     Route("/api/affari", affari),
     Route("/api/affari/{id:int}", affare),
     Route("/api/affari/{id:int}/contatto", contatto, methods=["POST"]),

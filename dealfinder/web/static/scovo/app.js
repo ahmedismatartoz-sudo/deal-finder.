@@ -321,7 +321,43 @@ function viewList(){
   return header(scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", scV ? `${list.length} supercar di privati in tutta Europa` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. "Opportunità" = margine prudente da 5.000 € in su, già tolti i costi di import; "Sotto mercato" = prezzo sotto la media ma margine più piccolo. Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Sopra i 1.500 € solo quelle sotto il prezzo di mercato; guadagni stimati prudenti. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${!scV && !incV && !ecoV ? venduteBanner() : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. "Opportunità" = margine prudente da 5.000 € in su, già tolti i costi di import; "Sotto mercato" = prezzo sotto la media ma margine più piccolo. Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Sopra i 1.500 € solo quelle sotto il prezzo di mercato; guadagni stimati prudenti. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+}
+
+/* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
+async function loadVendute(force){
+  if (S.vendLoading || (!force && S.vend && Date.now() - S.vend._t < 10 * 60 * 1000)) return;
+  S.vendLoading = true;
+  try { S.vend = Object.assign(await api("/api/vendute"), {_t: Date.now()}); } catch (e) { S.vend = {items: [], errore: e.message, _t: Date.now()}; }
+  S.vendLoading = false;
+  if (S.route === "vendute" || S.route === "affari") render({keep:true});
+}
+function venduteBanner(){
+  if (!S.vend) { if (canBrowse() && !S.vendLoading) setTimeout(() => loadVendute(), 0); return ""; }
+  if (!S.vend.items || !S.vend.items.length) return "";
+  return `<button class="tip vend-tip" data-act="tab" data-v="vendute" style="width:100%;text-align:left;cursor:pointer;border:0"><span class="eur" aria-hidden="true">✓</span><span><b>${S.vend.items.length} affari già andati negli ultimi ${S.vend.giorni} giorni: ${eur(S.vend.margine_totale)} di margine.</b> Guarda quali auto sono sparite dagli annunci →</span></button>`;
+}
+function viewVendute(){
+  const v = S.vend, l = (v && v.items) || [];
+  const sub = !v ? "Carico…" : l.length ? `${l.length} auto · ${eur(v.margine_totale)} di margine` : "Nessuna auto";
+  const back = `<button class="refresh" data-act="tab" data-v="affari" aria-label="Torna agli affari">←</button>`;
+  const cards = l.map((c, i) => `<div class="card" style="cursor:default">
+      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${c.giorni ? (c.giorni === 1 ? "Sparita in 1 giorno" : `Sparita in ${c.giorni} giorni`) : "Sparita"}</span></div>
+      <div class="card-body">
+        <div><div class="name">${esc(c.nome || "")}</div><div class="meta">${esc([c.anno, c.km ? num(c.km) + " km" : "", c.carb, c.prov ? "provincia di " + c.prov : ""].filter(Boolean).join(" · "))}</div></div>
+        <div class="trio">
+          <div><span class="lbl">Prezzo</span><span class="val">${eur(c.prezzo)}</span></div>
+          <div><span class="lbl">Mercato</span><span class="val">${c.mercato ? "~" + eur(c.mercato) : "—"}</span></div>
+          <div><span class="lbl">Sparita il</span><span class="val">${c.sparita ? new Date(c.sparita).toLocaleDateString("it-IT", {day: "numeric", month: "short"}) : "—"}</span></div>
+        </div>
+        <div class="gain"><span>Margine prudente che c'era</span><b>+${eur(c.margine)}</b></div>
+      </div>
+    </div>`).join("");
+  return header("Già vendute", sub, back) + `</header>
+  <main class="list" aria-live="polite">
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">✓</span><span><b>Affari passati da Skovo negli ultimi ${(v && v.giorni) || 7} giorni e già spariti dagli annunci.</b> Quasi sempre vuol dire venduti: qualcuno li ha presi prima. Prezzo, mercato e margine sono quelli calcolati quando l'auto era online. Contatti e annunci non sono più disponibili.</span></div>
+    ${!v ? `<div class="empty"><span class="meta">Carico le auto vendute…</span></div>` : l.length ? cards : `<div class="empty"><strong style="font:700 19px var(--disp)">Nessuna auto in questo momento</strong><span class="meta">${esc(v.errore || "Riprova più tardi.")}</span></div>`}
+  </main>`;
 }
 
 function botBanner(n){
@@ -726,7 +762,7 @@ function parseHash(){
   if (ab) return {route: "abbonamento", esito: ab[1]};
   if (!canBrowse()) return {route: "vetrina"};
   if (h === "ricambi") { location.replace("/incentivi/"); }
-  return {route: ["vendi","profilo","incidentate","economiche","supercar"].includes(h) ? h : "affari", sel: null};
+  return {route: ["vendi","profilo","incidentate","economiche","supercar","vendute"].includes(h) ? h : "affari", sel: null};
 }
 function go(route, replace){
   const h = "#/" + route;
@@ -751,6 +787,7 @@ function applyRoute(){
   else if (S.route === "entra" || S.route === "prova") render({top:true});
   else render({y: S.scroll[S.route] || 0});
   if (isList(S.route) && canBrowse()) loadCars();
+  if (S.route === "vendute" && canBrowse()) { loadVendute(); if (!S.cars) loadCars(); }
 }
 window.addEventListener("popstate", () => { if (S.sheet) { S.sheet = null; } applyRoute(); });
 
@@ -1143,12 +1180,12 @@ function render(opts){
   else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
   else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall() + tabBar(); }
   else if (S.route === "auto") { html = viewDetail(); }
-  else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : viewList()) + tabBar();
+  else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : viewList()) + tabBar();
   if (canBrowse()) {
     // pulsante "Chiedi" tolto (sarà sostituito)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
     html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "bot" ? sheetBot() : "";
-    const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
+    const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
   $app.innerHTML = html;
@@ -1423,7 +1460,7 @@ api("/api/auth/metodi").then(m => {
   document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
   document.querySelectorAll("[data-solo-senza-google]").forEach(a => { a.hidden = !!S.metodi.google; });
   if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
-  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|incidentate|economiche|supercar)$/.test(h) ? h : "affari", true); }
+  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|incidentate|economiche|supercar|vendute)$/.test(h) ? h : "affari", true); }
 }).catch(() => {});
 (function demo(){
   const card = document.getElementById("demo"), r = document.getElementById("sconto-demo");
