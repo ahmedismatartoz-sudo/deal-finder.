@@ -912,8 +912,10 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     as_tel: dict = {}
     for k in range(0, len(as_ids), 1000):
         with connect() as conn:
-            for r in conn.execute("SELECT id, telefono_ok FROM listings WHERE id = ANY(%s)", (as_ids[k:k + 1000],)).fetchall():
-                as_tel[r["id"]] = r["telefono_ok"]
+            for r in conn.execute("SELECT id, telefono_ok, title, description FROM listings WHERE id = ANY(%s)", (as_ids[k:k + 1000],)).fetchall():
+                # 31/10 (cliente): anche il numero scritto nella descrizione dell'annuncio AutoScout24 vale
+                t = f"{r.get('title') or ''} {r.get('description') or ''}"
+                as_tel[r["id"]] = True if (r["telefono_ok"] or scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)) else r["telefono_ok"]
     as_rigido = os.environ.get("AS_SOLO_CON_NUMERO", "1") == "1"
     tenute = [it for it in items if (it.get("fonte") == "AutoScout24" and (as_tel.get(it["id"]) is True or not as_rigido))
               or (it.get("fonte") != "AutoScout24" and _tel_cache.get(it["id"], False))

@@ -30,7 +30,7 @@ def giro() -> dict:
     if gb > float(os.environ.get("CE_DB_MAX_GB", "15")):
         log.warning("CONFRONTI_EXTRA fermo: database a %.1f GB", gb)
         return {"fermo_db_gb": round(gb, 1)}
-    citta = [c.strip() for c in os.environ.get("CE_CAP", "37121,40121,10121").split(",") if c.strip()]   # Verona, Bologna, Torino
+    citta = [c.strip() for c in os.environ.get("CE_CAP", "37121,40121,10121,35121,16121,50121,00185").split(",") if c.strip()]   # Verona, Bologna, Torino; dal 31/10 anche Padova, Genova, Firenze, Roma
     lo, hi = int(os.environ.get("CE_MIN", "1000")), int(os.environ.get("CE_MAX", "50000"))
     venditori = [("P", "privato"), ("D", "commerciante")]
     os.environ.pop("PASSI_JOB", None)

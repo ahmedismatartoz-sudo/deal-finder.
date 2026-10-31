@@ -726,7 +726,7 @@ if __name__ == "__main__":
     if os.environ.get("CONFRONTI_EXTRA") == "1":
         try:
             from .ciclo import _due
-            if _due("confronti_extra", int(os.environ.get("CE_ORE", "48"))):
+            if _due("confronti_extra:v2", int(os.environ.get("CE_ORE", "48"))):       # v2 (31/10): 7 città, parte al primo giro
                 from ..db import connect as _cn, log_job as _lj
                 from . import confronti_extra as CE
                 with _cn() as _c:

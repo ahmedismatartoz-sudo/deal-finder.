@@ -798,7 +798,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     aimap = ai_di(conn, [r["id"] for r in rows])
     targhe = targhe_visibili(conn)
     for r in rows:
-        if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not (
+        # 31/10 (cliente: "metti tutte le auto col numero nelle descrizioni"): il numero scritto nel testo vale come numero
+        if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not ha_numero_testo(r["title"], r["description"]) and not (
                 # 25/10 21:00 (cliente: "fallo, ti dirò io quali togliere"): Subito si valuta anche senza numero
                 # (il numero su Subito non si legge dalle pagine pubbliche); sul sito si contatta in chat
                 r["source"] == "subito" and r["telefono_ok"] is None
