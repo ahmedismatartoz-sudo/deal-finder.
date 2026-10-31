@@ -89,7 +89,7 @@ JOIN LATERAL (SELECT riassunto AS r FROM valutazioni_policy WHERE listing_id = l
 WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days => %(giorni)s)
   AND l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)
   AND l.price_eur BETWEEN 1000 AND 300000 AND coalesce(l.mileage_km, 0) <= 150000
-  AND coalesce(l.damage_class, 'nessuno') IN ('nessuno', 'leggero')
+  AND coalesce(l.damage_class, '') NOT IN ('grave', 'alto_rischio', 'medio')
   AND NOT ('leasing' = ANY(l.price_flags))
   AND vp.r->>'categoria' = ANY(%(cat)s)
   AND (vp.r->>'margine')::numeric >= CASE WHEN l.price_eur <= 4000 THEN 800 ELSE 1500 END
@@ -167,7 +167,13 @@ SELECT count(*) AS sparite,
   count(*) FILTER (WHERE l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)
                    AND EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = l.id
                                AND vp.riassunto->>'categoria' IN ('opportunita','candidato'))) AS cat_sito,
-  count(*) FILTER (WHERE EXISTS (SELECT 1 FROM sito_storico s WHERE s.listing_id = l.id)) AS gia_sul_sito
+  count(*) FILTER (WHERE EXISTS (SELECT 1 FROM sito_storico s WHERE s.listing_id = l.id)) AS gia_sul_sito,
+  count(*) FILTER (WHERE l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s) AND EXISTS (
+     SELECT 1 FROM (SELECT riassunto r FROM valutazioni_policy vp WHERE vp.listing_id = l.id ORDER BY computed_at DESC LIMIT 1) x
+     WHERE x.r->>'categoria' IN ('opportunita','candidato'))) AS ultima_cat_sito,
+  count(*) FILTER (WHERE l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s) AND EXISTS (
+     SELECT 1 FROM (SELECT riassunto r FROM valutazioni_policy vp WHERE vp.listing_id = l.id ORDER BY computed_at DESC LIMIT 1) x
+     WHERE x.r->>'categoria' IN ('opportunita','candidato') AND (x.r->>'margine') IS NOT NULL)) AS con_margine
 FROM listings l WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days => %(giorni)s)""",
                      {"giorni": giorni, "prov": prov}).fetchone()
     st = conn.execute("SELECT seller_type, count(*) AS n FROM listings WHERE status='scomparso' AND disappeared_at > now() - interval '7 days' GROUP BY 1").fetchall()
