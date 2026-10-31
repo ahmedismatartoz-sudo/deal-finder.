@@ -933,8 +933,11 @@ def _solo_con_telefono(items: list[dict]) -> list[dict]:
     tenute_ids = {it["id"] for it in tenute}
     _tel_da_controllare.update(it["id"] for it in items if it["id"] not in tenute_ids
                                and it.get("fonte") in ("AutoScout24", "Subito"))
-    logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute)",
-                                       len(items) - len(tenute), len(tenute), len(meta))
+    from collections import Counter as _C
+    _perche = _C(f"{it.get('fonte')}:{as_tel.get(it['id']) if it.get('fonte') == 'AutoScout24' else 'testo'}"
+                 for it in items if it["id"] not in tenute_ids)
+    logging.getLogger("scovo").warning("TELEFONO: %d auto senza numero tolte, %d restano (%d Subito senza numero tenute) %s",
+                                       len(items) - len(tenute), len(tenute), len(meta), dict(_perche))
     return tenute
 
 
