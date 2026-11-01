@@ -101,16 +101,25 @@ def giro() -> dict:
         corpo = {"searchStringsArray": [ricerca], "locationQuery": "Lombardia, Italia", "language": "it",
                  "maxCrawledPlacesPerSearch": quanti, "skipClosedPlaces": True, "scrapePlaceDetailPage": False}
         try:
+            # 1/11: token nell'intestazione, non nell'indirizzo (così non finisce nei log in caso di errore)
             r = httpx.post(f"https://api.apify.com/v2/acts/{ATTORE}/run-sync-get-dataset-items",
-                           params={"token": tok}, json=corpo, timeout=330)
+                           headers={"Authorization": f"Bearer {tok}"}, json=corpo, timeout=330)
             if r.status_code == 402:
                 log.warning("LEADMAPS credito Apify finito: mi fermo")
+                break
+            if r.status_code in (401, 403):
+                try:
+                    err = (r.json().get("error") or {})
+                    motivo = f"{err.get('type')}: {str(err.get('message'))[:200]}"
+                except Exception:
+                    motivo = r.text[:200]
+                log.warning("LEADMAPS Apify rifiuta (%d) %s: mi fermo", r.status_code, motivo)
                 break
             r.raise_for_status()
             dati = r.json()
             posti = dati if isinstance(dati, list) else []
         except Exception as e:
-            log.warning("LEADMAPS ricerca non riuscita (%s): %s", ricerca[:40], str(e)[:160])
+            log.warning("LEADMAPS ricerca non riuscita (%s): %s", ricerca[:40], re.sub(r"token=[^&\s']+", "token=***", str(e))[:160])
             time.sleep(5)
             continue
         ricerche += 1
