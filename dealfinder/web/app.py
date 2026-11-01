@@ -3771,6 +3771,39 @@ def _tempo_reale():
             L.warning("DIAGNOSI_SCARTI non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_scarti_foto, daemon=True, name="diagnosi_scarti").start()
 
+    def lead_maps_web():
+        """1/11 (cliente): commercianti di Milano e dintorni da Google Maps via Apify (APIFY_TOKEN sul servizio web),
+        poi le email lette dai loro siti. Una volta per etichetta (LEADMAPS_WEB=<tag>). Nei log solo conteggi."""
+        tag = os.environ.get("LEADMAPS_WEB")
+        if not tag or not os.environ.get("APIFY_TOKEN"):
+            return
+        time.sleep(120)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            from ..db import log_job
+            if not _due(f"leadmaps_web:{tag}", 100000):
+                return
+            os.environ.setdefault("MAPS_SOLO_PROV", "MI")
+            from ..pipeline import lead_maps as LM, lead_email as LE
+            with connect() as conn:
+                fine = log_job(conn, f"leadmaps_web:{tag}")
+                esito = LM.giro()
+                try:
+                    esito["email"] = LE.giro()
+                except Exception as e:
+                    L.warning("LEADMAPS_WEB email non riuscite: %s", str(e)[:200])
+                fine(True, esito)
+            with connect() as conn:
+                r = conn.execute("""SELECT count(*) AS posti, count(*) FILTER (WHERE m.sito IS NOT NULL) AS con_sito,
+                                           count(*) FILTER (WHERE cardinality(e.email) > 0) AS con_email
+                                    FROM lead_maps m LEFT JOIN lead_email e ON e.chiave = 'maps:' || m.place_id
+                                    WHERE m.prov = 'MI'""").fetchone()
+            L.warning("LEADMAPS_WEB fatto: %s · Milano e provincia: %s", esito, dict(r))
+        except Exception as e:
+            L.warning("LEADMAPS_WEB non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_maps_web, daemon=True, name="lead_maps_web").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""

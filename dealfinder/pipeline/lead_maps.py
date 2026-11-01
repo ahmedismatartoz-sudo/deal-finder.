@@ -56,6 +56,10 @@ def _ricerche() -> list[tuple[str, int]]:
                    if v["pv"] in ("VA", "PV", "LO") and v["comune"] not in visti and v.get("km", 99) <= 40]
     except Exception:
         pass
+    # 1/11 (cliente: "solo Milano e dintorni, appuntamenti più vicini, non Como, Bergamo ecc."): MAPS_SOLO_PROV=MI
+    solo = {p.strip().upper() for p in (os.environ.get("MAPS_SOLO_PROV") or "").split(",") if p.strip()}
+    if solo:
+        comuni = [(c, p) for c, p in comuni if p in solo]
     comuni.sort(key=lambda x: ORDINE_PROV.index(x[1]) if x[1] in ORDINE_PROV else 99)
     out = [(f"{p} Milano {z}", 60) for z in ZONE_MILANO for p in PAROLE[:2]]
     for c, pv in comuni:
@@ -80,7 +84,7 @@ def giro() -> dict:
         log.warning("LEADMAPS senza APIFY_TOKEN: niente da fare")
         return {"fatto": False, "motivo": "APIFY_TOKEN mancante"}
     from ..db import connect
-    massimo = int(os.environ.get("MAPS_MAX_POSTI", "1200"))
+    massimo = int(os.environ.get("MAPS_MAX_POSTI", "1000"))
     letti = nuovi = ricerche = 0
     with connect() as conn:
         conn.execute(SQL)
