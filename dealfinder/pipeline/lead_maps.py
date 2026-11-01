@@ -85,7 +85,16 @@ def _ricerche() -> list[tuple[str, int]]:
     comuni.sort(key=lambda x: ORDINE_PROV.index(x[1]) if x[1] in ORDINE_PROV else 99)
     # 1/11: parole diverse per trovare i commercianti mancanti (MAPS_PAROLE="a|b|c"), senza ripetere le ricerche già fatte
     parole = [p.strip() for p in (os.environ.get("MAPS_PAROLE") or "").split("|") if p.strip()] or PAROLE[:2]
-    out = [(f"{p} Milano {z}", int(os.environ.get("MAPS_PER_RICERCA", "60"))) for z in ZONE_MILANO for p in parole]
+    out = []
+    # 2/11 notte (cliente: "ricerche per marca"): concessionarie e saloni per marca nelle città della zona
+    # MAPS_MARCHE="Fiat|Volkswagen|..." e MAPS_CITTA_MARCHE="Monza MB|Como CO|..." -> "concessionaria Fiat Monza MB"
+    marche = [m.strip() for m in (os.environ.get("MAPS_MARCHE") or "").split("|") if m.strip()]
+    citta_m = [c.strip() for c in (os.environ.get("MAPS_CITTA_MARCHE") or "").split("|") if c.strip()]
+    for c in citta_m:
+        out += [(f"concessionaria {m} {c}", int(os.environ.get("MAPS_PER_MARCA", "20"))) for m in marche]
+    if os.environ.get("MAPS_SOLO_MARCHE") == "1":
+        return out
+    out += [(f"{p} Milano {z}", int(os.environ.get("MAPS_PER_RICERCA", "60"))) for z in ZONE_MILANO for p in parole]
     # 1/11 sera (cliente: "servono 1.000 email nuove"): i capoluoghi e le città grandi della zona del sito
     if os.environ.get("MAPS_CAPOLUOGHI") == "1":
         for pv, citta in CITTA_ZONA.items():

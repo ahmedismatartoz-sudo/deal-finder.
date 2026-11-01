@@ -92,7 +92,7 @@ def _sicuro(f, *a):
         log.warning("LEADE errore: %s", type(e).__name__)
 
 
-def giro() -> dict:
+def giro(solo_nomi: bool = False) -> dict:
     from ..collectors.autoscout import AutoScoutCollector
     from ..db import connect
     massimo = int(os.environ.get("LEADE_MAX", "2500"))
@@ -252,6 +252,8 @@ def giro() -> dict:
             log.warning("LEADE avanzamento: %d commercianti, %d con email, %d pagine, %ds", provati, trovati, pagine,
                         int(time.time() - t0))
 
+    if solo_nomi:
+        return _giro_nomi(dal_sito, salva, connect)
     par = int(os.environ.get("LEADE_PARALLELI", "1"))      # 28/10 notte (cliente: "in modo aggressivo")
     if par > 1:
         from concurrent.futures import ThreadPoolExecutor
@@ -289,13 +291,19 @@ def giro() -> dict:
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max(1, int(os.environ.get("LEADE_PARALLELI", "1")))) as ex:
             list(ex.map(lambda x: _sicuro(di_nuovo, x), riprova))
-    for pid, sito in maps:
+    def da_maps(x):
+        nonlocal provati, trovati
+        pid, sito = x
         if pagine >= massimo:
-            break
+            return
         provati += 1
         email, fonte = dal_sito(sito)
         salva("maps:" + pid, email, sito, fonte)
         trovati += bool(email)
+    # 2/11 notte (cliente: "1.000-1.500 email"): i siti di Google Maps in parallelo (LEADE_PARALLELI_MAPS, solo richieste web)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max(1, int(os.environ.get("LEADE_PARALLELI_MAPS", "6")))) as ex:
+        list(ex.map(lambda x: _sicuro(da_maps, x), maps))
     with connect() as conn:
         tot = conn.execute("SELECT count(*) n, count(*) FILTER (WHERE cardinality(email) > 0) c FROM lead_email").fetchone()
         resto = conn.execute("SELECT count(*) n FROM lead_tutti_dealer d LEFT JOIN lead_email e ON e.chiave = d.chiave "
@@ -338,3 +346,72 @@ def esporta() -> int:
                                             "auto": len(ann.get(r["chiave"], []))}, ensure_ascii=False))
     log.warning("LEADE_ESPORTATI %d", len(rows))
     return len(rows)
+
+
+def _parole_nome(t: str) -> set[str]:
+    t = re.sub(r"(?i)\b(s\.?r\.?l\.?s?|s\.?n\.?c\.?|s\.?a\.?s\.?|s\.?p\.?a\.?|srl|snc|sas|spa|srls|di|e|&|auto|automobili|cars?|motors?)\b", " ", t or "")
+    return {w for w in re.sub(r"[^a-z0-9 ]", " ", t.lower()).split() if len(w) >= 3}
+
+
+def _giro_nomi(dal_sito, salva, connect) -> dict:
+    """2/11 notte (cliente: "altri modi per cercare, almeno 1.000-1.500 email senza doppioni"): i commercianti che
+    vediamo già negli annunci (Subito e AutoScout24, lead_tutti_dealer) della zona e senza email. Per ognuno si cerca
+    il nome + comune su Google Maps via Outscraper (1 risultato, ~0,003 $), si prende il sito se il nome corrisponde
+    e si leggono le email dal sito. Chi non ha dato nulla resta segnato (fonte 'nome_maps') e non si riprova.
+    LEADE_NOMI_PROV (province), LEADE_NOMI_MAX (quanti), LEADE_PARALLELI_MAPS (in parallelo). Nei log solo conteggi."""
+    from concurrent.futures import ThreadPoolExecutor
+    from . import lead_maps as LM
+    osk = os.environ.get("OUTSCRAPER_KEY")
+    if not osk:
+        log.warning("LEADE_NOMI senza OUTSCRAPER_KEY")
+        return {}
+    prov = [p.strip().upper() for p in (os.environ.get("LEADE_NOMI_PROV") or "MI,MB,VA,CO,LC,BG,LO").split(",") if p.strip()]
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT d.chiave, d.nome, d.comune, d.prov FROM lead_tutti_dealer d LEFT JOIN lead_email e ON e.chiave = d.chiave "
+            "WHERE upper(d.prov) = ANY(%s) AND coalesce(d.nome, '') <> '' "
+            "AND (e.chiave IS NULL OR (cardinality(e.email) = 0 AND coalesce(e.fonte, '') <> 'nome_maps')) "
+            "ORDER BY array_position(%s::text[], upper(d.prov)), d.chiave LIMIT %s",
+            (prov, prov, int(os.environ.get("LEADE_NOMI_MAX", "2500")))).fetchall()
+    st = {"commercianti": len(rows), "con_sito": 0, "nuove_email": 0, "nome_diverso": 0, "senza_risultato": 0, "errori": 0}
+    log.warning("LEADE_NOMI parte: %d commercianti senza email (province %s)", len(rows), ",".join(prov))
+    fermo = {"si": False}
+
+    def uno(r):
+        if fermo["si"]:
+            return
+        com = (r["comune"] or "").split("-")[0].strip()
+        try:
+            posti = LM._outscraper(osk, f"{r['nome']} {com}".strip(), 1)
+        except LM.Fermo as e:
+            fermo["si"] = True
+            log.warning("LEADE_NOMI Outscraper: %s", str(e)[:200])
+            return
+        except Exception:
+            st["errori"] += 1
+            return
+        p = posti[0] if posti else None
+        if not p:
+            st["senza_risultato"] += 1
+            salva(r["chiave"], [], None, "nome_maps")
+            return
+        if not (_parole_nome(r["nome"]) & _parole_nome(p.get("title") or "")):
+            st["nome_diverso"] += 1                    # Google ha dato un'altra attività: non si usa
+            salva(r["chiave"], [], None, "nome_maps")
+            return
+        sito = p.get("website")
+        if not sito or NO_SITI.search(sito):
+            salva(r["chiave"], [], None, "nome_maps")
+            return
+        st["con_sito"] += 1
+        email, fonte = dal_sito(sito)
+        salva(r["chiave"], email, sito, fonte if email else "nome_maps")
+        st["nuove_email"] += bool(email)
+        n = st["con_sito"]
+        if n % 50 == 0:
+            log.warning("LEADE_NOMI avanzamento: %s", st)
+
+    with ThreadPoolExecutor(max(1, int(os.environ.get("LEADE_PARALLELI_MAPS", "6")))) as ex:
+        list(ex.map(lambda r: _sicuro(uno, r), rows))
+    log.warning("LEADE_NOMI_FINE %s", st)
+    return st

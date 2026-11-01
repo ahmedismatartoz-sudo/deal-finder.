@@ -3834,6 +3834,29 @@ def _tempo_reale():
             L.warning("LEADMAPS_WEB non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_maps_web, daemon=True, name="lead_maps_web").start()
 
+    def lead_nomi_web():
+        """2/11 notte (cliente: "1.000-1.500 email senza doppioni"): i commercianti dei nostri annunci (Subito, AutoScout24)
+        della zona senza email: nome + comune su Google Maps (Outscraper), sito, email. Una volta per etichetta
+        (LEADE_NOMI=<tag>), in parallelo al giro Maps. Niente Brevo. Nei log solo conteggi."""
+        tag = os.environ.get("LEADE_NOMI")
+        if not tag:
+            return
+        time.sleep(60)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            from ..db import log_job
+            if not _due(f"lead_nomi:{tag}", 100000):
+                return
+            from ..pipeline import lead_email as LE
+            with connect() as conn:
+                fine = log_job(conn, f"lead_nomi:{tag}")
+                esito = LE.giro(solo_nomi=True)
+                fine(True, esito)
+        except Exception as e:
+            L.warning("LEADE_NOMI non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_nomi_web, daemon=True, name="lead_nomi_web").start()
+
     def campagna_1_11():
         """1/11 (cliente): email a tutti i contatti Brevo con 3 testi e 2 auto per fascia (marketing/campagna_1_11.py).
         CAMPAGNA_1_11=prova solo log delle auto scelte; =invia manda una volta sola."""
@@ -4016,7 +4039,7 @@ def _tempo_reale():
                     conn.rollback()
                     in_brevo = set()
                 rows = conn.execute(
-                    "SELECT e.email, e.sito, e.tentato, d.nome, d.comune, d.prov, 'autoscout' AS fonte FROM lead_email e "
+                    "SELECT e.email, e.sito, e.tentato, d.nome, d.comune, d.prov, CASE WHEN d.chiave LIKE 'subito%%' THEN 'subito' ELSE 'autoscout' END AS fonte FROM lead_email e "
                     "JOIN lead_tutti_dealer d ON d.chiave = e.chiave WHERE cardinality(e.email) > 0 "
                     "UNION ALL "
                     "SELECT e.email, e.sito, e.tentato, m.nome, m.comune, m.prov, 'google_maps' AS fonte FROM lead_email e "
