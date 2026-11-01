@@ -80,11 +80,43 @@ def _prov(indirizzo: str) -> str | None:
     return m.group(1) if m else None
 
 
+class Fermo(Exception):
+    pass
+
+
+def _outscraper(chiave: str, ricerca: str, quanti: int) -> list[dict]:
+    """1/11 (cliente: "usiamo Outscraper"): stessa ricerca su Google Maps via Outscraper (OUTSCRAPER_KEY su Render).
+    Restituisce i posti con gli stessi nomi di campo di Apify."""
+    r = httpx.get("https://api.app.outscraper.com/maps/search-v3",
+                  headers={"X-API-KEY": chiave},
+                  params={"query": ricerca, "limit": quanti, "language": "it", "region": "IT", "async": "false"},
+                  timeout=330)
+    if r.status_code in (401, 402, 403):
+        raise Fermo(f"Outscraper rifiuta ({r.status_code}): {r.text[:200]}")
+    r.raise_for_status()
+    dati = r.json().get("data") or []
+    posti = dati[0] if dati and isinstance(dati[0], list) else dati
+    out = []
+    for p in posti or []:
+        if not isinstance(p, dict):
+            continue
+        out.append({"placeId": p.get("place_id") or p.get("google_id"), "title": p.get("name"),
+                    "address": p.get("full_address") or p.get("address"), "city": p.get("city"),
+                    "postalCode": p.get("postal_code"), "state": p.get("state"), "phone": p.get("phone"),
+                    "website": p.get("site"), "categoryName": p.get("type") or p.get("category"),
+                    "categories": [x.strip() for x in str(p.get("subtypes") or "").split(",") if x.strip()],
+                    "totalScore": p.get("rating"), "reviewsCount": p.get("reviews"),
+                    "permanentlyClosed": str(p.get("business_status") or "").upper() == "CLOSED_PERMANENTLY"})
+    return out
+
+
 def giro() -> dict:
+    osk = os.environ.get("OUTSCRAPER_KEY")
     tok = (os.environ.get("APIFY_TOKENS") or os.environ.get("APIFY_TOKEN"))
-    if not tok:
-        log.warning("LEADMAPS senza APIFY_TOKEN: niente da fare")
-        return {"fatto": False, "motivo": "APIFY_TOKEN mancante"}
+    if not (osk or tok):
+        log.warning("LEADMAPS senza OUTSCRAPER_KEY né APIFY_TOKEN: niente da fare")
+        return {"fatto": False, "motivo": "chiave mancante"}
+    log.warning("LEADMAPS uso %s", "Outscraper" if osk else "Apify")
     from ..db import connect
     massimo = int(os.environ.get("MAPS_MAX_POSTI", "1000"))
     letti = nuovi = ricerche = 0
@@ -101,23 +133,29 @@ def giro() -> dict:
         corpo = {"searchStringsArray": [ricerca], "locationQuery": "Lombardia, Italia", "language": "it",
                  "maxCrawledPlacesPerSearch": quanti, "skipClosedPlaces": True, "scrapePlaceDetailPage": False}
         try:
-            # 1/11: token nell'intestazione, non nell'indirizzo (così non finisce nei log in caso di errore)
-            r = httpx.post(f"https://api.apify.com/v2/acts/{ATTORE}/run-sync-get-dataset-items",
-                           headers={"Authorization": f"Bearer {tok}"}, json=corpo, timeout=330)
-            if r.status_code == 402:
-                log.warning("LEADMAPS credito Apify finito: mi fermo")
-                break
-            if r.status_code in (401, 403):
-                try:
-                    err = (r.json().get("error") or {})
-                    motivo = f"{err.get('type')}: {str(err.get('message'))[:200]}"
-                except Exception:
-                    motivo = r.text[:200]
-                log.warning("LEADMAPS Apify rifiuta (%d) %s: mi fermo", r.status_code, motivo)
-                break
-            r.raise_for_status()
-            dati = r.json()
-            posti = dati if isinstance(dati, list) else []
+            if osk:
+                posti = _outscraper(osk, ricerca, quanti)
+            else:
+                # 1/11: token nell'intestazione, non nell'indirizzo (così non finisce nei log in caso di errore)
+                r = httpx.post(f"https://api.apify.com/v2/acts/{ATTORE}/run-sync-get-dataset-items",
+                               headers={"Authorization": f"Bearer {tok}"}, json=corpo, timeout=330)
+                if r.status_code == 402:
+                    log.warning("LEADMAPS credito Apify finito: mi fermo")
+                    break
+                if r.status_code in (401, 403):
+                    try:
+                        err = (r.json().get("error") or {})
+                        motivo = f"{err.get('type')}: {str(err.get('message'))[:200]}"
+                    except Exception:
+                        motivo = r.text[:200]
+                    log.warning("LEADMAPS Apify rifiuta (%d) %s: mi fermo", r.status_code, motivo)
+                    break
+                r.raise_for_status()
+                dati = r.json()
+                posti = dati if isinstance(dati, list) else []
+        except Fermo as e:
+            log.warning("LEADMAPS %s: mi fermo", str(e)[:250])
+            break
         except Exception as e:
             log.warning("LEADMAPS ricerca non riuscita (%s): %s", ricerca[:40], re.sub(r"token=[^&\s']+", "token=***", str(e))[:160])
             time.sleep(5)
