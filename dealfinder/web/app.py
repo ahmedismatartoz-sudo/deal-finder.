@@ -3993,6 +3993,51 @@ def _tempo_reale():
             L.warning("DIAGNOSI_AS24 non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_as24, daemon=True, name="diag_as24").start()
 
+    def esporta_email():
+        """1/11 sera (cliente: "mettili in un file a parte, poi tolgo io quelli già su Brevo"): tutte le email aziendali
+        dei commercianti che abbiamo, a gruppi di 20 per riga nel log (ESPORTA_EMAIL_RIGA). Solo dati aziendali pubblici
+        (nome dell'attività, comune, provincia, email, sito), con la data in cui è stata trovata e se è già in Brevo.
+        Si ripete a ogni avvio con ESPORTA_EMAIL=<etichetta> nuova."""
+        tag = os.environ.get("ESPORTA_EMAIL")
+        if not tag:
+            return
+        time.sleep(int(os.environ.get("ESPORTA_EMAIL_RITARDO_S", "120")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"esporta_email:{tag}", 100000):
+                return
+            from ..db import log_job
+            with connect() as conn:
+                fine = log_job(conn, f"esporta_email:{tag}")
+                try:
+                    in_brevo = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+                except Exception:
+                    conn.rollback()
+                    in_brevo = set()
+                rows = conn.execute(
+                    "SELECT e.email, e.sito, e.tentato, d.nome, d.comune, d.prov, 'autoscout' AS fonte FROM lead_email e "
+                    "JOIN lead_tutti_dealer d ON d.chiave = e.chiave WHERE cardinality(e.email) > 0 "
+                    "UNION ALL "
+                    "SELECT e.email, e.sito, e.tentato, m.nome, m.comune, m.prov, 'google_maps' AS fonte FROM lead_email e "
+                    "JOIN lead_maps m ON 'maps:' || m.place_id = e.chiave WHERE cardinality(e.email) > 0").fetchall()
+                righe, visti = [], set()
+                for r in rows:
+                    for em in r["email"] or []:
+                        em = em.strip().lower()
+                        if em in visti:
+                            continue
+                        visti.add(em)
+                        righe.append([em, r["nome"], r["comune"], r["prov"], r["sito"], r["fonte"],
+                                      r["tentato"].strftime("%Y-%m-%d") if r["tentato"] else "", "si" if em in in_brevo else "no"])
+                for i in range(0, len(righe), 20):
+                    L.warning("ESPORTA_EMAIL_RIGA %s", json.dumps(righe[i:i + 20], ensure_ascii=False))
+                L.warning("ESPORTA_EMAIL_FINE %d email (%d non in Brevo)", len(righe), sum(1 for x in righe if x[-1] == "no"))
+                fine(True, {"email": len(righe)})
+        except Exception as e:
+            L.warning("ESPORTA_EMAIL non riuscito: %s", str(e)[:300])
+    threading.Thread(target=esporta_email, daemon=True, name="esporta_email").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""

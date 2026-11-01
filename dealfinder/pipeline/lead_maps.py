@@ -26,6 +26,21 @@ ZONE_MILANO = ["Niguarda", "Bovisa", "Affori", "Quarto Oggiaro", "Certosa", "Lam
                "Città Studi", "Loreto", "Viale Monza", "Gorla", "Bicocca", "Greco", "Isola", "Porta Romana",
                "Navigli", "Fulvio Testi", "Via Novara", "Precotto", "Ortica", "Bruzzano"]
 ORDINE_PROV = ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR"]
+CITTA_ZONA = {
+    "MB": ["Monza", "Desio", "Seregno", "Lissone", "Brugherio", "Cesano Maderno", "Vimercate"],
+    "BG": ["Bergamo", "Treviglio", "Seriate", "Dalmine", "Romano di Lombardia"],
+    "BS": ["Brescia", "Desenzano del Garda", "Chiari", "Lumezzane", "Montichiari", "Rovato"],
+    "VA": ["Varese", "Busto Arsizio", "Gallarate", "Saronno"],
+    "CO": ["Como", "Cantù", "Erba", "Mariano Comense"],
+    "LC": ["Lecco", "Merate", "Calolziocorte"],
+    "LO": ["Lodi", "Codogno"],
+    "CR": ["Cremona", "Crema", "Casalmaggiore"],
+    "MN": ["Mantova", "Castiglione delle Stiviere", "Suzzara", "Viadana"],
+    "PV": ["Pavia", "Vigevano", "Voghera"],
+    "SO": ["Sondrio", "Morbegno"],
+    "NO": ["Novara", "Borgomanero", "Trecate"],
+    "PC": ["Piacenza", "Fiorenzuola d'Arda", "Castel San Giovanni"],
+}
 
 SQL = """
 CREATE TABLE IF NOT EXISTS lead_maps (
@@ -64,6 +79,13 @@ def _ricerche() -> list[tuple[str, int]]:
     # 1/11: parole diverse per trovare i commercianti mancanti (MAPS_PAROLE="a|b|c"), senza ripetere le ricerche già fatte
     parole = [p.strip() for p in (os.environ.get("MAPS_PAROLE") or "").split("|") if p.strip()] or PAROLE[:2]
     out = [(f"{p} Milano {z}", int(os.environ.get("MAPS_PER_RICERCA", "60"))) for z in ZONE_MILANO for p in parole]
+    # 1/11 sera (cliente: "servono 1.000 email nuove"): i capoluoghi e le città grandi della zona del sito
+    if os.environ.get("MAPS_CAPOLUOGHI") == "1":
+        for pv, citta in CITTA_ZONA.items():
+            if solo and pv not in solo:
+                continue
+            for c in citta:
+                out += [(f"{p} {c} {pv}", int(os.environ.get("MAPS_PER_RICERCA", "60"))) for p in parole]
     for c, pv in comuni:
         out += [(f"{p} {c} {pv}", 30) for p in parole]
     return out
