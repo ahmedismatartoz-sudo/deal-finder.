@@ -1255,11 +1255,13 @@ def _solo_privati(items: list[dict]) -> list[dict]:
     comm = set()
     if os.environ.get("SITO_COMMERCIANTI_BENZINA", "1") == "1":
         try:
-            fuori = [p.strip().upper() for p in os.environ.get("COMMERCIANTI_ESCLUSE_PROV", "MI").split(",") if p.strip()]
+            # 1/11 sera (cliente: "anche tutte le province, conta solo le altre città"): fuori resta solo Milano città
+            fuori = [c.strip().lower() for c in os.environ.get("COMMERCIANTI_ESCLUSE_CITTA", "milano").split(",") if c.strip()]
             with connect() as conn:
                 comm = {r["id"] for r in conn.execute(
                     "SELECT id FROM listings WHERE id = ANY(%s) AND NOT (id = ANY(%s)) AND fuel ~* 'benzin' "
-                    "AND NOT (upper(coalesce(province,'')) = ANY(%s))", (ids, list(ok), fuori)).fetchall()}
+                    "AND NOT (lower(trim(regexp_replace(coalesce(city,''), '\\s*\\(.*\\)$', ''))) = ANY(%s))",
+                    (ids, list(ok), fuori)).fetchall()}
         except Exception as e:
             logging.getLogger("scovo").warning("COMMERCIANTI_BENZINA non controllati: %s", str(e)[:200])
     tenute = []
