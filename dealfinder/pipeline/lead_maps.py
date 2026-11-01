@@ -75,6 +75,13 @@ def _ricerche() -> list[tuple[str, int]]:
     solo = {p.strip().upper() for p in (os.environ.get("MAPS_SOLO_PROV") or "").split(",") if p.strip()}
     if solo:
         comuni = [(c, p) for c, p in comuni if p in solo]
+    # 1/11 notte (cliente: "Monza e Brianza, Varese e le cittadine attorno a Milano, max 25 minuti da Sesto"):
+    # comuni in più fuori dalle province scelte, MAPS_COMUNI_EXTRA="Saronno:VA|Origgio:VA"
+    for x in (os.environ.get("MAPS_COMUNI_EXTRA") or "").split("|"):
+        if ":" in x:
+            c, p = (s.strip() for s in x.rsplit(":", 1))
+            if c and (c, p.upper()) not in comuni:
+                comuni.append((c, p.upper()))
     comuni.sort(key=lambda x: ORDINE_PROV.index(x[1]) if x[1] in ORDINE_PROV else 99)
     # 1/11: parole diverse per trovare i commercianti mancanti (MAPS_PAROLE="a|b|c"), senza ripetere le ricerche già fatte
     parole = [p.strip() for p in (os.environ.get("MAPS_PAROLE") or "").split("|") if p.strip()] or PAROLE[:2]
