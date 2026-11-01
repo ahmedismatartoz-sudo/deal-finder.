@@ -117,6 +117,10 @@ def scegli(items: list[dict]) -> dict[str, list[dict]]:
     mmin, mmax = int(os.environ.get("C111_MARG_MIN", "2000")), int(os.environ.get("C111_MARG_MAX", "4500"))
     usate, out = set(), {}
     for fascia, (lo, hi) in FASCE.items():
+        if fascia == "supercar" and len(out.get("alte") or []) == 2:
+            out[fascia] = out["alte"]          # commercianti di auto care: stesse auto della fascia alta (popolari, benzina)
+            lg.warning("CAMPAGNA_1_11 auto supercar = auto alte")
+            continue
         cand = []
         for it in items:
             pv = it.get("pv") or {}
@@ -124,6 +128,7 @@ def scegli(items: list[dict]) -> dict[str, list[dict]]:
             if (it.get("supercar") or it.get("incidentata") or it["id"] in usate or not pv.get("M")
                     or pv.get("margine") is None or pv.get("categoria") not in ("opportunita", "candidato")
                     or not (mmin <= pv["margine"] <= mmax) or not (lo <= it["prezzo"] < hi)
+                    or it["prezzo"] < float(os.environ.get("C111_MIN_SU_M", "0.72")) * pv["M"]   # troppo sotto: sembra truffa
                     or (pv.get("n") or 0) < 8 or (it.get("km") or 10**9) > int(os.environ.get("C111_KM_MAX", "80000"))
                     or not it.get("anno") or not CARB_OK.search(str(it.get("carb") or ""))
                     or not POPOLARI.search(f"{it.get('modello') or ''} {it.get('nome') or ''}")
