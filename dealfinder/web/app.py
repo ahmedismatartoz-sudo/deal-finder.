@@ -3775,10 +3775,14 @@ def _tempo_reale():
         """1/11 (cliente): commercianti di Milano e dintorni da Google Maps via Apify (APIFY_TOKEN sul servizio web),
         poi le email lette dai loro siti. Una volta per etichetta (LEADMAPS_WEB=<tag>). Nei log solo conteggi."""
         tag = os.environ.get("LEADMAPS_WEB")
-        if not tag or not os.environ.get("APIFY_TOKEN"):
+        L = logging.getLogger("scovo")
+        if not tag:
+            return
+        if not os.environ.get("APIFY_TOKEN"):
+            L.warning("LEADMAPS_WEB fermo: APIFY_TOKEN non c'è sul servizio web")
             return
         time.sleep(120)
-        L = logging.getLogger("scovo")
+        L.warning("LEADMAPS_WEB parte (%s, province %s)", tag, os.environ.get("MAPS_SOLO_PROV", "MI"))
         try:
             from ..pipeline.ciclo import _due
             from ..db import log_job
