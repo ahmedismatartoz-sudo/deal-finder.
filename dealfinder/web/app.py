@@ -3814,6 +3814,11 @@ def _tempo_reale():
             with connect() as conn:
                 fine = log_job(conn, f"leadmaps_web:{tag}")
                 esito = LM.giro()
+                if os.environ.get("MAPS_COMPLETA_SITI") == "1":
+                    try:
+                        esito["siti"] = LM.completa_siti(int(os.environ.get("MAPS_SITI_MAX", "300")))
+                    except Exception as e:
+                        L.warning("LEADMAPS siti non completati: %s", str(e)[:200])
                 try:
                     esito["email"] = LE.giro()
                 except Exception as e:

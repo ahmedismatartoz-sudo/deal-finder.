@@ -84,6 +84,9 @@ class Fermo(Exception):
     pass
 
 
+_CHIAVI_VISTE = {"ok": False}
+
+
 def _outscraper(chiave: str, ricerca: str, quanti: int) -> list[dict]:
     """1/11 (cliente: "usiamo Outscraper"): stessa ricerca su Google Maps via Outscraper (OUTSCRAPER_KEY su Render).
     Restituisce i posti con gli stessi nomi di campo di Apify."""
@@ -97,17 +100,51 @@ def _outscraper(chiave: str, ricerca: str, quanti: int) -> list[dict]:
     dati = r.json().get("data") or []
     posti = dati[0] if dati and isinstance(dati[0], list) else dati
     out = []
+    if posti and isinstance(posti[0], dict) and not _CHIAVI_VISTE["ok"]:
+        _CHIAVI_VISTE["ok"] = True
+        log.warning("LEADMAPS Outscraper campi: %s", sorted(posti[0].keys()))
     for p in posti or []:
         if not isinstance(p, dict):
             continue
         out.append({"placeId": p.get("place_id") or p.get("google_id"), "title": p.get("name"),
                     "address": p.get("full_address") or p.get("address"), "city": p.get("city"),
                     "postalCode": p.get("postal_code"), "state": p.get("state"), "phone": p.get("phone"),
-                    "website": p.get("site"), "categoryName": p.get("type") or p.get("category"),
+                    "website": p.get("site") or p.get("website") or p.get("domain"), "categoryName": p.get("type") or p.get("category"),
                     "categories": [x.strip() for x in str(p.get("subtypes") or "").split(",") if x.strip()],
                     "totalScore": p.get("rating"), "reviewsCount": p.get("reviews"),
                     "permanentlyClosed": str(p.get("business_status") or "").upper() == "CLOSED_PERMANENTLY"})
     return out
+
+
+def completa_siti(limite: int = 300) -> dict:
+    """1/11: posti di Milano e provincia salvati senza sito: si richiede a Outscraper la scheda (per place_id, 1 risultato)
+    e si salvano sito e telefono. Costa 1 risultato per posto."""
+    osk = os.environ.get("OUTSCRAPER_KEY")
+    if not osk:
+        return {"fatto": False}
+    from ..db import connect
+    with connect() as conn:
+        rows = conn.execute("SELECT place_id FROM lead_maps WHERE sito IS NULL AND prov = ANY(%s) "
+                            "AND aggiornato > now() - interval '2 days' LIMIT %s",
+                            ([p.strip().upper() for p in (os.environ.get("MAPS_SOLO_PROV") or "MI").split(",")], limite)).fetchall()
+    st = {"posti": len(rows), "con_sito": 0, "errori": 0}
+    for r in rows:
+        try:
+            posti = _outscraper(osk, r["place_id"], 1)
+        except Fermo as e:
+            log.warning("LEADMAPS siti: %s", str(e)[:200])
+            break
+        except Exception:
+            st["errori"] += 1
+            continue
+        p = posti[0] if posti else None
+        if p and p.get("website"):
+            with connect() as conn:
+                conn.execute("UPDATE lead_maps SET sito=%s, tel=coalesce(tel,%s) WHERE place_id=%s",
+                             (p["website"], p.get("phone"), r["place_id"]))
+            st["con_sito"] += 1
+    log.warning("LEADMAPS siti completati: %s", st)
+    return st
 
 
 def giro() -> dict:
