@@ -149,7 +149,7 @@ def scegli(items: list[dict]) -> dict[str, list[dict]]:
         for it in items:
             pv = it.get("pv") or {}
             m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
-            if (it.get("supercar") or it.get("incidentata") or it["id"] in usate or not pv.get("M")
+            if (it.get("supercar") or it.get("incidentata") or it.get("commerciante") or it["id"] in usate or not pv.get("M")
                     or pv.get("margine") is None or pv.get("categoria") not in ("opportunita", "candidato")
                     or not (mmin <= pv["margine"] <= mmax) or not (lo <= it["prezzo"] < hi)
                     or (pv.get("n") or 0) < 8 or (it.get("km") or 10**9) > int(os.environ.get("C111_KM_MAX", "80000"))

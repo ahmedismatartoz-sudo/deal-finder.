@@ -1250,8 +1250,27 @@ def _solo_privati(items: list[dict]) -> list[dict]:
     except Exception as e:
         logging.getLogger("scovo").warning("SOLO_PRIVATI non controllato: %s", str(e)[:200])
         return items
-    tenute = [it for it in items if it.get("id") in ok]
-    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano", len(items) - len(tenute), len(tenute))
+    # 1/11 (cliente): anche le auto a BENZINA di commercianti FUORI dalla provincia di Milano (fuori Milano la benzina
+    # la vendono spesso più bassa del mercato di Milano): stesse regole di margine, con l'etichetta "Da commerciante"
+    comm = set()
+    if os.environ.get("SITO_COMMERCIANTI_BENZINA", "1") == "1":
+        try:
+            fuori = [p.strip().upper() for p in os.environ.get("COMMERCIANTI_ESCLUSE_PROV", "MI").split(",") if p.strip()]
+            with connect() as conn:
+                comm = {r["id"] for r in conn.execute(
+                    "SELECT id FROM listings WHERE id = ANY(%s) AND NOT (id = ANY(%s)) AND fuel ~* 'benzin' "
+                    "AND NOT (upper(coalesce(province,'')) = ANY(%s))", (ids, list(ok), fuori)).fetchall()}
+        except Exception as e:
+            logging.getLogger("scovo").warning("COMMERCIANTI_BENZINA non controllati: %s", str(e)[:200])
+    tenute = []
+    for it in items:
+        if it.get("id") in ok:
+            tenute.append(it)
+        elif it.get("id") in comm:
+            it["commerciante"] = True
+            tenute.append(it)
+    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano (di cui %d commercianti a benzina fuori Milano)",
+                                       len(items) - len(tenute), len(tenute), len(comm))
     return tenute
 
 

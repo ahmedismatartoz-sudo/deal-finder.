@@ -46,7 +46,7 @@ def salva_sito(items: list[dict]) -> None:
     for it in items:
         pv = it.get("pv") or {}
         marg = pv.get("margine")
-        if marg is None or not it.get("prezzo"):
+        if marg is None or not it.get("prezzo") or it.get("commerciante"):
             continue
         righe.append((int(it["id"]), json.dumps({
             "nome": it.get("nome"), "marca": it.get("marca"), "anno": it.get("anno"), "km": it.get("km"),
