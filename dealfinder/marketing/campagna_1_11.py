@@ -53,6 +53,30 @@ def _breve(it: dict) -> str:
     return " ".join(x for x in [it.get("marca"), it.get("modello")] if x) or str(it.get("nome") or "")
 
 
+def troppo_bella(it: dict) -> bool:
+    pv = it.get("pv") or {}
+    return it["prezzo"] < float(os.environ.get("C111_BELLA", "0.72")) * pv["M"]
+
+
+def rivendita(it: dict) -> int:
+    """1/11 (cliente: "i nostri prezzi di rivendita sono un po' gonfiati: su uno dei due esempi mettiamo una rivendita più
+    bassa e usiamo quelle troppo belle per essere vere"). Auto normale: rivendita prudente del sito. Auto molto sotto
+    prezzo (sotto il 72% del mercato): rivendita abbassata a mercato × 0,85 e mai oltre C111_MARG_MOSTRA di margine."""
+    pv = it.get("pv") or {}
+    if not troppo_bella(it):
+        return int(pv.get("R_finale") or pv.get("R") or (it["prezzo"] + 140 + pv["margine"]))
+    r = min(pv["M"] * float(os.environ.get("C111_RIV", "0.85")),
+            it["prezzo"] + 140 + int(os.environ.get("C111_MARG_MOSTRA", "4500")))
+    return int(round(r / 100.0)) * 100
+
+
+def margine(it: dict) -> int:
+    pv = it.get("pv") or {}
+    if not troppo_bella(it):
+        return int(pv["margine"])
+    return int(round((rivendita(it) - it["prezzo"] - 140) / 10.0)) * 10
+
+
 def _card(it: dict) -> str:
     pv = it.get("pv") or {}
     n = escape(str(it.get("nome") or ""))
@@ -65,8 +89,8 @@ def _card(it: dict) -> str:
         '<tr><td style="padding:12px 16px 14px">'
         f'<div style="font-size:17px;font-weight:700;margin:0 0 4px">{n}</div>'
         f'<div style="font-size:13px;color:#666;margin:0 0 8px">{it.get("anno")} · {_eur(it.get("km") or 0)} km · {escape(str(it.get("carb") or ""))} · venditore privato</div>'
-        f'<div style="font-size:14px;color:#222">Prezzo <b>{_eur(it["prezzo"])} €</b> · valore di mercato circa <b>{_eur(pv["M"])} €</b></div>'
-        f'<div style="font-size:14px;color:#0b7a43;font-weight:700;margin-top:4px">Margine stimato: +{_eur(pv["margine"])} €</div>'
+        f'<div style="font-size:14px;color:#222">Prezzo <b>{_eur(it["prezzo"])} €</b> · rivendita prudente circa <b>{_eur(rivendita(it))} €</b></div>'
+        f'<div style="font-size:14px;color:#0b7a43;font-weight:700;margin-top:4px">Margine stimato: +{_eur(margine(it))} €</div>'
         '</td></tr></table>')
 
 
@@ -89,7 +113,7 @@ def testi(auto: list[dict]) -> dict:
     """Le tre email (oggetto, html) per una fascia, con le sue 2 auto."""
     schede = "".join(_card(a) for a in auto)
     a1 = auto[0]
-    sotto = int(round(((a1.get("pv") or {})["M"] - a1["prezzo"]) / 100.0)) * 100
+    sotto = int(round((rivendita(a1) - a1["prezzo"]) / 100.0)) * 100
     mod = escape(_breve(a1))
     A = ("2 affari da privati vicino a voi", _pagina([
         "Buongiorno, siamo l'azienda Skovo.",
@@ -128,7 +152,6 @@ def scegli(items: list[dict]) -> dict[str, list[dict]]:
             if (it.get("supercar") or it.get("incidentata") or it["id"] in usate or not pv.get("M")
                     or pv.get("margine") is None or pv.get("categoria") not in ("opportunita", "candidato")
                     or not (mmin <= pv["margine"] <= mmax) or not (lo <= it["prezzo"] < hi)
-                    or it["prezzo"] < float(os.environ.get("C111_MIN_SU_M", "0.72")) * pv["M"]   # troppo sotto: sembra truffa
                     or (pv.get("n") or 0) < 8 or (it.get("km") or 10**9) > int(os.environ.get("C111_KM_MAX", "80000"))
                     or not it.get("anno") or not CARB_OK.search(str(it.get("carb") or ""))
                     or not POPOLARI.search(f"{it.get('modello') or ''} {it.get('nome') or ''}")
@@ -138,16 +161,19 @@ def scegli(items: list[dict]) -> dict[str, list[dict]]:
         # le più credibili: più confronti uguali, poi margine
         cand.sort(key=lambda x: (-((x.get("pv") or {}).get("n") or 0), -(x["pv"]["margine"])))
         scelte = []
-        for it in cand:
-            if _foto_ok(_card(it)):
-                scelte.append(it)
-                usate.add(it["id"])
-            if len(scelte) == 2:
-                break
+        for gruppo in ([c for c in cand if troppo_bella(c)], [c for c in cand if not troppo_bella(c)], cand):
+            for it in gruppo:
+                if len(scelte) == 2 or (scelte and gruppo is not cand and len([x for x in scelte if troppo_bella(x) == troppo_bella(it)])):
+                    break
+                if it["id"] not in usate and margine(it) >= int(os.environ.get("C111_MARG_MIN_MOSTRA", "1500")) and _foto_ok(_card(it)):
+                    scelte.append(it)
+                    usate.add(it["id"])
+                    break
         out[fascia] = scelte
         lg.warning("CAMPAGNA_1_11 auto %s (candidate %d): %s", fascia, len(cand), [
             {"id": a["id"], "auto": a.get("nome"), "anno": a.get("anno"), "km": a.get("km"), "zona": a.get("zona"),
-             "prezzo": a["prezzo"], "M": a["pv"]["M"], "margine": a["pv"]["margine"], "n": a["pv"].get("n"),
+             "prezzo": a["prezzo"], "M": a["pv"]["M"], "margine_sito": a["pv"]["margine"], "rivendita_email": rivendita(a),
+             "margine_email": margine(a), "n": a["pv"].get("n"),
              "fonte": a.get("fonte")} for a in scelte])
     return out
 
