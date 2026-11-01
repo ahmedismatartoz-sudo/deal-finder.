@@ -142,6 +142,31 @@ def giro() -> dict:
                                             "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
                                             "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+        # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
+        # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
+        if os.environ.get("BENZ_CAMBI_PREZZO", "1") == "1":
+            try:
+                gia = {r["id"] for r in cand}
+                cambi = conn.execute(
+                    """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
+                       FROM listings t
+                       WHERE t.id IN (SELECT DISTINCT listing_id FROM price_events
+                                      WHERE event = 'prezzo' AND at > now() - make_interval(hours => %(ore)s))
+                         AND t.status = 'attivo' AND upper(t.province) = ANY(%(prov)s)
+                         AND t.price_eur BETWEEN 1000 AND %(pmax)s AND coalesce(t.year, 2007) >= 2007
+                         AND coalesce(t.mileage_km, 0) <= 180000
+                         AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+                       LIMIT %(lim)s""",
+                    {"ore": int(os.environ.get("BENZ_CAMBI_ORE", "8")), "prov": PROVINCE_100, "pmax": PMAX,
+                     "lim": int(os.environ.get("BENZ_CAMBI_MAX", "1500"))}).fetchall()
+                nuovi_c = [r for r in cambi if r["id"] not in gia]
+                cand = nuovi_c + list(cand)
+                st["cambi_prezzo"] = len(cambi)
+                st["cambi_prezzo_aggiunti"] = len(nuovi_c)
+                log.warning("BENZ cambi di prezzo nelle ultime ore: %d (aggiunti alle candidate %d)", len(cambi), len(nuovi_c))
+            except Exception as e:
+                conn.rollback()
+                log.warning("BENZ cambi di prezzo non letti: %s", str(e)[:200])
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))
