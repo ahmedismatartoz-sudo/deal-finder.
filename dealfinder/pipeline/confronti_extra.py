@@ -12,11 +12,21 @@ sulla zona del cliente; questi annunci servono solo a confrontare i prezzi. Si f
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from collections import Counter
 
 log = logging.getLogger("confronti_extra")
+
+# raggio 100 km intorno a ogni città: Nord fuori zona, Centro, Sud e isole
+CAP_ITALIA = ",".join([
+    "30121", "33100", "34121", "38121", "39100",                        # Venezia, Udine, Trieste, Trento, Bolzano
+    "47921", "60121", "06121", "56121", "53100",                        # Rimini, Ancona, Perugia, Pisa, Siena
+    "65121", "80121", "84121", "70121", "74121",                        # Pescara, Napoli, Salerno, Bari, Taranto
+    "87100", "89121", "90121", "95121", "09121", "07100",               # Cosenza, Reggio Calabria, Palermo, Catania, Cagliari, Sassari
+    "37121", "40121", "10121", "35121", "16121", "50121", "00185",      # Verona, Bologna, Torino, Padova, Genova, Firenze, Roma
+])
 
 
 def giro() -> dict:
@@ -30,11 +40,19 @@ def giro() -> dict:
     if gb > float(os.environ.get("CE_DB_MAX_GB", "15")):
         log.warning("CONFRONTI_EXTRA fermo: database a %.1f GB", gb)
         return {"fermo_db_gb": round(gb, 1)}
-    citta = [c.strip() for c in os.environ.get("CE_CAP", "37121,40121,10121,35121,16121,50121,00185").split(",") if c.strip()]   # Verona, Bologna, Torino; dal 31/10 anche Padova, Genova, Firenze, Roma
-    lo, hi = int(os.environ.get("CE_MIN", "1000")), int(os.environ.get("CE_MAX", "50000"))
+    # 1/11 (cliente: "raccogliamo gli annunci fuori zona per averli sempre per i confronti"): tutta Italia.
+    # Ogni città ha il suo turno (CE_ORE ore); a ogni giro del cron se ne fanno al massimo CE_PER_GIRO, così il giro
+    # della zona non si allunga di ore e le città restano sempre aggiornate a rotazione.
+    tutte = [c.strip() for c in os.environ.get("CE_CAP", CAP_ITALIA).split(",") if c.strip()]
+    from .ciclo import _due
+    citta = [c for c in tutte if _due(f"ce:{c}", int(os.environ.get("CE_ORE", "48")))][: int(os.environ.get("CE_PER_GIRO", "3"))]
+    log.warning("CONFRONTI_EXTRA turno: %s (di %d città)", citta, len(tutte))
+    lo, hi = int(os.environ.get("CE_MIN", "1000")), int(os.environ.get("CE_MAX", "70000"))
     venditori = [("P", "privato"), ("D", "commerciante")]
     os.environ.pop("PASSI_JOB", None)
     for cap in citta:
+        with connect() as _c:
+            _jid = _c.execute("INSERT INTO job_runs (job) VALUES (%s) RETURNING id", (f"ce:{cap}",)).fetchone()["id"]
         os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = cap, os.environ.get("CE_RAGGIO", "100")
         with connect() as conn:
             n = 0
@@ -61,5 +79,11 @@ def giro() -> dict:
                         log.warning("CONFRONTI_EXTRA annuncio non salvato: %s", str(e)[:120])
             conn.commit()
         log.warning("CONFRONTI_EXTRA %s fatto: %s", cap, {k: v for k, v in st.items() if k.startswith(cap)})
+        try:
+            with connect() as _c:
+                _c.execute("UPDATE job_runs SET finished_at=now(), ok=true, stats=%s WHERE id=%s",
+                           (json.dumps({k: v for k, v in st.items() if k.startswith(cap)}), _jid))
+        except Exception as e:
+            log.warning("CONFRONTI_EXTRA turno non salvato: %s", str(e)[:120])
     log.warning("CONFRONTI_EXTRA_FINE %s", dict(st))
     return dict(st)
