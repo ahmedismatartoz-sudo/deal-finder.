@@ -3808,6 +3808,35 @@ def _tempo_reale():
             L.warning("LEADMAPS_WEB non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_maps_web, daemon=True, name="lead_maps_web").start()
 
+    def campagna_1_11():
+        """1/11 (cliente): email a tutti i contatti Brevo con 3 testi e 2 auto per fascia (marketing/campagna_1_11.py).
+        CAMPAGNA_1_11=prova solo log delle auto scelte; =invia manda una volta sola."""
+        modo = os.environ.get("CAMPAGNA_1_11")
+        if not modo:
+            return
+        L = logging.getLogger("scovo")
+        time.sleep(150)
+        for _ in range(30):
+            if _elenco.get("items"):
+                break
+            time.sleep(20)
+        try:
+            from ..pipeline.ciclo import _due
+            from ..db import log_job
+            from ..marketing import campagna_1_11 as C
+            if modo == "invia":
+                if not _due("campagna_1_11:invio", 100000):
+                    L.warning("CAMPAGNA_1_11 già inviata: niente")
+                    return
+                with connect() as conn:
+                    fine = log_job(conn, "campagna_1_11:invio")
+                    fine(True, C.esegui(lambda: list(_elenco["items"]), "invia"))
+            else:
+                C.esegui(lambda: list(_elenco["items"]), "prova")
+        except Exception as e:
+            L.warning("CAMPAGNA_1_11 non riuscita: %s", str(e)[:300])
+    threading.Thread(target=campagna_1_11, daemon=True, name="campagna_1_11").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
