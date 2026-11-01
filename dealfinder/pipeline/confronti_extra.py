@@ -19,13 +19,11 @@ from collections import Counter
 
 log = logging.getLogger("confronti_extra")
 
-# raggio 100 km intorno a ogni città: Nord fuori zona, Centro, Sud e isole
+# 1/11 (cliente): solo intorno alla Lombardia, perché più si scende più i prezzi calano. Raggio 100 km da ogni città:
+# Piemonte, Valle d'Aosta, Liguria, Emilia, Veneto, Trentino-Alto Adige. Niente Centro, Sud e isole.
 CAP_ITALIA = ",".join([
-    "30121", "33100", "34121", "38121", "39100",                        # Venezia, Udine, Trieste, Trento, Bolzano
-    "47921", "60121", "06121", "56121", "53100",                        # Rimini, Ancona, Perugia, Pisa, Siena
-    "65121", "80121", "84121", "70121", "74121",                        # Pescara, Napoli, Salerno, Bari, Taranto
-    "87100", "89121", "90121", "95121", "09121", "07100",               # Cosenza, Reggio Calabria, Palermo, Catania, Cagliari, Sassari
-    "37121", "40121", "10121", "35121", "16121", "50121", "00185",      # Verona, Bologna, Torino, Padova, Genova, Firenze, Roma
+    "12100", "11100", "43121", "41121", "36100", "31100", "38121", "39100",   # Cuneo, Aosta, Parma, Modena, Vicenza, Treviso, Trento, Bolzano
+    "10121", "16121", "40121", "37121", "35121",                              # Torino, Genova, Bologna, Verona, Padova (già fatte il 31/10)
 ])
 
 
@@ -40,7 +38,7 @@ def giro() -> dict:
     if gb > float(os.environ.get("CE_DB_MAX_GB", "15")):
         log.warning("CONFRONTI_EXTRA fermo: database a %.1f GB", gb)
         return {"fermo_db_gb": round(gb, 1)}
-    # 1/11 (cliente: "raccogliamo gli annunci fuori zona per averli sempre per i confronti"): tutta Italia.
+    # 1/11 (cliente: "raccogliamo gli annunci fuori zona per averli sempre per i confronti"): regioni intorno alla Lombardia.
     # Ogni città ha il suo turno (CE_ORE ore); a ogni giro del cron se ne fanno al massimo CE_PER_GIRO, così il giro
     # della zona non si allunga di ore e le città restano sempre aggiornate a rotazione.
     tutte = [c.strip() for c in os.environ.get("CE_CAP", CAP_ITALIA).split(",") if c.strip()]
