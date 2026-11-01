@@ -61,9 +61,11 @@ def _ricerche() -> list[tuple[str, int]]:
     if solo:
         comuni = [(c, p) for c, p in comuni if p in solo]
     comuni.sort(key=lambda x: ORDINE_PROV.index(x[1]) if x[1] in ORDINE_PROV else 99)
-    out = [(f"{p} Milano {z}", 60) for z in ZONE_MILANO for p in PAROLE[:2]]
+    # 1/11: parole diverse per trovare i commercianti mancanti (MAPS_PAROLE="a|b|c"), senza ripetere le ricerche già fatte
+    parole = [p.strip() for p in (os.environ.get("MAPS_PAROLE") or "").split("|") if p.strip()] or PAROLE[:2]
+    out = [(f"{p} Milano {z}", int(os.environ.get("MAPS_PER_RICERCA", "60"))) for z in ZONE_MILANO for p in parole]
     for c, pv in comuni:
-        out += [(f"{p} {c} {pv}", 30) for p in PAROLE[:2]]
+        out += [(f"{p} {c} {pv}", 30) for p in parole]
     return out
 
 
