@@ -561,6 +561,17 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
     return tenuti, esclusi
 
 
+_ALLESTIMENTI_SPORT = re.compile(
+    r"\bm[\s-]?sport\b|\bmsport\b|\bm[\s-]?performance\b|\bs[\s-]?line\b|\brs[\s-]?line\b|\br[\s-]?line\b|"
+    r"\bamg[\s-]?line\b|\bamg\b|\bgt[\s-]?line\b|\bst[\s-]?line\b|\bn[\s-]?line\b|\bfr\b|\bgts\b|"
+    r"\br[\s-]?design\b|\bs[\s-]?design\b|\bvignale\b|\bblack\s+edition\b|\bcompetizione\b|\bveloce\b", re.I)
+
+
+def allestimento(x: dict) -> str:
+    """'sportivo' per gli allestimenti sportivi/premium scritti nella versione o nel titolo, altrimenti 'normale'."""
+    return "sportivo" if _ALLESTIMENTI_SPORT.search(f"{x.get('version_raw') or ''} {x.get('title') or ''}") else "normale"
+
+
 def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict:
     puliti, esclusi = pulisci(t, mercato, cfg, now)
     if cfg.correzione and t.get("year") and t.get("mileage_km") is not None:
@@ -592,6 +603,16 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
                 if c not in ok:
                     scartati.append((c, f"prezzo fuori scala (mediana gruppo {int(med)} €): probabile errore"))
             validi = ok
+        # 1/11 (cliente): stesso allestimento. Una "M Sport", "S line", "R-Line", "AMG Line"… vale più della versione
+        # normale: se tra i confronti validi ce ne sono abbastanza (n_minimo) dello stesso tipo, si usano solo quelli
+        if os.environ.get("POLICY_ALLESTIMENTO", "1") == "1" and validi:
+            ta = allestimento(t)
+            stessi = [c for c in validi if allestimento(c) == ta]
+            if len(stessi) >= cfg.n_minimo and len(stessi) < len(validi):
+                for c in validi:
+                    if allestimento(c) != ta:
+                        scartati.append((c, "allestimento diverso (sportivo/normale)"))
+                validi = stessi
         if len(validi) >= cfg.n_minimo:
             break
     for c, why in scartati:

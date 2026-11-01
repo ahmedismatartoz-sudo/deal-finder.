@@ -423,3 +423,10 @@ def test_prezzo_assurdo_mai_sul_sito_anche_con_targa():
     t = dict(TARGET, price_eur=500, targa_e_telefono=True)
     v = valuta(t, m, 1500, CFG, NOW)
     assert v["categoria"] == "dati_insufficienti"
+
+
+def test_allestimento_1_11():
+    from dealfinder.pricing.policy_v2 import allestimento
+    assert allestimento({"version_raw": "118d M Sport"}) == "sportivo"
+    assert allestimento({"title": "Golf 2.0 TDI R-Line"}) == "sportivo"
+    assert allestimento({"version_raw": "Golf 1.6 TDI Business"}) == "normale"
