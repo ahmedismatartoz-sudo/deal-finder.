@@ -126,6 +126,7 @@ def completa_db(conn, limite: int = 20000) -> dict:
         rows = conn.execute(
             """SELECT id, title, description, version_raw, fuel, year, mileage_km, gearbox, power_kw, field_origin FROM listings
                WHERE status='attivo' AND (fuel IS NULL OR year IS NULL OR mileage_km IS NULL OR gearbox IS NULL OR power_kw IS NULL)
+                 AND NOT (coalesce(field_origin, '{}'::jsonb) ? 'testo_letto_v2')
                  AND (description IS NOT NULL OR title IS NOT NULL OR version_raw IS NOT NULL) AND id > %s
                ORDER BY id LIMIT 3000""", (ultimo,)).fetchall()
         if not rows:
@@ -134,9 +135,11 @@ def completa_db(conn, limite: int = 20000) -> dict:
         st["letti"] += len(rows)
         for r in rows:
             nuovi = completa(r, r["title"], r["description"])
-            if not nuovi:
-                continue
             orig = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
+            orig["testo_letto_v2"] = 1                 # già letto: al giro dopo si passa agli annunci successivi
+            if not nuovi:
+                conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(orig), r["id"]))
+                continue
             orig.update({k: "dal_testo" for k in nuovi})
             sets = ", ".join(f"{k}=%({k})s" for k in nuovi)
             conn.execute(f"UPDATE listings SET {sets}, field_origin=%(fo)s WHERE id=%(id)s",
