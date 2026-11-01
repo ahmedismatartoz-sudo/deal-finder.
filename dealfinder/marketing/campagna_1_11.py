@@ -64,7 +64,7 @@ def rivendita(it: dict) -> int:
     prezzo (sotto il 72% del mercato): rivendita abbassata a mercato × 0,85 e mai oltre C111_MARG_MOSTRA di margine."""
     pv = it.get("pv") or {}
     if not troppo_bella(it):
-        return int(pv.get("R_finale") or pv.get("R") or (it["prezzo"] + 140 + pv["margine"]))
+        return int(round((pv.get("R_finale") or pv.get("R") or (it["prezzo"] + 140 + pv["margine"])) / 100.0)) * 100
     r = min(pv["M"] * float(os.environ.get("C111_RIV", "0.85")),
             it["prezzo"] + 140 + int(os.environ.get("C111_MARG_MOSTRA", "4500")))
     return int(round(r / 100.0)) * 100
@@ -73,7 +73,7 @@ def rivendita(it: dict) -> int:
 def margine(it: dict) -> int:
     pv = it.get("pv") or {}
     if not troppo_bella(it):
-        return int(pv["margine"])
+        return int(round(min(pv["margine"], rivendita(it) - it["prezzo"] - 140) / 10.0)) * 10
     return int(round((rivendita(it) - it["prezzo"] - 140) / 10.0)) * 10
 
 
