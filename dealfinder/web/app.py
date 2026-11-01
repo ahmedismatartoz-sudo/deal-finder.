@@ -3778,7 +3778,7 @@ def _tempo_reale():
         L = logging.getLogger("scovo")
         if not tag:
             return
-        if not os.environ.get("APIFY_TOKEN"):
+        if not (os.environ.get("APIFY_TOKENS") or os.environ.get("APIFY_TOKEN")):
             L.warning("LEADMAPS_WEB fermo: APIFY_TOKEN non c'è sul servizio web")
             return
         time.sleep(120)

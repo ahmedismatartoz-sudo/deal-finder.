@@ -81,7 +81,7 @@ def _prov(indirizzo: str) -> str | None:
 
 
 def giro() -> dict:
-    tok = os.environ.get("APIFY_TOKEN")
+    tok = (os.environ.get("APIFY_TOKENS") or os.environ.get("APIFY_TOKEN"))
     if not tok:
         log.warning("LEADMAPS senza APIFY_TOKEN: niente da fare")
         return {"fatto": False, "motivo": "APIFY_TOKEN mancante"}
