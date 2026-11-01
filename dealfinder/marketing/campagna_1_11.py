@@ -23,8 +23,17 @@ from .brevo_liste import API, _chiave, _foto_ok
 
 lg = logging.getLogger("dealfinder.marketing")
 
-FASCE = {"utilitarie": (3000, 8000), "medie": (8000, 15000), "alte": (15000, 50000), "supercar": (25000, 70000)}
+FASCE = {"utilitarie": (3000, 8000), "medie": (8000, 15000), "alte": (15000, 50000), "supercar": (20000, 70000)}
 TELV = "348 242 5633"
+
+# 1/11 (cliente): esempi solo di auto molto richieste che si vendono in fretta: benzina o ibride, sotto 80.000 km
+CARB_OK = re.compile(r"benzin|ibrid|hybrid|elettr|gpl|metano", re.I)
+POPOLARI = re.compile(r"\b(panda|500x?|500l|ypsilon|yaris|aygo|c-hr|chr|rav ?4|corolla|polo|golf|t-roc|troc|t-cross|tcross|"
+                      r"tiguan|up|clio|captur|arkana|208|2008|3008|corsa|mokka|fiesta|puma|kuga|focus|sandero|duster|jogger|"
+                      r"i10|i20|i30|kona|tucson|bayon|picanto|rio|stonic|sportage|niro|ceed|qashqai|juke|micra|renegade|"
+                      r"compass|avenger|swift|ignis|vitara|s-cross|c3|c4|cooper|countryman|a1|a3|q2|q3|serie 1|118|"
+                      r"116|120|x1|x2|classe a|a 180|a 200|gla|cla|mx-5|cx-3|cx-30|mazda2|mazda3|fabia|kamiq|karoq|ibiza|arona|"
+                      r"leon|ateca|formentor|tonale|giulietta|zr-v|hr-v|jazz|civic)\b", re.I)
 P = 'style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#222"'
 
 
@@ -115,7 +124,9 @@ def scegli(items: list[dict]) -> dict[str, list[dict]]:
             if (it.get("supercar") or it.get("incidentata") or it["id"] in usate or not pv.get("M")
                     or pv.get("margine") is None or pv.get("categoria") not in ("opportunita", "candidato")
                     or not (mmin <= pv["margine"] <= mmax) or not (lo <= it["prezzo"] < hi)
-                    or (pv.get("n") or 0) < 8 or (it.get("km") or 10**9) > 150000 or not it.get("anno")
+                    or (pv.get("n") or 0) < 8 or (it.get("km") or 10**9) > int(os.environ.get("C111_KM_MAX", "80000"))
+                    or not it.get("anno") or not CARB_OK.search(str(it.get("carb") or ""))
+                    or not POPOLARI.search(f"{it.get('modello') or ''} {it.get('nome') or ''}")
                     or (it.get("n_foto") or 0) < 2 or (prov and (not m or m.group(1).upper() not in prov))):
                 continue
             cand.append(it)
