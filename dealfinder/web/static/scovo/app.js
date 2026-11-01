@@ -30,7 +30,7 @@ const ICON = {
 const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
               ["incidentate","Incidentate",'<path d="M5 17h-1a1 1 0 0 1-1-1v-3l2-5h9l3 4h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1"/><circle cx="7.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/><path d="M12 3l-1 3 2 1-1 3"/>'],
               ["economiche","Sotto 3000",'<path d="M4 7h16v10H4z"/><circle cx="12" cy="12" r="2.5"/><path d="M7 10v4M17 10v4"/>'],
-              ["vendi","Vendi",'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'],
+              ["vendute","Vendute",'<path d="M20 6 9 17l-5-5"/>'],
               ["supercar","Supercar",'<path d="M2 15l2-4c1-2 3-3 5-3h5c2 0 4 1 5.5 3L21 13c.6.2 1 .8 1 1.4V16a1 1 0 0 1-1 1h-1"/><path d="M4 17H3a1 1 0 0 1-1-1v-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/>'],
               ["profilo","Profilo",'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']];
 const BANDS = [
@@ -340,7 +340,6 @@ function venduteBanner(){
 function viewVendute(){
   const v = S.vend, l = (v && v.items) || [];
   const sub = !v ? "Carico…" : l.length ? `${l.length} auto · ${eur(v.margine_totale)} di margine` : "Nessuna auto";
-  const back = `<button class="refresh" data-act="tab" data-v="affari" aria-label="Torna agli affari">←</button>`;
   const cards = l.map((c, i) => `<div class="card" style="cursor:default">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${c.giorni ? (c.giorni === 1 ? "Sparita in 1 giorno" : `Sparita in ${c.giorni} giorni`) : "Sparita"}</span></div>
       <div class="card-body">
@@ -353,7 +352,7 @@ function viewVendute(){
         <div class="gain"><span>Margine prudente che c'era</span><b>+${eur(c.margine)}</b></div>
       </div>
     </div>`).join("");
-  return header("Già vendute", sub, back) + `</header>
+  return header("Già vendute", sub) + `</header>
   <main class="list" aria-live="polite">
     <div class="tip inc-tip"><span class="eur" aria-hidden="true">✓</span><span><b>Affari trovati da Skovo negli ultimi ${(v && v.giorni) || 7} giorni e già spariti dagli annunci.</b> Auto di privati della zona con il margine minimo del sito. Quasi sempre vuol dire vendute: qualcuno le ha prese prima. Prezzo, mercato e margine sono quelli calcolati quando l'auto era online. Contatti e annunci non sono più disponibili.</span></div>
     ${!v ? `<div class="empty"><span class="meta">Carico le auto vendute…</span></div>` : l.length ? cards : `<div class="empty"><strong style="font:700 19px var(--disp)">Nessuna auto in questo momento</strong><span class="meta">${esc(v.errore || "Riprova più tardi.")}</span></div>`}
