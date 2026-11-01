@@ -3932,6 +3932,67 @@ def _tempo_reale():
             L.warning("DIAGNOSI_INSUFF non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_insufficienti, daemon=True, name="diag_insuff").start()
 
+    def diagnosi_as24():
+        """1/11 (cliente): il giudizio di prezzo di AutoScout24 ("super prezzo", "ottimo prezzo"…) contro il nostro calcolo.
+        Una volta per etichetta (DIAGNOSI_AS24=<tag>): conteggi per giudizio, e per i migliori giudizi la nostra categoria,
+        il primo motivo di scarto e se sono sul sito. Solo conteggi + 40 esempi anonimi nel log."""
+        tag = os.environ.get("DIAGNOSI_AS24")
+        if not tag:
+            return
+        time.sleep(200)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"diag_as24:{tag}", 100000):
+                return
+            from ..db import log_job
+            from collections import Counter as _C
+            prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+            sul_sito = {it.get("id") for it in (_elenco.get("items") or [])}
+            with connect() as conn:
+                fine = log_job(conn, f"diag_as24:{tag}")
+                conn.execute("SET statement_timeout = '300s'")
+                rows = conn.execute("""
+                    WITH ult AS (SELECT DISTINCT ON (listing_id) listing_id, riassunto, dati->'motivi' AS motivi
+                                 FROM valutazioni_policy ORDER BY listing_id, computed_at DESC)
+                    SELECT l.id, l.make, l.model, l.fuel, l.year, l.mileage_km, l.price_eur, l.seller_type, l.telefono_ok,
+                           (SELECT f FROM unnest(l.price_flags) f WHERE f LIKE 'as24_prezzo:%%' LIMIT 1) AS giudizio,
+                           u.riassunto->>'categoria' AS cat, (u.riassunto->>'margine')::numeric AS margine,
+                           (u.riassunto->>'M')::numeric AS m, u.motivi
+                    FROM listings l LEFT JOIN ult u ON u.listing_id = l.id
+                    WHERE l.source='autoscout24' AND l.status='attivo' AND upper(l.province) = ANY(%s)
+                      AND EXISTS (SELECT 1 FROM unnest(l.price_flags) f WHERE f LIKE 'as24_prezzo:%%')""", (prov,)).fetchall()
+                per_giudizio = _C(r["giudizio"] for r in rows)
+                per_giudizio_priv = _C(r["giudizio"] for r in rows if r["seller_type"] == "privato")
+                migliori = sorted(per_giudizio, key=lambda g: -per_giudizio[g])
+                det = {}
+                esempi = []
+                for g in migliori:
+                    sub = [r for r in rows if r["giudizio"] == g and r["seller_type"] == "privato"]
+                    c = _C()
+                    for r in sub:
+                        c["sul_sito" if r["id"] in sul_sito else f"cat:{r['cat'] or 'non_valutata'}"] += 1
+                        if r["cat"] == "dati_insufficienti" and r["motivi"]:
+                            m0 = r["motivi"][0] if isinstance(r["motivi"], list) and r["motivi"] else str(r["motivi"])
+                            c["insuff:" + re.sub(r"\d[\d.]*", "N", str(m0))[:50]] += 1
+                        if r["m"] and r["price_eur"]:
+                            c["sotto_M_20+"] += int(r["price_eur"] < float(r["m"]) * .8)
+                    det[g] = dict(c.most_common(14))
+                    for r in sub[:400]:
+                        if len(esempi) < 40 and r["id"] not in sul_sito and r["cat"] in ("non_conveniente", "dati_insufficienti") \
+                                and ("top" in str(g) or "super" in str(g) or "very" in str(g)):
+                            esempi.append([g, r["make"], r["model"], r["fuel"], r["year"], r["mileage_km"], r["price_eur"],
+                                           int(r["m"] or 0), int(r["margine"] or 0), r["cat"], r["telefono_ok"]])
+                esito = {"annunci_con_giudizio": len(rows), "per_giudizio": dict(per_giudizio),
+                         "per_giudizio_privati": dict(per_giudizio_priv), "dettaglio_privati": det}
+                L.warning("DIAGNOSI_AS24 %s", json.dumps(esito, ensure_ascii=False, default=str))
+                for i in range(0, len(esempi), 20):
+                    L.warning("DIAGNOSI_AS24 esempi %s", json.dumps(esempi[i:i + 20], ensure_ascii=False, default=str))
+                fine(True, {"annunci": len(rows)})
+        except Exception as e:
+            L.warning("DIAGNOSI_AS24 non riuscita: %s", str(e)[:300])
+    threading.Thread(target=diagnosi_as24, daemon=True, name="diag_as24").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
