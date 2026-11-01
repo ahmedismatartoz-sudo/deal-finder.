@@ -32,3 +32,17 @@ def test_sigle_motore_1_11():
     assert alimentazione("BMW 320i Touring") == "benzina"
     assert alimentazione("Peugeot 208 d'occasione tenuta bene") is None
     assert completa({"version_raw": "X1 sDrive18d"}, "BMW X1", None) == {"fuel": "diesel"}
+
+
+def test_cambio_e_potenza_1_11():
+    from dealfinder.core.dal_testo import cambio, potenza_kw, completa
+    assert cambio("A3 1.4 TFSI 125 CV S tronic") == "automatico"
+    assert cambio("cambio manuale 6 marce") == "manuale"
+    assert cambio("cambio manuale e cambio automatico") is None
+    assert cambio("clima automatico, libretto e manuale") is None
+    assert potenza_kw("1.4 TFSI 125 CV") == 92
+    assert potenza_kw("92 kW (125 CV)") == 92
+    assert potenza_kw("110 CV e 150 CV") is None
+    assert completa({"gearbox": None, "power_kw": None, "fuel": "benzina", "year": 2015, "mileage_km": 1},
+                    "Golf 1.4 TSI 125 CV DSG", None) == {"gearbox": "automatico", "power_kw": 92}
+    assert completa({"fuel": "benzina", "year": 2015, "mileage_km": 1}, "Golf 1.4 TSI 125 CV DSG", None) == {}

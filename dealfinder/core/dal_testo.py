@@ -41,6 +41,30 @@ def alimentazione(testo: str) -> str | None:
     return trovate.pop() if len(trovate) == 1 else None
 
 
+# 1/11: cambio e potenza scritti nel testo (servono per trovare confronti "stesso motore e cambio")
+RE_AUTO = re.compile(r"cambio\s+(?:automatico|auto\b|robotizzato|sequenziale)|\bdsg\b|\bs-?\s?tronic\b|steptronic|tiptronic|\beat\s?[68]\b|\bedc\b|"
+                     r"\bcvt\b|powershift|\b[579]g-?tronic\b|\bdct\b|\bxtronic\b|\be-?cvt\b|\bauto\s?gear\b", re.I)
+RE_MANUALE = re.compile(r"cambio\s+manuale|\bmanuale\s+(?:a\s+)?\d\s+marce|\b\d\s+marce\s+manuale", re.I)
+# ("clima automatico", "libretto e manuale" non dicono niente sul cambio: servono parole vicine a "cambio"/"marce")
+RE_CV = re.compile(r"\b(\d{2,3})\s?(?:cv|hp|ps)\b", re.I)
+RE_KW = re.compile(r"\b(\d{2,3})\s?kw\b", re.I)
+
+
+def cambio(testo: str) -> str | None:
+    a, m = bool(RE_AUTO.search(testo)), bool(RE_MANUALE.search(testo))
+    return "automatico" if a and not m else "manuale" if m and not a else None
+
+
+def potenza_kw(testo: str) -> int | None:
+    kw = {int(x) for x in RE_KW.findall(testo)}
+    kw |= {int(round(int(x) * 0.7355)) for x in RE_CV.findall(testo)}
+    kw = {k for k in kw if 25 <= k <= 500}
+    if not kw:
+        return None
+    # lo stesso motore scritto in CV e in kW dà valori vicini: si accetta se tutti stanno entro ±3 kW
+    return round(sum(kw) / len(kw)) if max(kw) - min(kw) <= 3 else None
+
+
 def anno(testo: str) -> int | None:
     oggi = datetime.date.today().year
     valori = {int(m.group(1)) for m in RE_ANNO.finditer(testo)} | {int(m.group(1)) for m in RE_MESE_ANNO.finditer(testo)}
@@ -78,6 +102,14 @@ def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
         k = chilometri(testo)
         if k:
             out["mileage_km"] = k
+    if "gearbox" in campi and not campi.get("gearbox"):
+        g = cambio(testo)
+        if g:
+            out["gearbox"] = g
+    if "power_kw" in campi and not campi.get("power_kw"):
+        kw = potenza_kw(testo)
+        if kw:
+            out["power_kw"] = kw
     return out
 
 
@@ -88,12 +120,12 @@ def completa_db(conn, limite: int = 20000) -> dict:
     import json
     import os
     tetto = int(os.environ.get("DAL_TESTO_MAX", "60000"))
-    st = {"letti": 0, "fuel": 0, "year": 0, "mileage_km": 0, "aggiornati": 0}
+    st = {"letti": 0, "fuel": 0, "year": 0, "mileage_km": 0, "gearbox": 0, "power_kw": 0, "aggiornati": 0}
     ultimo = 0
     while st["letti"] < tetto:
         rows = conn.execute(
-            """SELECT id, title, description, version_raw, fuel, year, mileage_km, field_origin FROM listings
-               WHERE status='attivo' AND (fuel IS NULL OR year IS NULL OR mileage_km IS NULL)
+            """SELECT id, title, description, version_raw, fuel, year, mileage_km, gearbox, power_kw, field_origin FROM listings
+               WHERE status='attivo' AND (fuel IS NULL OR year IS NULL OR mileage_km IS NULL OR gearbox IS NULL OR power_kw IS NULL)
                  AND (description IS NOT NULL OR title IS NOT NULL OR version_raw IS NOT NULL) AND id > %s
                ORDER BY id LIMIT 3000""", (ultimo,)).fetchall()
         if not rows:
