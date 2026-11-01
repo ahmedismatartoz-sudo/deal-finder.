@@ -731,7 +731,14 @@ if __name__ == "__main__":
                 from . import confronti_extra as CE
                 with _cn() as _c:
                     _fin = _lj(_c, "confronti_extra")
-                    _fin(True, CE.giro())
+                    _ce = CE.giro()
+                    _fin(True, _ce)
+                # 1/11 (cliente: "appena entrano le auto nuove della Lombardia sfruttale per fare più confronti"):
+                # se sono entrati tanti confronti nuovi o con prezzo cambiato, il ricalcolo dei prezzi parte in questo giro
+                _nuovi = sum(v for k, v in (_ce or {}).items() if isinstance(v, int) and (k.endswith(":nuovo") or k.endswith(":prezzo")))
+                if _nuovi >= int(os.environ.get("CE_RICALCOLA_DA", "1000")):
+                    os.environ["RICALCOLO_SUBITO"] = "1"
+                    log.warning("CONFRONTI_EXTRA %d confronti nuovi: ricalcolo dei prezzi in questo giro", _nuovi)
         except Exception as e:
             log.warning("CONFRONTI_EXTRA non riuscito: %s", str(e)[:300])
     # 29/10: dopo la zona (le auto medie e basse prima) e una volta al giorno.
@@ -750,7 +757,7 @@ if __name__ == "__main__":
             from .ciclo import _due
             from ..db import connect, log_job
             ore = int(voce.split("@")[1]) if "@" in voce else 10000      # "nome@2": si ripete ogni 2 ore (a ogni giro)
-            if not _due(voce, ore):
+            if not _due(voce, ore) and not (voce.startswith("ricalcolo") and os.environ.pop("RICALCOLO_SUBITO", None) == "1"):
                 continue
             if voce.startswith("lusso60"):                                 # 20/10: auto 60-200k di continuo
                 from . import lusso as L
