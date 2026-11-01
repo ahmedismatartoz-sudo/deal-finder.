@@ -167,6 +167,35 @@ def giro() -> dict:
             except Exception as e:
                 conn.rollback()
                 log.warning("BENZ cambi di prezzo non letti: %s", str(e)[:200])
+        # 1/11 (cliente: "prendi le auto con il super prezzo e verifica se sono davvero opportunità"): le auto di
+        # privati della zona che AutoScout24 giudica "super prezzo" o "prezzo molto basso" e che il nostro calcolo non ha
+        # mai valutato (erano 2.572 + 525) passano sempre dal calcolo prudente. Decidono le nostre regole, non AutoScout.
+        if os.environ.get("BENZ_AS24_TOP", "1") == "1":
+            try:
+                gia = {r["id"] for r in cand}
+                top = conn.execute(
+                    """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
+                       FROM listings t
+                       WHERE t.source = 'autoscout24' AND t.status = 'attivo' AND t.seller_type = 'privato'
+                         AND upper(t.province) = ANY(%(prov)s)
+                         AND (t.price_flags && ARRAY['as24_prezzo:top-price', 'as24_prezzo:toolow-price']::text[])
+                         AND t.price_eur BETWEEN 1000 AND %(pmax)s AND coalesce(t.year, 2007) >= 2007
+                         AND coalesce(t.mileage_km, 0) <= 180000
+                         AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+                         AND t.stage IS DISTINCT FROM 'approfondito'
+                         AND NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
+                                         AND vp.computed_at > t.last_seen_at - interval '3 days')
+                       ORDER BY t.first_seen_at DESC
+                       LIMIT %(lim)s""",
+                    {"prov": PROVINCE_100, "pmax": PMAX, "lim": int(os.environ.get("BENZ_AS24_MAX", "1500"))}).fetchall()
+                agg = [r for r in top if r["id"] not in gia]
+                cand = agg + list(cand)
+                st["as24_super_prezzo"] = len(top)
+                st["as24_super_prezzo_aggiunte"] = len(agg)
+                log.warning("BENZ AutoScout 'super prezzo' mai valutate: %d (aggiunte %d)", len(top), len(agg))
+            except Exception as e:
+                conn.rollback()
+                log.warning("BENZ super prezzo non lette: %s", str(e)[:200])
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))
