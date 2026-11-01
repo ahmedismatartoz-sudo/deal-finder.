@@ -3858,6 +3858,75 @@ def _tempo_reale():
             L.warning("CAMPAGNA_1_11 non riuscita: %s", str(e)[:300])
     threading.Thread(target=campagna_1_11, daemon=True, name="campagna_1_11").start()
 
+    def diagnosi_insufficienti():
+        """1/11 (cliente: "il software può fare di più"): perché le auto di privati della zona restano 'dati insufficienti'.
+        Una volta per etichetta (DIAGNOSI_INSUFF=<tag>). Solo conteggi e 30 esempi anonimi (marca/modello/anno) nel log."""
+        tag = os.environ.get("DIAGNOSI_INSUFF")
+        if not tag:
+            return
+        time.sleep(180)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"diag_insuff:{tag}", 100000):
+                return
+            from ..db import log_job
+            prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+            with connect() as conn:
+                fine = log_job(conn, f"diag_insuff:{tag}")
+                conn.execute("SET statement_timeout = '300s'")
+                rows = conn.execute("""
+                    WITH ult AS (SELECT DISTINCT ON (listing_id) listing_id, dati, riassunto FROM valutazioni_policy
+                                 ORDER BY listing_id, computed_at DESC)
+                    SELECT l.id, l.make, l.model, l.fuel, l.year, l.mileage_km, l.gearbox, l.power_kw, l.version_raw, l.price_eur,
+                           u.dati->'motivi' AS motivi, (u.riassunto->>'n')::int AS n
+                    FROM listings l JOIN ult u ON u.listing_id = l.id
+                    WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                      AND u.riassunto->>'categoria' = 'dati_insufficienti'""", (prov,)).fetchall()
+                from collections import Counter as _C
+                motivi, mancano, nconf = _C(), _C(), _C()
+                pochi = []
+                for r in rows:
+                    m = (r["motivi"] or [""])
+                    m0 = m[0] if isinstance(m, list) and m else str(m)
+                    chiave = re.sub(r"\d[\d.]*", "N", str(m0))[:90]
+                    motivi[chiave] += 1
+                    if "confronti validi" in str(m0):
+                        pochi.append(r)
+                        nconf[min(int(r["n"] or 0), 5)] += 1
+                        if not r["power_kw"]:
+                            mancano["potenza"] += 1
+                        if not r["gearbox"]:
+                            mancano["cambio"] += 1
+                        if not r["version_raw"]:
+                            mancano["versione"] += 1
+                # per le auto con pochi confronti: quante auto stessa marca/modello/alimentazione, anno ±1, km ±20.000
+                # (senza guardare motore e cambio) ci sono in tutto il Nord tra online e sparite negli ultimi 60 giorni
+                larghi = _C()
+                esempi = []
+                for r in pochi[:400]:
+                    if not (r["year"] and r["mileage_km"] is not None):
+                        larghi["senza_anno_o_km"] += 1
+                        continue
+                    k = conn.execute("""SELECT count(*) AS n FROM listings WHERE make=%s AND model=%s AND fuel IS NOT DISTINCT FROM %s
+                        AND year BETWEEN %s AND %s AND mileage_km BETWEEN %s AND %s AND price_eur IS NOT NULL AND id <> %s
+                        AND (status='attivo' OR (status='scomparso' AND disappeared_at > now() - interval '60 days'))""",
+                        (r["make"], r["model"], r["fuel"], r["year"] - 1, r["year"] + 1, max(0, r["mileage_km"] - 20000),
+                         r["mileage_km"] + 20000, r["id"])).fetchone()["n"]
+                    larghi["0-4" if k < 5 else "5-9" if k < 10 else "10-29" if k < 30 else "30+"] += 1
+                    if k >= 10 and len(esempi) < 30:
+                        esempi.append([r["make"], r["model"], r["fuel"], r["year"], r["mileage_km"], r["power_kw"], r["gearbox"],
+                                       (r["version_raw"] or "")[:40], int(r["n"] or 0), k])
+                esito = {"auto": len(rows), "motivi": dict(motivi.most_common(15)), "pochi_confronti": len(pochi),
+                         "n_validi": dict(nconf), "mancano_tra_pochi": dict(mancano), "confronti_larghi": dict(larghi)}
+                L.warning("DIAGNOSI_INSUFF %s", json.dumps(esito, ensure_ascii=False))
+                for i in range(0, len(esempi), 15):
+                    L.warning("DIAGNOSI_INSUFF esempi %s", json.dumps(esempi[i:i + 15], ensure_ascii=False))
+                fine(True, esito)
+        except Exception as e:
+            L.warning("DIAGNOSI_INSUFF non riuscita: %s", str(e)[:300])
+    threading.Thread(target=diagnosi_insufficienti, daemon=True, name="diag_insuff").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
