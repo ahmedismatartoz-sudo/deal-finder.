@@ -22,3 +22,13 @@ def test_anno_e_km():
 def test_completa_solo_campi_vuoti():
     out = completa({"fuel": "benzina", "year": None, "mileage_km": None}, "Panda", "diesel anno 2011 140.000 km")
     assert out == {"year": 2011, "mileage_km": 140000}
+
+
+def test_sigle_motore_1_11():
+    from dealfinder.core.dal_testo import alimentazione, completa
+    assert alimentazione("BMW 118d Advantage") == "diesel"
+    assert alimentazione("Mercedes A 180 d Sport") == "diesel"
+    assert alimentazione("Seat Ibiza 1.0 EcoTSI 115 CV") == "benzina"
+    assert alimentazione("BMW 320i Touring") == "benzina"
+    assert alimentazione("Peugeot 208 d'occasione tenuta bene") is None
+    assert completa({"version_raw": "X1 sDrive18d"}, "BMW X1", None) == {"fuel": "diesel"}

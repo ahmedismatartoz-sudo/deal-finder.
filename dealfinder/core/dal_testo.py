@@ -16,8 +16,12 @@ _FUEL_PAROLE = [
     ("elettrica", r"\b(100\s*%\s*)?elettrica\b|\bfull\s+electric\b|\bbev\b"),
     ("ibrida", r"\bibrid[ao]\b|\bhybrid\b|\bplug-?in\b|\bphev\b|\bmhev\b|\bmild\s+hybrid\b"),
     ("diesel", r"\bdiesel\b|\bgasolio\b|\btdi\b|\bjtd[m]?\b|multi-?jet|\bmjt\b|\bhdi\b|bluehdi|\bdci\b|\bcrdi\b|"
-               r"\btdci\b|\bcdi\b|\bd-?4d\b|\bcdti\b|\bblue\s?motion\s+tdi\b|\bd\s?-?\s?cat\b|\b\d\.\d\s?d\b"),
-    ("benzina", r"\bbenzina\b|\btsi\b|\btfsi\b|\bfsi\b|t-?jet|\bfire\b|vvt-?i|ecoboost|puretech|\btce\b|\bmpi\b|\bgdi\b|\bt-?gdi\b"),
+               r"\btdci\b|\bcdi\b|\bd-?4d\b|\bcdti\b|\bblue\s?motion\s+tdi\b|\bd\s?-?\s?cat\b|\b\d\.\d\s?d\b|"
+               # 1/11: sigle dei modelli diesel (BMW 118d/320d/X1 sDrive18d, Mercedes A 180 d/C 220 d, Volvo D3/D4, Mazda Skyactiv-D)
+               r"\b[1-8]\d{2}\s?d\b(?!['’])|\b[sx]drive\s?\d{2}d\b|\b[a-z]{1,3}\s?\d{3}\s?(?:cdi|d)\b(?!['’])|\bbluetec\b|\bd[2-5]\b|skyactiv-?d|\becoblue\b|\bmultijet\b"),
+    ("benzina", r"\bbenzina\b|\btsi\b|\btfsi\b|\bfsi\b|t-?jet|\bfire\b|vvt-?i|ecoboost|puretech|\btce\b|\bmpi\b|\bgdi\b|\bt-?gdi\b|"
+               # 1/11: altre sigle benzina (EcoTSI, FireFly, TwinAir, VTEC, Skyactiv-G, Kompressor, BMW 118i/320i)
+               r"ecotsi|firefly|twin-?air|\bi-?vtec\b|\bvtec\b|skyactiv-?g|kompressor|\b[1-8]\d{2}\s?i\b(?!['’])|\b[sx]drive\s?\d{2}i\b|\bturbo\s?benzina\b"),
 ]
 RE_ANNO = re.compile(r"(?:anno|immatricolat[ao]|immatricolazione|del|dal|registrazione|prima\s+immatricolazione)\s*:?\s*"
                      r"(?:(?:0?[1-9]|1[0-2])\s*[/.-]\s*)?((?:19[89]|20[0-3])\d)\b", re.I)
@@ -60,7 +64,7 @@ def chilometri(testo: str) -> int | None:
 
 def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
     """Ritorna SOLO i campi mancanti trovati nel testo: {"fuel": ..., "year": ..., "mileage_km": ...}."""
-    testo = f"{titolo or ''}\n{descrizione or ''}"
+    testo = f"{campi.get('version_raw') or ''}\n{titolo or ''}\n{descrizione or ''}"     # 1/11: anche la versione
     out = {}
     if not campi.get("fuel"):
         f = alimentazione(testo)
@@ -78,24 +82,36 @@ def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
 
 
 def completa_db(conn, limite: int = 20000) -> dict:
-    """Riempie nel database i campi mancanti degli annunci attivi di privati (segnati in field_origin come 'dal_testo')."""
+    """Riempie nel database i campi mancanti degli annunci attivi (segnati in field_origin come 'dal_testo').
+    1/11: anche commercianti e annunci fuori zona (servono come confronti: senza alimentazione un annuncio non entra
+    mai nel mercato), a pezzi da 3.000 per la memoria; si legge anche la versione dell'annuncio."""
     import json
-    rows = conn.execute(
-        """SELECT id, title, description, fuel, year, mileage_km, field_origin FROM listings
-           WHERE status='attivo' AND seller_type='privato' AND (fuel IS NULL OR year IS NULL OR mileage_km IS NULL)
-             AND (description IS NOT NULL OR title IS NOT NULL) ORDER BY last_seen_at DESC LIMIT %s""", (limite,)).fetchall()
-    st = {"letti": len(rows), "fuel": 0, "year": 0, "mileage_km": 0, "aggiornati": 0}
-    for r in rows:
-        nuovi = completa(r, r["title"], r["description"])
-        if not nuovi:
-            continue
-        orig = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
-        orig.update({k: "dal_testo" for k in nuovi})
-        sets = ", ".join(f"{k}=%({k})s" for k in nuovi)
-        conn.execute(f"UPDATE listings SET {sets}, field_origin=%(fo)s WHERE id=%(id)s",
-                     {**nuovi, "fo": json.dumps(orig), "id": r["id"]})
-        for k in nuovi:
-            st[k] += 1
-        st["aggiornati"] += 1
-    conn.commit()
+    import os
+    tetto = int(os.environ.get("DAL_TESTO_MAX", "60000"))
+    st = {"letti": 0, "fuel": 0, "year": 0, "mileage_km": 0, "aggiornati": 0}
+    ultimo = 0
+    while st["letti"] < tetto:
+        rows = conn.execute(
+            """SELECT id, title, description, version_raw, fuel, year, mileage_km, field_origin FROM listings
+               WHERE status='attivo' AND (fuel IS NULL OR year IS NULL OR mileage_km IS NULL)
+                 AND (description IS NOT NULL OR title IS NOT NULL OR version_raw IS NOT NULL) AND id > %s
+               ORDER BY id LIMIT 3000""", (ultimo,)).fetchall()
+        if not rows:
+            break
+        ultimo = rows[-1]["id"]
+        st["letti"] += len(rows)
+        for r in rows:
+            nuovi = completa(r, r["title"], r["description"])
+            if not nuovi:
+                continue
+            orig = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
+            orig.update({k: "dal_testo" for k in nuovi})
+            sets = ", ".join(f"{k}=%({k})s" for k in nuovi)
+            conn.execute(f"UPDATE listings SET {sets}, field_origin=%(fo)s WHERE id=%(id)s",
+                         {**nuovi, "fo": json.dumps(orig), "id": r["id"]})
+            for k in nuovi:
+                st[k] += 1
+            st["aggiornati"] += 1
+        conn.commit()
+        del rows
     return st
