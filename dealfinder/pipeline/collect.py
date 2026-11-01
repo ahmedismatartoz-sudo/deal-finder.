@@ -694,6 +694,10 @@ if __name__ == "__main__":
     if not os.environ.get("DATABASE_URL"):
         log.info("DATABASE_URL non impostata: servizio non configurato, nulla da fare")
         sys.exit(0)
+    # 1/11 (regola del cliente: niente raccolta da Facebook): i giri Facebook non partono più, salvo FACEBOOK_ATTIVO=1
+    if mode in ("facebook", "fb_backfill", "fb_importa") and os.environ.get("FACEBOOK_ATTIVO") != "1":
+        log.warning("Facebook spento (regola del cliente): niente raccolta")
+        sys.exit(0)
     # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
     mode = os.environ.get("COLLECT_MODO") or mode
     # COLLECT_PRIMA (da Render), es. "leadsp:3,benzina_mi:5": giri pesanti una tantum fatti qui, in un processo
