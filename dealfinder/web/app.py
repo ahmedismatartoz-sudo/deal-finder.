@@ -4949,6 +4949,24 @@ def _tempo_reale():
                     if i % 500 == 0:
                         L.warning("VALNUOVE avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
                 L.warning("VALNUOVE fatto: %s", json.dumps(dict(st)))
+                # poi le auto scartate per pochi confronti: con il livello 2 corretto oggi (si allarga fino al minimo del
+                # sito) molte trovano abbastanza auto uguali. Prima le benzina fino a 100.000 km, poi il resto.
+                ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l
+                    JOIN LATERAL (SELECT categoria, dati FROM valutazioni_policy v WHERE v.listing_id=l.id
+                                  ORDER BY computed_at DESC LIMIT 1) u ON true
+                    WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                      AND l.price_eur BETWEEN 1000 AND 30000 AND COALESCE(l.mileage_km,0) <= 150000
+                      AND u.categoria = 'dati_insufficienti' AND u.dati->'motivi'->>0 LIKE 'solo %%confronti validi%%'
+                    ORDER BY (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000) DESC,
+                             (l.price_eur <= 10000) DESC, l.last_seen_at DESC LIMIT 4000""", (list(tutte()),)).fetchall()]
+                L.warning("VALNUOVE pochi confronti da rivalutare: %d", len(ids))
+                st = _C()
+                for i in range(0, len(ids), 25):
+                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
+                    conn.commit()
+                    if i % 500 == 0:
+                        L.warning("VALNUOVE confronti avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
+                L.warning("VALNUOVE confronti fatto: %s", json.dumps(dict(st)))
         except Exception as e:
             L.warning("VALNUOVE non riuscita: %s", str(e)[:300])
     threading.Thread(target=valuta_mai_valutate, daemon=True, name="valnuove").start()
