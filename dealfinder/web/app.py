@@ -4157,8 +4157,8 @@ def _tempo_reale():
             import httpx
             from pathlib import Path as _P
             from ..marketing.brevo_liste import _chiave
-            testo = ("Buongiorno, siamo Skovo: troviamo auto di privati sotto mercato, scartiamo truffe e vi fissiamo noi "
-                     "l'appuntamento. Interessati? Chiamate il 3482425633")
+            testo = ("Buongiorno, siamo Skovo: cerchiamo per voi auto di privati in vendita sotto mercato da comprare e "
+                     "rivendere, e vi fissiamo l'appuntamento. Info 3482425633")
             massimo = int(os.environ.get("SMS_MAX", "229"))
             chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])
             no = re.compile(r"(?i)officin|carrozz|gomm|pneumat|demoliz|rottam|soccorso|noleggio|ricambi|elettrauto|lavaggio|"
