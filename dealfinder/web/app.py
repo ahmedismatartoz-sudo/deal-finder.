@@ -4793,7 +4793,7 @@ def _tempo_reale():
                 SELECT DISTINCT ON (vp.listing_id) vp.listing_id, vp.categoria, vp.dati, l.price_eur, l.source
                 FROM valutazioni_policy vp JOIN listings l ON l.id = vp.listing_id
                 WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
-                  AND l.price_eur BETWEEN %s AND %s
+                  AND l.price_eur BETWEEN %s AND %s AND vp.computed_at > now() - interval '5 days'
                 ORDER BY vp.listing_id, vp.computed_at DESC"""
             with connect() as conn:
                 conn.execute("SET statement_timeout = '600s'")
@@ -4806,6 +4806,7 @@ def _tempo_reale():
                     tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
                     conn.commit()
                 L.warning("SOGLIA7K rivalutate: %s", json.dumps(dict(st)))
+                L.warning("SOGLIA7K diagnosi in corso")
                 rows = conn.execute(sql_ultima, (prov, 1000, 30000)).fetchall()
             cat, mot, marg, fonte = _C(), _C(), _C(), _C()
             for r in rows:
