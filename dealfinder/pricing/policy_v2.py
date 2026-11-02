@@ -148,7 +148,7 @@ class PolicyConfig:
     giacenza_giorni: int = 0
     giacenza_euro_giorno: float = 3.0
     # 25/10 (cliente): costi del commerciante per rivendere (passaggio, tagliando, pulizia, ritocchi, garanzia)
-    costo_fisso: int = 600
+    costo_fisso: int = 0              # 2/11 sera (cliente: "togli i 600 euro di costi"); prima 600
     costo_fisso_alto: int = 1000
     costo_alto_da: int = 20000
     iva_margine: bool = False         # tolta il 16/10 (richiesta); POLICY_IVA_MARGINE=1 la rimette. Regime del margine (art. 36 DL 41/95), aliquota 22%

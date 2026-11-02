@@ -4877,6 +4877,44 @@ def _tempo_reale():
             L.warning("RIPARADANNI non riuscita: %s", str(e)[:300])
     threading.Thread(target=ripara_danni, daemon=True, name="riparadanni").start()
 
+    def rivaluta_costi():
+        """2/11 sera (cliente: "togli i 600 euro di costi"): POLICY_COSTO_FISSO=0. RINVIO_INVIA=rivcosti<n> rivaluta
+        subito le auto di privati della zona scartate come non convenienti a cui mancavano al massimo 600 € per la
+        soglia (con il costo tolto possono entrare). Una volta per etichetta; nei log solo conteggi."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("rivcosti"):
+            return
+        time.sleep(30)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"rivcosti:{tag}"):
+                return
+            from collections import Counter as _C
+            from ..pipeline import tempo_reale as tr
+            from ..pricing import policy_v2 as P
+            from ..zone import tutte
+            from . import scovo as _sc
+            L.warning("RIVCOSTI costo fisso in uso: %s €", P.PolicyConfig.from_env().costo_fisso)
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '600s'")
+                rows = conn.execute("""SELECT l.id, l.price_eur, u.margine FROM listings l
+                    JOIN LATERAL (SELECT categoria, margine FROM valutazioni_policy v WHERE v.listing_id=l.id
+                                  ORDER BY computed_at DESC LIMIT 1) u ON true
+                    WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                      AND l.price_eur BETWEEN 1000 AND 20000 AND COALESCE(l.mileage_km,0) <= 150000
+                      AND u.categoria = 'non_conveniente' AND u.margine IS NOT NULL""", (list(tutte()),)).fetchall()
+                ids = [r["id"] for r in rows if int(r["margine"]) >= _sc.soglia(int(r["price_eur"])) - 600]
+                L.warning("RIVCOSTI non convenienti %d, a cui mancavano <= 600 €: %d", len(rows), len(ids))
+                st = _C()
+                for i in range(0, len(ids), 25):
+                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
+                    conn.commit()
+                L.warning("RIVCOSTI rivalutate: %s", json.dumps(dict(st)))
+        except Exception as e:
+            L.warning("RIVCOSTI non riuscita: %s", str(e)[:300])
+    threading.Thread(target=rivaluta_costi, daemon=True, name="rivcosti").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
