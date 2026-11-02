@@ -4541,6 +4541,55 @@ def _tempo_reale():
             L.warning("SMS_INVIA non riuscito: %s", str(e)[:300])
     threading.Thread(target=sms_invia, daemon=True, name="sms_invia").start()
 
+    def sms_statistiche():
+        """2/11 (cliente: "gli SMS sono andati malissimo, vedi se c'è qualche problema"): RINVIO_INVIA=statsms<n> legge da
+        Brevo gli eventi degli SMS Skovo (tag skovo_sms*) degli ultimi 5 giorni e scrive nei log SOLO conteggi: esito per
+        evento, quanti numeri hanno ricevuto 2+ SMS, risposte, motivi di errore. NON invia nulla. Una volta per etichetta."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("statsms"):
+            return
+        time.sleep(20)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"statsms:{tag}", 100000):
+                return
+            import httpx
+            from collections import Counter
+            from ..marketing.brevo_liste import _chiave
+            ev_all = []
+            with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
+                off = 0
+                while off < 20000:
+                    rr = c.get("https://api.brevo.com/v3/transactionalSMS/statistics/events", params={"limit": 2500, "offset": off, "days": 5})
+                    if rr.status_code >= 300:
+                        L.warning("STATSMS eventi errore %s %s", rr.status_code, rr.text[:200]); break
+                    ev = (rr.json() or {}).get("events") or []
+                    ev_all += ev
+                    if len(ev) < 2500:
+                        break
+                    off += 2500
+                agg = c.get("https://api.brevo.com/v3/transactionalSMS/statistics/aggregatedReport", params={"days": 5})
+                L.warning("STATSMS riepilogo Brevo 5 giorni: %s", agg.text[:600])
+                acc = c.get("https://api.brevo.com/v3/account")
+                try:
+                    L.warning("STATSMS crediti: %s", json.dumps([p for p in (acc.json().get("plan") or []) if "sms" in str(p).lower()])[:400])
+                except Exception:
+                    pass
+            sk = [e for e in ev_all if str(e.get("tag") or "").startswith("skovo_sms")]
+            L.warning("STATSMS eventi totali %d, Skovo %d", len(ev_all), len(sk))
+            L.warning("STATSMS per tag ed evento: %s", json.dumps(Counter(f"{e.get('tag')}|{e.get('event')}" for e in sk), ensure_ascii=False))
+            L.warning("STATSMS motivi: %s", json.dumps(Counter(f"{e.get('event')}|{e.get('reason')}" for e in sk if e.get("reason")), ensure_ascii=False)[:1500])
+            inv = Counter(re.sub(r"\D", "", str(e.get("phoneNumber") or ""))[-10:] for e in sk if e.get("event") in ("sent", "accepted"))
+            L.warning("STATSMS numeri diversi %d, numeri con 2+ SMS %d", len(inv), sum(1 for v in inv.values() if v > 1))
+            cons = {re.sub(r"\D", "", str(e.get("phoneNumber") or ""))[-10:] for e in sk if e.get("event") == "delivered"}
+            L.warning("STATSMS numeri con SMS consegnato %d", len(cons))
+            L.warning("STATSMS risposte %d", sum(1 for e in sk if e.get("event") in ("replied", "reply")))
+            L.warning("STATSMS esempio evento (senza numero): %s", json.dumps({k: v for k, v in (sk[0] if sk else {}).items() if k not in ("phoneNumber",)}, ensure_ascii=False)[:400])
+        except Exception as e:
+            L.warning("STATSMS non riuscito: %s", str(e)[:300])
+    threading.Thread(target=sms_statistiche, daemon=True, name="statsms").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
