@@ -4430,18 +4430,20 @@ def _tempo_reale():
             import base64
             import httpx
             urls = [u for u in (os.environ.get("MUSICA_URL") or "").split("|") if u] or [
-                "https://upload.wikimedia.org/wikipedia/commons/1/17/Antonin_Dvorak_-_symphony_no._9_in_e_minor_%27from_the_new_world%27%2C_op._95_-_iv._allegro_con_fuoco.ogg"]
+                "https://upload.wikimedia.org/wikipedia/commons/1/17/Antonin_Dvorak_-_symphony_no._9_in_e_minor_%27from_the_new_world%27%2C_op._95_-_iv._allegro_con_fuoco.ogg",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Antonin_Dvorak_-_symphony_no._9_in_e_minor_%27from_the_new_world%27%2C_op._95_-_iv._allegro_con_fuoco.ogg"]
             nb = int(os.environ.get("MUSICA_BYTE", "2000000"))
-            with httpx.Client(timeout=120, follow_redirects=True, headers={"User-Agent": "SkovoVideo/1.0 (video promozionale; contatto via sito)", "Range": f"bytes=0-{nb - 1}"}) as c:
+            with httpx.Client(timeout=120, follow_redirects=True, headers={"User-Agent": "SkovoVideoBot/1.0 (https://scovo.onrender.com) httpx", "Range": f"bytes=0-{nb - 1}", "Accept": "*/*"}) as c:
                 for i, u in enumerate(urls):
                     r = c.get(u)
                     L.warning("MUSICA brano %d: %s %s %d byte", i + 1, r.status_code, r.headers.get("content-type"), len(r.content))
                     if r.status_code >= 300:
-                        continue
+                        L.warning("MUSICA risposta: %s", r.text[:300]); continue
                     b = base64.b64encode(r.content[:nb]).decode()
                     pz = [b[k:k + 3500] for k in range(0, len(b), 3500)]
                     for k, x in enumerate(pz):
                         L.warning("MUSICA_B64 %d %d/%d %s", i + 1, k + 1, len(pz), x)
+                    break
             L.warning("MUSICA fatto")
         except Exception as e:
             L.warning("MUSICA non riuscita: %s", str(e)[:300])
