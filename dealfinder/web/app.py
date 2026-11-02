@@ -4768,6 +4768,61 @@ def _tempo_reale():
             lg.warning("DIAGNOSI_DATI non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_dati, daemon=True, name="diagnosi").start()
 
+    def soglia_7k():
+        """2/11 sera (cliente: "abbassiamo fino ai 7k, va bene 1.500 € di margine ... trova un modo per far entrare più
+        auto"): RINVIO_INVIA=soglia7k<n>. 1) rivaluta le auto di privati della zona da 5.000 a 6.999 € scartate come
+        non convenienti con margine tra 1.500 e 2.199 € (con la soglia nuova possono entrare); 2) diagnosi completa dei
+        motivi di scarto delle auto di privati della zona (solo conteggi). Una volta per etichetta."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("soglia7k"):
+            return
+        time.sleep(30)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"soglia7k:{tag}"):
+                return
+            from collections import Counter as _C
+            from ..pipeline import tempo_reale as tr
+            from ..zone import tutte
+            prov = list(tutte())
+            sql_ultima = """
+                SELECT DISTINCT ON (vp.listing_id) vp.listing_id, vp.categoria, vp.dati, l.price_eur, l.source
+                FROM valutazioni_policy vp JOIN listings l ON l.id = vp.listing_id
+                WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                  AND l.price_eur BETWEEN %s AND %s
+                ORDER BY vp.listing_id, vp.computed_at DESC"""
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '600s'")
+                rows = conn.execute(sql_ultima, (prov, 5000, 6999)).fetchall()
+                ids = [r["listing_id"] for r in rows if r["categoria"] == "non_conveniente"
+                       and 1500 <= int((r["dati"] or {}).get("margine") or -99999) < 2200]
+                L.warning("SOGLIA7K da rivalutare: %d (su %d auto 5.000-6.999 €)", len(ids), len(rows))
+                st = _C()
+                for i in range(0, len(ids), 25):
+                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
+                    conn.commit()
+                L.warning("SOGLIA7K rivalutate: %s", json.dumps(dict(st)))
+                rows = conn.execute(sql_ultima, (prov, 1000, 30000)).fetchall()
+            cat, mot, marg, fonte = _C(), _C(), _C(), _C()
+            for r in rows:
+                cat[r["categoria"]] += 1
+                d = r["dati"] or {}
+                if r["categoria"] == "dati_insufficienti":
+                    m = (d.get("motivi") or ["nessun motivo"])[0]
+                    mot[re.sub(r"\d[\d.]*", "N", m)[:80]] += 1
+                    fonte[r["source"]] += 1
+                if r["categoria"] == "non_conveniente" and d.get("margine") is not None and d.get("soglia"):
+                    manca = int(d["soglia"]) - int(d["margine"])
+                    marg["mancano <300" if manca < 300 else "300-700" if manca < 700 else "700-1500" if manca < 1500 else ">1500"] += 1
+            L.warning("SOGLIA7K diagnosi privati zona 1-30k: auto %d, categorie %s", len(rows), json.dumps(dict(cat)))
+            L.warning("SOGLIA7K dati insufficienti per motivo: %s", json.dumps(dict(mot.most_common(20)), ensure_ascii=False))
+            L.warning("SOGLIA7K dati insufficienti per fonte: %s; non convenienti per quanto manca alla soglia: %s",
+                      json.dumps(dict(fonte)), json.dumps(dict(marg)))
+        except Exception as e:
+            L.warning("SOGLIA7K non riuscita: %s", str(e)[:300])
+    threading.Thread(target=soglia_7k, daemon=True, name="soglia7k").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":

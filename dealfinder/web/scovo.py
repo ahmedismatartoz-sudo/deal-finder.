@@ -43,7 +43,7 @@ MARGINE_MINIMO = SOGLIE[0][1]
 
 
 # Margini minimi (regole del cliente, 17/10): margine = rivendita prudente − prezzo, mai sotto 1.500 €.
-# Prezzo d'acquisto fino a 5.000 € → 1.500; 5.000–10.000 → 2.200; 10.000–15.000 → 3.200; 15.000–20.000 → 4.000;
+# Prezzo d'acquisto fino a 7.000 € → 1.500 (dal 2/11 sera; prima 5.000); 7.000–10.000 → 2.200; 10.000–15.000 → 3.200; 15.000–20.000 → 4.000;
 # 20.000–30.000 → 5.000; oltre → 6.000. Variabile SOGLIE_PV "5000:1500,10000:2200,..." per cambiarle.
 def _soglie_pv():
     raw = os.environ.get("SOGLIE_PV")
@@ -52,7 +52,8 @@ def _soglie_pv():
             return [(int(a), int(b)) for a, b in (x.split(":") for x in raw.split(","))] + [(10**9, int(raw.split(",")[-1].split(":")[1]))]
         except ValueError:
             pass
-    return [(5000, 1500), (10000, 2200), (15000, 3200), (20000, 4000), (30000, 5000), (10**9, 6000)]
+    # 2/11 sera (cliente: "abbassiamo fino ai 7k, va bene solo 1.500 € di margine"): 1.500 € fino a 7.000 €
+    return [(7000, 1500), (10000, 2200), (15000, 3200), (20000, 4000), (30000, 5000), (10**9, 6000)]
 
 
 SOGLIE_PV = _soglie_pv()
