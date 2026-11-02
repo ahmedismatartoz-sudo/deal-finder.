@@ -4363,6 +4363,37 @@ def _tempo_reale():
                 if tag.startswith("voceintera"):
                     paragrafi = [" ".join(testi[0:4]), " ".join(testi[4:7]), testi[7], " ".join(testi[8:11]), " ".join(testi[11:14]), testi[14], " ".join(testi[15:17])]
                     testi = ["\n\n".join(paragrafi)]
+                # 2/11 sera: "vocets" = discorso intero via SSE con i tempi di ogni parola (allineamento esatto del video).
+                # Audio PCM 16 bit 24 kHz mono nei log (VOCE_PCM), parole nei log (VOCE_WORDS).
+                if tag.startswith("vocets"):
+                    body = {"model_id": "sonic-3.5", "transcript": "\n\n".join(paragrafi) if False else " ".join(testi), "voice": {"mode": "id", "id": scelta},
+                            "language": "it", "output_format": {"container": "raw", "encoding": "pcm_s16le", "sample_rate": 24000},
+                            "add_timestamps": True, "generation_config": {"speed": float(os.environ.get("VOCE_VEL", "1.0"))}}
+                    pcm, words, starts, ends = bytearray(), [], [], []
+                    with c.stream("POST", "https://api.cartesia.ai/tts/sse", json=body, timeout=180) as rr:
+                        if rr.status_code >= 300:
+                            L.warning("VOCE sse errore %s %s", rr.status_code, rr.read()[:300]); return
+                        for line in rr.iter_lines():
+                            if not line.startswith("data:"):
+                                continue
+                            try:
+                                ev = json.loads(line[5:].strip())
+                            except Exception:
+                                continue
+                            if ev.get("data") and ev.get("type", "chunk") == "chunk":
+                                pcm += base64.b64decode(ev["data"])
+                            wt = ev.get("word_timestamps")
+                            if wt:
+                                words += wt.get("words", []); starts += wt.get("start", []); ends += wt.get("end", [])
+                            if ev.get("type") == "error":
+                                L.warning("VOCE sse evento errore %s", str(ev)[:300])
+                    L.warning("VOCE_WORDS %s", json.dumps({"w": words, "s": starts, "e": ends}, ensure_ascii=False))
+                    b = base64.b64encode(bytes(pcm)).decode()
+                    pz = [b[k:k + 3500] for k in range(0, len(b), 3500)]
+                    for k, x in enumerate(pz):
+                        L.warning("VOCE_PCM %d/%d %s", k + 1, len(pz), x)
+                    L.warning("VOCE fatto sse: %d byte, %d parole", len(pcm), len(words))
+                    return
                 for i, t in enumerate(testi):
                     body = {"model_id": "sonic-3.5", "transcript": t, "voice": {"mode": "id", "id": scelta}, "language": "it",
                             "output_format": {"container": "mp3", "sample_rate": 44100, "bit_rate": 128000},
