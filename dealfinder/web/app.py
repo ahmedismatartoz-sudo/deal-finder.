@@ -5205,9 +5205,17 @@ async def _lifespan(app):
 from starlette.middleware.base import BaseHTTPMiddleware as _BaseMW
 
 
+# Render è al limite di 300 variabili: nel codice c'è solo l'impronta (sha256) del link, non il link
+_ANTEPRIMA_SHA = "88c0eab94883d3ce15b0f2327436b8fc8d105c503b9cfc146ce1ad70e8592b36"
+
+
+def _tok_ok(tok: str) -> bool:
+    import hashlib as _hl
+    return bool(tok) and _hl.sha256(tok.encode()).hexdigest() == _ANTEPRIMA_SHA
+
+
 def _anteprima_ok(request) -> bool:
-    tok = os.environ.get("ANTEPRIMA_TOKEN") or ""
-    return bool(tok) and request.cookies.get("skovo_anteprima") == tok
+    return _tok_ok(request.cookies.get("skovo_anteprima") or "")
 
 
 def _meno_mille(x):
@@ -5250,8 +5258,8 @@ class AnteprimaMiddleware(_BaseMW):
 
 
 def anteprima_entra(request: Request):
-    tok = os.environ.get("ANTEPRIMA_TOKEN") or ""
-    if not tok or request.path_params.get("tok") != tok:
+    tok = request.path_params.get("tok") or ""
+    if not _tok_ok(tok):
         return HTMLResponse("Link non valido", status_code=404)
     r = RedirectResponse("/", status_code=302)
     r.set_cookie("skovo_anteprima", tok, max_age=1800, httponly=True, secure=True, samesite="lax")
