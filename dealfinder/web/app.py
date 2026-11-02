@@ -4175,7 +4175,25 @@ def _tempo_reale():
                     pri = 0 if str(r["chiave"]).startswith("http") else (2 if r["nome"] else 3)
                     cand += [(pri, c) for c in r["cell"]]
             cand.sort(key=lambda x: x[0])
-            numeri, visti = ["3482425633"], {"3482425633"}
+            # 2/11: chi ha già ricevuto un SMS da un giro precedente (tag skovo_sms*) non lo riceve di nuovo
+            gia = set()
+            try:
+                with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c0:
+                    off = 0
+                    while off < 5000:
+                        rr = c0.get("https://api.brevo.com/v3/transactionalSMS/statistics/events",
+                                    params={"limit": 2500, "offset": off, "days": 2})
+                        ev = (rr.json() or {}).get("events") or [] if rr.status_code < 300 else []
+                        for e in ev:
+                            if str(e.get("tag") or "").startswith("skovo_sms"):
+                                gia.add(re.sub(r"\D", "", str(e.get("phoneNumber") or ""))[-10:])
+                        if len(ev) < 2500:
+                            break
+                        off += 2500
+            except Exception as e:
+                L.warning("SMS_INVIA già inviati non letti: %s", str(e)[:150])
+            L.warning("SMS_INVIA numeri che hanno già ricevuto un SMS: %d", len(gia))
+            numeri, visti = ["3482425633"], {"3482425633"} | gia
             for _, t in cand:
                 d = re.sub(r"\D", "", str(t or ""))
                 if d.startswith("39") and len(d) > 10:
