@@ -4335,14 +4335,16 @@ def _tempo_reale():
             import httpx
             key = os.environ.get("CARTESIA_API_KEY")
             H = {"Authorization": f"Bearer {key}", "Cartesia-Version": "2026-03-01", "Content-Type": "application/json"}
+            # frasi del discorso, una per file: i tempi di ogni frase guidano il montaggio del Reel
             testi = [
-                "Ti è mai capitato di vedere un'auto a un prezzo ottimo… e scoprire che era già venduta? Succede ogni giorno: le occasioni vere durano poche ore.",
-                "Il problema è che gli annunci sono migliaia, e in mezzo ci sono truffe, annunci falsi e auto incidentate. Per trovarne una buona perdi ore.",
-                "Per questo abbiamo creato Skovo.",
-                "Il nostro software legge tutti gli annunci di privati nella tua zona, li confronta con auto uguali e ti trova quelle davvero sotto mercato.",
-                "Scarta le truffe, ti avvisa appena esce l'occasione, e l'appuntamento con il venditore lo fissiamo noi.",
-                "Tu devi solo comprare e rivendere.",
-                "Skovo: le occasioni, prima degli altri. Chiamaci al 348 242 5633, ti spieghiamo tutto in due minuti.",
+                "Ti è mai capitato di vedere un'auto a un prezzo ottimo…", "e scoprire che era già venduta?",
+                "Succede ogni giorno:", "le occasioni vere durano poche ore.",
+                "Il problema è che gli annunci sono migliaia,", "e in mezzo ci sono truffe, annunci falsi e auto incidentate.",
+                "Per trovarne una buona perdi ore.", "Per questo abbiamo creato Skovo.",
+                "Il nostro software legge tutti gli annunci di privati nella tua zona,", "li confronta con auto uguali",
+                "e ti trova quelle davvero sotto mercato.", "Scarta le truffe,", "ti avvisa appena esce l'occasione,",
+                "e l'appuntamento con il venditore lo fissiamo noi.", "Tu devi solo comprare e rivendere.",
+                "Skovo: le occasioni, prima degli altri.", "Chiamaci al 348 242 5633, ti spieghiamo tutto in due minuti.",
             ]
             with httpx.Client(timeout=120, headers=H) as c:
                 r = c.get("https://api.cartesia.ai/voices", params={"language": "it", "limit": 100})
