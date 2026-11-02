@@ -587,6 +587,12 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
     _da = int(os.environ.get("POLICY_AMPLIA_DA", "0") or 0)
     livelli = [1, 2] if (cfg.amplia or (_da and (t.get("price_eur") or 0) >= _da)) else [1]
     motivi = {}
+    # 2/11 sera (cliente: "più auto con le nostre regole"): il livello 2 (approvato, con riduzione extra) si prova
+    # finché il livello stretto non arriva al minimo che il SITO chiede davvero (5 confronti, 8 sotto 10.000 €), non
+    # solo al minimo tecnico di 2: prima un'auto con 2-7 confronti stretti restava lì e poi il sito la scartava.
+    _serve = max(cfg.n_minimo, int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000
+                 else int(os.environ.get("SITO_CONFRONTI_MIN", "5")))
+    _migliore = None
     for liv in livelli:            # si amplia SOLO se il livello stretto non arriva al minimo
         validi, scartati = [], []
         for c in puliti:
@@ -608,13 +614,17 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
         if os.environ.get("POLICY_ALLESTIMENTO", "1") == "1" and validi:
             ta = allestimento(t)
             stessi = [c for c in validi if allestimento(c) == ta]
-            if len(stessi) >= cfg.n_minimo and len(stessi) < len(validi):
+            if len(stessi) >= _serve and len(stessi) < len(validi):
                 for c in validi:
                     if allestimento(c) != ta:
                         scartati.append((c, "allestimento diverso (sportivo/normale)"))
                 validi = stessi
-        if len(validi) >= cfg.n_minimo:
+        if _migliore is None or len(validi) > len(_migliore[1]):
+            _migliore = (liv, validi, scartati)
+        if len(validi) >= _serve:
             break
+    if len(validi) < _serve and _migliore is not None:
+        liv, validi, scartati = _migliore      # il livello con più confronti validi
     for c, why in scartati:
         motivi[why] = motivi.get(why, 0) + 1
     reg = regressione(t, puliti, cfg) if cfg.reg else None
