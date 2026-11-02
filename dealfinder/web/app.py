@@ -2782,6 +2782,81 @@ def _telefoni_scelte():
         lg.warning("TR telefoni scelte non riuscito: %s", str(e)[:300])
 
 
+def _sms_strutturati(no, L):
+    """2/11 sera: commercianti 'ben strutturati' entro ~45 km da Sesto San Giovanni, un cellulare per azienda.
+    Fonti: AutoScout24 (pagina commerciante con almeno 8 auto in vendita) e Google Maps (categoria concessionaria/
+    auto usate, sito web, almeno 20 recensioni, voto >= 3.5). Tolti: officine & co., esclusi/già consegnati, già
+    chiamati, numeri condivisi da più aziende. Ritorna ([(priorità, tel)], info) ordinati dal più strutturato."""
+    import hashlib
+    from collections import Counter
+    from ..pipeline.lead import _h, _nn, _nu, _tel9
+    from ..pipeline.lead_maps import CATEGORIE_OK, CATEGORIE_NO
+    base = Path(__file__).resolve().parents[2] / "data"
+    km60 = json.loads((base / "comuni_60km.json").read_text())
+
+    def km(comune):
+        k = (comune or "").lower()
+        for a, b in (("à", "a"), ("è", "e"), ("é", "e"), ("ù", "u"), ("ò", "o"), ("ì", "i")):
+            k = k.replace(a, b)
+        k = re.sub(r"[^a-z]", "", k)
+        if k == "milano":
+            return 9.0
+        v = km60.get(k)
+        return float(v["km"]) if v else None
+    es = json.loads((base / "lead_esclusi.json").read_text())
+    ET, EN, EU = set(es["tel"]), set(es["nome"]), set(es["url"])
+    chiamati = set(json.loads((base / "lead_chiamati.json").read_text())["tel"])
+    righe = []
+    st = Counter()
+    with connect() as conn:
+        for r in conn.execute("SELECT tel, nome, comune, prov, link, auto FROM lead_tutti "
+                              "WHERE link LIKE 'http%%' AND auto >= 8").fetchall():
+            righe.append({"tel": r["tel"], "nome": r["nome"] or "", "comune": r["comune"] or "", "prov": r["prov"], "link": r["link"],
+                          "peso": f'{r["auto"]} auto', "punti": min(r["auto"], 200) * 3, "fonte": "autoscout"})
+        for r in conn.execute("SELECT nome, comune, prov, tel, categoria, voto, recensioni FROM lead_maps WHERE cell "
+                              "AND sito IS NOT NULL AND sito <> '' AND coalesce(recensioni,0) >= 20 "
+                              "AND coalesce(voto,0) >= 3.5").fetchall():
+            if not CATEGORIE_OK.search(r["categoria"] or "") or CATEGORIE_NO.search(r["categoria"] or ""):
+                st["maps_categoria"] += 1
+                continue
+            righe.append({"tel": r["tel"], "nome": r["nome"] or "", "comune": r["comune"] or "", "prov": r["prov"], "link": None,
+                          "peso": f'{r["recensioni"]} recensioni', "punti": min(r["recensioni"], 600), "fonte": "maps"})
+    st["grezzi"] = len(righe)
+    for x in righe:
+        d = re.sub(r"\D", "", str(x["tel"] or ""))
+        x["tel"] = d[2:] if d.startswith("39") and len(d) > 10 else d
+    nomi_tel = {}
+    for x in righe:
+        nomi_tel.setdefault(x["tel"], set()).add(_nn(x["nome"]) or x["nome"])
+    buoni, visti_nomi = [], set()
+    for x in sorted(righe, key=lambda x: -x["punti"]):
+        x["km"] = km(x["comune"])
+        nn = _nn(x["nome"])
+        if no.search(x["nome"]):
+            st["officine_ecc"] += 1
+            continue
+        if x["km"] is None or x["km"] > 45:
+            st["lontani_o_comune_ignoto"] += 1
+            continue
+        if len(nomi_tel.get(x["tel"], ())) > 1:
+            st["numero_di_piu_aziende"] += 1
+            continue
+        # i lead "già consegnati" in lista al cliente NON sono esclusi (consegnati non vuol dire contattati): si contano soltanto
+        t9 = _tel9(x["tel"])
+        if (t9 and _h(t9) in ET) or (nn and _h(nn) in EN) or (x["link"] and _h(_nu(x["link"])) in EU):
+            st["(info) gia_consegnati_in_lista"] += 1
+        if hashlib.sha1(x["tel"][-9:].encode()).hexdigest()[:16] in chiamati:
+            st["gia_chiamati"] += 1
+            continue
+        if nn and nn in visti_nomi:
+            st["stessa_azienda"] += 1
+            continue
+        visti_nomi.add(nn)
+        buoni.append(x)
+    L.warning("SMS_STRUTT filtri: %s, candidati %d", json.dumps(st), len(buoni))
+    return [(0, x["tel"]) for x in buoni], buoni
+
+
 def _tempo_reale():
     """Due agenti continui (pipeline/tempo_reale.py): VERIFICA delle auto sul sito e NUOVI annunci, ogni 10 minuti."""
     from ..pipeline import tempo_reale as tr
@@ -4469,6 +4544,14 @@ def _tempo_reale():
             from ..marketing.brevo_liste import _chiave
             testo = ("Buongiorno, siamo Skovo: cerchiamo per voi auto di privati in vendita sotto mercato da comprare e "
                      "rivendere, e vi fissiamo l'appuntamento. Info 3482425633")
+            # 2/11 sera (cliente: "manda a 200 commercianti reali ben strutturati, numeri validi", testo scelto "Corto"):
+            # RINVIO_INVIA=sms<n>strutt -> testo nuovo (1 SMS) e selezione dei commercianti strutturati; con "prova" nel
+            # tag NON invia nulla e scrive solo conteggi e nomi (niente numeri).
+            strutt = "strutt" in tag
+            prova = "prova" in tag
+            if strutt:
+                testo = ("Siamo Skovo: troviamo auto di privati sotto mercato nella vostra zona, trattiamo il prezzo e vi "
+                         "fissiamo l'appuntamento. Scriveteci: wa.me/393482425633 STOP=no")
             massimo = int(os.environ.get("SMS_MAX", "229"))
             chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])
             no = re.compile(r"(?i)officin|carrozz|gomm|pneumat|demoliz|rottam|soccorso|noleggio|ricambi|elettrauto|lavaggio|"
@@ -4485,6 +4568,9 @@ def _tempo_reale():
                     pri = 0 if str(r["chiave"]).startswith("http") else (2 if r["nome"] else 3)
                     cand += [(pri, c) for c in r["cell"]]
             cand.sort(key=lambda x: x[0])
+            if strutt:
+                cand, info = _sms_strutturati(no, L)
+                massimo = int(os.environ.get("SMS_MAX", "200"))
             # 2/11: chi ha già ricevuto un SMS da un giro precedente (tag skovo_sms*) non lo riceve di nuovo
             gia = set()
             try:
@@ -4508,20 +4594,34 @@ def _tempo_reale():
                 L.warning("SMS_INVIA fermato: già inviati non letti: %s", str(e)[:150])
                 return
             L.warning("SMS_INVIA numeri che hanno già ricevuto un SMS: %d", len(gia))
-            numeri, visti = ["3482425633"], {"3482425633"} | gia
+            numeri, visti = ([] if prova else ["3482425633"]), {"3482425633"} | gia
             for _, t in cand:
                 d = re.sub(r"\D", "", str(t or ""))
                 if d.startswith("39") and len(d) > 10:
                     d = d[2:]
                 if not re.fullmatch(r"3[1-9]\d{8}", d) or d in visti:
                     continue
+                # prefissi di cellulari italiani realmente in uso (TIM, Vodafone, WindTre, Iliad, Fastweb, PosteMobile, Coop...)
+                if strutt and not re.match(r"3(2\d|3\d|4\d|5[0-35]|6[0-8]|7[0-9]|8[0-9]|9[0-37])", d):
+                    continue
                 if hashlib.sha1(d[-9:].encode()).hexdigest()[:16] in chiamati:
                     continue
                 visti.add(d)
                 numeri.append(d)
-                if len(numeri) > massimo:
+                if len(numeri) >= massimo + (0 if prova else 1):
                     break
             L.warning("SMS_INVIA %d numeri (il primo è il cliente)", len(numeri))
+            if strutt:
+                from collections import Counter as _C
+                scelti = set(numeri)
+                righe = [x for x in info if x["tel"] in scelti]
+                L.warning("SMS_STRUTT selezionati %d: fonti %s, km %s", len(righe), json.dumps(dict(_C(x["fonte"] for x in righe))),
+                          json.dumps(dict(_C("<=15" if x["km"] <= 15 else "<=30" if x["km"] <= 30 else "<=45" for x in righe))))
+                for k in range(0, len(righe), 25):
+                    L.warning("SMS_STRUTT nomi %d: %s", k, json.dumps([f'{x["nome"][:40]} ({x["comune"]}, {x["km"]:.0f} km, {x["peso"]})' for x in righe[k:k + 25]], ensure_ascii=False))
+            if prova:
+                L.warning("SMS_INVIA prova a secco: nessun SMS inviato")
+                return
             ok = ko = 0
             errori = {}
             with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=30) as c:
@@ -4529,6 +4629,14 @@ def _tempo_reale():
                     r = c.post("https://api.brevo.com/v3/transactionalSMS/sms",
                                json={"sender": "Skovo", "recipient": "39" + n, "content": testo, "type": "marketing",
                                      "tag": f"skovo_{tag}"})
+                    if r.status_code >= 500:
+                        time.sleep(2)
+                        r = c.post("https://api.brevo.com/v3/transactionalSMS/sms",
+                                   json={"sender": "Skovo", "recipient": "39" + n, "content": testo, "type": "marketing",
+                                         "tag": f"skovo_{tag}"})
+                    if r.status_code == 402:
+                        L.warning("SMS_INVIA fermato: credito finito dopo %d inviati", ok)
+                        break
                     if r.status_code < 300:
                         ok += 1
                     else:
@@ -4540,7 +4648,7 @@ def _tempo_reale():
                             return
                     if i == 0:
                         L.warning("SMS_INVIA prova al cliente: %s", "ok" if ok else errori)
-                    time.sleep(0.3)
+                    time.sleep(0.6)
             L.warning("SMS_INVIA fatto: %d inviati, %d non inviati %s", ok, ko, errori)
         except Exception as e:
             L.warning("SMS_INVIA non riuscito: %s", str(e)[:300])
