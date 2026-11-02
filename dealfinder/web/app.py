@@ -4785,6 +4785,9 @@ def _tempo_reale():
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
             from ..zone import tutte
+            from . import scovo as _sc
+            L.warning("SOGLIA7K soglie in uso: SOGLIE_PV env=%r tabella=%s policy=%s esempi 5500->%s 6900->%s",
+                      os.environ.get("SOGLIE_PV"), _sc.SOGLIE_PV[:3], _sc.POLICY_SITO, _sc.soglia(5500), _sc.soglia(6900))
             prov = list(tutte())
             sql_ultima = """
                 SELECT DISTINCT ON (vp.listing_id) vp.listing_id, vp.categoria, vp.dati, l.price_eur, l.source
