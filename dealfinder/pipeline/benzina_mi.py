@@ -34,7 +34,7 @@ JOIN g ON g.make=t.make AND g.model=t.model AND g.fuel IS NOT DISTINCT FROM t.fu
 WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
   AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')   -- 23/10: con BENZ_TUTTI_CARB=1 tutte le alimentazioni (tetto diesel 30 per cento sul sito)
   AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s AND t.year >= 2007
-  AND (%(solo_privati)s = false OR t.seller_type = 'privato') AND coalesce(t.mileage_km, 0) <= 180000
+  AND (%(solo_privati)s = false OR t.seller_type = 'privato') AND coalesce(t.mileage_km, 0) <= %(kmmax)s
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
@@ -141,7 +141,8 @@ def giro() -> dict:
                                             "lim": int(os.environ.get("BENZ_MAX", "500")), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
                                             "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
-                                            "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                                            "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
+                                            "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000"))}).fetchall()
         # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
         # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
         if os.environ.get("BENZ_CAMBI_PREZZO", "1") == "1":
@@ -154,11 +155,13 @@ def giro() -> dict:
                                       WHERE event = 'prezzo' AND at > now() - make_interval(hours => %(ore)s))
                          AND t.status = 'attivo' AND upper(t.province) = ANY(%(prov)s)
                          AND t.price_eur BETWEEN 1000 AND %(pmax)s AND coalesce(t.year, 2007) >= 2007
-                         AND coalesce(t.mileage_km, 0) <= 180000
+                         AND coalesce(t.mileage_km, 0) <= %(kmmax)s
+                         AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
                          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
                        LIMIT %(lim)s""",
                     {"ore": int(os.environ.get("BENZ_CAMBI_ORE", "8")), "prov": PROVINCE_100, "pmax": PMAX,
-                     "lim": int(os.environ.get("BENZ_CAMBI_MAX", "1500"))}).fetchall()
+                     "lim": int(os.environ.get("BENZ_CAMBI_MAX", "1500")),
+                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 nuovi_c = [r for r in cambi if r["id"] not in gia]
                 cand = nuovi_c + list(cand)
                 st["cambi_prezzo"] = len(cambi)
@@ -180,14 +183,16 @@ def giro() -> dict:
                          AND upper(t.province) = ANY(%(prov)s)
                          AND (t.price_flags && ARRAY['as24_prezzo:top-price', 'as24_prezzo:toolow-price']::text[])
                          AND t.price_eur BETWEEN 1000 AND %(pmax)s AND coalesce(t.year, 2007) >= 2007
-                         AND coalesce(t.mileage_km, 0) <= 180000
+                         AND coalesce(t.mileage_km, 0) <= %(kmmax)s
+                         AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
                          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
                          AND t.stage IS DISTINCT FROM 'approfondito'
                          AND NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
                                          AND vp.computed_at > t.last_seen_at - interval '3 days')
                        ORDER BY t.first_seen_at DESC
                        LIMIT %(lim)s""",
-                    {"prov": PROVINCE_100, "pmax": PMAX, "lim": int(os.environ.get("BENZ_AS24_MAX", "1500"))}).fetchall()
+                    {"prov": PROVINCE_100, "pmax": PMAX, "lim": int(os.environ.get("BENZ_AS24_MAX", "1500")),
+                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 agg = [r for r in top if r["id"] not in gia]
                 cand = agg + list(cand)
                 st["as24_super_prezzo"] = len(top)
