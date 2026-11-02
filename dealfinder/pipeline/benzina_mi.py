@@ -9,6 +9,7 @@ Giro una tantum (BENZ_GIRO=n):
 Nei log: BENZ {...} e BENZ_FINE.
 """
 from __future__ import annotations
+import re
 
 import json
 import logging
@@ -42,6 +43,68 @@ WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
                                           AND vp.computed_at > now() - interval '3 days'))   -- 2/11: solo mai valutate di recente
 ORDER BY (t.price_eur > %(util)s) ASC, t.price_eur / g.med ASC   -- 22/10: utilitarie per prime (BENZ_UTIL_PRIMA)
 LIMIT %(lim)s"""
+
+
+_RE_ANNO = [re.compile(p, re.I) for p in (
+    r"immatricolat\w*\s*(?:il|nel|a|ad|in)?\s*(?:\d{1,2}\s*[/.-]\s*)?((?:19|20)\d{2})\b",
+    r"\banno\s*(?:di\s*)?(?:immatricolazione)?\s*[:\-]?\s*((?:19|20)\d{2})\b",
+    r"\b(?:0?[1-9]|1[0-2])\s*/\s*((?:19|20)\d{2})\b",
+    r"\bdel\s+((?:19|20)\d{2})\b")]
+_RE_ANNO_TIT = re.compile(r"\b((?:19[89]|20[0-2])\d)\b(?!\s*(?:cc|cm|km|kw|cv|euro|€|\.\d))", re.I)
+_RE_KM = re.compile(r"\b(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\s*(?:km|chilometri)\b|\b(?:km|chilometri|chilometraggio)\s*(?:percorsi|reali|totali)?\s*[:.]?\s*(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\b", re.I)
+
+
+def _anno_dal_testo(titolo: str, testo: str) -> int | None:
+    import datetime as _dt
+    hi = _dt.date.today().year
+    for r in _RE_ANNO:
+        m = r.search(testo or "")
+        if m and 1985 <= int(m.group(1)) <= hi:
+            return int(m.group(1))
+    m = _RE_ANNO_TIT.search(titolo or "")
+    if m and 1985 <= int(m.group(1)) <= hi:
+        return int(m.group(1))
+    return None
+
+
+def _km_dal_testo(testo: str, anno) -> int | None:
+    for m in _RE_KM.finditer(testo or ""):
+        v = int(re.sub(r"\D", "", m.group(1) or m.group(2)))
+        if 100 <= v <= 400000 and not (anno and abs(v - int(anno)) <= 3):
+            return v
+    return None
+
+
+def completa_dati(conn, prov: list, pmax: int) -> list[int]:
+    """2/11 (cliente: "si perdono auto nei calcoli"): anno o km mancanti (o anno scritto nei km) letti dal titolo e dal
+    testo dell'annuncio, per le auto di privati della zona. Ritorna gli id corretti, da rivalutare."""
+    rows = conn.execute(
+        """SELECT id, title, description, version_raw, year, mileage_km FROM listings
+           WHERE status='attivo' AND COALESCE(seller_type,'privato') <> 'commerciante' AND upper(province) = ANY(%s)
+             AND price_eur BETWEEN 500 AND %s
+             AND (year IS NULL OR mileage_km IS NULL OR (mileage_km BETWEEN 1990 AND 2035 AND abs(mileage_km - COALESCE(year,0)) <= 3))""",
+        (prov, pmax)).fetchall()
+    fatti = []
+    for r in rows:
+        tit = f"{r['title'] or ''} {r['version_raw'] or ''}"
+        txt = f"{tit} {r['description'] or ''}"
+        anno, km = r["year"], r["mileage_km"]
+        nuovo = {}
+        if anno is None:
+            a = _anno_dal_testo(tit, txt)
+            if a:
+                nuovo["year"] = anno = a
+        if km is None or (anno and 1990 <= km <= 2035 and abs(km - anno) <= 3):
+            k = _km_dal_testo(txt, anno)
+            if k:
+                nuovo["mileage_km"] = k
+        if nuovo:
+            conn.execute("UPDATE listings SET " + ", ".join(f"{c}=%s" for c in nuovo) + " WHERE id=%s",
+                         (*nuovo.values(), r["id"]))
+            fatti.append(r["id"])
+    conn.commit()
+    log.warning("BENZ dati completati dal testo: %d su %d auto con anno/km mancanti", len(fatti), len(rows))
+    return fatti
 
 
 def giro() -> dict:
@@ -284,18 +347,23 @@ def giro() -> dict:
         # mai valutate (erano 3.436 benzina <=10k <=100k km), senza il pre-filtro sul prezzo mediano. Niente Facebook.
         if os.environ.get("BENZ_SOLO_INSUFF") == "mai":
             try:
+                corretti = completa_dati(conn, PROVINCE_100, PMAX)
+            except Exception as e:
+                conn.rollback(); corretti = []
+                log.warning("BENZ dati completati non riuscito: %s", str(e)[:200])
+            try:
                 cand = conn.execute(
                     """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
                        FROM listings t
-                       WHERE NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id)
+                       WHERE (NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id) OR t.id = ANY(%(corr)s))
                          AND t.status = 'attivo' AND COALESCE(t.seller_type, 'privato') <> 'commerciante'
                          AND t.source IN ('subito', 'autoscout24')
                          AND upper(t.province) = ANY(%(prov)s) AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s
                          AND coalesce(t.mileage_km, 0) <= %(kmmax)s
                          AND (%(tutti_carb)s OR t.fuel ILIKE '%%benzin%%')
                          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
-                       ORDER BY t.last_seen_at DESC NULLS LAST LIMIT %(lim)s""",
-                    {"prov": PROVINCE_100, "pmin": PMIN, "pmax": PMAX, "lim": int(os.environ.get("BENZ_MAX", "4000")),
+                       ORDER BY (t.id = ANY(%(corr)s)) DESC, t.last_seen_at DESC NULLS LAST LIMIT %(lim)s""",
+                    {"prov": PROVINCE_100, "pmin": PMIN, "pmax": PMAX, "lim": int(os.environ.get("BENZ_MAX", "4000")), "corr": corretti,
                      "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
                      "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 log.warning("BENZ mai valutate da valutare: %d", len(cand))
