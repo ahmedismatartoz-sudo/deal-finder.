@@ -3732,14 +3732,13 @@ def _tempo_reale():
                         out = {}
                         for nome, q in (
                             ("annunci", "SELECT id, source, url, title, make, model, year, price_eur, seller_type, city, province, status, "
-                                        "first_seen_at::date AS dal FROM listings WHERE regexp_replace(coalesce(telefono_ok,''),'\\D','','g') LIKE %(l)s "
-                                        "OR regexp_replace(coalesce(description,''),'[\\s.\\-/]','','g') LIKE %(l)s LIMIT 10"),
+                                        "first_seen_at::date AS dal FROM listings WHERE regexp_replace(coalesce(description,''),'[^0-9]','','g') LIKE %(l)s LIMIT 10"),
                             ("maps", "SELECT nome, comune, prov, tel, cell, sito, categoria FROM lead_maps WHERE "
-                                     "regexp_replace(coalesce(tel,'')||' '||coalesce(cell,''),'\\D','','g') LIKE %(l)s LIMIT 5"),
+                                     "regexp_replace(coalesce(tel,''),'[^0-9]','','g') LIKE %(l)s LIMIT 5"),
                             ("dealer", "SELECT nome, comune, prov, cell, fonte FROM lead_tutti_dealer WHERE "
-                                       "regexp_replace(coalesce(cell::text,''),'\\D','','g') LIKE %(l)s LIMIT 5"),
+                                       "regexp_replace(coalesce(cell::text,''),'[^0-9]','','g') LIKE %(l)s LIMIT 5"),
                             ("as24", "SELECT nome, cellulari::text AS cell FROM commercianti_as24 WHERE "
-                                     "regexp_replace(coalesce(cellulari::text,''),'\\D','','g') LIKE %(l)s LIMIT 5")):
+                                     "regexp_replace(coalesce(cellulari::text,''),'[^0-9]','','g') LIKE %(l)s LIMIT 5")):
                             try:
                                 out[nome] = [dict(r) for r in conn.execute(q, {"l": like}).fetchall()]
                             except Exception as e:
