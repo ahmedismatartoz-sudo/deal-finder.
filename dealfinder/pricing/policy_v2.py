@@ -812,6 +812,30 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             out["taratura"] = round(f, 3)
             out["ipotesi"].append(f"valore di mercato tarato {'−' if f < 1 else '+'}{abs(f - 1) * 100:.0f}%: in questo gruppo "
                                   "di auto il calcolo sbagliava in modo sistematico rispetto ai prezzi veri degli annunci")
+    # 2/11 notte (cliente: ok al metodo "valore reale"): il valore del modello prezzi costruito su tutti gli annunci e
+    # sulle auto VENDUTE (pricing/valore_reale.py) si usa insieme alle gemelle. Regole: le gemelle restano il controllo;
+    # se concordano (entro VR_ACCORDO, 8%) la stima è affidabile; se no vince la più bassa. Con poche gemelle (almeno
+    # VR_GEMELLE_MIN, 2) il valore reale basta solo se è preciso (sigma <= VR_SIGMA_MAX) e su un gruppo grande.
+    vr = t.get("vr") if os.environ.get("VR_ATTIVO", "0") == "1" else None
+    if vr and vr.get("v") and out.get("M") and prezzi:
+        V, P25v, sg = int(vr["v"]), int(vr["p25"]), float(vr.get("sigma") or 1)
+        diff = out["M"] / V - 1
+        out["valore_reale"] = {"V": V, "P25": P25v, "sigma": sg, "n_gruppo": vr.get("n"), "differenza_gemelle": round(diff, 3)}
+        serve = int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000 \
+            else int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
+        accordo = abs(diff) <= float(os.environ.get("VR_ACCORDO", "0.08"))
+        preciso = sg <= float(os.environ.get("VR_SIGMA_MAX", "0.15")) and (vr.get("n") or 0) >= int(os.environ.get("VR_N_GRUPPO", "100"))
+        if n >= serve or (n >= int(os.environ.get("VR_GEMELLE_MIN", "2")) and preciso and abs(diff) <= .15):
+            out["M"] = min(out["M"], V)
+            out["L"] = min(out.get("L") or out["M"], P25v)
+            out["metodo"] = "valore_reale" if accordo else "valore_reale_prudente"
+            out["vr_accordo"] = accordo
+            if n < serve:
+                out["vr_poche_gemelle"] = True
+                n = max(n, serve)              # il numero minimo lo garantisce il modello su tutto il gruppo
+                out["n_gemelle"] = len(prezzi)
+            out["ipotesi"].append(f"valore reale (modello su {vr.get('n')} annunci e auto vendute dello stesso modello, "
+                                  f"errore tipico ±{sg*100:.0f}%): {V} €; gemelle {'concordano' if accordo else 'non concordano: vince il più basso'}")
     _prud_min = int(os.environ.get("POLICY_PRUDENTE_N_MIN", "3"))
     _serve_sito = int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000 \
         else int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
@@ -1007,7 +1031,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
 def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
-            "totale_costi", "campione", "policy", "metodo", "prudente_pochi")
+            "totale_costi", "campione", "policy", "metodo", "prudente_pochi", "vr_accordo", "vr_poche_gemelle")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

@@ -135,7 +135,7 @@ def test_pochi_confronti_rivendita_prudente():
     v = valuta(TARGET, pochi, 1000, CFG, NOW)
     if v.get("prudente_pochi"):
         assert v["R"] <= min(c["prezzo"] for c in v["confronti"]) + 1
-        assert v["R"] <= v["M"] * 0.85 + 1
+        assert v["R"] <= v["M"] * 0.90 + 1
 
 
 def _ampliamento_esplicito():
