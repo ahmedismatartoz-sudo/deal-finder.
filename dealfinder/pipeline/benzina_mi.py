@@ -254,6 +254,28 @@ def giro() -> dict:
             except Exception as e:
                 conn.rollback()
                 log.warning("BENZ super prezzo non lette: %s", str(e)[:200])
+        # 2/11 (cliente: "confronti allargati"): BENZ_SOLO_INSUFF=1 rivaluta SOLO le auto della zona rimaste in
+        # "dati insufficienti" (ultima valutazione), ora che la policy ammette i confronti ampliati (anno ±2, km ±30.000)
+        if os.environ.get("BENZ_SOLO_INSUFF") == "1":
+            try:
+                cand = conn.execute(
+                    """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
+                       FROM listings t
+                       JOIN LATERAL (SELECT categoria FROM valutazioni_policy vp WHERE vp.listing_id = t.id
+                                     ORDER BY computed_at DESC LIMIT 1) v ON true
+                       WHERE v.categoria = 'dati_insufficienti' AND t.status = 'attivo' AND t.seller_type = 'privato'
+                         AND upper(t.province) = ANY(%(prov)s) AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s
+                         AND coalesce(t.year, 2007) >= 2007 AND coalesce(t.mileage_km, 0) <= %(kmmax)s
+                         AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
+                         AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+                       ORDER BY t.price_eur ASC LIMIT %(lim)s""",
+                    {"prov": PROVINCE_100, "pmin": PMIN, "pmax": PMAX, "lim": int(os.environ.get("BENZ_MAX", "2000")),
+                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
+                     "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                log.warning("BENZ dati insufficienti da rivalutare con i confronti ampliati: %d", len(cand))
+            except Exception as e:
+                conn.rollback()
+                log.warning("BENZ dati insufficienti non letti: %s", str(e)[:200])
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))

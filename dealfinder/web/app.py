@@ -3238,7 +3238,7 @@ def _tempo_reale():
                      "BENZ_MIN": os.environ.get("RZ_MIN", "1000"), "BENZ_PMAX": os.environ.get("RZ_MAX", "300000"),
                      "BENZ_PROVINCE": os.environ.get("RZ_PROVINCE", "BG,BS,CR,LC,MI,MB"), "BENZ_PASSO": os.environ.get("RZ_PASSO", "1000"),
                      "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": "0", "BENZ_TUTTI_CARB": os.environ.get("RZ_TUTTI_CARB", "1"),
-                     "BENZ_KM_MAX": os.environ.get("RZ_KM_MAX", "180000"), "BENZ_SOLO_NUOVE": os.environ.get("RZ_SOLO_NUOVE", "0"),
+                     "BENZ_KM_MAX": os.environ.get("RZ_KM_MAX", "180000"), "BENZ_SOLO_NUOVE": os.environ.get("RZ_SOLO_NUOVE", "0"), "BENZ_SOLO_INSUFF": os.environ.get("RZ_SOLO_INSUFF", "0"),
                      "BENZ_FOCUS": os.environ.get("RZ_FOCUS", "0"),
                      "BENZ_DAL": os.environ.get("RZ_DAL", "2026-09-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("RZ_SUB_PAGINE", "200"),
                      "BENZ_MAX": os.environ.get("RZ_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("RZ_SOGLIA", "0.9"),
