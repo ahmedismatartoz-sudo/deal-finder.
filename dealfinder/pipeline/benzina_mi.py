@@ -141,8 +141,12 @@ def giro() -> dict:
         # km (BENZ_FOCUS=1): AutoScout24 solo benzina, fino a FOCUS_KM km, fasce di prezzo strette (più pagine lette),
         # raggio FOCUS_RAGGIO da Sesto; poi Subito profondo nelle stesse fasce. Solo privati. Le regole di margine non cambiano.
         if not solo_valuta and os.environ.get("BENZ_FOCUS") == "1":
-            fmin, fmax = int(os.environ.get("FOCUS_MIN", "1000")), int(os.environ.get("FOCUS_MAX", "10000"))
-            fkm = int(os.environ.get("FOCUS_KM", "100000"))
+            # 2/11: senza FOCUS_* espliciti segue il giro (BENZ_PMAX fino a 30.000, BENZ_KM_MAX, BENZ_TUTTI_CARB)
+            fmin = int(os.environ.get("FOCUS_MIN", "1000"))
+            fmax = int(os.environ.get("FOCUS_MAX") or min(PMAX, 30000))
+            fkm = int(os.environ.get("FOCUS_KM") or os.environ.get("BENZ_KM_MAX") or "100000")
+            if "FOCUS_CARB" not in os.environ:
+                os.environ["FOCUS_CARB"] = "" if os.environ.get("BENZ_TUTTI_CARB", "1") == "1" else "B"
             salvati = {k: os.environ.get(k) for k in ("AUTOSCOUT_CAP", "AUTOSCOUT_RAGGIO", "AUTOSCOUT_KM_MAX", "AUTOSCOUT_CARB", "PASSI_JOB")}
             os.environ.update({"AUTOSCOUT_CAP": os.environ.get("FOCUS_CAP", "20099"), "AUTOSCOUT_RAGGIO": os.environ.get("FOCUS_RAGGIO", "200"),
                                "AUTOSCOUT_KM_MAX": str(fkm), "AUTOSCOUT_CARB": os.environ.get("FOCUS_CARB", "B"),
