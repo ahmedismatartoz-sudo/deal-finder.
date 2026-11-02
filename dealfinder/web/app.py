@@ -4788,7 +4788,8 @@ def _tempo_reale():
                     rows = conn.execute("""SELECT l.id, l.price_eur, l.fuel, l.mileage_km, v.v, v.p25, v.sigma FROM valore_reale v
                         JOIN listings l ON l.id = v.listing_id WHERE l.status='attivo' AND l.seller_type='privato'
                           AND COALESCE(l.mileage_km,0) <= 150000""").fetchall()
-                c = Counter()
+                from collections import Counter as _Cn
+                c = _Cn()
                 for r in rows:
                     R = min(r["v"] * 0.95, r["p25"])
                     m = R - r["price_eur"]
