@@ -2784,7 +2784,9 @@ def _telefoni_scelte():
 
 NON_COMMERCIANTI = re.compile(r"(?i)uffic|amministrativ|bosch|car service|detailing|riparaz|assistenz|\bassist|immobiliar|agenzia|"
                               r"marketing|incidentat|grandinat|compro auto|rottam|carrozz|wrapping|lavaggi|ricambi|pneumatic|"
-                              r"veicoli commerciali|furgon|camper|moto\b|scooter|autoscuol|assicuraz|leasing|finanziam")
+                              r"veicoli commerciali|furgon|camper|moto\b|scooter|autoscuol|assicuraz|leasing|finanziam|truck|camion|"
+                              # chi ha già detto di no (email del 2/11)
+                              r"auto\s*(&|e)\s*auto varese|cosval|officine mulino|loconte")
 
 
 def _sms_strutturati(no, L):
@@ -2815,11 +2817,11 @@ def _sms_strutturati(no, L):
     st = Counter()
     with connect() as conn:
         for r in conn.execute("SELECT tel, nome, comune, prov, link, auto FROM lead_tutti "
-                              "WHERE link LIKE 'http%%' AND auto >= 6").fetchall():
+                              "WHERE link LIKE 'http%%' AND auto >= 3").fetchall():
             righe.append({"tel": r["tel"], "nome": r["nome"] or "", "comune": r["comune"] or "", "prov": r["prov"], "link": r["link"],
                           "peso": f'{r["auto"]} auto', "punti": min(r["auto"], 200) * 3, "fonte": "autoscout"})
         for r in conn.execute("SELECT nome, comune, prov, tel, categoria, voto, recensioni FROM lead_maps WHERE cell "
-                              "AND sito IS NOT NULL AND sito <> '' AND coalesce(recensioni,0) >= 12 "
+                              "AND sito IS NOT NULL AND sito <> '' AND coalesce(recensioni,0) >= 5 "
                               "AND coalesce(voto,0) >= 3.5").fetchall():
             if not CATEGORIE_OK.search(r["categoria"] or "") or CATEGORIE_NO.search(r["categoria"] or ""):
                 st["maps_categoria"] += 1
@@ -2837,7 +2839,7 @@ def _sms_strutturati(no, L):
     for x in sorted(righe, key=lambda x: -x["punti"]):
         x["km"] = km(x["comune"])
         nn = _nn(x["nome"])
-        if no.search(x["nome"]) or NON_COMMERCIANTI.search(x["nome"]):
+        if not x["nome"].strip() or no.search(x["nome"]) or NON_COMMERCIANTI.search(x["nome"]):
             st["officine_ecc"] += 1
             continue
         if x["km"] is None or x["km"] > 50:
