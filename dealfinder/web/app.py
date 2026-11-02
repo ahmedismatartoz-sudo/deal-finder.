@@ -4971,6 +4971,47 @@ def _tempo_reale():
             L.warning("VALNUOVE non riuscita: %s", str(e)[:300])
     threading.Thread(target=valuta_mai_valutate, daemon=True, name="valnuove").start()
 
+    def diagnosi_incompleti():
+        """2/11 notte: RINVIO_INVIA=incompleti<n>. Le auto di privati della zona senza anno o km (non valutabili):
+        da quale sito, quale dato manca, se il testo lo contiene. Solo conteggi + 15 esempi senza dati personali."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("incompleti"):
+            return
+        time.sleep(30)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"incompleti:{tag}"):
+                return
+            from collections import Counter as _C
+            from ..core.dal_testo import anno, chilometri
+            from ..zone import tutte
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '600s'")
+                rows = conn.execute("""SELECT id, source, year, mileage_km, fuel, title, left(description, 600) AS d,
+                        version_raw, field_origin FROM listings
+                    WHERE status='attivo' AND seller_type='privato' AND upper(province) = ANY(%s)
+                      AND price_eur BETWEEN 1000 AND 30000 AND (year IS NULL OR mileage_km IS NULL OR fuel IS NULL)""",
+                                    (list(tutte()),)).fetchall()
+            c = _C()
+            es = []
+            for r in rows:
+                manca = "+".join(k for k in ("year", "mileage_km", "fuel") if r[k] is None)
+                testo = f"{r['version_raw'] or ''} {r['title'] or ''} {r['d'] or ''}"
+                c[f"{r['source']}|{manca}"] += 1
+                c[f"testo_ha_anno={bool(anno(testo))}"] += r["year"] is None
+                c[f"testo_ha_km={bool(chilometri(testo))}"] += r["mileage_km"] is None
+                c[f"descrizione_vuota={not (r['d'] or '').strip()}"] += 1
+                fo = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
+                c[f"testo_letto_v2={'testo_letto_v2' in fo}"] += 1
+                if len(es) < 15 and r["source"] == "subito":
+                    es.append([r["id"], manca, (r["title"] or "")[:60], len(r["d"] or "")])
+            L.warning("INCOMPLETI auto %d: %s", len(rows), json.dumps(dict(c.most_common(30))))
+            L.warning("INCOMPLETI esempi subito: %s", json.dumps(es, ensure_ascii=False))
+        except Exception as e:
+            L.warning("INCOMPLETI non riuscita: %s", str(e)[:300])
+    threading.Thread(target=diagnosi_incompleti, daemon=True, name="incompleti").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
