@@ -3253,6 +3253,13 @@ def _tempo_reale():
             esito = B.giro()
             lg.warning("RACCOLTA_ZONA fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
             _aggiorna_elenco(False)
+            # 2/11: dopo la sola valutazione, subito la ricerca mirata (raccolta + valutazione delle nuove), in sequenza
+            if os.environ.get("BENZ_SOLO_VALUTA") == "1" and os.environ.get("BENZ_FOCUS") == "1":
+                os.environ["BENZ_SOLO_VALUTA"] = "0"
+                os.environ["BENZ_SOLO_NUOVE"] = "1"
+                esito = B.giro()
+                lg.warning("RACCOLTA_ZONA mirata fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+                _aggiorna_elenco(False)
         except Exception as e:
             lg.warning("RACCOLTA_ZONA non riuscita: %s", str(e)[:300])
     threading.Thread(target=raccolta_zona, daemon=True, name="raccolta-zona").start()
