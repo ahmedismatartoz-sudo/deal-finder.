@@ -159,9 +159,13 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         _LETTURA_OK = True
     _ai = "(SELECT a.cambiati FROM lettura_ai a WHERE a.listing_id = listings.id)"
     _tenere = {
-        "power_kw": f"COALESCE(({_ai}->>'power_kw')::int, %(power_kw)s)",
-        "gearbox": f"COALESCE({_ai}->>'gearbox', %(gearbox)s)",
-        "version_raw": f"COALESCE({_ai}->>'version_raw', %(version_raw)s)",
+        # 2/11 sera: un nuovo passaggio dello scraper senza il dato NON cancella quello già ricavato dal testo
+        "power_kw": f"COALESCE(({_ai}->>'power_kw')::int, %(power_kw)s, listings.power_kw)",
+        "gearbox": f"COALESCE({_ai}->>'gearbox', %(gearbox)s, listings.gearbox)",
+        "version_raw": f"COALESCE({_ai}->>'version_raw', %(version_raw)s, listings.version_raw)",
+        "fuel": "COALESCE(%(fuel)s, listings.fuel)",
+        "year": "COALESCE(%(year)s, listings.year)",
+        "mileage_km": "COALESCE(%(mileage_km)s, listings.mileage_km)",
         "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
         "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
     }

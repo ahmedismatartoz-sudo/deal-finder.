@@ -737,7 +737,9 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
             log.warning("TR subito telefono: forma=%r lunghezza=%s cifre=%s", forma, len(ph) if isinstance(ph, str) else None,
                         len(re.sub(r"\D", "", ph)) if isinstance(ph, str) else None)
         from ..core.dal_testo import completa
-        for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km}, l.title, l.description).items():
+        # 2/11 sera: anche cambio e potenza dal testo (senza kW/cambio l'auto non trova confronti -> dati insufficienti)
+        for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km, "gearbox": l.gearbox,
+                              "power_kw": l.power_kw, "version_raw": l.version_raw}, l.title, l.description).items():
             setattr(l, k, v)                      # dati mancanti presi dal testo dell'annuncio
         try:
             normalize_fields(l)
