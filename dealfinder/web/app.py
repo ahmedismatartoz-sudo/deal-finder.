@@ -3747,7 +3747,8 @@ def _tempo_reale():
                                      "AND upper(l.province) = ANY(%(p)s) AND l.fuel ILIKE '%%benzin%%' AND l.price_eur BETWEEN 500 AND 10000 "
                                      "AND COALESCE(l.mileage_km,0) <= 100000", {"p": prov}).fetchone()
                     L.warning("DIAGNOSI_B10 totale %s", dict(t))
-                return
+                if not tag.startswith("b10s"):
+                    return
             with connect() as conn:
                 conn.execute("SET LOCAL statement_timeout = '300s'")
                 q = conn.execute("""
@@ -3805,6 +3806,9 @@ def _tempo_reale():
                             ("zona_sito", _zona_sito)]:
                 items = passo(nome, f, items)
             L.warning("DIAGNOSI_SITO passi (auto della zona rimaste dopo ogni passo): %s", dict(c))
+            b10 = [i for i in items if zona(i) and "benzin" in str(i.get("carb") or "").lower()
+                   and (i.get("prezzo") or 0) <= 10000 and (i.get("km") or 0) <= 100000]
+            L.warning("DIAGNOSI_B10 sul_sito benzina<=10k <=100km: %d su %d in zona", len(b10), sum(1 for i in items if zona(i)))
         except Exception as e:
             L.warning("DIAGNOSI_SITO non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_sito, daemon=True, name="diagnosi_sito").start()
