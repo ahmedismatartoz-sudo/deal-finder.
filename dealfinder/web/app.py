@@ -5139,6 +5139,42 @@ def _tempo_reale():
             L.warning("VALNUOVE non riuscita: %s", str(e)[:300])
     threading.Thread(target=valuta_mai_valutate, daemon=True, name="valnuove").start()
 
+    def rivaluta_tutte():
+        """3/11 notte (cliente: "mettilo come metodo principale e rivaluta tutte le auto"): RINVIO_INVIA=rivtutte<n>
+        rivaluta con il valore reale tutte le auto di privati della zona fino a 20.000 € e 150.000 km che hanno il
+        valore calcolato: prima le benzina fino a 100.000 km, poi dalla più economica. Solo conteggi nei log."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("rivtutte"):
+            return
+        time.sleep(45)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"rivtutte:{tag}"):
+                return
+            from collections import Counter as _C
+            from ..pipeline import tempo_reale as tr
+            from ..zone import tutte
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '600s'")
+                ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l JOIN valore_reale v ON v.listing_id = l.id
+                    WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                      AND l.price_eur BETWEEN 1000 AND 20000 AND COALESCE(l.mileage_km,0) <= 150000
+                      AND v.computed_at > now() - interval '2 days'
+                    ORDER BY (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000) DESC, l.price_eur
+                    LIMIT %s""", (list(tutte()), int(os.environ.get("RIVTUTTE_MAX", "30000")))).fetchall()]
+                L.warning("RIVTUTTE da rivalutare con il valore reale: %d", len(ids))
+                st = _C()
+                for i in range(0, len(ids), 25):
+                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
+                    conn.commit()
+                    if i % 1000 == 0:
+                        L.warning("RIVTUTTE avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
+                L.warning("RIVTUTTE fatto: %s", json.dumps(dict(st)))
+        except Exception as e:
+            L.warning("RIVTUTTE non riuscita: %s", str(e)[:300])
+    threading.Thread(target=rivaluta_tutte, daemon=True, name="rivtutte").start()
+
     def diagnosi_incompleti():
         """2/11 notte: RINVIO_INVIA=incompleti<n>. Le auto di privati della zona senza anno o km (non valutabili):
         da quale sito, quale dato manca, se il testo lo contiene. Solo conteggi + 15 esempi senza dati personali."""
