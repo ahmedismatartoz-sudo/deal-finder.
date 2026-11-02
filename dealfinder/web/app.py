@@ -3708,7 +3708,7 @@ def _tempo_reale():
         tag = os.environ.get("DIAGNOSI_SITO")
         if not tag:
             return
-        time.sleep(150)
+        time.sleep(20 if tag.startswith("b10") else 150)
         from collections import Counter
         from ..pipeline.ciclo import _due
         L = logging.getLogger("scovo")
@@ -3716,6 +3716,31 @@ def _tempo_reale():
             if not _due(f"diagnosi_sito:{tag}", 100000):
                 return
             prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+            if tag.startswith("b10"):
+                # 2/11: imbuto solo per benzina <=10.000 EUR, <=100.000 km, privati, zona sito
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '300s'")
+                    F = """FROM listings l LEFT JOIN LATERAL (SELECT categoria, margine, riassunto FROM valutazioni_policy v
+                             WHERE v.listing_id=l.id ORDER BY computed_at DESC LIMIT 1) u ON true
+                           WHERE l.status='attivo' AND COALESCE(l.seller_type,'privato') <> 'commerciante'
+                             AND upper(l.province) = ANY(%(p)s) AND l.fuel ILIKE '%%benzin%%'
+                             AND l.price_eur BETWEEN 500 AND 10000 AND COALESCE(l.mileage_km,0) <= 100000"""
+                    a = conn.execute("SELECT l.source, COALESCE(u.categoria, u.riassunto->>'categoria','(non valutata)') AS cat, count(*) AS n "
+                                     + F + " GROUP BY 1,2 ORDER BY n DESC", {"p": prov}).fetchall()
+                    L.warning("DIAGNOSI_B10 categorie %s", json.dumps([dict(r) for r in a], default=str))
+                    b = conn.execute("""SELECT CASE WHEN u.margine IS NULL THEN 'null' WHEN u.margine < 0 THEN '<0'
+                                        WHEN u.margine < 400 THEN '0-400' WHEN u.margine < 800 THEN '400-800'
+                                        WHEN u.margine < 1500 THEN '800-1500' ELSE '>=1500' END AS fascia,
+                                        (l.price_eur <= 4000) AS sotto4k, count(*) AS n """ + F +
+                                     " AND COALESCE(u.categoria, u.riassunto->>'categoria') = 'non_conveniente' GROUP BY 1,2 ORDER BY 1,2",
+                                     {"p": prov}).fetchall()
+                    L.warning("DIAGNOSI_B10 margini_non_conv %s", json.dumps([dict(r) for r in b], default=str))
+                    t = conn.execute("SELECT count(*) AS n, count(*) FILTER (WHERE l.last_seen_at > now() - interval '48 hours') AS viste48 "
+                                     "FROM listings l WHERE l.status='attivo' AND COALESCE(l.seller_type,'privato') <> 'commerciante' "
+                                     "AND upper(l.province) = ANY(%(p)s) AND l.fuel ILIKE '%%benzin%%' AND l.price_eur BETWEEN 500 AND 10000 "
+                                     "AND COALESCE(l.mileage_km,0) <= 100000", {"p": prov}).fetchone()
+                    L.warning("DIAGNOSI_B10 totale %s", dict(t))
+                return
             with connect() as conn:
                 conn.execute("SET LOCAL statement_timeout = '300s'")
                 q = conn.execute("""
