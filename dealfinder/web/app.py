@@ -4490,18 +4490,23 @@ def _tempo_reale():
             try:
                 with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c0:
                     off = 0
-                    while off < 5000:
+                    # 2/11: Brevo accetta al massimo 100 eventi per pagina (con 2500 rispondeva 400 e la lista restava vuota)
+                    while off < 20000:
                         rr = c0.get("https://api.brevo.com/v3/transactionalSMS/statistics/events",
-                                    params={"limit": 2500, "offset": off, "days": 2})
-                        ev = (rr.json() or {}).get("events") or [] if rr.status_code < 300 else []
+                                    params={"limit": 100, "offset": off, "days": 30})
+                        if rr.status_code >= 300:
+                            raise RuntimeError(f"eventi {rr.status_code} {rr.text[:100]}")
+                        ev = (rr.json() or {}).get("events") or []
                         for e in ev:
                             if str(e.get("tag") or "").startswith("skovo_sms"):
                                 gia.add(re.sub(r"\D", "", str(e.get("phoneNumber") or ""))[-10:])
-                        if len(ev) < 2500:
+                        if len(ev) < 100:
                             break
-                        off += 2500
+                        off += 100
             except Exception as e:
-                L.warning("SMS_INVIA già inviati non letti: %s", str(e)[:150])
+                # senza l'elenco dei già contattati NON si invia (si rischierebbero doppioni)
+                L.warning("SMS_INVIA fermato: già inviati non letti: %s", str(e)[:150])
+                return
             L.warning("SMS_INVIA numeri che hanno già ricevuto un SMS: %d", len(gia))
             numeri, visti = ["3482425633"], {"3482425633"} | gia
             for _, t in cand:
