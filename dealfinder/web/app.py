@@ -4752,6 +4752,24 @@ def _tempo_reale():
                 from ..zone import tutte
                 with connect() as conn:
                     conn.execute("SET statement_timeout = '600s'")
+                    if tag.startswith("conf2"):
+                        # motivi delle esclusioni PRIMA del confronto (campione di 40 per auto salvato nella valutazione)
+                        ce = _C()
+                        for r in conn.execute("""SELECT u.dati->'esclusi' AS e, (u.dati->>'n_esclusi')::int AS ex
+                            FROM listings l JOIN LATERAL (SELECT categoria, dati FROM valutazioni_policy v WHERE v.listing_id=l.id
+                                      ORDER BY computed_at DESC LIMIT 1) u ON true
+                            WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                              AND l.price_eur BETWEEN 1000 AND 30000 AND u.categoria='dati_insufficienti'
+                              AND u.dati->'motivi'->>0 LIKE 'solo %%confronti%%' LIMIT 3000""", (list(tutte()),)).fetchall():
+                            ee = r["e"] if isinstance(r["e"], list) else json.loads(r["e"] or "[]")
+                            tot = len(ee) or 1
+                            for x in ee:
+                                ce[re.sub(r"\d[\d.]*", "N", str(x.get("motivo")))[:70]] += (r["ex"] or 0) / tot
+                        L.warning("DIAGCONF2 esclusioni prima del confronto (stima sul totale): %s",
+                                  json.dumps({k: int(v) for k, v in ce.most_common(15)}, ensure_ascii=False))
+                        from ..pricing.ricalcolo import _STATO_SQL as _ss
+                        L.warning("DIAGCONF2 filtro stato della ricerca confronti: %s", _ss[:300])
+                        return
                     rows = conn.execute("""SELECT l.make, l.model, l.fuel, l.power_kw IS NULL AS senza_kw, l.gearbox IS NULL AS senza_cambio,
                             (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000 AND l.price_eur <= 10000) AS b10,
                             u.dati->'non_equivalenti' AS ne, (u.dati->>'n_esclusi')::int AS ex, (u.dati->>'n')::int AS n
