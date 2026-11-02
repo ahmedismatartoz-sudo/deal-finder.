@@ -441,12 +441,12 @@ def _equivalente(t, c, cfg, livello):
         return "generazione diversa"
     if t.get("year") is None or c.get("year") is None:
         return "anno mancante"
-    atol = cfg.anni_tol if livello == 1 else cfg.anni_tol_2
+    atol = cfg.anni_tol if livello == 1 else cfg.anni_tol_2 if livello == 2 else cfg.anni_tol_2 + 1
     if abs(int(c["year"]) - int(t["year"])) > atol:
         return f"anno oltre ±{atol}"
     if t.get("mileage_km") is None or c.get("mileage_km") is None:
         return "km mancanti"
-    ktol = cfg.km_tol if livello == 1 else cfg.km_tol_2
+    ktol = cfg.km_tol if livello == 1 else cfg.km_tol_2 if livello == 2 else cfg.km_tol_2 + 30000
     if abs(int(c["mileage_km"]) - int(t["mileage_km"])) > ktol:
         return f"km oltre ±{ktol:,}".replace(",", ".")
     if os.environ.get("POLICY_TRAZIONE", "0") == "1":    # 27/10 sera (cliente): stessa trazione (4x4 con 4x4)
@@ -586,6 +586,10 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
     # ammette il livello 2 (anno ±2, km ±35.000) quando il livello stretto non arriva al minimo: stima ampliata
     _da = int(os.environ.get("POLICY_AMPLIA_DA", "0") or 0)
     livelli = [1, 2] if (cfg.amplia or (_da and (t.get("price_eur") or 0) >= _da)) else [1]
+    # 2/11 notte (cliente: "per le auto con pochi confronti fai un'eccezione: allarga i confronti ma rivendita
+    # prudente, per tutte"): livello 3 (anno +1 e km +30.000 oltre il livello 2), solo se i primi non bastano
+    if os.environ.get("POLICY_PRUDENTE_POCHI", "1") == "1" and 2 in livelli:
+        livelli = livelli + [3]
     motivi = {}
     # 2/11 sera (cliente: "più auto con le nostre regole"): il livello 2 (approvato, con riduzione extra) si prova
     # finché il livello stretto non arriva al minimo che il SITO chiede davvero (5 confronti, 8 sotto 10.000 €), non
@@ -808,10 +812,17 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             out["taratura"] = round(f, 3)
             out["ipotesi"].append(f"valore di mercato tarato {'−' if f < 1 else '+'}{abs(f - 1) * 100:.0f}%: in questo gruppo "
                                   "di auto il calcolo sbagliava in modo sistematico rispetto ai prezzi veri degli annunci")
-    if n < cfg.n_minimo or not out.get("M"):
+    _prud_min = int(os.environ.get("POLICY_PRUDENTE_N_MIN", "3"))
+    _serve_sito = int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000 \
+        else int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
+    prudente = bool(os.environ.get("POLICY_PRUDENTE_POCHI", "1") == "1" and out.get("M") and prezzi
+                    and (n < max(cfg.n_minimo, _serve_sito) or sel["livello"] == 3) and len(prezzi) >= _prud_min)
+    if (n < cfg.n_minimo and not prudente) or not out.get("M"):
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")
         return out
+    if prudente:
+        out["prudente_pochi"] = True
 
     riv = rivendita(out["M"], out["L"], cfg, t.get("price_eur"))
     if cfg.adattiva and riv.get("riduzione") is not None:
@@ -868,6 +879,16 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"mercato M {out['M']} € oltre {cfg.m_massimo} €: la tabella prudenziale non si estende")
         return out
+    if out.get("prudente_pochi"):
+        # rivendita prudente: non oltre il prezzo PIÙ BASSO tra le auto uguali trovate, né oltre il mercato −15%
+        sc = float(os.environ.get("POLICY_PRUDENTE_SCONTO", "15")) / 100
+        rp = int(min(out["R"], min(prezzi), out["M"] * (1 - sc)))
+        if rp < out["R"]:
+            out["R"] = riv["R"] = rp
+            out["R_da"] = "prudente (pochi confronti)"
+            out["fascia"] = (out.get("fascia") or "") + f" · rivendita prudente: pochi confronti ({n})"
+        out["ipotesi"].append(f"pochi confronti ({n}, ricerca allargata): rivendita prudente = il prezzo più basso tra "
+                              f"le auto uguali ({int(min(prezzi))} €) e comunque non oltre il mercato −{int(sc*100)}%")
 
     R = riv["R"]
     if cfg.correzione_modello:
@@ -986,7 +1007,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
 def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
-            "totale_costi", "campione", "policy", "metodo")
+            "totale_costi", "campione", "policy", "metodo", "prudente_pochi")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

@@ -121,6 +121,24 @@ def test_motori_cambi_generazioni_diversi():
 
 
 def test_anno_e_km_stretti_poi_ampliamento_esplicito():
+    # senza l'eccezione "pochi confronti → livello 3 con rivendita prudente" (2/11 notte), comportamento storico
+    import os as _os
+    _os.environ["POLICY_PRUDENTE_POCHI"] = "0"
+    try:
+        _ampliamento_esplicito()
+    finally:
+        _os.environ.pop("POLICY_PRUDENTE_POCHI", None)
+
+
+def test_pochi_confronti_rivendita_prudente():
+    pochi = [car(300 + n, 9500 + n * 100, year=2020, km=110000 + n * 100, gearbox=None) for n in range(3)]
+    v = valuta(TARGET, pochi, 1000, CFG, NOW)
+    if v.get("prudente_pochi"):
+        assert v["R"] <= min(c["prezzo"] for c in v["confronti"]) + 1
+        assert v["R"] <= v["M"] * 0.85 + 1
+
+
+def _ampliamento_esplicito():
     lontani = [car(300 + n, 9500, year=2023, km=160000 + n) for n in range(12)]
     v = valuta(TARGET, lontani, 1500, CFG, NOW)
     assert v["n"] == 0 and v["categoria"] == "dati_insufficienti"

@@ -1169,8 +1169,9 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     def _n_serve(it):
         return n_min_eco if (it.get("prezzo") or 0) < p_eco else n_min
 
-    pochi = [it for it in items if it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it)]
-    items = [it for it in items if not (it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it))]
+    _prud = lambda it: bool((it.get("pv") or {}).get("prudente_pochi"))     # 2/11 notte: eccezione con rivendita prudente
+    pochi = [it for it in items if it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it) and not _prud(it)]
+    items = [it for it in items if not (it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it) and not _prud(it))]
     dopo_n = len(items)
     items = [it for it in items if _dati_ok(it)]
     logging.getLogger("scovo").warning("REGOLE_AFFIDABILITA tolte: %d con meno di %d auto uguali, %d con dati incoerenti",
@@ -1683,7 +1684,8 @@ def _mercato_calibrato(items: list) -> list:
             out.append(it)
             continue
         prezzo = it.get("prezzo") or 0
-        if prezzo and prezzo < lim_eco and (pv.get("n") or 0) and pv["n"] < n_eco and pv.get("metodo") != "confronti Europa":
+        if prezzo and prezzo < lim_eco and (pv.get("n") or 0) and pv["n"] < n_eco and pv.get("metodo") != "confronti Europa" \
+                and not pv.get("prudente_pochi"):
             st["pochi_confronti"] += 1
             continue
         M = float(pv["M"])
