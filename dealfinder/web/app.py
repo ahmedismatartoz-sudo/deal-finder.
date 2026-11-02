@@ -864,9 +864,10 @@ def _meno_subito_senza_telefono(items: list[dict]) -> list[dict]:
     mancano = [i for i in sub_ids if i not in _tel_cache]
     if mancano:
         with connect() as conn:
-            for r in conn.execute("SELECT id, description FROM listings WHERE id = ANY(%s)", (mancano,)).fetchall():
+            for r in conn.execute("SELECT id, description, telefono_ok FROM listings WHERE id = ANY(%s)", (mancano,)).fetchall():
                 t = r.get("description") or ""
-                _tel_cache[r["id"]] = bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
+                # 2/11 sera: conta anche il numero letto dal pulsante "Chiama" (telefono_ok), non solo quello scritto nel testo
+                _tel_cache[r["id"]] = bool(r.get("telefono_ok") or scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
     senza = [it for it in items if it.get("fonte") == "Subito" and not _tel_cache.get(it["id"], False)]
     senza.sort(key=lambda it: scovo.guadagno_minimo(it))
     via = {it["id"] for it in senza[: len(senza) * quota // 100]}
@@ -1242,7 +1243,7 @@ def _solo_privati(items: list[dict]) -> list[dict]:
         with connect() as conn:
             # anche i commercianti che si segnano come privati: nome o segni da rivenditore nel testo dell'annuncio
             nomi = os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte")
-            marchi = r"(\ms\.?\s?r\.?\s?l\.?s?\M|\ms\.?p\.?a\.?\M|concessionari|autosalone|rivenditor|garanzia\s+(di\s+)?12\s+mesi|iva\s+esposta|esposta\s+iva|iva\s+deducibile|finanziamenti\s+in\s+sede|nostro\s+(parco|salone)|" \
+            marchi = r"(\ms\.?\s?r\.?\s?l\.?s?\M|\ms\.?p\.?a\.?\M|concessionaria\s+(ufficiale|autorizzata)|la\s+nostra\s+concessionaria|autosalone|siamo\s+(un\s+)?rivenditor|rivenditore\s+autorizzato|garanzia\s+(di\s+)?12\s+mesi|iva\s+esposta|esposta\s+iva|iva\s+deducibile|finanziamenti\s+in\s+sede|nostro\s+(parco|salone)|" \
                      + "|".join(re.escape(n.strip()) for n in nomi.split(",") if n.strip()) + ")"
             ok = {r["id"] for r in conn.execute(
                 "SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='privato' "
@@ -4826,6 +4827,55 @@ def _tempo_reale():
         except Exception as e:
             L.warning("SOGLIA7K non riuscita: %s", str(e)[:300])
     threading.Thread(target=soglia_7k, daemon=True, name="soglia7k").start()
+
+    def ripara_danni():
+        """2/11 sera (cliente: "trova un qualsiasi modo per far entrare più auto, con le nostre regole"): le parole di
+        danno scattavano anche su frasi normali ("motore da 1.4", "cambio da 6 marce", "frizione da poco sostituita") e
+        l'auto veniva trattata come incidentata. RINVIO_INVIA=riparadanni<n>: per le auto di privati della zona segnate
+        "con danni" SOLO per quelle frasi (la regola nuova non trova più nulla, nessuna lettura AI che dica danno) si
+        toglie il segno e si rivalutano. Le auto davvero danneggiate restano fuori. Solo conteggi nei log."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("riparadanni"):
+            return
+        time.sleep(30)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"riparadanni:{tag}"):
+                return
+            from collections import Counter as _C
+            from ..core.models import Listing
+            from ..core.normalize import problem_hint
+            from ..pipeline import tempo_reale as tr
+            from ..zone import tutte
+            VECCHIA = re.compile(r"\b(frizione (?:da|che) |distribuzione da|turbina da|motore da|cambio da)", re.I)
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '600s'")
+                rows = conn.execute(
+                    "SELECT l.id, l.title, l.description FROM listings l WHERE l.status='attivo' AND l.seller_type='privato' "
+                    "AND l.damage_declared AND upper(l.province) = ANY(%s) AND l.price_eur BETWEEN 1000 AND 30000 "
+                    "AND NOT EXISTS (SELECT 1 FROM lettura_ai a WHERE a.listing_id=l.id AND a.cambiati ? 'damage_declared') "
+                    "LIMIT 20000", (list(tutte()),)).fetchall()
+                ids = []
+                for r in rows:
+                    testo = " ".join(filter(None, [r["title"], r["description"]]))
+                    if not VECCHIA.search(testo):
+                        continue
+                    if problem_hint(Listing(source="x", source_id="x", url="", title=r["title"], description=r["description"])):
+                        continue
+                    ids.append(r["id"])
+                L.warning("RIPARADANNI auto segnate con danni: %d, solo per frasi normali: %d", len(rows), len(ids))
+                for i in range(0, len(ids), 500):
+                    conn.execute("UPDATE listings SET damage_declared = NULL WHERE id = ANY(%s)", (ids[i:i + 500],))
+                conn.commit()
+                st = _C()
+                for i in range(0, len(ids), 25):
+                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
+                    conn.commit()
+                L.warning("RIPARADANNI rivalutate: %s", json.dumps(dict(st)))
+        except Exception as e:
+            L.warning("RIPARADANNI non riuscita: %s", str(e)[:300])
+    threading.Thread(target=ripara_danni, daemon=True, name="riparadanni").start()
 
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""

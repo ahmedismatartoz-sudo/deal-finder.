@@ -58,8 +58,11 @@ RE_IMPORT = re.compile(r"\b(da\s+immatricolare|import(azione)?|km\s*0\s*estero|t
 RE_PROBLEM = re.compile(
     r"\b(incident(?:at)?[ao]|indidentat[ao]|incidntat[ao]|sinistrat[ao]|danneggiat[ao]|grandinat[ao]|da sistemare|da riparare|da rivedere|"
     r"non (?:parte|si accende|va in moto)|guast[oai]|rott[oaie]|spia (?:motore|accesa|airbag)|"
-    r"frizione (?:da|che) |distribuzione da|turbina (?:da|rotta)|motore (?:da|fuso|rotto|grippato)|"
-    r"cambio (?:da|rotto)|fumo bianco|perde olio|batte in testa|cos[iì] com['’]? ?[eè]|per commercianti|"
+    # 2/11 sera: "motore da 1.4", "cambio da 6 marce", "frizione da poco sostituita" NON sono danni (prima scartavano auto sane)
+    r"frizione (?:da (?:rifare|sostituire|cambiare|sistemare)|che (?:slitta|strappa|gratta))|"
+    r"distribuzione da (?:rifare|sostituire|cambiare|fare)|turbina (?:da (?:rifare|sostituire|cambiare|sistemare)|rotta)|"
+    r"motore (?:da (?:rifare|sistemare|revisionare|sostituire|cambiare|rivedere)|fuso|rotto|grippato)|"
+    r"cambio (?:da (?:rifare|sistemare|revisionare|sostituire|cambiare|rivedere)|rotto)|fumo bianco|perde olio|batte in testa|cos[iì] com['’]? ?[eè]|per commercianti|"
     r"solo esportazione|per pezzi|per ricambi|non marciante|non funzionante|incendiat[ao]|sbronzinat[ao]|bronzine)\b", re.I)
 RE_NEGATION = re.compile(r"(mai|non|nessun[ao]?|zero|senza)\s+(\w+\s+){0,2}$", re.I)
 RE_PRICE_TEXT = re.compile(r"(?:prezzo|chiedo|richiesta|vendo a|valore)\s*:?\s*(?:€|euro)?\s*(\d{1,2}[.\s]?\d{3})\b|"
