@@ -798,13 +798,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     from ..pricing.ricalcolo import ai_di, carica_taratura, targa_e_telefono, targhe_visibili
     carica_taratura(conn)
     aimap = ai_di(conn, [r["id"] for r in rows])
-    vrmap = {}
-    try:      # 2/11 notte: valore reale (pricing/valore_reale.py), se calcolato negli ultimi 2 giorni
-        vrmap = {x["listing_id"]: dict(x) for x in conn.execute(
-            "SELECT listing_id, v, p25, sigma, n FROM valore_reale WHERE listing_id = ANY(%s) AND computed_at > now() - interval '2 days'",
-            ([r["id"] for r in rows],)).fetchall()}
-    except Exception:
-        conn.rollback()
+    from ..pricing.ricalcolo import vr_di
+    vrmap = vr_di(conn, [r["id"] for r in rows])      # 2/11 notte: valore reale
     targhe = targhe_visibili(conn)
     for r in rows:
         # 31/10 (cliente: "metti tutte le auto col numero nelle descrizioni"): il numero scritto nel testo vale come numero

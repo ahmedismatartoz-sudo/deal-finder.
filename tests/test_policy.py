@@ -448,3 +448,16 @@ def test_allestimento_1_11():
     assert allestimento({"version_raw": "118d M Sport"}) == "sportivo"
     assert allestimento({"title": "Golf 2.0 TDI R-Line"}) == "sportivo"
     assert allestimento({"version_raw": "Golf 1.6 TDI Business"}) == "normale"
+
+
+def test_valore_reale_concorda_e_poche_gemelle():
+    # gemelle che concordano: M = min(M, V), metodo valore_reale
+    v0 = valuta(TARGET, market(BASE), 1500, CFG, NOW)
+    if v0.get("M"):
+        t = dict(TARGET, vr={"v": int(v0["M"] * 1.02), "p25": int(v0["M"] * 0.9), "sigma": 0.1, "n": 500})
+        v = valuta(t, market(BASE), 1500, CFG, NOW)
+        assert v["M"] <= v0["M"] and v.get("metodo", "").startswith("valore_reale")
+        # valore reale molto più basso delle gemelle: vince il più basso
+        t2 = dict(TARGET, vr={"v": int(v0["M"] * 0.7), "p25": int(v0["M"] * 0.6), "sigma": 0.1, "n": 500})
+        v2 = valuta(t2, market(BASE), 1500, CFG, NOW)
+        assert v2["M"] <= int(v0["M"] * 0.7) + 1 and v2.get("vr_accordo") is False

@@ -123,6 +123,21 @@ def _valuta_base(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
     return v, lista
 
 
+def vr_di(conn, ids: list) -> dict:
+    """2/11 notte: valore reale (pricing/valore_reale.py, tabella valore_reale) per questi annunci, se calcolato negli
+    ultimi 2 giorni. Usato da TUTTE le valutazioni (sito e cron), così un ricalcolo non torna al metodo vecchio."""
+    if not ids:
+        return {}
+    try:
+        return {r["listing_id"]: dict(r) for r in conn.execute(
+            "SELECT listing_id, v, p25, sigma, n FROM valore_reale WHERE listing_id = ANY(%s) "
+            "AND computed_at > now() - interval '2 days'", (list(ids),)).fetchall()}
+    except Exception as e:                          # tabella non ancora creata: si valuta senza
+        conn.rollback()
+        log.warning("valore reale non letto: %s", str(e)[:150])
+        return {}
+
+
 def ai_di(conn, ids: list) -> dict:
     """Stime del modello AI dei prezzi (tabella stima_ai, scritta dal lavoro programmato) per questi annunci."""
     if not ids or os.environ.get("POLICY_AI", "1") != "1":
@@ -265,6 +280,7 @@ def esegui(conn, limite: int | None = None) -> dict:
     targhe = targhe_visibili(conn)
     targets.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
     aimap = ai_di(conn, [r["id"] for r in targets])
+    vrmap = vr_di(conn, [r["id"] for r in targets])
     log.warning("POLICY_AI stime AI disponibili per %d auto su %d", len(aimap), len(targets))
 
     cat, trans, motivi, ns = Counter(), Counter(), Counter(), Counter()
@@ -287,6 +303,7 @@ def esegui(conn, limite: int | None = None) -> dict:
         t["vehicle_identity"] = _j(t.get("vehicle_identity"))
         t["rischio_strutturale"] = _rischio(r)
         t["ai"] = aimap.get(r["id"])
+        t["vr"] = vrmap.get(r["id"])
         t["targa_e_telefono"] = targa_e_telefono(r, targhe)
         if info[r["id"]].get("audit") and info[r["id"]].get("mercato_audit"):
             t["tetto_rivendita"] = info[r["id"]]["mercato_audit"]
@@ -476,6 +493,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                                                              "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
     rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
     aimap = ai_di(conn, [r["id"] for r in rows])
+    vrmap = vr_di(conn, [r["id"] for r in rows])
     targhe = targhe_visibili(conn)
     carica_taratura(conn)
     campioni_tar = []
@@ -524,7 +542,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                        for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]),
+                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]), vr=vrmap.get(r["id"]),
                  targa_e_telefono=targa_e_telefono(r, targhe, True if tel is True else False))
         try:
             v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache_nord)

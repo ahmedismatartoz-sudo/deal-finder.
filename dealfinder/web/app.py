@@ -4898,6 +4898,36 @@ def _tempo_reale():
             lg.warning("DIAGNOSI_DATI non riuscita: %s", str(e)[:300])
     threading.Thread(target=diagnosi_dati, daemon=True, name="diagnosi").start()
 
+    def valore_reale_notte():
+        """2/11 notte: il valore reale si ricalcola ogni notte (verso le 3 ora italiana) con gli annunci e le vendite del
+        giorno, e si rifà la prova sulle vendute (nei log VALORE_REALE PROVA, per controllare che l'errore non salga).
+        VR_NOTTE=0 lo spegne."""
+        if os.environ.get("VR_NOTTE", "1") != "1":
+            return
+        L = logging.getLogger("scovo")
+        time.sleep(600)
+        while True:
+            try:
+                from datetime import datetime as _dt, timezone as _tz
+                if _dt.now(_tz.utc).hour == int(os.environ.get("VR_ORA_UTC", "2")):
+                    with connect() as conn:
+                        ult = conn.execute("SELECT max(computed_at) AS t FROM valore_reale").fetchone()["t"] \
+                            if conn.execute("SELECT to_regclass('valore_reale') AS t").fetchone()["t"] else None
+                    if ult is None or (_dt.now(_tz.utc) - ult).total_seconds() > 20 * 3600:
+                        from ..pipeline.ciclo import _una_volta
+                        if _una_volta("valore_reale_notte:" + _dt.now(_tz.utc).strftime("%Y%m%d")):
+                            from ..pricing import valore_reale as VR
+                            from ..zone import tutte
+                            with connect() as conn:
+                                conn.execute("SET statement_timeout = '900s'")
+                                L.warning("VALORE_REALE PROVA %s", json.dumps(VR.prova(conn), ensure_ascii=False, default=str))
+                                L.warning("VALORE_REALE CALCOLO %s", json.dumps(
+                                    VR.calcola_e_salva(conn, prov_zona=list(tutte())), default=str))
+            except Exception as e:
+                L.warning("VALORE_REALE notte non riuscito: %s", str(e)[:300])
+            time.sleep(1800)
+    threading.Thread(target=valore_reale_notte, daemon=True, name="vr-notte").start()
+
     def soglia_7k():
         """2/11 sera (cliente: "abbassiamo fino ai 7k, va bene 1.500 € di margine ... trova un modo per far entrare più
         auto"): RINVIO_INVIA=soglia7k<n>. 1) rivaluta le auto di privati della zona da 5.000 a 6.999 € scartate come
