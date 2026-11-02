@@ -131,6 +131,17 @@ def giro() -> dict:
                 pacco.clear()
 
         solo_valuta = os.environ.get("BENZ_SOLO_VALUTA") == "1"   # annunci già raccolti: si passa subito alla scelta
+        # 2/11: prima di tutto le auto con anno/km mancanti: dati letti dal testo e subito rivalutate (pochi minuti)
+        if os.environ.get("BENZ_SOLO_INSUFF") == "mai":
+            try:
+                subito_ids = completa_dati(conn, PROVINCE_100, PMAX)
+                for i in range(0, len(subito_ids), 25):
+                    tr.valuta_e_pubblica(conn, subito_ids[i:i + 25], st)
+                    conn.commit()
+                log.warning("BENZ dati completati rivalutate %d, pubblicate finora %d", len(subito_ids), st.get("pubblicate", 0))
+            except Exception as e:
+                conn.rollback()
+                log.warning("BENZ dati completati (inizio) non riuscito: %s", str(e)[:200])
         # 1a. Subito: Lombardia entro 100 km, dal più recente
         sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
         sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
