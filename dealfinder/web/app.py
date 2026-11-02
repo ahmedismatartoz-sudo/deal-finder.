@@ -4938,7 +4938,14 @@ def _tempo_reale():
             from ..zone import tutte
             with connect() as conn:
                 conn.execute("SET statement_timeout = '600s'")
-                ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l
+                # 2/11 notte (cliente: "dove sono finiti gli annunci raccolti per fare più confronti?"): base dei confronti
+                for r in conn.execute("""SELECT source, status, count(*) AS n,
+                        count(*) FILTER (WHERE last_seen_at > now() - interval '10 days') AS visti10,
+                        count(*) FILTER (WHERE last_seen_at > now() - interval '30 days') AS visti30,
+                        count(*) FILTER (WHERE first_seen_at > now() - interval '15 days') AS nuovi15
+                        FROM listings GROUP BY 1,2 ORDER BY n DESC LIMIT 12""").fetchall():
+                    L.warning("VALNUOVE base_confronti %s", json.dumps(dict(r), default=str))
+                ids = [] if "conf" in tag else [r["id"] for r in conn.execute("""SELECT l.id FROM listings l
                     WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
                       AND l.price_eur BETWEEN 1000 AND 30000 AND COALESCE(l.mileage_km,0) <= 150000
                       AND NOT EXISTS (SELECT 1 FROM valutazioni_policy v WHERE v.listing_id=l.id)

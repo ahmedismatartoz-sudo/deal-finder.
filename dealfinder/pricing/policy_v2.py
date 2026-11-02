@@ -881,7 +881,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         return out
     if out.get("prudente_pochi"):
         # rivendita prudente: non oltre il prezzo PIÙ BASSO tra le auto uguali trovate, né oltre il mercato −15%
-        sc = float(os.environ.get("POLICY_PRUDENTE_SCONTO", "15")) / 100
+        sc = float(os.environ.get("POLICY_PRUDENTE_SCONTO", "10")) / 100
         rp = int(min(out["R"], min(prezzi), out["M"] * (1 - sc)))
         if rp < out["R"]:
             out["R"] = riv["R"] = rp
