@@ -742,9 +742,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
                           for s in {c.get("seller_type") or "sconosciuto" for c in validi}})
     out["campione"] = ("base preferita" if n >= cfg.n_preferito else "provvisoria (campione limitato)"
                        if n >= cfg.n_minimo else "insufficiente")
-    if sel["livello"] == 2:
-        out["ipotesi"].append(f"confronti ampliati (anno ±{cfg.anni_tol_2}, km ±{cfg.km_tol_2:,}, cambio/potenza non sempre indicati): "
-                              "affidabilità ridotta".replace(",", "."))
+    if sel["livello"] >= 2:
+        _at = cfg.anni_tol_2 + (1 if sel["livello"] == 3 else 0)
+        _kt = cfg.km_tol_2 + (30000 if sel["livello"] == 3 else 0)
+        out["ipotesi"].append(f"confronti ampliati (livello {sel['livello']}: anno ±{_at}, km ±{_kt:,}, cambio/potenza non sempre "
+                              "indicati): affidabilità ridotta".replace(",", "."))
     if n and cfg.correzione:
         out["ipotesi"].append(f"prezzi dei confronti corretti verso {t['year']} e {int(t['mileage_km']):,} km: "
                               f"−{sel['correzione']['anno']*100:.1f}% per anno, −{sel['correzione']['km_10000']*100:.1f}% "
@@ -878,7 +880,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             err = (out.get("modello") or {}).get("errore_tipico") or .12
             rapp = 1 - .78 * err
             come = f"stimato dall'errore del modello (±{err*100:.0f}%)"
-        incerto = n < 5 or sel["livello"] == 2
+        incerto = n < 5 or sel["livello"] >= 2 or bool(out.get("vr_poche_gemelle"))
         rapp = max(cfg.veloce_min, min(cfg.veloce_max_incerto if incerto else cfg.veloce_max, rapp))
         if incerto:
             come += "; stima incerta (pochi confronti o confronti ampliati): almeno −8%"
@@ -1013,7 +1015,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         dubbi.append(f"campione limitato ({n} confronti)")
     if (out.get("ai") or {}).get("disaccordo"):
         dubbi.append("modello AI e confronti diretti non concordano: verificare versione e stato")
-    if sel["livello"] == 2:
+    if sel["livello"] >= 2:
         dubbi.append("confronti ampliati")
     if not t.get("gearbox") or not t.get("power_kw"):
         dubbi.append("motorizzazione o cambio non indicati nell'annuncio")

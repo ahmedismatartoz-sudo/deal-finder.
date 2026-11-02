@@ -189,7 +189,8 @@ def prova(conn, limite_gruppi: int = 400, giorni_prova: int = 14) -> dict:
     Errore del metodo nuovo (V) e di quello attuale (M dell'ultima valutazione salvata quando era online)."""
     now = datetime.now(timezone.utc)
     err_nuovo, err_vecchio, bias_nuovo, bias_vecchio = [], [], [], []
-    per_fascia = defaultdict(lambda: {"n": 0, "nuovo": [], "vecchio": []})
+    err_nuovo_stesse = []          # errore del nuovo sulle STESSE auto che hanno una stima del metodo attuale
+    per_fascia = defaultdict(lambda: {"n": 0, "nuovo": [], "vecchio": [], "nuovo_stesse": []})
     copertura = Counter()
     gruppi = gruppi_principali(conn, limite_gruppi)
     for gi, (mk, md, fu) in enumerate(gruppi):
@@ -224,7 +225,9 @@ def prova(conn, limite_gruppi: int = 400, giorni_prova: int = 14) -> dict:
             if vv and vv.get("m"):
                 e_v = (float(vv["m"]) - vero) / vero
                 err_vecchio.append(abs(e_v)); bias_vecchio.append(e_v)
+                err_nuovo_stesse.append(abs(e_n))
                 per_fascia[fascia]["vecchio"].append(abs(e_v))
+                per_fascia[fascia]["nuovo_stesse"].append(abs(e_n))
                 copertura["con_stima_vecchia"] += 1
             else:
                 copertura["senza_stima_vecchia"] += 1
@@ -233,12 +236,16 @@ def prova(conn, limite_gruppi: int = 400, giorni_prova: int = 14) -> dict:
     md_ = lambda a: round(float(np.median(a)) * 100, 1) if a else None
     return {"gruppi": len(gruppi), "auto_provate": len(err_nuovo),
             "errore_mediano_nuovo_%": md_(err_nuovo), "errore_mediano_attuale_%": md_(err_vecchio),
+            "STESSE_AUTO_nuovo_%": md_(err_nuovo_stesse), "STESSE_AUTO_attuale_%": md_(err_vecchio),
+            "STESSE_AUTO_n": len(err_nuovo_stesse),
+            "STESSE_AUTO_entro_10%_nuovo": round(float(np.mean(np.array(err_nuovo_stesse) <= .10)) * 100, 1) if err_nuovo_stesse else None,
             "entro_10%_nuovo": round(float(np.mean(np.array(err_nuovo) <= .10)) * 100, 1) if err_nuovo else None,
             "entro_10%_attuale": round(float(np.mean(np.array(err_vecchio) <= .10)) * 100, 1) if err_vecchio else None,
             "distorsione_nuovo_%": md_(bias_nuovo) if bias_nuovo else None,
             "distorsione_attuale_%": round(float(np.median(bias_vecchio)) * 100, 1) if bias_vecchio else None,
             "per_fascia": {k: {"n": v["n"], "nuovo_%": md_(v["nuovo"]), "attuale_%": md_(v["vecchio"]),
-                               "n_attuale": len(v["vecchio"])} for k, v in sorted(per_fascia.items())},
+                               "n_attuale": len(v["vecchio"]), "nuovo_stesse_%": md_(v["nuovo_stesse"])}
+                           for k, v in sorted(per_fascia.items())},
             "copertura": dict(copertura)}
 
 

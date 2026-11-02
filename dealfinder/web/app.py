@@ -1169,7 +1169,9 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     def _n_serve(it):
         return n_min_eco if (it.get("prezzo") or 0) < p_eco else n_min
 
-    _prud = lambda it: bool((it.get("pv") or {}).get("prudente_pochi"))     # 2/11 notte: eccezione con rivendita prudente
+    # 2/11 notte: eccezioni al minimo di confronti, già coperte nella valutazione (rivendita prudente, oppure valore
+    # reale del modello su tutto il gruppo con gemelle che concordano entro il 15%)
+    _prud = lambda it: bool((it.get("pv") or {}).get("prudente_pochi") or (it.get("pv") or {}).get("vr_poche_gemelle"))
     pochi = [it for it in items if it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it) and not _prud(it)]
     items = [it for it in items if not (it.get("pv") and (it["pv"].get("n") or 0) < _n_serve(it) and not _prud(it))]
     dopo_n = len(items)
@@ -1685,11 +1687,15 @@ def _mercato_calibrato(items: list) -> list:
             continue
         prezzo = it.get("prezzo") or 0
         if prezzo and prezzo < lim_eco and (pv.get("n") or 0) and pv["n"] < n_eco and pv.get("metodo") != "confronti Europa" \
-                and not pv.get("prudente_pochi"):
+                and not pv.get("prudente_pochi") and not pv.get("vr_poche_gemelle"):
             st["pochi_confronti"] += 1
             continue
         M = float(pv["M"])
         f = next(x for lim, _, x in fatt if M < lim)
+        # 2/11 notte: il valore reale è già il prezzo di VENDITA (non quello chiesto): la correzione "prezzi chiesti ->
+        # prezzi veri" qui sotto lo sconterebbe due volte
+        if str(pv.get("metodo") or "").startswith("valore_reale"):
+            f = 1.0
         # 2/11 sera (cliente: "per le benzina sotto i 100.000 km dimezza la stima prudente"): correzione a metà
         if f < 1 and "benzin" in str(it.get("carb") or "").lower() and it.get("km") is not None \
                 and int(it["km"]) <= int(os.environ.get("BENZ_META_KM", "100000")):
