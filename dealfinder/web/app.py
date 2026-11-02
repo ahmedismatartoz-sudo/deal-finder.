@@ -4358,10 +4358,15 @@ def _tempo_reale():
                             or re.search(r"\b(man|male|uomo|maschil)", (str(v.get("name")) + " " + str(v.get("description"))).lower())]
                     scelta = (pref or voci)[0]["id"]
                 L.warning("VOCE scelta %s", scelta)
+                # 2/11 sera: "voceintera" = tutto il discorso in una sola generazione (pause e intonazione naturali);
+                # i tagli del video si ricavano poi dalle pause dell'audio
+                if tag.startswith("voceintera"):
+                    paragrafi = [" ".join(testi[0:4]), " ".join(testi[4:7]), testi[7], " ".join(testi[8:11]), " ".join(testi[11:14]), testi[14], " ".join(testi[15:17])]
+                    testi = ["\n\n".join(paragrafi)]
                 for i, t in enumerate(testi):
                     body = {"model_id": "sonic-3.5", "transcript": t, "voice": {"mode": "id", "id": scelta}, "language": "it",
                             "output_format": {"container": "mp3", "sample_rate": 44100, "bit_rate": 128000},
-                            "generation_config": {"speed": float(os.environ.get("VOCE_VEL", "1.05"))}}
+                            "generation_config": {"speed": float(os.environ.get("VOCE_VEL", "1.0"))}}
                     rr = c.post("https://api.cartesia.ai/tts/bytes", json=body)
                     if rr.status_code >= 300:
                         body["model_id"] = "sonic-3"; body.pop("generation_config", None)
