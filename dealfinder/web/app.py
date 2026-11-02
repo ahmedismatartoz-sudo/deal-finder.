@@ -3715,7 +3715,7 @@ def _tempo_reale():
         tag = os.environ.get("DIAGNOSI_SITO")
         if not tag:
             return
-        time.sleep(20 if tag.startswith("b10") else 150)
+        time.sleep(20 if tag.startswith(("b10", "tel:")) else 150)
         from collections import Counter
         from ..pipeline.ciclo import _due
         L = logging.getLogger("scovo")
@@ -3723,6 +3723,29 @@ def _tempo_reale():
             if not _due(f"diagnosi_sito:{tag}", 100000):
                 return
             prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+            if tag.startswith("tel:"):
+                # 2/11 (cliente: "chi è questo numero tra i nostri lead"): cerca numeri (ultime 9 cifre) ovunque
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '300s'")
+                    for n in [x.strip()[-9:] for x in tag[4:].split(",") if x.strip()]:
+                        like = "%" + n + "%"
+                        out = {}
+                        for nome, q in (
+                            ("annunci", "SELECT id, source, url, title, make, model, year, price_eur, seller_type, city, province, status, "
+                                        "first_seen_at::date AS dal FROM listings WHERE regexp_replace(coalesce(telefono_ok,''),'\\D','','g') LIKE %(l)s "
+                                        "OR regexp_replace(coalesce(description,''),'[\\s.\\-/]','','g') LIKE %(l)s LIMIT 10"),
+                            ("maps", "SELECT nome, comune, prov, tel, cell, sito, categoria FROM lead_maps WHERE "
+                                     "regexp_replace(coalesce(tel,'')||' '||coalesce(cell,''),'\\D','','g') LIKE %(l)s LIMIT 5"),
+                            ("dealer", "SELECT nome, comune, prov, cell, fonte FROM lead_tutti_dealer WHERE "
+                                       "regexp_replace(coalesce(cell::text,''),'\\D','','g') LIKE %(l)s LIMIT 5"),
+                            ("as24", "SELECT nome, cellulari::text AS cell FROM commercianti_as24 WHERE "
+                                     "regexp_replace(coalesce(cellulari::text,''),'\\D','','g') LIKE %(l)s LIMIT 5")):
+                            try:
+                                out[nome] = [dict(r) for r in conn.execute(q, {"l": like}).fetchall()]
+                            except Exception as e:
+                                conn.rollback(); out[nome] = "err " + str(e)[:120]
+                        L.warning("CERCA_TEL %s %s", n, json.dumps(out, default=str, ensure_ascii=False)[:3000])
+                return
             if tag.startswith("b10"):
                 # 2/11: imbuto solo per benzina <=10.000 EUR, <=100.000 km, privati, zona sito
                 with connect() as conn:
