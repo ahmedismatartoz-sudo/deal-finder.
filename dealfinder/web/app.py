@@ -1688,6 +1688,10 @@ def _mercato_calibrato(items: list) -> list:
             continue
         M = float(pv["M"])
         f = next(x for lim, _, x in fatt if M < lim)
+        # 2/11 sera (cliente: "per le benzina sotto i 100.000 km dimezza la stima prudente"): correzione a metà
+        if f < 1 and "benzin" in str(it.get("carb") or "").lower() and it.get("km") is not None \
+                and int(it["km"]) <= int(os.environ.get("BENZ_META_KM", "100000")):
+            f = 1 - (1 - f) * float(os.environ.get("BENZ_META_QUOTA", "0.5"))
         R = float(pv.get("R_finale") or pv.get("R") or 0)
         R2 = min(R, M * f * 0.95) if f < 1 else R
         giu = int(round(R - R2))
