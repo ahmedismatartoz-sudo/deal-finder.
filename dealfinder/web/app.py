@@ -5199,6 +5199,75 @@ async def _lifespan(app):
     yield
 
 
+# 2/11 sera (cliente: "devo far vedere a mio fratello che funziona il sito", prezzi delle auto −1.000 €): ANTEPRIMA
+# PRIVATA. Chi apre /anteprima/<ANTEPRIMA_TOKEN> riceve un cookie per 30 minuti e solo sul SUO browser le API delle
+# auto mostrano il prezzo −1.000 € (margini +1.000 €). Gli altri utenti e i commercianti vedono i prezzi veri.
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseMW
+
+
+def _anteprima_ok(request) -> bool:
+    tok = os.environ.get("ANTEPRIMA_TOKEN") or ""
+    return bool(tok) and request.cookies.get("skovo_anteprima") == tok
+
+
+def _meno_mille(x):
+    d = int(os.environ.get("ANTEPRIMA_SCONTO", "1000"))
+    if isinstance(x, list):
+        return [_meno_mille(v) for v in x]
+    if not isinstance(x, dict):
+        return x
+    y = {k: _meno_mille(v) for k, v in x.items()}
+    if isinstance(y.get("prezzo"), int) and y["prezzo"] > d + 200:
+        y["prezzo"] -= d
+        for k in ("guadagno", "guadagno_min", "guadagno_max", "margine"):
+            if isinstance(y.get(k), (int, float)):
+                y[k] = y[k] + d
+        pv = y.get("pv")
+        if isinstance(pv, dict):
+            pv = dict(pv)
+            for k in ("margine",):
+                if isinstance(pv.get(k), (int, float)):
+                    pv[k] = pv[k] + d
+            if isinstance(pv.get("acquisto"), (int, float)):
+                pv["acquisto"] = pv["acquisto"] - d
+            y["pv"] = pv
+    return y
+
+
+class AnteprimaMiddleware(_BaseMW):
+    async def dispatch(self, request, call_next):
+        resp = await call_next(request)
+        if not request.url.path.startswith(("/api/opportunities", "/api/affari")) or not _anteprima_ok(request):
+            return resp
+        body = b"".join([c async for c in resp.body_iterator])
+        try:
+            data = json.loads(body)
+        except Exception:
+            return Response(body, status_code=resp.status_code, media_type=resp.media_type)
+        h = {k: v for k, v in resp.headers.items() if k.lower() not in ("content-length", "content-encoding")}
+        return Response(json.dumps(_meno_mille(data), default=str), status_code=resp.status_code, headers=h,
+                        media_type="application/json")
+
+
+def anteprima_entra(request: Request):
+    tok = os.environ.get("ANTEPRIMA_TOKEN") or ""
+    if not tok or request.path_params.get("tok") != tok:
+        return HTMLResponse("Link non valido", status_code=404)
+    r = RedirectResponse("/", status_code=302)
+    r.set_cookie("skovo_anteprima", tok, max_age=1800, httponly=True, secure=True, samesite="lax")
+    return r
+
+
+def anteprima_esci(request: Request):
+    r = RedirectResponse("/", status_code=302)
+    r.delete_cookie("skovo_anteprima")
+    return r
+
+
+routes.insert(0, Route("/anteprima/{tok}", anteprima_entra))
+routes.insert(0, Route("/anteprima-fine", anteprima_esci))
+
+
 app = Starlette(routes=routes, lifespan=_lifespan,
-                middleware=[Middleware(SecurityMiddleware), Middleware(GZipMiddleware, minimum_size=800)],
+                middleware=[Middleware(SecurityMiddleware), Middleware(GZipMiddleware, minimum_size=800), Middleware(AnteprimaMiddleware)],
                 exception_handlers={HTTPError: http_error, 500: server_error})
