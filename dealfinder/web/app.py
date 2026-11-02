@@ -4260,6 +4260,35 @@ def _tempo_reale():
             logging.getLogger("scovo").warning("RIMETTI non riuscito: %s", str(e)[:300])
     threading.Thread(target=rimetti_brevo, daemon=True, name="rimetti-brevo").start()
 
+    def esempi_rimessi():
+        """2/11: RINVIO_INVIA=esempi<n> manda l'email con 3 esempi ai contatti vecchi rimessi. Una volta per etichetta."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("esempi"):
+            return
+        time.sleep(120)
+        for _ in range(30):
+            if _elenco.get("items"):
+                break
+            time.sleep(60)
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"esempi_rimessi:{tag}", 100000):
+                return
+
+            def piatte():
+                out = []
+                for it in list(_elenco.get("items") or []):
+                    pv = it.get("pv") or {}
+                    out.append({"id": it.get("id"), "auto": it.get("nome"), "anno": it.get("anno"), "km": it.get("km"),
+                                "carb": it.get("carb"), "prezzo": it.get("prezzo"), "n": pv.get("n"), "zona": it.get("zona"),
+                                "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine")})
+                return out
+            from ..marketing import auto_invio as AI
+            AI.invia_rimessi(tag, piatte)
+        except Exception as e:
+            logging.getLogger("scovo").warning("RIMESSI_ESEMPI non riuscito: %s", str(e)[:300])
+    threading.Thread(target=esempi_rimessi, daemon=True, name="esempi-rimessi").start()
+
     def sms_invia():
         """2/11 (cliente: "manda l'SMS ai commercianti di Milano e provincia, subito, più numeri possibile"): SMS da Brevo
         (mittente "Skovo") ai cellulari AZIENDALI dei commercianti di Milano e provincia (Google Maps e annunci), tolti

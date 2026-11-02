@@ -307,3 +307,54 @@ def rimetti_contatti(tag: str) -> None:
         r = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in emails], "listIds": [lid],
                                                    "updateExistingContacts": True, "emptyContactsAttributes": False})
         lg.warning("RIMETTI %s: lista %s, import %s %s", tag, lid, r.status_code, r.text[:200])
+
+
+def invia_rimessi(tag: str, elenco) -> dict:
+    """2/11 (cliente: "prepara l'email con esempi e mandala a tutti questi"): una campagna con il testo approvato il 2/11
+    (TESTO_2_11) e 3 auto di esempio dal sito (privati, zona, almeno 10 confronti, margine >= 1.500, foto visibili),
+    alla lista dei contatti vecchi rimessi oggi. Una volta per etichetta."""
+    cand = []
+    for x in elenco():
+        m = re.search(r"\((\w\w)\)", str(x.get("zona") or ""))
+        if (not m or m.group(1).upper() not in PROV_100 or not x.get("R") or not x.get("anno") or (x.get("n") or 0) < 10
+                or (x.get("km") or 10**9) > 120000 or not (3000 <= (x.get("prezzo") or 0) <= 25000) or (x.get("margine") or 0) < 1500):
+            continue
+        cand.append(x)
+    cand.sort(key=lambda x: -(x.get("margine") or 0))
+    auto, modelli = [], set()
+    for x in cand:
+        mod = " ".join(str(x["auto"]).lower().split()[:2])
+        if mod in modelli or not _foto_ok(_card(x)):
+            continue
+        auto.append(x); modelli.add(mod)
+        if len(auto) == 3:
+            break
+    lg.warning("RIMESSI_ESEMPI %s: candidate %d, scelte %s", tag, len(cand), [(a["id"], a["auto"], a["prezzo"], a["margine"]) for a in auto])
+    if len(auto) < 2:
+        return {"inviata": False, "motivo": "esempi insufficienti"}
+    nomi = " ".join(str(auto[0]["auto"]).split()[:2])
+    html = _pagina(TESTO_2_11, f'<p {P}>Alcuni esempi di oggi, vicino a voi:</p>'
+                   '<div style="margin:6px 0 10px">' + "".join(_card(a) for a in auto) + "</div>")
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
+        lid = None
+        off = 0
+        while lid is None:
+            ls = c.get(f"{API}/contacts/lists", params={"limit": 50, "offset": off}).json().get("lists") or []
+            lid = next((l["id"] for l in ls if str(l.get("name", "")).startswith("Skovo contatti vecchi rimessi 02-11")), None)
+            if len(ls) < 50:
+                break
+            off += 50
+        if lid is None:
+            lg.warning("RIMESSI_ESEMPI %s: lista dei contatti rimessi non trovata", tag)
+            return {"inviata": False}
+        n = c.get(f"{API}/contacts/lists/{lid}").json().get("uniqueSubscribers")
+        r = c.post(f"{API}/emailCampaigns", json={"name": f"Skovo esempi contatti rimessi 02-11 {tag}",
+                                                  "subject": f"{nomi} da privato sotto mercato", "sender": MITTENTE,
+                                                  "replyTo": MITTENTE["email"], "htmlContent": html,
+                                                  "recipients": {"listIds": [lid]}})
+        if r.status_code >= 300:
+            lg.warning("RIMESSI_ESEMPI %s: campagna non creata %s %s", tag, r.status_code, r.text[:200])
+            return {"inviata": False}
+        s = c.post(f"{API}/emailCampaigns/{r.json()['id']}/sendNow")
+        lg.warning("RIMESSI_ESEMPI %s: campagna %s alla lista %s (%s contatti), invio %s", tag, r.json()["id"], lid, n, s.status_code)
+        return {"inviata": s.status_code < 300, "contatti": n}
