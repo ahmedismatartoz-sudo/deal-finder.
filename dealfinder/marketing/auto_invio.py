@@ -245,7 +245,8 @@ def invia_2_11(tag: str) -> dict:
         rows = conn.execute(
             "SELECT e.email, upper(COALESCE(d.prov, m.prov)) AS prov FROM lead_email e "
             "LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave LEFT JOIN lead_maps m ON e.chiave = 'maps:' || m.place_id "
-            "WHERE cardinality(e.email) > 0 AND upper(COALESCE(d.prov, m.prov)) = ANY(%s)", (list(ZONA_2_11),)).fetchall()
+            "WHERE cardinality(e.email) > 0 AND upper(COALESCE(d.prov, m.prov)) = ANY(%s)",
+            ([p.strip().upper() for p in (os.environ.get("BREVO_ZONA") or ",".join(ZONA_2_11)).split(",") if p.strip()],)).fetchall()
     scelte, per_prov, st = [], Counter(), Counter()
     visti = set()
     for r in rows:
