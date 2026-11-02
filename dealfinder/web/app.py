@@ -4919,6 +4919,40 @@ def _tempo_reale():
             L.warning("RIVCOSTI non riuscita: %s", str(e)[:300])
     threading.Thread(target=rivaluta_costi, daemon=True, name="rivcosti").start()
 
+    def valuta_mai_valutate():
+        """2/11 notte (cliente: "me ne servono di più, subito"): RINVIO_INVIA=valnuove<n> valuta subito le auto di
+        privati della zona mai valutate (fino a 30.000 €, fino a 150.000 km), prima le benzina. Solo conteggi nei log."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("valnuove"):
+            return
+        time.sleep(30)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"valnuove:{tag}"):
+                return
+            from collections import Counter as _C
+            from ..pipeline import tempo_reale as tr
+            from ..zone import tutte
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '600s'")
+                ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l
+                    WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                      AND l.price_eur BETWEEN 1000 AND 30000 AND COALESCE(l.mileage_km,0) <= 150000
+                      AND NOT EXISTS (SELECT 1 FROM valutazioni_policy v WHERE v.listing_id=l.id)
+                    ORDER BY (l.fuel ILIKE '%%benzin%%') DESC, l.last_seen_at DESC LIMIT 3000""", (list(tutte()),)).fetchall()]
+                L.warning("VALNUOVE mai valutate: %d", len(ids))
+                st = _C()
+                for i in range(0, len(ids), 25):
+                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
+                    conn.commit()
+                    if i % 500 == 0:
+                        L.warning("VALNUOVE avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
+                L.warning("VALNUOVE fatto: %s", json.dumps(dict(st)))
+        except Exception as e:
+            L.warning("VALNUOVE non riuscita: %s", str(e)[:300])
+    threading.Thread(target=valuta_mai_valutate, daemon=True, name="valnuove").start()
+
     def supercar_vere():
         """29/10 notte (cliente): l'AI controlla foto e annuncio delle supercar; sul sito solo quelle controllate (SC_CONTROLLO=1)."""
         if os.environ.get("SC_CONTROLLO", "1") != "1":
