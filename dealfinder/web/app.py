@@ -4139,6 +4139,51 @@ def _tempo_reale():
             L.warning("ESPORTA_TEL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_tel, daemon=True, name="esporta_tel").start()
 
+    def sms_invia():
+        """2/11 (cliente: "manda l'SMS ai commercianti di Milano e provincia, subito"): SMS da Brevo (mittente SMS_MITTENTE,
+        default "Skovo") ai numeri aziendali in SMS_NUMERI (separati da virgola), testo SMS_TESTO. Una volta per etichetta
+        (SMS_INVIA=<tag>). Il primo numero è quello del cliente (prova). Nei log solo conteggi ed errori."""
+        tag = os.environ.get("SMS_INVIA")
+        if not tag:
+            return
+        time.sleep(30)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"sms_invia:{tag}", 100000):
+                return
+            import httpx
+            from ..marketing.brevo_liste import _chiave
+            testo = os.environ.get("SMS_TESTO", "").strip()
+            numeri = [n.strip() for n in (os.environ.get("SMS_NUMERI") or "").split(",") if n.strip()]
+            mitt = os.environ.get("SMS_MITTENTE", "Skovo")
+            if not testo or not numeri:
+                L.warning("SMS_INVIA fermo: testo o numeri mancanti")
+                return
+            ok = ko = 0
+            errori = {}
+            with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=30) as c:
+                for i, n in enumerate(numeri):
+                    num = n if n.startswith("39") and len(n) > 10 else "39" + n
+                    r = c.post("https://api.brevo.com/v3/transactionalSMS/send",
+                               json={"sender": mitt, "recipient": num, "content": testo, "type": "marketing", "tag": f"skovo_{tag}"})
+                    if r.status_code < 300:
+                        ok += 1
+                    else:
+                        ko += 1
+                        k = f"{r.status_code}:{r.text[:120]}"
+                        errori[k] = errori.get(k, 0) + 1
+                        if ko >= 5 and ok == 0:
+                            L.warning("SMS_INVIA fermato: i primi %d invii sono falliti %s", ko, errori)
+                            return
+                    if i == 0:
+                        L.warning("SMS_INVIA prova al primo numero: %s", "ok" if ok else errori)
+                    time.sleep(0.3)
+            L.warning("SMS_INVIA fatto: %d inviati, %d non inviati %s", ok, ko, errori)
+        except Exception as e:
+            L.warning("SMS_INVIA non riuscito: %s", str(e)[:300])
+    threading.Thread(target=sms_invia, daemon=True, name="sms_invia").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
