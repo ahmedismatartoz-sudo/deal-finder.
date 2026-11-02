@@ -2782,6 +2782,11 @@ def _telefoni_scelte():
         lg.warning("TR telefoni scelte non riuscito: %s", str(e)[:300])
 
 
+NON_COMMERCIANTI = re.compile(r"(?i)uffic|amministrativ|bosch|car service|detailing|riparaz|assistenz|\bassist|immobiliar|agenzia|"
+                              r"marketing|incidentat|grandinat|compro auto|rottam|carrozz|wrapping|lavaggi|ricambi|pneumatic|"
+                              r"veicoli commerciali|furgon|camper|moto\b|scooter|autoscuol|assicuraz|leasing|finanziam")
+
+
 def _sms_strutturati(no, L):
     """2/11 sera: commercianti 'ben strutturati' entro ~45 km da Sesto San Giovanni, un cellulare per azienda.
     Fonti: AutoScout24 (pagina commerciante con almeno 8 auto in vendita) e Google Maps (categoria concessionaria/
@@ -2795,7 +2800,7 @@ def _sms_strutturati(no, L):
     km60 = json.loads((base / "comuni_60km.json").read_text())
 
     def km(comune):
-        k = (comune or "").lower()
+        k = (comune or "").split(" - ")[0].split(",")[0].strip().lower()
         for a, b in (("à", "a"), ("è", "e"), ("é", "e"), ("ù", "u"), ("ò", "o"), ("ì", "i")):
             k = k.replace(a, b)
         k = re.sub(r"[^a-z]", "", k)
@@ -2810,11 +2815,11 @@ def _sms_strutturati(no, L):
     st = Counter()
     with connect() as conn:
         for r in conn.execute("SELECT tel, nome, comune, prov, link, auto FROM lead_tutti "
-                              "WHERE link LIKE 'http%%' AND auto >= 8").fetchall():
+                              "WHERE link LIKE 'http%%' AND auto >= 6").fetchall():
             righe.append({"tel": r["tel"], "nome": r["nome"] or "", "comune": r["comune"] or "", "prov": r["prov"], "link": r["link"],
                           "peso": f'{r["auto"]} auto', "punti": min(r["auto"], 200) * 3, "fonte": "autoscout"})
         for r in conn.execute("SELECT nome, comune, prov, tel, categoria, voto, recensioni FROM lead_maps WHERE cell "
-                              "AND sito IS NOT NULL AND sito <> '' AND coalesce(recensioni,0) >= 20 "
+                              "AND sito IS NOT NULL AND sito <> '' AND coalesce(recensioni,0) >= 12 "
                               "AND coalesce(voto,0) >= 3.5").fetchall():
             if not CATEGORIE_OK.search(r["categoria"] or "") or CATEGORIE_NO.search(r["categoria"] or ""):
                 st["maps_categoria"] += 1
@@ -2832,10 +2837,10 @@ def _sms_strutturati(no, L):
     for x in sorted(righe, key=lambda x: -x["punti"]):
         x["km"] = km(x["comune"])
         nn = _nn(x["nome"])
-        if no.search(x["nome"]):
+        if no.search(x["nome"]) or NON_COMMERCIANTI.search(x["nome"]):
             st["officine_ecc"] += 1
             continue
-        if x["km"] is None or x["km"] > 45:
+        if x["km"] is None or x["km"] > 50:
             st["lontani_o_comune_ignoto"] += 1
             continue
         if len(nomi_tel.get(x["tel"], ())) > 1:
@@ -4568,7 +4573,19 @@ def _tempo_reale():
                     pri = 0 if str(r["chiave"]).startswith("http") else (2 if r["nome"] else 3)
                     cand += [(pri, c) for c in r["cell"]]
             cand.sort(key=lambda x: x[0])
+            vecchi = set()
             if strutt:
+                # giro di stamattina (sms<n> senza strutt): stessi candidati, primi 229 cellulari validi -> mai più
+                for _, t in cand:
+                    d = re.sub(r"\D", "", str(t or ""))
+                    if d.startswith("39") and len(d) > 10:
+                        d = d[2:]
+                    if re.fullmatch(r"3[1-9]\d{8}", d) and d not in vecchi and \
+                            hashlib.sha1(d[-9:].encode()).hexdigest()[:16] not in chiamati:
+                        vecchi.add(d)
+                    if len(vecchi) >= 260:
+                        break
+                L.warning("SMS_STRUTT numeri del giro di stamattina tolti (stima larga): %d", len(vecchi))
                 cand, info = _sms_strutturati(no, L)
                 massimo = int(os.environ.get("SMS_MAX", "200"))
             # 2/11: chi ha già ricevuto un SMS da un giro precedente (tag skovo_sms*) non lo riceve di nuovo
@@ -4583,8 +4600,11 @@ def _tempo_reale():
                         if rr.status_code >= 300:
                             raise RuntimeError(f"eventi {rr.status_code} {rr.text[:100]}")
                         ev = (rr.json() or {}).get("events") or []
+                        if off == 0:
+                            L.warning("SMS_INVIA eventi Brevo letti: %d, esempio campi %s, tag %s", len(ev), sorted((ev[0] if ev else {}).keys()),
+                                      sorted({str(e.get("tag")) for e in ev})[:5])
                         for e in ev:
-                            if str(e.get("tag") or "").startswith("skovo_sms"):
+                            if str(e.get("tag") or "").startswith("skovo_sms") or not e.get("tag"):
                                 gia.add(re.sub(r"\D", "", str(e.get("phoneNumber") or ""))[-10:])
                         if len(ev) < 100:
                             break
@@ -4594,7 +4614,7 @@ def _tempo_reale():
                 L.warning("SMS_INVIA fermato: già inviati non letti: %s", str(e)[:150])
                 return
             L.warning("SMS_INVIA numeri che hanno già ricevuto un SMS: %d", len(gia))
-            numeri, visti = ([] if prova else ["3482425633"]), {"3482425633"} | gia
+            numeri, visti = ([] if prova else ["3482425633"]), {"3482425633"} | gia | vecchi
             for _, t in cand:
                 d = re.sub(r"\D", "", str(t or ""))
                 if d.startswith("39") and len(d) > 10:
