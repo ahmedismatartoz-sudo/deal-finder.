@@ -221,3 +221,56 @@ def ciclo(elenco=None) -> None:
         except Exception as e:
             lg.warning("AUTO_INVIO giro non riuscito: %s", str(e)[:300])
         time.sleep(pausa)
+
+
+TESTO_2_11 = ["Ciao,", "trovo privati che vendono auto sotto mercato con un nostro software, che scarta truffe, annunci falsi e "
+              "auto incidentate. Vi fissiamo noi l'appuntamento con il privato: voi comprate e rivendete, io prendo una "
+              "piccola commissione.", "Ci sentiamo?"]
+ZONA_2_11 = ("MI", "MB", "VA", "CO", "LC", "BG", "LO")
+IMMAGINE = re.compile(r"\.(png|jpe?g|gif|webp|avif|svg|bmp)$", re.I)
+NON_COMMERCIALI = re.compile(r"^(bewerbung|job|jobs|lavora|careers?|rtdprivacy|ufficio\.stampa|stampa|press|hr|recruiting|cv|"
+                             r"curriculum|de\.)", re.I)
+
+
+def invia_2_11(tag: str) -> dict:
+    """2/11 notte (cliente: "mettile tutte su Brevo subito e mandiamo a tutti"): le email raccolte della zona
+    (MI, MB, VA, CO, LC, BG, LO) mai caricate prima (non in brevo_inviati, che contiene i 1.345 contatti cancellati),
+    senza doppioni né indirizzi finti, in una lista Brevo nuova e il testo corto approvato il 1/11 sera. Una volta.
+    Tetto BREVO_TETTO_2_11 (predefinito 1.450, limite del piano). Nei log solo conteggi."""
+    from collections import Counter
+    from ..db import connect
+    tetto = int(os.environ.get("BREVO_TETTO_2_11", "1450"))
+    with connect() as conn:
+        gia = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+        rows = conn.execute(
+            "SELECT e.email, upper(COALESCE(d.prov, m.prov)) AS prov FROM lead_email e "
+            "LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave LEFT JOIN lead_maps m ON e.chiave = 'maps:' || m.place_id "
+            "WHERE cardinality(e.email) > 0 AND upper(COALESCE(d.prov, m.prov)) = ANY(%s)", (list(ZONA_2_11),)).fetchall()
+    scelte, per_prov, st = [], Counter(), Counter()
+    visti = set()
+    for r in rows:
+        for e in r["email"] or []:
+            e = (e or "").strip().lower()
+            if not e or e in visti:
+                continue
+            visti.add(e)
+            if e in gia:
+                st["gia_contattate"] += 1
+            elif BAD.search(e) or IMMAGINE.search(e) or NON_COMMERCIALI.search(e) or not re.match(r"^[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}$", e):
+                st["scartate"] += 1
+            else:
+                scelte.append(e)
+                per_prov[r["prov"]] += 1
+    scelte = scelte[:tetto]
+    lg.warning("BREVO_2_11 %d email da mandare (per provincia %s), %s", len(scelte), dict(per_prov), dict(st))
+    if os.environ.get("BREVO_2_11_PROVA") == "1" or not scelte:
+        return {"email": len(scelte)}
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
+        ok = _manda(c, f"Skovo zona 02-11 {tag}", "auto da privati sotto mercato", _pagina(TESTO_2_11), scelte)
+    if ok:
+        with connect() as conn:
+            for e in scelte:
+                conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+            conn.commit()
+    lg.warning("BREVO_2_11 fatto: %s", "inviata" if ok else "NON inviata")
+    return {"email": len(scelte), "inviata": ok}

@@ -3857,6 +3857,25 @@ def _tempo_reale():
             L.warning("LEADE_NOMI non riuscito: %s", str(e)[:300])
     threading.Thread(target=lead_nomi_web, daemon=True, name="lead_nomi_web").start()
 
+    def brevo_2_11():
+        """2/11 notte (cliente): carica in Brevo le email della zona mai contattate e manda il testo corto (BREVO_2_11=<tag>)."""
+        tag = os.environ.get("BREVO_2_11")
+        if not tag:
+            return
+        time.sleep(60)
+        try:
+            from ..pipeline.ciclo import _due
+            from ..db import log_job
+            if not _due(f"brevo_2_11:{tag}", 100000):
+                return
+            from ..marketing import auto_invio as AI
+            with connect() as conn:
+                fine = log_job(conn, f"brevo_2_11:{tag}")
+                fine(True, AI.invia_2_11(tag))
+        except Exception as e:
+            logging.getLogger("scovo").warning("BREVO_2_11 non riuscito: %s", str(e)[:300])
+    threading.Thread(target=brevo_2_11, daemon=True, name="brevo_2_11").start()
+
     def campagna_1_11():
         """1/11 (cliente): email a tutti i contatti Brevo con 3 testi e 2 auto per fascia (marketing/campagna_1_11.py).
         CAMPAGNA_1_11=prova solo log delle auto scelte; =invia manda una volta sola."""
