@@ -145,7 +145,7 @@ def giro() -> dict:
             fkm = int(os.environ.get("FOCUS_KM", "100000"))
             salvati = {k: os.environ.get(k) for k in ("AUTOSCOUT_CAP", "AUTOSCOUT_RAGGIO", "AUTOSCOUT_KM_MAX", "AUTOSCOUT_CARB", "PASSI_JOB")}
             os.environ.update({"AUTOSCOUT_CAP": os.environ.get("FOCUS_CAP", "20099"), "AUTOSCOUT_RAGGIO": os.environ.get("FOCUS_RAGGIO", "200"),
-                               "AUTOSCOUT_KM_MAX": str(fkm), "AUTOSCOUT_CARB": "B",
+                               "AUTOSCOUT_KM_MAX": str(fkm), "AUTOSCOUT_CARB": os.environ.get("FOCUS_CARB", "B"),
                                "PASSI_JOB": "focus:" + time.strftime("%Y%m%d") + str(int(time.strftime("%H")) // 6)})
             nf = 0
             try:
@@ -172,7 +172,7 @@ def giro() -> dict:
                     try:
                         for l in sub._deep({"price_bands": fasce, "band_pages": int(os.environ.get("FOCUS_SUB_PAGINE", "20"))},
                                            set(provs), reg, 100):
-                            if (l.seller_type == "privato" and "benzina" in (l.fuel or "").lower()
+                            if (l.seller_type == "privato" and (os.environ.get("FOCUS_CARB", "B") == "" or "benzina" in (l.fuel or "").lower())
                                     and (l.mileage_km or 0) <= fkm and l.price_eur and fmin <= l.price_eur <= fmax):
                                 pacco.append(l); ns += 1
                                 salva()
