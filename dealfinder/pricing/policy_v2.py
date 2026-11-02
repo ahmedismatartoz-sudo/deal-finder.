@@ -821,7 +821,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     # prova del 2/11 notte su 6.040 auto vendute: errore mediano 18,3% contro 23,2% del metodo attuale, distorsione
     # +0,5% contro +22,2% (il metodo attuale sopravvalutava); migliore sotto 20.000 € in tutte le fasce, peggiore
     # sopra (17,4% contro 12,3%): acceso fino a VR_PREZZO_MAX (20.000 €), sopra resta il metodo delle gemelle.
-    vr = t.get("vr") if (os.environ.get("VR_ATTIVO", "1") == "1"
+    vr = t.get("vr") if (os.environ.get("VR_ATTIVO", "0") == "1"
                           and (t.get("price_eur") or 0) <= int(os.environ.get("VR_PREZZO_MAX", "20000"))) else None
     if vr and vr.get("v") and out.get("M") and prezzi:
         V, P25v, sg = int(vr["v"]), int(vr["p25"]), float(vr.get("sigma") or 1)
