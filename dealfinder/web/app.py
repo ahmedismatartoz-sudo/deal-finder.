@@ -3626,7 +3626,7 @@ def _tempo_reale():
     def rinvio_invia():
         """29/10 (cliente: "rimandala a tutti"): manda una volta la campagna preparata (RINVIO_INVIA=<id campagna>)."""
         cid = os.environ.get("RINVIO_INVIA")
-        if not cid:
+        if not cid or not cid.isdigit():
             return
         time.sleep(45)
         from ..db import log_job
@@ -4140,11 +4140,12 @@ def _tempo_reale():
     threading.Thread(target=esporta_tel, daemon=True, name="esporta_tel").start()
 
     def sms_invia():
-        """2/11 (cliente: "manda l'SMS ai commercianti di Milano e provincia, subito"): SMS da Brevo (mittente SMS_MITTENTE,
-        default "Skovo") ai numeri aziendali in SMS_NUMERI (separati da virgola), testo SMS_TESTO. Una volta per etichetta
-        (SMS_INVIA=<tag>). Il primo numero è quello del cliente (prova). Nei log solo conteggi ed errori."""
-        tag = os.environ.get("SMS_INVIA")
-        if not tag:
+        """2/11 (cliente: "manda l'SMS ai commercianti di Milano e provincia, subito, più numeri possibile"): SMS da Brevo
+        (mittente "Skovo") ai cellulari AZIENDALI dei commercianti di Milano e provincia (Google Maps e annunci), tolti
+        officine/carrozzerie ecc., Loconte e i numeri già chiamati (data/lead_chiamati.json). Il primo è il cliente (prova).
+        Si attiva con RINVIO_INVIA=sms<n> (Render è al limite di 300 variabili). Una volta per etichetta. Nei log solo conteggi."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("sms"):
             return
         time.sleep(30)
         L = logging.getLogger("scovo")
@@ -4152,32 +4153,60 @@ def _tempo_reale():
             from ..pipeline.ciclo import _due
             if not _due(f"sms_invia:{tag}", 100000):
                 return
+            import hashlib
             import httpx
+            from pathlib import Path as _P
             from ..marketing.brevo_liste import _chiave
-            testo = os.environ.get("SMS_TESTO", "").strip()
-            numeri = [n.strip() for n in (os.environ.get("SMS_NUMERI") or "").split(",") if n.strip()]
-            mitt = os.environ.get("SMS_MITTENTE", "Skovo")
-            if not testo or not numeri:
-                L.warning("SMS_INVIA fermo: testo o numeri mancanti")
-                return
+            testo = ("Buongiorno, siamo Skovo: troviamo auto di privati sotto mercato, scartiamo truffe e vi fissiamo noi "
+                     "l'appuntamento. Interessati? Chiamate il 3482425633")
+            massimo = int(os.environ.get("SMS_MAX", "229"))
+            chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])
+            no = re.compile(r"(?i)officin|carrozz|gomm|pneumat|demoliz|rottam|soccorso|noleggio|ricambi|elettrauto|lavaggio|"
+                            r"autoscuola|revision|moto\b|loconte|\baci\b")
+            cand = []
+            with connect() as conn:
+                for r in conn.execute("SELECT nome, categoria, tel FROM lead_maps WHERE upper(prov) = 'MI' AND cell").fetchall():
+                    if not no.search(f"{r['nome']} {r['categoria']}"):
+                        cand.append((1, r["tel"]))
+                for r in conn.execute("SELECT nome, chiave, cell, fonte FROM lead_tutti_dealer WHERE upper(prov) = 'MI' "
+                                      "AND cardinality(cell) > 0").fetchall():
+                    if no.search(r["nome"] or ""):
+                        continue
+                    pri = 0 if str(r["chiave"]).startswith("http") else (2 if r["nome"] else 3)
+                    cand += [(pri, c) for c in r["cell"]]
+            cand.sort(key=lambda x: x[0])
+            numeri, visti = ["3482425633"], {"3482425633"}
+            for _, t in cand:
+                d = re.sub(r"\D", "", str(t or ""))
+                if d.startswith("39") and len(d) > 10:
+                    d = d[2:]
+                if not re.fullmatch(r"3[1-9]\d{8}", d) or d in visti:
+                    continue
+                if hashlib.sha1(d[-9:].encode()).hexdigest()[:16] in chiamati:
+                    continue
+                visti.add(d)
+                numeri.append(d)
+                if len(numeri) > massimo:
+                    break
+            L.warning("SMS_INVIA %d numeri (il primo è il cliente)", len(numeri))
             ok = ko = 0
             errori = {}
             with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=30) as c:
                 for i, n in enumerate(numeri):
-                    num = n if n.startswith("39") and len(n) > 10 else "39" + n
-                    r = c.post("https://api.brevo.com/v3/transactionalSMS/send",
-                               json={"sender": mitt, "recipient": num, "content": testo, "type": "marketing", "tag": f"skovo_{tag}"})
+                    r = c.post("https://api.brevo.com/v3/transactionalSMS/sms",
+                               json={"sender": "Skovo", "recipient": "39" + n, "content": testo, "type": "marketing",
+                                     "tag": f"skovo_{tag}"})
                     if r.status_code < 300:
                         ok += 1
                     else:
                         ko += 1
-                        k = f"{r.status_code}:{r.text[:120]}"
+                        k = f"{r.status_code}:{r.text[:150]}"
                         errori[k] = errori.get(k, 0) + 1
                         if ko >= 5 and ok == 0:
                             L.warning("SMS_INVIA fermato: i primi %d invii sono falliti %s", ko, errori)
                             return
                     if i == 0:
-                        L.warning("SMS_INVIA prova al primo numero: %s", "ok" if ok else errori)
+                        L.warning("SMS_INVIA prova al cliente: %s", "ok" if ok else errori)
                     time.sleep(0.3)
             L.warning("SMS_INVIA fatto: %d inviati, %d non inviati %s", ok, ko, errori)
         except Exception as e:
