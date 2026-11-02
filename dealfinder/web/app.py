@@ -1264,15 +1264,32 @@ def _solo_privati(items: list[dict]) -> list[dict]:
                     (ids, list(ok), fuori)).fetchall()}
         except Exception as e:
             logging.getLogger("scovo").warning("COMMERCIANTI_BENZINA non controllati: %s", str(e)[:200])
+    # 2/11 (cliente: "togli tutte le auto di Loconte"): commercianti esclusi per nome (SITO_COMMERCIANTI_NOMI, separati da
+    # virgola): nome nel testo dell'annuncio oppure nome del venditore salvato da AutoScout24 (commercianti_as24, lead_tutti)
+    nomi_re = "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
+    esclusi = set()
+    if nomi_re:
+        for q in ("SELECT id FROM listings WHERE id = ANY(%(ids)s) AND (coalesce(title,'') || ' ' || coalesce(description,'')) ~* %(n)s",
+                  "SELECT l.id FROM listings l JOIN commercianti_as24_annunci a ON a.listing_id = l.source_id "
+                  "JOIN commercianti_as24 c ON c.seller_id = a.seller_id WHERE l.id = ANY(%(ids)s) AND c.nome ~* %(n)s",
+                  "SELECT l.id FROM listings l JOIN lead_tutti_ann t ON t.annuncio = l.source_id "
+                  "JOIN lead_tutti_dealer d ON d.chiave = t.chiave WHERE l.id = ANY(%(ids)s) AND d.nome ~* %(n)s"):
+            try:
+                with connect() as conn:
+                    esclusi |= {r["id"] for r in conn.execute(q, {"ids": ids, "n": nomi_re}).fetchall()}
+            except Exception as e:
+                logging.getLogger("scovo").warning("COMMERCIANTI_NOMI non controllati: %s", str(e)[:200])
     tenute = []
     for it in items:
+        if it.get("id") in esclusi:
+            continue
         if it.get("id") in ok:
             tenute.append(it)
         elif it.get("id") in comm:
             it["commerciante"] = True
             tenute.append(it)
-    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano (di cui %d commercianti a benzina fuori Milano)",
-                                       len(items) - len(tenute), len(tenute), len(comm))
+    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano (di cui %d commercianti a benzina fuori Milano; "
+                                       "%d dei commercianti esclusi per nome)", len(items) - len(tenute), len(tenute), len(comm), len(esclusi))
     return tenute
 
 
