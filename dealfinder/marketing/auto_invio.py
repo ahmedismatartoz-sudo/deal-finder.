@@ -358,3 +358,88 @@ def invia_rimessi(tag: str, elenco) -> dict:
         s = c.post(f"{API}/emailCampaigns/{r.json()['id']}/sendNow")
         lg.warning("RIMESSI_ESEMPI %s: campagna %s alla lista %s (%s contatti), invio %s", tag, r.json()["id"], lid, n, s.status_code)
         return {"inviata": s.status_code < 300, "contatti": n}
+
+
+FASCE_2_11 = {"utilitarie": (3000, 8000), "medie": (8000, 15000), "alte": (15000, 30000), "supercar": (30000, 300000)}
+
+
+def fasce_e_esempi(tag: str, elenco) -> dict:
+    """2/11 (cliente: "classifica ogni lead per la sua fascia e tre esempi per ogni fascia"): ogni contatto Brevo va nella
+    fascia delle auto che vende (prezzi dei suoi annunci; se mancano, la fascia salvata il 1/11), una lista Brevo per fascia,
+    e per ogni fascia una campagna in BOZZA (non inviata) con il testo del 2/11 e 3 auto di esempio del sito."""
+    import hashlib
+    from collections import Counter
+    from ..db import connect
+    vecchie = json.loads((_DATA / "brevo_fasce.json").read_text())
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
+        emails, off = [], 0
+        while True:
+            cs = c.get(f"{API}/contacts", params={"limit": 1000, "offset": off}).json().get("contacts") or []
+            emails += [x["email"].lower() for x in cs if x.get("email") and not x.get("emailBlacklisted")]
+            if len(cs) < 1000:
+                break
+            off += 1000
+        with connect() as conn:
+            prezzi: dict = {}
+            for r in conn.execute("SELECT e.email, a.prezzo FROM lead_email e JOIN lead_tutti_ann a ON a.chiave = e.chiave "
+                                  "WHERE cardinality(e.email) > 0").fetchall():
+                for e in r["email"] or []:
+                    prezzi.setdefault((e or "").lower(), []).append(r["prezzo"])
+        fascia, fonte = {}, Counter()
+        for e in emails:
+            p = [x for x in prezzi.get(e, []) if x and x > 300]
+            h = hashlib.sha1(e.encode()).hexdigest()[:16]
+            if p:
+                m = statistics.median(p)
+                f = "utilitarie" if m < 8000 else "medie" if m < 15000 else "alte" if m < 30000 else "supercar"
+                fonte["annunci"] += 1
+            elif vecchie.get(h):
+                f = {"premium": "alte"}.get(vecchie[h], vecchie[h])
+                fonte["fascia_1_11"] += 1
+            else:
+                f = "medie"
+                fonte["senza_dati_medie"] += 1
+            fascia[e] = f
+        per = Counter(fascia.values())
+        lg.warning("FASCE %s: contatti %d, per fascia %s, fonte %s", tag, len(emails), dict(per), dict(fonte))
+        # esempi
+        tutte = [x for x in elenco() if x.get("R") and x.get("anno") and (x.get("n") or 0) >= 10
+                 and (x.get("km") or 10**9) <= 150000 and (x.get("margine") or 0) >= 1500
+                 and (m_ := re.search(r"\((\w\w)\)", str(x.get("zona") or ""))) and m_.group(1).upper() in PROV_100]
+        esito = {}
+        for f, (lo, hi) in FASCE_2_11.items():
+            cand = sorted([x for x in tutte if lo <= (x.get("prezzo") or 0) < hi], key=lambda x: -(x.get("margine") or 0))
+            auto, modelli = [], set()
+            for x in cand:
+                mod = " ".join(str(x["auto"]).lower().split()[:2])
+                if mod in modelli or not _foto_ok(_card(x)):
+                    continue
+                auto.append(x); modelli.add(mod)
+                if len(auto) == 3:
+                    break
+            lg.warning("FASCE %s esempi %s: %s", tag, f, [(a["id"], a["auto"], a["anno"], a["km"], a["prezzo"], a["margine"]) for a in auto])
+            dest = [e for e, ff in fascia.items() if ff == f]
+            if not dest:
+                continue
+            r = c.post(f"{API}/contacts/lists", json={"name": f"Skovo fascia {f} 02-11 {tag}", "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+            c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in dest], "listIds": [lid],
+                                                   "updateExistingContacts": True, "emptyContactsAttributes": False})
+            cid = None
+            if len(auto) >= 2:
+                nomi = " ".join(str(auto[0]["auto"]).split()[:2])
+                html = _pagina(TESTO_2_11, f'<p {P}>Alcuni esempi di oggi, vicino a voi:</p>'
+                               '<div style="margin:6px 0 10px">' + "".join(_card(a) for a in auto) + "</div>")
+                for _ in range(6):
+                    time.sleep(30)
+                    rr = c.post(f"{API}/emailCampaigns", json={"name": f"Skovo fascia {f} 02-11 {tag} (bozza)",
+                                                               "subject": f"{nomi} da privato sotto mercato", "sender": MITTENTE,
+                                                               "replyTo": MITTENTE["email"], "htmlContent": html,
+                                                               "recipients": {"listIds": [lid]}})
+                    if rr.status_code < 300:
+                        cid = rr.json()["id"]
+                        break
+            esito[f] = {"contatti": len(dest), "lista": lid, "bozza": cid, "esempi": len(auto)}
+        lg.warning("FASCE %s fatto: %s", tag, json.dumps(esito))
+        return esito
