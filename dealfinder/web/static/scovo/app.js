@@ -187,6 +187,8 @@ function distKm(c){
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 const RAGGI = [[50,"50 km"],[100,"100 km"],[200,"200 km"],[300,"300 km"],[0,"Ovunque"]];
+/* 2/11 (cliente: "il filtro della distanza deve vedersi"): distanza nei filtri veloci, fino a 200 km */
+const DIST_STEPS = [25, 50, 100, 150, 200];
 function chiediPosizione(silenzioso){
   if (!navigator.geolocation) { if (!silenzioso) toast("Questo telefono non dà la posizione"); return; }
   navigator.geolocation.getCurrentPosition(p => {
@@ -316,6 +318,7 @@ function viewList(){
       <label class="qsel ${S.max !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="q-pmax">${opts(P_STEPS.map(v => [v, "Fino a " + num(v) + " €"]), S.max, "Prezzo")}</select></label>
       <label class="qsel ${S.carb.length ? "on" : ""}"><span class="sr">Alimentazione</span><select id="q-carb">${S.carb.length > 1 ? `<option value="__multi" selected>${S.carb.length} alimentazioni</option>` : ""}${opts(CARB, S.carb.length === 1 ? S.carb[0] : "", "Alimentazione")}</select></label>
       <label class="qsel ${S.kmMax !== "" ? "on" : ""}"><span class="sr">Chilometri massimi</span><select id="q-kmax">${opts(KM_STEPS.map(v => [v, "Fino a " + num(v) + " km"]), S.kmMax, "Km")}</select></label>
+      <label class="qsel ${S.raggio ? "on" : ""}"><span class="sr">Distanza</span><select id="q-raggio">${opts(DIST_STEPS.map(v => [v, "Entro " + v + " km"]), S.raggio || "", "Distanza")}</select></label>
     </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
   return header(scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", scV ? `${list.length} supercar di privati in tutta Europa` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
@@ -506,7 +509,7 @@ function sheetFilters(){
         `<button class="fck" data-act="carb" data-v="${k}" aria-pressed="${S.carb.includes(k)}" ${!cc[k] && !S.carb.includes(k) ? "disabled" : ""}><i aria-hidden="true"></i>${l}<span class="n">${cc[k] || 0}</span></button>`).join("")}</div></section>
       <section class="fgrp"><h3>Distanza</h3>
         ${seg([["milano","Da Milano"],["pos","Dalla mia posizione"]], S.centro, "centro", 2)}
-        <div class="fgrid" style="margin-top:10px">${sel("f-raggio", "Entro", opts([[10,"10 km"],[25,"25 km"],[50,"50 km"],[75,"75 km"],[100,"100 km"]], S.raggio || "", "Qualsiasi distanza"))}</div>
+        <div class="fgrid" style="margin-top:10px">${sel("f-raggio", "Entro", opts([[10,"10 km"],[25,"25 km"],[50,"50 km"],[75,"75 km"],[100,"100 km"],[150,"150 km"],[200,"200 km"]], S.raggio || "", "Qualsiasi distanza"))}</div>
       </section>
       <section class="fgrp"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Senza danni"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
       ${S.policy ? `<section class="fgrp"><h3>Rivendita</h3><span class="hint">Rivendita prudente calcolata per ogni auto: il più basso tra la mediana ridotta per fascia e il 25° percentile dei confronti equivalenti, meno tutti i costi.</span></section>`
@@ -1407,7 +1410,7 @@ $app.addEventListener("change", e => {
   const map = {"f-pmin": "min", "f-pmax": "max", "f-kmin": "kmMin", "f-kmax": "kmMax", "f-amin": "annoMin", "f-amax": "annoMax"};
   if (id === "f-marca") { S.brands = v ? [v] : []; S.modello = ""; }
   else if (id === "f-modello") S.modello = v;
-  else if (id === "f-raggio") S.raggio = v ? Number(v) : 0;
+  else if (id === "f-raggio" || id === "q-raggio") S.raggio = v ? Number(v) : 0;
   else if (id === "f-sort") S.sort = v;
   else if (id === "q-pmax") S.max = v;
   else if (id === "q-kmax") S.kmMax = v;
