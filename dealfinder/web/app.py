@@ -4343,7 +4343,7 @@ def _tempo_reale():
                 "Per trovarne una buona perdi ore.", "Per questo abbiamo creato Skovo.",
                 "Il nostro software legge tutti gli annunci di privati nella tua zona,", "li confronta con auto uguali",
                 "e ti trova quelle davvero sotto mercato.", "Scarta le truffe,", "ti avvisa appena esce l'occasione,",
-                "e l'appuntamento con il venditore lo fissiamo noi.", "Tu devi solo comprare e rivendere.",
+                "trattiamo noi con il venditore, arriviamo al prezzo più basso e fissiamo anche l'appuntamento.", "Tu devi solo comprare e rivendere.",
                 "Skovo: le occasioni, prima degli altri.", "Chiamaci al 348 242 5633, ti spieghiamo tutto in due minuti.",
             ]
             with httpx.Client(timeout=120, headers=H) as c:
