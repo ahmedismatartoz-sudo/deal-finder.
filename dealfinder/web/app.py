@@ -4099,6 +4099,46 @@ def _tempo_reale():
             L.warning("ESPORTA_EMAIL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_email, daemon=True, name="esporta_email").start()
 
+    def esporta_tel():
+        """2/11 (cliente: "dammi la mega lista dei numeri + i nuovi + quelli di Google Maps di ieri"): numeri AZIENDALI
+        dei commercianti (Google Maps lead_maps, AutoScout24/Subito lead_tutti_dealer, commercianti_as24), una volta
+        per etichetta (ESPORTA_TEL=<tag>). Righe ESPORTA_TEL_RIGA nei log, 25 alla volta."""
+        tag = os.environ.get("ESPORTA_TEL")
+        if not tag:
+            return
+        time.sleep(int(os.environ.get("ESPORTA_TEL_RITARDO_S", "90")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"esporta_tel:{tag}", 100000):
+                return
+            righe = []
+            with connect() as conn:
+                for r in conn.execute("SELECT nome, comune, prov, tel, cell, sito, categoria, aggiornato FROM lead_maps "
+                                      "WHERE coalesce(tel,'') <> ''").fetchall():
+                    righe.append([r["tel"], bool(r["cell"]), r["nome"], r["comune"], r["prov"], r["sito"], r["categoria"],
+                                  "google_maps", r["aggiornato"].strftime("%Y-%m-%d") if r["aggiornato"] else ""])
+                for r in conn.execute("SELECT nome, comune, prov, cell, fonte, chiave FROM lead_tutti_dealer "
+                                      "WHERE cardinality(cell) > 0").fetchall():
+                    for c in r["cell"]:
+                        righe.append([c, True, r["nome"], r["comune"], r["prov"],
+                                      r["chiave"] if str(r["chiave"]).startswith("http") else None, None, r["fonte"] or "annunci", ""])
+                try:
+                    for r in conn.execute("SELECT c.nome, c.cellulari, c.aggiornato, min(a.comune) AS comune, min(a.prov) AS prov "
+                                          "FROM commercianti_as24 c LEFT JOIN commercianti_as24_annunci a USING (seller_id) "
+                                          "WHERE cardinality(c.cellulari) > 0 GROUP BY c.seller_id, c.nome, c.cellulari, c.aggiornato").fetchall():
+                        for c in r["cellulari"]:
+                            righe.append([c, True, r["nome"], r["comune"], r["prov"], None, None, "autoscout24",
+                                          r["aggiornato"].strftime("%Y-%m-%d") if r["aggiornato"] else ""])
+                except Exception:
+                    conn.rollback()
+            for i in range(0, len(righe), 25):
+                L.warning("ESPORTA_TEL_RIGA %s", json.dumps(righe[i:i + 25], ensure_ascii=False, default=str))
+            L.warning("ESPORTA_TEL_FINE %d righe", len(righe))
+        except Exception as e:
+            L.warning("ESPORTA_TEL non riuscito: %s", str(e)[:300])
+    threading.Thread(target=esporta_tel, daemon=True, name="esporta_tel").start()
+
     def diagnosi_dati():
         """29/10 (cliente: "far lavorare meglio gli scraper"): perché le auto della zona finiscono in dati_insufficienti
         (DIAGNOSI_DATI=<etichetta>, una volta). Solo conteggi nel log."""
