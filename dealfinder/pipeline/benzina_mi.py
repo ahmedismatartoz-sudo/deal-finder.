@@ -280,6 +280,28 @@ def giro() -> dict:
             except Exception as e:
                 conn.rollback()
                 log.warning("BENZ dati insufficienti non letti: %s", str(e)[:200])
+        # 2/11 (cliente: "100 auto benzina sotto 10k da privati"): BENZ_SOLO_INSUFF=mai valuta TUTTE le auto della zona
+        # mai valutate (erano 3.436 benzina <=10k <=100k km), senza il pre-filtro sul prezzo mediano. Niente Facebook.
+        if os.environ.get("BENZ_SOLO_INSUFF") == "mai":
+            try:
+                cand = conn.execute(
+                    """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
+                       FROM listings t
+                       WHERE NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id)
+                         AND t.status = 'attivo' AND COALESCE(t.seller_type, 'privato') <> 'commerciante'
+                         AND t.source IN ('subito', 'autoscout24')
+                         AND upper(t.province) = ANY(%(prov)s) AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s
+                         AND coalesce(t.mileage_km, 0) <= %(kmmax)s
+                         AND (%(tutti_carb)s OR t.fuel ILIKE '%%benzin%%')
+                         AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+                       ORDER BY t.last_seen_at DESC NULLS LAST LIMIT %(lim)s""",
+                    {"prov": PROVINCE_100, "pmin": PMIN, "pmax": PMAX, "lim": int(os.environ.get("BENZ_MAX", "4000")),
+                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
+                     "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                log.warning("BENZ mai valutate da valutare: %d", len(cand))
+            except Exception as e:
+                conn.rollback()
+                log.warning("BENZ mai valutate non lette: %s", str(e)[:200])
         conn.execute("SET statement_timeout = 0")
         st["candidate"] = len(cand)
         log.warning("BENZ candidate %d", len(cand))
