@@ -4738,6 +4738,65 @@ def _tempo_reale():
         tag = os.environ.get("DIAGNOSI_DATI")
         if not tag:
             return
+        if tag.startswith("valreale"):
+            # 2/11 notte (cliente: ok a sviluppare e usare il metodo "valore reale"): prova sulle vendute, calcolo per le
+            # auto della zona, conteggio di quante entrerebbero con le stesse regole; in parallelo il lettore AI completa
+            # i dati mancanti (kW, versione, cambio) delle auto di privati della zona, entro il budget AI del giorno.
+            time.sleep(40)
+            L = logging.getLogger("scovo")
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"valreale:{tag}"):
+                return
+
+            def _lettore_zona():
+                try:
+                    from ..ai import lettore
+                    from ..zone import tutte
+                    with connect() as c2:
+                        ids = [r["id"] for r in c2.execute("""SELECT l.id FROM listings l
+                            LEFT JOIN lettura_ai a ON a.listing_id = l.id
+                            WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                              AND l.price_eur BETWEEN 1000 AND 30000 AND a.listing_id IS NULL
+                              AND (l.power_kw IS NULL OR l.version_raw IS NULL OR l.gearbox IS NULL OR l.year IS NULL)
+                            ORDER BY (l.fuel ILIKE '%%benzin%%') DESC, l.last_seen_at DESC LIMIT %s""",
+                                                            (list(tutte()), int(os.environ.get("VR_AI_MAX", "2000")))).fetchall()]
+                        L.warning("VALORE_REALE lettore AI: %d auto della zona con dati mancanti", len(ids))
+                        for i in range(0, len(ids), 100):
+                            res = lettore.giro(c2, ids=ids[i:i + 100], limite=100, rivaluta=True)
+                            if res.get("saltato") or res.get("spento"):
+                                L.warning("VALORE_REALE lettore AI fermo: %s", res)
+                                break
+                except Exception as e:
+                    L.warning("VALORE_REALE lettore AI non riuscito: %s", str(e)[:300])
+            threading.Thread(target=_lettore_zona, daemon=True, name="vr-lettore").start()
+            try:
+                from ..pricing import valore_reale as VR
+                from ..zone import tutte
+                from . import scovo as _sc
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '900s'")
+                    pr = VR.prova(conn, limite_gruppi=int(os.environ.get("VR_GRUPPI_PROVA", "400")))
+                    L.warning("VALORE_REALE PROVA %s", json.dumps(pr, ensure_ascii=False, default=str))
+                    st = VR.calcola_e_salva(conn, limite_gruppi=int(os.environ.get("VR_GRUPPI", "600")), prov_zona=list(tutte()))
+                    L.warning("VALORE_REALE CALCOLO %s", json.dumps(st, default=str))
+                    rows = conn.execute("""SELECT l.id, l.price_eur, l.fuel, l.mileage_km, v.v, v.p25, v.sigma FROM valore_reale v
+                        JOIN listings l ON l.id = v.listing_id WHERE l.status='attivo' AND l.seller_type='privato'
+                          AND COALESCE(l.mileage_km,0) <= 150000""").fetchall()
+                c = Counter()
+                for r in rows:
+                    R = min(r["v"] * 0.95, r["p25"])
+                    m = R - r["price_eur"]
+                    ok = m >= _sc.soglia(int(r["price_eur"]))
+                    c["stimate"] += 1
+                    if ok:
+                        c["sopra_soglia"] += 1
+                        c["sopra_soglia_sigma<=0.12"] += r["sigma"] <= 0.12
+                        if "benzin" in str(r["fuel"] or "") and (r["mileage_km"] or 0) <= 100000:
+                            c["sopra_soglia_benzina_100k"] += 1
+                L.warning("VALORE_REALE OMBRA (stesse regole: R=min(V*0,95,P25), soglie, privati, <=150k km): %s", dict(c))
+            except Exception as e:
+                L.warning("VALORE_REALE non riuscito: %s", str(e)[:300])
+            return
         if tag.startswith("conf"):
             # 2/11 notte (cliente: "abbiamo un grave problema nella struttura dei confronti, trova cosa blocca tutto"):
             # per le auto di privati della zona scartate per pochi confronti: quanti annunci dello stesso modello c'erano
