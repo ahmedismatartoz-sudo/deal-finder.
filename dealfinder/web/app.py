@@ -3747,7 +3747,28 @@ def _tempo_reale():
                                      "AND upper(l.province) = ANY(%(p)s) AND l.fuel ILIKE '%%benzin%%' AND l.price_eur BETWEEN 500 AND 10000 "
                                      "AND COALESCE(l.mileage_km,0) <= 100000", {"p": prov}).fetchone()
                     L.warning("DIAGNOSI_B10 totale %s", dict(t))
-                if not tag.startswith("b10s"):
+                    if tag.startswith("b10d"):
+                        x = conn.execute("""SELECT l.id, l.source, l.make, l.model, l.year, l.mileage_km, l.price_eur, u.margine,
+                                  u.riassunto->>'soglia' AS soglia, u.riassunto->>'n' AS n, u.riassunto->>'livello' AS liv,
+                                  u.riassunto->>'R_finale' AS rf, u.riassunto->>'M' AS m
+                                  """ + F + """ AND COALESCE(u.categoria, u.riassunto->>'categoria') = 'non_conveniente'
+                                  AND u.margine >= 1500 LIMIT 40""", {"p": prov}).fetchall()
+                        L.warning("DIAGNOSI_B10D nonconv_margine_alto %s", json.dumps([dict(r) for r in x], default=str))
+                        y = conn.execute("""SELECT left(regexp_replace(COALESCE(v.dati->'motivi'->>0, ''), '[0-9][0-9.]*', 'N', 'g'), 80) AS motivo,
+                                  u.riassunto->>'n' AS n, count(*) AS c FROM listings l
+                                  JOIN LATERAL (SELECT categoria, margine, riassunto, dati FROM valutazioni_policy v
+                                     WHERE v.listing_id=l.id ORDER BY computed_at DESC LIMIT 1) v ON true
+                                  CROSS JOIN LATERAL (SELECT v.riassunto) u
+                                  WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%(p)s)
+                                  AND l.fuel ILIKE '%%benzin%%' AND l.price_eur BETWEEN 500 AND 10000 AND COALESCE(l.mileage_km,0) <= 100000
+                                  AND v.categoria = 'dati_insufficienti' GROUP BY 1,2 ORDER BY c DESC LIMIT 25""", {"p": prov}).fetchall()
+                        L.warning("DIAGNOSI_B10D insufficienti_privati %s", json.dumps([dict(r) for r in y], default=str))
+                        z = conn.execute("""SELECT CASE WHEN u.margine < 0 THEN '<0' WHEN u.margine < 800 THEN '0-800'
+                                  WHEN u.margine < 1500 THEN '800-1500' ELSE '>=1500' END AS f, count(*) AS c
+                                  """ + F + """ AND l.seller_type='privato' AND COALESCE(u.categoria, u.riassunto->>'categoria') = 'non_conveniente'
+                                  GROUP BY 1""", {"p": prov}).fetchall()
+                        L.warning("DIAGNOSI_B10D nonconv_privati %s", json.dumps([dict(r) for r in z], default=str))
+                if not tag.startswith("b10s") and not tag.startswith("b10d"):
                     return
             with connect() as conn:
                 conn.execute("SET LOCAL statement_timeout = '300s'")
@@ -3799,8 +3820,12 @@ def _tempo_reale():
             cb = Counter(abbastanza=sum(1 for i in items if isb10(i)))
             items = passo("meno_subito_senza_tel", _meno_subito_senza_telefono, items)
             cb["meno_subito_senza_tel"] = sum(1 for i in items if isb10(i))
+            _pr = {i["id"]: i for i in items if isb10(i)}
             items = passo("solo_con_telefono", _solo_con_telefono, items)
             cb["solo_con_telefono"] = sum(1 for i in items if isb10(i))
+            if tag.startswith("b10d"):
+                _r = {i["id"] for i in items}
+                L.warning("DIAGNOSI_B10D persi solo_con_telefono %s", json.dumps([[k, v.get("nome"), v.get("prezzo"), (v.get("pv") or {}).get("margine"), v.get("fonte")] for k, v in _pr.items() if k not in _r][:40], default=str, ensure_ascii=False))
             items = passo("regole_finali", _regole_finali, items)
             cb["regole_finali"] = sum(1 for i in items if isb10(i))
             for nome, f in [("margine_recenti", _margine_recenti), ("margine_alta", _margine_alta),
@@ -3809,8 +3834,16 @@ def _tempo_reale():
                             ("senza_scarti_id", _senza_scarti_id), ("margine_minimo_sito", _margine_minimo_sito),
                             ("mercato_calibrato", _mercato_calibrato), ("rivendita_prudente", _rivendita_prudente),
                             ("zona_sito", _zona_sito)]:
+                prima = {i["id"]: i for i in items if isb10(i)}
                 items = passo(nome, f, items)
                 cb[nome] = sum(1 for i in items if isb10(i))
+                if tag.startswith("b10d") and nome != "solo_privati":
+                    rest = {i["id"] for i in items}
+                    persi = [[k, v.get("nome"), v.get("anno"), v.get("km"), v.get("prezzo"), (v.get("pv") or {}).get("margine"),
+                              (v.get("pv") or {}).get("n"), v.get("fonte")] for k, v in prima.items() if k not in rest]
+                    if persi and nome not in ("decisioni_jev", "margini_gonfiati", "senza_scarti_id", "margine_minimo_sito",
+                                              "mercato_calibrato", "rivendita_prudente", "zona_sito") or (persi and cb.get("solo_privati") is not None):
+                        L.warning("DIAGNOSI_B10D persi %s %s", nome, json.dumps(persi[:40], default=str, ensure_ascii=False))
             L.warning("DIAGNOSI_B10 passi %s", dict(cb))
             comp = Counter()
             for i in items:
