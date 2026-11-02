@@ -4738,6 +4738,52 @@ def _tempo_reale():
         tag = os.environ.get("DIAGNOSI_DATI")
         if not tag:
             return
+        if tag.startswith("conf"):
+            # 2/11 notte (cliente: "abbiamo un grave problema nella struttura dei confronti, trova cosa blocca tutto"):
+            # per le auto di privati della zona scartate per pochi confronti: quanti annunci dello stesso modello c'erano
+            # in partenza e quale regola li ha esclusi (somma dei motivi salvati in ogni valutazione). Solo conteggi.
+            time.sleep(40)
+            L = logging.getLogger("scovo")
+            try:
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"diagconf:{tag}"):
+                    return
+                from collections import Counter as _C
+                from ..zone import tutte
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '600s'")
+                    rows = conn.execute("""SELECT l.make, l.model, l.fuel, l.power_kw IS NULL AS senza_kw, l.gearbox IS NULL AS senza_cambio,
+                            (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000 AND l.price_eur <= 10000) AS b10,
+                            u.dati->'non_equivalenti' AS ne, (u.dati->>'n_esclusi')::int AS ex, (u.dati->>'n')::int AS n
+                        FROM listings l JOIN LATERAL (SELECT categoria, dati FROM valutazioni_policy v WHERE v.listing_id=l.id
+                                  ORDER BY computed_at DESC LIMIT 1) u ON true
+                        WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
+                          AND l.price_eur BETWEEN 1000 AND 30000 AND u.categoria='dati_insufficienti'
+                          AND u.dati->'motivi'->>0 LIKE 'solo %%confronti%%'""", (list(tutte()),)).fetchall()
+                    pool = conn.execute("""SELECT source, count(*) AS n FROM listings WHERE status='attivo'
+                        AND last_seen_at > now() - interval '10 days' GROUP BY 1""").fetchall()
+                mot, mot_b, base, campi, modelli = _C(), _C(), _C(), _C(), _C()
+                for r in rows:
+                    ne = r["ne"] if isinstance(r["ne"], dict) else json.loads(r["ne"] or "{}")
+                    tot = (r["n"] or 0) + (r["ex"] or 0) + sum(int(v) for v in ne.values())
+                    base["partenza 0" if tot == 0 else "1-9" if tot < 10 else "10-49" if tot < 50 else "50+"] += 1
+                    for k, v in ne.items():
+                        k2 = re.sub(r"\d[\d.]*", "N", k)[:60]
+                        mot[k2] += int(v)
+                        if r["b10"]:
+                            mot_b[k2] += int(v)
+                    mot["(esclusi: venduti/vecchi/danneggiati/prezzo)"] += r["ex"] or 0
+                    campi["senza_kw"] += bool(r["senza_kw"]); campi["senza_cambio"] += bool(r["senza_cambio"])
+                    if tot == 0:
+                        modelli[f"{r['make']} {r['model']} {r['fuel']}"] += 1
+                L.warning("DIAGCONF auto %d; annunci stesso modello in partenza: %s; campi: %s; base confronti attiva 10 gg: %s",
+                          len(rows), json.dumps(dict(base)), json.dumps(dict(campi)), json.dumps([dict(r) for r in pool]))
+                L.warning("DIAGCONF motivi di esclusione dei confronti (tutte): %s", json.dumps(dict(mot.most_common(15)), ensure_ascii=False))
+                L.warning("DIAGCONF motivi (benzina <=10k <=100k km): %s", json.dumps(dict(mot_b.most_common(12)), ensure_ascii=False))
+                L.warning("DIAGCONF modelli con ZERO annunci di partenza: %s", json.dumps(modelli.most_common(25), ensure_ascii=False))
+            except Exception as e:
+                L.warning("DIAGCONF non riuscita: %s", str(e)[:300])
+            return
         time.sleep(90)
         try:
             from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
