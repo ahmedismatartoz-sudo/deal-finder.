@@ -1253,7 +1253,8 @@ def _solo_privati(items: list[dict]) -> list[dict]:
     # 1/11 (cliente): anche le auto a BENZINA di commercianti FUORI dalla provincia di Milano (fuori Milano la benzina
     # la vendono spesso più bassa del mercato di Milano): stesse regole di margine, con l'etichetta "Da commerciante"
     comm = set()
-    if os.environ.get("SITO_COMMERCIANTI_BENZINA", "1") == "1":
+    # 2/11 (cliente: "togli i commercianti dal sito"): spento di base, SITO_COMMERCIANTI_BENZINA=1 per riaccenderlo
+    if os.environ.get("SITO_COMMERCIANTI_BENZINA", "0") == "1":
         try:
             # 1/11 sera (cliente: "anche tutte le province, conta solo le altre città"): fuori resta solo Milano città
             fuori = [c.strip().lower() for c in os.environ.get("COMMERCIANTI_ESCLUSE_CITTA", "milano").split(",") if c.strip()]
