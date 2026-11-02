@@ -275,3 +275,35 @@ def invia_2_11(tag: str) -> dict:
             conn.commit()
     lg.warning("BREVO_2_11 fatto: %s", "inviata" if ok else "NON inviata")
     return {"email": len(scelte), "inviata": ok}
+
+
+def rimetti_contatti(tag: str) -> None:
+    """2/11 (cliente: "dalle email rimetti i contatti vecchi fino ad arrivare a 1500 su Brevo"): ricarica in Brevo i contatti
+    vecchi scelti (data/brevo_rimetti.json, solo hash: non bloccati/disiscritti, prima chi aveva aperto, poi la zona),
+    presi da brevo_inviati. Solo caricamento in una lista: NESSUN invio. Si ferma a BREVO_TETTO (1.498) contatti."""
+    import hashlib
+    from ..db import connect
+    scelti = set(json.loads((_DATA / "brevo_rimetti.json").read_text()))
+    tetto = int(os.environ.get("BREVO_TETTO", "1498"))
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c, connect() as conn:
+        ora = c.get(f"{API}/contacts", params={"limit": 1}).json().get("count") or 0
+        attuali = set()
+        off = 0
+        while True:
+            cs = c.get(f"{API}/contacts", params={"limit": 1000, "offset": off}).json().get("contacts") or []
+            attuali |= {x["email"].lower() for x in cs if x.get("email")}
+            if len(cs) < 1000:
+                break
+            off += 1000
+        emails = sorted({r["email"].lower() for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()
+                         if hashlib.sha1(r["email"].lower().encode()).hexdigest()[:16] in scelti} - attuali)
+        emails = emails[:max(0, tetto - ora)]
+        lg.warning("RIMETTI %s: in Brevo %d, trovati %d di %d scelti, da caricare %d", tag, ora, len(emails), len(scelti), len(emails))
+        if not emails:
+            return
+        r = c.post(f"{API}/contacts/lists", json={"name": f"Skovo contatti vecchi rimessi 02-11 {tag}", "folderId": _cartella(c)})
+        r.raise_for_status()
+        lid = r.json()["id"]
+        r = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in emails], "listIds": [lid],
+                                                   "updateExistingContacts": True, "emptyContactsAttributes": False})
+        lg.warning("RIMETTI %s: lista %s, import %s %s", tag, lid, r.status_code, r.text[:200])

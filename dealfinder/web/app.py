@@ -4244,6 +4244,22 @@ def _tempo_reale():
             L.warning("ESPORTA_TEL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_tel, daemon=True, name="esporta_tel").start()
 
+    def rimetti_brevo():
+        """2/11: RINVIO_INVIA=rimetti<n> ricarica in Brevo i contatti vecchi fino a 1.498 (nessun invio). Una volta per etichetta."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("rimetti"):
+            return
+        time.sleep(30)
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"rimetti:{tag}", 100000):
+                return
+            from ..marketing import auto_invio as AI
+            AI.rimetti_contatti(tag)
+        except Exception as e:
+            logging.getLogger("scovo").warning("RIMETTI non riuscito: %s", str(e)[:300])
+    threading.Thread(target=rimetti_brevo, daemon=True, name="rimetti-brevo").start()
+
     def sms_invia():
         """2/11 (cliente: "manda l'SMS ai commercianti di Milano e provincia, subito, più numeri possibile"): SMS da Brevo
         (mittente "Skovo") ai cellulari AZIENDALI dei commercianti di Milano e provincia (Google Maps e annunci), tolti
