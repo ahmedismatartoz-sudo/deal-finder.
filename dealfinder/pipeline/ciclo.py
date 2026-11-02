@@ -28,6 +28,19 @@ def _due(job: str, hours: int) -> bool:
     return not (row and row["recent"])
 
 
+def _una_volta(job: str) -> bool:
+    """2/11: per i lavori da fare UNA sola volta (invii SMS/email, ecc.). Controlla e registra subito, in modo
+    atomico: un riavvio del server a metà non li fa ripartire da capo (prima _due da solo non registrava nulla
+    e ogni riavvio ripeteva l'invio)."""
+    with connect() as conn:
+        conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (job,))
+        if conn.execute("SELECT 1 FROM job_runs WHERE job=%s LIMIT 1", (job,)).fetchone():
+            return False
+        conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, '{}')", (job,))
+        conn.commit()
+    return True
+
+
 def _in_corso(job: str, hours: int = 8) -> bool:
     with connect() as conn:
         return bool(conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND finished_at IS NULL "

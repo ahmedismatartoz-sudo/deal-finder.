@@ -3479,7 +3479,7 @@ def _tempo_reale():
             return
         time.sleep(180)
         from ..pipeline import lead
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         job = f"lead:dintorni:{giro}"
         try:
@@ -3499,7 +3499,7 @@ def _tempo_reale():
             return
         time.sleep(120)
         from ..pipeline import lusso as L
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         for nome, fn in (("lead", L.lead_supercar), ("raccolta", L.raccolta_60k)):
             job = f"lusso:{nome}:{giro}"
@@ -3558,7 +3558,7 @@ def _tempo_reale():
         from collections import Counter as _Cn
         from ..ai import difetti as D
         from ..pipeline import tempo_reale as tr
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         while True:
             try:
                 with connect() as conn:
@@ -3620,7 +3620,7 @@ def _tempo_reale():
             return
         time.sleep(60)
         from ..db import log_job
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
             if _due(f"rinvio:{nome}", 100000):
@@ -3638,7 +3638,7 @@ def _tempo_reale():
             return
         time.sleep(45)
         from ..db import log_job
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
             if _due(f"rinvio_invia:{cid}", 100000):
@@ -3657,7 +3657,7 @@ def _tempo_reale():
             return
         time.sleep(50)
         from ..db import log_job
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
             if _due(f"rinvio_nonaperti:{cid}", 100000):
@@ -3675,7 +3675,7 @@ def _tempo_reale():
             return
         time.sleep(40)
         from ..db import log_job
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
             if _due(f"rinvio_escludi:{v}", 100000):
@@ -3717,10 +3717,10 @@ def _tempo_reale():
             return
         time.sleep(20 if tag.startswith(("b10", "tel:")) else 150)
         from collections import Counter
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         L = logging.getLogger("scovo")
         try:
-            if not _due(f"diagnosi_sito:{tag}", 100000):
+            if not _una_volta(f"diagnosi_sito:{tag}"):
                 return
             prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
             if tag.startswith("tel:"):
@@ -3888,11 +3888,11 @@ def _tempo_reale():
         if not tag:
             return
         time.sleep(200)
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..pipeline.manuale import FILE as _F
         L = logging.getLogger("scovo")
         try:
-            if not _due(f"diagnosi_scarti:{tag}", 100000):
+            if not _una_volta(f"diagnosi_scarti:{tag}"):
                 return
             prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
             note = {e["id"]: e for e in json.loads(_F.read_text())}
@@ -3929,7 +3929,7 @@ def _tempo_reale():
         time.sleep(120)
         L.warning("LEADMAPS_WEB parte (%s, province %s)", tag, os.environ.get("MAPS_SOLO_PROV", "MI"))
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
             if not _due(f"leadmaps_web:{tag}", 100000):
                 return
@@ -3968,7 +3968,7 @@ def _tempo_reale():
         time.sleep(60)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
             if not _due(f"lead_nomi:{tag}", 100000):
                 return
@@ -3988,7 +3988,7 @@ def _tempo_reale():
             return
         time.sleep(60)
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
             if not _due(f"brevo_2_11:{tag}", 100000):
                 return
@@ -4013,7 +4013,7 @@ def _tempo_reale():
                 break
             time.sleep(20)
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
             from ..marketing import campagna_1_11 as C
             if modo == "invia":
@@ -4038,7 +4038,7 @@ def _tempo_reale():
         time.sleep(180)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             if not _due(f"diag_insuff:{tag}", 100000):
                 return
             from ..db import log_job
@@ -4108,7 +4108,7 @@ def _tempo_reale():
         time.sleep(200)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             if not _due(f"diag_as24:{tag}", 100000):
                 return
             from ..db import log_job
@@ -4170,7 +4170,7 @@ def _tempo_reale():
         time.sleep(int(os.environ.get("ESPORTA_EMAIL_RITARDO_S", "120")))
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             if not _due(f"esporta_email:{tag}", 100000):
                 return
             from ..db import log_job
@@ -4214,8 +4214,8 @@ def _tempo_reale():
         time.sleep(int(os.environ.get("ESPORTA_TEL_RITARDO_S", "90")))
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"esporta_tel:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"esporta_tel:{tag}"):
                 return
             righe = []
             with connect() as conn:
@@ -4251,8 +4251,8 @@ def _tempo_reale():
             return
         time.sleep(30)
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"rimetti:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"rimetti:{tag}"):
                 return
             from ..marketing import auto_invio as AI
             AI.rimetti_contatti(tag)
@@ -4271,8 +4271,8 @@ def _tempo_reale():
                 break
             time.sleep(60)
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"esempi_rimessi:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"esempi_rimessi:{tag}"):
                 return
 
             def piatte():
@@ -4300,8 +4300,8 @@ def _tempo_reale():
                 break
             time.sleep(60)
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"fasce_brevo:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"fasce_brevo:{tag}"):
                 return
 
             def piatte():
@@ -4328,8 +4328,8 @@ def _tempo_reale():
         time.sleep(20)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"voce:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"voce:{tag}"):
                 return
             import base64
             import httpx
@@ -4424,8 +4424,8 @@ def _tempo_reale():
         time.sleep(20)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"musica:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"musica:{tag}"):
                 return
             import base64
             import httpx
@@ -4460,8 +4460,8 @@ def _tempo_reale():
         time.sleep(30)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"sms_invia:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"sms_invia:{tag}"):
                 return
             import hashlib
             import httpx
@@ -4551,8 +4551,8 @@ def _tempo_reale():
         time.sleep(20)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _due
-            if not _due(f"statsms:{tag}", 100000):
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _una_volta(f"statsms:{tag}"):
                 return
             import httpx
             from collections import Counter
@@ -4598,7 +4598,7 @@ def _tempo_reale():
             return
         time.sleep(90)
         try:
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
             from ..zone import tutte
             if not _due(f"diagnosi:{tag}", 100000):
@@ -4660,7 +4660,7 @@ def _tempo_reale():
                 break
             time.sleep(15)
         from ..pipeline import benzina_mi as B
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         job = f"benzina_mi:{giro}"
         try:
@@ -4685,7 +4685,7 @@ def _tempo_reale():
             return
         time.sleep(150)
         from ..pipeline import lusso as L
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         job = f"privati60:{giro}"
         try:
@@ -4704,7 +4704,7 @@ def _tempo_reale():
             return
         time.sleep(200)
         from ..pipeline import lusso as L
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         job = f"leadsp:{giro}"
         try:
@@ -4723,7 +4723,7 @@ def _tempo_reale():
             return
         time.sleep(30)
         from ..pipeline import fascia_lead as F
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         job = f"fascia_lead:{giro}"
         try:
@@ -4742,7 +4742,7 @@ def _tempo_reale():
             return
         time.sleep(30)
         from ..pipeline import lead_utilitarie as LU
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         job = f"lead_utilitarie:{giro}"
         try:
@@ -4758,7 +4758,7 @@ def _tempo_reale():
         """22/10 (cliente): tutti i commercianti con cellulare entro 50 km da Sesto (LEAD_TUTTI=n, una tantum)
         e consegna a blocchi (LEADT_ESPORTA=blocco:quanti)."""
         from ..pipeline import lead_tutti as LT
-        from ..pipeline.ciclo import _due
+        from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..db import log_job
         time.sleep(40)
         esp = os.environ.get("LEADT_ESPORTA") or ""
@@ -4813,7 +4813,7 @@ def _tempo_reale():
         time.sleep(30)
         try:
             from ..pipeline import lead_comuni as LC
-            from ..pipeline.ciclo import _due
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
             job = f"lead_comuni:{tag}"
             if _due(job, 100000):
