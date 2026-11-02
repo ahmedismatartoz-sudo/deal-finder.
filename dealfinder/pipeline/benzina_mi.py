@@ -38,6 +38,8 @@ WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
+  AND (NOT %(solo_nuove)s OR NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
+                                          AND vp.computed_at > now() - interval '3 days'))   -- 2/11: solo mai valutate di recente
 ORDER BY (t.price_eur > %(util)s) ASC, t.price_eur / g.med ASC   -- 22/10: utilitarie per prime (BENZ_UTIL_PRIMA)
 LIMIT %(lim)s"""
 
@@ -192,7 +194,8 @@ def giro() -> dict:
                                             "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
                                             "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
-                                            "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000"))}).fetchall()
+                                            "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
+                                            "solo_nuove": os.environ.get("BENZ_SOLO_NUOVE") == "1"}).fetchall()
         # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
         # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
         if os.environ.get("BENZ_CAMBI_PREZZO", "1") == "1":
