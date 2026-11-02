@@ -135,6 +135,56 @@ def giro() -> dict:
             log.warning("BENZ autoscout centro %s letti %d", voce, n - n0)
         st["letti_autoscout"] = n
         log.warning("BENZ autoscout letti %d", n)
+        # 2/11 (cliente: "concentra gli scraper sulle auto che ti ho detto"): giro mirato sulle BENZINA economiche con pochi
+        # km (BENZ_FOCUS=1): AutoScout24 solo benzina, fino a FOCUS_KM km, fasce di prezzo strette (più pagine lette),
+        # raggio FOCUS_RAGGIO da Sesto; poi Subito profondo nelle stesse fasce. Solo privati. Le regole di margine non cambiano.
+        if not solo_valuta and os.environ.get("BENZ_FOCUS") == "1":
+            fmin, fmax = int(os.environ.get("FOCUS_MIN", "1000")), int(os.environ.get("FOCUS_MAX", "10000"))
+            fkm = int(os.environ.get("FOCUS_KM", "100000"))
+            salvati = {k: os.environ.get(k) for k in ("AUTOSCOUT_CAP", "AUTOSCOUT_RAGGIO", "AUTOSCOUT_KM_MAX", "AUTOSCOUT_CARB", "PASSI_JOB")}
+            os.environ.update({"AUTOSCOUT_CAP": os.environ.get("FOCUS_CAP", "20099"), "AUTOSCOUT_RAGGIO": os.environ.get("FOCUS_RAGGIO", "200"),
+                               "AUTOSCOUT_KM_MAX": str(fkm), "AUTOSCOUT_CARB": "B",
+                               "PASSI_JOB": "focus:" + time.strftime("%Y%m%d") + str(int(time.strftime("%H")) // 6)})
+            nf = 0
+            try:
+                for l in bande_parallele(fmin, fmax, int(os.environ.get("FOCUS_PASSO", "250")), [("P", "privato")],
+                                         workers=int(os.environ.get("BENZ_PARALLELI", "3"))):
+                    pacco.append(l); nf += 1
+                    salva()
+            except Exception as e:
+                log.warning("BENZ focus autoscout: %s", str(e)[:200])
+            salva(True)
+            st["focus_autoscout"] = nf
+            log.warning("BENZ focus AutoScout benzina %d-%d €, <= %d km: letti %d", fmin, fmax, fkm, nf)
+            ns = 0
+            if os.environ.get("FOCUS_SUBITO", "1") == "1":
+                passo_s = int(os.environ.get("FOCUS_SUB_PASSO", "500"))
+                fasce = [(a, min(a + passo_s, fmax)) for a in range(fmin, fmax, passo_s)]
+                regioni = [(4, ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "SO", "MN"]),
+                           (2, ["NO", "VB", "VC", "BI", "AL", "AT", "TO", "CN"]), (8, ["PC", "PR", "RE", "MO"]),
+                           (int(os.environ.get("SUBITO_CODICE_LIGURIA", "3")), ["GE", "SV", "SP"])]
+                for reg, provs in regioni:
+                    provs = [p for p in provs if p in PROVINCE_100]
+                    if not provs:
+                        continue
+                    try:
+                        for l in sub._deep({"price_bands": fasce, "band_pages": int(os.environ.get("FOCUS_SUB_PAGINE", "20"))},
+                                           set(provs), reg, 100):
+                            if (l.seller_type == "privato" and "benzina" in (l.fuel or "").lower()
+                                    and (l.mileage_km or 0) <= fkm and l.price_eur and fmin <= l.price_eur <= fmax):
+                                pacco.append(l); ns += 1
+                                salva()
+                    except Exception as e:
+                        log.warning("BENZ focus subito regione %s: %s", reg, str(e)[:200])
+                    salva(True)
+            st["focus_subito"] = ns
+            log.warning("BENZ focus Subito benzina: tenuti %d", ns)
+            for k, v in salvati.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
         conn.execute("SET statement_timeout = '900s'")
         cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
