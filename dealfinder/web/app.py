@@ -4318,6 +4318,64 @@ def _tempo_reale():
             logging.getLogger("scovo").warning("FASCE non riuscito: %s", str(e)[:300])
     threading.Thread(target=fasce_brevo, daemon=True, name="fasce-brevo").start()
 
+    def voce_cartesia():
+        """2/11 (video Skovo): RINVIO_INVIA=voce<n> genera la voce del Reel con Cartesia (chiave CARTESIA_API_KEY su Render):
+        elenca le voci italiane, genera i 7 paragrafi del discorso uno per uno (MP3) e li scrive nei log in base64
+        (VOCE_B64 <paragrafo> <pezzo>/<pezzi> <dati>). Una volta per etichetta."""
+        tag = os.environ.get("RINVIO_INVIA") or ""
+        if not tag.startswith("voce"):
+            return
+        time.sleep(20)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"voce:{tag}", 100000):
+                return
+            import base64
+            import httpx
+            key = os.environ.get("CARTESIA_API_KEY")
+            H = {"Authorization": f"Bearer {key}", "Cartesia-Version": "2026-03-01", "Content-Type": "application/json"}
+            testi = [
+                "Ti è mai capitato di vedere un'auto a un prezzo ottimo… e scoprire che era già venduta? Succede ogni giorno: le occasioni vere durano poche ore.",
+                "Il problema è che gli annunci sono migliaia, e in mezzo ci sono truffe, annunci falsi e auto incidentate. Per trovarne una buona perdi ore.",
+                "Per questo abbiamo creato Skovo.",
+                "Il nostro software legge tutti gli annunci di privati nella tua zona, li confronta con auto uguali e ti trova quelle davvero sotto mercato.",
+                "Scarta le truffe, ti avvisa appena esce l'occasione, e l'appuntamento con il venditore lo fissiamo noi.",
+                "Tu devi solo comprare e rivendere.",
+                "Skovo: le occasioni, prima degli altri. Chiamaci al 348 242 5633, ti spieghiamo tutto in due minuti.",
+            ]
+            with httpx.Client(timeout=120, headers=H) as c:
+                r = c.get("https://api.cartesia.ai/voices", params={"language": "it", "limit": 100})
+                js = r.json() if r.status_code < 300 else {}
+                voci = js.get("data", js) if isinstance(js, dict) else js
+                voci = [v for v in (voci or []) if isinstance(v, dict) and str(v.get("language", "")).startswith("it")]
+                L.warning("VOCE voci italiane (%s): %s", r.status_code, json.dumps([[v.get("id"), v.get("name"), v.get("gender"), (v.get("description") or "")[:80]] for v in voci][:40], ensure_ascii=False))
+                scelta = os.environ.get("VOCE_ID") or ""
+                if not scelta and voci:
+                    pref = [v for v in voci if str(v.get("gender", "")).lower() in ("masculine", "male", "m")
+                            or re.search(r"\b(man|male|uomo|maschil)", (str(v.get("name")) + " " + str(v.get("description"))).lower())]
+                    scelta = (pref or voci)[0]["id"]
+                L.warning("VOCE scelta %s", scelta)
+                for i, t in enumerate(testi):
+                    body = {"model_id": "sonic-3.5", "transcript": t, "voice": {"mode": "id", "id": scelta}, "language": "it",
+                            "output_format": {"container": "mp3", "sample_rate": 44100, "bit_rate": 128000},
+                            "generation_config": {"speed": float(os.environ.get("VOCE_VEL", "1.05"))}}
+                    rr = c.post("https://api.cartesia.ai/tts/bytes", json=body)
+                    if rr.status_code >= 300:
+                        body["model_id"] = "sonic-3"; body.pop("generation_config", None)
+                        rr = c.post("https://api.cartesia.ai/tts/bytes", json=body)
+                    if rr.status_code >= 300:
+                        L.warning("VOCE paragrafo %d errore %s %s", i + 1, rr.status_code, rr.text[:300]); continue
+                    b = base64.b64encode(rr.content).decode()
+                    pz = [b[k:k + 3500] for k in range(0, len(b), 3500)]
+                    for k, x in enumerate(pz):
+                        L.warning("VOCE_B64 %d %d/%d %s", i + 1, k + 1, len(pz), x)
+                    L.warning("VOCE paragrafo %d ok: %d byte", i + 1, len(rr.content))
+            L.warning("VOCE fatto")
+        except Exception as e:
+            L.warning("VOCE non riuscita: %s", str(e)[:300])
+    threading.Thread(target=voce_cartesia, daemon=True, name="voce").start()
+
     def sms_invia():
         """2/11 (cliente: "manda l'SMS ai commercianti di Milano e provincia, subito, più numeri possibile"): SMS da Brevo
         (mittente "Skovo") ai cellulari AZIENDALI dei commercianti di Milano e provincia (Google Maps e annunci), tolti
