@@ -3795,9 +3795,14 @@ def _tempo_reale():
                 c[f"{nome}"] = sum(1 for i in y if zona(i))
                 return y
             c["abbastanza_zona"] = sum(1 for i in items if zona(i))
+            isb10 = lambda i: zona(i) and "benzin" in str(i.get("carb") or "").lower() and (i.get("prezzo") or 0) <= 10000 and (i.get("km") or 0) <= 100000
+            cb = Counter(abbastanza=sum(1 for i in items if isb10(i)))
             items = passo("meno_subito_senza_tel", _meno_subito_senza_telefono, items)
+            cb["meno_subito_senza_tel"] = sum(1 for i in items if isb10(i))
             items = passo("solo_con_telefono", _solo_con_telefono, items)
+            cb["solo_con_telefono"] = sum(1 for i in items if isb10(i))
             items = passo("regole_finali", _regole_finali, items)
+            cb["regole_finali"] = sum(1 for i in items if isb10(i))
             for nome, f in [("margine_recenti", _margine_recenti), ("margine_alta", _margine_alta),
                             ("senza_solo_finanz", _senza_solo_finanziamento), ("solo_privati", _solo_privati),
                             ("decisioni_jev", _decisioni_jev), ("margini_gonfiati", _margini_gonfiati),
@@ -3805,6 +3810,14 @@ def _tempo_reale():
                             ("mercato_calibrato", _mercato_calibrato), ("rivendita_prudente", _rivendita_prudente),
                             ("zona_sito", _zona_sito)]:
                 items = passo(nome, f, items)
+                cb[nome] = sum(1 for i in items if isb10(i))
+            L.warning("DIAGNOSI_B10 passi %s", dict(cb))
+            comp = Counter()
+            for i in items:
+                if zona(i):
+                    pz = i.get("prezzo") or 0
+                    comp[f'{str(i.get("carb") or "?").lower()[:10]}|{"<=10k" if pz <= 10000 else "10-20k" if pz <= 20000 else ">20k"}|{"<=100km" if (i.get("km") or 0) <= 100000 else ">100km"}'] += 1
+            L.warning("DIAGNOSI_B10 composizione_sito %s", json.dumps(comp.most_common(25)))
             L.warning("DIAGNOSI_SITO passi (auto della zona rimaste dopo ogni passo): %s", dict(c))
             b10 = [i for i in items if zona(i) and "benzin" in str(i.get("carb") or "").lower()
                    and (i.get("prezzo") or 0) <= 10000 and (i.get("km") or 0) <= 100000]
