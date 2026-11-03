@@ -5669,6 +5669,50 @@ def _tempo_reale():
             logging.getLogger("scovo").warning("BENZ_DB non riuscito: %s", str(e)[:300])
     threading.Thread(target=diag_benzina, daemon=True, name="diag_benz").start()
 
+    def benzina_subito():
+        """3/11 22:15 (cliente: "lo voglio adesso, non stanotte"): ricalcolo SUBITO, col codice attuale, delle benzina
+        dei privati in zona sotto 10.000 € e 100.000 km (prima quelle col margine salvato più alto). Blocchi da 40 col
+        controllo della memoria; salta quelle già fatte col codice attuale (riparte giusto dopo un riavvio)."""
+        if os.environ.get("BENZINA_SUBITO", "1") != "1":
+            return
+        L = logging.getLogger("scovo")
+        time.sleep(90)
+        try:
+            from collections import Counter as _C
+            from ..pipeline import tempo_reale as tr
+            from ..pricing import policy_v2 as _P
+            from ..zone import tutte
+            pr = [p for p in tutte() if p in PROVINCE_100KM] or list(tutte())
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '300s'")
+                rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel FROM listings l
+                    LEFT JOIN LATERAL (SELECT margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
+                                       ORDER BY computed_at DESC LIMIT 1) u ON true
+                    WHERE l.status='attivo' AND l.seller_type='privato' AND l.stage='approfondito'
+                      AND upper(l.province) = ANY(%s) AND l.fuel ILIKE 'benzin%%' AND l.price_eur BETWEEN 1000 AND 9999
+                      AND COALESCE(l.mileage_km, 0) BETWEEN 1 AND 99999 AND COALESCE(l.damage_declared, false) = false
+                      AND COALESCE(u.riassunto->>'policy_rev', '') <> %s AND COALESCE(u.margine, 0) >= -2500
+                    ORDER BY COALESCE(u.margine, 0) DESC LIMIT 4000""", (pr, _P.POLICY_REV)).fetchall()
+                L.warning("BENZINA_SUBITO da ricalcolare: %d", len(rows))
+                rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+                st = _C()
+                for i in range(0, len(rows), 40):
+                    _aspetta_memoria(L, "BENZINA_SUBITO")
+                    try:
+                        tr.valuta_e_pubblica(conn, [r["id"] for r in rows[i:i + 40]], st)
+                        conn.commit()
+                    except Exception as e:
+                        conn.rollback()
+                        L.warning("BENZINA_SUBITO blocco non riuscito: %s", str(e)[:200])
+                    if (i // 40) % 10 == 9:
+                        L.warning("BENZINA_SUBITO avanzamento %d/%d: %s", i + 40, len(rows), json.dumps(dict(st)))
+                        _elenco["t"] = 0          # l'elenco del sito si rifà col prossimo caricamento
+                _elenco["t"] = 0
+                L.warning("BENZINA_SUBITO FINE %d auto: %s", len(rows), json.dumps(dict(st)))
+        except Exception as e:
+            L.warning("BENZINA_SUBITO non riuscito: %s", str(e)[:300])
+    threading.Thread(target=benzina_subito, daemon=True, name="benzina_subito").start()
+
     _AVVIO_COMM = time.strftime("%Y%m%d%H%M%S")
 
     def commercianti_top_lavoro():
