@@ -168,6 +168,7 @@ a{color:var(--focus)}
 .badge.warn{background:var(--warn);color:#fff}
 .badge.new{left:auto;right:10px;background:var(--tag);color:#fff}
 .badge.seen{left:auto;right:10px;background:rgba(18,23,28,.78)}
+.badge.avviso{top:auto;bottom:10px;background:var(--warn);color:#fff}
 .top .refresh{flex:none;width:40px;height:40px;border-radius:20px;border:1px solid var(--head-line);background:var(--card);display:flex;align-items:center;justify-content:center;color:var(--head-ink)}
 .top .refresh.spinning svg{animation:sp .8s linear infinite}
 .skel{background:var(--card);border-radius:14px;overflow:hidden}
@@ -475,8 +476,52 @@ a{color:var(--focus)}
 .fck .n{margin-left:auto;color:var(--muted);font-weight:600;font-size:13px}
 .fck:disabled{opacity:.4}
 .fpanel-foot{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
-.qf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 8px}
+.qf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 8px}
+@media (min-width:620px){.qf{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .qsel select{width:100%;min-height:40px;border-radius:20px;border:1px solid var(--head-line);background:var(--card);color:var(--head-ink);font:600 14px var(--body);padding:0 26px 0 12px;appearance:none;-webkit-appearance:none;text-overflow:ellipsis;
   background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
 .qsel.on select{border-color:var(--ink);background-color:var(--ink);color:var(--bg);
   background-image:linear-gradient(45deg,transparent 50%,var(--bg) 50%),linear-gradient(135deg,var(--bg) 50%,transparent 50%)}
+/* 3/11: abbonati 200 €, appuntamento */
+.talk.talk-app{background:var(--card);color:var(--ink);border:1.5px solid var(--ink);margin-top:6px}
+:root[data-theme="dark"] .talk.talk-app{color:var(--ink)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .talk.talk-app{color:var(--ink)}}
+.sel{min-height:48px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:500 16px var(--body);color:var(--ink);background:var(--card);width:100%}
+
+/* 3/11: due abbonamenti */
+.piani{display:grid;gap:12px;width:100%}
+.piano{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:4px}
+.piano-pro{border:2px solid var(--tag)}
+.piano-top{display:flex;justify-content:space-between;align-items:center;font:800 20px var(--disp)}
+.piano-tag{font:700 12px var(--disp);background:var(--tag);color:#fff;border-radius:99px;padding:4px 10px}
+.piano-prezzo{font:800 28px var(--disp)}.piano-prezzo s{font-size:18px;color:var(--muted);font-weight:600}
+.piano-prezzo span{font-size:15px;font-weight:600;color:var(--muted)}
+@media (min-width:640px){.piani{grid-template-columns:1fr 1fr}}
+/* 3/11 v2: appuntamenti col calendario e dati azienda */
+.sheet h2:focus,.sheet h2:focus-visible{outline:none}
+.ap-sheet{max-height:92vh;max-height:92dvh}
+.ap-sheet .sheet-head{align-items:flex-start;gap:12px;padding:16px 16px 10px;border-bottom:1px solid var(--line)}
+.ap-sheet .sheet-head .hint{display:block;margin-top:2px}
+.ap-sheet .sheet-body{gap:18px;padding:14px 16px 16px;overscroll-behavior:contain}
+.ap-sheet .lbl{margin-bottom:8px}
+.ap-tip{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.4;color:var(--ink-2)}
+.cal{border:1px solid var(--line);border-radius:14px;padding:10px}
+.cal-mese{font:700 15px var(--disp);text-transform:capitalize;padding:2px 4px 8px}
+.cal-g,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-g span{font-size:11px;font-weight:700;color:var(--muted);padding-bottom:4px}
+.cal-d{position:relative;aspect-ratio:1;max-height:46px;border-radius:10px;border:0;background:transparent;font:600 15px var(--body);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cal-d.off{color:var(--muted);opacity:.35;cursor:default}
+.cal-d.has{background:var(--soft)}
+.cal-d.on{background:var(--ink);color:var(--bg)}
+.cal-d i{position:absolute;top:2px;right:3px;min-width:15px;height:15px;border-radius:8px;background:var(--tag);color:#fff;font:700 10px/15px var(--body);font-style:normal}
+.ap-ore{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ap-ora{min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card);font:600 14px var(--body);color:var(--ink-2);cursor:pointer}
+.ap-ora.on{background:var(--tag);border-color:var(--tag);color:#fff}
+.ap-vuoto{font-size:14px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.ap-scelte{display:flex;flex-wrap:wrap;gap:6px}
+.ap-chip{display:inline-flex;align-items:center;gap:4px;min-height:34px;padding:0 4px 0 12px;border-radius:17px;background:var(--soft);font:600 13px var(--body);color:var(--ink)}
+.ap-chip button{border:0;background:transparent;color:var(--muted);font-size:18px;width:28px;height:28px;cursor:pointer}
+.ap-ok{background:var(--soft);border-radius:14px;padding:16px;font-size:15px;line-height:1.45}
+.az-form{gap:14px}
+.az-riga{display:grid;grid-template-columns:1fr 88px;gap:10px}
+.btn:disabled{opacity:.5}

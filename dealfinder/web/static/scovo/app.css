@@ -168,6 +168,7 @@ a{color:var(--focus)}
 .badge.warn{background:var(--warn);color:#fff}
 .badge.new{left:auto;right:10px;background:var(--tag);color:#fff}
 .badge.seen{left:auto;right:10px;background:rgba(18,23,28,.78)}
+.badge.avviso{top:auto;bottom:10px;background:var(--warn);color:#fff}
 .top .refresh{flex:none;width:40px;height:40px;border-radius:20px;border:1px solid var(--head-line);background:var(--card);display:flex;align-items:center;justify-content:center;color:var(--head-ink)}
 .top .refresh.spinning svg{animation:sp .8s linear infinite}
 .skel{background:var(--card);border-radius:14px;overflow:hidden}
