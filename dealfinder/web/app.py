@@ -2184,6 +2184,10 @@ def _calcola_elenco() -> None:
         c[f"{sez}:{it.get('area') or 'milano'}"] += 1
         if sez == "affari" and it["prezzo"] < 2000:
             c[f"affari_sotto_2000:{it.get('area') or 'milano'}"] += 1
+        # 3/11 21:50 (cliente): quante benzina sotto 10.000 € e sotto 100.000 km
+        if "benzin" in str(it.get("carb") or "").lower() and 0 < (it.get("prezzo") or 0) < 10000 \
+                and it.get("km") is not None and int(it["km"]) < 100000:
+            c[f"benzina_10k_100k:{sez}"] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(items), time.time() - t0, dict(sorted(c.items())))
     try:      # 19/10: auto sul sito a metà prezzo (o meno) rispetto al mercato, e quante entrate nelle ultime 14 ore
         from datetime import datetime, timedelta, timezone
