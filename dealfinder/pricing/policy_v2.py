@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03g"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
+POLICY_REV = "2026-11-03h"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -282,13 +282,19 @@ def riduzione(m: float, cfg: PolicyConfig) -> tuple[float | None, str, float | N
 
 
 def benzina_richiesta(t: dict) -> bool:
-    """Benzina economica con pochi km (le più richieste): BENZ_RICHIESTE=1 (predefinito)."""
+    """Auto economiche con pochi km, le più richieste (BENZ_RICHIESTE=1): sotto 10.000 € e 100.000 km, a benzina e
+    (3/11 22:54, cliente) anche ibride, GPL, metano e diesel recenti (dal BENZ_RICHIESTE_DIESEL_ANNO, 2017)."""
     if os.environ.get("BENZ_RICHIESTE", "1") != "1":
         return False
     km = t.get("mileage_km", t.get("km"))
-    return ("benzin" in str(t.get("fuel") or t.get("carb") or "").lower()
-            and 0 < float(t.get("price_eur") or t.get("prezzo") or 0) < int(os.environ.get("BENZ_RICHIESTE_PREZZO", "10000"))
-            and km is not None and int(km) < int(os.environ.get("BENZ_RICHIESTE_KM", "100000")))
+    if not (0 < float(t.get("price_eur") or t.get("prezzo") or 0) < int(os.environ.get("BENZ_RICHIESTE_PREZZO", "10000"))
+            and km is not None and int(km) < int(os.environ.get("BENZ_RICHIESTE_KM", "100000"))):
+        return False
+    f = str(t.get("fuel") or t.get("carb") or "").lower()
+    if any(x in f for x in ("benzin", "ibrid", "hybrid", "gpl", "lpg", "metano")):
+        return True
+    anno = t.get("year", t.get("anno"))
+    return "diesel" in f and anno is not None and int(anno) >= int(os.environ.get("BENZ_RICHIESTE_DIESEL_ANNO", "2017"))
 
 
 def rivendita(m: float, l: float, cfg: PolicyConfig, prezzo: float | None = None) -> dict:

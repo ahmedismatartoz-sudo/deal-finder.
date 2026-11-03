@@ -1342,8 +1342,10 @@ def _solo_privati(items: list[dict]) -> list[dict]:
     top = set()
     try:
         from ..pricing import policy_v2 as _P
+        # 3/11 22:55: col metodo nuovo (da 2026-11-03c), non solo col codice di quest'ora: a ogni cambio del calcolo
+        # i commercianti sparivano tutti dal sito finché il lavoro dei commercianti non li rivalutava
         cand = [it for it in items if it.get("id") not in ok and it.get("id") not in comm
-                and (it.get("pv") or {}).get("policy_rev") == _P.POLICY_REV
+                and str((it.get("pv") or {}).get("policy_rev") or "") >= "2026-11-03c"
                 and (it.get("pv") or {}).get("categoria") in scovo.CATEGORIE_SITO
                 and (it.get("pv") or {}).get("M") and (it.get("prezzo") or 0) >= COMMERCIANTI_PREZZO_MIN_SU_M * float(it["pv"]["M"])]
         if cand:
@@ -1359,6 +1361,24 @@ def _solo_privati(items: list[dict]) -> list[dict]:
             top = {it["id"] for it in cand[:COMMERCIANTI_TOP * 3]}      # margine per i controlli dopo; 40 alla fine
     except Exception as e:
         logging.getLogger("scovo").warning("COMMERCIANTI_TOP non controllati: %s", str(e)[:200])
+    # 3/11 22:55 (cliente: "va bene"): nella fascia più richiesta (sotto 10.000 € e 100.000 km: benzina, ibride, GPL,
+    # metano, diesel recenti) anche i commercianti DELLA ZONA, senza promo/leasing/prezzi esca, stesse regole di margine
+    nicchia = set()
+    if os.environ.get("COMMERCIANTI_NICCHIA", "1") == "1":
+        try:
+            from ..pricing.policy_v2 import benzina_richiesta as _br
+            cn = [it for it in items if it.get("id") not in ok and it.get("id") not in comm and it.get("id") not in top
+                  and _br(it) and (it.get("pv") or {}).get("categoria") in scovo.CATEGORIE_SITO
+                  and (it.get("pv") or {}).get("M") and (it.get("prezzo") or 0) >= COMMERCIANTI_PREZZO_MIN_SU_M * float(it["pv"]["M"])]
+            if cn:
+                with connect() as conn:
+                    nicchia = {r["id"] for r in conn.execute(
+                        "SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='commerciante' "
+                        "AND NOT (coalesce(price_flags, '{}'::text[]) && %s::text[]) "
+                        "AND NOT ((coalesce(title,'') || ' ' || coalesce(description,'')) ~* %s)",
+                        ([it["id"] for it in cn], _FLAG_PROMO, RE_PROMO_COMMERCIANTE)).fetchall()}
+        except Exception as e:
+            logging.getLogger("scovo").warning("COMMERCIANTI_NICCHIA non controllati: %s", str(e)[:200])
     # 2/11 (cliente: "togli tutte le auto di Loconte"): commercianti esclusi per nome (SITO_COMMERCIANTI_NOMI, separati da
     # virgola): nome nel testo dell'annuncio oppure nome del venditore salvato da AutoScout24 (commercianti_as24, lead_tutti)
     nomi_re = "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
@@ -1387,9 +1407,14 @@ def _solo_privati(items: list[dict]) -> list[dict]:
             it["commerciante"] = True
             it["commerciante_top"] = True
             tenute.append(it)
+        elif it.get("id") in nicchia:
+            it["commerciante"] = True
+            it["commerciante_nicchia"] = True
+            tenute.append(it)
     logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano (di cui %d commercianti a benzina fuori Milano, "
-                                       "%d candidati tra i migliori commercianti lontani; %d dei commercianti esclusi per nome)",
-                                       len(items) - len(tenute), len(tenute), len(comm), len(top - esclusi), len(esclusi))
+                                       "%d candidati tra i migliori commercianti lontani, %d commercianti della zona nella fascia richiesta; "
+                                       "%d dei commercianti esclusi per nome)",
+                                       len(items) - len(tenute), len(tenute), len(comm), len(top - esclusi), len(nicchia - esclusi), len(esclusi))
     return tenute
 
 
@@ -2156,8 +2181,8 @@ def _calcola_elenco() -> None:
         except Exception as e:
             logging.getLogger("scovo").warning("DUMP_CANDIDATI non riuscito: %s", str(e)[:200])
     # 3/11 22:05 (cliente: "impossibile solo 15 benzina sotto 10k e 100k km"): conteggio di quel gruppo passo per passo
-    _bz = lambda xs: sum(1 for it in xs if "benzin" in str(it.get("carb") or "").lower() and 0 < (it.get("prezzo") or 0) < 10000
-                         and it.get("km") is not None and int(it["km"]) < 100000)
+    from ..pricing.policy_v2 import benzina_richiesta as _br
+    _bz = lambda xs: sum(1 for it in xs if _br(it))
     _fun = [("inizio", _bz(items))]
     items = _solo_con_telefono(items); _fun.append(("telefono", _bz(items)))
     items = _regole_finali(items); _fun.append(("regole_finali", _bz(items)))
@@ -2204,6 +2229,9 @@ def _calcola_elenco() -> None:
         if "benzin" in str(it.get("carb") or "").lower() and 0 < (it.get("prezzo") or 0) < 10000 \
                 and it.get("km") is not None and int(it["km"]) < 100000:
             c[f"benzina_10k_100k:{sez}"] += 1
+        from ..pricing.policy_v2 import benzina_richiesta as _br2
+        if _br2(it):
+            c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(items), time.time() - t0, dict(sorted(c.items())))
     try:      # 19/10: auto sul sito a metà prezzo (o meno) rispetto al mercato, e quante entrate nelle ultime 14 ore
         from datetime import datetime, timedelta, timezone
@@ -5597,7 +5625,8 @@ def _tempo_reale():
         stare sul sito (privati della zona, margine salvato ≥ 500 €) ma valutate con un codice diverso da quello attuale
         (POLICY_REV: per esempio dal ricalcolo del cron non ancora aggiornato) si rivalutano qui, poche alla volta.
         RIALLINEA=0 lo spegne. Ogni auto si riprova al massimo ogni 6 ore (es. Subito senza numero, che si salta)."""
-        if os.environ.get("RIALLINEA", "1") != "1":
+        # 3/11 23:00: spento di base per lo stesso motivo (calcolo del sito con meno confronti del cron)
+        if os.environ.get("RIALLINEA", "0") != "1":
             return
         L = logging.getLogger("scovo")
         time.sleep(300)
@@ -5673,7 +5702,9 @@ def _tempo_reale():
         """3/11 22:15 (cliente: "lo voglio adesso, non stanotte"): ricalcolo SUBITO, col codice attuale, delle benzina
         dei privati in zona sotto 10.000 € e 100.000 km (prima quelle col margine salvato più alto). Blocchi da 40 col
         controllo della memoria; salta quelle già fatte col codice attuale (riparte giusto dopo un riavvio)."""
-        if os.environ.get("BENZINA_SUBITO", "1") != "1":
+        # 3/11 23:00: SPENTO di base. Il calcolo nel sito trova meno auto uguali del cron (es. 19 contro 13, 193 contro 22)
+        # e sovrascriveva valutazioni migliori: le auto buone uscivano dal sito. Il ricalcolo si fa nel cron.
+        if os.environ.get("BENZINA_SUBITO", "0") != "1":
             return
         L = logging.getLogger("scovo")
         time.sleep(90)
@@ -5688,8 +5719,9 @@ def _tempo_reale():
                 rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel FROM listings l
                     LEFT JOIN LATERAL (SELECT margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
                                        ORDER BY computed_at DESC LIMIT 1) u ON true
-                    WHERE l.status='attivo' AND l.seller_type='privato'
-                      AND upper(l.province) = ANY(%s) AND l.fuel ILIKE 'benzin%%' AND l.price_eur BETWEEN 1000 AND 9999
+                    WHERE l.status='attivo' AND l.seller_type IN ('privato', 'commerciante')
+                      AND upper(l.province) = ANY(%s) AND l.price_eur BETWEEN 1000 AND 9999
+                      AND (l.fuel ~* '(benzin|ibrid|hybrid|gpl|lpg|metano)' OR (l.fuel ~* 'diesel' AND l.year >= 2017))
                       AND COALESCE(l.mileage_km, 0) BETWEEN 1 AND 99999 AND COALESCE(l.damage_declared, false) = false
                       AND COALESCE(u.riassunto->>'policy_rev', '') <> %s AND COALESCE(u.margine, 0) >= -2500
                     ORDER BY COALESCE(u.margine, 0) DESC LIMIT 5000""", (pr, _P.POLICY_REV)).fetchall()
