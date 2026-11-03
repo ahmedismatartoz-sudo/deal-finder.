@@ -778,6 +778,7 @@ async def assistente(request: Request):
             err(429, "Hai fatto molte domande oggi: entra con il tuo account per continuare")
         _guest_questions[ip].append(now)
     from . import assistente as bot
+    bot.ELENCO = _elenco_per          # 4/11: l'assistente propone solo le auto del sito, con gli stessi numeri
 
     def work():
         with connect() as conn:
