@@ -6,9 +6,13 @@ Giro continuo sul servizio web (AUTO_INVIO=1):
    mai già caricate in Brevo (tabella brevo_inviati, riempita all'avvio con tutti i contatti Brevo);
 3. le profila per fascia (prezzo mediano delle auto del commerciante) e, appena sono almeno AUTO_MIN_N,
    le carica in Brevo e manda subito: le prime AUTO_TESTO_RESTANTI con il testo corto, le altre con 2 auto vere
-   del sito della loro fascia (ribasso per fascia in _card);
+   del sito della loro fascia (prezzo vero dell'annuncio in _card, nessuno sconto da trattativa);
 4. non supera mai AUTO_TETTO_CONTATTI contatti in Brevo (limite del piano del cliente: 1.500).
 Nei log solo conteggi (AUTO_INVIO ...), mai indirizzi.
+
+4/11: ogni invio passa da _manda con un "lavoro" stabile (invii.prenota): un destinatario riceve un lavoro una
+volta sola anche dopo un riavvio, e chi è nella tabella disiscritti non riceve mai nulla. AUTO_INVIO resta spento
+se non è 1.
 """
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ from pathlib import Path
 
 import httpx
 
+from . import invii
 from .brevo_liste import API, MITTENTE, _card, _cartella, _chiave, _foto_ok
 
 lg = logging.getLogger("dealfinder.marketing")
@@ -99,39 +104,70 @@ def _fascia(prezzi):
     return "utilitarie" if m < 8000 else "medie" if m < 15000 else "alte" if m < 50000 else "supercar"
 
 
-def _semina(c: httpx.Client, conn) -> None:
-    conn.execute("CREATE TABLE IF NOT EXISTS brevo_inviati (email TEXT PRIMARY KEY, quando TIMESTAMPTZ DEFAULT now())")
-    conn.commit()
-    off, n = 0, 0
+def _contatti_brevo(c: httpx.Client) -> list[dict]:
+    out, off = [], 0
     while True:
         r = c.get(f"{API}/contacts", params={"limit": 1000, "offset": off})
         r.raise_for_status()
         cs = r.json().get("contacts") or []
-        for x in cs:
-            if x.get("email"):
-                conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (x["email"].lower(),))
-                n += 1
-        conn.commit()
+        out += cs
         if len(cs) < 1000:
             break
         off += 1000
-    for f in _DATA.glob("marketing_gruppi*.json"):          # anche le liste già usate (contatti cancellati in Brevo)
-        try:
-            for es in json.loads(f.read_text()).values():
-                for e in es:
-                    conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e.lower(),))
-        except Exception:
-            pass
-    conn.commit()
-    lg.warning("AUTO_INVIO contatti Brevo segnati come già usati: %d", n)
+    return out
 
 
-def _manda(c: httpx.Client, nome: str, oggetto: str, html: str, emails: list[str]) -> bool:
-    r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
+def _conta_brevo(c: httpx.Client) -> int:
+    """Contatti in Brevo. 4/11: se Brevo non risponde si solleva un errore (prima valeva 0 e il tetto non fermava nulla)."""
+    r = c.get(f"{API}/contacts", params={"limit": 1})
     r.raise_for_status()
-    lid = r.json()["id"]
-    c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in emails], "listIds": [lid],
-                                           "updateExistingContacts": True, "emptyContactsAttributes": False})
+    n = r.json().get("count")
+    if n is None:
+        raise RuntimeError("conteggio dei contatti Brevo non letto")
+    return int(n)
+
+
+def _semina(c: httpx.Client, conn) -> None:
+    """Tutti i contatti Brevo segnati come già usati; i bloccati/disiscritti anche nella tabella disiscritti.
+    4/11: le liste dei gruppi vecchi non si leggono più da data/ (dati personali fuori dal repo): sono in
+    dati_riservati, se caricate."""
+    n = 0
+    contatti = _contatti_brevo(c)
+    for x in contatti:
+        if x.get("email"):
+            conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (x["email"].lower(),))
+            n += 1
+    conn.commit()
+    bloccati = invii.sincronizza_da_brevo(conn, contatti)
+    from .dati_riservati import leggi_gruppi
+    for es in leggi_gruppi(conn).values():                     # anche le liste già usate (contatti cancellati in Brevo)
+        for e in es:
+            conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e.lower(),))
+    conn.commit()
+    lg.warning("AUTO_INVIO contatti Brevo segnati come già usati: %d (nuovi disiscritti %d)", n, bloccati)
+
+
+def _manda(c: httpx.Client, nome: str, oggetto: str, html: str, emails: list[str], lavoro: str | None = None) -> bool:
+    """Lista Brevo nuova + campagna mandata subito. Con `lavoro` (sempre, per gli invii veri) ogni destinatario
+    riceve quel lavoro una volta sola: si prenota prima (invii), chi era già prenotato o è disiscritto è tolto."""
+    from ..db import connect
+    lavoro = lavoro or f"campagna:{nome}"
+    with connect() as conn:
+        emails = invii.prenota(conn, lavoro, emails)
+    if not emails:
+        lg.warning("AUTO_INVIO %s: nessun destinatario nuovo (tutti già mandati o disiscritti)", nome)
+        return False
+    try:
+        r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
+        r.raise_for_status()
+        lid = r.json()["id"]
+        imp = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in emails], "listIds": [lid],
+                                                     "updateExistingContacts": True, "emptyContactsAttributes": False})
+        imp.raise_for_status()
+    except Exception:
+        with connect() as conn:                                 # niente è partito: si potrà riprovare
+            invii.libera(conn, lavoro, emails)
+        raise
     for _ in range(8):                                          # Brevo finisce di importare
         time.sleep(60)
         r = c.post(f"{API}/emailCampaigns", json={"name": nome, "subject": oggetto, "sender": MITTENTE,
@@ -140,8 +176,14 @@ def _manda(c: httpx.Client, nome: str, oggetto: str, html: str, emails: list[str
         if r.status_code < 300:
             s = c.post(f"{API}/emailCampaigns/{r.json()['id']}/sendNow")
             lg.warning("AUTO_INVIO %s inviata a %d (esito %s)", nome, len(emails), s.status_code)
+            if s.status_code < 300:
+                with connect() as conn:
+                    invii.segna_inviati(conn, lavoro, emails)
+            # invio non confermato: i destinatari restano prenotati (meglio un'email in meno che una doppia)
             return s.status_code < 300
     lg.warning("AUTO_INVIO %s NON inviata: lista non pronta", nome)
+    with connect() as conn:
+        invii.libera(conn, lavoro, emails)
     return False
 
 
@@ -154,6 +196,10 @@ def ciclo(elenco=None) -> None:
     pausa = int(os.environ.get("AUTO_MIN", "20")) * 60
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c, connect() as conn:
         _semina(c, conn)
+    with connect() as conn:
+        from ..pipeline.lead_maps import SQL as _MAPS_SQL
+        conn.execute(_MAPS_SQL)                       # tabella dei commercianti da Google Maps: una volta, non a ogni giro
+        conn.commit()
     usate_auto: set = set()
     giro_n = 0
     while True:
@@ -164,8 +210,6 @@ def ciclo(elenco=None) -> None:
             lg.warning("AUTO_INVIO ricerca email non riuscita: %s", str(e)[:200])
         try:
             with connect() as conn:
-                from ..pipeline.lead_maps import SQL as _MAPS_SQL
-                conn.execute(_MAPS_SQL)                   # tabella dei commercianti da Google Maps (vuota se non c'è Apify)
                 rows = conn.execute(
                     # 28/10 sera: anche i commercianti trovati su Google Maps (chiave "maps:<place_id>"), stessa zona
                     "SELECT e.chiave, e.email, e.sito FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
@@ -189,7 +233,7 @@ def ciclo(elenco=None) -> None:
             lg.warning("AUTO_INVIO giro %d: %d email nuove %s", giro_n, tot, {k: len(v) for k, v in nuove.items()})
             if tot >= minimo:
                 with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
-                    cnt = c.get(f"{API}/contacts", params={"limit": 1}).json().get("count") or 0
+                    cnt = _conta_brevo(c)
                     spazio = tetto - cnt
                     if spazio <= 0:
                         lg.warning("AUTO_INVIO fermo: %d contatti in Brevo (tetto %d)", cnt, tetto)
@@ -206,7 +250,8 @@ def ciclo(elenco=None) -> None:
                                 conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
                             conn.commit()
                         if corto:
-                            _manda(c, f"Skovo testo {fascia} {ts}", "auto da privati sotto mercato", _pagina(TESTO_CORTO), corto)
+                            _manda(c, f"Skovo testo {fascia} {ts}", "auto da privati sotto mercato", _pagina(TESTO_CORTO), corto,
+                                   "auto_invio")
                         if esempi:
                             auto = _auto(elenco, fascia, usate_auto) or _auto(elenco, "alte" if fascia == "supercar" else "medie", usate_auto)
                             if len(auto) == 2:
@@ -214,9 +259,11 @@ def ciclo(elenco=None) -> None:
                                 nomi = " ".join(str(auto[0]["auto"]).split()[:2])
                                 html = _pagina(TESTO_CORTO, f'<p {P}>Due esempi di oggi, vicino a voi:</p>'
                                                '<div style="margin:6px 0 10px">' + "".join(_card(a) for a in auto) + "</div>")
-                                _manda(c, f"Skovo esempi {fascia} {ts}", f"{nomi} da privato sotto mercato", html, esempi)
+                                _manda(c, f"Skovo esempi {fascia} {ts}", f"{nomi} da privato sotto mercato", html, esempi,
+                                       "auto_invio")
                             else:
-                                _manda(c, f"Skovo testo {fascia} {ts}", "auto da privati sotto mercato", _pagina(TESTO_CORTO), esempi)
+                                _manda(c, f"Skovo testo {fascia} {ts}", "auto da privati sotto mercato", _pagina(TESTO_CORTO), esempi,
+                                       "auto_invio")
                         spazio -= len(ems)
         except Exception as e:
             lg.warning("AUTO_INVIO giro non riuscito: %s", str(e)[:300])
@@ -267,7 +314,8 @@ def invia_2_11(tag: str) -> dict:
     if os.environ.get("BREVO_2_11_PROVA") == "1" or not scelte:
         return {"email": len(scelte)}
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
-        ok = _manda(c, f"Skovo zona 02-11 {tag}", "auto da privati sotto mercato", _pagina(TESTO_2_11), scelte)
+        ok = _manda(c, f"Skovo zona 02-11 {tag}", "auto da privati sotto mercato", _pagina(TESTO_2_11), scelte,
+                    f"brevo_2_11:{tag}")
     if ok:
         with connect() as conn:
             for e in scelte:
@@ -286,7 +334,8 @@ def rimetti_contatti(tag: str) -> None:
     scelti = set(json.loads((_DATA / "brevo_rimetti.json").read_text()))
     tetto = int(os.environ.get("BREVO_TETTO", "1498"))
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c, connect() as conn:
-        ora = c.get(f"{API}/contacts", params={"limit": 1}).json().get("count") or 0
+        ora = _conta_brevo(c)
+        via = invii.disiscritti(conn)                  # 4/11: mai rimettere chi si è disiscritto o è stato bloccato
         attuali = set()
         off = 0
         while True:
@@ -296,7 +345,8 @@ def rimetti_contatti(tag: str) -> None:
                 break
             off += 1000
         emails = sorted({r["email"].lower() for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()
-                         if hashlib.sha1(r["email"].lower().encode()).hexdigest()[:16] in scelti} - attuali)
+                         if hashlib.sha1(r["email"].lower().encode()).hexdigest()[:16] in scelti
+                         and invii.impronta(r["email"]) not in via} - attuali)
         emails = emails[:max(0, tetto - ora)]
         lg.warning("RIMETTI %s: in Brevo %d, trovati %d di %d scelti, da caricare %d", tag, ora, len(emails), len(scelti), len(emails))
         if not emails:
@@ -380,6 +430,8 @@ def fasce_e_esempi(tag: str, elenco) -> dict:
                 break
             off += 1000
         with connect() as conn:
+            via = invii.disiscritti(conn)
+            emails = [e for e in emails if invii.impronta(e) not in via]
             prezzi: dict = {}
             for r in conn.execute("SELECT e.email, a.prezzo FROM lead_email e JOIN lead_tutti_ann a ON a.chiave = e.chiave "
                                   "WHERE cardinality(e.email) > 0").fetchall():
@@ -528,13 +580,10 @@ def nuovi_3_11(tag: str, elenco) -> dict:
         fascia[e] = "utilitarie" if m < 8000 else "medie" if m < 15000 else "alte" if m < 30000 else "supercar"
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
         # posto in Brevo: via i contatti già usati (sono in brevo_inviati: non si perdono e non si ricontattano)
-        attuali, off = [], 0
-        while True:
-            cs = c.get(f"{API}/contacts", params={"limit": 1000, "offset": off}).json().get("contacts") or []
-            attuali += [x["email"].lower() for x in cs if x.get("email")]
-            if len(cs) < 1000:
-                break
-            off += 1000
+        contatti = _contatti_brevo(c)
+        with connect() as conn:                        # 4/11: i bloccati restano esclusi anche se tolti da Brevo
+            invii.sincronizza_da_brevo(conn, contatti)
+        attuali = [x["email"].lower() for x in contatti if x.get("email") and not invii.contatto_bloccato(x)]
         # chi è già in Brevo e NON ha mai aperto una nostra email resta e la riceve; chi ha aperto fa posto ai nuovi
         mai_aperte, aperte = [], []
         for e in attuali:
@@ -576,7 +625,7 @@ def nuovi_3_11(tag: str, elenco) -> dict:
             schede = (f'<p {P}>Alcuni esempi di oggi, vicino a voi:</p><div style="margin:6px 0 10px">'
                       + "".join(_card(a) for a in auto) + "</div>") if auto else ""
             oggetto = (" ".join(str(auto[0]["auto"]).split()[:2]) + " da privato sotto mercato") if auto else "auto da privati sotto mercato"
-            ok = _manda(c, f"Skovo nuovi {f} 03-11 {tag}", oggetto, _pagina(TESTO_2_11, schede), dest)
+            ok = _manda(c, f"Skovo nuovi {f} 03-11 {tag}", oggetto, _pagina(TESTO_2_11, schede), dest, f"nuovi_3_11:{tag}")
             if ok:
                 with connect() as conn:
                     for e in dest:

@@ -42,17 +42,26 @@ def err(status: int, message: str):
     raise HTTPError(status, message)
 
 
-def current_user(request: Request, admin: bool = False) -> dict:
-    auth = request.headers.get("authorization", "")
-    data = read_token(auth[7:] if auth.lower().startswith("bearer ") else None)
+def _utente_del_token(data: dict | None, admin: bool = False) -> dict:
+    """Token valido + sessione aperta. Il ruolo NON si prende dal token (dura anni): si rilegge dal database a ogni
+    richiesta (con la memoria di 60 s della sessione; per le pagine admin senza memoria). Un admin declassato o
+    spento perde subito l'accesso alle pagine di amministrazione."""
     if not data:
         err(401, "Accesso richiesto")
     ok, why = sessions.check(data.get("sid"), data["id"])
     if not ok:
         err(401, sessions.REVOKED_MSG.get(why or "", "Accesso scaduto: entra di nuovo"))
-    if admin and data.get("role") != "admin":
+    data = dict(data)
+    ruolo = sessions.ruolo_fresco(data["id"]) if admin else sessions.ruolo(data.get("sid"))
+    data["role"] = ruolo or "commerciante"
+    if admin and data["role"] != "admin":
         err(403, "Solo amministratori")
     return data
+
+
+def current_user(request: Request, admin: bool = False) -> dict:
+    auth = request.headers.get("authorization", "")
+    return _utente_del_token(read_token(auth[7:] if auth.lower().startswith("bearer ") else None), admin)
 
 
 PERMESSI = ("auto", "incentivi", "appuntamenti")   # appuntamenti: abbonati da 200 €
@@ -82,8 +91,8 @@ def richiede(request: Request, permesso: str) -> dict:
             if permesso not in permessi_di(conn, user):
                 err(403, "Il tuo account non ha accesso a questa sezione")
             if permesso == "auto":
-                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) AS con_password, "
-                                   "role FROM dealers WHERE id=%s",
+                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, abbonamento_tolleranza, "
+                                   "(password_hash IS NOT NULL) AS con_password, role FROM dealers WHERE id=%s",
                                    (user["id"],)).fetchone()
                 if not abbonamento.puo_vedere(row):
                     err(402, "Per vedere le auto serve l'abbonamento")
@@ -121,15 +130,36 @@ def jsonify(data, status=200):
     return JSONResponse(json.loads(json.dumps(data, default=str)), status_code=status)
 
 
+def _ip_pubblico(v: str) -> str | None:
+    """L'indirizzo, se è un IP valido e pubblico (non privato, loopback, link-local, riservato: quelli dei proxy)."""
+    import ipaddress
+    v = (v or "").strip().strip('"')
+    if v.startswith("[") and "]" in v:                 # [2001:db8::1]:443
+        v = v[1:v.index("]")]
+    elif v.count(":") == 1:                            # 1.2.3.4:5678
+        v = v.split(":")[0]
+    try:
+        ip = ipaddress.ip_address(v)
+    except ValueError:
+        return None
+    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+        return None
+    return str(ip)
+
+
 def client_ip(request: Request) -> str:
-    # 3/11 23:45: il primo valore di X-Forwarded-For lo scrive il cliente (falsificabile); si usa l'IP messo dal
-    # proxy (CF-Connecting-IP / True-Client-IP) o l'ULTIMO valore della catena
-    for h in ("cf-connecting-ip", "true-client-ip"):
-        v = (request.headers.get(h) or "").strip()
-        if v:
-            return v
-    fwd = request.headers.get("x-forwarded-for", "")
-    return (fwd.split(",")[-1].strip() if fwd else (request.client.host if request.client else "")) or "?"
+    """IP vero del visitatore, per i limiti di frequenza (accessi, contatti, domande, voce degli ospiti).
+    4/11: prima le intestazioni scritte dal proxy davanti al sito (CF-Connecting-IP, True-Client-IP, X-Real-IP), poi
+    il primo indirizzo di X-Forwarded-For che non è privato o di un proxy, infine l'indirizzo della connessione."""
+    for h in ("cf-connecting-ip", "true-client-ip", "x-real-ip"):
+        ip = _ip_pubblico(request.headers.get(h) or "")
+        if ip:
+            return ip
+    for parte in (request.headers.get("x-forwarded-for") or "").split(","):
+        ip = _ip_pubblico(parte)
+        if ip:
+            return ip
+    return (request.client.host if request.client else "") or "?"
 
 
 # ---------------------------------------------------------------------------
@@ -138,26 +168,10 @@ def client_ip(request: Request) -> str:
 _attempts: dict[str, list[float]] = defaultdict(list)
 
 
-def _diagnosi_password(email: str, pw: str, u: dict | None) -> str:
-    """Perché la password non va, SENZA scriverla: è quella dell'amministratore (riempita dal telefono)?
-    Dove differisce da quella preparata su Render? La password salvata corrisponde a quella preparata?"""
-    out = []
-    adm = (os.environ.get("ADMIN_PASSWORD") or "").strip()
-    if adm:
-        out.append(f"e_la_password_admin={pw.strip() == adm}")
-    try:
-        for c in json.loads(os.environ.get("ACCOUNT_CLIENTI") or "[]"):
-            if str(c.get("email", "")).strip().lower() == email:
-                giusta = str(c.get("password", "")).strip()
-                diff = next((i for i, (a, b) in enumerate(zip(pw, giusta)) if a != b), None)
-                out.append(f"uguale_a_quella_preparata={pw == giusta} lunghezza_giusta={len(giusta)} "
-                           f"prima_differenza_carattere={None if diff is None else diff + 1} "
-                           f"tipo_carattere_diverso={'' if diff is None else ('cifra' if pw[diff].isdigit() else 'lettera' if pw[diff].isalpha() else 'simbolo')}")
-                if u:
-                    out.append(f"salvata_corrisponde_a_preparata={verify_password(giusta, u['password_hash'])}")
-    except Exception as e:
-        out.append(f"diagnosi_errore={type(e).__name__}")
-    return " ".join(out)
+def _maschera_email(email: str) -> str:
+    """m***@dominio.it: abbastanza per riconoscere il caso nei log, non per raccogliere gli indirizzi."""
+    nome, _, dom = (email or "").partition("@")
+    return (nome[:1] + "***@" + dom) if dom else "***"
 
 
 async def login(request: Request):
@@ -178,10 +192,9 @@ async def login(request: Request):
                                (pw != pw.strip() and verify_password(pw.strip(), u["password_hash"])))
     u, ok = await run_in_threadpool(check)
     if not ok:
-        pw = str(data.get("password", ""))
-        log.warning("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s %s",
-                 email, "trovato" if u else "NON trovato o disattivato", len(pw), any(c.isupper() for c in pw),
-                 pw != pw.strip(), _diagnosi_password(email, pw, u))
+        # 4/11: nel log nessuna informazione sulla password (né lunghezza né confronti) e l'email mascherata
+        log.warning("ACCESSO_FALLITO email=%s utente=%s", _maschera_email(email),
+                    "trovato" if u else "NON trovato o disattivato")
         _attempts[email].append(now)
         _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")
@@ -542,8 +555,11 @@ async def admin_update_dealer(request: Request):
         if isinstance(data.get("permessi"), list):
             conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
                          ([p for p in data["permessi"] if p in PERMESSI], did))
+        sessions.dimentica_account(did)          # ruolo e stato riletti subito dal database
         if "active" in data:
-            conn.execute("UPDATE dealers SET active=%s WHERE id=%s", (bool(data["active"]), did))
+            # disattivato_da_admin: né il pagamento Stripe né l'avvio lo riaccendono
+            conn.execute("UPDATE dealers SET active=%s, disattivato_da_admin=%s WHERE id=%s",
+                         (bool(data["active"]), not bool(data["active"]), did))
             if not data["active"]:
                 sessions.revoke_all(conn, did, "account_disattivato")
         if data.get("password"):
@@ -574,14 +590,28 @@ async def abbonamento_checkout(request: Request):
     user = current_user(request)
     if not abbonamento.attivo():
         err(503, "Pagamenti non ancora attivi")
-    with connect() as conn:
-        d = conn.execute("SELECT id, email, stripe_customer FROM dealers WHERE id=%s", (user["id"],)).fetchone()
     piano = str((await body(request)).get("piano") or "base")
+
+    def go():
+        # 3/11 notte: niente secondo abbonamento se ce n'è già uno attivo, in prova o in tolleranza (database o
+        # Stripe): si manda al portale di Stripe, dove si cambia piano (Base <-> Max) o carta
+        with connect() as conn:
+            d = conn.execute("SELECT id, email, stripe_customer, abbonamento_stato FROM dealers WHERE id=%s",
+                             (user["id"],)).fetchone()
+            gia = abbonamento.abbonamento_in_corso(conn, d)
+        if gia:
+            if not d.get("stripe_customer"):
+                return {"gia_abbonato": True, "errore": "Hai già un abbonamento attivo"}
+            return {"url": abbonamento.portale(d["stripe_customer"], social.base_url(request)), "portale": True,
+                    "gia_abbonato": True}
+        return {"url": abbonamento.checkout(d, social.base_url(request), None, piano)}
     try:
-        url = await run_in_threadpool(abbonamento.checkout, d, social.base_url(request), None, piano)
+        out = await run_in_threadpool(go)
     except RuntimeError as e:
         err(502, str(e))
-    return jsonify({"url": url})
+    if out.get("gia_abbonato"):
+        log.warning("STRIPE checkout rifiutato: commerciante %s ha già un abbonamento (portale)", user["id"])
+    return jsonify(out, 200 if out.get("url") else 409)
 
 
 async def abbonamento_portale(request: Request):
@@ -713,7 +743,7 @@ def _service_log(conn, user: dict, service: str, ok: bool) -> None:
 
 
 async def servizio_vendi(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")          # 4/11: accesso + abbonamento attivo (prima bastava l'accesso)
     data = await body(request)
     from ..servizi import vendi
     try:
@@ -740,7 +770,7 @@ async def servizio_vendi(request: Request):
 
 
 async def servizio_ricambi(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")          # 4/11: accesso + abbonamento attivo (prima bastava l'accesso)
     data = await body(request)
     from ..servizi import ricambi
     pezzi = data.get("pezzi") or []
@@ -765,8 +795,10 @@ _guest_questions: dict[str, list[float]] = defaultdict(list)
 
 
 async def assistente(request: Request):
-    """Assistente a voce: domanda in linguaggio naturale, risposta + auto trovate."""
-    user = viewer(request)
+    """Assistente a voce: domanda in linguaggio naturale, risposta + auto trovate.
+    4/11: restituisce auto, quindi serve accesso + abbonamento attivo (permesso "auto"); senza account solo con il
+    sito aperto (SITO_APERTO=1), con il limite di domande degli ospiti."""
+    user = viewer(request, "auto")
     data = await body(request)
     msgs = [m for m in (data.get("messages") or []) if isinstance(m, dict)][-10:]
     if not msgs or not str(msgs[-1].get("content", "")).strip():
@@ -799,7 +831,27 @@ VOCE_LIMITE = {"tts": int(os.environ.get("VOCE_LIMITE_GIORNO", "300")), "stt": i
 _voce_uso: dict[str, list[float]] = defaultdict(list)
 
 
-def _voce_gate(request: Request, user: dict, kind: str) -> None:
+VOCE_OSPITE_MINUTO = int(os.environ.get("VOCE_OSPITE_MINUTO", "6"))           # per indirizzo, al minuto
+VOCE_OSPITI_GIORNO = int(os.environ.get("VOCE_OSPITI_GIORNO", "300"))          # tutti gli ospiti insieme, al giorno
+VOCE_OSPITE_CARATTERI = int(os.environ.get("VOCE_OSPITE_CARATTERI", "300"))
+
+
+def _voce_ospiti_oggi(kind: str, conta: bool) -> int:
+    """Usi della voce di TUTTI gli ospiti oggi, salvati nel database (un riavvio non azzera il tetto)."""
+    with connect() as conn:
+        uid = _ospiti_id(conn)
+        n = conn.execute("SELECT count(*) AS n FROM service_usage WHERE dealer_id=%s AND service=%s "
+                         "AND at > date_trunc('day', now())", (uid, "voce_ospite_" + kind)).fetchone()["n"]
+        if conta:
+            conn.execute("INSERT INTO service_usage (dealer_id, service, ok) VALUES (%s,%s,true)",
+                         (uid, "voce_ospite_" + kind))
+        conn.commit()
+    return n
+
+
+def _voce_gate(request: Request, user: dict, kind: str, testo: str = "") -> None:
+    """Tetti della voce (ogni chiamata costa). Ospiti (sito aperto, senza account): per indirizzo al minuto e al
+    giorno, testi corti, e un tetto giornaliero per tutti gli ospiti insieme salvato nel database."""
     ospite = user.get("role") == "ospite"
     k = f"{kind}:{'ip:' + client_ip(request) if ospite else user['id']}"
     now = time.time()
@@ -807,6 +859,14 @@ def _voce_gate(request: Request, user: dict, kind: str) -> None:
     lim = VOCE_LIMITE[kind] // (5 if ospite else 1)
     if len(_voce_uso[k]) >= lim:
         err(429, "Hai usato molto la voce oggi: continuo a risponderti per iscritto")
+    if ospite:
+        if len(testo) > VOCE_OSPITE_CARATTERI:
+            err(413, "Testo troppo lungo da leggere: entra con il tuo account")
+        if sum(1 for t in _voce_uso[k] if now - t < 60) >= VOCE_OSPITE_MINUTO:
+            err(429, "Troppe richieste di voce: riprova tra un minuto")
+        if _voce_ospiti_oggi(kind, conta=False) >= VOCE_OSPITI_GIORNO:
+            err(429, "La voce per chi non ha un account è finita per oggi: entra con il tuo account")
+        _voce_ospiti_oggi(kind, conta=True)
     _voce_uso[k].append(now)
 
 
@@ -820,7 +880,7 @@ async def voce_tts(request: Request):
     testo = str(data.get("testo") or "").strip()
     if not testo:
         err(400, "Niente da leggere")
-    _voce_gate(request, user, "tts")
+    _voce_gate(request, user, "tts", testo)
     try:
         audio = await run_in_threadpool(voce.tts, testo)
     except Exception as e:
@@ -1609,20 +1669,51 @@ AZIENDA_CAMPI = [("nome_azienda", "Nome dell'azienda", True), ("indirizzo", "Ind
 APP_FASCE = {"mattina": "Mattina (9–12)", "pranzo": "Pranzo (12–14)", "pomeriggio": "Pomeriggio (14–18)", "sera": "Sera (18–20)"}
 APP_ORE = [f"{h}:{m}" for h in range(9, 20) for m in ("00", "30")][:-1]       # 9:00 … 19:00
 APP_MAX = 8
-_TAB_APP = {"ok": False}
+APP_GIORNO = int(os.environ.get("APPUNTAMENTI_GIORNO", "20"))    # richieste al giorno per commerciante
+APP_DOPPIA_ORE = 24                                                 # stessa richiesta per la stessa auto: non si rimanda
+APP_PREAVVISO_MIN = int(os.environ.get("APPUNTAMENTI_PREAVVISO_MIN", "60"))
+# Le tabelle aziende_abbonati e appuntamenti nascono con la migrazione 031 (prima alla prima richiesta del sito).
 
 
-def _tabelle_app(conn) -> None:
-    if _TAB_APP["ok"]:
-        return
-    conn.execute("""CREATE TABLE IF NOT EXISTS aziende_abbonati (dealer_id BIGINT PRIMARY KEY, dati JSONB NOT NULL,
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS appuntamenti (id BIGSERIAL PRIMARY KEY, dealer_id BIGINT NOT NULL,
-                    listing_id BIGINT NOT NULL, giorno DATE NOT NULL, fascia TEXT NOT NULL, ora TEXT, nota TEXT,
-                    stato TEXT NOT NULL DEFAULT 'richiesto', created_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
-    conn.execute("ALTER TABLE appuntamenti ADD COLUMN IF NOT EXISTS proposte JSONB")
-    conn.commit()
-    _TAB_APP["ok"] = True
+def _ora_roma():
+    """Adesso in Italia: il server di Render è in UTC, il commerciante sceglie giorni e ore italiani."""
+    import datetime as _d
+    from zoneinfo import ZoneInfo
+    return _d.datetime.now(ZoneInfo("Europe/Rome"))
+
+
+def _proposte_valide(grezze: list, adesso) -> tuple[list, list]:
+    """(proposte buone ordinate [(giorno, ora)], scartate [{giorno, ora, motivo}]). Giorni da oggi a oggi+14 in
+    Europe/Rome; oggi solo gli orari almeno APP_PREAVVISO_MIN minuti dopo adesso; doppioni tolti."""
+    import datetime as _d
+    oggi = adesso.date()
+    proposte, scartate, visti = [], [], set()
+    for x in (grezze or [])[:APP_MAX]:
+        x = x if isinstance(x, dict) else {}
+        g_txt, o = str(x.get("giorno") or ""), str(x.get("ora") or "")
+        try:
+            g = _d.date.fromisoformat(g_txt)
+        except ValueError:
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "giorno non valido"})
+            continue
+        if o not in APP_ORE:
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "orario non valido"})
+        elif not (oggi <= g <= oggi + _d.timedelta(days=14)):
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "giorno fuori dalle prossime 2 settimane"})
+        elif g == oggi and _d.datetime.combine(g, _d.time(*map(int, o.split(":"))), adesso.tzinfo) < \
+                adesso + _d.timedelta(minutes=APP_PREAVVISO_MIN):
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "orario già passato o troppo vicino"})
+        elif (g, o) not in visti:
+            visti.add((g, o))
+            proposte.append((g, o))
+    proposte.sort()
+    return proposte, scartate
+
+
+def _impronta_appuntamento(dealer_id: int, lid: int, proposte: list, nota: str | None) -> str:
+    import hashlib
+    chiave = json.dumps([dealer_id, lid, [[str(g), o] for g, o in proposte], (nota or "").strip().lower()])
+    return hashlib.sha256(chiave.encode()).hexdigest()
 
 
 def _azienda_norm(d: dict | None) -> dict:
@@ -1645,7 +1736,6 @@ def _azienda_ok(d: dict | None) -> bool:
 async def azienda_get(request: Request):
     user = current_user(request)
     with connect() as conn:
-        _tabelle_app(conn)
         r = conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone()
         perm = permessi_di(conn, user)
     d = _azienda_norm((r or {}).get("dati"))
@@ -1661,53 +1751,55 @@ async def azienda_put(request: Request):
     if not _azienda_ok(d):
         err(400, "Compila tutti i campi obbligatori")
     with connect() as conn:
-        _tabelle_app(conn)
         conn.execute("INSERT INTO aziende_abbonati (dealer_id, dati) VALUES (%s,%s) ON CONFLICT (dealer_id) DO UPDATE "
                      "SET dati=EXCLUDED.dati, updated_at=now()", (user["id"], json.dumps(d)))
         conn.commit()
     return jsonify({"ok": True, "dati": d, "completa": True})
 
 
-def _avvisa_appuntamento(testo: str, oggetto: str) -> None:
-    """Email a info@skovo.app con la richiesta (Brevo transazionale, chiave su Render). Se non va resta in tabella."""
+def _avvisa_appuntamento(testo: str, oggetto: str, aid: int | None = None) -> bool:
+    """Email a info@skovo.app con la richiesta (Brevo transazionale, chiave su Render). 4/11: si guarda la risposta
+    di Brevo; l'esito va nel log (APPUNTAMENTO email esito=...) e in appuntamenti.email_ok/email_esito, così una
+    richiesta senza email si vede nel pannello."""
+    lg = logging.getLogger("scovo")
     try:
         import httpx
         from ..marketing.brevo_liste import API, MITTENTE, _chiave
-        httpx.post(f"{API}/smtp/email", headers={"api-key": _chiave(), "accept": "application/json"}, timeout=20,
-                   json={"sender": MITTENTE, "to": [{"email": os.environ.get("APPUNTAMENTI_EMAIL", "info@skovo.app")}],
-                         "subject": oggetto, "textContent": testo})
+        r = httpx.post(f"{API}/smtp/email", headers={"api-key": _chiave(), "accept": "application/json"}, timeout=20,
+                       json={"sender": MITTENTE, "to": [{"email": os.environ.get("APPUNTAMENTI_EMAIL", "info@skovo.app")}],
+                             "subject": oggetto, "textContent": testo})
+        ok = 200 <= r.status_code < 300
+        esito = f"http {r.status_code}" + ("" if ok else " " + (r.text or "")[:200])
     except Exception as e:
-        logging.getLogger("scovo").warning("APPUNTAMENTO email non mandata: %s", str(e)[:200])
+        ok, esito = False, f"{type(e).__name__}: {str(e)[:200]}"
+    (lg.info if ok else lg.error)("APPUNTAMENTO %s email esito=%s", aid, "ok" if ok else esito)
+    if aid:
+        try:
+            with connect() as conn:
+                conn.execute("UPDATE appuntamenti SET email_ok=%s, email_esito=%s WHERE id=%s", (ok, esito[:300], aid))
+                conn.commit()
+        except Exception as e:
+            lg.warning("APPUNTAMENTO %s esito email non salvato: %s", aid, type(e).__name__)
+    return ok
 
 
 async def appuntamento(request: Request):
     user = current_user(request)
     lid = int(request.path_params["id"])
     data = await body(request)
-    import datetime as _d
-    oggi = _d.date.today()
     grezze = data.get("proposte")
     if not isinstance(grezze, list):          # versione di prima: un giorno e una fascia
         grezze = [{"giorno": data.get("giorno"), "ora": data.get("ora") or {"mattina": "10:00", "pranzo": "12:30",
                    "pomeriggio": "15:00", "sera": "18:30"}.get(str(data.get("fascia") or ""), "")}]
-    proposte, visti = [], set()
-    for x in grezze[:APP_MAX]:
-        try:
-            g = _d.date.fromisoformat(str((x or {}).get("giorno") or ""))
-        except ValueError:
-            continue
-        o = str((x or {}).get("ora") or "")
-        if o not in APP_ORE or not (oggi <= g <= oggi + _d.timedelta(days=14)) or (g, o) in visti:
-            continue
-        visti.add((g, o)); proposte.append((g, o))
+    proposte, scartate = _proposte_valide(grezze, _ora_roma())
     if not proposte:
-        err(400, "Scegli almeno un giorno e un orario")
-    proposte.sort()
+        return jsonify({"errore": "Scegli almeno un giorno e un orario ancora libero (da adesso alle prossime "
+                                  "2 settimane)", "scartate": scartate}, 400)
     giorno, ora = proposte[0]
     fascia = _fascia_di(ora)
     nota = str(data.get("nota") or "").strip()[:500] or None
+    impronta = _impronta_appuntamento(user["id"], lid, proposte, nota)
     with connect() as conn:
-        _tabelle_app(conn)
         if not (user.get("role") == "admin" or "appuntamenti" in permessi_di(conn, user)):
             err(402, "Fissare gli appuntamenti è incluso nell'abbonamento da 200 €")
         az = _azienda_norm((conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone() or {}).get("dati"))
@@ -1717,10 +1809,23 @@ async def appuntamento(request: Request):
                            "FROM listings WHERE id=%s AND status='attivo'", (lid,)).fetchone()
         if not car:
             err(404, "Questa auto non è più disponibile")
-        aid = conn.execute("INSERT INTO appuntamenti (dealer_id, listing_id, giorno, fascia, ora, nota, proposte) "
-                           "VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        # due clic (o due schede) con la stessa richiesta: una sola riga e una sola email
+        conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (f"appuntamento:{user['id']}:{lid}",))
+        gia = conn.execute("SELECT id FROM appuntamenti WHERE dealer_id=%s AND listing_id=%s AND impronta=%s "
+                           "AND created_at > now() - make_interval(hours => %s) ORDER BY id DESC LIMIT 1",
+                           (user["id"], lid, impronta, APP_DOPPIA_ORE)).fetchone()
+        if gia:
+            conn.commit()
+            return jsonify({"ok": True, "id": gia["id"], "gia_inviata": True, "scartate": scartate})
+        if user.get("role") != "admin":
+            n = conn.execute("SELECT count(*) AS n FROM appuntamenti WHERE dealer_id=%s "
+                             "AND created_at > now() - interval '24 hours'", (user["id"],)).fetchone()["n"]
+            if n >= APP_GIORNO:
+                err(429, f"Hai chiesto {n} appuntamenti nelle ultime 24 ore: il limite è {APP_GIORNO}")
+        aid = conn.execute("INSERT INTO appuntamenti (dealer_id, listing_id, giorno, fascia, ora, nota, proposte, impronta) "
+                           "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                            (user["id"], lid, giorno, fascia, ora, nota,
-                            json.dumps([{"giorno": str(g), "ora": o} for g, o in proposte]))).fetchone()["id"]
+                            json.dumps([{"giorno": str(g), "ora": o} for g, o in proposte]), impronta)).fetchone()["id"]
         conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (lid, user["id"]))
         conn.commit()
     tel = scovo.find_phone(car.get("description"))
@@ -1731,21 +1836,22 @@ async def appuntamento(request: Request):
              f"Auto: {car.get('title') or ''} - {car.get('year') or ''} - {car.get('mileage_km') or ''} km - {car.get('price_eur')} EUR\n"
              f"Zona: {car.get('city') or ''} ({car.get('province') or ''})\nAnnuncio: {car.get('url')}\n"
              + (f"Numero del venditore nell'annuncio: {tel}\n" if tel else "") +
-             "\nDisponibilità del commerciante (una qualsiasi va bene):\n"
+             "\nDisponibilità del commerciante (ora italiana, una qualsiasi va bene):\n"
              + "".join(f"  - {['lun','mar','mer','gio','ven','sab','dom'][g.weekday()]} {g.strftime('%d/%m')} ore {o}\n" for g, o in proposte)
              + (f"Nota: {nota}\n" if nota else ""))
-    threading.Thread(target=_avvisa_appuntamento, args=(testo, f"Appuntamento ({len(proposte)} date) - {az.get('nome_azienda')} - {car.get('title') or ''}"[:150]),
+    threading.Thread(target=_avvisa_appuntamento, args=(testo, f"Appuntamento ({len(proposte)} date) - {az.get('nome_azienda')} - {car.get('title') or ''}"[:150], aid),
                      daemon=True).start()
     logging.getLogger("scovo").warning("APPUNTAMENTO %s richiesto: commerciante %s, auto %s, %s %s", aid, user["id"], lid, giorno, fascia)
-    return jsonify({"ok": True, "id": aid})
+    return jsonify({"ok": True, "id": aid, "scartate": scartate})
 
 
 async def admin_appuntamenti(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
-        _tabelle_app(conn)
+        # LEFT JOIN: le richieste restano anche quando l'annuncio viene cancellato dalla pulizia
         rows = conn.execute("""SELECT a.id, a.giorno, a.fascia, a.ora, a.nota, a.stato, a.created_at, a.listing_id,
-                 a.proposte, l.title, l.url, l.price_eur, z.dati AS azienda FROM appuntamenti a JOIN listings l ON l.id = a.listing_id
+                 a.proposte, a.email_ok, a.email_esito, l.title, l.url, l.price_eur, z.dati AS azienda
+                 FROM appuntamenti a LEFT JOIN listings l ON l.id = a.listing_id
                  LEFT JOIN aziende_abbonati z ON z.dealer_id = a.dealer_id ORDER BY a.created_at DESC LIMIT 200""").fetchall()
     return jsonify({"appuntamenti": [dict(r, giorno=str(r["giorno"]), created_at=str(r["created_at"])) for r in rows]})
 
@@ -1831,9 +1937,7 @@ def vai_annuncio(request: Request):
             data = read_token(tok)
             if not data:
                 err(401, "Accesso scaduto")
-            ok, _ = sessions.check(data.get("sid"), data["id"])
-            if not ok:
-                err(401, "Accesso scaduto")
+            data = _utente_del_token(data)          # ruolo dal database, non dal token
             if data.get("role") != "admin":
                 with connect() as conn:
                     if "auto" not in permessi_di(conn, data):
@@ -1888,12 +1992,27 @@ def foto_auto(request: Request):
                     headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
-def commercianti_tel(request: Request):
-    """22/10 (cliente): CSV dei piccoli commercianti di utilitarie con cellulare aziendale da AutoScout24.
-    Si scarica solo con la chiave COMMERCIANTI_KEY (link dato al cliente). Nei log solo il conteggio."""
+def _chiave_export_ok(request: Request) -> bool:
+    """4/11: la chiave non va più nell'indirizzo (?k=..., finiva nei log di accesso e nella cronologia): arriva
+    nell'intestazione X-Chiave (curl -H "X-Chiave: ..."), oppure si scarica da amministratore con il token."""
     import hmac
     chiave = os.environ.get("COMMERCIANTI_KEY") or ""
-    if not chiave or not hmac.compare_digest(chiave, str(request.query_params.get("k") or "")):
+    data = str(request.headers.get("x-chiave") or "")
+    if chiave and data and hmac.compare_digest(chiave.encode(), data.encode()):
+        return True
+    if request.headers.get("authorization"):
+        try:
+            current_user(request, admin=True)
+            return True
+        except HTTPError:
+            return False
+    return False
+
+
+def commercianti_tel(request: Request):
+    """22/10 (cliente): CSV dei piccoli commercianti di utilitarie con cellulare aziendale da AutoScout24.
+    Si scarica solo con la chiave COMMERCIANTI_KEY nell'intestazione X-Chiave o da amministratore. Nei log solo il conteggio."""
+    if not _chiave_export_ok(request):
         return Response(status_code=404)
     from ..marketing import commercianti_tel as ct
     with connect() as conn:
@@ -1901,6 +2020,24 @@ def commercianti_tel(request: Request):
     logging.getLogger("dealfinder.marketing").warning("COMMERCIANTI_TEL scaricati %d", len(rows))
     return Response(ct.csv_bytes(rows), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": "attachment; filename=commercianti_cellulari.csv", "Cache-Control": "no-store"})
+
+
+def admin_lead_csv(request: Request):
+    """4/11: liste di commercianti (prima righe LEAD..., LEADE, LEADT, ESPORTA_* nei log di Render) da scaricare in
+    CSV dall'amministratore: /api/admin/lead.csv?tipo=LEADE. Senza tipo: i tipi disponibili con i conteggi."""
+    current_user(request, admin=True)
+    from ..marketing import consegne
+    tipo = str(request.query_params.get("tipo") or "")[:40]
+    with connect() as conn:
+        if not tipo:
+            rows = conn.execute("SELECT tipo, count(*) AS n, max(at) AS ultimo FROM lead_consegne GROUP BY tipo "
+                                "ORDER BY tipo").fetchall()
+            return jsonify({"tipi": rows})
+        rows = consegne.righe(conn, tipo)
+    logging.getLogger("dealfinder.marketing").warning("LEAD_CSV %s scaricati %d", tipo, len(rows))
+    return Response(consegne.csv_bytes(rows), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=lead_{re.sub(r'[^A-Za-z0-9_]', '', tipo)}.csv",
+                             "Cache-Control": "no-store"})
 
 
 def foto_email(request: Request):
@@ -1983,7 +2120,8 @@ async def admin_request_done(request: Request):
     with connect() as conn:
         r = conn.execute("UPDATE access_requests SET handled=true WHERE id=%s RETURNING email", (rid,)).fetchone()
         if r:
-            conn.execute("UPDATE dealers SET active=true WHERE email=%s", (r["email"],))
+            # un account spento dall'admin si riaccende solo dal pannello (Attiva), non chiudendo una richiesta
+            conn.execute("UPDATE dealers SET active=true WHERE email=%s AND NOT disattivato_da_admin", (r["email"],))
         conn.commit()
     return jsonify({"ok": True})
 
@@ -2182,6 +2320,7 @@ def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
     ok, why = sessions.check(data.get("sid"), data["id"])
     if not ok:
         return False, 401, sessions.REVOKED_MSG.get(why or "", "Accesso scaduto: entra di nuovo")
+    data = {**data, "role": sessions.ruolo(data.get("sid")) or "commerciante"}      # ruolo dal database
     if data.get("role") == "admin":
         return True, 200, ""
     with connect() as conn:
@@ -2219,6 +2358,7 @@ routes = [
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
     Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
     Route("/admin/commercianti-tel.csv", commercianti_tel),
+    Route("/api/admin/lead.csv", admin_lead_csv),
     Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),
     Route("/api/opportunities/{id:int}", opportunity_detail),
@@ -2839,6 +2979,11 @@ def _tempo_reale():
         time.sleep(20)
         try:
             from ..marketing import brevo_liste as bl
+            from ..pipeline.ciclo import _una_volta
+            # 4/11: una volta per gruppo di liste, non a ogni avvio (prima ogni riavvio reimportava tutto)
+            if not _una_volta(f"brevo_liste:{bl.NOME_GRUPPI}"):
+                lg.warning("BREVO_LISTE %s già importate: niente (togli BREVO_IMPORT_LISTE da Render)", bl.NOME_GRUPPI)
+                return
             bl.importa()
             if os.environ.get("BREVO_CAMPAGNE") == "1":
                 time.sleep(120)  # Brevo finisce di importare i contatti
@@ -3292,7 +3437,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio:{nome}", 100000):
+            if _una_volta(f"rinvio:{nome}"):        # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio:{nome}")
                     fin(True, {"lista": rinvio.lista(nome)})
@@ -3310,7 +3455,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio_invia:{cid}", 100000):
+            if _una_volta(f"rinvio_invia:{cid}"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_invia:{cid}")
                     esito = rinvio.invia(int(cid))
@@ -3329,7 +3474,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio_nonaperti:{cid}", 100000):
+            if _una_volta(f"rinvio_nonaperti:{cid}"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_nonaperti:{cid}")
                     fin(True, rinvio.non_aperti(int(cid), quando))
@@ -3347,7 +3492,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio_escludi:{v}", 100000):
+            if _una_volta(f"rinvio_escludi:{v}"):
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_escludi:{v}")
                     a, b = v.split(":")[:2]
@@ -3606,7 +3751,7 @@ def _tempo_reale():
         try:
             from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
-            if not _due(f"brevo_2_11:{tag}", 100000):
+            if not _una_volta(f"brevo_2_11:{tag}"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 return
             from ..marketing import auto_invio as AI
             with connect() as conn:
@@ -3633,7 +3778,7 @@ def _tempo_reale():
             from ..db import log_job
             from ..marketing import campagna_1_11 as C
             if modo == "invia":
-                if not _due("campagna_1_11:invio", 100000):
+                if not _una_volta("campagna_1_11:invio"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                     L.warning("CAMPAGNA_1_11 già inviata: niente")
                     return
                 with connect() as conn:
@@ -3777,7 +3922,7 @@ def _tempo_reale():
 
     def esporta_email():
         """1/11 sera (cliente: "mettili in un file a parte, poi tolgo io quelli già su Brevo"): tutte le email aziendali
-        dei commercianti che abbiamo, a gruppi di 20 per riga nel log (ESPORTA_EMAIL_RIGA). Solo dati aziendali pubblici
+        dei commercianti che abbiamo, nel database (lead_consegne tipo ESPORTA_EMAIL, da /api/admin/lead.csv; 4/11: non più nei log). Solo dati aziendali pubblici
         (nome dell'attività, comune, provincia, email, sito), con la data in cui è stata trovata e se è già in Brevo.
         Si ripete a ogni avvio con ESPORTA_EMAIL=<etichetta> nuova."""
         tag = os.environ.get("ESPORTA_EMAIL")
@@ -3812,8 +3957,10 @@ def _tempo_reale():
                         visti.add(em)
                         righe.append([em, r["nome"], r["comune"], r["prov"], r["sito"], r["fonte"],
                                       r["tentato"].strftime("%Y-%m-%d") if r["tentato"] else "", "si" if em in in_brevo else "no"])
-                for i in range(0, len(righe), 20):
-                    L.warning("ESPORTA_EMAIL_RIGA %s", json.dumps(righe[i:i + 20], ensure_ascii=False))
+                from ..marketing.consegne import consegna      # 4/11: nel database (pannello admin), non nei log
+                for x in righe:
+                    consegna("ESPORTA_EMAIL", dict(zip(("email", "nome", "comune", "prov", "sito", "fonte", "tentato",
+                                                        "in_brevo"), x)))
                 L.warning("ESPORTA_EMAIL_FINE %d email (%d non in Brevo)", len(righe), sum(1 for x in righe if x[-1] == "no"))
                 fine(True, {"email": len(righe)})
         except Exception as e:
@@ -3823,7 +3970,7 @@ def _tempo_reale():
     def esporta_tel():
         """2/11 (cliente: "dammi la mega lista dei numeri + i nuovi + quelli di Google Maps di ieri"): numeri AZIENDALI
         dei commercianti (Google Maps lead_maps, AutoScout24/Subito lead_tutti_dealer, commercianti_as24), una volta
-        per etichetta (ESPORTA_TEL=<tag>). Righe ESPORTA_TEL_RIGA nei log, 25 alla volta."""
+        per etichetta (ESPORTA_TEL=<tag>). Righe in lead_consegne (tipo ESPORTA_TEL, da /api/admin/lead.csv; 4/11: non più nei log)."""
         tag = os.environ.get("ESPORTA_TEL")
         if not tag:
             return
@@ -3853,8 +4000,9 @@ def _tempo_reale():
                                           r["aggiornato"].strftime("%Y-%m-%d") if r["aggiornato"] else ""])
                 except Exception:
                     conn.rollback()
-            for i in range(0, len(righe), 25):
-                L.warning("ESPORTA_TEL_RIGA %s", json.dumps(righe[i:i + 25], ensure_ascii=False, default=str))
+            from ..marketing.consegne import consegna          # 4/11: nel database (pannello admin), non nei log
+            for x in righe:
+                consegna("ESPORTA_TEL", {"riga": x})
             L.warning("ESPORTA_TEL_FINE %d righe", len(righe))
         except Exception as e:
             L.warning("ESPORTA_TEL non riuscito: %s", str(e)[:300])
@@ -4127,7 +4275,7 @@ def _tempo_reale():
                 testo = ("Siamo Skovo: troviamo auto di privati sotto mercato nella vostra zona, trattiamo il prezzo e vi "
                          "fissiamo l'appuntamento. Scriveteci: wa.me/393482425633 STOP=no")
             massimo = int(os.environ.get("SMS_MAX", "229"))
-            chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])
+            chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])   # solo impronte
             no = re.compile(r"(?i)officin|carrozz|gomm|pneumat|demoliz|rottam|soccorso|noleggio|ricambi|elettrauto|lavaggio|"
                             r"autoscuola|revision|moto\b|loconte|\baci\b")
             cand = []
@@ -4199,6 +4347,15 @@ def _tempo_reale():
                 numeri.append(d)
                 if len(numeri) >= massimo + (0 if prova else 1):
                     break
+            # 4/11: SMS promozionali solo a chi ha dato il consenso esplicito (tabella consensi) e una volta per numero
+            # e per giro (tabella invii: un riavvio non rimanda). Il numero del cliente (prova) resta.
+            from ..marketing import invii as _inv
+            with connect() as conn:
+                prova_cliente = [n for n in numeri if n == "3482425633"]
+                altri = [n for n in numeri if n != "3482425633"]
+                con_ok = _inv.con_consenso(conn, altri, "sms")
+                L.warning("SMS_INVIA senza consenso esplicito, esclusi: %d", len(altri) - len(con_ok))
+                numeri = prova_cliente + (con_ok if prova else _inv.prenota(conn, f"sms_invia:{tag}", con_ok, "sms"))
             L.warning("SMS_INVIA %d numeri (il primo è il cliente)", len(numeri))
             if strutt:
                 from collections import Counter as _C
@@ -4206,8 +4363,7 @@ def _tempo_reale():
                 righe = [x for x in info if x["tel"] in scelti]
                 L.warning("SMS_STRUTT selezionati %d: fonti %s, km %s", len(righe), json.dumps(dict(_C(x["fonte"] for x in righe))),
                           json.dumps(dict(_C("<=15" if x["km"] <= 15 else "<=30" if x["km"] <= 30 else "<=45" for x in righe))))
-                for k in range(0, len(righe), 25):
-                    L.warning("SMS_STRUTT nomi %d: %s", k, json.dumps([f'{x["nome"][:40]} ({x["comune"]}, {x["km"]:.0f} km, {x["peso"]})' for x in righe[k:k + 25]], ensure_ascii=False))
+                # 4/11: i nomi dei commercianti scelti non vanno più nei log (solo i conteggi qui sopra)
             if prova:
                 L.warning("SMS_INVIA prova a secco: nessun SMS inviato")
                 return
@@ -4228,6 +4384,8 @@ def _tempo_reale():
                         break
                     if r.status_code < 300:
                         ok += 1
+                        with connect() as conn:
+                            _inv.segna_inviati(conn, f"sms_invia:{tag}", [n], "sms")
                     else:
                         ko += 1
                         k = f"{r.status_code}:{r.text[:150]}"

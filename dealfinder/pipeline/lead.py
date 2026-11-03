@@ -1,7 +1,7 @@
 """Lista commercianti di Milano e province (per il commerciale di Scovo): autosaloni che pubblicano su
 AutoScout24 e Subito, raggruppati per venditore, con i dati PUBBLICI dell'attività presi dai loro annunci
 (nome, comune, telefono/sito se presenti), quante auto hanno in vendita e se scrivono che ritirano o
-comprano auto da privati. Solo attività (venditori professionali), mai privati. Risultato nei log: LEAD {json}.
+comprano auto da privati. Solo attività (venditori professionali), mai privati. Risultato nei log LEAD nel database (lead_consegne, 4/11: non più nei log).
 
     COLLECT_MODO=lead_commercianti
 """
@@ -16,6 +16,12 @@ from ..db import connect
 from ..zone import MILANO
 
 log = logging.getLogger("lead")
+from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
+
+
+def _riservata(nome: str) -> list:
+    from ..marketing.dati_riservati import lista
+    return lista(nome)
 
 RITIRO = re.compile(r"ritir\w*|compr(o|iamo)\b|acquist(o|iamo)\b|permut\w*|valutazion\w*|pagamento immediato|"
                     r"valutiamo|supervalutaz\w*", re.I)
@@ -105,7 +111,7 @@ def run() -> int:
     # prima chi compra auto dai privati, poi chi ha più auto (più movimento = più acquisti)
     righe.sort(key=lambda x: (-(x["annunci_compro"] > 0), -(x["con_ritiro_permuta"] > 0), -x["annunci"]))
     for x in righe[:1500]:
-        log.info("LEAD %s", json.dumps(x, ensure_ascii=False, default=str))
+        consegna("LEAD", json.dumps(x, ensure_ascii=False, default=str))
     log.info("LEAD_FINE %d venditori", len(righe))
     return len(righe)
 
@@ -135,7 +141,7 @@ def dal_sito() -> int:
         n += 1
         s = (l.raw or {}).get("seller") or {}
         if n <= 3:
-            log.info("LEAD_DEBUG venditore=%s", json.dumps(s, ensure_ascii=False, default=str)[:900])
+            log.info("LEAD_DEBUG campi del venditore=%s", sorted(s)[:30] if isinstance(s, dict) else type(s).__name__)
         k = _chiave("as", s) if isinstance(s, dict) else None
         if not k:
             continue
@@ -158,7 +164,7 @@ def dal_sito() -> int:
         p = sorted(x.pop("prezzi"))
         x.update(prezzo_min=p[0] if p else None, prezzo_med=p[len(p) // 2] if p else None,
                  prezzo_max=p[-1] if p else None)
-        log.info("LEAD %s", json.dumps(x, ensure_ascii=False, default=str))
+        consegna("LEAD", json.dumps(x, ensure_ascii=False, default=str))
         stampati += 1
     log.info("LEAD_FINE %d autosaloni", stampati)
     return stampati
@@ -176,15 +182,15 @@ TEL = re.compile(r"(?:\+39[\s.]?)?(?:3\d{2}|0\d{1,3})[\s./-]?\d{3,4}[\s./-]?\d{3
 
 
 def compra_da_privati() -> int:
-    """Autosaloni della provincia di Milano (data/lead_mi.json) che scrivono sulla loro pagina AutoScout24 che
+    """Autosaloni della provincia di Milano (dati_riservati "lead_mi", 4/11: non più in data/ nel repo) che scrivono sulla loro pagina AutoScout24 che
     comprano/ritirano auto dai privati; poi annunci "compro auto" di attività su Subito, provincia di Milano.
-    Nei log: LEADP {json}."""
+    Nei log LEADP nel database (lead_consegne, 4/11: non più nei log)."""
     import time
     from pathlib import Path
     from html import unescape
     from ..collectors.autoscout import AutoScoutCollector
     from ..collectors.subito import SubitoCollector, API_SEARCH, API_HEADERS
-    lista = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_mi.json").read_text())
+    lista = _riservata("lead_mi")
     asc = AutoScoutCollector()
     n_si = 0
     for d in lista:
@@ -202,7 +208,7 @@ def compra_da_privati() -> int:
                 a, b = max(0, x.start() - 80), x.end() + 80
                 frase = " ".join(testo[a:b].split())[:220]
                 break
-        log.info("LEADP %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "citta": d["citta"],
+        consegna("LEADP", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "citta": d["citta"],
                                          "url": d["url"], "compra": bool(m), "qualsiasi": bool(q), "frase": frase,
                                          "tel": d.get("tel") or [], "annunci": d.get("annunci")},
                                         ensure_ascii=False))
@@ -232,7 +238,7 @@ def compra_da_privati() -> int:
                 visti.add(k)
                 geo = it.get("geo") or {}
                 citta = ((geo.get("town") or {}).get("value") if isinstance(geo.get("town"), dict) else None)
-                log.info("LEADP %s", json.dumps({"fonte": "subito", "nome": adv.get("shop_name") or adv.get("name"),
+                consegna("LEADP", json.dumps({"fonte": "subito", "nome": adv.get("shop_name") or adv.get("name"),
                                                  "citta": citta, "url": (it.get("urls") or {}).get("default"),
                                                  "compra": True, "qualsiasi": bool(QUALSIASI.search(testo)),
                                                  "azienda": adv.get("company") is True,
@@ -249,8 +255,8 @@ def compro_auto() -> int:
     """Chi compra auto di ogni tipo in provincia di Milano e Monza-Brianza:
     1) annunci Subito "cerco" (t=k) nella categoria auto, province MI e MB: chi scrive "compro auto ...";
     2) annunci di vendita Subito MI/MB con parole "compro/acquisto auto ... incidentate/fuse/qualsiasi";
-    3) pagine AutoScout24 degli autosaloni di Monza e Brianza (data/lead_mb.json).
-    Nei log: LEADC {json}."""
+    3) pagine AutoScout24 degli autosaloni di Monza e Brianza (dati_riservati "lead_mb", 4/11: non più in data/ nel repo).
+    Nei log LEADC nel database (lead_consegne, 4/11: non più nei log)."""
     import time
     from pathlib import Path
     from html import unescape
@@ -272,7 +278,7 @@ def compro_auto() -> int:
         town = geo.get("town") if isinstance(geo.get("town"), dict) else {}
         city = geo.get("city") if isinstance(geo.get("city"), dict) else {}
         n += 1
-        log.info("LEADC %s", json.dumps({
+        consegna("LEADC", json.dumps({
             "origine": origine, "nome": adv.get("shop_name") or adv.get("name"), "azienda": adv.get("company") is True,
             "utente": adv.get("user_id"), "comune": town.get("value"), "provincia": city.get("short_name") or city.get("value"),
             "titolo": (it.get("subject") or "")[:150], "testo": " ".join((it.get("body") or "").split())[:500],
@@ -301,7 +307,7 @@ def compro_auto() -> int:
                 time.sleep(1.0)
                 if len(ads) < 100:
                     break
-    lista = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_mb.json").read_text())
+    lista = _riservata("lead_mb")
     asc = AutoScoutCollector()
     for d in lista:
         try:
@@ -316,7 +322,7 @@ def compro_auto() -> int:
                 a, b = max(0, x.start() - 80), x.end() + 80
                 frase = " ".join(testo[a:b].split())[:220]
                 break
-        log.info("LEADC %s", json.dumps({"origine": "autoscout24", "nome": d["nome"], "comune": d["citta"], "provincia": "MB",
+        consegna("LEADC", json.dumps({"origine": "autoscout24", "nome": d["nome"], "comune": d["citta"], "provincia": "MB",
                                          "url": d["url"], "compra": bool(m), "qualsiasi": bool(qq), "testo": frase,
                                          "tel": d.get("tel") or [], "annunci": d.get("annunci")}, ensure_ascii=False))
         time.sleep(0.8)
@@ -364,7 +370,7 @@ def _cellulari(tels) -> list:
 
 def compra_dintorni() -> int:
     """Commercianti di Milano e dintorni che DICHIARANO di comprare auto dai privati (pagina AutoScout24 o annunci
-    Subito "compro auto"), esclusi quelli già consegnati (data/lead_esclusi.json, solo hash). Nei log: LEADN {json}.
+    Subito "compro auto"), esclusi quelli già consegnati (data/lead_esclusi.json, solo hash). Nei log LEADN nel database (lead_consegne, 4/11: non più nei log).
     Solo attività: nome dell'attività, comune, telefoni pubblicati dall'attività, link, la frase in cui lo dichiarano."""
     import time
     from pathlib import Path
@@ -445,7 +451,7 @@ def compra_dintorni() -> int:
                 a, b = max(0, m.start() - 90), m.end() + 90
                 frase = " ".join(testo[a:b].split())[:240]
             trovati += 1
-            log.warning("LEADN %s", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "comune": d["citta"], "prov": d["prov"],
+            consegna("LEADN", json.dumps({"fonte": "autoscout24", "nome": d["nome"], "comune": d["citta"], "prov": d["prov"],
                                              "cell": cell[:2], "url": url, "annunci": d["n"], "dichiara": bool(m),
                                              "qualsiasi": bool(q), "frase": frase}, ensure_ascii=False))
         time.sleep(0.9)
@@ -485,7 +491,7 @@ def compra_dintorni() -> int:
                     geo = it.get("geo") or {}
                     town = geo.get("town") if isinstance(geo.get("town"), dict) else {}
                     n_sub += 1
-                    log.warning("LEADN %s", json.dumps({"fonte": "subito", "nome": nome, "azienda": adv.get("company") is True,
+                    consegna("LEADN", json.dumps({"fonte": "subito", "nome": nome, "azienda": adv.get("company") is True,
                                                      "comune": town.get("value"), "prov": prov, "cell": _cellulari(tels)[:2], "url": link, "dichiara": True,
                                                      "qualsiasi": bool(QUALSIASI.search(testo)), "frase": sogg[:200]},
                                                     ensure_ascii=False))

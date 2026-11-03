@@ -10,3 +10,4 @@ PyJWT[crypto]>=2.8
 reportlab>=4.2
 pypdf>=5.0
 scikit-learn>=1.5
+tzdata>=2024.1

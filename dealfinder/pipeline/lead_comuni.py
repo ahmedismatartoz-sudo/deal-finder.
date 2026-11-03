@@ -1,7 +1,7 @@
 """23/10 (cliente): commercianti di auto usate SOLO nei comuni del suo elenco (data/comuni_sesto.json, ~50 minuti
 da Sesto). Per ogni comune la pagina AutoScout24 "rivenditori a <comune>", poi per ogni salone la pagina
 "chi siamo" (referente e cellulare) e la sua vetrina (prezzi -> fascia). Solo attività, mai privati.
-Righe nei log: LEADC {json}; fine: LEADC_FINE."""
+Righe nei log LEADC nel database (lead_consegne, 4/11: non più nei log); fine: LEADC_FINE."""
 from __future__ import annotations
 
 import json
@@ -31,6 +31,7 @@ def fissi(testo: str) -> list:
     return out
 
 log = logging.getLogger("lead")
+from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 BASE = "https://www.autoscout24.it"
 NON_SALONE = {"regioni", "cerca", "search", "lst", "informazioni", "recensioni", "chi-siamo"}
 
@@ -102,7 +103,7 @@ def giro() -> dict:
             ufficiale = bool(re.search(r"(dealer|concessionari[ao]|partner) ufficiale", tc + th, re.I))
             ind = re.search(r"(\d{5})\s+([A-ZÀ-Üa-zà-ü' .-]{2,40}?)\s*(?:-|\(|,)", tc)
             con_cell += bool(cell)
-            log.warning("LEADC %s", json.dumps({
+            consegna("LEADC", json.dumps({
                 "salone": s, "nome": nome[:150], "comune_elenco": info["comune_elenco"], "prov": info["prov"],
                 "comune_pagina": ind.group(2).strip() if ind else None, "cell": cell[:4], "fissi": fisso,
                 "prezzi": prezzi[:120], "ufficiale": ufficiale, "link": f"{BASE}/concessionari/{s}"}, ensure_ascii=False))

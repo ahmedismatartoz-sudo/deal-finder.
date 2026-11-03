@@ -188,7 +188,20 @@ def find_plate(text: str | None) -> str | None:
     return "".join(m.groups()) if m else None
 
 
-def plate_hash(plate: str, salt: str) -> str:
+SALE_FINTI = {"", "cambiami"}
+_sale_avvisato = [False]
+
+
+def plate_hash(plate: str, salt: str | None) -> str | None:
+    """Impronta della targa. Con PLATE_SALT mancante o lasciato al vecchio valore di esempio ("cambiami") non si
+    calcola nessuna impronta (None): un sale noto renderebbe le targhe ricostruibili. Errore nel log una volta."""
+    if (salt or "").strip() in SALE_FINTI:
+        if not _sale_avvisato[0]:
+            _sale_avvisato[0] = True
+            import logging
+            logging.getLogger("dealfinder").error("PLATE_SALT mancante o di esempio: impronte delle targhe spente "
+                                                  "(impostalo su Render)")
+        return None
     return hashlib.sha256((salt + plate).encode()).hexdigest()
 
 

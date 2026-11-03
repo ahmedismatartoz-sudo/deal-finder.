@@ -10,7 +10,7 @@ class Settings:
     database_url: str = field(default_factory=lambda: os.environ.get("DATABASE_URL", "postgresql://localhost/dealfinder"))
     anthropic_api_key: str | None = field(default_factory=lambda: os.environ.get("ANTHROPIC_API_KEY"))
     scraper_proxy: str | None = field(default_factory=lambda: os.environ.get("SCRAPER_PROXY"))
-    plate_salt: str = field(default_factory=lambda: os.environ.get("PLATE_SALT", "cambiami"))
+    plate_salt: str = field(default_factory=lambda: os.environ.get("PLATE_SALT", ""))
 
     # Ricerca opportunità
     region: str = "lombardia"

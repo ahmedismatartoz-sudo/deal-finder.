@@ -20,6 +20,7 @@ from pathlib import Path
 from .lead import CI_SUBITO, TEL, _cellulari, _h, _nn, _nu, _tel9
 
 log = logging.getLogger("lead")
+from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 
 PROV_SUBITO = ["MI", "MB", "LO", "CO", "LC", "BG", "PV", "VA"]     # province (anche in parte) entro ~50 km da Sesto
 PROV_AS = set((os.environ.get("LEADT_PROV") or "MI,MB,LO,CO,LC,BG,PV,VA,NO,CR").split(","))  # 27/10: zona allargabile da Render
@@ -298,14 +299,14 @@ def giro() -> dict:
 
 
 def esporta(quanti: int) -> int:
-    """Righe da consegnare (nei log, una per commerciante), poi segnate come consegnate."""
+    """Righe da consegnare (in lead_consegne, una per commerciante; 4/11: non più nei log), poi segnate come consegnate."""
     from ..db import connect
     with connect() as conn:
         _tabelle(conn)
         rows = conn.execute("SELECT * FROM lead_tutti WHERE NOT consegnato ORDER BY prov, comune, nome "
                             "LIMIT %s", (quanti,)).fetchall()
         for r in rows:
-            log.warning("LEADT %s", json.dumps({k: r[k] for k in ("tel", "altri_tel", "nome", "comune", "prov", "fonti",
+            consegna("LEADT", json.dumps({k: r[k] for k in ("tel", "altri_tel", "nome", "comune", "prov", "fonti",
                                                                  "link", "auto", "prezzo_min", "prezzo_mediano",
                                                                  "prezzo_max", "fascia", "quota_benzina", "marche")},
                                               ensure_ascii=False, default=str))
@@ -319,7 +320,7 @@ def esporta(quanti: int) -> int:
 def esporta_tutti() -> dict:
     """23/10 (cliente): mega lista completa. Tutti i commercianti con cellulare raccolti (stesso unire per
     telefono e per nome), togliendo SOLO i numeri gia' chiamati (data/lead_chiamati.json, hash dei telefoni).
-    Righe nei log: LEADA {json}; non scrive nel database."""
+    Righe nei log LEADA nel database (lead_consegne, 4/11: non più nei log); non scrive nel database."""
     from ..db import connect
     es = json.loads((Path(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())
     CH = set(es["tel"])
@@ -359,7 +360,7 @@ def esporta_tutti() -> dict:
         p = [a[0] for a in g["ann"] if a[0]]
         marche = Counter(a[1] for a in g["ann"] if a[1])
         benz = sum(1 for a in g["ann"] if "benz" in str(a[2] or "").lower())
-        log.warning("LEADA %s", json.dumps({
+        consegna("LEADA", json.dumps({
             "tel": g["cell"][0], "altri_tel": " ".join(g["cell"][1:4]), "nome": (g["nome"] or "")[:150],
             "comune": g["comune"], "prov": g["prov"], "fonti": ",".join(sorted(f for f in g["fonti"] if f)),
             "link": g["link"], "auto": len(g["ann"]), "prezzi": sorted(p)[:200],

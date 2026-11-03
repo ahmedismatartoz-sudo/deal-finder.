@@ -74,20 +74,39 @@ def connect():
                 pass
 
 
-def migrate(conn) -> list[str]:
-    """Applica in ordine le migrazioni non ancora eseguite."""
-    conn.execute("CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, "
-                 "applied_at TIMESTAMPTZ NOT NULL DEFAULT now())")
-    done = {r["name"] for r in conn.execute("SELECT name FROM schema_migrations").fetchall()}
-    applied = []
-    for f in sorted(MIGRATIONS.glob("*.sql")):
-        if f.name in done:
-            continue
-        conn.execute(f.read_text())
-        conn.execute("INSERT INTO schema_migrations (name) VALUES (%s)", (f.name,))
+MIGRAZIONI_LOCK = 7310311          # lucchetto Postgres delle migrazioni (un solo processo alla volta)
+
+
+def migrate(conn, cartella: Path | None = None) -> list[str]:
+    """Applica in ordine le migrazioni non ancora eseguite.
+
+    3/11: sotto un lucchetto di sessione Postgres (pg_advisory_lock): se due processi partono insieme (sito e
+    cron), il secondo aspetta il primo e poi trova le migrazioni già fatte. L'elenco delle fatte si rilegge DOPO
+    aver preso il lucchetto. Il lucchetto si libera alla fine, anche se una migrazione fallisce."""
+    conn.execute("SELECT pg_advisory_lock(%s)", (MIGRAZIONI_LOCK,))
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, "
+                     "applied_at TIMESTAMPTZ NOT NULL DEFAULT now())")
         conn.commit()
-        applied.append(f.name)
-    return applied
+        done = {r["name"] for r in conn.execute("SELECT name FROM schema_migrations").fetchall()}
+        applied = []
+        for f in sorted((cartella or MIGRATIONS).glob("*.sql")):
+            if f.name in done:
+                continue
+            conn.execute(f.read_text())
+            conn.execute("INSERT INTO schema_migrations (name) VALUES (%s)", (f.name,))
+            conn.commit()
+            applied.append(f.name)
+        return applied
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            conn.execute("SELECT pg_advisory_unlock(%s)", (MIGRAZIONI_LOCK,))
+            conn.commit()
+        except Exception:
+            pass
 
 
 def log_job(conn, job: str):

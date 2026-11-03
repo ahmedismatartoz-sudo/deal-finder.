@@ -20,6 +20,8 @@ lg = logging.getLogger("dealfinder.marketing")
 
 
 def lista(nome: str) -> int:
+    from ..db import connect
+    from . import invii
     esclusi = {x.strip().lower() for x in (os.environ.get("RINVIO_ESCLUSI") or "").split(",") if x.strip()}
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
         rimbalzati: set = set()
@@ -41,6 +43,8 @@ def lista(nome: str) -> int:
             r = c.get(f"{API}/contacts", params={"limit": 1000, "offset": off})
             r.raise_for_status()
             cs = r.json().get("contacts") or []
+            with connect() as conn:                     # 4/11: i bloccati restano esclusi per sempre (tabella disiscritti)
+                invii.sincronizza_da_brevo(conn, cs)
             for x in cs:
                 e = (x.get("email") or "").lower()
                 if not e:
@@ -53,6 +57,10 @@ def lista(nome: str) -> int:
             if len(cs) < 1000:
                 break
             off += 1000
+        with connect() as conn:
+            n0 = len(buoni)
+            buoni = invii.prenota(conn, f"rinvio:{nome}", buoni)      # disiscritti tolti, una volta per destinatario
+            tolti += n0 - len(buoni)
         r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
         r.raise_for_status()
         lid = r.json()["id"]
@@ -114,6 +122,10 @@ def non_aperti(campagna: int, quando: str) -> dict:
             off += 100
         buoni = sorted(e for e in emails if e not in esclusi and e.split("@")[-1] not in esclusi and e not in bloccati
                        and e != "info@skovo.app" and not e.startswith("ahmedisma"))
+        from ..db import connect
+        from . import invii
+        with connect() as conn:          # 4/11: disiscritti tolti; ognuno riceve il rinvio una volta sola
+            buoni = invii.prenota(conn, f"rinvio_nonaperti:{campagna}", buoni)
         nome = f"Non aperti campagna {campagna}"
         rl = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
         rl.raise_for_status()

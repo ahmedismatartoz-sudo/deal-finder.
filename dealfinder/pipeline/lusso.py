@@ -1,7 +1,7 @@
 """20/10 (cliente): auto di fascia alta a Milano e dintorni.
 
 lead_supercar(): commercianti di Milano e dintorni che vendono auto usate da 50.000 € in su e dichiarano di
-    comprare auto dai privati. Solo dati pubblicati dall'attività. Nei log: LEADS {json}.
+    comprare auto dai privati. Solo dati pubblicati dall'attività. Nei log LEADS nel database (lead_consegne, 4/11: non più nei log).
 raccolta_60k(): tutte le auto da 60.000 € in su in vendita a Milano e dintorni (AutoScout24 e Subito, privati e
     commercianti), salvate nel database per analizzarle. Nei log: LUSSO {json} e LUSSO_FINE.
 """
@@ -19,6 +19,7 @@ from html import unescape
 from pathlib import Path
 
 log = logging.getLogger("lusso")
+from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 
 
 def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None = None):
@@ -129,7 +130,7 @@ def lead_supercar() -> int:
             dich += 1
         visti_t.update(cell)
         trovati += 1
-        log.warning("LEADS %s", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2], "url": url,
+        consegna("LEADS", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2], "url": url,
                                            "auto_50k": d["n"], "prezzo_max": d["max"], "marche": [k for k, _ in d["marche"].most_common(5)],
                                            "dichiara": bool(m), "qualsiasi": bool(QUALSIASI.search(testo)) if testo else False,
                                            "frase": frase}, ensure_ascii=False))
@@ -319,7 +320,7 @@ SENZA_PERMUTA = re.compile(r"senza (obbligo di )?(permuta|acquist)|anche senza (
 def lead_sportive() -> int:
     """20/10 (cliente): commercianti di Milano e province che trattano auto SPORTIVE e dichiarano di comprare auto
     dai privati (meglio se anche senza permuta). Pagina AutoScout24 e, se c'è, il sito dell'attività.
-    Solo cellulari pubblicati dall'attività. Esclusi quelli già consegnati. Nei log: LEADSP {json}."""
+    Solo cellulari pubblicati dall'attività. Esclusi quelli già consegnati. Nei log LEADSP nel database (lead_consegne, 4/11: non più nei log)."""
     import httpx
     from concurrent.futures import ThreadPoolExecutor
     from .lead import PROV_DINTORNI, _cellulari, _h, _nn, _nu, _tel9, TEL
@@ -434,7 +435,7 @@ def lead_sportive() -> int:
             visti_t.update(cell)
             trovati += 1
             dich += dichiara
-            log.warning("LEADSP %s", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2],
+            consegna("LEADSP", json.dumps({"nome": d["nome"], "comune": d["citta"], "prov": d["prov"], "cell": cell[:2],
                                                  "url": url, "sito": d["sito"], "sportive": d["sport"], "annunci": d["n"], "prezzo_max": d.get("max"),
                                                  "esempi": d["esempi"], "dichiara": dichiara, "senza_permuta": senza,
                                                  "frase": frase, "fonte": fonte}, ensure_ascii=False))
@@ -445,7 +446,7 @@ def lead_sportive() -> int:
 def lead_subito_alta() -> int:
     """21/10 (cliente): commercianti di auto di ALTA GAMMA di Milano e dintorni (no Bergamo/Brescia) presi da Subito:
     attività con annunci da LEADSUB_MIN € in su; cellulare scritto dall'attività negli annunci o sulla sua vetrina
-    impresapiu; segnato chi scrive di comprare auto dai privati. Esclusi i numeri già consegnati. Nei log: LEADSUB {json}."""
+    impresapiu; segnato chi scrive di comprare auto dai privati. Esclusi i numeri già consegnati. Nei log LEADSUB nel database (lead_consegne, 4/11: non più nei log)."""
     import httpx
     from .lead import TEL, _cellulari, _h, _nn, _tel9
     from ..collectors.subito import API_HEADERS, API_SEARCH, SubitoCollector, parse_item
@@ -523,7 +524,7 @@ def lead_subito_alta() -> int:
             frase = " ".join(testo[max(0, m.start() - 100):m.end() + 100].split())[:250] if m else ""
             trovati += 1
             dich += bool(m)
-            log.warning("LEADSUB %s", json.dumps({"nome": d["nome"], "comune": d["comune"], "prov": d["prov"], "cell": cell[:2],
+            consegna("LEADSUB", json.dumps({"nome": d["nome"], "comune": d["comune"], "prov": d["prov"], "cell": cell[:2],
                                                   "url": f"https://impresapiu.subito.it/shops/{sid}" if d["shop"] else "",
                                                   "annunci_alta": d["n"], "esempi": d["esempi"], "dichiara": bool(m),
                                                   "senza_permuta": bool(SENZA_PERMUTA.search(testo)) if m else False,

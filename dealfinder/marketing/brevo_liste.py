@@ -2,6 +2,8 @@
 (fascia utilitarie/medie/premium x gruppo A/B). Solo import contatti: le campagne si creano a parte.
 
 Gira una volta all'avvio del servizio web se BREVO_IMPORT_LISTE=1. Non scrive email nei log.
+4/11: una volta sola per file (anche dopo i riavvii); i gruppi si leggono da dati_riservati (non più da data/ nel
+repo); non si reimportano i disiscritti/bloccati né i contatti già caricati e poi cancellati da Brevo.
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ lg = logging.getLogger("dealfinder.marketing")
 API = "https://api.brevo.com/v3"
 TAG = os.environ.get("BREVO_TAG", "").strip()  # 27/10: campagna nuova in cartella e liste proprie (es. "27-10")
 _DATA = Path(__file__).resolve().parents[2] / "data"
-FILE = _DATA / (f"marketing_gruppi_{TAG}.json" if TAG else "marketing_gruppi.json")
+NOME_GRUPPI = f"marketing_gruppi_{TAG}" if TAG else "marketing_gruppi"      # nome in dati_riservati
 
 
 def _cartella(c: httpx.Client) -> int:
@@ -47,34 +49,68 @@ def _chiave() -> str:
     return key
 
 
+def da_importare(emails, bloccati: set, gia_caricati: set, in_brevo: set) -> list[str]:
+    """Chi si può (ri)mettere in una lista: mai i disiscritti/bloccati (impronte), mai chi era già stato caricato
+    in Brevo e non c'è più (cancellato: tornerebbe come nuovo, senza il blocco). Chi è in Brevo resta."""
+    from .invii import impronta, norm_email
+    out, visti = [], set()
+    for e in emails:
+        e = norm_email(e)
+        if not e or e in visti or impronta(e) in bloccati or (e in gia_caricati and e not in in_brevo):
+            continue
+        visti.add(e)
+        out.append(e)
+    return out
+
+
 def importa() -> None:
+    from ..db import connect
+    from . import invii
+    from .dati_riservati import leggi_gruppi
     key = _chiave()
-    if not key or not FILE.exists():
-        lg.warning("BREVO_LISTE: chiave o file mancante")
+    with connect() as conn:
+        gruppi = leggi_gruppi(conn, NOME_GRUPPI)
+    if not key or not gruppi:
+        lg.warning("BREVO_LISTE: chiave o gruppi mancanti (dati_riservati %s)", NOME_GRUPPI)
         return
-    gruppi = json.loads(FILE.read_text())
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
         prova = c.get(f"{API}/account")
         if prova.status_code != 200:
-            lg.warning("BREVO_LISTE chiave rifiutata: tipo=%s lung=%d risposta=%s",
-                       key[:8], len(key), prova.text[:200])
+            lg.warning("BREVO_LISTE chiave rifiutata: esito=%s", prova.status_code)
             return
+        from .auto_invio import _contatti_brevo
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn)
+            gia = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+        in_brevo = {x["email"].lower() for x in contatti if x.get("email")}
         cartella = _cartella(c)
         esistenti = _liste(c)
         for nome, emails in gruppi.items():
             nome = f"{nome} {TAG}" if TAG else nome
+            buoni = da_importare(emails, bloccati, gia, in_brevo)
+            if not buoni:
+                lg.warning("BREVO_LISTE %s: nessun contatto da importare (%d esclusi)", nome, len(emails))
+                continue
             lid = esistenti.get(nome)
             if lid is None:
                 r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": cartella})
                 r.raise_for_status()
                 lid = r.json()["id"]
             r = c.post(f"{API}/contacts/import", json={
-                "jsonBody": [{"email": e} for e in emails],
+                "jsonBody": [{"email": e} for e in buoni],
                 "listIds": [lid],
                 "updateExistingContacts": True,
                 "emptyContactsAttributes": False,
             })
-            lg.warning("BREVO_LISTE %s id=%s contatti=%d esito=%s", nome, lid, len(emails), r.status_code)
+            if r.status_code < 300:
+                with connect() as conn:
+                    for e in buoni:
+                        conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+                    conn.commit()
+            lg.warning("BREVO_LISTE %s id=%s contatti=%d esclusi=%d esito=%s", nome, lid, len(buoni),
+                       len(emails) - len(buoni), r.status_code)
 
 
 CARTELLA_EMAIL = _DATA / "marketing_email" / TAG if TAG else _DATA / "marketing_email"
@@ -100,13 +136,12 @@ def _eur(v) -> str:
 
 
 def _card(x: dict) -> str:
-    """Stessa scheda delle email del 22/10: prezzo 1.500 € sotto l'annuncio (concordato), margine al netto di 100 €."""
+    """Scheda dell'auto nelle email. 4/11: prezzo VERO dell'annuncio (prima 1.500-5.000 € sotto, come se la trattativa
+    fosse già fatta, e il margine calcolato su quel prezzo): nessuno sconto da trattativa. Margine al netto di 100 €."""
     from html import escape
 
-    v = x["prezzo"]
-    rib = 1500 if v < 8000 else 3000 if v < 15000 else 4000 if v < 50000 else 5000   # 27/10: ribasso per fascia (cliente)
-    p = round(max(v - rib, v * 0.6) / 100) * 100
-    m = round((x["R"] - p - 100) / 5) * 5
+    p = round(x["prezzo"] / 100) * 100
+    m = round((x["R"] - x["prezzo"] - 100) / 5) * 5
     n = escape(str(x["auto"]))
     imgs = "".join(
         f'<td width="50%" style="padding:0 {1-k}px 0 {k}px"><img src="https://scovo.onrender.com/email-foto/{x["id"]}/{k}.jpg" '
@@ -170,15 +205,27 @@ def _sostituisci(gruppo: str, html: str, items: list[dict], usate: set) -> tuple
 _usate_oggi: set = set()  # auto messe nelle email rifatte in questo giro (le due email della stessa fascia restano diverse)
 
 
+def nomi_campagne(c: httpx.Client) -> set[str]:
+    """Nomi di TUTTE le campagne in Brevo (4/11: prima solo le ultime 100, e una campagna vecchia uscita dalla
+    pagina veniva creata e mandata di nuovo)."""
+    fatte, off = set(), 0
+    while True:
+        r = c.get(f"{API}/emailCampaigns", params={"limit": 100, "offset": off})
+        r.raise_for_status()
+        cs = r.json().get("campaigns") or []
+        fatte |= {x["name"] for x in cs if x.get("name")}
+        if len(cs) < 100:
+            return fatte
+        off += 100
+
+
 def campagne(elenco=None) -> None:
     """22/10 (cliente): crea e invia subito le 6 campagne (una per lista). Non rimanda quelle gia' create."""
     key = _chiave()
     oggetti = json.loads((CARTELLA_EMAIL / "oggetti.json").read_text())
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
         liste = _liste(c)
-        r = c.get(f"{API}/emailCampaigns", params={"limit": 100})
-        r.raise_for_status()
-        fatte = {x["name"] for x in r.json().get("campaigns") or []}
+        fatte = nomi_campagne(c)
         for gruppo, oggetto in oggetti.items():
             nome = f"Skovo {gruppo} {TAG or '22-10'}"
             lid = liste.get(f"Skovo {gruppo} {TAG}" if TAG else f"Skovo {gruppo}")

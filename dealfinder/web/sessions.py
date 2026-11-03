@@ -54,6 +54,25 @@ def revoke_all(conn, dealer_id: int, why: str, keep: str | None = None) -> None:
     conn.commit()
 
 
+def ruolo(sid: str | None) -> str | None:
+    """Ruolo letto dal database con l'ultimo controllo della sessione (non quello scritto nel token)."""
+    hit = _cache.get(sid or "")
+    return (hit[1] or {}).get("role") if hit else None
+
+
+def ruolo_fresco(dealer_id: int) -> str | None:
+    """Ruolo riletto adesso dal database, senza la memoria di 60 secondi (per le pagine di amministrazione)."""
+    with connect() as conn:
+        row = conn.execute("SELECT role, active FROM dealers WHERE id=%s", (dealer_id,)).fetchone()
+    return row["role"] if row and row["active"] else None
+
+
+def dimentica_account(dealer_id: int) -> None:
+    """Dopo un cambio fatto dal pannello (ruolo, attivo): la memoria delle sessioni di quell'account si svuota."""
+    for k in [k for k, v in list(_cache.items()) if (v[1] or {}).get("dealer_id") == dealer_id]:
+        _cache.pop(k, None)
+
+
 def check(sid: str | None, dealer_id: int) -> tuple[bool, str | None]:
     """(valida, motivo se chiusa)."""
     if not sid:
@@ -66,7 +85,7 @@ def check(sid: str | None, dealer_id: int) -> tuple[bool, str | None]:
         with connect() as conn:
             row = conn.execute(
                 "UPDATE dealer_sessions s SET last_seen_at=now() FROM dealers d WHERE s.id=%s AND d.id=s.dealer_id "
-                "RETURNING s.dealer_id, s.revoked_why, (s.revoked_at IS NULL) AS open, d.active, "
+                "RETURNING s.dealer_id, s.revoked_why, (s.revoked_at IS NULL) AS open, d.active, d.role, "
                 "(d.accesso_fino IS NOT NULL AND d.accesso_fino < now()) AS scaduto",
                 (sid,)).fetchone()
             conn.commit()

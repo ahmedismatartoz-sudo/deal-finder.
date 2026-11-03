@@ -1,7 +1,7 @@
 """22/10 (cliente): piccoli commercianti di utilitarie (3.000-25.000 €) in Lombardia e dintorni, con il
 cellulare che l'attività pubblica sui suoi annunci AutoScout24, profilati per fascia, per la prova WhatsApp
 (il cliente chiede il permesso a ognuno prima di scrivere). Stesso metodo delle liste lead del 19-21/10:
-solo attività (venditori professionali), mai privati. Risultato nei log: LEADWA {json}.
+solo attività (venditori professionali), mai privati. Risultato nei log LEADWA nel database (lead_consegne, 4/11: non più nei log).
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from collections import Counter
 from .lead import _cellulari
 
 log = logging.getLogger("lead")
+from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 
 PROV = {"MI", "MB", "BG", "BS", "CO", "CR", "LC", "LO", "PV", "VA", "NO", "PC"}
 GRANDI = re.compile(r"\b(s\.?p\.?a|spa|group|gruppo|holding|motorvillage|stellantis|spoticar|autotorino|"
@@ -22,7 +23,7 @@ GRANDI = re.compile(r"\b(s\.?p\.?a|spa|group|gruppo|holding|motorvillage|stellan
 
 
 def _emetti(dealers: dict, etichetta: str, gia: set | None):
-    """Scrive nei log i piccoli commercianti (una riga ciascuno). Con `gia`, solo quelli non ancora scritti
+    """Salva in lead_consegne (4/11: non più nei log) i piccoli commercianti (una riga ciascuno). Con `gia`, solo quelli non ancora scritti
     (uscite parziali durante la lettura, profilo su quanto letto fin li')."""
     max_auto = int(os.environ.get("LEADWA_MAX_AUTO", "40"))
     tenuti, fasce = 0, Counter()
@@ -38,7 +39,7 @@ def _emetti(dealers: dict, etichetta: str, gia: set | None):
         fascia = "3-8k" if med < 8000 else ("8-15k" if med < 15000 else "15-25k")
         fasce[fascia] += 1
         tenuti += 1
-        log.warning("%s %s", etichetta, json.dumps({
+        consegna(etichetta, json.dumps({
             "nome": d["nome"], "comune": d["comune"], "prov": d["prov"], "cell": d["cell"], "fascia": fascia,
             "prezzo_min": min(d["prezzi"]), "prezzo_mediano": int(med), "prezzo_max": max(d["prezzi"]),
             "auto": k, "quota_benzina": round(d["benz"] / k, 2),
