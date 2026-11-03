@@ -80,6 +80,22 @@ def telefono_subito(item: dict | None) -> bool:
     return ph.strip() != "" or ph == "0"
 
 
+def salva_telefono(conn, lid: int, tel: bool | None, controllato: bool = False) -> None:
+    """3/11 (studio 4, P22): stato del telefono stabile (solo sì/no, mai il numero).
+    - tel None: non si sa niente di nuovo, non si tocca nulla (prima un True già noto tornava NULL a ogni rilettura);
+    - tel True da una ricerca o dal testo: telefono_ok=True; telefono_at cambia solo se prima non era True;
+    - controllato=True (pagina dell'annuncio aperta davvero): si scrive il risultato e telefono_at=now().
+    Così telefono_at resta la data dell'ultimo controllo vero e la regola "ricontrolla dopo 12 ore" di
+    telefoni_candidate funziona."""
+    if tel is None:
+        return
+    if controllato:
+        conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (bool(tel), lid))
+    elif tel:
+        conn.execute("UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE id=%s AND telefono_ok IS NOT TRUE",
+                     (lid,))
+
+
 def ha_numero_testo(title: str | None, desc: str | None) -> bool:
     from ..web.scovo import RE_LANDLINE, RE_MOBILE
     t = f"{title or ''} {desc or ''}"
@@ -101,26 +117,35 @@ def _diagnostica_as(det: dict) -> None:
 
 # ------------------------------------------------------------------ pagine
 
-def _as_dettaglio(client, url: str) -> tuple[str, dict | None]:
-    """('attivo'|'scomparso'|'errore', listingDetails)."""
+def _as_esito(client, url: str) -> tuple[str, dict | None, str | None]:
+    """3/11: ('attivo'|'scomparso'|'errore', listingDetails, motivo). Motivo della sparizione (solo con prova):
+    '404' (404/410), 'reindirizzato' (rimando alla ricerca /lst), 'rimosso' ("non è più disponibile")."""
     from ..collectors.base import next_data
     try:
         r = client.get(url)
     except Exception as e:
         log.info("TR autoscout %s: %s", url, str(e)[:100])
-        return "errore", None
+        return "errore", None, None
     if r.status_code in (404, 410):
-        return "scomparso", None
+        return "scomparso", None, "404"
     if r.status_code != 200:
-        return "errore", None
+        return "errore", None, None
     if "/lst" in str(r.url) and "/annunci/" not in str(r.url):
-        return "scomparso", None               # rimandati alla ricerca: annuncio tolto
+        return "scomparso", None, "reindirizzato"      # rimandati alla ricerca: annuncio tolto
     props = ((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}
     det = props.get("listingDetails") or props.get("listing")
     if not isinstance(det, dict):
-        return ("scomparso" if "non è più disponibile" in r.text.lower() else "errore"), None
+        if "non è più disponibile" in (r.text or "").lower():
+            return "scomparso", None, "rimosso"
+        return "errore", None, None
     _diagnostica_as(det)
-    return "attivo", det
+    return "attivo", det, None
+
+
+def _as_dettaglio(client, url: str) -> tuple[str, dict | None]:
+    """('attivo'|'scomparso'|'errore', listingDetails)."""
+    st, det, _ = _as_esito(client, url)
+    return st, det
 
 
 def _head_stato(client, url: str) -> str | None:
@@ -157,29 +182,30 @@ _SUBITO_TOLTO = ("annuncio non è più disponibile", "questo annuncio è scaduto
                  "annuncio non trovato")
 
 
-def subito_stato_con_prova(client, url: str) -> str:
-    """3/11: stato di un annuncio Subito per la marcatura 'scomparso' IN BLOCCO (annunci non più visti nelle ricerche).
-    Più severo di _subito_stato: 'scomparso' SOLO con una prova (404/410, rimando a una pagina senza il numero
-    dell'annuncio, oppure pagina senza i dati dell'annuncio e con la scritta "annuncio scaduto/rimosso").
-    Pagina con i dati dell'annuncio = 'attivo'. Tutto il resto (errori, blocchi, pagina non riconosciuta) = 'errore':
-    nessuna decisione, l'annuncio resta com'è."""
+def subito_esito_con_prova(client, url: str, lenient: bool = False) -> tuple[str, str | None]:
+    """3/11: (stato, motivo) di un annuncio Subito. 'scomparso' SOLO con una prova: 404/410 (motivo '404'), rimando a
+    una pagina senza il numero dell'annuncio ('reindirizzato'), pagina senza i dati dell'annuncio e con la scritta
+    "annuncio scaduto" ('scaduto': NON è una vendita) o "rimosso / non più disponibile" ('rimosso').
+    Pagina con i dati dell'annuncio = 'attivo'. Il resto (errori, blocchi, pagina non riconosciuta) = 'errore'.
+    lenient=True (auto del sito, giro_verifica): una pagina 200 dello stesso annuncio senza scritte di rimozione
+    vale 'attivo' come prima, ma per toglierla serve la stessa prova del controllo in blocco."""
     from ..collectors.base import find_key, next_data
     try:
         r = client.get(url)
     except Exception as e:
         log.info("SCOMPARSI subito %s: %s", url, str(e)[:100])
-        return "errore"
+        return "errore", None
     code = getattr(r, "status_code", None)
     if code in (404, 410):
-        return "scomparso"
+        return "scomparso", "404"
     if code != 200:
-        return "errore"
+        return "errore", None
     fin = str(getattr(r, "url", "") or url)
     m = _RE_ID_SUBITO.search(url)
     if m and m.group(1) not in fin:
-        return "scomparso"                       # rimandati alla ricerca o alla pagina principale
+        return "scomparso", "reindirizzato"      # rimandati alla ricerca o alla pagina principale
     if not m and not _stesso_annuncio(url, fin):
-        return "errore"                          # indirizzo senza numero: non si può dire
+        return ("scomparso", "reindirizzato") if lenient else ("errore", None)
     text = getattr(r, "text", "") or ""
     try:
         data = next_data(text)
@@ -187,10 +213,17 @@ def subito_stato_con_prova(client, url: str) -> str:
         data = None
     item = find_key(data, "ad", "item") if isinstance(data, dict) else None
     if isinstance(item, dict) and (item.get("urn") or item.get("subject") or item.get("features")):
-        return "attivo"
-    if any(k in text.lower() for k in _SUBITO_TOLTO):
-        return "scomparso"
-    return "errore"
+        return "attivo", None
+    low = text.lower()
+    trovate = [k for k in _SUBITO_TOLTO if k in low]
+    if trovate:
+        return "scomparso", ("scaduto" if any("scadut" in k for k in trovate) else "rimosso")
+    return ("attivo", None) if lenient else ("errore", None)
+
+
+def subito_stato_con_prova(client, url: str) -> str:
+    """Stato di un annuncio Subito per la marcatura 'scomparso' IN BLOCCO: vedi subito_esito_con_prova."""
+    return subito_esito_con_prova(client, url)[0]
 
 
 def _subito_stato(client, url: str) -> str:
@@ -291,23 +324,27 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
         if r["source"] == "autoscout24":
-            st, _det = _as_dettaglio(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
-            return r, st, None
+            st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
+            return r, st, motivo
         if r["source"] == "facebook":
             return r, _fb_stato(cfb, r["url"]), None
-        return r, _subito_stato(csb, r["url"]), None
+        # 3/11 (studio 4 §4.4): per togliere un'auto Subito serve la stessa prova del controllo in blocco (prima
+        # bastava la frase "non è più disponibile" in un punto qualsiasi della pagina, anche negli annunci simili)
+        st, motivo = subito_esito_con_prova(csb, r["url"], lenient=True)
+        return r, st, motivo
 
     spariti = []
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
-        for r, st, tel in ex.map(check, rows):
+        for r, st, motivo in ex.map(check, rows):
             stats[f"{r['source']}:{st}"] += 1
-            log.warning("VERIFICA_AUTO %s", json.dumps({"id": r["id"], "fonte": r["source"], "esito": st}))
+            log.warning("VERIFICA_AUTO %s", json.dumps({"id": r["id"], "fonte": r["source"], "esito": st, "motivo": motivo}))
             if st in ("errore", "incerto"):
                 continue
-            _mark(conn, r["id"], st, r.get("price_eur"))
+            _mark(conn, r["id"], st, r.get("price_eur"), motivo=motivo, sito=True)
             if st == "scomparso":
-                spariti.append(r["id"])
-                registra_sparita(conn, r["id"])
+                spariti.append(r["id"])           # tolta dal sito in ogni caso
+                if motivo != "scaduto":           # annuncio scaduto: non è una vendita, niente misura
+                    registra_sparita(conn, r["id"])
     conn.commit()
     stats["_spariti"] = spariti            # type: ignore[assignment]
     return stats
@@ -489,67 +526,99 @@ FASCE_SUBITO = [(0, 1500), (1500, 2500), (2500, 3500), (3500, 5000), (5000, 6500
                 (10000, 13000), (13000, 17000), (17000, 22000), (22000, 30000), (30000, 45000), (45000, 80000)]
 
 
-def subito_completo(conn) -> dict:
+def subito_completo(conn, minuti: float | None = None, col=None) -> dict:
     """25/10 (cliente: "leggi TUTTE le auto di Subito con le nostre regole nel raggio dei 100 km"): rilegge Subito
     provincia per provincia e fascia di prezzo per fascia (così non c'è il tetto delle 10.000 auto più recenti),
     salva gli annunci nuovi o cambiati e segna chi ha il numero (sì/no, mai il numero). La valutazione la fa poi
-    il ricalcolo del cron. Le province sono quelle entro circa 100 km da Milano (SUBITO_PROVINCE per cambiarle)."""
-    from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector, parse_item
-    col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    il ricalcolo del cron. Le province sono quelle entro circa 100 km da Milano (SUBITO_PROVINCE per cambiarle).
+    3/11 (studio 4, P7/P8): si usa SubitoCollector._deep, che DIVIDE le fasce piene (prima oltre 40 pagine il resto
+    si perdeva senza avviso), con i passi già fatti (PASSI_JOB) per riprendere dopo un riavvio. Solo l'interfaccia
+    di ricerca (gratuita), mai il Web Unlocker. È anche la rilettura settimanale del cron (rilettura_subito): gli
+    annunci ancora in vendita tornano "visti" e restano confronti validi. `minuti`: tempo massimo per giro (il resto
+    al giro dopo, dai passi)."""
+    from ..collectors.subito import REGION_CODES, SubitoCollector
+    col = col or SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
     province = [p.strip().upper() for p in os.environ.get("SUBITO_PROVINCE", ",".join(PROVINCE_100KM)).split(",") if p.strip()]
+    pagine = int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))
     st = Counter()
     t0 = time.time()
+    fine = t0 + minuti * 60 if minuti else None
+    pacco: list = []
+
+    def salva():
+        if pacco:
+            try:
+                _salva(conn, pacco, st)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                st["errore_salva"] += 1
+                log.info("SUBITO_COMPLETO salva: %s", str(e)[:150])
+            pacco.clear()
+
     for reg, provs in REGIONI.items():
         voluti = set(provs) & set(province)
         if not voluti:
             continue
         code = REGION_CODES.get(reg) or _codici_regione.get(reg) or col._trova_regione(set(provs), 100)
         if not code:
+            st["regione_non_trovata"] += 1
             continue
         _codici_regione[reg] = REGION_CODES[reg] = code
-        chiavi = col._province_keys(code, voluti, 100)
-        for sn, key in sorted(chiavi.items()):
-            for ps, pe in FASCE_SUBITO:
-                for page in range(int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))):
-                    try:
-                        # 3/11: con nuovi tentativi per 429/5xx/rete (prima la fascia si chiudeva al primo errore)
-                        r = col._api({"c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
-                                      "start": page * 100, "sort": "datedesc"})
-                    except Exception as e:
-                        st["errore"] += 1
-                        log.info("SUBITO_COMPLETO %s %s-%s: %s", sn, ps, pe, str(e)[:100])
-                        break
-                    time.sleep(float(os.environ.get("TR_TEL_PAUSA_S", "1.0")))
-                    if r.status_code != 200:
-                        st[f"http_{r.status_code}"] += 1
-                        break
-                    ads = (r.json() or {}).get("ads") or []
-                    st["letti"] += len(ads)
-                    lst = []
-                    for a in ads:
-                        l = parse_item(a)
-                        if l:
-                            lst.append(l)
-                        st["con_numero" if telefono_subito(a) else "senza_numero"] += 1
-                    if lst:
-                        try:
-                            _salva(conn, lst, st)
-                            conn.commit()
-                        except Exception as e:
-                            conn.rollback()
-                            st["errore_salva"] += 1
-                            log.info("SUBITO_COMPLETO salva: %s", str(e)[:150])
-                    si = [str(a.get("urn")) for a in ads if a.get("urn") and telefono_subito(a)]
-                    if si:
-                        st["aggiornati_si"] += conn.execute(
-                            "UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE source='subito' "
-                            "AND source_id = ANY(%s) AND telefono_ok IS DISTINCT FROM true", (si,)).rowcount
-                        conn.commit()
-                    if len(ads) < 100:
-                        break
-            log.warning("SUBITO_COMPLETO %s fatto in %.0fs: %s", sn, time.time() - t0, dict(st))
+        gen = col._deep({"price_bands": FASCE_SUBITO, "band_pages": pagine}, voluti, code, 100)
+        try:
+            for l in gen:
+                st["con_numero" if telefono_subito(l.raw if isinstance(l.raw, dict) else None) else "senza_numero"] += 1
+                pacco.append(l)
+                if len(pacco) >= 150:              # in memoria mai più di un pacchetto (512 MB)
+                    salva()
+                if fine and time.time() > fine:
+                    st["fermato_tempo"] += 1
+                    break
+        except Exception as e:
+            st["errore"] += 1
+            log.warning("SUBITO_COMPLETO %s: %s", reg, str(e)[:150])
+        finally:
+            gen.close()                            # fascia a metà: non segnata fatta, si riprende da lì
+        salva()
+        log.warning("SUBITO_COMPLETO %s fatto in %.0fs: %s", reg, time.time() - t0, dict(st))
+        if st["fermato_tempo"]:
+            break
+    st["letti"] = sum(v for k, v in st.items() if k.startswith("letti:"))
     log.warning("SUBITO_COMPLETO_FINE in %.0fs: %s", time.time() - t0, dict(st))
     return dict(st)
+
+
+def rilettura_subito(minuti: float | None = None) -> dict:
+    """3/11 (studio 4 §4.2): rilettura settimanale di tutti gli annunci Subito della zona, nel CRON (mai nel sito).
+    A pezzi: ogni giro al massimo RS_MINUTI minuti, i passi fatti restano (PASSI_JOB per settimana); il lavoro
+    risulta finito (job_runs ok) solo quando tutte le fasce sono state lette. Con il database oltre CE_DB_MAX_GB
+    non parte."""
+    from ..db import connect, db_pieno, log_job
+    from . import passi
+    settimana = datetime.now(timezone.utc).strftime("%G-%V")
+    job = f"rilettura_subito:{settimana}"
+    vecchio = os.environ.get("PASSI_JOB")
+    os.environ["PASSI_JOB"] = job
+    passi._cache = None
+    try:
+        with connect() as conn:
+            if db_pieno(conn):
+                log.warning("RILETTURA_SUBITO saltata: database oltre CE_DB_MAX_GB")
+                return {"saltata": "db_pieno"}
+            fin = log_job(conn, "rilettura_subito")
+            st = subito_completo(conn, minuti=float(os.environ.get("RS_MINUTI", "90")) if minuti is None else minuti)
+            completa = not st.get("fermato_tempo") and not st.get("errore")
+            fin(completa, st)
+        if completa:
+            passi.finito(job)
+        return st
+    finally:
+        if vecchio is None:
+            os.environ.pop("PASSI_JOB", None)
+        else:
+            os.environ["PASSI_JOB"] = vecchio
+        passi._cache = None
 
 
 def telefoni_candidate(conn, ids) -> Counter:
@@ -852,13 +921,27 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
         for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km, "gearbox": l.gearbox,
                               "power_kw": l.power_kw, "version_raw": l.version_raw}, l.title, l.description).items():
             setattr(l, k, v)                      # dati mancanti presi dal testo dell'annuncio
+        stats[f"letti:{l.source}"] += 1
         try:
             normalize_fields(l)
         except Exception:
             stats["scartati_dati"] += 1
+            stats["scarto:dati"] += 1
             continue
-        if not l.province or l.province.upper() not in zona:
+        if not l.province and l.city:
+            # 3/11 (studio 4, P4): provincia dal comune prima di dire "fuori zona" (AutoScout24 senza CAP)
+            from .collect import provincia_da_comune
+            pv = provincia_da_comune(conn, l.city)
+            if pv:
+                l.province = pv
+                stats["provincia_ricavata"] += 1
+        if not l.province:
             stats[f"{l.source}:fuori_zona"] += 1
+            stats["scarto:senza_provincia"] += 1
+            continue
+        if l.province.upper() not in zona:
+            stats[f"{l.source}:fuori_zona"] += 1
+            stats["scarto:fuori_zona"] += 1
             continue
         if l.province and not l.region:
             from ..core.normalize import PROVINCE_REGION
@@ -868,14 +951,15 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
         except Exception as e:
             conn.rollback()
             stats["scartati_dati"] += 1
+            stats["scarto:non_salvato"] += 1
             log.info("TR annuncio %s non salvato: %s", l.url, str(e)[:100])
             continue
+        stats["salvati"] += 1
         if l.source == "autoscout24":
-            if tel is not None:
-                conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, lid))
+            salva_telefono(conn, lid, tel, controllato=tel is not None)        # dalla pagina dell'annuncio
         else:
-            conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s",
-                         (True if (tel_sub or ha_numero_testo(l.title, l.description)) else None, lid))   # Subito: "no" solo dal controllo
+            # Subito: "sì" dalla ricerca (advertiser.phone) o dal testo; il "no" lo dà solo il controllo della pagina
+            salva_telefono(conn, lid, True if (tel_sub or ha_numero_testo(l.title, l.description)) else None)
         conn.execute("UPDATE listings SET last_checked_at=now() WHERE id=%s", (lid,))
         stats[f"{l.source}:{ev}"] += 1
         if ev in ("prezzo", "riapparso"):

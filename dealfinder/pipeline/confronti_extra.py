@@ -36,11 +36,13 @@ def giro() -> dict:
     from ..db import connect, upsert_listing
     from .lusso import bande_parallele
     st: Counter = Counter()
+    from ..db import db_gb, db_pieno
+    from .collect import provincia_da_comune, riepilogo_scarti
     with connect() as conn:
-        gb = float(conn.execute("SELECT pg_database_size(current_database()) / 1e9 AS gb").fetchone()["gb"])
-    if gb > float(os.environ.get("CE_DB_MAX_GB", "15")):
-        log.warning("CONFRONTI_EXTRA fermo: database a %.1f GB", gb)
-        return {"fermo_db_gb": round(gb, 1)}
+        if db_pieno(conn):
+            gb = db_gb(conn) or 0.0
+            log.warning("CONFRONTI_EXTRA fermo: database a %.1f GB", gb)
+            return {"fermo_db_gb": round(gb, 1)}
     # 1/11 (cliente: "raccogliamo gli annunci fuori zona per averli sempre per i confronti"): regioni intorno alla Lombardia.
     # Ogni città ha il suo turno (CE_ORE ore); a ogni giro del cron se ne fanno al massimo CE_PER_GIRO, così il giro
     # della zona non si allunga di ore e le città restano sempre aggiornate a rotazione.
@@ -59,23 +61,35 @@ def giro() -> dict:
             n = 0
             for l in bande_parallele(lo, hi, int(os.environ.get("CE_PASSO", "1000")), venditori,
                                      workers=int(os.environ.get("CE_PARALLELI", "4"))):
+                st["letti:autoscout24"] += 1
                 try:
-                    for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km}, l.title, l.description).items():
+                    # 3/11: anche cambio e kW dal testo (come in _salva), provincia dal comune prima di scartare
+                    for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km, "gearbox": l.gearbox,
+                                          "power_kw": l.power_kw, "version_raw": l.version_raw}, l.title, l.description).items():
                         setattr(l, k, v)
                     normalize_fields(l)
+                    if not l.province and l.city:
+                        l.province = provincia_da_comune(conn, l.city)
+                        if l.province:
+                            st["provincia_ricavata"] += 1
                     if not l.province:
                         st["senza_provincia"] += 1
+                        st["scarto:senza_provincia"] += 1
                         continue
                     l.region = l.region or PROVINCE_REGION.get(l.province.upper())
                     l.photos = []                       # solo confronto: niente foto (spazio)
-                    _, ev = upsert_listing(conn, l)
+                    # 3/11: punto di ripristino per annuncio: un errore perde solo quell'annuncio (prima il rollback
+                    # buttava anche quelli letti dall'ultimo commit, fino a 199)
+                    with conn.transaction():
+                        _, ev = upsert_listing(conn, l)
                     st[f"{cap}:{ev}"] += 1
+                    st["salvati"] += 1
                     n += 1
                     if n % 200 == 0:
                         conn.commit()
                 except Exception as e:
-                    conn.rollback()
                     st["errori"] += 1
+                    st["scarto:non_salvato"] += 1
                     if st["errori"] < 4:
                         log.warning("CONFRONTI_EXTRA annuncio non salvato: %s", str(e)[:120])
             conn.commit()
@@ -86,5 +100,6 @@ def giro() -> dict:
                            (json.dumps({k: v for k, v in st.items() if k.startswith(cap)}), _jid))
         except Exception as e:
             log.warning("CONFRONTI_EXTRA turno non salvato: %s", str(e)[:120])
+    log.warning("RACCOLTA_SCARTI confronti_extra %s", json.dumps(riepilogo_scarti(st)))
     log.warning("CONFRONTI_EXTRA_FINE %s", dict(st))
     return dict(st)

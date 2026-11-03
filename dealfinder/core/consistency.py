@@ -26,8 +26,25 @@ MAKES = {
     "smart": "smart", "suzuki": "suzuki", "mazda": "mazda", "honda": "honda", "volvo": "volvo", "jeep": "jeep",
     "land rover": "land-rover", "range rover": "land-rover", "mitsubishi": "mitsubishi",
     "chevrolet": "chevrolet", "porsche": "porsche", "jaguar": "jaguar", "tesla": "tesla", "subaru": "subaru",
-    "mg": "mg", "daihatsu": "daihatsu", "lexus": "lexus", "ds": "ds",
+    "mg": "mg", "daihatsu": "daihatsu", "lexus": "lexus", "ds": "ds", "ds automobiles": "ds", "abarth": "abarth",
 }
+# 3/11 (studio 4, P10): marche che il venditore scrive in due modi per la stessa auto. "Fiat 500 Abarth" con marca
+# abarth, "Citroen DS3" con marca ds-automobiles: non sono dati incoerenti (prima ogni DS e ogni Abarth risultava
+# "marca_diversa_dal_testo", quindi esclusa dai confronti e con il prezzo "non affidabile").
+STESSO_GRUPPO = {"abarth": "fiat", "ds": "citroen"}
+
+
+def _gruppo(marca: str | None) -> str | None:
+    return STESSO_GRUPPO.get(marca, marca) if marca else marca
+
+
+def marca_campo(make: str | None) -> str | None:
+    """Marca del campo strutturato nella forma della tabella MAKES (dopo canon_make su entrambi i lati):
+    "mercedes-benz" -> "mercedes", "ds-automobiles" -> "ds", "alfa-romeo" -> "alfa-romeo"."""
+    mk = (make or "").lower()
+    if not mk:
+        return None
+    return MAKES.get(mk.replace("-", " "), MAKES.get(mk, mk))
 # modelli famosi che identificano la marca anche senza nominarla
 MODEL_MAKE = {
     "panda": "fiat", "punto": "fiat", "500": "fiat", "tipo": "fiat", "doblo": "fiat", "golf": "volkswagen",
@@ -73,9 +90,8 @@ def check(l: Listing, fix: bool = True) -> list[str]:
     problems = []
     makes = text_makes(l)
     # 28/10: marca del campo nella stessa forma del testo ("mercedes-benz" -> "mercedes", "land-rover" -> "land-rover")
-    mk = (l.make or "").lower()
-    mk = MAKES.get(mk.replace("-", " "), MAKES.get(mk, mk))
-    if l.make and makes and mk not in makes:
+    mk = marca_campo(l.make)
+    if l.make and makes and _gruppo(mk) not in {_gruppo(m) for m in makes}:
         problems.append("marca_diversa_dal_testo")
     ty = text_year(l)
     if ty and l.year and abs(ty - l.year) >= 2:

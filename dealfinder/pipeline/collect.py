@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import time
-import zlib
 import re
 import sys
 from collections import Counter
@@ -143,38 +142,147 @@ def city_provinces(conn) -> dict:
     return out
 
 
-def _fuori_regole_raccolta(l) -> str | None:
-    """Regole della raccolta completa: max 180.000 km, dal 2007. Restituisce il motivo dello scarto:
-    "regole" (km/anno) o "senza_numero" (Subito senza numero scritto nel testo: se ne tiene la metà migliore)."""
+_PROV_COMUNE: dict = {"mappa": None, "at": 0.0}
+
+
+def provincia_da_comune(conn, city: str | None) -> str | None:
+    """3/11 (studio 4, P4): provincia dal comune (mappa imparata dagli annunci Subito, letta al massimo ogni 6 ore
+    per processo). None se il comune non è noto."""
+    import time as _t
+    if not city:
+        return None
+    if _PROV_COMUNE["mappa"] is None or _t.time() - _PROV_COMUNE["at"] > 6 * 3600:
+        try:
+            _PROV_COMUNE.update(mappa=city_provinces(conn), at=_t.time())
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            log.warning("comuni -> province non letti: %s", str(e)[:120])
+            _PROV_COMUNE.update(mappa={}, at=_t.time())
+    return _PROV_COMUNE["mappa"].get(_norm_city(city))
+
+
+RINORM_PEZZO = 2000
+
+
+def rinormalizza_righe(righe: list[dict], con_tipo: bool = False) -> list[dict]:
+    """Regole di normalizzazione di oggi su righe già salvate: ritorna SOLO le modifiche ({id, campo: valore}).
+    Stesse funzioni della raccolta (canon_make, canon_model, norm_fuel, norm_gearbox, fuel_tipo); il flag
+    'dati_incoerenti' si toglie se con le regole nuove la marca torna coerente (bug DS/Abarth). Idempotente."""
+    from ..core import normalize as N
+    from ..core.consistency import check
+    from ..core.models import Listing
+    out = []
+    for r in righe:
+        nuovo = {}
+        mk = N.canon_make(N.slug(r.get("make"))) if r.get("make") else r.get("make")
+        md = N.canon_model(mk, N.slug(r.get("model"))) if r.get("model") else r.get("model")
+        testo = f"{r.get('version_raw') or ''} {r.get('title') or ''}"
+        fu = N.norm_fuel(r.get("fuel")) if r.get("fuel") else r.get("fuel")
+        if fu in ("benzina", "diesel") and N._RE_IBRIDA_TESTO.search(testo):
+            fu = "ibrida"
+        gb = N.norm_gearbox(r.get("gearbox")) if r.get("gearbox") else r.get("gearbox")
+        for k, v in (("make", mk), ("model", md), ("fuel", fu), ("gearbox", gb)):
+            if v != r.get(k):
+                nuovo[k] = v
+        if con_tipo and r.get("fuel"):
+            ft = N.fuel_tipo(r.get("fuel"), testo)
+            if ft != r.get("fuel_tipo") and ft is not None:
+                nuovo["fuel_tipo"] = ft
+        flags = list(r.get("price_flags") or [])
+        if "dati_incoerenti" in flags:
+            l = Listing(source=r.get("source") or "x", source_id=str(r["id"]), url="", make=mk, model=md,
+                        year=r.get("year"), mileage_km=r.get("mileage_km"), title=r.get("title"),
+                        description=r.get("descr"), version_raw=r.get("version_raw"))
+            if not check(l, fix=True):
+                nuovo["price_flags"] = [f for f in flags if f != "dati_incoerenti"]
+        if nuovo:
+            out.append({"id": r["id"], **nuovo})
+    return out
+
+
+def rinormalizza(conn, pezzo: int = RINORM_PEZZO, giorni: int = 180) -> dict:
+    """3/11 (studio 4, P9/P13/P14): riapplica le regole di normalizzazione allo storico (annunci attivi e spariti da
+    meno di `giorni`), a pezzi da `pezzo` righe in ordine di id. Riprende dall'ultimo id fatto (lavori_cursore):
+    dopo un riavvio non si rifà da capo. Si scrivono solo le righe che cambiano. Solo nel cron (vedi
+    lavoro_rinormalizza)."""
+    from ..core.normalize import NORM_VERSIONE
+    from ..db import ha_colonna
+    job = f"rinormalizza:v{NORM_VERSIONE}"
+    con_tipo = ha_colonna(conn, "fuel_tipo")
+    r = conn.execute("SELECT ultimo_id FROM lavori_cursore WHERE job=%s", (job,)).fetchone()
+    ultimo = int(r["ultimo_id"]) if r else 0
+    st: Counter = Counter()
+    while True:
+        righe = conn.execute(
+            "SELECT id, source, make, model, fuel, gearbox, title, version_raw, year, mileage_km, price_flags"
+            + (", fuel_tipo" if con_tipo else "") +
+            ", CASE WHEN 'dati_incoerenti' = ANY(price_flags) THEN left(description, 300) END AS descr "
+            "FROM listings WHERE id > %s AND (status = 'attivo' OR disappeared_at > now() - make_interval(days => %s)) "
+            "ORDER BY id LIMIT %s", (ultimo, giorni, pezzo)).fetchall()
+        if not righe:
+            break
+        st["lette"] += len(righe)
+        for m in rinormalizza_righe(righe, con_tipo):
+            campi = [k for k in m if k != "id"]
+            conn.execute("UPDATE listings SET " + ", ".join(f"{k}=%({k})s" for k in campi) + " WHERE id=%(id)s", m)
+            st["cambiate"] += 1
+            for k in campi:
+                st[f"campo:{k}"] += 1
+        ultimo = int(righe[-1]["id"])
+        conn.execute("INSERT INTO lavori_cursore (job, ultimo_id) VALUES (%s,%s) ON CONFLICT (job) DO UPDATE "
+                     "SET ultimo_id=EXCLUDED.ultimo_id, aggiornato=now()", (job, ultimo))
+        conn.commit()                         # ogni pezzo salvato: un riavvio riparte da qui
+        if len(righe) < pezzo:
+            break
+    st["ultimo_id"] = ultimo
+    log.warning("RINORMALIZZA %s: %s", job, dict(st))
+    return dict(st)
+
+
+def lavoro_rinormalizza() -> dict | None:
+    """Una volta per versione delle regole (NORM_VERSIONE), segnato fatto solo a lavoro finito (ciclo.inizia)."""
+    from ..core.normalize import NORM_VERSIONE
+    from .ciclo import inizia
+    lav = inizia(f"rinormalizza:v{NORM_VERSIONE}")
+    if not lav:
+        return None
+    try:
+        with connect() as conn:
+            st = rinormalizza(conn)
+        lav.fatto(st)
+        return st
+    except Exception as e:
+        lav.fallito(e)
+        log.warning("RINORMALIZZA non finito (riprende al prossimo giro): %s", str(e)[:200])
+        return None
+
+
+def senza_numero(l) -> bool:
+    """Subito senza numero: né nel testo né il bottone "Chiama" (advertiser.phone nella ricerca). Solo sì/no."""
+    if l.source != "subito":
+        return False
     from ..web import scovo
+    from .tempo_reale import telefono_subito
+    if telefono_subito(l.raw if isinstance(l.raw, dict) else None):
+        return False
+    t = f"{l.title or ''} {l.description or ''}"
+    return not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
+
+
+def _fuori_regole_raccolta(l) -> str | None:
+    """Regole della raccolta completa: max 180.000 km, dal 2007. "regole" se fuori (l'auto si salva lo stesso,
+    come solo confronto: stage 'mercato'), altrimenti None.
+    3/11 (studio 4, P1): il numero di telefono non è più un motivo di scarto (prima si buttava circa metà degli
+    annunci Subito senza numero nel testo, guardando solo il testo e non il bottone "Chiama"): si guarda solo
+    alla pubblicazione."""
     if l.mileage_km and l.mileage_km > int(os.environ.get("FULL_KM", "180000")):
         return "regole"
     if l.year and l.year < int(os.environ.get("FULL_ANNO", "2007")):
         return "regole"
-    if l.source == "subito":
-        t = f"{l.title or ''} {l.description or ''}"
-        if not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)):
-            return "senza_numero"
     return None
-
-
-class _MetaMigliore:
-    """Subito senza numero: si tiene circa la METÀ_SENZA_NUMERO (0.5) migliore. Il punteggio è il guadagno
-    stimato dal modello prezzi; si tiene chi sta sopra la mediana dei punteggi visti finora (si aggiusta da sola)."""
-    def __init__(self, quota: float):
-        import bisect
-        self.quota, self.visti, self._bis = quota, [], bisect
-
-    def tieni(self, punteggio: float) -> bool:
-        if self.quota >= 1:
-            return True
-        if self.quota <= 0:
-            return False
-        self._bis.insort(self.visti, punteggio)
-        if len(self.visti) < 50:
-            return True
-        soglia = self.visti[int(len(self.visti) * (1 - self.quota))]
-        return punteggio >= soglia
 
 
 def run(mode: str) -> Counter:
@@ -535,30 +643,39 @@ def run(mode: str) -> Counter:
                     n += 1
             conn.commit()
             stats["facebook:provincia_aggiunta"] += n
-        meta = _MetaMigliore(float(os.environ.get("META_SENZA_NUMERO", "0.5")))
+        from ..core.dal_testo import completa
+        from ..db import db_pieno
+        from .tempo_reale import ha_numero_testo, salva_telefono, telefono_subito
+        modi_full = ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra")
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
+                    stats[f"letti:{listing.source}"] += 1
                     try:
+                        # 3/11 (studio 4, P12): anche qui alimentazione, anno, km, cambio e kW dal testo, come in _salva
+                        for k, v in completa({"fuel": listing.fuel, "year": listing.year, "mileage_km": listing.mileage_km,
+                                              "gearbox": listing.gearbox, "power_kw": listing.power_kw,
+                                              "version_raw": listing.version_raw}, listing.title, listing.description).items():
+                            setattr(listing, k, v)
                         normalize_fields(listing)
                     except Exception as e:          # un testo strano non ferma tutta la raccolta
                         stats[f"{collector.source}:scartato_dati"] += 1
+                        stats["scarto:dati"] += 1
                         log.warning("annuncio %s non normalizzato: %r", listing.url, e)
                         continue
-                    if mode in ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra"):
-                        motivo = _fuori_regole_raccolta(listing)
-                        if motivo == "regole":
-                            stats[f"{listing.source}:fuori_regole"] += 1
-                            continue
-                        if motivo == "senza_numero":
-                            ps = prescreen(model, listing) if model is not None else {}
-                            pot = ps.get("potenziale")
-                            if pot is None:     # niente stima: metà a caso (fissa per annuncio)
-                                pot = -10**6 + (zlib.crc32(listing.url.encode()) % 1000)
-                            if not meta.tieni(pot):
-                                stats["subito:senza_numero_scartate"] += 1
+                    solo_confronto = False
+                    if mode in modi_full:
+                        if senza_numero(listing):
+                            stats["subito:senza_numero_letti"] += 1          # solo contato: si salva sempre
+                        if _fuori_regole_raccolta(listing) == "regole":
+                            # 3/11 (P5): fuori km/anno si salva lo stesso come confronto (stage 'mercato'), tranne
+                            # con il database oltre CE_DB_MAX_GB
+                            if db_pieno(conn):
+                                stats[f"{listing.source}:fuori_regole_db_pieno"] += 1
+                                stats["scarto:db_pieno"] += 1
                                 continue
-                            stats["subito:senza_numero_tenute"] += 1
+                            stats[f"{listing.source}:fuori_regole"] += 1
+                            solo_confronto = True
                     if listing.source in ("facebook", "autoscout24"):
                         # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
                         pv = prov_of.get(_norm_city(listing.city))
@@ -569,9 +686,11 @@ def run(mode: str) -> Counter:
                             from ..pricing.ricalcolo import NORD
                             if not pv or pv not in NORD or pv in ZONA:
                                 stats["mercato_nord:fuori"] += 1
+                                stats["scarto:fuori_nord"] += 1
                                 continue
                         elif mode not in ("incidentate", "modena_inc") and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
                             stats[f"{listing.source}:fuori_zona"] += 1
+                            stats["scarto:senza_provincia" if not pv else "scarto:fuori_zona"] += 1
                             continue
                         if listing.province and not listing.region:
                             from ..core.normalize import PROVINCE_REGION
@@ -579,16 +698,25 @@ def run(mode: str) -> Counter:
                     from ..zone import comune_ok
                     if not comune_ok(listing.province, listing.city):
                         stats[f"{listing.source}:fuori_60km"] += 1
+                        stats["scarto:fuori_60km"] += 1
                         continue
                     try:
                         lid, event = upsert_listing(conn, listing)
                     except Exception as e:          # un annuncio con dati assurdi non ferma la raccolta
                         conn.rollback()
                         stats[f"{collector.source}:scartato_dati"] += 1
+                        stats["scarto:non_salvato"] += 1
                         log.warning("annuncio %s non salvato: %s", listing.url, str(e)[:120])
                         continue
+                    stats["salvati"] += 1
                     if mode == "mercato_nord":           # solo prezzo di riferimento: mai proposta
                         conn.execute("UPDATE listings SET stage='mercato', stage_reason='mercato_nord' WHERE id=%s", (lid,))
+                    elif solo_confronto:
+                        conn.execute("UPDATE listings SET stage='mercato', stage_reason='fuori_regole' "
+                                     "WHERE id=%s AND stage IS DISTINCT FROM 'approfondito'", (lid,))
+                    if listing.source == "subito":       # sì/no del telefono stabile (mai il numero)
+                        salva_telefono(conn, lid, True if (telefono_subito(listing.raw if isinstance(listing.raw, dict) else None)
+                                                           or ha_numero_testo(listing.title, listing.description)) else None)
                     if model is not None and event in ("nuovo", "prezzo", "riapparso"):
                         ps = prescreen(model, listing)
                         conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "
@@ -599,7 +727,7 @@ def run(mode: str) -> Counter:
                         if ps["esito"] == "non_interessante":
                             conn.execute("UPDATE listings SET stage='mercato', stage_reason='modello_prezzi' "
                                          "WHERE id=%s AND stage='nuovo'", (lid,))
-                    if event in ("prezzo", "riapparso"):
+                    if event in ("prezzo", "riapparso") and not solo_confronto:
                         # prezzo cambiato: l'annuncio va rivalutato
                         conn.execute("UPDATE listings SET stage='nuovo' WHERE id=%s AND stage<>'nuovo'", (lid,))
                     stats[f"{collector.source}:{event}"] += 1
@@ -679,7 +807,73 @@ def run(mode: str) -> Counter:
             from . import passi
             passi.finito(os.environ["PASSI_JOB"])
     log.info("raccolta %s: %s", mode, dict(stats))
+    log.warning("RACCOLTA_SCARTI %s", json.dumps(riepilogo_scarti(stats)))
     return stats
+
+
+def riepilogo_scarti(stats) -> dict:
+    """3/11 (studio 4 §4.1): una riga per giro con letti, salvati e ogni scarto (letti = salvati + scarti)."""
+    letti = sum(v for k, v in stats.items() if k.startswith("letti:") and isinstance(v, int))
+    scarti = {k.split(":", 1)[1]: v for k, v in stats.items() if k.startswith("scarto:") and isinstance(v, int) and v}
+    return {"letti": letti, "salvati": int(stats.get("salvati", 0)), "scarti": scarti,
+            "non_contati": letti - int(stats.get("salvati", 0)) - sum(scarti.values())}
+
+
+def lavori_zona(esito: dict) -> None:
+    """3/11 (studio 4): dopo il giro della zona. 1) il giro si registra in job_runs ('zona_cron:giro', con i
+    contatori degli scarti); 2) AutoScout24: gli annunci non visti nelle ultime riletture si controllano uno per uno
+    e diventano 'scomparso' solo con una prova (pagine gratuite; prima le AutoScout sparite restavano attive per
+    sempre e non erano mai vendute). Solo se il giro ha letto davvero AutoScout24 (un blocco non fa sparire nulla)."""
+    from ..db import connect as _cn, log_job as _lj
+    try:
+        with _cn() as c:
+            _lj(c, "zona_cron:giro")(True, {k: v for k, v in esito.items() if isinstance(v, (int, float, str))})
+    except Exception as e:
+        log.warning("ZONA_CRON non registrata: %s", str(e)[:200])
+    letti_as = sum(v for k, v in esito.items() if k.startswith("letti_autoscout") and isinstance(v, int))
+    if os.environ.get("AS_SCOMPARSI", "1") != "1" or letti_as < int(os.environ.get("AS_SCOMPARSI_MIN_LETTI", "200")):
+        return
+    try:
+        from .benzina_mi import PROVINCE_100
+        from .verify import scomparsi_con_prova
+        with _cn() as c:
+            fin = _lj(c, "scomparsi:autoscout24")
+            st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=int(os.environ.get("AS_NON_VISTI_ORE", "8")),
+                                     limite=int(os.environ.get("AS_SCOMPARSI_MAX", "600")),
+                                     minuti=float(os.environ.get("AS_SCOMPARSI_MINUTI", "20")),
+                                     pausa=(0.5, 1.2), zona=PROVINCE_100)
+            fin(not st.get("eccezione"), dict(st))
+    except Exception as e:
+        log.warning("SCOMPARSI autoscout24 non controllati (nessuno segnato senza prova): %s", str(e)[:200])
+
+
+def lavori_cron() -> None:
+    """3/11 (studio 4): lavori di qualità dei dati, solo nel cron (mai nel sito, 512 MB), ognuno indipendente:
+    indice su vehicle_id per le ripubblicazioni (CONCURRENTLY), rinormalizzazione dello storico (una volta per
+    versione delle regole, riprende dopo un riavvio), rilettura settimanale di Subito (gratuita, a pezzi)."""
+    if os.environ.get("ZONA_CRON") != "1":
+        return
+    if os.environ.get("INDICE_VEICOLO", "1") == "1":
+        try:
+            from ..db import assicura_indice_veicolo
+            esito = assicura_indice_veicolo()
+            if esito != "pronto":
+                log.warning("INDICE_VEICOLO %s", esito)
+        except Exception as e:
+            log.warning("INDICE_VEICOLO non riuscito: %s", str(e)[:200])
+    if os.environ.get("RINORMALIZZA", "1") == "1":
+        try:
+            lavoro_rinormalizza()
+        except Exception as e:
+            log.warning("RINORMALIZZA non riuscito: %s", str(e)[:200])
+    if os.environ.get("RILETTURA_SUBITO", "1") == "1":
+        try:
+            from .ciclo import _due
+            if _due("rilettura_subito", int(os.environ.get("RS_ORE", str(24 * 7)))):
+                from .tempo_reale import rilettura_subito
+                rilettura_subito()
+        except Exception as e:
+            log.warning("RILETTURA_SUBITO non riuscita: %s", str(e)[:200])
 
 
 def _ai_prezzi():
@@ -732,7 +926,7 @@ if __name__ == "__main__":
                 for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"), "BENZ_CAP_EXTRA": os.environ.get("ZC_CAP_EXTRA", "25121:90"),
                              "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "70000"),   # 31/10: anche 50-70k (prima nessuno le guardava)
                              "BENZ_PROVINCE": os.environ.get("ZC_PROVINCE", "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"),
-                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
+                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": os.environ.get("ZC_RACCOLTA_TUTTI", "1"), "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
                              "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
                              "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
                              "BENZ_PARALLELI": os.environ.get("ZC_PARALLELI", "3"), "BENZ_SOLO_VALUTA": os.environ.get("ZC_SOLO_VALUTA", "0"),
@@ -742,8 +936,10 @@ if __name__ == "__main__":
                 from . import benzina_mi as B
                 esito = B.giro()
                 log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+                lavori_zona(esito)
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
+        lavori_cron()
     # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
     if os.environ.get("CONFRONTI_EXTRA") == "1":
         try:
