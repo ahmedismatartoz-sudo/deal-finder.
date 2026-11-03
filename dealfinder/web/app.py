@@ -1780,7 +1780,8 @@ def _mercato_calibrato(items: list) -> list:
                 and int(it["km"]) <= int(os.environ.get("BENZ_META_KM", "100000")):
             f = 1 - (1 - f) * float(os.environ.get("BENZ_META_QUOTA", "0.5"))
         R = float(pv.get("R_finale") or pv.get("R") or 0)
-        R2 = min(R, M * f * 0.95) if f < 1 else R
+        # 3/11 19:38 (cliente: "prezzi di rivendita veri"): solo il fattore misurato chiesto -> venduto, senza il −5% in più
+        R2 = min(R, M * f * float(os.environ.get("CALIBRA_MARGINE", "1.0"))) if f < 1 else R
         giu = int(round(R - R2))
         d = difetti.get(it["id"])
         if d and d.get("grave"):

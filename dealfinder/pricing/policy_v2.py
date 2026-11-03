@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03d"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
+POLICY_REV = "2026-11-03e"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -900,21 +900,16 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             centrale = out["M"] * (1 - r_new)
             riv.update(R=int(round(centrale)), centrale_ridotto=int(round(centrale)), riduzione=r_new,
                        fascia=riv["fascia"] + f" · ridotta a {int(r_new*100)}%: {perche}")
-    # 3/11 19:26 (cliente: "controlla il nuovo sistema di confronti"): l'esame sulle 20 auto valutate a mano dal cliente
-    # dà il software in media −10,6% sotto la rivendita vera (solo 4 su 20 entro il 10%). Il valore reale è già un
-    # prezzo di VENDITA: togliere ancora la riduzione di fascia (7–10%) contava la prudenza due volte. Col valore reale
-    # la riduzione diventa VR_RIDUZIONE (0%) se le gemelle concordano, VR_RIDUZIONE_PRUDENTE (3%) se no.
-    if riv.get("R") is not None and str(out.get("metodo") or "").startswith("valore_reale") \
-            and os.environ.get("VR_SENZA_RIDUZIONE", "1") == "1":
-        r_vr = float(os.environ.get("VR_RIDUZIONE", "0") if out["metodo"] == "valore_reale"
-                     else os.environ.get("VR_RIDUZIONE_PRUDENTE", "0.03"))
-        if r_vr < (riv.get("riduzione") or 0):
-            centrale = out["M"] * (1 - r_vr)
-            lim = (out.get("L") or 10**9) if cfg.usa_L else 10**9
-            riv.update(R=int(round(min(centrale, lim))), centrale_ridotto=int(round(centrale)), riduzione=r_vr,
-                       R_da="L" if lim < centrale else "valore reale",
-                       fascia=(riv.get("fascia") or "") + f" · valore reale: riduzione {r_vr*100:.0f}% (è già un prezzo di vendita)")
-    if cfg.vendita_veloce and riv.get("R") is not None and (
+    # 3/11 19:38 (cliente: "voglio i prezzi di rivendita veri del mercato, non prudenti"): la rivendita è il mercato
+    # vero M (col valore reale è già il prezzo di VENDITA; senza, il sito lo porta ai prezzi veri col fattore misurato).
+    # Niente riduzione di fascia, niente tetto P25 delle gemelle. Esame sulle 20 auto valutate a mano: con la riduzione
+    # il software stava −10,6% sotto; la variante "senza riduzione" sbaglia −0,2% (mediana 6,9% contro 9,9%).
+    # RIVENDITA_VERA=0 torna alle regole prudenti di prima.
+    rivendita_vera = os.environ.get("RIVENDITA_VERA", "1") == "1"
+    if riv.get("R") is not None and rivendita_vera:
+        riv.update(R=int(round(out["M"])), centrale_ridotto=int(round(out["M"])), riduzione=0.0, R_da="mercato vero",
+                   fascia="rivendita = prezzo vero di mercato")
+    if cfg.vendita_veloce and not rivendita_vera and riv.get("R") is not None and (
             cfg.vr_veloce or not str(out.get("metodo") or "").startswith("valore_reale")):
         if len(prezzi) >= 2:
             rapp = percentile(prezzi, cfg.q_veloce) / max(percentile(prezzi, .5), 1)
@@ -952,7 +947,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"mercato M {out['M']} € oltre {cfg.m_massimo} €: la tabella prudenziale non si estende")
         return out
-    if out.get("prudente_pochi"):
+    if out.get("prudente_pochi") and not rivendita_vera:
         # rivendita prudente: non oltre il prezzo PIÙ BASSO tra le auto uguali trovate, né oltre il mercato −10%
         # (POLICY_PRUDENTE_SCONTO)
         sc = float(os.environ.get("POLICY_PRUDENTE_SCONTO", "10")) / 100

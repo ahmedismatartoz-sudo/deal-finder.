@@ -1,6 +1,8 @@
 """Casi limite della policy di valutazione pv2."""
 from datetime import datetime, timedelta, timezone
 
+import os as _os
+_os.environ.setdefault("RIVENDITA_VERA", "0")     # questi test controllano le regole prudenti; la rivendita vera ha il suo test
 from dealfinder.pricing.policy_v2 import (PolicyConfig, percentile, riduzione, rivendita, valuta, seleziona)
 
 NOW = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
@@ -57,6 +59,16 @@ def test_base_preferita_opportunita():
     assert 9700 <= v["M"] <= 9900 and 9300 <= v["L"] <= 9475   # corretti per km (confronti con meno km)
     assert v["riduzione"] == .07 and v["R"] == round(v["M"] * .93)     # 12 confronti diretti: stima precisa → 7%
     assert v["categoria"] in ("opportunita", "non_conveniente")
+    assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
+
+
+def test_rivendita_vera_uguale_al_mercato():
+    _os.environ["RIVENDITA_VERA"] = "1"
+    try:
+        v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
+    finally:
+        _os.environ["RIVENDITA_VERA"] = "0"
+    assert v["riduzione"] == 0 and v["R"] == round(v["M"]) and v["R_da"] == "mercato vero"
     assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
 
 
