@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03i"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
+POLICY_REV = "2026-11-03j"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -152,7 +152,7 @@ class PolicyConfig:
     giacenza_euro_giorno: float = 3.0
     # 25/10 (cliente): costi del commerciante per rivendere (passaggio, tagliando, pulizia, ritocchi, garanzia)
     costo_fisso: int = 0              # 2/11 sera (cliente: "togli i 600 euro di costi"); prima 600
-    costo_fisso_alto: int = 1000
+    costo_fisso_alto: int = 0         # 3/11 23:23 (cliente: "il costo fisso di 1.000 € non l'ho mai deciso"); prima 1000
     costo_alto_da: int = 20000
     iva_margine: bool = False         # tolta il 16/10 (richiesta); POLICY_IVA_MARGINE=1 la rimette. Regime del margine (art. 36 DL 41/95), aliquota 22%
     iva_aliquota: float = .22
@@ -704,6 +704,8 @@ def costi(t: dict, R: int, cfg: PolicyConfig) -> dict:
     voci["garanzia"] = {"euro": gar, "origine": "stima",
                         "nota": f"accantonamento garanzia legale {int(cfg.garanzia_pct*100)}% della rivendita (min {cfg.garanzia_min} €)"}
     cf = cfg.costo_fisso_alto if int(t["price_eur"]) > cfg.costo_alto_da else cfg.costo_fisso
+    # 3/11 23:23 (cliente: "i costi li gestisce il venditore, massimo 200 € di costi"): mai oltre COSTI_FISSI_MAX
+    cf = min(cf, int(os.environ.get("COSTI_FISSI_MAX", "200")))
     voci["costi_commerciante"] = {"euro": int(cf), "origine": "config",
                                   "nota": "tagliando 150 € e pulizia 50 €"}
     voci["giacenza"] = {"euro": int(round(cfg.giacenza_giorni * cfg.giacenza_euro_giorno)), "origine": "stima",
