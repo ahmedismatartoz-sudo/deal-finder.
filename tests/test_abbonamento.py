@@ -73,7 +73,7 @@ def test_checkout_sconto_primo_mese(monkeypatch=None):
     import os
     os.environ.update(STRIPE_SECRET_KEY="sk_test_x", STRIPE_PRICE_ID="price_b", STRIPE_PRICE_PRO="price_p")
     os.environ.pop("ABBONAMENTO_SCONTO_PRIMO_MESE", None)
-    ab._CACHE["coupon"] = "SCOVO_PRIMO_MESE_50"
+    ab._CACHE.update(coupon="SCOVO_PRIMO_MESE_50", pro="price_p", base="price_b")
     inviati = []
 
     class H:

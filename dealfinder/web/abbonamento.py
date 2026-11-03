@@ -60,10 +60,15 @@ def info() -> dict:
 def _prezzo(piano: str, http=None) -> str:
     """Prezzo Stripe del piano: da Render se c'è, altrimenti quello creato dal sito (cercato per lookup_key)."""
     p = PIANI[piano]
-    if os.environ.get(p["env"]):
-        return os.environ[p["env"]]
     if piano in _CACHE:
         return _CACHE[piano]
+    if os.environ.get(p["env"]):
+        try:                       # 3/11: il prezzo vecchio su Render (80 €) non vale più: si usa solo se è giusto
+            if _get(f"/prices/{os.environ[p['env']]}", {}).get("unit_amount") == p["eur"] * 100:
+                _CACHE[piano] = os.environ[p["env"]]
+                return _CACHE[piano]
+        except RuntimeError:
+            pass
     trovati = _get("/prices", {"lookup_keys[]": p["lookup"], "active": "true", "limit": 1}).get("data", [])
     if trovati:
         _CACHE[piano] = trovati[0]["id"]
@@ -153,8 +158,6 @@ def prova_pronto() -> None:
             pid = _prezzo(k)
             pr = _get(f"/prices/{pid}", {})
             out[k] = f"{pid} {(pr.get('unit_amount') or 0) / 100:.0f}€/{(pr.get('recurring') or {}).get('interval')}"
-            if pr.get("unit_amount") != PIANI[k]["eur"] * 100:
-                log.warning("STRIPE ATTENZIONE: il prezzo del piano %s su Render (%s) non è %s €", k, pid, PIANI[k]["eur"])
         except Exception as e:
             out[k] = "ERRORE " + str(e)[:200]
     sc = sconto_primo_mese()
