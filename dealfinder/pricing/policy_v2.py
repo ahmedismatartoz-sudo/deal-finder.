@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03f"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
+POLICY_REV = "2026-11-03g"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -885,6 +885,27 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             n_gate = max(n, serve)             # il numero minimo lo garantisce il modello su tutto il gruppo
         out["ipotesi"].append(f"valore reale (modello su {vr.get('n')} annunci e auto vendute dello stesso modello, "
                               f"errore tipico ±{sg*100:.0f}%): {V} €; gemelle {'concordano' if accordo else 'non concordano: vince il più basso'}")
+    # 3/11 22:30 (cliente: "pochi annunci uguali: troviamo un modo per farli entrare"): con 0 o 1 gemella il mercato
+    # lo dà il modello del valore reale (annunci e auto VENDUTE dello stesso modello), ma solo se per quel modello è
+    # preciso (errore tipico <= VR_SOLO_SIGMA, 15%) e costruito su almeno VR_SOLO_N (100) auto. Poi l'AI controlla
+    # versione, foto e testo come per tutte.
+    if vr and vr.get("v") and n_gate < cfg.n_minimo and os.environ.get("VR_SENZA_GEMELLE", "1") == "1" \
+            and float(vr.get("sigma") or 1) <= float(os.environ.get("VR_SOLO_SIGMA", "0.15")) \
+            and (vr.get("n") or 0) >= int(os.environ.get("VR_SOLO_N", "100")):
+        V = int(vr["v"])
+        if out.get("M") and prezzi:
+            V = min(V, int(out["M"])) if not benzina_richiesta(t) else max(V, int(out["M"]))
+        out["M"] = V
+        out["L"] = V
+        out["metodo"] = "valore_reale_modello"
+        out["vr_poche_gemelle"] = True
+        out["vr_solo_modello"] = True
+        out["n_gemelle"] = len(prezzi)
+        n_gate = max(n, cfg.n_minimo, int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000
+                     else int(os.environ.get("SITO_CONFRONTI_MIN", "5")))
+        out.setdefault("valore_reale", {"V": int(vr["v"]), "P25": vr.get("p25"), "sigma": vr.get("sigma"), "n_gruppo": vr.get("n")})
+        out["ipotesi"].append(f"meno di {cfg.n_minimo} auto uguali in vendita: mercato dal modello del valore reale "
+                              f"({vr.get('n')} annunci e auto vendute dello stesso modello, errore tipico ±{float(vr.get('sigma') or 0)*100:.0f}%)")
     _prud_min = int(os.environ.get("POLICY_PRUDENTE_N_MIN", "3"))
     _serve_sito = int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000 \
         else int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
@@ -1093,7 +1114,7 @@ def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
             "totale_costi", "campione", "policy", "metodo", "prudente_pochi", "vr_accordo", "vr_poche_gemelle",
-            "policy_rev", "R_da")
+            "policy_rev", "R_da", "vr_solo_modello")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]
