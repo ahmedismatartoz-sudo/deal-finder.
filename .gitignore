@@ -9,3 +9,9 @@ data/*
 
 # copie di lavoro temporanee degli agenti
 .claude/
+
+# 4/11: dati personali (email e telefoni di commercianti) mai nel repo: vanno in dati_riservati nel database
+data/marketing_gruppi*.json
+data/commercianti*.json
+data/lead_mi*.json
+data/lead_mb*.json

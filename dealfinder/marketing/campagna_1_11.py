@@ -232,7 +232,7 @@ def esegui(items_fn, modo: str) -> dict:
                 if not parte:
                     continue
                 ogg, html = tt[lettera]
-                ok = _manda(c, f"Skovo 1-11 {lettera} {fascia}", ogg, html, parte)
+                ok = _manda(c, f"Skovo 1-11 {lettera} {fascia}", ogg, html, parte, "campagna_1_11")
                 esito[f"{fascia}:{lettera}"] = (len(parte), ok)
         lg.warning("CAMPAGNA_1_11_FINE %s", esito)
         return {"inviate": esito}

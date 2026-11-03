@@ -2798,6 +2798,24 @@ def commercianti_tel(request: Request):
                     headers={"Content-Disposition": "attachment; filename=commercianti_cellulari.csv", "Cache-Control": "no-store"})
 
 
+def admin_lead_csv(request: Request):
+    """4/11: liste di commercianti (prima righe LEAD..., LEADE, LEADT, ESPORTA_* nei log di Render) da scaricare in
+    CSV dall'amministratore: /api/admin/lead.csv?tipo=LEADE. Senza tipo: i tipi disponibili con i conteggi."""
+    current_user(request, admin=True)
+    from ..marketing import consegne
+    tipo = str(request.query_params.get("tipo") or "")[:40]
+    with connect() as conn:
+        if not tipo:
+            rows = conn.execute("SELECT tipo, count(*) AS n, max(at) AS ultimo FROM lead_consegne GROUP BY tipo "
+                                "ORDER BY tipo").fetchall()
+            return jsonify({"tipi": rows})
+        rows = consegne.righe(conn, tipo)
+    logging.getLogger("dealfinder.marketing").warning("LEAD_CSV %s scaricati %d", tipo, len(rows))
+    return Response(consegne.csv_bytes(rows), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=lead_{re.sub(r'[^A-Za-z0-9_]', '', tipo)}.csv",
+                             "Cache-Control": "no-store"})
+
+
 def foto_email(request: Request):
     """22/10 (cliente): foto delle auto del sito per le email ai commercianti (indirizzo fisso, senza firma),
     solo per le auto che sono sul sito in questo momento e solo le prime 4 foto."""
@@ -3115,6 +3133,7 @@ routes = [
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
     Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
     Route("/admin/commercianti-tel.csv", commercianti_tel),
+    Route("/api/admin/lead.csv", admin_lead_csv),
     Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),
     Route("/api/opportunities/{id:int}", opportunity_detail),
@@ -3737,6 +3756,11 @@ def _tempo_reale():
         time.sleep(20)
         try:
             from ..marketing import brevo_liste as bl
+            from ..pipeline.ciclo import _una_volta
+            # 4/11: una volta per gruppo di liste, non a ogni avvio (prima ogni riavvio reimportava tutto)
+            if not _una_volta(f"brevo_liste:{bl.NOME_GRUPPI}"):
+                lg.warning("BREVO_LISTE %s già importate: niente (togli BREVO_IMPORT_LISTE da Render)", bl.NOME_GRUPPI)
+                return
             bl.importa()
             if os.environ.get("BREVO_CAMPAGNE") == "1":
                 time.sleep(120)  # Brevo finisce di importare i contatti
@@ -4190,7 +4214,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio:{nome}", 100000):
+            if _una_volta(f"rinvio:{nome}"):        # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio:{nome}")
                     fin(True, {"lista": rinvio.lista(nome)})
@@ -4208,7 +4232,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio_invia:{cid}", 100000):
+            if _una_volta(f"rinvio_invia:{cid}"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_invia:{cid}")
                     esito = rinvio.invia(int(cid))
@@ -4227,7 +4251,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio_nonaperti:{cid}", 100000):
+            if _una_volta(f"rinvio_nonaperti:{cid}"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_nonaperti:{cid}")
                     fin(True, rinvio.non_aperti(int(cid), quando))
@@ -4245,7 +4269,7 @@ def _tempo_reale():
         from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
         from ..marketing import rinvio
         try:
-            if _due(f"rinvio_escludi:{v}", 100000):
+            if _una_volta(f"rinvio_escludi:{v}"):
                 with connect() as conn:
                     fin = log_job(conn, f"rinvio_escludi:{v}")
                     a, b = v.split(":")[:2]
@@ -4557,7 +4581,7 @@ def _tempo_reale():
         try:
             from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
-            if not _due(f"brevo_2_11:{tag}", 100000):
+            if not _una_volta(f"brevo_2_11:{tag}"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                 return
             from ..marketing import auto_invio as AI
             with connect() as conn:
@@ -4584,7 +4608,7 @@ def _tempo_reale():
             from ..db import log_job
             from ..marketing import campagna_1_11 as C
             if modo == "invia":
-                if not _due("campagna_1_11:invio", 100000):
+                if not _una_volta("campagna_1_11:invio"):   # 4/11: _una_volta (segnato prima di partire, atomico): un riavvio a metà invio non rimanda
                     L.warning("CAMPAGNA_1_11 già inviata: niente")
                     return
                 with connect() as conn:
@@ -4728,7 +4752,7 @@ def _tempo_reale():
 
     def esporta_email():
         """1/11 sera (cliente: "mettili in un file a parte, poi tolgo io quelli già su Brevo"): tutte le email aziendali
-        dei commercianti che abbiamo, a gruppi di 20 per riga nel log (ESPORTA_EMAIL_RIGA). Solo dati aziendali pubblici
+        dei commercianti che abbiamo, nel database (lead_consegne tipo ESPORTA_EMAIL, da /api/admin/lead.csv; 4/11: non più nei log). Solo dati aziendali pubblici
         (nome dell'attività, comune, provincia, email, sito), con la data in cui è stata trovata e se è già in Brevo.
         Si ripete a ogni avvio con ESPORTA_EMAIL=<etichetta> nuova."""
         tag = os.environ.get("ESPORTA_EMAIL")
@@ -4763,8 +4787,10 @@ def _tempo_reale():
                         visti.add(em)
                         righe.append([em, r["nome"], r["comune"], r["prov"], r["sito"], r["fonte"],
                                       r["tentato"].strftime("%Y-%m-%d") if r["tentato"] else "", "si" if em in in_brevo else "no"])
-                for i in range(0, len(righe), 20):
-                    L.warning("ESPORTA_EMAIL_RIGA %s", json.dumps(righe[i:i + 20], ensure_ascii=False))
+                from ..marketing.consegne import consegna      # 4/11: nel database (pannello admin), non nei log
+                for x in righe:
+                    consegna("ESPORTA_EMAIL", dict(zip(("email", "nome", "comune", "prov", "sito", "fonte", "tentato",
+                                                        "in_brevo"), x)))
                 L.warning("ESPORTA_EMAIL_FINE %d email (%d non in Brevo)", len(righe), sum(1 for x in righe if x[-1] == "no"))
                 fine(True, {"email": len(righe)})
         except Exception as e:
@@ -4774,7 +4800,7 @@ def _tempo_reale():
     def esporta_tel():
         """2/11 (cliente: "dammi la mega lista dei numeri + i nuovi + quelli di Google Maps di ieri"): numeri AZIENDALI
         dei commercianti (Google Maps lead_maps, AutoScout24/Subito lead_tutti_dealer, commercianti_as24), una volta
-        per etichetta (ESPORTA_TEL=<tag>). Righe ESPORTA_TEL_RIGA nei log, 25 alla volta."""
+        per etichetta (ESPORTA_TEL=<tag>). Righe in lead_consegne (tipo ESPORTA_TEL, da /api/admin/lead.csv; 4/11: non più nei log)."""
         tag = os.environ.get("ESPORTA_TEL")
         if not tag:
             return
@@ -4804,8 +4830,9 @@ def _tempo_reale():
                                           r["aggiornato"].strftime("%Y-%m-%d") if r["aggiornato"] else ""])
                 except Exception:
                     conn.rollback()
-            for i in range(0, len(righe), 25):
-                L.warning("ESPORTA_TEL_RIGA %s", json.dumps(righe[i:i + 25], ensure_ascii=False, default=str))
+            from ..marketing.consegne import consegna          # 4/11: nel database (pannello admin), non nei log
+            for x in righe:
+                consegna("ESPORTA_TEL", {"riga": x})
             L.warning("ESPORTA_TEL_FINE %d righe", len(righe))
         except Exception as e:
             L.warning("ESPORTA_TEL non riuscito: %s", str(e)[:300])
@@ -5078,7 +5105,7 @@ def _tempo_reale():
                 testo = ("Siamo Skovo: troviamo auto di privati sotto mercato nella vostra zona, trattiamo il prezzo e vi "
                          "fissiamo l'appuntamento. Scriveteci: wa.me/393482425633 STOP=no")
             massimo = int(os.environ.get("SMS_MAX", "229"))
-            chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])
+            chiamati = set(json.loads((_P(__file__).resolve().parents[2] / "data" / "lead_chiamati.json").read_text())["tel"])   # solo impronte
             no = re.compile(r"(?i)officin|carrozz|gomm|pneumat|demoliz|rottam|soccorso|noleggio|ricambi|elettrauto|lavaggio|"
                             r"autoscuola|revision|moto\b|loconte|\baci\b")
             cand = []
@@ -5150,6 +5177,15 @@ def _tempo_reale():
                 numeri.append(d)
                 if len(numeri) >= massimo + (0 if prova else 1):
                     break
+            # 4/11: SMS promozionali solo a chi ha dato il consenso esplicito (tabella consensi) e una volta per numero
+            # e per giro (tabella invii: un riavvio non rimanda). Il numero del cliente (prova) resta.
+            from ..marketing import invii as _inv
+            with connect() as conn:
+                prova_cliente = [n for n in numeri if n == "3482425633"]
+                altri = [n for n in numeri if n != "3482425633"]
+                con_ok = _inv.con_consenso(conn, altri, "sms")
+                L.warning("SMS_INVIA senza consenso esplicito, esclusi: %d", len(altri) - len(con_ok))
+                numeri = prova_cliente + (con_ok if prova else _inv.prenota(conn, f"sms_invia:{tag}", con_ok, "sms"))
             L.warning("SMS_INVIA %d numeri (il primo è il cliente)", len(numeri))
             if strutt:
                 from collections import Counter as _C
@@ -5157,8 +5193,7 @@ def _tempo_reale():
                 righe = [x for x in info if x["tel"] in scelti]
                 L.warning("SMS_STRUTT selezionati %d: fonti %s, km %s", len(righe), json.dumps(dict(_C(x["fonte"] for x in righe))),
                           json.dumps(dict(_C("<=15" if x["km"] <= 15 else "<=30" if x["km"] <= 30 else "<=45" for x in righe))))
-                for k in range(0, len(righe), 25):
-                    L.warning("SMS_STRUTT nomi %d: %s", k, json.dumps([f'{x["nome"][:40]} ({x["comune"]}, {x["km"]:.0f} km, {x["peso"]})' for x in righe[k:k + 25]], ensure_ascii=False))
+                # 4/11: i nomi dei commercianti scelti non vanno più nei log (solo i conteggi qui sopra)
             if prova:
                 L.warning("SMS_INVIA prova a secco: nessun SMS inviato")
                 return
@@ -5179,6 +5214,8 @@ def _tempo_reale():
                         break
                     if r.status_code < 300:
                         ok += 1
+                        with connect() as conn:
+                            _inv.segna_inviati(conn, f"sms_invia:{tag}", [n], "sms")
                     else:
                         ko += 1
                         k = f"{r.status_code}:{r.text[:150]}"

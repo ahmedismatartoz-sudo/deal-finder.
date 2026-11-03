@@ -7,7 +7,7 @@ Si tengono solo indirizzi del commerciante stesso: niente PEC, niente noreply, n
 dei fornitori di siti. Gira nel cron (voce COLLECT_PRIMA "leademail@3"), riprende da dove era arrivato
 (colonna tentato) e si ferma dopo LEADE_MAX pagine per giro. Nei log solo conteggi.
 
-Consegna a richiesta: LEADE_ESPORTA=<etichetta> sul servizio web -> righe "LEADE {json}" (nome, comune, prov,
+Consegna a richiesta: LEADE_ESPORTA=<etichetta> sul servizio web -> righe "LEADE" in lead_consegne (4/11: non più nei log) (nome, comune, prov,
 email, sito, fascia, prezzo mediano), una per commerciante con email.
 """
 from __future__ import annotations
@@ -22,6 +22,7 @@ from html import unescape
 from urllib.parse import urljoin, urlparse
 
 log = logging.getLogger("lead")
+from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 
 SQL = """
 CREATE TABLE IF NOT EXISTS lead_email (
@@ -323,7 +324,7 @@ def _fascia(prezzi: list[int]) -> tuple[str, int | None]:
 
 
 def esporta() -> int:
-    """Righe LEADE {json} nei log: dati aziendali pubblici dei commercianti con email (mai privati)."""
+    """Righe LEADE in lead_consegne (4/11: non più nei log): dati aziendali pubblici dei commercianti con email (mai privati)."""
     from ..db import connect
     with connect() as conn:
         rows = conn.execute(
@@ -340,7 +341,7 @@ def esporta() -> int:
             conn.rollback()
     for r in rows:
         fascia, med = _fascia(ann.get(r["chiave"], []))
-        log.warning("LEADE %s", json.dumps({"nome": r["nome"], "comune": r["comune"], "prov": r["prov"],
+        consegna("LEADE", json.dumps({"nome": r["nome"], "comune": r["comune"], "prov": r["prov"],
                                             "email": list(r["email"]), "sito": r["sito"], "fonte": r["fonte"],
                                             "fascia": fascia, "prezzo_mediano": med,
                                             "auto": len(ann.get(r["chiave"], []))}, ensure_ascii=False))
