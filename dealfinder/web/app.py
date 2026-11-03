@@ -5696,11 +5696,28 @@ def _tempo_reale():
                 L.warning("BENZINA_SUBITO da ricalcolare: %d", len(rows))
                 rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
                 st = _C()
+                perse = [0]
+                from . import scovo as _sc
                 for i in range(0, len(rows), 40):
                     _aspetta_memoria(L, "BENZINA_SUBITO")
+                    pezzo = [r["id"] for r in rows[i:i + 40]]
+                    _q = """SELECT DISTINCT ON (listing_id) listing_id, categoria, margine, riassunto FROM valutazioni_policy
+                            WHERE listing_id = ANY(%s) ORDER BY listing_id, computed_at DESC"""
+                    prima = {r["listing_id"]: r for r in conn.execute(_q, (pezzo,)).fetchall()}
                     try:
-                        tr.valuta_e_pubblica(conn, [r["id"] for r in rows[i:i + 40]], st)
+                        tr.valuta_e_pubblica(conn, pezzo, st)
                         conn.commit()
+                        if perse[0] < 25:     # 3/11 22:50: auto che erano buone e col ricalcolo non lo sono più: perché
+                            dopo = {r["listing_id"]: r for r in conn.execute(_q, (pezzo,)).fetchall()}
+                            for k, a in prima.items():
+                                b = dopo.get(k)
+                                if b and a["categoria"] in _sc.CATEGORIE_SITO and b["categoria"] not in _sc.CATEGORIE_SITO and perse[0] < 25:
+                                    perse[0] += 1
+                                    ra, rb = a["riassunto"] or {}, b["riassunto"] or {}
+                                    L.warning("BENZINA_PERSA %s", json.dumps({"id": k, "prima": [a["categoria"], a["margine"], ra.get("M"),
+                                              ra.get("R_finale") or ra.get("R"), ra.get("metodo"), ra.get("n"), ra.get("policy_rev")],
+                                              "dopo": [b["categoria"], b["margine"], rb.get("M"), rb.get("R_finale") or rb.get("R"),
+                                              rb.get("metodo"), rb.get("n"), rb.get("soglia")]}, default=str))
                     except Exception as e:
                         conn.rollback()
                         L.warning("BENZINA_SUBITO blocco non riuscito: %s", str(e)[:200])
