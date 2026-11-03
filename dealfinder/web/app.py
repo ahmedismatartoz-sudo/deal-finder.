@@ -2471,20 +2471,51 @@ AZIENDA_CAMPI = [("nome_azienda", "Nome dell'azienda", True), ("indirizzo", "Ind
 APP_FASCE = {"mattina": "Mattina (9–12)", "pranzo": "Pranzo (12–14)", "pomeriggio": "Pomeriggio (14–18)", "sera": "Sera (18–20)"}
 APP_ORE = [f"{h}:{m}" for h in range(9, 20) for m in ("00", "30")][:-1]       # 9:00 … 19:00
 APP_MAX = 8
-_TAB_APP = {"ok": False}
+APP_GIORNO = int(os.environ.get("APPUNTAMENTI_GIORNO", "20"))    # richieste al giorno per commerciante
+APP_DOPPIA_ORE = 24                                                 # stessa richiesta per la stessa auto: non si rimanda
+APP_PREAVVISO_MIN = int(os.environ.get("APPUNTAMENTI_PREAVVISO_MIN", "60"))
+# Le tabelle aziende_abbonati e appuntamenti nascono con la migrazione 031 (prima alla prima richiesta del sito).
 
 
-def _tabelle_app(conn) -> None:
-    if _TAB_APP["ok"]:
-        return
-    conn.execute("""CREATE TABLE IF NOT EXISTS aziende_abbonati (dealer_id BIGINT PRIMARY KEY, dati JSONB NOT NULL,
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS appuntamenti (id BIGSERIAL PRIMARY KEY, dealer_id BIGINT NOT NULL,
-                    listing_id BIGINT NOT NULL, giorno DATE NOT NULL, fascia TEXT NOT NULL, ora TEXT, nota TEXT,
-                    stato TEXT NOT NULL DEFAULT 'richiesto', created_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
-    conn.execute("ALTER TABLE appuntamenti ADD COLUMN IF NOT EXISTS proposte JSONB")
-    conn.commit()
-    _TAB_APP["ok"] = True
+def _ora_roma():
+    """Adesso in Italia: il server di Render è in UTC, il commerciante sceglie giorni e ore italiani."""
+    import datetime as _d
+    from zoneinfo import ZoneInfo
+    return _d.datetime.now(ZoneInfo("Europe/Rome"))
+
+
+def _proposte_valide(grezze: list, adesso) -> tuple[list, list]:
+    """(proposte buone ordinate [(giorno, ora)], scartate [{giorno, ora, motivo}]). Giorni da oggi a oggi+14 in
+    Europe/Rome; oggi solo gli orari almeno APP_PREAVVISO_MIN minuti dopo adesso; doppioni tolti."""
+    import datetime as _d
+    oggi = adesso.date()
+    proposte, scartate, visti = [], [], set()
+    for x in (grezze or [])[:APP_MAX]:
+        x = x if isinstance(x, dict) else {}
+        g_txt, o = str(x.get("giorno") or ""), str(x.get("ora") or "")
+        try:
+            g = _d.date.fromisoformat(g_txt)
+        except ValueError:
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "giorno non valido"})
+            continue
+        if o not in APP_ORE:
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "orario non valido"})
+        elif not (oggi <= g <= oggi + _d.timedelta(days=14)):
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "giorno fuori dalle prossime 2 settimane"})
+        elif g == oggi and _d.datetime.combine(g, _d.time(*map(int, o.split(":"))), adesso.tzinfo) < \
+                adesso + _d.timedelta(minutes=APP_PREAVVISO_MIN):
+            scartate.append({"giorno": g_txt, "ora": o, "motivo": "orario già passato o troppo vicino"})
+        elif (g, o) not in visti:
+            visti.add((g, o))
+            proposte.append((g, o))
+    proposte.sort()
+    return proposte, scartate
+
+
+def _impronta_appuntamento(dealer_id: int, lid: int, proposte: list, nota: str | None) -> str:
+    import hashlib
+    chiave = json.dumps([dealer_id, lid, [[str(g), o] for g, o in proposte], (nota or "").strip().lower()])
+    return hashlib.sha256(chiave.encode()).hexdigest()
 
 
 def _azienda_norm(d: dict | None) -> dict:
@@ -2507,7 +2538,6 @@ def _azienda_ok(d: dict | None) -> bool:
 async def azienda_get(request: Request):
     user = current_user(request)
     with connect() as conn:
-        _tabelle_app(conn)
         r = conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone()
         perm = permessi_di(conn, user)
     d = _azienda_norm((r or {}).get("dati"))
@@ -2523,53 +2553,55 @@ async def azienda_put(request: Request):
     if not _azienda_ok(d):
         err(400, "Compila tutti i campi obbligatori")
     with connect() as conn:
-        _tabelle_app(conn)
         conn.execute("INSERT INTO aziende_abbonati (dealer_id, dati) VALUES (%s,%s) ON CONFLICT (dealer_id) DO UPDATE "
                      "SET dati=EXCLUDED.dati, updated_at=now()", (user["id"], json.dumps(d)))
         conn.commit()
     return jsonify({"ok": True, "dati": d, "completa": True})
 
 
-def _avvisa_appuntamento(testo: str, oggetto: str) -> None:
-    """Email a info@skovo.app con la richiesta (Brevo transazionale, chiave su Render). Se non va resta in tabella."""
+def _avvisa_appuntamento(testo: str, oggetto: str, aid: int | None = None) -> bool:
+    """Email a info@skovo.app con la richiesta (Brevo transazionale, chiave su Render). 4/11: si guarda la risposta
+    di Brevo; l'esito va nel log (APPUNTAMENTO email esito=...) e in appuntamenti.email_ok/email_esito, così una
+    richiesta senza email si vede nel pannello."""
+    lg = logging.getLogger("scovo")
     try:
         import httpx
         from ..marketing.brevo_liste import API, MITTENTE, _chiave
-        httpx.post(f"{API}/smtp/email", headers={"api-key": _chiave(), "accept": "application/json"}, timeout=20,
-                   json={"sender": MITTENTE, "to": [{"email": os.environ.get("APPUNTAMENTI_EMAIL", "info@skovo.app")}],
-                         "subject": oggetto, "textContent": testo})
+        r = httpx.post(f"{API}/smtp/email", headers={"api-key": _chiave(), "accept": "application/json"}, timeout=20,
+                       json={"sender": MITTENTE, "to": [{"email": os.environ.get("APPUNTAMENTI_EMAIL", "info@skovo.app")}],
+                             "subject": oggetto, "textContent": testo})
+        ok = 200 <= r.status_code < 300
+        esito = f"http {r.status_code}" + ("" if ok else " " + (r.text or "")[:200])
     except Exception as e:
-        logging.getLogger("scovo").warning("APPUNTAMENTO email non mandata: %s", str(e)[:200])
+        ok, esito = False, f"{type(e).__name__}: {str(e)[:200]}"
+    (lg.info if ok else lg.error)("APPUNTAMENTO %s email esito=%s", aid, "ok" if ok else esito)
+    if aid:
+        try:
+            with connect() as conn:
+                conn.execute("UPDATE appuntamenti SET email_ok=%s, email_esito=%s WHERE id=%s", (ok, esito[:300], aid))
+                conn.commit()
+        except Exception as e:
+            lg.warning("APPUNTAMENTO %s esito email non salvato: %s", aid, type(e).__name__)
+    return ok
 
 
 async def appuntamento(request: Request):
     user = current_user(request)
     lid = int(request.path_params["id"])
     data = await body(request)
-    import datetime as _d
-    oggi = _d.date.today()
     grezze = data.get("proposte")
     if not isinstance(grezze, list):          # versione di prima: un giorno e una fascia
         grezze = [{"giorno": data.get("giorno"), "ora": data.get("ora") or {"mattina": "10:00", "pranzo": "12:30",
                    "pomeriggio": "15:00", "sera": "18:30"}.get(str(data.get("fascia") or ""), "")}]
-    proposte, visti = [], set()
-    for x in grezze[:APP_MAX]:
-        try:
-            g = _d.date.fromisoformat(str((x or {}).get("giorno") or ""))
-        except ValueError:
-            continue
-        o = str((x or {}).get("ora") or "")
-        if o not in APP_ORE or not (oggi <= g <= oggi + _d.timedelta(days=14)) or (g, o) in visti:
-            continue
-        visti.add((g, o)); proposte.append((g, o))
+    proposte, scartate = _proposte_valide(grezze, _ora_roma())
     if not proposte:
-        err(400, "Scegli almeno un giorno e un orario")
-    proposte.sort()
+        return jsonify({"errore": "Scegli almeno un giorno e un orario ancora libero (da adesso alle prossime "
+                                  "2 settimane)", "scartate": scartate}, 400)
     giorno, ora = proposte[0]
     fascia = _fascia_di(ora)
     nota = str(data.get("nota") or "").strip()[:500] or None
+    impronta = _impronta_appuntamento(user["id"], lid, proposte, nota)
     with connect() as conn:
-        _tabelle_app(conn)
         if not (user.get("role") == "admin" or "appuntamenti" in permessi_di(conn, user)):
             err(402, "Fissare gli appuntamenti è incluso nell'abbonamento da 200 €")
         az = _azienda_norm((conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone() or {}).get("dati"))
@@ -2579,10 +2611,23 @@ async def appuntamento(request: Request):
                            "FROM listings WHERE id=%s AND status='attivo'", (lid,)).fetchone()
         if not car:
             err(404, "Questa auto non è più disponibile")
-        aid = conn.execute("INSERT INTO appuntamenti (dealer_id, listing_id, giorno, fascia, ora, nota, proposte) "
-                           "VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        # due clic (o due schede) con la stessa richiesta: una sola riga e una sola email
+        conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (f"appuntamento:{user['id']}:{lid}",))
+        gia = conn.execute("SELECT id FROM appuntamenti WHERE dealer_id=%s AND listing_id=%s AND impronta=%s "
+                           "AND created_at > now() - make_interval(hours => %s) ORDER BY id DESC LIMIT 1",
+                           (user["id"], lid, impronta, APP_DOPPIA_ORE)).fetchone()
+        if gia:
+            conn.commit()
+            return jsonify({"ok": True, "id": gia["id"], "gia_inviata": True, "scartate": scartate})
+        if user.get("role") != "admin":
+            n = conn.execute("SELECT count(*) AS n FROM appuntamenti WHERE dealer_id=%s "
+                             "AND created_at > now() - interval '24 hours'", (user["id"],)).fetchone()["n"]
+            if n >= APP_GIORNO:
+                err(429, f"Hai chiesto {n} appuntamenti nelle ultime 24 ore: il limite è {APP_GIORNO}")
+        aid = conn.execute("INSERT INTO appuntamenti (dealer_id, listing_id, giorno, fascia, ora, nota, proposte, impronta) "
+                           "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                            (user["id"], lid, giorno, fascia, ora, nota,
-                            json.dumps([{"giorno": str(g), "ora": o} for g, o in proposte]))).fetchone()["id"]
+                            json.dumps([{"giorno": str(g), "ora": o} for g, o in proposte]), impronta)).fetchone()["id"]
         conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (lid, user["id"]))
         conn.commit()
     tel = scovo.find_phone(car.get("description"))
@@ -2593,21 +2638,22 @@ async def appuntamento(request: Request):
              f"Auto: {car.get('title') or ''} - {car.get('year') or ''} - {car.get('mileage_km') or ''} km - {car.get('price_eur')} EUR\n"
              f"Zona: {car.get('city') or ''} ({car.get('province') or ''})\nAnnuncio: {car.get('url')}\n"
              + (f"Numero del venditore nell'annuncio: {tel}\n" if tel else "") +
-             "\nDisponibilità del commerciante (una qualsiasi va bene):\n"
+             "\nDisponibilità del commerciante (ora italiana, una qualsiasi va bene):\n"
              + "".join(f"  - {['lun','mar','mer','gio','ven','sab','dom'][g.weekday()]} {g.strftime('%d/%m')} ore {o}\n" for g, o in proposte)
              + (f"Nota: {nota}\n" if nota else ""))
-    threading.Thread(target=_avvisa_appuntamento, args=(testo, f"Appuntamento ({len(proposte)} date) - {az.get('nome_azienda')} - {car.get('title') or ''}"[:150]),
+    threading.Thread(target=_avvisa_appuntamento, args=(testo, f"Appuntamento ({len(proposte)} date) - {az.get('nome_azienda')} - {car.get('title') or ''}"[:150], aid),
                      daemon=True).start()
     logging.getLogger("scovo").warning("APPUNTAMENTO %s richiesto: commerciante %s, auto %s, %s %s", aid, user["id"], lid, giorno, fascia)
-    return jsonify({"ok": True, "id": aid})
+    return jsonify({"ok": True, "id": aid, "scartate": scartate})
 
 
 async def admin_appuntamenti(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
-        _tabelle_app(conn)
+        # LEFT JOIN: le richieste restano anche quando l'annuncio viene cancellato dalla pulizia
         rows = conn.execute("""SELECT a.id, a.giorno, a.fascia, a.ora, a.nota, a.stato, a.created_at, a.listing_id,
-                 a.proposte, l.title, l.url, l.price_eur, z.dati AS azienda FROM appuntamenti a JOIN listings l ON l.id = a.listing_id
+                 a.proposte, a.email_ok, a.email_esito, l.title, l.url, l.price_eur, z.dati AS azienda
+                 FROM appuntamenti a LEFT JOIN listings l ON l.id = a.listing_id
                  LEFT JOIN aziende_abbonati z ON z.dealer_id = a.dealer_id ORDER BY a.created_at DESC LIMIT 200""").fetchall()
     return jsonify({"appuntamenti": [dict(r, giorno=str(r["giorno"]), created_at=str(r["created_at"])) for r in rows]})
 
