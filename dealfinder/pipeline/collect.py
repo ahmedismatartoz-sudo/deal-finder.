@@ -164,6 +164,102 @@ def provincia_da_comune(conn, city: str | None) -> str | None:
     return _PROV_COMUNE["mappa"].get(_norm_city(city))
 
 
+RINORM_PEZZO = 2000
+
+
+def rinormalizza_righe(righe: list[dict], con_tipo: bool = False) -> list[dict]:
+    """Regole di normalizzazione di oggi su righe già salvate: ritorna SOLO le modifiche ({id, campo: valore}).
+    Stesse funzioni della raccolta (canon_make, canon_model, norm_fuel, norm_gearbox, fuel_tipo); il flag
+    'dati_incoerenti' si toglie se con le regole nuove la marca torna coerente (bug DS/Abarth). Idempotente."""
+    from ..core import normalize as N
+    from ..core.consistency import check
+    from ..core.models import Listing
+    out = []
+    for r in righe:
+        nuovo = {}
+        mk = N.canon_make(N.slug(r.get("make"))) if r.get("make") else r.get("make")
+        md = N.canon_model(mk, N.slug(r.get("model"))) if r.get("model") else r.get("model")
+        testo = f"{r.get('version_raw') or ''} {r.get('title') or ''}"
+        fu = N.norm_fuel(r.get("fuel")) if r.get("fuel") else r.get("fuel")
+        if fu in ("benzina", "diesel") and N._RE_IBRIDA_TESTO.search(testo):
+            fu = "ibrida"
+        gb = N.norm_gearbox(r.get("gearbox")) if r.get("gearbox") else r.get("gearbox")
+        for k, v in (("make", mk), ("model", md), ("fuel", fu), ("gearbox", gb)):
+            if v != r.get(k):
+                nuovo[k] = v
+        if con_tipo and r.get("fuel"):
+            ft = N.fuel_tipo(r.get("fuel"), testo)
+            if ft != r.get("fuel_tipo") and ft is not None:
+                nuovo["fuel_tipo"] = ft
+        flags = list(r.get("price_flags") or [])
+        if "dati_incoerenti" in flags:
+            l = Listing(source=r.get("source") or "x", source_id=str(r["id"]), url="", make=mk, model=md,
+                        year=r.get("year"), mileage_km=r.get("mileage_km"), title=r.get("title"),
+                        description=r.get("descr"), version_raw=r.get("version_raw"))
+            if not check(l, fix=True):
+                nuovo["price_flags"] = [f for f in flags if f != "dati_incoerenti"]
+        if nuovo:
+            out.append({"id": r["id"], **nuovo})
+    return out
+
+
+def rinormalizza(conn, pezzo: int = RINORM_PEZZO, giorni: int = 180) -> dict:
+    """3/11 (studio 4, P9/P13/P14): riapplica le regole di normalizzazione allo storico (annunci attivi e spariti da
+    meno di `giorni`), a pezzi da `pezzo` righe in ordine di id. Riprende dall'ultimo id fatto (lavori_cursore):
+    dopo un riavvio non si rifà da capo. Si scrivono solo le righe che cambiano. Solo nel cron (vedi
+    lavoro_rinormalizza)."""
+    from ..core.normalize import NORM_VERSIONE
+    from ..db import ha_colonna
+    job = f"rinormalizza:v{NORM_VERSIONE}"
+    con_tipo = ha_colonna(conn, "fuel_tipo")
+    r = conn.execute("SELECT ultimo_id FROM lavori_cursore WHERE job=%s", (job,)).fetchone()
+    ultimo = int(r["ultimo_id"]) if r else 0
+    st: Counter = Counter()
+    while True:
+        righe = conn.execute(
+            "SELECT id, source, make, model, fuel, gearbox, title, version_raw, year, mileage_km, price_flags"
+            + (", fuel_tipo" if con_tipo else "") +
+            ", CASE WHEN 'dati_incoerenti' = ANY(price_flags) THEN left(description, 300) END AS descr "
+            "FROM listings WHERE id > %s AND (status = 'attivo' OR disappeared_at > now() - make_interval(days => %s)) "
+            "ORDER BY id LIMIT %s", (ultimo, giorni, pezzo)).fetchall()
+        if not righe:
+            break
+        st["lette"] += len(righe)
+        for m in rinormalizza_righe(righe, con_tipo):
+            campi = [k for k in m if k != "id"]
+            conn.execute("UPDATE listings SET " + ", ".join(f"{k}=%({k})s" for k in campi) + " WHERE id=%(id)s", m)
+            st["cambiate"] += 1
+            for k in campi:
+                st[f"campo:{k}"] += 1
+        ultimo = int(righe[-1]["id"])
+        conn.execute("INSERT INTO lavori_cursore (job, ultimo_id) VALUES (%s,%s) ON CONFLICT (job) DO UPDATE "
+                     "SET ultimo_id=EXCLUDED.ultimo_id, aggiornato=now()", (job, ultimo))
+        conn.commit()                         # ogni pezzo salvato: un riavvio riparte da qui
+        if len(righe) < pezzo:
+            break
+    st["ultimo_id"] = ultimo
+    log.warning("RINORMALIZZA %s: %s", job, dict(st))
+    return dict(st)
+
+
+def lavoro_rinormalizza() -> dict | None:
+    """Una volta per versione delle regole (NORM_VERSIONE), segnato fatto solo a lavoro finito (ciclo.inizia)."""
+    from ..core.normalize import NORM_VERSIONE
+    from .ciclo import inizia
+    lav = inizia(f"rinormalizza:v{NORM_VERSIONE}")
+    if not lav:
+        return None
+    try:
+        with connect() as conn:
+            st = rinormalizza(conn)
+        lav.fatto(st)
+        return st
+    except Exception as e:
+        lav.fallito(e)
+        log.warning("RINORMALIZZA non finito (riprende al prossimo giro): %s", str(e)[:200])
+        return None
+
+
 def senza_numero(l) -> bool:
     """Subito senza numero: né nel testo né il bottone "Chiama" (advertiser.phone nella ricerca). Solo sì/no."""
     if l.source != "subito":

@@ -11,3 +11,10 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS disappear_reason TEXT,
                      ADD COLUMN IF NOT EXISTS fuel_tipo TEXT;
 -- L'indice su vehicle_id (ripubblicazioni) lo crea il cron con CREATE INDEX CONCURRENTLY (db.assicura_indice_veicolo):
 -- qui bloccherebbe la tabella per tutta la durata.
+
+-- 4) Punto di arrivo dei lavori lunghi a pezzi (es. rinormalizza:v2): dopo un riavvio si riprende dall'ultimo id.
+CREATE TABLE IF NOT EXISTS lavori_cursore (
+    job         TEXT PRIMARY KEY,
+    ultimo_id   BIGINT NOT NULL DEFAULT 0,
+    aggiornato  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

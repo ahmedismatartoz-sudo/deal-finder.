@@ -400,3 +400,70 @@ def test_collect_run_non_scarta_subito_senza_numero():
     assert sorted(p[0] for p in mercato) == list(range(1, 11))
     r = collect.riepilogo_scarti(st)
     assert r["letti"] == 100 and r["salvati"] == 100 and r["non_contati"] == 0
+
+
+# ------------------------------------------------------------------ 9. rinormalizza lo storico
+
+class _ConnTabella(_Conn):
+    """Finta tabella listings in memoria per rinormalizza (SELECT a pezzi per id, UPDATE per id, cursore)."""
+    def __init__(self, righe):
+        super().__init__(colonne=True)
+        self.righe = {r["id"]: dict(r) for r in righe}
+        self.cursore = {}
+        self.scritture = 0
+
+    def execute(self, sql, params=None):
+        self.sql.append((sql, params))
+        if "information_schema.columns" in sql:
+            return _Cur([{"column_name": "disappear_reason"}, {"column_name": "fuel_tipo"}])
+        if sql.startswith("SELECT ultimo_id FROM lavori_cursore"):
+            j = params[0]
+            return _Cur([{"ultimo_id": self.cursore[j]}] if j in self.cursore else [])
+        if sql.startswith("INSERT INTO lavori_cursore"):
+            self.cursore[params[0]] = params[1]
+            return _Cur([])
+        if sql.startswith("SELECT id, source, make"):
+            dopo, _giorni, lim = params
+            ids = sorted(i for i in self.righe if i > dopo)[:lim]
+            out = []
+            for i in ids:
+                r = dict(self.righe[i])
+                r["descr"] = r.get("description") if "dati_incoerenti" in (r.get("price_flags") or []) else None
+                out.append(r)
+            return _Cur(out)
+        if sql.startswith("UPDATE listings SET"):
+            self.scritture += 1
+            r = self.righe[params["id"]]
+            r.update({k: v for k, v in params.items() if k != "id"})
+            return _Cur([])
+        return _Cur([])
+
+
+def test_rinormalizza_storico_idempotente_e_riprende():
+    from dealfinder.pipeline.collect import rinormalizza
+    righe = [
+        {"id": 1, "source": "autoscout24", "make": "bmw", "model": "320", "fuel": "diesel", "gearbox": "cambio-manuale"},
+        {"id": 2, "source": "autoscout24", "make": "mercedes", "model": "a-180", "fuel": "benzina", "gearbox": "automatico"},
+        {"id": 3, "source": "subito", "make": "fiat", "model": "500-x", "fuel": "benzina", "gearbox": "manuale",
+         "title": "Fiat 500X 1.5 Hybrid 48V"},
+        {"id": 4, "source": "subito", "make": "ds-automobiles", "model": "ds-3", "fuel": "benzina", "gearbox": "manuale",
+         "title": "DS 3 Crossback", "price_flags": ["dati_incoerenti"]},
+        {"id": 5, "source": "subito", "make": "fiat", "model": "panda", "fuel": "benzina", "gearbox": "manuale"},
+    ]
+    _schema_nuovo()
+    conn = _ConnTabella(righe)
+    st = rinormalizza(conn, pezzo=2)
+    r = conn.righe
+    assert (r[1]["model"], r[1]["gearbox"]) == ("serie-3", "manuale")
+    assert (r[2]["make"], r[2]["model"]) == ("mercedes-benz", "classe-a")
+    assert (r[3]["model"], r[3]["fuel"], r[3]["fuel_tipo"]) == ("500x", "ibrida", "mild")
+    assert r[4]["price_flags"] == [] and r[4]["model"] == "ds3"
+    assert "fuel_tipo" not in r[5] and st["cambiate"] == 4 and st["lette"] == 5
+    assert conn.cursore["rinormalizza:v2"] == 5 and conn.commits >= 3          # un commit per pezzo
+    # di nuovo: riprende dal cursore (niente da leggere); da capo: niente da cambiare
+    n = conn.scritture
+    assert rinormalizza(conn, pezzo=2).get("lette", 0) == 0
+    conn.cursore.clear()
+    st2 = rinormalizza(conn, pezzo=2)
+    _schema_nuovo()
+    assert st2["lette"] == 5 and st2.get("cambiate", 0) == 0 and conn.scritture == n
