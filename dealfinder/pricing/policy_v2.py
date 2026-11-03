@@ -187,6 +187,12 @@ class PolicyConfig:
     veloce_max: float = .97
     veloce_min: float = .80
     veloce_max_incerto: float = .92   # pochi confronti (<5) o confronti ampliati: errore tipico misurato 14–16%
+    # 3/11: col valore reale come mercato. vr_adattiva: la riduzione più bassa per le stime precise vale anche quando il
+    # mercato è il valore reale (prima del valore reale una mediana con ≥10 gemelle aveva il 7%: cambiando il nome del
+    # metodo la perdeva). vr_veloce: il "prezzo per vendere in fretta" si applica anche al valore reale (che è già un
+    # prezzo di vendita): resta acceso finché il cliente non sceglie (simulazione SIMVR).
+    vr_adattiva: bool = True
+    vr_veloce: bool = True
     taratura: bool = True             # correzione automatica degli errori sistematici del valore di mercato (19/10)
     # stima AI (pv15)
     ai: bool = True
@@ -880,6 +886,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             r_new, perche = cfg.rid_precisa, f"stima molto precisa (confronti e modello AI concordano, {n} annunci)"
         elif (out.get("metodo") == "modello" and err is not None and err <= .14 and n >= 6) or \
                 (out.get("metodo") == "mediana" and n >= 10) or \
+                (cfg.vr_adattiva and str(out.get("metodo") or "").startswith("valore_reale") and len(prezzi) >= 10) or \
                 ((out.get("ai") or {}).get("concorda") and n >= cfg.n_minimo):
             r_new, perche = cfg.rid_buona, f"stima precisa ({n} annunci)"
         else:
@@ -888,7 +895,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             centrale = out["M"] * (1 - r_new)
             riv.update(R=int(round(centrale)), centrale_ridotto=int(round(centrale)), riduzione=r_new,
                        fascia=riv["fascia"] + f" · ridotta a {int(r_new*100)}%: {perche}")
-    if cfg.vendita_veloce and riv.get("R") is not None:
+    if cfg.vendita_veloce and riv.get("R") is not None and (
+            cfg.vr_veloce or not str(out.get("metodo") or "").startswith("valore_reale")):
         if len(prezzi) >= 2:
             rapp = percentile(prezzi, cfg.q_veloce) / max(percentile(prezzi, .5), 1)
             come = f"il {int(cfg.q_veloce*100)}% dei {len(prezzi)} confronti costa meno, il {100-int(cfg.q_veloce*100)}% di più"

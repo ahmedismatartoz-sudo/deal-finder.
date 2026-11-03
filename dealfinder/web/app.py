@@ -4744,6 +4744,21 @@ def _tempo_reale():
         tag = os.environ.get("DIAGNOSI_DATI")
         if not tag:
             return
+        if tag.startswith("simvr"):
+            # 3/11 (cliente): quante auto entrerebbero con la rivendita senza la prudenza doppia (solo conteggi)
+            time.sleep(40)
+            L = logging.getLogger("scovo")
+            try:
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"simvr:{tag}"):
+                    return
+                from ..pricing import simula_vr
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '600s'")
+                    simula_vr.simula(conn, _fattori_calibra(), limite=int(os.environ.get("SIMVR_MAX", "5000")))
+            except Exception as e:
+                L.warning("SIMVR non riuscita: %s", str(e)[:300])
+            return
         if tag.startswith("valreale"):
             # 2/11 notte (cliente: ok a sviluppare e usare il metodo "valore reale"): prova sulle vendute, calcolo per le
             # auto della zona, conteggio di quante entrerebbero con le stesse regole; in parallelo il lettore AI completa
@@ -5171,9 +5186,16 @@ def _tempo_reale():
                 try:
                     from ..pricing import valore_reale as VR
                     with connect() as conn:
+                        fresco = conn.execute("SELECT max(computed_at) > now() - interval '6 hours' AS ok "
+                                              "FROM valore_reale").fetchone()["ok"]
+                    if fresco:
+                        raise StopIteration          # già ricalcolato nelle ultime 6 ore (es. riavvio): si riprende
+                    with connect() as conn:
                         conn.execute("SET statement_timeout = '900s'")
                         L.warning("RIVTUTTE valore reale ricalcolato: %s",
                                   json.dumps(VR.calcola_e_salva(conn, prov_zona=list(tutte())), default=str))
+                except StopIteration:
+                    L.warning("RIVTUTTE valore reale già fresco: non si ricalcola")
                 except Exception as e:
                     L.warning("RIVTUTTE ricalcolo valore reale non riuscito (si usa quello di stanotte): %s", str(e)[:300])
             with connect() as conn:
