@@ -1106,6 +1106,10 @@ def _regole_finali(items: list[dict]) -> list[dict]:
         if pv and pv.get("M") and pv.get("margine") is not None:
             R = pv.get("R_finale") or pv.get("R")
             cap = int(round(float(pv["M"]) * (1 - tetto_pct)))
+            # 3/11 20:20 (cliente: "prezzi di rivendita veri"): con la rivendita vera (R = mercato vero) niente tetto −5%
+            if (pv.get("R_da") == "mercato vero" or str(pv.get("fascia") or "").startswith("rivendita = prezzo vero")) \
+                    and os.environ.get("RIVENDITA_VERA", "1") == "1":
+                cap = int(round(float(pv["M"])))
             if R and R > cap:
                 m2 = int(pv["margine"]) - (int(R) - cap)
                 abbassate += 1
@@ -1122,6 +1126,11 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     g_pct = float(os.environ.get("SITO_GONFIATE_PCT", "100")) / 100
     g_eur = int(os.environ.get("SITO_GONFIATE_EURO", "3000"))
     prima_g = len(items)
+    # 3/11 20:20 (cliente: "se sono troppo belle basta assicurarsi che non sia una truffa"): con la rivendita vera non
+    # si tolgono più per il margine alto; restano i controlli anti-truffa (prezzo sotto il 55% del mercato solo con
+    # targa e numero, sotto il 20% mai, testo da truffa e confronti sbagliati controllati dall'AI subito dopo)
+    if os.environ.get("RIVENDITA_VERA", "1") == "1" and os.environ.get("SITO_GONFIATE_ATTIVO", "0") != "1":
+        g_eur = 10**9
     items = [it for it in items if not (
         (it.get("pv") or {}).get("margine") is not None and it.get("prezzo")
         and int(it["pv"]["margine"]) > g_eur and int(it["pv"]["margine"]) > g_pct * int(it["prezzo"]))]

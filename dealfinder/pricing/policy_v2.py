@@ -1077,7 +1077,7 @@ def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
             "totale_costi", "campione", "policy", "metodo", "prudente_pochi", "vr_accordo", "vr_poche_gemelle",
-            "policy_rev")
+            "policy_rev", "R_da")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]
