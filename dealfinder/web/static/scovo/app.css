@@ -496,3 +496,31 @@ a{color:var(--focus)}
 .piano-prezzo{font:800 28px var(--disp)}.piano-prezzo s{font-size:18px;color:var(--muted);font-weight:600}
 .piano-prezzo span{font-size:15px;font-weight:600;color:var(--muted)}
 @media (min-width:640px){.piani{grid-template-columns:1fr 1fr}}
+/* 3/11 v2: appuntamenti col calendario e dati azienda */
+.sheet h2:focus,.sheet h2:focus-visible{outline:none}
+.ap-sheet{max-height:92vh;max-height:92dvh}
+.ap-sheet .sheet-head{align-items:flex-start;gap:12px;padding:16px 16px 10px;border-bottom:1px solid var(--line)}
+.ap-sheet .sheet-head .hint{display:block;margin-top:2px}
+.ap-sheet .sheet-body{gap:18px;padding:14px 16px 16px;overscroll-behavior:contain}
+.ap-sheet .lbl{margin-bottom:8px}
+.ap-tip{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.4;color:var(--ink-2)}
+.cal{border:1px solid var(--line);border-radius:14px;padding:10px}
+.cal-mese{font:700 15px var(--disp);text-transform:capitalize;padding:2px 4px 8px}
+.cal-g,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-g span{font-size:11px;font-weight:700;color:var(--muted);padding-bottom:4px}
+.cal-d{position:relative;aspect-ratio:1;max-height:46px;border-radius:10px;border:0;background:transparent;font:600 15px var(--body);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cal-d.off{color:var(--muted);opacity:.35;cursor:default}
+.cal-d.has{background:var(--soft)}
+.cal-d.on{background:var(--ink);color:var(--bg)}
+.cal-d i{position:absolute;top:2px;right:3px;min-width:15px;height:15px;border-radius:8px;background:var(--tag);color:#fff;font:700 10px/15px var(--body);font-style:normal}
+.ap-ore{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ap-ora{min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card);font:600 14px var(--body);color:var(--ink-2);cursor:pointer}
+.ap-ora.on{background:var(--tag);border-color:var(--tag);color:#fff}
+.ap-vuoto{font-size:14px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.ap-scelte{display:flex;flex-wrap:wrap;gap:6px}
+.ap-chip{display:inline-flex;align-items:center;gap:4px;min-height:34px;padding:0 4px 0 12px;border-radius:17px;background:var(--soft);font:600 13px var(--body);color:var(--ink)}
+.ap-chip button{border:0;background:transparent;color:var(--muted);font-size:18px;width:28px;height:28px;cursor:pointer}
+.ap-ok{background:var(--soft);border-radius:14px;padding:16px;font-size:15px;line-height:1.45}
+.az-form{gap:14px}
+.az-riga{display:grid;grid-template-columns:1fr 88px;gap:10px}
+.btn:disabled{opacity:.5}

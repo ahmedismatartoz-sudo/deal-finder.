@@ -534,67 +534,103 @@ function sheetParts(){
     </div>
   </div></div>`;
 }
-/* ---------- 3/11: abbonati 200 €, dati azienda e appuntamenti ---------- */
-const AP = {az: null, campi: [], giorno: "", fascia: "", busy: false, err: "", ok: false, dopo: null};
-const FASCE_AP = [["mattina","Mattina","9–12"],["pranzo","Pranzo","12–14"],["pomeriggio","Pomeriggio","14–18"],["sera","Sera","18–20"]];
-const ORE_AP = {mattina:["9:00","10:00","11:00"], pranzo:["12:00","13:00"], pomeriggio:["14:00","15:00","16:00","17:00"], sera:["18:00","19:00"]};
+/* ---------- 3/11: abbonati Max (200 €), dati azienda e appuntamenti col calendario ---------- */
+const AP = {az: null, campi: [], ore: [], max: 8, sel: [], giorno: "", nota: "", busy: false, err: "", ok: false, dopo: null, completa: false};
+const GG_AP = ["dom","lun","mar","mer","gio","ven","sab"], MESI_AP = ["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+const isoAP = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const dataAP = iso => { const d = new Date(iso + "T12:00:00"); return GG_AP[d.getDay()] + " " + d.getDate() + " " + MESI_AP[d.getMonth()]; };
 async function apCarica(){
-  try { const r = await api("/api/me/azienda"); AP.az = r.dati || {}; AP.campi = r.campi || []; AP.completa = !!r.completa; }
+  try { const r = await api("/api/me/azienda"); AP.az = r.dati || {}; AP.campi = r.campi || []; AP.completa = !!r.completa;
+        AP.ore = r.ore || []; AP.max = r.max || 8; }
   catch (e) { AP.az = {}; AP.campi = []; AP.completa = false; }
+  if (!AP.ore.length) for (let h = 9; h <= 19; h++) { AP.ore.push(h + ":00"); if (h < 19) AP.ore.push(h + ":30"); }
 }
-function apGiorni(){
-  const out = [], nomi = ["dom","lun","mar","mer","gio","ven","sab"];
-  for (let i = 0; i < 8; i++) { const d = new Date(); d.setDate(d.getDate() + i);
-    if (d.getDay() === 0) continue;
-    const iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    out.push([iso, i === 0 ? "Oggi" : i === 1 ? "Domani" : nomi[d.getDay()] + " " + d.getDate()]); }
-  return out;
+/* calendario: da lunedì di questa settimana, 3 settimane; si sceglie da oggi a 14 giorni */
+function apCalendario(){
+  const oggi = new Date(); oggi.setHours(12, 0, 0, 0);
+  const fine = new Date(oggi); fine.setDate(fine.getDate() + 14);
+  const inizio = new Date(oggi); inizio.setDate(inizio.getDate() - ((oggi.getDay() + 6) % 7));
+  let celle = "";
+  for (let i = 0; i < 21; i++) {
+    const d = new Date(inizio); d.setDate(inizio.getDate() + i);
+    const iso = isoAP(d), ok = d >= new Date(isoAP(oggi) + "T00:00:00") && d <= fine;
+    const n = AP.sel.filter(x => x.giorno === iso).length;
+    celle += ok ? `<button class="cal-d${AP.giorno === iso ? " on" : ""}${n ? " has" : ""}" data-act="ap-giorno" data-v="${iso}" aria-pressed="${AP.giorno === iso}" aria-label="${dataAP(iso)}${n ? ", " + n + " orari scelti" : ""}">${d.getDate()}${n ? `<i>${n}</i>` : ""}</button>`
+                : `<span class="cal-d off">${d.getDate()}</span>`;
+  }
+  const m1 = MESI_AP[inizio.getMonth()], m2 = MESI_AP[fine.getMonth()];
+  return `<div class="cal"><div class="cal-mese">${m1 === m2 ? m1 : m1 + " – " + m2}</div>
+    <div class="cal-g">${["L","M","M","G","V","S","D"].map(x => `<span>${x}</span>`).join("")}</div>
+    <div class="cal-grid">${celle}</div></div>`;
 }
 function sheetAppuntamento(){
   const base = (S.cars || []).find(c => c.id === S.sel) || S.detail[S.sel] || {};
-  if (AP.ok) return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aph">
+  if (AP.ok) return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet ap-sheet" role="dialog" aria-modal="true" aria-labelledby="aph">
     <div class="sheet-head"><h2 id="aph">Richiesta inviata</h2><button class="link" data-act="close">Chiudi</button></div>
-    <div class="sheet-body"><div class="ok-box">Contattiamo noi il privato e ti confermiamo l'appuntamento su WhatsApp o per telefono.</div>
-    <span class="hint">${esc(base.nome || "")}</span></div></div></div>`;
-  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aph">
-    <div class="sheet-head"><h2 id="aph">Fissa l'appuntamento</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body"><div class="ap-ok"><b>Ci pensiamo noi.</b> Sentiamo il privato e ti diciamo se siamo riusciti a fissare l'appuntamento in una delle tue date.</div>
+    <span class="hint">${esc(base.nome || "")}</span></div>
+    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="close">Ok</button></div></div></div>`;
+  const ore = AP.giorno ? AP.ore.map(o => { const on = AP.sel.some(x => x.giorno === AP.giorno && x.ora === o);
+      return `<button class="ap-ora${on ? " on" : ""}" data-act="ap-ora" data-v="${o}" aria-pressed="${on}">${o}</button>`; }).join("") : "";
+  const scelte = [...AP.sel].sort((a, b) => (a.giorno + a.ora.padStart(5, "0")).localeCompare(b.giorno + b.ora.padStart(5, "0")));
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet ap-sheet" role="dialog" aria-modal="true" aria-labelledby="aph">
+    <div class="sheet-head"><div><h2 id="aph">Fissa l'appuntamento</h2><span class="hint">${esc(base.nome || "")}</span></div><button class="link" data-act="close">Chiudi</button></div>
     <div class="sheet-body">
-      <span class="hint">${esc(base.nome || "")}</span>
-      <div class="lbl">Giorno</div><div class="wrap">${apGiorni().map(([v,l]) => `<button class="pill" data-act="ap-giorno" data-v="${v}" aria-pressed="${AP.giorno === v}">${l}</button>`).join("")}</div>
-      <div class="lbl">Fascia oraria</div><div class="wrap">${FASCE_AP.map(([v,l,o]) => `<button class="pill" data-act="ap-fascia" data-v="${v}" aria-pressed="${AP.fascia === v}">${l} · ${o}</button>`).join("")}</div>
-      ${AP.fascia ? `<label class="field">Ora precisa (facoltativa)<select id="ap-ora" class="sel"><option value="">Qualsiasi ora della fascia</option>${(ORE_AP[AP.fascia] || []).map(o => `<option>${o}</option>`).join("")}</select></label>` : ""}
-      <label class="field">Nota per noi (facoltativa)<input id="ap-nota" type="text" maxlength="300" placeholder="es. porto un meccanico, chiedo il libretto"></label>
+      <div class="ap-tip">Scegli <b>più giorni e orari</b> in cui puoi andare: così troviamo più facilmente un momento che va bene anche al privato.</div>
+      <div><div class="lbl">1 · Giorno</div>${apCalendario()}</div>
+      <div><div class="lbl">2 · Orari ${AP.giorno ? "di " + dataAP(AP.giorno) : ""}</div>
+        ${AP.giorno ? `<div class="ap-ore">${ore}</div>` : `<div class="ap-vuoto">Tocca un giorno nel calendario</div>`}</div>
+      <div><div class="lbl">Le tue disponibilità · ${AP.sel.length}/${AP.max}</div>
+        ${scelte.length ? `<div class="ap-scelte">${scelte.map(x => `<span class="ap-chip">${dataAP(x.giorno)} · ${x.ora}<button data-act="ap-togli" data-v="${x.giorno}|${x.ora}" aria-label="Togli">×</button></span>`).join("")}</div>`
+          : `<div class="ap-vuoto">Ancora nessun orario scelto</div>`}</div>
+      <label class="field">Nota per noi (facoltativa)<input id="ap-nota" type="text" maxlength="300" value="${esc(AP.nota)}" placeholder="es. porto il meccanico, chiedo il libretto"></label>
       ${AP.err ? `<span class="err" role="alert">${esc(AP.err)}</span>` : ""}
     </div>
-    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="ap-send" ${AP.busy ? "disabled" : ""}>Chiedi l'appuntamento</button></div>
+    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="ap-send" ${AP.busy || !AP.sel.length ? "disabled" : ""}>${AP.busy ? "Invio…" : AP.sel.length ? "Invia " + AP.sel.length + (AP.sel.length === 1 ? " disponibilità" : " disponibilità") : "Scegli almeno un orario"}</button></div>
   </div></div>`;
 }
 function sheetAzienda(){
-  const d = AP.az || {};
-  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="azh">
-    <div class="sheet-head"><h2 id="azh">I dati della tua azienda</h2><button class="link" data-act="close">Chiudi</button></div>
-    <div class="sheet-body">
-      <span class="hint">Servono per presentarti al privato e fissare gli appuntamenti a tuo nome. Li vediamo solo noi.</span>
-      ${(AP.campi || []).map(c => `<label class="field">${esc(c.l)}${c.obbligatorio ? "" : " (facoltativo)"}<input id="az-${c.k}" type="${c.k === "email" ? "email" : c.k === "cellulare" ? "tel" : "text"}" value="${esc(d[c.k] || "")}" ${c.k === "provincia" ? 'maxlength="2" placeholder="es. BG"' : ""}></label>`).join("")}
+  const d = AP.az || {}, f = k => (AP.campi || []).find(c => c.k === k);
+  const campo = (k, extra = "") => { const c = f(k); if (!c) return "";
+    return `<label class="field">${esc(c.l)}${c.obbligatorio ? "" : " (facoltativo)"}<input id="az-${k}" type="${k === "email" ? "email" : k === "cellulare" ? "tel" : "text"}" value="${esc(d[k] || "")}" ${extra}></label>`; };
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet ap-sheet" role="dialog" aria-modal="true" aria-labelledby="azh">
+    <div class="sheet-head"><div><h2 id="azh">La tua azienda</h2><span class="hint">Lo chiediamo una volta sola. Lo usiamo per presentarti al privato.</span></div><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body az-form">
+      ${campo("nome_azienda", 'autocomplete="organization"')}
+      ${campo("indirizzo", 'autocomplete="street-address" placeholder="Via e numero"')}
+      <div class="az-riga">${campo("comune", 'autocomplete="address-level2"')}${campo("provincia", 'maxlength="2" placeholder="BG" autocapitalize="characters"')}</div>
+      ${campo("referente", 'autocomplete="name"')}
+      ${campo("cellulare", 'autocomplete="tel" inputmode="tel"')}
+      ${campo("email", 'autocomplete="email"')}
       ${AP.err ? `<span class="err" role="alert">${esc(AP.err)}</span>` : ""}
     </div>
-    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="az-save" ${AP.busy ? "disabled" : ""}>Salva${AP.dopo ? " e continua" : ""}</button></div>
+    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="az-save" ${AP.busy ? "disabled" : ""}>${AP.busy ? "Salvo…" : AP.dopo ? "Salva e scegli le date" : "Salva"}</button></div>
   </div></div>`;
+}
+function apNota(){ const n = document.getElementById("ap-nota"); if (n) AP.nota = n.value; }
+function apOra(o){
+  apNota();
+  const i = AP.sel.findIndex(x => x.giorno === AP.giorno && x.ora === o);
+  if (i >= 0) AP.sel.splice(i, 1);
+  else if (AP.sel.length >= AP.max) { toast("Bastano " + AP.max + " disponibilità"); return; }
+  else AP.sel.push({giorno: AP.giorno, ora: o});
+  AP.err = ""; render({keep:true});
 }
 async function apApri(){
   if (!S.token) { toast("Entra per fissare un appuntamento"); go("entra"); return; }
-  AP.ok = false; AP.err = ""; AP.giorno = ""; AP.fascia = "";
+  if (AP.selPer !== S.sel) { AP.sel = []; AP.nota = ""; AP.giorno = ""; AP.selPer = S.sel; }
+  AP.ok = false; AP.err = "";
   if (AP.az === null) await apCarica();
   S.sheet = AP.completa ? "appuntamento" : "azienda"; AP.dopo = AP.completa ? null : "appuntamento";
   render({keep:true});
 }
 async function apInvia(){
-  if (!AP.giorno || !AP.fascia) { AP.err = "Scegli il giorno e la fascia oraria"; render({keep:true}); return; }
+  apNota();
+  if (!AP.sel.length) { AP.err = "Scegli almeno un giorno e un orario"; render({keep:true}); return; }
   AP.busy = true; AP.err = ""; render({keep:true});
   try {
-    const ora = (document.getElementById("ap-ora") || {}).value || "", nota = (document.getElementById("ap-nota") || {}).value || "";
-    await api("/api/affari/" + S.sel + "/appuntamento", {method: "POST", body: {giorno: AP.giorno, fascia: AP.fascia, ora, nota}});
-    AP.ok = true; segnaAperta();
+    await api("/api/affari/" + S.sel + "/appuntamento", {method: "POST", body: {proposte: AP.sel, nota: AP.nota}});
+    AP.ok = true; AP.sel = []; AP.nota = ""; AP.giorno = ""; segnaAperta();
   } catch (e) {
     if (/dati della tua azienda/i.test(e.message || "")) { AP.dopo = "appuntamento"; S.sheet = "azienda"; }
     AP.err = e.message || "Non riuscito, riprova";
@@ -603,6 +639,9 @@ async function apInvia(){
 }
 async function azSalva(){
   const body = {}; (AP.campi || []).forEach(c => body[c.k] = ((document.getElementById("az-" + c.k) || {}).value || "").trim());
+  AP.az = Object.assign({}, AP.az, body);
+  const manca = (AP.campi || []).find(c => c.obbligatorio && !body[c.k]);
+  if (manca) { AP.err = "Manca: " + manca.l; render({keep:true}); return; }
   AP.busy = true; AP.err = ""; render({keep:true});
   try { const r = await api("/api/me/azienda", {method: "PUT", body}); AP.az = r.dati; AP.completa = true;
         S.sheet = AP.dopo || null; AP.dopo = null; if (!S.sheet) toast("Dati salvati"); }
@@ -1426,8 +1465,9 @@ $app.addEventListener("click", e => {
     case "filters": S.sheet = "filters"; break;
     case "parts": S.sheet = "parts"; break;
     case "app-open": apApri(); return;
-    case "ap-giorno": AP.giorno = v; AP.err = ""; break;
-    case "ap-fascia": AP.fascia = v; AP.err = ""; break;
+    case "ap-giorno": apNota(); AP.giorno = v; AP.err = ""; break;
+    case "ap-ora": apOra(v); return;
+    case "ap-togli": { apNota(); const [g, o] = String(v).split("|"); AP.sel = AP.sel.filter(x => !(x.giorno === g && x.ora === o)); break; }
     case "ap-send": apInvia(); return;
     case "az-open": (async () => { if (AP.az === null) await apCarica(); AP.err = ""; AP.dopo = null; S.sheet = "azienda"; render({keep:true}); })(); return;
     case "az-save": azSalva(); return;
