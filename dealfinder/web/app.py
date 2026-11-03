@@ -82,8 +82,8 @@ def richiede(request: Request, permesso: str) -> dict:
             if permesso not in permessi_di(conn, user):
                 err(403, "Il tuo account non ha accesso a questa sezione")
             if permesso == "auto":
-                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) AS con_password, "
-                                   "role FROM dealers WHERE id=%s",
+                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, abbonamento_tolleranza, "
+                                   "(password_hash IS NOT NULL) AS con_password, role FROM dealers WHERE id=%s",
                                    (user["id"],)).fetchone()
                 if not abbonamento.puo_vedere(row):
                     err(402, "Per vedere le auto serve l'abbonamento")
@@ -543,7 +543,9 @@ async def admin_update_dealer(request: Request):
             conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
                          ([p for p in data["permessi"] if p in PERMESSI], did))
         if "active" in data:
-            conn.execute("UPDATE dealers SET active=%s WHERE id=%s", (bool(data["active"]), did))
+            # disattivato_da_admin: né il pagamento Stripe né l'avvio lo riaccendono
+            conn.execute("UPDATE dealers SET active=%s, disattivato_da_admin=%s WHERE id=%s",
+                         (bool(data["active"]), not bool(data["active"]), did))
             if not data["active"]:
                 sessions.revoke_all(conn, did, "account_disattivato")
         if data.get("password"):
@@ -574,14 +576,28 @@ async def abbonamento_checkout(request: Request):
     user = current_user(request)
     if not abbonamento.attivo():
         err(503, "Pagamenti non ancora attivi")
-    with connect() as conn:
-        d = conn.execute("SELECT id, email, stripe_customer FROM dealers WHERE id=%s", (user["id"],)).fetchone()
     piano = str((await body(request)).get("piano") or "base")
+
+    def go():
+        # 3/11 notte: niente secondo abbonamento se ce n'è già uno attivo, in prova o in tolleranza (database o
+        # Stripe): si manda al portale di Stripe, dove si cambia piano (Base <-> Max) o carta
+        with connect() as conn:
+            d = conn.execute("SELECT id, email, stripe_customer, abbonamento_stato FROM dealers WHERE id=%s",
+                             (user["id"],)).fetchone()
+            gia = abbonamento.abbonamento_in_corso(conn, d)
+        if gia:
+            if not d.get("stripe_customer"):
+                return {"gia_abbonato": True, "errore": "Hai già un abbonamento attivo"}
+            return {"url": abbonamento.portale(d["stripe_customer"], social.base_url(request)), "portale": True,
+                    "gia_abbonato": True}
+        return {"url": abbonamento.checkout(d, social.base_url(request), None, piano)}
     try:
-        url = await run_in_threadpool(abbonamento.checkout, d, social.base_url(request), None, piano)
+        out = await run_in_threadpool(go)
     except RuntimeError as e:
         err(502, str(e))
-    return jsonify({"url": url})
+    if out.get("gia_abbonato"):
+        log.warning("STRIPE checkout rifiutato: commerciante %s ha già un abbonamento (portale)", user["id"])
+    return jsonify(out, 200 if out.get("url") else 409)
 
 
 async def abbonamento_portale(request: Request):

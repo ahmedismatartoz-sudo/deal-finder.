@@ -30,43 +30,208 @@ def test_chi_puo_vedere():
     assert not ab.puo_vedere({"richiede_abbonamento": True, "abbonamento_stato": "canceled"})
 
 
-class _Conn:
+class _R:
+    def __init__(self, rows=None):
+        self.rows = rows or []
+        self.rowcount = len(self.rows)
+
+    def fetchone(self):
+        return self.rows[0] if self.rows else None
+
+    def fetchall(self):
+        return self.rows
+
+
+class FintoStripeDB:
+    """dealers, abbonamenti e stripe_eventi in memoria: quanto basta per le query di abbonamento.applica."""
+
     def __init__(self):
-        self.q = []
-
-    def execute(self, sql, params=()):
-        self.q.append((" ".join(sql.split()), params))
-
-        class R:
-            rowcount = 1
-        return R()
+        from datetime import datetime, timezone
+        self.now = datetime.now(timezone.utc)
+        self.dealers = {7: {"id": 7, "stripe_customer": None, "abbonamento_stato": None, "active": True,
+                            "permessi": ["auto"], "appuntamenti_da_stripe": False, "abbonamento_tolleranza": None}}
+        self.abb, self.eventi, self.q = {}, set(), []
 
     def commit(self):
         pass
 
+    def rollback(self):
+        pass
+
+    def execute(self, sql, p=()):
+        s = " ".join(sql.split())
+        self.q.append(s)
+        D = self.dealers
+        if s.startswith("INSERT INTO stripe_eventi"):
+            if p[0] in self.eventi:
+                return _R()
+            self.eventi.add(p[0])
+            return _R([{"id": p[0]}])
+        if s.startswith("UPDATE stripe_eventi"):
+            return _R()
+        if s.startswith("SELECT dealer_id FROM abbonamenti WHERE subscription_id"):
+            a = self.abb.get(p[0])
+            return _R([{"dealer_id": a["dealer_id"]}] if a else [])
+        if s.startswith("SELECT id FROM dealers WHERE stripe_customer"):
+            return _R([{"id": d["id"]} for d in D.values() if d["stripe_customer"] == p[0]][:1])
+        if s.startswith("UPDATE dealers SET stripe_customer = COALESCE"):
+            D[p[1]]["stripe_customer"] = D[p[1]]["stripe_customer"] or p[0]
+            return _R()
+        if s.startswith("SELECT 1 FROM abbonamenti WHERE customer"):
+            return _R([{"x": 1}] if any(a["customer"] == p[0] for a in self.abb.values()) else [])
+        if s.startswith("INSERT INTO abbonamenti"):
+            from datetime import datetime, timezone
+            v = p
+            a = self.abb.get(v["sid"])
+            fino = datetime.fromtimestamp(v["fino"], timezone.utc) if v["fino"] else None
+            if a is None:
+                self.abb[v["sid"]] = {"subscription_id": v["sid"], "dealer_id": v["did"], "customer": v["cu"], "stato": v["st"],
+                                      "piano": v["pi"], "fino": fino, "evento_created": v["cr"],
+                                      "past_due_dal": self.now if v["st"] == "past_due" else None}
+                return _R([{"subscription_id": v["sid"]}])
+            if a["evento_created"] > v["cr"]:
+                return _R()
+            a["dealer_id"] = v["did"] or a["dealer_id"]
+            a["customer"] = v["cu"] or a["customer"]
+            a["stato"] = v["st"] or a["stato"]
+            a["piano"] = v["pi"] or a["piano"]
+            a["fino"] = fino or a["fino"]
+            a["past_due_dal"] = (a["past_due_dal"] or self.now) if a["stato"] == "past_due" else None
+            a["evento_created"] = v["cr"]
+            return _R([{"subscription_id": v["sid"]}])
+        if s.startswith("SELECT subscription_id, stato, piano, fino, past_due_dal FROM abbonamenti WHERE dealer_id"):
+            return _R([dict(a) for a in self.abb.values() if a["dealer_id"] == p[0]])
+        if s.startswith("UPDATE dealers SET abbonamento_stato"):
+            d = D[p[3]]
+            d["abbonamento_stato"], d["abbonamento_tolleranza"] = p[0], p[2]
+            return _R()
+        if s.startswith("UPDATE dealers SET permessi = array_append(COALESCE(permessi, '{}'), 'auto')"):
+            if "auto" not in D[p[0]]["permessi"]:
+                D[p[0]]["permessi"].append("auto")
+            return _R()
+        if s.startswith("UPDATE dealers SET permessi = array_append(COALESCE(permessi, '{}'), 'appuntamenti')"):
+            if "appuntamenti" not in D[p[0]]["permessi"]:
+                D[p[0]]["permessi"].append("appuntamenti")
+                D[p[0]]["appuntamenti_da_stripe"] = True
+            return _R()
+        if s.startswith("UPDATE dealers SET permessi = array_remove(permessi, 'appuntamenti')"):
+            d = D[p[0]]
+            if d["appuntamenti_da_stripe"]:
+                d["permessi"] = [x for x in d["permessi"] if x != "appuntamenti"]
+                d["appuntamenti_da_stripe"] = False
+            return _R()
+        if s.startswith("UPDATE abbonamenti SET stato='past_due'"):
+            created, sid, _, cu, _ = p
+            out = []
+            for a in self.abb.values():
+                if (a["subscription_id"] == sid or (sid is None and a["customer"] == cu)) and \
+                        a["stato"] in ("active", "trialing") and a["evento_created"] <= created:
+                    a["stato"], a["past_due_dal"], a["evento_created"] = "past_due", a["past_due_dal"] or self.now, created
+                    out.append({"dealer_id": a["dealer_id"]})
+            return _R(out)
+        raise AssertionError("query inattesa: " + s[:120])
+
+
+def _sub(sid, stato, created, lookup="scovo_base_100_mese", evid=None, tipo="customer.subscription.updated", **k):
+    o = {"id": sid, "customer": "cus_1", "status": stato, "metadata": {"dealer_id": "7"},
+         "items": {"data": [{"price": {"id": "price_x_" + lookup, "lookup_key": lookup}, "current_period_end": 1900000000}]}}
+    o.update(k)
+    return {"id": evid or f"evt_{sid}_{created}_{stato}", "type": tipo, "created": created, "data": {"object": o}}
+
 
 def test_eventi_stripe():
-    c = _Conn()
-    assert ab.applica(c, {"type": "checkout.session.completed",
-                          "data": {"object": {"client_reference_id": "7", "customer": "cus_1"}}}) == "pagato:7"
-    assert "abbonamento_stato='active'" in c.q[-1][0] and c.q[-1][1] == ("cus_1", 7)
-    assert ab.applica(c, {"type": "customer.subscription.deleted",
-                          "data": {"object": {"customer": "cus_1", "status": "canceled"}}}) == "abbonamento:canceled"
-    assert ab.applica(c, {"type": "invoice.payment_failed", "data": {"object": {"customer": "cus_1"}}}) == "pagamento_fallito"
-    assert ab.applica(c, {"type": "altro"}) == "ignorato"
+    db = FintoStripeDB()
+    ev = {"id": "evt_1", "type": "checkout.session.completed", "created": 100,
+          "data": {"object": {"client_reference_id": "7", "customer": "cus_1", "subscription": "sub_1", "payment_status": "paid"}}}
+    assert ab.applica(db, ev) == "pagato:7"
+    assert db.dealers[7]["abbonamento_stato"] == "active" and db.dealers[7]["stripe_customer"] == "cus_1"
+    assert ab.applica(db, ev) == "doppione"                                        # stesso evento: niente
+    assert ab.applica(db, _sub("sub_1", "canceled", 200, tipo="customer.subscription.deleted")).startswith("abbonamento:canceled")
+    assert db.dealers[7]["abbonamento_stato"] == "canceled"
+    assert ab.applica(db, {"id": "evt_x", "type": "altro"}) == "ignorato"
+    assert not any("active=true" in q or "active = true" in q for q in db.q)       # il pagamento non tocca `active`
 
 
-def test_piano_pro_da_gli_appuntamenti():
-    c = _Conn()
-    assert ab.applica(c, {"type": "checkout.session.completed",
-                          "data": {"object": {"client_reference_id": "7", "customer": "cus_1", "metadata": {"piano": "pro"}}}}) == "pagato:7"
-    assert any("'appuntamenti'" in q for q, _ in c.q)
-    c = _Conn()
-    ab.applica(c, {"type": "checkout.session.completed", "data": {"object": {"client_reference_id": "8", "customer": "cus_2"}}})
-    assert not any("'appuntamenti'" in q for q, _ in c.q)
-    c = _Conn()
-    ab.applica(c, {"type": "customer.subscription.deleted", "data": {"object": {"customer": "cus_1", "metadata": {"piano": "pro"}}}})
-    assert any("array_remove" in q for q, _ in c.q)
+def test_pagamento_non_riaccende_account_spento():
+    db = FintoStripeDB()
+    db.dealers[7]["active"] = False                                                # spento dall'amministratore
+    ab.applica(db, _sub("sub_1", "active", 100))
+    assert db.dealers[7]["active"] is False and db.dealers[7]["abbonamento_stato"] == "active"
+
+
+def test_due_abbonamenti_disdetta_di_uno():
+    db = FintoStripeDB()
+    ab.applica(db, _sub("sub_1", "active", 100))
+    ab.applica(db, _sub("sub_2", "active", 110))
+    ab.applica(db, _sub("sub_1", "canceled", 200, tipo="customer.subscription.deleted"))
+    assert db.dealers[7]["abbonamento_stato"] == "active"                          # l'altro è ancora pagato
+    assert ab.puo_vedere({"richiede_abbonamento": True, **db.dealers[7]})
+
+
+def test_evento_vecchio_ignorato():
+    db = FintoStripeDB()
+    ab.applica(db, _sub("sub_1", "active", 200))
+    assert ab.applica(db, _sub("sub_1", "incomplete", 150, tipo="customer.subscription.created")).startswith("vecchio")
+    assert db.dealers[7]["abbonamento_stato"] == "active"
+
+
+def test_piano_max_segue_il_prezzo_attuale():
+    db = FintoStripeDB()
+    ab.applica(db, _sub("sub_1", "active", 100, lookup="scovo_pro_200_mese"))
+    assert "appuntamenti" in db.dealers[7]["permessi"]
+    ab.applica(db, _sub("sub_1", "active", 200, lookup="scovo_base_100_mese", metadata={"dealer_id": "7", "piano": "pro"}))
+    assert "appuntamenti" not in db.dealers[7]["permessi"]                         # passato a Base dal portale
+    ab.applica(db, _sub("sub_1", "active", 300, lookup="scovo_pro_200_mese", metadata={"dealer_id": "7", "piano": "base"}))
+    assert "appuntamenti" in db.dealers[7]["permessi"]                             # e di nuovo a Max
+    ab.applica(db, _sub("sub_1", "unpaid", 400, lookup="scovo_pro_200_mese"))
+    assert "appuntamenti" not in db.dealers[7]["permessi"]
+
+
+def test_appuntamenti_dati_a_mano_restano():
+    db = FintoStripeDB()
+    db.dealers[7]["permessi"] = ["auto", "appuntamenti"]                            # dati dal pannello
+    ab.applica(db, _sub("sub_1", "active", 100, lookup="scovo_base_100_mese"))
+    ab.applica(db, _sub("sub_1", "canceled", 200, tipo="customer.subscription.deleted"))
+    assert "appuntamenti" in db.dealers[7]["permessi"]
+
+
+def test_pagamento_fallito_tolleranza():
+    from datetime import timedelta
+    db = FintoStripeDB()
+    ab.applica(db, _sub("sub_1", "active", 100, lookup="scovo_pro_200_mese"))
+    assert ab.applica(db, {"id": "evt_f", "type": "invoice.payment_failed", "created": 150,
+                           "data": {"object": {"customer": "cus_1", "subscription": "sub_1"}}}) == "pagamento_fallito"
+    d = db.dealers[7]
+    assert d["abbonamento_stato"] == "past_due" and "appuntamenti" in d["permessi"]   # nei giorni di tolleranza resta
+    assert ab.puo_vedere({"richiede_abbonamento": True, **d})
+    db.abb["sub_1"]["past_due_dal"] = db.now - timedelta(days=10)                      # tolleranza finita
+    ab.applica(db, _sub("sub_1", "past_due", 300, lookup="scovo_pro_200_mese"))
+    d = db.dealers[7]
+    assert "appuntamenti" not in d["permessi"] and not ab.puo_vedere({"richiede_abbonamento": True, **d})
+
+
+def test_secondo_abbonamento_bloccato():
+    db = FintoStripeDB()
+    ab.applica(db, _sub("sub_1", "active", 100))
+    assert ab.abbonamento_in_corso(db, {"id": 7, "abbonamento_stato": None, "stripe_customer": None})
+    db2 = FintoStripeDB()
+    leggi = lambda path, params: {"data": [{"id": "sub_9", "status": "trialing"}]}    # noqa: E731 (Stripe finto)
+    assert ab.abbonamento_in_corso(db2, {"id": 7, "abbonamento_stato": None, "stripe_customer": "cus_1"}, leggi)
+    leggi = lambda path, params: {"data": [{"id": "sub_9", "status": "canceled"}]}    # noqa: E731
+    assert not ab.abbonamento_in_corso(db2, {"id": 7, "abbonamento_stato": None, "stripe_customer": "cus_1"}, leggi)
+
+
+def test_clienti_di_prima_riletti_da_stripe():
+    db = FintoStripeDB()
+    db.dealers[7]["stripe_customer"] = "cus_1"
+    letti = []
+
+    def leggi(path, params):
+        letti.append(params["customer"])
+        return {"data": [{"id": "sub_vecchio", "status": "active", "customer": "cus_1",
+                          "items": {"data": [{"price": {"lookup_key": "scovo_base_100_mese"}}]}}]}
+    ab.applica(db, _sub("sub_nuovo", "canceled", 200, tipo="customer.subscription.deleted"), leggi)
+    assert letti == ["cus_1"] and db.dealers[7]["abbonamento_stato"] == "active"
 
 
 def test_checkout_sconto_primo_mese(monkeypatch=None):
@@ -100,3 +265,4 @@ def _checkout_sconto_primo_mese():
     assert d["line_items[0][price]"] == "price_p" and d["discounts[0][coupon]"] == "SCOVO_PRIMO_MESE_50"
     assert "allow_promotion_codes" not in d and d["subscription_data[metadata][piano]"] == "pro"
     assert [p["primo_mese"] for p in ab.info()["piani"]] == [50, 100]
+    assert [p["nome"] for p in ab.info()["piani"]] == ["Base", "Max"]
