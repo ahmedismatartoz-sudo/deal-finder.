@@ -526,67 +526,99 @@ FASCE_SUBITO = [(0, 1500), (1500, 2500), (2500, 3500), (3500, 5000), (5000, 6500
                 (10000, 13000), (13000, 17000), (17000, 22000), (22000, 30000), (30000, 45000), (45000, 80000)]
 
 
-def subito_completo(conn) -> dict:
+def subito_completo(conn, minuti: float | None = None, col=None) -> dict:
     """25/10 (cliente: "leggi TUTTE le auto di Subito con le nostre regole nel raggio dei 100 km"): rilegge Subito
     provincia per provincia e fascia di prezzo per fascia (così non c'è il tetto delle 10.000 auto più recenti),
     salva gli annunci nuovi o cambiati e segna chi ha il numero (sì/no, mai il numero). La valutazione la fa poi
-    il ricalcolo del cron. Le province sono quelle entro circa 100 km da Milano (SUBITO_PROVINCE per cambiarle)."""
-    from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector, parse_item
-    col = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+    il ricalcolo del cron. Le province sono quelle entro circa 100 km da Milano (SUBITO_PROVINCE per cambiarle).
+    3/11 (studio 4, P7/P8): si usa SubitoCollector._deep, che DIVIDE le fasce piene (prima oltre 40 pagine il resto
+    si perdeva senza avviso), con i passi già fatti (PASSI_JOB) per riprendere dopo un riavvio. Solo l'interfaccia
+    di ricerca (gratuita), mai il Web Unlocker. È anche la rilettura settimanale del cron (rilettura_subito): gli
+    annunci ancora in vendita tornano "visti" e restano confronti validi. `minuti`: tempo massimo per giro (il resto
+    al giro dopo, dai passi)."""
+    from ..collectors.subito import REGION_CODES, SubitoCollector
+    col = col or SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
     province = [p.strip().upper() for p in os.environ.get("SUBITO_PROVINCE", ",".join(PROVINCE_100KM)).split(",") if p.strip()]
+    pagine = int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))
     st = Counter()
     t0 = time.time()
+    fine = t0 + minuti * 60 if minuti else None
+    pacco: list = []
+
+    def salva():
+        if pacco:
+            try:
+                _salva(conn, pacco, st)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                st["errore_salva"] += 1
+                log.info("SUBITO_COMPLETO salva: %s", str(e)[:150])
+            pacco.clear()
+
     for reg, provs in REGIONI.items():
         voluti = set(provs) & set(province)
         if not voluti:
             continue
         code = REGION_CODES.get(reg) or _codici_regione.get(reg) or col._trova_regione(set(provs), 100)
         if not code:
+            st["regione_non_trovata"] += 1
             continue
         _codici_regione[reg] = REGION_CODES[reg] = code
-        chiavi = col._province_keys(code, voluti, 100)
-        for sn, key in sorted(chiavi.items()):
-            for ps, pe in FASCE_SUBITO:
-                for page in range(int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))):
-                    try:
-                        # 3/11: con nuovi tentativi per 429/5xx/rete (prima la fascia si chiudeva al primo errore)
-                        r = col._api({"c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
-                                      "start": page * 100, "sort": "datedesc"})
-                    except Exception as e:
-                        st["errore"] += 1
-                        log.info("SUBITO_COMPLETO %s %s-%s: %s", sn, ps, pe, str(e)[:100])
-                        break
-                    time.sleep(float(os.environ.get("TR_TEL_PAUSA_S", "1.0")))
-                    if r.status_code != 200:
-                        st[f"http_{r.status_code}"] += 1
-                        break
-                    ads = (r.json() or {}).get("ads") or []
-                    st["letti"] += len(ads)
-                    lst = []
-                    for a in ads:
-                        l = parse_item(a)
-                        if l:
-                            lst.append(l)
-                        st["con_numero" if telefono_subito(a) else "senza_numero"] += 1
-                    if lst:
-                        try:
-                            _salva(conn, lst, st)
-                            conn.commit()
-                        except Exception as e:
-                            conn.rollback()
-                            st["errore_salva"] += 1
-                            log.info("SUBITO_COMPLETO salva: %s", str(e)[:150])
-                    si = [str(a.get("urn")) for a in ads if a.get("urn") and telefono_subito(a)]
-                    if si:
-                        st["aggiornati_si"] += conn.execute(
-                            "UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE source='subito' "
-                            "AND source_id = ANY(%s) AND telefono_ok IS DISTINCT FROM true", (si,)).rowcount
-                        conn.commit()
-                    if len(ads) < 100:
-                        break
-            log.warning("SUBITO_COMPLETO %s fatto in %.0fs: %s", sn, time.time() - t0, dict(st))
+        gen = col._deep({"price_bands": FASCE_SUBITO, "band_pages": pagine}, voluti, code, 100)
+        try:
+            for l in gen:
+                st["con_numero" if telefono_subito(l.raw if isinstance(l.raw, dict) else None) else "senza_numero"] += 1
+                pacco.append(l)
+                if len(pacco) >= 150:              # in memoria mai più di un pacchetto (512 MB)
+                    salva()
+                if fine and time.time() > fine:
+                    st["fermato_tempo"] += 1
+                    break
+        except Exception as e:
+            st["errore"] += 1
+            log.warning("SUBITO_COMPLETO %s: %s", reg, str(e)[:150])
+        finally:
+            gen.close()                            # fascia a metà: non segnata fatta, si riprende da lì
+        salva()
+        log.warning("SUBITO_COMPLETO %s fatto in %.0fs: %s", reg, time.time() - t0, dict(st))
+        if st["fermato_tempo"]:
+            break
+    st["letti"] = sum(v for k, v in st.items() if k.startswith("letti:"))
     log.warning("SUBITO_COMPLETO_FINE in %.0fs: %s", time.time() - t0, dict(st))
     return dict(st)
+
+
+def rilettura_subito(minuti: float | None = None) -> dict:
+    """3/11 (studio 4 §4.2): rilettura settimanale di tutti gli annunci Subito della zona, nel CRON (mai nel sito).
+    A pezzi: ogni giro al massimo RS_MINUTI minuti, i passi fatti restano (PASSI_JOB per settimana); il lavoro
+    risulta finito (job_runs ok) solo quando tutte le fasce sono state lette. Con il database oltre CE_DB_MAX_GB
+    non parte."""
+    from ..db import connect, db_pieno, log_job
+    from . import passi
+    settimana = datetime.now(timezone.utc).strftime("%G-%V")
+    job = f"rilettura_subito:{settimana}"
+    vecchio = os.environ.get("PASSI_JOB")
+    os.environ["PASSI_JOB"] = job
+    passi._cache = None
+    try:
+        with connect() as conn:
+            if db_pieno(conn):
+                log.warning("RILETTURA_SUBITO saltata: database oltre CE_DB_MAX_GB")
+                return {"saltata": "db_pieno"}
+            fin = log_job(conn, "rilettura_subito")
+            st = subito_completo(conn, minuti=float(os.environ.get("RS_MINUTI", "90")) if minuti is None else minuti)
+            completa = not st.get("fermato_tempo") and not st.get("errore")
+            fin(completa, st)
+        if completa:
+            passi.finito(job)
+        return st
+    finally:
+        if vecchio is None:
+            os.environ.pop("PASSI_JOB", None)
+        else:
+            os.environ["PASSI_JOB"] = vecchio
+        passi._cache = None
 
 
 def telefoni_candidate(conn, ids) -> Counter:

@@ -467,3 +467,111 @@ def test_rinormalizza_storico_idempotente_e_riprende():
     st2 = rinormalizza(conn, pezzo=2)
     _schema_nuovo()
     assert st2["lette"] == 5 and st2.get("cambiate", 0) == 0 and conn.scritture == n
+
+
+# ------------------------------------------------------------------ 17. subito_completo divide le fasce piene
+
+def test_subito_completo_fascia_piena_si_divide():
+    import os
+    from dealfinder.pipeline import tempo_reale as tr
+    from tests.test_copertura_scraper import _Hades, _ad, _sub
+    ads = [_ad(800000 + i, prezzo=100 + (i * 3) % 1400) for i in range(450)]     # tutti nella fascia 0-1.500
+    salvati = []
+    vero, env = tr._salva, dict(os.environ)
+    tr._salva = lambda conn, lst, st: salvati.extend(lst) or []
+    os.environ.update(SUBITO_PROVINCE="MI", SUBITO_COMPLETO_PAGINE="2")
+    os.environ.pop("PASSI_JOB", None)
+    try:
+        st = tr.subito_completo(_Conn(), col=_sub(_Hades(ads)))
+    finally:
+        tr._salva = vero
+        os.environ.clear()
+        os.environ.update(env)
+    ids = [l.source_id for l in salvati]
+    assert len(ids) == len(set(ids)) == 450            # prima: 200 (le prime 2 pagine), il resto perso in silenzio
+    assert st["senza_numero"] == 450
+
+
+# ------------------------------------------------------------------ 3. il giro della zona salva anche i commercianti
+
+def test_giro_zona_salva_i_commercianti():
+    import contextlib
+    import os
+    from dealfinder import db
+    from dealfinder.collectors import subito
+    from dealfinder.pipeline import benzina_mi as B, lusso, tempo_reale as tr
+    sub_ads = [_l(source="subito", source_id=f"s{i}", make="fiat", model="panda", price_eur=4000, province="MI",
+                  seller_type="commerciante" if i % 2 else "privato") for i in range(6)]
+    sub_ads.append(_l(source="subito", source_id="caro", make="fiat", model="panda", price_eur=99000, province="MI"))
+    regioni_lette = []
+
+    class FintoSub:
+        def __init__(self, *a, **k):
+            pass
+
+        def search_recenti(self, reg, provs, dal, max_pages=0):
+            regioni_lette.append((reg, sorted(provs)))
+            return list(sub_ads) if reg == "lombardia" else []
+    venditori_chiesti = []
+
+    def bande(pmin, pmax, passo, venditori, workers=1):
+        venditori_chiesti.append([v for v, _ in venditori])
+        return [_l(source="autoscout24", source_id=f"a{v}", make="fiat", model="panda", price_eur=5000, province="MI",
+                   seller_type=t) for v, t in venditori]
+    pacchi, sql = [], []
+    conn = _Conn(colonne=False)
+    orig_exec = conn.execute
+
+    def execute(q, p=None):
+        if "WITH g AS" in q:
+            sql.append(p)
+        return orig_exec(q, p)
+    conn.execute = execute
+
+    @contextlib.contextmanager
+    def connetti():
+        yield conn
+    vecchi = (db.connect, subito.SubitoCollector, lusso.bande_parallele, tr._salva, tr.valuta_e_pubblica)
+    db.connect, subito.SubitoCollector, lusso.bande_parallele = connetti, FintoSub, bande
+    tr._salva = lambda c, lst, st: pacchi.extend(lst) or []
+    tr.valuta_e_pubblica = lambda c, ids, st: None
+    env = dict(os.environ)
+    for k in ("BENZ_RACCOLTA_TUTTI", "BENZ_CAP_EXTRA", "BENZ_FOCUS", "BENZ_SUB_PROFONDA", "BENZ_SOLO_INSUFF"):
+        os.environ.pop(k, None)
+    os.environ.update(BENZ_SOLO_PRIVATI="1", BENZ_PROVINCE="MI,BG,NO,PC", BENZ_MIN="1000", BENZ_PMAX="70000")
+    try:
+        st = B.giro()
+    finally:
+        db.connect, subito.SubitoCollector, lusso.bande_parallele, tr._salva, tr.valuta_e_pubblica = vecchi
+        os.environ.clear()
+        os.environ.update(env)
+        _schema_nuovo()
+    tipi = sorted(l.seller_type for l in pacchi)
+    assert tipi.count("commerciante") == 4 and tipi.count("privato") == 4     # 3+3 Subito, 1+1 AutoScout24
+    assert venditori_chiesti == [["P", "D"]]
+    assert [r for r, _ in regioni_lette] == ["lombardia", "piemonte", "emilia-romagna"]   # anche Novara e Piacenza
+    assert sql and sql[0]["solo_privati"] is True                             # le candidate restano solo privati
+    assert st["scarto:fuori_prezzo"] == 1
+
+
+def test_lavori_zona_autoscout_spariti_solo_se_il_giro_ha_letto():
+    import contextlib
+    from dealfinder import db
+    from dealfinder.pipeline import collect, verify
+    chiamate, registrati = [], []
+
+    @contextlib.contextmanager
+    def connetti():
+        yield _Conn(colonne=False)
+    vecchi = (db.connect, db.log_job, verify.scomparsi_con_prova)
+    db.connect = connetti
+    db.log_job = lambda c, job: (lambda ok, st: registrati.append((job, ok)))
+    verify.scomparsi_con_prova = lambda c, source, **k: chiamate.append((source, k)) or {"scomparso": 1}
+    try:
+        collect.lavori_zona({"letti_autoscout": 12})            # giro AutoScout bloccato: nessun controllo
+        assert chiamate == [] and registrati == [("zona_cron:giro", True)]
+        collect.lavori_zona({"letti_autoscout": 3000, "letti_autoscout_25121": 50})
+    finally:
+        db.connect, db.log_job, verify.scomparsi_con_prova = vecchi
+    assert [c[0] for c in chiamate] == ["autoscout24"] and chiamate[0][1]["not_seen_hours"] == 8
+    assert ("scomparsi:autoscout24", True) in registrati

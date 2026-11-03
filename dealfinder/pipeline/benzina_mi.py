@@ -107,6 +107,13 @@ def completa_dati(conn, prov: list, pmax: int) -> list[int]:
     return fatti
 
 
+def regioni_zona(province: list) -> list[tuple[str, list]]:
+    """Regioni di Subito da leggere per le province della zona (Lombardia sempre per prima)."""
+    from .tempo_reale import REGIONI
+    voluti = {p.upper() for p in province}
+    return [(reg, [p for p in provs if p in voluti]) for reg, provs in REGIONI.items() if voluti & set(provs)]
+
+
 def giro() -> dict:
     from ..db import connect
     from . import tempo_reale as tr
@@ -119,10 +126,26 @@ def giro() -> dict:
     SOLO_P = os.environ.get("BENZ_SOLO_PRIVATI") == "1"
     # 21/10 sera (cliente): si raccolgono TUTTI gli annunci (anche concessionari) per la base prezzi del modello;
     # sul sito vanno comunque solo i privati (le candidate restano filtrate con SOLO_P)
-    racc_p = SOLO_P and os.environ.get("BENZ_RACCOLTA_TUTTI") != "1"
+    # 3/11 (studio 4, P2): nel giro della zona (ZONA_CRON) BENZ_RACCOLTA_TUTTI=1 di default: anche i commercianti
+    # come confronti. Le candidate restano dei soli privati (SOLO_P in CANDIDATI_SQL).
+    racc_p = SOLO_P and os.environ.get("BENZ_RACCOLTA_TUTTI", "1") != "1"
     # salvataggio a pacchetti: in memoria non resta mai più di un pacchetto di annunci (512 MB di memoria)
     with connect() as conn:
+        from ..db import db_pieno
+        if not racc_p and SOLO_P and db_pieno(conn):
+            racc_p = True                      # database oltre CE_DB_MAX_GB: i commercianti (solo confronti) no
+            st["commercianti_saltati_db_pieno"] = 1
         pacco: list = []
+
+        def tieni(l, pmin=None, pmax=None) -> bool:
+            """Filtro prima del salvataggio, con un contatore per ogni scarto (letti = salvati + scarti)."""
+            if l.price_eur and (pmin or PMIN) <= l.price_eur <= (pmax or PMAX) \
+                    and (not racc_p or l.seller_type == "privato"):
+                return True
+            st[f"letti:{l.source}"] += 1
+            st["scarto:fuori_prezzo" if not (l.price_eur and (pmin or PMIN) <= l.price_eur <= (pmax or PMAX))
+               else "scarto:commerciante"] += 1
+            return False
 
         def salva(forza=False):
             if pacco and (forza or len(pacco) >= 150):
@@ -142,19 +165,22 @@ def giro() -> dict:
             except Exception as e:
                 conn.rollback()
                 log.warning("BENZ dati completati (inizio) non riuscito: %s", str(e)[:200])
-        # 1a. Subito: Lombardia entro 100 km, dal più recente
+        # 1a. Subito: tutte le regioni della zona (3/11, studio 4 P3: prima solo la Lombardia, quindi Novara e
+        # Piacenza, dentro i 100 km, non arrivavano mai da questo giro), dal più recente
         sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
         sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
         n = 0
-        try:
-            for l in ([] if solo_valuta else sub.search_recenti("lombardia", PROVINCE_100, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
-                                        max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300")))):
-                if l.price_eur and PMIN <= l.price_eur <= PMAX and (not racc_p or l.seller_type == "privato"):
-                    pacco.append(l); n += 1
-                    salva()
-        except Exception as e:
-            log.warning("BENZ subito: %s", str(e)[:200])
-        salva(True)
+        for reg, provs in regioni_zona(PROVINCE_100):
+            try:
+                for l in ([] if solo_valuta else sub.search_recenti(reg, provs, os.environ.get("BENZ_DAL", "2026-08-01 00:00"),
+                                            max_pages=int(os.environ.get("BENZ_SUB_PAGINE", "300")) if reg == "lombardia"
+                                            else int(os.environ.get("BENZ_SUB_PAGINE_ALTRE", "60")))):
+                    if tieni(l):
+                        pacco.append(l); n += 1
+                        salva()
+            except Exception as e:
+                log.warning("BENZ subito %s: %s", reg, str(e)[:200])
+            salva(True)
         # 1a-bis (21/10 sera, cliente: "tutti gli annunci del mercato, solo privati, a benzina"): raccolta profonda
         # di Subito provincia per provincia e fascia di prezzo per fascia (la ricerca per data si ferma prima),
         # in Lombardia, Piemonte ed Emilia entro il raggio
@@ -171,8 +197,7 @@ def giro() -> dict:
                 try:
                     for l in sub._deep({"price_bands": fasce, "band_pages": int(os.environ.get("BENZ_SUB_PAG_FASCIA", "30"))},
                                        set(provs), reg, 100):
-                        if (l.price_eur and PMIN <= l.price_eur <= PMAX and (not racc_p or l.seller_type == "privato")
-                                and (os.environ.get("BENZ_TUTTI_CARB", "1") == "1" or "benzina" in (l.fuel or "").lower())):
+                        if tieni(l) and (os.environ.get("BENZ_TUTTI_CARB", "1") == "1" or "benzina" in (l.fuel or "").lower()):
                             pacco.append(l); n += 1
                             salva()
                 except Exception as e:
@@ -415,5 +440,7 @@ def giro() -> dict:
             gc.collect()
             if pezzo < len(ids):
                 log.warning("BENZ valutate %d/%d, pubblicate finora %d", min(i + pezzo, len(ids)), len(ids), st.get("pubblicate", 0))
+    from .collect import riepilogo_scarti
+    log.warning("RACCOLTA_SCARTI zona %s", json.dumps(riepilogo_scarti(st)))
     log.warning("BENZ_FINE %s", json.dumps(dict(st)))
     return dict(st)

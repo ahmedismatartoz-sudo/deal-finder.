@@ -819,6 +819,63 @@ def riepilogo_scarti(stats) -> dict:
             "non_contati": letti - int(stats.get("salvati", 0)) - sum(scarti.values())}
 
 
+def lavori_zona(esito: dict) -> None:
+    """3/11 (studio 4): dopo il giro della zona. 1) il giro si registra in job_runs ('zona_cron:giro', con i
+    contatori degli scarti); 2) AutoScout24: gli annunci non visti nelle ultime riletture si controllano uno per uno
+    e diventano 'scomparso' solo con una prova (pagine gratuite; prima le AutoScout sparite restavano attive per
+    sempre e non erano mai vendute). Solo se il giro ha letto davvero AutoScout24 (un blocco non fa sparire nulla)."""
+    from ..db import connect as _cn, log_job as _lj
+    try:
+        with _cn() as c:
+            _lj(c, "zona_cron:giro")(True, {k: v for k, v in esito.items() if isinstance(v, (int, float, str))})
+    except Exception as e:
+        log.warning("ZONA_CRON non registrata: %s", str(e)[:200])
+    letti_as = sum(v for k, v in esito.items() if k.startswith("letti_autoscout") and isinstance(v, int))
+    if os.environ.get("AS_SCOMPARSI", "1") != "1" or letti_as < int(os.environ.get("AS_SCOMPARSI_MIN_LETTI", "200")):
+        return
+    try:
+        from .benzina_mi import PROVINCE_100
+        from .verify import scomparsi_con_prova
+        with _cn() as c:
+            fin = _lj(c, "scomparsi:autoscout24")
+            st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=int(os.environ.get("AS_NON_VISTI_ORE", "8")),
+                                     limite=int(os.environ.get("AS_SCOMPARSI_MAX", "600")),
+                                     minuti=float(os.environ.get("AS_SCOMPARSI_MINUTI", "20")),
+                                     pausa=(0.5, 1.2), zona=PROVINCE_100)
+            fin(not st.get("eccezione"), dict(st))
+    except Exception as e:
+        log.warning("SCOMPARSI autoscout24 non controllati (nessuno segnato senza prova): %s", str(e)[:200])
+
+
+def lavori_cron() -> None:
+    """3/11 (studio 4): lavori di qualità dei dati, solo nel cron (mai nel sito, 512 MB), ognuno indipendente:
+    indice su vehicle_id per le ripubblicazioni (CONCURRENTLY), rinormalizzazione dello storico (una volta per
+    versione delle regole, riprende dopo un riavvio), rilettura settimanale di Subito (gratuita, a pezzi)."""
+    if os.environ.get("ZONA_CRON") != "1":
+        return
+    if os.environ.get("INDICE_VEICOLO", "1") == "1":
+        try:
+            from ..db import assicura_indice_veicolo
+            esito = assicura_indice_veicolo()
+            if esito != "pronto":
+                log.warning("INDICE_VEICOLO %s", esito)
+        except Exception as e:
+            log.warning("INDICE_VEICOLO non riuscito: %s", str(e)[:200])
+    if os.environ.get("RINORMALIZZA", "1") == "1":
+        try:
+            lavoro_rinormalizza()
+        except Exception as e:
+            log.warning("RINORMALIZZA non riuscito: %s", str(e)[:200])
+    if os.environ.get("RILETTURA_SUBITO", "1") == "1":
+        try:
+            from .ciclo import _due
+            if _due("rilettura_subito", int(os.environ.get("RS_ORE", str(24 * 7)))):
+                from .tempo_reale import rilettura_subito
+                rilettura_subito()
+        except Exception as e:
+            log.warning("RILETTURA_SUBITO non riuscita: %s", str(e)[:200])
+
+
 def _ai_prezzi():
     """Dopo la raccolta (ogni 3 ore e ogni notte): il modello AI dei prezzi si riaddestra su tutti gli annunci e
     riscrive le stime (tabella stima_ai). Gira qui, nel lavoro programmato, per non pesare sulla memoria del sito."""
@@ -863,7 +920,7 @@ if __name__ == "__main__":
                 for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"), "BENZ_CAP_EXTRA": os.environ.get("ZC_CAP_EXTRA", "25121:90"),
                              "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "70000"),   # 31/10: anche 50-70k (prima nessuno le guardava)
                              "BENZ_PROVINCE": os.environ.get("ZC_PROVINCE", "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"),
-                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "0", "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
+                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": os.environ.get("ZC_RACCOLTA_TUTTI", "1"), "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
                              "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
                              "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
                              "BENZ_PARALLELI": os.environ.get("ZC_PARALLELI", "3"), "BENZ_SOLO_VALUTA": os.environ.get("ZC_SOLO_VALUTA", "0"),
@@ -873,8 +930,10 @@ if __name__ == "__main__":
                 from . import benzina_mi as B
                 esito = B.giro()
                 log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+                lavori_zona(esito)
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
+        lavori_cron()
     # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
     if os.environ.get("CONFRONTI_EXTRA") == "1":
         try:
