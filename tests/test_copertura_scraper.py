@@ -288,6 +288,46 @@ def test_upsert_ripiego_se_la_query_nuova_fallisce():
     assert "listings.description" not in upd[1]
 
 
+class _ConnNoti(_Conn):
+    def __init__(self, noti):
+        super().__init__()
+        self.noti = set(noti)
+
+    def execute(self, sql, params=None):
+        self.sql.append((sql, params))
+        if "source_id = ANY" in sql:
+            return _Cur([{"source_id": i} for i in params[0] if i in self.noti])
+        return _Cur([])
+
+
+def test_subito_leggero_si_ferma_alla_pagina_nota():
+    from dealfinder.pipeline import tempo_reale as tr
+    tr._sub_leggero["fermo_fino"] = 0.0
+    ads = [_ad(600000 + i) for i in range(300)]                 # i primi 30 nuovi, il resto già salvato
+    conn = _ConnNoti(f"id:ad:{600000 + i}:list:1" for i in range(30, 300))
+    cl = _Hades(ads)
+    got = tr._subito_nuovi_leggero(conn, col=_sub(cl), pausa=None)
+    assert sorted(l.source_id for l in got) == sorted(f"id:ad:{600000 + i}:list:1" for i in range(30))
+    lomb = [p for p in cl.calls if p.get("r") == 4]
+    assert len(lomb) == 2                                      # pagina 1 (nuovi) + pagina 2 (tutta nota): stop
+
+
+def test_subito_leggero_429_si_ferma_e_niente_eccezioni():
+    from dealfinder.pipeline import tempo_reale as tr
+    tr._sub_leggero["fermo_fino"] = 0.0
+    cl = _Hades([_ad(700001)], guasti=[429])
+    assert tr._subito_nuovi_leggero(_ConnNoti([]), col=_sub(cl), pausa=None) == []
+    assert tr._sub_leggero["fermo_fino"] > 0
+    n = len(cl.calls)
+    assert tr._subito_nuovi_leggero(_ConnNoti([]), col=_sub(cl), pausa=None) == [] and len(cl.calls) == n   # in pausa
+    tr._sub_leggero["fermo_fino"] = 0.0
+
+    class Rotto:
+        def get(self, *a, **k):
+            raise ValueError("forma inattesa")
+    assert tr._subito_nuovi_leggero(_ConnNoti([]), col=_sub(Rotto()), pausa=None) == []
+
+
 def test_upsert_facebook_invariato():
     _, _, upd, foto = _upsert("facebook")
     assert len(upd) == 1 and "listings.description" not in upd[0] and foto == []

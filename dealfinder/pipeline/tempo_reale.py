@@ -640,6 +640,69 @@ def _subito_nuovi(dal: str, pagine: int | None = None, solo: str | None = None) 
     return out
 
 
+# 3/11: lettura LEGGERA degli annunci nuovi di Subito (vale anche con TR_SUBITO spento): per ogni regione le pagine
+# dal più recente, fermandosi alla prima pagina tutta già nota; al massimo SUB_LEGGERO_PAGINE pagine per regione e
+# SUB_LEGGERO_SECONDI in tutto, una richiesta alla volta con pausa. Con 403/429 si ferma per SUB_LEGGERO_PAUSA_MIN
+# minuti; con qualsiasi altro problema restituisce quello che ha (anche niente) e il giro continua come prima.
+SUB_LEGGERO = True
+SUB_LEGGERO_PAGINE = 3
+SUB_LEGGERO_SECONDI = 60
+SUB_LEGGERO_PAUSA_MIN = 30
+_SUB_REGIONI_NOTE = {"piemonte": 2, "liguria": 3}    # codici usati anche dal giro della zona (benzina_mi)
+_sub_leggero = {"fermo_fino": 0.0}
+
+
+def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: float | None = None, pausa=(1.2, 2.5)) -> list:
+    import random
+    out: list = []
+    if time.time() < _sub_leggero["fermo_fino"]:
+        return out
+    try:
+        from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector, parse_item
+        col = col or SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+        fine = time.time() + (secondi or SUB_LEGGERO_SECONDI)
+        for reg, provs in REGIONI.items():
+            code = REGION_CODES.get(reg) or _codici_regione.get(reg) or _SUB_REGIONI_NOTE.get(reg)
+            if not code:
+                continue
+            voluti = set(provs)
+            for page in range(pagine or SUB_LEGGERO_PAGINE):
+                if time.time() > fine:
+                    return out
+                r = col.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": code, "t": "s", "lim": 100,
+                                                                            "start": page * 100, "sort": "datedesc"})
+                if pausa:
+                    time.sleep(random.uniform(*pausa))
+                if r.status_code in (403, 429):
+                    _sub_leggero["fermo_fino"] = time.time() + SUB_LEGGERO_PAUSA_MIN * 60
+                    log.warning("TR subito leggero: HTTP %s, fermo per %d minuti", r.status_code, SUB_LEGGERO_PAUSA_MIN)
+                    return out
+                if r.status_code != 200:
+                    break
+                ads = (r.json() or {}).get("ads")
+                if not isinstance(ads, list):
+                    log.warning("TR subito leggero: risposta inattesa (%s), salto", type(ads).__name__)
+                    return out
+                ids = [str(a.get("urn") or a.get("id")) for a in ads if isinstance(a, dict) and (a.get("urn") or a.get("id"))]
+                if not ids:
+                    break
+                noti = {x["source_id"] for x in conn.execute(
+                    "SELECT source_id FROM listings WHERE source='subito' AND source_id = ANY(%s)", (ids,)).fetchall()}
+                for a in ads:
+                    l = parse_item(a) if isinstance(a, dict) else None
+                    if l and l.source_id not in noti and (not l.province or l.province.upper() in voluti):
+                        out.append(l)
+                if len(noti) >= len(ids) or len(ads) < 100:
+                    break                              # pagina tutta già vista: i successivi sono più vecchi
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("TR subito leggero: %s (il giro continua)", str(e)[:150])
+    return out
+
+
 def _autoscout_nuovi(conn) -> list:
     """Privati entro 150 km da Milano, dal più recente: si scorre finché una pagina è tutta già nota."""
     from ..collectors.autoscout import BASE, parse_item
@@ -975,6 +1038,11 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         if os.environ.get("TR_SUBITO", "1") == "1":
             letti += _subito_nuovi(_ora_it(dal_dt))
             _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
+        elif SUB_LEGGERO:
+            # 3/11: con la lettura Subito completa spenta (TR_SUBITO) gli annunci nuovi di Subito arrivavano solo col
+            # giro della zona (ogni 3 ore): ora le prime pagine dal più recente, ci si ferma alla prima pagina già nota
+            letti += _subito_nuovi_leggero(conn)
+            stats["letti_subito_leggero"] = len(letti)
         if os.environ.get("TR_AUTOSCOUT", "1") == "1":
             try:
                 letti += _autoscout_nuovi(conn)
