@@ -1431,8 +1431,8 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
                 "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.correzione_pct, d.versione_ok, "
                 "(d.risposta->'guasto'->>'noul')::float AS guasto, (d.risposta->'prezzo_rata'->>'noul')::float AS rata, "
                 "(d.risposta->'km_credibili'->>'noul')::float AS km_ok, "
-                "(d.risposta->'answers'->'danni_foto'->>'noul')::float AS danni, "
-                "(d.risposta->'answers'->'foto_internet'->>'noul')::float AS foto_internet "
+                "(COALESCE(d.risposta->'danni_foto', d.risposta->'answers'->'danni_foto')->>'noul')::float AS danni, "
+                "(COALESCE(d.risposta->'foto_internet', d.risposta->'answers'->'foto_internet')->>'noul')::float AS foto_internet "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
                 "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
     except Exception as e:
@@ -1474,7 +1474,9 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
         if d["decisione"] == "scarta" and (d["confidenza"] or 0) >= conf:
             c["scarta"] += 1
             continue
-        if (d["danni"] or 0) >= .7:
+        # 3/11 23:40: la lettura dei danni nelle foto prima non funzionava mai (risposta salvata senza 'answers'); ora sì.
+        # Le auto della sezione Incidentate restano (il cliente la tiene): i danni lì sono dichiarati e stimati.
+        if (d["danni"] or 0) >= .7 and not it.get("incidentata"):
             c["danni_foto"] += 1
             continue
         # 25/10 (cliente): Jev come lettore di annunci. Fuori le auto non marcianti o con guasti dichiarati, quelle
