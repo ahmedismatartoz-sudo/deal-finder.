@@ -6,3 +6,6 @@ data/*
 !data/analisi_manuale.json
 !data/annunci_aggiunti.json
 !data/aggiunte/
+
+# copie di lavoro temporanee degli agenti
+.claude/
