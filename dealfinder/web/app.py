@@ -5200,7 +5200,7 @@ def _tempo_reale():
                     L.warning("RIVTUTTE ricalcolo valore reale non riuscito (si usa quello di stanotte): %s", str(e)[:300])
             with connect() as conn:
                 conn.execute("SET statement_timeout = '600s'")
-                rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel,
+                rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel, COALESCE(u.margine, -99999) AS margine,
                         (l.stage = 'approfondito' AND COALESCE(u.margine, -1) >= 500) AS sul_sito,
                         (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000) AS benz100
                     FROM listings l JOIN valore_reale v ON v.listing_id = l.id
@@ -5213,8 +5213,11 @@ def _tempo_reale():
                                   int(os.environ.get("RIVTUTTE_MAX", "40000")))).fetchall()
                 # prima le auto che possono essere sul sito, poi le benzina fino a 100.000 km, poi le altre; dentro
                 # ogni parte per modello (un solo caricamento dei confronti per gruppo)
-                rows = sorted(rows, key=lambda r: (not r["sul_sito"], not r["benz100"], r["make"] or "", r["model"] or "",
-                                                   r["fuel"] or ""))
+                # 3/11 10:23 (cliente: "mi servono molte più auto sul sito, ho una presentazione"): prima le auto più
+                # vicine alla soglia (margine salvato da −800 € in su: con la regola nuova possono entrare), poi quelle
+                # del sito, poi le benzina fino a 100.000 km, poi le altre
+                rows = sorted(rows, key=lambda r: (not (r["margine"] >= -800), not r["sul_sito"], not r["benz100"],
+                                                   r["make"] or "", r["model"] or "", r["fuel"] or ""))
                 ids = [r["id"] for r in rows]
                 del rows
                 L.warning("RIVTUTTE da rivalutare con il valore reale: %d", len(ids))
