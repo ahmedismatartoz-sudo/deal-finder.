@@ -43,6 +43,49 @@ def norm_fuel(f: str | None) -> str | None:
 GEARBOX_MAP = {"manuale": "manuale", "manual": "manuale",
                "automatico": "automatico", "automatic": "automatico",
                "semiautomatico": "automatico", "sequenziale": "automatico"}
+# 3/11 (studio 4, P13): "Cambio manuale", "Manuale 6 marce", "Automatico (DSG)" erano slug diversi da "manuale" /
+# "automatico" e il confronto risultava "cambio diverso". Ora conta cosa CONTIENE il testo.
+_RE_GEAR_AUTO = re.compile(r"autom|dsg|cvt|robot|sequen|semiaut|doppia\s*frizione|dct|tiptronic|steptronic|tronic|edc|eat\s?\d",
+                           re.I)
+_RE_GEAR_MAN = re.compile(r"manual", re.I)
+
+
+def norm_gearbox(g: str | None) -> str | None:
+    if not g:
+        return g
+    x = g.strip().lower()
+    if x in GEARBOX_MAP:
+        return GEARBOX_MAP[x]
+    a, m = bool(_RE_GEAR_AUTO.search(x)), bool(_RE_GEAR_MAN.search(x))
+    if a and not m:
+        return "automatico"
+    if m and not a:
+        return "manuale"
+    return slug(g)
+
+
+# 3/11 (studio 4, P14): sottotipo dell'ibrida in una colonna a parte (fuel resta il gruppo dei confronti).
+_RE_TIPO_PLUGIN = re.compile(r"plug[\s-]?in|\bphev\b|ricaricabil", re.I)
+_RE_TIPO_MILD = re.compile(r"mild|\bmhev\b|\bmh\b|\b48\s?v\b|ecoboost\s+hybrid|firefly\s+hybrid|\bhybrid\s+48", re.I)
+_RE_TIPO_FULL = re.compile(r"full[\s-]?hybrid|\bhev\b|self[\s-]?charging|e-?cvt", re.I)
+_RE_IBRIDA_TESTO = re.compile(r"hybrid|ibrid[ao]|\bmhev\b|\bphev\b|\bhev\b", re.I)
+
+
+def fuel_tipo(fuel_raw: str | None, testo: str | None = None) -> str | None:
+    """'mild' | 'full' | 'plug-in' | 'bifuel' | None. Dal campo della fonte e, per le ibride, da titolo/versione."""
+    f = (fuel_raw or "").lower()
+    t = f"{f} {testo or ''}"
+    if norm_fuel(fuel_raw) in ("gpl", "metano") or ("benzina" in f and ("gpl" in f or "metano" in f)):
+        return "bifuel"
+    if norm_fuel(fuel_raw) != "ibrida" and not _RE_IBRIDA_TESTO.search(t):
+        return None
+    if _RE_TIPO_PLUGIN.search(t):
+        return "plug-in"
+    if _RE_TIPO_MILD.search(t):
+        return "mild"
+    if _RE_TIPO_FULL.search(t):
+        return "full"
+    return None
 
 PROVINCE_REGION = {"MI": "Lombardia", "MB": "Lombardia", "BG": "Lombardia", "BS": "Lombardia",
                    "CO": "Lombardia", "VA": "Lombardia", "LC": "Lombardia", "LO": "Lombardia",
@@ -152,9 +195,15 @@ def normalize_fields(listing: Listing) -> Listing:
     listing.make = canon_make(slug(listing.make))
     listing.model = canon_model(listing.make, slug(listing.model))
     if listing.fuel:
+        testo_motore = f"{listing.version_raw or ''} {listing.title or ''}"
+        listing.fuel_tipo = fuel_tipo(listing.fuel, testo_motore)
         listing.fuel = norm_fuel(listing.fuel)
+        # 3/11 (P14): "Benzina" su una fonte e "Ibrida" sull'altra per la stessa auto mild/full hybrid: se titolo o
+        # versione dicono ibrida, il gruppo è "ibrida" su entrambe (il sottotipo resta in fuel_tipo)
+        if listing.fuel in ("benzina", "diesel") and _RE_IBRIDA_TESTO.search(testo_motore):
+            listing.fuel = "ibrida"
     if listing.gearbox:
-        listing.gearbox = GEARBOX_MAP.get(listing.gearbox.strip().lower(), slug(listing.gearbox))
+        listing.gearbox = norm_gearbox(listing.gearbox)
     if listing.province and not listing.region:
         listing.region = PROVINCE_REGION.get(listing.province.upper())
     normalize_price(listing)
@@ -227,19 +276,52 @@ def canon_make(make: str | None) -> str | None:
     return MAKE_CANON.get(make, make) if make else make
 
 
+# 3/11 (studio 4, P9): versione delle regole di normalizzazione. Il lavoro `rinormalizza` (cron) riapplica le regole
+# allo storico una volta per versione: va aumentata a ogni cambio di canon_model / norm_fuel / norm_gearbox.
+NORM_VERSIONE = 2
+
+# suffissi di CARROZZERIA (non di modello): "a3-sportback" e "a3" sono la stessa auto, la carrozzeria la danno
+# versione e titolo. Non si tolgono suffissi che fanno un modello diverso (golf-plus, yaris-cross, golf-sportsvan).
+_CARROZZERIA = ("sportback", "sw", "avant", "touring", "variant", "station-wagon", "wagon", "sports-tourer",
+                "sportstourer", "sporter", "sportswagon", "kombi", "combi", "estate", "break", "grandtour")
+_RE_CARROZZERIA = re.compile(r"(.+?)-(?:" + "|".join(re.escape(s) for s in _CARROZZERIA) + r")")
+# famiglie Mercedes a 3 lettere scritte con "classe-" davanti su una fonte ("classe-cla") e senza sull'altra ("cla")
+_MB_SENZA_CLASSE = ("cla", "gla", "glc", "gle", "glb", "gls", "cle", "cls", "slk", "slc", "sl")
+
+
+def _canon_generico(m: str) -> str:
+    """Regole valide per tutte le marche: trattini tra cifre e lettere ("500-x" -> "500x", "cx-5" -> "cx5")."""
+    r = re.fullmatch(r"(\d{2,4})-([a-z])", m)            # 500-x, 500-l, 500-c
+    if r:
+        return r.group(1) + r.group(2)
+    r = re.fullmatch(r"([a-z]{1,3})-(\d{1,3})", m)       # cx-5, rav-4, id-3, c-3, x-1 (non "serie-3": 5 lettere)
+    if r:
+        return r.group(1) + r.group(2)
+    return m
+
+
 def canon_model(make: str | None, model: str | None) -> str | None:
     if not make or not model:
         return model
     m = model
     if make == "bmw":
-        r = re.fullmatch(r"([1-8])\d{2}[a-z]?", m)
+        r = re.fullmatch(r"([1-8])\d{2}[a-z]{0,2}", m)
         if r:
             return f"serie-{r.group(1)}"
+        # 3/11: "220-active-tourer" (AutoScout) = "serie-2-active-tourer" (Subito); "420-gran-coupe" = "serie-4"
+        r = re.fullmatch(r"([1-8])\d{2}[a-z]{0,2}-(active-tourer|gran-tourer|.+)", m)
+        if r:
+            return f"serie-{r.group(1)}" + (f"-{r.group(2)}" if r.group(2) in ("active-tourer", "gran-tourer") else "")
         r = re.fullmatch(r"serie-([1-8])(-.*)?", m)
         if r and r.group(2) and r.group(2) not in ("-active-tourer", "-gran-tourer"):
             return f"serie-{r.group(1)}"
-        return m
+        return _canon_generico(m)
     if make == "mercedes-benz":
+        r = re.fullmatch(r"classe-(" + "|".join(_MB_SENZA_CLASSE) + r")(-.*)?", m)
+        if r:
+            # "classe-cla-200-d" -> "cla" (motore), "classe-glc-coupe" -> "glc-coupe" (carrozzeria che conta)
+            coda = r.group(2) or ""
+            return r.group(1) + ("" if not coda or re.match(r"-\d", coda) else coda)
         r = re.fullmatch(r"([a-z]{1,3})-?(\d{2,3})(-.*)?", m)
         if r and r.group(1) in _MB_CLASSI:
             return f"classe-{r.group(1)}"
@@ -279,5 +361,7 @@ def canon_model(make: str | None, model: str | None) -> str | None:
             return "passat"
         if m in ("polo-gti",):
             return "polo"
-        return m
-    return m
+    r = _RE_CARROZZERIA.fullmatch(m)
+    if r:
+        m = r.group(1)
+    return _canon_generico(m)
