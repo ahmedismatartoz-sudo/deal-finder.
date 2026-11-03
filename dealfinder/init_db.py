@@ -73,12 +73,15 @@ if __name__ == "__main__":
                 continue
             z = c.get("zona") or "milano"
             prov = tutte() if z == "tutte" else list(ZONE.get(z, ZONE["milano"])["province"])
-            perm = [x for x in (c.get("permessi") or ["auto"]) if x in ("auto", "incentivi")]
+            perm = [x for x in (c.get("permessi") or ["auto"]) if x in ("auto", "incentivi", "appuntamenti")]
             row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
             fino = str(c.get("fino") or "").strip()[:10] or None          # "AAAA-MM-GG": accesso fino a quel giorno compreso
             if row:
-                conn.execute("UPDATE dealers SET password_hash=%s, active=true, provinces=%s, permessi=%s WHERE id=%s",
-                             (hash_password(pw), prov, perm, row["id"]))
+                # 3/11 23:50: il permesso "appuntamenti" dato da Stripe (abbonamento Max) o dal pannello NON si toglie a ogni avvio
+                conn.execute("UPDATE dealers SET password_hash=%s, active=true, provinces=%s, "
+                             "permessi = (SELECT array_agg(DISTINCT x) FROM unnest(%s::text[] || "
+                             "CASE WHEN 'appuntamenti' = ANY(COALESCE(permessi, '{}')) THEN ARRAY['appuntamenti'] ELSE '{}'::text[] END) x) "
+                             "WHERE id=%s", (hash_password(pw), prov, perm, row["id"]))
                 print("Account cliente aggiornato:", em)
             else:
                 row = conn.execute(
