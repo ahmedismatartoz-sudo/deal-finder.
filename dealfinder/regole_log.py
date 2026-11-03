@@ -1,0 +1,156 @@
+"""Impronta della configurazione (fase 1 del piano di ricostruzione, 3/11/2026).
+
+All'avvio di ogni processo (sito, cron collect, init_db) scrive nel log UNA riga:
+
+    CONFIG_IMPRONTA <sha256 a 12 cifre> {json}
+
+con i valori EFFETTIVI delle impostazioni che decidono prezzi, valutazione e filtri del sito: il valore preso
+dall'ambiente, oppure "<default>" se non impostata (vale il default scritto nel codice), più i campi di
+PolicyConfig.from_env() già risolti. Le impostazioni segrete (chiavi, token, password, DATABASE_URL, sale)
+non ci sono mai, nemmeno il nome. L'impronta è calcolata solo sulle regole (non su processo e commit), così
+sito e cron con le stesse regole hanno la stessa impronta e ogni differenza si vede subito.
+
+Solo log: non cambia nessun valore e nessun risultato.
+"""
+from __future__ import annotations
+
+import dataclasses
+import hashlib
+import json
+import logging
+import os
+import re
+
+log = logging.getLogger("config")
+
+DEFAULT = "<default>"
+NASCOSTO = "<nascosto>"
+
+# Nomi letti nel codice (scan AST di dealfinder/, studio 5 appendice A: regole + interruttori + gruppi sotto),
+# senza i segreti. I nomi con i prefissi qui sotto presenti nell'ambiente si aggiungono da soli.
+NOMI = tuple("""
+    AI_ALBERI AI_BUDGET_GIORNO AI_ECONOMICA AI_ERRORE_MAX_SITO AI_FOTO_APPROFONDITE AI_FOTO_FILTRO AI_FOTO_LATO
+    AI_FOTO_LATO_FILTRO AI_MARGINE_MIN AI_MAX_RIGHE AI_MODEL_DEEP AI_MODEL_FAST AI_MODEL_RICAMBI AI_N_MIN_SITO
+    AI_PREZZI AI_PREZZI_TIMEOUT AI_PREZZO_MAX AI_PROVIDER AI_RIALZO_ERR AI_RIALZO_MAX AI_RICERCHE_PER_PEZZO
+    AI_THINKING AI_UTILITARIE_MAX AI_WEB_SEARCH_TOOL ALTA_DA ALTA_MARGINE_COMM ALTA_MARGINE_MIN
+    ALTA_SOLO_PRIVATI ANALISI_ATTIVA ANNO_MINIMO ANNO_MINIMO_SITO AS_SOLO_CON_NUMERO AS_TOP_MIN AS_TOP_N
+    AS_TOP_QUOTA AUTOSCOUT AUTOSCOUT_DEBUG AUTO_MIN_N AUTO_TESTO_RESTANTI AUTO_TETTO_CONTATTI BASSE_EURO
+    BASSE_MAX BASSE_MIN BASSE_N BASSE_N_CONFRONTI BASSE_QUOTA BASSO_SOLO_TELEFONO BENZ_AS24_MAX BENZ_AS24_TOP
+    BENZ_CAMBI_MAX BENZ_CAMBI_ORE BENZ_CAMBI_PREZZO BENZ_CAP BENZ_CAP_EXTRA BENZ_DAL BENZ_FOCUS BENZ_GIRO
+    BENZ_G_MAX BENZ_KM_MAX BENZ_LOOP_MIN BENZ_MAX BENZ_META_KM BENZ_META_QUOTA BENZ_MIN BENZ_PARALLELI
+    BENZ_PASSO BENZ_PMAX BENZ_PROVINCE BENZ_RACCOLTA_TUTTI BENZ_RAGGIO BENZ_RICHIESTE BENZ_RICHIESTE_DIESEL_ANNO
+    BENZ_RICHIESTE_KM BENZ_RICHIESTE_PREZZO BENZ_SOGLIA BENZ_SOLO_INSUFF BENZ_SOLO_NUOVE BENZ_SOLO_PRIVATI
+    BENZ_SOLO_VALUTA BENZ_SUB_PAGINE BENZ_SUB_PAG_FASCIA BENZ_SUB_PASSO BENZ_SUB_PROFONDA BENZ_TEL_PARALLELI
+    BENZ_TUTTI_CARB BENZ_UTIL_PRIMA BENZ_VAL_MAX BENZ_VAL_PEZZO BENZ_VAL_SOGLIA BREVO_TETTO BREVO_TETTO_2_11
+    BREVO_ZONA CALIBRA_ATTESA CALIBRA_DAL_GIORNI CALIBRA_FATTORI CALIBRA_GIORNI_VENDITA CALIBRA_MARGINE
+    CALIBRA_MAX CALIBRA_N_MIN CANDIDATI COMMERCIANTI_BREVO COMMERCIANTI_ESCLUSE_CITTA COMMERCIANTI_LAVORO
+    COMMERCIANTI_MAX_AUTO COMMERCIANTI_NICCHIA CONFRONTI_EXTRA CONFRONTI_MIN_ECO CONFRONTI_MIN_SOTTO
+    COPERTURA_MARGINE_MIN COPERTURA_MIN COPERTURA_QUOTA CORR_GUADAGNO_MIN CORR_MAX_GIU CORR_MAX_SU CORR_N_MIN
+    CORR_PRUDENZA CORR_SEG_N_MIN CORR_SEG_PESO DAL_TESTO_MAX DANNI_AI DANNI_RECUPERO DIESEL_EURO6_DAL DIESEL_MAX
+    DIFETTI ECONOMICHE_ANNO ECONOMICHE_GUADAGNO ECONOMICHE_LIBERO ECONOMICHE_MAX ECONOMICHE_MAX_PREZZO
+    ECONOMICHE_SITO ECO_CAP_PIU ECO_CAP_X ECO_TELEFONO ESAME_VENDUTI ESAME_VENDUTI_GIORNI FACEBOOK_ATTIVO
+    FILTRA_INC_TESTO FILTRA_TEL FOCUS_KM FOCUS_SUBITO FRESCHEZZA_ORE FULL_CONCESSIONARI GUADAGNO_MOSTRATO_MINIMO
+    INC_MILANO INDICE_CONFRONTI JEV_CONF_SCARTA JEV_CORREGGI JEV_DURANTE_CALCOLO JEV_FOTO JEV_LOTTO_PICCOLO
+    JEV_MARGINE_MIN JEV_MAX_GIORNO JEV_MIN JEV_MODO JEV_NONUGUALI_PCT JEV_NONUGUALI_RICALCOLA JEV_PARALLELI
+    JEV_PER_GIRO JEV_QUOTA_SOGLIA JEV_RITARDO_S JEV_TRUFFA JEV_TRUFFA_SOLO_SENZA_NUMERO JEV_VERSIONE_MIN
+    KM_MASSIMO KM_MASSIMO_SITO LEADE_SUBITO LEADSP_FASCIA LEADSP_ITALIA LEADSP_TUTTI LEADT_CHI_SIAMO LETTORE
+    LETTORE_MARGINE_MIN LETTORE_NUOVI LOMBARDIA_SOLO_AUTOSCOUT LUSSO_LOG LUSSO_SOLO_PRIVATI LUSSO_TUTTA_ITALIA
+    MAPS_CITTA_MARCHE MAPS_COMUNI_EXTRA MAPS_MARCHE MAPS_PAROLE MAPS_SOLO_MARCHE MARGINE_FINO_1500
+    MARGINE_FINO_5000 MARGINE_MIN_SITO MARGINE_OLTRE_5000 MARGINE_RECENTI_DAL MARGINE_RECENTI_MIN
+    MERCATO_CALIBRATO MERCATO_NORD MERCATO_REALISTICO META_SENZA_NUMERO MISURA_GIORNI PLATE_IN_PIPELINE
+    PLUS_NMIN PLUS_RACCOGLI PLUS_SOGLIA POI_RAVENNA POLICY_AI POLICY_ALLESTIMENTO POLICY_AMPLIA_DA
+    POLICY_CAMPIONE POLICY_CATEGORIE_SITO POLICY_COSTO_FISSO POLICY_FASCE POLICY_GIUDICE_AI POLICY_ITALIA
+    POLICY_ITALIA_DA POLICY_ITALIA_PMIN POLICY_LOG_SOSPETTE POLICY_MOTORE_SENZA_KW POLICY_ORE
+    POLICY_PRUDENTE_N_MIN POLICY_PRUDENTE_POCHI POLICY_PRUDENTE_SCONTO POLICY_RICALCOLO POLICY_RIPIEGO_NORD
+    POLICY_RITARDO_S POLICY_R_BASSI POLICY_R_BASSI_MIN POLICY_SITO POLICY_TRAZIONE POLICY_VENDUTE_GIORNI
+    RAVENNA_RAGGIO RAVENNA_SOLO_SUBITO RIPRISTINO_PREZZO_BASSO RIVENDITA_MARCA RIVENDITA_SCONTO RIVENDITA_SOPRA
+    RIVENDITA_SOPRA_PCT RIVENDITA_SOPRA_TIENI RIVENDITA_SOTTO RIVENDITA_SOTTO_PCT RIVENDITA_VECCHIE
+    RIVENDITA_VECCHIE_ANNI RIVENDITA_VERA RIVTUTTE_VR RZ_FOCUS RZ_SOLO_INSUFF RZ_SOLO_NUOVE RZ_SOLO_VALUTA
+    RZ_TUTTI_CARB SC_ATTESA SC_CONTROLLO SC_FATTORE SC_FOTO_MIN SC_LUSSO SC_LUSSO_MARGINE SC_LUSSO_MIN
+    SC_LUSSO_NMIN SC_LUSSO_QUANTE SC_LUSSO_SCONTO_MIN SC_MIN SC_NMIN SENZA_NUMERO_CONFRONTI SENZA_NUMERO_EXTRA
+    SENZA_NUMERO_EXTRA_CONFRONTI SENZA_NUMERO_EXTRA_FATTORE SENZA_NUMERO_EXTRA_MARGINE SENZA_NUMERO_FATTORE
+    SENZA_NUMERO_QUOTA SIM_COMMERCIANTI_MIN SITO_APERTO SITO_COMMERCIANTI_BENZINA SITO_COMMERCIANTI_NOMI
+    SITO_CONFRONTI_MIN SITO_CONFRONTI_MIN_ECO SITO_CONTROLLO_AI SITO_ECO_DA SITO_GONFIATE_ATTIVO
+    SITO_GONFIATE_EURO SITO_GONFIATE_PCT SITO_KM_ANNO_MIN SITO_MARGINE_MIN_SOPRA SITO_MARGINE_MIN_SOTTO
+    SITO_NO_SOLO_FIN SITO_PREZZO_LIMITE SITO_SOLO_PRIVATI SITO_TETTO_PCT SOGLIE_PV SUBITO_COMPLETO_ORA
+    SUPERCAR_ANNO_MIN SUPERCAR_COSTI_ESTERO SUPERCAR_EU_CRON SUPERCAR_GIUDICE_AI SUPERCAR_KM_MAX SUPERCAR_KW_TOL
+    SUPERCAR_MARGINE_MIN SUPERCAR_NMIN SUPERCAR_SITO TARATURA_MAX TARATURA_MIN TARATURA_MIN_N
+    TELEFONO_OBBLIGATORIO TEL_CANDIDATE TEL_CAND_SUBITO TEMPO_REALE TOGLI_SENZA_TELEFONO TOP_MIN_EURO TOP_N
+    TOP_QUOTA TR_AUTOSCOUT TR_COMPLETO TR_LUSSO_SENZA_NUMERO TR_SOLO_PRIVATI TR_SUBITO TR_SUBITO_SENZA_NUMERO
+    TR_TARGHE TUTTE_GIORNI TUTTE_MAX TUTTE_MIN UTIL_PUBBLICA UTIL_SENZA_NUMERO_CONFRONTI
+    UTIL_SENZA_NUMERO_MARGINE UTIL_SENZA_NUMERO_MAX UTIL_SENZA_NUMERO_N UTIL_SENZA_NUMERO_QUOTA UTIL_SIM
+    UTIL_SOLO_SITO VISIBILI_SOTTOFONDO VR_ACCORDO VR_AI_MAX VR_ATTIVO VR_GEMELLE_MIN VR_GRUPPI VR_GRUPPI_PROVA
+    VR_MIN_GRUPPO VR_NOTTE VR_N_GRUPPO VR_ORA_UTC VR_P25_TETTO VR_PREZZO_MAX VR_SENZA_GEMELLE VR_SIGMA_MAX
+    VR_SOLO_N VR_SOLO_SIGMA ZC_SOLO_VALUTA ZC_SUB_PROFONDA ZONA_150 ZONA_CRON ZONA_RAVENNA ZONA_SITO ZONE_ATTIVE
+    POLICY_RICALCOLO_SITO
+""".split())
+
+PREFISSI = ("POLICY_", "SOGLIE_PV", "CONFRONTI_", "SITO_", "VR_", "BENZ_", "RIVENDITA_", "CALIBRA_", "JEV_",
+            "MARGINE_", "KM_", "ANNO_", "META_SENZA_NUMERO", "TELEFONO_", "COMMERCIANTI_", "ZONA_", "MERCATO_",
+            "AI_", "TARATURA_", "SENZA_NUMERO_", "UTIL_", "ALTA_", "SUPERCAR_", "ECONOMICHE_", "TOP_",
+            "BASSE_", "CORR_", "SC_")
+
+# Nome che sembra un segreto: mai nel log (nemmeno il nome).
+_SEGRETO_NOME = re.compile(r"KEY|TOKEN|SECRET|PASSWORD|DATABASE_URL|SALT|API|PROXY|USERNAME|PRIVATE|CREDENZIAL")
+# Valore che sembra un segreto anche sotto un nome innocuo: si scrive solo "<nascosto>".
+_SEGRETO_VALORE = re.compile(r"://[^/\s]*@|^(sk|pk|rk|whsec)_|^ey[A-Za-z0-9_-]{20,}\.|^[A-Za-z0-9+/_=-]{40,}$")
+
+
+def segreto(nome: str) -> bool:
+    return bool(_SEGRETO_NOME.search(nome.upper()))
+
+
+def _valore(v: str) -> str:
+    return NASCOSTO if _SEGRETO_VALORE.search(v.strip()) else v
+
+
+def valori(environ=None) -> dict:
+    """{nome: valore effettivo o "<default>"} per le impostazioni di regola, ordinato, senza segreti."""
+    env = os.environ if environ is None else environ
+    nomi = set(NOMI) | {k for k in env if k.startswith(PREFISSI)}
+    return {k: (_valore(env[k]) if k in env else DEFAULT) for k in sorted(nomi) if not segreto(k)}
+
+
+def policy_risolta(environ=None) -> dict:
+    """Campi di PolicyConfig.from_env() già convertiti (con i ripieghi silenziosi di policy_v2._e)."""
+    try:
+        from .pricing import policy_v2
+        if environ is None:
+            cfg = policy_v2.PolicyConfig.from_env()
+        else:
+            vecchio = dict(os.environ)
+            try:
+                os.environ.clear()
+                os.environ.update(environ)
+                cfg = policy_v2.PolicyConfig.from_env()
+            finally:
+                os.environ.clear()
+                os.environ.update(vecchio)
+        return json.loads(json.dumps(dataclasses.asdict(cfg), sort_keys=True, default=str))
+    except Exception as e:                       # il log non deve mai fermare l'avvio
+        return {"errore": type(e).__name__}
+
+
+def impronta(environ=None) -> tuple[str, dict]:
+    """(sha256 a 12 cifre, dati). L'impronta copre solo env + policy: uguale tra sito e cron a parità di regole."""
+    regole = {"env": valori(environ), "policy": policy_risolta(environ)}
+    canon = json.dumps(regole, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canon.encode()).hexdigest()[:12], regole
+
+
+def riga(processo: str, environ=None) -> str:
+    env = os.environ if environ is None else environ
+    h, regole = impronta(environ)
+    dati = {"processo": processo, "commit": (env.get("RENDER_GIT_COMMIT") or "")[:12] or None, **regole}
+    return "CONFIG_IMPRONTA %s %s" % (h, json.dumps(dati, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
+
+
+def registra(processo: str) -> str | None:
+    """Scrive la riga nel log (WARNING: si vede anche senza logging configurato). Non solleva mai."""
+    try:
+        r = riga(processo)
+        log.warning("%s", r)
+        return r
+    except Exception as e:
+        log.warning("CONFIG_IMPRONTA non calcolata: %s", type(e).__name__)
+        return None

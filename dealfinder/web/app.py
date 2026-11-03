@@ -6182,6 +6182,11 @@ def _lavoro_subito():
 
 @asynccontextmanager
 async def _lifespan(app):
+    try:
+        from .. import regole_log as _rl             # 3/11 fase 1: impronta delle regole usate dal sito
+        _rl.registra("web")
+    except Exception:
+        pass
     if os.environ.get("DATABASE_URL"):
         _pulizia_disco()
         _aggiorna_elenco(attendi=False)       # elenco auto pronto prima del primo visitatore

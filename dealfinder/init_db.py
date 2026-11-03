@@ -11,6 +11,8 @@ from .db import connect, migrate
 from .web.auth import hash_password
 
 if __name__ == "__main__":
+    from . import regole_log as _rl                  # 3/11 fase 1: impronta delle regole all'avvio
+    _rl.registra("init_db:" + os.environ.get("RENDER_SERVICE_TYPE", "web"))
     if not os.environ.get("DATABASE_URL"):
         print("DATABASE_URL non impostata: servizio non configurato, nulla da fare.")
         raise SystemExit(0)
