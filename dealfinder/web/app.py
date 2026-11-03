@@ -55,7 +55,7 @@ def current_user(request: Request, admin: bool = False) -> dict:
     return data
 
 
-PERMESSI = ("auto", "incentivi")
+PERMESSI = ("auto", "incentivi", "appuntamenti")   # appuntamenti: abbonati da 200 €
 
 
 def _province_zona(data: dict) -> list[str]:

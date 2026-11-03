@@ -367,7 +367,7 @@ async function viewAdmin() {
       <div style="overflow-x:auto;margin:0 -16px;padding:0 16px">${table(d.items, [["name", "Nome"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
         ["provinces", "Zona", (v, r) => r.role === "admin" ? "Tutte" : `<select data-zona="${r.id}">${[["milano", "Milano e dintorni"], ["ravenna", "Ravenna e dintorni"], ["tutte", "Tutte"]].map(([k, l]) =>
           `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
-        ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"]].map(([k, l]) =>
+        ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"], ["appuntamenti", "Appuntamenti (200 €)"]].map(([k, l]) =>
           `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
         ["active", "Attivo", (v, r) => `${v ? '<span class="ok">Attivo</span>' : '<b class="ko">Disattivato</b>'} <button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Riattiva"}</button>`],
         ["id", "Accesso", (v, r) => `<button class="btn primary" data-link="${v}" data-who="${esc(r.email)}">Link di accesso</button> <button class="btn" data-pwd="${v}" data-who="${esc(r.email)}">Nuova password</button>`]])}</div>
@@ -383,7 +383,8 @@ async function viewAdmin() {
           <option value="milano">Milano e dintorni</option><option value="ravenna">Ravenna e dintorni</option><option value="tutte">Tutte</option></select></div>
         <fieldset class="field" style="border:0;padding:0"><legend>Accesso a</legend>
           <label style="display:inline-flex;gap:8px;align-items:center;margin:6px 18px 0 0"><input type="checkbox" id="nd-auto" checked style="width:20px;height:20px"> Auto (affari e vendi)</label>
-          <label style="display:inline-flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="nd-inc" style="width:20px;height:20px"> Incentivi</label></fieldset>
+          <label style="display:inline-flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="nd-inc" style="width:20px;height:20px"> Incentivi</label>
+          <label style="display:inline-flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="nd-app" style="width:20px;height:20px"> Appuntamenti (200 €)</label></fieldset>
         <button class="btn primary" type="submit">Crea account</button>
       </form>`;
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
@@ -430,7 +431,7 @@ async function viewAdmin() {
       const g = (id) => document.getElementById(id).value;
       try {
         await api("/api/admin/dealers", { method: "POST", body: { name: g("nd-name"), company: g("nd-company"), email: g("nd-email"), password: g("nd-pwd"), zona: g("nd-zona"),
-          permessi: [["nd-auto", "auto"], ["nd-inc", "incentivi"]].filter(([i]) => document.getElementById(i).checked).map(([, k]) => k) } });
+          permessi: [["nd-auto", "auto"], ["nd-inc", "incentivi"], ["nd-app", "appuntamenti"]].filter(([i]) => document.getElementById(i).checked).map(([, k]) => k) } });
         if (fromRequest) await api("/api/admin/richieste/" + fromRequest, { method: "POST" });
         toast("Account creato"); viewAdmin();
       } catch (err) { toast(err.message); }
