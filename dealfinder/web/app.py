@@ -5279,7 +5279,8 @@ def _tempo_reale():
         try:
             # 3/11: lucchetto per tutta la durata (non "una volta sola"): se il sito si riavvia il giro riprende da
             # dove era (le auto già fatte col codice attuale si saltano)
-            _lk = connect().__enter__()
+            _cm_lk = connect()               # il riferimento resta per tutta la funzione (sennò la connessione si chiude)
+            _lk = _cm_lk.__enter__()
             _ok_lk = _lk.execute("SELECT pg_try_advisory_lock(778821) AS ok").fetchone()["ok"]
             _lk.commit()                     # il lucchetto di sessione resta, la transazione no
             if not _ok_lk:
