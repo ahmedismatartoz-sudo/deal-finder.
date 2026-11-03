@@ -24,6 +24,9 @@ log = logging.getLogger("confronti_extra")
 CAP_ITALIA = ",".join([
     "12100", "11100", "43121", "41121", "36100", "31100", "38121", "39100",   # Cuneo, Aosta, Parma, Modena, Vicenza, Treviso, Trento, Bolzano
     "10121", "16121", "40121", "37121", "35121",                              # Torino, Genova, Bologna, Verona, Padova (già fatte il 31/10)
+    # 3/11 22:39 (cliente: "raccogliamo più auto di altre zone così non restano senza confronti"): resto del Nord
+    "30121", "33100", "34121", "19121", "17100", "47921", "44121", "15121", "28100",   # Venezia, Udine, Trieste, La Spezia,
+    # Savona, Rimini, Ferrara, Alessandria, Novara
 ])
 
 
@@ -43,7 +46,7 @@ def giro() -> dict:
     # della zona non si allunga di ore e le città restano sempre aggiornate a rotazione.
     tutte = [c.strip() for c in os.environ.get("CE_CAP", CAP_ITALIA).split(",") if c.strip()]
     from .ciclo import _due
-    citta = [c for c in tutte if _due(f"ce:{c}", int(os.environ.get("CE_ORE", "48")))][: int(os.environ.get("CE_PER_GIRO", "3"))]
+    citta = [c for c in tutte if _due(f"ce:{c}", int(os.environ.get("CE_ORE", "48")))][: int(os.environ.get("CE_PER_GIRO", "5"))]
     log.warning("CONFRONTI_EXTRA turno: %s (di %d città)", citta, len(tutte))
     lo, hi = int(os.environ.get("CE_MIN", "1000")), int(os.environ.get("CE_MAX", "70000"))
     venditori = [("P", "privato"), ("D", "commerciante")]
