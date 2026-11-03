@@ -5,8 +5,8 @@ All'avvio di ogni processo (sito, cron collect, init_db) scrive nel log UNA riga
     CONFIG_IMPRONTA <sha256 a 12 cifre> {json}
 
 con i valori EFFETTIVI delle impostazioni che decidono prezzi, valutazione e filtri del sito: il valore preso
-dall'ambiente, oppure "<default>" se non impostata (vale il default scritto nel codice), più i campi di
-PolicyConfig.from_env() già risolti. Le impostazioni segrete (chiavi, token, password, DATABASE_URL, sale)
+dall'ambiente, oppure "<default>" se non impostata (vale il default scritto nel codice), più le regole
+effettive di dealfinder/regole.py. Le impostazioni segrete (chiavi, token, password, DATABASE_URL, sale)
 non ci sono mai, nemmeno il nome. L'impronta è calcolata solo sulle regole (non su processo e commit), così
 sito e cron con le stesse regole hanno la stessa impronta e ogni differenza si vede subito.
 
@@ -112,21 +112,12 @@ def valori(environ=None) -> dict:
 
 
 def policy_risolta(environ=None) -> dict:
-    """Campi di PolicyConfig.from_env() già convertiti (con i ripieghi silenziosi di policy_v2._e)."""
+    """Regole effettive (dealfinder/regole.py: default del file + interruttori ammessi dall'ambiente), con la loro
+    impronta (la stessa scritta in ogni valutazione, colonna impronta_regole)."""
     try:
-        from .pricing import policy_v2
-        if environ is None:
-            cfg = policy_v2.PolicyConfig.from_env()
-        else:
-            vecchio = dict(os.environ)
-            try:
-                os.environ.clear()
-                os.environ.update(environ)
-                cfg = policy_v2.PolicyConfig.from_env()
-            finally:
-                os.environ.clear()
-                os.environ.update(vecchio)
-        return json.loads(json.dumps(dataclasses.asdict(cfg), sort_keys=True, default=str))
+        from . import regole as RG
+        r = RG.regole(environ)
+        return dict(RG.come_dict(r), impronta=RG.impronta(r))
     except Exception as e:                       # il log non deve mai fermare l'avvio
         return {"errore": type(e).__name__}
 

@@ -2,13 +2,12 @@
 from datetime import datetime, timedelta, timezone
 
 import os as _os
-_os.environ.setdefault("RIVENDITA_VERA", "0")
-_os.environ.setdefault("BENZ_RICHIESTE", "0")       # la fascia richiesta ha il suo test     # questi test controllano le regole prudenti; la rivendita vera ha il suo test
-from dealfinder.pricing.policy_v2 import (PolicyConfig, percentile, riduzione, rivendita, valuta, seleziona)
+# 4/11: niente impostazioni d'ambiente: i test girano con le regole di produzione (dealfinder/regole.py)
+from dealfinder.pricing.policy_v2 import (PolicyConfig, percentile, valuta, seleziona)
 
 NOW = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
 CFG = PolicyConfig()
-CFG_DANNI = PolicyConfig(solo_sane=False)
+CFG_DANNI = PolicyConfig(solo_sane=False, perdita_storico_danno=.08)
 
 
 def car(i, price, year=2018, km=90000, fuel="diesel", gearbox="manuale", kw=81, **kw2):
@@ -34,33 +33,13 @@ def test_percentile_tipo7():
     assert percentile([10], .25) == 10
 
 
-def test_fasce_e_confini():
-    assert riduzione(4999, CFG)[0] == .10 and riduzione(9999, CFG)[0] == .10 and riduzione(50000, CFG)[0] == .10
-    assert riduzione(50001, CFG)[0] is None
-
-def test_esempio_documento():
-    assert rivendita(12000, 10500, CFG)["R"] == 10800          # 12.000 × 0,90 (L non taglia più)
-    cfg = PolicyConfig(usa_L=True)
-    assert rivendita(12000, 9000, cfg)["R"] == 9000             # regola del documento, se riattivata
-
-def test_transizione_mai_sopra_la_regola_piu_severa():
-    cfg = PolicyConfig(transizione=True, transizione_w=1000, usa_L=True)
-    cfg.fasce = [(5000, .20), (10000, .17), (50000, .15)]
-    base_cfg = PolicyConfig(usa_L=True)
-    base_cfg.fasce = cfg.fasce
-    prev = 0
-    for m in range(4000, 50000, 50):
-        r = rivendita(m, 10**9, cfg)["R"]
-        assert r <= rivendita(m, 10**9, base_cfg)["R"] + 1 and r >= prev - 1
-        prev = r
-
 def test_base_preferita_opportunita():
     v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
     assert v["n"] == 12 and v["campione"] == "base preferita"
-    assert 9700 <= v["M"] <= 9900 and 9300 <= v["L"] <= 9475   # corretti per km (confronti con meno km)
-    assert v["riduzione"] == .07 and v["R"] == round(v["M"] * .93)     # 12 confronti diretti: stima precisa → 7%
-    assert v["categoria"] in ("opportunita", "non_conveniente")
-    assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
+    assert 9700 <= v["M"] <= 9950 and 9300 <= v["L"] <= 9600   # corretti per km nei due sensi
+    assert v["riduzione"] == 0 and v["R"] == v["M"]              # 4/11: R = M, nessuna riduzione
+    assert v["categoria"] == "opportunita" and v["M_fonte"] == "annunci"
+    assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"]
 
 
 def _ripristina(nome, prima):
@@ -73,7 +52,7 @@ def _ripristina(nome, prima):
 
 def test_rivendita_vera_uguale_al_mercato():
     prima = _os.environ.get("RIVENDITA_VERA")
-    _os.environ["RIVENDITA_VERA"] = "1"
+    _os.environ["RIVENDITA_VERA"] = "0"                  # variabile tolta: non cambia più niente
     try:
         v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
     finally:
@@ -142,24 +121,6 @@ def test_motori_cambi_generazioni_diversi():
     assert seleziona(t, m2, CFG, NOW)["validi"] == []
 
 
-def test_anno_e_km_stretti_poi_ampliamento_esplicito():
-    # senza l'eccezione "pochi confronti → livello 3 con rivendita prudente" (2/11 notte), comportamento storico
-    prima = _os.environ.get("POLICY_PRUDENTE_POCHI")
-    _os.environ["POLICY_PRUDENTE_POCHI"] = "0"
-    try:
-        _ampliamento_esplicito()
-    finally:
-        _ripristina("POLICY_PRUDENTE_POCHI", prima)
-
-
-def test_pochi_confronti_rivendita_prudente():
-    pochi = [car(300 + n, 9500 + n * 100, year=2020, km=110000 + n * 100, gearbox=None) for n in range(3)]
-    v = valuta(TARGET, pochi, 1000, CFG, NOW)
-    if v.get("prudente_pochi"):
-        assert v["R"] <= min(c["prezzo"] for c in v["confronti"]) + 1
-        assert v["R"] <= v["M"] * 0.90 + 1
-
-
 def _ampliamento_esplicito():
     lontani = [car(300 + n, 9500, year=2023, km=160000 + n) for n in range(12)]
     v = valuta(TARGET, lontani, 1500, CFG, NOW)
@@ -195,9 +156,10 @@ def test_alto_rischio_sempre_da_approfondire():
 
 
 def test_oltre_50mila():
+    # 4/11: sopra 50.000 € non più "dati insufficienti" perché finiva la tabella delle riduzioni
     m = market([60000 + n * 500 for n in range(12)])
     v = valuta(car(1, 40000), m, 2000, CFG, NOW)
-    assert v["categoria"] == "dati_insufficienti" and v.get("R") is None
+    assert v.get("R") and v["R"] == v["M"] > 50000 and v["categoria"] == "opportunita"
 
 
 def test_annunci_vecchi_o_spariti():
@@ -220,12 +182,6 @@ def test_troppo_bello_mai_sul_sito():
     assert v["categoria"] == "dati_insufficienti" and any("truffa" in m for m in v["motivi"])
 
 
-def test_fascia_piu_severa_tra_prezzo_e_mercato():
-    cfg = PolicyConfig(adattiva=False)
-    cfg.fasce = [(5000, .20), (10000, .17), (50000, .15)]
-    v = valuta(car(1, 8700), market([12000 + n * 100 for n in range(12)]), 2200, cfg, NOW)
-    assert v["riduzione"] == .17
-
 def test_nessun_costo_margine_uguale_rivendita_meno_prezzo():
     v = valuta(car(1, 6000), market(BASE), 1500, CFG, NOW)
     assert v["totale_costi"] == 0 and v["riserva"]["euro"] == 0
@@ -233,8 +189,17 @@ def test_nessun_costo_margine_uguale_rivendita_meno_prezzo():
 
 
 def test_solo_auto_sane():
+    # 4/11 (Incidentate): danno dichiarato con costo stimato -> si valuta col costo tolto (candidato, da verificare)
     v = valuta(car(1, 6000, damage_class="leggero", parts_cost_high=300), market(BASE), 1500, CFG, NOW)
-    assert v["categoria"] == "dati_insufficienti" and "sane" in v["motivi"][-1]
+    assert v["categoria"] == "candidato" and v["totale_costi"] == 300 and v["margine"] == v["R"] - 6000 - 300
+    # danno senza stima, grave/strutturale o dichiarato e non letto: fuori
+    for t in (car(1, 6000, damage_class="leggero", parts_cost_high=None), car(1, 6000, damage_class="grave", parts_cost_high=300),
+              car(1, 6000, rischio_strutturale=True), car(1, 6000, damage_declared=True)):
+        v = valuta(t, market(BASE), 1500, CFG, NOW)
+        assert v["categoria"] == "dati_insufficienti" and "sane" in v["motivi"][-1]
+    # difetti letti dall'AI (ai_difetti, non gravi): costo tolto una volta, segnato per il sito
+    v = valuta(car(1, 6000, costo_difetti=400, difetti_motivo="frizione"), market(BASE), 1500, CFG, NOW)
+    assert v["costi"]["difetti"]["euro"] == 400 and v["costo_difetti_incluso"] and v["categoria"] == "candidato"
 
 
 def test_correzione_anno_km():
@@ -251,11 +216,14 @@ def test_confronto_senza_anno_o_km():
     assert v["n"] == 12
 
 
-def test_correzione_non_gonfia_i_confronti_peggiori():
+def test_correzione_nei_due_sensi_con_tetto():
+    # 4/11: un confronto più vecchio o con più km SALE (prima solo verso il basso), al massimo +25%
     vecchie = [car(500 + n, 10000 + n * 100, year=2015, km=160000 + n * 500) for n in range(6)]
-    v = valuta(car(1, 9000), vecchie, 1500, CFG, NOW)
-    assert all(c["prezzo_corretto"] <= c["prezzo"] for c in v["confronti"])
-    assert v["M"] <= 10300
+    v = valuta(car(1, 9000), vecchie, 1500, PolicyConfig(due_sensi=True), NOW)   # 4/11: spenta di base finché non è provata
+    assert all(c["prezzo"] < c["prezzo_corretto"] <= c["prezzo"] * 1.25 + 1 for c in v["confronti"])
+    assert v["M"] > 10300
+    v0 = valuta(car(1, 9000), vecchie, 1500, PolicyConfig(due_sensi=False), NOW)       # regola di prima
+    assert all(c["prezzo_corretto"] <= c["prezzo"] for c in v0["confronti"]) and v0["M"] <= 10300
 
 
 def test_carrozzerie_diverse():
@@ -284,28 +252,6 @@ def test_modello_prezzi_preciso_e_piu_auto():
          [car(900 + k, int(vero(2014 + k % 6, 90000 + k * 3000)), year=2014 + k % 6, km=90000 + k * 3000) for k in range(12)]
     v2 = valuta(t2, m2, 1500, CFG, NOW)
     assert v2.get("M") and v2["metodo"] == "modello"
-
-
-def test_gemella_piu_economica_affidabile():
-    from dealfinder.pricing.ricalcolo import gemelle, gemella_rivendita
-    t = car(1, 3000, year=2014, km=120000, version_raw="1.2 Lounge")
-    m = [car(10, 4500, year=2014, km=125000, version_raw="1.2 Lounge"),
-         car(11, 4800, year=2015, km=110000, version_raw="1.2 Pop"),
-         car(12, 5000, year=2013, km=130000, version_raw="1.2"),
-         car(13, 2500, year=2014, km=118000, version_raw="1.2"),            # troppo bassa rispetto alle altre: scartata
-         car(14, 4000, year=2014, km=121000, version_raw="1.4 Sport"),      # cilindrata diversa: non è gemella
-         car(15, 4200, year=2014, km=180000, version_raw="1.2")]            # km troppo diversi
-    tw = gemelle(t, m, NOW)
-    assert [c["id"] for c in tw] == [13, 10, 11, 12]
-    g = gemella_rivendita(t, tw, 4800)
-    assert g["gemella"]["id"] == 10 and g["rivendita"] == 3500
-
-
-def test_riduzione_secondo_la_precisione():
-    v = valuta(car(1, 5600), market(BASE[:4]), 1500, CFG, NOW)
-    assert v["riduzione"] == .10                                   # pochi confronti: prudenza piena
-    v = valuta(car(1, 5600), market(BASE), 1500, CFG, NOW)
-    assert v["riduzione"] == .07
 
 
 def test_telefono_subito_dietro_il_bottone():
@@ -379,15 +325,15 @@ def test_ai_poco_precisa_non_usata():
         assert v["categoria"] == "dati_insufficienti" and "ai" not in v
 
 
-def test_ai_con_confronti_media_e_accordo():
+def test_ai_con_confronti_solo_segnale():
     m = market(BASE)
     v0 = valuta(TARGET, m, 1500, CFG, NOW)
     v = valuta(dict(TARGET, ai={"prezzo": v0["M"], "errore": .08, "n": 40}), m, 1500, CFG, NOW)
     assert v["ai"]["concorda"] and v["M"] == v0["M"]
-    assert v["riduzione"] <= v0["riduzione"]                  # stime concordi: prudenza minore o uguale
-    alta = valuta(dict(TARGET, ai={"prezzo": int(v0["M"] * 1.5), "errore": .08, "n": 40}), m, 1500, CFG, NOW)
-    assert alta["ai"]["disaccordo"] and alta["categoria"] in ("candidato", "dati_insufficienti")
-    assert alta["M"] < v0["M"] * 1.5                           # l'AI pesa, non sostituisce i confronti
+    # 4/11: con le gemelle l'AI (prezzi chiesti) è solo un segnale: non entra in M né sopra né sotto
+    for k in (1.5, 0.6):
+        x = valuta(dict(TARGET, ai={"prezzo": int(v0["M"] * k), "errore": .08, "n": 40}), m, 1500, CFG, NOW)
+        assert x["ai"]["disaccordo"] and x["M"] == v0["M"] and x["categoria"] in ("candidato", "dati_insufficienti")
 
 
 def test_ai_non_salva_le_truffe():
@@ -402,40 +348,6 @@ def test_prezzo_molto_basso_ammesso_con_targa_e_telefono():
     assert valuta(t, m, 1500, CFG, NOW)["categoria"] == "dati_insufficienti"      # senza targa+numero: fuori
     v = valuta(dict(t, targa_e_telefono=True), m, 1500, CFG, NOW)
     assert v["categoria"] == "candidato" and v.get("prezzo_molto_basso_ammesso")
-
-
-def test_taratura_corregge_il_valore_di_mercato():
-    from dealfinder.pricing import policy_v2 as P
-    m = market(BASE)
-    v0 = valuta(TARGET, m, 1500, CFG, NOW)
-    P.TARATURA.clear()
-    P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 0.90
-    try:
-        v = valuta(TARGET, m, 1500, CFG, NOW)
-        assert v["M_grezzo"] == v0["M"] and v["M"] == round(v0["M"] * .9) and v["taratura"] == .9
-        P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 0.5      # mai oltre −15%
-        assert valuta(TARGET, m, 1500, CFG, NOW)["M"] == round(v0["M"] * .85)
-        P.TARATURA[P.chiave_taratura(v0["metodo"], v0["n"], v0["M"])] = 1.2      # mai alzare la rivendita
-        assert valuta(TARGET, m, 1500, CFG, NOW)["M"] == v0["M"]
-    finally:
-        P.TARATURA.clear()
-
-
-def test_rivendita_vendita_veloce():
-    m = market(BASE)
-    v = valuta(TARGET, m, 1500, CFG, NOW)
-    assert v.get("V") and v["R"] <= v["V"] <= round(v["M"] * .97) and v["V"] >= round(v["M"] * .80)
-    from dealfinder.pricing.policy_v2 import PolicyConfig
-    import dataclasses
-    v0 = valuta(TARGET, m, 1500, dataclasses.replace(CFG, vendita_veloce=False), NOW)
-    assert v["R"] <= v0["R"]
-
-
-def test_vendita_veloce_piu_prudente_con_pochi_confronti():
-    m = market(BASE)[:3]
-    v = valuta(TARGET, m, 1500, CFG, NOW)
-    if v.get("V") and v.get("modello") is None:
-        assert v["V"] <= round(v["M"] * .92) + 1
 
 
 def test_prezzo_assurdo_mai_sul_sito_anche_con_targa():
@@ -455,21 +367,20 @@ def test_allestimento_1_11():
 def test_valore_reale_concorda_e_poche_gemelle():
     v0 = valuta(TARGET, market(BASE), 1500, CFG, NOW)
     assert v0.get("M")
-    # valore reale poco SOPRA le gemelle: il mercato resta quello delle gemelle e il metodo NON diventa valore_reale
-    # (3/11: altrimenti il sito saltava la correzione dei prezzi chiesti e il margine saliva)
-    t = dict(TARGET, vr={"v": int(v0["M"] * 1.02), "p25": int(v0["M"] * 0.9), "sigma": 0.1, "n": 500})
-    v = valuta(t, market(BASE), 1500, CFG, NOW)
-    assert v["M"] == v0["M"] and not str(v.get("metodo", "")).startswith("valore_reale") and v.get("vr_accordo") is True
-    assert v.get("policy_rev") and v.get("M_gemelle") == v0["M"] and v.get("metodo_base") == v0["metodo"]
-    # valore reale poco SOTTO: il mercato è il valore reale, metodo valore_reale
-    t1 = dict(TARGET, vr={"v": int(v0["M"] * 0.97), "p25": int(v0["M"] * 0.85), "sigma": 0.1, "n": 500})
-    v1 = valuta(t1, market(BASE), 1500, CFG, NOW)
-    assert v1["M"] == int(v0["M"] * 0.97) and v1.get("metodo") == "valore_reale"
-    # valore reale molto più basso delle gemelle: vince il più basso
-    t2 = dict(TARGET, vr={"v": int(v0["M"] * 0.7), "p25": int(v0["M"] * 0.6), "sigma": 0.1, "n": 500})
-    v2 = valuta(t2, market(BASE), 1500, CFG, NOW)
-    assert v2["M"] <= int(v0["M"] * 0.7) + 1 and v2.get("vr_accordo") is False
-    assert v2.get("metodo") == "valore_reale_prudente"
+    f = .915                                                  # riserva chiesto -> venduto della fascia 5-10k
+    # gemelle portate al prezzo di vendita entro ±8% dal valore reale: M = V (prezzo di vendita, niente calibrazione)
+    for k in (1.02, 0.97):
+        t = dict(TARGET, vr={"v": int(v0["M"] * f * k), "p25": 1, "sigma": 0.1, "n": 500})
+        v = valuta(t, market(BASE), 1500, CFG, NOW)
+        assert v["M"] == int(v0["M"] * f * k) and v["metodo"] == "valore_reale" and v["vr_accordo"] is True
+        assert v["M_fonte"] == "vendite" and v["M_gemelle"] == v0["M"] and v["metodo_base"] == v0["metodo"]
+    # molto diversi (sopra o sotto): media pesata con gli errori, mai il più basso o il più alto dei due
+    for k in (0.7, 1.4):
+        V = int(v0["M"] * f * k)
+        v2 = valuta(dict(TARGET, vr={"v": V, "p25": 1, "sigma": 0.1, "n": 500}), market(BASE), 1500, CFG, NOW)
+        G = v2["valore_reale"]["gemelle_vendita"]
+        assert min(V, G) < v2["M"] < max(V, G) and v2["vr_accordo"] is False
+        assert v2["metodo"] == "valore_reale_combinato" and abs(sum(v2["valore_reale"]["pesi"].values()) - 1) < .01
 
 
 def test_valore_reale_poche_gemelle_non_diventa_affidabile():

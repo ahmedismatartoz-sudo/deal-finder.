@@ -82,15 +82,12 @@ def config_da_dict(d: dict | None) -> tuple[P.PolicyConfig, dict]:
     d = dict(d or {})
     env = {k: v for k, v in d.items() if k.isupper()}
     campi = {k: v for k, v in d.items() if not k.isupper()}
-    noti = {f.name for f in dataclasses.fields(P.PolicyConfig)}
+    noti = set(getattr(P, "_MAPPA", {}) or {})
     ignoti = sorted(set(campi) - noti)
     if ignoti:
         raise ValueError("campi di PolicyConfig sconosciuti: " + ", ".join(ignoti))
     with _ambiente(env):
-        base = P.PolicyConfig.from_env()
-    if "fasce" in campi:
-        campi["fasce"] = [tuple(x) for x in campi["fasce"]]
-    return dataclasses.replace(base, **campi), env
+        return P.PolicyConfig(**campi), env
 
 
 def valutatore(regola, conn=None):

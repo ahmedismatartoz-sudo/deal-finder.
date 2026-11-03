@@ -40,7 +40,7 @@ def test_errore_di_una_valutazione_non_ferma_le_altre():
 def test_config_da_dict_campi_e_ambiente():
     prima = os.environ.get("POLICY_COSTO_FISSO")
     cfg, env = O.config_da_dict({"costo_fisso": 600, "POLICY_KM_TOL": "30000", "SOGLIE_PV": "7000:1500"})
-    assert cfg.costo_fisso == 600 and cfg.km_tol == 30000          # ambiente letto da PolicyConfig.from_env
+    assert cfg.costo_fisso == 600 and env.get("POLICY_KM_TOL") == "30000"   # 4/11: le regole non si leggono più dall'ambiente
     assert env == {"POLICY_KM_TOL": "30000", "SOGLIE_PV": "7000:1500"}
     assert os.environ.get("POLICY_KM_TOL") is None and os.environ.get("POLICY_COSTO_FISSO") == prima
     try:

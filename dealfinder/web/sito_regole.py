@@ -302,16 +302,19 @@ def r_jev(it, g):
 
 
 def calibra_venduto(it, g) -> int:
-    """Euro da togliere alla rivendita: se M è una mediana di prezzi CHIESTI, R non supera M × fattore misurato
-    chiesto -> venduto (una volta sola). Col valore reale (prezzo di vendita) nessuna correzione."""
+    """Euro da togliere alla rivendita: correzione misurata prezzo CHIESTO -> VENDUTO, una sola volta, con la funzione
+    unica regole.calibra_vendita (solo se M viene dai prezzi chiesti, mai sul valore reale)."""
     pv = it.get("pv") if isinstance(it.get("pv"), dict) else None
-    if not pv or not g.fattori_calibra or not pv.get("M") or str(pv.get("metodo") or "").startswith("valore_reale") \
-            or it.get("supercar"):
+    if not pv or not g.fattori_calibra or not pv.get("M") or it.get("supercar") or pv.get("calibrato") is not None:
         return 0
-    M = float(pv["M"])
-    f = next((x for lim, _, x in g.fattori_calibra if M < lim), 1.0)
+    from .. import regole as RG
+    try:
+        pv2 = RG.calibra_vendita(pv, list(g.fattori_calibra))
+    except Exception:
+        return 0
     R = float(pv.get("R_finale") or pv.get("R") or 0)
-    return int(round(max(0.0, R - M * f))) if f < 1 and R else 0
+    R2 = float(pv2.get("R_finale") or pv2.get("R") or R)
+    return int(round(max(0.0, R - R2)))
 
 
 def t_margine_sito(it, g):
@@ -321,7 +324,7 @@ def t_margine_sito(it, g):
     if giu > 0 and it["pv"].get("margine") is not None:
         pv = it["pv"]
         R = int(pv.get("R_finale") or pv.get("R"))
-        it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, calibrato_venduto=giu)
+        it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, calibrato_venduto=giu, calibrato=True)
     costo = int((_r(it).get("difetto") or {}).get("costo") or 0)
     if costo > 0 and isinstance(it.get("pv"), dict) and it["pv"].get("margine") is not None:
         it["pv"] = dict(it["pv"], margine=int(it["pv"]["margine"]) - costo, margine_calcolo=int(it["pv"]["margine"]),

@@ -85,7 +85,8 @@ def misura(conn) -> dict:
         d["err_R"].append((R - prezzo) / prezzo * 100)
         d["coperte"] += 1 if prezzo >= R else 0
         tot += 1
-    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": {}}
+    # 4/11: con quale correzione anno/km è stata misurata (il fattore cambia se cambia la regola: va rimisurato)
+    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": {}, "correzione_due_sensi": bool(cfg.due_sensi)}
     for lim, f in FASCE:
         d = per.get(f)
         if not d or not d["n"]:

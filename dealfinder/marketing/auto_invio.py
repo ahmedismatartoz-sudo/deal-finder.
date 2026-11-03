@@ -510,7 +510,6 @@ def nuovi_3_11(tag: str, elenco) -> dict:
     import hashlib  # noqa: F401
     from collections import Counter
     from ..db import connect
-    from ..pricing import policy_v2 as _P
     tetto = int(os.environ.get("BREVO_TETTO", "1498"))
     nord = ("MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC", "MN", "SO", "VC", "BI", "VB",
             "AL", "AT", "TO", "CN", "GE", "SV", "PR", "RE", "MO", "BO", "VR", "VI", "PD", "VE", "TV", "TN", "BZ")
@@ -554,7 +553,7 @@ def nuovi_3_11(tag: str, elenco) -> dict:
         return dict(st)
     # esempi di oggi (metodo nuovo), zona entro 100 km
     tutte = [x for x in elenco() if x.get("R") and x.get("anno") and (x.get("n") or 0) >= 8
-             and (x.get("km") or 10**9) <= 150000 and (x.get("margine") or 0) >= 1500 and x.get("rev") == _P.POLICY_REV
+             and (x.get("km") or 10**9) <= 150000 and (x.get("margine") or 0) >= 1500 and x.get("regole")
              and (m_ := re.search(r"\((\w\w)\)", str(x.get("zona") or ""))) and m_.group(1).upper() in PROV_100]
     esempi = {}
     for f, (lo, hi) in FASCE_2_11.items():

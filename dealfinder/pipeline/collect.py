@@ -1011,6 +1011,11 @@ if __name__ == "__main__":
             elif voce.startswith("leadmaps"):                              # 26/10 notte: commercianti da Google Maps via Apify
                 from . import lead_maps as LM
                 esito = LM.giro()
+            elif voce.startswith("provacorrezione"):                       # 4/11: prova correzione anno/km sulle vendute
+                from ..pricing import prova_correzione
+                with connect() as conn:
+                    r = prova_correzione.esegui(conn)
+                esito = {"usate": r.get("usate"), "decisione": r.get("decisione")}
             elif voce.startswith("ricalcolo"):                             # 24/10 sera: ricalcolo policy qui, non sul sito (512 MB)
                 from ..pricing import ricalcolo
                 with connect() as conn:

@@ -23,6 +23,7 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Redire
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from .. import regole as _RG
 from ..config import settings
 from ..db import connect, usa_pool
 from . import abbonamento, cards, foto, scovo, sessions, social
@@ -971,36 +972,27 @@ ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
 
 _calib_cache = {"t": 0.0, "f": None}
-_FASCE_CALIB = [(5000, "<5k"), (10000, "5-10k"), (20000, "10-20k"), (35000, "20-35k"), (60000, "35-60k"), (10**9, ">60k")]
 
 
 def _fattori_calibra() -> list:
-    """28/10 sera (cliente: "non voglio più margini gonfiati"): per fascia, prezzo di vendita vero / mediana degli annunci,
-    misurato sulle auto vendute (tabella calibrazione, aggiornata dalla misura CALIBRA). Mai sopra 1, mai sotto 0,8;
-    fasce con meno di CALIBRA_N_MIN auto misurate: si usa il valore di riserva CALIBRA_FATTORI."""
+    """Fattori prezzo CHIESTO → prezzo di VENDITA per fascia di M (regole.fattori_calibrazione, dall'ultima misura
+    della tabella calibrazione; riserva e limiti in dealfinder/regole.py, niente variabili d'ambiente)."""
     if time.time() - _calib_cache["t"] < 1800 and _calib_cache["f"] is not None:
         return _calib_cache["f"]
-    riserva = {}
-    for voce in (os.environ.get("CALIBRA_FATTORI") or "<5k:0.87,5-10k:0.915,10-20k:0.97").split(","):
-        if ":" in voce:
-            k, v = voce.split(":", 1)
-            riserva[k.strip()] = float(v)
     fasce = {}
     try:
         with connect() as conn:
             if conn.execute("SELECT to_regclass('calibrazione') AS t").fetchone()["t"]:
                 r = conn.execute("SELECT dati FROM calibrazione ORDER BY at DESC LIMIT 1").fetchone()
                 d = r["dati"] if r else None
-                fasce = (json.loads(d) if isinstance(d, str) else d or {}).get("fasce") or {}
+                dati = (json.loads(d) if isinstance(d, str) else d or {})
+                fasce = dati.get("fasce") or {}
+                if _RG.calibrazione_vecchia(dati):
+                    logging.getLogger("scovo").warning("CALIBRA_VECCHIA misura fatta con un'altra correzione anno/km: "
+                                                       "va rifatta (CALIBRA=1)")
     except Exception as e:
         logging.getLogger("scovo").warning("CALIBRA fattori non letti: %s", str(e)[:120])
-    nmin = int(os.environ.get("CALIBRA_N_MIN", "20"))
-    out = []
-    for lim, nome in _FASCE_CALIB:
-        f = fasce.get(nome) or {}
-        x = f.get("prezzo_su_M") if (f.get("n") or 0) >= nmin else None
-        x = riserva.get(nome, 1.0) if x is None else x
-        out.append((lim, nome, max(0.8, min(1.0, float(x)))))
+    out = _RG.fattori_calibrazione(fasce)
     _calib_cache.update(t=time.time(), f=out)
     logging.getLogger("scovo").warning("CALIBRA_FATTORI %s", {n: x for _, n, x in out})
     return out
@@ -4107,7 +4099,7 @@ def _tempo_reale():
                     out.append({"id": it.get("id"), "auto": it.get("nome"), "anno": it.get("anno"), "km": it.get("km"),
                                 "carb": it.get("carb"), "prezzo": it.get("prezzo"), "n": pv.get("n"), "zona": it.get("zona"),
                                 "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine"),
-                                "rev": pv.get("policy_rev")})
+                                "rev": pv.get("policy_rev"), "regole": pv.get("regole")})
                 return out
             from ..marketing import auto_invio as AI
             AI.nuovi_3_11(tag, piatte)
@@ -4464,10 +4456,8 @@ def _tempo_reale():
                 from ..pipeline.ciclo import _una_volta
                 if not _una_volta(f"simvr:{tag}"):
                     return
-                from ..pricing import simula_vr
-                with connect() as conn:
-                    conn.execute("SET statement_timeout = '600s'")
-                    simula_vr.simula(conn, _fattori_calibra(), limite=int(os.environ.get("SIMVR_MAX", "5000")))
+                # 4/11: simula_vr tolta (simulava varianti della vendita veloce e della P25, regole non più in uso)
+                L.warning("SIMVR tolta il 4/11: le regole prudenti che simulava non esistono più")
             except Exception as e:
                 L.warning("SIMVR non riuscita: %s", str(e)[:300])
             return
@@ -4952,8 +4942,8 @@ def _tempo_reale():
                     WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
                       AND l.price_eur BETWEEN 1000 AND 20000 AND COALESCE(l.mileage_km,0) <= 150000
                       AND v.computed_at > now() - interval '2 days'
-                      AND NOT (COALESCE(u.riassunto->>'policy_rev', '') = %s AND u.computed_at > v.computed_at)
-                    LIMIT %s""", (_P.POLICY_VERSION, list(tutte()), _P.POLICY_REV,
+                      AND NOT (u.impronta_regole IS NOT DISTINCT FROM %s AND u.computed_at > v.computed_at)
+                    LIMIT %s""", (_P.POLICY_VERSION, list(tutte()), _RG.impronta(),
                                   int(os.environ.get("RIVTUTTE_MAX", "40000")))).fetchall()
                 # prima le auto che possono essere sul sito, poi le benzina fino a 100.000 km, poi le altre; dentro
                 # ogni parte per modello (un solo caricamento dei confronti per gruppo)
@@ -5014,8 +5004,8 @@ def _tempo_reale():
                         JOIN valutazioni_policy u ON u.listing_id = l.id AND u.policy_version = %s
                         WHERE l.status='attivo' AND l.seller_type='privato' AND l.stage='approfondito'
                           AND upper(l.province) = ANY(%s) AND COALESCE(u.margine, -1) >= 500
-                          AND COALESCE(u.riassunto->>'policy_rev', '') <> %s
-                        LIMIT 3000""", (_P.POLICY_VERSION, list(tutte()), _P.POLICY_REV)).fetchall()
+                          AND u.impronta_regole IS DISTINCT FROM %s
+                        LIMIT 3000""", (_P.POLICY_VERSION, list(tutte()), _RG.impronta())).fetchall()
                     rows = sorted([r for r in rows if r["id"] not in provate],
                                   key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
                     rows = rows[:int(os.environ.get("RIALLINEA_MAX", "600"))]
@@ -5056,10 +5046,10 @@ def _tempo_reale():
                 cat = conn.execute("""SELECT COALESCE(u.categoria,'senza_valutazione') AS c, count(*) AS n,
                         count(*) FILTER (WHERE u.margine >= 1500) AS m1500, count(*) FILTER (WHERE u.margine BETWEEN 800 AND 1499) AS m800,
                         count(*) FILTER (WHERE u.margine BETWEEN 0 AND 799) AS m0,
-                        count(*) FILTER (WHERE COALESCE(u.riassunto->>'policy_rev','') = %(rev)s) AS rev_nuova
-                        """ + base.replace("FROM listings l", "FROM listings l LEFT JOIN LATERAL (SELECT categoria, margine, riassunto "
+                        count(*) FILTER (WHERE u.impronta_regole IS NOT DISTINCT FROM %(rev)s) AS rev_nuova
+                        """ + base.replace("FROM listings l", "FROM listings l LEFT JOIN LATERAL (SELECT categoria, margine, impronta_regole "
                         "FROM valutazioni_policy v WHERE v.listing_id = l.id ORDER BY computed_at DESC LIMIT 1) u ON true") +
-                        " GROUP BY 1 ORDER BY 2 DESC", {"pr": pr, "rev": _P.POLICY_REV}).fetchall()
+                        " GROUP BY 1 ORDER BY 2 DESC", {"pr": pr, "rev": _RG.impronta()}).fetchall()
             logging.getLogger("scovo").warning("BENZ_DB totale=%s approfondite=%s per categoria: %s", tot["n"], tot["appr"],
                                                json.dumps([dict(r) for r in cat], default=str))
         except Exception as e:
@@ -5085,14 +5075,14 @@ def _tempo_reale():
             with connect() as conn:
                 conn.execute("SET statement_timeout = '300s'")
                 rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel FROM listings l
-                    LEFT JOIN LATERAL (SELECT margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
+                    LEFT JOIN LATERAL (SELECT margine, impronta_regole FROM valutazioni_policy v WHERE v.listing_id = l.id
                                        ORDER BY computed_at DESC LIMIT 1) u ON true
                     WHERE l.status='attivo' AND l.seller_type IN ('privato', 'commerciante')
                       AND upper(l.province) = ANY(%s) AND l.price_eur BETWEEN 1000 AND 9999
                       AND (l.fuel ~* '(benzin|ibrid|hybrid|gpl|lpg|metano)' OR (l.fuel ~* 'diesel' AND l.year >= 2017))
                       AND COALESCE(l.mileage_km, 0) BETWEEN 1 AND 99999 AND COALESCE(l.damage_declared, false) = false
-                      AND COALESCE(u.riassunto->>'policy_rev', '') <> %s AND COALESCE(u.margine, 0) >= -2500
-                    ORDER BY COALESCE(u.margine, 0) DESC LIMIT 5000""", (pr, _P.POLICY_REV)).fetchall()
+                      AND u.impronta_regole IS DISTINCT FROM %s AND COALESCE(u.margine, 0) >= -2500
+                    ORDER BY COALESCE(u.margine, 0) DESC LIMIT 5000""", (pr, _RG.impronta())).fetchall()
                 L.warning("BENZINA_SUBITO da ricalcolare: %d", len(rows))
                 rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
                 st = _C()
@@ -5149,9 +5139,7 @@ def _tempo_reale():
                 from ..core.normalize import problem_hint as _ph
                 from ..pricing import policy_v2 as _P
                 from ..pricing import valore_reale as VR
-                from ..pricing.ricalcolo import (MARKET_SQL, TARGET_COLS, _j, _rischio, ai_di, carica_taratura,
-                                                 valuta_con_ripiego, vr_di)
-                from ..store import HOME_REGION_SQL
+                from ..pricing.valutazione import valuta_e_scrivi
                 from ..zone import tutte
                 from ..pipeline.ciclo import _una_volta
                 escl = list(COMMERCIANTI_PROVINCE_ESCLUSE)
@@ -5179,65 +5167,40 @@ def _tempo_reale():
                           AND NOT ((coalesce(l.title,'') || ' ' || coalesce(l.description,'')) ~* %(promo)s)
                           AND NOT ((coalesce(l.title,'') || ' ' || coalesce(l.description,'')) ~* %(nomi)s)
                           AND COALESCE(l.damage_declared, false) = false
-                          AND NOT (COALESCE(u.riassunto->>'policy_rev','') = %(rev)s AND u.computed_at > v.computed_at)
+                          AND NOT (u.impronta_regole IS NOT DISTINCT FROM %(rev)s AND u.computed_at > v.computed_at)
                         ORDER BY (v.v * 0.95 - l.price_eur) DESC LIMIT 400""",
                         {"pv": _P.POLICY_VERSION, "zona": list(tutte()), "escl": escl, "minimo": COMMERCIANTI_PREZZO_MIN_SU_M,
                          "flag": _FLAG_PROMO, "promo": RE_PROMO_COMMERCIANTE, "nomi": _commercianti_nomi_re() or "$^",
-                         "rev": _P.POLICY_REV}).fetchall()]
+                         "rev": _RG.impronta()}).fetchall()]
                     st = _C()
-                    if ids:
-                        rows = conn.execute(f"SELECT {TARGET_COLS}, l.title, l.description FROM listings l WHERE l.id = ANY(%s)",
-                                            (ids,)).fetchall()
-                        rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
-                        carica_taratura(conn)
-                        aimap, vrmap = ai_di(conn, ids), vr_di(conn, ids)
-                        cfg = _P.PolicyConfig.from_env()
-                        gruppo, mercato, cache = None, [], {}
-                        for i_r, r in enumerate(rows):
-                            if i_r % 30 == 0:
-                                _aspetta_memoria(L, "COMMERCIANTI_TOP")
+                    # 4/11: stessa valutazione di cron e sito (pricing/valutazione.valuta_e_scrivi): per un commerciante
+                    # un prezzo molto sotto il mercato non è mai ammesso (niente prezzi esca, regole.antitruffa)
+                    for k in range(0, len(ids), 30):
+                        _aspetta_memoria(L, "COMMERCIANTI_TOP")
+                        es = valuta_e_scrivi(conn, ids[k:k + 30], "commercianti", extra={i: {"sezione": "affari"} for i in ids[k:k + 30]})
+                        for chiave, n in es.stats.items():
+                            st[chiave] += n
+                        for lid, cat in es.salvata.items():
+                            v = es.valutazioni.get(lid) or {}
+                            if cat not in scovo.CATEGORIE_SITO or v.get("categoria") != cat:
+                                continue
                             try:
-                                if _ph(_Lst(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
-                                    st["danni_nel_testo"] += 1
-                                    continue
-                                if not (r["make"] and r["model"] and r["fuel"]):
-                                    st["dati_incompleti"] += 1
-                                    continue
-                                key = (r["make"], r["model"], r["fuel"])
-                                if key != gruppo:
-                                    gruppo, cache = key, {}
-                                    mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
-                                               for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
-                                # targa_e_telefono=False: un prezzo molto sotto il mercato NON è ammesso (niente prezzi esca)
-                                t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                                         rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]), vr=vrmap.get(r["id"]),
-                                         targa_e_telefono=False)
-                                v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache)
-                                v["sezione"] = "affari"
-                                st[f"valuta:{v['categoria']}"] += 1
+                                conf = "affidabile" if cat == "opportunita" else "da_verificare"
                                 conn.execute(
-                                    """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)
-                                       VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(),
-                                       categoria=EXCLUDED.categoria, margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati""",
-                                    (r["id"], _P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(_P.riassunto(v), default=str),
-                                     json.dumps(v, default=str)))
-                                if v["categoria"] in scovo.CATEGORIE_SITO:
-                                    conf = "affidabile" if v["categoria"] == "opportunita" else "da_verificare"
-                                    conn.execute(
-                                        """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
-                                             n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
-                                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
-                                        (r["id"], _P.POLICY_VERSION + "+commercianti-top", v.get("M"), v.get("M"), v.get("R_finale"),
-                                         v.get("n"), json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
-                                    conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), "
-                                                 "last_checked_at=now() WHERE id=%s", (conf, r["id"]))
-                                    st["pubblicate"] += 1
+                                    """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
+                                         n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
+                                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
+                                    (lid, _P.POLICY_VERSION + "+commercianti-top", v.get("M"), v.get("M"), v.get("R_finale"),
+                                     v.get("n"), json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
+                                conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), "
+                                             "last_checked_at=now() WHERE id=%s", (conf, lid))
                                 conn.commit()
+                                st["pubblicate"] += 1
                             except Exception as e:
                                 conn.rollback()
                                 st["errore"] += 1
                                 if st["errore"] <= 3:
-                                    L.warning("COMMERCIANTI_TOP %s: %s", r.get("id"), str(e)[:150])
+                                    L.warning("COMMERCIANTI_TOP %s: %s", lid, str(e)[:150])
                     L.warning("COMMERCIANTI_TOP giro: %d candidati lontani senza promo, %s", len(ids), json.dumps(dict(st)))
             except Exception as e:
                 L.warning("COMMERCIANTI_TOP non riuscito: %s", str(e)[:300])

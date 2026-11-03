@@ -34,8 +34,6 @@ def esegui(conn) -> dict:
     rows = {r["listing_id"]: r for r in conn.execute(
         "SELECT DISTINCT ON (listing_id) listing_id, dati, computed_at FROM valutazioni_policy "
         "WHERE listing_id = ANY(%s) ORDER BY listing_id, computed_at DESC", (ids,)).fetchall()}
-    corr = {r["listing_id"]: r["correzione_pct"] for r in conn.execute(
-        "SELECT listing_id, correzione_pct FROM decisione_ai WHERE listing_id = ANY(%s)", (ids,)).fetchall()}
     errori, dettagli, mancanti = [], [], 0
     for x in auto:
         r = rows.get(int(x["id"]))
@@ -46,9 +44,6 @@ def esegui(conn) -> dict:
         if not R:
             mancanti += 1
             continue
-        import os
-        c = min(0.0, float(corr.get(int(x["id"])) or 0)) if os.environ.get("JEV_CORREGGI", "0") == "1" else 0.0
-        R = R * (1 + c / 100)
         rif = float(x["rivendita"])
         e = (R - rif) / rif * 100
         errori.append(e)
@@ -69,18 +64,8 @@ def esegui(conn) -> dict:
 
 VARIANTI = {
     "attuale": {},
-    "senza_riduzione_q27": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .27, "adattiva": False},
-    "senza_riduzione_q30": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .30, "adattiva": False},
-    "senza_riduzione_q35": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False},
-    "senza_riduzione_q40": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .40, "adattiva": False},
-    "senza_riduzione_q45": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .45, "adattiva": False},
-    "commercianti_5": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
-                       "rivendita_commercianti": True, "commercianti_sconto": .05},
-    "commercianti_8": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
-                       "rivendita_commercianti": True, "commercianti_sconto": .08},
-    "commercianti_12": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .35, "adattiva": False,
-                        "rivendita_commercianti": True, "commercianti_sconto": .12},
-    "mediana": {"fasce": [(50000, 0.0)], "usa_L": False, "q_veloce": .50, "adattiva": False, "veloce_max": 1.0},
+    # 4/11: prova della correzione anno/km (regole.Correzione.due_sensi): la regola di prima, solo verso il basso
+    "solo_verso_il_basso": {"due_sensi": False},
     # 26/10 (cliente: "allarga un po' la ricerca delle auto uguali"): se le auto uguali strette sono meno di 5,
     # si prendono anche anno ±2 e km ±40.000 (sempre stesso motore, prezzi corretti per anno e km)
     "amplia_2_40": {"amplia": True, "anni_tol_2": 2, "km_tol_2": 40000},
@@ -152,7 +137,7 @@ WHERE l.status = 'scomparso' AND l.seller_type = 'commerciante'
   AND l.mileage_km IS NOT NULL AND l.year IS NOT NULL AND {home}
 ORDER BY md5(l.id::text) LIMIT %(lim)s"""
 
-VARIANTI_VENDUTI = ("attuale", "amplia_2_40", "amplia_2_50")
+VARIANTI_VENDUTI = ("attuale", "solo_verso_il_basso", "amplia_2_40", "amplia_2_50")
 
 
 def venduti(conn) -> dict:
@@ -179,7 +164,6 @@ def venduti(conn) -> dict:
         c = copy.deepcopy(base)
         for k, v in VARIANTI[nome].items():
             setattr(c, k, v)
-        c.correzione_modello = False          # l'esame misura il calcolo senza correzione (niente circolo)
         cfgs[nome] = c
     errs = defaultdict(list)
     per_modello = defaultdict(list)
@@ -215,93 +199,5 @@ def venduti(conn) -> dict:
     mod = {f"{k[0]} {k[1]}": (len(v), round(stx.mean((c[1] - c[2]) / c[2] * 100 for c in v), 1))
            for k, v in per_modello.items() if len(v) >= 4}
     out["modelli_peggiori"] = sorted(mod.items(), key=lambda kv: -abs(kv[1][1]))[:10]
-    try:
-        out["correzione"] = correzioni(conn, per_modello)
-    except Exception as e:
-        conn.rollback()
-        out["correzione"] = {"errore": str(e)[:200]}
     log.warning("ESAME_VENDUTI %s", json.dumps(out, ensure_ascii=False))
     return out
-
-
-def _fattori(casi: dict, nmin: int | None = None, peso: int = 8) -> dict:
-    """casi: {chiave: [(id, R, prezzo_venduto, anno)]} → {chiave: {n, errore_pct, fattore}}.
-    Obiettivo: R = prezzo di vendita del concessionario meno CORR_PRUDENZA (8%), così la correzione non toglie
-    la prudenza ("prezzi bassi per non gonfiare i margini"). Con pochi casi la correzione si riduce
-    (n/(n+peso)); al massimo +10% in su e −20% in giù; sotto il 2% non si corregge."""
-    import os
-    import statistics as stx
-    prud = float(os.environ.get("CORR_PRUDENZA", "0.08"))
-    nmin = nmin or int(os.environ.get("CORR_N_MIN", "5"))
-    su, giu = float(os.environ.get("CORR_MAX_SU", "0.10")), float(os.environ.get("CORR_MAX_GIU", "0.20"))
-    out = {}
-    for k, v in casi.items():
-        if len(v) < nmin:
-            continue
-        errs = [(c[1] - c[2] * (1 - prud)) / (c[2] * (1 - prud)) for c in v]
-        e = stx.median(errs)
-        f = -e * len(v) / (len(v) + peso)
-        f = max(-giu, min(su, f))
-        if abs(f) < .02:
-            continue
-        out[k] = {"n": len(v), "errore_pct": round(e * 100, 1), "fattore": round(f, 3)}
-    return out
-
-
-def _per_segmento(casi: dict) -> dict:
-    """Stesse auto raggruppate per segmento (età × fascia di prezzo): più auto per gruppo dei singoli modelli."""
-    from collections import defaultdict
-    from .policy_v2 import segmento
-    out = defaultdict(list)
-    for v in casi.values():
-        for c in v:
-            out[("*SEG", segmento(c[3], c[1]))].append(c)
-    return dict(out)
-
-
-def _strategia(fm: dict, fs: dict, k_mod, c) -> float:
-    from .policy_v2 import segmento
-    if k_mod in fm:
-        return fm[k_mod]["fattore"]
-    return fs.get(("*SEG", segmento(c[3], c[1])), {}).get("fattore", 0.0)
-
-
-def correzioni(conn, casi: dict) -> dict:
-    """Correzioni automatiche misurate onestamente: si calcolano su metà delle auto vendute e si provano
-    sull'altra metà. Si provano 3 strategie (nessuna, per segmento, per modello+segmento) e si scrive nella
-    tabella correzioni_modello SOLO quella che sbaglia meno sulla metà di prova (se nessuna aiuta, tabella vuota)."""
-    import os
-    import statistics as stx
-    q = 1 - float(os.environ.get("CORR_PRUDENZA", "0.08"))      # obiettivo: prezzo venduto meno la prudenza
-    a = {k: [c for c in v if c[0] % 2 == 0] for k, v in casi.items()}
-    b = {k: [c for c in v if c[0] % 2 == 1] for k, v in casi.items()}
-    sn, sp = int(os.environ.get("CORR_SEG_N_MIN", "12")), int(os.environ.get("CORR_SEG_PESO", "15"))
-    fm_a, fs_a = _fattori(a), _fattori(_per_segmento(a), sn, sp)
-    err = {"nessuna": [], "segmento": [], "modello": [], "modello_segmento": []}
-    for k, v in b.items():
-        for c in v:
-            R, x = c[1], c[2] * q
-            err["nessuna"].append(abs(R - x) / x * 100)
-            err["segmento"].append(abs(R * (1 + _strategia({}, fs_a, k, c)) - x) / x * 100)
-            err["modello"].append(abs(R * (1 + _strategia(fm_a, {}, k, c)) - x) / x * 100)
-            err["modello_segmento"].append(abs(R * (1 + _strategia(fm_a, fs_a, k, c)) - x) / x * 100)
-    prova = {k: round(stx.mean(v), 2) for k, v in err.items() if v}
-    prova["auto_prova"] = len(err["nessuna"])
-    migliore = min((k for k in prova if k != "auto_prova"), key=lambda k: prova[k]) if err["nessuna"] else "nessuna"
-    if migliore != "nessuna" and prova[migliore] > prova["nessuna"] - float(os.environ.get("CORR_GUADAGNO_MIN", "0.2")):
-        migliore = "nessuna"                                # deve migliorare davvero, non per caso
-    fm, fs = _fattori(casi), _fattori(_per_segmento(casi), sn, sp)
-    scrivi = {}
-    if migliore in ("modello", "modello_segmento"):
-        scrivi.update(fm)
-    if migliore in ("segmento", "modello_segmento"):
-        scrivi.update(fs)
-    conn.execute("""CREATE TABLE IF NOT EXISTS correzioni_modello (make TEXT, model TEXT, n INT, errore_pct REAL,
-                    fattore REAL, computed_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY (make, model))""")
-    conn.execute("DELETE FROM correzioni_modello")
-    for (mk, md), d in scrivi.items():
-        conn.execute("INSERT INTO correzioni_modello (make, model, n, errore_pct, fattore) VALUES (%s,%s,%s,%s,%s)",
-                     (mk, md, d["n"], d["errore_pct"], d["fattore"]))
-    conn.commit()
-    return {"scelta": migliore, "prova_su_meta": prova, "gruppi_corretti": len(scrivi),
-            "segmenti": sorted(((k[1], d["n"], d["fattore"]) for k, d in fs.items()), key=lambda z: -abs(z[2]))[:10]}
