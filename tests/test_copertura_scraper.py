@@ -91,7 +91,7 @@ def test_scomparsi_solo_con_prova():
     st = scomparsi_con_prova(conn, stato=lambda u: esiti[int(u.split("-")[-1][:-4]) - 100000], pausa=None, zona=["MI"])
     assert st["scomparso"] == 2 and st["attivo"] == 1 and st["errore"] == 1
     upd = [p for s, p in conn.sql if s.startswith("UPDATE listings SET status='scomparso'")]
-    assert sorted(p[1] for p in upd) == [1, 4]                       # solo i due con prova
+    assert sorted(p["id"] for p in upd) == [1, 4]                    # solo i due con prova
     assert not any("make_interval(hours" in s and s.lstrip().startswith("UPDATE") for s, _ in conn.sql)   # mai in blocco
 
 

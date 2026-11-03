@@ -101,26 +101,35 @@ def _diagnostica_as(det: dict) -> None:
 
 # ------------------------------------------------------------------ pagine
 
-def _as_dettaglio(client, url: str) -> tuple[str, dict | None]:
-    """('attivo'|'scomparso'|'errore', listingDetails)."""
+def _as_esito(client, url: str) -> tuple[str, dict | None, str | None]:
+    """3/11: ('attivo'|'scomparso'|'errore', listingDetails, motivo). Motivo della sparizione (solo con prova):
+    '404' (404/410), 'reindirizzato' (rimando alla ricerca /lst), 'rimosso' ("non è più disponibile")."""
     from ..collectors.base import next_data
     try:
         r = client.get(url)
     except Exception as e:
         log.info("TR autoscout %s: %s", url, str(e)[:100])
-        return "errore", None
+        return "errore", None, None
     if r.status_code in (404, 410):
-        return "scomparso", None
+        return "scomparso", None, "404"
     if r.status_code != 200:
-        return "errore", None
+        return "errore", None, None
     if "/lst" in str(r.url) and "/annunci/" not in str(r.url):
-        return "scomparso", None               # rimandati alla ricerca: annuncio tolto
+        return "scomparso", None, "reindirizzato"      # rimandati alla ricerca: annuncio tolto
     props = ((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}
     det = props.get("listingDetails") or props.get("listing")
     if not isinstance(det, dict):
-        return ("scomparso" if "non è più disponibile" in r.text.lower() else "errore"), None
+        if "non è più disponibile" in (r.text or "").lower():
+            return "scomparso", None, "rimosso"
+        return "errore", None, None
     _diagnostica_as(det)
-    return "attivo", det
+    return "attivo", det, None
+
+
+def _as_dettaglio(client, url: str) -> tuple[str, dict | None]:
+    """('attivo'|'scomparso'|'errore', listingDetails)."""
+    st, det, _ = _as_esito(client, url)
+    return st, det
 
 
 def _head_stato(client, url: str) -> str | None:
@@ -157,29 +166,30 @@ _SUBITO_TOLTO = ("annuncio non è più disponibile", "questo annuncio è scaduto
                  "annuncio non trovato")
 
 
-def subito_stato_con_prova(client, url: str) -> str:
-    """3/11: stato di un annuncio Subito per la marcatura 'scomparso' IN BLOCCO (annunci non più visti nelle ricerche).
-    Più severo di _subito_stato: 'scomparso' SOLO con una prova (404/410, rimando a una pagina senza il numero
-    dell'annuncio, oppure pagina senza i dati dell'annuncio e con la scritta "annuncio scaduto/rimosso").
-    Pagina con i dati dell'annuncio = 'attivo'. Tutto il resto (errori, blocchi, pagina non riconosciuta) = 'errore':
-    nessuna decisione, l'annuncio resta com'è."""
+def subito_esito_con_prova(client, url: str, lenient: bool = False) -> tuple[str, str | None]:
+    """3/11: (stato, motivo) di un annuncio Subito. 'scomparso' SOLO con una prova: 404/410 (motivo '404'), rimando a
+    una pagina senza il numero dell'annuncio ('reindirizzato'), pagina senza i dati dell'annuncio e con la scritta
+    "annuncio scaduto" ('scaduto': NON è una vendita) o "rimosso / non più disponibile" ('rimosso').
+    Pagina con i dati dell'annuncio = 'attivo'. Il resto (errori, blocchi, pagina non riconosciuta) = 'errore'.
+    lenient=True (auto del sito, giro_verifica): una pagina 200 dello stesso annuncio senza scritte di rimozione
+    vale 'attivo' come prima, ma per toglierla serve la stessa prova del controllo in blocco."""
     from ..collectors.base import find_key, next_data
     try:
         r = client.get(url)
     except Exception as e:
         log.info("SCOMPARSI subito %s: %s", url, str(e)[:100])
-        return "errore"
+        return "errore", None
     code = getattr(r, "status_code", None)
     if code in (404, 410):
-        return "scomparso"
+        return "scomparso", "404"
     if code != 200:
-        return "errore"
+        return "errore", None
     fin = str(getattr(r, "url", "") or url)
     m = _RE_ID_SUBITO.search(url)
     if m and m.group(1) not in fin:
-        return "scomparso"                       # rimandati alla ricerca o alla pagina principale
+        return "scomparso", "reindirizzato"      # rimandati alla ricerca o alla pagina principale
     if not m and not _stesso_annuncio(url, fin):
-        return "errore"                          # indirizzo senza numero: non si può dire
+        return ("scomparso", "reindirizzato") if lenient else ("errore", None)
     text = getattr(r, "text", "") or ""
     try:
         data = next_data(text)
@@ -187,10 +197,17 @@ def subito_stato_con_prova(client, url: str) -> str:
         data = None
     item = find_key(data, "ad", "item") if isinstance(data, dict) else None
     if isinstance(item, dict) and (item.get("urn") or item.get("subject") or item.get("features")):
-        return "attivo"
-    if any(k in text.lower() for k in _SUBITO_TOLTO):
-        return "scomparso"
-    return "errore"
+        return "attivo", None
+    low = text.lower()
+    trovate = [k for k in _SUBITO_TOLTO if k in low]
+    if trovate:
+        return "scomparso", ("scaduto" if any("scadut" in k for k in trovate) else "rimosso")
+    return ("attivo", None) if lenient else ("errore", None)
+
+
+def subito_stato_con_prova(client, url: str) -> str:
+    """Stato di un annuncio Subito per la marcatura 'scomparso' IN BLOCCO: vedi subito_esito_con_prova."""
+    return subito_esito_con_prova(client, url)[0]
 
 
 def _subito_stato(client, url: str) -> str:
@@ -291,23 +308,27 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
         if r["source"] == "autoscout24":
-            st, _det = _as_dettaglio(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
-            return r, st, None
+            st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
+            return r, st, motivo
         if r["source"] == "facebook":
             return r, _fb_stato(cfb, r["url"]), None
-        return r, _subito_stato(csb, r["url"]), None
+        # 3/11 (studio 4 §4.4): per togliere un'auto Subito serve la stessa prova del controllo in blocco (prima
+        # bastava la frase "non è più disponibile" in un punto qualsiasi della pagina, anche negli annunci simili)
+        st, motivo = subito_esito_con_prova(csb, r["url"], lenient=True)
+        return r, st, motivo
 
     spariti = []
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
-        for r, st, tel in ex.map(check, rows):
+        for r, st, motivo in ex.map(check, rows):
             stats[f"{r['source']}:{st}"] += 1
-            log.warning("VERIFICA_AUTO %s", json.dumps({"id": r["id"], "fonte": r["source"], "esito": st}))
+            log.warning("VERIFICA_AUTO %s", json.dumps({"id": r["id"], "fonte": r["source"], "esito": st, "motivo": motivo}))
             if st in ("errore", "incerto"):
                 continue
-            _mark(conn, r["id"], st, r.get("price_eur"))
+            _mark(conn, r["id"], st, r.get("price_eur"), motivo=motivo, sito=True)
             if st == "scomparso":
-                spariti.append(r["id"])
-                registra_sparita(conn, r["id"])
+                spariti.append(r["id"])           # tolta dal sito in ogni caso
+                if motivo != "scaduto":           # annuncio scaduto: non è una vendita, niente misura
+                    registra_sparita(conn, r["id"])
     conn.commit()
     stats["_spariti"] = spariti            # type: ignore[assignment]
     return stats

@@ -119,6 +119,132 @@ def upsert_vehicle(conn, listing: Listing) -> int:
 
 _LETTURA_OK = False
 
+# 3/11 (studio 4): colonne nuove (migrazione 033). Le raccolte del cron possono partire prima che il sito abbia
+# applicato la migrazione: si scrive una colonna nuova solo se c'è davvero (controllo una volta per processo,
+# ripetuto ogni 10 minuti finché manca). Senza colonna tutto funziona come prima.
+_SCHEMA: dict = {"colonne": None, "indici": None, "at": 0.0}
+
+
+def _schema(conn) -> tuple[set, set]:
+    import time
+    if _SCHEMA["colonne"] is not None:
+        completo = len(_SCHEMA["colonne"]) == 2 and bool(_SCHEMA["indici"])
+        if time.time() - _SCHEMA["at"] < (86400 if completo else 600):
+            return _SCHEMA["colonne"], _SCHEMA["indici"]
+    try:
+        col = {r["column_name"] for r in conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name='listings' "
+            "AND column_name IN ('disappear_reason','fuel_tipo')").fetchall()}
+        idx = {r["indexname"] for r in conn.execute(
+            "SELECT indexname FROM pg_indexes WHERE tablename='listings' AND indexname='listings_vehicle_idx'").fetchall()}
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        col, idx = set(), set()
+    _SCHEMA.update(colonne=col, indici=idx, at=time.time())
+    return col, idx
+
+
+def ha_colonna(conn, nome: str) -> bool:
+    return nome in _schema(conn)[0]
+
+
+# Stati di un annuncio non più online. Solo 'scomparso' vale come "venduta" per valore reale, vendute e calibra:
+# 'scaduto' (annuncio scaduto sul portale) e 'ripubblicato' (stesso veicolo rimesso in vendita) NON sono vendite.
+STATI_SPARITI = ("scomparso", "scaduto", "ripubblicato")
+RIPUBBLICATO_GIORNI = 30
+
+
+def ripubblicazione(conn, lid: int, vehicle_id: int | None, listing: Listing) -> int:
+    """Annuncio NUOVO: se lo stesso veicolo (vehicle_id + stesso comune + km ±1.500) era sparito negli ultimi 30
+    giorni, quello vecchio diventa 'ripubblicato' (non venduto). Solo con l'indice su vehicle_id (niente scansioni
+    della tabella a ogni annuncio). Ritorna quanti annunci vecchi sono stati cambiati."""
+    if not vehicle_id or "listings_vehicle_idx" not in _schema(conn)[1]:
+        return 0
+    try:
+        with conn.transaction():          # punto di ripristino: un errore qui non perde l'annuncio appena salvato
+            return _ripubblica(conn, lid, vehicle_id, listing)
+    except Exception:
+        return 0
+
+
+def _ripubblica(conn, lid: int, vehicle_id: int, listing: Listing) -> int:
+    rows = conn.execute(
+        """SELECT id, city, mileage_km FROM listings
+           WHERE vehicle_id=%s AND id<>%s AND status IN ('scomparso','scaduto')
+             AND COALESCE(disappeared_at, last_checked_at) > now() - make_interval(days => %s)""",
+        (vehicle_id, lid, RIPUBBLICATO_GIORNI)).fetchall()
+    n = 0
+    for r in rows:
+        if listing.city and r.get("city") and _citta(r["city"]) != _citta(listing.city):
+            continue
+        if listing.mileage_km is not None and r.get("mileage_km") is not None \
+                and abs(int(r["mileage_km"]) - int(listing.mileage_km)) > 1500:
+            continue
+        motivo = ", disappear_reason='ripubblicato'" if ha_colonna(conn, "disappear_reason") else ""
+        conn.execute(f"UPDATE listings SET status='ripubblicato'{motivo} WHERE id=%s", (r["id"],))
+        conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'ripubblicato',%s)",
+                     (r["id"], listing.price_eur))
+        n += 1
+    return n
+
+
+def _citta(c: str) -> str:
+    import re
+    import unicodedata
+    c = unicodedata.normalize("NFKD", str(c or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z]", "", c.split(",")[0])
+
+
+_DB_GB: dict = {"gb": None, "at": 0.0}
+
+
+def db_gb(conn) -> float | None:
+    """Dimensione del database in GB (letta al massimo ogni 10 minuti)."""
+    import time
+    if _DB_GB["gb"] is not None and time.time() - _DB_GB["at"] < 600:
+        return _DB_GB["gb"]
+    try:
+        gb = float(conn.execute("SELECT pg_database_size(current_database()) / 1e9 AS gb").fetchone()["gb"])
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+    _DB_GB.update(gb=gb, at=time.time())
+    return gb
+
+
+def db_pieno(conn) -> bool:
+    """3/11: oltre CE_DB_MAX_GB (15) si smette di salvare gli annunci che servono SOLO come confronti (commercianti
+    del giro della zona, auto fuori regole, rilettura settimanale, confronti fuori zona). Il resto continua."""
+    import os
+    gb = db_gb(conn)
+    return gb is not None and gb > float(os.environ.get("CE_DB_MAX_GB", "15"))
+
+
+def assicura_indice_veicolo() -> str:
+    """Indice su vehicle_id (riconoscere le ripubblicazioni) creato CONCURRENTLY, solo nel cron: nessun blocco
+    della tabella. Se resta a metà (riavvio) si rifà al giro dopo."""
+    import psycopg
+    try:
+        with psycopg.connect(settings.database_url, autocommit=True) as c:
+            r = c.execute("""SELECT i.indisvalid FROM pg_class x JOIN pg_index i ON i.indexrelid = x.oid
+                             WHERE x.relname = 'listings_vehicle_idx'""").fetchone()
+            if r is not None and r[0]:
+                return "pronto"
+            if r is not None:
+                c.execute("DROP INDEX CONCURRENTLY IF EXISTS listings_vehicle_idx")
+            c.execute("SET statement_timeout = 0")
+            c.execute("CREATE INDEX CONCURRENTLY IF NOT EXISTS listings_vehicle_idx ON listings (vehicle_id)")
+            _SCHEMA["colonne"] = None
+            return "creato"
+    except Exception as e:
+        return "errore: " + str(e)[:120]
+
 
 def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     """Salva o aggiorna un annuncio. Ritorna (id, evento): nuovo | prezzo | invariato | riapparso."""
@@ -140,6 +266,8 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         raw=json.dumps(listing.raw, default=str) if listing.source == "facebook" and listing.raw else None,
         problem_search=listing.problem_search,
     )
+    if getattr(listing, "fuel_tipo", None) is not None and ha_colonna(conn, "fuel_tipo"):
+        params["fuel_tipo"] = listing.fuel_tipo
     if prev is None:
         cols = ", ".join(params)
         vals = ", ".join(f"%({k})s" for k in params)
@@ -147,6 +275,7 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'apparso',%s)",
                      (lid, listing.price_eur))
         _save_photos(conn, lid, listing.photos)
+        ripubblicazione(conn, lid, vehicle_id, listing)
         return lid, "nuovo"
 
     lid = prev["id"]
@@ -178,10 +307,12 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     else:
         conn.execute(sql_prima, {**params, "id": lid})
     event = "invariato"
-    if prev["status"] == "scomparso":
+    if prev["status"] in STATI_SPARITI:
         event = "riapparso"
         conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'riapparso',%s)",
                      (lid, listing.price_eur))
+        if ha_colonna(conn, "disappear_reason"):
+            conn.execute("UPDATE listings SET disappear_reason=NULL WHERE id=%s", (lid,))
     if prev["price_eur"] != listing.price_eur:
         event = "prezzo"
         conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)",
