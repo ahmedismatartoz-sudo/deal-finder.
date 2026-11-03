@@ -147,6 +147,8 @@ def cached_lookup(conn, plate: str, lookup_fn=None, days: int = 180) -> dict | N
     if conn is None or not p:
         return lookup_fn(p)
     h = plate_hash(p, settings.plate_salt)
+    if not h:                         # PLATE_SALT non impostato: niente memoria delle targhe, solo la ricerca
+        return lookup_fn(p)
     row = conn.execute("SELECT vehicle FROM plate_cache WHERE plate_hash=%s "
                        "AND searched_at > now() - make_interval(days => %s)", (h, days)).fetchone()
     if row and row["vehicle"]:

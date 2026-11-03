@@ -42,17 +42,26 @@ def err(status: int, message: str):
     raise HTTPError(status, message)
 
 
-def current_user(request: Request, admin: bool = False) -> dict:
-    auth = request.headers.get("authorization", "")
-    data = read_token(auth[7:] if auth.lower().startswith("bearer ") else None)
+def _utente_del_token(data: dict | None, admin: bool = False) -> dict:
+    """Token valido + sessione aperta. Il ruolo NON si prende dal token (dura anni): si rilegge dal database a ogni
+    richiesta (con la memoria di 60 s della sessione; per le pagine admin senza memoria). Un admin declassato o
+    spento perde subito l'accesso alle pagine di amministrazione."""
     if not data:
         err(401, "Accesso richiesto")
     ok, why = sessions.check(data.get("sid"), data["id"])
     if not ok:
         err(401, sessions.REVOKED_MSG.get(why or "", "Accesso scaduto: entra di nuovo"))
-    if admin and data.get("role") != "admin":
+    data = dict(data)
+    ruolo = sessions.ruolo_fresco(data["id"]) if admin else sessions.ruolo(data.get("sid"))
+    data["role"] = ruolo or "commerciante"
+    if admin and data["role"] != "admin":
         err(403, "Solo amministratori")
     return data
+
+
+def current_user(request: Request, admin: bool = False) -> dict:
+    auth = request.headers.get("authorization", "")
+    return _utente_del_token(read_token(auth[7:] if auth.lower().startswith("bearer ") else None), admin)
 
 
 PERMESSI = ("auto", "incentivi", "appuntamenti")   # appuntamenti: abbonati da 200 €
@@ -121,15 +130,36 @@ def jsonify(data, status=200):
     return JSONResponse(json.loads(json.dumps(data, default=str)), status_code=status)
 
 
+def _ip_pubblico(v: str) -> str | None:
+    """L'indirizzo, se è un IP valido e pubblico (non privato, loopback, link-local, riservato: quelli dei proxy)."""
+    import ipaddress
+    v = (v or "").strip().strip('"')
+    if v.startswith("[") and "]" in v:                 # [2001:db8::1]:443
+        v = v[1:v.index("]")]
+    elif v.count(":") == 1:                            # 1.2.3.4:5678
+        v = v.split(":")[0]
+    try:
+        ip = ipaddress.ip_address(v)
+    except ValueError:
+        return None
+    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+        return None
+    return str(ip)
+
+
 def client_ip(request: Request) -> str:
-    # 3/11 23:45: il primo valore di X-Forwarded-For lo scrive il cliente (falsificabile); si usa l'IP messo dal
-    # proxy (CF-Connecting-IP / True-Client-IP) o l'ULTIMO valore della catena
-    for h in ("cf-connecting-ip", "true-client-ip"):
-        v = (request.headers.get(h) or "").strip()
-        if v:
-            return v
-    fwd = request.headers.get("x-forwarded-for", "")
-    return (fwd.split(",")[-1].strip() if fwd else (request.client.host if request.client else "")) or "?"
+    """IP vero del visitatore, per i limiti di frequenza (accessi, contatti, domande, voce degli ospiti).
+    4/11: prima le intestazioni scritte dal proxy davanti al sito (CF-Connecting-IP, True-Client-IP, X-Real-IP), poi
+    il primo indirizzo di X-Forwarded-For che non è privato o di un proxy, infine l'indirizzo della connessione."""
+    for h in ("cf-connecting-ip", "true-client-ip", "x-real-ip"):
+        ip = _ip_pubblico(request.headers.get(h) or "")
+        if ip:
+            return ip
+    for parte in (request.headers.get("x-forwarded-for") or "").split(","):
+        ip = _ip_pubblico(parte)
+        if ip:
+            return ip
+    return (request.client.host if request.client else "") or "?"
 
 
 # ---------------------------------------------------------------------------
@@ -138,26 +168,10 @@ def client_ip(request: Request) -> str:
 _attempts: dict[str, list[float]] = defaultdict(list)
 
 
-def _diagnosi_password(email: str, pw: str, u: dict | None) -> str:
-    """Perché la password non va, SENZA scriverla: è quella dell'amministratore (riempita dal telefono)?
-    Dove differisce da quella preparata su Render? La password salvata corrisponde a quella preparata?"""
-    out = []
-    adm = (os.environ.get("ADMIN_PASSWORD") or "").strip()
-    if adm:
-        out.append(f"e_la_password_admin={pw.strip() == adm}")
-    try:
-        for c in json.loads(os.environ.get("ACCOUNT_CLIENTI") or "[]"):
-            if str(c.get("email", "")).strip().lower() == email:
-                giusta = str(c.get("password", "")).strip()
-                diff = next((i for i, (a, b) in enumerate(zip(pw, giusta)) if a != b), None)
-                out.append(f"uguale_a_quella_preparata={pw == giusta} lunghezza_giusta={len(giusta)} "
-                           f"prima_differenza_carattere={None if diff is None else diff + 1} "
-                           f"tipo_carattere_diverso={'' if diff is None else ('cifra' if pw[diff].isdigit() else 'lettera' if pw[diff].isalpha() else 'simbolo')}")
-                if u:
-                    out.append(f"salvata_corrisponde_a_preparata={verify_password(giusta, u['password_hash'])}")
-    except Exception as e:
-        out.append(f"diagnosi_errore={type(e).__name__}")
-    return " ".join(out)
+def _maschera_email(email: str) -> str:
+    """m***@dominio.it: abbastanza per riconoscere il caso nei log, non per raccogliere gli indirizzi."""
+    nome, _, dom = (email or "").partition("@")
+    return (nome[:1] + "***@" + dom) if dom else "***"
 
 
 async def login(request: Request):
@@ -178,10 +192,9 @@ async def login(request: Request):
                                (pw != pw.strip() and verify_password(pw.strip(), u["password_hash"])))
     u, ok = await run_in_threadpool(check)
     if not ok:
-        pw = str(data.get("password", ""))
-        log.warning("ACCESSO_FALLITO email=%s utente=%s lunghezza_password=%d maiuscole=%s spazi=%s %s",
-                 email, "trovato" if u else "NON trovato o disattivato", len(pw), any(c.isupper() for c in pw),
-                 pw != pw.strip(), _diagnosi_password(email, pw, u))
+        # 4/11: nel log nessuna informazione sulla password (né lunghezza né confronti) e l'email mascherata
+        log.warning("ACCESSO_FALLITO email=%s utente=%s", _maschera_email(email),
+                    "trovato" if u else "NON trovato o disattivato")
         _attempts[email].append(now)
         _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")
@@ -542,6 +555,7 @@ async def admin_update_dealer(request: Request):
         if isinstance(data.get("permessi"), list):
             conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
                          ([p for p in data["permessi"] if p in PERMESSI], did))
+        sessions.dimentica_account(did)          # ruolo e stato riletti subito dal database
         if "active" in data:
             # disattivato_da_admin: né il pagamento Stripe né l'avvio lo riaccendono
             conn.execute("UPDATE dealers SET active=%s, disattivato_da_admin=%s WHERE id=%s",
@@ -729,7 +743,7 @@ def _service_log(conn, user: dict, service: str, ok: bool) -> None:
 
 
 async def servizio_vendi(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")          # 4/11: accesso + abbonamento attivo (prima bastava l'accesso)
     data = await body(request)
     from ..servizi import vendi
     try:
@@ -756,7 +770,7 @@ async def servizio_vendi(request: Request):
 
 
 async def servizio_ricambi(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")          # 4/11: accesso + abbonamento attivo (prima bastava l'accesso)
     data = await body(request)
     from ..servizi import ricambi
     pezzi = data.get("pezzi") or []
@@ -781,8 +795,10 @@ _guest_questions: dict[str, list[float]] = defaultdict(list)
 
 
 async def assistente(request: Request):
-    """Assistente a voce: domanda in linguaggio naturale, risposta + auto trovate."""
-    user = viewer(request)
+    """Assistente a voce: domanda in linguaggio naturale, risposta + auto trovate.
+    4/11: restituisce auto, quindi serve accesso + abbonamento attivo (permesso "auto"); senza account solo con il
+    sito aperto (SITO_APERTO=1), con il limite di domande degli ospiti."""
+    user = viewer(request, "auto")
     data = await body(request)
     msgs = [m for m in (data.get("messages") or []) if isinstance(m, dict)][-10:]
     if not msgs or not str(msgs[-1].get("content", "")).strip():
@@ -814,7 +830,27 @@ VOCE_LIMITE = {"tts": int(os.environ.get("VOCE_LIMITE_GIORNO", "300")), "stt": i
 _voce_uso: dict[str, list[float]] = defaultdict(list)
 
 
-def _voce_gate(request: Request, user: dict, kind: str) -> None:
+VOCE_OSPITE_MINUTO = int(os.environ.get("VOCE_OSPITE_MINUTO", "6"))           # per indirizzo, al minuto
+VOCE_OSPITI_GIORNO = int(os.environ.get("VOCE_OSPITI_GIORNO", "300"))          # tutti gli ospiti insieme, al giorno
+VOCE_OSPITE_CARATTERI = int(os.environ.get("VOCE_OSPITE_CARATTERI", "300"))
+
+
+def _voce_ospiti_oggi(kind: str, conta: bool) -> int:
+    """Usi della voce di TUTTI gli ospiti oggi, salvati nel database (un riavvio non azzera il tetto)."""
+    with connect() as conn:
+        uid = _ospiti_id(conn)
+        n = conn.execute("SELECT count(*) AS n FROM service_usage WHERE dealer_id=%s AND service=%s "
+                         "AND at > date_trunc('day', now())", (uid, "voce_ospite_" + kind)).fetchone()["n"]
+        if conta:
+            conn.execute("INSERT INTO service_usage (dealer_id, service, ok) VALUES (%s,%s,true)",
+                         (uid, "voce_ospite_" + kind))
+        conn.commit()
+    return n
+
+
+def _voce_gate(request: Request, user: dict, kind: str, testo: str = "") -> None:
+    """Tetti della voce (ogni chiamata costa). Ospiti (sito aperto, senza account): per indirizzo al minuto e al
+    giorno, testi corti, e un tetto giornaliero per tutti gli ospiti insieme salvato nel database."""
     ospite = user.get("role") == "ospite"
     k = f"{kind}:{'ip:' + client_ip(request) if ospite else user['id']}"
     now = time.time()
@@ -822,6 +858,14 @@ def _voce_gate(request: Request, user: dict, kind: str) -> None:
     lim = VOCE_LIMITE[kind] // (5 if ospite else 1)
     if len(_voce_uso[k]) >= lim:
         err(429, "Hai usato molto la voce oggi: continuo a risponderti per iscritto")
+    if ospite:
+        if len(testo) > VOCE_OSPITE_CARATTERI:
+            err(413, "Testo troppo lungo da leggere: entra con il tuo account")
+        if sum(1 for t in _voce_uso[k] if now - t < 60) >= VOCE_OSPITE_MINUTO:
+            err(429, "Troppe richieste di voce: riprova tra un minuto")
+        if _voce_ospiti_oggi(kind, conta=False) >= VOCE_OSPITI_GIORNO:
+            err(429, "La voce per chi non ha un account è finita per oggi: entra con il tuo account")
+        _voce_ospiti_oggi(kind, conta=True)
     _voce_uso[k].append(now)
 
 
@@ -835,7 +879,7 @@ async def voce_tts(request: Request):
     testo = str(data.get("testo") or "").strip()
     if not testo:
         err(400, "Niente da leggere")
-    _voce_gate(request, user, "tts")
+    _voce_gate(request, user, "tts", testo)
     try:
         audio = await run_in_threadpool(voce.tts, testo)
     except Exception as e:
@@ -2623,9 +2667,7 @@ def vai_annuncio(request: Request):
             data = read_token(tok)
             if not data:
                 err(401, "Accesso scaduto")
-            ok, _ = sessions.check(data.get("sid"), data["id"])
-            if not ok:
-                err(401, "Accesso scaduto")
+            data = _utente_del_token(data)          # ruolo dal database, non dal token
             if data.get("role") != "admin":
                 with connect() as conn:
                     if "auto" not in permessi_di(conn, data):
@@ -2680,12 +2722,27 @@ def foto_auto(request: Request):
                     headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
-def commercianti_tel(request: Request):
-    """22/10 (cliente): CSV dei piccoli commercianti di utilitarie con cellulare aziendale da AutoScout24.
-    Si scarica solo con la chiave COMMERCIANTI_KEY (link dato al cliente). Nei log solo il conteggio."""
+def _chiave_export_ok(request: Request) -> bool:
+    """4/11: la chiave non va più nell'indirizzo (?k=..., finiva nei log di accesso e nella cronologia): arriva
+    nell'intestazione X-Chiave (curl -H "X-Chiave: ..."), oppure si scarica da amministratore con il token."""
     import hmac
     chiave = os.environ.get("COMMERCIANTI_KEY") or ""
-    if not chiave or not hmac.compare_digest(chiave, str(request.query_params.get("k") or "")):
+    data = str(request.headers.get("x-chiave") or "")
+    if chiave and data and hmac.compare_digest(chiave.encode(), data.encode()):
+        return True
+    if request.headers.get("authorization"):
+        try:
+            current_user(request, admin=True)
+            return True
+        except HTTPError:
+            return False
+    return False
+
+
+def commercianti_tel(request: Request):
+    """22/10 (cliente): CSV dei piccoli commercianti di utilitarie con cellulare aziendale da AutoScout24.
+    Si scarica solo con la chiave COMMERCIANTI_KEY nell'intestazione X-Chiave o da amministratore. Nei log solo il conteggio."""
+    if not _chiave_export_ok(request):
         return Response(status_code=404)
     from ..marketing import commercianti_tel as ct
     with connect() as conn:
@@ -2974,6 +3031,7 @@ def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
     ok, why = sessions.check(data.get("sid"), data["id"])
     if not ok:
         return False, 401, sessions.REVOKED_MSG.get(why or "", "Accesso scaduto: entra di nuovo")
+    data = {**data, "role": sessions.ruolo(data.get("sid")) or "commerciante"}      # ruolo dal database
     if data.get("role") == "admin":
         return True, 200, ""
     with connect() as conn:
