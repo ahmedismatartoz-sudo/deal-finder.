@@ -146,6 +146,9 @@ class Regole:
     rapporto_basse_sotto: int = 3000
     alto_euro: int = 3000             # margine molto alto: oltre 3.000 € E oltre il 100% del prezzo
     alto_pct: float = 1.0
+    # 4/11 00:20: correzione misurata prezzo CHIESTO -> prezzo VENDUTO, per le auto il cui mercato M viene dalla
+    # mediana dei prezzi chiesti (non dal valore reale, che è già un prezzo di vendita): [(limite_M, nome, fattore)]
+    fattori_calibra: tuple = ()
 
     @classmethod
     def da_env(cls) -> "Regole":
@@ -298,8 +301,27 @@ def r_jev(it, g):
     return None
 
 
+def calibra_venduto(it, g) -> int:
+    """Euro da togliere alla rivendita: se M è una mediana di prezzi CHIESTI, R non supera M × fattore misurato
+    chiesto -> venduto (una volta sola). Col valore reale (prezzo di vendita) nessuna correzione."""
+    pv = it.get("pv") if isinstance(it.get("pv"), dict) else None
+    if not pv or not g.fattori_calibra or not pv.get("M") or str(pv.get("metodo") or "").startswith("valore_reale") \
+            or it.get("supercar"):
+        return 0
+    M = float(pv["M"])
+    f = next((x for lim, _, x in g.fattori_calibra if M < lim), 1.0)
+    R = float(pv.get("R_finale") or pv.get("R") or 0)
+    return int(round(max(0.0, R - M * f))) if f < 1 and R else 0
+
+
 def t_margine_sito(it, g):
-    """Unica modifica al margine: il costo del difetto letto dall'AI (tabella ai_difetti)."""
+    """Modifiche al margine: correzione misurata chiesto -> venduto (solo mercato da prezzi chiesti) e costo del
+    difetto letto dall'AI (tabella ai_difetti)."""
+    giu = calibra_venduto(it, g)
+    if giu > 0 and it["pv"].get("margine") is not None:
+        pv = it["pv"]
+        R = int(pv.get("R_finale") or pv.get("R"))
+        it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, calibrato_venduto=giu)
     costo = int((_r(it).get("difetto") or {}).get("costo") or 0)
     if costo > 0 and isinstance(it.get("pv"), dict) and it["pv"].get("margine") is not None:
         it["pv"] = dict(it["pv"], margine=int(it["pv"]["margine"]) - costo, margine_calcolo=int(it["pv"]["margine"]),

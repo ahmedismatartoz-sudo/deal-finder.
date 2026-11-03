@@ -203,3 +203,15 @@ def test_commercianti_valutati_per_data_non_per_testo():
     assert not app._dopo(None, "2026-11-03T22:55:00+01:00")
     tx = app._dal_testo("Golf tagliandata, chiamare 333 1234567. Bonifico prima di vedere l'auto.", None)
     assert tx["tel_testo"] and tx["testo_truffa"] and not tx["loconte_testo"]
+
+
+def test_correzione_chiesto_venduto_una_volta():
+    import dataclasses
+    from dealfinder.web import sito_regole as SR
+    g = dataclasses.replace(SR.Regole(), fattori_calibra=((5000, "<5k", 0.87), (10000, "5-10k", 0.915), (10**9, "oltre", 1.0)))
+    it = {"id": 1, "prezzo": 5000, "pv": {"M": 8000, "R": 8000, "R_finale": 8000, "margine": 3000, "metodo": "mediana"}}
+    SR.t_margine_sito(it, g)
+    assert it["pv"]["R_finale"] == 7320 and it["pv"]["margine"] == 2320
+    vr = {"id": 2, "prezzo": 5000, "pv": {"M": 8000, "R": 8000, "R_finale": 8000, "margine": 3000, "metodo": "valore_reale"}}
+    SR.t_margine_sito(vr, g)
+    assert vr["pv"]["R_finale"] == 8000 and vr["pv"]["margine"] == 3000      # il valore reale è già un prezzo di vendita

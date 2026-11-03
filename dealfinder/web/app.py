@@ -1346,7 +1346,13 @@ def _calcola_elenco() -> None:
         _pool_revisione = [dict(it) for it in items if (it.get("_r") or {}).get("tel")
                            and (it.get("_r") or {}).get("seller_type") == "privato"]
     fonte = {it["id"]: it.get("fonte") for it in items}
-    out, fun = SR.elenco_sito(items, caricamento=stats)
+    import dataclasses as _dc
+    try:
+        _g = _dc.replace(SR.Regole.da_env(), fattori_calibra=tuple(_fattori_calibra()))
+    except Exception as e:
+        logging.getLogger("scovo").warning("CALIBRA non applicata: %s", str(e)[:200])
+        _g = SR.Regole.da_env()
+    out, fun = SR.elenco_sito(items, g=_g, caricamento=stats)
     # auto tolte solo perché il numero non è mai stato letto: le ricontrolla il lavoro telefoni_candidate
     _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
     for it in out:
