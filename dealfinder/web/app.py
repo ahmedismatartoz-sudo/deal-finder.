@@ -1787,7 +1787,11 @@ def _fattori_calibra() -> list:
             if conn.execute("SELECT to_regclass('calibrazione') AS t").fetchone()["t"]:
                 r = conn.execute("SELECT dati FROM calibrazione ORDER BY at DESC LIMIT 1").fetchone()
                 d = r["dati"] if r else None
-                fasce = (json.loads(d) if isinstance(d, str) else d or {}).get("fasce") or {}
+                dati = (json.loads(d) if isinstance(d, str) else d or {})
+                fasce = dati.get("fasce") or {}
+                if _RG.calibrazione_vecchia(dati):
+                    logging.getLogger("scovo").warning("CALIBRA_VECCHIA misura fatta con un'altra correzione anno/km: "
+                                                       "va rifatta (CALIBRA=1)")
     except Exception as e:
         logging.getLogger("scovo").warning("CALIBRA fattori non letti: %s", str(e)[:120])
     out = _RG.fattori_calibrazione(fasce)
@@ -5113,10 +5117,8 @@ def _tempo_reale():
                 from ..pipeline.ciclo import _una_volta
                 if not _una_volta(f"simvr:{tag}"):
                     return
-                from ..pricing import simula_vr
-                with connect() as conn:
-                    conn.execute("SET statement_timeout = '600s'")
-                    simula_vr.simula(conn, _fattori_calibra(), limite=int(os.environ.get("SIMVR_MAX", "5000")))
+                # 4/11: simula_vr tolta (simulava varianti della vendita veloce e della P25, regole non più in uso)
+                L.warning("SIMVR tolta il 4/11: le regole prudenti che simulava non esistono più")
             except Exception as e:
                 L.warning("SIMVR non riuscita: %s", str(e)[:300])
             return

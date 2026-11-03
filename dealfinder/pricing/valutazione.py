@@ -49,7 +49,7 @@ UPSERT_SQL = """INSERT INTO valutazioni_policy (listing_id, policy_version, cate
       OR valutazioni_policy.computed_at < now() - make_interval(hours => %s)
       OR COALESCE(EXCLUDED.n, 0) >= COALESCE(valutazioni_policy.n, 0)
    RETURNING listing_id"""
-# Database senza la migrazione 032 (colonne n, impronte, fonte, metodo): scrittura di prima, senza guardia nel database
+# Database senza la migrazione 036 (colonne n, impronte, fonte, metodo): scrittura di prima, senza guardia nel database
 # (la guardia resta in deve_scrivere, sulle righe lette).
 UPSERT_SQL_VECCHIO = """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, prima)
    VALUES (%s,%s,%s,%s,%s,%s,%s)
@@ -57,7 +57,7 @@ UPSERT_SQL_VECCHIO = """INSERT INTO valutazioni_policy (listing_id, policy_versi
      margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati,
      prima=COALESCE(EXCLUDED.prima, valutazioni_policy.prima)
    RETURNING listing_id"""
-_SCHEMA = {"nuovo": None}          # None = da provare; False = colonne della 032 mancanti
+_SCHEMA = {"nuovo": None}          # None = da provare; False = colonne della 036 mancanti
 
 
 @dataclass
@@ -130,8 +130,11 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
                         "ORDER BY listing_id, created_at DESC", (ids, P.POLICY_VERSION + "%"), "ricambi")}
     if "calibra" in solo:
         righe = _q(conn, "SELECT dati FROM calibrazione ORDER BY at DESC LIMIT 1", (), "calibrazione")
-        misurate = ((_j(righe[0]["dati"]) or {}).get("fasce") or {}) if righe else {}
-        out["fattori_calibra"] = RG.fattori_calibrazione(misurate)
+        dati = (_j(righe[0]["dati"]) or {}) if righe else {}
+        if RG.calibrazione_vecchia(dati):
+            log.warning("CALIBRA_VECCHIA la misura chiesto -> venduto è stata fatta con un'altra correzione anno/km: "
+                        "va rifatta (CALIBRA=1)")
+        out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {})
     return out
 
 
@@ -365,7 +368,7 @@ def _scrivi(conn, lid, v: dict, pr, imp_a: str, imp_r: str, fonte: str, ore: int
                 raise
             conn.rollback()
             _SCHEMA["nuovo"] = False
-            log.warning("VALUTAZIONE migrazione 032 non applicata: scrittura senza colonne di guardia")
+            log.warning("VALUTAZIONE migrazione 036 non applicata: scrittura senza colonne di guardia")
     cur = conn.execute(UPSERT_SQL_VECCHIO, (lid, P.POLICY_VERSION, v["categoria"], v.get("margine"), riass, dati, prj))
     return cur.fetchone() is not None if hasattr(cur, "fetchone") else True
 

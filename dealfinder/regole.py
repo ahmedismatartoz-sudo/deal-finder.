@@ -329,6 +329,14 @@ def fattori_calibrazione(misurate: dict | None, r: Regole | None = None) -> list
     return out
 
 
+def calibrazione_vecchia(dati: dict | None, r: Regole | None = None) -> bool:
+    """La misura chiesto → venduto (dati dell'ultima riga di `calibrazione`) è stata fatta con una correzione anno/km
+    diversa da quella in vigore (o prima del 4/11, quando si correggeva solo verso il basso): va rimisurata (CALIBRA=1)."""
+    if not dati:
+        return False
+    return bool(dati.get("correzione_due_sensi", False)) != bool((r or regole()).correzione.due_sensi)
+
+
 def fattore_per(M: float, fattori: list | None, r: Regole | None = None) -> float:
     fattori = fattori if fattori is not None else fattori_calibrazione(None, r)
     return next((x for lim, _, x in fattori if M < lim), 1.0)
