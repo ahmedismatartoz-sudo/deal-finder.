@@ -171,8 +171,12 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     }
     sets = ", ".join(f"{k} = {_tenere[k]}" if k in _tenere else f"{k} = %({k})s"
                      for k in params if k not in ("source", "source_id"))
-    conn.execute(f"UPDATE listings SET {sets}, last_seen_at = now(), status='attivo', disappeared_at=NULL "
-                 f"WHERE id = %(id)s", {**params, "id": lid})
+    sql_prima = (f"UPDATE listings SET {sets}, last_seen_at = now(), status='attivo', disappeared_at=NULL "
+                 f"WHERE id = %(id)s")
+    if listing.source in ("subito", "autoscout24"):
+        _aggiorna_senza_perdere(conn, listing, lid, params, _tenere, sql_prima)
+    else:
+        conn.execute(sql_prima, {**params, "id": lid})
     event = "invariato"
     if prev["status"] == "scomparso":
         event = "riapparso"
@@ -183,6 +187,54 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)",
                      (lid, listing.price_eur))
     return lid, event
+
+
+# 3/11 (Subito e AutoScout24): una nuova lettura SENZA un dato non cancella più quello già salvato. Es. le pagine di
+# ricerca di AutoScout24 non hanno la descrizione (la pagina dell'annuncio sì): a ogni giro della zona la
+# descrizione tornava NULL (numero di telefono nel testo, danni scritti, tutto perso). Venditore 'sconosciuto' non
+# sostituisce privato/commerciante. Le foto si aggiungono se la nuova lettura ne ha più di quelle salvate
+# (prima si salvavano solo alla prima lettura).
+_TENERE_SCRAPER = {
+    "title": "COALESCE(NULLIF(%(title)s, ''), listings.title)",
+    "description": "COALESCE(NULLIF(%(description)s, ''), listings.description)",
+    "make": "COALESCE(%(make)s, listings.make)",
+    "model": "COALESCE(%(model)s, listings.model)",
+    "city": "COALESCE(%(city)s, listings.city)",
+    "province": "COALESCE(%(province)s, listings.province)",
+    "region": "COALESCE(%(region)s, listings.region)",
+    "seller_type": "COALESCE(NULLIF(%(seller_type)s, 'sconosciuto'), listings.seller_type, %(seller_type)s)",
+}
+_avvisi_upsert = {"n": 0}
+
+
+def _aggiorna_senza_perdere(conn, listing: Listing, lid: int, params: dict, tenere: dict, sql_prima: str) -> None:
+    """UPDATE che tiene i dati già salvati, dentro un punto di ripristino: se qualcosa va storto si torna
+    all'UPDATE di prima (stesso risultato di sempre), mai un annuncio perso."""
+    regole = {**tenere, **_TENERE_SCRAPER}
+    sets = ", ".join(f"{k} = {regole[k]}" if k in regole else f"{k} = %({k})s"
+                     for k in params if k not in ("source", "source_id"))
+    sql = (f"UPDATE listings SET {sets}, last_seen_at = now(), status='attivo', disappeared_at=NULL "
+           f"WHERE id = %(id)s RETURNING (SELECT count(*) FROM listing_photos p WHERE p.listing_id = listings.id) AS n_foto")
+    try:
+        with conn.transaction():
+            row = conn.execute(sql, {**params, "id": lid}).fetchone()
+    except Exception as e:
+        if _avvisi_upsert["n"] < 5:
+            _avvisi_upsert["n"] += 1
+            import logging
+            logging.getLogger(__name__).warning("upsert senza perdite non riuscito (uso quello di prima): %s", str(e)[:200])
+        conn.execute(sql_prima, {**params, "id": lid})
+        return
+    try:
+        n_foto = row["n_foto"] if row else None
+        if listing.photos and n_foto is not None and int(n_foto) < min(len(listing.photos), 30):
+            with conn.transaction():
+                _save_photos(conn, lid, listing.photos)
+    except Exception as e:
+        if _avvisi_upsert["n"] < 5:
+            _avvisi_upsert["n"] += 1
+            import logging
+            logging.getLogger(__name__).warning("foto in più non salvate: %s", str(e)[:200])
 
 
 def _save_photos(conn, listing_id: int, urls: list[str]) -> None:

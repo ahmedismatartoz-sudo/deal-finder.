@@ -138,11 +138,59 @@ def _head_stato(client, url: str) -> str | None:
     return None
 
 
+_RE_ID_SUBITO = re.compile(r"(\d{6,})\.htm")
+
+
 def _stesso_annuncio(url: str, finale: str) -> bool:
-    """Dopo i reindirizzamenti si è ancora sulla pagina dell'annuncio? (un annuncio tolto rimanda alla ricerca)"""
+    """Dopo i reindirizzamenti si è ancora sulla pagina dell'annuncio? (un annuncio tolto rimanda alla ricerca)
+    3/11: anche se il titolo cambia (Subito rimanda a un indirizzo con un altro testo ma lo STESSO numero
+    dell'annuncio) è sempre lo stesso annuncio: prima risultava "scomparso" per errore."""
     from urllib.parse import urlparse
     a, f = urlparse(url).path.rstrip("/"), urlparse(finale).path.rstrip("/")
-    return a == f or (a.split("/")[-1] and a.split("/")[-1] == f.split("/")[-1])
+    if a == f or (a.split("/")[-1] and a.split("/")[-1] == f.split("/")[-1]):
+        return True
+    ma, mf = _RE_ID_SUBITO.search(a), _RE_ID_SUBITO.search(f)
+    return bool(ma and mf and ma.group(1) == mf.group(1))
+
+
+_SUBITO_TOLTO = ("annuncio non è più disponibile", "questo annuncio è scaduto", "annuncio rimosso", "annuncio scaduto",
+                 "annuncio non trovato")
+
+
+def subito_stato_con_prova(client, url: str) -> str:
+    """3/11: stato di un annuncio Subito per la marcatura 'scomparso' IN BLOCCO (annunci non più visti nelle ricerche).
+    Più severo di _subito_stato: 'scomparso' SOLO con una prova (404/410, rimando a una pagina senza il numero
+    dell'annuncio, oppure pagina senza i dati dell'annuncio e con la scritta "annuncio scaduto/rimosso").
+    Pagina con i dati dell'annuncio = 'attivo'. Tutto il resto (errori, blocchi, pagina non riconosciuta) = 'errore':
+    nessuna decisione, l'annuncio resta com'è."""
+    from ..collectors.base import find_key, next_data
+    try:
+        r = client.get(url)
+    except Exception as e:
+        log.info("SCOMPARSI subito %s: %s", url, str(e)[:100])
+        return "errore"
+    code = getattr(r, "status_code", None)
+    if code in (404, 410):
+        return "scomparso"
+    if code != 200:
+        return "errore"
+    fin = str(getattr(r, "url", "") or url)
+    m = _RE_ID_SUBITO.search(url)
+    if m and m.group(1) not in fin:
+        return "scomparso"                       # rimandati alla ricerca o alla pagina principale
+    if not m and not _stesso_annuncio(url, fin):
+        return "errore"                          # indirizzo senza numero: non si può dire
+    text = getattr(r, "text", "") or ""
+    try:
+        data = next_data(text)
+    except Exception:
+        data = None
+    item = find_key(data, "ad", "item") if isinstance(data, dict) else None
+    if isinstance(item, dict) and (item.get("urn") or item.get("subject") or item.get("features")):
+        return "attivo"
+    if any(k in text.lower() for k in _SUBITO_TOLTO):
+        return "scomparso"
+    return "errore"
 
 
 def _subito_stato(client, url: str) -> str:
@@ -464,9 +512,9 @@ def subito_completo(conn) -> dict:
             for ps, pe in FASCE_SUBITO:
                 for page in range(int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))):
                     try:
-                        r = col.client.get(API_SEARCH, headers=API_HEADERS, params={
-                            "c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
-                            "start": page * 100, "sort": "datedesc"})
+                        # 3/11: con nuovi tentativi per 429/5xx/rete (prima la fascia si chiudeva al primo errore)
+                        r = col._api({"c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
+                                      "start": page * 100, "sort": "datedesc"})
                     except Exception as e:
                         st["errore"] += 1
                         log.info("SUBITO_COMPLETO %s %s-%s: %s", sn, ps, pe, str(e)[:100])
@@ -589,6 +637,69 @@ def _subito_nuovi(dal: str, pagine: int | None = None, solo: str | None = None) 
                 out.append(l)
         except Exception as e:
             log.warning("TR subito %s: %s", reg, str(e)[:150])
+    return out
+
+
+# 3/11: lettura LEGGERA degli annunci nuovi di Subito (vale anche con TR_SUBITO spento): per ogni regione le pagine
+# dal più recente, fermandosi alla prima pagina tutta già nota; al massimo SUB_LEGGERO_PAGINE pagine per regione e
+# SUB_LEGGERO_SECONDI in tutto, una richiesta alla volta con pausa. Con 403/429 si ferma per SUB_LEGGERO_PAUSA_MIN
+# minuti; con qualsiasi altro problema restituisce quello che ha (anche niente) e il giro continua come prima.
+SUB_LEGGERO = True
+SUB_LEGGERO_PAGINE = 3
+SUB_LEGGERO_SECONDI = 60
+SUB_LEGGERO_PAUSA_MIN = 30
+_SUB_REGIONI_NOTE = {"piemonte": 2, "liguria": 3}    # codici usati anche dal giro della zona (benzina_mi)
+_sub_leggero = {"fermo_fino": 0.0}
+
+
+def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: float | None = None, pausa=(1.2, 2.5)) -> list:
+    import random
+    out: list = []
+    if time.time() < _sub_leggero["fermo_fino"]:
+        return out
+    try:
+        from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector, parse_item
+        col = col or SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
+        fine = time.time() + (secondi or SUB_LEGGERO_SECONDI)
+        for reg, provs in REGIONI.items():
+            code = REGION_CODES.get(reg) or _codici_regione.get(reg) or _SUB_REGIONI_NOTE.get(reg)
+            if not code:
+                continue
+            voluti = set(provs)
+            for page in range(pagine or SUB_LEGGERO_PAGINE):
+                if time.time() > fine:
+                    return out
+                r = col.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": code, "t": "s", "lim": 100,
+                                                                            "start": page * 100, "sort": "datedesc"})
+                if pausa:
+                    time.sleep(random.uniform(*pausa))
+                if r.status_code in (403, 429):
+                    _sub_leggero["fermo_fino"] = time.time() + SUB_LEGGERO_PAUSA_MIN * 60
+                    log.warning("TR subito leggero: HTTP %s, fermo per %d minuti", r.status_code, SUB_LEGGERO_PAUSA_MIN)
+                    return out
+                if r.status_code != 200:
+                    break
+                ads = (r.json() or {}).get("ads")
+                if not isinstance(ads, list):
+                    log.warning("TR subito leggero: risposta inattesa (%s), salto", type(ads).__name__)
+                    return out
+                ids = [str(a.get("urn") or a.get("id")) for a in ads if isinstance(a, dict) and (a.get("urn") or a.get("id"))]
+                if not ids:
+                    break
+                noti = {x["source_id"] for x in conn.execute(
+                    "SELECT source_id FROM listings WHERE source='subito' AND source_id = ANY(%s)", (ids,)).fetchall()}
+                for a in ads:
+                    l = parse_item(a) if isinstance(a, dict) else None
+                    if l and l.source_id not in noti and (not l.province or l.province.upper() in voluti):
+                        out.append(l)
+                if len(noti) >= len(ids) or len(ads) < 100:
+                    break                              # pagina tutta già vista: i successivi sono più vecchi
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("TR subito leggero: %s (il giro continua)", str(e)[:150])
     return out
 
 
@@ -938,6 +1049,11 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         if os.environ.get("TR_SUBITO", "1") == "1":
             letti += _subito_nuovi(_ora_it(dal_dt))
             _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
+        elif SUB_LEGGERO:
+            # 3/11: con la lettura Subito completa spenta (TR_SUBITO) gli annunci nuovi di Subito arrivavano solo col
+            # giro della zona (ogni 3 ore): ora le prime pagine dal più recente, ci si ferma alla prima pagina già nota
+            letti += _subito_nuovi_leggero(conn)
+            stats["letti_subito_leggero"] = len(letti)
         if os.environ.get("TR_AUTOSCOUT", "1") == "1":
             try:
                 letti += _autoscout_nuovi(conn)

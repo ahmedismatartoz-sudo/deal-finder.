@@ -45,6 +45,72 @@ def _mark(conn, lid: int, status: str, price=None) -> None:
             time.sleep(1 + tent * 2)
 
 
+# 3/11: annunci Subito non più visti nelle ricerche. Prima diventavano TUTTI 'scomparso' dopo 36 ore (mark_disappeared),
+# anche se la ricerca della notte non li aveva cercati (si leggono solo le pagine più recenti): migliaia di auto ancora
+# in vendita risultavano "vendute" (6.239 'riapparso' in un giro) e falsavano i prezzi. Ora si apre la pagina di
+# ognuno e si segna 'scomparso' solo con una prova; con errori o blocchi non si segna niente.
+SCOMPARSI_MAX = 1200            # pagine aperte al massimo per giro
+SCOMPARSI_MINUTI = 30           # tempo massimo per giro
+SCOMPARSI_PAUSA = (1.0, 2.0)    # secondi tra una pagina e l'altra (ritmo rispettoso, una alla volta)
+
+
+def scomparsi_con_prova(conn, source: str = "subito", not_seen_hours: int = 36, limite: int = SCOMPARSI_MAX,
+                        minuti: float = SCOMPARSI_MINUTI, stato=None, pausa=SCOMPARSI_PAUSA, zona=None) -> Counter:
+    """Annunci non visti da `not_seen_hours` ore: si apre la pagina (prima quelli della zona, poi i più vecchi).
+    'scomparso' solo con prova, 'attivo' = visto adesso (last_seen_at aggiornato), 'errore' = nessuna modifica.
+    Si ferma da solo se il sito blocca (molti errori di fila). Non solleva mai eccezioni: in caso di problemi
+    smette e nessun annuncio viene segnato senza prova."""
+    import random
+    import time
+    stats: Counter = Counter()
+    try:
+        if zona is None:
+            from ..zone import tutte
+            zona = tutte()
+        rows = conn.execute(
+            """SELECT id, url, price_eur FROM listings
+               WHERE source=%s AND status='attivo' AND last_seen_at < now() - make_interval(hours => %s)
+               ORDER BY (upper(coalesce(province, '')) = ANY(%s)) DESC, last_seen_at ASC LIMIT %s""",
+            (source, not_seen_hours, list(zona), limite)).fetchall()
+        stats["da_controllare"] = len(rows)
+        if not rows:
+            return stats
+        if stato is None:
+            from .tempo_reale import _client_subito, subito_stato_con_prova
+            client = _client_subito()
+
+            def stato(u):
+                return subito_stato_con_prova(client, u)
+        fine = time.time() + minuti * 60
+        errori_di_fila = 0
+        for r in rows:
+            if time.time() > fine:
+                stats["fermato_tempo"] += 1
+                break
+            st = stato(r["url"])
+            stats[st] += 1
+            if st in ("attivo", "scomparso"):
+                errori_di_fila = 0
+                _mark(conn, r["id"], st, r.get("price_eur"))
+            else:
+                errori_di_fila += 1
+                if errori_di_fila >= 15:
+                    stats["fermato_errori"] += 1
+                    log.warning("SCOMPARSI %s: %d errori di fila (sito bloccato?), mi fermo", source, errori_di_fila)
+                    break
+            if pausa:
+                time.sleep(random.uniform(*pausa))
+    except Exception as e:
+        stats["eccezione"] += 1
+        log.warning("SCOMPARSI %s non completato (nessun annuncio segnato senza prova): %s", source, str(e)[:200])
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    log.warning("SCOMPARSI %s con prova: %s", source, dict(stats))
+    return stats
+
+
 def verify_rows(conn, rows: list[dict]) -> Counter:
     """Verifica un gruppo di annunci; ritorna i conteggi per esito."""
     stats: Counter = Counter()
