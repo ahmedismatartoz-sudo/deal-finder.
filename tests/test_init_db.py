@@ -149,6 +149,8 @@ def test_migrazioni_sotto_lucchetto(tmp=None):
             self.q.append((s, p))
             if s.startswith("SELECT name FROM schema_migrations"):
                 return _R([{"name": n} for n in self.fatte])
+            if s.startswith("SELECT pg_try_advisory_lock"):
+                return _R([{"ok": True}])
             if s.startswith("INSERT INTO schema_migrations"):
                 self.fatte.add(p[0])
             if s == "ROTTA":
@@ -160,7 +162,7 @@ def test_migrazioni_sotto_lucchetto(tmp=None):
         c = C()
         assert D.migrate(c, Path(d)) == ["002_b.sql"]
         sq = [s for s, _ in c.q]
-        assert sq[0].startswith("SELECT pg_advisory_lock") and sq[-1].startswith("SELECT pg_advisory_unlock")
+        assert sq[0].startswith("SELECT pg_try_advisory_lock") and sq[-1].startswith("SELECT pg_advisory_unlock")
         assert sq.index("SELECT name FROM schema_migrations") > 0               # elenco riletto dopo il lucchetto
         Path(d, "003_c.sql").write_text("ROTTA")
         c = C()

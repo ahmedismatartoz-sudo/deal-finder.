@@ -102,13 +102,26 @@ def _applica_con_attesa(conn, f: Path) -> None:
     raise RuntimeError(f"Migrazione {f.name}: tabella sempre occupata, rinuncio")
 
 
-def migrate(conn, cartella: Path | None = None) -> list[str]:
+class MigrazioniRimandate(RuntimeError):
+    """Il lucchetto delle migrazioni è tenuto da un altro processo: si riprova più tardi, senza bloccare l'avvio."""
+
+
+def migrate(conn, cartella: Path | None = None, attesa_max: float | None = None) -> list[str]:
     """Applica in ordine le migrazioni non ancora eseguite.
 
     3/11: sotto un lucchetto di sessione Postgres (pg_advisory_lock): se due processi partono insieme (sito e
     cron), il secondo aspetta il primo e poi trova le migrazioni già fatte. L'elenco delle fatte si rilegge DOPO
     aver preso il lucchetto. Il lucchetto si libera alla fine, anche se una migrazione fallisce."""
-    conn.execute("SELECT pg_advisory_lock(%s)", (MIGRAZIONI_LOCK,))
+    import time as _t
+    t0 = _t.time()
+    while True:                       # 4/11: mai un'attesa senza fine (un processo fantasma può tenere il lucchetto)
+        preso = conn.execute("SELECT pg_try_advisory_lock(%s) AS ok", (MIGRAZIONI_LOCK,)).fetchone()["ok"]
+        conn.commit()
+        if preso:
+            break
+        if attesa_max is not None and _t.time() - t0 > attesa_max:
+            raise MigrazioniRimandate("lucchetto delle migrazioni occupato da un altro processo")
+        _t.sleep(3)
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, "
                      "applied_at TIMESTAMPTZ NOT NULL DEFAULT now())")

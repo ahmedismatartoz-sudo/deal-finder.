@@ -200,9 +200,19 @@ def main() -> None:
     if not processo_principale():
         print("init_db nel cron: migrazioni, account e Stripe li fa solo il sito web (INIT_DB_SEMPRE=1 per forzare).")
     else:
+        from .db import MigrazioniRimandate
         with connect() as conn:
-            applied = migrate(conn)
-            print("Migrazioni applicate:", applied or "nessuna (già aggiornato)")
+            try:                       # 4/11: al massimo 60 s; se il lucchetto è occupato il sito parte lo stesso
+                applied = migrate(conn, attesa_max=float(os.environ.get("MIGRAZIONI_ATTESA_S", "60")))
+                print("Migrazioni applicate:", applied or "nessuna (già aggiornato)", flush=True)
+            except Exception as e:     # le riprova il sito in sottofondo (web/app.py, migrazioni_in_sottofondo)
+                conn.rollback()
+                print("MIGRAZIONI RIMANDATE:", str(e)[:200], "- le riprova il sito appena partito", flush=True)
+                applied = None
+        if applied is None:
+            print("init_db: account e permessi saltati in questo avvio (schema forse non aggiornato)", flush=True)
+            return
+        with connect() as conn:
             try:
                 from . import sentinella as _sent        # 3/11 sentinella: impronta delle regole (tabella config_impronte)
                 _sent.salva_impronta("init_db:" + os.environ.get("RENDER_SERVICE_TYPE", "web"))

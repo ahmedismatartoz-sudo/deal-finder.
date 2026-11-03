@@ -2582,6 +2582,29 @@ def _sms_strutturati(no, L):
     return [(0, x["tel"]) for x in buoni], buoni
 
 
+def _migrazioni_in_sottofondo():
+    """4/11: se all'avvio il lucchetto delle migrazioni era occupato (init_db le ha rimandate), il sito le riprova
+    qui ogni 30 secondi finché non sono tutte fatte. Quando non manca niente, il primo giro finisce subito."""
+    from ..db import migrate, MigrazioniRimandate
+    lg = logging.getLogger("migrazioni")
+
+    def giro():
+        for i in range(240):
+            try:
+                with connect() as conn:
+                    fatte = migrate(conn, attesa_max=20)
+                if fatte:
+                    lg.warning("MIGRAZIONI applicate in sottofondo: %s", fatte)
+                return
+            except MigrazioniRimandate:
+                pass
+            except Exception as e:
+                lg.warning("MIGRAZIONI in sottofondo non riuscite: %s", str(e)[:300])
+            time.sleep(30)
+
+    threading.Thread(target=giro, daemon=True, name="migrazioni").start()
+
+
 def _tempo_reale():
     """Due agenti continui (pipeline/tempo_reale.py): VERIFICA delle auto sul sito e NUOVI annunci, ogni 10 minuti."""
     from ..pipeline import tempo_reale as tr
@@ -5540,6 +5563,7 @@ async def _lifespan(app):
         except Exception:
             pass
     if os.environ.get("DATABASE_URL"):
+        _migrazioni_in_sottofondo()           # 4/11: quelle rimandate da init_db (lucchetto occupato)
         _pulizia_disco()
         _tabelle_sito()                       # 4/11: contatori giornalieri dei filtri del sito (mai nelle richieste)
         _aggiorna_elenco(attendi=False)       # elenco auto pronto prima del primo visitatore
