@@ -575,3 +575,42 @@ def test_lavori_zona_autoscout_spariti_solo_se_il_giro_ha_letto():
         db.connect, db.log_job, verify.scomparsi_con_prova = vecchi
     assert [c[0] for c in chiamate] == ["autoscout24"] and chiamate[0][1]["not_seen_hours"] == 8
     assert ("scomparsi:autoscout24", True) in registrati
+
+
+def test_confronti_extra_provincia_dal_comune_e_un_errore_non_perde_gli_altri():
+    import contextlib
+    import os
+    from dealfinder import db
+    from dealfinder.pipeline import ciclo, collect, confronti_extra as CE, lusso
+    ls = [_l(source="autoscout24", source_id=f"c{i}", make="fiat", model="panda", price_eur=4000,
+             city="Torino" if i != 2 else "Boh", province=None) for i in range(4)]
+    salvati = []
+
+    def upsert(conn, l):
+        if l.source_id == "c3":
+            raise ValueError("dato assurdo")
+        salvati.append(l)
+        return 1, "nuovo"
+
+    @contextlib.contextmanager
+    def connetti():
+        yield _Conn([("INSERT INTO job_runs", [{"id": 1}])], colonne=False)
+    vecchi = (db.connect, db.upsert_listing, lusso.bande_parallele, ciclo._due)
+    db.connect, db.upsert_listing = connetti, upsert
+    lusso.bande_parallele = lambda *a, **k: list(ls)
+    ciclo._due = lambda job, ore: True
+    collect._PROV_COMUNE.update(mappa={"torino": "TO"}, at=9e18)
+    env = dict(os.environ)
+    os.environ["CE_CAP"] = "10121"
+    try:
+        st = CE.giro()
+    finally:
+        db.connect, db.upsert_listing, lusso.bande_parallele, ciclo._due = vecchi
+        collect._PROV_COMUNE.update(mappa=None, at=0.0)
+        os.environ.clear()
+        os.environ.update(env)
+        _schema_nuovo()
+    assert [l.source_id for l in salvati] == ["c0", "c1"] and salvati[0].province == "TO"
+    assert st["provincia_ricavata"] == 3 and st["scarto:senza_provincia"] == 1 and st["scarto:non_salvato"] == 1
+    r = collect.riepilogo_scarti(st)
+    assert r["letti"] == 4 and r["non_contati"] == 0
