@@ -475,7 +475,8 @@ def nuovi_3_11(tag: str, elenco) -> dict:
     cand, visti = [], set()
     for r in rows:
         pv = (r["prov"] or "").upper()
-        rango = 0 if pv in PROV_100 or pv == "PC" else 1 if pv in nord else 2
+        # 3/11 14:46 (cliente): solo la zona; se non si arriva a 1.500 si aggiungono quelli che non hanno mai aperto
+        rango = 0 if pv in PROV_100 or pv == "PC" else 2
         for e in r["email"] or []:
             e = (e or "").strip().lower()
             if not e or e in visti:
@@ -522,7 +523,7 @@ def nuovi_3_11(tag: str, elenco) -> dict:
             esempi[f] = esempi.get(alt) or []
     fascia = {}
     for _, e, ch in cand:
-        p = prezzi.get(ch) or []
+        p = prezzi.get(ch) or []  # noqa
         m = statistics.median(p) if p else 11000
         fascia[e] = "utilitarie" if m < 8000 else "medie" if m < 15000 else "alte" if m < 30000 else "supercar"
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
@@ -534,10 +535,27 @@ def nuovi_3_11(tag: str, elenco) -> dict:
             if len(cs) < 1000:
                 break
             off += 1000
+        # chi è già in Brevo e NON ha mai aperto una nostra email resta e la riceve; chi ha aperto fa posto ai nuovi
+        mai_aperte, aperte = [], []
+        for e in attuali:
+            if ESCLUSI_3_11.search(e):
+                aperte.append(e)
+                continue
+            try:
+                cs_ = c.get(f"{API}/contacts/{e}/campaignStats").json() or {}
+                (aperte if cs_.get("opened") or cs_.get("clicked") else mai_aperte).append(e)
+            except Exception:
+                aperte.append(e)
+            time.sleep(0.12)
+        posto = max(0, tetto - len(cand))
+        mai_aperte = mai_aperte[:posto]
+        lg.warning("NUOVI_3_11 %s: già in Brevo %d, mai aperto %d (ricevono di nuovo), aperto o esclusi %d", tag,
+                   len(attuali), len(mai_aperte), len(aperte))
+        tenere = set(mai_aperte)
         da_togliere = max(0, len(attuali) + len(cand) - tetto)
         tolti = 0
         with connect() as conn:
-            for e in attuali:
+            for e in sorted(attuali, key=lambda x: x in tenere):
                 if tolti >= da_togliere:
                     break
                 conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
@@ -547,6 +565,8 @@ def nuovi_3_11(tag: str, elenco) -> dict:
                     tolti += 1
                 time.sleep(0.15)
         lg.warning("NUOVI_3_11 %s: in Brevo %d, tolti %d già contattati per fare posto", tag, len(attuali), tolti)
+        for e in mai_aperte:
+            fascia.setdefault(e, "medie")
         esito = {}
         for f in FASCE_2_11:
             dest = [e for e, ff in fascia.items() if ff == f]
