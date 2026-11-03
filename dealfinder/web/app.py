@@ -122,8 +122,14 @@ def jsonify(data, status=200):
 
 
 def client_ip(request: Request) -> str:
+    # 3/11 23:45: il primo valore di X-Forwarded-For lo scrive il cliente (falsificabile); si usa l'IP messo dal
+    # proxy (CF-Connecting-IP / True-Client-IP) o l'ULTIMO valore della catena
+    for h in ("cf-connecting-ip", "true-client-ip"):
+        v = (request.headers.get(h) or "").strip()
+        if v:
+            return v
     fwd = request.headers.get("x-forwarded-for", "")
-    return (fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")) or "?"
+    return (fwd.split(",")[-1].strip() if fwd else (request.client.host if request.client else "")) or "?"
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +288,7 @@ def _visible(row) -> bool:
 
 
 def opportunities(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")   # 3/11 23:45: servono accesso E abbonamento (prima bastava l\'accesso)
     q = request.query_params
     want = q.get("status", "opportunita")            # opportunita | da_verificare | tutte
     with connect() as conn:
@@ -314,7 +320,7 @@ def opportunities(request: Request):
 
 
 def opportunity_detail(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")   # 3/11 23:45: servono accesso E abbonamento (prima bastava l\'accesso)
     lid = int(request.path_params["id"])
     with connect() as conn:
         dealer, costs = _dealer_context(conn, user["id"])
@@ -333,7 +339,7 @@ def opportunity_detail(request: Request):
 
 def open_listing(request: Request):
     """Registra l'apertura del link e restituisce l'URL originale dell'annuncio."""
-    user = current_user(request)
+    user = richiede(request, "auto")   # 3/11 23:45: servono accesso E abbonamento (prima bastava l\'accesso)
     lid = int(request.path_params["id"])
     with connect() as conn:
         row = conn.execute(
@@ -367,7 +373,7 @@ async def feedback(request: Request):
 
 
 def my_activity(request: Request):
-    user = current_user(request)
+    user = richiede(request, "auto")   # 3/11 23:45: servono accesso E abbonamento (prima bastava l\'accesso)
     with connect() as conn:
         rows = conn.execute(
             """SELECT DISTINCT ON (f.listing_id) f.listing_id AS id, f.status, f.bought_eur, f.sold_eur, f.at,
@@ -380,7 +386,7 @@ def my_activity(request: Request):
 
 def notifications(request: Request):
     """Nuove opportunità dall'ultima volta che il commerciante ha guardato."""
-    user = current_user(request)
+    user = richiede(request, "auto")   # 3/11 23:45: servono accesso E abbonamento (prima bastava l\'accesso)
     with connect() as conn:
         dealer, costs = _dealer_context(conn, user["id"])
         rows = conn.execute(LIST_SQL + " AND l.deep_at > %(since)s AND l.price_eur <= %(max)s "
@@ -2556,6 +2562,11 @@ def _apri_contatto(request: Request, user: dict | None) -> dict:
             err(429, "Hai aperto molti contatti: riprova tra un po' oppure crea un account")
         _contatti_ospiti[ip].append(now)
     lid = int(request.path_params["id"])
+    # 3/11 23:45: contatto (url e numero) solo per le auto mostrate sul sito, non per qualsiasi annuncio del database
+    if not (user and user.get("role") == "admin"):
+        sul_sito = {it.get("id") for it in (_elenco.get("items") or [])}
+        if sul_sito and lid not in sul_sito:
+            err(404, "Questa auto non è più disponibile")
     with connect() as conn:
         uid = _ospiti_id(conn) if ospite else user["id"]
         row = conn.execute(
