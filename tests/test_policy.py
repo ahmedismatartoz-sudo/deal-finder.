@@ -451,13 +451,55 @@ def test_allestimento_1_11():
 
 
 def test_valore_reale_concorda_e_poche_gemelle():
-    # gemelle che concordano: M = min(M, V), metodo valore_reale
     v0 = valuta(TARGET, market(BASE), 1500, CFG, NOW)
-    if v0.get("M"):
-        t = dict(TARGET, vr={"v": int(v0["M"] * 1.02), "p25": int(v0["M"] * 0.9), "sigma": 0.1, "n": 500})
-        v = valuta(t, market(BASE), 1500, CFG, NOW)
-        assert v["M"] <= v0["M"] and v.get("metodo", "").startswith("valore_reale")
-        # valore reale molto più basso delle gemelle: vince il più basso
-        t2 = dict(TARGET, vr={"v": int(v0["M"] * 0.7), "p25": int(v0["M"] * 0.6), "sigma": 0.1, "n": 500})
-        v2 = valuta(t2, market(BASE), 1500, CFG, NOW)
-        assert v2["M"] <= int(v0["M"] * 0.7) + 1 and v2.get("vr_accordo") is False
+    assert v0.get("M")
+    # valore reale poco SOPRA le gemelle: il mercato resta quello delle gemelle e il metodo NON diventa valore_reale
+    # (3/11: altrimenti il sito saltava la correzione dei prezzi chiesti e il margine saliva)
+    t = dict(TARGET, vr={"v": int(v0["M"] * 1.02), "p25": int(v0["M"] * 0.9), "sigma": 0.1, "n": 500})
+    v = valuta(t, market(BASE), 1500, CFG, NOW)
+    assert v["M"] == v0["M"] and not str(v.get("metodo", "")).startswith("valore_reale") and v.get("vr_accordo") is True
+    assert v.get("policy_rev") and v.get("M_gemelle") == v0["M"] and v.get("metodo_base") == v0["metodo"]
+    # valore reale poco SOTTO: il mercato è il valore reale, metodo valore_reale
+    t1 = dict(TARGET, vr={"v": int(v0["M"] * 0.97), "p25": int(v0["M"] * 0.85), "sigma": 0.1, "n": 500})
+    v1 = valuta(t1, market(BASE), 1500, CFG, NOW)
+    assert v1["M"] == int(v0["M"] * 0.97) and v1.get("metodo") == "valore_reale"
+    # valore reale molto più basso delle gemelle: vince il più basso
+    t2 = dict(TARGET, vr={"v": int(v0["M"] * 0.7), "p25": int(v0["M"] * 0.6), "sigma": 0.1, "n": 500})
+    v2 = valuta(t2, market(BASE), 1500, CFG, NOW)
+    assert v2["M"] <= int(v0["M"] * 0.7) + 1 and v2.get("vr_accordo") is False
+    assert v2.get("metodo") == "valore_reale_prudente"
+
+
+def test_valore_reale_poche_gemelle_non_diventa_affidabile():
+    # 3/11 (controllo indipendente): 2 gemelle + valore reale preciso -> entra, ma resta "candidato" (campione limitato)
+    # e il numero salvato resta quello vero
+    m = market([9500, 9700])
+    v0 = valuta(TARGET, m, 1500, CFG, NOW)
+    if not v0.get("M"):
+        return
+    t = dict(TARGET, vr={"v": int(v0["M"] * 0.98), "p25": int(v0["M"] * 0.9), "sigma": 0.1, "n": 500})
+    v = valuta(t, m, 1500, CFG, NOW)
+    assert v.get("vr_poche_gemelle") and v.get("n_gemelle") == 2
+    assert v["categoria"] != "opportunita"
+    assert (v.get("n") or 0) <= 2 or v.get("metodo_base") in ("modello", "ai")
+
+
+def test_valore_reale_una_gemella_con_ai_non_basta():
+    # 1 sola gemella: anche se il modello AI alza il conteggio, il valore reale non "garantisce" il minimo
+    m = market([9500])
+    t = dict(TARGET, ai={"prezzo": 9400, "errore": .08, "n": 300, "livello": 1},
+             vr={"v": 9300, "p25": 8500, "sigma": 0.1, "n": 500})
+    v = valuta(t, m, 1500, CFG, NOW)
+    assert not v.get("vr_poche_gemelle")
+
+
+def test_allestimento_soglia_n_minimo():
+    # 3/11: 3 "Business" e 4 "R-Line": una Business si confronta solo con le Business (prima: tutte e 7, +21%)
+    t = car(1, 21000, version_raw="Golf 1.6 TDI Business", year=2020, km=60000)
+    mk = [car(200 + i, p, version_raw="Golf 1.6 TDI Business", year=2020, km=58000 + i * 1000) for i, p in
+          enumerate([22000, 22200, 22400])]
+    mk += [car(300 + i, p, version_raw="Golf 1.6 TDI R-Line", year=2020, km=59000 + i * 1000) for i, p in
+           enumerate([27000, 27500, 28000, 28500])]
+    v = valuta(t, mk, 4000, CFG, NOW)
+    if v.get("M") and v.get("metodo") == "mediana":
+        assert v["M"] <= 22500

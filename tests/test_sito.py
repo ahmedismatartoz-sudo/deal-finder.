@@ -137,8 +137,9 @@ def test_assistente_capisce_le_domande():
 
 def test_soglie_guadagno_per_prezzo():
     from dealfinder.web import scovo
-    assert scovo.soglia(800) == 1500 and scovo.soglia(4999) == 1500
-    assert scovo.soglia(5000) == 2200 and scovo.soglia(9999) == 2200
+    # 2/11 sera (cliente): 1.500 € fino a 7.000 €
+    assert scovo.soglia(800) == 1500 and scovo.soglia(4999) == 1500 and scovo.soglia(6999) == 1500
+    assert scovo.soglia(7000) == 2200 and scovo.soglia(9999) == 2200
     assert scovo.soglia(12000) == 3200 and scovo.soglia(18000) == 4000 and scovo.soglia(25000) == 5000
     assert scovo.soglia(40000) == 6000
 

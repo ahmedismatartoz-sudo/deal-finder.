@@ -114,34 +114,73 @@ NOMI = ["costante", "eta", "eta2", "log_km", "log_kw", "automatico", "sportivo",
 
 def adatta(X: np.ndarray, y: np.ndarray, w: np.ndarray, ridge: float = 1.0, giri: int = 3) -> tuple[np.ndarray, np.ndarray]:
     """Minimi quadrati pesati con ridge (non sulla costante) e 3 giri robusti (pesi Huber sui residui)."""
+    beta, res, _, _ = adatta_completo(X, y, w, ridge, giri)
+    return beta, res
+
+
+def adatta_completo(X: np.ndarray, y: np.ndarray, w: np.ndarray, ridge: float = 1.0, giri: int = 3):
+    """Come adatta, e in più l'inversa di (X'WX + ridge) e i pesi usati nell'ultimo calcolo: servono a stimare ogni
+    annuncio con il modello addestrato SENZA quell'annuncio (formula esatta di Sherman-Morrison, vedi ModelloGruppo)."""
     p = X.shape[1]
     lam = np.eye(p) * ridge
     lam[0, 0] = 0.0
     ww = w.copy()
     beta = np.zeros(p)
+    usati = ww
     for _ in range(giri):
         Xw = X * ww[:, None]
         try:
             beta = np.linalg.solve(X.T @ Xw + lam, Xw.T @ y)
         except np.linalg.LinAlgError:
             beta = np.linalg.lstsq(X.T @ Xw + lam, Xw.T @ y, rcond=None)[0]
+        usati = ww
         res = y - X @ beta
         s = 1.4826 * np.median(np.abs(res - np.median(res))) or 0.1
         k = 1.5 * s
         hub = np.where(np.abs(res) <= k, 1.0, k / np.maximum(np.abs(res), 1e-9))
         ww = w * hub
     res = y - X @ beta
-    return beta, res
+    try:
+        A_inv = np.linalg.inv(X.T @ (X * usati[:, None]) + lam)
+    except np.linalg.LinAlgError:
+        A_inv = None
+    return beta, res, A_inv, usati
 
 
 class ModelloGruppo:
-    def __init__(self, chiave, beta, sigma, n, n_vendute, kw_med, premio_venduta):
+    def __init__(self, chiave, beta, sigma, n, n_vendute, kw_med, premio_venduta, loo=None):
         self.chiave, self.beta, self.sigma, self.n, self.n_vendute = chiave, beta, sigma, n, n_vendute
         self.kw_med, self.premio_venduta = kw_med, premio_venduta
+        # 3/11 (controllo indipendente): un annuncio che è anche nell'addestramento si stima con il modello SENZA di lui,
+        # altrimenti un'auto unica nel gruppo (sola SW, sola automatica...) "tira" il proprio valore verso il suo prezzo
+        # e nasconde l'affare. loo = (beta grezzo, inversa, {id: (riga X, peso, residuo)}, poche_vendute)
+        self._loo = loo
+
+    def _beta_per(self, r: dict):
+        if not self._loo or r.get("id") is None:
+            return self.beta
+        b0, A_inv, righe, poche = self._loo
+        it = righe.get(r["id"])
+        if it is None or A_inv is None:
+            return self.beta
+        try:
+            xi, a, e = it
+            Ax = A_inv @ xi
+            h = float(xi @ Ax)
+            den = max(1.0 - a * h, 1e-3)
+            b = b0 - Ax * (a * e / den)
+            if poche:
+                b = b.copy()
+                b[-1] = 0.0
+            if not np.all(np.isfinite(b)):
+                return self.beta
+            return b
+        except Exception:
+            return self.beta
 
     def stima(self, r: dict) -> dict:
         x = np.array(caratteristiche(dict(r, seller_type="privato"), self.kw_med) + [1.0])   # venduta, da privato
-        mu = float(x @ self.beta)
+        mu = float(x @ self._beta_per(r))
         v = math.exp(mu)
         return {"V": int(round(v)), "P25": int(round(v * math.exp(-0.674 * self.sigma))),
                 "sigma": round(self.sigma, 3), "n": self.n, "n_vendute": self.n_vendute,
@@ -167,13 +206,17 @@ def costruisci(righe: list[dict], chiave, escludi: set | None = None, now=None) 
     for j in range(1, X.shape[1]):
         if np.all(X[:, j] == X[0, j]):
             X[:, j] = 0.0
-    beta, res = adatta(X, y, w)
+    beta, res, A_inv, usati = adatta_completo(X, y, w)
+    b0 = beta.copy()
+    # sigma con i pesi originali (anche i residui grandi contano): più prudente, la P25 resta più bassa
     sigma = float(np.sqrt(np.average(res ** 2, weights=w)))
     sigma = min(max(sigma, 0.05), 0.6)
     premio = float(beta[-1]) if vend >= 5 else 0.0
     if vend < 5:
         beta[-1] = 0.0          # troppo poche vendute: la differenza chiesto/venduto non si stima
-    return ModelloGruppo(chiave, beta, sigma, len(rr), vend, kw_med, premio)
+    loo = (b0, A_inv, {r["id"]: (X[i], float(usati[i]), float(res[i])) for i, r in enumerate(rr) if r.get("id") is not None},
+           vend < 5)
+    return ModelloGruppo(chiave, beta, sigma, len(rr), vend, kw_med, premio, loo)
 
 
 def gruppi_principali(conn, limite: int) -> list[tuple]:
@@ -206,7 +249,7 @@ def prova(conn, limite_gruppi: int = 400, giorni_prova: int = 14) -> dict:
             copertura["gruppi_piccoli"] += 1
             continue
         vecchi = {r["listing_id"]: r for r in conn.execute(
-            """SELECT DISTINCT ON (listing_id) listing_id, (dati->>'M')::float AS m, (dati->>'n')::int AS n
+            """SELECT DISTINCT ON (listing_id) listing_id, COALESCE(dati->>'M_gemelle', dati->>'M')::float AS m, (dati->>'n')::int AS n
                FROM valutazioni_policy WHERE listing_id = ANY(%s) ORDER BY listing_id, computed_at DESC""",
             (list(prova_ids),)).fetchall()}
         for r in righe:

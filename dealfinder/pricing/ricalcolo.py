@@ -157,8 +157,11 @@ def carica_taratura(conn) -> None:
     """Fattori di taratura dell'ultimo ricalcolo (tabella taratura) dentro la policy."""
     try:
         rows = conn.execute("SELECT chiave, fattore FROM taratura WHERE at > now() - interval '3 days'").fetchall()
-        P.TARATURA.clear()
-        P.TARATURA.update({r["chiave"]: float(r["fattore"]) for r in rows})
+        nuovo = {r["chiave"]: float(r["fattore"]) for r in rows}
+        # 3/11: senza svuotare il dizionario (altri thread valutano intanto): prima i valori nuovi, poi via i vecchi
+        P.TARATURA.update(nuovo)
+        for k in [k for k in list(P.TARATURA) if k not in nuovo]:
+            P.TARATURA.pop(k, None)
     except Exception:
         conn.rollback()
 
@@ -553,7 +556,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
         st[f"cat:{v['categoria']}"] += 1
         p_ = int(r["price_eur"])
         if v.get("M_grezzo") and (v.get("n") or 0) >= 2 and not set(r.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
-            campioni_tar.append((v.get("metodo") or "mediana", int(v.get("n") or 0), v["M_grezzo"], p_, r.get("year"),
+            campioni_tar.append((v.get("metodo_base") or v.get("metodo") or "mediana", int(v.get("n") or 0), v["M_grezzo"], p_, r.get("year"),
                                  r.get("mileage_km"), r.get("fuel"), r.get("source"), v.get("livello"), v.get("fuori_zona")))
         # PROVA "prezzi dei commercianti" (18/10): rivendita = prezzo a cui i concessionari vendono la stessa auto,
         # meno la trattativa; quante auto passerebbero rispetto a oggi (il sito non cambia)

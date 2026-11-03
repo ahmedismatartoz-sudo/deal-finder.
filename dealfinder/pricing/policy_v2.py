@@ -47,6 +47,9 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 
 POLICY_VERSION = "pv16-2026-10-19"
+# revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
+# rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
+POLICY_REV = "2026-11-03a"
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -618,7 +621,9 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
         if os.environ.get("POLICY_ALLESTIMENTO", "1") == "1" and validi:
             ta = allestimento(t)
             stessi = [c for c in validi if allestimento(c) == ta]
-            if len(stessi) >= _serve and len(stessi) < len(validi):
+            # 3/11 (controllo indipendente): soglia n_minimo, non il minimo del sito: con _serve una "Business" veniva
+            # confrontata con le "R-Line" (+21% sul mercato) quando le Business uguali erano 3-7
+            if len(stessi) >= cfg.n_minimo and len(stessi) < len(validi):
                 for c in validi:
                     if allestimento(c) != ta:
                         scartati.append((c, "allestimento diverso (sportivo/normale)"))
@@ -712,7 +717,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     """Valutazione completa e verificabile di un'auto. `t` e `mercato` sono righe di `listings` (dict)."""
     cfg = cfg or PolicyConfig.from_env()
     now = now or datetime.now(timezone.utc)
-    out = {"policy": POLICY_VERSION, "id": t.get("id"), "acquisto": t.get("price_eur"), "soglia": soglia,
+    out = {"policy": POLICY_VERSION, "policy_rev": POLICY_REV, "id": t.get("id"), "acquisto": t.get("price_eur"), "soglia": soglia,
            "mancanti": [], "ipotesi": [], "motivi": []}
     for k, nome in (("year", "anno"), ("mileage_km", "km"), ("fuel", "alimentazione"), ("price_eur", "prezzo")):
         if t.get(k) in (None, ""):
@@ -825,6 +830,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     # >20k 13,9/12,3 (peggiore): acceso fino a 20.000 € il 3/11 alle 0:45
     vr = t.get("vr") if (os.environ.get("VR_ATTIVO", "1") == "1"
                           and (t.get("price_eur") or 0) <= int(os.environ.get("VR_PREZZO_MAX", "20000"))) else None
+    # 3/11 (controllo indipendente): il valore reale può solo ABBASSARE il mercato, sempre; il numero di confronti
+    # "garantito dal modello" (n_gate) vale solo per i controlli di quantità, non per i testi e i dubbi, e si conta
+    # sulle gemelle vere (len(prezzi)), non su n già alzato dal modello AI.
+    n_gate = n
+    out["metodo_base"] = out.get("metodo") or "mediana"     # metodo della taratura (M_grezzo), prima del valore reale
     if vr and vr.get("v") and out.get("M") and prezzi:
         V, P25v, sg = int(vr["v"]), int(vr["p25"]), float(vr.get("sigma") or 1)
         diff = out["M"] / V - 1
@@ -833,23 +843,27 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             else int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
         accordo = abs(diff) <= float(os.environ.get("VR_ACCORDO", "0.08"))
         preciso = sg <= float(os.environ.get("VR_SIGMA_MAX", "0.15")) and (vr.get("n") or 0) >= int(os.environ.get("VR_N_GRUPPO", "100"))
-        if n >= serve or (n >= int(os.environ.get("VR_GEMELLE_MIN", "2")) and preciso and abs(diff) <= .15):
-            out["M"] = min(out["M"], V)
-            out["L"] = min(out.get("L") or out["M"], P25v)
+        n_gem = len(prezzi)
+        M_prima = out["M"]
+        out["M_gemelle"] = M_prima                 # mercato senza valore reale: serve alla prova notturna
+        out["M"] = min(out["M"], V)
+        out["L"] = min(out.get("L") or out["M"], P25v, out["M"])
+        out["vr_accordo"] = accordo
+        if V < M_prima:
+            # il mercato ora È il valore reale (prezzo di vendita, non richiesto): il sito non lo ritara
             out["metodo"] = "valore_reale" if accordo else "valore_reale_prudente"
-            out["vr_accordo"] = accordo
-            if n < serve:
-                out["vr_poche_gemelle"] = True
-                n = max(n, serve)              # il numero minimo lo garantisce il modello su tutto il gruppo
-                out["n_gemelle"] = len(prezzi)
-            out["ipotesi"].append(f"valore reale (modello su {vr.get('n')} annunci e auto vendute dello stesso modello, "
-                                  f"errore tipico ±{sg*100:.0f}%): {V} €; gemelle {'concordano' if accordo else 'non concordano: vince il più basso'}")
+        if n_gem < serve and n_gem >= int(os.environ.get("VR_GEMELLE_MIN", "2")) and preciso and abs(diff) <= .15:
+            out["vr_poche_gemelle"] = True
+            out["n_gemelle"] = n_gem
+            n_gate = max(n, serve)             # il numero minimo lo garantisce il modello su tutto il gruppo
+        out["ipotesi"].append(f"valore reale (modello su {vr.get('n')} annunci e auto vendute dello stesso modello, "
+                              f"errore tipico ±{sg*100:.0f}%): {V} €; gemelle {'concordano' if accordo else 'non concordano: vince il più basso'}")
     _prud_min = int(os.environ.get("POLICY_PRUDENTE_N_MIN", "3"))
     _serve_sito = int(os.environ.get("CONFRONTI_MIN_ECO", "8")) if (t.get("price_eur") or 0) < 10000 \
         else int(os.environ.get("SITO_CONFRONTI_MIN", "5"))
     prudente = bool(os.environ.get("POLICY_PRUDENTE_POCHI", "1") == "1" and out.get("M") and prezzi
-                    and (n < max(cfg.n_minimo, _serve_sito) or sel["livello"] == 3) and len(prezzi) >= _prud_min)
-    if (n < cfg.n_minimo and not prudente) or not out.get("M"):
+                    and (n_gate < max(cfg.n_minimo, _serve_sito) or sel["livello"] == 3) and len(prezzi) >= _prud_min)
+    if (n_gate < cfg.n_minimo and not prudente) or not out.get("M"):
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append(f"solo {n} confronti validi (servono almeno {cfg.n_minimo})")
         return out
@@ -912,7 +926,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["motivi"].append(f"mercato M {out['M']} € oltre {cfg.m_massimo} €: la tabella prudenziale non si estende")
         return out
     if out.get("prudente_pochi"):
-        # rivendita prudente: non oltre il prezzo PIÙ BASSO tra le auto uguali trovate, né oltre il mercato −15%
+        # rivendita prudente: non oltre il prezzo PIÙ BASSO tra le auto uguali trovate, né oltre il mercato −10%
+        # (POLICY_PRUDENTE_SCONTO)
         sc = float(os.environ.get("POLICY_PRUDENTE_SCONTO", "10")) / 100
         rp = int(min(out["R"], min(prezzi), out["M"] * (1 - sc)))
         if rp < out["R"]:
@@ -1039,7 +1054,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
 def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
-            "totale_costi", "campione", "policy", "metodo", "prudente_pochi", "vr_accordo", "vr_poche_gemelle")
+            "totale_costi", "campione", "policy", "metodo", "prudente_pochi", "vr_accordo", "vr_poche_gemelle",
+            "policy_rev")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

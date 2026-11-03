@@ -802,71 +802,82 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter) -> None:
     vrmap = vr_di(conn, [r["id"] for r in rows])      # 2/11 notte: valore reale
     targhe = targhe_visibili(conn)
     for r in rows:
-        # 31/10 (cliente: "metti tutte le auto col numero nelle descrizioni"): il numero scritto nel testo vale come numero
-        if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not ha_numero_testo(r["title"], r["description"]) and not (
-                # 25/10 21:00 (cliente: "fallo, ti dirò io quali togliere"): Subito si valuta anche senza numero
-                # (il numero su Subito non si legge dalle pagine pubbliche); sul sito si contatta in chat
-                r["source"] == "subito" and r["telefono_ok"] is None
-                and os.environ.get("TR_SUBITO_SENZA_NUMERO", "0") == "1") and not (
-                os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1"
-                and (r["price_eur"] or 0) >= int(os.environ.get("TR_SENZA_NUMERO_DA", "60000"))):
-            # 21/10 (cliente): per le auto da 60.000 € in su si valutano anche quelle senza numero; sul sito
-            # resta la regola di sempre (al massimo il 20% delle auto senza numero)
-            stats["valuta:senza_numero"] += 1
-            continue
-        if r["damage_declared"] or problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"],
-                                                        description=r["description"])):
-            # 29/10 (cliente: "servono molte più auto medie e basse"): l'annuncio con danni scritti non resta più fermo.
-            # L'AI lo legge (sul sito, dove c'è la chiave): se il danno è grave resta fuori, altrimenti si valuta e il
-            # costo stimato della riparazione viene tolto dal margine sul sito (ai_difetti).
-            letto = None
-            try:
-                letto = conn.execute("SELECT grave FROM ai_difetti WHERE listing_id=%s", (r["id"],)).fetchone()
-            except Exception:
-                conn.rollback()
-            if letto is None or letto["grave"]:
+        # 3/11 (controllo indipendente): un'auto con dati strani non deve fermare tutto il giro (rivalutazioni lunghe)
+        try:
+            # 31/10 (cliente: "metti tutte le auto col numero nelle descrizioni"): il numero scritto nel testo vale come numero
+            if r["source"] in ("subito", "autoscout24") and not r["telefono_ok"] and not ha_numero_testo(r["title"], r["description"]) and not (
+                    # 25/10 21:00 (cliente: "fallo, ti dirò io quali togliere"): Subito si valuta anche senza numero
+                    # (il numero su Subito non si legge dalle pagine pubbliche); sul sito si contatta in chat
+                    r["source"] == "subito" and r["telefono_ok"] is None
+                    and os.environ.get("TR_SUBITO_SENZA_NUMERO", "0") == "1") and not (
+                    os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1"
+                    and (r["price_eur"] or 0) >= int(os.environ.get("TR_SENZA_NUMERO_DA", "60000"))):
+                # 21/10 (cliente): per le auto da 60.000 € in su si valutano anche quelle senza numero; sul sito
+                # resta la regola di sempre (al massimo il 20% delle auto senza numero)
+                stats["valuta:senza_numero"] += 1
+                continue
+            if r["damage_declared"] or problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"],
+                                                            description=r["description"])):
+                # 29/10 (cliente: "servono molte più auto medie e basse"): l'annuncio con danni scritti non resta più fermo.
+                # L'AI lo legge (sul sito, dove c'è la chiave): se il danno è grave resta fuori, altrimenti si valuta e il
+                # costo stimato della riparazione viene tolto dal margine sul sito (ai_difetti).
+                letto = None
                 try:
-                    conn.execute("CREATE TABLE IF NOT EXISTS analisi_danni (listing_id BIGINT PRIMARY KEY, at TIMESTAMPTZ DEFAULT now())")
-                    if letto is None:
-                        conn.execute("INSERT INTO analisi_danni (listing_id) VALUES (%s) ON CONFLICT DO NOTHING", (r["id"],))
+                    letto = conn.execute("SELECT grave FROM ai_difetti WHERE listing_id=%s", (r["id"],)).fetchone()
                 except Exception:
                     conn.rollback()
-                stats["valuta:danni_nel_testo_ad_analisi" if letto is None else "valuta:danno_grave_ai"] += 1
+                if letto is None or letto["grave"]:
+                    try:
+                        conn.execute("CREATE TABLE IF NOT EXISTS analisi_danni (listing_id BIGINT PRIMARY KEY, at TIMESTAMPTZ DEFAULT now())")
+                        if letto is None:
+                            conn.execute("INSERT INTO analisi_danni (listing_id) VALUES (%s) ON CONFLICT DO NOTHING", (r["id"],))
+                    except Exception:
+                        conn.rollback()
+                    stats["valuta:danni_nel_testo_ad_analisi" if letto is None else "valuta:danno_grave_ai"] += 1
+                    continue
+                stats["valuta:danni_letti_ai_non_gravi"] += 1
+            if not (r["make"] and r["model"] and r["fuel"]):
+                stats["valuta:dati_incompleti"] += 1
                 continue
-            stats["valuta:danni_letti_ai_non_gravi"] += 1
-        if not (r["make"] and r["model"] and r["fuel"]):
-            stats["valuta:dati_incompleti"] += 1
-            continue
-        key = (r["make"], r["model"], r["fuel"])
-        if key not in gruppi:
-            gruppi[key] = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
-                           for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
-        t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]), vr=vrmap.get(r["id"]),
-                 targa_e_telefono=targa_e_telefono(r, targhe, True if r.get("telefono_ok") else None))
-        soglia = scovo.soglia(int(r["price_eur"]))
-        from ..pricing.ricalcolo import valuta_con_ripiego
-        v = valuta_con_ripiego(conn, t, gruppi[key], soglia, cfg, cache_nord)
-        v["sezione"] = "affari"
-        stats[f"valuta:{v['categoria']}"] += 1
-        conn.execute(
-            """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)
-               VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(),
-               categoria=EXCLUDED.categoria, margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati""",
-            (r["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
-             json.dumps(v, default=str)))
-        if v["categoria"] in scovo.CATEGORIE_SITO:
-            conf = "affidabile" if v["categoria"] == "opportunita" else "da_verificare"
+            key = (r["make"], r["model"], r["fuel"])
+            if key not in gruppi:
+                gruppi[key] = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                               for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
+            t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
+                     rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]), vr=vrmap.get(r["id"]),
+                     targa_e_telefono=targa_e_telefono(r, targhe, True if r.get("telefono_ok") else None))
+            soglia = scovo.soglia(int(r["price_eur"]))
+            from ..pricing.ricalcolo import valuta_con_ripiego
+            v = valuta_con_ripiego(conn, t, gruppi[key], soglia, cfg, cache_nord)
+            v["sezione"] = "affari"
+            stats[f"valuta:{v['categoria']}"] += 1
             conn.execute(
-                """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
-                     n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
-                (r["id"], P.POLICY_VERSION + "+tempo-reale", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
-                 json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
-            conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), last_checked_at=now() "
-                         "WHERE id=%s", ("opportunita" if conf == "affidabile" else "da_verificare", r["id"]))
-            stats["pubblicate"] += 1
-        conn.commit()
+                """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)
+                   VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(),
+                   categoria=EXCLUDED.categoria, margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati""",
+                (r["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
+                 json.dumps(v, default=str)))
+            if v["categoria"] in scovo.CATEGORIE_SITO:
+                conf = "affidabile" if v["categoria"] == "opportunita" else "da_verificare"
+                conn.execute(
+                    """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
+                         n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
+                    (r["id"], P.POLICY_VERSION + "+tempo-reale", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
+                     json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
+                conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), last_checked_at=now() "
+                             "WHERE id=%s", ("opportunita" if conf == "affidabile" else "da_verificare", r["id"]))
+                stats["pubblicate"] += 1
+            conn.commit()
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            stats["valuta:errore"] += 1
+            if stats["valuta:errore"] <= 5:
+                log.warning("TR valuta %s non riuscita: %s", r.get("id"), str(e)[:200])
+            continue
 
 
 def _lettore_nuovi(conn, ids: list[int], stats: Counter) -> None:

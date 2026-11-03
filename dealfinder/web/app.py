@@ -4925,11 +4925,18 @@ def _tempo_reale():
                         if _una_volta("valore_reale_notte:" + _dt.now(_tz.utc).strftime("%Y%m%d")):
                             from ..pricing import valore_reale as VR
                             from ..zone import tutte
+                            # 3/11 (controllo indipendente): prima il calcolo (serve al sito), poi la prova in un try a
+                            # parte: se la prova fallisce il valore reale resta aggiornato
                             with connect() as conn:
                                 conn.execute("SET statement_timeout = '900s'")
-                                L.warning("VALORE_REALE PROVA %s", json.dumps(VR.prova(conn), ensure_ascii=False, default=str))
                                 L.warning("VALORE_REALE CALCOLO %s", json.dumps(
                                     VR.calcola_e_salva(conn, prov_zona=list(tutte())), default=str))
+                            try:
+                                with connect() as conn:
+                                    conn.execute("SET statement_timeout = '900s'")
+                                    L.warning("VALORE_REALE PROVA %s", json.dumps(VR.prova(conn), ensure_ascii=False, default=str))
+                            except Exception as e:
+                                L.warning("VALORE_REALE prova notturna non riuscita: %s", str(e)[:300])
             except Exception as e:
                 L.warning("VALORE_REALE notte non riuscito: %s", str(e)[:300])
             time.sleep(1800)
@@ -5155,26 +5162,104 @@ def _tempo_reale():
                 return
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
+            from ..pricing import policy_v2 as _P
             from ..zone import tutte
+            # 3/11: dalla 2a volta (rivtutte2...) prima si ricalcola il valore reale (stima di ogni auto SENZA lei stessa
+            # nel modello), poi si rivalutano solo le auto non ancora fatte con il codice attuale (POLICY_REV): se il
+            # sito si riavvia, il giro riprende da dove era. Per velocità le auto vanno a gruppi dello stesso modello.
+            if tag != "rivtutte1" and os.environ.get("RIVTUTTE_VR", "1") == "1":
+                try:
+                    from ..pricing import valore_reale as VR
+                    with connect() as conn:
+                        conn.execute("SET statement_timeout = '900s'")
+                        L.warning("RIVTUTTE valore reale ricalcolato: %s",
+                                  json.dumps(VR.calcola_e_salva(conn, prov_zona=list(tutte())), default=str))
+                except Exception as e:
+                    L.warning("RIVTUTTE ricalcolo valore reale non riuscito (si usa quello di stanotte): %s", str(e)[:300])
             with connect() as conn:
                 conn.execute("SET statement_timeout = '600s'")
-                ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l JOIN valore_reale v ON v.listing_id = l.id
+                rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel,
+                        (l.stage = 'approfondito' AND COALESCE(u.margine, -1) >= 500) AS sul_sito,
+                        (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000) AS benz100
+                    FROM listings l JOIN valore_reale v ON v.listing_id = l.id
+                    LEFT JOIN valutazioni_policy u ON u.listing_id = l.id AND u.policy_version = %s
                     WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%s)
                       AND l.price_eur BETWEEN 1000 AND 20000 AND COALESCE(l.mileage_km,0) <= 150000
                       AND v.computed_at > now() - interval '2 days'
-                    ORDER BY (l.fuel ILIKE '%%benzin%%' AND COALESCE(l.mileage_km,0) <= 100000) DESC, l.price_eur
-                    LIMIT %s""", (list(tutte()), int(os.environ.get("RIVTUTTE_MAX", "30000")))).fetchall()]
+                      AND NOT (COALESCE(u.riassunto->>'policy_rev', '') = %s AND u.computed_at > v.computed_at)
+                    LIMIT %s""", (_P.POLICY_VERSION, list(tutte()), _P.POLICY_REV,
+                                  int(os.environ.get("RIVTUTTE_MAX", "40000")))).fetchall()
+                # prima le auto che possono essere sul sito, poi le benzina fino a 100.000 km, poi le altre; dentro
+                # ogni parte per modello (un solo caricamento dei confronti per gruppo)
+                rows = sorted(rows, key=lambda r: (not r["sul_sito"], not r["benz100"], r["make"] or "", r["model"] or "",
+                                                   r["fuel"] or ""))
+                ids = [r["id"] for r in rows]
+                del rows
                 L.warning("RIVTUTTE da rivalutare con il valore reale: %d", len(ids))
                 st = _C()
-                for i in range(0, len(ids), 25):
-                    tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
-                    conn.commit()
-                    if i % 1000 == 0:
+                for i in range(0, len(ids), 60):
+                    try:
+                        tr.valuta_e_pubblica(conn, ids[i:i + 60], st)
+                        conn.commit()
+                    except Exception as e:
+                        conn.rollback()
+                        st["blocchi_non_riusciti"] += 1
+                        L.warning("RIVTUTTE blocco %d non riuscito: %s", i, str(e)[:200])
+                    if i % 1200 == 0:
                         L.warning("RIVTUTTE avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
                 L.warning("RIVTUTTE fatto: %s", json.dumps(dict(st)))
         except Exception as e:
             L.warning("RIVTUTTE non riuscita: %s", str(e)[:300])
     threading.Thread(target=rivaluta_tutte, daemon=True, name="rivtutte").start()
+
+    def riallinea_sito():
+        """3/11 (cliente: "tutte le auto valutate col nuovo metodo"): ogni RIALLINEA_MIN minuti le auto che possono
+        stare sul sito (privati della zona, margine salvato ≥ 500 €) ma valutate con un codice diverso da quello attuale
+        (POLICY_REV: per esempio dal ricalcolo del cron non ancora aggiornato) si rivalutano qui, poche alla volta.
+        RIALLINEA=0 lo spegne. Ogni auto si riprova al massimo ogni 6 ore (es. Subito senza numero, che si salta)."""
+        if os.environ.get("RIALLINEA", "1") != "1":
+            return
+        L = logging.getLogger("scovo")
+        time.sleep(300)
+        provate: dict = {}
+        while True:
+            try:
+                from collections import Counter as _C
+                from ..pipeline import tempo_reale as tr
+                from ..pricing import policy_v2 as _P
+                from ..zone import tutte
+                ora = time.time()
+                for k in [k for k, t0 in provate.items() if ora - t0 > 6 * 3600]:
+                    provate.pop(k, None)
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '300s'")
+                    rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel FROM listings l
+                        JOIN valutazioni_policy u ON u.listing_id = l.id AND u.policy_version = %s
+                        WHERE l.status='attivo' AND l.seller_type='privato' AND l.stage='approfondito'
+                          AND upper(l.province) = ANY(%s) AND COALESCE(u.margine, -1) >= 500
+                          AND COALESCE(u.riassunto->>'policy_rev', '') <> %s
+                        LIMIT 3000""", (_P.POLICY_VERSION, list(tutte()), _P.POLICY_REV)).fetchall()
+                    rows = sorted([r for r in rows if r["id"] not in provate],
+                                  key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+                    rows = rows[:int(os.environ.get("RIALLINEA_MAX", "600"))]
+                    st = _C()
+                    for i in range(0, len(rows), 60):
+                        pezzo = [r["id"] for r in rows[i:i + 60]]
+                        for k in pezzo:
+                            provate[k] = ora
+                        try:
+                            tr.valuta_e_pubblica(conn, pezzo, st)
+                            conn.commit()
+                        except Exception as e:
+                            conn.rollback()
+                            L.warning("RIALLINEA blocco non riuscito: %s", str(e)[:200])
+                    if rows:
+                        L.warning("RIALLINEA %d auto del sito rivalutate col codice attuale (%s): %s", len(rows),
+                                  _P.POLICY_REV, json.dumps(dict(st)))
+            except Exception as e:
+                L.warning("RIALLINEA non riuscito: %s", str(e)[:300])
+            time.sleep(float(os.environ.get("RIALLINEA_MIN", "20")) * 60)
+    threading.Thread(target=riallinea_sito, daemon=True, name="riallinea").start()
 
     def diagnosi_incompleti():
         """2/11 notte: RINVIO_INVIA=incompleti<n>. Le auto di privati della zona senza anno o km (non valutabili):
