@@ -1237,6 +1237,37 @@ def _prezzi_trattati(items: list[dict]) -> None:
 from .scovo import FIN_SOLO_RE  # noqa: E402  (21/10: auto solo leasing/finanziamento)
 
 
+# 3/11 10:29 (cliente: "metti commercianti ma lontani, senza prezzi promo e senza leasing, fuori da Milano, non Loconte
+# e quelli là, assicurati che il prezzo non sia fatto apposta per tirare su il cliente; dei commercianti solo i 40
+# migliori"). Valutati col metodo nuovo (valore reale) dal lavoro commercianti_top, poi sul sito i 40 con più margine.
+COMMERCIANTI_TOP = 40
+COMMERCIANTI_PROVINCE_ESCLUSE = ("MI",)
+COMMERCIANTI_PREZZO_MIN_SU_M = 0.75        # sotto il 75% del mercato da un commerciante: prezzo "esca", fuori
+RE_PROMO_COMMERCIANTE = (r"(promo|promozion|prezzo\s+(valido|riservat\w*|special\w*|bloccat\w*)|a\s+partire\s+da|"
+                         r"(solo|vincolat\w*|valid\w*|previo|tramite|con|in\s+caso\s+di)\s+(a\s+|al\s+|il\s+|un\s+)?finanziament|"
+                         r"\mrat[ae]\s+(da|mensil)|\mrateal|anticipo|leasing|noleggio|"
+                         r"prezzo\s+(con|in)\s+permuta|valid\w*\s+con\s+permuta|solo\s+con\s+permuta|permuta\s+obbligatoria|"
+                         r"iva\s+esclus|\+\s*iva|"
+                         r"oltre\s+iva|esclus\w*\s+(il\s+)?passaggio|passaggio\s+esclus|\+\s*passaggio|"
+                         r"messa\s+su\s+strada|incentiv|rottamazion|\mbonus\M|offerta\s+valida|esauriment|"
+                         r"prezzo\s+con\s|in\s+caso\s+di\s+finanz|salvo\s+approvazione|tan\s+\d|taeg)")
+_FLAG_PROMO = ["leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoerenti"]
+
+
+def _commercianti_nomi_re() -> str:
+    return "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
+
+
+def _tetto_commercianti(items: list[dict]) -> list[dict]:
+    """Alla fine dei controlli: dei commercianti restano solo i COMMERCIANTI_TOP con più margine."""
+    comm = sorted([it for it in items if it.get("commerciante_top")],
+                  key=lambda it: -int((it.get("pv") or {}).get("margine") or 0))
+    via = {it["id"] for it in comm[COMMERCIANTI_TOP:]}
+    if comm:
+        logging.getLogger("scovo").warning("COMMERCIANTI_TOP %d sul sito (di %d dopo i controlli)", min(len(comm), COMMERCIANTI_TOP), len(comm))
+    return [it for it in items if it.get("id") not in via]
+
+
 def _solo_privati(items: list[dict]) -> list[dict]:
     """21/10 sera (cliente): sul sito SOLO auto messe in vendita da privati (venditore segnato come privato)."""
     if os.environ.get("SITO_SOLO_PRIVATI", "1") != "1" or not items:
@@ -1269,6 +1300,27 @@ def _solo_privati(items: list[dict]) -> list[dict]:
                     (ids, list(ok), fuori)).fetchall()}
         except Exception as e:
             logging.getLogger("scovo").warning("COMMERCIANTI_BENZINA non controllati: %s", str(e)[:200])
+    # 3/11: i migliori commercianti lontani (fuori provincia di Milano), valutati col codice attuale, senza promo/leasing
+    top = set()
+    try:
+        from ..pricing import policy_v2 as _P
+        cand = [it for it in items if it.get("id") not in ok and it.get("id") not in comm
+                and (it.get("pv") or {}).get("policy_rev") == _P.POLICY_REV
+                and (it.get("pv") or {}).get("categoria") in scovo.CATEGORIE_SITO
+                and (it.get("pv") or {}).get("M") and (it.get("prezzo") or 0) >= COMMERCIANTI_PREZZO_MIN_SU_M * float(it["pv"]["M"])]
+        if cand:
+            with connect() as conn:
+                buoni = {r["id"] for r in conn.execute(
+                    "SELECT id FROM listings WHERE id = ANY(%s) AND seller_type='commerciante' "
+                    "AND NOT (upper(coalesce(province,'')) = ANY(%s)) "
+                    "AND NOT (coalesce(price_flags, '{}'::text[]) && %s::text[]) "
+                    "AND NOT ((coalesce(title,'') || ' ' || coalesce(description,'')) ~* %s)",
+                    ([it["id"] for it in cand], list(COMMERCIANTI_PROVINCE_ESCLUSE), _FLAG_PROMO,
+                     RE_PROMO_COMMERCIANTE)).fetchall()}
+            cand = sorted([it for it in cand if it["id"] in buoni], key=lambda it: -int(it["pv"].get("margine") or 0))
+            top = {it["id"] for it in cand[:COMMERCIANTI_TOP * 3]}      # margine per i controlli dopo; 40 alla fine
+    except Exception as e:
+        logging.getLogger("scovo").warning("COMMERCIANTI_TOP non controllati: %s", str(e)[:200])
     # 2/11 (cliente: "togli tutte le auto di Loconte"): commercianti esclusi per nome (SITO_COMMERCIANTI_NOMI, separati da
     # virgola): nome nel testo dell'annuncio oppure nome del venditore salvato da AutoScout24 (commercianti_as24, lead_tutti)
     nomi_re = "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
@@ -1293,8 +1345,13 @@ def _solo_privati(items: list[dict]) -> list[dict]:
         elif it.get("id") in comm:
             it["commerciante"] = True
             tenute.append(it)
-    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano (di cui %d commercianti a benzina fuori Milano; "
-                                       "%d dei commercianti esclusi per nome)", len(items) - len(tenute), len(tenute), len(comm), len(esclusi))
+        elif it.get("id") in top:
+            it["commerciante"] = True
+            it["commerciante_top"] = True
+            tenute.append(it)
+    logging.getLogger("scovo").warning("SOLO_PRIVATI %d auto di commercianti tolte, %d restano (di cui %d commercianti a benzina fuori Milano, "
+                                       "%d candidati tra i migliori commercianti lontani; %d dei commercianti esclusi per nome)",
+                                       len(items) - len(tenute), len(tenute), len(comm), len(top - esclusi), len(esclusi))
     return tenute
 
 
@@ -2026,7 +2083,7 @@ def _calcola_elenco() -> None:
     _forz = _forzate_sito(set(), opens)
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
-    items = _zona_sito(_rivendita_prudente(_mercato_calibrato(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items)))))))))))
+    items = _tetto_commercianti(_zona_sito(_rivendita_prudente(_mercato_calibrato(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))))))
     # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
     items += _senza_scarti_id(_supercar_europa({it["id"] for it in items}, opens))
     items += _senza_scarti_id(_supercar_lusso({it["id"] for it in items}, opens))
@@ -4945,7 +5002,8 @@ def _tempo_reale():
                             with connect() as conn:
                                 conn.execute("SET statement_timeout = '900s'")
                                 L.warning("VALORE_REALE CALCOLO %s", json.dumps(
-                                    VR.calcola_e_salva(conn, prov_zona=list(tutte())), default=str))
+                                    VR.calcola_e_salva(conn, prov_zona=list(tutte()),
+                                                       commercianti_fuori=list(COMMERCIANTI_PROVINCE_ESCLUSE)), default=str))
                             try:
                                 with connect() as conn:
                                     conn.execute("SET statement_timeout = '900s'")
@@ -5289,6 +5347,114 @@ def _tempo_reale():
                 L.warning("RIALLINEA non riuscito: %s", str(e)[:300])
             time.sleep(float(os.environ.get("RIALLINEA_MIN", "20")) * 60)
     threading.Thread(target=riallinea_sito, daemon=True, name="riallinea").start()
+
+    def commercianti_top_lavoro():
+        """3/11 10:29 (cliente): commercianti LONTANI (fuori provincia di Milano), senza promo/leasing/prezzi esca, valutati
+        col metodo nuovo (valore reale). Una volta al giorno il valore reale anche per loro, poi ogni 20 minuti le auto
+        con un margine possibile (prezzo ≤ V −5% −1.200 €, mai sotto il 75% di V). Sul sito vanno solo i 40 migliori
+        (_solo_privati / _tetto_commercianti). COMMERCIANTI_LAVORO=0 lo spegne."""
+        if os.environ.get("COMMERCIANTI_LAVORO", "1") != "1":
+            return
+        L = logging.getLogger("scovo")
+        time.sleep(150)
+        while True:
+            try:
+                from collections import Counter as _C
+                from datetime import datetime as _dt, timezone as _tz
+                from ..core.models import Listing as _Lst
+                from ..core.normalize import problem_hint as _ph
+                from ..pricing import policy_v2 as _P
+                from ..pricing import valore_reale as VR
+                from ..pricing.ricalcolo import (MARKET_SQL, TARGET_COLS, _j, _rischio, ai_di, carica_taratura,
+                                                 valuta_con_ripiego, vr_di)
+                from ..store import HOME_REGION_SQL
+                from ..zone import tutte
+                from ..pipeline.ciclo import _una_volta
+                escl = list(COMMERCIANTI_PROVINCE_ESCLUSE)
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '600s'")
+                    n_vr = conn.execute("""SELECT count(*) AS n FROM valore_reale v JOIN listings l ON l.id = v.listing_id
+                        WHERE l.seller_type = 'commerciante' AND v.computed_at > now() - interval '20 hours'""").fetchone()["n"]
+                if n_vr < 200 and _una_volta("vr_commercianti:" + _dt.now(_tz.utc).strftime("%Y%m%d%H")):
+                    with connect() as conn:
+                        conn.execute("SET statement_timeout = '900s'")
+                        L.warning("COMMERCIANTI_TOP valore reale (privati + commercianti lontani): %s", json.dumps(
+                            VR.calcola_e_salva(conn, prov_zona=list(tutte()), commercianti_fuori=escl), default=str))
+                with connect() as conn:
+                    conn.execute("SET statement_timeout = '600s'")
+                    ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l JOIN valore_reale v ON v.listing_id = l.id
+                        LEFT JOIN valutazioni_policy u ON u.listing_id = l.id AND u.policy_version = %(pv)s
+                        WHERE l.status='attivo' AND l.seller_type='commerciante' AND upper(l.province) = ANY(%(zona)s)
+                          AND NOT (upper(l.province) = ANY(%(escl)s))
+                          AND l.price_eur BETWEEN 1000 AND 20000 AND COALESCE(l.mileage_km,0) <= 150000
+                          AND l.last_seen_at > now() - interval '4 days' AND v.computed_at > now() - interval '2 days'
+                          AND l.price_eur <= v.v * 0.95 - 1200 AND l.price_eur >= v.v * %(minimo)s
+                          AND NOT (coalesce(l.price_flags, '{}'::text[]) && %(flag)s::text[])
+                          AND NOT ((coalesce(l.title,'') || ' ' || coalesce(l.description,'')) ~* %(promo)s)
+                          AND NOT ((coalesce(l.title,'') || ' ' || coalesce(l.description,'')) ~* %(nomi)s)
+                          AND COALESCE(l.damage_declared, false) = false
+                          AND NOT (COALESCE(u.riassunto->>'policy_rev','') = %(rev)s AND u.computed_at > v.computed_at)
+                        ORDER BY (v.v * 0.95 - l.price_eur) DESC LIMIT 400""",
+                        {"pv": _P.POLICY_VERSION, "zona": list(tutte()), "escl": escl, "minimo": COMMERCIANTI_PREZZO_MIN_SU_M,
+                         "flag": _FLAG_PROMO, "promo": RE_PROMO_COMMERCIANTE, "nomi": _commercianti_nomi_re() or "$^",
+                         "rev": _P.POLICY_REV}).fetchall()]
+                    st = _C()
+                    if ids:
+                        rows = conn.execute(f"SELECT {TARGET_COLS}, l.title, l.description FROM listings l WHERE l.id = ANY(%s)",
+                                            (ids,)).fetchall()
+                        rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
+                        carica_taratura(conn)
+                        aimap, vrmap = ai_di(conn, ids), vr_di(conn, ids)
+                        cfg = _P.PolicyConfig.from_env()
+                        gruppo, mercato, cache = None, [], {}
+                        for r in rows:
+                            try:
+                                if _ph(_Lst(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
+                                    st["danni_nel_testo"] += 1
+                                    continue
+                                if not (r["make"] and r["model"] and r["fuel"]):
+                                    st["dati_incompleti"] += 1
+                                    continue
+                                key = (r["make"], r["model"], r["fuel"])
+                                if key != gruppo:
+                                    gruppo, cache = key, {}
+                                    mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                                               for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
+                                # targa_e_telefono=False: un prezzo molto sotto il mercato NON è ammesso (niente prezzi esca)
+                                t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
+                                         rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]), vr=vrmap.get(r["id"]),
+                                         targa_e_telefono=False)
+                                v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache)
+                                v["sezione"] = "affari"
+                                st[f"valuta:{v['categoria']}"] += 1
+                                conn.execute(
+                                    """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)
+                                       VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(),
+                                       categoria=EXCLUDED.categoria, margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati""",
+                                    (r["id"], _P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(_P.riassunto(v), default=str),
+                                     json.dumps(v, default=str)))
+                                if v["categoria"] in scovo.CATEGORIE_SITO:
+                                    conf = "affidabile" if v["categoria"] == "opportunita" else "da_verificare"
+                                    conn.execute(
+                                        """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
+                                             n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
+                                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
+                                        (r["id"], _P.POLICY_VERSION + "+commercianti-top", v.get("M"), v.get("M"), v.get("R_finale"),
+                                         v.get("n"), json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
+                                    conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), "
+                                                 "last_checked_at=now() WHERE id=%s", (conf, r["id"]))
+                                    st["pubblicate"] += 1
+                                conn.commit()
+                            except Exception as e:
+                                conn.rollback()
+                                st["errore"] += 1
+                                if st["errore"] <= 3:
+                                    L.warning("COMMERCIANTI_TOP %s: %s", r.get("id"), str(e)[:150])
+                    L.warning("COMMERCIANTI_TOP giro: %d candidati lontani senza promo, %s", len(ids), json.dumps(dict(st)))
+            except Exception as e:
+                L.warning("COMMERCIANTI_TOP non riuscito: %s", str(e)[:300])
+            time.sleep(20 * 60)
+    threading.Thread(target=commercianti_top_lavoro, daemon=True, name="commercianti-top").start()
 
     def diagnosi_incompleti():
         """2/11 notte: RINVIO_INVIA=incompleti<n>. Le auto di privati della zona senza anno o km (non valutabili):

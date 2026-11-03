@@ -292,7 +292,8 @@ def prova(conn, limite_gruppi: int = 400, giorni_prova: int = 14) -> dict:
             "copertura": dict(copertura)}
 
 
-def calcola_e_salva(conn, limite_gruppi: int = 600, prov_zona: list | None = None) -> dict:
+def calcola_e_salva(conn, limite_gruppi: int = 600, prov_zona: list | None = None,
+                    commercianti_fuori: list | None = None) -> dict:
     """Addestra i modelli sui gruppi principali e salva V/P25/sigma per gli annunci ATTIVI di privati della zona
     (tabella valore_reale), senza toccare il sito: serve alla prova in parallelo e poi alla valutazione."""
     conn.execute("""CREATE TABLE IF NOT EXISTS valore_reale (
@@ -309,7 +310,13 @@ def calcola_e_salva(conn, limite_gruppi: int = 600, prov_zona: list | None = Non
             continue
         st["gruppi"] += 1
         for r in righe:
-            if r["status"] != "attivo" or r.get("seller_type") != "privato" or (prov_zona and r.get("prov") not in prov_zona):
+            if r["status"] != "attivo" or (prov_zona and r.get("prov") not in prov_zona):
+                continue
+            # 3/11 (cliente: "metti commercianti ma lontani, solo i 40 migliori"): anche i commercianti della zona fuori
+            # dalle province in commercianti_fuori (es. ["MI"])
+            if r.get("seller_type") != "privato" and not (
+                    commercianti_fuori is not None and r.get("seller_type") == "commerciante"
+                    and r.get("prov") not in commercianti_fuori):
                 continue
             s = m.stima(r)
             conn.execute("""INSERT INTO valore_reale (listing_id, v, p25, sigma, n, n_vendute, premio_venduta, gruppo, computed_at)
