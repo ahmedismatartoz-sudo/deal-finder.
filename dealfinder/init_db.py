@@ -99,10 +99,12 @@ if __name__ == "__main__":
         except Exception as e:
             print("non_rinnovare:", str(e)[:200])
         # 3/11: PERMESSO_APPUNTAMENTI="a@x.it,b@y.it": accende il tasto "Fissa l'appuntamento" (abbonati Max / prove)
-        for em in [e.strip().lower() for e in os.environ.get("PERMESSO_APPUNTAMENTI", "ahmedismatartoz@gmail.com").split(",") if "@" in e]:
+        for em in [e.strip().lower() for e in os.environ.get("PERMESSO_APPUNTAMENTI", "ahmedismatartoz@gmail.com,astrame87@gmail.com").split(",") if "@" in e]:
             n = conn.execute("""UPDATE dealers SET permessi = array_append(COALESCE(permessi, '{}'), 'appuntamenti')
                                 WHERE lower(email)=%s AND NOT ('appuntamenti' = ANY(COALESCE(permessi, '{}')))""", (em,)).rowcount
-            print("Appuntamenti per", em, ": acceso ora" if n else ": già acceso o account non trovato", flush=True)
+            r = conn.execute("SELECT role, permessi FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
+            print("Appuntamenti per", em, ":", "account non trovato" if not r else
+                  f"acceso ora (ruolo {r['role']})" if n else f"già acceso (ruolo {r['role']}, permessi {r['permessi']})", flush=True)
         conn.commit()
         # ACCOUNT_DISATTIVATI="a@x.it,b@y.it": account spenti (vince su tutto il resto), sessioni chiuse subito
         for em in [e.strip().lower() for e in os.environ.get("ACCOUNT_DISATTIVATI", "").split(",") if "@" in e]:
