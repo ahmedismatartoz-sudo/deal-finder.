@@ -2151,17 +2151,29 @@ def _calcola_elenco() -> None:
             _pool_revisione = _solo_privati(_solo_con_telefono([dict(it) for it in items]))
         except Exception as e:
             logging.getLogger("scovo").warning("DUMP_CANDIDATI non riuscito: %s", str(e)[:200])
-    items = _regole_finali(_solo_con_telefono(items))
+    # 3/11 22:05 (cliente: "impossibile solo 15 benzina sotto 10k e 100k km"): conteggio di quel gruppo passo per passo
+    _bz = lambda xs: sum(1 for it in xs if "benzin" in str(it.get("carb") or "").lower() and 0 < (it.get("prezzo") or 0) < 10000
+                         and it.get("km") is not None and int(it["km"]) < 100000)
+    _fun = [("inizio", _bz(items))]
+    items = _solo_con_telefono(items); _fun.append(("telefono", _bz(items)))
+    items = _regole_finali(items); _fun.append(("regole_finali", _bz(items)))
     # 26/10: le auto scelte a mano sostituiscono la stessa auto arrivata dal calcolo (così Jev non le toglie per
     # "confronti non uguali": restano col margine prudente scelto a mano, min(calcolo, mercato −5%))
     _forz = _forzate_sito(set(), opens)
     _ids_f = {f["id"] for f in _forz}
     items = [it for it in items if it["id"] not in _ids_f] + _forz
-    items = _tetto_commercianti(_zona_sito(_rivendita_prudente(_mercato_calibrato(_margine_minimo_sito(_senza_scarti_id(_margini_gonfiati(_decisioni_jev(_solo_privati(_senza_solo_finanziamento(_margine_alta(_margine_recenti(items))))))))))))
+    for _nome, _f in (("recenti", _margine_recenti), ("alta", _margine_alta), ("finanziamento", _senza_solo_finanziamento),
+                      ("solo_privati", _solo_privati), ("jev", _decisioni_jev), ("controllo_ai", _margini_gonfiati),
+                      ("scarti", _senza_scarti_id), ("margine_minimo", _margine_minimo_sito), ("calibrato", _mercato_calibrato),
+                      ("rivendita_prudente", _rivendita_prudente), ("zona", _zona_sito), ("tetto_commercianti", _tetto_commercianti)):
+        items = _f(items)
+        _fun.append((_nome, _bz(items)))
     # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
     items += _senza_scarti_id(_supercar_europa({it["id"] for it in items}, opens))
     items += _senza_scarti_id(_supercar_lusso({it["id"] for it in items}, opens))
     items = _solo_100km(items)
+    _fun.append(("100km", _bz(items)))
+    logging.getLogger("scovo").warning("BENZ_FUNNEL benzina <10k <100k km passo per passo: %s", json.dumps(_fun))
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
@@ -5625,6 +5637,33 @@ def _tempo_reale():
                 L.warning("RIALLINEA non riuscito: %s", str(e)[:300])
             time.sleep(float(os.environ.get("RIALLINEA_MIN", "20")) * 60)
     threading.Thread(target=riallinea_sito, daemon=True, name="riallinea").start()
+
+    def diag_benzina():
+        """3/11 22:05: quante benzina <10k <100k km dei privati in zona ci sono nel database e a che punto della
+        valutazione si fermano (solo conteggi nei log, BENZ_DB)."""
+        time.sleep(400)
+        try:
+            from ..pricing import policy_v2 as _P
+            from ..zone import tutte
+            with connect() as conn:
+                conn.execute("SET statement_timeout = '240s'")
+                base = """FROM listings l WHERE l.status='attivo' AND l.seller_type='privato' AND upper(l.province) = ANY(%(pr)s)
+                          AND l.fuel ILIKE 'benzin%%' AND l.price_eur BETWEEN 1000 AND 9999 AND l.mileage_km < 100000"""
+                pr = [p for p in tutte() if p in PROVINCE_100KM] or list(tutte())
+                tot = conn.execute("SELECT count(*) AS n, count(*) FILTER (WHERE l.stage='approfondito') AS appr " + base,
+                                   {"pr": pr}).fetchone()
+                cat = conn.execute("""SELECT COALESCE(u.categoria,'senza_valutazione') AS c, count(*) AS n,
+                        count(*) FILTER (WHERE u.margine >= 1500) AS m1500, count(*) FILTER (WHERE u.margine BETWEEN 800 AND 1499) AS m800,
+                        count(*) FILTER (WHERE u.margine BETWEEN 0 AND 799) AS m0,
+                        count(*) FILTER (WHERE COALESCE(u.riassunto->>'policy_rev','') = %(rev)s) AS rev_nuova
+                        """ + base.replace("FROM listings l", "FROM listings l LEFT JOIN LATERAL (SELECT categoria, margine, riassunto "
+                        "FROM valutazioni_policy v WHERE v.listing_id = l.id ORDER BY computed_at DESC LIMIT 1) u ON true") +
+                        " GROUP BY 1 ORDER BY 2 DESC", {"pr": pr, "rev": _P.POLICY_REV}).fetchall()
+            logging.getLogger("scovo").warning("BENZ_DB totale=%s approfondite=%s per categoria: %s", tot["n"], tot["appr"],
+                                               json.dumps([dict(r) for r in cat], default=str))
+        except Exception as e:
+            logging.getLogger("scovo").warning("BENZ_DB non riuscito: %s", str(e)[:300])
+    threading.Thread(target=diag_benzina, daemon=True, name="diag_benz").start()
 
     _AVVIO_COMM = time.strftime("%Y%m%d%H%M%S")
 
