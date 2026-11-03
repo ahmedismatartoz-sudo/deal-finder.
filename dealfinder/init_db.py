@@ -98,6 +98,12 @@ if __name__ == "__main__":
             _abb.prova_pronto()
         except Exception as e:
             print("non_rinnovare:", str(e)[:200])
+        # 3/11: PERMESSO_APPUNTAMENTI="a@x.it,b@y.it": accende il tasto "Fissa l'appuntamento" (abbonati Max / prove)
+        for em in [e.strip().lower() for e in os.environ.get("PERMESSO_APPUNTAMENTI", "").split(",") if "@" in e]:
+            n = conn.execute("""UPDATE dealers SET permessi = array_append(COALESCE(permessi, '{}'), 'appuntamenti')
+                                WHERE lower(email)=%s AND NOT ('appuntamenti' = ANY(COALESCE(permessi, '{}')))""", (em,)).rowcount
+            print("Appuntamenti accesi per", em, "(già acceso)" if not n else "")
+        conn.commit()
         # ACCOUNT_DISATTIVATI="a@x.it,b@y.it": account spenti (vince su tutto il resto), sessioni chiuse subito
         for em in [e.strip().lower() for e in os.environ.get("ACCOUNT_DISATTIVATI", "").split(",") if "@" in e]:
             row = conn.execute("SELECT id FROM dealers WHERE lower(email)=%s", (em,)).fetchone()
