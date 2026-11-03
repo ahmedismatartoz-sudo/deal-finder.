@@ -5688,11 +5688,11 @@ def _tempo_reale():
                 rows = conn.execute("""SELECT l.id, l.make, l.model, l.fuel FROM listings l
                     LEFT JOIN LATERAL (SELECT margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
                                        ORDER BY computed_at DESC LIMIT 1) u ON true
-                    WHERE l.status='attivo' AND l.seller_type='privato' AND l.stage='approfondito'
+                    WHERE l.status='attivo' AND l.seller_type='privato'
                       AND upper(l.province) = ANY(%s) AND l.fuel ILIKE 'benzin%%' AND l.price_eur BETWEEN 1000 AND 9999
                       AND COALESCE(l.mileage_km, 0) BETWEEN 1 AND 99999 AND COALESCE(l.damage_declared, false) = false
                       AND COALESCE(u.riassunto->>'policy_rev', '') <> %s AND COALESCE(u.margine, 0) >= -2500
-                    ORDER BY COALESCE(u.margine, 0) DESC LIMIT 4000""", (pr, _P.POLICY_REV)).fetchall()
+                    ORDER BY COALESCE(u.margine, 0) DESC LIMIT 5000""", (pr, _P.POLICY_REV)).fetchall()
                 L.warning("BENZINA_SUBITO da ricalcolare: %d", len(rows))
                 rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
                 st = _C()
