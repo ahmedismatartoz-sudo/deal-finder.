@@ -1130,6 +1130,13 @@ def _regole_finali(items: list[dict]) -> list[dict]:
     # si tolgono più per il margine alto; restano i controlli anti-truffa (prezzo sotto il 55% del mercato solo con
     # targa e numero, sotto il 20% mai, testo da truffa e confronti sbagliati controllati dall'AI subito dopo)
     if os.environ.get("RIVENDITA_VERA", "1") == "1" and os.environ.get("SITO_GONFIATE_ATTIVO", "0") != "1":
+        # 3/11 21:27 (cliente: "basta il numero di telefono, e foto e descrizione controllate"): restano, ma solo dopo
+        # il controllo dell'AI su foto e testo (_decisioni_jev: senza controllo aspettano, truffa o foto finte fuori)
+        for it in items:
+            pv = it.get("pv") or {}
+            if pv.get("margine") is not None and it.get("prezzo") and int(pv["margine"]) > g_eur \
+                    and int(pv["margine"]) > g_pct * int(it["prezzo"]):
+                it["da_verificare"] = True
         g_eur = 10**9
     items = [it for it in items if not (
         (it.get("pv") or {}).get("margine") is not None and it.get("prezzo")
@@ -1399,7 +1406,8 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
                 "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.correzione_pct, d.versione_ok, "
                 "(d.risposta->'guasto'->>'noul')::float AS guasto, (d.risposta->'prezzo_rata'->>'noul')::float AS rata, "
                 "(d.risposta->'km_credibili'->>'noul')::float AS km_ok, "
-                "(d.risposta->'answers'->'danni_foto'->>'noul')::float AS danni "
+                "(d.risposta->'answers'->'danni_foto'->>'noul')::float AS danni, "
+                "(d.risposta->'answers'->'foto_internet'->>'noul')::float AS foto_internet "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
                 "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
     except Exception as e:
@@ -1413,6 +1421,15 @@ def _decisioni_jev(items: list[dict]) -> list[dict]:
     c, tenute = Counter(), []
     for it in items:
         d = dec.get(it.get("id"))
+        if it.get("da_verificare"):
+            # guadagno molto alto: entra solo col numero e con foto e descrizione controllate dall'AI
+            if not d:
+                c["alte_in_attesa_controllo"] += 1
+                continue
+            if it.get("senza_numero") or (d["truffa"] or 0) >= tr or float(d.get("foto_internet") or 0) >= .7:
+                c["alte_tolte_truffa_o_foto"] += 1
+                continue
+            c["alte_controllate_ok"] += 1
         if not d:
             c["non_decise"] += 1
             tenute.append(it)
