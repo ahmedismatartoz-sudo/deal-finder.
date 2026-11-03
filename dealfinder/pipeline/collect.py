@@ -645,9 +645,19 @@ def run(mode: str) -> Counter:
             conn.commit()
         # Si segnano gli scomparsi solo se la raccolta è andata a buon fine,
         # altrimenti un blocco del sito farebbe "sparire" tutto.
+        # 3/11: e solo con una PROVA per ogni annuncio (pagina aperta: 404/410, rimando alla ricerca, "scaduto").
+        # Prima tutti quelli non visti da 36 ore diventavano 'scomparso' (= venduti per i prezzi), ma la ricerca
+        # della notte legge solo gli annunci più recenti: migliaia di auto ancora in vendita risultavano vendute.
         seen = sum(v for k, v in stats.items() if k.startswith("subito:") and k != "subito:errore")
         if mode == "mercato" and not stats["subito:errore"] and seen > 200:
-            stats["subito:scomparsi"] = mark_disappeared(conn, "subito", not_seen_hours=36)
+            try:
+                from .verify import scomparsi_con_prova
+                esito = scomparsi_con_prova(conn, "subito", not_seen_hours=36)
+                stats["subito:scomparsi"] = int(esito.get("scomparso", 0))
+                stats["subito:scomparsi_controllati"] = sum(v for k, v in esito.items() if k in ("attivo", "scomparso", "errore"))
+            except Exception as e:          # nessuno segnato senza prova
+                conn.rollback()
+                log.warning("scomparsi Subito non controllati: %s", str(e)[:200])
         conn.commit()
         # Riepilogo della qualità dei dati raccolti nell'ultima ora (visibile nei log)
         for q in conn.execute(

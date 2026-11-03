@@ -138,11 +138,59 @@ def _head_stato(client, url: str) -> str | None:
     return None
 
 
+_RE_ID_SUBITO = re.compile(r"(\d{6,})\.htm")
+
+
 def _stesso_annuncio(url: str, finale: str) -> bool:
-    """Dopo i reindirizzamenti si è ancora sulla pagina dell'annuncio? (un annuncio tolto rimanda alla ricerca)"""
+    """Dopo i reindirizzamenti si è ancora sulla pagina dell'annuncio? (un annuncio tolto rimanda alla ricerca)
+    3/11: anche se il titolo cambia (Subito rimanda a un indirizzo con un altro testo ma lo STESSO numero
+    dell'annuncio) è sempre lo stesso annuncio: prima risultava "scomparso" per errore."""
     from urllib.parse import urlparse
     a, f = urlparse(url).path.rstrip("/"), urlparse(finale).path.rstrip("/")
-    return a == f or (a.split("/")[-1] and a.split("/")[-1] == f.split("/")[-1])
+    if a == f or (a.split("/")[-1] and a.split("/")[-1] == f.split("/")[-1]):
+        return True
+    ma, mf = _RE_ID_SUBITO.search(a), _RE_ID_SUBITO.search(f)
+    return bool(ma and mf and ma.group(1) == mf.group(1))
+
+
+_SUBITO_TOLTO = ("annuncio non è più disponibile", "questo annuncio è scaduto", "annuncio rimosso", "annuncio scaduto",
+                 "annuncio non trovato")
+
+
+def subito_stato_con_prova(client, url: str) -> str:
+    """3/11: stato di un annuncio Subito per la marcatura 'scomparso' IN BLOCCO (annunci non più visti nelle ricerche).
+    Più severo di _subito_stato: 'scomparso' SOLO con una prova (404/410, rimando a una pagina senza il numero
+    dell'annuncio, oppure pagina senza i dati dell'annuncio e con la scritta "annuncio scaduto/rimosso").
+    Pagina con i dati dell'annuncio = 'attivo'. Tutto il resto (errori, blocchi, pagina non riconosciuta) = 'errore':
+    nessuna decisione, l'annuncio resta com'è."""
+    from ..collectors.base import find_key, next_data
+    try:
+        r = client.get(url)
+    except Exception as e:
+        log.info("SCOMPARSI subito %s: %s", url, str(e)[:100])
+        return "errore"
+    code = getattr(r, "status_code", None)
+    if code in (404, 410):
+        return "scomparso"
+    if code != 200:
+        return "errore"
+    fin = str(getattr(r, "url", "") or url)
+    m = _RE_ID_SUBITO.search(url)
+    if m and m.group(1) not in fin:
+        return "scomparso"                       # rimandati alla ricerca o alla pagina principale
+    if not m and not _stesso_annuncio(url, fin):
+        return "errore"                          # indirizzo senza numero: non si può dire
+    text = getattr(r, "text", "") or ""
+    try:
+        data = next_data(text)
+    except Exception:
+        data = None
+    item = find_key(data, "ad", "item") if isinstance(data, dict) else None
+    if isinstance(item, dict) and (item.get("urn") or item.get("subject") or item.get("features")):
+        return "attivo"
+    if any(k in text.lower() for k in _SUBITO_TOLTO):
+        return "scomparso"
+    return "errore"
 
 
 def _subito_stato(client, url: str) -> str:

@@ -201,9 +201,10 @@ class SubitoCollector(Collector):
     def __init__(self, client=None, proxy: str | None = None):
         import os
 
-        import httpx
-        self.client = client or httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True,
-                                             proxy=proxy)
+        if client is None:
+            import httpx
+            client = httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True, proxy=proxy)
+        self.client = client
         # Subito blocca le richieste dai server cloud (HTTP 403): se configurato,
         # le pagine passano dal Web Unlocker di Bright Data (stesso account dello scraper Facebook).
         self.unlocker_zone = os.environ.get("BRIGHTDATA_UNLOCKER_ZONE")
@@ -491,7 +492,10 @@ class SubitoCollector(Collector):
         if r.status_code != 200:
             raise RuntimeError(f"subito HTTP {r.status_code} per {url}")
         final = str(getattr(r, "url", url))
-        if final.rstrip("/") != url.rstrip("/") and ".htm" not in final:
+        # 3/11: con il Web Unlocker l'indirizzo della risposta è quello di Bright Data, non di Subito: non è un
+        # rimando alla ricerca (prima ogni annuncio controllato così risultava "scomparso")
+        via_unlocker = bool(self.unlocker_zone and self.unlocker_key)
+        if not via_unlocker and final.rstrip("/") != url.rstrip("/") and ".htm" not in final:
             return None          # rimandato a una pagina di ricerca: annuncio rimosso
         data = next_data(r.text)
         item: Any = find_key(data, "ad", "item") if data else None
