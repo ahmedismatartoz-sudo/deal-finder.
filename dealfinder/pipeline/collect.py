@@ -700,6 +700,8 @@ def _ai_prezzi():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     mode = sys.argv[1] if len(sys.argv) > 1 else "opportunita"
+    from .. import regole_log as _rl                 # 3/11 fase 1: impronta delle regole usate da questo cron
+    _rl.registra("cron:" + (os.environ.get("COLLECT_MODO") or mode))
     import os
     if not os.environ.get("DATABASE_URL"):
         log.info("DATABASE_URL non impostata: servizio non configurato, nulla da fare")

@@ -71,6 +71,16 @@ def test_piano_pro_da_gli_appuntamenti():
 
 def test_checkout_sconto_primo_mese(monkeypatch=None):
     import os
+    env_prima = dict(os.environ)          # 3/11: ripristinato alla fine anche se il test fallisce
+    try:
+        _checkout_sconto_primo_mese()
+    finally:
+        os.environ.clear()
+        os.environ.update(env_prima)
+
+
+def _checkout_sconto_primo_mese():
+    import os
     os.environ.update(STRIPE_SECRET_KEY="sk_test_x", STRIPE_PRICE_ID="price_b", STRIPE_PRICE_PRO="price_p")
     os.environ.pop("ABBONAMENTO_SCONTO_PRIMO_MESE", None)
     ab._CACHE.update(coupon="SCOVO_PRIMO_MESE_50", pro="price_p", base="price_b")
@@ -90,5 +100,3 @@ def test_checkout_sconto_primo_mese(monkeypatch=None):
     assert d["line_items[0][price]"] == "price_p" and d["discounts[0][coupon]"] == "SCOVO_PRIMO_MESE_50"
     assert "allow_promotion_codes" not in d and d["subscription_data[metadata][piano]"] == "pro"
     assert [p["primo_mese"] for p in ab.info()["piani"]] == [50, 100]
-    for k in ("STRIPE_SECRET_KEY", "STRIPE_PRICE_ID", "STRIPE_PRICE_PRO"):
-        os.environ.pop(k)

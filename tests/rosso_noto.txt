@@ -1,0 +1,10 @@
+# Test "rossi noti" con le regole di produzione (python run_tests.py --produzione: RIVENDITA_VERA=1, BENZ_RICHIESTE=1).
+# Descrivono le regole prudenti di prima (RIVENDITA_VERA=0): con la rivendita vera la riduzione è 0 e R = M.
+# Restano verdi con i default dei test (test_policy imposta RIVENDITA_VERA=0 all'import, solo per i suoi test).
+# Fase 1: non si cambia il codice delle regole per farli passare. Da riscrivere come test_v1_* o da togliere
+# insieme al codice v1 (studio 5, §3.2-3.3). Formato: <modulo> <test>  # motivo
+tests.test_policy test_base_preferita_opportunita  # attende riduzione 7% (R = M x 0,93): con la rivendita vera riduzione 0
+tests.test_policy test_fascia_piu_severa_tra_prezzo_e_mercato  # attende riduzione 17% dalla fascia: con la rivendita vera 0
+tests.test_policy test_pochi_confronti_rivendita_prudente  # attende R <= M x 0,90 con pochi confronti: con la rivendita vera R = M
+tests.test_policy test_riduzione_secondo_la_precisione  # attende riduzione 10% con pochi confronti: con la rivendita vera 0
+tests.test_policy test_rivendita_vendita_veloce  # attende V tra R e M x 0,97 (vendita veloce): con la rivendita vera R = M
