@@ -3284,7 +3284,11 @@ def _tempo_reale():
                     _tel_cache.clear()
                     _elenco["t"] = 0.0
                     _aggiorna_elenco(attendi=False)
-                    if os.environ.get("UTIL_SIM", "1") == "1":     # subito il calcolo completo con i numeri nuovi
+                    if os.environ.get("UTIL_SIM", "1") == "1" and not _ricalcolo_sito():
+                        # 3/11 fase 1: il calcolo completo lo fa il cron (collect "ricalcolo"), non il sito (512 MB)
+                        lg.warning("RICALCOLO_SITO spento: utilitarie dopo i telefoni Subito lasciate al cron "
+                                   "(POLICY_RICALCOLO_SITO=1 per rifarle qui)")
+                    elif os.environ.get("UTIL_SIM", "1") == "1":     # subito il calcolo completo con i numeri nuovi
                         from ..pricing import ricalcolo
                         with _c() as conn:
                             ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
@@ -6166,6 +6170,13 @@ def _tempo_reale():
 _calcolo = {"in_corso": False, "completo": False}   # mentre gira il calcolo grande la lettura completa aspetta (memoria: 512 MB)
 
 
+def _ricalcolo_sito() -> bool:
+    """3/11 fase 1: il ricalcolo pesante (ricalcolo.esegui + utilitarie) gira nel cron (collect "ricalcolo"), non nel
+    sito (512 MB: andava fuori memoria, il sito ripartiva e rifaceva tutto). POLICY_RICALCOLO_SITO=1 lo riaccende qui.
+    Cambia solo dove gira il lavoro, non i risultati."""
+    return os.environ.get("POLICY_RICALCOLO_SITO", "0") == "1"
+
+
 def _ricalcolo_policy():
     """Ricalcolo con la policy prudente (pricing/ricalcolo.py): subito dopo l'avvio e poi ogni POLICY_ORE ore;
     finito il giro, l'elenco del sito si ricalcola con i nuovi numeri."""
@@ -6224,7 +6235,11 @@ async def _lifespan(app):
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
         _aggiorna_visibili()
     if os.environ.get("DATABASE_URL") and os.environ.get("POLICY_RICALCOLO", "1") == "1":
-        _ricalcolo_policy()
+        if _ricalcolo_sito():
+            _ricalcolo_policy()
+        else:
+            logging.getLogger("policy").warning("RICALCOLO_SITO spento: il ricalcolo all'avvio lo fa il cron "
+                                                "(POLICY_RICALCOLO_SITO=1 per rifarlo nel sito)")
     if os.environ.get("DATABASE_URL") and os.environ.get("TEMPO_REALE", "1") == "1":
         _tempo_reale()
     if os.environ.get("DATABASE_URL"):
