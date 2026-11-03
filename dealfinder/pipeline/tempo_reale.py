@@ -80,6 +80,22 @@ def telefono_subito(item: dict | None) -> bool:
     return ph.strip() != "" or ph == "0"
 
 
+def salva_telefono(conn, lid: int, tel: bool | None, controllato: bool = False) -> None:
+    """3/11 (studio 4, P22): stato del telefono stabile (solo sì/no, mai il numero).
+    - tel None: non si sa niente di nuovo, non si tocca nulla (prima un True già noto tornava NULL a ogni rilettura);
+    - tel True da una ricerca o dal testo: telefono_ok=True; telefono_at cambia solo se prima non era True;
+    - controllato=True (pagina dell'annuncio aperta davvero): si scrive il risultato e telefono_at=now().
+    Così telefono_at resta la data dell'ultimo controllo vero e la regola "ricontrolla dopo 12 ore" di
+    telefoni_candidate funziona."""
+    if tel is None:
+        return
+    if controllato:
+        conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (bool(tel), lid))
+    elif tel:
+        conn.execute("UPDATE listings SET telefono_ok=true, telefono_at=now() WHERE id=%s AND telefono_ok IS NOT TRUE",
+                     (lid,))
+
+
 def ha_numero_testo(title: str | None, desc: str | None) -> bool:
     from ..web.scovo import RE_LANDLINE, RE_MOBILE
     t = f"{title or ''} {desc or ''}"
@@ -873,13 +889,27 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
         for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km, "gearbox": l.gearbox,
                               "power_kw": l.power_kw, "version_raw": l.version_raw}, l.title, l.description).items():
             setattr(l, k, v)                      # dati mancanti presi dal testo dell'annuncio
+        stats[f"letti:{l.source}"] += 1
         try:
             normalize_fields(l)
         except Exception:
             stats["scartati_dati"] += 1
+            stats["scarto:dati"] += 1
             continue
-        if not l.province or l.province.upper() not in zona:
+        if not l.province and l.city:
+            # 3/11 (studio 4, P4): provincia dal comune prima di dire "fuori zona" (AutoScout24 senza CAP)
+            from .collect import provincia_da_comune
+            pv = provincia_da_comune(conn, l.city)
+            if pv:
+                l.province = pv
+                stats["provincia_ricavata"] += 1
+        if not l.province:
             stats[f"{l.source}:fuori_zona"] += 1
+            stats["scarto:senza_provincia"] += 1
+            continue
+        if l.province.upper() not in zona:
+            stats[f"{l.source}:fuori_zona"] += 1
+            stats["scarto:fuori_zona"] += 1
             continue
         if l.province and not l.region:
             from ..core.normalize import PROVINCE_REGION
@@ -889,14 +919,15 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
         except Exception as e:
             conn.rollback()
             stats["scartati_dati"] += 1
+            stats["scarto:non_salvato"] += 1
             log.info("TR annuncio %s non salvato: %s", l.url, str(e)[:100])
             continue
+        stats["salvati"] += 1
         if l.source == "autoscout24":
-            if tel is not None:
-                conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, lid))
+            salva_telefono(conn, lid, tel, controllato=tel is not None)        # dalla pagina dell'annuncio
         else:
-            conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s",
-                         (True if (tel_sub or ha_numero_testo(l.title, l.description)) else None, lid))   # Subito: "no" solo dal controllo
+            # Subito: "sì" dalla ricerca (advertiser.phone) o dal testo; il "no" lo dà solo il controllo della pagina
+            salva_telefono(conn, lid, True if (tel_sub or ha_numero_testo(l.title, l.description)) else None)
         conn.execute("UPDATE listings SET last_checked_at=now() WHERE id=%s", (lid,))
         stats[f"{l.source}:{ev}"] += 1
         if ev in ("prezzo", "riapparso"):

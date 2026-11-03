@@ -279,3 +279,124 @@ def test_ripubblicazione_senza_indice_non_fa_niente():
     upsert_listing(conn, Listing(source="subito", source_id="n2", url="https://x/n2", make="fiat", model="panda"))
     _schema_nuovo()
     assert not any("status IN ('scomparso','scaduto')" in s for s, _ in conn.sql)   # niente scansione della tabella
+
+
+# ------------------------------------------------------------------ 4, 5, 18. _salva: provincia, telefono, contatori
+
+def _salva_finto(listings, tel_prima=None, mappa=None):
+    """_salva con upsert finto (un id per annuncio) e mappa comuni -> province finta."""
+    from collections import Counter
+    from dealfinder import db
+    from dealfinder.pipeline import collect, tempo_reale as tr
+    salvati = []
+
+    def upsert(conn, l):
+        salvati.append(l)
+        return 100 + len(salvati), "invariato"
+    vero = db.upsert_listing
+    db.upsert_listing = upsert
+    collect._PROV_COMUNE.update(mappa=mappa or {}, at=9e18)
+    try:
+        conn, st = _Conn(), Counter()
+        tr._salva(conn, listings, st)
+    finally:
+        db.upsert_listing = vero
+        collect._PROV_COMUNE.update(mappa=None, at=0.0)
+    return conn, st, salvati
+
+
+def test_salva_provincia_dal_comune_e_contatori():
+    ls = [_l(source="autoscout24", source_id="a1", make="fiat", model="panda", price_eur=4000, city="Rho"),
+          _l(source="autoscout24", source_id="a2", make="fiat", model="panda", price_eur=4000, city="Paesino ignoto"),
+          _l(source="subito", source_id="s1", make="fiat", model="panda", price_eur=4000, province="RM", city="Roma"),
+          _l(source="subito", source_id="s2", make="fiat", model="panda", price_eur=4000, province="MI", city="Milano")]
+    conn, st, salvati = _salva_finto(ls, mappa={"rho": "MI"})
+    assert [l.source_id for l in salvati] == ["a1", "s2"] and salvati[0].province == "MI"
+    assert st["provincia_ricavata"] == 1 and st["scarto:senza_provincia"] == 1 and st["scarto:fuori_zona"] == 1
+    letti = sum(v for k, v in st.items() if k.startswith("letti:"))
+    scarti = sum(v for k, v in st.items() if k.startswith("scarto:"))
+    assert letti == 4 and letti == st["salvati"] + scarti
+
+
+def test_salva_telefono_stabile():
+    sub = {"advertiser": {"phone": "0"}}
+    con = _l(source="subito", source_id="s1", make="fiat", model="panda", price_eur=4000, province="MI", raw=sub)
+    conn, _, _ = _salva_finto([con])
+    tel = [s for s, _ in conn.sql if "telefono_ok" in s]
+    assert len(tel) == 1 and "telefono_ok=true" in tel[0] and "telefono_ok IS NOT TRUE" in tel[0]   # telefono_at solo se cambia
+    # rilettura senza indicatore: nessuna scrittura (prima tornava NULL e telefono_at=now())
+    senza = _l(source="subito", source_id="s1", make="fiat", model="panda", price_eur=4000, province="MI", raw={})
+    conn, _, _ = _salva_finto([senza])
+    assert not any("telefono" in s for s, _ in conn.sql)
+    # AutoScout24 dalla pagina (controllo vero): si scrive il risultato con la data
+    asx = _l(source="autoscout24", source_id="a9", make="fiat", model="panda", price_eur=4000, province="MI",
+             raw={"_telefono": False})
+    conn, _, _ = _salva_finto([asx])
+    assert [p for s, p in conn.sql if "telefono_ok" in s] == [(False, 101)]
+
+
+def test_vecchio_filtro_senza_numero_considera_il_bottone():
+    from dealfinder.pipeline.collect import _fuori_regole_raccolta, senza_numero
+    con_bottone = _l(source="subito", make="fiat", model="panda", year=2015, mileage_km=90000,
+                     title="Fiat Panda", description="ottime condizioni", raw={"advertiser": {"phone": "0"}})
+    assert not senza_numero(con_bottone) and _fuori_regole_raccolta(con_bottone) is None
+    nulla = _l(source="subito", make="fiat", model="panda", year=2015, mileage_km=90000, title="Fiat Panda", raw={})
+    assert senza_numero(nulla)
+    assert _fuori_regole_raccolta(nulla) is None              # senza numero NON è più un motivo di scarto
+    vecchia = _l(source="subito", make="fiat", model="panda", year=2003, mileage_km=90000, raw={})
+    assert _fuori_regole_raccolta(vecchia) == "regole"
+
+
+# ------------------------------------------------------------------ 1. collect.run salva tutto (anche senza numero)
+
+def test_collect_run_non_scarta_subito_senza_numero():
+    import contextlib
+    from dealfinder.collectors import autoscout
+    from dealfinder.pipeline import collect
+    from dealfinder.pricing import train
+    annunci = [_l(source="subito", source_id=f"s{i}", url=f"https://www.subito.it/auto/x-{500000 + i}.htm",
+                  make="Fiat", model="Panda", year=2003 if i < 10 else 2015, mileage_km=90000, fuel="Benzina",
+                  price_eur=3000 + i, province="MI", city="Milano", title="Fiat Panda", description="ottima", raw={})
+               for i in range(100)]
+
+    class FintoSub:
+        source = "subito"
+
+        def __init__(self, *a, **k):
+            self.min_delay_s = self.max_delay_s = 0
+
+        def search(self, q):
+            yield from annunci
+
+    salvati = []
+
+    def upsert(conn, l):
+        salvati.append(l)
+        return len(salvati), "nuovo"
+    conn = _Conn(colonne=False)
+
+    @contextlib.contextmanager
+    def connetti():
+        yield conn
+    vecchi = (collect.SubitoCollector, collect.connect, collect.log_job, collect.upsert_listing, train.load_active,
+              autoscout.AutoScoutCollector)
+    collect.SubitoCollector, collect.connect, collect.upsert_listing = FintoSub, connetti, upsert
+    collect.log_job = lambda c, job: (lambda ok, st: None)
+    train.load_active = lambda c: None
+    autoscout.AutoScoutCollector = lambda *a, **k: type("A", (), {"source": "autoscout24", "stop": False})()
+    import os
+    env = dict(os.environ)
+    try:
+        st = collect.run("full_sub")
+    finally:
+        os.environ.clear()
+        os.environ.update(env)
+        (collect.SubitoCollector, collect.connect, collect.log_job, collect.upsert_listing, train.load_active,
+         autoscout.AutoScoutCollector) = vecchi
+        _schema_nuovo()
+    assert len(salvati) == 100 and st["subito:senza_numero_letti"] == 100
+    assert st["subito:fuori_regole"] == 10                           # auto del 2003: salvate come solo confronto
+    mercato = [p for s, p in conn.sql if "stage_reason='fuori_regole'" in s]
+    assert sorted(p[0] for p in mercato) == list(range(1, 11))
+    r = collect.riepilogo_scarti(st)
+    assert r["letti"] == 100 and r["salvati"] == 100 and r["non_contati"] == 0

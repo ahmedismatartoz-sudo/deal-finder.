@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import time
-import zlib
 import re
 import sys
 from collections import Counter
@@ -143,38 +142,51 @@ def city_provinces(conn) -> dict:
     return out
 
 
-def _fuori_regole_raccolta(l) -> str | None:
-    """Regole della raccolta completa: max 180.000 km, dal 2007. Restituisce il motivo dello scarto:
-    "regole" (km/anno) o "senza_numero" (Subito senza numero scritto nel testo: se ne tiene la metà migliore)."""
+_PROV_COMUNE: dict = {"mappa": None, "at": 0.0}
+
+
+def provincia_da_comune(conn, city: str | None) -> str | None:
+    """3/11 (studio 4, P4): provincia dal comune (mappa imparata dagli annunci Subito, letta al massimo ogni 6 ore
+    per processo). None se il comune non è noto."""
+    import time as _t
+    if not city:
+        return None
+    if _PROV_COMUNE["mappa"] is None or _t.time() - _PROV_COMUNE["at"] > 6 * 3600:
+        try:
+            _PROV_COMUNE.update(mappa=city_provinces(conn), at=_t.time())
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            log.warning("comuni -> province non letti: %s", str(e)[:120])
+            _PROV_COMUNE.update(mappa={}, at=_t.time())
+    return _PROV_COMUNE["mappa"].get(_norm_city(city))
+
+
+def senza_numero(l) -> bool:
+    """Subito senza numero: né nel testo né il bottone "Chiama" (advertiser.phone nella ricerca). Solo sì/no."""
+    if l.source != "subito":
+        return False
     from ..web import scovo
+    from .tempo_reale import telefono_subito
+    if telefono_subito(l.raw if isinstance(l.raw, dict) else None):
+        return False
+    t = f"{l.title or ''} {l.description or ''}"
+    return not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t))
+
+
+def _fuori_regole_raccolta(l) -> str | None:
+    """Regole della raccolta completa: max 180.000 km, dal 2007. "regole" se fuori (l'auto si salva lo stesso,
+    come solo confronto: stage 'mercato'), altrimenti None.
+    3/11 (studio 4, P1): il numero di telefono non è più un motivo di scarto (prima si buttava circa metà degli
+    annunci Subito senza numero nel testo, guardando solo il testo e non il bottone "Chiama"): si guarda solo
+    alla pubblicazione."""
     if l.mileage_km and l.mileage_km > int(os.environ.get("FULL_KM", "180000")):
         return "regole"
     if l.year and l.year < int(os.environ.get("FULL_ANNO", "2007")):
         return "regole"
-    if l.source == "subito":
-        t = f"{l.title or ''} {l.description or ''}"
-        if not (scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)):
-            return "senza_numero"
     return None
-
-
-class _MetaMigliore:
-    """Subito senza numero: si tiene circa la METÀ_SENZA_NUMERO (0.5) migliore. Il punteggio è il guadagno
-    stimato dal modello prezzi; si tiene chi sta sopra la mediana dei punteggi visti finora (si aggiusta da sola)."""
-    def __init__(self, quota: float):
-        import bisect
-        self.quota, self.visti, self._bis = quota, [], bisect
-
-    def tieni(self, punteggio: float) -> bool:
-        if self.quota >= 1:
-            return True
-        if self.quota <= 0:
-            return False
-        self._bis.insort(self.visti, punteggio)
-        if len(self.visti) < 50:
-            return True
-        soglia = self.visti[int(len(self.visti) * (1 - self.quota))]
-        return punteggio >= soglia
 
 
 def run(mode: str) -> Counter:
@@ -535,30 +547,39 @@ def run(mode: str) -> Counter:
                     n += 1
             conn.commit()
             stats["facebook:provincia_aggiunta"] += n
-        meta = _MetaMigliore(float(os.environ.get("META_SENZA_NUMERO", "0.5")))
+        from ..core.dal_testo import completa
+        from ..db import db_pieno
+        from .tempo_reale import ha_numero_testo, salva_telefono, telefono_subito
+        modi_full = ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra")
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
+                    stats[f"letti:{listing.source}"] += 1
                     try:
+                        # 3/11 (studio 4, P12): anche qui alimentazione, anno, km, cambio e kW dal testo, come in _salva
+                        for k, v in completa({"fuel": listing.fuel, "year": listing.year, "mileage_km": listing.mileage_km,
+                                              "gearbox": listing.gearbox, "power_kw": listing.power_kw,
+                                              "version_raw": listing.version_raw}, listing.title, listing.description).items():
+                            setattr(listing, k, v)
                         normalize_fields(listing)
                     except Exception as e:          # un testo strano non ferma tutta la raccolta
                         stats[f"{collector.source}:scartato_dati"] += 1
+                        stats["scarto:dati"] += 1
                         log.warning("annuncio %s non normalizzato: %r", listing.url, e)
                         continue
-                    if mode in ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra"):
-                        motivo = _fuori_regole_raccolta(listing)
-                        if motivo == "regole":
-                            stats[f"{listing.source}:fuori_regole"] += 1
-                            continue
-                        if motivo == "senza_numero":
-                            ps = prescreen(model, listing) if model is not None else {}
-                            pot = ps.get("potenziale")
-                            if pot is None:     # niente stima: metà a caso (fissa per annuncio)
-                                pot = -10**6 + (zlib.crc32(listing.url.encode()) % 1000)
-                            if not meta.tieni(pot):
-                                stats["subito:senza_numero_scartate"] += 1
+                    solo_confronto = False
+                    if mode in modi_full:
+                        if senza_numero(listing):
+                            stats["subito:senza_numero_letti"] += 1          # solo contato: si salva sempre
+                        if _fuori_regole_raccolta(listing) == "regole":
+                            # 3/11 (P5): fuori km/anno si salva lo stesso come confronto (stage 'mercato'), tranne
+                            # con il database oltre CE_DB_MAX_GB
+                            if db_pieno(conn):
+                                stats[f"{listing.source}:fuori_regole_db_pieno"] += 1
+                                stats["scarto:db_pieno"] += 1
                                 continue
-                            stats["subito:senza_numero_tenute"] += 1
+                            stats[f"{listing.source}:fuori_regole"] += 1
+                            solo_confronto = True
                     if listing.source in ("facebook", "autoscout24"):
                         # posizione giusta: provincia dal comune; fuori da Milano e dintorni non si salva
                         pv = prov_of.get(_norm_city(listing.city))
@@ -569,9 +590,11 @@ def run(mode: str) -> Counter:
                             from ..pricing.ricalcolo import NORD
                             if not pv or pv not in NORD or pv in ZONA:
                                 stats["mercato_nord:fuori"] += 1
+                                stats["scarto:fuori_nord"] += 1
                                 continue
                         elif mode not in ("incidentate", "modena_inc") and ((pv and pv not in ZONA) or (listing.source == "autoscout24" and not pv)):
                             stats[f"{listing.source}:fuori_zona"] += 1
+                            stats["scarto:senza_provincia" if not pv else "scarto:fuori_zona"] += 1
                             continue
                         if listing.province and not listing.region:
                             from ..core.normalize import PROVINCE_REGION
@@ -579,16 +602,25 @@ def run(mode: str) -> Counter:
                     from ..zone import comune_ok
                     if not comune_ok(listing.province, listing.city):
                         stats[f"{listing.source}:fuori_60km"] += 1
+                        stats["scarto:fuori_60km"] += 1
                         continue
                     try:
                         lid, event = upsert_listing(conn, listing)
                     except Exception as e:          # un annuncio con dati assurdi non ferma la raccolta
                         conn.rollback()
                         stats[f"{collector.source}:scartato_dati"] += 1
+                        stats["scarto:non_salvato"] += 1
                         log.warning("annuncio %s non salvato: %s", listing.url, str(e)[:120])
                         continue
+                    stats["salvati"] += 1
                     if mode == "mercato_nord":           # solo prezzo di riferimento: mai proposta
                         conn.execute("UPDATE listings SET stage='mercato', stage_reason='mercato_nord' WHERE id=%s", (lid,))
+                    elif solo_confronto:
+                        conn.execute("UPDATE listings SET stage='mercato', stage_reason='fuori_regole' "
+                                     "WHERE id=%s AND stage IS DISTINCT FROM 'approfondito'", (lid,))
+                    if listing.source == "subito":       # sì/no del telefono stabile (mai il numero)
+                        salva_telefono(conn, lid, True if (telefono_subito(listing.raw if isinstance(listing.raw, dict) else None)
+                                                           or ha_numero_testo(listing.title, listing.description)) else None)
                     if model is not None and event in ("nuovo", "prezzo", "riapparso"):
                         ps = prescreen(model, listing)
                         conn.execute("UPDATE listings SET model_p50=%s, model_p25=%s, prescreen=%s, "
@@ -599,7 +631,7 @@ def run(mode: str) -> Counter:
                         if ps["esito"] == "non_interessante":
                             conn.execute("UPDATE listings SET stage='mercato', stage_reason='modello_prezzi' "
                                          "WHERE id=%s AND stage='nuovo'", (lid,))
-                    if event in ("prezzo", "riapparso"):
+                    if event in ("prezzo", "riapparso") and not solo_confronto:
                         # prezzo cambiato: l'annuncio va rivalutato
                         conn.execute("UPDATE listings SET stage='nuovo' WHERE id=%s AND stage<>'nuovo'", (lid,))
                     stats[f"{collector.source}:{event}"] += 1
@@ -679,7 +711,16 @@ def run(mode: str) -> Counter:
             from . import passi
             passi.finito(os.environ["PASSI_JOB"])
     log.info("raccolta %s: %s", mode, dict(stats))
+    log.warning("RACCOLTA_SCARTI %s", json.dumps(riepilogo_scarti(stats)))
     return stats
+
+
+def riepilogo_scarti(stats) -> dict:
+    """3/11 (studio 4 §4.1): una riga per giro con letti, salvati e ogni scarto (letti = salvati + scarti)."""
+    letti = sum(v for k, v in stats.items() if k.startswith("letti:") and isinstance(v, int))
+    scarti = {k.split(":", 1)[1]: v for k, v in stats.items() if k.startswith("scarto:") and isinstance(v, int) and v}
+    return {"letti": letti, "salvati": int(stats.get("salvati", 0)), "scarti": scarti,
+            "non_contati": letti - int(stats.get("salvati", 0)) - sum(scarti.values())}
 
 
 def _ai_prezzi():

@@ -397,8 +397,8 @@ def giro() -> dict:
             for lid, stato, tel in ex.map(numero, da_fare):
                 if stato == "scomparso":
                     st["autoscout_sparite"] += 1
-                elif tel is not None or stato == "attivo":
-                    conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, lid))
+                elif tel is not None:             # 3/11: mai più NULL su un valore già noto
+                    tr.salva_telefono(conn, lid, tel, controllato=True)
                     st[f"autoscout_telefono_{tel}"] += 1
         conn.commit()
         # 4. valutazione prudente e pubblicazione
