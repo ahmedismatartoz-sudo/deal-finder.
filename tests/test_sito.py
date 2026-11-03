@@ -145,10 +145,14 @@ def test_soglie_guadagno_per_prezzo():
 
 def test_niente_auto_prima_del_2007():
     from dealfinder.web import scovo
+    prima = scovo.SOGLIE
     scovo.SOGLIE = scovo.SOGLIE_FASCE
-    ok = {"mercato": 10000, "prezzo": 3000, "rip_hi": 0, "anno": 2007}
-    assert scovo.abbastanza(ok)
-    assert not scovo.abbastanza({**ok, "anno": 2006})
+    try:
+        ok = {"mercato": 10000, "prezzo": 3000, "rip_hi": 0, "anno": 2007}
+        assert scovo.abbastanza(ok)
+        assert not scovo.abbastanza({**ok, "anno": 2006})
+    finally:
+        scovo.SOGLIE = prima                                     # 3/11: non lascia la soglia cambiata agli altri test
 
 
 def test_costi_ai_e_tetto():
@@ -161,6 +165,7 @@ def test_costi_ai_e_tetto():
 
 def test_filtro_prima_dell_ai_usa_la_regola_del_sito():
     from dealfinder.web import scovo
+    soglie_prima = scovo.SOGLIE
     scovo.SOGLIE = scovo.SOGLIE_FASCE
     from dealfinder.pipeline.process import quick_potential
     from dealfinder.core.models import Listing
@@ -178,6 +183,7 @@ def test_filtro_prima_dell_ai_usa_la_regola_del_sito():
         assert quick_potential(Listing(source="subito", source_id="3", url="u", price_eur=3000, year=2005), None)[1] == "troppo_vecchia"
     finally:
         pr.value_listing = old
+        scovo.SOGLIE = soglie_prima
 
 
 def test_zona_milano_ravenna():

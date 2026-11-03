@@ -63,12 +63,21 @@ def test_base_preferita_opportunita():
     assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
 
 
+def _ripristina(nome, prima):
+    """3/11: rimette il valore di prima (prima si scriveva "0", e i test dopo giravano con le regole vecchie)."""
+    if prima is None:
+        _os.environ.pop(nome, None)
+    else:
+        _os.environ[nome] = prima
+
+
 def test_rivendita_vera_uguale_al_mercato():
+    prima = _os.environ.get("RIVENDITA_VERA")
     _os.environ["RIVENDITA_VERA"] = "1"
     try:
         v = valuta(TARGET, market(BASE), soglia=1500, cfg=CFG, now=NOW)
     finally:
-        _os.environ["RIVENDITA_VERA"] = "0"
+        _ripristina("RIVENDITA_VERA", prima)
     assert v["riduzione"] == 0 and v["R"] == round(v["M"]) and v["R_da"] == "mercato vero"
     assert v["margine"] == v["R_finale"] - 6000 - v["totale_costi"] - v["riserva"]["euro"]
 
@@ -135,12 +144,12 @@ def test_motori_cambi_generazioni_diversi():
 
 def test_anno_e_km_stretti_poi_ampliamento_esplicito():
     # senza l'eccezione "pochi confronti → livello 3 con rivendita prudente" (2/11 notte), comportamento storico
-    import os as _os
+    prima = _os.environ.get("POLICY_PRUDENTE_POCHI")
     _os.environ["POLICY_PRUDENTE_POCHI"] = "0"
     try:
         _ampliamento_esplicito()
     finally:
-        _os.environ.pop("POLICY_PRUDENTE_POCHI", None)
+        _ripristina("POLICY_PRUDENTE_POCHI", prima)
 
 
 def test_pochi_confronti_rivendita_prudente():
@@ -520,6 +529,7 @@ def test_allestimento_soglia_n_minimo():
 
 def test_fascia_richiesta():
     from dealfinder.pricing.policy_v2 import benzina_richiesta
+    prima = _os.environ.get("BENZ_RICHIESTE")
     _os.environ["BENZ_RICHIESTE"] = "1"
     try:
         assert benzina_richiesta({"fuel": "Benzina", "price_eur": 6000, "mileage_km": 80000, "year": 2012})
@@ -530,4 +540,4 @@ def test_fascia_richiesta():
         assert not benzina_richiesta({"fuel": "Benzina", "price_eur": 12000, "mileage_km": 50000, "year": 2018})
         assert not benzina_richiesta({"fuel": "Benzina", "price_eur": 6000, "mileage_km": 120000, "year": 2012})
     finally:
-        _os.environ["BENZ_RICHIESTE"] = "0"
+        _ripristina("BENZ_RICHIESTE", prima)
