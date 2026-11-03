@@ -1793,6 +1793,26 @@ def _difetti_letti(ids: list) -> dict:
         return {}
 
 
+# 3/11 10:41 (cliente: "non voglio le macchine di Roma, solo macchine qua in zona nei 100 km"): sul sito solo le
+# province entro circa 100 km da Milano. Fuori: Roma, Ravenna, resto d'Italia ed Europa (anche le supercar), Mantova
+# (~160 km) e Sondrio (~140 km).
+PROVINCE_100KM = {"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC"}
+
+
+def _solo_100km(items: list) -> list:
+    from collections import Counter
+    out, via = [], Counter()
+    for it in items:
+        m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
+        pv = m.group(1).upper() if m else None
+        if pv in PROVINCE_100KM or (pv is None and (it.get("area") or "milano") == "milano" and not it.get("supercar")):
+            out.append(it)
+        else:
+            via[pv or it.get("area") or "?"] += 1
+    logging.getLogger("scovo").warning("ZONA_100KM %d auto restano, tolte %s", len(out), dict(via.most_common(12)))
+    return out
+
+
 def _zona_sito(items: list) -> list:
     """27/10 sera (cliente): sul sito solo le province accettate (Lombardia + Novara, Pavia, Piacenza)."""
     ok = {p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()}
@@ -2087,6 +2107,7 @@ def _calcola_elenco() -> None:
     # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
     items += _senza_scarti_id(_supercar_europa({it["id"] for it in items}, opens))
     items += _senza_scarti_id(_supercar_lusso({it["id"] for it in items}, opens))
+    items = _solo_100km(items)
     # 26/10 pomeriggio: il prezzo trattato (data/prezzi_sito.json) si applica DOPO i controlli, che restano sul prezzo vero
     _prezzi_trattati(items)
     _elenco.update(t=time.time(), items=items, opens=opens)
