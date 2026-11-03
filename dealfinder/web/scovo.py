@@ -53,7 +53,8 @@ def _soglie_pv():
         except ValueError:
             pass
     # 2/11 sera (cliente: "abbassiamo fino ai 7k, va bene solo 1.500 € di margine"): 1.500 € fino a 7.000 €
-    return [(7000, 1500), (10000, 2200), (15000, 3200), (20000, 4000), (30000, 5000), (10**9, 6000)]
+    # 3/11 10:25 (cliente: "più basse, circa −20%", presentazione): 1.800 / 2.500 / 3.200 / 4.000 / 5.000
+    return [(7000, 1500), (10000, 1800), (15000, 2500), (20000, 3200), (30000, 4000), (10**9, 5000)]
 
 
 SOGLIE_PV = _soglie_pv()
