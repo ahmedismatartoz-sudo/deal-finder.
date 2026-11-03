@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03h"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
+POLICY_REV = "2026-11-03i"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -872,8 +872,9 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         # 3/11 22:12 (cliente: "sono così richieste che non ha senso il calcolo prudente, il prezzo sarà alto"):
         # benzina sotto BENZ_RICHIESTE_PREZZO (10.000 €) e BENZ_RICHIESTE_KM (100.000 km): si vendono al prezzo delle
         # gemelle in vendita, il valore reale non abbassa il mercato
+        # 3/11 23:15 (controllo del codice): NON si usa più il prezzo CHIESTO delle gemelle al posto del valore reale:
+        # le vendite misurate dicono che sotto 10.000 € si vende all'87–92% del chiesto (margini gonfiati di 700–1.100 €)
         if benzina_richiesta(t):
-            out["M"] = M_prima
             out["benzina_richiesta"] = True
         # 3/11 10:21 (cliente: "fai le prime tre, basta che entrano più auto"): la P25 del valore reale NON fa più da
         # tetto alla rivendita. Il valore reale è già un prezzo di VENDITA: la P25 (il 25% più basso) era pensata per i
@@ -900,7 +901,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             and (vr.get("n") or 0) >= int(os.environ.get("VR_SOLO_N", "100")):
         V = int(vr["v"])
         if out.get("M") and prezzi:
-            V = min(V, int(out["M"])) if not benzina_richiesta(t) else max(V, int(out["M"]))
+            V = min(V, int(out["M"]))
         out["M"] = V
         out["L"] = V
         out["metodo"] = "valore_reale_modello"
