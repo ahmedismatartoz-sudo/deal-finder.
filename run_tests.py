@@ -30,7 +30,6 @@ ROSSO_NOTO = os.path.join(QUI, "tests", "rosso_noto.txt")
 # Variabili di modulo condivise: un test che le cambia le cambia per tutti quelli dopo.
 STATO_MODULI = (
     ("dealfinder.web.scovo", ("SOGLIE", "SOGLIE_FASCE", "SOGLIE_PV", "MARGINE_MINIMO", "ANNO_MINIMO", "KM_MASSIMO")),
-    ("dealfinder.pricing.policy_v2", ("TARATURA", "TARATURA_MIN", "TARATURA_MAX", "FASCE_BASE")),
     ("dealfinder.pipeline.benzina_mi", ("PROVINCE_100",)),
     ("dealfinder.web.app", ("_elenco",)),
 )

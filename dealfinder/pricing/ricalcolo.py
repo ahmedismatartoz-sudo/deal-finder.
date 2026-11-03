@@ -1,17 +1,22 @@
-"""Ricalcola con la policy pv2 tutte le auto che il sito potrebbe mostrare e salva il risultato
-in `valutazioni_policy`. Scrive nei log il confronto prima/dopo (policy precedente → pv2).
+"""Ricalcolo delle auto che il sito può mostrare (cron, voce "ricalcolo" di COLLECT_PRIMA).
 
-    python -m dealfinder.pricing.ricalcolo          (oppure in sottofondo dal sito, ogni POLICY_ORE ore)
+    python -m dealfinder.pricing.ricalcolo
+
+Dal 4/11 qui c'è solo la SCELTA delle auto da rivalutare (esegui: auto approfondite + sezione economica;
+utilitarie: tutti i privati sani della zona) e cosa pubblicare. Il calcolo e la scrittura sono UNA sola funzione per
+tutti, `pricing/valutazione.valuta_e_scrivi` (stesse colonne, stesso telefono, stessi confronti, stessa guardia sulle
+scritture). Tolti: taratura (correggeva verso i prezzi CHIESTI), tetto manuale della rivendita, simulazioni con
+regole spente (gemella, commercianti, soglie), auto "top" sotto il margine minimo del cliente.
 """
 from __future__ import annotations
 
 import json
-import re
 import logging
 import os
 import time
 from collections import Counter
 
+from .. import regole as RG
 from . import policy_v2 as P
 
 log = logging.getLogger("policy")
@@ -21,21 +26,17 @@ TARGET_COLS = ("l.id, l.source, l.url, l.make, l.model, l.version_raw, l.year, l
                "l.vehicle_identity, l.stage_reason")
 FIN_SQL = (r"COALESCE(description ~* '(solo|vincolat\w*|valid\w*|previo|tramite|con)\s+(a\s+|al\s+|il\s+|un\s+)?"
            r"finanziament', false) AS finanziamento")
-# 28/10 (cliente: "margini non precisi"): tra i confronti anche le auto VENDUTE (annunci spariti negli ultimi
-# POLICY_VENDUTE_GIORNI giorni): dicono il prezzo a cui il mercato compra davvero, non solo quello richiesto.
-_VEND_GG = int(os.environ.get("POLICY_VENDUTE_GIORNI", "0") or 0)
-_STATO_SQL = ("(status='attivo' OR (status='scomparso' AND disappeared_at > now() - interval '%d days'))" % _VEND_GG
-              if _VEND_GG > 0 else "status='attivo'")
-MARKET_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, fuel, "
-              "gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, problem_search, "
-              "first_seen_at, last_seen_at, last_checked_at, disappeared_at, " + FIN_SQL + " FROM listings "
-              "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "
-              "AND {home}")
-MARKET_ITALIA_SQL = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, fuel, "
-                     "gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, problem_search, "
-                     "first_seen_at, last_seen_at, last_checked_at, disappeared_at, " + FIN_SQL + " FROM listings "
-                     "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s "   # 28/10: nomi già normalizzati, usa l'indice
-                     "AND price_eur BETWEEN " + str(int(os.environ.get("POLICY_ITALIA_PMIN", "25000"))) + " AND 400000")
+# Gemelle: solo annunci attivi (prezzi chiesti). Le auto vendute entrano nel valore reale (prezzo di vendita), non qui.
+# (Prima: POLICY_VENDUTE_GIORNI letto all'import, diverso tra sito e cron.)
+_STATO_SQL = "status='attivo'"
+_COLONNE_MERCATO = ("SELECT id, source, url, vehicle_id, vehicle_identity, make, model, version_raw, year, mileage_km, "
+                    "fuel, gearbox, power_kw, price_eur, price_flags, seller_type, damage_class, status, stage_reason, "
+                    "problem_search, first_seen_at, last_seen_at, last_checked_at, disappeared_at, " + FIN_SQL +
+                    " FROM listings ")
+MARKET_SQL = (_COLONNE_MERCATO + "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s "
+              "AND price_eur IS NOT NULL AND {home}")
+MARKET_ITALIA_SQL = (_COLONNE_MERCATO + "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s "
+                     "AND price_eur BETWEEN " + str(int(RG.Zona().italia_pmin)) + " AND 400000")
 RISCHIO = {"telaio_longheroni", "tetto_montanti", "airbag_esplosi", "frontale_profondo", "airbag",
            "modulo_airbag_volante", "modulo_airbag_passeggero", "centralina_airbag", "motore_sostituzione",
            "cambio_sostituzione", "alluvionata", "incendio"}
@@ -54,11 +55,14 @@ def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: di
     return _giudice_ai(conn, t, v, lista, soglia, cfg)
 
 
+def _regole(cfg) -> RG.Regole:
+    return getattr(cfg, "regole", None) or RG.regole()
+
+
 def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg) -> dict:
-    """28/10: l'AI toglie i confronti che non sono davvero la stessa auto, poi si rifà il calcolo (POLICY_GIUDICE_AI=1).
-    Solo per le auto che andrebbero sul sito: le altre non costano niente."""
-    if os.environ.get("POLICY_GIUDICE_AI") != "1" or v.get("categoria") not in ("opportunita", "candidato") \
-            or not v.get("confronti"):
+    """28/10: l'AI toglie i confronti che non sono davvero la stessa auto, poi si rifà il calcolo (interruttore
+    POLICY_GIUDICE_AI, regole.giudice_ai). Solo per le auto che andrebbero sul sito: le altre non costano niente."""
+    if not _regole(cfg).giudice_ai or v.get("categoria") not in ("opportunita", "candidato") or not v.get("confronti"):
         return v
     from ..ai import giudice
     g = giudice.giudica(conn, t, v["confronti"])
@@ -78,18 +82,17 @@ def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg) -> dict:
                                                            "margine": v.get("margine"), "n": v.get("n")}}
     v2.setdefault("ipotesi", []).append(f"l'AI ha tolto {len(via)} confronti non uguali (versione/allestimento/prezzo): "
                                         f"ricalcolato su {v2.get('n')}")
-    import logging as _lg
-    _lg.getLogger("giudice").warning("GIUDICE_AI %s tolti %d: M %s→%s, margine %s→%s, %s→%s",
-                                     t.get("id"), len(via), v.get("M"), v2.get("M"), v.get("margine"),
-                                     v2.get("margine"), v.get("categoria"), v2.get("categoria"))
+    logging.getLogger("giudice").warning("GIUDICE_AI %s tolti %d: M %s→%s, margine %s→%s, %s→%s",
+                                         t.get("id"), len(via), v.get("M"), v2.get("M"), v.get("margine"),
+                                         v2.get("margine"), v.get("categoria"), v2.get("categoria"))
     return v2
 
 
 def _valuta_base(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
+    z = _regole(cfg).zona
     v = P.valuta(t, mercato, soglia, cfg)
     lista = mercato
-    if os.environ.get("POLICY_RIPIEGO_NORD", "1") != "1" or (v.get("n") or 0) >= cfg.n_preferito \
-            or not (t.get("make") and t.get("model") and t.get("fuel")):
+    if not z.ripiego_nord or (v.get("n") or 0) >= cfg.n_preferito or not (t.get("make") and t.get("model") and t.get("fuel")):
         return v, lista
     key = (t["make"], t["model"], t["fuel"])
     if key not in cache:
@@ -104,10 +107,8 @@ def _valuta_base(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
         v = v2
         lista = cache[key]
     # 21/10 (cliente): auto di fascia alta (da 50.000 €): pochi esemplari uguali per zona, si usa la base prezzi
-    # 60-200k di tutta Italia (privati e concessionari), con marca/modello/alimentazione scritti in modo diverso
-    # tra AutoScout24 e Subito ("PORSCHE"/"Porsche", "Benzina"/"benzina")
-    if os.environ.get("POLICY_ITALIA") != "1" or (v.get("n") or 0) >= cfg.n_preferito \
-            or (t.get("price_eur") or 0) < int(os.environ.get("POLICY_ITALIA_DA", "50000")):
+    # di tutta Italia (privati e concessionari). Interruttore POLICY_ITALIA (regole.zona.italia).
+    if not z.italia or (v.get("n") or 0) >= cfg.n_preferito or (t.get("price_eur") or 0) < z.italia_da:
         return v, lista
     chiave = ("IT",) + tuple(str(x).lower() for x in key)
     if chiave not in cache:
@@ -124,90 +125,22 @@ def _valuta_base(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
 
 
 def vr_di(conn, ids: list) -> dict:
-    """2/11 notte: valore reale (pricing/valore_reale.py, tabella valore_reale) per questi annunci, se calcolato negli
-    ultimi 2 giorni. Usato da TUTTE le valutazioni (sito e cron), così un ricalcolo non torna al metodo vecchio."""
-    if not ids:
-        return {}
-    try:
-        return {r["listing_id"]: dict(r) for r in conn.execute(
-            "SELECT listing_id, v, p25, sigma, n FROM valore_reale WHERE listing_id = ANY(%s) "
-            "AND computed_at > now() - interval '2 days'", (list(ids),)).fetchall()}
-    except Exception as e:                          # tabella non ancora creata: si valuta senza
-        conn.rollback()
-        log.warning("valore reale non letto: %s", str(e)[:150])
-        return {}
+    """Valore reale (tabella valore_reale) per questi annunci: l'ULTIMO disponibile, con la data (computed_at).
+    4/11: non sparisce più dopo 2 giorni (se il calcolo notturno salta, M non cambia da solo); avviso se vecchio."""
+    from .valutazione import ingressi
+    return ingressi(conn, ids, solo=("vr",))["vr"] if ids else {}
 
 
 def ai_di(conn, ids: list) -> dict:
-    """Stime del modello AI dei prezzi (tabella stima_ai, scritta dal lavoro programmato) per questi annunci."""
-    if not ids or os.environ.get("POLICY_AI", "1") != "1":
-        return {}
-    try:
-        return {r["listing_id"]: {"prezzo": r["prezzo"], "errore": r["errore"], "n": r["n_gruppo"], "livello": r["livello"]}
-                for r in conn.execute("SELECT listing_id, prezzo, errore, n_gruppo, livello FROM stima_ai "
-                                      "WHERE listing_id = ANY(%s) AND computed_at > now() - interval '2 days'",
-                                      (list(ids),)).fetchall()}
-    except Exception as e:                          # tabella non ancora creata o altro: si valuta senza AI
-        conn.rollback()
-        log.warning("stima AI non letta: %s", str(e)[:150])
-        return {}
+    """Stime del modello AI dei prezzi (tabella stima_ai): l'ultima disponibile per annuncio, con la data."""
+    from .valutazione import ingressi
+    return ingressi(conn, ids, solo=("ai",))["ai"] if ids else {}
 
 
 def carica_taratura(conn) -> None:
-    """Fattori di taratura dell'ultimo ricalcolo (tabella taratura) dentro la policy."""
-    try:
-        rows = conn.execute("SELECT chiave, fattore FROM taratura WHERE at > now() - interval '3 days'").fetchall()
-        nuovo = {r["chiave"]: float(r["fattore"]) for r in rows}
-        # 3/11: senza svuotare il dizionario (altri thread valutano intanto): prima i valori nuovi, poi via i vecchi
-        P.TARATURA.update(nuovo)
-        for k in [k for k in list(P.TARATURA) if k not in nuovo]:
-            P.TARATURA.pop(k, None)
-    except Exception:
-        conn.rollback()
-
-
-def salva_taratura(conn, campioni: list) -> dict:
-    """campioni: (metodo, n, M_grezzo, prezzo, anno, km, carburante, fonte, livello, fuori_zona).
-    Per ogni gruppo il rapporto mediano prezzo vero / valore calcolato SENZA guardare l'annuncio: se è 0,92 il sistema
-    sopravvaluta del 8% e il fattore 0,92 lo corregge dal calcolo successivo. Nei log anche il dettaglio per età, km,
-    carburante, sito e tipo di confronto, per capire DOVE sbaglia."""
-    import statistics as stt
-    from collections import defaultdict
-    g, diag = defaultdict(list), defaultdict(list)
-    anno_ora = time.gmtime().tm_year
-    for metodo, n, m, p, anno, km, fuel, src, liv, fz in campioni:
-        if not m or not p:
-            continue
-        x = p / m
-        if not (.3 <= x <= 2.5):
-            continue
-        g[P.chiave_taratura(metodo, n, m)].append(x)
-        g[f"{metodo}|*|{P.fascia_m(m)}"].append(x)
-        eta = anno_ora - (anno or anno_ora)
-        for k in (f"tutte", f"metodo:{metodo}", f"confronti:{P.nb(n)}", f"fascia:{P.fascia_m(m)}",
-                  f"eta:{'0-5' if eta <= 5 else '6-10' if eta <= 10 else '11-15' if eta <= 15 else '16+'}",
-                  f"km:{'<80k' if (km or 0) < 80000 else '80-150k' if km < 150000 else '150-200k' if km < 200000 else '200k+'}",
-                  f"carb:{fuel}", f"sito:{src}", f"livello:{liv}", f"nord:{bool(fz)}"):
-            diag[k].append(x)
-    minimo = int(os.environ.get("TARATURA_MIN_N", "120"))
-    fattori = {k: round(stt.median(v), 4) for k, v in g.items() if len(v) >= minimo}
-    for k, f in fattori.items():
-        conn.execute("INSERT INTO taratura (chiave, fattore, n, at) VALUES (%s,%s,%s, now()) ON CONFLICT (chiave) DO UPDATE "
-                     "SET fattore=EXCLUDED.fattore, n=EXCLUDED.n, at=now()", (k, f, len(g[k])))
-    conn.commit()
-    def _prec(v):
-        # PRECISIONE (19/10): quanto sbaglia la stima su ogni singola auto, tolto l'errore medio del gruppo
-        m = stt.median(v)
-        e = sorted(abs(x / m - 1) for x in v)
-        return {"errore_tipico_pct": round(e[len(e) // 2] * 100, 1),
-                "entro_10pct": round(sum(1 for x in e if x <= .10) / len(e) * 100),
-                "oltre_25pct": round(sum(1 for x in e if x > .25) / len(e) * 100)}
-    rep = {k: {"n": len(v), "prezzo_su_stima_pct": round((stt.median(v) - 1) * 100, 1), **_prec(v)}
-           for k, v in sorted(diag.items()) if len(v) >= 30}
-    log.warning("TARATURA_DIAGNOSI %s", json.dumps(rep, ensure_ascii=False))
-    log.warning("TARATURA_FATTORI %s", json.dumps({k: {"fattore": f, "n": len(g[k])} for k, f in sorted(fattori.items())},
-                                                   ensure_ascii=False))
-    return fattori
+    """4/11: la taratura è tolta (correggeva M verso i prezzi CHIESTI degli annunci attivi, studio 1 §1.3).
+    Resta il nome per i lavori che lo chiamano ancora: non fa niente."""
+    return None
 
 
 def targhe_visibili(conn) -> set:
@@ -219,19 +152,20 @@ def targhe_visibili(conn) -> set:
         return set()
 
 
-def targa_e_telefono(r: dict, targhe: set, tel=None) -> bool:
-    """19/10: auto con il numero di telefono E la targa visibile (scritta nell'annuncio o vista nelle foto)."""
-    from ..core.normalize import find_plate
-    from ..web import scovo
-    testo = f"{r.get('title') or ''} {r.get('description') or ''}"
-    if tel is None:
-        tel = bool(r.get("telefono_ok")) or bool(scovo.RE_MOBILE.search(testo) or scovo.RE_LANDLINE.search(testo))
+def targa_e_telefono(r: dict, targhe: set | None = None, tel=None) -> bool:
+    """Prezzo molto basso ammesso: basta il numero del venditore (regole.antitruffa.basso_solo_telefono, cliente 24/10),
+    mai per un commerciante. Stessa regola di valutazione.prepara (telefono unico: valutazione.telefono)."""
+    from .valutazione import telefono
+    rg = RG.regole()
+    tel = telefono(r) if tel is None else tel
     if tel is not True:
         return False
-    # 24/10 sera (cliente): basta il numero del venditore, la targa non serve più per tenere i prezzi molto bassi
-    if os.environ.get("BASSO_SOLO_TELEFONO", "1") == "1":
+    if (r.get("seller_type") or "privato") == "commerciante" and rg.antitruffa.eccezione_solo_privati:
+        return False
+    if rg.antitruffa.basso_solo_telefono:
         return True
-    return r.get("id") in targhe or bool(find_plate(testo))
+    from ..core.normalize import find_plate
+    return r.get("id") in (targhe or set()) or bool(find_plate(f"{r.get('title') or ''} {r.get('description') or ''}"))
 
 
 def _j(v):
@@ -243,134 +177,46 @@ def _rischio(r) -> bool:
     return r.get("damage_class") == "alto_rischio" or bool(parts & RISCHIO)
 
 
-def _prima(it: dict | None, abbastanza) -> dict | None:
-    """Numeri della policy precedente (mercato −10% − 140 € − ricambi) per il confronto."""
-    if not it or not it.get("mercato"):
-        return None
-    from ..web import scovo
-    return {"mercato": it["mercato"], "rivendita": round(it["mercato"] * (1 - scovo.SCONTO_DEFAULT / 100)),
-            "guadagno": scovo.guadagno_minimo(it), "mostrata": bool(abbastanza)}
+def _riepilogo(es, extra: dict | None = None) -> dict:
+    """Contatori per categoria (e sezione) e per numero di confronti, dalle valutazioni appena fatte."""
+    cat, ns = Counter(), Counter()
+    for lid, v in es.valutazioni.items():
+        sez = (extra or {}).get(lid, {}).get("sezione") or v.get("sezione") or "affari"
+        cat[f"{sez}:{v.get('categoria')}"] += 1
+        n = v.get("n") or 0
+        ns["≥10" if n >= 10 else "5-9" if n >= 5 else "<5"] += 1
+    return {"categorie": dict(sorted(cat.items())), "confronti": dict(ns)}
 
 
 def esegui(conn, limite: int | None = None) -> dict:
-    from ..store import HOME_REGION_SQL
+    """Rivaluta le auto già approfondite (sezioni affari e incidentate) e la sezione economica, con
+    valutazione.valuta_e_scrivi (fonte 'cron'). Nessun limite casuale: tutte, ordinate per gruppo."""
     from ..web import scovo
+    from .valutazione import valuta_e_scrivi
     t0 = time.time()
     conn.execute("SET statement_timeout = '60s'")
-    cfg = P.PolicyConfig.from_env()
-    carica_taratura(conn)
-    # 1) le auto candidate: quelle approfondite (sezioni affari e incidentate) + la sezione economica
-    rows = conn.execute(scovo.LIST_SQL + " LIMIT 4000", {"me": 0}).fetchall()
-    eco = conn.execute(scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s",
-                       dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()
-    prima, info = {}, {}
-    for r in rows:
-        it = scovo.item(r)
-        prima[r["id"]] = _prima(it, scovo.abbastanza(it, policy=False))
-        info[r["id"]] = {"parts_cost_low": r.get("parts_cost_low"), "parts_cost_high": r.get("parts_cost_high"),
-                         "eco": False, "audit": "+manuale-v5-" in (r.get("engine_version") or ""),
-                         "mercato_audit": it["mercato"] if it else None}
-    for r in eco:
-        if r["id"] in info:
-            continue
-        it = scovo.item_eco(r)
-        prima[r["id"]] = _prima(it, it and (it["prezzo"] <= int(os.environ.get("ECONOMICHE_LIBERO", "1000"))
-                                           or scovo.guadagno_minimo(it) >= int(os.environ.get("ECONOMICHE_GUADAGNO", "400"))))
-        info[r["id"]] = {"parts_cost_low": r.get("parts_cost_low"), "parts_cost_high": r.get("parts_cost_high"), "eco": True}
-    ids = list(info)[:limite] if limite else list(info)
-    targets = conn.execute(f"SELECT {TARGET_COLS}, l.title, l.description, l.telefono_ok FROM listings l WHERE l.id = ANY(%s)",
-                           (ids,)).fetchall()
-    targhe = targhe_visibili(conn)
-    targets.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
-    aimap = ai_di(conn, [r["id"] for r in targets])
-    vrmap = vr_di(conn, [r["id"] for r in targets])
-    log.warning("POLICY_AI stime AI disponibili per %d auto su %d", len(aimap), len(targets))
-
-    cat, trans, motivi, ns = Counter(), Counter(), Counter(), Counter()
-    aic = Counter()
-    fasce = {i: Counter() for i in range(len(scovo.COPERTURA_FASCE))}
-    sospette = [0]
-    campioni, gruppo, mercato, gruppi = [], None, [], 0
-    cache_nord: dict = {}
-    for r in targets:
-        key = (r["make"], r["model"], r["fuel"])
-        if key != gruppo:
-            gruppo = key
-            cache_nord.clear()                       # memoria: il ripiego Nord serve solo al gruppo corrente
-            mercato = (conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()
-                       if r["make"] and r["model"] and r["fuel"] else [])
-            gruppi += 1
-            if gruppi % 50 == 0:
-                log.warning("POLICY avanzamento: %d gruppi, %d auto, %.0fs", gruppi, sum(cat.values()), time.time() - t0)
-        t = dict(r, **{k: v for k, v in info[r["id"]].items() if k.startswith("parts_")})
-        t["vehicle_identity"] = _j(t.get("vehicle_identity"))
-        t["rischio_strutturale"] = _rischio(r)
-        t["ai"] = aimap.get(r["id"])
-        t["vr"] = vrmap.get(r["id"])
-        t["targa_e_telefono"] = targa_e_telefono(r, targhe)
-        if info[r["id"]].get("audit") and info[r["id"]].get("mercato_audit"):
-            t["tetto_rivendita"] = info[r["id"]]["mercato_audit"]
-        soglia = scovo.soglia(int(r["price_eur"] or 0))
-        try:
-            v = valuta_con_ripiego(conn, t, [dict(m, vehicle_identity=_j(m.get("vehicle_identity"))) for m in mercato],
-                                   soglia, cfg, cache_nord)
-        except Exception as e:                       # una valutazione sbagliata non ferma le altre
-            log.warning("policy: auto %s non valutata: %s", r["id"], str(e)[:200])
-            continue
-        v["sezione"] = "economiche" if info[r["id"]]["eco"] else "affari"
-        pr = prima.get(r["id"])
-        conn.execute(
-            """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, prima)
-               VALUES (%s,%s,%s,%s,%s,%s,%s)
-               ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(), categoria=EXCLUDED.categoria,
-                 margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati, prima=EXCLUDED.prima""",
-            (r["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
-             json.dumps(v, default=str), json.dumps(pr) if pr else None))
-        cat[(v["sezione"], v["categoria"])] += 1
-        if v.get("ai"):
-            aic["con_ai"] += 1
-            aic["solo_ai" if v.get("solo_ai") else ("ai_concorda" if v["ai"].get("concorda") else
-                ("ai_disaccordo" if v["ai"].get("disaccordo") else "ai_media"))] += 1
-            if v.get("solo_ai"):
-                aic[f"solo_ai:{v['categoria']}"] += 1
-        if (v["categoria"] in scovo.CATEGORIE_SITO and v.get("M") and r["price_eur"]
-                and v["M"] > 1.5 * r["price_eur"] and sospette[0] < int(os.environ.get("POLICY_LOG_SOSPETTE", "12"))):
-            sospette[0] += 1         # controllo a vista: mercato molto sopra il prezzo (solo dati dell'auto, niente venditori)
+    affari = [r["id"] for r in conn.execute("SELECT q.id FROM (" + scovo.LIST_SQL + ") q", {"me": 0}).fetchall()]
+    eco = [r["id"] for r in conn.execute(
+        "SELECT q.id FROM (" + scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s) q",
+        dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()]
+    extra = {i: {"sezione": "affari"} for i in affari}
+    for i in eco:
+        extra.setdefault(i, {"sezione": "economiche"})
+    ids = list(extra)[:limite] if limite else list(extra)
+    es = valuta_e_scrivi(conn, ids, "cron", extra=extra)
+    sospette = 0
+    for lid, v in es.valutazioni.items():
+        if (v.get("categoria") in scovo.CATEGORIE_SITO and v.get("M") and v.get("acquisto")
+                and v["M"] > 1.5 * v["acquisto"] and sospette < 12):
+            sospette += 1        # controllo a vista: mercato molto sopra il prezzo (solo dati dell'auto, niente venditori)
             log.warning("POLICY_SOSPETTA %s", json.dumps({
-                "id": r["id"], "auto": f"{r['make']} {r['model']} {r['version_raw'] or ''} {r['year']} {r['mileage_km']}km "
-                                      f"{r['fuel']} {r['gearbox']} {r['power_kw']}kW", "prezzo": r["price_eur"],
-                "M": v["M"], "L": v["L"], "R": v.get("R_finale"), "margine": v.get("margine"), "cat": v["categoria"],
-                "confronti": [[c["prezzo"], c.get("prezzo_corretto"), c["anno"], c["km"], c["kw"], (c.get("versione") or "")[:20]]
+                "id": lid, "prezzo": v.get("acquisto"), "M": v.get("M"), "M_fonte": v.get("M_fonte"),
+                "metodo": v.get("metodo"), "R": v.get("R_finale"), "margine": v.get("margine"), "cat": v["categoria"],
+                "confronti": [[c.get("prezzo"), c.get("prezzo_corretto"), c.get("anno"), c.get("km"), c.get("kw")]
                               for c in (v.get("confronti") or [])[:12]]}, ensure_ascii=False, default=str))
-        if v["sezione"] == "affari" and (r["year"] or 0) >= scovo.ANNO_MINIMO and not scovo.troppi_km(r["mileage_km"]):
-            f = scovo._fascia(int(r["price_eur"] or 0))
-            if v["categoria"] in scovo.CATEGORIE_SITO:
-                fasce[f]["ok"] += 1
-            elif (v["categoria"] == "non_conveniente" and v.get("margine") is not None
-                  and v["margine"] >= max(scovo.COPERTURA_MARGINE_MIN, scovo.COPERTURA_QUOTA * soglia)):
-                fasce[f]["riserva"] += 1
-        ns["≥10" if v.get("n", 0) >= 10 else "5-9" if v.get("n", 0) >= 5 else "<5"] += 1
-        if pr and pr["mostrata"]:
-            trans[(v["sezione"], v["categoria"])] += 1
-            motivi[(v["motivi"] or ["—"])[0].split(" (")[0].split(":")[0][:60]] += 1
-            if len(campioni) < int(os.environ.get("POLICY_CAMPIONE", "25")) and v["sezione"] == "affari":
-                campioni.append({"id": r["id"], "auto": f"{r['make']} {r['model']} {r['year']} {r['mileage_km']}km {r['fuel']}",
-                                 "prezzo": r["price_eur"], "prima_mercato": pr["mercato"], "prima_guadagno": pr["guadagno"],
-                                 "M": v.get("M"), "L": v.get("L"), "n": v.get("n"), "liv": v.get("livello"),
-                                 "rid": v.get("riduzione"), "R": v.get("R_finale"), "costi": v.get("totale_costi"),
-                                 "riserva": (v.get("riserva") or {}).get("euro"), "margine": v.get("margine"),
-                                 "soglia": soglia, "cat": v["categoria"], "perche": (v["motivi"] or [""])[:2]})
-        conn.commit()
-    stats = {"valutate": len(targets), "secondi": round(time.time() - t0, 1),
-             "prima_mostrate": sum(1 for p in prima.values() if p and p["mostrata"]),
-             "categorie": {f"{a}:{b}": n for (a, b), n in sorted(cat.items())},
-             "mostrate_prima_ora": {f"{a}:{b}": n for (a, b), n in sorted(trans.items())},
-             "confronti": dict(ns),
-             "fasce_affari": {f"<{lim}": dict(fasce[i]) for i, lim in enumerate(scovo.COPERTURA_FASCE)}, "motivi_principali": dict(motivi.most_common(12))}
+    stats = {"valutate": len(ids), "secondi": round(time.time() - t0, 1), **_riepilogo(es, extra),
+             "contatori": dict(es.stats), "impronta_regole": RG.impronta()}
     log.warning("POLICY_RIEPILOGO %s", json.dumps(stats, ensure_ascii=False))
-    log.warning("POLICY_AI %s", json.dumps(dict(aic)))
-    for c in campioni:
-        log.warning("POLICY_PRIMA_DOPO %s", json.dumps(c, ensure_ascii=False, default=str))
     return stats
 
 
@@ -381,7 +227,7 @@ if __name__ == "__main__":
         print(esegui(conn))
 
 
-# ------------------------------------------------------------------ auto da 1.000 a 7.000 € (utilitarie)
+# ------------------------------------------------------------------ privati sani della zona (utilitarie)
 UTILITARIE = {"panda", "punto", "grande-punto", "punto-evo", "500", "ypsilon", "fiesta", "ka", "ka+", "fusion", "polo", "up",
               "fox", "lupo", "yaris", "aygo", "iq", "clio", "twingo", "modus", "zoe", "208", "207", "206", "107", "108",
               "c1", "c2", "c3", "c3-picasso", "ds3", "corsa", "agila", "adam", "karl", "micra", "note", "i10", "i20",
@@ -392,74 +238,14 @@ UTILITARIE = {"panda", "punto", "grande-punto", "punto-evo", "500", "ypsilon", "
               "juke", "golf", "a-class", "classe-a", "a-klasse", "b-klasse", "classe-b", "auris", "corolla", "megane", "astra",
               "focus", "bravo", "308", "c4", "leon", "ceed", "i30", "civic"}
 
-UTIL_SQL = ("SELECT {cols}, l.title, left(l.description, 1200) AS description, l.telefono_ok, l.damage_declared, l.problem_search FROM listings l "
+# Tutti i privati sani della zona, visti negli ultimi 14 giorni (la descrizione intera la legge valutazione.prepara)
+UTIL_SQL = ("SELECT l.id FROM listings l "
             "WHERE l.status='attivo' AND l.seller_type='privato' AND l.price_eur BETWEEN %(lo)s AND %(hi)s "
             "AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s AND l.province = ANY(%(prov)s) "
-            "AND l.last_seen_at > now() - make_interval(days => " + os.environ.get("TUTTE_GIORNI", "14") + ") AND l.source IN ('subito','autoscout24','facebook') "
+            "AND l.last_seen_at > now() - interval '14 days' AND l.source IN ('subito','autoscout24','facebook') "
             "AND COALESCE(l.damage_class, 'sconosciuto') IN ('nessuno','sconosciuto') AND NOT COALESCE(l.problem_search, false) "
-            "AND COALESCE(l.damage_declared, false) = false "
             "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti') "
             "AND COALESCE(l.stage_reason, '') NOT LIKE 'analisi_manuale%%'")      # scartate a mano: mai ripubblicate
-
-
-_CIL = re.compile(r"\b(\d\.\d)\b")
-
-
-def gemelle(t: dict, mercato: list[dict], now=None) -> list[dict]:
-    """Auto IDENTICHE in vendita (idea del cliente, 17/10): stessa marca/modello (gruppo), alimentazione, cambio,
-    carrozzeria, cilindrata scritta e potenza quasi uguale (±5%), anno ±1, km ±20.000; sane, attive, viste di recente."""
-    from datetime import datetime, timezone
-    now = now or datetime.now(timezone.utc)
-    if not (t.get("year") and t.get("mileage_km") is not None):
-        return []
-    tg, bt, tp = P._norm_gear(t.get("gearbox")), P.carrozzeria(t), t.get("power_kw")
-    tc = set(_CIL.findall(t.get("version_raw") or ""))
-    out = []
-    for c in mercato:
-        if c.get("id") == t.get("id") or c.get("status") != "attivo" or not c.get("price_eur") or c["price_eur"] < 500:
-            continue
-        if c.get("fuel") != t.get("fuel") or not c.get("year") or c.get("mileage_km") is None:
-            continue
-        if abs(int(c["year"]) - int(t["year"])) > 1 or abs(int(c["mileage_km"]) - int(t["mileage_km"])) > 20000:
-            continue
-        cg = P._norm_gear(c.get("gearbox"))
-        if (tg or cg) and tg != cg:
-            continue
-        if P.carrozzeria(c) != bt:
-            continue
-        if tp and c.get("power_kw") and abs(c["power_kw"] - tp) > tp * .05:
-            continue
-        if bool(tp) != bool(c.get("power_kw")) and not tc:
-            continue                                          # senza potenza né cilindrata non si può dire "identica"
-        cc = set(_CIL.findall(c.get("version_raw") or ""))
-        if tc and cc and not (tc & cc):
-            continue
-        if (c.get("damage_class") or "sconosciuto") in P.DANNEGGIATE or c.get("problem_search") or c.get("finanziamento"):
-            continue
-        if c.get("stage_reason") in ("doppione", "truffa", "prezzo_finto") or set(c.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
-            continue
-        visto = max((d for d in (c.get("last_checked_at"), c.get("last_seen_at")) if d), default=None)
-        if not visto or (now - visto).days > 7:
-            continue
-        out.append(c)
-    return sorted(out, key=lambda c: c["price_eur"])
-
-
-def gemella_rivendita(t: dict, twins: list[dict], M: float | None, sconto: int = 1000) -> dict | None:
-    """Rivendita = gemella più economica AFFIDABILE − sconto. Protezione contro l'annuncio "strano": la gemella
-    scelta non può stare sotto l'85% della mediana delle gemelle (se sono ≥ 3) né sotto il 70% del mercato M."""
-    if not twins:
-        return None
-    prezzi = [c["price_eur"] for c in twins]
-    med = P.percentile(prezzi, .5)
-    for c in twins:
-        if len(twins) >= 3 and c["price_eur"] < .85 * med:
-            continue
-        if M and c["price_eur"] < .7 * M:
-            continue
-        return {"gemella": c, "rivendita": int(c["price_eur"]) - sconto, "n_gemelle": len(twins)}
-    return None
-
 
 _UTIL_LOCK = __import__("threading").Lock()
 
@@ -476,248 +262,47 @@ def utilitarie(conn, pubblica: bool = False) -> dict:
 
 
 def _utilitarie(conn, pubblica: bool = False) -> dict:
-    """Tutte le auto sane di privati da UTIL_MIN a UTIL_MAX € (con il numero): valutazione con la policy e
-    simulazione di quante superano UTIL_MARGINE € di margine con riduzioni diverse sotto i 10.000 €.
-    Con pubblica=True quelle che passano con la tabella in vigore vanno sul sito (stage 'approfondito')."""
-    from ..core.models import Listing
-    from ..core.normalize import problem_hint
-    from ..store import HOME_REGION_SQL
+    """Tutti i privati sani della zona da 500 a 50.000 €, valutati con valutazione.valuta_e_scrivi (fonte
+    'cron-utilitarie': si scrivono TUTTE le valutazioni, anche escluse e non convenienti, così non resta una riga
+    vecchia "candidato"). Con pubblica=True quelle sopra il margine minimo del cliente vanno sul sito
+    (stage 'approfondito') e in top_auto (ordinate per margine/soglia)."""
+    from ..core.dal_testo import completa_db
     from ..web import scovo
     from ..zone import MILANO
-    from ..pipeline.tempo_reale import ha_numero_testo
+    from .valutazione import valuta_e_scrivi
     t0 = time.time()
-    # dal 17/10: TUTTI gli annunci raccolti entro 150 km (auto sane di privati), da 500 a 50.000 €
-    lo, hi = int(os.environ.get("TUTTE_MIN", "500")), int(os.environ.get("TUTTE_MAX", "50000"))
-    cfg = P.PolicyConfig.from_env()
-    from ..core.dal_testo import completa_db
+    a = RG.regole().ammissione
     log.warning("DAL_TESTO %s", json.dumps(completa_db(conn)))          # anno, km, alimentazione mancanti: dal testo
-    cache_nord: dict = {}
-    rows = conn.execute(UTIL_SQL.format(cols=TARGET_COLS), {"lo": lo, "hi": hi, "anno": scovo.ANNO_MINIMO,
-                                                             "km": scovo.KM_MASSIMO, "prov": list(MILANO)}).fetchall()
-    rows.sort(key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
-    aimap = ai_di(conn, [r["id"] for r in rows])
-    vrmap = vr_di(conn, [r["id"] for r in rows])
-    targhe = targhe_visibili(conn)
-    carica_taratura(conn)
-    campioni_tar = []
-    import gc
-    pavimento = min(int(os.environ.get("AS_TOP_MIN", "600")), int(os.environ.get("TOP_MIN_EURO", "800")))
-    st, vals, gruppo, mercato = Counter(), [], None, []
-    gsim, gesempi = Counter(), []
-    meta = Counter()
-    csim, crapporti, crapporti_m = Counter(), [], []
-    csim_min = int(os.environ.get("SIM_COMMERCIANTI_MIN", "3"))
-    for i_r in range(len(rows)):
-        r, rows[i_r] = rows[i_r], None                 # memoria: ogni riga si libera dopo l'uso
-        if i_r % 2000 == 0:
-            gc.collect()
-            log.warning("UTILITARIE avanzamento: %d/%d auto, %.0fs", i_r, len(rows), time.time() - t0)
-        if r["source"] == "autoscout24":
-            tel = r["telefono_ok"]                       # None = non ancora controllato (lo fa l'agente di verifica)
-        elif r["source"] == "subito":
-            # numero dietro il bottone "Chiama" (telefono_ok) oppure scritto nel testo
-            # IMBUTO: su Subito il numero NON filtra all'inizio. Con il numero nel testo = sì; altrimenti "da controllare"
-            # (None): se l'auto viene selezionata, l'agente apre la sua pagina e controlla il bottone Chiama.
-            tel = True if (r["telefono_ok"] or ha_numero_testo(r["title"], r["description"])) else (
-                False if r["telefono_ok"] is False else None)
-        else:
-            tel = True
-        # 26/10 (cliente: "il ricalcolo mi serve prima delle 15"): UTIL_SOLO_SITO=1 valuta solo le auto che possono
-        # andare sul sito (privati; Subito solo con il numero). I confronti restano tutti (mercato completo).
-        if os.environ.get("UTIL_SOLO_SITO", "0") == "1" and (
-                r.get("seller_type") == "commerciante" or (r["source"] == "subito" and tel is not True)):
-            st["saltata_non_da_sito"] += 1
-            continue
-        if tel is False:
-            st["senza_numero"] += 1               # valutata solo per la simulazione, mai pubblicata
-            if os.environ.get("UTIL_SALTA_SENZA_NUMERO", "1") == "1":
-                continue                          # 25/10: senza numero non va mai sul sito: non si ricalcola (tempo)
-        if problem_hint(Listing(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
-            st["danni_nel_testo"] += 1
-            continue
-        if not (r["make"] and r["model"] and r["fuel"]):
-            st["dati_incompleti"] += 1
-            continue
-        key = (r["make"], r["model"], r["fuel"])
-        if key != gruppo:
-            gruppo = key
-            cache_nord.clear()                       # memoria (512 MB su Render): solo il gruppo corrente
-            mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
-                       for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
-        t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=aimap.get(r["id"]), vr=vrmap.get(r["id"]),
-                 targa_e_telefono=targa_e_telefono(r, targhe, True if tel is True else False))
-        try:
-            v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(r["price_eur"])), cfg, cache_nord)
-        except Exception as e:
-            st["errore"] += 1
-            log.warning("utilitarie: %s non valutata: %s", r["id"], str(e)[:120])
-            continue
-        st[f"cat:{v['categoria']}"] += 1
-        p_ = int(r["price_eur"])
-        if v.get("M_grezzo") and (v.get("n") or 0) >= 2 and not set(r.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
-            campioni_tar.append((v.get("metodo_base") or v.get("metodo") or "mediana", int(v.get("n") or 0), v["M_grezzo"], p_, r.get("year"),
-                                 r.get("mileage_km"), r.get("fuel"), r.get("source"), v.get("livello"), v.get("fuori_zona")))
-        # PROVA "prezzi dei commercianti" (18/10): rivendita = prezzo a cui i concessionari vendono la stessa auto,
-        # meno la trattativa; quante auto passerebbero rispetto a oggi (il sito non cambia)
-        if (v.get("n_commercianti") or 0) >= csim_min and tel is not False:
-            mc = v["M_commercianti"]
-            csim["con_prezzo_commercianti"] += 1
-            if v.get("M_privati") and (v.get("n_privati") or 0) >= 3:
-                crapporti.append(mc / v["M_privati"])
-            if v.get("M"):
-                crapporti_m.append(mc / v["M"])
-            ok_now = v["categoria"] in scovo.CATEGORIE_SITO and (v.get("margine") or 0) >= scovo.soglia(p_)
-            for tr in (.05, .10, .15):
-                ok_c = v["categoria"] not in ("dati_insufficienti",) and mc * (1 - tr) - p_ >= scovo.soglia(p_)
-                csim[f"passano_trattativa_{int(tr*100)}%"] += ok_c
-                csim[f"in_piu_trattativa_{int(tr*100)}%"] += ok_c and not ok_now
-            csim["passano_oggi"] += ok_now
-        if 1000 <= p_ <= 5000:                         # simulazione "gemella più economica − 1.000 €"
-            g = gemella_rivendita(t, gemelle(t, mercato), v.get("M"))
-            ok_now = v["categoria"] in scovo.CATEGORIE_SITO and (v.get("margine") or 0) >= scovo.soglia(p_)
-            ok_g = bool(g) and g["rivendita"] - p_ >= scovo.soglia(p_)
-            gsim["auto_1000_5000"] += 1
-            gsim["con_gemella"] += bool(g)
-            gsim["passano_regola_attuale"] += ok_now
-            gsim["passano_gemella"] += ok_g
-            gsim["passano_entrambe"] += ok_now and ok_g
-            gsim["solo_gemella"] += ok_g and not ok_now
-            gsim["solo_attuale"] += ok_now and not ok_g
-            if g and len(gesempi) < 15 and (ok_g or ok_now):
-                c = g["gemella"]
-                gesempi.append({"id": r["id"], "auto": f"{r['make']} {r['model']} {r['version_raw'] or ''} {r['year']} {r['mileage_km']}km",
-                                "prezzo": p_, "gemella": [c["price_eur"], c["year"], c["mileage_km"], c.get("url")],
-                                "n_gemelle": g["n_gemelle"], "riv_gemella": g["rivendita"], "margine_gemella": g["rivendita"] - p_,
-                                "M": v.get("M"), "riv_attuale": v.get("R_finale"), "margine_attuale": v.get("margine")})
-        if v.get("M") and p_ <= .5 * v["M"]:      # 19/10: dove finiscono le auto a metà prezzo o meno
-            meta["totale"] += 1
-            meta["con_numero" if tel else "senza_numero" if tel is False else "numero_sconosciuto"] += 1
-            if v["categoria"] in scovo.CATEGORIE_SITO:
-                meta["passano_" + v["categoria"]] += 1
-            else:
-                mot = (v.get("motivi") or ["?"])[0]
-                meta["fuori: " + re.sub(r"\d[\d.]*", "N", mot)[:70]] += 1
-        if v.get("M"):
-            # memoria: la valutazione completa (con i confronti) si tiene solo per le auto che possono andare sul sito
-            utile = v.get("margine") is not None and v["margine"] >= pavimento
-            vals.append({"id": r["id"], "src": r["source"], "p": int(r["price_eur"]), "M": v["M"], "L": v["L"], "n": v["n"],
-                         "tel": tel, "util": (r["model"] or "") in UTILITARIE, "fuel": r["fuel"],
-                         "v": v if utile else {"categoria": v["categoria"], "margine": v.get("margine")}})
-    sim = {"pubblicabili_per_fascia": dict(Counter(
-        next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if x["p"] < lim)
-        for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO))}
-    out = {"lette": len(rows), "valutate": len(vals), "stats": dict(st), "simulazione": sim, "secondi": round(time.time() - t0)}
-    log.warning("META_PREZZO %s", json.dumps(dict(meta.most_common(25)), ensure_ascii=False))
-    log.warning("GEMELLA_SIM %s", json.dumps(dict(gsim)))
-    try:
-        salva_taratura(conn, campioni_tar)
-    except Exception as e:
-        conn.rollback()
-        log.warning("taratura non salvata: %s", str(e)[:200])
-    del campioni_tar
-    if crapporti or crapporti_m:
-        import statistics as _stt
-        csim["commercianti_su_privati_mediana_pct"] = round((_stt.median(crapporti) - 1) * 100, 1) if crapporti else None
-        csim["commercianti_su_mercato_usato_oggi_pct"] = round((_stt.median(crapporti_m) - 1) * 100, 1) if crapporti_m else None
-        csim["auto_con_entrambi"] = len(crapporti)
-    log.warning("SIM_COMMERCIANTI %s", json.dumps(dict(csim)))
-    for e in gesempi:
-        log.warning("GEMELLA_ESEMPIO %s", json.dumps(e, default=str, ensure_ascii=False))
+    ids = [r["id"] for r in conn.execute(UTIL_SQL, {"lo": 500, "hi": 50000, "anno": a.anno_min, "km": a.km_max,
+                                                    "prov": list(MILANO)}).fetchall()]
+    es = valuta_e_scrivi(conn, ids, "cron-utilitarie")
+    pass_ = [(lid, v) for lid, v in es.valutazioni.items()
+             if es.salvata.get(lid) in scovo.CATEGORIE_SITO and v.get("categoria") in scovo.CATEGORIE_SITO
+             and v.get("margine") is not None and v.get("acquisto")
+             and v["margine"] >= scovo.soglia(int(v["acquisto"])) and es.telefono.get(lid) is not False]
+    per_fascia = Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if int(v["acquisto"]) < lim)
+                         for _, v in pass_)
+    out = {"lette": len(ids), "valutate": len(es.valutazioni), "stats": dict(es.stats),
+           "pubblicabili_per_fascia": dict(per_fascia), "secondi": round(time.time() - t0)}
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
-    # esempi (solo dati dell'auto) con la riduzione in vigore
-    # simulazione: quante auto con soglie più basse (stessa rivendita, niente prezzi gonfiati) e anche senza numero
-    soglie_sim = {}
-    for f in (1.0, .85, .7, .6):
-        for senza in (False, True):
-            ok = [x for x in vals if x["v"].get("margine") is not None and (senza or x["tel"] is not False)
-                  and x["v"]["categoria"] in ("opportunita", "candidato", "non_conveniente")
-                  and x["v"]["margine"] >= scovo.soglia(x["p"]) * f]
-            soglie_sim[f"soglie_x{f}{'_anche_senza_numero' if senza else ''}"] = {
-                "tutte": len(ok), "diesel": sum(1 for x in ok if x["fuel"] == "diesel"),
-                "per_fascia": dict(Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 10**9) if x["p"] < lim) for x in ok))}
-    log.warning("SOGLIE_SIM %s", json.dumps(soglie_sim, ensure_ascii=False))
-    # sopra la soglia piena anche SENZA numero (17/10): sul sito ne entra al massimo il 20%, solo le super valide e con
-    # la targa visibile nelle foto (app._senza_numero_super); le altre restano fuori
-    pass_ = [x for x in vals if x["v"]["categoria"] in scovo.CATEGORIE_SITO
-             and (x["v"].get("margine") or 0) >= scovo.soglia(x["p"])]
-    # Le migliori TOP_N (richiesta del 17/10: "le 250 più convenienti"): oltre a quelle sopra soglia, le migliori per
-    # margine rispetto alla soglia della fascia, purché il margine sia almeno TOP_MIN_EURO e TOP_QUOTA della soglia.
-    top_n = int(os.environ.get("TOP_N", "550"))      # più largo: una parte cade al controllo del numero
-    top_min, top_quota = int(os.environ.get("TOP_MIN_EURO", "800")), float(os.environ.get("TOP_QUOTA", "0.6"))
-    gia = {x["id"] for x in pass_}
-    extra = [x for x in vals if x["id"] not in gia and x["tel"] is not False and x["v"]["categoria"] == "non_conveniente"
-             and x["v"].get("margine") is not None
-             and x["v"]["margine"] >= max(top_min, top_quota * scovo.soglia(x["p"]))]
-    extra.sort(key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))
-    extra = extra[:max(0, top_n - len(pass_))]
-    # AutoScout24 (richiesta del 17/10): le migliori AS_TOP_N auto AutoScout analizzate, con margine un po' più flessibile
-    # (almeno AS_TOP_MIN € e AS_TOP_QUOTA della soglia). Quelle col numero non ancora controllato le verifica l'agente
-    # entro pochi giri; senza numero non vanno sul sito.
-    as_n = int(os.environ.get("AS_TOP_N", "160"))
-    as_min, as_quota = int(os.environ.get("AS_TOP_MIN", "600")), float(os.environ.get("AS_TOP_QUOTA", "0.4"))
-    scelti = {x["id"] for x in pass_ + extra}
-    as_gia = sum(1 for x in pass_ + extra if x["src"] == "autoscout24")
-    as_extra = [x for x in vals if x["src"] == "autoscout24" and x["id"] not in scelti and x["tel"] is not False
-                and x["v"]["categoria"] == "non_conveniente" and x["v"].get("margine") is not None
-                and x["v"]["margine"] >= max(as_min, as_quota * scovo.soglia(x["p"]))]
-    as_extra.sort(key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))
-    as_extra = as_extra[:max(0, as_n - as_gia)]
-    extra += as_extra
-    # UTILITARIE ECONOMICHE (richiesta del 17/10: "almeno 50 auto da 1.000 a 3.000 €, il più discreto possibile"):
-    # quota riservata alla fascia, con le stesse stime (nessun prezzo gonfiato) e un margine minimo proporzionato al
-    # prezzo: almeno BASSE_EURO € e BASSE_QUOTA del prezzo d'acquisto, con almeno BASSE_N_CONFRONTI confronti.
-    b_lo, b_hi = int(os.environ.get("BASSE_MIN", "500")), int(os.environ.get("BASSE_MAX", "10000"))   # 17/10 17:41: fino a 10k
-    b_n = int(os.environ.get("BASSE_N", "300"))
-    b_euro, b_quota = int(os.environ.get("BASSE_EURO", "1000")), float(os.environ.get("BASSE_QUOTA", "0.15"))   # 17/10 17:41: 1.000 € (1.500 € sopra 7k)
-    b_conf = int(os.environ.get("BASSE_N_CONFRONTI", "3"))
-    scelti = {x["id"] for x in pass_ + extra}
-    b_gia = sum(1 for x in pass_ + extra if b_lo <= x["p"] <= b_hi)
-
-    def _basse(euro, quota):
-        return [x for x in vals if b_lo <= x["p"] <= b_hi and x["id"] not in scelti and x["tel"] is not False
-                and x["v"]["categoria"] in ("non_conveniente", "candidato", "opportunita")
-                and x["v"].get("margine") is not None and (x.get("n") or 0) >= b_conf
-                and x["v"]["margine"] >= (max(euro, quota * x["p"]) if x["p"] <= 7000 else max(1500, euro))]
-    b_extra = sorted(_basse(b_euro, b_quota), key=lambda x: -x["v"]["margine"])[:b_n]
-    extra += b_extra
-    log.warning("BASSE_0_7K già scelte=%d, aggiunte=%d (margine ≥ %d € e ≥ %.0f%% del prezzo); simulazione: %s", b_gia,
-                len(b_extra), b_euro, b_quota * 100,
-                {f"{e}€/{int(q * 100)}%": len(_basse(e, q)) for e, q in ((1000, .2), (1200, .2), (1500, .2), (2000, .25))})
-    log.warning("TOP_AUTOSCOUT già scelte=%d, aggiunte=%d (con numero già confermato %d)", as_gia, len(as_extra),
-                sum(1 for x in as_extra if x["tel"] is True))
-    log.warning("TOP_AUTO sopra soglia=%d, aggiunte tra le migliori=%d (margine minimo %s)", len(pass_), len(extra),
-                dict(Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 10**9) if x["p"] < lim) for x in extra)))
-    for x in sorted(pass_, key=lambda x: -x["v"]["margine"])[:8]:
-        v = x["v"]
-        log.warning("UTILITARIE_ESEMPIO %s", json.dumps({"id": x["id"], "prezzo": x["p"], "M": x["M"], "L": x["L"], "n": x["n"],
-                    "R": v.get("R_finale"), "rid": v.get("riduzione"), "margine": v.get("margine"), "cat": v["categoria"],
-                    "confronti": [[c["prezzo"], c.get("prezzo_corretto"), c["anno"], c["km"], c["kw"]] for c in (v.get("confronti") or [])[:8]]},
-                    default=str))
     if pubblica:
         n = 0
         conn.execute("DELETE FROM top_auto")
-        for pos, x in enumerate(sorted(extra, key=lambda x: -x["v"]["margine"] / scovo.soglia(x["p"]))):
+        ordine = sorted(pass_, key=lambda x: -x[1]["margine"] / scovo.soglia(int(x[1]["acquisto"])))
+        for pos, (lid, v) in enumerate(ordine):
             conn.execute("INSERT INTO top_auto (listing_id, posizione, margine) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING",
-                         (x["id"], pos, x["v"]["margine"]))
-        for x in pass_ + extra:
-            v = x["v"]
-            conn.execute(
-                """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati)
-                   VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (listing_id, policy_version) DO UPDATE SET computed_at=now(),
-                   categoria=EXCLUDED.categoria, margine=EXCLUDED.margine, riassunto=EXCLUDED.riassunto, dati=EXCLUDED.dati""",
-                (x["id"], P.POLICY_VERSION, v["categoria"], v.get("margine"), json.dumps(P.riassunto(v), default=str),
-                 json.dumps(v, default=str)))
-            if not conn.execute("SELECT 1 FROM valuations WHERE listing_id=%s LIMIT 1", (x["id"],)).fetchone():
+                         (lid, pos, v["margine"]))
+        for lid, v in ordine:
+            if not conn.execute("SELECT 1 FROM valuations WHERE listing_id=%s LIMIT 1", (lid,)).fetchone():
                 conn.execute(
                     """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
                          n_comparables, comparables_used, confidence, parts_cost_low, parts_cost_high)
                        VALUES (%s,%s,%s,%s,%s,%s,'[]',%s,0,0)""",
-                    (x["id"], P.POLICY_VERSION + "+utilitarie", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
+                    (lid, P.POLICY_VERSION + "+utilitarie", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
                      "affidabile" if v["categoria"] == "opportunita" else "da_verificare"))
             conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
                          "last_checked_at=now() WHERE id=%s AND stage <> 'approfondito'",
-                         ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", x["id"]))
+                         ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid))
             n += 1
         conn.commit()
         log.warning("UTILITARIE_PUBBLICATE %d", n)

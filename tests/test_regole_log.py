@@ -33,7 +33,10 @@ def test_valori_effettivi_e_default():
     e = d["env"]
     assert e["RIVENDITA_VERA"] == "1" and e["BENZ_RICHIESTE"] == rl.DEFAULT and e["SOGLIE_PV"] == rl.DEFAULT
     assert e["POLICY_COSTO_FISSO"] == "200" and e["POLICY_NUOVA_REGOLA"] == "3"   # POLICY_* trovate anche se nuove
-    assert d["policy"]["costo_fisso"] == 200 and d["policy"]["rivendita_commercianti"] is False
+    assert d["policy"]["costi"]["fissi_max"] == 200 and d["policy"]["costi"]["costo_fisso_alto"] == 0
+    assert d["policy"]["versione"].startswith("regole-") and len(d["policy"]["impronta"]) == 12
+    _, d2 = _riga({"CORREZIONE_DUE_SENSI": "0"})                                 # interruttore ammesso: si vede
+    assert d2["policy"]["correzione"]["due_sensi"] is False
     assert d["processo"] == "test"
 
 
