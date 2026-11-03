@@ -301,7 +301,8 @@ def test_riduzione_secondo_la_precisione():
 def test_telefono_subito_dietro_il_bottone():
     from dealfinder.pipeline.tempo_reale import telefono_subito
     assert telefono_subito({"advertiser": {"phone": "+39 333 1234567"}})
-    assert telefono_subito({"advertiser": {"phone": "1"}}) and not telefono_subito({"advertiser": {"phone": "0"}})
+    # 25/10 21:40: Subito mette advertiser.phone = "0" proprio quando il venditore HA il numero (bottone "Mostra numero")
+    assert telefono_subito({"advertiser": {"phone": "1"}}) and telefono_subito({"advertiser": {"phone": "0"}})
     assert not telefono_subito({"advertiser": {"phone": ""}})
     assert not telefono_subito({"advertiser": {}})
     assert not telefono_subito(None)
