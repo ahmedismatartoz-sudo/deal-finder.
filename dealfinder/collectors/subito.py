@@ -465,43 +465,66 @@ class SubitoCollector(Collector):
         missing = wanted - set(keys)
         if missing:
             log.warning("subito: codice non trovato per %s (saltate nella raccolta profonda)", sorted(missing))
+        band_pages = query.get("band_pages", 30)
         for sn, key in sorted(keys.items()):
-            tot_read = tot_kept = 0
+            tot = {"letti": 0, "tenuti": 0}
             from ..pipeline import passi
             for ps, pe in query["price_bands"]:
                 chiave = f"sub:{region}:{sn}:{ps}-{pe}"
                 if passi.fatto(chiave):
                     continue
-                ok_band = True
+                esito = {"ok": True}
                 try:
-                    for page in range(query.get("band_pages", 30)):
-                        r = self._api({"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
-                                       "lim": lim, "start": page * lim, "sort": "datedesc"})
-                        self.pause()
-                        if r.status_code != 200:
-                            log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
-                            ok_band = False
-                            break
-                        ads = (r.json() or {}).get("ads") or []
-                        for it in ads:
-                            listing = parse_item(it)
-                            if not listing:
-                                continue
-                            tot_read += 1
-                            if listing.province and listing.province.upper() not in wanted:
-                                continue          # il filtro per provincia non ha funzionato: si scarta qui
-                            tot_kept += 1
-                            yield listing
-                        if len(ads) < lim:
-                            break
+                    yield from self._fascia(region, key, sn, ps, pe, band_pages, lim, wanted, set(), 0, tot, esito)
                 except Exception as e:
                     # 3/11: prima un errore (rete, risposta non leggibile) chiudeva TUTTA la regione; ora solo la fascia
                     log.warning("subito %s fascia %s-%s: %s (fascia saltata, si continua)", sn, ps, pe, str(e)[:150])
-                    ok_band = False
-                if ok_band:
+                    esito["ok"] = False
+                if esito["ok"]:
                     passi.segna(chiave)
-            log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot_read, tot_kept,
+            log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot["letti"], tot["tenuti"],
                      query["price_bands"][-1][1])
+
+    # 3/11: una fascia (provincia + prezzo) che riempie tutte le pagine permesse ha altri annunci oltre l'ultima pagina:
+    # prima si perdevano in silenzio (giro della zona: 10 pagine = 1.000 auto per fascia da 1.000 €, Milano ne ha di
+    # più). Ora la fascia si divide in due metà, rilette da capo (i doppioni si saltano), fino a FASCIA_DIVISIONI volte.
+    FASCIA_DIVISIONI = 4          # al massimo 16 pezzi per fascia
+    FASCIA_MINIMA = 100           # euro: sotto questa larghezza non si divide più
+
+    def _fascia(self, region, key, sn, ps, pe, pages, lim, wanted, visti: set, livello: int, tot: dict,
+                esito: dict) -> Iterator[Listing]:
+        piena = False
+        for page in range(pages):
+            r = self._api({"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
+                           "lim": lim, "start": page * lim, "sort": "datedesc"})
+            self.pause()
+            if r.status_code != 200:
+                log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
+                esito["ok"] = False
+                return
+            ads = (r.json() or {}).get("ads") or []
+            for it in ads:
+                listing = parse_item(it)
+                if not listing or listing.source_id in visti:
+                    continue
+                visti.add(listing.source_id)
+                tot["letti"] += 1
+                if listing.province and listing.province.upper() not in wanted:
+                    continue          # il filtro per provincia non ha funzionato: si scarta qui
+                tot["tenuti"] += 1
+                yield listing
+            if len(ads) < lim:
+                return
+            piena = page == pages - 1
+        if not piena:
+            return
+        if livello >= self.FASCIA_DIVISIONI or pe - ps < self.FASCIA_MINIMA:
+            log.warning("subito %s fascia %s-%s: ancora piena dopo %d pagine, letti solo i più recenti", sn, ps, pe, pages)
+            return
+        mid = (ps + pe) // 2
+        log.info("subito %s fascia %s-%s piena: divisa in %s-%s e %s-%s", sn, ps, pe, ps, mid, mid, pe)
+        yield from self._fascia(region, key, sn, ps, mid, pages, lim, wanted, visti, livello + 1, tot, esito)
+        yield from self._fascia(region, key, sn, mid, pe, pages, lim, wanted, visti, livello + 1, tot, esito)
 
     def _search_html(self, query: dict) -> Iterator[Listing]:
         for province in query["provinces"]:

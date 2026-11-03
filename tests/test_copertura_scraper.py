@@ -207,3 +207,30 @@ def test_profonda_un_errore_salta_solo_la_fascia():
     cl.get = get
     got = list(c._deep({"price_bands": [(1000, 2000), (2000, 3000)], "band_pages": 5}, {"MI"}, 4, 100))
     assert len(got) == 30 and all(l.price_eur == 2500 for l in got)   # prima: zero (regione intera persa)
+
+
+# ------------------------------------------------------------------ fix 3: fasce piene divise in due
+
+def test_profonda_fascia_piena_si_divide():
+    ads = [_ad(300000 + i, prezzo=1000 + (i * 7) % 1000) for i in range(450)]
+    cl = _Hades(ads)
+    got = list(_sub(cl)._deep({"price_bands": [(1000, 2000)], "band_pages": 2}, {"MI"}, 4, 100))
+    ids = [l.source_id for l in got]
+    assert len(ids) == len(set(ids)) == 450        # prima: 200 (solo le prime 2 pagine)
+
+
+def test_profonda_fascia_non_piena_non_si_divide():
+    ads = [_ad(400000 + i, prezzo=1500) for i in range(150)]
+    cl = _Hades(ads)
+    got = list(_sub(cl)._deep({"price_bands": [(1000, 2000)], "band_pages": 2}, {"MI"}, 4, 100))
+    assert len(got) == 150
+    assert sum(1 for p in cl.calls if "ps" in p) == 2   # nessuna rilettura in più
+
+
+def test_profonda_divisione_limitata():
+    ads = [_ad(500000 + i, prezzo=1500) for i in range(1000)]    # tutte allo stesso prezzo: dividere non aiuta
+    cl = _Hades(ads)
+    c = _sub(cl)
+    got = list(c._deep({"price_bands": [(1000, 2000)], "band_pages": 1}, {"MI"}, 4, 100))
+    assert len(got) == 100
+    assert sum(1 for p in cl.calls if "ps" in p) <= 2 ** (c.FASCIA_DIVISIONI + 1)
