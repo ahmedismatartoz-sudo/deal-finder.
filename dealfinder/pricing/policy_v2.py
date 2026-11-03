@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03e"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
+POLICY_REV = "2026-11-03f"   # c: soglie −20% (cliente 3/11 10:25); d: valore reale senza la riduzione in più (esame 3/11 19:26)
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -279,6 +279,16 @@ def riduzione(m: float, cfg: PolicyConfig) -> tuple[float | None, str, float | N
             return r, desc, base
         prev = lim
     return None, "fuori tabella", None
+
+
+def benzina_richiesta(t: dict) -> bool:
+    """Benzina economica con pochi km (le più richieste): BENZ_RICHIESTE=1 (predefinito)."""
+    if os.environ.get("BENZ_RICHIESTE", "1") != "1":
+        return False
+    km = t.get("mileage_km", t.get("km"))
+    return ("benzin" in str(t.get("fuel") or t.get("carb") or "").lower()
+            and 0 < float(t.get("price_eur") or t.get("prezzo") or 0) < int(os.environ.get("BENZ_RICHIESTE_PREZZO", "10000"))
+            and km is not None and int(km) < int(os.environ.get("BENZ_RICHIESTE_KM", "100000")))
 
 
 def rivendita(m: float, l: float, cfg: PolicyConfig, prezzo: float | None = None) -> dict:
@@ -853,6 +863,12 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         M_prima = out["M"]
         out["M_gemelle"] = M_prima                 # mercato senza valore reale: serve alla prova notturna
         out["M"] = min(out["M"], V)
+        # 3/11 22:12 (cliente: "sono così richieste che non ha senso il calcolo prudente, il prezzo sarà alto"):
+        # benzina sotto BENZ_RICHIESTE_PREZZO (10.000 €) e BENZ_RICHIESTE_KM (100.000 km): si vendono al prezzo delle
+        # gemelle in vendita, il valore reale non abbassa il mercato
+        if benzina_richiesta(t):
+            out["M"] = M_prima
+            out["benzina_richiesta"] = True
         # 3/11 10:21 (cliente: "fai le prime tre, basta che entrano più auto"): la P25 del valore reale NON fa più da
         # tetto alla rivendita. Il valore reale è già un prezzo di VENDITA: la P25 (il 25% più basso) era pensata per i
         # prezzi CHIESTI e qui contava la prudenza due volte (−5/10% in più). Resta il tetto P25 delle gemelle.
