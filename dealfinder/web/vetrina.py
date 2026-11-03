@@ -134,9 +134,13 @@ def _leggi_uno(slug: str) -> list:
         return leggi(slug)
 
 
+# vetrine sempre attive (Render è al limite di 300 variabili: non si aggiunge VETRINA_SLUG per ognuna)
+VETRINA_SEMPRE = {"sr-auto-srl"}     # 3/11: prototipo SR AUTO S.r.l. (Osio Sopra, BG)
+
+
 async def api_vetrina(request):
     slug = request.path_params["slug"]
-    ammessi = {s.strip() for s in os.environ.get("VETRINA_SLUG", "auto-grandi-srl").split(",") if s.strip()}
+    ammessi = {s.strip() for s in os.environ.get("VETRINA_SLUG", "auto-grandi-srl").split(",") if s.strip()} | VETRINA_SEMPRE
     h = {"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300"}
     if slug not in ammessi:
         return JSONResponse({"errore": "non disponibile"}, status_code=404, headers=h)

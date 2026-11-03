@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SR AUTO · Osio Sopra</title>
+<meta name="description" content="SR AUTO S.r.l., Osio Sopra (BG): vendita di auto nuove e usate, noleggio, finanziamenti personalizzati, garanzia e prova su strada.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,300..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nero:#08080a; --carbon:#111114; --grafite:#1a1a1f; --linea:#2a2a31;
+  --rosso:#e3121c; --rosso2:#ff2a33; --glow:rgba(255,32,44,.55);
+  --bianco:#f6f6f8; --acciaio:#a3a6ad; --morbido:#c9cbd1;
+  --f:"Saira",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--f);font-variation-settings:"wdth" 100;background:var(--nero);color:var(--bianco);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.w{width:min(1200px,100% - 32px);margin:0 auto}
+.neon{color:#fff;text-shadow:0 0 4px #fff,0 0 12px var(--rosso2),0 0 28px var(--rosso),0 0 60px var(--glow)}
+.kick{font-size:13px;letter-spacing:.32em;text-transform:uppercase;color:var(--rosso2);font-weight:700}
+h1,h2,h3{font-variation-settings:"wdth" 118;line-height:1.02;letter-spacing:-.01em}
+.tit{font-size:clamp(34px,5.4vw,64px);font-weight:850;text-transform:uppercase}
+.cta{display:inline-flex;align-items:center;gap:10px;padding:15px 26px;border-radius:999px;background:var(--rosso);color:#fff;font-weight:750;letter-spacing:.04em;text-transform:uppercase;font-size:14px;box-shadow:0 0 0 0 var(--glow);transition:transform .2s,box-shadow .3s,background .2s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 10px 40px -6px var(--glow);background:var(--rosso2)}
+.cta.lin{background:transparent;border:1.5px solid rgba(255,255,255,.35)}
+.cta.lin:hover{border-color:#fff;box-shadow:none}
+.cta svg{width:18px;height:18px}
+
+/* ---------- intro: l'insegna al neon che si accende ---------- */
+#intro{position:fixed;inset:0;z-index:100;background:#000;display:grid;place-items:center;overflow:hidden}
+#intro .insegna{font-weight:900;font-variation-settings:"wdth" 125;font-size:clamp(56px,14vw,170px);letter-spacing:.04em;color:#2a0507;display:flex;gap:.08em}
+#intro .insegna span{animation:accendi 1.6s forwards}
+#intro .insegna span:nth-child(2){animation-delay:.18s}#intro .insegna span:nth-child(4){animation-delay:.32s}
+#intro .insegna span:nth-child(5){animation-delay:.42s}#intro .insegna span:nth-child(6){animation-delay:.55s}#intro .insegna span:nth-child(7){animation-delay:.66s}
+#intro .sotto{position:absolute;top:calc(50% + clamp(48px,9vw,110px));font-size:clamp(12px,1.6vw,16px);letter-spacing:.5em;color:var(--acciaio);opacity:0;animation:appari .6s 1.3s forwards}
+#intro .raggio{position:absolute;inset:0;background:linear-gradient(100deg,transparent 40%,rgba(255,40,50,.35) 50%,transparent 60%);transform:translateX(-100%);animation:raggio 1.1s 1.2s ease-in forwards}
+#intro.via{animation:sipario .7s cubic-bezier(.7,0,.3,1) forwards}
+@keyframes accendi{0%{color:#2a0507;text-shadow:none}8%{color:#fff;text-shadow:0 0 18px var(--rosso2),0 0 60px var(--rosso)}12%{color:#2a0507;text-shadow:none}22%,100%{color:#fff;text-shadow:0 0 6px #fff,0 0 18px var(--rosso2),0 0 46px var(--rosso),0 0 100px var(--glow)}}
+@keyframes appari{to{opacity:1}}
+@keyframes raggio{to{transform:translateX(100%)}}
+@keyframes sipario{to{clip-path:inset(0 0 100% 0)}}
+#intro{clip-path:inset(0 0 0 0)}
+
+/* ---------- barra ---------- */
+.top{position:fixed;top:0;left:0;right:0;z-index:50;transition:background .3s,backdrop-filter .3s,border-color .3s;border-bottom:1px solid transparent}
+.top.piena{background:rgba(8,8,10,.82);backdrop-filter:blur(14px);border-color:var(--linea)}
+.top .w{display:flex;align-items:center;justify-content:space-between;height:72px;gap:18px}
+.mark{font-weight:900;font-variation-settings:"wdth" 125;font-size:26px;letter-spacing:.06em;display:flex;align-items:baseline;gap:10px}
+.mark b{color:var(--rosso2);text-shadow:0 0 14px var(--glow)}
+.mark small{font-size:11px;letter-spacing:.3em;color:var(--acciaio);font-weight:600}
+.top nav{display:flex;gap:26px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;font-weight:650}
+.top nav a{opacity:.8;transition:opacity .2s,color .2s}.top nav a:hover{opacity:1;color:var(--rosso2)}
+.top .tel{font-weight:750;font-size:15px;padding:9px 18px;border:1.5px solid var(--rosso);border-radius:999px;white-space:nowrap}
+.burger{display:none;width:44px;height:44px;place-items:center}
+.burger i,.burger i:before,.burger i:after{display:block;width:22px;height:2px;background:#fff;position:relative;content:""}
+.burger i:before{position:absolute;top:-7px}.burger i:after{position:absolute;top:7px}
+
+/* ---------- hero con le scie di luce ---------- */
+.hero{position:relative;min-height:100svh;display:flex;align-items:flex-end;padding:120px 0 70px;overflow:hidden;isolation:isolate}
+#scie{position:absolute;inset:0;z-index:-2;width:100%;height:100%}
+.hero:after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(70% 60% at 75% 35%,rgba(227,18,28,.22),transparent 70%),linear-gradient(180deg,rgba(8,8,10,.1),var(--nero) 96%)}
+.hero h1{font-size:clamp(46px,9vw,124px);font-weight:900;text-transform:uppercase;max-width:12ch}
+.hero h1 em{font-style:normal;color:var(--rosso2);text-shadow:0 0 24px var(--glow)}
+.hero p.lead{max-width:56ch;margin:22px 0 34px;color:var(--morbido);font-size:clamp(17px,1.6vw,20px)}
+.hero .ctas{display:flex;gap:14px;flex-wrap:wrap}
+.stato{display:inline-flex;align-items:center;gap:10px;margin-bottom:26px;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--linea);font-size:14px}
+.stato i{width:9px;height:9px;border-radius:50%;background:#3ad16b;box-shadow:0 0 12px #3ad16b}
+.stato.chiuso i{background:var(--rosso2);box-shadow:0 0 12px var(--rosso2)}
+.numeri{display:flex;gap:44px;margin-top:56px;flex-wrap:wrap}
+.numeri div b{display:block;font-size:clamp(34px,4vw,48px);font-weight:850;font-variation-settings:"wdth" 120}
+.numeri div span{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--acciaio)}
+
+/* ---------- nastro servizi ---------- */
+.nastro{border-block:1px solid var(--linea);background:var(--carbon);overflow:hidden;padding:18px 0}
+.nastro .scorre{display:flex;gap:56px;width:max-content;animation:scorre 34s linear infinite;font-weight:800;font-variation-settings:"wdth" 122;text-transform:uppercase;font-size:clamp(18px,2.4vw,28px);letter-spacing:.06em}
+.nastro .scorre span{display:flex;align-items:center;gap:56px;white-space:nowrap}
+.nastro .scorre span:after{content:"";width:10px;height:10px;background:var(--rosso);transform:rotate(45deg);box-shadow:0 0 12px var(--glow)}
+@keyframes scorre{to{transform:translateX(-50%)}}
+
+/* ---------- auto ---------- */
+section{padding:clamp(70px,10vw,130px) 0}
+.testa{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;flex-wrap:wrap;margin-bottom:38px}
+.testa p{color:var(--acciaio);max-width:48ch;margin-top:14px}
+.filtri{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tab{padding:10px 18px;border-radius:999px;border:1px solid var(--linea);font-size:14px;font-weight:650;transition:all .2s}
+.tab[aria-pressed="true"]{background:var(--bianco);color:var(--nero);border-color:var(--bianco)}
+select{font:inherit;font-size:14px;background:var(--grafite);color:var(--bianco);border:1px solid var(--linea);border-radius:999px;padding:10px 16px}
+.griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
+.auto{text-align:left;background:var(--carbon);border:1px solid var(--linea);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .35s;opacity:0;transform:translateY(24px)}
+.auto.vista{opacity:1;transform:none}
+.auto:hover{transform:translateY(-6px);border-color:rgba(255,42,51,.6);box-shadow:0 24px 60px -24px var(--glow)}
+.auto .f{aspect-ratio:4/3;background:linear-gradient(135deg,#1c1c22,#0e0e11);position:relative;overflow:hidden}
+.auto .f img{width:100%;height:100%;object-fit:cover;transition:transform .7s}
+.auto:hover .f img{transform:scale(1.06)}
+.auto .eti{position:absolute;top:14px;left:14px;padding:6px 12px;border-radius:999px;background:rgba(8,8,10,.75);backdrop-filter:blur(6px);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.auto .eti.n{background:var(--rosso)}
+.auto .c{padding:20px 22px 22px;display:flex;flex-direction:column;gap:8px;flex:1}
+.auto h3{font-size:22px;font-weight:800;text-transform:uppercase}
+.auto .v{color:var(--acciaio);font-size:14px;min-height:1.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auto .d{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.auto .d span{font-size:13px;padding:4px 10px;border-radius:8px;background:var(--grafite);color:var(--morbido)}
+.auto .p{margin-top:auto;padding-top:14px;font-size:26px;font-weight:850;font-variation-settings:"wdth" 120;color:#fff}
+.vuoto{grid-column:1/-1;padding:46px;border:1px dashed var(--linea);border-radius:22px;color:var(--acciaio);text-align:center}
+.carica{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
+.carica div{height:390px;border-radius:22px;background:linear-gradient(90deg,var(--carbon),var(--grafite),var(--carbon));background-size:200% 100%;animation:luccica 1.4s infinite}
+@keyframes luccica{to{background-position:-200% 0}}
+.tutte{margin-top:36px;text-align:center}
+
+/* ---------- servizi ---------- */
+.servizi{background:linear-gradient(180deg,var(--nero),var(--carbon))}
+.serv{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:44px}
+.serv div{padding:30px 26px;border-radius:22px;border:1px solid var(--linea);background:rgba(255,255,255,.02);position:relative;overflow:hidden;transition:border-color .3s}
+.serv div:hover{border-color:rgba(255,42,51,.55)}
+.serv div:before{content:"";position:absolute;inset:auto -40% -60% auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 70%);opacity:0;transition:opacity .4s}
+.serv div:hover:before{opacity:.6}
+.serv svg{width:38px;height:38px;color:var(--rosso2);margin-bottom:18px;filter:drop-shadow(0 0 8px var(--glow))}
+.serv h3{font-size:22px;font-weight:800;text-transform:uppercase;margin-bottom:8px}
+.serv p{color:var(--acciaio);font-size:15.5px}
+
+/* ---------- noleggio ---------- */
+.noleggio .box{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:clamp(30px,5vw,60px);border-radius:30px;background:radial-gradient(90% 120% at 100% 0%,rgba(227,18,28,.3),transparent 60%),var(--carbon);border:1px solid var(--linea)}
+.noleggio ul{list-style:none;display:grid;gap:12px;margin-top:24px}
+.noleggio li{display:flex;gap:12px;align-items:flex-start;color:var(--morbido)}
+.noleggio li:before{content:"";flex:none;margin-top:9px;width:8px;height:8px;background:var(--rosso);transform:rotate(45deg)}
+.totem{justify-self:center;width:min(240px,70%);aspect-ratio:1/3.2;border-radius:14px;background:linear-gradient(180deg,#1b0204,#0c0c0e);border:2px solid #3a0a0d;box-shadow:0 0 0 6px #0d0d10,0 0 80px -10px var(--glow);display:flex;flex-direction:column;align-items:center;padding:28px 0;gap:14px}
+.totem .t1{font-weight:900;font-variation-settings:"wdth" 125;font-size:clamp(30px,4vw,44px);line-height:.9;text-align:center}
+.totem .t2{font-size:10px;letter-spacing:.24em;color:var(--morbido);text-align:center}
+.totem i{display:block;width:44%;height:2px;background:linear-gradient(90deg,transparent,var(--rosso2),transparent);box-shadow:0 0 10px var(--rosso2)}
+.totem .marche{margin-top:auto;display:flex;flex-direction:column;gap:12px;font-size:11px;letter-spacing:.18em;color:var(--acciaio);text-transform:uppercase;text-align:center}
+
+/* ---------- dove ---------- */
+.dove .g{display:grid;grid-template-columns:1fr 1.1fr;gap:34px}
+.ind{font-size:22px;font-weight:700;margin:18px 0 22px}
+table.orari{width:100%;border-collapse:collapse;margin-bottom:26px}
+table.orari td{padding:11px 0;border-bottom:1px solid var(--linea);font-size:15.5px}
+table.orari td:last-child{text-align:right;color:var(--morbido)}
+table.orari tr.oggi td{color:#fff;font-weight:750}
+table.orari tr.oggi td:first-child:before{content:"● ";color:var(--rosso2)}
+.dove .ctas{display:flex;gap:12px;flex-wrap:wrap}
+.mappa{border-radius:24px;overflow:hidden;border:1px solid var(--linea);min-height:420px;filter:grayscale(.3) contrast(1.05)}
+.mappa iframe{width:100%;height:100%;min-height:420px;border:0}
+
+footer{padding:40px 0 90px;border-top:1px solid var(--linea);color:var(--acciaio);font-size:14px}
+footer .w{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.proto{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:60;background:rgba(17,17,20,.92);border:1px solid var(--linea);color:var(--acciaio);font-size:12.5px;padding:8px 16px;border-radius:999px;white-space:nowrap}
+.wa-fisso{position:fixed;right:18px;bottom:60px;z-index:60;width:58px;height:58px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 10px 30px -6px rgba(37,211,102,.6);transition:transform .2s}
+.wa-fisso:hover{transform:scale(1.08)}
+.wa-fisso svg{width:30px;height:30px;color:#fff}
+
+/* ---------- scheda auto ---------- */
+.scheda{position:fixed;inset:0;z-index:80;background:rgba(5,5,7,.96);backdrop-filter:blur(10px);overflow-y:auto;opacity:0;pointer-events:none;transition:opacity .3s}
+.scheda.on{opacity:1;pointer-events:auto}
+.scheda .chiudi{display:flex;justify-content:space-between;align-items:center;height:76px}
+.scheda .chiudi button{padding:10px 20px;border:1px solid var(--linea);border-radius:999px;font-weight:650}
+.sc{display:grid;grid-template-columns:1.35fr 1fr;gap:38px;padding-bottom:60px}
+.palco{position:relative;aspect-ratio:4/3;border-radius:22px;overflow:hidden;background:var(--carbon)}
+.palco img{width:100%;height:100%;object-fit:cover;transition:opacity .3s}
+.palco button{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:rgba(8,8,10,.7);font-size:28px;line-height:1}
+.palco .prev{left:14px}.palco .next{right:14px}
+.palco .n{position:absolute;bottom:14px;right:14px;padding:5px 12px;border-radius:999px;background:rgba(8,8,10,.75);font-size:13px}
+.mini{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:6px}
+.mini img{width:92px;height:69px;object-fit:cover;border-radius:10px;opacity:.5;cursor:pointer;flex:none;border:2px solid transparent}
+.mini img.on{opacity:1;border-color:var(--rosso2)}
+.sc h2{font-size:clamp(30px,4vw,46px);font-weight:850;text-transform:uppercase}
+.sc .ver{color:var(--acciaio);margin-top:8px}
+.sc .prezzo{font-size:42px;font-weight:900;margin:18px 0 22px;font-variation-settings:"wdth" 120;color:#fff;text-shadow:0 0 22px var(--glow)}
+table.dati{width:100%;border-collapse:collapse;margin-bottom:26px}
+table.dati td{padding:11px 0;border-bottom:1px solid var(--linea)}
+table.dati td:first-child{color:var(--acciaio)}
+table.dati td:last-child{text-align:right;font-weight:650}
+.sc .cta{width:100%;justify-content:center;margin-bottom:12px}
+
+/* comparsa allo scorrimento */
+.rivela{opacity:0;transform:translateY(30px);transition:opacity .9s,transform .9s cubic-bezier(.2,.8,.2,1)}
+.rivela.vista{opacity:1;transform:none}
+
+@media (max-width:900px){
+  .top nav{display:none}.top .tel{display:none}.burger{display:grid}
+  .top.aperto nav{display:flex;position:absolute;top:72px;left:0;right:0;flex-direction:column;background:rgba(8,8,10,.97);padding:22px 16px;gap:18px;border-bottom:1px solid var(--linea)}
+  .noleggio .box,.dove .g,.sc{grid-template-columns:1fr}
+  .totem{display:none}
+  .numeri{gap:28px}
+  .proto{font-size:11px;white-space:normal;width:calc(100% - 32px);text-align:center}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.auto,.rivela{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div id="intro" aria-hidden="true">
+  <div class="raggio"></div>
+  <div class="insegna"><span>S</span><span>R</span>&nbsp;<span>A</span><span>U</span><span>T</span><span>O</span></div>
+  <div class="sotto">VENDITA E NOLEGGIO</div>
+</div>
+
+<header class="top" id="top">
+  <div class="w">
+    <a class="mark" href="#">SR <b>AUTO</b><small>OSIO SOPRA</small></a>
+    <nav><a href="#auto">Auto</a><a href="#servizi">Servizi</a><a href="#noleggio">Noleggio</a><a href="#dove">Dove siamo</a></nav>
+    <a class="tel" href="tel:+393514370735">351 437 0735</a>
+    <button class="burger" aria-label="Menu" onclick="document.getElementById('top').classList.toggle('aperto')"><i></i></button>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <canvas id="scie" aria-hidden="true"></canvas>
+  <div class="w">
+    <div class="stato" id="stato"><i></i><span>Orari di oggi</span></div>
+    <p class="kick">Concessionaria a Osio Sopra · Bergamo</p>
+    <h1>La tua prossima auto <em>si accende qui</em></h1>
+    <p class="lead">Auto nuove e usate selezionate, garanzia e pulizia completa alla consegna, finanziamenti su misura e prova su strada. Vendita e noleggio, con un solo interlocutore.</p>
+    <div class="ctas">
+      <a class="cta" href="#auto">Guarda le auto <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="cta lin wa" href="#">Scrivici su WhatsApp</a>
+    </div>
+    <div class="numeri">
+      <div><b id="nAuto">—</b><span>Auto disponibili</span></div>
+      <div><b>6 giorni</b><span>Aperti a settimana</span></div>
+      <div><b>BG</b><span>Via Primo Maggio 39</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="nastro" aria-hidden="true"><div class="scorre">
+  <span>Auto nuove e usate</span><span>Noleggio</span><span>Finanziamenti personalizzati</span><span>Garanzia</span><span>Pulizia completa alla consegna</span><span>Prova su strada</span>
+  <span>Auto nuove e usate</span><span>Noleggio</span><span>Finanziamenti personalizzati</span><span>Garanzia</span><span>Pulizia completa alla consegna</span><span>Prova su strada</span>
+</div></div>
+
+<section id="auto">
+  <div class="w">
+    <div class="testa rivela">
+      <div><p class="kick">Disponibili ora</p><h2 class="tit">Le nostre auto</h2><p>Ogni auto con foto, chilometri e prezzo reali, aggiornate da sole quando entra o esce un'auto dal salone.</p></div>
+      <div class="filtri">
+        <button class="tab" data-f="tutte" aria-pressed="true">Tutte</button>
+        <button class="tab" data-f="b" aria-pressed="false">Fino a 15.000 €</button>
+        <button class="tab" data-f="a" aria-pressed="false">Oltre 15.000 €</button>
+        <select id="ordina" aria-label="Ordina"><option value="">In evidenza</option><option value="pa">Prezzo crescente</option><option value="pd">Prezzo decrescente</option><option value="km">Meno chilometri</option></select>
+      </div>
+    </div>
+    <div class="griglia" id="stock"><div class="carica"><div></div><div></div><div></div></div></div>
+    <div class="tutte"><a class="cta lin" id="tutteAS" target="_blank" rel="noopener">Tutte le auto su AutoScout24</a></div>
+  </div>
+</section>
+
+<section class="servizi" id="servizi">
+  <div class="w">
+    <div class="rivela"><p class="kick">Perché SR AUTO</p><h2 class="tit">Comprare bene,<br>senza pensieri</h2></div>
+    <div class="serv">
+      <div class="rivela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><h3>Garanzia</h3><p>Ogni auto consegnata con la garanzia e i controlli fatti prima della vendita.</p></div>
+      <div class="rivela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg><h3>Finanziamenti</h3><p>Rate costruite sulle tue esigenze, con la pratica seguita direttamente in salone.</p></div>
+      <div class="rivela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17h14l-1.5-6.5A2 2 0 0015.6 9H8.4a2 2 0 00-1.9 1.5L5 17z"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/><path d="M12 3v3M8 4.5l1 2M16 4.5l-1 2"/></svg><h3>Pulizia completa</h3><p>L'auto ti arriva pulita a fondo, dentro e fuori, pronta da guidare.</p></div>
+      <div class="rivela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v6.5M4.2 16.5L9.8 13.2M19.8 16.5l-5.6-3.3"/></svg><h3>Prova su strada</h3><p>Prenoti su WhatsApp, vieni a Osio Sopra e la provi prima di decidere.</p></div>
+      <div class="rivela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg><h3>Consulenza</h3><p>Ti aiutiamo a scegliere l'auto giusta per uso, budget e alimentazione.</p></div>
+      <div class="rivela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h11l5 5-5 5H4z"/><path d="M8 12h6"/></svg><h3>Nuove e usate</h3><p>Dalle utilitarie alle premium: auto nuove, km 0 e usate selezionate.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="noleggio" id="noleggio">
+  <div class="w">
+    <div class="box rivela">
+      <div>
+        <p class="kick">Vendita e noleggio</p>
+        <h2 class="tit">Ti serve un'auto per un periodo?</h2>
+        <p style="margin-top:18px;color:var(--morbido)">Oltre alla vendita, SR AUTO offre auto a noleggio: per lavoro, mentre aspetti la tua auto nuova o quando ti serve un'auto in più.</p>
+        <ul><li>Auto pronte, controllate e pulite</li><li>Durata e condizioni concordate in salone</li><li>Un solo riferimento per vendita, noleggio e assistenza</li></ul>
+        <div style="margin-top:30px"><a class="cta wa-nol" href="#">Chiedi un noleggio</a></div>
+      </div>
+      <div class="totem" aria-hidden="true">
+        <div class="t1 neon">SR<br>AUTO</div><div class="t2">VENDITA E NOLEGGIO</div><i></i>
+        <div class="marche"><span>Porsche</span><span>Audi</span><span>BMW</span><span>Mercedes</span><span>Volkswagen</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="dove" id="dove">
+  <div class="w g">
+    <div class="rivela">
+      <p class="kick">Dove siamo</p><h2 class="tit">Vieni in salone</h2>
+      <p class="ind">Via Primo Maggio, 39<br>24040 Osio Sopra (BG)</p>
+      <table class="orari" id="orari">
+        <tr data-g="1"><td>Lunedì</td><td>9:00–12:30 · 14:00–19:00</td></tr>
+        <tr data-g="2"><td>Martedì</td><td>9:00–12:30 · 14:00–19:00</td></tr>
+        <tr data-g="3"><td>Mercoledì</td><td>9:00–12:30 · 14:00–19:00</td></tr>
+        <tr data-g="4"><td>Giovedì</td><td>9:00–12:30 · 14:00–19:00</td></tr>
+        <tr data-g="5"><td>Venerdì</td><td>9:00–12:30 · 14:00–19:00</td></tr>
+        <tr data-g="6"><td>Sabato</td><td>9:00–12:30 · 14:00–17:00</td></tr>
+        <tr data-g="0"><td>Domenica</td><td>Chiuso</td></tr>
+        <tr><td>Telefono e WhatsApp</td><td><a href="tel:+393514370735">351 437 0735</a></td></tr>
+      </table>
+      <div class="ctas">
+        <a class="cta" href="https://www.google.com/maps/dir/?api=1&destination=SR+AUTO+Via+Primo+Maggio+39+24040+Osio+Sopra+BG" target="_blank" rel="noopener">Indicazioni stradali</a>
+        <a class="cta lin" href="tel:+393514370735">Chiama</a>
+      </div>
+    </div>
+    <div class="mappa rivela"><iframe loading="lazy" title="Mappa di SR AUTO" src="https://maps.google.com/maps?q=Via+Primo+Maggio+39,+24040+Osio+Sopra+BG&z=15&output=embed"></iframe></div>
+  </div>
+</section>
+</main>
+
+<footer><div class="w"><span>SR AUTO S.r.l. · Via Primo Maggio 39, 24040 Osio Sopra (BG)</span><span>Tel. e WhatsApp 351 437 0735</span></div></footer>
+<a class="wa-fisso wa" href="#" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.7 11.8 11.8 0 004.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 001.8-1.3 2.2 2.2 0 00.2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg></a>
+<div class="proto">Prototipo proposto a SR AUTO S.r.l., non è il sito ufficiale</div>
+
+<div class="scheda" id="scheda" role="dialog" aria-modal="true" aria-labelledby="sT">
+  <div class="w">
+    <div class="chiudi"><span class="mark">SR <b>AUTO</b></span><button onclick="chiudi()">Chiudi</button></div>
+    <div class="sc">
+      <div class="gal"><div class="palco"><img id="sImg" alt=""><button class="prev" onclick="vai(k-1)" aria-label="Foto precedente">‹</button><button class="next" onclick="vai(k+1)" aria-label="Foto successiva">›</button><span class="n" id="sN"></span></div><div class="mini" id="sMini"></div></div>
+      <div>
+        <h2 id="sT"></h2><p class="ver" id="sV"></p>
+        <div class="prezzo" id="sP"></div>
+        <table class="dati" id="sD"></table>
+        <a class="cta" id="sW" target="_blank" rel="noopener">Prenota una prova su WhatsApp</a>
+        <a class="cta lin" id="sL" target="_blank" rel="noopener">Vedi l'annuncio su AutoScout24</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "https://scovo.onrender.com/api/vetrina/sr-auto-srl";
+const AS = "https://www.autoscout24.it/concessionari/sr-auto-srl";
+const WA = t => "https://wa.me/393514370735?text=" + encodeURIComponent(t);
+const RISERVA = [];
+let AUTO=[], filtro="tutte", cur=null, k=0;
+const eur=n=>n==null?"":"€ "+Number(n).toLocaleString("it-IT");
+const kmf=n=>n==null?"":Number(n).toLocaleString("it-IT")+" km";
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const anno=a=>{const m=String(a.immatricolazione||"").match(/\d{4}/);return m?m[0]:(a.anno||"")};
+const nome=a=>esc(a.marca)+" "+esc(a.modello);
+const pic=(a,i=0)=>a.foto&&a.foto[i]?a.foto[i]:"";
+const peso=a=>(a.foto?Math.min(a.foto.length,10):0)*3+(a.nuova?6:0)+Math.min((a.prezzo||0)/5000,8);
+document.getElementById("tutteAS").href=AS;
+
+function carica(){
+  let fatto=false;
+  const usa=l=>{ if(fatto) return; fatto=true; AUTO=l.slice().sort((a,b)=>peso(b)-peso(a)); pronto(); };
+  fetch(API).then(r=>r.ok?r.json():Promise.reject()).then(d=>usa(d.auto||[])).catch(()=>usa(RISERVA));
+  setTimeout(()=>usa(RISERVA),25000);
+}
+function conta(el,fino){ const t0=performance.now(); const p=t=>{const x=Math.min(1,(t-t0)/1200); el.textContent=Math.round(fino*(1-Math.pow(1-x,3))); if(x<1) requestAnimationFrame(p);}; requestAnimationFrame(p); }
+function pronto(){ conta(document.getElementById("nAuto"),AUTO.length); disegna(); }
+function disegna(){
+  const ord=document.getElementById("ordina").value;
+  let l=AUTO.filter(a=>filtro==="tutte"||(filtro==="b")===((a.prezzo||0)<=15000));
+  if(ord==="pa") l=l.slice().sort((a,b)=>a.prezzo-b.prezzo);
+  if(ord==="pd") l=l.slice().sort((a,b)=>b.prezzo-a.prezzo);
+  if(ord==="km") l=l.slice().sort((a,b)=>(a.km||0)-(b.km||0));
+  const s=document.getElementById("stock");
+  if(!l.length){ s.innerHTML=`<p class="vuoto">${AUTO.length?"Nessuna auto in questa fascia adesso.":"Stiamo caricando le auto in vendita. Se non compaiono, scrivici su WhatsApp: ti mandiamo foto e prezzi delle auto disponibili."}</p>`; return; }
+  s.innerHTML=l.map(a=>`
+    <button class="auto" onclick="apri('${a.id}')">
+      <div class="f">${pic(a)?`<img src="${esc(pic(a))}" alt="${nome(a)}" loading="lazy" onerror="this.remove()">`:""}<span class="eti${a.nuova?" n":""}">${a.nuova?"Nuova o km 0":"Usata"}</span></div>
+      <div class="c"><h3>${nome(a)}</h3><span class="v">${esc(a.versione||"")}</span>
+      <span class="d">${anno(a)?`<span>${anno(a)}</span>`:""}${a.km!=null?`<span>${kmf(a.km)}</span>`:""}${a.carburante?`<span>${esc(a.carburante)}</span>`:""}${a.cambio?`<span>${esc(a.cambio)}</span>`:""}</span>
+      <span class="p">${eur(a.prezzo)}</span></div>
+    </button>`).join("");
+  osserva(s.querySelectorAll(".auto"));
+}
+function apri(id){
+  cur=AUTO.find(a=>String(a.id)===String(id)); if(!cur) return; k=0;
+  document.getElementById("sT").innerHTML=nome(cur);
+  document.getElementById("sV").textContent=cur.versione||"";
+  document.getElementById("sP").textContent=eur(cur.prezzo);
+  const r=[["Condizione",cur.nuova?"Nuova o km 0":"Usata"],["Immatricolazione",cur.immatricolazione||anno(cur)],["Chilometri",kmf(cur.km)],["Alimentazione",cur.carburante],["Cambio",cur.cambio],["Potenza",cur.potenza]];
+  document.getElementById("sD").innerHTML=r.filter(x=>x[1]).map(x=>`<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join("");
+  document.getElementById("sL").href=cur.link||AS;
+  document.getElementById("sW").href=WA("Buongiorno, vorrei provare la "+cur.marca+" "+cur.modello+" a "+eur(cur.prezzo)+" che ho visto sul vostro sito.");
+  document.getElementById("sMini").innerHTML=(cur.foto||[]).map((f,i)=>`<img src="${esc(f.replace(/\/\d+x\d+\.(webp|jpg)$/,"/250x188.webp"))}" alt="Foto ${i+1}" onclick="vai(${i})">`).join("");
+  vai(0);
+  const sc=document.getElementById("scheda"); sc.classList.add("on"); sc.scrollTop=0; document.body.style.overflow="hidden";
+}
+function vai(i){
+  const f=(cur&&cur.foto)||[], im=document.getElementById("sImg");
+  document.querySelectorAll(".palco button").forEach(b=>b.hidden=f.length<2);
+  if(!f.length){ im.removeAttribute("src"); im.alt=""; document.getElementById("sN").textContent="Foto in arrivo"; return; }
+  k=(i+f.length)%f.length; im.style.opacity=.15; im.onload=()=>im.style.opacity=1; im.src=f[k]; im.alt=cur.marca+" "+cur.modello+", foto "+(k+1);
+  document.getElementById("sN").textContent=(k+1)+" di "+f.length;
+  document.querySelectorAll("#sMini img").forEach((t,j)=>t.classList.toggle("on",j===k));
+}
+function chiudi(){ document.getElementById("scheda").classList.remove("on"); document.body.style.overflow=""; }
+document.addEventListener("keydown",e=>{ if(!document.getElementById("scheda").classList.contains("on")) return;
+  if(e.key==="Escape") chiudi(); if(e.key==="ArrowRight") vai(k+1); if(e.key==="ArrowLeft") vai(k-1); });
+(()=>{ const g=document.querySelector(".palco"); let x0=null;
+  g.addEventListener("touchstart",e=>x0=e.touches[0].clientX,{passive:true});
+  g.addEventListener("touchend",e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40) vai(k+(dx<0?1:-1)); x0=null; }); })();
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{ document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-pressed","false")); t.setAttribute("aria-pressed","true"); filtro=t.dataset.f; disegna(); });
+document.getElementById("ordina").onchange=disegna;
+document.querySelectorAll(".top nav a").forEach(a=>a.onclick=()=>document.getElementById("top").classList.remove("aperto"));
+document.querySelectorAll("a.wa").forEach(a=>{a.href=WA("Buongiorno, ho visto le vostre auto e vorrei qualche informazione.");a.target="_blank";a.rel="noopener";});
+document.querySelectorAll("a.wa-nol").forEach(a=>{a.href=WA("Buongiorno, vorrei informazioni per un'auto a noleggio.");a.target="_blank";a.rel="noopener";});
+
+// orari: aperto adesso?
+(()=>{
+  const ORARI={1:[[540,750],[840,1140]],2:[[540,750],[840,1140]],3:[[540,750],[840,1140]],4:[[540,750],[840,1140]],5:[[540,750],[840,1140]],6:[[540,750],[840,1020]],0:[]};
+  const n=new Date(new Date().toLocaleString("en-US",{timeZone:"Europe/Rome"})); const g=n.getDay(), m=n.getHours()*60+n.getMinutes();
+  const t=document.querySelector(`#orari tr[data-g="${g}"]`); if(t) t.classList.add("oggi");
+  const ap=(ORARI[g]||[]).some(([a,b])=>m>=a&&m<b);
+  const prossima=(ORARI[g]||[]).find(([a])=>a>m);
+  const s=document.getElementById("stato"), hh=x=>Math.floor(x/60)+":"+String(x%60).padStart(2,"0");
+  s.classList.toggle("chiuso",!ap);
+  s.querySelector("span").textContent=ap?"Aperto ora · 351 437 0735":(prossima?"Chiuso ora · riapre alle "+hh(prossima[0]):"Chiuso ora · scrivici su WhatsApp");
+})();
+
+// comparsa allo scorrimento
+const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("vista"); io.unobserve(e.target);} }),{threshold:.12});
+function osserva(l){ l.forEach((x,i)=>{ x.style.transitionDelay=Math.min(i%6,5)*60+"ms"; io.observe(x); }); }
+osserva(document.querySelectorAll(".rivela"));
+addEventListener("scroll",()=>document.getElementById("top").classList.toggle("piena",scrollY>30),{passive:true});
+
+// scie di luce nell'hero: fari bianchi e luci di posizione rosse
+(()=>{
+  const c=document.getElementById("scie"), x=c.getContext("2d"); let W,H,L=[];
+  const rid=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function dim(){ W=c.width=c.offsetWidth*devicePixelRatio; H=c.height=c.offsetHeight*devicePixelRatio; }
+  function nuova(){ const rosso=Math.random()<.6; return {y:H*(.35+Math.random()*.6),x:-Math.random()*W,v:(rosso?2.2:3.4)*(1+Math.random())*devicePixelRatio,l:(80+Math.random()*260)*devicePixelRatio,s:(1+Math.random()*2.2)*devicePixelRatio,r:rosso,a:.25+Math.random()*.6}; }
+  dim(); addEventListener("resize",dim); for(let i=0;i<70;i++){const s=nuova(); s.x=Math.random()*W; L.push(s);}
+  function f(){
+    x.clearRect(0,0,W,H);
+    for(const s of L){
+      s.x+=s.v; if(s.x-s.l>W) Object.assign(s,nuova());
+      const g=x.createLinearGradient(s.x-s.l,0,s.x,0);
+      g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,s.r?`rgba(255,40,50,${s.a})`:`rgba(255,240,230,${s.a})`);
+      x.strokeStyle=g; x.lineWidth=s.s; x.beginPath(); x.moveTo(s.x-s.l,s.y); x.lineTo(s.x,s.y); x.stroke();
+    }
+    if(!rid) requestAnimationFrame(f);
+  }
+  f();
+})();
+
+// intro
+(()=>{
+  const I=document.getElementById("intro");
+  let visto=false; try{visto=!!sessionStorage.getItem("srIntro")}catch(e){}
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches||visto){ I.remove(); carica(); return; }
+  try{sessionStorage.setItem("srIntro","1")}catch(e){}
+  carica();
+  setTimeout(()=>I.classList.add("via"),2500);
+  setTimeout(()=>I.remove(),3300);
+  I.addEventListener("click",()=>{I.classList.add("via");setTimeout(()=>I.remove(),700);});
+})();
+</script>
+</body>
+</html>
