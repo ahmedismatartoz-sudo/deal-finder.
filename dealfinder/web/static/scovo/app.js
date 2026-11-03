@@ -466,6 +466,7 @@ function viewDetail(){
       ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}${contact.label}</a>`
           : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}${contact.label}</button>`}
       <span class="talk-note">${contact.note}</span>
+      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open">${ICON.chat}Fissa l'appuntamento</button><span class="talk-note">Scegli giorno e ora: l'appuntamento col privato lo fissiamo noi</span>` : ""}
     </div></div>
   </div>`;
 }
@@ -533,6 +534,82 @@ function sheetParts(){
     </div>
   </div></div>`;
 }
+/* ---------- 3/11: abbonati 200 €, dati azienda e appuntamenti ---------- */
+const AP = {az: null, campi: [], giorno: "", fascia: "", busy: false, err: "", ok: false, dopo: null};
+const FASCE_AP = [["mattina","Mattina","9–12"],["pranzo","Pranzo","12–14"],["pomeriggio","Pomeriggio","14–18"],["sera","Sera","18–20"]];
+const ORE_AP = {mattina:["9:00","10:00","11:00"], pranzo:["12:00","13:00"], pomeriggio:["14:00","15:00","16:00","17:00"], sera:["18:00","19:00"]};
+async function apCarica(){
+  try { const r = await api("/api/me/azienda"); AP.az = r.dati || {}; AP.campi = r.campi || []; AP.completa = !!r.completa; }
+  catch (e) { AP.az = {}; AP.campi = []; AP.completa = false; }
+}
+function apGiorni(){
+  const out = [], nomi = ["dom","lun","mar","mer","gio","ven","sab"];
+  for (let i = 0; i < 8; i++) { const d = new Date(); d.setDate(d.getDate() + i);
+    if (d.getDay() === 0) continue;
+    const iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    out.push([iso, i === 0 ? "Oggi" : i === 1 ? "Domani" : nomi[d.getDay()] + " " + d.getDate()]); }
+  return out;
+}
+function sheetAppuntamento(){
+  const base = (S.cars || []).find(c => c.id === S.sel) || S.detail[S.sel] || {};
+  if (AP.ok) return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aph">
+    <div class="sheet-head"><h2 id="aph">Richiesta inviata</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body"><div class="ok-box">Contattiamo noi il privato e ti confermiamo l'appuntamento su WhatsApp o per telefono.</div>
+    <span class="hint">${esc(base.nome || "")}</span></div></div></div>`;
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aph">
+    <div class="sheet-head"><h2 id="aph">Fissa l'appuntamento</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body">
+      <span class="hint">${esc(base.nome || "")}</span>
+      <div class="lbl">Giorno</div><div class="wrap">${apGiorni().map(([v,l]) => `<button class="pill" data-act="ap-giorno" data-v="${v}" aria-pressed="${AP.giorno === v}">${l}</button>`).join("")}</div>
+      <div class="lbl">Fascia oraria</div><div class="wrap">${FASCE_AP.map(([v,l,o]) => `<button class="pill" data-act="ap-fascia" data-v="${v}" aria-pressed="${AP.fascia === v}">${l} · ${o}</button>`).join("")}</div>
+      ${AP.fascia ? `<label class="field">Ora precisa (facoltativa)<select id="ap-ora" class="sel"><option value="">Qualsiasi ora della fascia</option>${(ORE_AP[AP.fascia] || []).map(o => `<option>${o}</option>`).join("")}</select></label>` : ""}
+      <label class="field">Nota per noi (facoltativa)<input id="ap-nota" type="text" maxlength="300" placeholder="es. porto un meccanico, chiedo il libretto"></label>
+      ${AP.err ? `<span class="err" role="alert">${esc(AP.err)}</span>` : ""}
+    </div>
+    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="ap-send" ${AP.busy ? "disabled" : ""}>Chiedi l'appuntamento</button></div>
+  </div></div>`;
+}
+function sheetAzienda(){
+  const d = AP.az || {};
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="azh">
+    <div class="sheet-head"><h2 id="azh">I dati della tua azienda</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body">
+      <span class="hint">Servono per presentarti al privato e fissare gli appuntamenti a tuo nome. Li vediamo solo noi.</span>
+      ${(AP.campi || []).map(c => `<label class="field">${esc(c.l)}${c.obbligatorio ? "" : " (facoltativo)"}<input id="az-${c.k}" type="${c.k === "email" ? "email" : c.k === "cellulare" ? "tel" : "text"}" value="${esc(d[c.k] || "")}" ${c.k === "provincia" ? 'maxlength="2" placeholder="es. BG"' : ""}></label>`).join("")}
+      ${AP.err ? `<span class="err" role="alert">${esc(AP.err)}</span>` : ""}
+    </div>
+    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="az-save" ${AP.busy ? "disabled" : ""}>Salva${AP.dopo ? " e continua" : ""}</button></div>
+  </div></div>`;
+}
+async function apApri(){
+  if (!S.token) { toast("Entra per fissare un appuntamento"); go("entra"); return; }
+  AP.ok = false; AP.err = ""; AP.giorno = ""; AP.fascia = "";
+  if (AP.az === null) await apCarica();
+  S.sheet = AP.completa ? "appuntamento" : "azienda"; AP.dopo = AP.completa ? null : "appuntamento";
+  render({keep:true});
+}
+async function apInvia(){
+  if (!AP.giorno || !AP.fascia) { AP.err = "Scegli il giorno e la fascia oraria"; render({keep:true}); return; }
+  AP.busy = true; AP.err = ""; render({keep:true});
+  try {
+    const ora = (document.getElementById("ap-ora") || {}).value || "", nota = (document.getElementById("ap-nota") || {}).value || "";
+    await api("/api/affari/" + S.sel + "/appuntamento", {method: "POST", body: {giorno: AP.giorno, fascia: AP.fascia, ora, nota}});
+    AP.ok = true; segnaAperta();
+  } catch (e) {
+    if (/dati della tua azienda/i.test(e.message || "")) { AP.dopo = "appuntamento"; S.sheet = "azienda"; }
+    AP.err = e.message || "Non riuscito, riprova";
+  }
+  AP.busy = false; render({keep:true});
+}
+async function azSalva(){
+  const body = {}; (AP.campi || []).forEach(c => body[c.k] = ((document.getElementById("az-" + c.k) || {}).value || "").trim());
+  AP.busy = true; AP.err = ""; render({keep:true});
+  try { const r = await api("/api/me/azienda", {method: "PUT", body}); AP.az = r.dati; AP.completa = true;
+        S.sheet = AP.dopo || null; AP.dopo = null; if (!S.sheet) toast("Dati salvati"); }
+  catch (e) { AP.err = e.message || "Controlla i campi"; }
+  AP.busy = false; render({keep:true});
+}
+
 function sheetComprata(){
   return `
   <div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ch">
@@ -630,7 +707,8 @@ function viewProfilo(){
     <div class="sec-title">Account</div>
     <div class="plist"><div><span>Nome</span><span class="v">${esc(u.name || "")}</span></div><div><span>Email</span><span class="v">${esc(u.email || "")}</span></div>
       <button data-act="pwd"><span>Cambia password</span>${ICON.next}</button>
-      ${u.ha_pagamento ? `<button data-act="portale"><span>Abbonamento: carta, fatture, disdetta</span>${ICON.next}</button>` : ""}</div>
+      ${u.ha_pagamento ? `<button data-act="portale"><span>Abbonamento: carta, fatture, disdetta</span>${ICON.next}</button>` : ""}
+      ${perm("appuntamenti") ? `<button data-act="az-open"><span>Dati della tua azienda</span>${ICON.next}</button>` : ""}</div>
     ${P.open ? `<section class="box form" style="padding:16px">
       <label class="field">Password attuale<input id="p-old" type="password" autocomplete="current-password"></label>
       <label class="field">Nuova password (almeno 8 caratteri)<input id="p-new" type="password" autocomplete="new-password" minlength="8"></label>
@@ -1186,7 +1264,7 @@ function render(opts){
   if (canBrowse()) {
     // pulsante "Chiedi" tolto (sarà sostituito)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "bot" ? sheetBot() : "";
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
@@ -1340,6 +1418,12 @@ $app.addEventListener("click", e => {
     case "band": setBand(v); saveFilters(); break;
     case "filters": S.sheet = "filters"; break;
     case "parts": S.sheet = "parts"; break;
+    case "app-open": apApri(); return;
+    case "ap-giorno": AP.giorno = v; AP.err = ""; break;
+    case "ap-fascia": AP.fascia = v; AP.err = ""; break;
+    case "ap-send": apInvia(); return;
+    case "az-open": (async () => { if (AP.az === null) await apCarica(); AP.err = ""; AP.dopo = null; S.sheet = "azienda"; render({keep:true}); })(); return;
+    case "az-save": azSalva(); return;
     case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); S.sheet = null; break;
     case "bot": {
       // dal bottone "Chiedi": conversazione a voce, un tocco solo

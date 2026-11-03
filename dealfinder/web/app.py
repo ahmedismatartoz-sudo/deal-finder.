@@ -2317,6 +2317,131 @@ def _ospiti_id(conn) -> int:
     return row["id"]
 
 
+# ---------------------------------------------------------------------------
+# 3/11 sera (cliente): abbonati da 200 €. Prima i dati dell'azienda (chi sono e dove), poi il tasto "Fissa
+# appuntamento" su ogni auto: il commerciante sceglie giorno e fascia oraria, noi fissiamo l'appuntamento col
+# privato. Ogni richiesta va in tabella appuntamenti e arriva per email a info@skovo.app.
+# ---------------------------------------------------------------------------
+AZIENDA_CAMPI = [("ragione_sociale", "Ragione sociale", True), ("piva", "Partita IVA", True),
+                 ("indirizzo", "Indirizzo della sede", True), ("comune", "Comune", True), ("provincia", "Provincia", True),
+                 ("referente", "Nome del referente", True), ("cellulare", "Cellulare o WhatsApp", True),
+                 ("email", "Email", False), ("note", "Quando potete andare a vedere le auto", False)]
+APP_FASCE = {"mattina": "Mattina (9–12)", "pranzo": "Pranzo (12–14)", "pomeriggio": "Pomeriggio (14–18)", "sera": "Sera (18–20)"}
+_TAB_APP = {"ok": False}
+
+
+def _tabelle_app(conn) -> None:
+    if _TAB_APP["ok"]:
+        return
+    conn.execute("""CREATE TABLE IF NOT EXISTS aziende_abbonati (dealer_id BIGINT PRIMARY KEY, dati JSONB NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS appuntamenti (id BIGSERIAL PRIMARY KEY, dealer_id BIGINT NOT NULL,
+                    listing_id BIGINT NOT NULL, giorno DATE NOT NULL, fascia TEXT NOT NULL, ora TEXT, nota TEXT,
+                    stato TEXT NOT NULL DEFAULT 'richiesto', created_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
+    conn.commit()
+    _TAB_APP["ok"] = True
+
+
+def _azienda_ok(d: dict | None) -> bool:
+    return bool(d) and all(str(d.get(k) or "").strip() for k, _, obbl in AZIENDA_CAMPI if obbl)
+
+
+async def azienda_get(request: Request):
+    user = current_user(request)
+    with connect() as conn:
+        _tabelle_app(conn)
+        r = conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone()
+        perm = permessi_di(conn, user)
+    d = (r or {}).get("dati") or {}
+    return jsonify({"dati": d, "completa": _azienda_ok(d), "campi": [{"k": k, "l": l, "obbligatorio": o} for k, l, o in AZIENDA_CAMPI],
+                    "appuntamenti": user.get("role") == "admin" or "appuntamenti" in perm})
+
+
+async def azienda_put(request: Request):
+    user = current_user(request)
+    data = await body(request)
+    d = {k: str(data.get(k) or "").strip()[:200] for k, _, _ in AZIENDA_CAMPI}
+    d["provincia"] = d["provincia"].upper()[:2]
+    if not _azienda_ok(d):
+        err(400, "Compila tutti i campi obbligatori")
+    with connect() as conn:
+        _tabelle_app(conn)
+        conn.execute("INSERT INTO aziende_abbonati (dealer_id, dati) VALUES (%s,%s) ON CONFLICT (dealer_id) DO UPDATE "
+                     "SET dati=EXCLUDED.dati, updated_at=now()", (user["id"], json.dumps(d)))
+        conn.commit()
+    return jsonify({"ok": True, "dati": d, "completa": True})
+
+
+def _avvisa_appuntamento(testo: str, oggetto: str) -> None:
+    """Email a info@skovo.app con la richiesta (Brevo transazionale, chiave su Render). Se non va resta in tabella."""
+    try:
+        import httpx
+        from ..marketing.brevo_liste import API, MITTENTE, _chiave
+        httpx.post(f"{API}/smtp/email", headers={"api-key": _chiave(), "accept": "application/json"}, timeout=20,
+                   json={"sender": MITTENTE, "to": [{"email": os.environ.get("APPUNTAMENTI_EMAIL", "info@skovo.app")}],
+                         "subject": oggetto, "textContent": testo})
+    except Exception as e:
+        logging.getLogger("scovo").warning("APPUNTAMENTO email non mandata: %s", str(e)[:200])
+
+
+async def appuntamento(request: Request):
+    user = current_user(request)
+    lid = int(request.path_params["id"])
+    data = await body(request)
+    import datetime as _d
+    try:
+        giorno = _d.date.fromisoformat(str(data.get("giorno") or ""))
+    except ValueError:
+        err(400, "Scegli il giorno")
+    oggi = _d.date.today()
+    if not (oggi <= giorno <= oggi + _d.timedelta(days=14)):
+        err(400, "Scegli un giorno entro due settimane")
+    fascia = str(data.get("fascia") or "")
+    if fascia not in APP_FASCE:
+        err(400, "Scegli la fascia oraria")
+    ora = str(data.get("ora") or "").strip()[:5] or None
+    nota = str(data.get("nota") or "").strip()[:500] or None
+    with connect() as conn:
+        _tabelle_app(conn)
+        if not (user.get("role") == "admin" or "appuntamenti" in permessi_di(conn, user)):
+            err(402, "Fissare gli appuntamenti è incluso nell'abbonamento da 200 €")
+        az = (conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone() or {}).get("dati")
+        if not _azienda_ok(az):
+            return jsonify({"serve_azienda": True, "errore": "Prima inserisci i dati della tua azienda"}, 409)
+        car = conn.execute("SELECT id, url, title, make, model, year, mileage_km, price_eur, city, province, description "
+                           "FROM listings WHERE id=%s AND status='attivo'", (lid,)).fetchone()
+        if not car:
+            err(404, "Questa auto non è più disponibile")
+        aid = conn.execute("INSERT INTO appuntamenti (dealer_id, listing_id, giorno, fascia, ora, nota) VALUES (%s,%s,%s,%s,%s,%s) "
+                           "RETURNING id", (user["id"], lid, giorno, fascia, ora, nota)).fetchone()["id"]
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (lid, user["id"]))
+        conn.commit()
+    tel = scovo.find_phone(car.get("description"))
+    testo = (f"Richiesta appuntamento n. {aid}\n\n"
+             f"Commerciante: {az.get('ragione_sociale')} (P.IVA {az.get('piva')})\n"
+             f"Sede: {az.get('indirizzo')}, {az.get('comune')} ({az.get('provincia')})\n"
+             f"Referente: {az.get('referente')} - {az.get('cellulare')}" + (f" - {az.get('email')}" if az.get('email') else "") + "\n\n"
+             f"Auto: {car.get('title') or ''} - {car.get('year') or ''} - {car.get('mileage_km') or ''} km - {car.get('price_eur')} EUR\n"
+             f"Zona: {car.get('city') or ''} ({car.get('province') or ''})\nAnnuncio: {car.get('url')}\n"
+             + (f"Numero del venditore nell'annuncio: {tel}\n" if tel else "") +
+             f"\nQuando: {giorno.strftime('%d/%m/%Y')} - {APP_FASCE[fascia]}" + (f" - ore {ora}" if ora else "") + "\n"
+             + (f"Nota: {nota}\n" if nota else ""))
+    threading.Thread(target=_avvisa_appuntamento, args=(testo, f"Appuntamento {giorno.strftime('%d/%m')} - {az.get('ragione_sociale')} - {car.get('title') or ''}"[:150]),
+                     daemon=True).start()
+    logging.getLogger("scovo").warning("APPUNTAMENTO %s richiesto: commerciante %s, auto %s, %s %s", aid, user["id"], lid, giorno, fascia)
+    return jsonify({"ok": True, "id": aid})
+
+
+async def admin_appuntamenti(request: Request):
+    current_user(request, admin=True)
+    with connect() as conn:
+        _tabelle_app(conn)
+        rows = conn.execute("""SELECT a.id, a.giorno, a.fascia, a.ora, a.nota, a.stato, a.created_at, a.listing_id,
+                 l.title, l.url, l.price_eur, z.dati AS azienda FROM appuntamenti a JOIN listings l ON l.id = a.listing_id
+                 LEFT JOIN aziende_abbonati z ON z.dealer_id = a.dealer_id ORDER BY a.created_at DESC LIMIT 200""").fetchall()
+    return jsonify({"appuntamenti": [dict(r, giorno=str(r["giorno"]), created_at=str(r["created_at"])) for r in rows]})
+
+
 def _apri_contatto(request: Request, user: dict | None) -> dict:
     """Conta l'apertura (ospite se user è None) e restituisce url e numero dell'annuncio."""
     ospite = user is None
@@ -2748,6 +2873,10 @@ routes = [
     Route("/api/affari/{id:int}", affare),
     Route("/api/affari/{id:int}/contatto", contatto, methods=["POST"]),
     Route("/api/affari/{id:int}/vai", vai_annuncio),
+    Route("/api/affari/{id:int}/appuntamento", appuntamento, methods=["POST"]),
+    Route("/api/me/azienda", azienda_get, methods=["GET"]),
+    Route("/api/me/azienda", azienda_put, methods=["PUT"]),
+    Route("/api/admin/appuntamenti", admin_appuntamenti),
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
     Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
     Route("/admin/commercianti-tel.csv", commercianti_tel),
