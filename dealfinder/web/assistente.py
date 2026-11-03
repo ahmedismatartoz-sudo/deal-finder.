@@ -26,8 +26,19 @@ from ..core.vehicles import make_model_from_title
 from . import scovo
 
 log = logging.getLogger("assistente")
-COSTI = sum(scovo.COSTI_FISSI.values())
+COSTI = int(os.environ.get("COSTI_FISSI_MAX", "200"))    # 4/11: costi del commerciante al massimo 200 € più i pezzi
 MAX_PASSI = 6
+# 4/11: l'assistente propone SOLO le auto dell'elenco del sito, con gli stessi numeri. web/app.py imposta qui la funzione
+# che dà l'elenco visibile a un utente (app._elenco_per); senza (test, script) si ripiega sulla lettura dal database.
+ELENCO: Callable[[int], list] | None = None
+
+
+def _soglie_txt() -> str:
+    righe, da = [], 0
+    for lim, m in scovo.SOGLIE_PV:
+        righe.append(f"{m} € di margine" + (f" da {da} a {lim} €" if lim < 10**9 else f" oltre {da} €"))
+        da = lim
+    return "; ".join(righe)
 
 SYSTEM = """Sei Scovo, l'assistente vocale di un servizio che trova auto usate di privati sotto prezzo a Milano e dintorni per i commercianti.
 Stai PARLANDO al telefono con un commerciante: quello che scrivi viene letto ad alta voce da una voce naturale.
@@ -40,9 +51,11 @@ Come parli:
 - puoi rispondere anche a domande generali sul mestiere (trattativa, documenti, passaggio, difetti tipici di un modello).
 Dati: usa SEMPRE gli strumenti per auto, prezzi e guadagni, non inventare mai.
 Quando cerchi auto con cerca_affari, TUTTE le auto trovate compaiono sullo schermo come catalogo: dillo in breve ("te le ho messe sullo schermo"), cita solo la migliore o le due migliori con prezzo e guadagno, senza elencarle tutte.
-Conti di Scovo (policy prudente pv2): M = mediana dei prezzi di auto equivalenti, L = 25° percentile; rivendita prudente R = il più basso tra M ridotto per fascia (30% sotto 5.000 €, 25% fino a 10.000, 20% fino a 15.000, 15% fino a 20.000, 12% fino a 30.000, 10% fino a 50.000) e L; margine operativo prudente = R − prezzo − ripristino (ricambi e manodopera) − altri costi − riserva imprevisti. Usa i numeri che danno gli strumenti, non ricalcolarli; non chiamarlo mai utile netto. Con pochi confronti di' che i dati sono insufficienti.
+Conti di Scovo: M = prezzo delle auto equivalenti in vendita, R = prezzo di rivendita calcolato; margine = R − prezzo − costi del commerciante (al massimo 200 € fissi per tagliando e pulizia) − pezzi da cambiare. Usa SOLO i numeri che danno gli strumenti (sono gli stessi del sito), non ricalcolarli; non chiamarlo mai utile netto.
+Regole del sito (le auto che trovi con gli strumenti le rispettano già): margine minimo per fascia di prezzo (__SOGLIE__); venditori privati col numero di telefono entro circa 100 km da Milano, zona di Ravenna e supercar europee (margine almeno 10.000 € e 15% del prezzo, controllate dall'AI), più alcuni commercianti senza promozioni; mai Roma; dal 2007 e al massimo 150.000 km. Se un'auto ha "avviso_verifica", di' che va verificata prima di pagare.
 Per targhe e ricambi usa gli strumenti dedicati; se mancano km o pezzi, chiedili in una frase.
 Se un dato sembra troppo bello per essere vero (guadagno enorme su un'auto quasi nuova), avvisa che va verificato."""
+SYSTEM = SYSTEM.replace("__SOGLIE__", _soglie_txt())
 
 TOOLS = [
     {"name": "cerca_affari", "description": "Cerca tra le auto proposte oggi da Scovo con filtri. Restituisce le auto ordinate.",
@@ -96,8 +109,11 @@ def _gain(it: dict, sconto: int) -> tuple[int, int, int]:
 
 def cerca_affari(conn, user: dict, a: dict) -> dict:
     sconto = max(0, min(int(a.get("sconto") if a.get("sconto") is not None else scovo.SCONTO_DEFAULT), 60))
-    rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": user["id"]}).fetchall()
-    items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
+    if ELENCO is not None:
+        items = [dict(it) for it in ELENCO(user["id"])]          # le auto del sito, con i numeri del sito
+    else:
+        rows = conn.execute(scovo.LIST_SQL + " LIMIT 3000", {"me": user["id"]}).fetchall()
+        items = [it for it in (scovo.item(r) for r in rows if scovo.visible(r, settings.max_dealer_opens)) if scovo.abbastanza(it)]
     marca = (a.get("marca") or "").strip().lower()
     modello = (a.get("modello") or "").strip().lower().replace("-", " ")
     out = []
@@ -142,20 +158,28 @@ def cerca_affari(conn, user: dict, a: dict) -> dict:
     return {"totale": len(out), "sconto": sconto, "filtri": filtri,
             "auto": [{k: x[k] for k in ("id", "nome", "anno", "km", "carb", "zona", "fonte", "prezzo", "mercato", "riv",
                                         "rip_lo", "rip_hi", "guadagno_da", "guadagno_a", "verificare", "foto")}
+                     | {"avviso_verifica": bool(x.get("avviso_verifica"))}
                      for x in out[:lim]]}
 
 
 def dettaglio_auto(conn, user: dict, a: dict) -> dict:
     lid = int(a["id"])
-    row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
-    if not row or not scovo.visible(row, settings.max_dealer_opens):
-        return {"errore": "auto non più disponibile"}
-    extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {}
-    d = scovo.detail(scovo.item(row), extra)
+    if ELENCO is not None:
+        it = next((x for x in ELENCO(user["id"]) if x.get("id") == lid), None)
+        if it is None:
+            return {"errore": "auto non più disponibile"}
+        extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
+        d = scovo.detail(dict(it), extra)
+    else:
+        row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
+        if not row or not scovo.visible(row, settings.max_dealer_opens):
+            return {"errore": "auto non più disponibile"}
+        extra = conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {}
+        d = scovo.detail(scovo.item(row), extra)
     riv, g_lo, g_hi = _gain(d, scovo.SCONTO_DEFAULT)
     return {k: d.get(k) for k in ("id", "nome", "anno", "km", "carb", "zona", "prezzo", "mercato", "rip_lo", "rip_hi",
                                    "descrizione", "pezzi", "controlli", "verificare")} | {
-        "rivendita_30": riv, "guadagno_da": g_lo, "guadagno_a": g_hi}
+        "rivendita": riv, "guadagno_da": g_lo, "guadagno_a": g_hi, "avviso_verifica": bool(d.get("avviso_verifica"))}
 
 
 def prezzo_mercato(conn, user: dict, a: dict) -> dict:

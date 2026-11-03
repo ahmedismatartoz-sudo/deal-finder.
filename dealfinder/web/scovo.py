@@ -391,11 +391,16 @@ def item(r: dict) -> dict | None:
     grezzo = int(round(float(mercato)))
     ev = r.get("engine_version") or ""
     audit = "+manuale-v5-" in ev   # controllate a mano in una revisione (a1, a2, fb1, inc3...): rivendita già prudente
-    if not audit:
+    pv = _pv(r)
+    if pv and pv.get("M"):
+        # 4/11: con la valutazione pv2 il mercato è quello della policy (niente "mercato realistico" in più: la prudenza
+        # sta già nella rivendita R e nelle regole del sito)
+        mercato = pv["M"]
+    elif not audit:
         # stima automatica: si mostra prudente (anche quando sembra troppo bella: il mercato viene limitato)
         mercato = mercato_realistico(float(mercato), int(price), r.get("n_comparables"))
     return {
-        "pv": _pv(r),
+        "pv": pv,
         "top": bool(r.get("top")),
         "mercato_grezzo": grezzo,
         "mercato_base": grezzo,
@@ -435,8 +440,7 @@ def _pv(r: dict) -> dict | None:
         return None
     pv = dict(_j(r["pv"]))
     pv["etichetta"] = CATEGORIE.get(pv.get("categoria"), pv.get("categoria"))
-    if r.get("top") and pv.get("categoria") == "non_conveniente":
-        pv["etichetta"], pv["top"] = "Tra le migliori · margine sotto soglia piena", True
+    # 4/11: tolta l'etichetta "Tra le migliori · margine sotto soglia piena": sul sito vanno solo auto col margine minimo
     return pv
 
 
@@ -475,6 +479,27 @@ def detail(base: dict, extra: dict) -> dict:
             "metodo", "modello", "M_confronti")}
         d["valutazione"]["etichetta"] = CATEGORIE.get(pv.get("categoria"))
         d["valutazione"]["esclusi_motivi"] = _conta_motivi(pv.get("esclusi") or [])
+    stessi_numeri(d)
+    return d
+
+
+NUMERI_ELENCO = ("categoria", "M", "R", "R_finale", "totale_costi", "margine", "soglia", "n", "metodo")
+
+
+def stessi_numeri(d: dict) -> dict:
+    """4/11: la scheda mostra gli STESSI numeri dell'elenco (rivendita, costi, margine): quelli dell'auto del sito
+    (base["pv"], già con il costo del difetto letto dall'AI) valgono sopra i dati completi dell'ultima valutazione."""
+    pv = d.get("pv") if isinstance(d.get("pv"), dict) else None
+    if not pv:
+        return d
+    val = d.get("valutazione")
+    if isinstance(val, dict):
+        for k in NUMERI_ELENCO:
+            if pv.get(k) is not None:
+                val[k] = pv[k]
+        for k in ("difetto_costo", "difetto", "margine_calcolo"):
+            if pv.get(k) is not None:
+                val[k] = pv[k]
     return d
 
 

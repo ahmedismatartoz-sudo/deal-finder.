@@ -351,8 +351,9 @@ const zonaDi = (prov) => {
 };
 
 async function viewAdmin() {
-  $view.innerHTML = `<h1>Gestione</h1><p class="sub">Stato delle fonti, qualità delle stime, costi AI e commercianti.</p><div id="adm"></div><div id="adm-stato"><p class="note">Carico lo stato delle fonti…</p></div>`;
+  $view.innerHTML = `<h1>Gestione</h1><p class="sub">Stato delle fonti, qualità delle stime, costi AI e commercianti.</p><div id="adm"></div><div id="adm-funnel"><p class="note">Carico i filtri del sito…</p></div><div id="adm-stato"><p class="note">Carico lo stato delle fonti…</p></div>`;
   const box = document.getElementById("adm");
+  viewFunnel(document.getElementById("adm-funnel"));
   try {
     const oP = api("/api/admin/overview");      // lento con tanti annunci: si carica dopo, i commercianti subito
     const [d, rq] = await Promise.all([api("/api/admin/dealers"), api("/api/admin/richieste")]);
@@ -455,6 +456,29 @@ async function viewAdmin() {
       <h2>Vendi e Ricambi oggi</h2>${table(o.servizi_oggi || [], [["service", "Servizio"], ["n", "Usi"], ["ok", "Riusciti"]])}`;
     }).catch((err) => { st.innerHTML = `<p class="note">Stato delle fonti non disponibile ora (${esc(err.message)}).</p>`; });
   } catch (err) { box.innerHTML = `<div class="empty error">${esc(err.message)}</div>`; }
+}
+
+/* ---------- 4/11: auto entrate e uscite dal sito, regola per regola (tabella sito_funnel_giorno) ---------- */
+const PASSI = { valutata: "Valutata (rivendita e margine)", no_loconte: "Loconte", scarti_cliente: "Scartate a mano", anno: "Anno (dal 2007)",
+  km: "Km (al massimo 150.000)", telefono: "Numero del venditore", no_roma: "Roma", zona: "Zona (100 km da Milano, Ravenna, supercar)",
+  venditore: "Venditore (privati e commercianti ammessi)", prezzo_intero: "Prezzo intero (niente rata/leasing)", jev: "Controllo AI (Jev)",
+  margine_sito: "Costo dei difetti letti dall'AI", truffa: "Truffe", margine_minimo: "Margine minimo", tetto_commercianti: "Massimo 40 commercianti lontani" };
+async function viewFunnel(el) {
+  try {
+    const d = await api("/api/admin/sito-funnel?giorni=7");
+    if (!(d.giorni || []).length) { el.innerHTML = `<h2>Filtri del sito</h2><p class="note">${esc(d.errore || "Ancora nessun conteggio: arriva col primo elenco calcolato.")}</p>`; return; }
+    el.innerHTML = `<h2>Filtri del sito: auto entrate e uscite per regola</h2>
+      <p class="note">Ultimo elenco calcolato di ogni giorno. "Entrate" = auto arrivate alla regola, "Uscite" = auto tolte da quella regola; sotto ogni regola i motivi.</p>
+      ${d.giorni.map((g) => {
+        const princ = g.passi.filter((p) => !p.passo.includes("."));
+        const fine = princ.length ? princ[princ.length - 1].entrate - princ[princ.length - 1].uscite : 0;
+        return `<details class="panel" style="margin-bottom:12px" ${g === d.giorni[0] ? "open" : ""}><summary><b>${esc(new Date(g.giorno).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }))}</b> · ${fine} auto sul sito</summary>
+          <div style="overflow-x:auto"><table class="kv"><tr><th>Regola</th><th>Entrate</th><th>Uscite</th></tr>
+          ${g.passi.map((p) => { const [a, m] = p.passo.split(".");
+            return m ? `<tr><td style="padding-left:1.4rem"><small>${esc(m === "fascia_richiesta" ? "di cui fascia richiesta" : m.replace(/_/g, " "))}</small></td><td><small>${m === "fascia_richiesta" ? p.entrate : ""}</small></td><td><small>${p.uscite}</small></td></tr>`
+                     : `<tr><td><b>${esc(PASSI[a] || a)}</b></td><td>${p.entrate}</td><td class="${p.uscite ? "ko" : ""}">${p.uscite}</td></tr>`; }).join("")}
+          </table></div></details>`; }).join("")}`;
+  } catch (err) { el.innerHTML = `<p class="note">Filtri del sito non disponibili ora (${esc(err.message)}).</p>`; }
 }
 
 /* ---------- navigazione ---------- */

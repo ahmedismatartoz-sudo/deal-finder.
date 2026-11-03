@@ -64,7 +64,7 @@ ARGOMENTI = {
             ("Perché conviene arrivare primi", "Le auto davvero sotto prezzo restano online poche ore. Il commerciante che chiama per primo tratta meglio e spesso chiude l'affare prima che l'annuncio sparisca. Per questo ogni auto su Scovo può essere contattata al massimo da 7 commercianti."),
         ],
         "faq": [("Le auto sono di privati o di concessionari?", "Solo di privati. Gli annunci dei concessionari servono solo come prezzo di confronto."),
-                ("Il guadagno è garantito?", "No: è una stima prudente. La rivendita è calcolata al 10% sotto il mercato e dal guadagno sono già tolti passaggio di proprietà, pulizia e pezzi da cambiare. Ogni scheda dice cosa controllare dal vivo.")],
+                ("Il guadagno è garantito?", "No: è una stima prudente. La rivendita è calcolata al 10% sotto il mercato e dal guadagno sono già tolti i costi del commerciante (al massimo 200 € per tagliando e pulizia) e i pezzi da cambiare. Ogni scheda dice cosa controllare dal vivo.")],
     },
     "auto-incidentate-milano": {
         "titolo": "Auto incidentate in vendita a Milano da privati",
@@ -94,7 +94,7 @@ ARGOMENTI = {
         "desc": "Come trovano le auto i commercianti di usato: dove cercarle, come calcolare il guadagno e cosa controllare prima di comprare un'auto da un privato a Milano e in Lombardia.",
         "testo": [
             ("Il lavoro che fa Scovo al posto tuo", "Chi compra e rivende auto usate passa ore a scorrere annunci su Subito, AutoScout24 e Facebook Marketplace. Scovo lo fa per te più volte al giorno e ti mostra solo le auto dei privati con un margine reale, già calcolato."),
-            ("Come si calcola il guadagno", "Guadagno = prezzo di rivendita prudente − prezzo pagato − passaggio di proprietà − pulizia − pezzi da cambiare. La rivendita prudente è il prezzo delle auto uguali in vendita in zona meno il 10%: un prezzo a cui l'auto si vende davvero in poche settimane."),
+            ("Come si calcola il guadagno", "Guadagno = prezzo di rivendita prudente − prezzo pagato − tagliando e pulizia (al massimo 200 €) − pezzi da cambiare. La rivendita prudente è il prezzo delle auto uguali in vendita in zona meno il 10%: un prezzo a cui l'auto si vende davvero in poche settimane."),
             ("Cosa controllare prima di comprare", "Chilometri e tagliandi, revisione, stato di frizione e cambio, eventuali spie accese, gomme, segni di incidenti non dichiarati. Per i diesel: FAP, EGR e turbo."),
         ],
         "faq": [("Quanto si guadagna con un'auto usata?", "Dipende dalla fascia: su Scovo mostriamo auto con almeno 800–1.600 € di guadagno stimato dopo le spese, a seconda del prezzo."),
@@ -119,7 +119,7 @@ GUIDE = {
         "desc": "Quanto costa il passaggio di proprietà di un'auto usata, quali documenti servono e come si fa tra privati o con un commerciante, spiegato in modo semplice.",
         "testo": [
             ("Cos'è", "Il passaggio di proprietà trasferisce l'auto dal venditore al compratore al PRA e sulla carta di circolazione (il Documento Unico)."),
-            ("Quanto costa", "Il costo cambia con la potenza dell'auto e la provincia: c'è l'IPT (imposta provinciale di trascrizione), gli emolumenti ACI, i diritti della Motorizzazione e le marche da bollo. Per un'utilitaria si parte da circa 150–200 €; per chi compra per rivendere esiste la minivoltura, più economica. Su Scovo nel conto del guadagno mettiamo 90 € di passaggio per i commercianti."),
+            ("Quanto costa", "Il costo cambia con la potenza dell'auto e la provincia: c'è l'IPT (imposta provinciale di trascrizione), gli emolumenti ACI, i diritti della Motorizzazione e le marche da bollo. Per un'utilitaria si parte da circa 150–200 €; per chi compra per rivendere esiste la minivoltura, più economica. Su Scovo nel conto del guadagno mettiamo al massimo 200 € di costi fissi del commerciante (tagliando e pulizia) più i pezzi."),
             ("Documenti", "Documento Unico dell'auto, documenti di identità e codice fiscale di venditore e compratore. Si fa presso un'agenzia di pratiche auto, l'ACI o la Motorizzazione."),
         ],
     },
@@ -139,7 +139,7 @@ GUIDE = {
         "testo": [
             ("Velocità", "Le occasioni vere durano poche ore. Controlla gli annunci più volte al giorno, o usa uno strumento che lo fa per te."),
             ("Prezzo troppo bello", "Un'auto a metà del suo valore senza una spiegazione nel testo è spesso una truffa o un dato sbagliato (chilometri, anno, modello). Diffida di chi chiede anticipi o non fa vedere l'auto."),
-            ("Margine vero", "Il margine si calcola sul prezzo a cui rivendi davvero, non sul prezzo più alto che vedi online: togli almeno il 10% per la trattativa, poi passaggio, pulizia e pezzi."),
+            ("Margine vero", "Il margine si calcola sul prezzo a cui rivendi davvero, non sul prezzo più alto che vedi online: togli almeno il 10% per la trattativa, poi tagliando, pulizia e pezzi."),
         ],
     },
 }
@@ -315,19 +315,19 @@ def pagina_citta(slug: str) -> str | None:
             f"Sì: ogni giorno alcune auto di privati a {c['nome']} e {inp} sono messe in vendita sotto il prezzo di mercato. Scovo le trova e ti mostra il guadagno stimato dopo le spese."),
            (f"Da dove arrivano gli annunci di {c['nome']}?",
             "Da annunci pubblici di venditori privati su Subito, AutoScout24 e Facebook Marketplace. Niente concessionari né aste."),
-           ("Quanto costa Scovo?", "79,99 € al mese IVA inclusa, disdici quando vuoi.")]
+           ("Quanto costa Scovo?", "Base 100 € o Max 200 € al mese IVA inclusa, con il 50% di sconto sul primo mese. Disdici quando vuoi.")]
     fh, fld = _faq_html(faq)
     corpo = (f"<h1>Auto usate a {_e(c['nome'])}: le occasioni dei privati</h1>"
              f"<p>{_e(c['nota'])}</p>"
              f"<p><b>Scovo</b> legge ogni giorno tutti gli annunci di auto usate dei privati a {_e(c['nome'])} e "
              f"{_e(inp)} e ti mostra solo quelle sotto prezzo: per ogni auto trovi il prezzo di mercato, i pezzi da "
-             f"cambiare, la rivendita prudente e il guadagno, già tolti passaggio di proprietà e pulizia. È pensato per "
+             f"cambiare, la rivendita prudente e il guadagno, già tolti tagliando, pulizia (al massimo 200 €) e pezzi. È pensato per "
              f"commercianti di auto usate, autosaloni, carrozzieri e chi compra auto da privati per rivenderle.</p>"
              f"{stats}{CTA}{tab}"
              f"<h2>Come funziona a {_e(c['nome'])}</h2><ol>"
              f"<li><b>Leggiamo gli annunci</b> di Subito, AutoScout24 e Facebook Marketplace a {_e(c['nome'])} e provincia, solo privati.</li>"
              f"<li><b>Confrontiamo ogni auto</b> con quelle uguali in vendita in zona: marca, modello, anno, chilometri, alimentazione.</li>"
-             f"<li><b>Togliamo quelle che non rendono</b>: se dopo pezzi, passaggio e pulizia il guadagno non c'è, l'auto non arriva a te.</li>"
+             f"<li><b>Togliamo quelle che non rendono</b>: se dopo pezzi, tagliando e pulizia il guadagno non c'è, l'auto non arriva a te.</li>"
              f"<li><b>Chiami per primo</b>: ogni auto si può contattare al massimo da 7 commercianti.</li></ol>"
              f"<h2>Auto incidentate ed economiche a {_e(c['nome'])}</h2>"
              f"<p>Oltre alle auto sane trovi una sezione di <a href=\"/auto-incidentate-milano\">auto incidentate</a> con i pezzi già stimati, "
@@ -376,5 +376,6 @@ def jsonld_home() -> str:
     app = {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Scovo",
            "applicationCategory": "BusinessApplication", "operatingSystem": "Web, iOS, Android",
            "description": "Le auto usate dei privati sotto prezzo a Milano e in Lombardia, con guadagno, pezzi e rivendita già calcolati, per commercianti di auto usate.",
-           "offers": {"@type": "Offer", "price": "79.99", "priceCurrency": "EUR"}}
+           "offers": [{"@type": "Offer", "name": "Scovo Base", "price": "100.00", "priceCurrency": "EUR"},
+                      {"@type": "Offer", "name": "Scovo Max", "price": "200.00", "priceCurrency": "EUR"}]}
     return "".join(f'<script type="application/ld+json">{json.dumps(x, ensure_ascii=False)}</script>' for x in (org, site, app))

@@ -52,7 +52,7 @@ const S = {
   kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
   pos: store.get("pos", null),
   sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "guadagno",   /* si entra SEMPRE con l'ordine per guadagno in percentuale sul prezzo, dalla più alta */
-  cars: null, costs: 140, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
+  cars: null, costs: 200, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
 const V = {targa:"", km:"", note:"", cambio:"", foto:[], stato:"form", err:"", res:null};
@@ -214,9 +214,9 @@ function botMatch(c, b){
 }
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
-const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"],["roma","Roma e dintorni"]];
-function zoneCounts(){ const o = {milano:0, ravenna:0, roma:0, italia:0}; filtered({zona:"tutte"}).forEach(c => o[c.area || "milano"]++); o.tutte = o.milano + o.ravenna + o.roma; return o; }
-function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","ravenna","roma"].includes(k)); }
+const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
+function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.ravenna; return o; }
+function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","ravenna"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
 const CARB = [["benzina","Benzina"],["diesel","Diesel"],["gpl","GPL"],["metano","Metano"],["ibrida","Ibrida"],["elettrica","Elettrica"]];
 const carbKey = t => { t = String(t || "").toLowerCase(); return t.startsWith("ibrid") ? "ibrida" : t; };
@@ -290,7 +290,7 @@ function viewList(){
   const TIT = {all: "Dalla più conveniente: margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
-      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}</div>
+      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}</div>
       <div class="card-body">
         <div><div class="name">${esc(c.nome)}</div><div class="meta">${esc(meta(c))}</div></div>
         <div class="trio">
@@ -324,7 +324,7 @@ function viewList(){
   return header(scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", scV ? `${list.length} supercar di privati in tutta Europa` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${!scV && !incV && !ecoV ? venduteBanner() : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. "Opportunità" = margine prudente da 5.000 € in su, già tolti i costi di import; "Sotto mercato" = prezzo sotto la media ma margine più piccolo. Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Sopra i 1.500 € solo quelle sotto il prezzo di mercato; guadagni stimati prudenti. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${!scV && !incV && !ecoV ? venduteBanner() : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -390,7 +390,7 @@ function boxV1(c){ return `
         <div class="row" style="border-bottom:0"><span class="k">Rivendita veloce</span><span class="v">${c.economica && !c.mercato ? "da stimare" : eur(c.riv)}</span></div>
         <div class="note">${c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`}${c.economica ? " Auto non ancora controllata a mano: guarda bene foto e descrizione." : ""}</div>
         <div class="row total"><span class="k">Guadagno stimato</span><span class="v">${gainTxt(c)}</span></div>
-        <div class="note" style="border:0;margin-top:-8px">Già tolti passaggio (90 €) e pulizia (50 €).${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}</div>
+        <div class="note" style="border:0;margin-top:-8px">Già tolti i costi del commerciante: al massimo ${eur(S.costs)} fissi (tagliando e pulizia) più i pezzi.${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}</div>
       </div>`; }
 const VOCI = {ricambi: "Ricambi", manodopera: "Manodopera e verniciatura", passaggio: "Passaggio e pratiche", trasporto: "Trasporto / ritiro",
   diagnosi_revisione: "Diagnosi e revisione", preparazione: "Preparazione e pulizia", vendita: "Costi di vendita", garanzia: "Garanzia (accantonamento)",
@@ -413,7 +413,7 @@ function boxPolicy(c, v){
     if (v.riserva && v.riserva.euro) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
   } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
   h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
-    <div class="note" style="border:0;margin-top:-8px">${p.riempimento || p.top ? `<b>Margine sotto la soglia piena di ${eur(p.soglia)}</b>: è tra le auto più convenienti che abbiamo in questo momento.` : `Soglia minima richiesta: ${eur(p.soglia)}.`} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
+    <div class="note" style="border:0;margin-top:-8px">${p.difetto_costo ? `Già tolti ${eur(p.difetto_costo)} per un difetto scritto nell'annuncio${p.difetto ? " (" + esc(p.difetto) + ")" : ""}. ` : ""}${p.soglia ? `Soglia minima richiesta: ${eur(p.soglia)}.` : ""} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
   if (p.sconto_pct != null && p.margine == null) h += `<div class="note" style="border:0">Prezzo ${p.sconto_pct}% sotto la media di ${p.n} annunci uguali in Europa. Con la rivendita prudente e i costi di import il margine non è garantito: è un'auto da trattare.</div>`;
   h += `</div>`;
   if (!v) return h + `<div class="skel"><div class="bar"></div></div>`;
@@ -428,7 +428,7 @@ function boxPolicy(c, v){
 }
 
 /* ---------- viste: scheda auto ---------- */
-const ESITI = [["contattato","Contattato"],["trattativa","In trattativa"],["comprata","Comprata"],["scartata","Non mi interessa"]];
+const ESITI = [["contattato","Contattato"],["trattativa","In trattativa"],["comprata","Comprata"],["venduta","Rivenduta a … €"],["scartata","Non mi interessa"]];
 function viewDetail(){
   const base = (S.cars || []).find(c => c.id === S.sel) || S.detail[S.sel];
   const d = S.detail[S.sel];
@@ -453,13 +453,14 @@ function viewDetail(){
     </div>
     <div class="d-body">
       <div><h1 class="d-name">${esc(c.nome)}</h1><div class="meta" style="margin-top:4px">${esc(meta(c))}</div></div>
+      ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
       ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : boxV1(c)}
       <div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
       ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
-      ${c.aperta ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
+      ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
       <span class="where">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</span>
     </div>
     <div class="dock"><div class="dock-in">
@@ -754,7 +755,7 @@ function viewProfilo(){
       ${P.err ? `<span class="err" role="alert">${esc(P.err)}</span>` : ""}${P.ok ? `<div class="ok-msg">Password cambiata</div>` : ""}
       <button class="btn btn-dark" data-act="pwd-go" ${P.busy ? "disabled" : ""}>Salva la nuova password</button></section>` : ""}
     <div class="sec-title">Come calcoliamo</div>
-    <div class="plist"><div><span>Rivendita</span><span class="v">${S.sconto}% sotto mercato</span></div><div><span>Passaggio + pulizia</span><span class="v">${eur(S.costs)}</span></div><div><span>Riparazioni</span><span class="v">solo pezzi</span></div></div>
+    <div class="plist"><div><span>Rivendita</span><span class="v">${S.sconto}% sotto mercato</span></div><div><span>Tagliando e pulizia</span><span class="v">max ${eur(S.costs)}</span></div><div><span>Riparazioni</span><span class="v">solo pezzi</span></div></div>
     <span class="hint" style="padding:0 4px">Lo sconto di rivendita si cambia dai Filtri. Ogni auto sparisce dopo che 7 commercianti l'hanno contattata.</span>
     ${installHint()}
     <div class="sec-title">Scovo</div>
@@ -1303,7 +1304,7 @@ function render(opts){
   if (canBrowse()) {
     // pulsante "Chiedi" tolto (sarà sostituito)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : "";
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
@@ -1402,6 +1403,17 @@ async function talk(){
 // Sul telefono l'annuncio si apre nella stessa scheda: Subito, AutoScout24 e Facebook aprono la loro app e
 // una scheda nuova resterebbe vuota (about:blank). Tornando indietro Scovo riapre la stessa auto.
 const MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "") || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform || ""));
+function sheetVenduta(){
+  return `
+  <div class="sheet-wrap" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vh">
+    <div class="sheet-head"><h2 id="vh">Rivenduta</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body">
+      <label class="field">A quanto l'hai rivenduta?<input id="sold" type="number" inputmode="numeric" min="100" placeholder="es. 6500"></label>
+      <span class="hint">Il prezzo di rivendita vero ci serve a controllare le stime. Non lo vede nessun altro.</span>
+    </div>
+    <div class="sheet-foot"><button class="btn btn-dark" style="width:100%" data-act="venduta-ok">Salva</button></div>
+  </div></div>`;
+}
 function segnaAperta(){
   const car = (S.cars || []).find(c => c.id === S.sel); if (car) car.aperta = true;
   if (S.detail[S.sel]) S.detail[S.sel].aperta = true;
@@ -1505,7 +1517,10 @@ $app.addEventListener("click", e => {
     case "posizione": chiediPosizione(false); return;
     case "sconto": S.sconto = Number(v); saveFilters(); break;
     case "sort": S.sort = v; saveFilters(); break;
-    case "esito": if (v === "comprata") { S.sheet = "comprata"; break; } sendEsito(v); return;
+    case "esito": if (v === "comprata" || v === "venduta") { S.sheet = v; break; } sendEsito(v); return;
+    case "venduta-ok": { const p = Number((document.getElementById("sold") || {}).value || 0);
+      if (!(p >= 100)) { toast("Scrivi il prezzo a cui l'hai rivenduta"); return; }
+      S.sheet = null; sendEsito("venduta", {sold_eur: p}); return; }
     case "comprata-ok": { const p = (document.getElementById("paid") || {}).value; S.sheet = null; sendEsito("comprata", p ? {bought_eur: Number(p)} : {}); return; }
     case "cerca-pezzi": { const d = S.detail[S.sel] || {}; R.pezzi = (d.pezzi || []).map(p => p.pezzo).slice(0, 8); R.stato = "form"; R.err = ""; S.sheet = null; go("ricambi"); return; }
     case "logout": logout(); return;
@@ -1600,7 +1615,7 @@ api("/api/auth/metodi").then(m => {
   if (!card || !r) return;
   const p = Number(card.dataset.prezzo), m = Number(card.dataset.mercato), lo = Number(card.dataset.lo), hi = Number(card.dataset.hi);
   const upd = () => {
-    const sc = Number(r.value), riv = Math.round(m * (1 - sc / 100)), base = riv - p - 140;
+    const sc = Number(r.value), riv = Math.round(m * (1 - sc / 100)), base = riv - p - 200;
     document.getElementById("sconto-val").textContent = sc + "%";
     card.querySelector("[data-riv]").textContent = eur(riv);
     const g = card.querySelector("[data-gain]");

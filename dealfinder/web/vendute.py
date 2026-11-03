@@ -38,7 +38,8 @@ def _provincia(zona) -> str | None:
 
 
 def salva_sito(items: list[dict]) -> None:
-    """Dopo ogni calcolo dell'elenco: ricorda le auto mostrate sul sito (al massimo ogni 10 minuti)."""
+    """Dopo ogni calcolo dell'elenco: ricorda le auto mostrate sul sito (al massimo ogni 10 minuti). 4/11: si salva il
+    prezzo VERO dell'annuncio (prima di qualunque sconto o prezzo trattato) e il margine mostrato sul sito."""
     if time.time() - _ultimo_salvataggio["t"] < 600:
         return
     _ultimo_salvataggio["t"] = time.time()
@@ -50,7 +51,8 @@ def salva_sito(items: list[dict]) -> None:
             continue
         righe.append((int(it["id"]), json.dumps({
             "nome": it.get("nome"), "marca": it.get("marca"), "anno": it.get("anno"), "km": it.get("km"),
-            "carb": it.get("carb"), "prov": _provincia(it.get("zona")), "prezzo": int(it["prezzo"]),
+            "carb": it.get("carb"), "prov": _provincia(it.get("zona")),
+            "prezzo": int(it.get("prezzo_annuncio") or it["prezzo"]),
             "mercato": pv.get("M") or it.get("mercato"), "margine": int(marg), "supercar": bool(it.get("supercar")),
         }, ensure_ascii=False)))
     if not righe:
@@ -90,11 +92,19 @@ WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days =
   AND l.seller_type = 'privato' AND upper(l.province) = ANY(%(prov)s)
   AND l.price_eur BETWEEN 1000 AND 300000 AND coalesce(l.mileage_km, 0) <= 150000
   AND coalesce(l.damage_class, '') NOT IN ('grave', 'alto_rischio', 'medio')
-  AND NOT ('leasing' = ANY(l.price_flags))
-  AND vp.r->>'categoria' = ANY(%(cat)s)
-  AND (vp.r->>'margine')::numeric >= CASE WHEN l.price_eur <= 4000 THEN 800 ELSE 1500 END
-  AND l.price_eur >= 0.5 * coalesce((vp.r->>'M')::numeric, 0)   -- metà prezzo o meno: spesso truffa o prezzo sbagliato
+  AND NOT ('leasing_o_rata' = ANY(COALESCE(l.price_flags, ARRAY[]::text[])))   -- 4/11: il flag vero (prima 'leasing', mai scritto)
+  AND coalesce(vp.r->>'categoria', '') <> 'dati_insufficienti'
+  AND (vp.r->>'margine')::numeric >= %(m_min)s
+  AND l.price_eur >= 0.45 * coalesce((vp.r->>'M')::numeric, 0)   -- sotto il 45% del mercato: segnale di truffa (regola del sito)
 """
+
+
+def _zona() -> list[str]:
+    """Province della sezione: ZONA_SITO se impostata, altrimenti le stesse del sito (100 km da Milano e Ravenna).
+    Roma mai."""
+    from .sito_regole import PROVINCE_100KM, RAVENNA, ROMA
+    prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
+    return [p for p in (prov or sorted(PROVINCE_100KM | RAVENNA)) if p not in ROMA]
 
 
 def _giorni(a, b) -> int | None:
@@ -106,8 +116,7 @@ def _giorni(a, b) -> int | None:
 
 def _calcola() -> dict:
     giorni = int(os.environ.get("VENDUTE_GIORNI", "7"))
-    prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
-    costi = sum(scovo.COSTI_FISSI.values())
+    prov = _zona()
     auto = {}
     with connect() as conn:
         conn.execute(_TABELLA)
@@ -126,8 +135,12 @@ def _calcola() -> dict:
             except Exception as e:
                 log.warning("VENDUTE_DIAGNOSI errore: %s", str(e)[:200])
         if prov:
-            for r in conn.execute(_SQL_RICOSTRUITE, {"giorni": giorni, "prov": prov, "cat": sorted(scovo.CATEGORIE_SITO)}).fetchall():
+            m_min = min(m for _, m in scovo.SOGLIE_PV)
+            for r in conn.execute(_SQL_RICOSTRUITE, {"giorni": giorni, "prov": prov, "m_min": m_min}).fetchall():
                 if r["id"] in auto:
+                    continue
+                # 4/11: stessa regola del sito, margine almeno la soglia della fascia di prezzo
+                if int(float((r["pv"] or {}).get("margine") or 0)) < scovo.soglia(int(r["price_eur"])):
                     continue
                 nome = " ".join(x for x in [r["make"], r["model"], r["version_raw"]] if x) or r["title"]
                 auto[r["id"]] = {

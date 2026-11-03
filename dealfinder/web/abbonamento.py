@@ -26,12 +26,12 @@ API = "https://api.stripe.com/v1"
 STATI_OK = ("active", "trialing")
 
 
-# 3/11 (cliente): due abbonamenti, Base 100 € e Pro 200 € al mese (Pro = anche gli appuntamenti), −50% il primo mese.
+# 3/11 (cliente): due abbonamenti, Base 100 € e Max 200 € (id "pro") al mese (Pro = anche gli appuntamenti), −50% il primo mese.
 PIANI = {
     "base": {"nome": "Base", "eur": 100, "lookup": "scovo_base_100_mese", "env": "STRIPE_PRICE_ID",
              "cosa": ["Tutte le auto sotto prezzo dei privati in zona", "Guadagno e prezzo di rivendita già calcolati",
                       "Truffe e annunci falsi già scartati"]},
-    "pro": {"nome": "Pro", "eur": 200, "lookup": "scovo_pro_200_mese", "env": "STRIPE_PRICE_PRO",
+    "pro": {"nome": "Max", "eur": 200, "lookup": "scovo_pro_200_mese", "env": "STRIPE_PRICE_PRO",
             "cosa": ["Tutto quello del Base", "Fissa l'appuntamento: al privato pensiamo noi",
                      "Garanzia di due auto al mese"]},
 }
