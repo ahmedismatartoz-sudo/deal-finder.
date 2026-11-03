@@ -1254,6 +1254,27 @@ RE_PROMO_COMMERCIANTE = (r"(promo|promozion|prezzo\s+(valido|riservat\w*|special
 _FLAG_PROMO = ["leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoerenti"]
 
 
+def _rss_mb() -> float:
+    """Memoria usata da questo processo (MB). 3/11: il sito ha 512 MB e i lavori lunghi lo mandavano fuori memoria."""
+    try:
+        with open("/proc/self/statm") as f:
+            return int(f.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1e6
+    except Exception:
+        return 0.0
+
+
+def _aspetta_memoria(L, nome: str, limite: float = 420.0) -> None:
+    """Prima di ogni blocco di un lavoro lungo: se la memoria è alta si libera e si aspetta (il sito viene prima)."""
+    import gc
+    for tent in range(10):
+        if _rss_mb() < limite:
+            return
+        gc.collect()
+        if tent == 0 or tent % 5 == 4:
+            L.warning("%s: memoria %.0f MB, aspetto prima di continuare", nome, _rss_mb())
+        time.sleep(30)
+
+
 def _commercianti_nomi_re() -> str:
     return "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
 
@@ -5256,8 +5277,12 @@ def _tempo_reale():
         time.sleep(45)
         L = logging.getLogger("scovo")
         try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"rivtutte:{tag}"):
+            # 3/11: lucchetto per tutta la durata (non "una volta sola"): se il sito si riavvia il giro riprende da
+            # dove era (le auto già fatte col codice attuale si saltano)
+            _lk = connect().__enter__()
+            _ok_lk = _lk.execute("SELECT pg_try_advisory_lock(778821) AS ok").fetchone()["ok"]
+            _lk.commit()                     # il lucchetto di sessione resta, la transazione no
+            if not _ok_lk:
                 return
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
@@ -5310,16 +5335,19 @@ def _tempo_reale():
                 del rows
                 L.warning("RIVTUTTE da rivalutare con il valore reale: %d", len(ids))
                 st = _C()
-                for i in range(0, len(ids), 60):
+                for i in range(0, len(ids), 30):
+                    _aspetta_memoria(L, "RIVTUTTE")
                     try:
-                        tr.valuta_e_pubblica(conn, ids[i:i + 60], st)
+                        tr.valuta_e_pubblica(conn, ids[i:i + 30], st)
                         conn.commit()
                     except Exception as e:
                         conn.rollback()
                         st["blocchi_non_riusciti"] += 1
                         L.warning("RIVTUTTE blocco %d non riuscito: %s", i, str(e)[:200])
-                    if i % 1200 == 0:
-                        L.warning("RIVTUTTE avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
+                    if i % 600 == 0:
+                        import gc as _gc
+                        _gc.collect()
+                        L.warning("RIVTUTTE avanzamento %d/%d (memoria %.0f MB): %s", i, len(ids), _rss_mb(), json.dumps(dict(st)))
                 L.warning("RIVTUTTE fatto: %s", json.dumps(dict(st)))
         except Exception as e:
             L.warning("RIVTUTTE non riuscita: %s", str(e)[:300])
@@ -5360,6 +5388,7 @@ def _tempo_reale():
                         pezzo = [r["id"] for r in rows[i:i + 60]]
                         for k in pezzo:
                             provate[k] = ora
+                        _aspetta_memoria(L, "RIALLINEA")
                         try:
                             tr.valuta_e_pubblica(conn, pezzo, st)
                             conn.commit()
@@ -5404,7 +5433,8 @@ def _tempo_reale():
                     n_vr = conn.execute("""SELECT count(*) AS n FROM valore_reale v JOIN listings l ON l.id = v.listing_id
                         WHERE l.seller_type = 'commerciante' AND v.computed_at > now() - interval '20 hours'""").fetchone()["n"]
                 # una volta per avvio del sito (un riavvio a metà calcolo lo rifà subito, non dopo un'ora)
-                if n_vr < 200 and _una_volta("vr_commercianti:" + _AVVIO_COMM):
+                # 3/11 11:50: il calcolo completo di giorno mandava il sito fuori memoria (512 MB): solo di notte (2-5 UTC)
+                if n_vr < 200 and 2 <= _dt.now(_tz.utc).hour < 5 and _una_volta("vr_commercianti:" + _AVVIO_COMM):
                     with connect() as conn:
                         conn.execute("SET statement_timeout = '900s'")
                         L.warning("COMMERCIANTI_TOP valore reale (privati + commercianti lontani): %s", json.dumps(
@@ -5436,7 +5466,9 @@ def _tempo_reale():
                         aimap, vrmap = ai_di(conn, ids), vr_di(conn, ids)
                         cfg = _P.PolicyConfig.from_env()
                         gruppo, mercato, cache = None, [], {}
-                        for r in rows:
+                        for i_r, r in enumerate(rows):
+                            if i_r % 30 == 0:
+                                _aspetta_memoria(L, "COMMERCIANTI_TOP")
                             try:
                                 if _ph(_Lst(source=r["source"], source_id="", url="", title=r["title"], description=r["description"])):
                                     st["danni_nel_testo"] += 1
