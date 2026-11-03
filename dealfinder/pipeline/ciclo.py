@@ -13,8 +13,10 @@ vengono analizzati qui.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
+from contextlib import contextmanager
 
 from ..db import connect
 
@@ -39,6 +41,108 @@ def _una_volta(job: str) -> bool:
         conn.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, '{}')", (job,))
         conn.commit()
     return True
+
+
+class LavoroUnaVolta:
+    """3/11 (fase 1): lavoro da fare una volta sola, segnato "fatto" SOLO quando è finito davvero.
+
+    _una_volta segna fatto PRIMA di fare: un crash, un riavvio o un errore di memoria a metà lasciano il lavoro
+    "fatto" per sempre. Qui invece:
+      - inizia(job): lucchetto di sessione Postgres (pg_try_advisory_lock, si libera da solo se il processo muore)
+        tenuto per tutta la durata; se il lavoro ha già una riga ok=true non si rifà; le righe rimaste aperte da un
+        processo morto si chiudono come interrotte (ok=false) e si riparte; si registra una riga "iniziato"
+        (finished_at NULL);
+      - fatto(stats): ok=true, finished_at=now();
+      - fallito(e): ok=false, finished_at=now(), il prossimo giro lo rifà;
+      - dopo `tentativi_max` tentativi non riusciti (errori o crash) non si riprova più da solo (niente ciclo
+        crash -> riavvio -> crash), resta nel log.
+    Uso: `lav = inizia(job); if not lav: return; ...; lav.fatto()` con `lav.fallito(e)` nell'except,
+    oppure `with una_volta_sicura(job) as fare: if fare: ...`.
+    Per i lavori che cambiano dati o valutazioni; per gli invii (SMS, email) resta _una_volta.
+    """
+
+    def __init__(self, job: str, conn, uscita):
+        self.job, self.conn, self._uscita, self.id, self.chiuso = job, conn, uscita, None, False
+
+    def _chiudi(self, ok: bool, stats: dict) -> None:
+        if self.chiuso:
+            return
+        self.chiuso = True
+        try:
+            self.conn.execute("UPDATE job_runs SET finished_at=now(), ok=%s, stats=%s WHERE id=%s",
+                              (ok, json.dumps(stats, default=str), self.id))
+            self.conn.commit()
+        finally:
+            self._rilascia()
+
+    def _rilascia(self) -> None:
+        try:
+            self.conn.execute("SELECT pg_advisory_unlock(hashtext(%s))", (self.job,))
+            self.conn.commit()
+        except Exception:
+            pass
+        finally:
+            u, self._uscita = self._uscita, None
+            if u:
+                u(None, None, None)
+
+    def fatto(self, stats: dict | None = None) -> None:
+        self._chiudi(True, stats or {})
+
+    def fallito(self, errore=None) -> None:
+        self._chiudi(False, {"errore": (type(errore).__name__ + ": " + str(errore)[:200]) if errore else "errore"})
+
+
+def inizia(job: str, tentativi_max: int = 3, connetti=None) -> LavoroUnaVolta | None:
+    """Prende il lavoro una tantum `job`. None se è già fatto, se un altro processo lo sta facendo o se ha già
+    fallito `tentativi_max` volte; altrimenti il lavoro, da chiudere con .fatto() o .fallito()."""
+    cm = (connetti or connect)()
+    conn = cm.__enter__()
+    lav = None
+    try:
+        if not conn.execute("SELECT pg_try_advisory_lock(hashtext(%s)) AS preso", (job,)).fetchone()["preso"]:
+            conn.commit()
+            cm.__exit__(None, None, None)
+            log.warning("LAVORO %s: già in corso in un altro processo, salto", job)
+            return None
+        lav = LavoroUnaVolta(job, conn, cm.__exit__)
+        if conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok LIMIT 1", (job,)).fetchone():
+            lav._rilascia()
+            return None
+        n = conn.execute("SELECT count(*) AS n FROM job_runs WHERE job=%s AND ok IS NOT TRUE", (job,)).fetchone()["n"]
+        if n >= tentativi_max:
+            lav._rilascia()
+            log.warning("LAVORO %s: %d tentativi non riusciti, non riprovo da solo", job, n)
+            return None
+        # righe aperte da un processo morto (il lucchetto è nostro, quindi nessuno le sta facendo): interrotte
+        conn.execute("UPDATE job_runs SET finished_at=now(), ok=false, stats='{\"interrotto\": true}' "
+                     "WHERE job=%s AND finished_at IS NULL", (job,))
+        lav.id = conn.execute("INSERT INTO job_runs (job) VALUES (%s) RETURNING id", (job,)).fetchone()["id"]
+        conn.commit()
+        if n:
+            log.warning("LAVORO %s: riprendo dopo %d tentativi non finiti", job, n)
+        return lav
+    except Exception:
+        if lav is not None:
+            lav._rilascia()
+        else:
+            cm.__exit__(None, None, None)
+        raise
+
+
+@contextmanager
+def una_volta_sicura(job: str, tentativi_max: int = 3, connetti=None):
+    """Come inizia/fatto/fallito ma con `with`: dentro si riceve True se va fatto; un'eccezione lo segna fallito."""
+    lav = inizia(job, tentativi_max, connetti)
+    if not lav:
+        yield False
+        return
+    try:
+        yield True
+    except BaseException as e:
+        lav.fallito(e)
+        raise
+    lav.fatto()
 
 
 def _in_corso(job: str, hours: int = 8) -> bool:

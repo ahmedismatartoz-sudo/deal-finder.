@@ -5304,17 +5304,23 @@ def _tempo_reale():
                         ult = conn.execute("SELECT max(computed_at) AS t FROM valore_reale").fetchone()["t"] \
                             if conn.execute("SELECT to_regclass('valore_reale') AS t").fetchone()["t"] else None
                     if ult is None or (_dt.now(_tz.utc) - ult).total_seconds() > 20 * 3600:
-                        from ..pipeline.ciclo import _una_volta
-                        if _una_volta("valore_reale_notte:" + _dt.now(_tz.utc).strftime("%Y%m%d")):
+                        from ..pipeline.ciclo import inizia   # 3/11: fatto solo se il calcolo finisce
+                        lav = inizia("valore_reale_notte:" + _dt.now(_tz.utc).strftime("%Y%m%d"))
+                        if lav:
                             from ..pricing import valore_reale as VR
                             from ..zone import tutte
                             # 3/11 (controllo indipendente): prima il calcolo (serve al sito), poi la prova in un try a
                             # parte: se la prova fallisce il valore reale resta aggiornato
-                            with connect() as conn:
-                                conn.execute("SET statement_timeout = '900s'")
-                                L.warning("VALORE_REALE CALCOLO %s", json.dumps(
-                                    VR.calcola_e_salva(conn, prov_zona=list(tutte()),
-                                                       commercianti_fuori=list(COMMERCIANTI_PROVINCE_ESCLUSE)), default=str))
+                            try:
+                                with connect() as conn:
+                                    conn.execute("SET statement_timeout = '900s'")
+                                    L.warning("VALORE_REALE CALCOLO %s", json.dumps(
+                                        VR.calcola_e_salva(conn, prov_zona=list(tutte()),
+                                                           commercianti_fuori=list(COMMERCIANTI_PROVINCE_ESCLUSE)), default=str))
+                            except Exception as e:
+                                lav.fallito(e)                  # il giro dopo (fra 30 minuti) lo rifà
+                                raise
+                            lav.fatto()
                             try:
                                 with connect() as conn:
                                     conn.execute("SET statement_timeout = '900s'")
@@ -5336,9 +5342,11 @@ def _tempo_reale():
             return
         time.sleep(30)
         L = logging.getLogger("scovo")
+        lav = None
         try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"soglia7k:{tag}"):
+            from ..pipeline.ciclo import inizia      # 3/11: segnato fatto solo a lavoro finito (prima: prima di farlo)
+            lav = inizia(f"soglia7k:{tag}")
+            if not lav:
                 return
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
@@ -5381,8 +5389,11 @@ def _tempo_reale():
             L.warning("SOGLIA7K dati insufficienti per motivo: %s", json.dumps(dict(mot.most_common(20)), ensure_ascii=False))
             L.warning("SOGLIA7K dati insufficienti per fonte: %s; non convenienti per quanto manca alla soglia: %s",
                       json.dumps(dict(fonte)), json.dumps(dict(marg)))
+            lav.fatto()
         except Exception as e:
             L.warning("SOGLIA7K non riuscita: %s", str(e)[:300])
+            if lav:
+                lav.fallito(e)
     threading.Thread(target=soglia_7k, daemon=True, name="soglia7k").start()
 
     def ripara_danni():
@@ -5396,9 +5407,11 @@ def _tempo_reale():
             return
         time.sleep(30)
         L = logging.getLogger("scovo")
+        lav = None
         try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"riparadanni:{tag}"):
+            from ..pipeline.ciclo import inizia      # 3/11: segnato fatto solo a lavoro finito (prima: prima di farlo)
+            lav = inizia(f"riparadanni:{tag}")
+            if not lav:
                 return
             from collections import Counter as _C
             from ..core.models import Listing
@@ -5430,8 +5443,11 @@ def _tempo_reale():
                     tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
                     conn.commit()
                 L.warning("RIPARADANNI rivalutate: %s", json.dumps(dict(st)))
+            lav.fatto()
         except Exception as e:
             L.warning("RIPARADANNI non riuscita: %s", str(e)[:300])
+            if lav:
+                lav.fallito(e)
     threading.Thread(target=ripara_danni, daemon=True, name="riparadanni").start()
 
     def rivaluta_costi():
@@ -5443,9 +5459,11 @@ def _tempo_reale():
             return
         time.sleep(30)
         L = logging.getLogger("scovo")
+        lav = None
         try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"rivcosti:{tag}"):
+            from ..pipeline.ciclo import inizia      # 3/11: segnato fatto solo a lavoro finito (prima: prima di farlo)
+            lav = inizia(f"rivcosti:{tag}")
+            if not lav:
                 return
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
@@ -5468,8 +5486,11 @@ def _tempo_reale():
                     tr.valuta_e_pubblica(conn, ids[i:i + 25], st)
                     conn.commit()
                 L.warning("RIVCOSTI rivalutate: %s", json.dumps(dict(st)))
+            lav.fatto()
         except Exception as e:
             L.warning("RIVCOSTI non riuscita: %s", str(e)[:300])
+            if lav:
+                lav.fallito(e)
     threading.Thread(target=rivaluta_costi, daemon=True, name="rivcosti").start()
 
     def valuta_mai_valutate():
@@ -5480,9 +5501,11 @@ def _tempo_reale():
             return
         time.sleep(30)
         L = logging.getLogger("scovo")
+        lav = None
         try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"valnuove:{tag}"):
+            from ..pipeline.ciclo import inizia      # 3/11: segnato fatto solo a lavoro finito (prima: prima di farlo)
+            lav = inizia(f"valnuove:{tag}")
+            if not lav:
                 return
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
@@ -5527,8 +5550,11 @@ def _tempo_reale():
                     if i % 500 == 0:
                         L.warning("VALNUOVE confronti avanzamento %d/%d: %s", i, len(ids), json.dumps(dict(st)))
                 L.warning("VALNUOVE confronti fatto: %s", json.dumps(dict(st)))
+            lav.fatto()
         except Exception as e:
             L.warning("VALNUOVE non riuscita: %s", str(e)[:300])
+            if lav:
+                lav.fallito(e)
     threading.Thread(target=valuta_mai_valutate, daemon=True, name="valnuove").start()
 
     def rivaluta_tutte():
@@ -5882,9 +5908,11 @@ def _tempo_reale():
             return
         time.sleep(30)
         L = logging.getLogger("scovo")
+        lav = None
         try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"incompleti:{tag}"):
+            from ..pipeline.ciclo import inizia      # 3/11: segnato fatto solo a lavoro finito (prima: prima di farlo)
+            lav = inizia(f"incompleti:{tag}")
+            if not lav:
                 return
             from collections import Counter as _C
             from ..core.dal_testo import anno, chilometri
@@ -5911,8 +5939,11 @@ def _tempo_reale():
                     es.append([r["id"], manca, (r["title"] or "")[:60], len(r["d"] or "")])
             L.warning("INCOMPLETI auto %d: %s", len(rows), json.dumps(dict(c.most_common(30))))
             L.warning("INCOMPLETI esempi subito: %s", json.dumps(es, ensure_ascii=False))
+            lav.fatto()
         except Exception as e:
             L.warning("INCOMPLETI non riuscita: %s", str(e)[:300])
+            if lav:
+                lav.fallito(e)
     threading.Thread(target=diagnosi_incompleti, daemon=True, name="incompleti").start()
 
     def supercar_vere():
