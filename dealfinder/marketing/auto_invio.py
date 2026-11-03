@@ -443,3 +443,125 @@ def fasce_e_esempi(tag: str, elenco) -> dict:
             esito[f] = {"contatti": len(dest), "lista": lid, "bozza": cid, "esempi": len(auto)}
         lg.warning("FASCE %s fatto: %s", tag, json.dumps(esito))
         return esito
+
+
+# 3/11 (cliente: "togli quelle che si sono lamentate e manda a tutti i 1500, prendi gente nuova mai contattata prima")
+ESCLUSI_3_11 = re.compile(r"(officinemulino|cosvalauto|autoeautovarese|srauto|loconte)", re.I)
+
+
+def nuovi_3_11(tag: str, elenco) -> dict:
+    """Commercianti MAI contattati (non in brevo_inviati), prima la zona entro 100 km poi il resto del Nord, fino al
+    tetto del piano Brevo (1.498): per fare posto si tolgono da Brevo i contatti già usati (restano in brevo_inviati e
+    non vengono mai ricontattati per errore). Ogni contatto nella fascia delle auto che vende, una lista e una
+    campagna per fascia con il testo approvato del 2/11 e 3 auto di esempio di oggi (metodo nuovo), INVIATE subito.
+    Esclusi chi si è lamentato e i nomi esclusi. Nei log solo conteggi."""
+    import hashlib  # noqa: F401
+    from collections import Counter
+    from ..db import connect
+    from ..pricing import policy_v2 as _P
+    tetto = int(os.environ.get("BREVO_TETTO", "1498"))
+    nord = ("MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC", "MN", "SO", "VC", "BI", "VB",
+            "AL", "AT", "TO", "CN", "GE", "SV", "PR", "RE", "MO", "BO", "VR", "VI", "PD", "VE", "TV", "TN", "BZ")
+    st = Counter()
+    with connect() as conn:
+        gia = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+        rows = conn.execute(
+            "SELECT e.chiave, e.email, upper(COALESCE(d.prov, m.prov)) AS prov FROM lead_email e "
+            "LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave LEFT JOIN lead_maps m ON e.chiave = 'maps:' || m.place_id "
+            "WHERE cardinality(e.email) > 0").fetchall()
+        prezzi: dict = {}
+        for r in conn.execute("SELECT chiave, prezzo FROM lead_tutti_ann WHERE prezzo > 300").fetchall():
+            prezzi.setdefault(r["chiave"], []).append(r["prezzo"])
+    cand, visti = [], set()
+    for r in rows:
+        pv = (r["prov"] or "").upper()
+        rango = 0 if pv in PROV_100 or pv == "PC" else 1 if pv in nord else 2
+        for e in r["email"] or []:
+            e = (e or "").strip().lower()
+            if not e or e in visti:
+                continue
+            visti.add(e)
+            if e in gia:
+                st["gia_contattate"] += 1
+            elif ESCLUSI_3_11.search(e):
+                st["esclusi"] += 1
+            elif BAD.search(e) or IMMAGINE.search(e) or NON_COMMERCIALI.search(e) or \
+                    not re.match(r"^[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}$", e):
+                st["scartate"] += 1
+            elif rango < 2:
+                cand.append((rango, e, r["chiave"]))
+            else:
+                st["fuori_nord"] += 1
+    cand.sort()
+    cand = cand[:tetto]
+    st["nuove_zona_100km"] = sum(1 for x in cand if x[0] == 0)
+    st["nuove_resto_nord"] = sum(1 for x in cand if x[0] == 1)
+    lg.warning("NUOVI_3_11 %s: %d email nuove scelte, %s", tag, len(cand), dict(st))
+    if not cand:
+        return dict(st)
+    # esempi di oggi (metodo nuovo), zona entro 100 km
+    tutte = [x for x in elenco() if x.get("R") and x.get("anno") and (x.get("n") or 0) >= 8
+             and (x.get("km") or 10**9) <= 150000 and (x.get("margine") or 0) >= 1500 and x.get("rev") == _P.POLICY_REV
+             and (m_ := re.search(r"\((\w\w)\)", str(x.get("zona") or ""))) and m_.group(1).upper() in PROV_100]
+    esempi = {}
+    for f, (lo, hi) in FASCE_2_11.items():
+        cs = sorted([x for x in tutte if lo <= (x.get("prezzo") or 0) < hi], key=lambda x: -(x.get("margine") or 0))
+        auto, modelli = [], set()
+        for x in cs:
+            mod = " ".join(str(x["auto"]).lower().split()[:2])
+            if mod in modelli or not _foto_ok(_card(x)):
+                continue
+            auto.append(x); modelli.add(mod)
+            if len(auto) == 3:
+                break
+        esempi[f] = auto
+        lg.warning("NUOVI_3_11 esempi %s: %s", f, [(a["id"], a["auto"], a["anno"], a["km"], a["prezzo"], a["margine"]) for a in auto])
+    # le fasce senza esempi usano quelli della fascia più vicina
+    for f, alt in (("utilitarie", "medie"), ("medie", "utilitarie"), ("alte", "medie"), ("supercar", "alte")):
+        if len(esempi.get(f) or []) < 2:
+            esempi[f] = esempi.get(alt) or []
+    fascia = {}
+    for _, e, ch in cand:
+        p = prezzi.get(ch) or []
+        m = statistics.median(p) if p else 11000
+        fascia[e] = "utilitarie" if m < 8000 else "medie" if m < 15000 else "alte" if m < 30000 else "supercar"
+    with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c:
+        # posto in Brevo: via i contatti già usati (sono in brevo_inviati: non si perdono e non si ricontattano)
+        attuali, off = [], 0
+        while True:
+            cs = c.get(f"{API}/contacts", params={"limit": 1000, "offset": off}).json().get("contacts") or []
+            attuali += [x["email"].lower() for x in cs if x.get("email")]
+            if len(cs) < 1000:
+                break
+            off += 1000
+        da_togliere = max(0, len(attuali) + len(cand) - tetto)
+        tolti = 0
+        with connect() as conn:
+            for e in attuali:
+                if tolti >= da_togliere:
+                    break
+                conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+                conn.commit()
+                r = c.delete(f"{API}/contacts/{e}")
+                if r.status_code < 300:
+                    tolti += 1
+                time.sleep(0.15)
+        lg.warning("NUOVI_3_11 %s: in Brevo %d, tolti %d già contattati per fare posto", tag, len(attuali), tolti)
+        esito = {}
+        for f in FASCE_2_11:
+            dest = [e for e, ff in fascia.items() if ff == f]
+            auto = esempi.get(f) or []
+            if not dest:
+                continue
+            schede = (f'<p {P}>Alcuni esempi di oggi, vicino a voi:</p><div style="margin:6px 0 10px">'
+                      + "".join(_card(a) for a in auto) + "</div>") if auto else ""
+            oggetto = (" ".join(str(auto[0]["auto"]).split()[:2]) + " da privato sotto mercato") if auto else "auto da privati sotto mercato"
+            ok = _manda(c, f"Skovo nuovi {f} 03-11 {tag}", oggetto, _pagina(TESTO_2_11, schede), dest)
+            if ok:
+                with connect() as conn:
+                    for e in dest:
+                        conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+                    conn.commit()
+            esito[f] = {"contatti": len(dest), "esempi": len(auto), "inviata": ok}
+        lg.warning("NUOVI_3_11 %s fatto: %s", tag, json.dumps(esito))
+        return esito

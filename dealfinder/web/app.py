@@ -4517,6 +4517,39 @@ def _tempo_reale():
             logging.getLogger("scovo").warning("FASCE non riuscito: %s", str(e)[:300])
     threading.Thread(target=fasce_brevo, daemon=True, name="fasce-brevo").start()
 
+    def nuovi_brevo():
+        """3/11 (cliente: "manda a tutti i 1500, gente nuova mai contattata, togli chi si è lamentato"): DIAGNOSI_DATI=nuovi<n>
+        (RINVIO_INVIA resta alla rivalutazione). Una volta per etichetta."""
+        tag = os.environ.get("DIAGNOSI_DATI") or ""
+        if not tag.startswith("nuovi"):
+            return
+        time.sleep(120)
+        for _ in range(30):
+            if _elenco.get("items"):
+                break
+            time.sleep(60)
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"nuovi_brevo:{tag}"):
+                return
+
+            def piatte():
+                out = []
+                for it in list(_elenco.get("items") or []):
+                    if it.get("commerciante"):
+                        continue
+                    pv = it.get("pv") or {}
+                    out.append({"id": it.get("id"), "auto": it.get("nome"), "anno": it.get("anno"), "km": it.get("km"),
+                                "carb": it.get("carb"), "prezzo": it.get("prezzo"), "n": pv.get("n"), "zona": it.get("zona"),
+                                "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine"),
+                                "rev": pv.get("policy_rev")})
+                return out
+            from ..marketing import auto_invio as AI
+            AI.nuovi_3_11(tag, piatte)
+        except Exception as e:
+            logging.getLogger("scovo").warning("NUOVI_3_11 non riuscito: %s", str(e)[:300])
+    threading.Thread(target=nuovi_brevo, daemon=True, name="nuovi-brevo").start()
+
     def voce_cartesia():
         """2/11 (video Skovo): RINVIO_INVIA=voce<n> genera la voce del Reel con Cartesia (chiave CARTESIA_API_KEY su Render):
         elenca le voci italiane, genera i 7 paragrafi del discorso uno per uno (MP3) e li scrive nei log in base64
