@@ -86,45 +86,54 @@ def _senza_telefoni(it: dict) -> dict:
         return {"id": it.get("id") if isinstance(it, dict) else None}
 
 
+def righe_commercianti(items) -> tuple[dict, list]:
+    """Dai risultati di ricerca: i COMMERCIANTI (mai i privati) con id e ragione sociale, e i loro annunci.
+    3/11 (regola del cliente: nessun dato personale del venditore, solo telefono sì/no): i cellulari NON si leggono
+    più e non si salvano (un commerciante può essere una ditta individuale); il nome è solo la ragione sociale
+    (companyName), mai il nome della persona di contatto."""
+    righe, annunci = {}, []
+    for it in items or []:
+        s = (it or {}).get("seller") or {}
+        if not isinstance(s, dict) or str(s.get("type") or "").lower().startswith("priv") or not s.get("id"):
+            continue
+        d = s.get("dealer") if isinstance(s.get("dealer"), dict) else {}
+        nome = d.get("companyName") or s.get("companyName") or ""
+        righe[str(s["id"])] = (str(s["id"]), str(nome)[:120])
+        veh, loc, trk = it.get("vehicle") or {}, it.get("location") or {}, it.get("tracking") or {}
+        annunci.append((str(s["id"]), str(it.get("id")), _num(trk.get("price")), veh.get("make"), veh.get("fuel"),
+                        loc.get("city"), province_from_cap(loc.get("zip"))))
+    return righe, annunci
+
+
+_GIA_SALVATI: set = set()
+
+
 def _salva_commercianti(items) -> None:
-    """22/10 (cliente): dai risultati di ricerca tiene solo i COMMERCIANTI con un cellulare aziendale
-    (mai i privati) in commercianti_as24, per la lista della prova WhatsApp. Mai nei log."""
+    """22/10 (cliente): i COMMERCIANTI dei risultati di ricerca in commercianti_as24 (id e ragione sociale) e i loro
+    annunci. 3/11: senza numeri di telefono (vedi righe_commercianti)."""
     try:
-        righe, annunci = {}, []
-        for it in items or []:
-            s = (it or {}).get("seller") or {}
-            if str(s.get("type") or "").lower().startswith("priv") or not s.get("id"):
-                continue
-            cell = []
-            for p in s.get("phones") or []:
-                g = str((p or {}).get("callTo") or "").strip()
-                n = re.sub(r"\D", "", g)
-                if g.startswith("+"):
-                    if not n.startswith("39"):
-                        continue
-                    n = n[2:]
-                if n.startswith("3") and 9 <= len(n) <= 10 and n not in cell:
-                    cell.append(n)
-            if not cell:
-                continue
-            d = s.get("dealer") or {}
-            nome = d.get("companyName") or s.get("companyName") or d.get("contactName") or s.get("contactName") or ""
-            righe[str(s["id"])] = (str(s["id"]), str(nome)[:120], cell)
-            veh, loc, trk = it.get("vehicle") or {}, it.get("location") or {}, it.get("tracking") or {}
-            annunci.append((str(s["id"]), str(it.get("id")), _num(trk.get("price")), veh.get("make"), veh.get("fuel"),
-                            loc.get("city"), province_from_cap(loc.get("zip"))))
-        if not righe:
+        righe, annunci = righe_commercianti(items)
+        # una sola scrittura per commerciante/annuncio per processo (prima: una connessione per ogni pagina)
+        if len(_GIA_SALVATI) > 200_000:
+            _GIA_SALVATI.clear()
+        righe = {k: v for k, v in righe.items() if ("s", k) not in _GIA_SALVATI}
+        annunci = [a for a in annunci if ("a", a[0], a[1]) not in _GIA_SALVATI]
+        if not righe and not annunci:
             return
+        _GIA_SALVATI.update(("s", k) for k in righe)
+        _GIA_SALVATI.update(("a", a[0], a[1]) for a in annunci)
         from ..db import connect
         with connect() as conn:
-            conn.cursor().executemany(
-                "INSERT INTO commercianti_as24 (seller_id, nome, cellulari) VALUES (%s,%s,%s) "
-                "ON CONFLICT (seller_id) DO UPDATE SET nome=EXCLUDED.nome, cellulari=EXCLUDED.cellulari, aggiornato=now()",
-                list(righe.values()))
-            conn.cursor().executemany(
-                "INSERT INTO commercianti_as24_annunci (seller_id, listing_id, prezzo, marca, carburante, comune, prov) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (seller_id, listing_id) DO UPDATE SET prezzo=EXCLUDED.prezzo, visto=now()",
-                annunci)
+            if righe:
+                conn.cursor().executemany(
+                    "INSERT INTO commercianti_as24 (seller_id, nome) VALUES (%s,%s) ON CONFLICT (seller_id) DO UPDATE "
+                    "SET nome=COALESCE(NULLIF(EXCLUDED.nome, ''), commercianti_as24.nome), cellulari='{}', aggiornato=now()",
+                    list(righe.values()))
+            if annunci:
+                conn.cursor().executemany(
+                    "INSERT INTO commercianti_as24_annunci (seller_id, listing_id, prezzo, marca, carburante, comune, prov) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (seller_id, listing_id) DO UPDATE SET prezzo=EXCLUDED.prezzo, visto=now()",
+                    annunci)
             conn.commit()
     except Exception as e:
         log.warning("commercianti_as24 non salvati: %s", type(e).__name__)

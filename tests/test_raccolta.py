@@ -59,3 +59,26 @@ def test_normalizzazione_cambio_e_alimentazione():
     assert _norm("fiat", "panda", fuel="Benzina/GPL").fuel_tipo == "bifuel"
     pura = _norm("fiat", "panda", fuel="Benzina", title="Fiat Panda 1.2 Easy")
     assert pura.fuel == "benzina" and pura.fuel_tipo is None
+
+
+# ------------------------------------------------------------------ regola del cliente: nessun numero dei commercianti
+
+def test_commercianti_as24_senza_numeri():
+    from dealfinder.collectors.autoscout import righe_commercianti
+    items = [
+        {"id": "a1", "seller": {"id": "S1", "type": "Dealer", "phones": [{"callTo": "+393331234567"}],
+                                "dealer": {"companyName": "Auto Rossi srl", "contactName": "Mario Rossi"}},
+         "vehicle": {"make": "Fiat", "fuel": "Benzina"}, "location": {"city": "Milano", "zip": "20121"},
+         "tracking": {"price": "5900"}},
+        {"id": "a2", "seller": {"id": "P9", "type": "Private", "phones": [{"callTo": "3471112222"}]}},
+        {"id": "a3", "seller": {"id": "S2", "type": "Dealer", "contactName": "Luigi Bianchi"}},
+    ]
+    righe, annunci = righe_commercianti(items)
+    assert set(righe) == {"S1", "S2"}                       # mai i privati
+    assert righe["S1"] == ("S1", "Auto Rossi srl") and righe["S2"] == ("S2", "")   # mai il nome della persona
+    testo = repr((righe, annunci))
+    assert "333" not in testo and "347" not in testo and "Rossi\"" not in testo and "Luigi" not in testo
+    assert [a[1] for a in annunci] == ["a1", "a3"]
+    import pathlib
+    sql = pathlib.Path(__file__).resolve().parents[1].joinpath("db/migrations/033_raccolta_qualita.sql").read_text()
+    assert "UPDATE commercianti_as24 SET cellulari = '{}'" in sql
