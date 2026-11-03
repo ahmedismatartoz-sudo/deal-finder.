@@ -2896,7 +2896,8 @@ async def admin_request_done(request: Request):
     with connect() as conn:
         r = conn.execute("UPDATE access_requests SET handled=true WHERE id=%s RETURNING email", (rid,)).fetchone()
         if r:
-            conn.execute("UPDATE dealers SET active=true WHERE email=%s", (r["email"],))
+            # un account spento dall'admin si riaccende solo dal pannello (Attiva), non chiudendo una richiesta
+            conn.execute("UPDATE dealers SET active=true WHERE email=%s AND NOT disattivato_da_admin", (r["email"],))
         conn.commit()
     return jsonify({"ok": True})
 
