@@ -159,3 +159,15 @@ def test_esito_email_brevo_controllato():
             sys.modules.pop("httpx", None)
         else:
             sys.modules["httpx"] = vero
+
+
+def test_privacy_e_condizioni_aggiornate():
+    import os
+    d = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dealfinder", "web", "static", "scovo")
+    priv = open(os.path.join(d, "privacy.html"), encoding="utf-8").read()
+    cond = open(os.path.join(d, "condizioni.html"), encoding="utf-8").read()
+    for parola in ("Stripe", "Brevo", "Appuntamenti", "referente", "consenso"):
+        assert parola in priv, parola
+    for parola in ("Stripe", "Base", "Max", "Disdetta", "Appuntamenti", "ora italiana"):
+        assert parola in cond, parola
+    assert "da completare quando si attivano i pagamenti" not in cond
