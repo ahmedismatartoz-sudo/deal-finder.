@@ -234,3 +234,60 @@ def test_profonda_divisione_limitata():
     got = list(c._deep({"price_bands": [(1000, 2000)], "band_pages": 1}, {"MI"}, 4, 100))
     assert len(got) == 100
     assert sum(1 for p in cl.calls if "ps" in p) <= 2 ** (c.FASCIA_DIVISIONI + 1)
+
+
+# ------------------------------------------------------------------ fix 4: una rilettura senza un dato non lo cancella
+
+class _ConnTx(_Conn):
+    def __init__(self, risposte=(), rompi=None):
+        super().__init__(risposte)
+        self.rompi = rompi
+
+    def execute(self, sql, params=None):
+        if self.rompi and self.rompi in sql:
+            self.sql.append((sql, params))
+            raise RuntimeError("sql non valido")
+        return super().execute(sql, params)
+
+    def transaction(self):
+        import contextlib
+        return contextlib.nullcontext()
+
+
+def _upsert(source, rompi=None, n_foto=1, foto=3):
+    from dealfinder.core.models import Listing
+    from dealfinder.db import upsert_listing
+    conn = _ConnTx([("INSERT INTO vehicles", [{"id": 1}]),
+                    ("FROM listings WHERE source", [{"id": 7, "price_eur": 5000, "status": "attivo"}]),
+                    ("RETURNING (SELECT count", [{"n_foto": n_foto}])], rompi=rompi)
+    l = Listing(source=source, source_id="a1", url="https://x/a1", make="fiat", model="panda", price_eur=5000,
+                description=None, photos=[f"https://img/{i}" for i in range(foto)])
+    lid, ev = upsert_listing(conn, l)
+    upd = [s for s, _ in conn.sql if s.startswith("UPDATE listings SET") and "last_seen_at = now()" in s]
+    foto_ins = [p for s, p in conn.sql if s.startswith("INSERT INTO listing_photos")]
+    return lid, ev, upd, foto_ins
+
+
+def test_upsert_non_cancella_la_descrizione():
+    lid, ev, upd, foto = _upsert("autoscout24")
+    assert (lid, ev) == (7, "invariato") and len(upd) == 1
+    assert "COALESCE(NULLIF(%(description)s, ''), listings.description)" in upd[0]
+    assert "COALESCE(%(province)s, listings.province)" in upd[0]
+    assert "NULLIF(%(seller_type)s, 'sconosciuto')" in upd[0]
+    assert [p[1] for p in foto] == [0, 1, 2]       # 1 foto salvata, 3 nella nuova lettura: si aggiungono
+
+
+def test_upsert_foto_gia_complete_nessun_insert():
+    _, _, _, foto = _upsert("subito", n_foto=3, foto=3)
+    assert foto == []
+
+
+def test_upsert_ripiego_se_la_query_nuova_fallisce():
+    lid, ev, upd, _ = _upsert("subito", rompi="RETURNING (SELECT count")
+    assert lid == 7 and len(upd) == 2               # tentata la nuova, poi quella di prima
+    assert "listings.description" not in upd[1]
+
+
+def test_upsert_facebook_invariato():
+    _, _, upd, foto = _upsert("facebook")
+    assert len(upd) == 1 and "listings.description" not in upd[0] and foto == []
