@@ -350,7 +350,7 @@ def test_esegui_giro_completo_e_riga_di_log():
 
 def test_salva_istantanea_righe_e_nessuna_riscrittura_se_uguale():
     S._TABELLE["ok"] = True
-    firma = S._ist["firma"]
+    firma, t = S._ist["firma"], S._ist["t"]
     try:
         items = [{"id": 5, "prezzo": 8000, "pv": {"margine": 2100.4, "categoria": "opportunita"}, "fonte": "Subito",
                   "zona": "Monza (MB)", "area": "milano", "km": 80000},
@@ -363,9 +363,13 @@ def test_salva_istantanea_righe_e_nessuna_riscrittura_se_uguale():
         assert col[9] == ["affari", "eco"] and col[3][0] == int(S._soglia_locale()(8000))
         assert len(c.tag("ist_svuota")) == 1 and c.commit_n == 1
         assert S.salva_istantanea(items, connetti=_connetti(c)) == 0 and len(c.tag("ist_svuota")) == 1
+        assert c.tag("ist_rinfresca") == []
+        S._ist["t"] -= S.ISTANTANEA_RINFRESCA_S + 1             # elenco uguale dopo 30 minuti: solo l'ora
+        assert S.salva_istantanea(items, connetti=_connetti(c)) == 0
+        assert len(c.tag("ist_rinfresca")) == 1 and len(c.tag("ist_svuota")) == 1
     finally:
         S._TABELLE["ok"] = False
-        S._ist["firma"] = firma
+        S._ist.update(firma=firma, t=t)
 
 
 def test_spenta_e_mai_eccezioni():

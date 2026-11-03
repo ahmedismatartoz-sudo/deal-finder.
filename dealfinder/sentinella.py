@@ -737,7 +737,8 @@ def solo_coda(connetti=None, invia=None, adesso: datetime | None = None) -> dict
 # ---------------------------------------------------------------------------------------------------------------
 # Scrittori chiamati dagli altri: fotografia del sito, impronta delle regole
 # ---------------------------------------------------------------------------------------------------------------
-_ist = {"firma": None}
+_ist = {"firma": None, "t": 0.0}
+ISTANTANEA_RINFRESCA_S = 1800         # elenco uguale: solo l'ora della fotografia, al massimo ogni 30 minuti
 _ist_lock = threading.Lock()
 
 
@@ -770,7 +771,8 @@ def _riga_istantanea(it: dict, soglia) -> tuple | None:
 
 def salva_istantanea(items: list, connetti=None) -> int:
     """Fotografia dell'elenco del sito in sito_istantanea (sostituita a ogni costruzione). Da chiamare alla fine di
-    web/app._calcola_elenco con la lista finale. Se l'elenco non è cambiato dall'ultima volta non scrive nulla.
+    web/app._calcola_elenco con la lista finale. Se l'elenco non è cambiato dall'ultima volta rinfresca solo l'ora
+    (al massimo ogni 30 minuti), così il controllo 1 non lo scambia per un sito fermo.
     Ritorna quante righe ha scritto (-1 se non riuscito). Non solleva mai."""
     try:
         soglia = _soglia_locale()
@@ -778,10 +780,18 @@ def salva_istantanea(items: list, connetti=None) -> int:
         uniche = list({r[0]: r for r in righe}.values())
         firma = hashlib.sha256(json.dumps(sorted(uniche), default=str).encode()).hexdigest()
         with _ist_lock:
-            if firma == _ist["firma"]:
+            uguale = firma == _ist["firma"]
+            if uguale and time.monotonic() - _ist["t"] < ISTANTANEA_RINFRESCA_S:
                 return 0
             if connetti is None:
                 from .db import connect as connetti
+            if uguale:
+                with connetti() as conn:
+                    conn.execute("SET LOCAL statement_timeout = '%ds'" % TIMEOUT_S)
+                    conn.execute("/*S:ist_rinfresca*/ UPDATE sito_istantanea SET salvata_at = now()")
+                    conn.commit()
+                _ist["t"] = time.monotonic()
+                return 0
             with connetti() as conn:
                 conn.execute("SET LOCAL statement_timeout = '%ds'" % TIMEOUT_S)
                 assicura_tabelle(conn)
@@ -793,7 +803,7 @@ def salva_istantanea(items: list, connetti=None) -> int:
                                  "%s::bigint[], %s::int[], %s::int[], %s::int[], %s::text[], %s::bool[], %s::text[], "
                                  "%s::text[], %s::int[], %s::text[], %s::text[])", [list(c) for c in col])
                 conn.commit()
-            _ist["firma"] = firma
+            _ist["firma"], _ist["t"] = firma, time.monotonic()
         return len(uniche)
     except Exception as e:
         log.warning("SENTINELLA istantanea non salvata: %s", type(e).__name__ + ": " + str(e)[:120])
