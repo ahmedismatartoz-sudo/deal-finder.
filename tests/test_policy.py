@@ -2,7 +2,8 @@
 from datetime import datetime, timedelta, timezone
 
 import os as _os
-_os.environ.setdefault("RIVENDITA_VERA", "0")     # questi test controllano le regole prudenti; la rivendita vera ha il suo test
+_os.environ.setdefault("RIVENDITA_VERA", "0")
+_os.environ.setdefault("BENZ_RICHIESTE", "0")       # la fascia richiesta ha il suo test     # questi test controllano le regole prudenti; la rivendita vera ha il suo test
 from dealfinder.pricing.policy_v2 import (PolicyConfig, percentile, riduzione, rivendita, valuta, seleziona)
 
 NOW = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
@@ -516,3 +517,17 @@ def test_allestimento_soglia_n_minimo():
     v = valuta(t, mk, 4000, CFG, NOW)
     if v.get("M") and v.get("metodo") == "mediana":
         assert v["M"] <= 22500
+
+def test_fascia_richiesta():
+    from dealfinder.pricing.policy_v2 import benzina_richiesta
+    _os.environ["BENZ_RICHIESTE"] = "1"
+    try:
+        assert benzina_richiesta({"fuel": "Benzina", "price_eur": 6000, "mileage_km": 80000, "year": 2012})
+        assert benzina_richiesta({"fuel": "Ibrida", "price_eur": 9000, "mileage_km": 90000, "year": 2015})
+        assert benzina_richiesta({"fuel": "GPL", "price_eur": 5000, "mileage_km": 50000, "year": 2011})
+        assert benzina_richiesta({"fuel": "Diesel", "price_eur": 9500, "mileage_km": 70000, "year": 2018})
+        assert not benzina_richiesta({"fuel": "Diesel", "price_eur": 6000, "mileage_km": 70000, "year": 2014})
+        assert not benzina_richiesta({"fuel": "Benzina", "price_eur": 12000, "mileage_km": 50000, "year": 2018})
+        assert not benzina_richiesta({"fuel": "Benzina", "price_eur": 6000, "mileage_km": 120000, "year": 2012})
+    finally:
+        _os.environ["BENZ_RICHIESTE"] = "0"
