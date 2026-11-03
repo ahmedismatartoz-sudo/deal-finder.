@@ -486,3 +486,13 @@ a{color:var(--focus)}
 :root[data-theme="dark"] .talk.talk-app{color:var(--ink)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .talk.talk-app{color:var(--ink)}}
 .sel{min-height:48px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:500 16px var(--body);color:var(--ink);background:var(--card);width:100%}
+
+/* 3/11: due abbonamenti */
+.piani{display:grid;gap:12px;width:100%}
+.piano{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:4px}
+.piano-pro{border:2px solid var(--tag)}
+.piano-top{display:flex;justify-content:space-between;align-items:center;font:800 20px var(--disp)}
+.piano-tag{font:700 12px var(--disp);background:var(--tag);color:#fff;border-radius:99px;padding:4px 10px}
+.piano-prezzo{font:800 28px var(--disp)}.piano-prezzo s{font-size:18px;color:var(--muted);font-weight:600}
+.piano-prezzo span{font-size:15px;font-weight:600;color:var(--muted)}
+@media (min-width:640px){.piani{grid-template-columns:1fr 1fr}}

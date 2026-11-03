@@ -3,7 +3,9 @@
 Variabili da mettere su Render (le chiavi le inserisce il titolare, mai in chat):
   STRIPE_SECRET_KEY       chiave segreta (sk_live_… oppure sk_test_… per le prove)
   STRIPE_WEBHOOK_SECRET   firma degli avvisi di Stripe (whsec_…), dal webhook che punta a /api/stripe/webhook
-  STRIPE_PRICE_ID         il prezzo dell'abbonamento creato su Stripe (price_…), mensile o annuale
+  STRIPE_PRICE_ID         (facoltativo) prezzo già creato su Stripe per il piano Base; se manca lo crea il sito
+  STRIPE_PRICE_PRO        (facoltativo) prezzo già creato su Stripe per il piano Pro; se manca lo crea il sito
+  ABBONAMENTO_SCONTO_PRIMO_MESE  sconto in % sul primo mese per i nuovi abbonati (predefinito 50, 0 = nessuno)
   ABBONAMENTO_TESTO       testo del prezzo mostrato sul sito, es. "49 € al mese"
   ABBONAMENTO_PROVA_GIORNI  giorni di prova gratuita (0 = nessuna)
   ISCRIZIONE=pagamento    chi entra con Google per la prima volta ha l'account, ma vede le auto solo dopo aver pagato
@@ -24,13 +26,68 @@ API = "https://api.stripe.com/v1"
 STATI_OK = ("active", "trialing")
 
 
+# 3/11 (cliente): due abbonamenti, Base 100 € e Pro 200 € al mese (Pro = anche gli appuntamenti), −50% il primo mese.
+PIANI = {
+    "base": {"nome": "Base", "eur": 100, "lookup": "scovo_base_100_mese", "env": "STRIPE_PRICE_ID",
+             "cosa": ["Tutte le auto sotto prezzo dei privati in zona", "Guadagno e prezzo di rivendita già calcolati",
+                      "Truffe e annunci falsi già scartati"]},
+    "pro": {"nome": "Pro", "eur": 200, "lookup": "scovo_pro_200_mese", "env": "STRIPE_PRICE_PRO",
+            "cosa": ["Tutto quello del Base", "Fissa l'appuntamento: al privato pensiamo noi",
+                     "Garanzia di due auto al mese"]},
+}
+_CACHE: dict = {}
+
+
 def attivo() -> bool:
-    return bool(os.environ.get("STRIPE_SECRET_KEY") and os.environ.get("STRIPE_PRICE_ID"))
+    return bool(os.environ.get("STRIPE_SECRET_KEY"))
+
+
+def sconto_primo_mese() -> int:
+    try:
+        return max(0, min(100, int(os.environ.get("ABBONAMENTO_SCONTO_PRIMO_MESE", "50") or 0)))
+    except ValueError:
+        return 0
 
 
 def info() -> dict:
+    sc = sconto_primo_mese()
     return {"attivo": attivo(), "prezzo": os.environ.get("ABBONAMENTO_TESTO", ""),
-            "prova_giorni": int(os.environ.get("ABBONAMENTO_PROVA_GIORNI", "0") or 0)}
+            "prova_giorni": int(os.environ.get("ABBONAMENTO_PROVA_GIORNI", "0") or 0), "sconto_primo_mese": sc,
+            "piani": [{"id": k, "nome": v["nome"], "eur": v["eur"], "primo_mese": round(v["eur"] * (100 - sc) / 100),
+                       "cosa": v["cosa"]} for k, v in PIANI.items()]}
+
+
+def _prezzo(piano: str, http=None) -> str:
+    """Prezzo Stripe del piano: da Render se c'è, altrimenti quello creato dal sito (cercato per lookup_key)."""
+    p = PIANI[piano]
+    if os.environ.get(p["env"]):
+        return os.environ[p["env"]]
+    if piano in _CACHE:
+        return _CACHE[piano]
+    trovati = _get("/prices", {"lookup_keys[]": p["lookup"], "active": "true", "limit": 1}).get("data", [])
+    if trovati:
+        _CACHE[piano] = trovati[0]["id"]
+    else:
+        _CACHE[piano] = _post("/prices", {"currency": "eur", "unit_amount": str(p["eur"] * 100),
+                                         "recurring[interval]": "month", "lookup_key": p["lookup"],
+                                         "product_data[name]": f"Scovo {p['nome']}"}, http)["id"]
+        log.warning("STRIPE creato il prezzo %s per il piano %s", _CACHE[piano], piano)
+    return _CACHE[piano]
+
+
+def _coupon(pct: int, http=None) -> str:
+    """Buono "primo mese" (vale solo sulla prima fattura). Lo crea una volta sola, con un nome fisso."""
+    cid = f"SCOVO_PRIMO_MESE_{pct}"
+    if _CACHE.get("coupon") == cid:
+        return cid
+    try:
+        _get(f"/coupons/{cid}", {})
+    except RuntimeError:
+        _post("/coupons", {"id": cid, "percent_off": str(pct), "duration": "once",
+                           "name": f"-{pct}% il primo mese"}, http)
+        log.warning("STRIPE creato il buono %s", cid)
+    _CACHE["coupon"] = cid
+    return cid
 
 
 def _post(path: str, data: dict, http=None) -> dict:
@@ -85,13 +142,19 @@ def non_rinnovare(conn) -> None:
             log.warning("NON_RINNOVA %s: errore %s", em, str(e)[:300])
 
 
-def checkout(dealer: dict, base: str, http=None) -> str:
+def checkout(dealer: dict, base: str, http=None, piano: str = "base") -> str:
     """Pagina di pagamento Stripe per abbonarsi: ritorna l'indirizzo dove mandare il cliente."""
-    data = {"mode": "subscription", "line_items[0][price]": os.environ["STRIPE_PRICE_ID"],
+    piano = piano if piano in PIANI else "base"
+    data = {"mode": "subscription", "line_items[0][price]": _prezzo(piano, http),
             "line_items[0][quantity]": "1", "client_reference_id": str(dealer["id"]),
             "success_url": base + "/#/abbonamento/ok", "cancel_url": base + "/#/abbonamento/annullato",
-            "allow_promotion_codes": "true", "locale": "it",
-            "subscription_data[metadata][dealer_id]": str(dealer["id"])}
+            "locale": "it", "metadata[piano]": piano,
+            "subscription_data[metadata][dealer_id]": str(dealer["id"]), "subscription_data[metadata][piano]": piano}
+    sc = sconto_primo_mese()
+    if sc and not dealer.get("stripe_customer"):
+        data["discounts[0][coupon]"] = _coupon(sc, http)      # Stripe: buono e codici promo non insieme
+    else:
+        data["allow_promotion_codes"] = "true"
     if dealer.get("stripe_customer"):
         data["customer"] = dealer["stripe_customer"]
     elif dealer.get("email"):
@@ -135,6 +198,9 @@ def applica(conn, evento: dict) -> str:
         conn.execute("""UPDATE dealers SET stripe_customer=%s, abbonamento_stato='active', active=true,
                         permessi = CASE WHEN 'auto' = ANY(permessi) THEN permessi ELSE array_append(permessi, 'auto') END
                         WHERE id=%s""", (o.get("customer"), int(did)))
+        if (o.get("metadata") or {}).get("piano") == "pro":
+            conn.execute("""UPDATE dealers SET permessi = array_append(permessi, 'appuntamenti')
+                            WHERE id=%s AND NOT ('appuntamenti' = ANY(permessi))""", (int(did),))
         conn.commit()
         return f"pagato:{did}"
     if tipo.startswith("customer.subscription."):
@@ -143,6 +209,9 @@ def applica(conn, evento: dict) -> str:
         n = conn.execute("""UPDATE dealers SET abbonamento_stato=%s,
                             abbonamento_fino = CASE WHEN %s::bigint IS NULL THEN abbonamento_fino ELSE to_timestamp(%s) END
                             WHERE stripe_customer=%s""", (stato, fino, fino, o.get("customer"))).rowcount
+        if stato == "canceled" and (o.get("metadata") or {}).get("piano") == "pro":
+            conn.execute("UPDATE dealers SET permessi = array_remove(permessi, 'appuntamenti') WHERE stripe_customer=%s",
+                         (o.get("customer"),))
         if not n and (o.get("metadata") or {}).get("dealer_id"):
             conn.execute("UPDATE dealers SET stripe_customer=%s, abbonamento_stato=%s WHERE id=%s",
                          (o.get("customer"), stato, int(o["metadata"]["dealer_id"])))

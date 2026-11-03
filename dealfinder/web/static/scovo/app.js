@@ -1315,18 +1315,25 @@ function viewPaywall(){
   return svcHead("Scovo", "Abbonamento") + `<main class="list"><div class="empty paywall">
     <strong style="font:800 24px var(--disp)">Le auto sotto prezzo, ogni giorno</strong>
     <ul class="checks" style="text-align:left;margin:4px 0 6px">
-      <li>Auto di privati sotto il prezzo di mercato a Milano, Ravenna e Roma</li>
+      <li>Auto di privati sotto il prezzo di mercato entro 100 km da Milano</li>
       <li>Guadagno già calcolato, con i pezzi da cambiare</li>
       <li>Controllo foto e prezzi realistici, aggiornati più volte al giorno</li></ul>
-    ${ab.prezzo ? `<div class="price-big">${esc(ab.prezzo)}</div>` : ""}
-    ${ab.attivo ? `<button class="l-btn l-btn-blue" data-act="abbonati" style="width:100%" ${S.payBusy ? "disabled" : ""}>${S.payBusy ? "Apro il pagamento…" : "Abbonati con carta"}</button>${prova}
+    ${ab.attivo && (ab.piani || []).length ? `<div class="piani">${ab.piani.map(p => `<div class="piano${p.id === "pro" ? " piano-pro" : ""}">
+        <div class="piano-top"><b>${esc(p.nome)}</b>${p.id === "pro" ? `<span class="piano-tag">Con appuntamenti</span>` : ""}</div>
+        ${ab.sconto_primo_mese ? `<div class="piano-prezzo"><s>${p.eur} €</s> <b>${p.primo_mese} €</b> <span>il primo mese</span></div>
+          <span class="meta" style="font-size:13px">poi ${p.eur} € al mese · −${ab.sconto_primo_mese}% sul primo mese</span>`
+          : `<div class="piano-prezzo"><b>${p.eur} €</b> <span>al mese</span></div>`}
+        <ul class="checks" style="text-align:left;margin:6px 0">${(p.cosa || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+        <button class="l-btn ${p.id === "pro" ? "l-btn-blue" : "l-btn-ghost"}" data-act="abbonati" data-v="${p.id}" style="width:100%" ${S.payBusy ? "disabled" : ""}>${S.payBusy === p.id ? "Apro il pagamento…" : "Scegli " + esc(p.nome)}</button>
+      </div>`).join("")}</div>${prova}
       <span class="meta" style="font-size:13px">Il pagamento è gestito da Stripe: Scovo non vede né salva i dati della tua carta.</span>`
+    : ab.attivo ? `<button class="l-btn l-btn-blue" data-act="abbonati" style="width:100%" ${S.payBusy ? "disabled" : ""}>${S.payBusy ? "Apro il pagamento…" : "Abbonati con carta"}</button>${prova}`
       : `<span class="meta">I pagamenti online stanno per arrivare. Per attivare l'account scrivici dalla pagina di contatto.</span>`}
     <button class="link" data-act="logout">Esci</button></div></main>`;
 }
-async function abbonati(){
-  if (S.payBusy) return; S.payBusy = true; render({keep:true});
-  try { const d = await api("/api/abbonamento/checkout", {method: "POST", body: {}}); location.href = d.url; }
+async function abbonati(piano){
+  if (S.payBusy) return; S.payBusy = piano || true; render({keep:true});
+  try { const d = await api("/api/abbonamento/checkout", {method: "POST", body: {piano: piano || "base"}}); location.href = d.url; }
   catch (e) { S.payBusy = false; toast(e.message); render({keep:true}); }
 }
 async function portaleAbbonamento(){
@@ -1462,7 +1469,7 @@ $app.addEventListener("click", e => {
     case "comprata-ok": { const p = (document.getElementById("paid") || {}).value; S.sheet = null; sendEsito("comprata", p ? {bought_eur: Number(p)} : {}); return; }
     case "cerca-pezzi": { const d = S.detail[S.sel] || {}; R.pezzi = (d.pezzi || []).map(p => p.pezzo).slice(0, 8); R.stato = "form"; R.err = ""; S.sheet = null; go("ricambi"); return; }
     case "logout": logout(); return;
-    case "abbonati": abbonati(); return;
+    case "abbonati": abbonati(v); return;
     case "portale": portaleAbbonamento(); return;
     case "install": if (installEvt) { installEvt.prompt(); installEvt = null; } break;
     case "pwd": P.open = !P.open; P.err = ""; P.ok = false; break;

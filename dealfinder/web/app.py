@@ -570,8 +570,9 @@ async def abbonamento_checkout(request: Request):
         err(503, "Pagamenti non ancora attivi")
     with connect() as conn:
         d = conn.execute("SELECT id, email, stripe_customer FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+    piano = str((await body(request)).get("piano") or "base")
     try:
-        url = await run_in_threadpool(abbonamento.checkout, d, social.base_url(request))
+        url = await run_in_threadpool(abbonamento.checkout, d, social.base_url(request), None, piano)
     except RuntimeError as e:
         err(502, str(e))
     return jsonify({"url": url})
