@@ -512,9 +512,9 @@ def subito_completo(conn) -> dict:
             for ps, pe in FASCE_SUBITO:
                 for page in range(int(os.environ.get("SUBITO_COMPLETO_PAGINE", "40"))):
                     try:
-                        r = col.client.get(API_SEARCH, headers=API_HEADERS, params={
-                            "c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
-                            "start": page * 100, "sort": "datedesc"})
+                        # 3/11: con nuovi tentativi per 429/5xx/rete (prima la fascia si chiudeva al primo errore)
+                        r = col._api({"c": 2, "r": code, "ci": key, "t": "s", "ps": ps, "pe": pe, "lim": 100,
+                                      "start": page * 100, "sort": "datedesc"})
                     except Exception as e:
                         st["errore"] += 1
                         log.info("SUBITO_COMPLETO %s %s-%s: %s", sn, ps, pe, str(e)[:100])

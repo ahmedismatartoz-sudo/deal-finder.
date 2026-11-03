@@ -225,29 +225,72 @@ class SubitoCollector(Collector):
         self.pause()
         return r
 
+    # 3/11: un 429/5xx o un errore di rete su UNA pagina dell'interfaccia di ricerca chiudeva tutta la lettura della
+    # regione (search_recenti) o della fascia (_deep): auto perse e numeri molto diversi da un giro all'altro.
+    # Ora si riprova con attesa crescente; se la pagina non arriva, tutto come prima (ultima risposta o eccezione).
+    API_RIPROVE = 3
+    API_ATTESE = (5, 15, 40)          # secondi
+    API_DA_RIPROVARE = (429, 500, 502, 503, 504)
+
+    def _dormi(self, s: float) -> None:
+        import time
+        time.sleep(s)
+
+    def _api(self, params: dict):
+        r, errore = None, None
+        for t in range(self.API_RIPROVE + 1):
+            try:
+                r, errore = self.client.get(API_SEARCH, headers=API_HEADERS, params=params), None
+            except Exception as e:
+                r, errore = None, e
+            code = getattr(r, "status_code", None)
+            if r is not None and code not in self.API_DA_RIPROVARE:
+                return r
+            if t < self.API_RIPROVE:
+                attesa = self.API_ATTESE[min(t, len(self.API_ATTESE) - 1)]
+                log.warning("subito api: %s (start=%s), riprovo tra %ss (tentativo %d)",
+                            f"HTTP {code}" if r is not None else str(errore)[:120], params.get("start"), attesa, t + 2)
+                self._dormi(attesa)
+        if r is not None:
+            return r
+        raise errore
+
+    @staticmethod
+    def _data_annuncio(it: dict) -> str | None:
+        """Data con cui Subito ordina i risultati ('display', aggiornata quando l'annuncio torna in cima): prima si
+        prendeva la PRIMA data qualsiasi di 'dates', che poteva essere un'altra (es. la scadenza)."""
+        import json as _json
+        dates = it.get("dates") or {}
+        cand = dates.get("display") if isinstance(dates, dict) else None
+        m = re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", str(cand)) if cand else None
+        if not m:
+            m = re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", _json.dumps(dates, default=str))
+        return f"{m.group(1)} {m.group(2)}" if m else None
+
     def search_recenti(self, region: str, provinces: list[str], dal: str, max_pages: int = 80) -> Iterator[Listing]:
         """Annunci pubblicati da "dal" (es. '2026-10-15 00:00') in poi: la regione dal più recente, fino alla data."""
-        import re as _re
         wanted = {p.upper() for p in provinces}
         reg = REGION_CODES.get(region, None)
         if reg is None:
             reg = self._trova_regione(wanted, 100) or 4
         letti = tenuti = 0
         for page in range(max_pages):
-            r = self.client.get(API_SEARCH, headers=API_HEADERS,
-                                params={"c": 2, "r": reg, "t": "s", "lim": 100, "start": page * 100, "sort": "datedesc"})
+            r = self._api({"c": 2, "r": reg, "t": "s", "lim": 100, "start": page * 100, "sort": "datedesc"})
             self.pause()
             if r.status_code != 200:
                 log.warning("subito recenti %s: HTTP %s a pagina %s", region, r.status_code, page)
                 break
-            ads = (r.json() or {}).get("ads") or []
+            try:
+                ads = (r.json() or {}).get("ads") or []
+            except Exception as e:
+                log.warning("subito recenti %s: risposta non leggibile a pagina %s (%s)", region, page, str(e)[:100])
+                break
             if not ads:
                 break
             vecchi = 0
             for it in ads:
-                d = __import__("json").dumps(it.get("dates") or {})
-                m = _re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", d)
-                if m and f"{m.group(1)} {m.group(2)}" < dal:
+                quando = self._data_annuncio(it) if isinstance(it, dict) else None
+                if quando and quando < dal:
                     vecchi += 1
                     continue
                 listing = parse_item(it)
@@ -269,9 +312,7 @@ class SubitoCollector(Collector):
         region = REGION_CODES.get(query.get("region", "lombardia"), 4)
         lim, seen = 100, 0
         for page in range(query.get("max_pages", 20)):
-            r = self.client.get(API_SEARCH, headers=API_HEADERS,
-                                params={"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim,
-                                        "sort": "datedesc"})
+            r = self._api({"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim, "sort": "datedesc"})
             self.pause()
             if r.status_code != 200:
                 log.warning("subito api -> HTTP %s (pagina %s): ripiego sulle pagine web", r.status_code, page)
@@ -385,9 +426,7 @@ class SubitoCollector(Collector):
         """Codice interno di Subito per ogni provincia (es. Milano = 8), letto dagli annunci."""
         keys: dict = {}
         for page in range(10):
-            r = self.client.get(API_SEARCH, headers=API_HEADERS,
-                                params={"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim,
-                                        "sort": "datedesc"})
+            r = self._api({"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim, "sort": "datedesc"})
             self.pause()
             if r.status_code != 200:
                 break
@@ -434,27 +473,31 @@ class SubitoCollector(Collector):
                 if passi.fatto(chiave):
                     continue
                 ok_band = True
-                for page in range(query.get("band_pages", 30)):
-                    r = self.client.get(API_SEARCH, headers=API_HEADERS,
-                                        params={"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
-                                                "lim": lim, "start": page * lim, "sort": "datedesc"})
-                    self.pause()
-                    if r.status_code != 200:
-                        log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
-                        ok_band = False
-                        break
-                    ads = (r.json() or {}).get("ads") or []
-                    for it in ads:
-                        listing = parse_item(it)
-                        if not listing:
-                            continue
-                        tot_read += 1
-                        if listing.province and listing.province.upper() not in wanted:
-                            continue          # il filtro per provincia non ha funzionato: si scarta qui
-                        tot_kept += 1
-                        yield listing
-                    if len(ads) < lim:
-                        break
+                try:
+                    for page in range(query.get("band_pages", 30)):
+                        r = self._api({"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
+                                       "lim": lim, "start": page * lim, "sort": "datedesc"})
+                        self.pause()
+                        if r.status_code != 200:
+                            log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
+                            ok_band = False
+                            break
+                        ads = (r.json() or {}).get("ads") or []
+                        for it in ads:
+                            listing = parse_item(it)
+                            if not listing:
+                                continue
+                            tot_read += 1
+                            if listing.province and listing.province.upper() not in wanted:
+                                continue          # il filtro per provincia non ha funzionato: si scarta qui
+                            tot_kept += 1
+                            yield listing
+                        if len(ads) < lim:
+                            break
+                except Exception as e:
+                    # 3/11: prima un errore (rete, risposta non leggibile) chiudeva TUTTA la regione; ora solo la fascia
+                    log.warning("subito %s fascia %s-%s: %s (fascia saltata, si continua)", sn, ps, pe, str(e)[:150])
+                    ok_band = False
                 if ok_band:
                     passi.segna(chiave)
             log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot_read, tot_kept,

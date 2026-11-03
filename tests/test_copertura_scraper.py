@@ -129,3 +129,81 @@ def test_fetch_subito_con_unlocker_non_e_scomparso():
     col.pause = lambda: None
     l = col.fetch("https://www.subito.it/auto/fiat-panda-milano-561234567.htm")
     assert l is not None and l.title == "Fiat Panda"
+
+
+# ------------------------------------------------------------------ fix 2: nuovi tentativi sull'interfaccia di Subito
+
+def _ad(n, prov="MI", prezzo=5000, data="2026-11-02 10:00:00", key="8"):
+    return {"urn": f"id:ad:{n}:list:1", "subject": f"auto {n}", "body": "",
+            "urls": {"default": f"https://www.subito.it/auto/auto-{n}.htm"},
+            "dates": {"display": data, "expiration": "2027-01-01 10:00:00"},
+            "geo": {"city": {"short_name": prov, "key": key}, "town": {"value": "Milano"}},
+            "advertiser": {"type": 0},
+            "features": {"/price": {"label": "Prezzo", "values": [{"key": str(prezzo), "value": f"{prezzo} €"}]}}}
+
+
+class _Hades:
+    """Finto hades.subito.it: annunci filtrati per ci/ps/pe, 100 per pagina; `guasti` = risposte da dare prima."""
+    def __init__(self, ads, guasti=()):
+        self.ads, self.guasti, self.calls = ads, list(guasti), []
+
+    def get(self, url, headers=None, params=None):
+        p = dict(params or {})
+        self.calls.append(p)
+        if self.guasti:
+            g = self.guasti.pop(0)
+            if isinstance(g, Exception):
+                raise g
+            return _Resp(g, "", url, {})
+        sel = self.ads
+        if "ci" in p:
+            sel = [a for a in sel if a["geo"]["city"]["key"] == p["ci"]]
+        if "ps" in p:
+            sel = [a for a in sel if p["ps"] <= int(a["features"]["/price"]["values"][0]["key"]) <= p["pe"]]
+        start, lim = int(p.get("start", 0)), int(p.get("lim", 100))
+        return _Resp(200, "", url, {"ads": sel[start:start + lim]})
+
+
+def _sub(client):
+    from dealfinder.collectors.subito import SubitoCollector
+    c = SubitoCollector(client=client)
+    c.pause = lambda: None
+    c._dormi = lambda s: None
+    return c
+
+
+def test_recenti_riprova_dopo_429_e_errori_di_rete():
+    ads = [_ad(100000 + i) for i in range(150)]
+    cl = _Hades(ads, guasti=[503, 429, TimeoutError("rete")])
+    got = list(_sub(cl).search_recenti("lombardia", ["MI"], "2026-10-01 00:00", max_pages=5))
+    assert len(got) == 150                        # prima: zero (la prima pagina in errore chiudeva tutto)
+
+
+def test_recenti_si_ferma_se_l_errore_resta():
+    cl = _Hades([_ad(100001)], guasti=[429] * 10)
+    c = _sub(cl)
+    assert list(c.search_recenti("lombardia", ["MI"], "2026-10-01 00:00", max_pages=5)) == []
+    assert len(cl.calls) == c.API_RIPROVE + 1      # tentativi limitati, poi come prima
+
+
+def test_recenti_usa_la_data_display():
+    vecchio = _ad(100001)
+    vecchio["dates"] = {"expiration": "2027-01-01 10:00:00", "display": "2026-09-01 10:00:00"}
+    nuovo = _ad(100002, data="2026-11-01 10:00:00")
+    got = list(_sub(_Hades([nuovo, vecchio])).search_recenti("lombardia", ["MI"], "2026-10-01 00:00", max_pages=2))
+    assert [l.source_id for l in got] == ["id:ad:100002:list:1"]
+
+
+def test_profonda_un_errore_salta_solo_la_fascia():
+    ads = [_ad(100000 + i, prezzo=1500) for i in range(30)] + [_ad(200000 + i, prezzo=2500) for i in range(30)]
+    cl = _Hades(ads)
+    c = _sub(cl)
+    orig = cl.get
+
+    def get(url, headers=None, params=None):
+        if params and params.get("ps") == 1000:
+            raise ValueError("risposta strana")
+        return orig(url, headers, params)
+    cl.get = get
+    got = list(c._deep({"price_bands": [(1000, 2000), (2000, 3000)], "band_pages": 5}, {"MI"}, 4, 100))
+    assert len(got) == 30 and all(l.price_eur == 2500 for l in got)   # prima: zero (regione intera persa)
