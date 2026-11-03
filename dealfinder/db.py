@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -77,6 +78,30 @@ def connect():
 MIGRAZIONI_LOCK = 7310311          # lucchetto Postgres delle migrazioni (un solo processo alla volta)
 
 
+def _applica_con_attesa(conn, f: Path) -> None:
+    """4/11: una migrazione che altera una tabella grande (listings, valutazioni_policy) deve aspettare che le
+    query lunghe del cron finiscano. Senza limite resta in coda per sempre e, peggio, blocca tutte le letture
+    del sito dietro di sé. Con lock_timeout breve si ritira subito e riprova: il sito non si blocca mai."""
+    import time as _t
+    tentativi = int(os.environ.get("MIGRAZIONI_TENTATIVI", "60") or 60)
+    for i in range(tentativi):
+        try:
+            conn.execute("SET lock_timeout = '4s'")
+            conn.execute(f.read_text())
+            conn.execute("INSERT INTO schema_migrations (name) VALUES (%s)", (f.name,))
+            conn.execute("SET lock_timeout = 0")
+            conn.commit()
+            return
+        except Exception as e:
+            conn.rollback()
+            if "lock timeout" not in str(e).lower() and "lock_timeout" not in str(e).lower() \
+                    and getattr(e, "sqlstate", "") != "55P03":
+                raise
+            print(f"Migrazione {f.name}: tabella occupata, riprovo ({i + 1}/{tentativi})", flush=True)
+            _t.sleep(3)
+    raise RuntimeError(f"Migrazione {f.name}: tabella sempre occupata, rinuncio")
+
+
 def migrate(conn, cartella: Path | None = None) -> list[str]:
     """Applica in ordine le migrazioni non ancora eseguite.
 
@@ -93,9 +118,7 @@ def migrate(conn, cartella: Path | None = None) -> list[str]:
         for f in sorted((cartella or MIGRATIONS).glob("*.sql")):
             if f.name in done:
                 continue
-            conn.execute(f.read_text())
-            conn.execute("INSERT INTO schema_migrations (name) VALUES (%s)", (f.name,))
-            conn.commit()
+            _applica_con_attesa(conn, f)
             applied.append(f.name)
         return applied
     except Exception:
