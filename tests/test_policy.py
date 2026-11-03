@@ -349,27 +349,6 @@ def test_km_uguale_anno_non_valutata():
     assert v["categoria"] == "dati_insufficienti"
 
 
-def test_senza_numero_super_quota_e_targa():
-    from dealfinder.web import app, scovo
-    from dealfinder.pipeline import tempo_reale as tr
-
-    class C:
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
-    vecchi = app.connect, tr.esiti_targa
-    app.connect = lambda: C()
-    tr.esiti_targa = lambda conn, ids: {1: "visibile", 2: "coperta", 3: "visibile"}
-    cat = sorted(scovo.CATEGORIE_SITO)[0]
-    def it(i, prezzo, margine, n=10, fonte="Subito"):
-        return {"id": i, "prezzo": prezzo, "fonte": fonte, "pv": {"categoria": cat, "margine": margine, "n": n}}
-    tenute = [{"id": 100 + k} for k in range(8)]          # 8 con numero -> al massimo 2 senza numero (20%)
-    items = [it(1, 4000, 3000), it(2, 4000, 3000), it(3, 4000, 2500), it(4, 4000, 1600), it(5, 4000, 3000, n=3)]
-    ok = app._senza_numero_super(items, tenute)
-    assert [x["id"] for x in ok] == [1, 3]                 # 2: targa coperta; 4: margine non abbastanza alto; 5: pochi confronti
-    assert set(app._targhe_da_controllare) == {1, 2, 3}
-    app.connect, tr.esiti_targa = vecchi
-
-
 def test_utilitaria_economica_molto_sotto_mercato():
     prezzi = [4000, 4100, 4200, 4300, 4400, 4500, 4600, 4700]
     v = valuta(car(1, 2100), market(prezzi), soglia=1500, cfg=CFG, now=NOW)       # ~50% di M, 8 confronti
