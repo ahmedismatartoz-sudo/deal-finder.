@@ -142,6 +142,29 @@ def non_rinnovare(conn) -> None:
             log.warning("NON_RINNOVA %s: errore %s", em, str(e)[:300])
 
 
+def prova_pronto() -> None:
+    """All'avvio: controlla che la chiave possa leggere/creare i prezzi e il buono (log STRIPE PRONTO o STRIPE ERRORE)."""
+    if not attivo():
+        log.warning("STRIPE ERRORE: STRIPE_SECRET_KEY non c'è su Render")
+        return
+    out = {}
+    for k in PIANI:
+        try:
+            pid = _prezzo(k)
+            pr = _get(f"/prices/{pid}", {})
+            out[k] = f"{pid} {(pr.get('unit_amount') or 0) / 100:.0f}€/{(pr.get('recurring') or {}).get('interval')}"
+            if pr.get("unit_amount") != PIANI[k]["eur"] * 100:
+                log.warning("STRIPE ATTENZIONE: il prezzo del piano %s su Render (%s) non è %s €", k, pid, PIANI[k]["eur"])
+        except Exception as e:
+            out[k] = "ERRORE " + str(e)[:200]
+    sc = sconto_primo_mese()
+    try:
+        out["buono"] = _coupon(sc) if sc else "nessuno"
+    except Exception as e:
+        out["buono"] = "ERRORE " + str(e)[:200]
+    log.warning("STRIPE %s %s", "ERRORE" if any("ERRORE" in str(v) for v in out.values()) else "PRONTO", json.dumps(out))
+
+
 def checkout(dealer: dict, base: str, http=None, piano: str = "base") -> str:
     """Pagina di pagamento Stripe per abbonarsi: ritorna l'indirizzo dove mandare il cliente."""
     piano = piano if piano in PIANI else "base"

@@ -95,6 +95,7 @@ if __name__ == "__main__":
             _lg.basicConfig(level=_lg.INFO)
             from .web import abbonamento as _abb
             _abb.non_rinnovare(conn)
+            _abb.prova_pronto()
         except Exception as e:
             print("non_rinnovare:", str(e)[:200])
         # ACCOUNT_DISATTIVATI="a@x.it,b@y.it": account spenti (vince su tutto il resto), sessioni chiuse subito
