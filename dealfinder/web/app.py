@@ -1128,36 +1128,73 @@ def _dopo(ts, dal: str) -> bool:
         return False
 
 
+# 4/11: quello che si ricava dal TESTO dell'annuncio (titolo e descrizione) si calcola una volta per annuncio e prezzo
+# e si tiene in memoria (solo sì/no, mai numeri di telefono): l'elenco si ricalcola ogni 90 secondi e rileggere 8.000
+# descrizioni ogni volta pesa sul database. Si svuota ogni TESTO_CACHE_ORE ore (6).
+_testo_cache: dict = {}
+_testo_cache_t = {"t": time.time()}
+
+
+def _dal_testo(t: str, nomi) -> dict:
+    from . import sito_regole as SR
+    return {"tel_testo": bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)),
+            "tel_estero": SR.tel_estero(t), "testo_truffa": SR.testo_truffa(t),
+            "segni_commerciante": bool(_SEGNI_COMMERCIANTE.search(t)), "promo_testo": bool(_PROMO_RE.search(t)),
+            "solo_fin": bool(_SOLO_FIN_RE.search(t)), "loconte_testo": bool(nomi and nomi.search(t))}
+
+
 def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
     """Dati per le regole del sito, letti UNA volta per giro (nessun numero di telefono salvato: solo sì/no)."""
     from . import sito_regole as SR
     ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
+    prezzi = {it["id"]: it.get("prezzo") for it in items}
     scarti = _scarti_cliente_ids()
     nomi_re = _commercianti_nomi_re()
     nomi = re.compile(nomi_re, re.I) if nomi_re else None
+    if time.time() - _testo_cache_t["t"] > float(os.environ.get("TESTO_CACHE_ORE", "6")) * 3600 or len(_testo_cache) > 60000:
+        _testo_cache.clear()
+        _testo_cache_t["t"] = time.time()
     dati: dict = {}
     loconte: set = set()
     jev: dict = {}
     jev_errore = False
     with connect() as conn:
+        senza_testo = [i for i in ids if (i, prezzi.get(i)) not in _testo_cache]
+        for k in range(0, len(senza_testo), 2000):
+            for r in conn.execute("SELECT id, title, description FROM listings WHERE id = ANY(%s)",
+                                  (senza_testo[k:k + 2000],)).fetchall():
+                _testo_cache[(r["id"], prezzi.get(r["id"]))] = _dal_testo(
+                    f"{r.get('title') or ''} {r.get('description') or ''}", nomi)
+        stats["testi_letti"] = len(senza_testo)
         for k in range(0, len(ids), 2000):
             for r in conn.execute(
-                    "SELECT id, title, description, seller_type, telefono_ok, price_flags, province, city, stage, "
-                    "stage_reason, damage_class FROM listings WHERE id = ANY(%s)", (ids[k:k + 2000],)).fetchall():
-                t = f"{r.get('title') or ''} {r.get('description') or ''}"
+                    "SELECT id, seller_type, telefono_ok, price_flags, province, city, stage, stage_reason, damage_class "
+                    "FROM listings WHERE id = ANY(%s)", (ids[k:k + 2000],)).fetchall():
+                tx = _testo_cache.get((r["id"], prezzi.get(r["id"]))) or {}
                 flags = set(r.get("price_flags") or [])
                 dati[r["id"]] = {
-                    "tel": bool(r.get("telefono_ok") or scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)),
-                    "tel_estero": SR.tel_estero(t), "testo_truffa": SR.testo_truffa(t),
-                    "seller_type": r.get("seller_type"), "segni_commerciante": bool(_SEGNI_COMMERCIANTE.search(t)),
-                    "promo": bool(_PROMO_RE.search(t) or flags & set(_FLAG_PROMO)), "solo_fin": bool(_SOLO_FIN_RE.search(t)),
+                    "tel": bool(r.get("telefono_ok") or tx.get("tel_testo")),
+                    "tel_estero": bool(tx.get("tel_estero")), "testo_truffa": bool(tx.get("testo_truffa")),
+                    "seller_type": r.get("seller_type"), "segni_commerciante": bool(tx.get("segni_commerciante")),
+                    "promo": bool(tx.get("promo_testo") or flags & set(_FLAG_PROMO)), "solo_fin": bool(tx.get("solo_fin")),
                     "provincia": SR.provincia_di(r.get("province"), r.get("city")),
                     "scarto_cliente": r["id"] in scarti or r.get("stage") == "scartato",
                     "da_verificare": r.get("stage_reason") == "da_verificare",
                     "danno_dichiarato": (r.get("damage_class") or "") in SR.DANNI_DICHIARATI,
                 }
-                if nomi and nomi.search(t):
+                if tx.get("loconte_testo"):
                     loconte.add(r["id"])
+        # commercianti: data dell'ultima valutazione (metodo nuovo dal COMMERCIANTI_VALUTATI_DAL), non più un confronto
+        # di testo sulla versione del calcolo
+        comm = [i for i, d in dati.items() if d.get("seller_type") == "commerciante" and not pv_at.get(i)]
+        if comm:
+            try:
+                for r in conn.execute("SELECT DISTINCT ON (listing_id) listing_id, computed_at FROM valutazioni_policy "
+                                      "WHERE listing_id = ANY(%s) ORDER BY listing_id, computed_at DESC", (comm,)).fetchall():
+                    pv_at[r["listing_id"]] = r["computed_at"]
+            except Exception as e:
+                conn.rollback()
+                logging.getLogger("scovo").warning("COMMERCIANTI data valutazione non letta: %s", str(e)[:200])
         if nomi_re:
             for q in ("SELECT l.id FROM listings l JOIN commercianti_as24_annunci a ON a.listing_id = l.source_id "
                       "JOIN commercianti_as24 c ON c.seller_id = a.seller_id WHERE l.id = ANY(%(ids)s) AND c.nome ~* %(n)s",
@@ -1314,6 +1351,7 @@ def _calcola_elenco() -> None:
     _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
     for it in out:
         it.pop("_r", None)
+        it.pop("_tipo", None)
     _elenco.update(t=time.time(), items=out, opens=opens)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute

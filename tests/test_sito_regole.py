@@ -193,3 +193,13 @@ def test_stessi_numeri_elenco_e_scheda():
         assert d["valutazione"]["margine"] == 2600 and d["pv"]["margine"] == 2600
     finally:
         scovo.POLICY_SITO = vecchio
+
+
+def test_commercianti_valutati_per_data_non_per_testo():
+    from datetime import datetime, timezone
+    from dealfinder.web import app
+    assert app._dopo(datetime(2026, 11, 4, tzinfo=timezone.utc), "2026-11-03T22:55:00+01:00")
+    assert not app._dopo(datetime(2026, 11, 3, 12, tzinfo=timezone.utc), "2026-11-03T22:55:00+01:00")
+    assert not app._dopo(None, "2026-11-03T22:55:00+01:00")
+    tx = app._dal_testo("Golf tagliandata, chiamare 333 1234567. Bonifico prima di vedere l'auto.", None)
+    assert tx["tel_testo"] and tx["testo_truffa"] and not tx["loconte_testo"]
