@@ -864,6 +864,7 @@ def _ciclo_web(ogni_min: int, passo_s: int, attesa_s: int) -> None:
         try:
             istantanea_da_app()
             if time.monotonic() - ultimo >= ogni_min * 60 or not ultimo:
+                salva_impronta("web")               # rinfrescata ogni ora: il controllo 5 guarda gli ultimi 3 giorni
                 esegui("web")
                 ultimo = time.monotonic()
             else:

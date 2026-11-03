@@ -6243,6 +6243,13 @@ async def _lifespan(app):
     except Exception:
         pass
     if os.environ.get("DATABASE_URL"):
+        try:                                         # 3/11 sentinella: impronta delle regole + un thread leggero
+            from .. import sentinella as _sent       # (fotografia del sito, controlli ogni ora, email degli allarmi)
+            _sent.salva_impronta("web", in_sottofondo=True)
+            _sent.avvia_thread_web()
+        except Exception:
+            pass
+    if os.environ.get("DATABASE_URL"):
         _pulizia_disco()
         _aggiorna_elenco(attendi=False)       # elenco auto pronto prima del primo visitatore
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":

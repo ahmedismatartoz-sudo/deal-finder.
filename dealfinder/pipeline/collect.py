@@ -712,6 +712,12 @@ if __name__ == "__main__":
         sys.exit(0)
     # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
     mode = os.environ.get("COLLECT_MODO") or mode
+    try:                                             # 3/11 sentinella: impronta delle regole + controlli, una volta per giro
+        from .. import sentinella as _sent           # (solo lettura, mai eccezioni; salta se fatti < 30 min fa)
+        _sent.salva_impronta("cron:" + mode)
+        _sent.esegui("cron:" + mode)
+    except Exception:
+        pass
     # COLLECT_PRIMA (da Render), es. "leadsp:3,benzina_mi:5": giri pesanti una tantum fatti qui, in un processo
     # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
     import time

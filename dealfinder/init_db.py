@@ -19,6 +19,8 @@ if __name__ == "__main__":
     with connect() as conn:
         applied = migrate(conn)
         print("Migrazioni applicate:", applied or "nessuna (già aggiornato)")
+        from . import sentinella as _sent            # 3/11 sentinella: impronta delle regole (tabella config_impronte)
+        _sent.salva_impronta("init_db:" + os.environ.get("RENDER_SERVICE_TYPE", "web"))
         email = (os.environ.get("ADMIN_EMAIL") or "").strip().lower()
         pwd = (os.environ.get("ADMIN_PASSWORD") or "").strip()
         if not email or not pwd:
