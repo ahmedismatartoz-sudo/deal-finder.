@@ -1806,6 +1806,9 @@ def _solo_100km(items: list) -> list:
         m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
         pv = m.group(1).upper() if m else None
         # 3/11 10:44 (cliente): restano anche le supercar dall'Europa e la zona di Ravenna
+        if (it.get("area") or "") == "roma":
+            via["roma"] += 1                    # Roma mai, nemmeno le supercar (cliente 3/11 10:41)
+            continue
         if pv in PROVINCE_100KM or it.get("supercar") or (it.get("area") or "milano") == "ravenna" \
                 or (pv is None and (it.get("area") or "milano") == "milano"):
             out.append(it)
