@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 POLICY_VERSION = "pv16-2026-10-19"
 # revisione del codice di calcolo (stessa tabella, stessa versione): le valutazioni con una revisione diversa vengono
 # rifatte sul sito (app._riallinea_sito) e dalla rivalutazione completa. 3/11: correzioni del controllo indipendente
-POLICY_REV = "2026-11-03a"
+POLICY_REV = "2026-11-03b"
 # pv15 (18/10, cliente: "più auto e rivendite più precise, con l'AI"): entra la stima del modello AI dei prezzi
 #   (pricing/ai_prezzi.py, errore misurato per modello d'auto). Con pochi confronti diretti (meno di 2) l'auto si
 #   valuta con l'AI se il suo errore per quel modello è ≤ 15% (sempre "candidato", mai "opportunità" piena);
@@ -853,7 +853,12 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         M_prima = out["M"]
         out["M_gemelle"] = M_prima                 # mercato senza valore reale: serve alla prova notturna
         out["M"] = min(out["M"], V)
-        out["L"] = min(out.get("L") or out["M"], P25v, out["M"])
+        # 3/11 10:21 (cliente: "fai le prime tre, basta che entrano più auto"): la P25 del valore reale NON fa più da
+        # tetto alla rivendita. Il valore reale è già un prezzo di VENDITA: la P25 (il 25% più basso) era pensata per i
+        # prezzi CHIESTI e qui contava la prudenza due volte (−5/10% in più). Resta il tetto P25 delle gemelle.
+        out["L"] = min(out.get("L") or out["M"], out["M"])
+        if os.environ.get("VR_P25_TETTO", "0") == "1":
+            out["L"] = min(out["L"], P25v)
         out["vr_accordo"] = accordo
         if V < M_prima:
             # il mercato ora È il valore reale (prezzo di vendita, non richiesto): il sito non lo ritara

@@ -490,6 +490,7 @@ class SubitoCollector(Collector):
     # più). Ora la fascia si divide in due metà, rilette da capo (i doppioni si saltano), fino a FASCIA_DIVISIONI volte.
     FASCIA_DIVISIONI = 4          # al massimo 16 pezzi per fascia
     FASCIA_MINIMA = 100           # euro: sotto questa larghezza non si divide più
+    FASCIA_PAGINE_EXTRA = 400     # pagine in più (divisioni) per giro al massimo: circa 10-15 minuti
 
     def _fascia(self, region, key, sn, ps, pe, pages, lim, wanted, visti: set, livello: int, tot: dict,
                 esito: dict) -> Iterator[Listing]:
@@ -521,6 +522,13 @@ class SubitoCollector(Collector):
         if livello >= self.FASCIA_DIVISIONI or pe - ps < self.FASCIA_MINIMA:
             log.warning("subito %s fascia %s-%s: ancora piena dopo %d pagine, letti solo i più recenti", sn, ps, pe, pages)
             return
+        # 3/11: tetto alle pagine in più per giro (il giro del cron ha già poco tempo prima del limite di 12 ore)
+        extra = getattr(self, "_pagine_extra", 0)
+        if extra >= self.FASCIA_PAGINE_EXTRA:
+            log.warning("subito %s fascia %s-%s piena: tetto di %d pagine in più raggiunto, letti solo i più recenti",
+                        sn, ps, pe, self.FASCIA_PAGINE_EXTRA)
+            return
+        self._pagine_extra = extra + 2 * pages
         mid = (ps + pe) // 2
         log.info("subito %s fascia %s-%s piena: divisa in %s-%s e %s-%s", sn, ps, pe, ps, mid, mid, pe)
         yield from self._fascia(region, key, sn, ps, mid, pages, lim, wanted, visti, livello + 1, tot, esito)
