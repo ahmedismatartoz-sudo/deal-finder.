@@ -5369,6 +5369,8 @@ def _tempo_reale():
             time.sleep(float(os.environ.get("RIALLINEA_MIN", "20")) * 60)
     threading.Thread(target=riallinea_sito, daemon=True, name="riallinea").start()
 
+    _AVVIO_COMM = time.strftime("%Y%m%d%H%M%S")
+
     def commercianti_top_lavoro():
         """3/11 10:29 (cliente): commercianti LONTANI (fuori provincia di Milano), senza promo/leasing/prezzi esca, valutati
         col metodo nuovo (valore reale). Una volta al giorno il valore reale anche per loro, poi ogni 20 minuti le auto
@@ -5396,7 +5398,8 @@ def _tempo_reale():
                     conn.execute("SET statement_timeout = '600s'")
                     n_vr = conn.execute("""SELECT count(*) AS n FROM valore_reale v JOIN listings l ON l.id = v.listing_id
                         WHERE l.seller_type = 'commerciante' AND v.computed_at > now() - interval '20 hours'""").fetchone()["n"]
-                if n_vr < 200 and _una_volta("vr_commercianti:" + _dt.now(_tz.utc).strftime("%Y%m%d%H")):
+                # una volta per avvio del sito (un riavvio a metà calcolo lo rifà subito, non dopo un'ora)
+                if n_vr < 200 and _una_volta("vr_commercianti:" + _AVVIO_COMM):
                     with connect() as conn:
                         conn.execute("SET statement_timeout = '900s'")
                         L.warning("COMMERCIANTI_TOP valore reale (privati + commercianti lontani): %s", json.dumps(
