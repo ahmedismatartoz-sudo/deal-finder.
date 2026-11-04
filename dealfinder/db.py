@@ -102,6 +102,26 @@ def _applica_con_attesa(conn, f: Path) -> None:
     raise RuntimeError(f"Migrazione {f.name}: tabella sempre occupata, rinuncio")
 
 
+def _chiudi_migrazioni_fantasma(conn) -> int:
+    """4/11: un avvio del sito ucciso da Render lascia nel database la sua sessione di migrazione ancora viva:
+    tiene il lucchetto delle migrazioni e, se era ferma su un ALTER TABLE, blocca tutte le letture di quella
+    tabella (il sito non costruisce più l'elenco). Una migrazione vera dura secondi: chi tiene il lucchetto da più
+    di 5 minuti è un fantasma e si chiude. Tocca solo le sessioni che tengono il lucchetto delle migrazioni."""
+    try:
+        righe = conn.execute(
+            "SELECT l.pid, pg_terminate_backend(l.pid) AS chiusa FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid "
+            "WHERE l.locktype = 'advisory' AND l.objid = %s AND l.granted AND l.pid <> pg_backend_pid() "
+            "AND a.backend_start < now() - interval '5 minutes'", (MIGRAZIONI_LOCK,)).fetchall()
+        conn.commit()
+        if righe:
+            print("MIGRAZIONI: chiuse sessioni fantasma", [r["pid"] for r in righe], flush=True)
+        return len(righe)
+    except Exception as e:
+        conn.rollback()
+        print("MIGRAZIONI: fantasmi non chiusi:", str(e)[:200], flush=True)
+        return 0
+
+
 class MigrazioniRimandate(RuntimeError):
     """Il lucchetto delle migrazioni è tenuto da un altro processo: si riprova più tardi, senza bloccare l'avvio."""
 
@@ -119,6 +139,8 @@ def migrate(conn, cartella: Path | None = None, attesa_max: float | None = None)
         conn.commit()
         if preso:
             break
+        if _t.time() - t0 > 5:
+            _chiudi_migrazioni_fantasma(conn)
         if attesa_max is not None and _t.time() - t0 > attesa_max:
             raise MigrazioniRimandate("lucchetto delle migrazioni occupato da un altro processo")
         _t.sleep(3)
