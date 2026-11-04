@@ -48,3 +48,19 @@ def test_solo_annunci_degli_ultimi_10_giorni():
     assert SR.sconto_trattativa(_auto(6000, sog - 300, visto_dal=(OGGI - timedelta(days=9)).isoformat()), g) == 300
     assert SR.sconto_trattativa(_auto(6000, sog - 300, visto_dal=(OGGI - timedelta(days=11)).isoformat()), g) is None
     assert SR.sconto_trattativa(_auto(6000, sog - 300, visto_dal=None), g) is None
+
+
+def test_limiti_da_render(monkeypatch):
+    monkeypatch.setenv("TRATTA_GIORNI", "20")
+    monkeypatch.setenv("TRATTA_MAX", "1000000000:1000")
+    g = SR.Regole.da_env()
+    assert g.tratta_giorni == 20 and g.tratta_max == ((10**9, 1000),)
+    sog = scovo.soglia(6000)
+    assert SR.sconto_trattativa(_auto(6000, sog - 900, visto_dal=(OGGI - timedelta(days=15)).isoformat()), g) == 900
+
+
+def test_diagnosi():
+    g = SR.Regole.da_env()
+    sog = scovo.soglia(6000)
+    d = SR.diagnosi_trattabili([_auto(6000, sog - 600), _auto(6000, sog + 10)], g)
+    assert d == {"fino_700|3g": 1}

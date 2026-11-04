@@ -169,7 +169,9 @@ class Regole:
         return cls(km_max=int(e("KM_MASSIMO_SITO", "150000")), anno_min=int(e("ANNO_MINIMO_SITO", "2007")),
                    fb_sito=e("FB_SITO", "0") == "1",
                    jev_conf_scarta=float(e("JEV_CONF_SCARTA", "0.6")),
-                   sc_senza_margine_da=int(e("SC_SENZA_MARGINE_DA", "300000")))
+                   sc_senza_margine_da=int(e("SC_SENZA_MARGINE_DA", "300000")),
+                   tratta_giorni=int(e("TRATTA_GIORNI", "10")),
+                   tratta_max=_fasce_tratta(e("TRATTA_MAX", "7000:500,1000000000:700")))
 
     def impronta(self) -> str:
         import dataclasses
@@ -447,6 +449,38 @@ def recente(it, giorni: int, ora=None) -> bool:
     return ((ora or datetime.now(timezone.utc)) - d).total_seconds() <= giorni * 86400
 
 
+def _fasce_tratta(v: str) -> tuple:
+    """'7000:500,1000000000:700' -> ((7000, 500), (10**9, 700)); l'ultima fascia vale per tutti i prezzi sopra."""
+    out = []
+    for pezzo in (v or "").split(","):
+        if ":" in pezzo:
+            a, b = pezzo.split(":", 1)
+            out.append((int(a), int(b)))
+    out.sort()
+    if not out:
+        return ((7000, 500), (10**9, 700))
+    out[-1] = (10**9, out[-1][1])
+    return tuple(out)
+
+
+def diagnosi_trattabili(items: list[dict], g) -> dict:
+    """5/11 (cliente: "dobbiamo far entrare più macchine"): auto della fascia richiesta che arrivano fino al
+    margine minimo ma sono sotto: quante per sconto necessario e per età dell'annuncio, per scegliere i limiti."""
+    from collections import Counter
+    c = Counter()
+    for it in items:
+        if it.get("supercar") or it.get("economica") or it.get("incidentata") or not fascia(it):
+            continue
+        m, p = margine(it), int(it.get("prezzo") or 0)
+        if m is None or m <= 0 or p <= 0 or m >= scovo.soglia(p):
+            continue
+        serve = next((sc for sc in range(50, 3001, 50) if m + sc >= scovo.soglia(p - sc)), None)
+        sb = "oltre_3000" if serve is None else next(f"fino_{x}" for x in (300, 500, 700, 1000, 1500, 2000, 3000) if serve <= x)
+        eta = next((f"{d}g" for d in (3, 7, 10, 14, 20, 30) if recente(it, d)), "oltre_30g" if it.get("visto_dal") else "senza_data")
+        c[f"{sb}|{eta}"] += 1
+    return dict(sorted(c.items()))
+
+
 def sconto_trattativa(it, g) -> int | None:
     """Sconto da chiedere (a passi di 50 €) perché un'auto della fascia richiesta arrivi al margine minimo,
     se non supera g.tratta_max; None se non serve o se è troppo."""
@@ -541,6 +575,12 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
     c = Counter(t_margine_sito(it, g) for it in items)
     fun.passo("margine_sito", items, items, {k: v for k, v in c.items() if k})
     for nome, f in DOPO_MARGINE:
+        if nome == "margine_minimo" and scrivi_log:
+            try:
+                log.warning("TRATTA_DIAG %s", json.dumps({"giorni": g.tratta_giorni, "max": g.tratta_max,
+                                                         "auto": diagnosi_trattabili(items, g)}))
+            except Exception as e:
+                log.warning("TRATTA_DIAG non riuscita: %s", str(e)[:200])
         items = _applica(items, nome, f, g, fun)
     prima = items
     items, via = tetto_commercianti(items, g)
