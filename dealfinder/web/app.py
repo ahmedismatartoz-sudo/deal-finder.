@@ -4182,6 +4182,9 @@ def _tempo_reale():
                     pref = [v for v in voci if str(v.get("gender", "")).lower() in ("masculine", "male", "m")
                             or re.search(r"\b(man|male|uomo|maschil)", (str(v.get("name")) + " " + str(v.get("description"))).lower())]
                     scelta = (pref or voci)[0]["id"]
+                if tag.startswith("voceintro"):     # 4/11: inizio del video per i commercianti, stessa voce del Reel
+                    scelta = os.environ.get("VOCE_ID") or "79693aee-1207-4771-a01e-20c393c89e6f"
+                    testi = ["Sei un commerciante d'auto? Skovo è solo per commercianti."]
                 L.warning("VOCE scelta %s", scelta)
                 # 2/11 sera: "voceintera" = tutto il discorso in una sola generazione (pause e intonazione naturali);
                 # i tagli del video si ricavano poi dalle pause dell'audio
