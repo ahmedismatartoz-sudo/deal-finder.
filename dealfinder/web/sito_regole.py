@@ -326,6 +326,8 @@ def t_margine_sito(it, g):
         R = int(pv.get("R_finale") or pv.get("R"))
         it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, calibrato_venduto=giu, calibrato=True)
     costo = int((_r(it).get("difetto") or {}).get("costo") or 0)
+    if isinstance(it.get("pv"), dict) and it["pv"].get("costo_difetti_incluso"):
+        costo = 0                          # 4/11: già tolto nella valutazione (policy_v2.costi), non due volte
     if costo > 0 and isinstance(it.get("pv"), dict) and it["pv"].get("margine") is not None:
         it["pv"] = dict(it["pv"], margine=int(it["pv"]["margine"]) - costo, margine_calcolo=int(it["pv"]["margine"]),
                         difetto_costo=costo, difetto=(_r(it).get("difetto") or {}).get("motivo"))
@@ -367,6 +369,8 @@ def esito_truffa(it, g: Regole) -> tuple[str, str]:
         return "fuori", "jev_non_letto"              # decisioni non lette: le auto da controllare restano fuori
     if alto and not j:
         return "fuori", "margine_alto_senza_jev"
+    if not j and isinstance(it.get("pv"), dict) and it["pv"].get("serve_controllo_ai"):
+        return "fuori", "aspetta_controllo_ai"     # 4/11: valore reale senza auto gemelle, prima deve decidere l'AI
     meno = g.truffa_alto_meno if alto else 0.0
     p = float((j or {}).get("truffa") or 0)
     con_numero = bool(r.get("tel"))
