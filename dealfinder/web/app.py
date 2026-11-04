@@ -4091,8 +4091,9 @@ def _tempo_reale():
     threading.Thread(target=esporta_senza_email, daemon=True, name="senza_email").start()
 
     def lead_zona_100km():
-        """4/11 pom. (cliente: "raccogliere altro qua a Milano e recuperare le loro email, Milano Bergamo Varese ecc."):
-        una volta (LEAD_ZONA, di serie "4-11"): tutti i saloni di AutoScout24 entro LEAD_ZONA_RAGGIO km (100) da Sesto,
+        """4/11 pom. (cliente: "raccogliere altro qua a Milano e recuperare le loro email, Milano Bergamo Varese ecc.,
+        persone nuove, non doppioni"): una volta (LEAD_ZONA, di serie "4-11"): i saloni NUOVI dell'elenco AutoScout24
+        comune per comune nelle 12 province della zona (lead_comuni.nuovi_zona),
         poi le loro email (pagina AutoScout24 e sito), poi i saloni della zona ancora senza email in lead_consegne
         (tipo SENZA_EMAIL, etichetta "<tag>-dopo"). Niente invii. Nei log solo conteggi."""
         tag = os.environ.get("LEAD_ZONA", "4-11")
@@ -4103,11 +4104,9 @@ def _tempo_reale():
         try:
             from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
             from ..db import log_job
-            from ..pipeline import lead_tutti as LT, lead_email as LE
+            from ..pipeline import lead_comuni as LC, lead_email as LE
             if _due(f"lead_zona:{tag}", 100000):
-                os.environ["LEADT_RAGGIO"] = os.environ.get("LEAD_ZONA_RAGGIO", "100")
-                os.environ["LEADT_GIRO"] = f"zona-{tag}"
-                esito = LT.giro()
+                esito = LC.nuovi_zona()       # elenco saloni di AutoScout24 comune per comune: solo i nuovi
                 with connect() as conn:
                     log_job(conn, f"lead_zona:{tag}")(True, esito)
                 L.warning("LEAD_ZONA_RACCOLTA_FINE %s", json.dumps(esito, ensure_ascii=False, default=str)[:600])

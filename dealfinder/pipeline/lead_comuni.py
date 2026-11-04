@@ -114,3 +114,101 @@ def giro() -> dict:
     esito = {"comuni": len(comuni), "pagine_elenco": pagine_ok, "saloni": len(saloni), "con_cellulare": con_cell}
     log.warning("LEADC_FINE %s", json.dumps(esito))
     return esito
+
+
+REGIONE = {"NO": "piemonte", "PC": "emilia-romagna"}       # tutte le altre province della zona: lombardia
+
+
+def _comuni_zona(prov: set) -> list[tuple[str, str]]:
+    base = Path(__file__).resolve().parents[2] / "data"
+    out, visti = [], set()
+    for nome, pv in json.loads((base / "comuni_sesto.json").read_text()):
+        if pv in prov and _slug(nome) not in visti:
+            visti.add(_slug(nome))
+            out.append((nome, pv))
+    for v in json.loads((base / "comuni_60km.json").read_text()).values():
+        if v["pv"] in prov and _slug(v["comune"]) not in visti:
+            visti.add(_slug(v["comune"]))
+            out.append((v["comune"], v["pv"]))
+    return out
+
+
+def nuovi_zona() -> dict:
+    """4/11 pom. (cliente: "prendere persone nuove, non doppioni, qua in zona"): l'elenco "concessionari a <comune>" di
+    AutoScout24 per ogni comune della zona (comuni_sesto + comuni_60km, 12 province), e SOLO i saloni che non sono già
+    in lead_tutti_dealer finiscono lì (chiave = pagina AutoScout24 del salone), con nome, comune, cellulari e prezzi
+    della vetrina (lead_tutti_ann, annuncio 'vetrina:<n>'). Le email poi le cerca lead_email.giro come per tutti.
+    Solo attività, mai privati. Nei log solo conteggi."""
+    import os
+    from ..collectors.autoscout import AutoScoutCollector
+    from ..db import connect
+    from .lead_tutti import _tabelle
+    from ..web.sito_regole import PROVINCE_100KM
+    prov = set(PROVINCE_100KM)
+    comuni = _comuni_zona(prov)
+    asc = AutoScoutCollector()
+    asc.min_delay_s, asc.max_delay_s = float(os.environ.get("LEADZ_PAUSA_MIN", "0.5")), float(os.environ.get("LEADZ_PAUSA_MAX", "1.0"))
+    get = asc.client.get
+    with connect() as conn:
+        _tabelle(conn)
+        gia = set()
+        for r in conn.execute("SELECT chiave FROM lead_tutti_dealer WHERE chiave LIKE '%%/concessionari/%%'").fetchall():
+            gia.add(r["chiave"].rstrip("/").split("/concessionari/")[-1].split("/")[0].split("?")[0])
+    st = {"comuni": len(comuni), "pagine_elenco": 0, "saloni_visti": 0, "gia_noti": 0, "nuovi": 0, "errori": 0}
+    nuovi: dict = {}
+    for i, (nome, pv) in enumerate(comuni):
+        for pag in range(1, int(os.environ.get("LEADZ_PAGINE", "60"))):
+            url = f"{BASE}/concessionari/regioni/{REGIONE.get(pv, 'lombardia')}/{_slug(nome)}/" + (f"?page={pag}" if pag > 1 else "")
+            try:
+                r = get(url)
+            except Exception:
+                st["errori"] += 1
+                break
+            asc.pause()
+            if r.status_code != 200:
+                break
+            st["pagine_elenco"] += 1
+            trovati = 0
+            for sl in dict.fromkeys(re.findall(r'href="(?:https://www\.autoscout24\.it)?/concessionari/([a-z0-9][a-z0-9-]+)/?["?#]', r.text)):
+                if sl in NON_SALONE:
+                    continue
+                trovati += 1
+                if sl in gia or sl in nuovi:
+                    continue
+                nuovi[sl] = (nome, pv)
+            st["saloni_visti"] += trovati
+            if not trovati:
+                break
+        if (i + 1) % 100 == 0:
+            log.warning("LEADZ avanzamento elenchi: %d/%d comuni, %d saloni nuovi", i + 1, len(comuni), len(nuovi))
+    st["gia_noti"] = max(0, st["saloni_visti"] - len(nuovi))
+    for j, (sl, (comune, pv)) in enumerate(nuovi.items()):
+        try:
+            home = get(f"{BASE}/concessionari/{sl}")
+            asc.pause()
+            if home.status_code != 200:
+                st["errori"] += 1
+                continue
+            th = _testo(home.text)
+            m = re.search(r"<title>(.*?)</title>", home.text or "", re.S)
+            nome = re.split(r"\s+[-|–]\s+", unescape(m.group(1)).strip())[0] if m else sl
+            cell = cell_validi(TEL.findall(th))
+            prezzi = sorted(int(p.replace(".", "")) for p in re.findall(r"€\s?(\d{1,3}(?:\.\d{3})+|\d{3,6})(?![\d.])", th)
+                            if 500 <= int(p.replace(".", "")) <= 400000)
+            chiave = f"{BASE}/concessionari/{sl}"
+            with connect() as conn:
+                conn.execute("INSERT INTO lead_tutti_dealer (chiave, nome, comune, prov, cell, fonte) VALUES (%s,%s,%s,%s,%s,%s) "
+                             "ON CONFLICT (chiave) DO NOTHING", (chiave, nome[:150], comune, pv, cell[:4], "autoscout24_elenco"))
+                conn.cursor().executemany(
+                    "INSERT INTO lead_tutti_ann (chiave, annuncio, prezzo, marca, carb) VALUES (%s,%s,%s,NULL,NULL) ON CONFLICT DO NOTHING",
+                    [(chiave, f"vetrina:{k}", p) for k, p in enumerate(prezzi[:60])])
+                conn.commit()
+            st["nuovi"] += 1
+        except Exception as e:
+            st["errori"] += 1
+            if st["errori"] < 5:
+                log.warning("LEADZ errore %s: %s", sl, str(e)[:150])
+        if (j + 1) % 100 == 0:
+            log.warning("LEADZ avanzamento saloni nuovi: %d/%d", j + 1, len(nuovi))
+    log.warning("LEADZ_FINE %s", json.dumps(st))
+    return st
