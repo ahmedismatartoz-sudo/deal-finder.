@@ -2068,6 +2068,20 @@ def commercianti_tel(request: Request):
                     headers={"Content-Disposition": "attachment; filename=commercianti_cellulari.csv", "Cache-Control": "no-store"})
 
 
+async def admin_dati_riservati(request: Request):
+    """4/11 sera: l'amministratore carica una lista con dati personali (es. email dei saloni trovate a mano) nella
+    tabella dati_riservati, fuori dal repo e dai log. Corpo JSON {"nome": "lead_...", "dati": [...]}."""
+    current_user(request, admin=True)
+    from ..marketing import dati_riservati as DR
+    body = await request.json()
+    nome = str(body.get("nome") or "")
+    if not re.fullmatch(r"lead_[a-z0-9_]{1,40}", nome) or not isinstance(body.get("dati"), (list, dict)):
+        err(400, "nome lead_... e dati (lista) richiesti")
+    with connect() as conn:
+        DR.carica(conn, nome, body["dati"])
+    return jsonify({"ok": True, "nome": nome, "voci": len(body["dati"])})
+
+
 def admin_lead_csv(request: Request):
     """4/11: liste di commercianti (prima righe LEAD..., LEADE, LEADT, ESPORTA_* nei log di Render) da scaricare in
     CSV dall'amministratore: /api/admin/lead.csv?tipo=LEADE. Senza tipo: i tipi disponibili con i conteggi."""
@@ -2405,6 +2419,7 @@ routes = [
     Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
     Route("/admin/commercianti-tel.csv", commercianti_tel),
     Route("/api/admin/lead.csv", admin_lead_csv),
+    Route("/api/admin/dati-riservati", admin_dati_riservati, methods=["POST"]),
     Route("/api/richiesta-accesso", richiesta_accesso, methods=["POST"]),
     Route("/api/opportunities", opportunities),
     Route("/api/opportunities/{id:int}", opportunity_detail),
@@ -4178,6 +4193,44 @@ def _tempo_reale():
         except Exception as e:
             L.warning("ZONA_MAI_USATE non riuscito: %s", str(e)[:300])
     threading.Thread(target=zona_mai_usate, daemon=True, name="zona_mai_usate").start()
+
+    def nuovi_zona_invio():
+        """4/11 sera (cliente: "carica e manda i nuovi"): una volta (NUOVI_ZONA_INVIO, di serie "5-11") carica in Brevo
+        le email dei saloni della zona mai contattati (lista caricata dall'admin in dati_riservati lead_zona_nuove_0511
+        + righe ZONA_MAI_USATE) e crea la campagna copia della 68, programmata (NUOVI_ZONA_QUANDO). Parte solo quando
+        la lista c'è; nei log solo conteggi."""
+        tag = os.environ.get("NUOVI_ZONA_INVIO", "5-11")
+        if not tag or tag == "0":
+            return
+        L = logging.getLogger("scovo")
+        from ..marketing import brevo_liste as BL
+        from ..marketing import consegne as CO
+        from ..marketing.dati_riservati import leggi
+        for _ in range(240):                                   # aspetta fino a 4 ore che l'admin carichi la lista
+            time.sleep(60)
+            try:
+                with connect() as conn:
+                    nuove = leggi(conn, "lead_zona_nuove_0511")
+                if nuove:
+                    break
+            except Exception:
+                pass
+        else:
+            L.warning("NUOVI_ZONA lista non caricata: niente")
+            return
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"nuovi_zona_invio:{tag}"):
+                return
+            with connect() as conn:
+                db = [r.get("email") for r in CO.righe(conn, "ZONA_MAI_USATE")]
+            emails = [str(e) for e in list(nuove) + db if e]
+            esito = BL.carica_e_programma(emails, int(os.environ.get("NUOVI_ZONA_MODELLO", "68")),
+                                          os.environ.get("NUOVI_ZONA_QUANDO", "2026-11-05T09:10:00+01:00"))
+            L.warning("NUOVI_ZONA_FINE %s", json.dumps(esito))
+        except Exception as e:
+            L.warning("NUOVI_ZONA non riuscito: %s", str(e)[:300])
+    threading.Thread(target=nuovi_zona_invio, daemon=True, name="nuovi_zona_invio").start()
 
     def esporta_sportive():
         """4/11 sera (cliente: "prova con gente che tratta solo macchine sportive, che compra qua in Italia, non troppo

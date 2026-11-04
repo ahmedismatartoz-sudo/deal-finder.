@@ -369,3 +369,94 @@ def rimetti_e_invia(campagna_id: int) -> dict:
         s = c.post(f"{API}/emailCampaigns/{campagna_id}/sendNow")
         esito["invio"] = s.status_code
         return esito
+
+
+# ---------- 4/11 sera (cliente: "carica e manda i nuovi"): saloni della zona mai contattati ----------
+LISTA_NUOVI_ZONA = "Skovo saloni zona nuovi 05-11"
+
+
+def scegli_nuovi(emails, bloccati: set, gia_usati: set, in_brevo: set, posto: int) -> list[str]:
+    """Email mai contattate: valide, non disiscritte/bloccate (impronte), mai caricate in Brevo, senza doppioni, entro
+    il posto libero sotto il tetto dei contatti. Funzione pura (tests/test_brevo_rimessi.py)."""
+    from .invii import impronta, norm_email
+    out, visti = [], set()
+    for e in emails:
+        e = norm_email(e)
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or ".pec." in e \
+                or e.endswith("@pec.it") or "legalmail" in e:
+            continue
+        visti.add(e)
+        if impronta(e) in bloccati or e in gia_usati or e in in_brevo:
+            continue
+        out.append(e)
+    return out[:max(0, posto)]
+
+
+def carica_e_programma(emails: list[str], modello_id: int, quando: str) -> dict:
+    """Carica i saloni nuovi in una lista propria e crea la campagna (copia di `modello_id`: stesso oggetto e testo)
+    programmata per `quando`. Se le auto della campagna modello non sono più sul sito non crea niente. Solo conteggi."""
+    import time as _t
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            gia = {invii.norm_email(r["email"]) for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+        in_brevo = {(x.get("email") or "").lower() for x in contatti}
+        posto = TETTO_BREVO - len(in_brevo)
+        tutti = scegli_nuovi(emails, bloccati, gia, in_brevo, 10**6)
+        buoni = tutti[:max(0, posto)]
+        esito = {"ricevute": len(emails), "valide_mai_usate": len(tutti), "in_brevo": len(in_brevo), "posto": posto,
+                 "da_caricare": len(buoni), "fuori_tetto": len(tutti) - len(buoni), "disiscritti": len(bloccati)}
+        if len(bloccati) < BLOCCATI_MINIMI:
+            esito["fermo"] = "disiscritti_incompleti"
+            return esito
+        if not buoni:
+            return esito
+        modello = c.get(f"{API}/emailCampaigns/{modello_id}").json()
+        html, oggetto = modello.get("htmlContent") or "", modello.get("subject") or ""
+        if not html or not _foto_ok(html):
+            esito["fermo"] = "auto_del_modello_non_piu_sul_sito"
+            return esito
+        lid = _liste(c).get(LISTA_NUOVI_ZONA)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": LISTA_NUOVI_ZONA, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        r = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in buoni], "listIds": [lid],
+                                                   "updateExistingContacts": True, "emptyContactsAttributes": False})
+        esito["import"] = r.status_code
+        if r.status_code >= 300:
+            return esito
+        with connect() as conn:
+            for e in buoni:
+                conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+            conn.commit()
+        n = 0
+        for _ in range(40):
+            _t.sleep(15)
+            n = int((c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers") or 0)
+            if n >= 0.9 * len(buoni):
+                break
+        esito["nella_lista"] = n
+        if n == 0:
+            return esito
+        if LISTA_NUOVI_ZONA in nomi_campagne(c):
+            esito["fermo"] = "campagna_gia_creata"
+            return esito
+        corpo = {"name": LISTA_NUOVI_ZONA, "subject": oggetto, "sender": MITTENTE, "replyTo": MITTENTE["email"],
+                 "htmlContent": html, "recipients": {"listIds": [lid]}, "scheduledAt": quando}
+        r = c.post(f"{API}/emailCampaigns", json=corpo)
+        esito["campagna"] = r.status_code
+        if r.status_code < 300:
+            esito["campagna_id"] = r.json().get("id")
+            esito["programmata"] = quando
+        return esito
