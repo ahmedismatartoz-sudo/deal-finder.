@@ -290,6 +290,22 @@ def scegli_rimessi(emails, bloccati: set, gia_in_brevo: set, posto: int) -> list
 BLOCCATI_MINIMI = 158                    # nell'esportazione del 1/11 i disiscritti/bloccati erano 158
 
 
+def _rimessi_0111() -> set[str]:
+    """Impronte dei 1.186 contatti dell'esportazione del 1/11 da rimettere (gli stessi delle prime campagne)."""
+    try:
+        return set(json.loads((_DATA / "brevo_rimessi_0111.json").read_text()))
+    except Exception:
+        return set()
+
+
+def _bloccati_0111() -> set[str]:
+    """Impronte (sha256, mai le email) dei 158 disiscritti/bloccati dell'esportazione Brevo del 1/11."""
+    try:
+        return set(json.loads((_DATA / "brevo_bloccati_0111.json").read_text()))
+    except Exception:
+        return set()
+
+
 def rimetti_e_invia(campagna_id: int) -> dict:
     """Rimette in una lista nuova i commercianti già caricati in Brevo in passato (tabella brevo_inviati) che il
     cliente ha cancellato da Brevo, tranne disiscritti e bloccati, poi manda la campagna `campagna_id` a quella lista.
@@ -307,9 +323,15 @@ def rimetti_e_invia(campagna_id: int) -> dict:
         contatti = _contatti_brevo(c)
         with connect() as conn:
             invii.sincronizza_da_brevo(conn, contatti)
-            bloccati = invii.disiscritti(conn)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            for h in _bloccati_0111():
+                conn.execute("INSERT INTO disiscritti (email_hash, motivo) VALUES (%s,'brevo_0111') ON CONFLICT DO NOTHING", (h,))
+            conn.commit()
             vecchi = [r["email"] for r in conn.execute("SELECT email FROM brevo_inviati ORDER BY email").fetchall()]
         in_brevo = {(x.get("email") or "").lower() for x in contatti}
+        scelti = _rimessi_0111()
+        if scelti:                                   # solo i contatti delle prime campagne (esportazione del 1/11)
+            vecchi = [e for e in vecchi if invii.impronta(e) in scelti]
         buoni = scegli_rimessi(vecchi, bloccati, in_brevo, TETTO_BREVO - len(in_brevo))
         esito = {"vecchi": len(vecchi), "in_brevo": len(in_brevo), "da_rimettere": len(buoni), "disiscritti": len(bloccati)}
         if len(bloccati) < BLOCCATI_MINIMI:          # elenco dei disiscritti incompleto: si rischia di riscrivere a chi
