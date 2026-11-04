@@ -170,6 +170,9 @@ def nuovi_zona() -> dict:
             gia.add(r["chiave"].rstrip("/").split("/concessionari/")[-1].split("/")[0].split("?")[0])
     st = {"comuni": len(comuni), "pagine_elenco": 0, "saloni_visti": 0, "gia_noti": 0, "nuovi": 0, "errori": 0}
     nuovi: dict = {}
+    from collections import Counter
+    http = Counter()
+    log.warning("LEADZ parte: %d comuni, %d saloni già noti", len(comuni), len(gia))
     for i, (nome, pv) in enumerate(comuni):
         for pag in range(1, int(os.environ.get("LEADZ_PAGINE", "60"))):
             url = f"{BASE}/concessionari/regioni/{REGIONE.get(pv, 'lombardia')}/{_slug(nome)}/" + (f"?page={pag}" if pag > 1 else "")
@@ -179,6 +182,7 @@ def nuovi_zona() -> dict:
                 st["errori"] += 1
                 break
             asc.pause()
+            http[r.status_code] += 1
             if r.status_code != 200:
                 break
             st["pagine_elenco"] += 1
@@ -193,8 +197,9 @@ def nuovi_zona() -> dict:
             st["saloni_visti"] += trovati
             if not trovati:
                 break
-        if (i + 1) % 100 == 0:
-            log.warning("LEADZ avanzamento elenchi: %d/%d comuni, %d saloni nuovi", i + 1, len(comuni), len(nuovi))
+        if (i + 1) % 20 == 0:
+            log.warning("LEADZ avanzamento elenchi: %d/%d comuni, %d pagine, %d saloni nuovi, risposte %s",
+                        i + 1, len(comuni), st["pagine_elenco"], len(nuovi), dict(http))
     st["gia_noti"] = max(0, st["saloni_visti"] - len(nuovi))
     for j, (sl, (comune, pv)) in enumerate(nuovi.items()):
         try:

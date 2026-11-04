@@ -4090,6 +4090,41 @@ def _tempo_reale():
             L.warning("SENZA_EMAIL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_senza_email, daemon=True, name="senza_email").start()
 
+    def senza_email_nei_log():
+        """4/11 sera (cliente: "fallo tu"): una volta (SENZA_EMAIL_LOG, di serie "4-11"), le righe SENZA_EMAIL già salvate
+        scritte anche nei log in forma corta, SOLO dati pubblici dell'attività (nome, comune, provincia, pagina
+        AutoScout24, numero di auto; mai telefoni né email), a blocchi di 40, per farle leggere all'agente che cerca i siti."""
+        tag = os.environ.get("SENZA_EMAIL_LOG", "4-11")
+        if not tag or tag == "0":
+            return
+        time.sleep(int(os.environ.get("SENZA_EMAIL_LOG_RITARDO_S", "70")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _due(f"senza_email_log:{tag}", 100000):
+                return
+            from ..db import log_job
+            from ..marketing import consegne
+            with connect() as conn:
+                fine = log_job(conn, f"senza_email_log:{tag}")
+                righe = consegne.righe(conn, "SENZA_EMAIL")
+            visti, corte = set(), []
+            for r in righe:
+                pag = str(r.get("pagina_autoscout") or "")
+                if pag in visti:
+                    continue
+                visti.add(pag)
+                corte.append([r.get("nome"), r.get("comune"), r.get("prov"),
+                              pag.rstrip("/").split("/concessionari/")[-1], r.get("auto")])
+            corte.sort(key=lambda x: -(x[4] or 0))
+            for i in range(0, len(corte), 40):
+                L.warning("SENZA_EMAIL_RIGHE %d %s", i // 40, json.dumps(corte[i:i + 40], ensure_ascii=False))
+            L.warning("SENZA_EMAIL_RIGHE_FINE %d saloni", len(corte))
+            fine(True, {"saloni": len(corte)})
+        except Exception as e:
+            L.warning("SENZA_EMAIL_LOG non riuscito: %s", str(e)[:300])
+    threading.Thread(target=senza_email_nei_log, daemon=True, name="senza_email_log").start()
+
     def esporta_sportive():
         """4/11 sera (cliente: "prova con gente che tratta solo macchine sportive, che compra qua in Italia, non troppo
         grossa"): saloni AutoScout24 delle province della zona con la maggior parte delle auto in vendita di marche
