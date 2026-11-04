@@ -4125,6 +4125,60 @@ def _tempo_reale():
             L.warning("SENZA_EMAIL_LOG non riuscito: %s", str(e)[:300])
     threading.Thread(target=senza_email_nei_log, daemon=True, name="senza_email_log").start()
 
+    def zona_mai_usate():
+        """4/11 sera (cliente: "ci servono più email"): una volta (ZONA_MAI_USATE, di serie "4-11"), quante email dei saloni
+        AutoScout24 delle province della zona abbiamo già ma non sono MAI state caricate in Brevo (brevo_inviati) e
+        non sono disiscritte. Nei log solo i conteggi per provincia; le righe in lead_consegne (tipo ZONA_MAI_USATE)."""
+        tag = os.environ.get("ZONA_MAI_USATE", "4-11")
+        if not tag or tag == "0":
+            return
+        time.sleep(int(os.environ.get("ZONA_MAI_USATE_RITARDO_S", "80")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _due(f"zona_mai_usate:{tag}", 100000):
+                return
+            from collections import Counter
+            from ..db import log_job
+            from ..marketing import invii as INV
+            from ..marketing.consegne import consegna
+            from ..pipeline.lead_comuni import prov_zona
+            with connect() as conn:
+                fine = log_job(conn, f"zona_mai_usate:{tag}")
+                try:
+                    in_brevo = {INV.norm_email(r["email"]) for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+                except Exception:
+                    conn.rollback()
+                    in_brevo = set()
+                try:
+                    via = INV.disiscritti(conn)
+                except Exception:
+                    conn.rollback()
+                    via = set()
+                rows = conn.execute(
+                    "SELECT e.email, e.sito, d.nome, d.comune, d.prov, d.chiave FROM lead_email e "
+                    "JOIN lead_tutti_dealer d ON d.chiave = e.chiave WHERE cardinality(e.email) > 0 "
+                    "AND d.chiave NOT LIKE 'subito%%' AND upper(d.prov) = ANY(%s)", (sorted(prov_zona()),)).fetchall()
+                tot, mai, visti = Counter(), Counter(), set()
+                for r in rows:
+                    for em in r["email"] or []:
+                        em = INV.norm_email(em)
+                        if not em or em in visti:
+                            continue
+                        visti.add(em)
+                        tot[r["prov"]] += 1
+                        if em in in_brevo or INV.impronta(em) in via:
+                            continue
+                        mai[r["prov"]] += 1
+                        consegna("ZONA_MAI_USATE", {"email": em, "nome": r["nome"], "comune": r["comune"], "prov": r["prov"],
+                                                    "sito": r["sito"], "pagina_autoscout": r["chiave"]})
+                L.warning("ZONA_MAI_USATE_FINE email in zona %d, mai caricate in Brevo e non disiscritte %d; per provincia "
+                          "tutte %s mai %s", sum(tot.values()), sum(mai.values()), dict(tot), dict(mai))
+                fine(True, {"zona": sum(tot.values()), "mai_usate": sum(mai.values())})
+        except Exception as e:
+            L.warning("ZONA_MAI_USATE non riuscito: %s", str(e)[:300])
+    threading.Thread(target=zona_mai_usate, daemon=True, name="zona_mai_usate").start()
+
     def esporta_sportive():
         """4/11 sera (cliente: "prova con gente che tratta solo macchine sportive, che compra qua in Italia, non troppo
         grossa"): saloni AutoScout24 delle province della zona con la maggior parte delle auto in vendita di marche
