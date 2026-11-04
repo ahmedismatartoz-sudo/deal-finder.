@@ -876,6 +876,19 @@ def lavori_cron() -> None:
             log.warning("RILETTURA_SUBITO non riuscita: %s", str(e)[:200])
 
 
+def tempo_ok(fase: str, entro_ore: float, t0: float, ora: float | None = None) -> bool:
+    """4/11: il cron "opportunità" andava oltre le 12 ore di Render (zona 4 h + Subito 1,5 h + confronti + supercar
+    1,5 h + ricalcolo ~4 h) e veniva fermato a metà, ogni volta. Ogni fase parte solo se c'è ancora tempo
+    (CRON_ORE_<FASE> da Render): quello che resta fuori lo fa il giro dopo (le fasi hanno già il loro _due)."""
+    import time as _t
+    limite = float(os.environ.get("CRON_ORE_" + fase.upper(), str(entro_ore)))
+    passate = ((ora if ora is not None else _t.time()) - t0) / 3600
+    if passate < limite:
+        return True
+    log.warning("TEMPO_CRON %s rimandata al prossimo giro: già %.1f ore (limite %.1f)", fase, passate, limite)
+    return False
+
+
 def _ai_prezzi():
     """Dopo la raccolta (ogni 3 ore e ogni notte): il modello AI dei prezzi si riaddestra su tutti gli annunci e
     riscrive le stime (tabella stima_ai). Gira qui, nel lavoro programmato, per non pesare sulla memoria del sito."""
@@ -941,7 +954,7 @@ if __name__ == "__main__":
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
         lavori_cron()
     # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
-    if os.environ.get("CONFRONTI_EXTRA") == "1":
+    if os.environ.get("CONFRONTI_EXTRA") == "1" and tempo_ok("confronti", 6, _t0_loop):
         try:
             from .ciclo import _due
             if _due("confronti_extra:v3", int(os.environ.get("CE_ORE_GIRO", "0"))):   # 1/11: a ogni giro, le città a turno
@@ -954,14 +967,14 @@ if __name__ == "__main__":
                 # 1/11 (cliente: "appena entrano le auto nuove della Lombardia sfruttale per fare più confronti"):
                 # se sono entrati tanti confronti nuovi o con prezzo cambiato, il ricalcolo dei prezzi parte in questo giro
                 _nuovi = sum(v for k, v in (_ce or {}).items() if isinstance(v, int) and (k.endswith(":nuovo") or k.endswith(":prezzo")))
-                if _nuovi >= int(os.environ.get("CE_RICALCOLA_DA", "1000")):
+                if _nuovi >= int(os.environ.get("CE_RICALCOLA_DA", "1000")) and tempo_ok("ricalcolo", 4, _t0_loop):
                     os.environ["RICALCOLO_SUBITO"] = "1"
                     log.warning("CONFRONTI_EXTRA %d confronti nuovi: ricalcolo dei prezzi in questo giro", _nuovi)
         except Exception as e:
             log.warning("CONFRONTI_EXTRA non riuscito: %s", str(e)[:300])
     # 29/10: dopo la zona (le auto medie e basse prima) e una volta al giorno.
     # 28/10 sera: supercar da 70.000 € in tutta Europa anche qui (processo separato dal sito, 512 MB); riprende le fasce già fatte
-    if os.environ.get("SUPERCAR_EU_CRON") == "1":
+    if os.environ.get("SUPERCAR_EU_CRON") == "1" and tempo_ok("supercar", 7, _t0_loop):
         try:
             from .ciclo import _due
             if _due("supercar_eu", int(os.environ.get("SUPERCAR_EU_ORE", "24"))):
@@ -976,6 +989,8 @@ if __name__ == "__main__":
             from ..db import connect, log_job
             ore = int(voce.split("@")[1]) if "@" in voce else 10000      # "nome@2": si ripete ogni 2 ore (a ogni giro)
             if not _due(voce, ore) and not (voce.startswith("ricalcolo") and os.environ.pop("RICALCOLO_SUBITO", None) == "1"):
+                continue
+            if not tempo_ok("ricalcolo" if voce.startswith("ricalcolo") else "prima", 5 if voce.startswith("ricalcolo") else 8, _t0_loop):
                 continue
             if voce.startswith("lusso60"):                                 # 20/10: auto 60-200k di continuo
                 from . import lusso as L
@@ -1544,8 +1559,9 @@ if __name__ == "__main__":
         ciclo_run()
         _ai_prezzi()
         sys.exit(0)
-    run(mode)
-    if mode == "mercato":
+    if tempo_ok("raccolta", 10, _t0_loop):
+        run(mode)
+    if mode == "mercato" and tempo_ok("modello", 10, _t0_loop):
         # dopo la raccolta notturna: riaddestra il modello se ha più di 7 giorni
         from ..pricing.train import run as train_run
         train_run()
@@ -1564,5 +1580,5 @@ if __name__ == "__main__":
     if mode in ("opportunita", "facebook") and analisi:
         from .process import run as process_run
         process_run("tutto")
-    if mode in ("opportunita", "mercato"):
+    if mode in ("opportunita", "mercato") and tempo_ok("ai_prezzi", 10.5, _t0_loop):
         _ai_prezzi()                       # ultimo passo: sostituisce il processo (memoria pulita)
