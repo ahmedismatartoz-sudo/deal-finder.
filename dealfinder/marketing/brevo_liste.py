@@ -460,3 +460,57 @@ def carica_e_programma(emails: list[str], modello_id: int, quando: str) -> dict:
             esito["campagna_id"] = r.json().get("id")
             esito["programmata"] = quando
         return esito
+
+
+def hash_email(e: str) -> str:
+    import hashlib
+    return hashlib.sha256(e.strip().lower().encode()).hexdigest()[:12]
+
+
+def emails_da_export(dati: bytes) -> list[str]:
+    """Il file di Brevo può arrivare zip, gzip o CSV semplice: ne tira fuori gli indirizzi, senza doppioni."""
+    import gzip
+    import io
+    import re
+    import zipfile
+    testo = dati
+    try:
+        with zipfile.ZipFile(io.BytesIO(dati)) as z:
+            testo = b"\n".join(z.read(n) for n in z.namelist())
+    except zipfile.BadZipFile:
+        try:
+            testo = gzip.decompress(dati)
+        except OSError:
+            pass
+    visti, out = set(), []
+    for e in re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", testo.decode("utf-8", "ignore")):
+        k = e.lower()
+        if k not in visti:
+            visti.add(k)
+            out.append(k)
+    return out
+
+
+def aperture(campagna_id: int, tipo: str = "openers") -> dict:
+    """4/11 sera (cliente: "preparami la lista" di chi ha aperto, da chiamare): chiede a Brevo l'elenco di chi ha
+    aperto la campagna. Nei log SOLO l'impronta corta (sha256, 12 caratteri) di ogni indirizzo: mai email in chiaro.
+    Il confronto con nomi e numeri si fa fuori dal sito, sulle liste del cliente."""
+    import time
+    key = _chiave()
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=120) as c:
+        r = c.post(f"{API}/emailCampaigns/{campagna_id}/exportRecipients", json={"recipientsType": tipo})
+        r.raise_for_status()
+        pid = r.json()["processId"]
+        url = None
+        for _ in range(60):
+            time.sleep(10)
+            p = c.get(f"{API}/processes/{pid}").json()
+            if p.get("status") == "completed":
+                url = p.get("export_url")
+                break
+        if not url:
+            return {"errore": "export non pronto", "process": pid}
+        d = httpx.get(url, timeout=120, follow_redirects=True)
+        d.raise_for_status()
+    ems = emails_da_export(d.content)
+    return {"campagna": campagna_id, "tipo": tipo, "n": len(ems), "h": [hash_email(e) for e in ems]}

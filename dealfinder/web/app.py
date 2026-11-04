@@ -3059,6 +3059,22 @@ def _tempo_reale():
     def brevo_liste():
         """22/10 (cliente): carica una volta in Brevo le 6 liste dei commercianti (data/marketing_gruppi.json)."""
         v = os.environ.get("BREVO_IMPORT_LISTE") or ""
+        if v.startswith("aperture:"):         # 4/11 sera (cliente): chi ha aperto la campagna, da chiamare
+            time.sleep(30)
+            try:
+                from ..marketing import brevo_liste as bl
+                from ..pipeline.ciclo import _una_volta
+                if _una_volta(f"brevo_aperture:{v}"):
+                    r = bl.aperture(int(v.split(":")[1]))
+                    hs = r.pop("h", [])
+                    lg.warning("BREVO_APERTURE %s", json.dumps(r))
+                    for i in range(0, len(hs), 100):
+                        lg.warning("BREVO_APERTURE_H %d %s", i, " ".join(hs[i:i + 100]))
+                else:
+                    lg.warning("BREVO_APERTURE %s già fatto", v)
+            except Exception as e:
+                lg.warning("BREVO_APERTURE non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("rimetti:"):          # 4/11 notte (cliente): "rimetti:<id campagna>" una volta sola
             time.sleep(30)
             try:
