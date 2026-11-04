@@ -15,7 +15,8 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
   km               km scritti e al massimo 150.000
   telefono         numero del venditore obbligatorio (supercar europee no: si contattano dall'annuncio); Facebook solo se FB_SITO=1
   no_roma          Roma mai, nemmeno le supercar
-  zona             12 province entro 100 km da Milano (provincia ricavata dalla città se manca), zona di Ravenna,
+  zona             12 province entro 100 km da Milano (fascia richiesta: anche fuori, poi le 100 più vicine,
+                   passo tetto_fuori_zona) (provincia ricavata dalla città se manca), zona di Ravenna,
                    supercar europee
   venditore        privati; commercianti: fascia richiesta senza promo (senza tetto) oppure lontani (fuori provincia
                    MI) senza promo/leasing/prezzo esca e valutati col metodo nuovo
@@ -130,6 +131,9 @@ class Regole:
     km_max: int = 150000
     fb_sito: bool = False             # FB_SITO: come in produzione oggi (0 = Facebook fuori)
     commercianti_max: int = 40
+    # 5/11 notte (cliente: "metti tutti quelli fuori zona, i 100 più vicini"): fascia richiesta anche fuori dalle
+    # province della zona (Roma mai), al massimo fascia_fuori_max auto, le più vicine a Milano
+    fascia_fuori_max: int = 100
     prezzo_min_su_m_comm: float = 0.75
     sc_margine_min: int = 10000
     sc_margine_pct: float = 0.15
@@ -171,6 +175,7 @@ class Regole:
                    jev_conf_scarta=float(e("JEV_CONF_SCARTA", "0.6")),
                    sc_senza_margine_da=int(e("SC_SENZA_MARGINE_DA", "300000")),
                    tratta_giorni=int(e("TRATTA_GIORNI", "10")),
+                   fascia_fuori_max=int(e("FASCIA_FUORI_ZONA_MAX", "100")),
                    tratta_max=_fasce_tratta(e("TRATTA_MAX", "7000:500,1000000000:700")))
 
     def impronta(self) -> str:
@@ -248,11 +253,29 @@ def r_no_roma(it, g):
     return "roma" if _r(it).get("provincia") in ROMA else None
 
 
+def km_da_milano(provincia: str | None) -> float | None:
+    from ..geo import coords, km
+    c, m = coords(provincia), coords("MI")
+    return round(km(m, c)) if c and m else None
+
+
 def r_zona(it, g):
     p = _r(it).get("provincia")
     if it.get("supercar") or p in PROVINCE_100KM or p in RAVENNA:
         return None
+    if g.fascia_fuori_max > 0 and fascia(it) and p not in ROMA:
+        d = km_da_milano(p)
+        if d is not None:
+            it["fuori_zona_km"] = d                # fascia richiesta fuori zona: resta, poi solo le più vicine
+            return None
     return "provincia_" + (p or "sconosciuta")
+
+
+def tetto_fuori_zona(items: list[dict], g) -> tuple[list[dict], set]:
+    fuori = sorted((it for it in items if it.get("fuori_zona_km") is not None),
+                   key=lambda it: (it["fuori_zona_km"], -int(margine(it) or 0), it.get("id") or 0))
+    via = {it["id"] for it in fuori[g.fascia_fuori_max:]}
+    return [it for it in items if it.get("id") not in via], via
 
 
 def tipo_venditore(it, g: Regole) -> str | None:
@@ -569,6 +592,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         it.pop("_tipo", None)
         it.pop("avviso_verifica", None)
         it.pop("trattare", None)
+        it.pop("fuori_zona_km", None)
     for nome, f in REGOLE:
         items = _applica(items, nome, f, g, fun)
     from collections import Counter
@@ -586,6 +610,10 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
     items, via = tetto_commercianti(items, g)
     fun.passo("tetto_commercianti", prima, items, {"oltre_%d" % g.commercianti_max: len(via)} if via else None)
     fun.tolti["tetto_commercianti"] = sorted(via)
+    prima = items
+    items, via = tetto_fuori_zona(items, g)
+    fun.passo("tetto_fuori_zona", prima, items, {"oltre_%d" % g.fascia_fuori_max: len(via)} if via else None)
+    fun.tolti["tetto_fuori_zona"] = sorted(via)
     # controllo finale: nessuna auto sotto il minimo (non deve mai scattare)
     sotto = [it["id"] for it in items if r_margine_minimo(it, g)]
     if sotto:
@@ -601,6 +629,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "commercianti_fascia": sum(1 for it in items if it.get("_tipo") == "comm_fascia"),
                                                   "avvisi": sum(1 for it in items if it.get("avviso_verifica")),
                                                   "da_trattare": sum(1 for it in items if it.get("trattare")),
+                                                  "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},
                                                   "passi": fun.passi}, ensure_ascii=False, default=str))
     return items, fun

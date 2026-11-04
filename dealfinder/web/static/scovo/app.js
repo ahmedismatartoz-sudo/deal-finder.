@@ -220,7 +220,7 @@ function botMatch(c, b){
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
 const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
-function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.ravenna; return o; }
+function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.ravenna + (o.italia || 0); return o; }
 function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","ravenna"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
 const CARB = [["benzina","Benzina"],["diesel","Diesel"],["gpl","GPL"],["metano","Metano"],["ibrida","Ibrida"],["elettrica","Elettrica"]];
@@ -296,7 +296,7 @@ function viewList(){
   const TIT = {all: "Dalla più conveniente: margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
-      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}</div>
+      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}</div>
       <div class="card-body">
         <div><div class="name">${esc(c.nome)}</div><div class="meta">${esc(meta(c))}</div></div>
         <div class="trio">
