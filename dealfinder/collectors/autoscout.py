@@ -319,6 +319,14 @@ class AutoScoutCollector(Collector):
                 for ys in self.ANNI:
                     yield from self._band(lo, hi, ctype, seller, ys)
                 return
+            # 5/11 (controllo scraper): le auto recenti (2020-2030) superavano ancora le 400 in fasce di 60 €
+            # (prezzi tondi da concessionario): si divide anno per anno invece di perdere il resto
+            if years[1] > years[0]:
+                y_mid = (years[0] + min(years[1], 2026)) // 2
+                if y_mid >= years[0] and y_mid < years[1]:
+                    yield from self._band(lo, hi, ctype, seller, (years[0], y_mid))
+                    yield from self._band(lo, hi, ctype, seller, (y_mid + 1, years[1]))
+                    return
             log.warning("autoscout: fascia %s-%s anni %s oltre %s risultati (%s): letti solo i primi 400",
                         lo, hi, years, self.TETTO, total)
         yield from self._emit(items, ctype, seller)
