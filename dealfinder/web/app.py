@@ -4051,7 +4051,7 @@ def _tempo_reale():
 
     def esporta_senza_email():
         """4/11 pom. (cliente: "voglio gente che c'è già su AutoScout, prendere le loro email"): i saloni di AutoScout24
-        della zona (12 province entro 100 km da Milano) di cui non abbiamo l'email, con la loro pagina AutoScout24,
+        della zona (MI, MB, VA, CO, LC, BG, LO, PV) di cui non abbiamo l'email, con la loro pagina AutoScout24,
         per cercare a mano/con l'agente il loro sito. Una volta per etichetta (SENZA_EMAIL, di serie "4-11").
         Righe in lead_consegne tipo SENZA_EMAIL (da /api/admin/lead.csv?tipo=SENZA_EMAIL), nei log solo il conteggio."""
         tag = os.environ.get("SENZA_EMAIL", "4-11")
@@ -4066,7 +4066,7 @@ def _tempo_reale():
             from ..db import log_job
             from ..marketing.consegne import consegna
             from ..pipeline.lead_email import _fascia
-            from .sito_regole import PROVINCE_100KM
+            from ..pipeline.lead_comuni import prov_zona
             with connect() as conn:
                 fine = log_job(conn, f"senza_email:{tag}")
                 rows = conn.execute(
@@ -4074,7 +4074,7 @@ def _tempo_reale():
                     "LEFT JOIN lead_email e ON e.chiave = d.chiave "
                     "WHERE d.chiave NOT LIKE 'subito%%' AND upper(d.prov) = ANY(%s) AND coalesce(d.nome, '') <> '' "
                     "AND (e.chiave IS NULL OR cardinality(e.email) = 0) ORDER BY d.prov, d.comune, d.nome",
-                    (sorted(PROVINCE_100KM),)).fetchall()
+                    (sorted(prov_zona()),)).fetchall()
                 ann: dict = {}
                 for r in conn.execute("SELECT chiave, prezzo FROM lead_tutti_ann WHERE chiave = ANY(%s)",
                                       ([r["chiave"] for r in rows],)).fetchall():
@@ -4093,10 +4093,10 @@ def _tempo_reale():
     def lead_zona_100km():
         """4/11 pom. (cliente: "raccogliere altro qua a Milano e recuperare le loro email, Milano Bergamo Varese ecc.,
         persone nuove, non doppioni"): una volta (LEAD_ZONA, di serie "4-11"): i saloni NUOVI dell'elenco AutoScout24
-        comune per comune nelle 12 province della zona (lead_comuni.nuovi_zona),
+        comune per comune in tutti i comuni di MI, MB, VA, CO, LC, BG, LO, PV (lead_comuni.nuovi_zona),
         poi le loro email (pagina AutoScout24 e sito), poi i saloni della zona ancora senza email in lead_consegne
         (tipo SENZA_EMAIL, etichetta "<tag>-dopo"). Niente invii. Nei log solo conteggi."""
-        tag = os.environ.get("LEAD_ZONA", "4-11")
+        tag = os.environ.get("LEAD_ZONA", "4-11-8prov")
         if not tag or tag == "0":
             return
         time.sleep(int(os.environ.get("LEAD_ZONA_RITARDO_S", "180")))

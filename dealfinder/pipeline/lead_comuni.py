@@ -119,9 +119,24 @@ def giro() -> dict:
 REGIONE = {"NO": "piemonte", "PC": "emilia-romagna"}       # tutte le altre province della zona: lombardia
 
 
+PROV_ZONA = "MI,MB,VA,CO,LC,BG,LO,PV"       # 4/11 pom. (cliente): niente Cremona, Brescia, Novara, Piacenza
+
+
+def prov_zona() -> set:
+    import os
+    return {p.strip().upper() for p in (os.environ.get("LEADZ_PROV") or PROV_ZONA).split(",") if p.strip()}
+
+
 def _comuni_zona(prov: set) -> list[tuple[str, str]]:
+    """Tutti i comuni delle province (data/comuni_zona_lead.json, elenco completo), più quelli degli elenchi vecchi."""
     base = Path(__file__).resolve().parents[2] / "data"
     out, visti = [], set()
+    tutti = base / "comuni_zona_lead.json"
+    if tutti.exists():
+        for nome, pv in json.loads(tutti.read_text()):
+            if pv in prov and _slug(nome) not in visti:
+                visti.add(_slug(nome))
+                out.append((nome, pv))
     for nome, pv in json.loads((base / "comuni_sesto.json").read_text()):
         if pv in prov and _slug(nome) not in visti:
             visti.add(_slug(nome))
@@ -135,7 +150,7 @@ def _comuni_zona(prov: set) -> list[tuple[str, str]]:
 
 def nuovi_zona() -> dict:
     """4/11 pom. (cliente: "prendere persone nuove, non doppioni, qua in zona"): l'elenco "concessionari a <comune>" di
-    AutoScout24 per ogni comune della zona (comuni_sesto + comuni_60km, 12 province), e SOLO i saloni che non sono già
+    AutoScout24 per ogni comune delle province della zona (tutti i comuni di MI, MB, VA, CO, LC, BG, LO, PV), e SOLO i saloni che non sono già
     in lead_tutti_dealer finiscono lì (chiave = pagina AutoScout24 del salone), con nome, comune, cellulari e prezzi
     della vetrina (lead_tutti_ann, annuncio 'vetrina:<n>'). Le email poi le cerca lead_email.giro come per tutti.
     Solo attività, mai privati. Nei log solo conteggi."""
@@ -143,8 +158,7 @@ def nuovi_zona() -> dict:
     from ..collectors.autoscout import AutoScoutCollector
     from ..db import connect
     from .lead_tutti import _tabelle
-    from ..web.sito_regole import PROVINCE_100KM
-    prov = set(PROVINCE_100KM)
+    prov = prov_zona()
     comuni = _comuni_zona(prov)
     asc = AutoScoutCollector()
     asc.min_delay_s, asc.max_delay_s = float(os.environ.get("LEADZ_PAUSA_MIN", "0.5")), float(os.environ.get("LEADZ_PAUSA_MAX", "1.0"))
