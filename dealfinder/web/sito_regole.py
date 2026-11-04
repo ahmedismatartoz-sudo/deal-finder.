@@ -148,7 +148,8 @@ class Regole:
     troppo_bella: float = 0.60        # prezzo sotto il 60% del mercato: fuori
     troppo_bella_recenti: float = 0.70  # auto recenti (dal 2018) sotto il 70% del mercato: fuori
     troppo_bella_anno: int = 2018
-    avviso_fuori: bool = True         # auto con segnali da verificare (AI truffa ≥ 0,5): fuori, non più col cartello
+    avviso_fuori: bool = True         # auto con segnali da verificare (AI truffa ≥ 0,5): fuori, non più col cartello...
+    avviso_prezzo_normale: float = 0.80  # ...tranne se il prezzo è normale (almeno l'80% del mercato): restano col cartello
     alto_euro: int = 3000             # margine molto alto: oltre 3.000 € E oltre il 100% del prezzo
     alto_pct: float = 1.0
     # 4/11 00:20: correzione misurata prezzo CHIESTO -> prezzo VENDUTO, per le auto il cui mercato M viene dalla
@@ -392,7 +393,9 @@ def esito_truffa(it, g: Regole) -> tuple[str, str]:
     if p >= g.truffa_fuori - meno:
         return "fuori", "truffa_probabile"
     if p >= g.truffa_avviso - meno:
-        return ("fuori" if g.avviso_fuori else "avviso"), "truffa_da_verificare"
+        M = float((it.get("pv") or {}).get("M") or 0)
+        normale = M > 0 and float(it.get("prezzo") or 0) >= g.avviso_prezzo_normale * M
+        return ("fuori" if g.avviso_fuori and not normale else "avviso"), "truffa_da_verificare"
     return "tieni", ""
 
 

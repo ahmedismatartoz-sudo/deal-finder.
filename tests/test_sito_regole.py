@@ -118,6 +118,8 @@ def test_tabella_truffa():
     out, _ = SR.elenco_sito([auto(1, jev=j(0.3)), auto(2, jev=j(0.6)), auto(3, jev=j(0.9)), auto(4)], G,
                             scrivi_log=False)
     assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, False), (4, False)]      # 4/11: da verificare = fuori
+    out, _ = SR.elenco_sito([auto(21, prezzo=8000, M=9600, margine=1800, jev=j(0.6))], G, scrivi_log=False)
+    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(21, True)]                 # ...se il prezzo è normale resta
     # segnali duri: fuori anche con probabilità bassa
     assert ids([auto(5, jev=j(0.1, foto_internet=0.8))]) == []
     assert ids([auto(6, prezzo=3000, M=7000, margine=s, jev=j(0.1))]) == []                # 43% del mercato
