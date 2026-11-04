@@ -24,8 +24,8 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    versioni molto diverse, difetto grave letto dall'AI; supercar solo dopo il controllo AI ok
   margine_sito     (trasformazione) costo del difetto letto dall'AI tolto dal margine: l'UNICA modifica al margine
   truffa           tabella dello studio 6 §4 (avviso "Verificare prima di pagare" nella fascia di dubbio)
-  margine_minimo   margine ≥ scovo.soglia(prezzo) (fascia richiesta: basta arrivarci con uno sconto da chiedere di
-                   al massimo 500 € fino a 7.000 €, 700 € sopra: sezione "Da trattare"); supercar: ≥ 10.000 € e ≥ 15% del prezzo; supercar da 300.000 €
+  margine_minimo   margine ≥ scovo.soglia(prezzo) (fascia richiesta, annunci degli ultimi 10 giorni: basta arrivarci con
+                   uno sconto da chiedere di al massimo 500 € fino a 7.000 €, 700 € sopra: sezione "Da trattare"); supercar: ≥ 10.000 € e ≥ 15% del prezzo; supercar da 300.000 €
                    in su: nessun margine richiesto, prezzo non sopra il mercato (4/11 pom., cliente)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
 """
@@ -156,6 +156,7 @@ class Regole:
     # margine se trattando si arriva al minimo, ma lo sconto da chiedere non deve superare 500-700 €"): sezione
     # "Da trattare", solo fascia richiesta. (prezzo fino a, sconto massimo da chiedere)
     tratta_max: tuple = ((7000, 500), (10**9, 700))
+    tratta_giorni: int = 10           # 4/11 sera (cliente): "queste auto girano in fretta": solo annunci degli ultimi 10 giorni
     alto_euro: int = 3000             # margine molto alto: oltre 3.000 € E oltre il 100% del prezzo
     alto_pct: float = 1.0
     # 4/11 00:20: correzione misurata prezzo CHIESTO -> prezzo VENDUTO, per le auto il cui mercato M viene dalla
@@ -431,13 +432,28 @@ def r_truffa(it, g):
     return None
 
 
+def recente(it, giorni: int, ora=None) -> bool:
+    """Annuncio online da al massimo `giorni` giorni (prima volta che l'abbiamo visto); senza data: no."""
+    from datetime import datetime, timezone
+    v = it.get("visto_dal")
+    if not v:
+        return False
+    try:
+        d = v if isinstance(v, datetime) else datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return ((ora or datetime.now(timezone.utc)) - d).total_seconds() <= giorni * 86400
+
+
 def sconto_trattativa(it, g) -> int | None:
     """Sconto da chiedere (a passi di 50 €) perché un'auto della fascia richiesta arrivi al margine minimo,
     se non supera g.tratta_max; None se non serve o se è troppo."""
     if it.get("supercar") or it.get("economica") or it.get("incidentata") or not fascia(it):
         return None
     m, p = margine(it), int(it.get("prezzo") or 0)
-    if m is None or m <= 0 or p <= 0:
+    if m is None or m <= 0 or p <= 0 or not recente(it, g.tratta_giorni):
         return None
     tetto = next(x for fino, x in g.tratta_max if p < fino)
     for sc in range(50, tetto + 1, 50):

@@ -427,6 +427,7 @@ def item(r: dict) -> dict | None:
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),
         "nuova": r.get("deep_at"),
+        "visto_dal": r.get("first_seen_at"),           # 4/11 sera: da quando l'annuncio è online (prima volta visto)
         "aperta": bool(r.get("opened_by_me")),
     }
 
