@@ -525,3 +525,6 @@ a{color:var(--focus)}
 .az-form{gap:14px}
 .az-riga{display:grid;grid-template-columns:1fr 88px;gap:10px}
 .btn:disabled{opacity:.5}
+/* 4/11 sera: sezione "Da trattare": sconto da chiedere e prezzo da offrire */
+.tratta{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);background:var(--bg,transparent);border:1px dashed var(--line);border-radius:10px;padding:6px 10px;margin:2px 0 6px}
+.tratta b{color:var(--ink);font-weight:800}

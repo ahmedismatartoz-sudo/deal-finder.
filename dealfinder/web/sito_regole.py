@@ -24,7 +24,8 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    versioni molto diverse, difetto grave letto dall'AI; supercar solo dopo il controllo AI ok
   margine_sito     (trasformazione) costo del difetto letto dall'AI tolto dal margine: l'UNICA modifica al margine
   truffa           tabella dello studio 6 §4 (avviso "Verificare prima di pagare" nella fascia di dubbio)
-  margine_minimo   margine ≥ scovo.soglia(prezzo); supercar: ≥ 10.000 € e ≥ 15% del prezzo; supercar da 300.000 €
+  margine_minimo   margine ≥ scovo.soglia(prezzo) (fascia richiesta: basta arrivarci con uno sconto da chiedere di
+                   al massimo 500 € fino a 7.000 €, 700 € sopra: sezione "Da trattare"); supercar: ≥ 10.000 € e ≥ 15% del prezzo; supercar da 300.000 €
                    in su: nessun margine richiesto, prezzo non sopra il mercato (4/11 pom., cliente)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
 """
@@ -151,6 +152,10 @@ class Regole:
     sconto_max: float = 0.40          # oltre il 40% di sconto: fuori (da 3.000 € in su)
     sconto_euro: tuple = ((5000, 10**9), (10000, 4000), (20000, 5000), (35000, 6000), (10**9, 8000))  # (prezzo fino a, sconto € oltre cui serve l'AI pulita)
     ai_pulita: float = 0.30           # sopra la soglia in euro resta solo se l'AI ha deciso e la truffa è sotto 0,30
+    # 4/11 sera (cliente: "sotto i 10k benzina con meno di 100k km facciamo fatica: teniamo anche quelle con poco
+    # margine se trattando si arriva al minimo, ma lo sconto da chiedere non deve superare 500-700 €"): sezione
+    # "Da trattare", solo fascia richiesta. (prezzo fino a, sconto massimo da chiedere)
+    tratta_max: tuple = ((7000, 500), (10**9, 700))
     alto_euro: int = 3000             # margine molto alto: oltre 3.000 € E oltre il 100% del prezzo
     alto_pct: float = 1.0
     # 4/11 00:20: correzione misurata prezzo CHIESTO -> prezzo VENDUTO, per le auto il cui mercato M viene dalla
@@ -426,8 +431,26 @@ def r_truffa(it, g):
     return None
 
 
+def sconto_trattativa(it, g) -> int | None:
+    """Sconto da chiedere (a passi di 50 €) perché un'auto della fascia richiesta arrivi al margine minimo,
+    se non supera g.tratta_max; None se non serve o se è troppo."""
+    if it.get("supercar") or it.get("economica") or it.get("incidentata") or not fascia(it):
+        return None
+    m, p = margine(it), int(it.get("prezzo") or 0)
+    if m is None or m <= 0 or p <= 0:
+        return None
+    tetto = next(x for fino, x in g.tratta_max if p < fino)
+    for sc in range(50, tetto + 1, 50):
+        if m + sc >= scovo.soglia(p - sc):
+            return sc
+    return None
+
+
 def r_margine_minimo(it, g):
     m, p = margine(it), int(it.get("prezzo") or 0)
+    tr = it.get("trattare")
+    if tr:                                   # sezione "Da trattare": vale il margine dopo lo sconto da chiedere
+        return None if m is not None and m > 0 and m + tr["sconto"] >= scovo.soglia(p - tr["sconto"]) else "sotto_soglia"
     if super_senza_margine(it, g):
         M = (it.get("pv") or {}).get("M")
         return None if M and p <= int(M) else "supercar_sopra_mercato"
@@ -437,7 +460,13 @@ def r_margine_minimo(it, g):
         if m < max(g.sc_margine_min, g.sc_margine_pct * p):
             return "supercar_margine_basso"
         return None
-    return "sotto_soglia" if m < scovo.soglia(p) else None
+    if m < scovo.soglia(p):
+        sc = sconto_trattativa(it, g)
+        if sc:
+            it["trattare"] = {"sconto": sc, "prezzo_obiettivo": p - sc, "margine": m + sc}
+            return None
+        return "sotto_soglia"
+    return None
 
 
 REGOLE = [("valutata", r_valutata), ("no_loconte", r_no_loconte), ("scarti_cliente", r_scarti_cliente),
@@ -489,6 +518,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
     for it in items:
         it.pop("_tipo", None)
         it.pop("avviso_verifica", None)
+        it.pop("trattare", None)
     for nome, f in REGOLE:
         items = _applica(items, nome, f, g, fun)
     from collections import Counter
@@ -514,6 +544,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "commercianti_lontani": sum(1 for it in items if it.get("_tipo") == "comm_lontano"),
                                                   "commercianti_fascia": sum(1 for it in items if it.get("_tipo") == "comm_fascia"),
                                                   "avvisi": sum(1 for it in items if it.get("avviso_verifica")),
+                                                  "da_trattare": sum(1 for it in items if it.get("trattare")),
                                                   "caricamento": caricamento or {},
                                                   "passi": fun.passi}, ensure_ascii=False, default=str))
     return items, fun
