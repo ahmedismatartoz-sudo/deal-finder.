@@ -95,7 +95,7 @@ WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days =
   AND NOT ('leasing_o_rata' = ANY(COALESCE(l.price_flags, ARRAY[]::text[])))   -- 4/11: il flag vero (prima 'leasing', mai scritto)
   AND coalesce(vp.r->>'categoria', '') <> 'dati_insufficienti'
   AND (vp.r->>'margine')::numeric >= %(m_min)s
-  AND l.price_eur >= 0.45 * coalesce((vp.r->>'M')::numeric, 0)   -- sotto il 45% del mercato: segnale di truffa (regola del sito)
+  AND l.price_eur >= 0.45 * coalesce((vp.r->>'M')::numeric, 0)   -- sotto il 45 per cento del mercato: segnale di truffa (regola del sito)
 """
 
 
