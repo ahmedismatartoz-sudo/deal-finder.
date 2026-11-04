@@ -4090,6 +4090,38 @@ def _tempo_reale():
             L.warning("SENZA_EMAIL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_senza_email, daemon=True, name="senza_email").start()
 
+    def lead_zona_100km():
+        """4/11 pom. (cliente: "raccogliere altro qua a Milano e recuperare le loro email, Milano Bergamo Varese ecc."):
+        una volta (LEAD_ZONA, di serie "4-11"): tutti i saloni di AutoScout24 entro LEAD_ZONA_RAGGIO km (100) da Sesto,
+        poi le loro email (pagina AutoScout24 e sito), poi i saloni della zona ancora senza email in lead_consegne
+        (tipo SENZA_EMAIL, etichetta "<tag>-dopo"). Niente invii. Nei log solo conteggi."""
+        tag = os.environ.get("LEAD_ZONA", "4-11")
+        if not tag or tag == "0":
+            return
+        time.sleep(int(os.environ.get("LEAD_ZONA_RITARDO_S", "180")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            from ..db import log_job
+            from ..pipeline import lead_tutti as LT, lead_email as LE
+            if _due(f"lead_zona:{tag}", 100000):
+                os.environ["LEADT_RAGGIO"] = os.environ.get("LEAD_ZONA_RAGGIO", "100")
+                os.environ["LEADT_GIRO"] = f"zona-{tag}"
+                esito = LT.giro()
+                with connect() as conn:
+                    log_job(conn, f"lead_zona:{tag}")(True, esito)
+                L.warning("LEAD_ZONA_RACCOLTA_FINE %s", json.dumps(esito, ensure_ascii=False, default=str)[:600])
+            if _due(f"lead_zona_email:{tag}", 100000):
+                st = LE.giro()
+                with connect() as conn:
+                    log_job(conn, f"lead_zona_email:{tag}")(True, st)
+            os.environ["SENZA_EMAIL"] = f"{tag}-dopo"
+            os.environ["SENZA_EMAIL_RITARDO_S"] = "1"
+            esporta_senza_email()
+        except Exception as e:
+            L.warning("LEAD_ZONA non riuscito: %s", str(e)[:300])
+    threading.Thread(target=lead_zona_100km, daemon=True, name="lead_zona").start()
+
     def esporta_tel():
         """2/11 (cliente: "dammi la mega lista dei numeri + i nuovi + quelli di Google Maps di ieri"): numeri AZIENDALI
         dei commercianti (Google Maps lead_maps, AutoScout24/Subito lead_tutti_dealer, commercianti_as24), una volta
