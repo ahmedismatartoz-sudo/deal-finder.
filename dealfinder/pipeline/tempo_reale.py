@@ -1098,6 +1098,7 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
             except Exception as e:
                 log.warning("TR autoscout: %s", str(e)[:200])
         stats["letti"] = len(letti)
+        _ritardo_subito(letti, stats)
         ids = _salva(conn, letti, stats)
         _lettore_nuovi(conn, ids, stats)
         valuta_e_pubblica(conn, ids, stats)
@@ -1105,6 +1106,35 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
                  "SET ultimo_at=EXCLUDED.ultimo_at, stats=EXCLUDED.stats", (inizio, json.dumps(dict(stats))))
     conn.commit()
     return stats
+
+
+def ritardo_minuti(data_annuncio: str | None, ora_it: str) -> int | None:
+    """Minuti tra la data dell'annuncio su Subito ('AAAA-MM-GG HH:MM', ora italiana) e adesso (stessa forma)."""
+    if not data_annuncio:
+        return None
+    try:
+        d = datetime.strptime(data_annuncio, "%Y-%m-%d %H:%M")
+        o = datetime.strptime(ora_it, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+    m = int((o - d).total_seconds() // 60)
+    return m if m >= 0 else 0
+
+
+def _ritardo_subito(letti: list, stats: Counter) -> None:
+    """5/11 (cliente: "ho paura che non raccogliamo subito gli annunci appena scesi"): quanti minuti dopo la
+    pubblicazione su Subito leggiamo gli annunci NUOVI (mediana e peggiore del giro), nei contatori di TR NUOVI."""
+    try:
+        from ..collectors.subito import SubitoCollector
+        ora = _ora_it(datetime.now(timezone.utc))
+        rit = sorted(m for m in (ritardo_minuti(SubitoCollector._data_annuncio(l.raw), ora)
+                                 for l in letti if l.source == "subito" and isinstance(l.raw, dict)) if m is not None)
+        if rit:
+            stats["ritardo_subito_mediana_min"] = rit[len(rit) // 2]
+            stats["ritardo_subito_max_min"] = rit[-1]
+            stats["subito_entro_15_min"] = sum(1 for m in rit if m <= 15)
+    except Exception as e:
+        log.info("ritardo subito non calcolato: %s", str(e)[:100])
 
 
 def con_lucchetto(nome: str, fn, *a):
