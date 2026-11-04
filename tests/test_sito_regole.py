@@ -112,6 +112,22 @@ def test_supercar_soglie():
     assert ids([sc]) == []                                                                 # mai senza margine
 
 
+def test_supercar_da_300k_senza_margine():
+    base = dict(supercar=True, prov=None, tel=False, _r={"sc_ok": True})
+    sc = auto(1, prezzo=450000, margine=0, M=500000, **base)
+    sc["pv"]["margine"] = None
+    assert ids([sc]) == [1]                                                                # sotto il mercato: dentro
+    sopra = auto(2, prezzo=520000, margine=0, M=500000, **base)
+    sopra["pv"]["margine"] = None
+    assert ids([sopra]) == []                                                              # sopra il mercato: fuori
+    sotto = auto(3, prezzo=250000, margine=0, M=300000, **base)
+    sotto["pv"]["margine"] = None
+    assert ids([sotto]) == []                                                              # sotto 300.000: serve margine
+    nc = auto(4, prezzo=450000, margine=0, M=500000, supercar=True, prov=None, tel=False, _r={"sc_ok": None})
+    nc["pv"]["margine"] = None
+    assert ids([nc]) == []                                                                 # controllo AI sempre
+
+
 def test_tabella_truffa():
     s = scovo.soglia(5000)
     j = lambda p, **k: dict({"truffa": p}, **k)

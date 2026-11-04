@@ -13,7 +13,7 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
   scarti_cliente   scelte a mano del cliente (data/scarti_sito.json, analisi manuale)
   anno             dal 2007
   km               km scritti e al massimo 150.000
-  telefono         numero del venditore obbligatorio; Facebook solo se FB_SITO=1 (lì si scrive in chat)
+  telefono         numero del venditore obbligatorio (supercar europee no: si contattano dall'annuncio); Facebook solo se FB_SITO=1
   no_roma          Roma mai, nemmeno le supercar
   zona             12 province entro 100 km da Milano (provincia ricavata dalla città se manca), zona di Ravenna,
                    supercar europee
@@ -24,7 +24,8 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    versioni molto diverse, difetto grave letto dall'AI; supercar solo dopo il controllo AI ok
   margine_sito     (trasformazione) costo del difetto letto dall'AI tolto dal margine: l'UNICA modifica al margine
   truffa           tabella dello studio 6 §4 (avviso "Verificare prima di pagare" nella fascia di dubbio)
-  margine_minimo   margine ≥ scovo.soglia(prezzo); supercar: ≥ 10.000 € e ≥ 15% del prezzo
+  margine_minimo   margine ≥ scovo.soglia(prezzo); supercar: ≥ 10.000 € e ≥ 15% del prezzo; supercar da 300.000 €
+                   in su: nessun margine richiesto, prezzo non sopra il mercato (4/11 pom., cliente)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
 """
 from __future__ import annotations
@@ -131,6 +132,7 @@ class Regole:
     prezzo_min_su_m_comm: float = 0.75
     sc_margine_min: int = 10000
     sc_margine_pct: float = 0.15
+    sc_senza_margine_da: int = 300000  # 4/11 pom. (cliente): super da qui in su senza obbligo di margine, prezzo <= mercato
     jev_conf_scarta: float = 0.6
     jev_guasto: float = 0.7
     jev_rata: float = 0.7
@@ -160,7 +162,8 @@ class Regole:
         e = os.environ.get
         return cls(km_max=int(e("KM_MASSIMO_SITO", "150000")), anno_min=int(e("ANNO_MINIMO_SITO", "2007")),
                    fb_sito=e("FB_SITO", "0") == "1",
-                   jev_conf_scarta=float(e("JEV_CONF_SCARTA", "0.6")))
+                   jev_conf_scarta=float(e("JEV_CONF_SCARTA", "0.6")),
+                   sc_senza_margine_da=int(e("SC_SENZA_MARGINE_DA", "300000")))
 
     def impronta(self) -> str:
         import dataclasses
@@ -171,6 +174,11 @@ class Regole:
 def _r(it: dict) -> dict:
     """Dati di lavoro preparati dal caricamento (mai mandati al telefono)."""
     return it.get("_r") or {}
+
+
+def super_senza_margine(it: dict, g: "Regole") -> bool:
+    """4/11 pom. (cliente): supercar da sc_senza_margine_da in su: basta un buon prezzo rispetto al mercato."""
+    return bool(it.get("supercar")) and int(it.get("prezzo") or 0) >= g.sc_senza_margine_da
 
 
 def margine(it: dict):
@@ -192,6 +200,8 @@ def r_valutata(it, g: Regole):
         return "senza_valutazione"
     if pv.get("categoria") == "dati_insufficienti":
         return "dati_insufficienti"
+    if super_senza_margine(it, g) and pv.get("M") is not None and it.get("prezzo"):
+        return None
     if pv.get("margine") is None or pv.get("M") is None or (pv.get("R_finale") is None and pv.get("R") is None):
         return "senza_margine"
     if not it.get("prezzo"):
@@ -219,6 +229,8 @@ def r_km(it, g):
 
 
 def r_telefono(it, g):
+    if it.get("supercar"):
+        return None             # 4/11 pom.: super in tutta Europa, si contattano dall'annuncio
     if it.get("fonte") == "Facebook Marketplace":
         return None if g.fb_sito else "facebook_spento"
     return None if _r(it).get("tel") else "senza_numero"
@@ -416,6 +428,9 @@ def r_truffa(it, g):
 
 def r_margine_minimo(it, g):
     m, p = margine(it), int(it.get("prezzo") or 0)
+    if super_senza_margine(it, g):
+        M = (it.get("pv") or {}).get("M")
+        return None if M and p <= int(M) else "supercar_sopra_mercato"
     if m is None or m <= 0:
         return "margine_nullo"
     if it.get("supercar"):

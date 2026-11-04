@@ -271,3 +271,27 @@ WHERE s.categoria = 'opportunita' AND s.computed_at > now() - interval '2 days'
 ORDER BY s.margine DESC
 LIMIT %(lim)s
 """
+
+
+# 4/11 pomeriggio (cliente): "almeno 100 super da 100k in su in tutta Europa"; da SC_SENZA_MARGINE_DA (300.000 €) in su
+# non serve il margine, basta un buon prezzo rispetto al mercato (prezzo <= M); sotto quella cifra serve il margine.
+# Prima gli affari migliori: ordinate per sconto sulla mediana dei confronti europei.
+SUPER_SQL = """
+SELECT s.listing_id, s.m, s.r, s.n, s.margine, s.costi, s.paese
+FROM supercar_eu s JOIN listings l ON l.id = s.listing_id
+WHERE s.computed_at > now() - interval '4 days' AND l.status = 'attivo' AND l.seller_type = 'privato'
+  AND s.categoria IN ('opportunita', 'non_conveniente')
+  AND l.price_eur >= %(min)s AND s.m IS NOT NULL AND s.r IS NOT NULL AND s.n >= %(nmin)s
+  AND ((l.price_eur >= %(senza)s AND s.m >= l.price_eur) OR (s.margine IS NOT NULL AND s.margine > 0))
+ORDER BY (s.m - l.price_eur)::float / s.m DESC
+LIMIT %(lim)s
+"""
+
+
+def super_params() -> dict:
+    return {"min": int(os.environ.get("SC_SUPER_MIN", "100000")), "senza": senza_margine_da(),
+            "nmin": int(os.environ.get("SC_SUPER_NMIN", "5")), "lim": int(os.environ.get("SC_SUPER_QUANTE", "1500"))}
+
+
+def senza_margine_da() -> int:
+    return int(os.environ.get("SC_SENZA_MARGINE_DA", "300000"))

@@ -121,7 +121,7 @@ function filtered(over){
   const s = Object.assign({}, S, over || {});
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
   const sec = s.sezione || sezioneDi(S.route), inc = sec === "incidentate", eco = sec === "economiche", sc = sec === "supercar";
-  return ordinaLista(Object.assign({}, s, {eco}), (S.cars || []).filter(c => sc ? !!c.supercar : !c.supercar && (eco ? !!c.economica : (!inc && c.vetrina != null) || (!c.economica && !!c.incidentata === inc))).map(c => Object.assign({}, c, numeri(c)))
+  return ordinaLista(Object.assign({}, s, {eco, sc}), (S.cars || []).filter(c => sc ? !!c.supercar : !c.supercar && (eco ? !!c.economica : (!inc && c.vetrina != null) || (!c.economica && !!c.incidentata === inc))).map(c => Object.assign({}, c, numeri(c)))
     .filter(c => eco || c.pv || c.gain >= (c.soglia_min != null ? Math.min(c.soglia_min, sogliaDi(c.prezzo)) : sogliaDi(c.prezzo)))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
@@ -150,7 +150,10 @@ const MARCHE_2 = ["renault","peugeot","ford","opel","citro","dacia","jeep","kia"
 const gruppoMarca = c => { const m = String(c.marca || c.nome || "").toLowerCase();
   return MARCHE_1.some(x => m.startsWith(x)) ? 0 : MARCHE_2.some(x => m.startsWith(x)) ? 1 : 2; };
 const perPct = (a, b) => (gruppoMarca(a) - gruppoMarca(b)) || (rendePct(b) - rendePct(a)) || (b.gainMax - a.gainMax);
+/* 4/11 pom. (cliente): supercar, prima gli affari col prezzo migliore rispetto al mercato */
+const scontoM = c => c.pv && c.pv.M ? (c.pv.M - c.prezzo) / c.pv.M : -1;
 function ordinaLista(s, arr){
+  if (s.sc && s.sort === "guadagno") return arr.slice().sort((a, b) => scontoM(b) - scontoM(a)).map(c => Object.assign(c, {_grp: "all"}));
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
   if (s.sort === "guadagno") {
@@ -321,7 +324,7 @@ function viewList(){
       <label class="qsel ${S.raggio ? "on" : ""}"><span class="sr">Distanza</span><select id="q-raggio">${opts(DIST_STEPS.map(v => [v, "Entro " + v + " km"]), S.raggio || "", "Distanza")}</select></label>
     </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
-  return header(scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", scV ? `${list.length} supercar di privati in tutta Europa` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
+  return header(scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
   <main class="list" aria-live="polite">${!scV && !incV && !ecoV ? venduteBanner() : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;

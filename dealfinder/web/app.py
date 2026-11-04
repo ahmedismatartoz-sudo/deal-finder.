@@ -1130,6 +1130,57 @@ def _supercar_lusso(gia: set, opens: dict, stats=None) -> list:
     return out
 
 
+def _supercar_super(gia: set, opens: dict, stats=None) -> list:
+    """4/11 pomeriggio (cliente): "almeno 100 super da 100k in su in tutta Europa". Auto di privati da SC_SUPER_MIN
+    (100.000 €) negli 8 paesi AutoScout24, prima gli affari col prezzo migliore rispetto al mercato. Da
+    SC_SENZA_MARGINE_DA (300.000 €) in su basta il prezzo sotto il mercato (margine non richiesto, mostrato lo sconto
+    sulla media); sotto quella cifra il margine minimo e il controllo AI li decide sito_regole come sempre."""
+    if os.environ.get("SC_SUPER", "1") != "1":
+        return []
+    from collections import Counter
+    from ..ai import supercar_vero as SV
+    from ..pipeline.supercar_eu import SUPER_SQL, super_params, senza_margine_da
+    out, scarti = [], Counter()
+    try:
+        with connect() as conn:
+            if not conn.execute("SELECT to_regclass('supercar_eu') AS t").fetchone()["t"]:
+                return []
+            val = {r["listing_id"]: r for r in conn.execute(SUPER_SQL, super_params()).fetchall()}
+            if not val:
+                return []
+            rows, desc, controllo = _supercar_righe(conn, val)
+        senza = senza_margine_da()
+        for r in rows:
+            if r["id"] in gia:
+                continue
+            v = dict(val[r["id"]])
+            prezzo = int(r.get("price_eur") or 0)
+            motivo, corr = SV.filtra(dict(r, description=desc.get(r["id"])), v, int(r.get("n_photos") or 0),
+                                     **SV.soglie_super(prezzo))
+            if motivo:
+                scarti[motivo] += 1
+                continue
+            it = _supercar_item(r, v, corr, controllo, lusso=prezzo >= 150000)
+            if not it:
+                continue
+            M = int(v["m"])
+            if prezzo >= senza:
+                pv = dict(it["pv"], sconto_pct=max(0, round((M - prezzo) / M * 100)), senza_margine=True,
+                          etichetta="Supercar Europa · prezzo sotto il mercato")
+                if int(corr.get("margine") or 0) <= 0:
+                    pv["margine"] = None                   # nessun margine promesso: si mostra lo sconto sulla media
+                it["pv"] = pv
+            out.append(it)
+            gia.add(it["id"])
+            opens[it["id"]] = int(r["opens"] or 0)
+    except Exception as ex:
+        logging.getLogger("scovo").warning("SUPERCAR_SUPER non caricate: %s", str(ex)[:200])
+    if stats is not None:
+        stats.update({"super:" + k: v for k, v in scarti.items()})
+        stats["super_caricate"] += len(out)
+    return out
+
+
 _dump_fatto = {"t": 0.0}
 
 
@@ -1325,8 +1376,11 @@ def _carica_candidati() -> tuple[list[dict], dict, dict]:
         except Exception as e:
             logging.getLogger("scovo").warning("economiche non caricate: %s", str(e)[:200])
     # 28/10 sera (cliente): supercar da 70.000 € in tutta Europa (valutate sui confronti europei, vedi supercar_eu.py)
+    # 4/11 pomeriggio: prima le super da 100.000 € in su (da 300.000 € senza obbligo di margine), poi le altre
+    items += _supercar_super(gia, opens, stats)
     items += _supercar_europa(gia, opens, stats)
-    items += _supercar_lusso(gia, opens, stats)
+    if os.environ.get("SC_SUPER", "1") != "1":
+        items += _supercar_lusso(gia, opens, stats)
     _arricchisci(items, pv_at, stats)
     return items, opens, dict(stats)
 

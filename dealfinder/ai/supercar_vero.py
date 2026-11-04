@@ -113,16 +113,26 @@ def controlla(conn, r: dict, foto: list[str]) -> dict | None:
     return {"ok": ok, "motivo": motivo}
 
 
+def soglie_super(prezzo: int) -> dict:
+    """4/11 (cliente): regole fisse per la sezione Super. Da SC_SENZA_MARGINE_DA in su il margine non conta (basta il
+    prezzo sotto il mercato, deciso dalla query); sotto, un margine positivo (il minimo vero lo decide sito_regole)."""
+    from ..pipeline.supercar_eu import senza_margine_da
+    return {"minimo": -10**9 if prezzo >= senza_margine_da() else 1, "nmin": int(os.environ.get("SC_SUPER_NMIN", "5"))}
+
+
 def giro(limite: int = 400) -> dict:
     """Controlla con l'AI le supercar che passano le regole fisse e non sono ancora controllate."""
     from collections import Counter
     from ..db import connect
-    from ..pipeline.supercar_eu import SITO_SQL
+    from ..pipeline.supercar_eu import SITO_SQL, SUPER_SQL, super_params
     st = Counter()
     with connect() as conn:
         if not conn.execute("SELECT to_regclass('supercar_eu') AS t").fetchone()["t"]:
             return dict(st)
         val = {x["listing_id"]: x for x in conn.execute(SITO_SQL, {"lim": limite}).fetchall()}
+        # 4/11: anche le super da 100.000 € in su della sezione Super (da 300.000 € senza obbligo di margine)
+        sup = {x["listing_id"]: x for x in conn.execute(SUPER_SQL, super_params()).fetchall() if x["listing_id"] not in val}
+        val.update(sup)
         if not val:
             return dict(st)
         rows = conn.execute("""SELECT id, title, version_raw, description, price_eur, year, mileage_km, region, province
@@ -133,7 +143,10 @@ def giro(limite: int = 400) -> dict:
             foto.setdefault(p["listing_id"], []).append(p["source_url"])
         for r in rows:
             r = dict(r)
-            motivo, _ = filtra(r, val[r["id"]], len(foto.get(r["id"], [])))
+            if r["id"] in sup:
+                motivo, _ = filtra(r, val[r["id"]], len(foto.get(r["id"], [])), **soglie_super(int(r["price_eur"])))
+            else:
+                motivo, _ = filtra(r, val[r["id"]], len(foto.get(r["id"], [])))
             if motivo:
                 st[motivo] += 1
                 continue
