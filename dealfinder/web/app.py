@@ -4218,6 +4218,10 @@ def _tempo_reale():
         else:
             L.warning("NUOVI_ZONA lista non caricata: niente")
             return
+        from datetime import datetime as _dt
+        da = _dt.fromisoformat(os.environ.get("NUOVI_ZONA_CARICA_DA", "2026-11-05T08:30:00+01:00"))
+        while _dt.now(da.tzinfo) < da:                         # 4/11: il cliente libera posto in Brevo stanotte: si
+            time.sleep(60)                                     # carica la mattina, con il posto che c'è a quell'ora
         try:
             from ..pipeline.ciclo import _una_volta
             if not _una_volta(f"nuovi_zona_invio:{tag}"):
