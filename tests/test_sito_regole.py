@@ -117,7 +117,7 @@ def test_tabella_truffa():
     j = lambda p, **k: dict({"truffa": p}, **k)
     out, _ = SR.elenco_sito([auto(1, jev=j(0.3)), auto(2, jev=j(0.6)), auto(3, jev=j(0.9)), auto(4)], G,
                             scrivi_log=False)
-    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, False), (2, True), (4, False)]
+    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, False), (4, False)]      # 4/11: da verificare = fuori
     # segnali duri: fuori anche con probabilità bassa
     assert ids([auto(5, jev=j(0.1, foto_internet=0.8))]) == []
     assert ids([auto(6, prezzo=3000, M=7000, margine=s, jev=j(0.1))]) == []                # 43% del mercato
@@ -133,7 +133,12 @@ def test_tabella_truffa():
     alto = dict(prezzo=3500, M=7500, margine=4500)
     assert ids([auto(11, **alto)]) == []                                                   # Jev non ha deciso
     out, _ = SR.elenco_sito([auto(12, jev=j(0.45), **alto), auto(13, jev=j(0.76), **alto)], G, scrivi_log=False)
-    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(12, True)]
+    assert [it["id"] for it in out] == []                                                  # 47% del mercato: troppo bella
+    # 4/11 troppo belle per essere vere: recenti sotto il 70%, tutte sotto il 60% (da 3.000 € in su)
+    assert ids([auto(17, prezzo=13000, M=21900, margine=8900, anno=2024, jev=j(0.1))]) == []      # la Yaris GR
+    assert ids([auto(18, prezzo=13000, M=17000, margine=4000, anno=2024, jev=j(0.1))]) == [18]    # 76%
+    assert ids([auto(19, prezzo=6000, M=9000, margine=3000, anno=2012, jev=j(0.1))]) == [19]      # 67%, vecchia
+    assert ids([auto(20, prezzo=5000, M=9000, margine=4000, anno=2012, jev=j(0.1))]) == []        # 56%
     # decisioni Jev non lette: le auto da verificare e quelle con margine molto alto restano fuori
     assert ids([auto(14, _r={"jev_errore": True, "da_verificare": True}), auto(15, _r={"jev_errore": True}, **alto),
                 auto(16, _r={"jev_errore": True})]) == [16]
