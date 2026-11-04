@@ -4090,6 +4090,59 @@ def _tempo_reale():
             L.warning("SENZA_EMAIL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_senza_email, daemon=True, name="senza_email").start()
 
+    def esporta_sportive():
+        """4/11 sera (cliente: "prova con gente che tratta solo macchine sportive, che compra qua in Italia, non troppo
+        grossa"): saloni AutoScout24 delle province della zona con la maggior parte delle auto in vendita di marche
+        sportive e un parco piccolo-medio (SPORT_AUTO_MIN-SPORT_AUTO_MAX auto), con telefono ed email aziendali se li
+        abbiamo. Una volta per etichetta (SPORTIVE, di serie "4-11"). Righe in lead_consegne tipo SPORTIVE
+        (/api/admin/lead.csv?tipo=SPORTIVE). Niente invii."""
+        tag = os.environ.get("SPORTIVE", "4-11")
+        if not tag or tag == "0":
+            return
+        time.sleep(int(os.environ.get("SPORTIVE_RITARDO_S", "100")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _due(f"sportive:{tag}", 100000):
+                return
+            from ..db import log_job
+            from ..marketing.consegne import consegna
+            from ..pipeline.lead_comuni import prov_zona
+            marche = ("porsche", "ferrari", "lamborghini", "maserati", "aston", "mclaren", "bentley", "rolls",
+                      "lotus", "alpine", "jaguar", "abarth", "alfa romeo")
+            amin, amax = int(os.environ.get("SPORT_AUTO_MIN", "4")), int(os.environ.get("SPORT_AUTO_MAX", "40"))
+            quota = float(os.environ.get("SPORT_QUOTA", "0.5"))
+            with connect() as conn:
+                fine = log_job(conn, f"sportive:{tag}")
+                rows = conn.execute(
+                    "SELECT d.chiave, d.nome, d.comune, d.prov, d.cell, e.email, e.sito, "
+                    "count(a.*) AS auto, "
+                    "count(*) FILTER (WHERE lower(coalesce(a.marca, '')) LIKE ANY(%s)) AS sportive, "
+                    "percentile_cont(0.5) WITHIN GROUP (ORDER BY a.prezzo) AS mediana, "
+                    "string_agg(DISTINCT lower(a.marca), ', ') AS marche "
+                    "FROM lead_tutti_dealer d JOIN lead_tutti_ann a ON a.chiave = d.chiave "
+                    "LEFT JOIN lead_email e ON e.chiave = d.chiave "
+                    "WHERE d.chiave NOT LIKE 'subito%%' AND upper(d.prov) = ANY(%s) "
+                    "GROUP BY d.chiave, d.nome, d.comune, d.prov, d.cell, e.email, e.sito",
+                    ([m + "%" for m in marche], sorted(prov_zona()))).fetchall()
+                tenuti = 0
+                for r in rows:
+                    n, sp = int(r["auto"] or 0), int(r["sportive"] or 0)
+                    if not (amin <= n <= amax) or sp < quota * n:
+                        continue
+                    tenuti += 1
+                    consegna("SPORTIVE", {"nome": r["nome"], "comune": r["comune"], "prov": r["prov"],
+                                          "auto": n, "sportive": sp, "quota_sportive": round(sp / n, 2),
+                                          "prezzo_mediano": int(r["mediana"]) if r["mediana"] else None,
+                                          "marche": r["marche"], "telefoni": list(r["cell"] or []),
+                                          "email": list(r["email"] or []), "sito": r["sito"],
+                                          "pagina_autoscout": r["chiave"]})
+                L.warning("SPORTIVE_FINE %d saloni di sportive piccoli-medi su %d", tenuti, len(rows))
+                fine(True, {"saloni": tenuti})
+        except Exception as e:
+            L.warning("SPORTIVE non riuscito: %s", str(e)[:300])
+    threading.Thread(target=esporta_sportive, daemon=True, name="sportive").start()
+
     def lead_zona_100km():
         """4/11 pom. (cliente: "raccogliere altro qua a Milano e recuperare le loro email, Milano Bergamo Varese ecc.,
         persone nuove, non doppioni"): una volta (LEAD_ZONA, di serie "4-11"): i saloni NUOVI dell'elenco AutoScout24
