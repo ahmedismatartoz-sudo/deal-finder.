@@ -4049,6 +4049,47 @@ def _tempo_reale():
             L.warning("ESPORTA_EMAIL non riuscito: %s", str(e)[:300])
     threading.Thread(target=esporta_email, daemon=True, name="esporta_email").start()
 
+    def esporta_senza_email():
+        """4/11 pom. (cliente: "voglio gente che c'è già su AutoScout, prendere le loro email"): i saloni di AutoScout24
+        della zona (12 province entro 100 km da Milano) di cui non abbiamo l'email, con la loro pagina AutoScout24,
+        per cercare a mano/con l'agente il loro sito. Una volta per etichetta (SENZA_EMAIL, di serie "4-11").
+        Righe in lead_consegne tipo SENZA_EMAIL (da /api/admin/lead.csv?tipo=SENZA_EMAIL), nei log solo il conteggio."""
+        tag = os.environ.get("SENZA_EMAIL", "4-11")
+        if not tag or tag == "0":
+            return
+        time.sleep(int(os.environ.get("SENZA_EMAIL_RITARDO_S", "90")))
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due, _una_volta  # noqa: F401
+            if not _due(f"senza_email:{tag}", 100000):
+                return
+            from ..db import log_job
+            from ..marketing.consegne import consegna
+            from ..pipeline.lead_email import _fascia
+            from .sito_regole import PROVINCE_100KM
+            with connect() as conn:
+                fine = log_job(conn, f"senza_email:{tag}")
+                rows = conn.execute(
+                    "SELECT d.chiave, d.nome, d.comune, d.prov FROM lead_tutti_dealer d "
+                    "LEFT JOIN lead_email e ON e.chiave = d.chiave "
+                    "WHERE d.chiave NOT LIKE 'subito%%' AND upper(d.prov) = ANY(%s) AND coalesce(d.nome, '') <> '' "
+                    "AND (e.chiave IS NULL OR cardinality(e.email) = 0) ORDER BY d.prov, d.comune, d.nome",
+                    (sorted(PROVINCE_100KM),)).fetchall()
+                ann: dict = {}
+                for r in conn.execute("SELECT chiave, prezzo FROM lead_tutti_ann WHERE chiave = ANY(%s)",
+                                      ([r["chiave"] for r in rows],)).fetchall():
+                    ann.setdefault(r["chiave"], []).append(r["prezzo"])
+                for r in rows:
+                    fascia, med = _fascia(ann.get(r["chiave"], []))
+                    consegna("SENZA_EMAIL", {"nome": r["nome"], "comune": r["comune"], "prov": r["prov"],
+                                             "pagina_autoscout": r["chiave"], "auto": len(ann.get(r["chiave"], [])),
+                                             "fascia": fascia, "prezzo_mediano": med})
+                L.warning("SENZA_EMAIL_FINE %d saloni AutoScout24 della zona senza email", len(rows))
+                fine(True, {"saloni": len(rows)})
+        except Exception as e:
+            L.warning("SENZA_EMAIL non riuscito: %s", str(e)[:300])
+    threading.Thread(target=esporta_senza_email, daemon=True, name="senza_email").start()
+
     def esporta_tel():
         """2/11 (cliente: "dammi la mega lista dei numeri + i nuovi + quelli di Google Maps di ieri"): numeri AZIENDALI
         dei commercianti (Google Maps lead_maps, AutoScout24/Subito lead_tutti_dealer, commercianti_as24), una volta
