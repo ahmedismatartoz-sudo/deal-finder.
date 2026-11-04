@@ -144,12 +144,11 @@ class Regole:
     rapporto_duro: float = 0.45       # prezzo sotto il 45% del mercato senza danni dichiarati: segnale duro
     rapporto_duro_basse: float = 0.35
     rapporto_basse_sotto: int = 3000
-    # 4/11 (cliente: "togli le auto troppo belle per essere vere, sono truffe")
-    troppo_bella: float = 0.60        # prezzo sotto il 60% del mercato: fuori
-    troppo_bella_recenti: float = 0.70  # auto recenti (dal 2018) sotto il 70% del mercato: fuori
-    troppo_bella_anno: int = 2018
-    avviso_fuori: bool = True         # auto con segnali da verificare (AI truffa ≥ 0,5): fuori, non più col cartello...
-    avviso_prezzo_normale: float = 0.80  # ...tranne se il prezzo è normale (almeno l'80% del mercato): restano col cartello
+    # 4/11 (cliente): sconto massimo 40% sul mercato; più è scontata più va controllata, e conta la cifra in euro
+    # più della percentuale (le auto piccole hanno di solito sconti grandi in %, le fasce alte vanno guardate di più)
+    sconto_max: float = 0.40          # oltre il 40% di sconto: fuori (da 3.000 € in su)
+    sconto_euro: tuple = ((5000, 10**9), (10000, 4000), (20000, 5000), (35000, 6000), (10**9, 8000))  # (prezzo fino a, sconto € oltre cui serve l'AI pulita)
+    ai_pulita: float = 0.30           # sopra la soglia in euro resta solo se l'AI ha deciso e la truffa è sotto 0,30
     alto_euro: int = 3000             # margine molto alto: oltre 3.000 € E oltre il 100% del prezzo
     alto_pct: float = 1.0
     # 4/11 00:20: correzione misurata prezzo CHIESTO -> prezzo VENDUTO, per le auto il cui mercato M viene dalla
@@ -358,15 +357,22 @@ def segnali_duri(it, g: Regole) -> list[str]:
         out.append("prezzo_troppo_basso")
     elif M and not danno and not it.get("supercar") and p >= g.rapporto_basse_sotto:   # sotto 3.000 € il minimo
         # di 1.500 € impone già sconti forti: lì vale solo il 35%
-        anno = int(it.get("anno") or _r(it).get("anno") or 0)
-        lim2 = g.troppo_bella_recenti if anno >= g.troppo_bella_anno else g.troppo_bella
-        if p < lim2 * float(M):
+        if p < (1 - g.sconto_max) * float(M):
             out.append("troppo_bella")
     if r.get("testo_truffa"):
         out.append("testo_pagamento_estero")
     if r.get("tel_estero"):
         out.append("numero_estero")
     return out
+
+
+def sconto_da_controllare(it, g: Regole) -> bool:
+    """Sconto in euro oltre il limite della fascia di prezzo (supercar e incidentate escluse)."""
+    M, p = float((it.get("pv") or {}).get("M") or 0), float(it.get("prezzo") or 0)
+    if not M or it.get("supercar") or it.get("incidentata"):
+        return False
+    lim = next(e for fino, e in g.sconto_euro if p < fino)
+    return (M - p) > lim
 
 
 def esito_truffa(it, g: Regole) -> tuple[str, str]:
@@ -392,10 +398,11 @@ def esito_truffa(it, g: Regole) -> tuple[str, str]:
         return "tieni", ""
     if p >= g.truffa_fuori - meno:
         return "fuori", "truffa_probabile"
+    controllo = sconto_da_controllare(it, g)
+    if controllo and (not j or p >= g.ai_pulita):
+        return "fuori", "sconto_alto_da_controllare"
     if p >= g.truffa_avviso - meno:
-        M = float((it.get("pv") or {}).get("M") or 0)
-        normale = M > 0 and float(it.get("prezzo") or 0) >= g.avviso_prezzo_normale * M
-        return ("fuori" if g.avviso_fuori and not normale else "avviso"), "truffa_da_verificare"
+        return "avviso", "truffa_da_verificare"
     return "tieni", ""
 
 

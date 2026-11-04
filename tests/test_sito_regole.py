@@ -117,9 +117,7 @@ def test_tabella_truffa():
     j = lambda p, **k: dict({"truffa": p}, **k)
     out, _ = SR.elenco_sito([auto(1, jev=j(0.3)), auto(2, jev=j(0.6)), auto(3, jev=j(0.9)), auto(4)], G,
                             scrivi_log=False)
-    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, False), (4, False)]      # 4/11: da verificare = fuori
-    out, _ = SR.elenco_sito([auto(21, prezzo=8000, M=9600, margine=1800, jev=j(0.6))], G, scrivi_log=False)
-    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(21, True)]                 # ...se il prezzo è normale resta
+    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, False), (2, True), (4, False)]
     # segnali duri: fuori anche con probabilità bassa
     assert ids([auto(5, jev=j(0.1, foto_internet=0.8))]) == []
     assert ids([auto(6, prezzo=3000, M=7000, margine=s, jev=j(0.1))]) == []                # 43% del mercato
@@ -136,11 +134,13 @@ def test_tabella_truffa():
     assert ids([auto(11, **alto)]) == []                                                   # Jev non ha deciso
     out, _ = SR.elenco_sito([auto(12, jev=j(0.45), **alto), auto(13, jev=j(0.76), **alto)], G, scrivi_log=False)
     assert [it["id"] for it in out] == []                                                  # 47% del mercato: troppo bella
-    # 4/11 troppo belle per essere vere: recenti sotto il 70%, tutte sotto il 60% (da 3.000 € in su)
-    assert ids([auto(17, prezzo=13000, M=21900, margine=8900, anno=2024, jev=j(0.1))]) == []      # la Yaris GR
-    assert ids([auto(18, prezzo=13000, M=17000, margine=4000, anno=2024, jev=j(0.1))]) == [18]    # 76%
-    assert ids([auto(19, prezzo=6000, M=9000, margine=3000, anno=2012, jev=j(0.1))]) == [19]      # 67%, vecchia
-    assert ids([auto(20, prezzo=5000, M=9000, margine=4000, anno=2012, jev=j(0.1))]) == []        # 56%
+    # 4/11 sconto massimo 40%; oltre il limite in euro della fascia serve l'AI pulita (truffa < 0,30)
+    assert ids([auto(17, prezzo=13000, M=21900, margine=8900, anno=2024, jev=j(0.1))]) == []      # la Yaris GR: 41%
+    assert ids([auto(18, prezzo=4000, M=6500, margine=2500, jev=j(0.4))]) == [18]                # piccola: 38%, sotto 5.000 €
+    assert ids([auto(19, prezzo=12000, M=17500, margine=5500, jev=j(0.1))]) == [19]              # 5.500 € > 5.000 ma AI pulita
+    assert ids([auto(20, prezzo=12000, M=17500, margine=5500, jev=j(0.4))]) == []                # stessa auto, AI dubbia
+    assert ids([auto(22, prezzo=12000, M=17500, margine=5500)]) == []                            # stessa auto, AI non ha deciso
+    assert ids([auto(23, prezzo=12000, M=15500, margine=3500, jev=j(0.6))]) == [23]              # sconto normale: col cartello
     # decisioni Jev non lette: le auto da verificare e quelle con margine molto alto restano fuori
     assert ids([auto(14, _r={"jev_errore": True, "da_verificare": True}), auto(15, _r={"jev_errore": True}, **alto),
                 auto(16, _r={"jev_errore": True})]) == [16]
