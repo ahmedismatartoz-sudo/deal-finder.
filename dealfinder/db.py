@@ -83,7 +83,7 @@ def _applica_con_attesa(conn, f: Path) -> None:
     query lunghe del cron finiscano. Senza limite resta in coda per sempre e, peggio, blocca tutte le letture
     del sito dietro di sé. Con lock_timeout breve si ritira subito e riprova: il sito non si blocca mai."""
     import time as _t
-    tentativi = int(os.environ.get("MIGRAZIONI_TENTATIVI", "60") or 60)
+    tentativi = int(os.environ.get("MIGRAZIONI_TENTATIVI", "15") or 15)
     for i in range(tentativi):
         try:
             conn.execute("SET lock_timeout = '4s'")
@@ -99,7 +99,7 @@ def _applica_con_attesa(conn, f: Path) -> None:
                 raise
             print(f"Migrazione {f.name}: tabella occupata, riprovo ({i + 1}/{tentativi})", flush=True)
             _t.sleep(3)
-    raise RuntimeError(f"Migrazione {f.name}: tabella sempre occupata, rinuncio")
+    raise TabellaOccupata(f"Migrazione {f.name}: tabella sempre occupata, rinuncio per ora")
 
 
 def _chiudi_migrazioni_fantasma(conn) -> int:
@@ -120,6 +120,10 @@ def _chiudi_migrazioni_fantasma(conn) -> int:
         conn.rollback()
         print("MIGRAZIONI: fantasmi non chiusi:", str(e)[:200], flush=True)
         return 0
+
+
+class TabellaOccupata(RuntimeError):
+    """Una migrazione non ha avuto la tabella entro i tentativi: si salta e si riprova più tardi."""
 
 
 class MigrazioniRimandate(RuntimeError):
@@ -149,12 +153,21 @@ def migrate(conn, cartella: Path | None = None, attesa_max: float | None = None)
                      "applied_at TIMESTAMPTZ NOT NULL DEFAULT now())")
         conn.commit()
         done = {r["name"] for r in conn.execute("SELECT name FROM schema_migrations").fetchall()}
-        applied = []
+        applied, occupate = [], []
         for f in sorted((cartella or MIGRATIONS).glob("*.sql")):
             if f.name in done:
                 continue
-            _applica_con_attesa(conn, f)
+            try:
+                _applica_con_attesa(conn, f)
+            except TabellaOccupata:
+                # 4/11: una tabella tenuta a lungo da un lavoro del cron non deve fermare le migrazioni successive
+                # (quelle di stanotte sono indipendenti tra loro); questa si riprova al prossimo giro
+                occupate.append(f.name)
+                continue
             applied.append(f.name)
+        if occupate:
+            print("MIGRAZIONI ancora da fare (tabella occupata):", occupate, "- fatte ora:", applied, flush=True)
+            raise MigrazioniRimandate("tabella occupata per " + ", ".join(occupate))
         return applied
     except Exception:
         conn.rollback()
