@@ -4096,7 +4096,7 @@ def _tempo_reale():
         comune per comune in tutti i comuni di MI, MB, VA, CO, LC, BG, LO, PV (lead_comuni.nuovi_zona),
         poi le loro email (pagina AutoScout24 e sito), poi i saloni della zona ancora senza email in lead_consegne
         (tipo SENZA_EMAIL, etichetta "<tag>-dopo"). Niente invii. Nei log solo conteggi."""
-        tag = os.environ.get("LEAD_ZONA", "4-11-8prov")
+        tag = os.environ.get("LEAD_ZONA", "4-11-tutti-i-comuni")
         if not tag or tag == "0":
             return
         time.sleep(int(os.environ.get("LEAD_ZONA_RITARDO_S", "180")))
