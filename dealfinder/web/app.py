@@ -2989,7 +2989,20 @@ def _tempo_reale():
 
     def brevo_liste():
         """22/10 (cliente): carica una volta in Brevo le 6 liste dei commercianti (data/marketing_gruppi.json)."""
-        if os.environ.get("BREVO_IMPORT_LISTE") != "1":
+        v = os.environ.get("BREVO_IMPORT_LISTE") or ""
+        if v.startswith("rimetti:"):          # 4/11 notte (cliente): "rimetti:<id campagna>" una volta sola
+            time.sleep(30)
+            try:
+                from ..marketing import brevo_liste as bl
+                from ..pipeline.ciclo import _una_volta
+                if _una_volta(f"brevo_rimetti:{v}"):
+                    lg.warning("BREVO_RIMETTI %s", json.dumps(bl.rimetti_e_invia(int(v.split(":")[1]))))
+                else:
+                    lg.warning("BREVO_RIMETTI %s già fatto", v)
+            except Exception as e:
+                lg.warning("BREVO_RIMETTI non riuscito: %s", str(e)[:300])
+            return
+        if v != "1":
             return
         time.sleep(20)
         try:

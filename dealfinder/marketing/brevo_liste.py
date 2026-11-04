@@ -259,3 +259,91 @@ def campagne(elenco=None) -> None:
                 continue
             s = c.post(f"{API}/emailCampaigns/{cid}/sendNow")
             lg.warning("BREVO_CAMPAGNA %s id=%s lista=%s invio=%s %s", gruppo, cid, lid, s.status_code, s.text[:200])
+
+
+# ---------- 4/11 notte (cliente): rimettere i contatti vecchi e mandare la campagna con gli esempi ----------
+import re as _re
+
+_EMAIL_OK = _re.compile(r"^[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}$")
+_NON_EMAIL = _re.compile(r"(\.(png|jpe?g|gif|webp|avif|svg|bmp)$)|@2x", _re.I)
+LISTA_RIMESSI = "Skovo contatti vecchi rimessi 04-11"
+TETTO_BREVO = 1495                       # regola: meno di 1.500 contatti in Brevo
+
+
+def scegli_rimessi(emails, bloccati: set, gia_in_brevo: set, posto: int) -> list[str]:
+    """Contatti vecchi da rimettere: email valide, mai disiscritti/bloccati (impronte), mai Loconte, senza doppioni,
+    entro il posto libero in Brevo. Funzione pura (test in tests/test_brevo_rimessi.py)."""
+    from .invii import impronta, norm_email
+    out, visti = [], set()
+    for e in emails:
+        e = norm_email(e)
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e:
+            continue
+        if impronta(e) in bloccati:
+            continue
+        visti.add(e)
+        if e not in gia_in_brevo:
+            out.append(e)
+    return out[:max(0, posto)]
+
+
+BLOCCATI_MINIMI = 158                    # nell'esportazione del 1/11 i disiscritti/bloccati erano 158
+
+
+def rimetti_e_invia(campagna_id: int) -> dict:
+    """Rimette in una lista nuova i commercianti già caricati in Brevo in passato (tabella brevo_inviati) che il
+    cliente ha cancellato da Brevo, tranne disiscritti e bloccati, poi manda la campagna `campagna_id` a quella lista.
+    Una volta sola (ciclo._una_volta). Nei log solo conteggi."""
+    import time as _t
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn)
+            vecchi = [r["email"] for r in conn.execute("SELECT email FROM brevo_inviati ORDER BY email").fetchall()]
+        in_brevo = {(x.get("email") or "").lower() for x in contatti}
+        buoni = scegli_rimessi(vecchi, bloccati, in_brevo, TETTO_BREVO - len(in_brevo))
+        esito = {"vecchi": len(vecchi), "in_brevo": len(in_brevo), "da_rimettere": len(buoni), "disiscritti": len(bloccati)}
+        if len(bloccati) < BLOCCATI_MINIMI:          # elenco dei disiscritti incompleto: si rischia di riscrivere a chi
+            esito["fermo"] = "disiscritti_incompleti"  # ha chiesto di non ricevere più email -> niente invio
+            return esito
+        if not buoni:
+            return esito
+        lid = _liste(c).get(LISTA_RIMESSI)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": LISTA_RIMESSI, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        r = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in buoni], "listIds": [lid],
+                                                   "updateExistingContacts": True, "emptyContactsAttributes": False})
+        esito["import"] = r.status_code
+        if r.status_code >= 300:
+            return esito
+        with connect() as conn:
+            for e in buoni:
+                conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+            conn.commit()
+        n = 0
+        for _ in range(40):                                  # Brevo importa in differita: si aspetta la lista piena
+            _t.sleep(15)
+            n = int((c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers") or 0)
+            if n >= 0.9 * len(buoni):
+                break
+        esito["nella_lista"] = n
+        if n == 0:
+            return esito
+        r = c.put(f"{API}/emailCampaigns/{campagna_id}", json={"recipients": {"listIds": [lid]}})
+        esito["destinatari"] = r.status_code
+        if r.status_code >= 300:
+            return esito
+        s = c.post(f"{API}/emailCampaigns/{campagna_id}/sendNow")
+        esito["invio"] = s.status_code
+        return esito
