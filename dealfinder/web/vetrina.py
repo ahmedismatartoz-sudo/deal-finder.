@@ -162,9 +162,11 @@ async def api_vetrina(request):
 def _preriscalda():
     """30/10: legge subito all'avvio le vetrine in VETRINA_PRERISCALDA (così la cache è pronta e i log mostrano le foto)."""
     time.sleep(20)
-    for slug in [s.strip() for s in (os.environ.get("VETRINA_PRERISCALDA") or "").split(",") if s.strip()]:
+    for slug in [s.strip() for s in (os.environ.get("VETRINA_PRERISCALDA") or "").split(",") if s.strip()] + ["astro-srl-milano-mi"]:
         try:
             _cache[slug] = {"t": time.time(), "auto": _leggi_uno(slug)}
+            log.warning("VETRINA_ELENCO %s %s", slug, [(a.get("titolo"), a.get("prezzo"), a.get("anno"), a.get("km"),
+                        a.get("carburante"), len(a.get("foto") or [])) for a in _cache[slug]["auto"]][:40])
         except Exception as e:
             log.warning("VETRINA preriscaldo %s: %s", slug, str(e)[:200])
 
