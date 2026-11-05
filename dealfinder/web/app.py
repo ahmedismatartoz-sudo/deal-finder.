@@ -2258,6 +2258,18 @@ def vetrina_pagina(request: Request):
     return FileResponse(f, media_type="text/html; charset=utf-8", headers={"cache-control": "public, max-age=600"})
 
 
+def vetrina_js(request: Request):
+    """5/11: three.js servito dal nostro dominio per i siti vetrina 3D (il CDN su iPhone era lento)."""
+    nome, p = request.path_params["nome"], request.path_params["p"]
+    if not re.fullmatch(r"[a-z0-9-]{2,40}", nome) or ".." in p or not re.fullmatch(r"[A-Za-z0-9_./-]{2,120}\.(js|json)", p):
+        return Response("non trovato", status_code=404)
+    f = Path(__file__).resolve().parents[2] / "data" / "vetrine" / nome / "js" / p
+    if not f.is_file():
+        return Response("non trovato", status_code=404)
+    tipo = "text/javascript; charset=utf-8" if p.endswith(".js") else "application/json"
+    return FileResponse(f, media_type=tipo, headers={"cache-control": "public, max-age=604800", "Access-Control-Allow-Origin": "*"})
+
+
 def robots(request: Request):
     from . import seo
     return Response("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /gestione\nDisallow: /auth/\n"
@@ -2446,6 +2458,7 @@ routes = [
     Route("/manifest.webmanifest", manifest),
     Route("/robots.txt", robots),
     Route("/vetrina/{nome}", vetrina),
+    Route("/vetrina/{nome}/js/{p:path}", vetrina_js),
     Route("/vetrina/{nome}/{pagina}", vetrina_pagina),
     Route("/auto-usate/{citta}", seo_citta),
     Route("/guide/{guida}", seo_guida),
