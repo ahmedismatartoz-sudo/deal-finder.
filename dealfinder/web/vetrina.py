@@ -68,7 +68,15 @@ def leggi(slug: str) -> list:
                 log.warning("VETRINA %s pagina %d: HTTP %s", slug, pag, r.status_code)
                 break
             nuovi = 0
-            for it in _annunci(next_data(r.text) or {}):
+            lista = _annunci(next_data(r.text) or {})
+            if lista and slug == "astro-srl-milano-mi" and pag == 1:
+                import json as _j
+                from ..collectors.autoscout import _senza_telefoni
+                x = _senza_telefoni(lista[0])
+                log.warning("VETRINA_DEBUG chiavi=%s price=%s tracking=%s dettagli=%s veicolo=%s", list(x)[:40],
+                            _j.dumps(x.get("price"), ensure_ascii=False)[:400], _j.dumps(x.get("tracking"), ensure_ascii=False)[:400],
+                            _j.dumps(x.get("vehicleDetails"), ensure_ascii=False)[:800], _j.dumps(x.get("vehicle"), ensure_ascii=False)[:600])
+            for it in lista:
                 a = _auto(it)
                 if a and a["id"] not in visti:
                     visti.add(a["id"]); out.append(a); nuovi += 1
