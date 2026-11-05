@@ -4210,6 +4210,61 @@ def _tempo_reale():
             L.warning("ZONA_MAI_USATE non riuscito: %s", str(e)[:300])
     threading.Thread(target=zona_mai_usate, daemon=True, name="zona_mai_usate").start()
 
+    def tutte_mai_usate():
+        """5/11 (cliente: "a me servono le email nuove"): come ZONA_MAI_USATE ma su TUTTE le email raccolte (tutte le
+        fonti e tutte le province, non solo gli 8 capoluoghi): quante non sono MAI state caricate in Brevo e non sono
+        disiscritte, niente PEC né Loconte. Nei log solo conteggi; righe in lead_consegne (tipo TUTTE_MAI_USATE)."""
+        tag = "5-11"
+        time.sleep(100)
+        L = logging.getLogger("scovo")
+        try:
+            from ..pipeline.ciclo import _due
+            if not _due(f"tutte_mai_usate:{tag}", 100000):
+                return
+            from collections import Counter
+            from ..db import log_job
+            from ..marketing import invii as INV
+            from ..marketing.consegne import consegna
+            from ..pipeline.lead_comuni import prov_zona
+            zona = prov_zona()
+            with connect() as conn:
+                fine = log_job(conn, f"tutte_mai_usate:{tag}")
+                try:
+                    in_brevo = {INV.norm_email(r["email"]) for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+                except Exception:
+                    conn.rollback()
+                    in_brevo = set()
+                try:
+                    via = INV.disiscritti(conn)
+                except Exception:
+                    conn.rollback()
+                    via = set()
+                rows = conn.execute(
+                    "SELECT e.email, e.sito, e.chiave, d.nome, d.comune, d.prov FROM lead_email e "
+                    "LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave WHERE cardinality(e.email) > 0").fetchall()
+                tot, mai, visti = Counter(), Counter(), set()
+                for r in rows:
+                    pv = (r.get("prov") or "?").upper()[:2]
+                    for em in r["email"] or []:
+                        em = INV.norm_email(em)
+                        if not em or em in visti or "loconte" in em or "pec" in em.split("@")[-1] or "legalmail" in em:
+                            continue
+                        visti.add(em)
+                        tot[pv] += 1
+                        if em in in_brevo or INV.impronta(em) in via:
+                            continue
+                        mai[pv] += 1
+                        consegna("TUTTE_MAI_USATE", {"email": em, "nome": r.get("nome"), "comune": r.get("comune"),
+                                                     "prov": pv, "zona": pv in zona, "sito": r.get("sito"),
+                                                     "chiave": r.get("chiave")})
+                L.warning("TUTTE_MAI_USATE_FINE email %d, mai caricate in Brevo e non disiscritte %d (in zona %d); "
+                          "per provincia mai %s", sum(tot.values()), sum(mai.values()),
+                          sum(v for k, v in mai.items() if k in zona), dict(mai.most_common(30)))
+                fine(True, {"tutte": sum(tot.values()), "mai_usate": sum(mai.values())})
+        except Exception as e:
+            L.warning("TUTTE_MAI_USATE non riuscito: %s", str(e)[:300])
+    threading.Thread(target=tutte_mai_usate, daemon=True, name="tutte_mai_usate").start()
+
     def nuovi_zona_invio():
         """4/11 sera (cliente: "carica e manda i nuovi"): una volta (NUOVI_ZONA_INVIO, di serie "5-11") carica in Brevo
         le email dei saloni della zona mai contattati (lista caricata dall'admin in dati_riservati lead_zona_nuove_0511
