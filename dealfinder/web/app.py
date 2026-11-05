@@ -4223,11 +4223,13 @@ def _tempo_reale():
         from ..marketing import consegne as CO
         from ..marketing.dati_riservati import leggi
         for _ in range(240):                                   # aspetta fino a 4 ore che l'admin carichi la lista
-            time.sleep(60)
+            time.sleep(60 if _ else 5)
             try:
                 with connect() as conn:
                     nuove = leggi(conn, "lead_zona_nuove_0511")
                 if nuove:
+                    L.warning("NUOVI_ZONA lista trovata: %d email (si caricano da %s)", len(nuove),
+                              os.environ.get("NUOVI_ZONA_CARICA_DA", "2026-11-05T08:30:00+01:00"))
                     break
             except Exception:
                 pass
