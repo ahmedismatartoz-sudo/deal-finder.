@@ -109,13 +109,6 @@ def leggi(slug: str) -> list:
                 break
             nuovi = 0
             lista = _annunci(next_data(r.text) or {})
-            if lista and slug == "astro-srl-milano-mi" and pag == 1:
-                import json as _j
-                from ..collectors.autoscout import _senza_telefoni
-                x = _senza_telefoni(lista[0])
-                v = x.get("vehicle") or {}
-                log.warning("VETRINA_DEBUG prices=%s chiavi_veicolo=%s data=%s", _j.dumps(x.get("prices"), ensure_ascii=False)[:600],
-                            list(v), {k: v.get(k) for k in v if any(w in k.lower() for w in ("regist", "year", "date", "anno"))})
             for it in lista:
                 a = _auto(it)
                 if a and a["id"] not in visti:

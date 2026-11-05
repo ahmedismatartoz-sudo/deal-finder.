@@ -153,11 +153,12 @@ const API='/api/vetrina/astro-srl-milano-mi', AS24='https://www.autoscout24.it/c
 const eur=n=>n?n.toLocaleString('it-IT')+' €':'Prezzo su richiesta';
 const km=n=>n||n===0?n.toLocaleString('it-IT')+' km':'';
 let AUTO=[], filtro='tutte', marca='', ordine='rec';
+const nome=a=>((a.marca||'')+' '+(a.versione||a.modello||'')).replace(/\s+/g,' ').trim()||a.titolo;
 function scheda(a,i){
   const f=(a.foto&&a.foto[0])||'';
-  return `<article class="auto" data-i="${i}" tabindex="0"><div class="ft">${f?`<img loading="lazy" src="${f.replace('1280x960','720x540')}" alt="${a.titolo} usata Milano">`:''}
+  return `<article class="auto" data-i="${i}" tabindex="0"><div class="ft">${f?`<img loading="lazy" src="${f.replace('1280x960','720x540')}" alt="${nome(a)} usata Milano">`:''}
   <span class="pr">${eur(a.prezzo)}</span>${a.foto&&a.foto.length>1?`<span class="nf">📷 ${a.foto.length}</span>`:''}</div>
-  <div class="tx"><h3>${a.marca||''} ${a.modello||''}</h3><div class="ve">${a.versione||a.titolo||''}</div>
+  <div class="tx"><h3>${a.marca||''} ${a.modello||''}</h3><div class="ve">${(a.versione||'').replace(a.modello||'@@','').trim()}${a.carrozzeria?' · '+a.carrozzeria:''}</div>
   <div class="dati">${a.anno?`<span>📅 ${a.anno}</span>`:''}${a.km!=null?`<span>🛣 ${km(a.km)}</span>`:''}${a.carburante?`<span>⛽ ${a.carburante}</span>`:''}${a.cambio?`<span>⚙ ${a.cambio}</span>`:''}</div></div><div class="lucc"></div></article>`;
 }
 function filtra(){
@@ -190,12 +191,12 @@ function disegna(){
 let cur=0,fotoi=0;
 function apri(i){
   cur=i;fotoi=0;const a=AUTO[i];const f=document.getElementById('fin');
-  const righe=[['Anno',a.immatricolazione||a.anno],['Chilometri',km(a.km)],['Alimentazione',a.carburante],['Cambio',a.cambio],['Potenza',a.potenza]].filter(r=>r[1]);
-  const msg=encodeURIComponent(`Ciao Astro, mi interessa la ${a.titolo} a ${eur(a.prezzo)}. È ancora disponibile?`);
+  const righe=[['Anno',a.immatricolazione||a.anno],['Chilometri',km(a.km)],['Alimentazione',a.carburante],['Cambio',a.cambio],['Potenza',a.potenza],['Carrozzeria',a.carrozzeria]].filter(r=>r[1]);
+  const msg=encodeURIComponent(`Ciao Astro, mi interessa la ${nome(a)} a ${eur(a.prezzo)}. È ancora disponibile?`);
   f.querySelector('.box').innerHTML=`<button class="chiudi" onclick="chiudi()" aria-label="Chiudi">×</button>
   <div><div class="gal"><img id="gimg" src="${(a.foto||[])[0]||''}" alt="${a.titolo}"><button class="p" onclick="sfoglia(-1)">‹</button><button class="n" onclick="sfoglia(1)">›</button></div>
   <div class="mini">${(a.foto||[]).map((u,k)=>`<img src="${u.replace('1280x960','250x188')}" class="${k?'':'on'}" onclick="vai(${k})" alt="">`).join('')}</div></div>
-  <div class="inf"><span class="eti">Auto usata · Milano</span><h3 style="margin-top:10px">${a.titolo||''}</h3><div class="prz">${eur(a.prezzo)}</div>
+  <div class="inf"><span class="eti">Auto usata · Milano</span><h3 style="margin-top:10px">${nome(a)}</h3><div class="prz">${eur(a.prezzo)}</div>
   <table class="tab">${righe.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</table>
   <div class="azioni"><a class="bt v" href="${WA}${msg}">💬 Chiedi su WhatsApp</a><a class="bt" href="tel:${TEL}">☎ Chiama ora</a>
   <a class="bt o" style="color:var(--blu)" href="${a.link}" target="_blank" rel="noopener">Vedi l'annuncio su AutoScout24</a></div>
@@ -218,7 +219,7 @@ fetch(API).then(r=>r.json()).then(d=>{
   document.querySelectorAll('[data-da]').forEach(x=>x.textContent=pz.length?Math.min(...pz).toLocaleString('it-IT')+' €':'—');
   if(sm){[...new Set(AUTO.map(a=>a.marca).filter(Boolean))].sort().forEach(m=>sm.insertAdjacentHTML('beforeend',`<option>${m}</option>`))}
   // dati strutturati delle auto per Google
-  const ld={"@context":"https://schema.org","@type":"ItemList","itemListElement":AUTO.map((a,i)=>({"@type":"ListItem","position":i+1,"item":{"@type":"Car","name":a.titolo,"brand":a.marca,"model":a.modello,"vehicleModelDate":a.anno,"mileageFromOdometer":{"@type":"QuantitativeValue","value":a.km,"unitCode":"KMT"},"fuelType":a.carburante,"image":(a.foto||[])[0],"offers":{"@type":"Offer","price":a.prezzo,"priceCurrency":"EUR","availability":"https://schema.org/InStock","url":a.link}}}))};
+  const ld={"@context":"https://schema.org","@type":"ItemList","itemListElement":AUTO.map((a,i)=>({"@type":"ListItem","position":i+1,"item":{"@type":"Car","name":nome(a),"brand":a.marca,"model":a.modello,"vehicleModelDate":a.anno,"mileageFromOdometer":{"@type":"QuantitativeValue","value":a.km,"unitCode":"KMT"},"fuelType":a.carburante,"image":(a.foto||[])[0],"offers":{"@type":"Offer","price":a.prezzo,"priceCurrency":"EUR","availability":"https://schema.org/InStock","url":a.link}}}))};
   const s=document.createElement('script');s.type='application/ld+json';s.textContent=JSON.stringify(ld);document.head.appendChild(s);
   disegna();
   const m=location.hash.match(/^#auto-(.+)$/); if(m){const i=AUTO.findIndex(a=>String(a.id)===m[1]); if(i>=0) apri(i);}
