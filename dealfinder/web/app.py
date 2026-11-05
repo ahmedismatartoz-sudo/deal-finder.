@@ -2262,7 +2262,7 @@ def robots(request: Request):
     from . import seo
     return Response("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /gestione\nDisallow: /auth/\n"
                     "Disallow: /incentivi/\n"
-                    f"Sitemap: {seo.BASE}/sitemap.xml\nSitemap: {seo.BASE}/vetrina/marconi1/sitemap.xml\n", media_type="text/plain")
+                    f"Sitemap: {seo.BASE}/sitemap.xml\nSitemap: {seo.BASE}/vetrina/marconi1/sitemap.xml\nSitemap: {seo.BASE}/vetrina/astro/sitemap.xml\n", media_type="text/plain")
 
 
 def sitemap(request: Request):
