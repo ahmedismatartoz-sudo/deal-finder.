@@ -544,9 +544,13 @@ def scegli_mix(nuove: list[dict], richiamo: list[str], bloccati: set, totale: in
 def _esporta(c, campagna_id: int, tipo: str) -> list[str]:
     import time as _t
     r = c.post(f"{API}/emailCampaigns/{campagna_id}/exportRecipients", json={"recipientsType": tipo})
-    if r.status_code >= 300:
+    try:
+        pid = (r.json() or {}).get("processId") if r.status_code < 300 else None
+    except ValueError:
+        pid = None
+    if not pid:
+        lg.warning("BREVO_MIX esportazione campagna %s (%s) non disponibile: HTTP %s", campagna_id, tipo, r.status_code)
         return []
-    pid = r.json()["processId"]
     for _ in range(60):
         _t.sleep(5)
         p = c.get(f"{API}/processes/{pid}").json()
