@@ -213,7 +213,7 @@ document.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>
 const sm=document.getElementById('marca'), so=document.getElementById('ordine');
 sm&&sm.addEventListener('change',()=>{marca=sm.value;disegna()}); so&&so.addEventListener('change',()=>{ordine=so.value;disegna()});
 fetch(API).then(r=>r.json()).then(d=>{
-  AUTO=(d.auto||[]).filter(a=>a&&a.titolo);
+  AUTO=(d.auto||[]).filter(a=>a&&a.titolo); window.__AUTO=AUTO; document.dispatchEvent(new CustomEvent('auto-pronte',{detail:AUTO}));
   document.querySelectorAll('[data-n-auto]').forEach(x=>x.textContent=AUTO.length||'—');
   const pz=AUTO.map(a=>a.prezzo).filter(Boolean);
   document.querySelectorAll('[data-da]').forEach(x=>x.textContent=pz.length?Math.min(...pz).toLocaleString('it-IT')+' €':'—');

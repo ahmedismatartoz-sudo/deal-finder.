@@ -213,3 +213,31 @@ def _preriscalda():
 
 
 threading.Thread(target=_preriscalda, daemon=True, name="vetrina_preriscalda").start()
+
+
+_foto_cache: dict = {}
+
+
+async def foto_vetrina(request):
+    """Foto degli annunci AutoScout24 con CORS, per usarle come texture 3D nei siti vetrina (solo host AutoScout)."""
+    from urllib.parse import urlparse
+    from starlette.responses import Response
+    u = request.query_params.get("u") or ""
+    host = urlparse(u).hostname or ""
+    if not (u.startswith("https://") and (host.endswith(".autoscout24.net") or host.endswith(".autoscout24.com"))):
+        return Response(status_code=400)
+    c = _foto_cache.get(u)
+    if not c:
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers={"User-Agent": UA}) as cl:
+                r = await cl.get(u)
+            if r.status_code != 200 or len(r.content) > 3_000_000:
+                return Response(status_code=502)
+            c = (r.content, r.headers.get("content-type", "image/jpeg"))
+            if len(_foto_cache) > 150:          # memoria del web limitata: cache piccola
+                _foto_cache.clear()
+            _foto_cache[u] = c
+        except Exception:
+            return Response(status_code=502)
+    return Response(c[0], media_type=c[1], headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400"})

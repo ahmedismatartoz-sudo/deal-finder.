@@ -130,24 +130,25 @@ h1,h2,h3{font-family:'Sora','Manrope',sans-serif;letter-spacing:-.02em;line-heig
 .post h3{font-size:20px;margin-bottom:10px}
 .post p{color:var(--g);font-size:15px;line-height:1.6}
 
-.loader{position:fixed;inset:0;z-index:100;background:#fff;display:grid;place-items:center;transition:opacity .9s,visibility .9s}
+.loader{position:fixed;inset:0;z-index:100;background:#020617;display:grid;place-items:center;transition:opacity .9s,visibility .9s}
 .loader.via{opacity:0;visibility:hidden}
-.loader b{font:800 clamp(46px,10vw,110px) Sora;letter-spacing:.3em;color:transparent;-webkit-text-stroke:1.5px var(--blu);background:linear-gradient(90deg,var(--blu) 0 var(--p,0%),transparent var(--p,0%));-webkit-background-clip:text;background-clip:text;padding-left:.3em}
+.loader b{font:800 clamp(46px,10vw,110px) Sora;letter-spacing:.3em;color:transparent;-webkit-text-stroke:1.5px #4f86ff;background:linear-gradient(90deg,#fff 0 var(--p,0%),transparent var(--p,0%));-webkit-background-clip:text;background-clip:text;padding-left:.3em}
 .loader small{display:block;text-align:center;margin-top:18px;font:600 12px Manrope;letter-spacing:.4em;color:var(--g)}
 #hero{height:260vh;position:relative;background:var(--notte)}
 #hero .fisso{position:sticky;top:0;height:100vh;overflow:hidden}
 #scena3d{width:100%;height:100%;display:block}
-.sopra{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:0 clamp(16px,5vw,70px) clamp(40px,9vh,90px);color:#fff;pointer-events:none;background:linear-gradient(0deg,rgba(3,11,34,.9),transparent 50%),linear-gradient(90deg,rgba(3,11,34,.55),transparent 55%)}
+.sopra{opacity:0;transform:translateY(30px);transition:1.2s cubic-bezier(.2,.7,.2,1);position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:0 clamp(16px,5vw,70px) clamp(40px,9vh,90px);color:#fff;pointer-events:none;background:linear-gradient(0deg,rgba(3,11,34,.9),transparent 50%),linear-gradient(90deg,rgba(3,11,34,.55),transparent 55%)}
 .sopra *{pointer-events:auto}
 .sopra h1{font-size:clamp(36px,5.6vw,80px);max-width:820px;text-shadow:0 10px 40px rgba(0,0,0,.4)}
 .sopra h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#7fa8ff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sopra p{max-width:620px;color:#c8d6fb;font-size:clamp(16px,1.6vw,20px);line-height:1.6;margin:18px 0 26px}
 .sopra .cta2{display:flex;gap:12px;flex-wrap:wrap}
-.frasi{position:absolute;right:clamp(16px,5vw,70px);top:110px;display:grid;gap:16px;text-align:right}
+.sopra.si,.frasi.si2{opacity:1;transform:none}.frasi{opacity:0;transition:1s;position:absolute;right:clamp(16px,5vw,70px);top:110px;display:grid;gap:16px;text-align:right}
 .frasi div{font:700 clamp(15px,1.5vw,19px) Sora;color:#fff;opacity:0;transform:translateX(40px);transition:.8s}
 .frasi div.si{opacity:1;transform:none}
 .frasi div span{color:#7fa8ff}
 @media(max-width:760px){.frasi{display:none}}
+.salta{position:absolute;right:20px;bottom:20px;z-index:3;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:9px 16px;font:600 13px Manrope;cursor:pointer;backdrop-filter:blur(8px);transition:.5s}.salta.via{opacity:0;pointer-events:none}
 .giu{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);color:#9fb7f2;font:600 11px Manrope;letter-spacing:.3em;animation:su 2s infinite}
 @keyframes su{50%{transform:translate(-50%,8px)}}
 .nastro{background:var(--blu);color:#fff;overflow:hidden;white-space:nowrap;padding:18px 0}
@@ -188,13 +189,13 @@ h1,h2,h3{font-family:'Sora','Manrope',sans-serif;letter-spacing:-.02em;line-heig
 <header class="top" id="top"><a class="logo" href="/vetrina/astro"><i></i><span>ASTRO<small>AUTO USATE MILANO</small></span></a>
 <nav class="menu" id="menu"><a href="/vetrina/astro#auto">Le nostre auto</a><a href="/vetrina/astro#servizi">Servizi</a><a href="/vetrina/astro#zone">Zone</a><a href="/vetrina/astro/blog">Blog</a><a href="/vetrina/astro#faq">Domande</a><a href="/vetrina/astro#contatti">Contatti</a></nav>
 <div style="display:flex;gap:10px;align-items:center"><a class="bt" href="tel:+393471757088">☎<span> Chiama 347 1757088</span></a><button class="hamb" onclick="document.getElementById('menu').classList.toggle('aperto')" aria-label="Menu">☰</button></div></header>
-<div class="loader" id="loader"><div><b id="lb">ASTRO</b><small>AUTO USATE · MILANO</small></div></div>
+<div class="loader" id="loader"><div><b id="lb">ASTRO</b><small style="color:#9cbcff">STASERA IN SALONE · AUTO USATE MILANO</small></div></div>
 <section id="hero"><div class="fisso"><canvas id="scena3d"></canvas>
 <div class="frasi"><div>Auto usate <span>selezionate</span></div><div>Permuta e <span>valutazione gratuita</span></div><div>Pratiche <span>seguite da noi</span></div><div><span data-n-auto>…</span> auto disponibili ora</div></div>
 <div class="sopra"><span class="eti" style="color:#9cbcff">Astro srl · Milano</span><h1>Auto usate a Milano, <em>scelte una per una.</em></h1>
 <p>Utilitarie, benzina, ibride e auto per neopatentati con chilometri chiari, foto reali e prezzi aggiornati in tempo reale. Permuta e valutazione gratuita.</p>
 <div class="cta2"><a class="bt" href="#auto">Guarda le auto</a><a class="bt v" href="https://wa.me/393471757088?text=Ciao Astro, ho visto il sito e vorrei informazioni sulle auto">💬 WhatsApp</a><a class="bt b" href="tel:+393471757088">☎ 347 1757088</a></div></div>
-<div class="giu">SCORRI</div></div></section>
+<button class="salta" id="salta">Salta intro ›</button><div class="giu">SCORRI PER ENTRARE IN GALLERIA</div></div></section>
 <div class="nastro"><div><span>Fiat</span><span>Toyota</span><span>Citroen</span><span>Peugeot</span><span>Ford</span><span>Mercedes-Benz</span><span>Volkswagen</span><span>Renault</span><span>Opel</span><span>Audi</span><span>BMW</span><span>Lancia</span><span>Kia</span><span>Hyundai</span><span>Nissan</span><span>Dacia</span><span>Skoda</span><span>Seat</span><span>Mini</span><span>Smart</span><span>Suzuki</span><span>Jeep</span><span>Fiat</span><span>Toyota</span><span>Citroen</span><span>Peugeot</span><span>Ford</span><span>Mercedes-Benz</span><span>Volkswagen</span><span>Renault</span><span>Opel</span><span>Audi</span><span>BMW</span><span>Lancia</span><span>Kia</span><span>Hyundai</span><span>Nissan</span><span>Dacia</span><span>Skoda</span><span>Seat</span><span>Mini</span><span>Smart</span><span>Suzuki</span><span>Jeep</span></div></div>
 <div class="w"><div class="numeri"><div class="sale"><b data-n-auto>…</b><span>auto disponibili ora</span></div><div class="sale"><b data-da>…</b><span>prezzo di partenza</span></div><div class="sale"><b>100%</b><span>foto reali delle auto</span></div><div class="sale"><b>0 €</b><span>valutazione della tua auto</span></div></div></div>
 <section class="sez" id="auto" style="background:var(--fondo)"><div class="w"><span class="eti sale">Auto disponibili · aggiornate da AutoScout24</span>
@@ -232,200 +233,311 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 
+/* =====================================================================
+   SALONE ASTRO DI NOTTE: esterno con fari da gala, porte che si aprono,
+   galleria con le foto delle auto (da AutoScout24) appese ai muri, auto
+   sulla pedana in fondo. Regia a tempo + scorrimento + mouse.
+   ===================================================================== */
 const tela = document.getElementById('scena3d');
 const telefono = matchMedia('(max-width: 760px)').matches;
 const renderer = new THREE.WebGLRenderer({ canvas: tela, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, telefono ? 1.5 : 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .9;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x030b22); scene.fog = new THREE.FogExp2(0x030b22, 0.028);
-const camera = new THREE.PerspectiveCamera(telefono ? 52 : 38, 1, 0.1, 400);
+scene.background = new THREE.Color(0x020617); scene.fog = new THREE.FogExp2(0x020617, .012);
+const camera = new THREE.PerspectiveCamera(telefono ? 62 : 50, 1, .1, 600);
 const pm = new THREE.PMREMGenerator(renderer);
-const ENV = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environment = ENV;
+scene.environment = pm.fromScene(new RoomEnvironment(), .04).texture;
 
-/* ---------- pavimento a specchio + griglia luminosa ---------- */
-const specchio = new Reflector(new THREE.CircleGeometry(40, 96), { textureWidth: telefono ? 512 : 1536, textureHeight: telefono ? 512 : 1536, color: 0x1a2a55 });
+const LUNG = 46, LARG = 15, ALT = 7.5;          // misure della sala (z da 0 a -LUNG)
+const blu = 0x2f6bff, bianco = 0xffffff;
+const liscia = t => t * t * (3 - 2 * t), tra = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+const lerp = THREE.MathUtils.lerp;
+
+/* ---------- testo su tela (targhe, insegne) ---------- */
+function tex(w, h, disegna) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  disegna(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+const FONT = '"Sora","Manrope",Arial,sans-serif';
+
+/* ---------- strada bagnata, cielo, stelle ---------- */
+const terraGeo = new THREE.PlaneGeometry(400, 400);
+const specchio = new Reflector(terraGeo, { textureWidth: telefono ? 512 : 1024, textureHeight: telefono ? 512 : 1024, color: 0x3a4766 });
 specchio.rotation.x = -Math.PI / 2; scene.add(specchio);
-const velo = new THREE.Mesh(new THREE.CircleGeometry(40, 96), new THREE.MeshStandardMaterial({ color: 0x06132f, roughness: .55, metalness: .3, transparent: true, opacity: .78 }));
-velo.rotation.x = -Math.PI / 2; velo.position.y = .005; velo.receiveShadow = true; scene.add(velo);
-const griglia = new THREE.PolarGridHelper(38, 24, 16, 96, 0x1f5fff, 0x0c2a7a); griglia.position.y = .012;
-griglia.material.transparent = true; griglia.material.opacity = .35; scene.add(griglia);
-
-/* ---------- anelli di luce (si accendono uno alla volta) ---------- */
-const anelli = [];
-[3.6, 4.4, 5.6, 7.4, 10].forEach((r, i) => {
-  const m = new THREE.MeshBasicMaterial({ color: i % 2 ? 0x4f8bff : 0xffffff, transparent: true, opacity: 0 });
-  const a = new THREE.Mesh(new THREE.TorusGeometry(r, i === 0 ? .035 : .018, 8, 220), m);
-  a.rotation.x = Math.PI / 2; a.position.y = .03; scene.add(a); anelli.push({ a, m, r, i });
-});
-// piattaforma girevole
-const piatta = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.5, .14, 96),
-  new THREE.MeshPhysicalMaterial({ color: 0x1a2448, metalness: .8, roughness: .25, clearcoat: 1 }));
-piatta.position.y = .07; piatta.receiveShadow = true; scene.add(piatta);
-const bordo = new THREE.Mesh(new THREE.TorusGeometry(3.45, .025, 8, 200), new THREE.MeshBasicMaterial({ color: 0x3d7bff }));
-bordo.rotation.x = Math.PI / 2; bordo.position.y = .145; scene.add(bordo);
-
-/* ---------- l'auto (forma generica, vernice bianco perla con riflessi blu) ---------- */
-const auto = new THREE.Group(); scene.add(auto);
-function curva(punti, n = 10) {
-  const c = new THREE.CatmullRomCurve3(punti.map(([x, y]) => new THREE.Vector3(x, y, 0)), false, 'centripetal');
-  return c.getPoints(n * punti.length).map(p => new THREE.Vector2(p.x, p.y));
+const asfalto = new THREE.Mesh(terraGeo, new THREE.MeshStandardMaterial({ color: 0x050a16, roughness: .35, metalness: .4, transparent: true, opacity: .82 }));
+asfalto.rotation.x = -Math.PI / 2; asfalto.position.y = .004; scene.add(asfalto);
+// strisce stradali e marciapiede davanti al salone
+for (let i = -6; i < 7; i++) {
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(2.4, .14), new THREE.MeshBasicMaterial({ color: 0x8b95ad }));
+  s.rotation.x = -Math.PI / 2; s.position.set(i * 6, .01, 22); scene.add(s);
 }
-const L = 4.6;
-const vernice = new THREE.MeshPhysicalMaterial({ color: 0x1546d0, metalness: .75, roughness: .28, clearcoat: 1, clearcoatRoughness: .04,
-  sheen: .6, sheenColor: new THREE.Color(0x9cbcff), sheenRoughness: .35, envMapIntensity: 1.6 });
-const nero = new THREE.MeshPhysicalMaterial({ color: 0x0a0d14, metalness: .6, roughness: .25, clearcoat: 1 });
-const vetro = new THREE.MeshPhysicalMaterial({ color: 0x0b1a3a, metalness: .2, roughness: .02, transmission: .2, transparent: true, opacity: .92, clearcoat: 1, envMapIntensity: 2 });
-const profilo = [[0, .34], [-.06, .6], [.02, .82], [.45, .9], [1.4, .92], [2.6, .92], [3.4, .86], [4.2, .7], [4.58, .56], [4.62, .36]];
-const fondo = [[4.5, .22], [3.9, .2], [.7, .2], [.08, .24]];
-const sagoma = new THREE.Shape(curva(profilo, 8).concat(fondo.map(([x, y]) => new THREE.Vector2(x, y))));
-const W = 1.86, prof = W - .5;
-const gCorpo = new THREE.ExtrudeGeometry(sagoma, { depth: prof, bevelEnabled: true, bevelThickness: .25, bevelSize: .22, bevelSegments: 10, curveSegments: 24, steps: 1 });
-gCorpo.translate(-L / 2, 0, -prof / 2);
-// forma più morbida: muso e coda arrotondati in pianta, fianchi che rientrano verso l'alto
-function modella(g, fy) { const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const ex = Math.pow(Math.abs(x) / (L / 2 + .3), 4); p.setZ(i, z * (1 - .22 * ex) * fy(y)); }
-  g.computeVertexNormals(); }
-modella(gCorpo, y => 1 - .16 * Math.max(0, y - .55));
-const corpo = new THREE.Mesh(gCorpo, vernice); corpo.castShadow = true; auto.add(corpo);
-const cabina = new THREE.Shape(curva([[.45, .9], [.95, 1.08], [1.5, 1.34], [2.3, 1.38], [2.95, 1.26], [3.6, .91]], 10));
-const lc = W - .78;
-const gCab = new THREE.ExtrudeGeometry(cabina, { depth: lc, bevelEnabled: true, bevelThickness: .16, bevelSize: .14, bevelSegments: 8, curveSegments: 24 });
-gCab.translate(-L / 2, 0, -lc / 2); modella(gCab, y => 1 - .42 * Math.max(0, (y - .9) / .5)); const vetri = new THREE.Mesh(gCab, vetro); vetri.castShadow = true; auto.add(vetri);
-// tetto lucido nero e montanti
-const tetto = new THREE.Mesh(new THREE.BoxGeometry(1.15, .04, lc * .62), nero); tetto.position.set(1.9 - L / 2, 1.43, 0); auto.add(tetto);
-// linea blu laterale (firma Astro)
-const lineeBlu = [];
-[-1, 1].forEach(s => {
-  const lin = new THREE.Mesh(new THREE.BoxGeometry(3.6, .025, .02), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  lin.position.set(.15, .6, s * (W / 2 + .005)); auto.add(lin); lineeBlu.push(lin.material);
-});
-// ruote
-const ruote = [];
-const gomma = new THREE.MeshStandardMaterial({ color: 0x111317, roughness: .8 });
-const cerchio = new THREE.MeshPhysicalMaterial({ color: 0xcfd6e2, metalness: 1, roughness: .18, clearcoat: .6 });
-const pinza = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .3, metalness: .4 });
-function ruota(x, z) {
-  const g = new THREE.Group();
-  const t = new THREE.Mesh(new THREE.TorusGeometry(.3, .11, 20, 48), gomma); g.add(t);
-  const c = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .2, 48).rotateX(Math.PI / 2), cerchio); g.add(c);
-  for (let k = 0; k < 5; k++) {
-    const r = new THREE.Mesh(new THREE.BoxGeometry(.05, .5, .04), cerchio); r.rotation.z = k * Math.PI * 2 / 5;
-    r.position.z = Math.sign(z) * .11; g.add(r);
-  }
-  const p = new THREE.Mesh(new THREE.BoxGeometry(.16, .12, .05), pinza); p.position.set(.15, .12, Math.sign(z) * .06); g.add(p);
-  g.position.set(x, .41, z); g.traverse(o => { o.castShadow = true; }); auto.add(g); ruote.push(g);
-}
-[[-1.42, 1], [1.5, 1]].forEach(([x]) => [-1, 1].forEach(s => ruota(x, s * (W / 2 - .05))));
-// fari e luci posteriori (si accendono nell'intro)
-const fariM = new THREE.MeshBasicMaterial({ color: 0x000000 }), stopM = new THREE.MeshBasicMaterial({ color: 0x000000 });
-[-1, 1].forEach(s => {
-  const f = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .32, 4, 12).rotateX(Math.PI / 2).rotateY(.35 * s), fariM);
-  f.position.set(L / 2 + .02, .66, s * .62); auto.add(f);
-  const r = new THREE.Mesh(new THREE.BoxGeometry(.04, .05, .62), stopM); r.position.set(-L / 2 - .12, .78, s * .42); auto.add(r);
-});
-const barraPost = new THREE.Mesh(new THREE.BoxGeometry(.03, .025, 1.5), stopM); barraPost.position.set(-L / 2 - .14, .78, 0); auto.add(barraPost);
-const fascio = new THREE.SpotLight(0xdfe9ff, 0, 30, .5, .6, 1.2); fascio.position.set(L / 2, .7, 0); fascio.target.position.set(L / 2 + 8, 0, 0);
-auto.add(fascio); auto.add(fascio.target);
-auto.position.y = .14; auto.scale.setScalar(1);
+const marciapiede = new THREE.Mesh(new THREE.BoxGeometry(80, .18, 9), new THREE.MeshStandardMaterial({ color: 0x1a2133, roughness: .6 }));
+marciapiede.position.set(0, .09, 5); scene.add(marciapiede);
 
-/* ---------- luci ---------- */
-scene.add(new THREE.HemisphereLight(0x9cc0ff, 0x050a18, .5));
-const chiave = new THREE.SpotLight(0xffffff, 0, 40, .45, .6, 1.2); chiave.position.set(6, 8, 7); chiave.castShadow = true;
-chiave.shadow.mapSize.set(telefono ? 1024 : 2048, telefono ? 1024 : 2048); chiave.shadow.bias = -.0004; scene.add(chiave);
-const blu1 = new THREE.PointLight(0x2f6bff, 0, 20, 1.6); blu1.position.set(-5, 2.5, -3); scene.add(blu1);
-const blu2 = new THREE.PointLight(0x6fa0ff, 0, 20, 1.6); blu2.position.set(5, 2, 4); scene.add(blu2);
-const barre = [];
-for (let i = 0; i < 7; i++) { // lame di luce sopra l'auto
-  const b = new THREE.Mesh(new THREE.BoxGeometry(6, .04, .08), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 }));
-  b.position.set(0, 5.2, -3 + i); scene.add(b); barre.push(b);
-}
-
-/* ---------- campo di stelle (Astro) e polvere luminosa ---------- */
-function stelle(n, r0, r1, dim, col) {
-  const g = new THREE.BufferGeometry(), p = new Float32Array(n * 3), v = new Float32Array(n);
+function stelle(n) {
+  const g = new THREE.BufferGeometry(), p = new Float32Array(n * 3), f = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    const r = r0 + Math.random() * (r1 - r0), t = Math.random() * Math.PI * 2, f = Math.acos(Math.random() * 1.6 - .6);
-    p[i * 3] = r * Math.sin(f) * Math.cos(t); p[i * 3 + 1] = Math.abs(r * Math.cos(f)) + 1; p[i * 3 + 2] = r * Math.sin(f) * Math.sin(t); v[i] = Math.random();
+    const r = 180 + Math.random() * 120, t = Math.random() * Math.PI * 2, e = Math.random() * 1.3 + .08;
+    p.set([r * Math.cos(e) * Math.cos(t), r * Math.sin(e), r * Math.cos(e) * Math.sin(t)], i * 3); f[i] = Math.random();
   }
-  g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('fase', new THREE.BufferAttribute(v, 1));
-  const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { t: { value: 0 }, a: { value: 0 }, col: { value: new THREE.Color(col) }, dim: { value: dim } },
-    vertexShader: `attribute float fase; uniform float t; uniform float dim; varying float vf;
-      void main(){ vf = fase; vec3 q = position; q.y += sin(t*.3 + fase*20.)*.15; vec4 mv = modelViewMatrix*vec4(q,1.);
-      gl_PointSize = dim*(.6+fase)*(300./-mv.z); gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `uniform float t; uniform float a; uniform vec3 col; varying float vf;
-      void main(){ float d = length(gl_PointCoord-.5); if(d>.5) discard; float tw = .55+.45*sin(t*2.+vf*40.);
-      gl_FragColor = vec4(col, (1.-d*2.)*tw*a); }` });
-  const pt = new THREE.Points(g, m); scene.add(pt); return m;
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('fase', new THREE.BufferAttribute(f, 1));
+  const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { t: { value: 0 } },
+    vertexShader: 'attribute float fase; varying float vf; void main(){ vf=fase; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize=(1.+fase*2.)*' + (telefono ? '1.0' : '1.4') + '; gl_Position=projectionMatrix*mv; }',
+    fragmentShader: 'uniform float t; varying float vf; void main(){ float d=length(gl_PointCoord-.5); if(d>.5) discard; gl_FragColor=vec4(.85,.9,1.,(1.-d*2.)*(.5+.5*sin(t*1.7+vf*50.))); }' });
+  scene.add(new THREE.Points(g, m)); return m;
 }
-const cielo = stelle(telefono ? 2500 : 7000, 30, 140, .35, 0xcfe0ff);
-const polvere = stelle(telefono ? 600 : 1800, 6, 18, .07, 0x5d93ff);
+const cielo = stelle(telefono ? 1500 : 4000);
 
-/* ---------- scritta ASTRO in 3D ---------- */
-let scritta = null;
-new FontLoader().load('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', font => {
-  const g = new TextGeometry('ASTRO', { font, size: 1.6, height: .35, curveSegments: 10, bevelEnabled: true, bevelThickness: .05, bevelSize: .035, bevelSegments: 5 });
-  g.center();
-  scritta = new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: .9, roughness: .12, clearcoat: 1, emissive: 0x1847c8, emissiveIntensity: 0 }));
-  scritta.position.set(0, 2.6, -13); scene.add(scritta);
+/* ---------- edificio: facciata vetrata bianca, insegna ASTRO, porte scorrevoli ---------- */
+const struttura = new THREE.MeshPhysicalMaterial({ color: 0xf2f5fb, roughness: .35, metalness: .1, clearcoat: .6 });
+const scuroM = new THREE.MeshStandardMaterial({ color: 0x0b1226, roughness: .7 });
+const vetroF = new THREE.MeshPhysicalMaterial({ color: 0x88a6e8, roughness: .05, metalness: .1, transparent: true, opacity: .18, side: THREE.DoubleSide });
+function blocco(w, h, d, x, y, z, m = struttura) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); scene.add(b); return b; }
+// pareti esterne, tetto (cornice bianca spessa) e pilastri della facciata
+blocco(1, ALT + 2, LUNG + 2, -LARG / 2 - .5, (ALT + 2) / 2, -LUNG / 2, scuroM); blocco(1, ALT + 2, LUNG + 2, LARG / 2 + .5, (ALT + 2) / 2, -LUNG / 2, scuroM);
+blocco(LARG + 2, 1, LUNG + 2, 0, ALT + .5, -LUNG / 2, scuroM); blocco(LARG + 2, ALT + 2, 1, 0, (ALT + 2) / 2, -LUNG - .5, scuroM);
+blocco(LARG + 3, 1.8, 1.6, 0, ALT + 1.1, .4);                       // fascia dell'insegna
+[-LARG / 2 - .4, -4.2, 4.2, LARG / 2 + .4].forEach(x => blocco(.5, ALT + .3, 1.2, x, (ALT + .3) / 2, .4));
+blocco(LARG + 3, .25, 1.4, 0, .12, .5);
+// vetrate fisse ai lati delle porte
+[[-6, 3.1], [6, 3.1]].forEach(([x, w]) => { const v = new THREE.Mesh(new THREE.PlaneGeometry(w, ALT), vetroF); v.position.set(x, ALT / 2, .3); scene.add(v); });
+const sopraporta = new THREE.Mesh(new THREE.PlaneGeometry(8.4, ALT - 4.6), vetroF); sopraporta.position.set(0, 4.6 + (ALT - 4.6) / 2, .3); scene.add(sopraporta);
+// porte scorrevoli (si aprono nell'intro)
+const porte = [-1, 1].map(s => {
+  const g = new THREE.Group();
+  const v = new THREE.Mesh(new THREE.PlaneGeometry(4.1, 4.5), vetroF); v.position.y = 2.25; g.add(v);
+  const tel = new THREE.Mesh(new THREE.BoxGeometry(4.1, .08, .08), struttura); tel.position.y = 4.5; g.add(tel);
+  const tel2 = tel.clone(); tel2.position.y = .04; g.add(tel2);
+  const mani = new THREE.Mesh(new THREE.BoxGeometry(.06, 1.6, .1), new THREE.MeshStandardMaterial({ color: 0xcfd6e2, metalness: 1, roughness: .2 }));
+  mani.position.set(-s * 1.8, 2.3, .08); g.add(mani);
+  g.position.set(s * 2.05, 0, .32); g.userData.s = s; scene.add(g); return g;
+});
+// striscia LED blu sotto l'insegna e luci a terra davanti
+const led = new THREE.Mesh(new THREE.BoxGeometry(LARG + 3, .06, .06), new THREE.MeshBasicMaterial({ color: blu })); led.position.set(0, ALT + .18, 1.25); scene.add(led);
+const ledM = led.material;
+// tappeto blu da gala che parte dalla strada ed entra nel salone
+const tappeto = new THREE.Mesh(new THREE.PlaneGeometry(3.4, LUNG + 14), new THREE.MeshStandardMaterial({ color: 0x0c2c9a, roughness: .9 }));
+tappeto.rotation.x = -Math.PI / 2; tappeto.position.set(0, .2, -LUNG / 2 + 7); scene.add(tappeto);
+[-1.75, 1.75].forEach(x => { const l = new THREE.Mesh(new THREE.BoxGeometry(.05, .03, LUNG + 14), new THREE.MeshBasicMaterial({ color: 0x9cbcff })); l.position.set(x, .22, -LUNG / 2 + 7); scene.add(l); });
+// paletti con cordone di velluto lungo il tappeto, fuori
+for (let i = 0; i < 4; i++) [-2.3, 2.3].forEach(x => {
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .07, 1, 16), new THREE.MeshStandardMaterial({ color: 0xdfe6f2, metalness: 1, roughness: .15 }));
+  p.position.set(x, .7, 2 + i * 2.2); scene.add(p);
+  const sfera = new THREE.Mesh(new THREE.SphereGeometry(.08, 16, 12), p.material); sfera.position.set(x, 1.22, 2 + i * 2.2); scene.add(sfera);
+  if (i < 3) { const c = new THREE.Mesh(new THREE.TorusGeometry(1.1, .03, 8, 24, Math.PI), new THREE.MeshStandardMaterial({ color: 0x1a4fff, roughness: .6 }));
+    c.rotation.set(0, Math.PI / 2, Math.PI); c.position.set(x, 1.15, 3.1 + i * 2.2); c.scale.set(1, .25, 1); scene.add(c); }
+});
+// lampioni
+for (let i = -2; i <= 2; i++) if (i) {
+  const x = i * 11, palo = blocco(.15, 6, .15, x, 3, 9, new THREE.MeshStandardMaterial({ color: 0x2a3247, metalness: .8, roughness: .3 }));
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.2, .12, .35), new THREE.MeshBasicMaterial({ color: 0xffe9c2 })); lamp.position.set(x - .5, 6, 9); scene.add(lamp);
+  const l = new THREE.PointLight(0xffd9a0, 18, 14, 2); l.position.set(x - .5, 5.6, 9); scene.add(l);
+}
+
+/* ---------- fari da gala che tagliano il cielo ---------- */
+const fari = [];
+const fasciM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { a: { value: 0 }, col: { value: new THREE.Color(0x9cc0ff) } },
+  vertexShader: 'varying float vy; varying vec2 vu; void main(){ vy=uv.y; vu=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+  fragmentShader: 'uniform float a; uniform vec3 col; varying float vy; varying vec2 vu; void main(){ float bordo=1.-abs(vu.x-.5)*2.; gl_FragColor=vec4(col, a*pow(1.-vy,1.6)*.38*smoothstep(0.,.6,bordo)); }' });
+[[-9, -6], [9, -6], [-5, -44], [5, -44]].forEach(([x, z], i) => {
+  const g = new THREE.Group(); g.position.set(x, ALT + 1, z);
+  const cono = new THREE.Mesh(new THREE.CylinderGeometry(4, .25, 120, 24, 1, true), fasciM); cono.position.y = 60; g.add(cono);
+  scene.add(g); fari.push({ g, f: i * 1.7 });
 });
 
-/* ---------- post-produzione: bagliore ---------- */
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .5, .4, .95); composer.addPass(bloom);
-composer.addPass(new OutputPass());
+/* ---------- insegna ASTRO in 3D ---------- */
+let insegna = null; const insegnaM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x6f9bff, emissiveIntensity: 0, metalness: .4, roughness: .3 });
+new FontLoader().load('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', font => {
+  const g = new TextGeometry('ASTRO', { font, size: 1.05, height: .25, curveSegments: 8, bevelEnabled: true, bevelThickness: .03, bevelSize: .02, bevelSegments: 3 });
+  g.center(); insegna = new THREE.Mesh(g, insegnaM); insegna.position.set(-1.6, ALT + 1.15, 1.35); scene.add(insegna);
+  const sotto = new THREE.Mesh(new THREE.PlaneGeometry(4.6, .5), new THREE.MeshBasicMaterial({ transparent: true, map: tex(1024, 112, (x, w, h) => {
+    x.fillStyle = '#cfe0ff'; x.font = `700 58px ${FONT}`; x.textBaseline = 'middle'; x.fillText('AUTO USATE · MILANO', 10, h / 2); }) }));
+  sotto.position.set(3.7, ALT + 1.05, 1.22); scene.add(sotto);
+});
 
-function misura() {
-  const w = tela.clientWidth, h = tela.clientHeight;
-  renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h;
-  if (w > 760) camera.setViewOffset(w, h, -w * .2, h * .04, w, h); else camera.setViewOffset(w, h, 0, h * .16, w, h);
-  camera.updateProjectionMatrix();
+/* ---------- interno: soffitto con linee di luce, colonne, cornici con le foto ---------- */
+const pavimentoInt = new THREE.Mesh(new THREE.PlaneGeometry(LARG, LUNG), new THREE.MeshPhysicalMaterial({ color: 0x0a0f1d, roughness: .12, metalness: .3, clearcoat: 1, transparent: true, opacity: .55 }));
+pavimentoInt.rotation.x = -Math.PI / 2; pavimentoInt.position.set(0, .015, -LUNG / 2); scene.add(pavimentoInt);
+const luciSoffitto = [];
+for (let z = -3; z > -LUNG; z -= 3.2) {
+  const s = new THREE.Mesh(new THREE.BoxGeometry(LARG - 3, .05, .14), new THREE.MeshBasicMaterial({ color: 0x000000 })); s.position.set(0, ALT - .05, z); scene.add(s); luciSoffitto.push(s.material);
 }
+const interne = [];
+for (let k = 0; k < 4; k++) { const l = new THREE.PointLight(0xdfe8ff, 0, 22, 1.5); l.position.set(0, ALT - 1, -6 - k * 10); scene.add(l); interne.push(l); }
+const pedanaLuce = new THREE.SpotLight(0xffffff, 0, 30, .42, .5, 1.1); pedanaLuce.position.set(0, ALT - .3, -33); pedanaLuce.target.position.set(0, 0, -38); scene.add(pedanaLuce, pedanaLuce.target);
+const colonne = [];
+const colonnaM = new THREE.MeshPhysicalMaterial({ color: 0x0d1838, metalness: .7, roughness: .3, clearcoat: 1 });
+const cornici = [];          // {foto, targa, auto}
+const N_LATO = telefono ? 5 : 7, PASSO = 4.6;
+for (let s of [-1, 1]) for (let i = 0; i < N_LATO; i++) {
+  const z = -5.5 - i * PASSO, x = s * (LARG / 2 - .06);
+  // colonna con luce blu che sale
+  const col = blocco(.5, ALT, .5, s * (LARG / 2 - .25), ALT / 2, z + PASSO / 2, colonnaM);
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(.04, ALT - .6, .04), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  strip.position.set(s * (LARG / 2 - .52), ALT / 2, z + PASSO / 2); scene.add(strip); colonne.push(strip.material);
+  // cornice bianca + foto retroilluminata
+  const telaio = new THREE.Mesh(new THREE.BoxGeometry(.12, 2.75, 3.6), struttura); telaio.position.set(x, 3.3, z); scene.add(telaio);
+  const fotoM = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const foto = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 2.47), fotoM); foto.position.set(x - s * .07, 3.3, z); foto.rotation.y = -s * Math.PI / 2; scene.add(foto);
+  const targaM = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true });
+  const targa = new THREE.Mesh(new THREE.PlaneGeometry(3.3, .55), targaM); targa.position.set(x - s * .08, 1.6, z); targa.rotation.y = -s * Math.PI / 2; scene.add(targa);
+  // cono di luce dal soffitto sulla foto
+  const cono = new THREE.Mesh(new THREE.CylinderGeometry(.15, 1.8, ALT - 1, 20, 1, true), fasciM.clone());
+  cono.material.uniforms.col.value = new THREE.Color(0xffffff); cono.position.set(x - s * 1.2, (ALT - 1) / 2 + 1, z); cono.rotation.z = s * .17; scene.add(cono);
+  cornici.push({ foto, fotoM, targa, targaM, cono, auto: -1, i: cornici.length });
+}
+// segnaposto finché non arrivano le foto vere
+const segnaposto = tex(512, 384, (x, w, h) => {
+  const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#0a3fd6'); g.addColorStop(1, '#030b22'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.strokeStyle = 'rgba(156,188,255,.5)'; x.lineWidth = 2; for (let r = 60; r < 400; r += 60) { x.beginPath(); x.arc(w * .8, h * .5, r, 0, 7); x.stroke(); }
+  x.fillStyle = '#fff'; x.font = `800 64px ${FONT}`; x.fillText('ASTRO', 36, h - 50);
+});
+cornici.forEach(c => { c.fotoM.map = segnaposto; c.targaM.map = tex(660, 110, (x, w, h) => { x.fillStyle = '#030b22'; x.fillRect(0, 0, w, h); x.fillStyle = '#9cbcff'; x.font = `700 34px ${FONT}`; x.fillText('Auto usate selezionate', 24, 68); }); });
+// schermo grande in fondo con il marchio
+const fondoSchermo = new THREE.Mesh(new THREE.PlaneGeometry(10, 4.2), new THREE.MeshBasicMaterial({ map: tex(1600, 672, (x, w, h) => {
+  const g = x.createRadialGradient(w * .5, h * .5, 20, w * .5, h * .5, w * .6); g.addColorStop(0, '#1a4fff'); g.addColorStop(1, '#020617'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = `800 210px ${FONT}`; x.fillText('ASTRO', w / 2, h * .58);
+  x.fillStyle = '#9cbcff'; x.font = `700 46px ${FONT}`; x.fillText('AUTO USATE SELEZIONATE · MILANO', w / 2, h * .8); }) }));
+fondoSchermo.position.set(0, 4.3, -LUNG + .05); scene.add(fondoSchermo);
+
+/* ---------- pedana girevole con l'auto in fondo alla sala ---------- */
+const pedana = new THREE.Group(); pedana.position.set(0, 0, -38); scene.add(pedana);
+const piatta = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.7, .2, 96), new THREE.MeshPhysicalMaterial({ color: 0xeef2fa, metalness: .5, roughness: .2, clearcoat: 1 }));
+piatta.position.y = .1; pedana.add(piatta);
+const anello = new THREE.Mesh(new THREE.TorusGeometry(3.66, .035, 8, 200), new THREE.MeshBasicMaterial({ color: blu })); anello.rotation.x = Math.PI / 2; anello.position.y = .2; pedana.add(anello);
+const auto = new THREE.Group(); auto.position.y = .2; pedana.add(auto);
+function curva(punti, n = 10) { const c = new THREE.CatmullRomCurve3(punti.map(([x, y]) => new THREE.Vector3(x, y, 0)), false, 'centripetal'); return c.getPoints(n * punti.length).map(p => new THREE.Vector2(p.x, p.y)); }
+const L = 4.6, W = 1.86, prof = W - .5;
+const vernice = new THREE.MeshPhysicalMaterial({ color: 0x1546d0, metalness: .75, roughness: .25, clearcoat: 1, clearcoatRoughness: .04, envMapIntensity: 1.7 });
+const nero = new THREE.MeshPhysicalMaterial({ color: 0x0a0d14, metalness: .6, roughness: .25, clearcoat: 1 });
+const vetro = new THREE.MeshPhysicalMaterial({ color: 0x0b1a3a, metalness: .2, roughness: .02, transparent: true, opacity: .92, clearcoat: 1, envMapIntensity: 2 });
+function modella(g, fy) { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+  p.setZ(i, z * (1 - .22 * Math.pow(Math.abs(x) / (L / 2 + .3), 4)) * fy(y)); } g.computeVertexNormals(); }
+const gCorpo = new THREE.ExtrudeGeometry(new THREE.Shape(curva([[0, .34], [-.06, .6], [.02, .82], [.45, .9], [1.4, .92], [2.6, .92], [3.4, .86], [4.2, .7], [4.58, .56], [4.62, .36]], 8)
+  .concat([[4.5, .22], [3.9, .2], [.7, .2], [.08, .24]].map(([x, y]) => new THREE.Vector2(x, y)))), { depth: prof, bevelEnabled: true, bevelThickness: .25, bevelSize: .22, bevelSegments: 10, curveSegments: 24 });
+gCorpo.translate(-L / 2, 0, -prof / 2); modella(gCorpo, y => 1 - .16 * Math.max(0, y - .55)); auto.add(new THREE.Mesh(gCorpo, vernice));
+const lc = W - .78;
+const gCab = new THREE.ExtrudeGeometry(new THREE.Shape(curva([[.45, .9], [.95, 1.08], [1.5, 1.34], [2.3, 1.38], [2.95, 1.26], [3.6, .91]], 10)), { depth: lc, bevelEnabled: true, bevelThickness: .16, bevelSize: .14, bevelSegments: 8, curveSegments: 24 });
+gCab.translate(-L / 2, 0, -lc / 2); modella(gCab, y => 1 - .42 * Math.max(0, (y - .9) / .5)); auto.add(new THREE.Mesh(gCab, vetro));
+const tetto = new THREE.Mesh(new THREE.BoxGeometry(1.15, .04, lc * .62), nero); tetto.position.set(1.9 - L / 2, 1.43, 0); auto.add(tetto);
+[-1, 1].forEach(s => { const l = new THREE.Mesh(new THREE.BoxGeometry(3.6, .025, .02), new THREE.MeshBasicMaterial({ color: bianco })); l.position.set(.15, .6, s * (W / 2 + .005)); auto.add(l); });
+const gomma = new THREE.MeshStandardMaterial({ color: 0x111317, roughness: .8 }), cerchio = new THREE.MeshPhysicalMaterial({ color: 0xcfd6e2, metalness: 1, roughness: .18 });
+[-1.42, 1.5].forEach(x => [-1, 1].forEach(s => { const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(.3, .11, 20, 48), gomma)); g.add(new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .2, 48).rotateX(Math.PI / 2), cerchio));
+  for (let k = 0; k < 5; k++) { const r = new THREE.Mesh(new THREE.BoxGeometry(.05, .5, .04), cerchio); r.rotation.z = k * Math.PI * 2 / 5; r.position.z = s * .11; g.add(r); }
+  g.position.set(x, .41, s * (W / 2 - .05)); auto.add(g); }));
+const fariM = new THREE.MeshBasicMaterial({ color: 0x000000 }), stopM = new THREE.MeshBasicMaterial({ color: 0x000000 });
+[-1, 1].forEach(s => { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .32, 4, 12).rotateX(Math.PI / 2).rotateY(.35 * s), fariM); f.position.set(L / 2 + .02, .66, s * .62); auto.add(f);
+  const r = new THREE.Mesh(new THREE.BoxGeometry(.04, .05, .62), stopM); r.position.set(-L / 2 - .12, .78, s * .42); auto.add(r); });
+auto.rotation.y = Math.PI / 2;
+
+/* ---------- coriandoli luminosi della serata di gala ---------- */
+const NC = telefono ? 500 : 1400, cg = new THREE.BufferGeometry(), cp = new Float32Array(NC * 3), cv = new Float32Array(NC);
+for (let i = 0; i < NC; i++) { cp.set([(Math.random() - .5) * LARG, Math.random() * ALT, -Math.random() * LUNG], i * 3); cv[i] = .3 + Math.random(); }
+cg.setAttribute('position', new THREE.BufferAttribute(cp, 3));
+const coriandoliM = new THREE.PointsMaterial({ color: 0xbfd3ff, size: telefono ? .05 : .045, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+scene.add(new THREE.Points(cg, coriandoliM));
+
+scene.add(new THREE.HemisphereLight(0x6f8fd8, 0x020617, .35));
+const luna = new THREE.DirectionalLight(0x9cb6ff, .35); luna.position.set(-30, 40, 30); scene.add(luna);
+const luceIngresso = new THREE.PointLight(0xcfe0ff, 0, 30, 1.4); luceIngresso.position.set(0, 4, -3); scene.add(luceIngresso);
+
+/* ---------- foto vere delle auto sui muri (da AutoScout24, tramite il nostro server) ---------- */
+const caricatore = new THREE.TextureLoader(); caricatore.setCrossOrigin('anonymous');
+const eur = n => n ? n.toLocaleString('it-IT') + ' €' : '';
+function appendi(AUTO) {
+  if (!AUTO || !AUTO.length) return;
+  const lista = [];
+  const maxF = Math.max(...AUTO.map(a => (a.foto || []).length));
+  for (let j = 0; j < maxF && lista.length < cornici.length; j++) AUTO.forEach((a, i) => { if (a.foto && a.foto[j] && lista.length < cornici.length) lista.push([i, a.foto[j]]); });
+  // ordine: prima la foto principale di ogni auto, alternando i due muri
+  cornici.forEach((c, k) => {
+    const pos = k % 2 ? N_LATO + (k >> 1) : (k >> 1); const cc = cornici[pos] || c;
+    const [i, u] = lista[k % lista.length]; const a = AUTO[i]; cc.auto = i;
+    caricatore.load('/api/vetrina-foto?u=' + encodeURIComponent(u.replace('1280x960', '720x540')), t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; cc.fotoM.map = t; cc.fotoM.needsUpdate = true; });
+    cc.targaM.map = tex(660, 110, (x, w, h) => {
+      x.fillStyle = '#030b22'; x.fillRect(0, 0, w, h); x.fillStyle = '#2f6bff'; x.fillRect(0, 0, 8, h);
+      const nome = ((a.marca || '') + ' ' + (a.versione || a.modello || '')).replace(/\s+/g, ' ').trim();
+      x.fillStyle = '#fff'; x.font = `700 34px ${FONT}`; x.fillText(nome.length > 26 ? nome.slice(0, 25) + '…' : nome, 26, 48);
+      x.fillStyle = '#9cbcff'; x.font = `600 26px ${FONT}`; x.fillText([a.anno, a.km != null ? a.km.toLocaleString('it-IT') + ' km' : '', a.carburante].filter(Boolean).join(' · '), 26, 88);
+      x.fillStyle = '#fff'; x.font = `800 40px ${FONT}`; x.textAlign = 'right'; x.fillText(eur(a.prezzo), w - 22, 66);
+    });
+    cc.targaM.needsUpdate = true;
+  });
+}
+if (window.__AUTO) appendi(window.__AUTO);
+document.addEventListener('auto-pronte', e => appendi(e.detail));
+
+/* ---------- clic sulle cornici: apre la scheda dell'auto ---------- */
+const ray = new THREE.Raycaster(), pu = new THREE.Vector2();
+let sopraCornice = null;
+function colpita(ev) {
+  const r = tela.getBoundingClientRect(); pu.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(pu, camera); const h = ray.intersectObjects(cornici.map(c => c.foto))[0];
+  return h ? cornici.find(c => c.foto === h.object) : null;
+}
+tela.addEventListener('pointermove', ev => { sopraCornice = colpita(ev); tela.style.cursor = sopraCornice && sopraCornice.auto >= 0 ? 'pointer' : ''; });
+tela.addEventListener('click', ev => { const c = colpita(ev); if (c && c.auto >= 0 && window.apri) window.apri(c.auto); });
+
+/* ---------- post-produzione ---------- */
+const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .5, .45, .9); composer.addPass(bloom); composer.addPass(new OutputPass());
+function misura() { const w = tela.clientWidth, h = tela.clientHeight; renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', misura); misura();
 
-/* ---------- regia: intro + scroll + mouse ---------- */
+/* ---------- regia ---------- */
 const mouse = { x: 0, y: 0 }; addEventListener('pointermove', e => { mouse.x = e.clientX / innerWidth - .5; mouse.y = e.clientY / innerHeight - .5; });
 let scroll = 0; const hero = document.getElementById('hero');
 addEventListener('scroll', () => { const r = hero.getBoundingClientRect(); scroll = Math.min(1, Math.max(0, -r.top / (r.height - innerHeight || 1))); }, { passive: true });
-const liscia = t => t * t * (3 - 2 * t), tra = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
-const T0 = performance.now(); let visibile = true;
-new IntersectionObserver(e => { visibile = e[0].isIntersecting; }).observe(tela);
-const durata = 6.5;
+let visibile = true; new IntersectionObserver(e => { visibile = e[0].isIntersecting; }).observe(tela);
+let T0 = null; const FINE = 12.5; let finita = false;
+const salta = () => { if (T0 !== null) T0 = Math.min(T0, performance.now() - FINE * 1000); };
+document.getElementById('salta')?.addEventListener('click', salta);
+// percorso della telecamera: fuori → porte → dentro la galleria → davanti all'auto
+const tappe = [
+  [0, [0, 9, 46], [0, 4, 0]], [3.2, [3, 3.4, 18], [0, 4.2, 0]], [5.2, [0, 2.4, 6], [0, 2.4, -10]],
+  [7.6, [-2.2, 2.3, -9], [6, 2.8, -14]], [9.8, [2.2, 2.3, -20], [-6, 2.8, -24]], [12.5, telefono ? [0, 3.2, -29] : [-1.6, 2.7, -30.5], telefono ? [0, 1.6, -38] : [-3.4, 1.0, -38]]];
+const pc = new THREE.Vector3(), pt = new THREE.Vector3();
+function percorso(t) {
+  let k = 0; while (k < tappe.length - 2 && t > tappe[k + 1][0]) k++;
+  const [a0, p0, g0] = tappe[k], [a1, p1, g1] = tappe[k + 1]; const u = liscia(tra(t, a0, a1));
+  pc.set(lerp(p0[0], p1[0], u), lerp(p0[1], p1[1], u), lerp(p0[2], p1[2], u)); pt.set(lerp(g0[0], g1[0], u), lerp(g0[1], g1[1], u), lerp(g0[2], g1[2], u));
+}
 document.dispatchEvent(new Event('scena-pronta'));
-
 function giro(now) {
-  requestAnimationFrame(giro);
-  if (!visibile) return;
-  const t = (window.__T ?? (now - T0) / 1000), k = Math.min(1, t / durata);
-  // intro: discesa dalle stelle fino all'auto
-  const iv = liscia(tra(t, 0, 4.2));
-  const ang = -2.4 + iv * 2.0 + scroll * Math.PI * 1.15 + t * .03 * (1 - scroll) + mouse.x * .25;
-  const rag = THREE.MathUtils.lerp(26, telefono ? 11.5 : 9.2, iv) - scroll * 1.5;
-  const alt = THREE.MathUtils.lerp(22, 2.3, iv) + scroll * 2.2 - mouse.y * .6;
-  camera.position.set(Math.sin(ang) * rag, alt, Math.cos(ang) * rag);
-  camera.lookAt(0, THREE.MathUtils.lerp(4, .9, iv) + scroll * .2, 0);
-  // accensioni in sequenza
-  anelli.forEach(o => { const v = tra(t, 1.2 + o.i * .35, 1.8 + o.i * .35); o.m.opacity = v * (o.i === 0 ? 1 : .55 + .3 * Math.sin(t * 1.5 + o.i)); o.a.scale.setScalar(1 + .015 * Math.sin(t * 2 + o.i)); });
-  barre.forEach((b, i) => { b.material.opacity = tra(t, 2.0 + i * .12, 2.3 + i * .12) * .35; });
-  const luce = tra(t, 2.2, 3.4);
-  chiave.intensity = luce * 70; blu1.intensity = luce * 30; blu2.intensity = luce * 22;
-  const fari = tra(t, 3.6, 3.75) * (t < 4.1 ? (Math.sin(t * 40) > 0 ? 1 : .2) : 1);
-  fariM.color.setRGB(fari * 1.6, fari * 1.8, fari * 2.2); stopM.color.setRGB(fari * 2.2, fari * .1, fari * .2); fascio.intensity = fari * 60;
-  (lineeBlu || []).forEach(m => m.color.setRGB(.6 + fari * .4, .7 + fari * .3, 1));
-  cielo.uniforms.t.value = t; cielo.uniforms.a.value = 1; polvere.uniforms.t.value = t; polvere.uniforms.a.value = tra(t, 2, 4) * .5;
-  griglia.material.opacity = .12 + .25 * tra(t, 1, 3);
-  // piattaforma che gira, ruote che girano un poco
-  piatta.rotation.y = auto.rotation.y = t * .18 + scroll * 1.2;
-  ruote.forEach(r => { r.children[0].rotation.z = r.children[1].rotation.z = 0; });
-  if (scritta) {
-    const s = tra(t, 4.2, 5.4); scritta.material.emissiveIntensity = s * .6; scritta.position.y = 2.4 + (1 - s) * 3 + Math.sin(t) * .1;
-    scritta.rotation.y = Math.sin(t * .4) * .25 - mouse.x * .3; scritta.scale.setScalar((telefono ? .55 : 1) * (.4 + .6 * liscia(s)));
+  requestAnimationFrame(giro); if (!visibile) return;
+  if (T0 === null) T0 = now;
+  const t = window.__T ?? (now - T0) / 1000;
+  if (!finita && t > FINE - 1.5) { finita = true; document.dispatchEvent(new Event('intro-finita')); }
+  percorso(Math.min(t, FINE));
+  if (t >= FINE) {           // dopo l'intro: scorrendo cammini indietro lungo la galleria guardando le foto ai muri
+    const s = liscia(scroll), k = Math.min(1, s * 6);
+    pc.set((telefono ? 0 : -1.6) * (1 - k) + Math.sin(s * Math.PI * 2) * 2.2 + mouse.x * 1.2, 2.7 + s * .2 - mouse.y * .5, lerp(-30.5, -6, s));
+    pt.set((telefono ? 0 : -3.4) * (1 - k) + Math.sin(s * Math.PI * 4) * 6 * k + mouse.x * 3, lerp(1.0, 3, k), pc.z - 4 - (1 - k) * 3.5);
   }
-  bloom.strength = .3 + .25 * tra(t, 2, 4) + .08 * Math.sin(t * .8) * k;
+  camera.position.lerp(pc, t < FINE ? 1 : .08); camera.lookAt(pt);
+  // accensioni
+  const insegnaOn = tra(t, .8, 1.1) * (t < 1.6 ? (Math.sin(t * 55) > 0 ? 1 : .15) : 1);
+  insegnaM.emissiveIntensity = insegnaOn * 2.2; ledM.color.setScalar(0).add(new THREE.Color(blu).multiplyScalar(.3 + insegnaOn));
+  fasciM.uniforms.a.value = tra(t, .3, 1.5);
+  fari.forEach(f => { f.g.rotation.z = Math.sin(t * .45 + f.f) * .55; f.g.rotation.x = Math.cos(t * .33 + f.f) * .35; });
+  const apre = liscia(tra(t, 3.3, 5.0)); porte.forEach(p => { p.position.x = p.userData.s * (2.05 + apre * 3.9); });
+  const dentro = tra(t, 3.6, 6.2);
+  luciSoffitto.forEach((m, i) => m.color.setScalar(tra(t, 3.6 + i * .12, 3.9 + i * .12) * .9));
+  interne.forEach(l => l.intensity = dentro * 14); luceIngresso.intensity = dentro * 12; pedanaLuce.intensity = tra(t, 9, 11) * 120;
+  colonne.forEach((m, i) => m.color.setRGB(.18 * tra(t, 4 + i * .08, 4.4 + i * .08), .42 * tra(t, 4 + i * .08, 4.4 + i * .08), tra(t, 4 + i * .08, 4.4 + i * .08)));
+  cornici.forEach((c, i) => { const v = tra(t, 4.6 + (i % N_LATO) * .3, 5.2 + (i % N_LATO) * .3); const h = c === sopraCornice ? 1.25 : 1;
+    c.fotoM.color.setScalar(v * h * .92); c.targaM.color.setScalar(v); c.cono.material.uniforms.a.value = v * .16; });
+  const far = tra(t, 10.4, 10.6) * (t < 11 ? (Math.sin(t * 40) > 0 ? 1 : .2) : 1);
+  fariM.color.setRGB(far * 1.6, far * 1.8, far * 2.2); stopM.color.setRGB(far * 2.2, far * .1, far * .2);
+  anello.material.color.setRGB(.18 + .3 * far, .42 + .3 * far, 1);
+  pedana.rotation.y = t * .25;
+  coriandoliM.opacity = dentro * .6;
+  const p = cg.attributes.position; for (let i = 0; i < NC; i++) { let y = p.getY(i) - cv[i] * .012; if (y < 0) y = ALT; p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(t + i) * .002); } p.needsUpdate = true;
+  cielo.uniforms.t.value = t;
+  bloom.strength = .5 - .15 * dentro;
   composer.render();
 }
 requestAnimationFrame(giro);
@@ -433,10 +545,11 @@ requestAnimationFrame(giro);
 <script>
 // caricamento con la scritta che si riempie di blu
 (function(){const lb=document.getElementById('lb'),L=document.getElementById('loader');let p=0;const t=setInterval(()=>{p=Math.min(100,p+3+Math.random()*6);lb.style.setProperty('--p',p+'%');if(p>=100){clearInterval(t);setTimeout(()=>L.classList.add('via'),250)}},60);
-setTimeout(()=>L.classList.add('via'),6000)})();
+setTimeout(()=>L.classList.add('via'),4000);document.addEventListener('scena-pronta',()=>setTimeout(()=>L.classList.add('via'),400))})();
 // frasi che entrano scorrendo l'apertura
 const fr=[...document.querySelectorAll('.frasi div')];addEventListener('scroll',()=>{const r=document.getElementById('hero').getBoundingClientRect();const s=-r.top/(r.height-innerHeight);fr.forEach((d,i)=>d.classList.toggle('si',s>i*.18+.05))},{passive:true});
-setTimeout(()=>fr[0]&&fr[0].classList.add('si'),5200);
+document.addEventListener('intro-finita',()=>{document.querySelector('.sopra').classList.add('si');document.querySelector('.frasi').classList.add('si2');document.getElementById('salta').classList.add('via');fr[0]&&fr[0].classList.add('si')});
+setTimeout(()=>document.dispatchEvent(new Event('intro-finita')),16000);
 
 const API='/api/vetrina/astro-srl-milano-mi', AS24='https://www.autoscout24.it/concessionari/astro-srl-milano-mi', WA='https://wa.me/393471757088?text=', TEL='+393471757088';
 const eur=n=>n?n.toLocaleString('it-IT')+' €':'Prezzo su richiesta';
@@ -502,7 +615,7 @@ document.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>
 const sm=document.getElementById('marca'), so=document.getElementById('ordine');
 sm&&sm.addEventListener('change',()=>{marca=sm.value;disegna()}); so&&so.addEventListener('change',()=>{ordine=so.value;disegna()});
 fetch(API).then(r=>r.json()).then(d=>{
-  AUTO=(d.auto||[]).filter(a=>a&&a.titolo);
+  AUTO=(d.auto||[]).filter(a=>a&&a.titolo); window.__AUTO=AUTO; document.dispatchEvent(new CustomEvent('auto-pronte',{detail:AUTO}));
   document.querySelectorAll('[data-n-auto]').forEach(x=>x.textContent=AUTO.length||'—');
   const pz=AUTO.map(a=>a.prezzo).filter(Boolean);
   document.querySelectorAll('[data-da]').forEach(x=>x.textContent=pz.length?Math.min(...pz).toLocaleString('it-IT')+' €':'—');
