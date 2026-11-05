@@ -149,7 +149,7 @@ h1,h2,h3{font-family:'Sora','Manrope',sans-serif;letter-spacing:-.02em;line-heig
 .frasi div span{color:#7fa8ff}
 @media(max-width:760px){.frasi{display:none}}
 .salta{position:absolute;right:20px;bottom:90px;z-index:3;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:9px 16px;font:600 13px Manrope;cursor:pointer;backdrop-filter:blur(8px);transition:.5s}.salta.via{opacity:0;pointer-events:none}
-.atti{position:absolute;left:clamp(16px,5vw,70px);top:22vh;pointer-events:none;color:#fff}
+.atti{z-index:4;position:absolute;left:clamp(16px,5vw,70px);top:22vh;pointer-events:none;color:#fff}
 .atto{position:absolute;left:0;top:0;width:min(560px,90vw);opacity:0;transform:translateY(40px);filter:blur(8px);transition:1s cubic-bezier(.2,.7,.2,1)}
 .atto.on{opacity:1;transform:none;filter:none}
 .atto small{font:700 12px Manrope;letter-spacing:.4em;text-transform:uppercase;color:#7fa8ff}
@@ -160,6 +160,12 @@ h1,h2,h3{font-family:'Sora','Manrope',sans-serif;letter-spacing:-.02em;line-heig
 .tacche i{width:10px;height:10px;border-radius:50%;border:1.5px solid #9cbcff;transition:.4s}
 .tacche i.on{background:#fff;border-color:#fff;box-shadow:0 0 14px #6f9bff;height:30px;border-radius:6px}
 @media(max-width:760px){.tacche{right:10px}.atti{top:16vh}}
+.muro{display:none;z-index:0}.sopra,.frasi,.tacche,.salta,.giu{z-index:4}
+.senza3d #scena3d{display:none}
+.senza3d .fisso{background:radial-gradient(900px 500px at 50% 30%,#123a9e,#020617 70%)}
+.senza3d .muro{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;position:absolute;inset:-10% -20%;padding:10px;transform:perspective(900px) rotateX(calc(28deg - var(--s,0)*28deg)) translateY(calc(var(--s,0)*-30%)) scale(calc(.9 + var(--s,0)*.5));transition:transform .2s;opacity:.55}
+.senza3d .muro img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:2px solid rgba(156,188,255,.5);box-shadow:0 0 30px rgba(47,107,255,.5);animation:entra .9s both;animation-delay:calc(var(--i)*.06s)}
+@keyframes entra{from{opacity:0;transform:translateY(30px) scale(.9)}}
 .giu{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);color:#9fb7f2;font:600 11px Manrope;letter-spacing:.3em;animation:su 2s infinite}
 @keyframes su{50%{transform:translate(-50%,8px)}}
 .nastro{background:var(--blu);color:#fff;overflow:hidden;white-space:nowrap;padding:18px 0}
@@ -201,7 +207,7 @@ h1,h2,h3{font-family:'Sora','Manrope',sans-serif;letter-spacing:-.02em;line-heig
 <nav class="menu" id="menu"><a href="/vetrina/astro#auto">Le nostre auto</a><a href="/vetrina/astro#servizi">Servizi</a><a href="/vetrina/astro#zone">Zone</a><a href="/vetrina/astro/blog">Blog</a><a href="/vetrina/astro#faq">Domande</a><a href="/vetrina/astro#contatti">Contatti</a></nav>
 <div style="display:flex;gap:10px;align-items:center"><a class="bt" href="tel:+393471757088">☎<span> Chiama 347 1757088</span></a><button class="hamb" onclick="document.getElementById('menu').classList.toggle('aperto')" aria-label="Menu">☰</button></div></header>
 <div class="loader" id="loader"><div><b id="lb">ASTRO</b><small style="color:#9cbcff">STASERA IN SALONE · AUTO USATE MILANO</small></div></div>
-<section id="hero"><div class="fisso"><canvas id="scena3d"></canvas>
+<section id="hero"><div class="fisso"><canvas id="scena3d"></canvas><div class="muro" id="muro"></div>
 <div class="frasi"><div>Auto usate <span>selezionate</span></div><div>Permuta e <span>valutazione gratuita</span></div><div>Pratiche <span>seguite da noi</span></div><div><span data-n-auto>…</span> auto disponibili ora</div></div>
 <div class="sopra"><span class="eti" style="color:#9cbcff">Astro srl · Milano</span><h1>Auto usate a Milano, <em>scelte una per una.</em></h1>
 <p>Utilitarie, benzina, ibride e auto per neopatentati con chilometri chiari, foto reali e prezzi aggiornati in tempo reale. Permuta e valutazione gratuita.</p>
@@ -235,6 +241,25 @@ h1,h2,h3{font-family:'Sora','Manrope',sans-serif;letter-spacing:-.02em;line-heig
 <a class="grande" href="tel:+393471757088">347 1757088</a><p class="sot">Telefono e WhatsApp · <a href="mailto:astro@astroservizi.org">astro@astroservizi.org</a><br>Astro srl · Milano · visite su appuntamento</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:26px"><a class="bt v" href="https://wa.me/393471757088?text=Ciao Astro, vorrei fissare un appuntamento">💬 Scrivici su WhatsApp</a><a class="bt b" href="https://www.autoscout24.it/concessionari/astro-srl-milano-mi" target="_blank" rel="noopener">Le auto su AutoScout24</a></div></div>
 <div class="globo"></div></div></section>
+<script>
+(function(){
+  var inviati=0;function segnala(m){if(inviati++>2)return;try{new Image().src='/vetrina/astro/errore-3d?m='+encodeURIComponent(String(m).slice(0,180))+'&ua='+encodeURIComponent(navigator.userAgent.slice(0,90))}catch(e){}}
+  addEventListener('error',function(e){segnala((e.message||'errore')+' @'+(e.filename||'').split('/').pop()+':'+e.lineno)});
+  addEventListener('unhandledrejection',function(e){segnala('promise: '+(e.reason&&e.reason.message||e.reason))});
+  var c=document.createElement('canvas');var gl=null;try{gl=c.getContext('webgl2')||c.getContext('webgl')}catch(e){}
+  if(!gl){segnala('niente webgl');document.documentElement.classList.add('senza3d')}
+  setTimeout(function(){if(!window.__3D_OK){segnala('3d non partito in 9s');document.documentElement.classList.add('senza3d')}},9000);
+  // atti e testi guidati dallo scorrimento, anche se il 3D non parte
+  var hero=document.getElementById('hero'),atto=-1,fin=false;
+  function su(){var r=hero.getBoundingClientRect(),s=Math.min(1,Math.max(0,-r.top/(r.height-innerHeight||1)));
+    if(window.__3D_OK)return;var a=s<.33?0:s<.64?1:2;if(a!==atto){atto=a;document.dispatchEvent(new CustomEvent('atto',{detail:a}))}
+    document.documentElement.style.setProperty('--s',s);
+    if(s>.93&&!fin){fin=true;document.dispatchEvent(new Event('intro-finita'))}if(s<.88&&fin){fin=false;document.dispatchEvent(new Event('intro-indietro'))}}
+  addEventListener('scroll',su,{passive:true});setTimeout(su,50);
+  document.addEventListener('auto-pronte',function(e){var w=document.getElementById('muro');if(!w)return;var f=[];e.detail.forEach(function(a){(a.foto||[]).slice(0,4).forEach(function(u){f.push(u.replace('1280x960','480x360'))})});
+    w.innerHTML=f.slice(0,24).map(function(u,i){return '<img src="'+u+'" style="--i:'+i+'" alt="" loading="lazy">'}).join('')});
+})();
+</script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -253,8 +278,8 @@ import { Reflector } from 'three/addons/objects/Reflector.js';
    ===================================================================== */
 const tela = document.getElementById('scena3d');
 const telefono = matchMedia('(max-width: 760px)').matches;
-const renderer = new THREE.WebGLRenderer({ canvas: tela, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, telefono ? 1.5 : 2));
+const renderer = new THREE.WebGLRenderer({ canvas: tela, antialias: !telefono, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, telefono ? 1.25 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020617); scene.fog = new THREE.FogExp2(0x020617, .012);
@@ -276,8 +301,8 @@ const FONT = '"Sora","Manrope",Arial,sans-serif';
 
 /* ---------- strada bagnata, cielo, stelle ---------- */
 const terraGeo = new THREE.PlaneGeometry(400, 400);
-const specchio = new Reflector(terraGeo, { textureWidth: telefono ? 512 : 1024, textureHeight: telefono ? 512 : 1024, color: 0x3a4766 });
-specchio.rotation.x = -Math.PI / 2; scene.add(specchio);
+if (!telefono) { const specchio = new Reflector(terraGeo, { textureWidth: 1024, textureHeight: 1024, color: 0x3a4766 });
+specchio.rotation.x = -Math.PI / 2; scene.add(specchio); }
 const asfalto = new THREE.Mesh(terraGeo, new THREE.MeshStandardMaterial({ color: 0x050a16, roughness: .35, metalness: .4, transparent: true, opacity: .82 }));
 asfalto.rotation.x = -Math.PI / 2; asfalto.position.y = .004; scene.add(asfalto);
 // strisce stradali e marciapiede davanti al salone
@@ -616,6 +641,7 @@ function giro(now) {
   cielo.uniforms.t.value = t;
   bloom.strength = .5 - .15 * dentro + lampoM.opacity * .35 + far * .15;
   composer.render();
+  if (!window.__3D_OK) { window.__3D_OK = true; document.dispatchEvent(new Event('3d-ok')); }
 }
 requestAnimationFrame(giro);
 </script>
