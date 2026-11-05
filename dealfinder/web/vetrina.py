@@ -49,10 +49,50 @@ def _auto(it: dict) -> dict | None:
     foto = [re.sub(r"/\d+x\d+\.(webp|jpg)$", "/1280x960.webp", f) for f in (it.get("images") or []) if isinstance(f, str) and f.startswith("http")]
     det = {str(d.get("iconName") or ""): d.get("data") for d in (it.get("vehicleDetails") or []) if isinstance(d, dict)}
     prezzo = l.price_eur
+    # formato pagina concessionario (5/11): prices / vehicle.*{raw, formatted}
+    def raw(k):
+        x = veh.get(k)
+        return x.get("raw") if isinstance(x, dict) else x
+    def fmt(k):
+        x = veh.get(k)
+        return x.get("formatted") if isinstance(x, dict) else x
+    if not prezzo:
+        pz = it.get("prices") or {}
+        cand = []
+        def cerca(o):
+            if isinstance(o, dict):
+                for kk, vv in o.items():
+                    if isinstance(vv, (int, float)) and "price" in kk.lower():
+                        cand.append(vv)
+                    elif isinstance(vv, str) and "€" in vv:
+                        n = re.sub(r"[^0-9]", "", vv.split(",")[0])
+                        if n:
+                            cand.append(int(n))
+                    else:
+                        cerca(vv)
+            elif isinstance(o, list):
+                for vv in o:
+                    cerca(vv)
+        cerca(pz)
+        cand = [c for c in cand if 300 <= c <= 2_000_000]
+        prezzo = int(cand[0]) if cand else None
+    anno = l.year
+    if not anno:
+        for k in veh:
+            if "regist" in k.lower() or "year" in k.lower():
+                m = re.search(r"(19|20)\d\d", str(fmt(k) or raw(k) or ""))
+                if m:
+                    anno = int(m.group(0)); break
+    km_ = l.mileage_km or raw("mileageInKm")
+    carb = det.get("gas_pump") or fmt("fuelCategory") or l.fuel
+    cambio = det.get("transmission") or fmt("transmissionType") or l.gearbox
+    pot = det.get("speedometer") or (" / ".join(x for x in (fmt("powerInKw"), fmt("powerInHp")) if x) or None)
+    kw = l.power_kw or raw("powerInKw")
+    if "non marciante" in (str(l.title) + " " + str(veh.get("modelVersionInput"))).lower():
+        return None                       # auto da ricambi: non va sul sito vetrina
     return {"id": l.source_id, "marca": veh.get("make"), "modello": veh.get("model"), "versione": veh.get("modelVersionInput"),
-            "titolo": l.title, "prezzo": prezzo, "anno": l.year, "immatricolazione": det.get("calendar"), "km": l.mileage_km,
-            "carburante": det.get("gas_pump") or l.fuel, "cambio": det.get("transmission") or l.gearbox,
-            "potenza": det.get("speedometer"), "kw": l.power_kw, "foto": foto[:30], "link": l.url,
+            "titolo": l.title, "prezzo": prezzo, "anno": anno, "immatricolazione": det.get("calendar"), "km": km_,
+            "carburante": carb, "cambio": cambio, "potenza": pot, "kw": kw, "carrozzeria": fmt("bodyType"), "foto": foto[:30], "link": l.url,
             "nuova": str(det.get("calendar") or "").strip() in ("", "- (Prima immatricolazione)", "Nuovo") and (l.mileage_km or 0) < 100}
 
 
@@ -73,9 +113,9 @@ def leggi(slug: str) -> list:
                 import json as _j
                 from ..collectors.autoscout import _senza_telefoni
                 x = _senza_telefoni(lista[0])
-                log.warning("VETRINA_DEBUG chiavi=%s price=%s tracking=%s dettagli=%s veicolo=%s", list(x)[:40],
-                            _j.dumps(x.get("price"), ensure_ascii=False)[:400], _j.dumps(x.get("tracking"), ensure_ascii=False)[:400],
-                            _j.dumps(x.get("vehicleDetails"), ensure_ascii=False)[:800], _j.dumps(x.get("vehicle"), ensure_ascii=False)[:600])
+                v = x.get("vehicle") or {}
+                log.warning("VETRINA_DEBUG prices=%s chiavi_veicolo=%s data=%s", _j.dumps(x.get("prices"), ensure_ascii=False)[:600],
+                            list(v), {k: v.get(k) for k in v if any(w in k.lower() for w in ("regist", "year", "date", "anno"))})
             for it in lista:
                 a = _auto(it)
                 if a and a["id"] not in visti:
