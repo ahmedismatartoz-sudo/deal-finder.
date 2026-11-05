@@ -514,3 +514,138 @@ def aperture(campagna_id: int, tipo: str = "openers") -> dict:
         d.raise_for_status()
     ems = emails_da_export(d.content)
     return {"campagna": campagna_id, "tipo": tipo, "n": len(ems), "h": [hash_email(e) for e in ems]}
+
+
+# ---------- 5/11 pomeriggio (cliente: "prendi i nuovi 300, fai un mix di altre fino a 1.200, caricali e manda") ----------
+LISTA_MIX = "Skovo nuovi + richiamo 05-11"
+
+
+def scegli_mix(nuove: list[dict], richiamo: list[str], bloccati: set, totale: int) -> list[str]:
+    """Prima le email mai contattate (zona, poi senza provincia, poi fuori zona), poi i contattati del 3/11 che non
+    hanno aperto, fino a `totale`. Sempre fuori: disiscritti/bloccati, PEC, Loconte, doppioni. Funzione pura."""
+    from .invii import impronta, norm_email
+    ordine = {"zona": 0, "?": 1}
+    nuove = sorted(nuove, key=lambda r: ordine.get("zona" if r.get("zona") else (r.get("prov") or "?"), 2))
+    out, visti = [], set()
+    for e in [r.get("email") for r in nuove] + list(richiamo):
+        e = norm_email(e or "")
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e \
+                or "pec" in e.split("@")[-1] or "legalmail" in e:
+            continue
+        visti.add(e)
+        if impronta(e) in bloccati:
+            continue
+        out.append(e)
+        if len(out) >= totale:
+            break
+    return out
+
+
+def _esporta(c, campagna_id: int, tipo: str) -> list[str]:
+    import time as _t
+    r = c.post(f"{API}/emailCampaigns/{campagna_id}/exportRecipients", json={"recipientsType": tipo})
+    if r.status_code >= 300:
+        return []
+    pid = r.json()["processId"]
+    for _ in range(60):
+        _t.sleep(5)
+        p = c.get(f"{API}/processes/{pid}").json()
+        if p.get("status") == "completed" and p.get("export_url"):
+            d = httpx.get(p["export_url"], timeout=120, follow_redirects=True)
+            return emails_da_export(d.content) if d.status_code == 200 else []
+    return []
+
+
+def mix_e_invia(modello_id: int, totale: int = 1200, campagne_richiamo=(64, 65, 66, 67), lista_vecchia: int = 74) -> dict:
+    """Toglie da Brevo i contatti della lista di ieri (non quelli bloccati, che restano bloccati), carica le email
+    nuove + il richiamo del 3/11 in una lista propria e manda subito la copia della campagna `modello_id`."""
+    import time as _t
+    from ..db import connect
+    from . import consegne as CO
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    esito = {}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            nuove = CO.righe(conn, "TUTTE_MAI_USATE")
+        esito["disiscritti"] = len(bloccati)
+        if len(bloccati) < BLOCCATI_MINIMI:
+            esito["fermo"] = "disiscritti_incompleti"
+            return esito
+        # 1) il richiamo: chi il 3/11 ha ricevuto e non ha aperto (prima di cancellare qualsiasi cosa)
+        richiamo = []
+        for cid in campagne_richiamo:
+            richiamo += _esporta(c, cid, "nonOpeners")
+        hard = set()
+        for cid in campagne_richiamo:
+            hard |= set(_esporta(c, cid, "hardBounces"))
+        richiamo = [e for e in richiamo if e not in hard]
+        esito["richiamo_disponibili"] = len(richiamo)
+        scelti = scegli_mix(nuove, richiamo, bloccati, totale)
+        esito["scelti"] = len(scelti)
+        esito["di_cui_nuove"] = sum(1 for e in scelti if e not in set(richiamo))
+        modello = c.get(f"{API}/emailCampaigns/{modello_id}").json()
+        html, oggetto = modello.get("htmlContent") or "", modello.get("subject") or ""
+        if not html or not _foto_ok(html):
+            esito["fermo"] = "auto_del_modello_non_piu_sul_sito"
+            return esito
+        # 2) posto in Brevo: via i contatti della lista di ieri che non sono bloccati
+        da_togliere = [x["email"] for x in contatti if lista_vecchia in (x.get("listIds") or [])
+                       and not invii.contatto_bloccato(x) and x.get("email")]
+        tolti = 0
+        for e in da_togliere:
+            from urllib.parse import quote
+            r = c.delete(f"{API}/contacts/{quote(e, safe='')}")
+            if r.status_code in (204, 200, 404):
+                tolti += 1
+            _t.sleep(0.12)
+        esito["tolti_da_brevo"] = tolti
+        n_brevo = int((c.get(f"{API}/contacts", params={"limit": 1}).json() or {}).get("count") or 0)
+        posto = TETTO_BREVO - n_brevo
+        esito["in_brevo_dopo"] = n_brevo
+        scelti = scelti[:max(0, posto)]
+        esito["da_caricare"] = len(scelti)
+        if not scelti:
+            return esito
+        lid = _liste(c).get(LISTA_MIX)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": LISTA_MIX, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        r = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in scelti], "listIds": [lid],
+                                                   "updateExistingContacts": True, "emptyContactsAttributes": False})
+        esito["import"] = r.status_code
+        if r.status_code >= 300:
+            return esito
+        with connect() as conn:
+            for e in scelti:
+                conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
+            conn.commit()
+        n = 0
+        for _ in range(40):
+            _t.sleep(15)
+            n = int((c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers") or 0)
+            if n >= 0.9 * len(scelti):
+                break
+        esito["nella_lista"] = n
+        if n == 0 or LISTA_MIX in nomi_campagne(c):
+            return esito
+        corpo = {"name": LISTA_MIX, "subject": oggetto, "sender": MITTENTE, "replyTo": MITTENTE["email"],
+                 "htmlContent": html, "recipients": {"listIds": [lid]}}
+        r = c.post(f"{API}/emailCampaigns", json=corpo)
+        esito["campagna"] = r.status_code
+        if r.status_code >= 300:
+            return esito
+        cid = r.json().get("id")
+        esito["campagna_id"] = cid
+        s = c.post(f"{API}/emailCampaigns/{cid}/sendNow")
+        esito["invio"] = s.status_code
+        return esito

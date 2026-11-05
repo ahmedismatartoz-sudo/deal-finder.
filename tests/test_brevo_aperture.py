@@ -18,3 +18,13 @@ def test_email_da_export_zip_gzip_csv():
         z.writestr("f.csv", csv)
     assert emails_da_export(buf.getvalue()) == ["a@x.it", "b@y.com"]
     assert hash_email(" A@x.it ") == hash_email("a@x.it") and len(hash_email("a@x.it")) == 12
+
+
+def test_scegli_mix_ordine_e_esclusioni():
+    from dealfinder.marketing.brevo_liste import scegli_mix
+    from dealfinder.marketing.invii import impronta
+    nuove = [{"email": "fuori@a.it", "prov": "TO"}, {"email": "zona@a.it", "prov": "MI", "zona": True},
+             {"email": "x@pec.it", "prov": "MI", "zona": True}, {"email": "nonsi@a.it", "prov": "?"},
+             {"email": "via@a.it", "prov": "MI", "zona": True}]
+    out = scegli_mix(nuove, ["vecchio@b.it", "zona@a.it"], {impronta("via@a.it")}, 4)
+    assert out == ["zona@a.it", "nonsi@a.it", "fuori@a.it", "vecchio@b.it"]
