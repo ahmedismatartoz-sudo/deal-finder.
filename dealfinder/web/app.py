@@ -4229,7 +4229,7 @@ def _tempo_reale():
                     nuove = leggi(conn, "lead_zona_nuove_0511")
                 if nuove:
                     L.warning("NUOVI_ZONA lista trovata: %d email (si caricano da %s)", len(nuove),
-                              os.environ.get("NUOVI_ZONA_CARICA_DA", "2026-11-05T08:30:00+01:00"))
+                              os.environ.get("NUOVI_ZONA_CARICA_DA", "2026-12-31T08:30:00+01:00"))
                     break
             except Exception:
                 pass
@@ -4237,7 +4237,9 @@ def _tempo_reale():
             L.warning("NUOVI_ZONA lista non caricata: niente")
             return
         from datetime import datetime as _dt
-        da = _dt.fromisoformat(os.environ.get("NUOVI_ZONA_CARICA_DA", "2026-11-05T08:30:00+01:00"))
+        da = _dt.fromisoformat(os.environ.get("NUOVI_ZONA_CARICA_DA", "2026-12-31T08:30:00+01:00"))
+        # 5/11: la lista di ieri non è arrivata in tempo: niente caricamento né invio finché il cliente non dice sì
+        # (si cambia questa data). Nel log solo quante email ha la lista.
         while _dt.now(da.tzinfo) < da:                         # 4/11: il cliente libera posto in Brevo stanotte: si
             time.sleep(60)                                     # carica la mattina, con il posto che c'è a quell'ora
         try:
