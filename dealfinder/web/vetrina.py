@@ -135,7 +135,7 @@ def _leggi_uno(slug: str) -> list:
 
 
 # vetrine sempre attive (Render è al limite di 300 variabili: non si aggiunge VETRINA_SLUG per ognuna)
-VETRINA_SEMPRE = {"sr-auto-srl"}     # 3/11: prototipo SR AUTO S.r.l. (Osio Sopra, BG)
+VETRINA_SEMPRE = {"sr-auto-srl", "astro-srl-milano-mi"}     # 3/11: SR AUTO (Osio Sopra, BG); 5/11: Astro srl (Milano)
 
 
 async def api_vetrina(request):
