@@ -3101,6 +3101,38 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("BREVO_APERTURE non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("utenti:"):           # 6/11 sera (cliente): quanto usano il sito i commercianti registrati (niente email nei log)
+            time.sleep(20)
+            try:
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta("utenti:" + v.split(":", 1)[1]):
+                    lg.warning("UTENTI già fatto")
+                    return
+                with connect() as conn:
+                    righe = conn.execute("""
+                        SELECT d.id, d.name, d.created_at::date AS dal, d.active, d.disattivato_da_admin AS spento,
+                               d.abbonamento_stato AS stato, d.abbonamento_fino::date AS fino, d.accesso_fino::date AS accesso,
+                               d.richiede_abbonamento AS richiede, d.stripe_customer IS NOT NULL AS stripe,
+                               (SELECT a.piano FROM abbonamenti a WHERE a.dealer_id=d.id ORDER BY a.aggiornato_at DESC LIMIT 1) AS piano,
+                               (SELECT a.stato FROM abbonamenti a WHERE a.dealer_id=d.id ORDER BY a.aggiornato_at DESC LIMIT 1) AS stato_stripe,
+                               (SELECT count(*) FROM dealer_sessions s WHERE s.dealer_id=d.id) AS sessioni,
+                               (SELECT max(s.last_seen_at)::timestamp(0) FROM dealer_sessions s WHERE s.dealer_id=d.id) AS ultimo,
+                               (SELECT count(DISTINCT s.last_seen_at::date) FROM dealer_sessions s WHERE s.dealer_id=d.id
+                                  AND s.last_seen_at > now()-interval '30 days') AS giorni30,
+                               (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id) AS aperture,
+                               (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id AND o.first_opened_at > now()-interval '7 days') AS aperture7,
+                               (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id AND o.first_opened_at > now()-interval '30 days') AS aperture30,
+                               (SELECT max(o.first_opened_at)::timestamp(0) FROM listing_opens o WHERE o.dealer_id=d.id) AS ultima_apertura,
+                               (SELECT count(*) FROM appuntamenti p WHERE p.dealer_id=d.id) AS appuntamenti,
+                               (SELECT json_object_agg(status, n) FROM (SELECT status, count(*) n FROM dealer_feedback f
+                                  WHERE f.dealer_id=d.id GROUP BY status) x) AS esiti
+                        FROM dealers d ORDER BY d.id""").fetchall()
+                for i in range(0, len(righe), 10):
+                    lg.warning("UTENTI_RIGHE %d %s", i, json.dumps([dict(r) for r in righe[i:i + 10]], ensure_ascii=False, default=str))
+                lg.warning("UTENTI_FINE %d", len(righe))
+            except Exception as e:
+                lg.warning("UTENTI non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("wa30:"):             # 6/11 notte (cliente): profili di 30 commercianti + auto del sito per WhatsApp su misura
             time.sleep(30)
             try:
