@@ -3101,6 +3101,50 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("BREVO_APERTURE non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("wa30:"):             # 6/11 notte (cliente): profili di 30 commercianti + auto del sito per WhatsApp su misura
+            time.sleep(30)
+            try:
+                import hashlib
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"wa30:{hashlib.sha256(v.encode()).hexdigest()[:10]}"):
+                    lg.warning("WA30 già fatto")
+                    return
+                cerca = set(v.split(":", 1)[1].split(","))
+
+                def h(t):
+                    d = re.sub(r"\D", "", str(t or ""))
+                    d = d[2:] if d.startswith("39") and len(d) > 10 else d
+                    return hashlib.sha256(d.encode()).hexdigest()[:12]
+                with connect() as conn:
+                    righe = conn.execute("SELECT tel, altri_tel, nome, comune, prov, auto, prezzo_min, prezzo_mediano, prezzo_max, "
+                                         "fascia, quota_benzina, marche, link FROM lead_tutti").fetchall()
+                trovati = 0
+                for r in righe:
+                    hs = [h(r["tel"])] + [h(t) for t in str(r["altri_tel"] or "").split() if t]
+                    hit = next((x for x in hs if x in cerca), None)
+                    if hit:
+                        trovati += 1
+                        lg.warning("WA30_PROFILO %s", json.dumps({"h": hit, "nome": r["nome"], "comune": r["comune"], "prov": r["prov"],
+                                   "auto": r["auto"], "pmin": r["prezzo_min"], "pmed": r["prezzo_mediano"], "pmax": r["prezzo_max"],
+                                   "fascia": r["fascia"], "benz": r["quota_benzina"], "marche": r["marche"], "link": r["link"]},
+                                   ensure_ascii=False, default=str))
+                lg.warning("WA30_PROFILI trovati %d su %d cercati", trovati, len(cerca))
+                for _ in range(30):
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                el = []
+                for it in list(_elenco.get("items") or []):
+                    pv = it.get("pv") or {}
+                    el.append([it.get("id"), it.get("marca"), it.get("modello"), it.get("nome"), it.get("anno"), it.get("km"),
+                               it.get("carb"), it.get("cambio"), it.get("prezzo"), pv.get("R_finale") or pv.get("R"), pv.get("margine"),
+                               pv.get("n"), it.get("area"), it.get("zona"), it.get("fonte"), str(it.get("nuova") or "")[:16], it.get("n_foto")])
+                for i in range(0, len(el), 20):
+                    lg.warning("WA30_AUTO %d %s", i, json.dumps(el[i:i + 20], ensure_ascii=False, default=str))
+                lg.warning("WA30_FINE auto=%d", len(el))
+            except Exception as e:
+                lg.warning("WA30 non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("rimetti:"):          # 4/11 notte (cliente): "rimetti:<id campagna>" una volta sola
             time.sleep(30)
             try:
