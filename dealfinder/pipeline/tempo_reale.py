@@ -670,7 +670,9 @@ def telefoni_candidate(conn, ids) -> Counter:
         elif tel is False:
             conn.execute("UPDATE listings SET telefono_ok=false, telefono_at=now() WHERE id=%s", (r["id"],))
         else:
-            conn.execute("UPDATE listings SET telefono_at=now() WHERE id=%s", (r["id"],))
+            # 6/11 (verifica imbuto): "non leggibile" non è "senza numero": si riprova tra ~2 ore invece che tra 12
+            rip = max(0, int(os.environ.get("TEL_CAND_ORE", "12")) - int(os.environ.get("TEL_CAND_RIPROVA_ORE", "2")))
+            conn.execute("UPDATE listings SET telefono_at=now() - make_interval(hours => %s) WHERE id=%s", (rip, r["id"]))
         stats[f"{r['source']}:{'si' if tel else ('no' if tel is False else 'non_leggibile')}"] += 1
         conn.commit()
     conn.commit()

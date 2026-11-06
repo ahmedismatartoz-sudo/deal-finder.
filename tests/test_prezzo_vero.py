@@ -159,7 +159,7 @@ def test_zero_una_gemella_solo_candidato():
         assert v["categoria"] == "candidato" and v["serve_controllo_ai"] and v["metodo"] == "valore_reale_modello"
         assert v["M"] == v["R"] == 9000
     # con il modello AI (prezzi chiesti) e senza gemelle: mai oltre candidato
-    v = P.valuta(car(1, 5000, ai={"prezzo": 9000, "errore": .1, "n": 50}), [], 1500, CFG, NOW)
+    v = P.valuta(car(1, 5000, ai={"prezzo": 9000, "errore": .1, "n": 50}), [], 1500, P.PolicyConfig(ai=True), NOW)
     assert v["categoria"] == "candidato" and v["serve_controllo_ai"]
 
 

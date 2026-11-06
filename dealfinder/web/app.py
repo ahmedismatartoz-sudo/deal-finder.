@@ -930,13 +930,15 @@ _targhe_da_controllare: list = []    # 4/11: niente più auto senza numero sul s
 COMMERCIANTI_TOP = 40
 COMMERCIANTI_PROVINCE_ESCLUSE = ("MI",)
 COMMERCIANTI_PREZZO_MIN_SU_M = 0.75        # sotto il 75% del mercato da un commerciante: prezzo "esca", fuori
+# 6/11 (verifica imbuto): tolte le parole sciolte "leasing", "noleggio", "anticipo", "con finanziamento", "incentivi":
+# scattavano sulla frase di rito "possibilità di finanziamento/leasing" (184 auto fuori). Promo = prezzo legato al finanziamento.
 RE_PROMO_COMMERCIANTE = (r"(promo|promozion|prezzo\s+(valido|riservat\w*|special\w*|bloccat\w*)|a\s+partire\s+da|"
-                         r"(solo|vincolat\w*|valid\w*|previo|tramite|con|in\s+caso\s+di)\s+(a\s+|al\s+|il\s+|un\s+)?finanziament|"
-                         r"\mrat[ae]\s+(da|mensil)|\mrateal|anticipo|leasing|noleggio|"
+                         r"(solo|vincolat\w*|valid\w*|previo|in\s+caso\s+di)\s+(a\s+|al\s+|il\s+|un\s+)?finanziament|"
+                         r"\mrat[ae]\s+da\s*\d|anticipo\s+(di\s+)?(€\s*)?\d|(prezzo|offerta)\s+(in\s+|con\s+)?(leasing|noleggio)|"
                          r"prezzo\s+(con|in)\s+permuta|valid\w*\s+con\s+permuta|solo\s+con\s+permuta|permuta\s+obbligatoria|"
                          r"iva\s+esclus|\+\s*iva|"
                          r"oltre\s+iva|esclus\w*\s+(il\s+)?passaggio|passaggio\s+esclus|\+\s*passaggio|"
-                         r"messa\s+su\s+strada|incentiv|rottamazion|\mbonus\M|offerta\s+valida|esauriment|"
+                         r"messa\s+su\s+strada|con\s+(gli\s+)?incentiv|rottamazion|\mbonus\M|offerta\s+valida|esauriment|"
                          r"prezzo\s+con\s|in\s+caso\s+di\s+finanz|salvo\s+approvazione|tan\s+\d|taeg)")
 _FLAG_PROMO = ["leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoerenti"]
 
@@ -2754,11 +2756,15 @@ def _tempo_reale():
                     fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("telefoni_subito:v3:" + giorno,)).fetchone()
                 if not fatto:
                     t0 = time.time()
-                    with _c() as conn:
-                        from ..db import log_job
-                        fine = log_job(conn, "telefoni_subito:v3:" + giorno)
-                        st = tr.giro_telefoni_subito(conn)
-                        fine(True, st)
+                    from ..pipeline.ciclo import una_volta_sicura      # 6/11: riga chiusa anche se il sito si riavvia a metà
+                    st = None
+                    with una_volta_sicura("telefoni_subito:v3:" + giorno, tentativi_max=6) as fare:
+                        if fare:
+                            with _c() as conn:
+                                st = tr.giro_telefoni_subito(conn)
+                    if st is None:
+                        time.sleep(3600)
+                        continue
                     lg.warning("TR TELEFONI SUBITO in %.0fs: %s", time.time() - t0, st)
                     _elenco["t"] = 0.0
                     _aggiorna_elenco(attendi=False)
@@ -3039,10 +3045,11 @@ def _tempo_reale():
                     with _c() as conn:
                         fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("subito_completo:" + giorno,)).fetchone()
                     if not fatto:
-                        with _c() as conn:
-                            fine = log_job(conn, "subito_completo:" + giorno)
-                            st = tr.subito_completo(conn)
-                            fine(True, st)
+                        from ..pipeline.ciclo import una_volta_sicura   # 6/11: riga chiusa anche dopo un riavvio
+                        with una_volta_sicura("subito_completo:" + giorno, tentativi_max=6) as fare:
+                            if fare:
+                                with _c() as conn:
+                                    tr.subito_completo(conn)
                         _elenco["t"] = 0.0
                         _aggiorna_elenco(attendi=False)
             except Exception as e:

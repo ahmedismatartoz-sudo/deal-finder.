@@ -972,18 +972,9 @@ if __name__ == "__main__":
                     log.warning("CONFRONTI_EXTRA %d confronti nuovi: ricalcolo dei prezzi in questo giro", _nuovi)
         except Exception as e:
             log.warning("CONFRONTI_EXTRA non riuscito: %s", str(e)[:300])
-    # 29/10: dopo la zona (le auto medie e basse prima) e una volta al giorno.
-    # 28/10 sera: supercar da 70.000 € in tutta Europa anche qui (processo separato dal sito, 512 MB); riprende le fasce già fatte
-    if os.environ.get("SUPERCAR_EU_CRON") == "1" and tempo_ok("supercar", 7, _t0_loop):
-        try:
-            from .ciclo import _due
-            if _due("supercar_eu", int(os.environ.get("SUPERCAR_EU_ORE", "24"))):
-                from . import supercar_eu as SE
-                SE.raccolta()
-                SE.valuta()
-        except Exception as e:
-            log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
-    for voce in [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]:
+    # 6/11: il ricalcolo dei prezzi per primo (prima veniva quasi sempre rimandato: supercar e lead finivano il tempo)
+    _voci = [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]
+    for voce in sorted(_voci, key=lambda v: 0 if v.startswith("ricalcolo") else 1):
         try:
             from .ciclo import _due
             from ..db import connect, log_job
@@ -1087,7 +1078,26 @@ if __name__ == "__main__":
             log.warning("PRIMA %s fatto: %s", voce, esito)
         except Exception as e:
             log.warning("PRIMA %s non riuscito: %s", voce, str(e)[:300])
+    # 29/10 (6/11: dopo il ricalcolo e i lead): dopo la zona (le auto medie e basse prima) e una volta al giorno.
+    # 28/10 sera: supercar da 70.000 € in tutta Europa anche qui (processo separato dal sito, 512 MB); riprende le fasce già fatte
+    if os.environ.get("SUPERCAR_EU_CRON") == "1" and tempo_ok("supercar", 7, _t0_loop):
+        try:
+            from .ciclo import _due
+            if _due("supercar_eu", int(os.environ.get("SUPERCAR_EU_ORE", "24"))):
+                from . import supercar_eu as SE
+                SE.raccolta()
+                SE.valuta()
+        except Exception as e:
+            log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
     if os.environ.get("COLLECT_SOLO_PRIMA") == "1":           # 21/10 sera: solo i giri di COLLECT_PRIMA (benzina senza sosta)
+        try:                                                  # 6/11: il giro è riuscito anche così (la sentinella lo
+            from ..db import connect as _cn                   # aspetta come collect:<modo>, prima allarme falso fisso)
+            with _cn() as _c:
+                _c.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
+                           ("collect:" + mode, json.dumps({"solo_prima": True, "ore": round((time.time() - _t0_loop) / 3600, 2)})))
+                _c.commit()
+        except Exception as e:
+            log.warning("COLLECT_SOLO_PRIMA registro non riuscito: %s", str(e)[:200])
         log.warning("COLLECT_SOLO_PRIMA: fine giro")
         sys.exit(0)
     if mode == "sito":

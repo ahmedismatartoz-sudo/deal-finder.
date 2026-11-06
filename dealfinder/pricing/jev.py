@@ -130,9 +130,10 @@ def domande_foto(chiavi: list[str]) -> dict:
                            "leggibile (caratteri visibili, non coperta, non sfocata, non cancellata)?"},
         "danni_foto": {"type": "noul", "instructions": f"Nelle foto {rif} si vedono danni evidenti (carrozzeria rotta o "
                        "ammaccata, vetri rotti, airbag esplosi, ruggine forte, auto incidentata)?"},
-        "foto_internet": {"type": "noul", "instructions": f"Le foto {rif} sembrano prese da internet o da un catalogo "
-                          "(foto professionali di concessionario, sfondi da studio, watermark di altri siti) invece che "
-                          "scattate dal venditore?"},
+        "foto_internet": {"type": "noul", "instructions": f"Le foto {rif} sono foto di catalogo/pubblicità della casa "
+                          "auto, oppure mostrano un'auto diversa da quella dell'annuncio, oppure hanno il watermark di un "
+                          "ALTRO sito o di un altro venditore? (Le foto fatte bene da un concessionario, con il suo logo o "
+                          "uno sfondo da salone, NON contano: rispondi no.)"},
     }
 
 

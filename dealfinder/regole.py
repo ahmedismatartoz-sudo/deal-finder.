@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 
 log = logging.getLogger("config")
 
-VERSIONE = "regole-2026-11-04a"
+VERSIONE = "regole-2026-11-06a"
 
 
 @dataclass(frozen=True)
@@ -87,9 +87,11 @@ class ModelloLocale:
     gemelle quando è preciso. Senza tetto (prima: mai oltre 1,10 × mediana)."""
     attivo: bool = True
     n_min: int = 8
-    anni: int = 6
-    potenza: float = .25
+    anni: int = 3                      # 6/11 (verifica prezzi): era 6, mescolava generazioni (430i F36 con G26)
+    potenza: float = .10               # 6/11: era 0,25 (motori diversi nello stesso modello)
     errore_max: float = .18
+    accordo: float = .10               # 6/11: con almeno n_minimo gemelle il modello vale solo se entro ±10% dalla
+                                       # loro mediana; altrimenti si tiene la mediana delle gemelle
 
 
 @dataclass(frozen=True)
@@ -113,8 +115,9 @@ class ValoreReale:
 @dataclass(frozen=True)
 class StimaAI:
     """Modello AI dei prezzi (stima_ai, prezzi CHIESTI): solo segnale di disaccordo con le gemelle; da solo (0–1
-    gemelle e senza valore reale) dà una stima "candidato" sul prezzo chiesto, che il sito porta al prezzo di vendita."""
-    attiva: bool = True
+    gemelle e senza valore reale) dà una stima "candidato" sul prezzo chiesto, che il sito porta al prezzo di vendita.
+    6/11: spento di default (era spento in produzione con POLICY_AI=0; il cron mercato non lo sapeva)."""
+    attiva: bool = False
     errore_max: float = .15
     n_min: int = 8
     accordo: float = .08
@@ -168,7 +171,7 @@ class Ammissione:
 @dataclass(frozen=True)
 class Zona:
     ripiego_nord: bool = True
-    italia: bool = False
+    italia: bool = True                # 6/11: default = produzione (POLICY_ITALIA=1 su sito e cron opportunità)
     italia_da: int = 50000
     italia_pmin: int = 25000
 
@@ -207,7 +210,8 @@ class Regole:
     zona: Zona = field(default_factory=Zona)
     calibrazione: Calibrazione = field(default_factory=Calibrazione)
     scrittura: Scrittura = field(default_factory=Scrittura)
-    giudice_ai: bool = False           # l'AI toglie i confronti non uguali (lavoro con chiave e budget)
+    giudice_ai: bool = True            # l'AI toglie i confronti non uguali (6/11: default = produzione, così cron mercato,
+                                       # cron opportunità e sito calcolano con le STESSE regole anche senza variabili)
     fascia_richiesta: bool = True
 
 
@@ -262,6 +266,10 @@ def regole(environ=None) -> Regole:
                 r = dataclasses.replace(r, **{campo: val})
         if over and environ is None:
             log.warning("CONFIG override %s", json.dumps({k: v for k, v in sorted(over.items())}))
+        if environ is None:
+            ign = sorted(k for k in env if k.startswith("POLICY_") and k not in INTERRUTTORI)
+            if ign:                        # 6/11: chi le imposta su Render deve sapere che non contano
+                log.warning("CONFIG ignorate (le regole sono in regole.py): %s", ", ".join(ign))
         if len(_CACHE) > 64:
             _CACHE.clear()
         _CACHE[chiave] = r

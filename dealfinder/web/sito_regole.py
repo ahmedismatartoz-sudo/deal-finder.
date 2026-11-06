@@ -391,8 +391,7 @@ def margine_alto(it, g: Regole) -> bool:
 def segnali_duri(it, g: Regole) -> list[str]:
     r, j = _r(it), _r(it).get("jev") or {}
     out = []
-    if float(j.get("foto_internet") or 0) >= g.foto_internet:
-        out.append("foto_internet")
+    foto_int = float(j.get("foto_internet") or 0) >= g.foto_internet
     M, p = (it.get("pv") or {}).get("M"), it.get("prezzo") or 0
     lim = g.rapporto_duro_basse if p < g.rapporto_basse_sotto else g.rapporto_duro
     danno = it.get("incidentata") or r.get("danno_dichiarato") or float(j.get("guasto") or 0) >= g.jev_guasto
@@ -406,6 +405,12 @@ def segnali_duri(it, g: Regole) -> list[str]:
         out.append("testo_pagamento_estero")
     if r.get("tel_estero"):
         out.append("numero_estero")
+    # 6/11 (verifica imbuto): "foto da internet" scattava sul 68% delle auto con foto (anche le foto professionali dei
+    # concessionari). Per un commerciante non conta; per un privato esce solo insieme a un altro segnale
+    # (prezzo troppo basso/troppo bello o AI che vede una truffa probabile).
+    com = bool(it.get("commerciante") or it.get("commerciante_top") or r.get("seller_type") == "commerciante")
+    if foto_int and not com and (out or float(j.get("truffa") or 0) >= .5):
+        out.insert(0, "foto_internet")
     return out
 
 

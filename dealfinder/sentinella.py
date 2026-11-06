@@ -487,8 +487,8 @@ def c_imbuto(conn, ctx: dict) -> dict:
     cols = _colonne(conn, "sito_funnel_giorno")
     g = next((c for c in ("giorno", "data", "day", "at") if c in cols), None)
     p = next((c for c in ("passo", "filtro", "regola", "nome", "step") if c in cols), None)
-    e = next((c for c in ("entrati", "prima", "ingresso", "n_in", "dentro") if c in cols), None)
-    u = next((c for c in ("usciti", "tolti", "via", "scartati", "n_out") if c in cols), None)
+    e = next((c for c in ("entrati", "entrate", "prima", "ingresso", "n_in", "dentro") if c in cols), None)
+    u = next((c for c in ("usciti", "uscite", "tolti", "via", "scartati", "n_out") if c in cols), None)
     d = next((c for c in ("dopo", "restano", "rimasti", "uscita") if c in cols), None)
     if not (g and p and e and (u or d)) or not all(_NOME_SQL.match(x) for x in (g, p, e, u or d)):
         return _esito("imbuto", {"colonne": sorted(cols)[:20], "nota": "colonne non riconosciute"}, disponibile=False)
@@ -760,7 +760,8 @@ def _riga_istantanea(it: dict, soglia) -> tuple | None:
             s = None
     m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
     sez = ("supercar" if it.get("supercar") else "eco" if it.get("economica") else
-           "inc" if it.get("incidentata") else "affari")
+           "inc" if it.get("incidentata") else "trattare" if it.get("trattare") else "affari")   # 6/11: "Da trattare"
+                                                                                                 # è sotto soglia per scelta
     km = it.get("km")
     km = int(km) if isinstance(km, (int, float)) else None
     return (lid, prezzo, marg, s, str(it.get("fonte") or "")[:40] or None,

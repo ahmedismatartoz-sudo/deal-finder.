@@ -109,6 +109,7 @@ _MAPPA = {
     "svalutazione_10km": ("correzione", "svalutazione_10km"),
     "reg": ("modello_locale", "attivo"), "reg_min": ("modello_locale", "n_min"), "reg_anni": ("modello_locale", "anni"),
     "reg_potenza": ("modello_locale", "potenza"), "reg_errore_max": ("modello_locale", "errore_max"),
+    "reg_accordo": ("modello_locale", "accordo"),
     "ai": ("ai", "attiva"), "ai_errore_max": ("ai", "errore_max"), "ai_n_min": ("ai", "n_min"),
     "ai_accordo": ("ai", "accordo"), "ai_disaccordo": ("ai", "disaccordo"),
     "passaggio": ("costi", "passaggio"), "pulizia": ("costi", "pulizia"), "trasporto": ("costi", "trasporto"),
@@ -243,7 +244,8 @@ def prezzo_corretto(c: dict, t: dict, ya: float, ka: float, corr=None) -> float:
     return float(c["price_eur"]) * f
 
 
-_CARROZZERIE = [("sw", r"sports? ?tourer|station ?wagon|sportswagon|\bsw\b|touring|avant|variant|wagon|kombi|estate|shooting ?brake"),
+_CARROZZERIE = [("commerciale", r"\bvan\b|\bcargo\b|furgon|autocarro|\bn1\b"),   # 6/11: Doblò Cargo, Panda Van
+                ("sw", r"sports? ?tourer|station ?wagon|sportswagon|\bsw\b|touring|avant|variant|wagon|kombi|estate|shooting ?brake"),
                 ("monovolume", r"active ?tourer|gran ?tourer|\btourer\b"),
                 ("grancoupe", r"gran ?coup[eé]"),
                 ("cabrio", r"cabrio|cabriolet|roadster|spider|spyder|convertible"),
@@ -255,6 +257,40 @@ def carrozzeria(c: dict) -> str | None:
     for nome, rx in _CARROZZERIE:
         if re.search(rx, txt):
             return nome
+    return None
+
+
+# 6/11 (verifica prezzi): le ibride sono tutte fuel="ibrida"; mild, full e plug-in, diesel e benzina valgono cifre
+# molto diverse (318d mhev ≠ 330e plug-in). Sottotipo dalla colonna fuel_tipo o dal testo, base diesel dal testo.
+_RE_DIESEL_BASE = re.compile(r"(?i)\b(\d{2,3}d|\d{2,3}\s+d|tdi|dci|hdi|crdi|multijet|mjet|cdi|bluehdi|ecoblue|"
+                             r"d\d{3}|diesel|jtd\w*|tdci|bluetec)\b")
+_RE_PLUGIN_SIGLE = re.compile(r"(?i)\b(\d{2,3}\s?x?e|\d{3}\s?de|xdrive\s?\d{2}e|e-?hybrid|tfsi\s?e|gte|recharge|t8|"
+                              r"phev|plug[\s-]?in)\b")
+
+
+def ibrida_tipo(c: dict) -> tuple:
+    """(sottotipo, base) di un'ibrida: sottotipo 'mild' | 'full' | 'plug-in' | None, base 'diesel' | 'benzina'."""
+    if c.get("fuel") != "ibrida":
+        return (None, None)
+    from ..core import normalize as N
+    testo = f"{c.get('version_raw') or ''} {c.get('title') or ''}"
+    st = c.get("fuel_tipo") if c.get("fuel_tipo") in ("mild", "full", "plug-in") else N.fuel_tipo("ibrida", testo)
+    if st != "plug-in" and _RE_PLUGIN_SIGLE.search(testo):
+        st = "plug-in"
+    base = "diesel" if (st != "plug-in" or "de" in testo.lower().split()) and _RE_DIESEL_BASE.search(testo) else "benzina"
+    return (st, base)
+
+
+def _ibride_diverse(t: dict, c: dict) -> str | None:
+    if t.get("fuel") != "ibrida" or c.get("fuel") != "ibrida":
+        return None
+    (st, bt), (sc, bc) = ibrida_tipo(t), ibrida_tipo(c)
+    if bt != bc:
+        return "ibrida diesel/benzina diversa"
+    if (st == "plug-in") != (sc == "plug-in"):
+        return "ibrida plug-in con non plug-in"
+    if st and sc and st != sc:
+        return "tipo di ibrida diverso"
     return None
 
 
@@ -270,6 +306,8 @@ def regressione(t: dict, puliti: list[dict], cfg: PolicyConfig) -> dict | None:
     g = []
     for c in puliti:
         if c.get("fuel") != t.get("fuel") or not c.get("year") or c.get("mileage_km") is None or not c.get("price_eur"):
+            continue
+        if _ibride_diverse(t, c):
             continue
         if abs(int(c["year"]) - int(t["year"])) > cfg.reg_anni:
             continue
@@ -325,6 +363,9 @@ def _equivalente(t, c, cfg, livello):
     """None se equivalente, altrimenti il motivo dell'esclusione."""
     if c.get("fuel") != t.get("fuel"):
         return "carburante diverso"
+    ib = _ibride_diverse(t, c)
+    if ib:
+        return ib
     bt, bc = carrozzeria(t), carrozzeria(c)
     if bt != bc and (bt or bc) and not (bt is None and bc in ("sw",)) and not (bc is None and bt in ("sw",)):
         return "carrozzeria diversa"
@@ -646,6 +687,15 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if p_priv:
         out["M_privati"], out["n_privati"] = int(round(percentile(p_priv, .5))), len(p_priv)
     reg = sel.get("regressione")
+    if reg and reg["errore_tipico"] <= cfg.reg_errore_max and M_ann and n_gem >= cfg.n_minimo \
+            and abs(reg["prezzo"] / M_ann - 1) > cfg.reg_accordo:
+        # 6/11 (verifica prezzi): il modello del gruppo non concorda con le auto uguali vere (generazione, versione o
+        # motore diversi nel gruppo): vale la mediana delle gemelle
+        out["modello_scartato"] = {"prezzo": int(round(reg["prezzo"])), "n": reg["n"],
+                                   "differenza": round(reg["prezzo"] / M_ann - 1, 3)}
+        out["ipotesi"].append(f"modello prezzi ({int(round(reg['prezzo']))} €) lontano dalla mediana delle {n_gem} auto "
+                              f"uguali ({int(round(M_ann))} €): usata la mediana")
+        reg = None
     if reg and reg["errore_tipico"] <= cfg.reg_errore_max:
         out["M_confronti"] = int(round(M_ann)) if M_ann else None
         M_ann = reg["prezzo"]
@@ -655,7 +705,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
                               f"({reg['anno_pct']*100:.1f}% per anno, {reg['km10k_pct']*100:.1f}% ogni 10.000 km, "
                               f"errore tipico ±{reg['errore_tipico']*100:.0f}%)")
         n = max(n, reg["n"])                         # base della stima: annunci del modello (le gemelle sono in n_gemelle)
-        out["n"] = n
+        out["n_modello"] = reg["n"]                  # 6/11: il sito mostra le auto uguali vere (n = n_gemelle)
     if M_ann:
         out["M_gemelle"] = int(round(M_ann))         # stima sui prezzi CHIESTI (gemelle o modello), prima del valore reale
     out["campione"] = ("base preferita" if n >= cfg.n_preferito else "provvisoria (campione limitato)"
@@ -810,6 +860,16 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
                              "trovato non è affidabile (versione diversa, dati sbagliati o truffa)")
         return out
     if margine < soglia:
+        sc = _sconto_da_trattare(t, prezzo_t, margine, soglia)
+        if sc:
+            # 6/11 (verifica imbuto): auto della fascia richiesta che arriva al margine minimo chiedendo al massimo
+            # 500/700 € di sconto: va sul sito come "candidato" e il sito la mette in "Da trattare" (sito_regole
+            # .sconto_trattativa ricontrolla tutto: fascia, annuncio recente, sconto massimo). Prima restava
+            # "non_conveniente", non veniva mai pubblicata e la sezione "Da trattare" restava quasi vuota.
+            out.update(categoria="candidato", da_trattare={"sconto": sc, "prezzo_obiettivo": prezzo_t - sc})
+            out["motivi"].append(f"margine {margine} € sotto la soglia di {soglia} €: arriva al minimo con "
+                                 f"{sc} € di sconto da chiedere al venditore")
+            return out
         out["categoria"] = "non_conveniente"
         out["motivi"].append(f"margine {margine} € sotto la soglia di {soglia} €")
         return out
@@ -822,8 +882,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         dubbi.append("valore reale del modello senza auto uguali in vendita: serve il controllo dell'AI")
     elif n_gem < cfg.n_minimo:
         dubbi.append(f"meno di {cfg.n_minimo} auto uguali in vendita: stima dal modello, da controllare")
-    elif n_gem < cfg.n_preferito and out["metodo"] != "modello":
-        dubbi.append(f"campione limitato ({n_gem} confronti)")
+    elif n_gem < cfg.n_preferito:                    # 6/11: anche col modello (prima solo con la mediana)
+        dubbi.append(f"campione limitato ({n_gem} auto uguali)")
     if n_gem < cfg.n_minimo:
         out["serve_controllo_ai"] = True             # 0–1 gemelle: mai oltre "candidato", Jev/AI obbligatorio
     if out.get("pochi_confronti") and sel["livello"] == 3:
@@ -851,12 +911,34 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     return out
 
 
+TRATTA_MAX = ((7000, 500), (10**9, 700))           # stesso default del sito (sito_regole.Regole.tratta_max)
+
+
+def _sconto_da_trattare(t: dict, prezzo: int, margine: int, soglia: int) -> int | None:
+    """Sconto (a passi di 50 €) con cui un'auto della fascia richiesta arriva al margine minimo, entro TRATTA_MAX."""
+    if margine is None or margine <= 0 or prezzo <= 0 or t.get("supercar"):
+        return None
+    try:
+        if not benzina_richiesta(t):
+            return None
+        from ..web import scovo
+        if int(soglia) != scovo.soglia(prezzo):      # soglia diversa da quella del cliente (prove): niente trattativa
+            return None
+    except Exception:
+        return None
+    tetto = next(x for fino, x in TRATTA_MAX if prezzo < fino)
+    for sc in range(50, tetto + 1, 50):
+        if margine + sc >= scovo.soglia(prezzo - sc):
+            return sc
+    return None
+
+
 def riassunto(v: dict) -> dict:
     """Versione compatta per l'elenco del sito (la valutazione completa resta nel database)."""
     keys = ("categoria", "M", "L", "n", "n_gemelle", "livello", "riduzione", "fascia", "R", "R_finale", "margine", "soglia",
             "totale_costi", "campione", "policy", "metodo", "M_fonte", "prudente_pochi", "pochi_confronti", "vr_accordo",
             "vr_poche_gemelle", "policy_rev", "regole", "R_da", "vr_solo_modello", "serve_controllo_ai",
-            "costo_difetti_incluso", "motivo_esclusione", "fonte_valutazione")
+            "costo_difetti_incluso", "motivo_esclusione", "fonte_valutazione", "da_trattare")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

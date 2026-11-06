@@ -135,7 +135,9 @@ def test_tabella_truffa():
                             scrivi_log=False)
     assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, False), (2, True), (4, False)]
     # segnali duri: fuori anche con probabilità bassa
-    assert ids([auto(5, jev=j(0.1, foto_internet=0.8))]) == []
+    # 6/11: "foto da internet" da sola non basta più (scattava sulle foto dei concessionari); con un altro segnale sì
+    assert ids([auto(5, jev=j(0.1, foto_internet=0.8))]) == [5]
+    assert ids([auto(51, jev=j(0.5, foto_internet=0.8))]) == []
     assert ids([auto(6, prezzo=3000, M=7000, margine=s, jev=j(0.1))]) == []                # 43% del mercato
     assert ids([auto(7, prezzo=2000, M=5000, margine=scovo.soglia(2000), jev=j(0.1))]) == [7]  # 40%: sotto 3.000 € ok
     assert ids([auto(8, prezzo=3000, M=7000, margine=s, incidentata=True, jev=j(0.1))]) == [8]  # danno dichiarato

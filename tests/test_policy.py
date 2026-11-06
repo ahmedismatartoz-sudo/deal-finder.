@@ -251,7 +251,24 @@ def test_modello_prezzi_preciso_e_piu_auto():
     m2 = [c for c in m if abs(c["year"] - 2013) > 3 or abs(c["mileage_km"] - 60000) > 50000] + \
          [car(900 + k, int(vero(2014 + k % 6, 90000 + k * 3000)), year=2014 + k % 6, km=90000 + k * 3000) for k in range(12)]
     v2 = valuta(t2, m2, 1500, CFG, NOW)
-    assert v2.get("M") and v2["metodo"] == "modello"
+    assert v2.get("M")              # 6/11: il modello vale solo se concorda (±10%) con le gemelle, sennò la mediana
+
+
+def test_modello_scartato_se_lontano_dalle_gemelle():
+    """6/11 (BMW 430i 2017): il modello del gruppo (generazioni miste) dà +40%: vale la mediana delle gemelle."""
+    m = [car(800 + n, 30000 + n * 50, year=2017 + n % 2, km=80000 + n * 1000) for n in range(12)]
+    gem = [car(900 + n, 21000 + n * 100, year=2017, km=85000 + n * 2000) for n in range(3)]
+    t = car(1, 18000, year=2017, km=86000)
+    from dealfinder.pricing import policy_v2 as P
+    orig = P.regressione
+    P.regressione = lambda *a, **k: {"prezzo": 31000.0, "n": 15, "errore_tipico": .05, "anno_pct": .08,
+                                     "km10k_pct": .01, "potenza": False}
+    try:
+        v = valuta(t, gem, 1500, CFG, NOW)
+    finally:
+        P.regressione = orig
+    assert v.get("modello_scartato") and v["metodo"] != "modello" and v["M"] < 25000
+    assert v["n"] == v["n_gemelle"] == 3
 
 
 def test_telefono_subito_dietro_il_bottone():
@@ -310,12 +327,15 @@ def test_utilitaria_economica_molto_sotto_mercato():
 
 # ---------------------------------------------------------------- pv15: stima del modello AI dei prezzi
 
+CFG_AI = PolicyConfig(ai=True)          # 6/11: stima AI spenta di default (come in produzione)
+
+
 def test_ai_senza_confronti_valuta_ma_resta_candidato():
     t = dict(TARGET, ai={"prezzo": 10000, "errore": .10, "n": 30})
-    v = valuta(t, [], 1500, CFG, NOW)
+    v = valuta(t, [], 1500, CFG_AI, NOW)
     assert v["metodo"] == "ai" and v["M"] == 10000 and v.get("solo_ai")
     assert v["categoria"] == "candidato"                      # mai "opportunità" piena con la sola AI
-    v0 = valuta(TARGET, [], 1500, CFG, NOW)
+    v0 = valuta(TARGET, [], 1500, CFG_AI, NOW)
     assert v0["categoria"] == "dati_insufficienti"            # senza AI: come prima
 
 
@@ -327,12 +347,12 @@ def test_ai_poco_precisa_non_usata():
 
 def test_ai_con_confronti_solo_segnale():
     m = market(BASE)
-    v0 = valuta(TARGET, m, 1500, CFG, NOW)
-    v = valuta(dict(TARGET, ai={"prezzo": v0["M"], "errore": .08, "n": 40}), m, 1500, CFG, NOW)
+    v0 = valuta(TARGET, m, 1500, CFG_AI, NOW)
+    v = valuta(dict(TARGET, ai={"prezzo": v0["M"], "errore": .08, "n": 40}), m, 1500, CFG_AI, NOW)
     assert v["ai"]["concorda"] and v["M"] == v0["M"]
     # 4/11: con le gemelle l'AI (prezzi chiesti) è solo un segnale: non entra in M né sopra né sotto
     for k in (1.5, 0.6):
-        x = valuta(dict(TARGET, ai={"prezzo": int(v0["M"] * k), "errore": .08, "n": 40}), m, 1500, CFG, NOW)
+        x = valuta(dict(TARGET, ai={"prezzo": int(v0["M"] * k), "errore": .08, "n": 40}), m, 1500, CFG_AI, NOW)
         assert x["ai"]["disaccordo"] and x["M"] == v0["M"] and x["categoria"] in ("candidato", "dati_insufficienti")
 
 
@@ -431,3 +451,31 @@ def test_fascia_richiesta():
         assert not benzina_richiesta({"fuel": "Benzina", "price_eur": 6000, "mileage_km": 120000, "year": 2012})
     finally:
         _ripristina("BENZ_RICHIESTE", prima)
+
+
+def test_ibride_mild_diesel_non_confrontate_con_plugin():
+    """6/11: 318d mild hybrid e 330e plug-in erano 'la stessa auto' (stesso fuel 'ibrida', kW vicini)."""
+    from dealfinder.pricing.policy_v2 import _equivalente, ibrida_tipo
+    a = car(1, 20900, fuel="ibrida", version_raw="318d Touring mhev 48V Business", kw=110)
+    b = car(2, 30000, fuel="ibrida", version_raw="330e Touring Plug-in Msport", kw=110)
+    c = car(3, 21500, fuel="ibrida", version_raw="318d Touring mild hybrid 48V", kw=110)
+    d = car(4, 26000, fuel="ibrida", version_raw="A6 Avant 50 TFSI e quattro S tronic", kw=220)
+    assert ibrida_tipo(a) == ("mild", "diesel") and ibrida_tipo(b)[0] == "plug-in" and ibrida_tipo(d)[0] == "plug-in"
+    assert _equivalente(a, b, CFG, 1)
+    assert _equivalente(a, c, CFG, 1) is None
+    e = car(5, 9000, fuel="ibrida", version_raw="Yaris 1.5 Hybrid Active", kw=85)
+    f = car(6, 9000, fuel="ibrida", version_raw="Yaris 1.5 Hybrid Trend", kw=85)
+    assert _equivalente(e, f, CFG, 1) is None
+
+
+def test_vicina_alla_soglia_va_in_da_trattare():
+    """6/11: un'auto della fascia richiesta a 300 € dal margine minimo diventa candidato 'da trattare' (prima
+    restava non_conveniente e non arrivava mai al sito)."""
+    from dealfinder.web import scovo
+    m = [car(100 + n, 7800 + n * 10, fuel="benzina", km=60000 + n * 500) for n in range(9)]
+    t = car(1, 6500, fuel="benzina", km=61000)
+    v = valuta(t, m, scovo.soglia(6500), CFG, NOW)
+    assert v["margine"] < scovo.soglia(6500)
+    assert v["categoria"] == "candidato" and v["da_trattare"]["sconto"] <= 500
+    lontana = valuta(car(2, 7500, fuel="benzina", km=61000), m, scovo.soglia(7500), CFG, NOW)
+    assert lontana["categoria"] == "non_conveniente"

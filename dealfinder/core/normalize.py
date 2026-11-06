@@ -95,7 +95,7 @@ PROVINCE_REGION = {"MI": "Lombardia", "MB": "Lombardia", "BG": "Lombardia", "BS"
                    "RE": "Emilia-Romagna", "NO": "Piemonte", "VC": "Piemonte", "BI": "Piemonte", "VB": "Piemonte",
                    "AL": "Piemonte", "AT": "Piemonte", "TO": "Piemonte", "GE": "Liguria"}
 
-RE_PLUS_IVA = re.compile(r"\+\s*iva|iva\s*esclusa|esclusa\s*iva|oltre\s*iva", re.I)
+RE_PLUS_IVA = re.compile(r"\+\s*i\.?v\.?a|iva\s*esclusa|esclusa\s*iva|oltre\s*iva|netto\s*(di\s*)?iva|iva\s*a\s*parte", re.I)  # 6/11: anche "NETTO IVA"
 RE_LEASING = re.compile(r"\b(rata|rate|al\s*mese|/\s*mese|leasing|noleggio|anticipo|finanziamento\s+da)\b", re.I)
 RE_IMPORT = re.compile(r"\b(da\s+immatricolare|import(azione)?|km\s*0\s*estero|targa\s+(tedesca|estera))\b", re.I)
 RE_PROBLEM = re.compile(
