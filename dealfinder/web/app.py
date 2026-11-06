@@ -2263,8 +2263,11 @@ def vetrina_js(request: Request):
     nome, p = request.path_params["nome"], request.path_params["p"]
     if not re.fullmatch(r"[a-z0-9-]{2,40}", nome) or ".." in p or not re.fullmatch(r"[A-Za-z0-9_./-]{2,120}\.(js|json)", p):
         return Response("non trovato", status_code=404)
-    f = Path(__file__).resolve().parents[2] / "data" / "vetrine" / nome / "js" / p
-    if not f.is_file():
+    if p.startswith("/") or "//" in p or "\\" in p:
+        return Response("non trovato", status_code=404)
+    base = (Path(__file__).resolve().parents[2] / "data" / "vetrine" / nome / "js").resolve()
+    f = (base / p).resolve()
+    if not f.is_relative_to(base) or not f.is_file():
         return Response("non trovato", status_code=404)
     tipo = "text/javascript; charset=utf-8" if p.endswith(".js") else "application/json"
     return FileResponse(f, media_type=tipo, headers={"cache-control": "public, max-age=604800", "Access-Control-Allow-Origin": "*"})

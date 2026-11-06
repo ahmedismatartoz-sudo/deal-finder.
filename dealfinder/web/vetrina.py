@@ -216,28 +216,46 @@ threading.Thread(target=_preriscalda, daemon=True, name="vetrina_preriscalda").s
 
 
 _foto_cache: dict = {}
+_foto_byte = 0
+_FOTO_MAX = 1_000_000
+_FOTO_CACHE_MAX = 40_000_000
+_FOTO_TIPI = {"image/jpeg", "image/png", "image/webp", "image/avif"}
 
 
 async def foto_vetrina(request):
-    """Foto degli annunci AutoScout24 con CORS, per usarle come texture 3D nei siti vetrina (solo host AutoScout)."""
+    """Foto degli annunci AutoScout24 con CORS, per usarle come texture 3D nei siti vetrina (solo host AutoScout).
+    6/11: niente redirect, solo immagini, massimo 1 MB, cache limitata in byte."""
     from urllib.parse import urlparse
     from starlette.responses import Response
     u = request.query_params.get("u") or ""
-    host = urlparse(u).hostname or ""
-    if not (u.startswith("https://") and (host.endswith(".autoscout24.net") or host.endswith(".autoscout24.com"))):
+    pu = urlparse(u)
+    host = (pu.hostname or "").lower()
+    if not (pu.scheme == "https" and pu.port in (None, 443) and not pu.username and not pu.password
+            and (host.endswith(".autoscout24.net") or host.endswith(".autoscout24.com"))):
         return Response(status_code=400)
-    c = _foto_cache.get(u)
+    chiave = f"{host}{pu.path}"
+    c = _foto_cache.get(chiave)
     if not c:
         import httpx
         try:
-            async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers={"User-Agent": UA}) as cl:
-                r = await cl.get(u)
-            if r.status_code != 200 or len(r.content) > 3_000_000:
-                return Response(status_code=502)
-            c = (r.content, r.headers.get("content-type", "image/jpeg"))
-            if len(_foto_cache) > 150:          # memoria del web limitata: cache piccola
+            async with httpx.AsyncClient(timeout=20, follow_redirects=False, headers={"User-Agent": UA}) as cl:
+                async with cl.stream("GET", f"https://{host}{pu.path}") as r:
+                    tipo = (r.headers.get("content-type") or "").split(";")[0].strip().lower()
+                    if r.status_code != 200 or tipo not in _FOTO_TIPI:
+                        return Response(status_code=502)
+                    buf = bytearray()
+                    async for pezzo in r.aiter_bytes():
+                        buf += pezzo
+                        if len(buf) > _FOTO_MAX:
+                            return Response(status_code=502)
+            c = (bytes(buf), tipo)
+            global _foto_byte
+            if _foto_byte + len(c[0]) > _FOTO_CACHE_MAX or len(_foto_cache) > 150:   # memoria del web limitata
                 _foto_cache.clear()
-            _foto_cache[u] = c
+                _foto_byte = 0
+            _foto_cache[chiave] = c
+            _foto_byte += len(c[0])
         except Exception:
             return Response(status_code=502)
-    return Response(c[0], media_type=c[1], headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400"})
+    return Response(c[0], media_type=c[1], headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400",
+                                                    "X-Content-Type-Options": "nosniff"})
