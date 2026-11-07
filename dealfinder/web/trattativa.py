@@ -27,7 +27,7 @@ log = logging.getLogger("trattativa")
 
 PUNTI = (0, 7, 14, 21, 30, 45, 60, 90)          # età dell'annuncio (giorni) in cui si "fotografa" lo stato
 N_MIN = 30                                       # annunci minimi in un gruppo per usarne la statistica
-STATS: dict = {"t": 0.0, "gruppi": {}, "n": 0, "in_corso": False, "modelli": {}, "attivi": {}}
+STATS: dict = {"t": 0.0, "gruppi": {}, "n": 0, "in_corso": False, "modelli": {}, "attivi": {}, "esempi": {}}
 
 STATS_SQL = [
     "DROP TABLE IF EXISTS _tr_v",
@@ -146,6 +146,18 @@ WHERE status = 'scomparso' AND disappeared_at > now() - interval '90 days'
   AND make IS NOT NULL AND model IS NOT NULL AND year IS NOT NULL
   AND disappeared_at > first_seen_at + interval '12 hours'
 GROUP BY 1, 2, 3, 4"""
+ESEMPI_SQL = """
+SELECT make, model, fuel, year, price_eur, mileage_km, city, province, giorni, quando FROM (
+  SELECT lower(make) AS make, lower(model) AS model, fuel, year, price_eur, mileage_km, city, province,
+         extract(epoch FROM disappeared_at - first_seen_at) / 86400.0 AS giorni, disappeared_at AS quando,
+         row_number() OVER (PARTITION BY lower(make), lower(model), fuel, year ORDER BY disappeared_at DESC) AS rn
+  FROM listings
+  WHERE status = 'scomparso' AND disappeared_at > now() - interval '90 days'
+    AND COALESCE(disappear_reason, '') NOT IN ('scaduto', 'ripubblicato')
+    AND source IN ('subito', 'autoscout24') AND price_eur BETWEEN 500 AND 150000
+    AND make IS NOT NULL AND model IS NOT NULL AND year IS NOT NULL
+    AND disappeared_at > first_seen_at + interval '12 hours') x
+WHERE rn <= 6"""
 ATTIVI_SQL = """
 SELECT lower(make) AS make, lower(model) AS model, fuel, year, count(*) AS attivi,
        percentile_cont(0.5) WITHIN GROUP (ORDER BY price_eur) AS prezzo_med,
@@ -165,12 +177,17 @@ def aggiorna_modelli(conn) -> int:
     for r in conn.execute(ATTIVI_SQL).fetchall():
         att[(r["make"], r["model"], r["fuel"], int(r["year"]))] = (int(r["attivi"]), float(r["prezzo_med"] or 0),
                                                                  int(r["nuovi_30"]))
-    STATS.update(modelli=mod, attivi=att)
-    log.warning("SCHEDA_MODELLI %s", {"gruppi_venduti": len(mod), "gruppi_attivi": len(att)})
+    es = {}
+    for r in conn.execute(ESEMPI_SQL).fetchall():           # casi reali: ultime 6 vendute per modello/carburante/anno
+        es.setdefault((r["make"], r["model"], r["fuel"], int(r["year"])), []).append(
+            (int(r["price_eur"]), int(r["mileage_km"]) if r["mileage_km"] is not None else None, r["city"] or r["province"],
+             max(1, int(round(float(r["giorni"])))), r["quando"].date().isoformat() if r["quando"] else None, int(r["year"])))
+    STATS.update(modelli=mod, attivi=att, esempi=es)
+    log.warning("SCHEDA_MODELLI %s", {"gruppi_venduti": len(mod), "gruppi_attivi": len(att), "esempi": sum(map(len, es.values()))})
     return len(mod)
 
 
-def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=None, attivi=None) -> dict | None:
+def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=None, attivi=None, esempi=None) -> dict | None:
     """Quanto velocemente si vende questo modello (anni vicini, stesso carburante) e quanta concorrenza c'è."""
     modelli = STATS["modelli"] if modelli is None else modelli
     attivi = STATS["attivi"] if attivi is None else attivi
@@ -226,7 +243,12 @@ def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=N
         frasi.append(f"{in_vendita} auto simili in vendita ora contro circa {int(round(vendite_mese))} vendute al mese: {conc_t}.")
     if trend is not None and abs(trend) >= 2:
         frasi.append(f"Prezzi di vendita {'in salita' if trend > 0 else 'in calo'} del {abs(trend)}% nell'ultimo mese.")
-    return {"voto": voto, "velocita": vel, "giorni_vendita": int(round(giorni)), "giorni_veloci": int(round(giorni_p25)),
+    esempi = STATS.get("esempi", {}) if esempi is None else esempi
+    casi = [c for y in anni for c in esempi.get(k0 + (y,), [])]
+    if km is not None:
+        casi.sort(key=lambda c: (abs((c[1] if c[1] is not None else 10 ** 7) - km), -int((c[4] or "0").replace("-", ""))))
+    casi = [{"prezzo": c[0], "km": c[1], "dove": c[2], "giorni": c[3], "quando": c[4], "anno": c[5]} for c in casi[:3]]
+    return {"casi": casi, "voto": voto, "velocita": vel, "giorni_vendita": int(round(giorni)), "giorni_veloci": int(round(giorni_p25)),
             "vendute_90g": n90, "vendute_30g": n30, "vendute_mese": round(vendite_mese, 1), "in_vendita": in_vendita,
             "nuove_30g": nuovi_30, "settimane_di_offerta": settimane_stock, "concorrenza": conc, "trend_prezzi_pct": trend,
             "anni": f"{min(anni)}–{max(anni)}", "frasi": frasi,
@@ -486,14 +508,13 @@ def flash(prezzi: dict, piano: dict | None, rv: dict | None, voto: int, margine,
 
 def parere(d, b, prezzo, M, margine, soglia, giorni, giorni_ann, rib, sceso, prezzi, prev, piano, rv, ds, voto, vend,
            n_piu_bassi, ripubblicata) -> dict:
-    """Il nostro parere sull'auto, in poche frasi da professionista. Solo fatti che abbiamo, niente frasi vuote."""
+    """Il nostro parere in 3-4 paragrafi brevi: l'auto e il prezzo, il venditore e la trattativa, la rivendita
+    (con i casi reali venduti), le attenzioni. I numeri chiave sono in grassetto (**...**) per l'app."""
     nome = d.get("nome") or "Quest'auto"
-    guad = (piano or {}).get("guadagno_atteso")
-    if guad is None:
-        guad = prezzi.get("guadagno_a_chiusura")
+    pv = d.get("pv") if isinstance(d.get("pv"), dict) else {}
+    R = pv.get("R_finale") or pv.get("R")
     ok_margine = margine is not None and soglia and margine >= soglia
     veloce = rv and rv.get("velocita") in ("molto_veloce", "veloce")
-    lenta = rv and rv.get("velocita") == "lenta"
     rischio = [v for v in (ds or {}).get("voci") or [] if v.get("livello") in ("male", "attenzione")]
     if ok_margine and (veloce or not rv) and not any(v.get("livello") == "male" for v in rischio):
         giudizio, tono = "Affare da prendere", "good"
@@ -503,59 +524,95 @@ def parere(d, b, prezzo, M, margine, soglia, giorni, giorni_ann, rib, sceso, pre
         giudizio, tono = "Diventa un affare trattando", "info"
     else:
         giudizio, tono = "Solo se la prendi al prezzo giusto", "warn"
+    par = []
 
-    fr = []
+    # 1. l'auto e il prezzo
+    anno, km = b.get("year"), b.get("mileage_km")
+    t = f"{nome}" + (f" del {anno}" if anno else "") + (f" con {_e(km)} km" if km is not None else "") + f", chiesta **{_e(prezzo)} €**."
     if M:
-        diff = (prezzo - M) / M * 100
-        if diff <= -3:
-            fr.append(f"{nome} è in vendita a {_e(prezzo)} €, il {abs(round(diff))}% sotto il prezzo di mercato per anno e "
-                      f"chilometri (circa {_e(M)} €).")
-        elif diff >= 3:
-            fr.append(f"{nome} è in vendita a {_e(prezzo)} €, sopra il prezzo di mercato per anno e chilometri (circa "
-                      f"{_e(M)} €): l'affare si fa solo trattando.")
+        diff = M - prezzo
+        if diff > 0.03 * M:
+            t += f" Per anno e chilometri vale circa **{_e(M)} €**: sei **{_e(diff)} € sotto mercato**."
+        elif diff < -0.03 * M:
+            t += f" Per anno e chilometri vale circa **{_e(M)} €**: il prezzo è alto, l'affare si fa solo trattando."
         else:
-            fr.append(f"{nome} è in vendita a {_e(prezzo)} €, in linea con il mercato (circa {_e(M)} €).")
+            t += f" È in linea con il mercato (circa **{_e(M)} €**)."
+    par.append(t)
+
+    # 2. venditore e trattativa
     if giorni_ann < 3 and not ripubblicata:
-        fr.append("L'annuncio è appena uscito: chi arriva per primo la prende, quindi muoviti oggi e non tirare troppo.")
+        t = "Annuncio appena uscito: chi chiama per primo la prende, quindi muoviti oggi e non tirare troppo."
     else:
-        pezzo = f"È in vendita da {int(giorni)} giorni"
+        t = f"Online da **{int(giorni)} giorni**"
         if rib:
-            pezzo += f" e il venditore ha già abbassato {rib} {'volta' if rib == 1 else 'volte'} ({_e(sceso)} € in meno)"
+            t += f", ha già abbassato {rib} {'volta' if rib == 1 else 'volte'} (**−{_e(sceso)} €**)"
+        else:
+            t += ", mai abbassata"
         if ripubblicata:
-            pezzo += ", dopo averla anche tolta e ripubblicata"
-        pezzo += ": " + ("è un venditore che vuole chiudere." if voto >= 7 else
-                         "c'è spazio per trattare." if voto >= 5 else "difficilmente farà grandi sconti.")
-        fr.append(pezzo)
-    if prev and prev.get("probabilita_ribasso", 0) >= .4 and giorni_ann >= 3:
-        fr.append(f"Dai venditori simili ci aspettiamo un altro ribasso ({int(prev['probabilita_ribasso'] * 100)}% di "
-                  f"probabilità), verso {_e(prev['prezzo_annuncio_previsto'])} €.")
-    t = f"Parti da {_e(prezzi['apertura'])} € e punta a chiudere intorno a {_e(prezzi['chiusura_probabile'])} €"
-    if prezzi.get("massimo") is not None:
-        t += f"; non andare oltre {_e(prezzi['massimo'])} €, sopra il guadagno scende sotto il minimo"
-    fr.append(t + ".")
+            t += ", tolta e ripubblicata"
+        t += ". " + ("Venditore che vuole chiudere." if voto >= 7 else "C'è spazio per trattare." if voto >= 5
+                     else "Non aspettarti grandi sconti.")
+    t += f" Proponi **{_e(prezzi['apertura'])} €**"
     if n_piu_bassi:
-        fr.append(f"Usa in trattativa le {n_piu_bassi} auto uguali in vendita a meno.")
+        t += f" facendo notare le {n_piu_bassi} uguali in vendita a meno"
+    t += f", chiudi intorno a **{_e(prezzi['chiusura_probabile'])} €**"
+    if prezzi.get("massimo") is not None:
+        t += f"; fino a **{_e(prezzi['massimo'])} €** ci guadagni ancora il minimo"
+    t += "."
+    if prev and prev.get("probabilita_ribasso", 0) >= .4 and giorni_ann >= 3:
+        t += f" Probabile un altro ribasso a breve ({int(prev['probabilita_ribasso'] * 100)}%)."
+    par.append(t)
+
+    # 3. rivendita
+    riv = None
+    if R:
+        listino = _listino(R * 1.04 + 99)                      # un po' sopra: margine per la trattativa del cliente
+        costi = max(0, int(R - prezzo - (margine or 0))) if margine is not None else 0
+        giorni_v = rv["giorni_vendita"] if rv else None
+        guad = int(R - prezzi["chiusura_probabile"] - costi - (giorni_v or 20) * COSTO_GIORNO) if margine is not None else None
+        riv = {"annuncio": listino, "vendita": _round50(R), "giorni": giorni_v, "guadagno": guad}
+        t = f"Rimettila in vendita a **{_e(listino)} €**: si chiude intorno a **{_e(R)} €**"
+        if giorni_v:
+            t += f", in circa **{giorni_v} giorni**"
+        t += "."
+        if guad is not None:
+            t += f" Ti restano circa **{_e(guad)} €** netti."
+        if rv:
+            if rv.get("concorrenza") == "tanta":
+                t += f" Ci sono molte uguali in vendita ({rv['in_vendita']}): foto curate e risposte veloci fanno la differenza."
+            elif rv.get("concorrenza") == "poca":
+                t += " Poca concorrenza: puoi tenere il prezzo."
+            if rv.get("trend_prezzi_pct") is not None and rv["trend_prezzi_pct"] <= -3:
+                t += f" Prezzi in calo ({rv['trend_prezzi_pct']}% nel mese): meglio non tenerla ferma."
+        par.append(t)
+
+    # 4. attenzioni
+    if rischio or vend == "commerciante":
+        corti = [v["titolo"].replace(" (probabile, dall'anno)", "").replace("Area B Milano · ", "Area B per ")
+                 .replace("Chilometri", "chilometri").replace("Poche foto", "poche foto") for v in rischio[:3]]
+        if vend == "commerciante":
+            corti.append("venditore professionale (chiedi fattura e regime IVA)")
+        par.append("Attenzione a: " + "; ".join(corti) + ".")
+    return {"giudizio": giudizio, "tono": tono, "paragrafi": par, "rivendi": riv}
+
+
+def mercato(d: dict, rv: dict | None) -> dict | None:
+    """Il mercato di quest'auto in un riquadro: quante ne abbiamo confrontate, prezzo basso/medio/alto, tempi."""
+    val = d.get("valutazione") if isinstance(d.get("valutazione"), dict) else {}
+    pv = d.get("pv") if isinstance(d.get("pv"), dict) else {}
+    prezzi = sorted(int(c["prezzo"]) for c in (val.get("confronti") or []) if c.get("prezzo"))
+    out = {"confrontate": pv.get("n") or val.get("n") or len(prezzi)}
+    if prezzi:
+        out.update(basso=prezzi[0], medio=_round50(prezzi[len(prezzi) // 2] if len(prezzi) % 2
+                                                    else (prezzi[len(prezzi) // 2 - 1] + prezzi[len(prezzi) // 2]) / 2),
+                   alto=prezzi[-1])
+    elif pv.get("M"):
+        out.update(medio=_round50(pv["M"]))
     if rv:
-        r = f"Il modello si rivende in circa {rv['giorni_vendita']} giorni"
-        if rv.get("concorrenza") == "poca":
-            r += " e c'è poca concorrenza"
-        elif rv.get("concorrenza") == "tanta":
-            r += f", ma ci sono molte auto uguali in vendita ({rv['in_vendita']})"
-        if rv.get("trend_prezzi_pct") is not None and abs(rv["trend_prezzi_pct"]) >= 2:
-            r += f"; prezzi {'in salita' if rv['trend_prezzi_pct'] > 0 else 'in calo'} del {abs(rv['trend_prezzi_pct'])}% nell'ultimo mese"
-        fr.append(r + ".")
-    if piano:
-        fr.append(f"Rimessa in vendita, la stimiamo venduta a circa {_e(piano['prezzo_vendita_atteso'])} € in "
-                  f"{piano['giorni_attesi']} giorni, con un guadagno netto di circa {_e(piano['guadagno_atteso'])} €; "
-                  f"sotto {_e(piano['pareggio'])} € ci perdi.")
-    if rischio:
-        corti = [v["titolo"].replace(" (probabile, dall'anno)", "").replace("Area B Milano · ", "limiti in Area B per ")
-                 .replace("Chilometri", "chilometri").replace("Poche foto", "poche foto").replace("Venditore", "venditore")
-                 for v in rischio[:3]]
-        fr.append("Attenzione a: " + ", ".join(corti) + " (dettagli sotto).")
-    if vend == "commerciante":
-        fr.append("Venditore professionale: chiedi fattura e regime IVA.")
-    return {"giudizio": giudizio, "tono": tono, "testo": " ".join(fr)}
+        out.update(in_vendita=rv["in_vendita"], vendute_mese=round(rv["vendute_mese"]), giorni_vendita=rv["giorni_vendita"],
+                   giorni_veloci=rv["giorni_veloci"], trend=rv.get("trend_prezzi_pct"), casi=rv.get("casi") or [],
+                   concorrenza=rv.get("concorrenza"))
+    return out
 
 
 STORICO_SQL = """
@@ -650,7 +707,7 @@ def scheda(conn, lid: int, d: dict, soglia_fn, ora=None) -> dict | None:
 
 
 def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: dict | None = None,
-            modelli=None, attivi=None) -> dict:
+            modelli=None, attivi=None, esempi=None) -> dict:
     prezzo = int(d.get("prezzo") or b.get("price_eur") or 0)
     pv = d.get("pv") if isinstance(d.get("pv"), dict) else {}
     val = d.get("valutazione") if isinstance(d.get("valutazione"), dict) else {}
@@ -766,11 +823,11 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
 
     ds = da_sapere(b, d, ora)
     rv = rivendita(b.get("make"), b.get("model"), b.get("fuel"), b.get("year"), b.get("mileage_km"),
-                   modelli=modelli, attivi=attivi)
+                   modelli=modelli, attivi=attivi, esempi=esempi)
     piano = piano_rivendita(d, prezzo, chiusura, margine, rv, ds, b)
     return {
         "piano": piano,
-        "flash": flash(prezzi, piano, rv, voto, margine, prezzo),
+        "mercato": mercato(d, rv),
         "parere": parere(d, b, prezzo, M, margine, soglia, giorni, giorni_annuncio, rib, sceso, prezzi, previsione,
                          piano, rv, ds, voto, vend, len(piu_bassi), st.get("ripubblicato")),
         "voto": voto, "voto_testo": ("molto disponibile a trattare" if voto >= 8 else "disponibile a trattare" if voto >= 6

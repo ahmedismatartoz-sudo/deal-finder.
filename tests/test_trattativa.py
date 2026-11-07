@@ -90,3 +90,23 @@ def test_piano_rivendita_scende_e_guadagna():
     assert all(x["prezzo_annuncio"] > pz["pareggio"] for x in pz["passi"])
     assert 0 < pz["passi"][-1]["prob_venduta_entro"] <= 1 and pz["guadagno_atteso"] > 0
     assert pz["passi"][1]["dal_giorno"] == 10 and pz["annuncio"]["titolo"].startswith("Fiat Panda 2018")
+
+
+def test_parere_paragrafi_mercato_e_casi_reali():
+    st = T.storico([ev(29, 7900, "apparso")], 1)
+    b = {"first_seen_at": ORA - timedelta(days=29), "price_eur": 7900, "seller_type": "privato", "description": "",
+         "title": "", "price_flags": [], "year": 2021, "mileage_km": 68000, "make": "fiat", "model": "500",
+         "fuel": "ibrida", "power_kw": 51}
+    mod = {("fiat", "500", "ibrida", 2021): (80, 30, 13.0, 6.0, 10500.0, 10600.0)}
+    att = {("fiat", "500", "ibrida", 2021): (60, 10900.0, 25)}
+    es = {("fiat", "500", "ibrida", 2021): [(10900, 70000, "Monza", 9, "2026-10-28", 2021), (11400, 30000, "Milano", 15, "2026-10-20", 2021)]}
+    d = {"prezzo": 7900, "nome": "Fiat 500 1.0 Hybrid Cult", "pv": {"M": 11056, "R": 10500, "margine": 2400, "soglia": 1800, "n": 23},
+         "valutazione": {"confronti": [{"prezzo": p} for p in (9800, 10500, 11200, 12900)]}}
+    s = T.calcola(b, st, [], d, soglia, ora=ORA, gruppi=GRUPPI, modelli=mod, attivi=att, esempi=es)
+    pa = s["parere"]
+    assert len(pa["paragrafi"]) >= 3 and "**7.900 €**" in pa["paragrafi"][0] and "sotto mercato" in pa["paragrafi"][0]
+    assert "mai abbassata" in pa["paragrafi"][1]
+    assert pa["rivendi"]["annuncio"] > 10500 and "13 giorni" in pa["paragrafi"][2]
+    mk = s["mercato"]
+    assert (mk["basso"], mk["alto"], mk["confrontate"]) == (9800, 12900, 23) and mk["medio"] == 10850
+    assert mk["casi"][0]["km"] == 70000 and mk["casi"][0]["giorni"] == 9          # il più vicino per km per primo
