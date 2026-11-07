@@ -3162,6 +3162,36 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("UTENTI non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("zona:"):             # 7/11 (cliente): quante auto per provincia (sito e annunci attivi), nessun dato personale
+            time.sleep(30)
+            try:
+                from ..pipeline.ciclo import _una_volta
+                from . import sito_regole as _SR
+                if not _una_volta("zona:" + v.split(":", 1)[1][:40]):
+                    lg.warning("ZONA_CONTA già fatto")
+                    return
+                for _ in range(30):
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                sito, fascia_p = {}, {}
+                for it in list(_elenco.get("items") or []):
+                    pr = _SR._r(it).get("provincia") or "?"
+                    sito[pr] = sito.get(pr, 0) + 1
+                    if _SR.fascia(it):
+                        fascia_p[pr] = fascia_p.get(pr, 0) + 1
+                with connect() as conn:
+                    righe = conn.execute(
+                        "SELECT province, count(*) AS n, count(*) FILTER (WHERE seller_type = 'privato') AS privati, "
+                        "count(*) FILTER (WHERE first_seen_at > now() - interval '7 days') AS nuove_7g, "
+                        "count(*) FILTER (WHERE price_eur <= 10000) AS fino_10k "
+                        "FROM listings WHERE status = 'attivo' AND source IN ('subito', 'autoscout24') GROUP BY 1 ORDER BY 2 DESC LIMIT 40").fetchall()
+                lg.warning("ZONA_SITO %s", json.dumps({"sito": dict(sorted(sito.items(), key=lambda x: -x[1])),
+                                                        "fascia": dict(sorted(fascia_p.items(), key=lambda x: -x[1]))}))
+                lg.warning("ZONA_ATTIVI %s", json.dumps([dict(r) for r in righe], default=str))
+            except Exception as e:
+                lg.warning("ZONA_CONTA non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("wa30:"):             # 6/11 notte (cliente): profili di 30 commercianti + auto del sito per WhatsApp su misura
             time.sleep(30)
             try:
