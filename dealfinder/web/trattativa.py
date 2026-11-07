@@ -234,6 +234,119 @@ def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=N
                     "(Subito e AutoScout24, nord Italia): un annuncio sparito è quasi sempre un'auto venduta."}
 
 
+# ---------------------------------------------------------------- da sapere (per chi compra e poi rivende)
+# Stime: classe Euro dall'anno (la vera è sul libretto), bollo Lombardia, passaggio con IPT di Milano.
+# Area B Milano (fonte: Comune di Milano, ottobre 2026): vietati ora benzina fino a Euro 3 e diesel fino a Euro 5;
+# dal 1/10/2028 benzina Euro 4 e diesel Euro 6 a-b-c; dal 1/10/2030 diesel Euro 6 d-temp e d.
+
+def classe_euro(fuel: str | None, anno: int | None) -> str | None:
+    if not anno:
+        return None
+    f = (fuel or "").lower()
+    if f.startswith("diesel"):
+        return ("Euro 3" if anno <= 2005 else "Euro 4" if anno <= 2010 else "Euro 5" if anno <= 2015
+                else "Euro 6 (a-b-c)" if anno <= 2019 else "Euro 6 d-temp/d")
+    if f in ("elettrica",):
+        return "elettrica"
+    return ("Euro 2" if anno <= 2000 else "Euro 3" if anno <= 2005 else "Euro 4" if anno <= 2010
+            else "Euro 5" if anno <= 2014 else "Euro 6")
+
+
+def area_b(fuel: str | None, classe: str | None) -> tuple[str, str] | None:
+    if not classe or classe == "elettrica":
+        return ("ok", "Entra in Area B e Area C a Milano senza limiti (elettrica).") if classe else None
+    f = (fuel or "").lower()
+    if f.startswith("diesel"):
+        if classe in ("Euro 3", "Euro 4", "Euro 5"):
+            return ("male", f"Diesel {classe}: NON entra già oggi in Area B a Milano. Più difficile da rivendere a chi vive in città.")
+        if classe.startswith("Euro 6 (a"):
+            return ("attenzione", "Diesel Euro 6 a-b-c (probabile): entra in Area B fino al 30/9/2028, poi no. Vale meno per i clienti di Milano.")
+        return ("ok", "Diesel Euro 6 d (probabile): entra in Area B fino al 30/9/2030.")
+    if classe in ("Euro 2", "Euro 3"):
+        return ("male", f"Benzina {classe}: NON entra già oggi in Area B a Milano.")
+    if classe == "Euro 4":
+        return ("attenzione", "Benzina Euro 4: entra in Area B fino al 30/9/2028, poi no.")
+    return ("ok", "Entra in Area B a Milano (benzina Euro 5/6, ibride e GPL seguono la benzina).")
+
+
+def bollo_lombardia(kw: int | None, anno: int | None, fuel: str | None, adesso: int) -> int | None:
+    if not kw or (fuel or "").lower() in ("elettrica",):
+        return None
+    b = 2.58 * min(kw, 100) + 3.87 * max(0, kw - 100)
+    if kw > 185 and anno:
+        eta = adesso - anno
+        f = 1.0 if eta < 5 else .6 if eta < 10 else .3 if eta < 15 else .15 if eta < 20 else 0
+        b += 20 * (kw - 185) * f
+    return int(round(b))
+
+
+def passaggio_milano(kw: int | None) -> tuple[int, int] | None:
+    if not kw:
+        return None
+    ipt = (150.81 if kw <= 53 else 3.5119 * kw) * 1.3          # IPT Milano (+30%)
+    base = ipt + 100                                            # ACI, bolli, diritti
+    return int(round(base / 10) * 10), int(round((base + 200) / 10) * 10)   # da soli / con agenzia
+
+
+def controlli(fuel: str | None, cambio: str | None, km: int | None, anno: int | None, adesso: int) -> list[str]:
+    f, c, km, eta = (fuel or "").lower(), (cambio or "").lower(), km or 0, (adesso - anno) if anno else 0
+    out = []
+    if f.startswith("diesel"):
+        out.append("Diesel: chiedi se fa tanta città. Controlla FAP/DPF ed EGR, spia motore e fumo allo scarico in accelerazione.")
+    if f == "gpl" or "gpl" in f:
+        out.append("GPL: guarda la data della bombola sul certificato (dura 10 anni) e prova la commutazione benzina/GPL.")
+    if f == "metano":
+        out.append("Metano: controlla la scadenza della revisione delle bombole (ogni 4 anni).")
+    if f == "ibrida":
+        out.append("Ibrida: chiedi lo stato della batteria e se c'è ancora garanzia della casa sulla parte ibrida.")
+    if f == "elettrica":
+        out.append("Elettrica: fatti dare lo stato di salute della batteria (SOH) e verifica la garanzia sulla batteria.")
+    if "autom" in c:
+        out.append("Cambio automatico: in prova controlla che non dia strappi da fermo e in retromarcia; chiedi quando è stato cambiato l'olio del cambio.")
+    if km >= 120000:
+        out.append("Oltre 120.000 km: chiedi fatture di distribuzione, frizione, ammortizzatori e freni.")
+    elif km >= 80000:
+        out.append("Oltre 80.000 km: chiedi se ha fatto la distribuzione e quando è previsto il prossimo tagliando grosso.")
+    if eta >= 8:
+        out.append("Auto con più di 8 anni: guarda ruggine sotto scocca e nei passaruota, e lo stato dei tubi freno.")
+    out.append("Sempre: libretto dei tagliandi, numero di chiavi, verifica gratuita km e revisioni sul Portale dell'Automobilista, visura PRA per fermi o ipoteche.")
+    return out
+
+
+def da_sapere(b: dict, d: dict, ora=None) -> dict:
+    adesso = (ora or datetime.now(timezone.utc)).year
+    anno, km, kw, fuel = b.get("year"), b.get("mileage_km"), b.get("power_kw"), b.get("fuel")
+    voci = []
+    if anno and km is not None:
+        eta = max(1, adesso - anno)
+        kma = int(round(km / eta / 1000.0)) * 1000
+        if km / eta < 5000 and eta >= 4:
+            voci.append({"livello": "attenzione", "titolo": "Chilometri molto bassi",
+                         "testo": f"Circa {_e(kma)} km all'anno: pochi per l'età. Verifica i km sul Portale dell'Automobilista (revisioni) e sui tagliandi."})
+        elif km / eta > 30000:
+            voci.append({"livello": "attenzione", "titolo": "Chilometri alti per l'età",
+                         "testo": f"Circa {_e(kma)} km all'anno: probabile uso da lavoro o autostrada. Pesa sul prezzo di rivendita."})
+        else:
+            voci.append({"livello": "ok", "titolo": "Chilometri nella norma", "testo": f"Circa {_e(kma)} km all'anno."})
+    classe = classe_euro(fuel, anno)
+    ab = area_b(fuel, classe)
+    if ab:
+        voci.append({"livello": ab[0], "titolo": f"Area B Milano · {classe} (probabile, dall'anno)", "testo": ab[1]})
+    nf = d.get("n_foto")
+    if nf is not None and nf < 5:
+        voci.append({"livello": "attenzione", "titolo": "Poche foto",
+                     "testo": f"Solo {nf} foto: chiedi altre foto (interni, sottoscocca, cruscotto acceso) prima di muoverti."})
+    if d.get("commerciante") or b.get("seller_type") == "commerciante":
+        voci.append({"livello": "info", "titolo": "Venditore commerciante",
+                     "testo": "Chiedi fattura e se l'auto è in regime del margine: cambia il conto dell'IVA."})
+    bollo = bollo_lombardia(kw, anno, fuel, adesso)
+    pas = passaggio_milano(kw)
+    return {"voci": voci, "classe_euro": classe, "bollo_anno": bollo, "passaggio": pas,
+            "kw": kw, "cv": int(round(kw * 1.36)) if kw else None, "controlli": controlli(fuel, b.get("gearbox"), km, anno, adesso),
+            "nota": "Classe Euro stimata dall'anno di immatricolazione (quella vera è sul libretto). Bollo: tariffe "
+                    "Lombardia; passaggio: IPT della provincia di Milano, prima cifra fai da te, seconda con agenzia."}
+
+
 STORICO_SQL = """
 WITH stessa AS (
   SELECT l2.id, l2.source, l2.status, l2.first_seen_at
@@ -247,7 +360,7 @@ DOPPIONI_SQL = """
 SELECT l2.source, l2.price_eur FROM listings l JOIN listings l2 ON l2.vehicle_id = l.vehicle_id AND l2.id <> l.id
 WHERE l.id = %(id)s AND l.vehicle_id IS NOT NULL AND l2.status = 'attivo' LIMIT 5"""
 BASE_SQL = """SELECT id, first_seen_at, price_eur, seller_type, description, title, price_flags, year, mileage_km,
-                     source, vehicle_id, make, model, fuel FROM listings WHERE id = %(id)s"""
+                     source, vehicle_id, make, model, fuel, power_kw, gearbox, province FROM listings WHERE id = %(id)s"""
 
 SEGNALI_TESTO = [
     (re.compile(r"\bnon\s+(?:è\s+)?trattabil|\bprezzo\s+fisso\b|\bno\s+perditempo\b.*\bno\s+trattativ|\bnon\s+tratto\b", re.I),
@@ -451,6 +564,7 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
         "storico": st.get("punti") or [], "doppioni": dop, "venditore": vend,
         "concorrenti": len(confronti), "concorrenti_piu_bassi": len(piu_bassi),
         "previsione": previsione, "prezzi": prezzi,
+        "da_sapere": da_sapere(b, d, ora),
         "rivendita": rivendita(b.get("make"), b.get("model"), b.get("fuel"), b.get("year"), b.get("mileage_km"),
                                modelli=modelli, attivi=attivi), "argomenti": argomenti[:6], "quando": quando,
         "messaggio": messaggio,

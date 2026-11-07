@@ -64,3 +64,16 @@ def test_gruppo_allarga_se_pochi():
     g = T.gruppo("commerciante", 33, 2, GRUPPI)      # commerciante con pochi dati: usa i privati con stesso stato
     assert g and g["n"] == 120
     assert T.gruppo("privato", 33, 2, {}) is None
+
+
+def test_da_sapere_area_b_bollo_passaggio():
+    b = {"year": 2014, "mileage_km": 30000, "power_kw": 81, "fuel": "diesel", "gearbox": "automatico",
+         "seller_type": "privato"}
+    x = T.da_sapere(b, {"n_foto": 3}, ORA)
+    titoli = " ".join(v["titolo"] for v in x["voci"])
+    assert "Chilometri molto bassi" in titoli and "Poche foto" in titoli
+    assert any(v["livello"] == "male" and "Area B" in v["titolo"] for v in x["voci"])   # diesel Euro 5
+    assert x["bollo_anno"] == 209 and x["passaggio"][0] < x["passaggio"][1]
+    assert any("FAP" in c for c in x["controlli"]) and any("automatico" in c for c in x["controlli"])
+    assert T.area_b("benzina", T.classe_euro("benzina", 2008))[0] == "attenzione"
+    assert T.area_b("diesel", T.classe_euro("diesel", 2021))[0] == "ok"

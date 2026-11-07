@@ -464,6 +464,19 @@ function boxTrattativa(t){
   if ((t.doppioni || []).length) h += `<div class="note">Pubblicata anche su: ${t.doppioni.map(x => esc(x.source) + (x.price_eur ? " a " + eur(x.price_eur) : "")).join(", ")}.</div>`;
   if (t.messaggio) h += `<h3 class="tr-h">Messaggio pronto</h3><div class="box tr-msg"><p style="margin:12px 0">${esc(t.messaggio)}</p></div><button class="pill" data-act="copy-msg">Copia il messaggio</button>`;
   h += `</section>`;
+  const ds = t.da_sapere;
+  if (ds) {
+    const ic = {ok: "✓", attenzione: "!", male: "✕", info: "i"};
+    h += `<section class="d-sec tr"><h2>Da sapere</h2>${(ds.voci || []).map(v => `<div class="tr-voce ${esc(v.livello)}"><span class="tr-ic" aria-hidden="true">${ic[v.livello] || "i"}</span><div><b>${esc(v.titolo)}</b><br>${esc(v.testo)}</div></div>`).join("")}
+      <div class="box">
+        ${ds.kw ? row("Potenza", `${ds.kw} kW <small>· ${ds.cv} CV</small>`) : ""}
+        ${ds.classe_euro ? row("Classe Euro <small>(probabile)</small>", esc(ds.classe_euro)) : ""}
+        ${ds.bollo_anno ? row("Bollo all'anno <small>(Lombardia)</small>", "~" + eur(ds.bollo_anno)) : ""}
+        ${ds.passaggio ? row("Passaggio di proprietà <small>(Milano)</small>", `${eur(ds.passaggio[0])} – ${eur(ds.passaggio[1])}`) : ""}
+      </div>
+      ${(ds.controlli || []).length ? `<h3 class="tr-h">Cosa controllare quando la vedi</h3><ul class="checks">${ds.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      <div class="note" style="border:0">${esc(ds.nota || "")}</div></section>`;
+  }
   if (rv) h += `<section class="d-sec tr"><h2>Rivendita</h2><div class="box">
     <div class="row"><span class="k"><b>Facilità di vendita</b><br><small>${esc({molto_veloce: "molto veloce", veloce: "veloce", media: "nella media", lenta: "lenta"}[rv.velocita] || "")}</small></span><span class="v">${meter(rv.voto, "Facilità di vendita")}</span></div>
     ${row("Tempo medio di vendita", `${rv.giorni_vendita} giorni <small>(le più rapide ${rv.giorni_veloci})</small>`)}

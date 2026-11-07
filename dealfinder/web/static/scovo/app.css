@@ -537,3 +537,7 @@ a{color:var(--focus)}
 .tr .checks li small{font-size:13px}
 .tr-msg p{font-size:15px;line-height:1.45;color:var(--ink-2)}
 .row .v.good{color:var(--good)}
+.tr-voce{display:flex;gap:10px;align-items:flex-start;background:var(--card);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--ink-2);line-height:1.4}
+.tr-voce b{color:var(--ink)}
+.tr-ic{flex:0 0 22px;height:22px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;background:var(--tag)}
+.tr-voce.ok .tr-ic{background:var(--good)} .tr-voce.attenzione .tr-ic{background:var(--warn)} .tr-voce.male .tr-ic{background:#d93025}
