@@ -464,6 +464,26 @@ function boxTrattativa(t){
   if ((t.doppioni || []).length) h += `<div class="note">Pubblicata anche su: ${t.doppioni.map(x => esc(x.source) + (x.price_eur ? " a " + eur(x.price_eur) : "")).join(", ")}.</div>`;
   if (t.messaggio) h += `<h3 class="tr-h">Messaggio pronto</h3><div class="box tr-msg"><p style="margin:12px 0">${esc(t.messaggio)}</p></div><button class="pill" data-act="copy-msg">Copia il messaggio</button>`;
   h += `</section>`;
+  const pz = t.piano;
+  if (pz) {
+    h += `<section class="d-sec tr"><h2>Piano di rivendita</h2>
+      <div class="box">
+        ${row("Guadagno atteso", eur(pz.guadagno_atteso) + " <small>netto giacenza</small>", "good")}
+        ${row("Venduta in circa", pz.giorni_attesi + " giorni" + ` <small>· ${Math.round(pz.prob_venduta_30g * 100)}% entro 30 giorni</small>`)}
+        ${row("Sotto questo prezzo ci perdi", eur(pz.pareggio), "warn")}
+      </div>
+      <div class="tr-tab" role="table" aria-label="Prezzi di rivendita nel tempo">
+        <div class="tr-tr tr-th" role="row"><span role="columnheader">Dal giorno</span><span role="columnheader">Annuncio</span><span role="columnheader">Venduta entro</span><span role="columnheader">Guadagno</span></div>
+        ${pz.passi.map(x => `<div class="tr-tr" role="row"><span role="cell">${x.dal_giorno === 0 ? "Subito" : x.dal_giorno + "°"}</span><span role="cell"><b>${eur(x.prezzo_annuncio)}</b><small>cliente ~${eur(x.prezzo_atteso_cliente)}</small></span><span role="cell">${Math.round(x.prob_venduta_entro * 100)}%<small>al giorno ${x.fino_al_giorno}</small></span><span role="cell" style="color:${x.guadagno_netto > 0 ? "var(--good)" : "var(--warn)"}"><b>${eur(x.guadagno_netto)}</b><small>−${eur(x.costo_giacenza)} giacenza</small></span></div>`).join("")}
+      </div>
+      <div class="note" style="border:0">Se al giorno indicato non è venduta, abbassa al prezzo della riga. ${esc(pz.base_tempi)}.</div>
+      ${(pz.consigli || []).length ? `<h3 class="tr-h">Quando e come venderla</h3><ul class="checks">${pz.consigli.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      <h3 class="tr-h">L'annuncio di vendita</h3>
+      <div class="box tr-msg"><p style="margin:12px 0"><b>${esc(pz.annuncio.titolo)}</b></p></div>
+      <ul class="checks"><li><b>A chi venderla:</b> ${esc(pz.annuncio.clienti)}.</li>${pz.annuncio.punti.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <h3 class="tr-h">Dopo la vendita</h3><ul class="checks">${pz.dopo_vendita.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="note" style="border:0">${esc(pz.nota)}</div></section>`;
+  }
   const ds = t.da_sapere;
   if (ds) {
     const ic = {ok: "✓", attenzione: "!", male: "✕", info: "i"};

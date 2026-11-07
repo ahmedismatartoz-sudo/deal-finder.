@@ -77,3 +77,16 @@ def test_da_sapere_area_b_bollo_passaggio():
     assert any("FAP" in c for c in x["controlli"]) and any("automatico" in c for c in x["controlli"])
     assert T.area_b("benzina", T.classe_euro("benzina", 2008))[0] == "attenzione"
     assert T.area_b("diesel", T.classe_euro("diesel", 2021))[0] == "ok"
+
+
+def test_piano_rivendita_scende_e_guadagna():
+    mod = {("fiat", "panda", "benzina", 2018): (60, 25, 18.0, 7.0, 7600.0, 7600.0)}
+    att = {("fiat", "panda", "benzina", 2018): (20, 7900.0, 20)}
+    rv = T.rivendita("fiat", "panda", "benzina", 2018, modelli=mod, attivi=att)
+    d = {"prezzo": 7000, "nome": "Fiat Panda", "pv": {"M": 9000, "R": 8800, "margine": 1500, "soglia": 1500}}
+    pz = T.piano_rivendita(d, 7000, 6700, 1500, rv, None, {"year": 2018, "mileage_km": 60000, "fuel": "benzina"})
+    prezzi = [x["prezzo_annuncio"] for x in pz["passi"]]
+    assert prezzi == sorted(prezzi, reverse=True) and prezzi[0] >= 9000 and len(prezzi) >= 4
+    assert all(x["prezzo_annuncio"] > pz["pareggio"] for x in pz["passi"])
+    assert 0 < pz["passi"][-1]["prob_venduta_entro"] <= 1 and pz["guadagno_atteso"] > 0
+    assert pz["passi"][1]["dal_giorno"] == 10 and pz["annuncio"]["titolo"].startswith("Fiat Panda 2018")

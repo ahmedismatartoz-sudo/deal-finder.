@@ -541,3 +541,8 @@ a{color:var(--focus)}
 .tr-voce b{color:var(--ink)}
 .tr-ic{flex:0 0 22px;height:22px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;background:var(--tag)}
 .tr-voce.ok .tr-ic{background:var(--good)} .tr-voce.attenzione .tr-ic{background:var(--warn)} .tr-voce.male .tr-ic{background:#d93025}
+.tr-tab{background:var(--card);border-radius:14px;padding:4px 12px;font-size:14px}
+.tr-tr{display:grid;grid-template-columns:.8fr 1.2fr 1fr 1.1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+.tr-tr:first-child{border-top:0}
+.tr-th{font-size:12px;color:var(--ink-3,#8e8e93);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.tr-tr small{display:block;font-size:11.5px;color:var(--ink-3,#8e8e93);margin-top:2px}

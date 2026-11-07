@@ -347,6 +347,119 @@ def da_sapere(b: dict, d: dict, ora=None) -> dict:
                     "Lombardia; passaggio: IPT della provincia di Milano, prima cifra fai da te, seconda con agenzia."}
 
 
+# ---------------------------------------------------------------- piano di rivendita (dopo l'acquisto)
+COSTO_GIORNO = 8          # € al giorno di auto ferma: assicurazione, spazio, soldi bloccati (stima, modificabile)
+PASSI = (0, 10, 15, 20, 30, 45)
+
+
+def _listino(x: float) -> int:
+    """Prezzo da annuncio: tondo alle centinaia sotto (9.900, 12.400)."""
+    return int(x // 100) * 100 if x >= 1000 else _round50(x)
+
+
+def piano_rivendita(d: dict, prezzo: int, acquisto: int, margine, rv: dict | None, ds: dict | None, b: dict) -> dict | None:
+    """Dopo averla comprata: a che prezzo metterla, quando abbassare, quanto si guadagna giorno per giorno.
+    Probabilità di vendita stimate dal tempo medio di vendita del modello (curva con quella mediana); prezzi sopra il
+    mercato allungano i tempi. Guadagno = prezzo di vendita − acquisto (chiusura probabile) − costi della scheda −
+    giorni di giacenza."""
+    pv = d.get("pv") if isinstance(d.get("pv"), dict) else {}
+    M = pv.get("M")
+    R = pv.get("R_finale") or pv.get("R")
+    if not M or not R or margine is None or not acquisto:
+        return None
+    costi = max(0, int(R - prezzo - margine))                     # costi e riserva della scheda (stessi del margine)
+    pareggio = acquisto + costi
+    mediana = float(rv["giorni_vendita"]) if rv else 30.0
+    veloce = float(rv["giorni_veloci"]) if rv else 12.0
+    trend = (rv or {}).get("trend_prezzi_pct") or 0
+    base = max(M, R)
+    livelli = [base * 1.04, base * 1.0, base * .98, base * .96, max(R * .99, pareggio + 300), max(R * .96, pareggio + 100)]
+    if trend < -3:                                                 # prezzi in calo: si scende prima
+        livelli = [x * .99 for x in livelli]
+    passi, prec = [], None
+    for g, x in zip(PASSI, livelli):
+        prezzo_l = _listino(x)
+        if prec is not None and prezzo_l >= prec:
+            prezzo_l = prec - 100
+        if prezzo_l <= pareggio:
+            break
+        prec = prezzo_l
+        sopra = max(0.0, prezzo_l / M - 1)
+        med_eff = mediana * (1 + 4 * sopra)                       # +5% sul mercato ≈ +20% di tempo
+        guadagno = int(prezzo_l * .97 - acquisto - costi)        # ~3% di sconto al cliente in trattativa
+        passi.append({"dal_giorno": g, "prezzo_annuncio": prezzo_l, "prezzo_atteso_cliente": _round50(prezzo_l * .97),
+                      "guadagno_lordo": guadagno, "_med": med_eff})
+    if not passi:
+        return None
+    # probabilità di essere venduta entro la fine di ogni passo (curva con mediana med_eff del passo)
+    p_ancora, cum = 1.0, 0.0
+    for i, ps in enumerate(passi):
+        fine = passi[i + 1]["dal_giorno"] if i + 1 < len(passi) else ps["dal_giorno"] + 15
+        durata = fine - ps["dal_giorno"]
+        q = 1 - 0.5 ** (durata / max(ps.pop("_med"), 3))
+        venduta_qui = p_ancora * q
+        cum += venduta_qui
+        p_ancora -= venduta_qui
+        giorno_tipo = ps["dal_giorno"] + durata / 2
+        ps.update(fino_al_giorno=fine, prob_vendita_nel_passo=round(venduta_qui, 2), prob_venduta_entro=round(cum, 2),
+                  costo_giacenza=int(giorno_tipo * COSTO_GIORNO),
+                  guadagno_netto=int(ps["guadagno_lordo"] - giorno_tipo * COSTO_GIORNO))
+    atteso = sum(ps["prob_vendita_nel_passo"] * ps["guadagno_netto"] for ps in passi) / max(cum, .01)
+    giorni_attesi = sum(ps["prob_vendita_nel_passo"] * (ps["dal_giorno"] + (ps["fino_al_giorno"] - ps["dal_giorno"]) / 2)
+                        for ps in passi) / max(cum, .01)
+
+    consigli = []
+    if rv and rv.get("concorrenza") == "tanta":
+        consigli.append("Tanta concorrenza: parti già vicino al prezzo di mercato e cura bene le foto, se no resta ferma.")
+    if rv and rv.get("velocita") in ("molto_veloce", "veloce"):
+        consigli.append(f"Si vende in fretta (le più rapide in {rv['giorni_veloci']} giorni): puoi partire un po' più alto e tenere il prezzo per 10 giorni.")
+    if rv and rv.get("velocita") == "lenta":
+        consigli.append("Si vende lentamente: metti un prezzo giusto da subito, ogni settimana ferma costa circa "
+                        f"{_e(7 * COSTO_GIORNO)} €.")
+    if trend < -2:
+        consigli.append(f"Prezzi in calo ({trend}% nell'ultimo mese): non aspettare, vendila il prima possibile.")
+    elif trend > 2:
+        consigli.append(f"Prezzi in salita (+{trend}% nell'ultimo mese): puoi tenere il prezzo qualche giorno in più.")
+    for v in (ds or {}).get("voci") or []:
+        if v.get("titolo", "").startswith("Area B") and v.get("livello") in ("male", "attenzione"):
+            consigli.append("Per l'Area B: pubblicala anche fuori Milano (Brianza, Bergamo, Lodi, Pavia) e scrivilo nell'annuncio; "
+                            "a Milano città la cercano meno.")
+    anno, fuel = b.get("year"), (b.get("fuel") or "").lower()
+    if prezzo and prezzo < 7000:
+        clienti = "neopatentati, seconda auto di famiglia, chi cerca un'auto economica per il lavoro"
+    elif fuel in ("ibrida", "elettrica"):
+        clienti = "chi fa città e vuole consumare poco o entrare in Area B/C senza pensieri"
+    elif fuel.startswith("diesel"):
+        clienti = "chi fa tanti km (autostrada, pendolari, lavoro)"
+    else:
+        clienti = "famiglie e chi cerca un'auto affidabile per tutti i giorni"
+    nome = d.get("nome") or "Auto"
+    titolo = f"{nome} {anno or ''} · {_e(b.get('mileage_km') or 0)} km · tagliandata · garanzia 12 mesi".replace("  ", " ")
+    annuncio = {
+        "titolo": titolo,
+        "punti": ["Prezzo che finisce con 900/400 (es. " + _e(passi[0]["prezzo_annuncio"]) + " €): nelle ricerche per fascia esce prima.",
+                  "Almeno 20 foto alla luce del giorno: 3/4 davanti, 3/4 dietro, interni, cruscotto acceso con i km, gomme, bagagliaio.",
+                  "Scrivi tagliandi, n° proprietari, garanzia 12 mesi e possibilità di finanziamento.",
+                  "Pubblicala su Subito e AutoScout24 nello stesso giorno; rinnova l'annuncio (o mettilo in evidenza) al primo ribasso.",
+                  "Rispondi entro 5 minuti alle richieste: chi risponde subito vende molto di più."],
+        "clienti": clienti,
+    }
+    dopo = ["Garanzia legale: vendendo a un privato devi garantire l'auto per almeno 12 mesi. Metti da parte "
+            f"circa {_e(max(150, round(passi[0]['prezzo_annuncio'] * .02 / 50) * 50))} € per piccoli interventi.",
+            "Passaggio di proprietà: di solito lo paga il cliente; tienine conto in trattativa.",
+            "Prima della consegna: tagliando, pulizia, revisione se scade entro 6 mesi; consegna con 2 chiavi e libretto tagliandi.",
+            "Dopo la vendita: un messaggio dopo 7 giorni per sapere come va e chiedere una recensione; il cliente contento torna e porta amici."]
+    return {"passi": passi, "pareggio": pareggio, "costi_scheda": costi, "acquisto": acquisto,
+            "guadagno_atteso": int(atteso), "giorni_attesi": int(round(giorni_attesi)),
+            "prob_venduta_30g": next((ps["prob_venduta_entro"] for ps in passi if ps["fino_al_giorno"] >= 30), passi[-1]["prob_venduta_entro"]),
+            "costo_giorno": COSTO_GIORNO, "consigli": consigli, "annuncio": annuncio, "dopo_vendita": dopo,
+            "base_tempi": ("tempo medio di vendita di questo modello: " + str(rv["giorni_vendita"]) + " giorni") if rv
+                          else "nessun dato sul modello: tempi stimati su 30 giorni",
+            "nota": "Stime: acquisto al prezzo di chiusura probabile, costi della scheda, circa 3% di sconto al cliente e "
+                    f"{COSTO_GIORNO} € al giorno di giacenza. Le probabilità vengono dai tempi di vendita del modello e salgono "
+                    "o scendono col prezzo."}
+
+
 STORICO_SQL = """
 WITH stessa AS (
   SELECT l2.id, l2.source, l2.status, l2.first_seen_at
@@ -553,7 +666,12 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
                  + (f"Considerando che {' e che '.join(arg_msg)}, " if arg_msg else "")
                  + f"le posso offrire {_e(apertura)} €. Mi faccia sapere, grazie.")
 
+    ds = da_sapere(b, d, ora)
+    rv = rivendita(b.get("make"), b.get("model"), b.get("fuel"), b.get("year"), b.get("mileage_km"),
+                   modelli=modelli, attivi=attivi)
+    piano = piano_rivendita(d, prezzo, chiusura, margine, rv, ds, b)
     return {
+        "piano": piano,
         "voto": voto, "voto_testo": ("molto disponibile a trattare" if voto >= 8 else "disponibile a trattare" if voto >= 6
                                      else "poco margine di trattativa" if voto >= 4 else "difficile da trattare"),
         "motivi": motivi,
@@ -564,9 +682,7 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
         "storico": st.get("punti") or [], "doppioni": dop, "venditore": vend,
         "concorrenti": len(confronti), "concorrenti_piu_bassi": len(piu_bassi),
         "previsione": previsione, "prezzi": prezzi,
-        "da_sapere": da_sapere(b, d, ora),
-        "rivendita": rivendita(b.get("make"), b.get("model"), b.get("fuel"), b.get("year"), b.get("mileage_km"),
-                               modelli=modelli, attivi=attivi), "argomenti": argomenti[:6], "quando": quando,
+        "da_sapere": ds, "rivendita": rv, "argomenti": argomenti[:6], "quando": quando,
         "messaggio": messaggio,
         "nota": "Previsioni dagli annunci spariti (probabilmente venduti) negli ultimi 90 giorni: vediamo l'ultimo prezzo "
                 "dell'annuncio, non il prezzo finale della trattativa.",
