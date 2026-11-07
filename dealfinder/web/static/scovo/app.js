@@ -439,72 +439,50 @@ function meter(v, label){
   const col = v >= 7 ? "var(--good)" : v >= 4 ? "var(--tag)" : "var(--warn)";
   return `<div class="tr-meter" role="img" aria-label="${label}: ${v} su 10"><div class="tr-bar"><i style="width:${v * 10}%;background:${col}"></i></div><b style="color:${col}">${v}/10</b></div>`;
 }
+function boxTop(t){
+  if (!t || !t.parere) return "";
+  const f = t.flash || [];
+  const val = x => x.tipo === "eur" ? eur(x.v) : esc(x.v);
+  return `<section class="tr-top" aria-label="In breve">
+    <div class="tr-flash">${f.map(x => `<div class="tr-f ${esc(x.tono || "")}"><span>${esc(x.k)}</span><b>${val(x)}</b></div>`).join("")}</div>
+    <div class="tr-parere ${esc(t.parere.tono)}"><h2>${esc(t.parere.giudizio)}</h2><p>${esc(t.parere.testo)}</p></div>
+  </section>`;
+}
 function boxTrattativa(t){
   if (!t) return "";
   const row = (k, val, cls) => `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${val}</span></div>`;
-  const p = t.prezzi || {}, pr = t.previsione, rv = t.rivendita;
-  let h = `<section class="d-sec tr"><h2>Trattativa</h2><div class="box">
-    <div class="row"><span class="k"><b>Disponibile a trattare</b><br><small>${esc(t.voto_testo)}</small></span><span class="v">${meter(t.voto, "Disponibile a trattare")}</span></div>
+  const rv = t.rivendita, ds = t.da_sapere;
+  let h = `<section class="d-sec tr"><h2>Venditore e prezzo</h2><div class="box">
     ${row("In vendita da", t.giorni_in_vendita + (t.giorni_in_vendita === 1 ? " giorno" : " giorni") + (t.ripubblicato ? " <small>(ripubblicata)</small>" : ""))}
-    ${row("Ribassi fatti", t.ribassi ? `${t.ribassi} · −${eur(t.sceso_euro)} (−${t.sceso_pct}%)` : "nessuno")}
-    ${t.prezzo_iniziale && t.prezzo_iniziale !== c_prezzo(t) ? row("Prezzo iniziale", eur(t.prezzo_iniziale)) : ""}
+    ${row("Ribassi fatti", t.ribassi ? `${t.ribassi} · −${eur(t.sceso_euro)} <small>(−${t.sceso_pct}%)</small>` : "nessuno")}
+    ${t.prezzo_iniziale && t.sceso_euro ? row("Prezzo iniziale", eur(t.prezzo_iniziale)) : ""}
+    ${t.previsione ? row("Probabile nuovo ribasso", `${Math.round(t.previsione.probabilita_ribasso * 100)}% <small>· verso ${eur(t.previsione.prezzo_annuncio_previsto)}</small>`) : ""}
+    ${t.concorrenti ? row("Auto uguali in vendita", t.concorrenti + (t.concorrenti_piu_bassi ? ` <small>· ${t.concorrenti_piu_bassi} a meno</small>` : "")) : ""}
   </div>`;
-  if ((t.motivi || []).length) h += `<ul class="checks">${t.motivi.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
-  h += `<div class="box">
-    ${row("Offerta d'apertura", eur(p.apertura) + (p.guadagno_ad_apertura != null ? ` <small>· guadagni ${eur(p.guadagno_ad_apertura)}</small>` : ""), "good")}
-    ${row("Chiusura probabile", eur(p.chiusura_probabile) + (p.guadagno_a_chiusura != null ? ` <small>· guadagni ${eur(p.guadagno_a_chiusura)}</small>` : ""))}
-    ${p.massimo != null ? row("Massimo da pagare <small>(per tenere il margine minimo)</small>", eur(p.massimo), "warn") : ""}
-  </div>`;
-  if (pr) h += `<div class="note">Previsione: <b>${Math.round(pr.probabilita_ribasso * 100)}%</b> di probabilità che abbassi ancora, di circa il ${pr.ribasso_previsto_pct}% (annuncio a ~${eur(pr.prezzo_annuncio_previsto)}). Le auto come questa spariscono in circa ${pr.giorni_alla_vendita} giorni. <small>Base: ${esc(pr.base)}.</small></div>`;
-  if (t.quando) h += `<div class="note-box${t.quando.azione === "chiama_subito" ? " bad" : ""}" role="note"><b>${t.quando.azione === "chiama_subito" ? "Chiama subito." : t.quando.azione === "aspetta" ? "Puoi aspettare." : "Fai l'offerta."}</b> ${esc(t.quando.testo)}</div>`;
-  if ((t.argomenti || []).length) h += `<h3 class="tr-h">Argomenti per abbassare il prezzo</h3><ul class="checks">${t.argomenti.map(a =>
-      `<li>${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener" style="color:inherit">` : ""}${esc(a.testo)}${a.link ? "</a>" : ""}${a.euro ? ` <b>−${eur(a.euro)}</b>` : ""}</li>`).join("")}</ul>`;
-  if ((t.storico || []).length > 1) h += `<h3 class="tr-h">Storico del prezzo</h3><ul class="checks">${t.storico.map(x =>
-      `<li>${esc(x.data)} · <b>${eur(x.prezzo)}</b>${x.variazione ? ` <small style="color:${x.variazione < 0 ? "var(--good)" : "var(--warn)"}">${x.variazione < 0 ? "−" : "+"}${eur(Math.abs(x.variazione))}</small>` : ""}${x.evento === "apparso" ? " · pubblicata" : x.evento === "riapparso" ? " · ricomparsa" : x.evento === "ripubblicato" ? " · ripubblicata" : ""}${x.fonte ? " · " + esc(x.fonte) : ""}</li>`).join("")}</ul>`;
+  if ((t.storico || []).length > 1) h += `<div class="tr-storia">${t.storico.map(x => `<span><small>${esc(x.data.slice(5).split("-").reverse().join("/"))}</small><b>${eur(x.prezzo)}</b></span>`).join('<i aria-hidden="true">→</i>')}</div>`;
+  if ((t.argomenti || []).length) h += `<h3 class="tr-h">Argomenti per abbassare il prezzo</h3><div class="box">${t.argomenti.map(a =>
+      row(`${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener" style="color:inherit">` : ""}${esc(a.testo)}${a.link ? "</a>" : ""}`, a.euro ? "−" + eur(a.euro) : "")).join("")}</div>`;
   if ((t.doppioni || []).length) h += `<div class="note">Pubblicata anche su: ${t.doppioni.map(x => esc(x.source) + (x.price_eur ? " a " + eur(x.price_eur) : "")).join(", ")}.</div>`;
-  if (t.messaggio) h += `<h3 class="tr-h">Messaggio pronto</h3><div class="box tr-msg"><p style="margin:12px 0">${esc(t.messaggio)}</p></div><button class="pill" data-act="copy-msg">Copia il messaggio</button>`;
+  if (t.messaggio) h += `<h3 class="tr-h">Messaggio per il venditore</h3><div class="box tr-msg"><p style="margin:12px 0">${esc(t.messaggio)}</p></div><button class="pill" data-act="copy-msg">Copia il messaggio</button>`;
   h += `</section>`;
-  const pz = t.piano;
-  if (pz) {
-    h += `<section class="d-sec tr"><h2>Piano di rivendita</h2>
-      <div class="box">
-        ${row("Guadagno atteso", eur(pz.guadagno_atteso) + " <small>netto giacenza</small>", "good")}
-        ${row("Venduta in circa", pz.giorni_attesi + " giorni" + ` <small>· ${Math.round(pz.prob_venduta_30g * 100)}% entro 30 giorni</small>`)}
-        ${row("Sotto questo prezzo ci perdi", eur(pz.pareggio), "warn")}
-      </div>
-      <div class="tr-tab" role="table" aria-label="Prezzi di rivendita nel tempo">
-        <div class="tr-tr tr-th" role="row"><span role="columnheader">Dal giorno</span><span role="columnheader">Annuncio</span><span role="columnheader">Venduta entro</span><span role="columnheader">Guadagno</span></div>
-        ${pz.passi.map(x => `<div class="tr-tr" role="row"><span role="cell">${x.dal_giorno === 0 ? "Subito" : x.dal_giorno + "°"}</span><span role="cell"><b>${eur(x.prezzo_annuncio)}</b><small>cliente ~${eur(x.prezzo_atteso_cliente)}</small></span><span role="cell">${Math.round(x.prob_venduta_entro * 100)}%<small>al giorno ${x.fino_al_giorno}</small></span><span role="cell" style="color:${x.guadagno_netto > 0 ? "var(--good)" : "var(--warn)"}"><b>${eur(x.guadagno_netto)}</b><small>−${eur(x.costo_giacenza)} giacenza</small></span></div>`).join("")}
-      </div>
-      <div class="note" style="border:0">Se al giorno indicato non è venduta, abbassa al prezzo della riga. ${esc(pz.base_tempi)}.</div>
-      ${(pz.consigli || []).length ? `<h3 class="tr-h">Quando e come venderla</h3><ul class="checks">${pz.consigli.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <h3 class="tr-h">L'annuncio di vendita</h3>
-      <div class="box tr-msg"><p style="margin:12px 0"><b>${esc(pz.annuncio.titolo)}</b></p></div>
-      <ul class="checks"><li><b>A chi venderla:</b> ${esc(pz.annuncio.clienti)}.</li>${pz.annuncio.punti.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      <h3 class="tr-h">Dopo la vendita</h3><ul class="checks">${pz.dopo_vendita.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      <div class="note" style="border:0">${esc(pz.nota)}</div></section>`;
-  }
-  const ds = t.da_sapere;
+  if (rv) h += `<section class="d-sec tr"><h2>Mercato di questo modello</h2><div class="box">
+    ${row("Tempo medio di vendita", `${rv.giorni_vendita} giorni <small>· le più rapide ${rv.giorni_veloci}</small>`)}
+    ${row("Vendute al mese", `~${Math.round(rv.vendute_mese)} <small>· ${rv.vendute_90g} in 90 giorni</small>`)}
+    ${row("In vendita adesso", rv.in_vendita + (rv.settimane_di_offerta != null ? ` <small>· ${rv.settimane_di_offerta} settimane di offerta</small>` : ""), rv.concorrenza === "tanta" ? "warn" : rv.concorrenza === "poca" ? "good" : "")}
+    ${rv.trend_prezzi_pct != null ? row("Prezzi nell'ultimo mese", (rv.trend_prezzi_pct > 0 ? "+" : "") + rv.trend_prezzi_pct + "%", rv.trend_prezzi_pct < -2 ? "warn" : rv.trend_prezzi_pct > 2 ? "good" : "") : ""}
+  </div></section>`;
   if (ds) {
     const ic = {ok: "✓", attenzione: "!", male: "✕", info: "i"};
-    h += `<section class="d-sec tr"><h2>Da sapere</h2>${(ds.voci || []).map(v => `<div class="tr-voce ${esc(v.livello)}"><span class="tr-ic" aria-hidden="true">${ic[v.livello] || "i"}</span><div><b>${esc(v.titolo)}</b><br>${esc(v.testo)}</div></div>`).join("")}
+    const voci = (ds.voci || []).filter(v => v.livello !== "ok");
+    h += `<section class="d-sec tr"><h2>Da sapere</h2>${voci.map(v => `<div class="tr-voce ${esc(v.livello)}"><span class="tr-ic" aria-hidden="true">${ic[v.livello] || "i"}</span><div><b>${esc(v.titolo)}</b><br>${esc(v.testo)}</div></div>`).join("")}
       <div class="box">
         ${ds.kw ? row("Potenza", `${ds.kw} kW <small>· ${ds.cv} CV</small>`) : ""}
         ${ds.classe_euro ? row("Classe Euro <small>(probabile)</small>", esc(ds.classe_euro)) : ""}
+        ${(ds.voci || []).filter(v => v.titolo.startsWith("Chilometri")).map(v => row("Km all'anno", esc(v.testo.replace(/^Circa /, "").split(":")[0].replace(" all'anno.", "").replace(" all'anno", "")), v.livello === "ok" ? "" : "warn")).join("")}
         ${ds.bollo_anno ? row("Bollo all'anno <small>(Lombardia)</small>", "~" + eur(ds.bollo_anno)) : ""}
-        ${ds.passaggio ? row("Passaggio di proprietà <small>(Milano)</small>", `${eur(ds.passaggio[0])} – ${eur(ds.passaggio[1])}`) : ""}
-      </div>
-      ${(ds.controlli || []).length ? `<h3 class="tr-h">Cosa controllare quando la vedi</h3><ul class="checks">${ds.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      <div class="note" style="border:0">${esc(ds.nota || "")}</div></section>`;
+        ${ds.passaggio ? row("Passaggio <small>(Milano)</small>", `${eur(ds.passaggio[0])} – ${eur(ds.passaggio[1])}`) : ""}
+      </div></section>`;
   }
-  if (rv) h += `<section class="d-sec tr"><h2>Rivendita</h2><div class="box">
-    <div class="row"><span class="k"><b>Facilità di vendita</b><br><small>${esc({molto_veloce: "molto veloce", veloce: "veloce", media: "nella media", lenta: "lenta"}[rv.velocita] || "")}</small></span><span class="v">${meter(rv.voto, "Facilità di vendita")}</span></div>
-    ${row("Tempo medio di vendita", `${rv.giorni_vendita} giorni <small>(le più rapide ${rv.giorni_veloci})</small>`)}
-    ${row("Vendute negli ultimi 30 giorni", rv.vendute_30g + ` <small>· ${rv.vendute_90g} in 90 giorni</small>`)}
-    ${row("In vendita adesso", rv.in_vendita + (rv.nuove_30g ? ` <small>· ${rv.nuove_30g} nuove nel mese</small>` : ""))}
-    ${rv.settimane_di_offerta != null ? row("Concorrenza", `${esc(rv.concorrenza || "")} <small>· ${rv.settimane_di_offerta} settimane di offerta</small>`, rv.concorrenza === "tanta" ? "warn" : rv.concorrenza === "poca" ? "good" : "") : ""}
-    ${rv.trend_prezzi_pct != null ? row("Prezzi nell'ultimo mese", (rv.trend_prezzi_pct > 0 ? "+" : "") + rv.trend_prezzi_pct + "%", rv.trend_prezzi_pct < -2 ? "warn" : rv.trend_prezzi_pct > 2 ? "good" : "") : ""}
-  </div><ul class="checks">${(rv.frasi || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul><div class="note" style="border:0">${esc(rv.nota)} Anni ${esc(rv.anni)}.</div></section>`;
   if (t.nota) h += `<div class="note" style="border:0">${esc(t.nota)}</div>`;
   return h;
 }
@@ -536,6 +514,7 @@ function viewDetail(){
     </div>
     <div class="d-body">
       <div><h1 class="d-name">${esc(c.nome)}</h1><div class="meta" style="margin-top:4px">${esc(meta(c))}</div></div>
+      ${d && !d.err && d.trattativa ? boxTop(d.trattativa) : ""}
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}

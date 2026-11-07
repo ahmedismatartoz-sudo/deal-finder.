@@ -546,3 +546,17 @@ a{color:var(--focus)}
 .tr-tr:first-child{border-top:0}
 .tr-th{font-size:12px;color:var(--ink-3,#8e8e93);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
 .tr-tr small{display:block;font-size:11.5px;color:var(--ink-3,#8e8e93);margin-top:2px}
+.tr-top{display:flex;flex-direction:column;gap:10px}
+.tr-flash{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:560px){.tr-flash{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tr-f{background:var(--card);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.tr-f span{font-size:12px;font-weight:700;color:var(--ink-3,#8e8e93);text-transform:uppercase;letter-spacing:.03em}
+.tr-f b{font:800 20px var(--disp);color:var(--ink)}
+.tr-f.good b{color:var(--good)} .tr-f.warn b{color:var(--warn)}
+.tr-parere{background:var(--card);border-radius:14px;padding:14px 16px;border-left:4px solid var(--tag)}
+.tr-parere.good{border-left-color:var(--good)} .tr-parere.warn{border-left-color:var(--warn)}
+.tr-parere h2{margin:0 0 6px;font:800 18px var(--disp)}
+.tr-parere p{margin:0;font-size:15px;line-height:1.5;color:var(--ink-2)}
+.tr-storia{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:14px}
+.tr-storia span{display:flex;flex-direction:column;background:var(--card);border-radius:10px;padding:6px 10px}
+.tr-storia small{font-size:11px;color:var(--ink-3,#8e8e93)} .tr-storia i{font-style:normal;color:var(--ink-3,#8e8e93)}

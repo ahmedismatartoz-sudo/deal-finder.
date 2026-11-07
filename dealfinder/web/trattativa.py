@@ -449,7 +449,9 @@ def piano_rivendita(d: dict, prezzo: int, acquisto: int, margine, rv: dict | Non
             "Passaggio di proprietà: di solito lo paga il cliente; tienine conto in trattativa.",
             "Prima della consegna: tagliando, pulizia, revisione se scade entro 6 mesi; consegna con 2 chiavi e libretto tagliandi.",
             "Dopo la vendita: un messaggio dopo 7 giorni per sapere come va e chiedere una recensione; il cliente contento torna e porta amici."]
+    vendita_attesa = sum(ps["prob_vendita_nel_passo"] * ps["prezzo_atteso_cliente"] for ps in passi) / max(cum, .01)
     return {"passi": passi, "pareggio": pareggio, "costi_scheda": costi, "acquisto": acquisto,
+            "prezzo_vendita_atteso": _round50(vendita_attesa),
             "guadagno_atteso": int(atteso), "giorni_attesi": int(round(giorni_attesi)),
             "prob_venduta_30g": next((ps["prob_venduta_entro"] for ps in passi if ps["fino_al_giorno"] >= 30), passi[-1]["prob_venduta_entro"]),
             "costo_giorno": COSTO_GIORNO, "consigli": consigli, "annuncio": annuncio, "dopo_vendita": dopo,
@@ -458,6 +460,102 @@ def piano_rivendita(d: dict, prezzo: int, acquisto: int, margine, rv: dict | Non
             "nota": "Stime: acquisto al prezzo di chiusura probabile, costi della scheda, circa 3% di sconto al cliente e "
                     f"{COSTO_GIORNO} € al giorno di giacenza. Le probabilità vengono dai tempi di vendita del modello e salgono "
                     "o scendono col prezzo."}
+
+
+# ---------------------------------------------------------------- numeri lampo e parere scritto (7/11 pomeriggio)
+
+def flash(prezzi: dict, piano: dict | None, rv: dict | None, voto: int, margine, prezzo: int) -> list[dict]:
+    """Pochi numeri da leggere in 3 secondi, in cima alla scheda."""
+    out = [{"k": "Offri", "v": prezzi.get("apertura"), "tipo": "eur"},
+           {"k": "Chiudi a", "v": prezzi.get("chiusura_probabile"), "tipo": "eur"}]
+    if prezzi.get("massimo") is not None:
+        out.append({"k": "Non oltre", "v": prezzi["massimo"], "tipo": "eur", "tono": "warn"})
+    if piano:
+        out.append({"k": "Rivendi a", "v": piano.get("prezzo_vendita_atteso"), "tipo": "eur"})
+        out.append({"k": "Guadagno netto", "v": piano.get("guadagno_atteso"), "tipo": "eur",
+                    "tono": "good" if (piano.get("guadagno_atteso") or 0) > 0 else "warn"})
+        out.append({"k": "Venduta in", "v": f"~{piano.get('giorni_attesi')} gg", "tipo": "txt"})
+    elif prezzi.get("guadagno_a_chiusura") is not None:
+        out.append({"k": "Guadagno", "v": prezzi["guadagno_a_chiusura"], "tipo": "eur", "tono": "good"})
+    out.append({"k": "Trattativa", "v": f"{voto}/10", "tipo": "txt", "tono": "good" if voto >= 7 else "warn" if voto <= 3 else ""})
+    if rv:
+        out.append({"k": "Concorrenza", "v": {"poca": "Poca", "media": "Media", "tanta": "Tanta"}.get(rv.get("concorrenza"), "—"),
+                    "tipo": "txt", "tono": "good" if rv.get("concorrenza") == "poca" else "warn" if rv.get("concorrenza") == "tanta" else ""})
+    return out
+
+
+def parere(d, b, prezzo, M, margine, soglia, giorni, giorni_ann, rib, sceso, prezzi, prev, piano, rv, ds, voto, vend,
+           n_piu_bassi, ripubblicata) -> dict:
+    """Il nostro parere sull'auto, in poche frasi da professionista. Solo fatti che abbiamo, niente frasi vuote."""
+    nome = d.get("nome") or "Quest'auto"
+    guad = (piano or {}).get("guadagno_atteso")
+    if guad is None:
+        guad = prezzi.get("guadagno_a_chiusura")
+    ok_margine = margine is not None and soglia and margine >= soglia
+    veloce = rv and rv.get("velocita") in ("molto_veloce", "veloce")
+    lenta = rv and rv.get("velocita") == "lenta"
+    rischio = [v for v in (ds or {}).get("voci") or [] if v.get("livello") in ("male", "attenzione")]
+    if ok_margine and (veloce or not rv) and not any(v.get("livello") == "male" for v in rischio):
+        giudizio, tono = "Affare da prendere", "good"
+    elif ok_margine:
+        giudizio, tono = "Buona occasione, con qualche attenzione", "good"
+    elif margine is not None and margine > 0 and voto >= 6:
+        giudizio, tono = "Diventa un affare trattando", "info"
+    else:
+        giudizio, tono = "Solo se la prendi al prezzo giusto", "warn"
+
+    fr = []
+    if M:
+        diff = (prezzo - M) / M * 100
+        if diff <= -3:
+            fr.append(f"{nome} è in vendita a {_e(prezzo)} €, il {abs(round(diff))}% sotto il prezzo di mercato per anno e "
+                      f"chilometri (circa {_e(M)} €).")
+        elif diff >= 3:
+            fr.append(f"{nome} è in vendita a {_e(prezzo)} €, sopra il prezzo di mercato per anno e chilometri (circa "
+                      f"{_e(M)} €): l'affare si fa solo trattando.")
+        else:
+            fr.append(f"{nome} è in vendita a {_e(prezzo)} €, in linea con il mercato (circa {_e(M)} €).")
+    if giorni_ann < 3 and not ripubblicata:
+        fr.append("L'annuncio è appena uscito: chi arriva per primo la prende, quindi muoviti oggi e non tirare troppo.")
+    else:
+        pezzo = f"È in vendita da {int(giorni)} giorni"
+        if rib:
+            pezzo += f" e il venditore ha già abbassato {rib} {'volta' if rib == 1 else 'volte'} ({_e(sceso)} € in meno)"
+        if ripubblicata:
+            pezzo += ", dopo averla anche tolta e ripubblicata"
+        pezzo += ": " + ("è un venditore che vuole chiudere." if voto >= 7 else
+                         "c'è spazio per trattare." if voto >= 5 else "difficilmente farà grandi sconti.")
+        fr.append(pezzo)
+    if prev and prev.get("probabilita_ribasso", 0) >= .4 and giorni_ann >= 3:
+        fr.append(f"Dai venditori simili ci aspettiamo un altro ribasso ({int(prev['probabilita_ribasso'] * 100)}% di "
+                  f"probabilità), verso {_e(prev['prezzo_annuncio_previsto'])} €.")
+    t = f"Parti da {_e(prezzi['apertura'])} € e punta a chiudere intorno a {_e(prezzi['chiusura_probabile'])} €"
+    if prezzi.get("massimo") is not None:
+        t += f"; non andare oltre {_e(prezzi['massimo'])} €, sopra il guadagno scende sotto il minimo"
+    fr.append(t + ".")
+    if n_piu_bassi:
+        fr.append(f"Usa in trattativa le {n_piu_bassi} auto uguali in vendita a meno.")
+    if rv:
+        r = f"Il modello si rivende in circa {rv['giorni_vendita']} giorni"
+        if rv.get("concorrenza") == "poca":
+            r += " e c'è poca concorrenza"
+        elif rv.get("concorrenza") == "tanta":
+            r += f", ma ci sono molte auto uguali in vendita ({rv['in_vendita']})"
+        if rv.get("trend_prezzi_pct") is not None and abs(rv["trend_prezzi_pct"]) >= 2:
+            r += f"; prezzi {'in salita' if rv['trend_prezzi_pct'] > 0 else 'in calo'} del {abs(rv['trend_prezzi_pct'])}% nell'ultimo mese"
+        fr.append(r + ".")
+    if piano:
+        fr.append(f"Rimessa in vendita, la stimiamo venduta a circa {_e(piano['prezzo_vendita_atteso'])} € in "
+                  f"{piano['giorni_attesi']} giorni, con un guadagno netto di circa {_e(piano['guadagno_atteso'])} €; "
+                  f"sotto {_e(piano['pareggio'])} € ci perdi.")
+    if rischio:
+        corti = [v["titolo"].replace(" (probabile, dall'anno)", "").replace("Area B Milano · ", "limiti in Area B per ")
+                 .replace("Chilometri", "chilometri").replace("Poche foto", "poche foto").replace("Venditore", "venditore")
+                 for v in rischio[:3]]
+        fr.append("Attenzione a: " + ", ".join(corti) + " (dettagli sotto).")
+    if vend == "commerciante":
+        fr.append("Venditore professionale: chiedi fattura e regime IVA.")
+    return {"giudizio": giudizio, "tono": tono, "testo": " ".join(fr)}
 
 
 STORICO_SQL = """
@@ -672,6 +770,9 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
     piano = piano_rivendita(d, prezzo, chiusura, margine, rv, ds, b)
     return {
         "piano": piano,
+        "flash": flash(prezzi, piano, rv, voto, margine, prezzo),
+        "parere": parere(d, b, prezzo, M, margine, soglia, giorni, giorni_annuncio, rib, sceso, prezzi, previsione,
+                         piano, rv, ds, voto, vend, len(piu_bassi), st.get("ripubblicato")),
         "voto": voto, "voto_testo": ("molto disponibile a trattare" if voto >= 8 else "disponibile a trattare" if voto >= 6
                                      else "poco margine di trattativa" if voto >= 4 else "difficile da trattare"),
         "motivi": motivi,
