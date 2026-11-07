@@ -528,3 +528,12 @@ a{color:var(--focus)}
 /* 4/11 sera: sezione "Da trattare": sconto da chiedere e prezzo da offrire */
 .tratta{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);background:var(--bg,transparent);border:1px dashed var(--line);border-radius:10px;padding:6px 10px;margin:2px 0 6px}
 .tratta b{color:var(--ink);font-weight:800}
+
+/* 7/11 scheda trattativa */
+.tr-meter{display:flex;align-items:center;gap:8px;min-width:120px}
+.tr-bar{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.tr-bar i{display:block;height:100%;border-radius:4px}
+.tr-h{margin:6px 0 0;font:700 16px var(--disp)}
+.tr .checks li small{font-size:13px}
+.tr-msg p{font-size:15px;line-height:1.45;color:var(--ink-2)}
+.row .v.good{color:var(--good)}

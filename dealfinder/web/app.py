@@ -1618,7 +1618,9 @@ def affare(request: Request):
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
-            return jsonify(scovo.detail(dict(it), extra))
+            d = scovo.detail(dict(it), extra)
+            _con_trattativa(conn, lid, d)
+            return jsonify(d)
         if not admin:
             err(404, "Questa auto non è più disponibile")
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
@@ -1631,7 +1633,24 @@ def affare(request: Request):
         err(404, "Questa auto non è più disponibile")
     d = scovo.detail(base, extra or {})
     d["non_sul_sito"] = True                    # solo amministratore: auto valutata ma tolta dalle regole del sito
+    with connect() as conn:
+        _con_trattativa(conn, lid, d)
     return jsonify(d)
+
+
+def _con_trattativa(conn, lid: int, d: dict) -> None:
+    """7/11: scheda trattativa (storico prezzi, venditore, previsioni, tempo di rivendita). Mai blocca la scheda."""
+    if os.environ.get("SCHEDA_TRATTATIVA", "1") != "1":
+        return
+    try:
+        from . import trattativa as _tr
+        d["trattativa"] = _tr.scheda(conn, lid, d, scovo.soglia)
+    except Exception as e:
+        logging.getLogger("trattativa").warning("SCHEDA errore %s: %s", lid, str(e)[:200])
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
 
 async def esito_affare(request: Request):
@@ -6088,6 +6107,12 @@ async def _lifespan(app):
             from .. import sentinella as _sent       # (fotografia del sito, controlli ogni ora, email degli allarmi)
             _sent.salva_impronta("web", in_sottofondo=True)
             _sent.avvia_thread_web()
+        except Exception:
+            pass
+    if os.environ.get("DATABASE_URL") and os.environ.get("SCHEDA_TRATTATIVA", "1") == "1":
+        try:                                  # 7/11: statistiche di ribassi e tempi di vendita per la scheda trattativa
+            from . import trattativa as _tr
+            _tr.avvia_statistiche(connect)
         except Exception:
             pass
     if os.environ.get("DATABASE_URL"):
