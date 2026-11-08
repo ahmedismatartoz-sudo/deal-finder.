@@ -3185,7 +3185,9 @@ def _tempo_reale():
                     time.sleep(60)
                 sito, fascia_p = {}, {}
                 for it in list(_elenco.get("items") or []):
-                    pr = _SR._r(it).get("provincia") or "?"
+                    import re as _re
+                    m = _re.search(r"\(([A-Z]{2})\)", str(it.get("zona") or ""))
+                    pr = (m.group(1) if m else None) or _SR._r(it).get("provincia") or it.get("provincia") or "?"
                     sito[pr] = sito.get(pr, 0) + 1
                     if _SR.fascia(it):
                         fascia_p[pr] = fascia_p.get(pr, 0) + 1
