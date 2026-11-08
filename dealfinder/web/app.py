@@ -3135,8 +3135,10 @@ def _tempo_reale():
                     if _elenco.get("items"):
                         break
                     time.sleep(60)
+                n_tot = v.split(":")[1]
                 lg.warning("SU_MISURA %s", json.dumps(SM.prepara(list(_elenco.get("items") or []),
-                                                                 totale=int(v.split(":")[1] or 1450))))
+                                                                 totale=int(n_tot.rstrip("b") or 1450),
+                                                                 crea_campagne=not n_tot.endswith("b"))))
             except Exception as e:
                 lg.warning("SU_MISURA non riuscito: %s", str(e)[:300])
             return

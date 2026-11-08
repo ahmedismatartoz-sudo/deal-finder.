@@ -208,8 +208,29 @@ def _righe_db(conn) -> list[dict]:
     return out
 
 
+def _aspetta_import(c, r, max_s: int = 600) -> None:
+    """8/11: Brevo fa un import alla volta; se se ne manda un altro mentre il primo lavora, il secondo si perde
+    (S2 e S4 rimasti vuoti). Si aspetta che il processo finisca prima di andare avanti."""
+    import time
+    try:
+        pid = (r.json() or {}).get("processId") if r.status_code < 300 else None
+    except ValueError:
+        pid = None
+    if not pid:
+        time.sleep(30)
+        return
+    for _ in range(max_s // 5):
+        time.sleep(5)
+        st = (c.get(f"{API}/processes/{pid}").json() or {}).get("status")
+        if st in ("completed", "failed", "aborted"):
+            if st != "completed":
+                lg.warning("SU_MISURA import %s: %s", pid, st)
+            return
+
+
 def prepara(items: list[dict], totale: int = 1450, quando: str = "2026-11-09T09:00:00+01:00",
-            campagne_aperture=(69, 68, 65, 54, 53, 52, 44, 43, 42, 41, 40, 39, 35, 34, 33)) -> dict:
+            campagne_aperture=(69, 68, 65, 54, 53, 52, 44, 43, 42, 41, 40, 39, 35, 34, 33),
+            crea_campagne: bool = True) -> dict:
     from ..db import connect
     from . import invii
     from .auto_invio import _contatti_brevo
@@ -279,12 +300,13 @@ def prepara(items: list[dict], totale: int = 1450, quando: str = "2026-11-09T09:
                     "jsonBody": [{"email": s["email"], "attributes": s["attr"]} for s in parte[k:k + 500]],
                     "listIds": [lid], "updateExistingContacts": True, "emptyContactsAttributes": False})
                 esito[f"import_S{i}_{k}"] = r.status_code
+                _aspetta_import(c, r)
             ids.append((i, lid, len(parte)))
             if i > len(SCAGLIONI):
                 break
         esito["scaglioni"] = [[i, n] for i, _, n in ids]
-        # campagne: la prima programmata, le altre in bozza
-        for i, lid, _n in ids:
+        # campagne: la prima programmata, le altre in bozza (8/11 bis: se già create si salta)
+        for i, lid, _n in ids if crea_campagne else []:
             corpo = {"name": f"Skovo su misura 08-11 S{i}", "subject": "Due auto da privati vicino a voi",
                      "sender": MITTENTE, "replyTo": RISPOSTE, "htmlContent": html_email(),
                      "recipients": {"listIds": [lid]}, "inlineImageActivation": False}
