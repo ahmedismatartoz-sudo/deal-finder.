@@ -99,17 +99,17 @@ def distanza(dealer: dict, a: dict) -> float | None:
     return km(c1, c2) + 5
 
 
-def scegli_due(dealer: dict, auto: list[dict], uso: dict) -> list[dict]:
+def scegli_due(dealer: dict, auto: list[dict], uso: dict, raggio: float = RAGGIO_KM, uso_max: int = USO_MAX) -> list[dict]:
     """Le 2 auto più vicine al salone (modelli diversi), nella sua fascia di prezzo se nota; marca che tratta = +bonus."""
     med = dealer.get("pmed")
     lo, hi = (med * 0.45, med * 1.6) if med else (3000, 40000)
     marche = {m.lower() for m in dealer.get("marche") or []}
     cand = []
     for a in auto:
-        if uso.get(a["id"], 0) >= USO_MAX or not lo <= a["prezzo"] <= hi:
+        if uso.get(a["id"], 0) >= uso_max or not lo <= a["prezzo"] <= hi:
             continue
         d = distanza(dealer, a)
-        if d is None or d > RAGGIO_KM:
+        if d is None or d > raggio:
             continue
         punti = d - (15 if a["marca"].lower() in marche else 0) - min(a["R"] - a["prezzo"], 8000) / 1000
         cand.append((punti, a))
@@ -314,4 +314,137 @@ def prepara(items: list[dict], totale: int = 1450, quando: str = "2026-11-09T09:
                 corpo["scheduledAt"] = quando
             r = c.post(f"{API}/emailCampaigns", json=corpo)
             esito[f"campagna_S{i}"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
+    return esito
+
+
+# ---------- 8/11 pomeriggio (cliente: "fai entrare tutti i nuovi, profilali, prepara gli esempi e poi manda") ----------
+FRASI = ((50, "Oggi ne abbiamo due vicino a voi:"), (120, "Oggi ne abbiamo due nella vostra zona:"),
+         (10 ** 6, "Oggi ne abbiamo due tra Milano e dintorni che possono interessarvi:"))
+
+
+def scegli_secondo(righe: list[dict], bloccati: set, gia: set, totale: int) -> list[dict]:
+    """Chi oggi NON ha ricevuto la campagna 70: un indirizzo per salone, anche senza comune/provincia. Pura."""
+    from .invii import impronta, norm_email
+    mi = coords("MI")
+    visti, out = set(), []
+    for r in righe:
+        for e in r.get("email") or []:
+            e = norm_email(e)
+            if e in visti or e in gia or not email_buona(e) or impronta(e) in bloccati:
+                continue
+            visti.add(e)
+            c = coords(r.get("prov"))
+            out.append({**r, "email": e, "dmi": km(mi, c) if c else 10 ** 5})
+            break
+    out.sort(key=lambda r: r["dmi"])
+    return out[:totale]
+
+
+def assegna_secondo(saloni: list[dict], auto: list[dict], totale: int) -> list[dict]:
+    """Prima le auto entro 50 km, poi entro 120; chi è lontano o senza luogo riceve le 2 migliori di Milano e dintorni."""
+    uso: dict = {}
+    out = []
+    for s in saloni:
+        due, frase = [], FRASI[-1][1]
+        if coords(s.get("prov")):
+            for raggio, f in FRASI[:2]:
+                due = scegli_due(s, auto, uso, raggio=raggio, uso_max=15)
+                if due:
+                    frase = f
+                    break
+        if not due:
+            due = scegli_due({**s, "comune": "Milano", "prov": "MI"}, auto, uso, raggio=40, uso_max=15)
+            frase = FRASI[-1][1]
+        if not due:
+            continue
+        for a in due:
+            uso[a["id"]] = uso.get(a["id"], 0) + 1
+        (a1, d1), (a2, d2) = testi(due[0]), testi(due[1])
+        out.append({**s, "frase": frase, "attr": {"SK_AUTO1": a1, "SK_DATI1": d1, "SK_AUTO2": a2, "SK_DATI2": d2,
+                                                  "SK_FRASE": frase, "SK_ZONA": (s.get("comune") or s.get("prov") or "").title()}})
+        if len(out) >= totale:
+            break
+    return out
+
+
+def html_email_secondo() -> str:
+    return html_email().replace("<p>Oggi ne abbiamo due vicino a voi:</p>", "<p>{{ contact.SK_FRASE }}</p>")
+
+
+def prepara_secondo(items: list[dict], totale: int = 1100, campagna_fatta: int = 70) -> dict:
+    """Carica in Brevo chi oggi non ha ricevuto la campagna 70, con 2 auto ciascuno, e crea la campagna IN BOZZA
+    (si manda dopo che il cliente ha visto gli esempi). Nei log conteggi ed esempi senza indirizzi né nomi."""
+    import json as _json
+    from urllib.parse import quote
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    from .brevo_liste import BLOCCATI_MINIMI, _bloccati_0111
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    esito: dict = {}
+    auto = auto_sito(items)
+    esito["auto_sito"] = len(auto)
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            righe = _righe_db(conn)
+        if len(bloccati) < BLOCCATI_MINIMI:
+            return {"fermo": "disiscritti_incompleti", "disiscritti": len(bloccati)}
+        gia = set(_esporta(c, campagna_fatta, "all"))
+        rimb = set(_esporta(c, campagna_fatta, "hardBounces")) | set(_esporta(c, campagna_fatta, "softBounces"))
+        esito.update({"disiscritti": len(bloccati), "gia_ricevuto_oggi": len(gia), "rimbalzati_oggi": len(rimb)})
+        if len(gia) < 1000:
+            esito["fermo"] = "elenco_campagna_70_incompleto"
+            return esito
+        bloccati_in_brevo = [x for x in contatti if invii.contatto_bloccato(x)]
+        posto = TETTO_BREVO - len(bloccati_in_brevo)
+        saloni = scegli_secondo(righe, bloccati, gia | rimb, totale * 2)
+        scelti = assegna_secondo(saloni, auto, min(totale, posto))
+        from collections import Counter
+        esito.update({"candidati": len(saloni), "scelti": len(scelti),
+                      "per_frase": dict(Counter(s["frase"][:30] for s in scelti)),
+                      "bloccati_tenuti_in_brevo": len(bloccati_in_brevo)})
+        for s in scelti[:: max(1, len(scelti) // 8)][:8]:
+            lg.warning("SU_MISURA2_ESEMPIO %s", _json.dumps({"zona": s["attr"]["SK_ZONA"], "prov": s.get("prov"),
+                                                             "fascia_media": s.get("pmed"), "marche": s.get("marche")[:3],
+                                                             **{k: v for k, v in s["attr"].items() if k != "SK_ZONA"}},
+                                                            ensure_ascii=False, default=str))
+        if not scelti:
+            return esito
+        tieni = {s["email"] for s in scelti}
+        tolti = 0
+        for x in contatti:
+            e = (x.get("email") or "").lower()
+            if e and e not in tieni and not invii.contatto_bloccato(x):
+                if c.delete(f"{API}/contacts/{quote(e, safe='')}").status_code in (200, 204, 404):
+                    tolti += 1
+        esito["tolti_da_brevo"] = tolti
+        esistenti = {a.get("name") for a in (c.get(f"{API}/contacts/attributes").json() or {}).get("attributes", [])}
+        for nome in ATTRIBUTI + ("SK_FRASE",):
+            if nome not in esistenti:
+                c.post(f"{API}/contacts/attributes/normal/{nome}", json={"type": "text"})
+        nome = "Skovo su misura 08-11 B"
+        lid = _liste(c).get(nome)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        for k in range(0, len(scelti), 500):
+            r = c.post(f"{API}/contacts/import", json={
+                "jsonBody": [{"email": s["email"], "attributes": s["attr"]} for s in scelti[k:k + 500]],
+                "listIds": [lid], "updateExistingContacts": True, "emptyContactsAttributes": False})
+            esito[f"import_{k}"] = r.status_code
+            _aspetta_import(c, r)
+        esito["lista_id"] = lid
+        r = c.post(f"{API}/emailCampaigns", json={
+            "name": "Skovo su misura 08-11 B (bozza)", "subject": "Due auto da privati sotto mercato",
+            "sender": MITTENTE, "replyTo": RISPOSTE, "htmlContent": html_email_secondo(),
+            "recipients": {"listIds": [lid]}, "inlineImageActivation": False})
+        esito["campagna_bozza"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
     return esito

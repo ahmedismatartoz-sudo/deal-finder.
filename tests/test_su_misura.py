@@ -37,3 +37,18 @@ def test_saloni_filtri_e_ordine():
 def test_html_ha_i_segnaposto():
     h = SM.html_email()
     assert "{{ contact.SK_AUTO1 }}" in h and "{{ contact.SK_DATI2 }}" in h and "348 242 5633" in h
+
+
+def test_secondo_giro_esclude_chi_ha_ricevuto_e_copre_senza_luogo():
+    righe = [{"chiave": "a", "email": ["a@gmail.com"], "comune": "Monza", "prov": "MB"},
+             {"chiave": "b", "email": ["b@gmail.com"], "comune": None, "prov": None},
+             {"chiave": "c", "email": ["c@gmail.com"], "comune": "Torino", "prov": "TO"},
+             {"chiave": "d", "email": ["gia@gmail.com"], "comune": "Milano", "prov": "MI"}]
+    s = SM.scegli_secondo(righe, set(), {"gia@gmail.com"}, 10)
+    assert [x["email"] for x in s] == ["a@gmail.com", "c@gmail.com", "b@gmail.com"]
+    out = SM.assegna_secondo(s, SM.auto_sito(ITEMS), 10)
+    fr = {x["email"]: x["frase"] for x in out}
+    assert fr["a@gmail.com"].endswith("vicino a voi:")
+    assert "Milano e dintorni" in fr["c@gmail.com"]          # a Torino c'è una sola auto: le 2 migliori di Milano
+    assert "Milano e dintorni" in fr["b@gmail.com"]
+    assert "{{ contact.SK_FRASE }}" in SM.html_email_secondo()
