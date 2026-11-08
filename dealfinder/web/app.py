@@ -3123,6 +3123,23 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("BREVO_MIX non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("su_misura:"):        # 8/11 (cliente): 1.450 email su misura (2 auto vicine al salone), a scaglioni
+            time.sleep(30)
+            try:
+                from ..marketing import su_misura as SM
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"su_misura:{v}"):
+                    lg.warning("SU_MISURA %s già fatto", v)
+                    return
+                for _ in range(30):
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                lg.warning("SU_MISURA %s", json.dumps(SM.prepara(list(_elenco.get("items") or []),
+                                                                 totale=int(v.split(":")[1] or 1450))))
+            except Exception as e:
+                lg.warning("SU_MISURA non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("conta_email:"):      # 8/11 (cliente): quante email abbiamo e quante si possono usare (solo numeri)
             try:
                 from ..marketing import brevo_liste as bl
