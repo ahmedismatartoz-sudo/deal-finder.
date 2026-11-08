@@ -3123,6 +3123,13 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("BREVO_MIX non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("conta_email:"):      # 8/11 (cliente): quante email abbiamo e quante si possono usare (solo numeri)
+            try:
+                from ..marketing import brevo_liste as bl
+                lg.warning("CONTA_EMAIL %s", json.dumps(bl.conteggio_email()))
+            except Exception as e:
+                lg.warning("CONTA_EMAIL non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("pulita:"):           # 8/11 (cliente): lista di chi apre, pulita, per il nuovo mittente (non invia)
             time.sleep(30)
             try:

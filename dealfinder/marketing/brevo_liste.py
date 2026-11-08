@@ -733,3 +733,69 @@ def lista_pulita(campagne=(69, 68, 65, 54, 53, 52, 44, 43, 42, 41, 40, 39, 35, 3
         esito["import"] = r.status_code
         esito["lista_id"] = lid
     return esito
+
+
+# ---------- 8/11 (cliente: "quante email abbiamo raccolto in totale, quelle che si possono usare") ----------
+def gruppo_dominio(e: str) -> str:
+    dom = e.split("@")[-1]
+    if "pec" in dom or "legalmail" in dom:
+        return "pec"
+    if any(dom == d or dom.startswith(d) for d in _DOMINI_FERMI):
+        return "libero_microsoft"
+    if dom in ("gmail.com", "googlemail.com"):
+        return "gmail"
+    if dom.endswith((".it", ".com", ".net", ".eu", ".org", ".biz", ".info")) and dom not in (
+            "tiscali.it", "alice.it", "tin.it", "yahoo.it", "yahoo.com", "icloud.com", "me.com", "fastwebnet.it", "aruba.it"):
+        return "aziendali"
+    return "altri_gratuiti"
+
+
+def conta_email(testi, bloccati: set, inviati: set) -> dict:
+    """Conta gli indirizzi unici trovati nei testi (righe lead). Solo numeri, nessun indirizzo. Funzione pura."""
+    import re
+    from collections import Counter
+    from .invii import impronta
+    tutte = set()
+    for t in testi:
+        for e in re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", t or ""):
+            e = e.lower().strip(".")
+            if _EMAIL_OK.match(e) and not _NON_EMAIL.search(e):
+                tutte.add(e)
+    out = Counter(totale=len(tutte))
+    for e in tutte:
+        g = gruppo_dominio(e)
+        if "loconte" in e:
+            out["escluse_loconte"] += 1
+            continue
+        if g == "pec":
+            out["escluse_pec"] += 1
+            continue
+        if impronta(e) in bloccati:
+            out["escluse_disiscritte_o_rimbalzate"] += 1
+            continue
+        out["usabili"] += 1
+        out[f"usabili_{g}"] += 1
+        out["usabili_gia_contattate" if impronta(e) in inviati else "usabili_mai_contattate"] += 1
+    return dict(out)
+
+
+def conteggio_email() -> dict:
+    from ..db import connect
+    from . import invii
+    with connect() as conn:
+        testi = [r["d"] for r in conn.execute("SELECT dati::text AS d FROM lead_consegne").fetchall()]
+        bloccati = invii.disiscritti(conn) | _bloccati_0111()
+        inviati = {r["h"] for r in conn.execute(
+            "SELECT DISTINCT destinatario_hash AS h FROM invii WHERE canale='email'").fetchall()}
+    key = _chiave()
+    in_brevo = []
+    if key:
+        from .auto_invio import _contatti_brevo
+        with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+            in_brevo = _contatti_brevo(c)
+    testi.append(" ".join(x.get("email") or "" for x in in_brevo))
+    esito = conta_email(testi, bloccati, inviati)
+    esito["righe_lead"] = len(testi) - 1
+    esito["contatti_in_brevo"] = len(in_brevo)
+    esito["disiscritti_noti"] = len(bloccati)
+    return esito
