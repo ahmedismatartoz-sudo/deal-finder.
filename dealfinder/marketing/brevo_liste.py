@@ -653,3 +653,83 @@ def mix_e_invia(modello_id: int, totale: int = 1200, campagne_richiamo=(64, 65, 
         s = c.post(f"{API}/emailCampaigns/{cid}/sendNow")
         esito["invio"] = s.status_code
         return esito
+
+
+# ---------- 8/11 (cliente: "dobbiamo ripartire puliti" dopo il calo delle aperture e Libero che rifiuta) ----------
+LISTA_PULITA = "Skovo pulita 08-11 (chi apre)"
+# Libero/Virgilio/Microsoft ci rifiutano o ci mettono in spam: per ora fuori, si riprovano col sottodominio riscaldato
+_DOMINI_FERMI = ("libero.it", "iol.it", "inwind.it", "blu.it", "giallo.it", "virgilio.it",
+                 "hotmail.", "outlook.", "live.", "msn.com")
+
+
+def scegli_pulita(aperti: list[str], bloccati: set, rimbalzati: set, totale: int) -> list[str]:
+    """Solo chi ha aperto (nell'ordine dato: prima i più recenti), senza disiscritti/bloccati, senza chi è
+    rimbalzato, senza Libero/Microsoft, PEC, Loconte e doppioni. Funzione pura."""
+    from .invii import impronta, norm_email
+    out, visti = [], set()
+    for e in aperti:
+        e = norm_email(e or "")
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e:
+            continue
+        visti.add(e)
+        dom = e.split("@")[-1]
+        if "pec" in dom or "legalmail" in dom or any(dom == d or dom.startswith(d) for d in _DOMINI_FERMI):
+            continue
+        if e in rimbalzati or impronta(e) in bloccati:
+            continue
+        out.append(e)
+        if len(out) >= totale:
+            break
+    return out
+
+
+def lista_pulita(campagne=(69, 68, 65, 54, 53, 52, 44, 43, 42, 41, 40, 39, 35, 34, 33), totale: int = 400) -> dict:
+    """Carica in una lista nuova chi ha aperto le ultime campagne, pulito. NON manda niente e NON cancella contatti:
+    se in Brevo non c'è posto ne carica solo quanti ci stanno. Nei log solo conteggi."""
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    esito = {}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+        esito["disiscritti"] = len(bloccati)
+        if len(bloccati) < BLOCCATI_MINIMI:
+            esito["fermo"] = "disiscritti_incompleti"
+            return esito
+        aperti, rimb = [], set()
+        for cid in campagne:
+            aperti += _esporta(c, cid, "openers")
+            rimb |= set(_esporta(c, cid, "hardBounces")) | set(_esporta(c, cid, "softBounces"))
+        esito["aperture_totali"] = len(set(aperti))
+        esito["rimbalzati"] = len(rimb)
+        scelti = scegli_pulita(aperti, bloccati, rimb, totale)
+        esito["scelti"] = len(scelti)
+        in_brevo = {(x.get("email") or "").lower() for x in contatti}
+        nuovi = [e for e in scelti if e not in in_brevo]
+        n_brevo = len(contatti)
+        posto = max(0, TETTO_BREVO - n_brevo)
+        if len(nuovi) > posto:
+            tenuti = set(nuovi[:posto])
+            scelti = [e for e in scelti if e in in_brevo or e in tenuti]
+        esito.update({"gia_in_brevo": len(scelti) - min(len(nuovi), posto), "nuovi_caricati": min(len(nuovi), posto),
+                      "in_brevo_prima": n_brevo, "in_lista": len(scelti)})
+        if not scelti:
+            return esito
+        lid = _liste(c).get(LISTA_PULITA)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": LISTA_PULITA, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        r = c.post(f"{API}/contacts/import", json={"jsonBody": [{"email": e} for e in scelti], "listIds": [lid],
+                                                   "updateExistingContacts": True, "emptyContactsAttributes": False})
+        esito["import"] = r.status_code
+        esito["lista_id"] = lid
+    return esito

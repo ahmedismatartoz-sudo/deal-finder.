@@ -3123,6 +3123,18 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("BREVO_MIX non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("pulita:"):           # 8/11 (cliente): lista di chi apre, pulita, per il nuovo mittente (non invia)
+            time.sleep(30)
+            try:
+                from ..marketing import brevo_liste as bl
+                from ..pipeline.ciclo import _una_volta
+                if _una_volta(f"brevo_pulita:{v}"):
+                    lg.warning("BREVO_PULITA %s", json.dumps(bl.lista_pulita(totale=int(v.split(":")[1] or 400))))
+                else:
+                    lg.warning("BREVO_PULITA %s già fatto", v)
+            except Exception as e:
+                lg.warning("BREVO_PULITA non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("aperture:"):         # 4/11 sera (cliente): chi ha aperto la campagna, da chiamare
             time.sleep(30)
             try:
