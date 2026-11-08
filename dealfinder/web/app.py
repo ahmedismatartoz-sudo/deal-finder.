@@ -3099,9 +3099,18 @@ def _tempo_reale():
 
     threading.Thread(target=esame_software, daemon=True, name="esame").start()
 
-    def brevo_liste():
-        """22/10 (cliente): carica una volta in Brevo le 6 liste dei commercianti (data/marketing_gruppi.json)."""
-        v = os.environ.get("BREVO_IMPORT_LISTE") or ""
+    def brevo_liste(v: str | None = None):
+        """22/10 (cliente): carica una volta in Brevo le 6 liste dei commercianti (data/marketing_gruppi.json).
+        8/11: più lavori una tantum insieme separati da '+' (es. 'zona:0811+utenti:0811'), uno dopo l'altro."""
+        if v is None:
+            v = os.environ.get("BREVO_IMPORT_LISTE") or ""
+            if "+" in v and not v.startswith(("mix:", "rimetti:")):
+                for parte in [x.strip() for x in v.split("+") if x.strip()]:
+                    try:
+                        brevo_liste(parte)
+                    except Exception as e:
+                        lg.warning("LAVORO %s non riuscito: %s", parte.split(":")[0], str(e)[:200])
+                return
         if v.startswith("mix:"):              # 5/11 (cliente): nuove + richiamo del 3/11 fino a 1.200, invio subito
             time.sleep(30)
             try:
