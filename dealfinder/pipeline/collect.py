@@ -957,6 +957,38 @@ if __name__ == "__main__":
     # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
     import time
     _t0_loop = time.time()
+    # 9/11 16:20 (cliente: "lo scraper deve andare proprio su Torino e 100 km intorno, ci serve un'auto entro domani,
+    # soprattutto fascia medio-alta, senza gonfiare i prezzi"): giro dedicato a Torino PRIMA della zona di Milano, ogni
+    # TORINO_ORE ore. Stessa raccolta + valutazione + pubblicazione del giro di zona (stesse regole di prezzo e margine:
+    # niente di diverso nel calcolo), ma centrato su Torino, raggio 100 km, auto da TORINO_MIN a TORINO_MAX euro.
+    if os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1":
+        try:
+            from .ciclo import _due
+            if _due("torino_cron", int(os.environ.get("TORINO_ORE", "3"))):
+                from ..zone import TORINO
+                vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
+                prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
+                for k, v in {"BENZ_CAP": "10121", "BENZ_RAGGIO": os.environ.get("TORINO_RAGGIO_KM", "100"), "BENZ_CAP_EXTRA": "",
+                             "BENZ_MIN": os.environ.get("TORINO_MIN", "4000"), "BENZ_PMAX": os.environ.get("TORINO_MAX", "45000"),
+                             "BENZ_PROVINCE": ",".join(prov), "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "1",
+                             "BENZ_SUB_PROFONDA": os.environ.get("TORINO_SUB_PROFONDA", "1"), "BENZ_SUB_PASSO": "1000",
+                             "BENZ_SUB_PAG_FASCIA": os.environ.get("TORINO_PAG_FASCIA", "8"), "BENZ_TUTTI_CARB": "1",
+                             "BENZ_DAL": os.environ.get("TORINO_DAL", "2026-10-10 00:00"), "BENZ_SUB_PAGINE_ALTRE": os.environ.get("TORINO_SUB_PAGINE", "150"),
+                             "BENZ_MAX": os.environ.get("TORINO_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
+                             "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
+                             "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
+                    os.environ[k] = v
+                try:
+                    from . import benzina_mi as B
+                    esito = B.giro()
+                    log.warning("TORINO_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+                    lavori_zona(esito)
+                finally:
+                    for k in [k for k in os.environ if k.startswith("BENZ_")]:
+                        del os.environ[k]
+                    os.environ.update({k: v for k, v in vecchie.items() if v is not None})
+        except Exception as e:
+            log.warning("TORINO_CRON non riuscita: %s", str(e)[:300])
     # 28/10 22:08 (cliente: "300 auto medie e basse, supercar a parte, base di tutte le auto e quelle nuove"): raccolta
     # degli annunci nuovi della zona + scelta sulla base di TUTTE le auto del database + valutazione e pubblicazione,
     # qui nel cron (prima girava sul sito e lo mandava in crash per memoria). Impostazioni ZC_* (fascia media e bassa).
@@ -982,7 +1014,7 @@ if __name__ == "__main__":
                     os.environ["BENZ_PROVINCE"] = ",".join(pv + [p for p in TORINO if p not in pv])
                     extra = os.environ.get("BENZ_CAP_EXTRA", "")
                     if "10121:" not in extra:
-                        os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:60")) if x)
+                        os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:100")) if x)
                 from . import benzina_mi as B
                 esito = B.giro()
                 log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})

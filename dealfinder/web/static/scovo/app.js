@@ -1328,7 +1328,10 @@ const CM = {testo: "", rec: false, busy: false, trascrivo: false, err: "", sent:
 const CM_IDEE = ["Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €",
                  "Una 500 o una Panda a benzina sotto i 5.000 €, anche con qualche graffio",
                  "SUV ibrido, Toyota C-HR o Kia Niro, dal 2019, budget 17.000 €"];
-function cmFab(){ return `<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi">${MIC}<span>Chiedi</span></button>`; }
+function cmFab(){
+  const tip = !store.get("cmTipVisto", false);
+  return `${tip ? `<div class="cm-tip" role="note"><b>Novità</b> Dicci a voce che auto cerchi: la troviamo noi in 30 minuti<button class="cm-tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>` : ""}<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;
+}
 async function cmCarica(){
   try { const d = await api("/api/richieste-auto"); CM.max = !!d.max; CM.lista = d.richieste || []; }
   catch (e) { CM.max = perm("appuntamenti"); CM.lista = CM.lista || []; }
@@ -1648,7 +1651,8 @@ $app.addEventListener("click", e => {
     case "ap-send": apInvia(); return;
     case "az-open": (async () => { if (AP.az === null) await apCarica(); AP.err = ""; AP.dopo = null; S.sheet = "azienda"; render({keep:true}); })(); return;
     case "az-save": azSalva(); return;
-    case "cm-open": S.sheet = "cerca"; CM.err = ""; if (CM.sent) { CM.sent = null; CM.intanto = []; } cmCarica(); break;
+    case "cm-tip-x": store.set("cmTipVisto", true); break;
+    case "cm-open": store.set("cmTipVisto", true); S.sheet = "cerca"; CM.err = ""; if (CM.sent) { CM.sent = null; CM.intanto = []; } cmCarica(); break;
     case "cm-mic": cmMic(); return;
     case "cm-idea": CM.testo = v; break;
     case "cm-send": cmInvia(); return;

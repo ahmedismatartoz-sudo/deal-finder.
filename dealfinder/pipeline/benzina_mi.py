@@ -188,7 +188,7 @@ def giro() -> dict:
             passo = int(os.environ.get("BENZ_SUB_PASSO", "500"))
             fasce = [(a, min(a + passo, PMAX)) for a in range(PMIN, PMAX, passo)]
             regioni = [(4, ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "SO", "MN"]),
-                       (2, ["NO", "VB", "VC", "BI", "AL", "AT", "TO"]), (8, ["PC", "PR", "RE"]),
+                       (2, ["NO", "VB", "VC", "BI", "AL", "AT", "TO", "CN"]), (8, ["PC", "PR", "RE"]),
                        (int(os.environ.get("SUBITO_CODICE_LIGURIA", "3")), ["GE"])]   # 23/10: zona 150 km del sito
             for reg, provs in regioni:
                 provs = [p for p in provs if p in PROVINCE_100]
