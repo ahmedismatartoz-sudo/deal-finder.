@@ -14,6 +14,7 @@ Nei log solo conteggi, mai indirizzi.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import statistics
 
@@ -490,7 +491,7 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
                 via |= set(_esporta(c, cid, tipo))
         voluti = ricevuto - via
         esito.update({"ricevuto": len(ricevuto), "aperto_cliccato_rimbalzato_disiscritto": len(via), "da_rimandare": len(voluti)})
-        if len(ricevuto) < 1500 or not voluti:
+        if len(ricevuto) < int(os.environ.get("RINVIO_SM_MIN", "500")) or not voluti:
             esito["fermo"] = "elenchi_brevo_incompleti"
             return esito
         contatti = _contatti_brevo(c)
