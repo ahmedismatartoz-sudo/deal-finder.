@@ -805,3 +805,53 @@ def conteggio_email() -> dict:
     esito["contatti_in_brevo"] = len(in_brevo)
     esito["disiscritti_noti"] = len(bloccati)
     return esito
+
+
+# ---------- 9/11 pomeriggio (cliente: "dammi il numero di quelli che hanno aperto/cliccato le email") ----------
+def righe_cliccati(emails: list[str], righe_db: list[dict]) -> list[dict]:
+    """Abbina le email di chi ha cliccato ai commercianti dell'archivio (nome, comune, telefoni). Funzione pura.
+    Chi non è in archivio resta con il solo indirizzo. Mai Loconte né gli esclusi."""
+    per_email: dict = {}
+    for r in righe_db:
+        for e in r.get("email") or []:
+            per_email.setdefault((e or "").strip().lower(), r)
+    out, visti = [], set()
+    for e in emails:
+        e = (e or "").strip().lower()
+        if not e or e in visti or "loconte" in e or _esclusi(e):
+            continue
+        visti.add(e)
+        r = per_email.get(e) or {}
+        tel = [t for t in (list(r.get("cell") or []) + [r.get("tel")]) if t]
+        out.append({"email": e, "nome": r.get("nome") or "", "comune": r.get("comune") or "",
+                    "prov": (r.get("prov") or "")[:2].upper(), "tel": list(dict.fromkeys(tel))})
+    out.sort(key=lambda x: (not x["tel"], not x["prov"], x["prov"], x["comune"], x["nome"]))
+    return out
+
+
+def cliccati(campagne=(70, 72)) -> dict:
+    """Esporta da Brevo chi ha cliccato le campagne, lo abbina all'archivio e manda l'elenco (nomi e numeri) SOLO per
+    email a info@skovo.app. Nei log vanno soltanto i conteggi: mai email né telefoni."""
+    from ..db import connect
+    from ..sentinella import _invia_brevo
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    emails: list[str] = []
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=120) as c:
+        for cid in campagne:
+            emails += _esporta(c, int(cid), "clickers")
+    with connect() as conn:
+        db = [dict(r) for r in conn.execute(
+            "SELECT e.email, COALESCE(d.nome, m.nome) AS nome, COALESCE(d.comune, m.comune) AS comune, "
+            "COALESCE(d.prov, m.prov) AS prov, d.cell, m.tel FROM lead_email e "
+            "LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
+            "LEFT JOIN lead_maps m ON e.chiave = 'maps:' || m.place_id "
+            "WHERE cardinality(e.email) > 0").fetchall()]
+    righe = righe_cliccati(emails, db)
+    testo = "\n".join(f"{i}. {r['nome'] or '-'} | {r['comune'] or '-'} ({r['prov'] or '-'}) | "
+                      f"{', '.join(r['tel']) or 'senza numero'} | {r['email']}" for i, r in enumerate(righe, 1))
+    ok = _invia_brevo(f"Skovo - chi ha cliccato le email {'+'.join(map(str, campagne))} ({len(righe)})",
+                      testo or "nessuno")
+    return {"campagne": list(campagne), "cliccati": len(emails), "righe": len(righe),
+            "con_numero": sum(1 for r in righe if r["tel"]), "email_mandata": ok}

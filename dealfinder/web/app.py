@@ -3178,6 +3178,19 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("BREVO_PULITA non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("cliccati:"):         # 9/11 (cliente): chi ha cliccato le email, elenco per email a info@
+            time.sleep(30)
+            try:
+                from ..marketing import brevo_liste as bl
+                from ..pipeline.ciclo import _una_volta
+                if _una_volta(f"brevo_cliccati:{v}"):
+                    ids = [int(x) for x in v.split(":")[1].split(",") if x.strip()]
+                    lg.warning("BREVO_CLICCATI %s", json.dumps(bl.cliccati(ids)))
+                else:
+                    lg.warning("BREVO_CLICCATI %s già fatto", v)
+            except Exception as e:
+                lg.warning("BREVO_CLICCATI non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("aperture:"):         # 4/11 sera (cliente): chi ha aperto la campagna, da chiamare
             time.sleep(30)
             try:
