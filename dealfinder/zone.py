@@ -34,19 +34,23 @@ def comune_ok(provincia: str | None, citta: str | None) -> bool:
     c = unicodedata.normalize("NFKD", str(citta or "")).encode("ascii", "ignore").decode().lower()
     return re.sub(r"[^a-z]", "", c.split(",")[0]) in COMUNI_60KM
 RAVENNA = ["RA", "FC", "RN", "FE", "BO"]
+# 9/11 (cliente: presentazione a un commerciante di Torino): Torino e dintorni, con zona e filtro propri sul sito
+TORINO = ["TO", "AT", "CN", "BI", "VC"]
 ROMA = ["RM", "LT", "FR", "VT", "RI"]
 
 ZONE = {
     "milano": {"nome": "Milano e dintorni", "province": MILANO},
     "ravenna": {"nome": "Ravenna e dintorni", "province": RAVENNA, "subito_regione": "emilia-romagna",
                 "autoscout_cap": "48121", "autoscout_raggio": os.environ.get("RAVENNA_RAGGIO", "80")},
+    "torino": {"nome": "Torino e dintorni", "province": TORINO, "subito_regione": "piemonte",
+               "autoscout_cap": "10121", "autoscout_raggio": os.environ.get("TORINO_RAGGIO", "70")},
     "roma": {"nome": "Roma e dintorni", "province": ROMA, "subito_regione": "lazio",
              "autoscout_cap": "00185", "autoscout_raggio": os.environ.get("ROMA_RAGGIO", "70")},
 }
 
 
 # zone su cui si lavora (raccolte e sito): per ora solo Milano e dintorni
-ATTIVE = [z.strip() for z in os.environ.get("ZONE_ATTIVE", "milano").split(",") if z.strip() in ZONE]
+ATTIVE = [z.strip() for z in os.environ.get("ZONE_ATTIVE", "milano,torino").split(",") if z.strip() in ZONE]
 
 
 def tutte() -> list[str]:

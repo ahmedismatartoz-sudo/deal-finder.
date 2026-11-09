@@ -553,6 +553,25 @@ def run(mode: str) -> Counter:
                           "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))})]
         if os.environ.get("RAVENNA_SOLO_SUBITO") != "1":
             sources.append((asc, {"massiva": True, "min_price": 500, "max_price": 30000}))
+    elif mode == "torino":
+        # 9/11 Torino e dintorni (presentazione a un commerciante di Torino): Subito Piemonte provincia per
+        # provincia in fasce strette, poi AutoScout24 entro TORINO_RAGGIO km da Torino
+        from ..zone import ZONE
+        z = ZONE["torino"]
+        bands = ([(p, p + 249) for p in range(500, 5000, 250)] + [(p, p + 499) for p in range(5000, 15000, 500)]
+                 + [(p, p + 999) for p in range(15000, 40000, 1000)])
+        sub = SubitoCollector(proxy=settings.scraper_proxy)
+        sub.min_delay_s = float(os.environ.get("MASSIVA_PAUSA_MIN", "1.2"))
+        sub.max_delay_s = float(os.environ.get("MASSIVA_PAUSA_MAX", "3.0"))
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "0.8"))
+        asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.0"))
+        sources = [(sub, {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
+                          "max_price": 40000, "max_pages": 0, "price_bands": bands,
+                          "band_pages": int(os.environ.get("MASSIVA_PAGINE", "100"))}),
+                   (_Centri(asc, [[z["autoscout_cap"], z["autoscout_raggio"]]],
+                            {"massiva": True, "min_price": 500, "max_price": 40000, "step": 1000}), {})]
     elif mode == "autoscout":
         from ..collectors.autoscout import AutoScoutCollector
         bands = ([(p, p + 499) for p in range(500, 5000, 500)] + [(p, p + 999) for p in range(5000, 12000, 1000)]
@@ -620,6 +639,15 @@ def run(mode: str) -> Counter:
             sources.append((SubitoCollector(proxy=settings.scraper_proxy),
                             {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
                              "max_price": max_price, "max_pages": int(os.environ.get("RAVENNA_PAGINE", "8")),
+                             "cheap_pages": 2}))
+
+        if mode == "opportunita" and os.environ.get("ZONA_TORINO", "1") == "1":
+            # 9/11 Torino e dintorni: ogni giro anche gli annunci più recenti del Piemonte (TO, AT, CN, BI, VC)
+            from ..zone import ZONE
+            z = ZONE["torino"]
+            sources.append((SubitoCollector(proxy=settings.scraper_proxy),
+                            {"region": z["subito_regione"], "provinces": [p.lower() for p in z["province"]],
+                             "max_price": max_price, "max_pages": int(os.environ.get("TORINO_PAGINE", "10")),
                              "cheap_pages": 2}))
 
     with connect() as conn:
@@ -946,6 +974,15 @@ if __name__ == "__main__":
                              "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"), "BENZ_TEL_PARALLELI": os.environ.get("ZC_TEL_PARALLELI", "3"),
                              "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
                     os.environ[k] = v
+                if os.environ.get("ZONA_TORINO", "1") == "1":
+                    # 9/11 (cliente: presentazione a Torino): nel giro della zona anche Torino e dintorni, con una
+                    # ricerca AutoScout24 in più centrata su Torino (Milano + 130 km arriva appena a Torino)
+                    from ..zone import TORINO
+                    pv = [p for p in os.environ["BENZ_PROVINCE"].split(",") if p.strip()]
+                    os.environ["BENZ_PROVINCE"] = ",".join(pv + [p for p in TORINO if p not in pv])
+                    extra = os.environ.get("BENZ_CAP_EXTRA", "")
+                    if "10121:" not in extra:
+                        os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:60")) if x)
                 from . import benzina_mi as B
                 esito = B.giro()
                 log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})

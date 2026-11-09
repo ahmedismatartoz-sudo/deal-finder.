@@ -53,7 +53,8 @@ def test_mai_roma():
 
 
 def test_zona_100km_ravenna_e_supercar():
-    assert ids([auto(1, prov="TO"), auto(2, prov="BG"), auto(3, prov="RA"), auto(4, prov=None)]) == [2, 3]
+    assert ids([auto(1, prov="GE"), auto(2, prov="BG"), auto(3, prov="RA"), auto(4, prov=None)]) == [2, 3]
+    assert ids([auto(6, prov="TO"), auto(7, prov="CN")]) == [6, 7]          # 9/11: Torino e dintorni sul sito
     sc = auto(5, prov=None, supercar=True, prezzo=100000, margine=20000, M=130000, _r={"sc_ok": True})
     assert ids([sc]) == [5]
 

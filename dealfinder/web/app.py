@@ -1850,6 +1850,130 @@ def _avvisa_appuntamento(testo: str, oggetto: str, aid: int | None = None) -> bo
     return ok
 
 
+# ---------- 9/11 (cliente): "Cercamela" — il commerciante dice a voce l'auto che vuole, noi entro 30 minuti gli
+# troviamo la migliore dei privati in zona. Solo piano Max (permesso "appuntamenti"). La richiesta va in tabella
+# richieste_auto e arriva per email a info@skovo.app (nome, telefono, testo e le auto del sito che già combaciano).
+RICHIESTE_GIORNO = int(os.environ.get("RICHIESTE_AUTO_GIORNO", "10"))
+_RICHIESTE_SQL = """CREATE TABLE IF NOT EXISTS richieste_auto (
+    id BIGSERIAL PRIMARY KEY, dealer_id BIGINT NOT NULL, testo TEXT NOT NULL, zona TEXT,
+    stato TEXT NOT NULL DEFAULT 'in_cerca', risposta TEXT, email_ok BOOLEAN,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())"""
+
+
+def _richieste_tabella(conn) -> None:
+    conn.execute(_RICHIESTE_SQL)
+    conn.execute("CREATE INDEX IF NOT EXISTS richieste_auto_dealer ON richieste_auto (dealer_id, created_at DESC)")
+
+
+def _richiesta_righe(conn, did: int) -> list[dict]:
+    return [{"id": r["id"], "testo": r["testo"], "stato": r["stato"], "risposta": r["risposta"],
+             "quando": r["created_at"].isoformat()}
+            for r in conn.execute("SELECT id, testo, stato, risposta, created_at FROM richieste_auto WHERE dealer_id=%s "
+                                  "ORDER BY id DESC LIMIT 10", (did,)).fetchall()]
+
+
+async def richieste_get(request: Request):
+    user = current_user(request)
+    with connect() as conn:
+        _richieste_tabella(conn)
+        perm = permessi_di(conn, user)
+        righe = _richiesta_righe(conn, user["id"])
+        conn.commit()
+    return jsonify({"max": user.get("role") == "admin" or "appuntamenti" in perm, "richieste": righe})
+
+
+async def richieste_post(request: Request):
+    user = current_user(request)
+    data = await body(request)
+    testo = re.sub(r"\s+", " ", str(data.get("testo") or "")).strip()[:1500]
+    if len(testo) < 6:
+        err(400, "Dicci che auto cerchi: marca, modello, anno, km e quanto vuoi spendere")
+    zona = str(data.get("zona") or "")[:20] or None
+
+    def work():
+        with connect() as conn:
+            _richieste_tabella(conn)
+            if not (user.get("role") == "admin" or "appuntamenti" in permessi_di(conn, user)):
+                err(402, "La ricerca su misura è inclusa nel piano Max")
+            if user.get("role") != "admin":
+                n = conn.execute("SELECT count(*) AS n FROM richieste_auto WHERE dealer_id=%s "
+                                 "AND created_at > now() - interval '24 hours'", (user["id"],)).fetchone()["n"]
+                if n >= RICHIESTE_GIORNO:
+                    err(429, f"Hai già mandato {n} richieste oggi: il limite è {RICHIESTE_GIORNO}")
+            gia = conn.execute("SELECT id FROM richieste_auto WHERE dealer_id=%s AND testo=%s "
+                               "AND created_at > now() - interval '10 minutes'", (user["id"], testo)).fetchone()
+            rid = gia["id"] if gia else conn.execute(
+                "INSERT INTO richieste_auto (dealer_id, testo, zona) VALUES (%s,%s,%s) RETURNING id",
+                (user["id"], testo, zona)).fetchone()["id"]
+            d = conn.execute("SELECT name, email, company, phone FROM dealers WHERE id=%s", (user["id"],)).fetchone() or {}
+            conn.commit()
+            # le auto del sito che già combaciano (marca/modello/prezzo/anno/km detti a voce): aiutano chi cerca
+            intanto = []
+            try:
+                from . import assistente as bot
+                bot.ELENCO = _elenco_per
+                q = bot.parse(testo)
+                if q.get("marca") or q.get("modello"):
+                    a = {k: q.get(k) for k in ("marca", "modello", "prezzo_max", "stato")}
+                    if q.get("anno"):
+                        a["anno_min"] = q["anno"] - 1
+                    if q.get("km"):
+                        a["km_max"] = q["km"]
+                    a["limite"] = 3
+                    intanto = bot.cerca_affari(conn, user, a).get("auto") or []
+            except Exception as e:
+                logging.getLogger("scovo").warning("RICHIESTA_AUTO %s ricerca nel sito non riuscita: %s", rid, type(e).__name__)
+            righe = _richiesta_righe(conn, user["id"])
+        if gia:
+            return {"ok": True, "id": rid, "gia_inviata": True, "richieste": righe, "intanto": intanto}
+        base = os.environ.get("SITO_URL", "https://scovo.onrender.com")
+        testo_email = (f"Richiesta auto su misura n. {rid} (piano Max): trovare la migliore entro 30 minuti\n\n"
+                       f"Cosa cerca: {testo}\n\n"
+                       f"Commerciante: {d.get('company') or d.get('name') or '-'}\n"
+                       f"Nome: {d.get('name') or '-'}\nTelefono: {d.get('phone') or '-'}\nEmail: {d.get('email') or '-'}\n"
+                       f"Zona scelta sul sito: {zona or 'tutte'}\n")
+        if intanto:
+            testo_email += "\nGià sul sito e simili:\n" + "\n".join(
+                f"- {c['nome']} {c.get('anno') or ''} · {c.get('zona') or ''} · {c['prezzo']} € · guadagno "
+                f"{c['guadagno_da']}–{c['guadagno_a']} € · {base}/#/auto/{c['id']}" for c in intanto)
+        ok = _avvisa_appuntamento(testo_email, f"Skovo - CERCAMELA n. {rid}: {testo[:60]}")
+        try:
+            with connect() as conn:
+                conn.execute("UPDATE richieste_auto SET email_ok=%s WHERE id=%s", (ok, rid))
+                conn.commit()
+        except Exception:
+            pass
+        logging.getLogger("scovo").warning("RICHIESTA_AUTO %s dealer=%s email=%s simili=%d", rid, user["id"],
+                                           "ok" if ok else "no", len(intanto))
+        return {"ok": True, "id": rid, "richieste": righe, "intanto": intanto}
+    return jsonify(await run_in_threadpool(work))
+
+
+async def admin_richieste_auto(request: Request):
+    current_user(request, admin=True)
+    with connect() as conn:
+        _richieste_tabella(conn)
+        rows = conn.execute("SELECT r.id, r.testo, r.stato, r.risposta, r.zona, r.created_at, r.email_ok, d.name, d.company, "
+                            "d.phone, d.email FROM richieste_auto r LEFT JOIN dealers d ON d.id = r.dealer_id "
+                            "ORDER BY r.id DESC LIMIT 100").fetchall()
+        conn.commit()
+    return jsonify([{**dict(r), "created_at": r["created_at"].isoformat()} for r in rows])
+
+
+async def admin_richiesta_auto_aggiorna(request: Request):
+    current_user(request, admin=True)
+    data = await body(request)
+    stato = str(data.get("stato") or "trovata")
+    if stato not in ("in_cerca", "trovata", "non_trovata"):
+        err(400, "Stato non valido")
+    with connect() as conn:
+        _richieste_tabella(conn)
+        conn.execute("UPDATE richieste_auto SET stato=%s, risposta=COALESCE(%s, risposta), updated_at=now() WHERE id=%s",
+                     (stato, (str(data.get("risposta") or "").strip()[:1000] or None), int(request.path_params["id"])))
+        conn.commit()
+    return jsonify({"ok": True})
+
+
 async def appuntamento(request: Request):
     user = current_user(request)
     lid = int(request.path_params["id"])
@@ -2452,6 +2576,10 @@ routes = [
     Route("/api/me/azienda", azienda_get, methods=["GET"]),
     Route("/api/me/azienda", azienda_put, methods=["PUT"]),
     Route("/api/admin/appuntamenti", admin_appuntamenti),
+    Route("/api/richieste-auto", richieste_get, methods=["GET"]),
+    Route("/api/richieste-auto", richieste_post, methods=["POST"]),
+    Route("/api/admin/richieste-auto", admin_richieste_auto),
+    Route("/api/admin/richieste-auto/{id:int}", admin_richiesta_auto_aggiorna, methods=["POST"]),
     Route("/api/foto/{id:int}/{pos:int}", foto_auto),
     Route("/email-foto/{id:int}/{pos:int}.jpg", foto_email),
     Route("/admin/commercianti-tel.csv", commercianti_tel),

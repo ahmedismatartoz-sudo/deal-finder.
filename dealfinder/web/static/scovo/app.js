@@ -219,9 +219,9 @@ function botMatch(c, b){
 }
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
-const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
-function zoneCounts(){ const o = {milano:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.ravenna + (o.italia || 0); return o; }
-function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","ravenna"].includes(k)); }
+const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["torino","Torino e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
+function zoneCounts(){ const o = {milano:0, torino:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.torino + o.ravenna + (o.italia || 0); return o; }
+function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","torino","ravenna"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
 const CARB = [["benzina","Benzina"],["diesel","Diesel"],["gpl","GPL"],["metano","Metano"],["ibrida","Ibrida"],["elettrica","Elettrica"]];
 const carbKey = t => { t = String(t || "").toLowerCase(); return t.startsWith("ibrid") ? "ibrida" : t; };
@@ -331,7 +331,7 @@ function viewList(){
   return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${!scV && !incV && zc.torino ? zoneBar : ""}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -1319,6 +1319,127 @@ function vcOrb(){
   vcListen();
 }
 
+
+/* ---------- "Cercamela" (9/11, piano Max) ----------
+   Il commerciante dice a voce l'auto che vuole (marca, modello, anno, km, budget). La richiesta arriva a noi e
+   entro 30 minuti gli troviamo la migliore dei privati in zona. Tocchi il microfono, parli, tocchi di nuovo:
+   il testo si può correggere prima di mandarlo. */
+const CM = {testo: "", rec: false, busy: false, trascrivo: false, err: "", sent: null, lista: null, max: null, intanto: [], mr: null, sr: null, stream: null, timer: 0, t0: 0};
+const CM_IDEE = ["Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €",
+                 "Una 500 o una Panda a benzina sotto i 5.000 €, anche con qualche graffio",
+                 "SUV ibrido, Toyota C-HR o Kia Niro, dal 2019, budget 17.000 €"];
+function cmFab(){ return `<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi">${MIC}<span>Chiedi</span></button>`; }
+async function cmCarica(){
+  try { const d = await api("/api/richieste-auto"); CM.max = !!d.max; CM.lista = d.richieste || []; }
+  catch (e) { CM.max = perm("appuntamenti"); CM.lista = CM.lista || []; }
+  if (S.sheet === "cerca") render({keep:true});
+}
+function cmQuando(iso){
+  const d = new Date(iso), m = Math.round((Date.now() - d) / 60000);
+  return m < 1 ? "adesso" : m < 60 ? m + " min fa" : d.toLocaleString("it-IT", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+}
+const CM_STATO = {in_cerca: ["Stiamo cercando", "cm-st-on"], trovata: ["Trovata", "cm-st-ok"], non_trovata: ["Non trovata", "cm-st-no"]};
+function cmLista(){
+  const l = (CM.lista || []).filter(r => !CM.sent || r.id !== CM.sent.id);
+  if (!l.length) return "";
+  return `<div class="cm-sec">Le tue richieste</div><div class="cm-list">${l.slice(0, 5).map(r => { const st = CM_STATO[r.stato] || CM_STATO.in_cerca;
+    return `<div class="cm-req"><div class="cm-req-top"><span class="cm-st ${st[1]}">${st[0]}</span><small>${esc(cmQuando(r.quando))}</small></div>
+      <p>${esc(r.testo)}</p>${r.risposta ? `<p class="cm-risp">${esc(r.risposta)}</p>` : ""}</div>`; }).join("")}</div>`;
+}
+function cmIntanto(){
+  if (!(CM.intanto || []).length) return "";
+  return `<div class="cm-sec">Intanto, già su Scovo</div><div class="b-cars">${CM.intanto.map(c => `
+    <button class="b-car" data-act="bot-open" data-v="${c.id}">${c.foto ? `<img src="${esc(c.foto)}" alt="" loading="lazy">` : `<span class="b-noimg">${CAR_SVG}</span>`}
+      <span class="b-car-t"><b>${esc(c.nome)}</b><span>${esc([c.anno, c.zona].filter(Boolean).join(" · "))}</span>
+      <span>${eur(c.prezzo)} · <em>+${eur(Math.max(c.guadagno_da, 0))}</em></span></span></button>`).join("")}</div>`;
+}
+function sheetCerca(){
+  const head = `<div class="sheet-head"><h2 id="cmh">Cercamela tu</h2><button class="link" data-act="close">Chiudi</button></div>`;
+  const wrap = b => `<div class="sheet-wrap" data-act="close-bg"><div class="sheet cm-sheet" role="dialog" aria-modal="true" aria-labelledby="cmh">${head}<div class="sheet-body cm-body">${b}</div></div></div>`;
+  if (CM.max === null) return wrap(`<div class="cm-wait"><span class="spin" aria-hidden="true"></span>Un attimo…</div>`);
+  if (!S.token) return wrap(`<div class="cm-hero"><div class="cm-badge">Piano Max</div><h3>Dicci che auto cerchi, la troviamo noi</h3>
+      <p>Entra con il tuo account per chiederci un'auto su misura.</p></div><a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a>`);
+  if (!CM.max) return wrap(`<div class="cm-hero"><div class="cm-badge">Solo piano Max</div><h3>Dicci che auto cerchi, la troviamo noi</h3>
+      <p>Ci dici a voce l'auto che vuoi e <b>entro 30 minuti</b> ti troviamo la migliore dei privati in zona. Poi l'appuntamento col privato lo fissiamo noi.</p></div>
+      <ul class="checks cm-checks"><li>Basta parlare: niente filtri</li><li>La migliore occasione in zona entro 30 minuti</li><li>Appuntamento col privato fissato da noi</li><li>Garanzia di due auto al mese</li></ul>
+      <button class="l-btn l-btn-blue" data-act="abbonati" data-v="pro" style="width:100%" ${S.payBusy ? "disabled" : ""}>${S.payBusy ? "Apro il pagamento…" : "Passa al piano Max"}</button>${cmLista()}`);
+  if (CM.sent) return wrap(`<div class="cm-done"><div class="cm-ok" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h3>Richiesta ricevuta!</h3><p>Ci mettiamo subito a cercare: <b>entro 30 minuti</b> ti mandiamo la migliore auto che troviamo dai privati in zona.</p>
+      <blockquote class="cm-quote">${esc(CM.sent.testo)}</blockquote>
+      <button class="btn btn-blue" data-act="cm-nuova" style="width:100%">Cerca un'altra auto</button></div>${cmIntanto()}${cmLista()}`);
+  const parla = SR || EARS();
+  const stato = CM.rec ? `<span class="cm-live"><i></i>Ti ascolto… tocca quando hai finito</span>` : CM.trascrivo ? `<span class="cm-live">Scrivo quello che hai detto…</span>`
+    : parla ? `<span>${CM.testo ? "Tocca per aggiungere altro" : "Tocca e parla"}</span>` : `<span>${IN_APP ? "Per parlare apri il sito in Safari o Chrome. Intanto scrivi qui sotto." : "Scrivi qui sotto l'auto che cerchi."}</span>`;
+  return wrap(`<div class="cm-hero"><div class="cm-badge">Piano Max · entro 30 minuti</div><h3>Che auto cerchi?</h3>
+      <p>Dillo come lo diresti a un collega: marca, modello, anno, km, alimentazione e quanto vuoi spendere. La migliore dei privati in zona la troviamo noi.</p></div>
+    ${parla ? `<div class="cm-mic-wrap"><button class="cm-mic${CM.rec ? " on" : ""}" data-act="cm-mic" aria-label="${CM.rec ? "Ho finito di parlare" : "Parla"}" ${CM.trascrivo || CM.busy ? "disabled" : ""}>${CM.rec ? '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></svg>' : MIC.replace(/width="26" height="26"/, 'width="38" height="38"')}<span class="cm-ring"></span></button>${stato}</div>` : `<div class="cm-mic-wrap">${stato}</div>`}
+    <label class="cm-field"><span>La tua richiesta</span><textarea id="cm-text" rows="4" maxlength="1500" placeholder="Es. Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €">${esc(CM.testo)}</textarea></label>
+    ${!CM.testo ? `<div class="cm-ideas">${CM_IDEE.map(t => `<button class="pill" data-act="cm-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>` : ""}
+    ${CM.err ? `<span class="err" role="alert">${esc(CM.err)}</span>` : ""}
+    <button class="btn btn-blue cm-send" data-act="cm-send" ${CM.busy || CM.rec || CM.trascrivo || CM.testo.trim().length < 6 ? "disabled" : ""}>${CM.busy ? "Invio…" : "Trovamela"}</button>
+    ${cmLista()}`);
+}
+function cmPaint(){ if (S.sheet === "cerca") render({keep:true}); }
+function cmAggiungi(t){ t = String(t || "").trim(); if (!t) return; CM.testo = (CM.testo ? CM.testo.replace(/\s+$/, "") + " " : "") + t; }
+function cmStop(){
+  clearTimeout(CM.timer);
+  if (CM.mr && CM.mr.state !== "inactive") { try { CM.mr.stop(); } catch (e) {} }
+  if (CM.sr) { try { CM.sr.stop(); } catch (e) {} }
+}
+function cmChiudiMic(){ if (CM.stream) { CM.stream.getTracks().forEach(t => t.stop()); CM.stream = null; } }
+async function cmMic(){
+  if (CM.rec) { cmStop(); return; }
+  CM.err = ""; stopVoice();
+  if (EARS()) {
+    try { CM.stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}}); }
+    catch (e) { toast(e && e.name === "NotAllowedError" ? SR_ERR["not-allowed"] : "Non riesco ad aprire il microfono: scrivi la richiesta."); if (!SR) return; return cmSpeech(); }
+    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+    const mime = types.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || "";
+    let mr; try { mr = new MediaRecorder(CM.stream, mime ? {mimeType: mime} : undefined); } catch (e) { cmChiudiMic(); return SR ? cmSpeech() : toast("Scrivi la richiesta qui sotto."); }
+    const parts = []; CM.mr = mr;
+    mr.ondataavailable = e => { if (e.data && e.data.size) parts.push(e.data); };
+    mr.onstop = async () => {
+      CM.rec = false; CM.mr = null; cmChiudiMic();
+      if (performance.now() - CM.t0 < 700 || !parts.length) { cmPaint(); return; }
+      CM.trascrivo = true; cmPaint();
+      const blob = new Blob(parts, {type: mr.mimeType || mime || "audio/webm"});
+      const headers = {"Content-Type": blob.type || "audio/webm"}; if (S.token) headers.Authorization = "Bearer " + S.token;
+      try {
+        const r = await fetch("/api/trascrivi", {method: "POST", headers, body: blob});
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || d.errore || "Non ho capito: riprova o scrivi");
+        if ((d.testo || "").trim()) cmAggiungi(d.testo); else toast("Non ho sentito niente: riprova");
+      } catch (e) { toast(e.message || "Non ho capito: riprova o scrivi"); }
+      CM.trascrivo = false; cmPaint();
+    };
+    CM.t0 = performance.now(); mr.start(250); CM.rec = true; cmPaint();
+    CM.timer = setTimeout(cmStop, 60000);           // al massimo un minuto per volta
+    return;
+  }
+  if (SR) return cmSpeech();
+  toast("Questo browser non ascolta la voce: scrivi la richiesta.");
+}
+function cmSpeech(){
+  let rec; try { rec = new SR(); } catch (e) { toast(SR_ERR["service-not-allowed"]); return; }
+  CM.sr = rec; rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = true;
+  let fin = "", inter = "";
+  rec.onresult = ev => { inter = ""; for (let i = ev.resultIndex; i < ev.results.length; i++) { if (ev.results[i].isFinal) fin += ev.results[i][0].transcript + " "; else inter += ev.results[i][0].transcript; }
+    const live = document.querySelector(".cm-live"); if (live) live.textContent = (fin + inter).trim() || "Ti ascolto…"; };
+  rec.onerror = ev => { if (ev.error !== "aborted" && ev.error !== "no-speech") toast(SR_ERR[ev.error] || "Non ho capito: riprova o scrivi."); };
+  rec.onend = () => { clearTimeout(CM.timer); CM.sr = null; CM.rec = false; cmAggiungi(fin || inter); cmPaint(); };
+  CM.rec = true; cmPaint(); CM.timer = setTimeout(cmStop, 60000);
+  try { rec.start(); } catch (e) { CM.rec = false; CM.sr = null; toast(SR_ERR["service-not-allowed"]); cmPaint(); }
+}
+async function cmInvia(){
+  const t = document.getElementById("cm-text"); if (t) CM.testo = t.value;
+  if (CM.busy || CM.testo.trim().length < 6) return;
+  CM.busy = true; CM.err = ""; cmPaint();
+  try {
+    const d = await api("/api/richieste-auto", {method: "POST", body: {testo: CM.testo.trim(), zona: S.zona || "tutte"}});
+    CM.sent = {id: d.id, testo: CM.testo.trim()}; CM.lista = d.richieste || CM.lista; CM.intanto = d.intanto || []; CM.testo = "";
+  } catch (e) { CM.err = e.message || "Invio non riuscito: riprova"; }
+  CM.busy = false; cmPaint();
+}
 function tabBar(){
   const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
   return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
@@ -1343,9 +1464,9 @@ function render(opts){
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : viewList()) + tabBar();
   if (canBrowse()) {
-    // pulsante "Chiedi" tolto (sarà sostituito)
+    if ((isList(S.route) || S.route === "vendute") && !S.sheet && !VC.on && !S.paywall) html += cmFab();     // 9/11: "Chiedi" = Cercamela (piano Max)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : "";
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", trattare:"Da trattare", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
@@ -1527,7 +1648,12 @@ $app.addEventListener("click", e => {
     case "ap-send": apInvia(); return;
     case "az-open": (async () => { if (AP.az === null) await apCarica(); AP.err = ""; AP.dopo = null; S.sheet = "azienda"; render({keep:true}); })(); return;
     case "az-save": azSalva(); return;
-    case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); S.sheet = null; break;
+    case "cm-open": S.sheet = "cerca"; CM.err = ""; if (CM.sent) { CM.sent = null; CM.intanto = []; } cmCarica(); break;
+    case "cm-mic": cmMic(); return;
+    case "cm-idea": CM.testo = v; break;
+    case "cm-send": cmInvia(); return;
+    case "cm-nuova": CM.sent = null; CM.intanto = []; CM.testo = ""; break;
+    case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); if (S.sheet === "cerca" && CM.rec) cmStop(); S.sheet = null; break;
     case "bot": {
       // dal bottone "Chiedi": conversazione a voce, un tocco solo
       if ((t.dataset.voce || t.classList.contains("bb-ask")) && (SR || EARS())) { vcStart(); return; }
@@ -1556,7 +1682,7 @@ $app.addEventListener("click", e => {
       saveFilters(); break;
     }
     case "stato": S.stato = v; saveFilters(); break;
-    case "zona": S.zona = v; saveFilters(); window.scrollTo(0, 0); break;
+    case "zona": S.zona = S.zona === v ? "tutte" : v; saveFilters(); window.scrollTo(0, 0); break;
     case "raggio": S.raggio = Number(v); saveFilters(); window.scrollTo(0, 0); break;
     case "posizione": chiediPosizione(false); return;
     case "sconto": S.sconto = Number(v); saveFilters(); break;
@@ -1625,6 +1751,7 @@ $app.addEventListener("keydown", e => {
 $app.addEventListener("input", e => {
   const id = e.target.id, val = e.target.value;
   if (id === "bot-text") { A.text = val; return; }
+  if (id === "cm-text") { const prima = CM.testo.trim().length >= 6; CM.testo = val; const b = document.querySelector(".cm-send"); if (b) b.disabled = CM.busy || val.trim().length < 6; if (!prima && val && document.querySelector(".cm-ideas")) document.querySelector(".cm-ideas").remove(); return; }
   if (id === "v-targa") V.targa = val; else if (id === "v-km") { V.km = val.replace(/\D/g, ""); if (val !== V.km) e.target.value = V.km; }
   else if (id === "v-note") V.note = val; else if (id === "r-targa") R.targa = val; else if (id === "r-pezzo") R.pezzo = val;
   else if (id === "fmin" || id === "fmax") {

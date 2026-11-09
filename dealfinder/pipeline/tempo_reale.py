@@ -26,7 +26,7 @@ log = logging.getLogger("tempo_reale")
 
 REGIONI = {
     "lombardia": ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO"],
-    "piemonte": ["NO", "VC", "BI", "VB", "AL", "AT", "TO"],
+    "piemonte": ["NO", "VC", "BI", "VB", "AL", "AT", "TO", "CN"],        # 9/11: CN per Torino e dintorni
     "emilia-romagna": ["PC", "PR", "RE"],
     "liguria": ["GE"],
 }
@@ -894,10 +894,10 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
     """Salva gli annunci letti; ritorna gli id da valutare (privati nuovi o con prezzo cambiato, nelle regole)."""
     from ..core.normalize import normalize_fields
     from ..db import upsert_listing
-    from ..zone import MILANO
+    from ..zone import MILANO, TORINO
     from .collect import doppione_altro_sito
     da_valutare = []
-    zona = set(MILANO)
+    zona = set(MILANO) | set(TORINO)
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
     for l in listings:
         tel = (l.raw or {}).get("_telefono") if l.source == "autoscout24" else None

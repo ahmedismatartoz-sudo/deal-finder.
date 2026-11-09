@@ -46,6 +46,8 @@ log = logging.getLogger("scovo")
 PROVINCE_100KM = frozenset({"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC"})
 RAVENNA = frozenset({"RA", "FC", "RN", "FE", "BO"})
 ROMA = frozenset({"RM", "LT", "FR", "VT", "RI"})
+# 9/11: Torino e dintorni sul sito (SITO_TORINO=0 la spegne)
+TORINO = frozenset({"TO", "AT", "CN", "BI", "VC"}) if os.environ.get("SITO_TORINO", "1") == "1" else frozenset()
 
 # capoluoghi e città grandi (la provincia si ricava dalla città quando l'annuncio non la dà); il resto da
 # data/comuni_60km.json e data/comuni_sesto.json
@@ -54,7 +56,9 @@ _CAPOLUOGHI = {
     "pavia": "PV", "cremona": "CR", "brescia": "BS", "novara": "NO", "piacenza": "PC", "ravenna": "RA",
     "forli": "FC", "cesena": "FC", "rimini": "RN", "ferrara": "FE", "bologna": "BO", "roma": "RM", "latina": "LT",
     "frosinone": "FR", "viterbo": "VT", "rieti": "RI", "torino": "TO", "genova": "GE", "mantova": "MN",
-    "sondrio": "SO", "alessandria": "AL", "vercelli": "VC", "biella": "BI", "asti": "AT", "parma": "PR",
+    "sondrio": "SO", "alessandria": "AL", "cuneo": "CN", "moncalieri": "TO", "rivoli": "TO", "collegno": "TO",
+    "nichelino": "TO", "settimotorinese": "TO", "grugliasco": "TO", "chieri": "TO", "pinerolo": "TO", "ivrea": "TO",
+    "alba": "CN", "bra": "CN", "vercelli": "VC", "biella": "BI", "asti": "AT", "parma": "PR",
     "reggioemilia": "RE", "modena": "MO", "verona": "VR", "trento": "TN", "fiumicino": "RM", "ostia": "RM",
     "sestosangiovanni": "MI", "cinisellobalsamo": "MI", "legnano": "MI", "rho": "MI", "busto arsizio": "VA",
     "bustoarsizio": "VA", "gallarate": "VA", "saronno": "VA", "vigevano": "PV", "voghera": "PV", "crema": "CR",
@@ -261,7 +265,7 @@ def km_da_milano(provincia: str | None) -> float | None:
 
 def r_zona(it, g):
     p = _r(it).get("provincia")
-    if it.get("supercar") or p in PROVINCE_100KM or p in RAVENNA:
+    if it.get("supercar") or p in PROVINCE_100KM or p in RAVENNA or p in TORINO:
         return None
     if g.fascia_fuori_max > 0 and fascia(it) and p not in ROMA:
         d = km_da_milano(p)

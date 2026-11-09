@@ -55,6 +55,7 @@ PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG"
                   "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",
                   "cremona": "CR", "mantova": "MN", "sondrio": "SO",
                   "novara": "NO", "vercelli": "VC", "alessandria": "AL", "piacenza": "PC",
+                  "torino": "TO", "asti": "AT", "cuneo": "CN", "biella": "BI",
                   "ravenna": "RA", "forli-cesena": "FC", "rimini": "RN", "ferrara": "FE", "bologna": "BO",
                   "roma": "RM", "latina": "LT", "frosinone": "FR", "viterbo": "VT", "rieti": "RI"}
 
