@@ -34,6 +34,11 @@ def test_venditore_morbido_voto_alto_e_previsione():
     assert "7.100" in s["argomenti"][1]["testo"] or any("7.100" in a["testo"] for a in s["argomenti"])
     assert "trasferimento" in " ".join(s["motivi"]) or any("fretta" in m for m in s["motivi"])
     assert str(p["apertura"]).replace("000", "") and f"{p['apertura']:,}".replace(",", ".") in s["messaggio"]
+    c = s["comportamento"]                                        # 10/11: comportamento del venditore, a righe colorate
+    r = {x["k"]: x for x in c["righe"]}
+    assert r["Prezzo"]["v"] == "abbassato 2 volte · −1.000 €" and r["Prezzo"]["tono"] == "good" and r["Partiva da"]["v"] == "8.500 €"
+    assert r["Altro ribasso"]["v"] == "probabile · 62%" and r["Di solito scende a"]["v"] == "7.050 €"
+    assert c["sintesi"] == "Si può trattare bene" and "ceduto 1.000 €" in c["attesa"] and "fretta" in c["attesa"]
 
 
 def test_non_trattabile_e_appena_uscita():
@@ -43,6 +48,9 @@ def test_non_trattabile_e_appena_uscita():
     d = {"prezzo": 6000, "pv": {"M": 9000, "margine": 3000, "soglia": 1500}, "valutazione": {}}
     s = T.calcola(b, st, [], d, soglia, ora=ORA, gruppi=GRUPPI, modelli={}, attivi={})
     assert s["voto"] <= 3 and s["quando"]["azione"] == "chiama_subito"
+    c = s["comportamento"]
+    assert c["tono"] == "warn" and "appena uscito" in c["attesa"]
+    assert {"k": "Nell'annuncio", "v": "prezzo non trattabile", "tono": "warn"} in c["righe"]
 
 
 def test_massimo_per_margine():
@@ -107,6 +115,12 @@ def test_parere_paragrafi_mercato_e_casi_reali():
     assert len(pa["paragrafi"]) >= 3 and "**7.900 €**" in pa["paragrafi"][0] and "sotto mercato" in pa["paragrafi"][0]
     assert "mai abbassata" in pa["paragrafi"][1]
     assert pa["rivendi"]["annuncio"] > 10500 and "13 giorni" in pa["paragrafi"][2]
+    bl = {x["tipo"]: x for x in pa["blocchi"]}                    # 10/11: gli stessi numeri a blocchi
+    assert [n["v"] for n in bl["prezzo"]["numeri"]] == [7900, 11056, 3156] and bl["prezzo"]["tono"] == "good"
+    assert [n["k"] for n in bl["trattativa"]["numeri"]][:2] == ["Offri", "Chiudi a"]
+    assert bl["rivendita"]["numeri"][-1] == {"k": "Tempo", "v": "~13 gg", "tipo": "txt"}
+    c = s["comportamento"]
+    assert {"k": "Prezzo", "v": "mai abbassato", "tono": ""} in c["righe"] and "senza ribassi" in c["attesa"]
     mk = s["mercato"]
     assert (mk["basso"], mk["alto"], mk["confrontate"]) == (9800, 12900, 23) and mk["medio"] == 10850
     assert mk["casi"][0]["km"] == 70000 and mk["casi"][0]["giorni"] == 9          # il più vicino per km per primo

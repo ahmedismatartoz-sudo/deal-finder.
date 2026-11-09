@@ -593,7 +593,104 @@ def parere(d, b, prezzo, M, margine, soglia, giorni, giorni_ann, rib, sceso, pre
         if vend == "commerciante":
             corti.append("venditore professionale (chiedi fattura e regime IVA)")
         par.append("Attenzione a: " + "; ".join(corti) + ".")
-    return {"giudizio": giudizio, "tono": tono, "paragrafi": par, "rivendi": riv}
+    # 10/11 (cliente: "troppo parlato: più professionale, a blocchi, a colori"): gli stessi contenuti in blocchi con i
+    # numeri in evidenza e UNA riga di testo ciascuno. "paragrafi" resta per le app già aperte.
+    blocchi = []
+    if M:
+        diff = M - prezzo
+        sotto = diff > 0.03 * M
+        blocchi.append({"tipo": "prezzo", "titolo": "Prezzo", "tono": "good" if sotto else "warn" if diff < -0.03 * M else "info",
+                        "numeri": [{"k": "Chiesta", "v": prezzo, "tipo": "eur"}, {"k": "Mercato", "v": int(M), "tipo": "eur"},
+                                   {"k": "Sotto di" if diff >= 0 else "Sopra di", "v": abs(int(diff)), "tipo": "eur",
+                                    "tono": "good" if sotto else "warn" if diff < -0.03 * M else ""}],
+                        "testo": ("Sotto il prezzo delle auto uguali per anno e chilometri." if sotto
+                                  else "Prezzo alto: l'affare si fa solo trattando." if diff < -0.03 * M
+                                  else "In linea con le auto uguali per anno e chilometri.")})
+    nuova = giorni_ann < 3 and not ripubblicata
+    num_t = [{"k": "Offri", "v": prezzi["apertura"], "tipo": "eur", "tono": "info"},
+             {"k": "Chiudi a", "v": prezzi["chiusura_probabile"], "tipo": "eur", "tono": "good"}]
+    if prezzi.get("massimo") is not None:
+        num_t.append({"k": "Non oltre", "v": prezzi["massimo"], "tipo": "eur", "tono": "warn"})
+    frasi_t = ["Appena uscita: muoviti oggi, senza tirare troppo." if nuova else
+               "Venditore che vuole chiudere." if voto >= 7 else "C'è spazio per trattare." if voto >= 5 else "Sconto limitato."]
+    if n_piu_bassi:
+        frasi_t.append(f"Fai notare le {n_piu_bassi} uguali in vendita a meno.")
+    blocchi.append({"tipo": "trattativa", "titolo": "Trattativa", "tono": "info", "numeri": num_t, "testo": " ".join(frasi_t)})
+    if riv:
+        num_r = [{"k": "Annuncio a", "v": riv["annuncio"], "tipo": "eur"}, {"k": "Si chiude a", "v": riv["vendita"], "tipo": "eur"}]
+        if riv.get("guadagno") is not None:
+            num_r.append({"k": "Netto", "v": riv["guadagno"], "tipo": "eur", "tono": "good" if riv["guadagno"] > 0 else "warn"})
+        if riv.get("giorni"):
+            num_r.append({"k": "Tempo", "v": f"~{riv['giorni']} gg", "tipo": "txt"})
+        frasi_r = []
+        if rv:
+            if rv.get("concorrenza") == "tanta":
+                frasi_r.append(f"Tante uguali in vendita ({_e(rv['in_vendita'])}): contano foto curate e risposte veloci.")
+            elif rv.get("concorrenza") == "poca":
+                frasi_r.append("Poca concorrenza: puoi tenere il prezzo.")
+            if rv.get("trend_prezzi_pct") is not None and rv["trend_prezzi_pct"] <= -3:
+                frasi_r.append(f"Prezzi in calo ({rv['trend_prezzi_pct']}% nel mese): non tenerla ferma.")
+        blocchi.append({"tipo": "rivendita", "titolo": "Rivendita", "tono": "good", "numeri": num_r, "testo": " ".join(frasi_r)})
+    if rischio or vend == "commerciante":
+        punti = [v["titolo"].replace(" (probabile, dall'anno)", "").replace("Area B Milano · ", "Area B per ") for v in rischio[:3]]
+        if vend == "commerciante":
+            punti.append("Venditore professionale: chiedi fattura e regime IVA")
+        blocchi.append({"tipo": "attenzione", "titolo": "Attenzione", "tono": "warn", "punti": punti})
+    return {"giudizio": giudizio, "tono": tono, "paragrafi": par, "blocchi": blocchi, "rivendi": riv}
+
+
+def comportamento(vend, giorni, giorni_ann, rib, sceso, iniziale, prezzo, previsione, voto, motivi, ripubblicata) -> dict:
+    """10/11 (cliente: "parla del comportamento del privato: ha abbassato o no, cosa ci possiamo aspettare, si può
+    trattare"). Righe corte con un colore ciascuna (good = a favore di chi compra, warn = contro) e una frase finale."""
+    chi = "Il commerciante" if vend == "commerciante" else "Il privato"
+    nuova = giorni_ann < 3 and not ripubblicata
+    righe = [{"k": "In vendita da", "v": "oggi" if giorni < 1 else f"{int(giorni)} {'giorno' if int(giorni) == 1 else 'giorni'}",
+              "tono": "good" if giorni >= 30 else "warn" if nuova else ""}]
+    if rib:
+        righe.append({"k": "Prezzo", "v": f"abbassato {rib} {'volta' if rib == 1 else 'volte'}" + (f" · −{_e(sceso)} €" if sceso else ""),
+                      "tono": "good"})
+        if sceso and iniziale:
+            righe.append({"k": "Partiva da", "v": f"{_e(iniziale)} €", "tono": ""})
+    else:
+        righe.append({"k": "Prezzo", "v": "mai abbassato", "tono": ""})
+    if ripubblicata:
+        righe.append({"k": "Annuncio", "v": "tolto e ripubblicato", "tono": "good"})
+    if previsione:
+        pr = int(round(previsione["probabilita_ribasso"] * 100))
+        righe.append({"k": "Altro ribasso", "v": f"{'probabile' if pr >= 50 else 'possibile' if pr >= 25 else 'poco probabile'} · {pr}%",
+                      "tono": "good" if pr >= 50 else "" if pr >= 25 else "warn"})
+        if previsione.get("prezzo_annuncio_previsto") and previsione["prezzo_annuncio_previsto"] < prezzo:
+            righe.append({"k": "Di solito scende a", "v": f"{_e(previsione['prezzo_annuncio_previsto'])} €", "tono": "good"})
+    no_tratta = any("non è trattabile" in m for m in motivi)
+    fretta = any("fretta" in m for m in motivi)
+    tratta = any("trattabile" in m and "non è" not in m for m in motivi)
+    if no_tratta:
+        righe.append({"k": "Nell'annuncio", "v": "prezzo non trattabile", "tono": "warn"})
+    elif fretta:
+        righe.append({"k": "Nell'annuncio", "v": "ha fretta di vendere", "tono": "good"})
+    elif tratta:
+        righe.append({"k": "Nell'annuncio", "v": "prezzo trattabile", "tono": "good"})
+    if nuova:
+        attesa = "Annuncio appena uscito: per ora tiene il prezzo. Qui conta arrivare per primi, non lo sconto."
+    elif no_tratta:
+        attesa = f"{chi} dichiara il prezzo fisso: aspettati poco sconto, e solo con pagamento immediato."
+    elif rib and giorni >= 14:
+        attesa = (f"Ha già ceduto {_e(sceso)} € in {int(giorni)} giorni: vuole chiudere. " if sceso else "Ha già ritoccato il prezzo: vuole chiudere. ")                  + "Un'offerta decisa con pagamento subito ha buone possibilità."
+    elif rib:
+        attesa = "Ha già ritoccato il prezzo in pochi giorni: è disposto a scendere ancora."
+    elif giorni >= 30:
+        attesa = f"Fermo da {int(giorni)} giorni senza ribassi: finora ha tenuto il prezzo, ma dopo un mese invenduta un'offerta concreta viene ascoltata."
+    elif giorni >= 14:
+        attesa = "Da più di due settimane senza ribassi: inizia a essere disponibile a parlarne."
+    else:
+        attesa = "Annuncio recente e prezzo mai toccato: per ora tiene il prezzo, lo sconto sarà contenuto."
+    if fretta and not nuova:
+        attesa += " Scrive di avere fretta: fai pesare il ritiro in giornata."
+    return {"chi": chi, "voto": voto, "tono": "good" if voto >= 7 else "warn" if voto <= 3 else "info",
+            "sintesi": ("Si può trattare bene" if voto >= 7 else "Si può trattare" if voto >= 5 else "Tratta poco" if voto >= 4
+                        else "Difficile da trattare"),
+            "righe": righe, "attesa": attesa,
+            "base": (previsione or {}).get("base")}
 
 
 def mercato(d: dict, rv: dict | None) -> dict | None:
@@ -830,6 +927,8 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
         "mercato": mercato(d, rv),
         "parere": parere(d, b, prezzo, M, margine, soglia, giorni, giorni_annuncio, rib, sceso, prezzi, previsione,
                          piano, rv, ds, voto, vend, len(piu_bassi), st.get("ripubblicato")),
+        "comportamento": comportamento(vend, giorni, giorni_annuncio, rib, sceso, iniziale, prezzo, previsione, voto, motivi,
+                                       st.get("ripubblicato")),
         "voto": voto, "voto_testo": ("molto disponibile a trattare" if voto >= 8 else "disponibile a trattare" if voto >= 6
                                      else "poco margine di trattativa" if voto >= 4 else "difficile da trattare"),
         "motivi": motivi,

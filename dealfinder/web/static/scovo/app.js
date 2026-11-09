@@ -444,19 +444,48 @@ function boxTop(t){
   </section>`;
 }
 function grassetto(x){ return esc(x).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
+/* 10/11 (cliente): parere a blocchi colorati (numeri in evidenza + una riga), poi il comportamento del venditore
+   e solo gli esempi del venduto. Le schede vecchie (senza blocchi) cadono sui paragrafi di prima. */
+const PB_ICO = {prezzo: "€", trattativa: "↔", rivendita: "↗", attenzione: "!"};
+function pbNum(x){ return `<div class="pb-n ${esc(x.tono || "")}"><span>${esc(x.k)}</span><b>${x.tipo === "eur" ? eur(x.v) : esc(x.v)}</b></div>`; }
+function pbBlocco(b){
+  return `<div class="pb ${esc(b.tono || "info")}"><div class="pb-h"><i aria-hidden="true">${PB_ICO[b.tipo] || "•"}</i><span>${esc(b.titolo)}</span></div>
+    ${(b.numeri || []).length ? `<div class="pb-nums n${Math.min(b.numeri.length, 4)}">${b.numeri.map(pbNum).join("")}</div>` : ""}
+    ${(b.punti || []).length ? `<ul class="pb-ul">${b.punti.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+    ${b.testo ? `<p>${esc(b.testo)}</p>` : ""}</div>`;
+}
+function boxVenditore(c){
+  if (!c || !(c.righe || []).length) return "";
+  const col = c.tono === "good" ? "var(--good)" : c.tono === "warn" ? "var(--warn)" : "var(--tag)";
+  return `<section class="d-sec tr"><h2>Il venditore</h2><div class="vd ${esc(c.tono || "info")}">
+    <div class="vd-top"><div><span class="tr-lab">Si può trattare?</span><b class="vd-sint">${esc(c.sintesi || "")}</b></div>
+      <div class="vd-voto" role="img" aria-label="Trattativa ${c.voto} su 10" style="--c:${col}"><b>${c.voto}</b><small>/10</small></div></div>
+    <div class="vd-bar" aria-hidden="true"><i style="width:${Math.max(1, Math.min(10, c.voto)) * 10}%;background:${col}"></i></div>
+    <div class="vd-righe">${c.righe.map(r => `<div class="vd-r ${esc(r.tono || "")}"><span>${esc(r.k)}</span><b>${esc(r.v)}</b></div>`).join("")}</div>
+    ${c.attesa ? `<div class="vd-att"><span class="tr-lab">Cosa aspettarsi</span><p>${esc(c.attesa)}</p></div>` : ""}
+  </div></section>`;
+}
+function boxVendute(mk){
+  if (!mk) return "";
+  const casi = mk.casi || [];
+  if (!casi.length && !mk.giorni_vendita) return "";
+  const gg = n => n <= 7 ? "good" : n <= 21 ? "info" : "warn";
+  return `<section class="d-sec tr"><h2>Uguali vendute di recente</h2><div class="tr-merc">
+    ${casi.map(c => `<div class="vn"><div class="vn-p"><b>${eur(c.prezzo)}</b><small>${[c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(" · ")}</small></div>
+      <div class="vn-g ${gg(c.giorni)}"><b>${c.giorni} ${c.giorni === 1 ? "giorno" : "giorni"}</b><small>${c.quando ? "venduta il " + esc(c.quando.slice(5).split("-").reverse().join("/")) : "per venderla"}</small></div></div>`).join("")}
+    ${mk.giorni_vendita ? `<p class="vn-nota">${casi.length ? "In media" : "Auto uguali: in media"} si vendono in <b>${mk.giorni_vendita} giorni</b>${mk.trend != null && Math.abs(mk.trend) >= 2 ? `, prezzi ${mk.trend > 0 ? "in salita" : "in calo"} del ${Math.abs(mk.trend)}% nel mese` : ""}.</p>` : ""}
+  </div></section>`;
+}
 function boxTrattativa(t){
   if (!t || !t.parere) return "";
   const pa = t.parere, mk = t.mercato, ds = t.da_sapere;
-  let h = `<section class="d-sec tr"><div class="tr-parere ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2>${esc(pa.giudizio)}</h2>${(pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("")}</div>
+  const corpo = (pa.blocchi || []).length ? `<div class="pb-list">${pa.blocchi.map(pbBlocco).join("")}</div>`
+    : (pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("");
+  let h = `<section class="d-sec tr"><div class="tr-parere pbx ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2><i class="pb-dot" aria-hidden="true"></i>${esc(pa.giudizio)}</h2>${corpo}</div>
     ${t.messaggio ? `<button class="pill" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
-  if (mk && (mk.medio || mk.giorni_vendita)) {
-    h += `<section class="d-sec tr"><h2>Il mercato di questa auto</h2><div class="tr-merc">
-      ${mk.medio ? `<p class="tr-sub">${mk.confrontate ? `Abbiamo confrontato <b>${mk.confrontate}</b> auto uguali.` : ""}</p>
-      <div class="tr-trio">${mk.basso ? `<div><span>Basso</span><b>${eur(mk.basso)}</b></div>` : ""}<div><span>Medio</span><b>${eur(mk.medio)}</b></div>${mk.alto ? `<div><span>Alto</span><b>${eur(mk.alto)}</b></div>` : ""}</div>` : ""}
-      ${mk.giorni_vendita ? `<p class="tr-sub">Si vendono di solito in <b>${mk.giorni_vendita} giorni</b> (le più rapide in ${mk.giorni_veloci}). Ne escono circa <b>${mk.vendute_mese} al mese</b> e ora ce ne sono <b>${mk.in_vendita}</b> in vendita${mk.trend != null && Math.abs(mk.trend) >= 2 ? `; prezzi ${mk.trend > 0 ? "in salita" : "in calo"} del ${Math.abs(mk.trend)}% nell'ultimo mese` : ""}.</p>` : ""}
-      ${(mk.casi || []).length ? `<h3 class="tr-h">Vendute di recente</h3>${mk.casi.map(c => `<div class="tr-caso"><div><b>${eur(c.prezzo)}</b><small>${c.anno || ""}${c.km != null ? " · " + num(c.km) + " km" : ""}${c.dove ? " · " + esc(c.dove) : ""}</small></div><div class="tr-gg"><b>${c.giorni} ${c.giorni === 1 ? "giorno" : "giorni"}</b><small>${c.quando ? "sparita il " + esc(c.quando.slice(5).split("-").reverse().join("/")) : ""}</small></div></div>`).join("")}` : ""}
-    </div></section>`;
-  }
+  h += boxVenditore(t.comportamento);
+  if (t.comportamento) h += boxVendute(mk);
+  else if (mk && (mk.medio || mk.giorni_vendita)) h += boxVendute(mk);
   if (ds) {
     const bits = [ds.kw ? `${ds.kw} kW (${ds.cv} CV)` : "", ds.classe_euro ? esc(ds.classe_euro) + " probabile" : "",
       ds.bollo_anno ? "bollo ~" + eur(ds.bollo_anno) + "/anno" : "", ds.passaggio ? "passaggio " + eur(ds.passaggio[0]) + "–" + eur(ds.passaggio[1]) : ""].filter(Boolean);
