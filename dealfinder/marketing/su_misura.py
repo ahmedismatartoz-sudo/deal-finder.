@@ -43,7 +43,8 @@ def _norm_comune(c: str | None) -> str:
 
 def email_buona(e: str) -> bool:
     e = (e or "").strip().lower()
-    if not e or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e:
+    from .auto_invio import ESCLUSI_3_11            # 9/11: Officine Mulino ha ricevuto la campagna 70 (mai più)
+    if not e or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or ESCLUSI_3_11.search(e):
         return False
     dom = e.split("@")[-1]
     if "pec" in dom or "legalmail" in dom:

@@ -52,3 +52,9 @@ def test_secondo_giro_esclude_chi_ha_ricevuto_e_copre_senza_luogo():
     assert "Milano e dintorni" in fr["c@gmail.com"]          # a Torino c'è una sola auto: le 2 migliori di Milano
     assert "Milano e dintorni" in fr["b@gmail.com"]
     assert "{{ contact.SK_FRASE }}" in SM.html_email_secondo()
+
+
+def test_officine_mulino_mai():
+    from dealfinder.marketing.brevo_liste import scegli_pulita
+    assert not SM.email_buona("matteo@officinemulino.com")
+    assert scegli_pulita(["matteo@officinemulino.com", "a@gmail.com"], set(), set(), 5) == ["a@gmail.com"]

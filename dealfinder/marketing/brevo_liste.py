@@ -277,7 +277,7 @@ def scegli_rimessi(emails, bloccati: set, gia_in_brevo: set, posto: int) -> list
     out, visti = [], set()
     for e in emails:
         e = norm_email(e)
-        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e:
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or _esclusi(e):
             continue
         if impronta(e) in bloccati:
             continue
@@ -296,6 +296,12 @@ def _rimessi_0111() -> set[str]:
         return set(json.loads((_DATA / "brevo_rimessi_0111.json").read_text()))
     except Exception:
         return set()
+
+
+def _esclusi(e: str) -> bool:
+    """9/11: clienti/contatti da non scrivere mai (Officine Mulino ha ricevuto la campagna 70 dopo essersi disiscritto)."""
+    from .auto_invio import ESCLUSI_3_11
+    return bool(ESCLUSI_3_11.search(e or ""))
 
 
 def _bloccati_0111() -> set[str]:
@@ -382,7 +388,7 @@ def scegli_nuovi(emails, bloccati: set, gia_usati: set, in_brevo: set, posto: in
     out, visti = [], set()
     for e in emails:
         e = norm_email(e)
-        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or ".pec." in e \
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or _esclusi(e) or ".pec." in e \
                 or e.endswith("@pec.it") or "legalmail" in e:
             continue
         visti.add(e)
@@ -529,7 +535,7 @@ def scegli_mix(nuove: list[dict], richiamo: list[str], bloccati: set, totale: in
     out, visti = [], set()
     for e in [r.get("email") for r in nuove] + list(richiamo):
         e = norm_email(e or "")
-        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e \
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or _esclusi(e) \
                 or "pec" in e.split("@")[-1] or "legalmail" in e:
             continue
         visti.add(e)
@@ -669,7 +675,7 @@ def scegli_pulita(aperti: list[str], bloccati: set, rimbalzati: set, totale: int
     out, visti = [], set()
     for e in aperti:
         e = norm_email(e or "")
-        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e:
+        if not e or e in visti or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "loconte" in e or _esclusi(e):
             continue
         visti.add(e)
         dom = e.split("@")[-1]
