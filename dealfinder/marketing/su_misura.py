@@ -449,3 +449,91 @@ def prepara_secondo(items: list[dict], totale: int = 1100, campagna_fatta: int =
             "recipients": {"listIds": [lid]}, "inlineImageActivation": False})
         esito["campagna_bozza"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
     return esito
+
+
+# ---------- 9/11 sera (cliente: "rimanda le email a tutti quelli che non hanno aperto, domani mattina") ----------
+def righe_solo(righe: list[dict], voluti: set) -> list[dict]:
+    """Tiene di ogni salone solo gli indirizzi in `voluti` (chi deve ricevere il rinvio). Funzione pura."""
+    from .invii import norm_email
+    out = []
+    for r in righe:
+        em = [e for e in (r.get("email") or []) if norm_email(e) in voluti]
+        if em:
+            out.append({**r, "email": em})
+    return out
+
+
+def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-10T09:00:00+01:00",
+                   totale: int = 1450) -> dict:
+    """Chi ha ricevuto le campagne 70/72 e NON le ha aperte né cliccate (tolti rimbalzati, disiscritti, esclusi):
+    2 auto NUOVE ciascuno (le stesse regole del secondo giro: entro 50/120 km, altrimenti Milano), lista e campagna
+    PROGRAMMATA in Brevo all'ora data (invia Brevo). Nei log solo conteggi ed esempi senza indirizzi né nomi."""
+    import json as _json
+    from urllib.parse import quote
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    from .brevo_liste import BLOCCATI_MINIMI, _bloccati_0111
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    esito: dict = {}
+    auto = auto_sito(items)
+    esito["auto_sito"] = len(auto)
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        ricevuto, via = set(), set()
+        for cid in campagne:
+            ricevuto |= set(_esporta(c, cid, "all"))
+            for tipo in ("openers", "clickers", "hardBounces", "softBounces", "unsubscribed"):
+                via |= set(_esporta(c, cid, tipo))
+        voluti = ricevuto - via
+        esito.update({"ricevuto": len(ricevuto), "aperto_cliccato_rimbalzato_disiscritto": len(via), "da_rimandare": len(voluti)})
+        if len(ricevuto) < 1500 or not voluti:
+            esito["fermo"] = "elenchi_brevo_incompleti"
+            return esito
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            righe = righe_solo(_righe_db(conn), voluti)
+        if len(bloccati) < BLOCCATI_MINIMI:
+            return {**esito, "fermo": "disiscritti_incompleti"}
+        bloccati_in_brevo = [x for x in contatti if invii.contatto_bloccato(x)]
+        posto = TETTO_BREVO - len(bloccati_in_brevo)
+        saloni = scegli_secondo(righe, bloccati, set(), totale * 2)
+        scelti = assegna_secondo(saloni, auto, min(totale, posto))
+        esito.update({"saloni": len(saloni), "scelti": len(scelti), "bloccati_tenuti_in_brevo": len(bloccati_in_brevo)})
+        for s in scelti[:: max(1, len(scelti) // 6)][:6]:
+            lg.warning("RINVIO_SM_ESEMPIO %s", _json.dumps({k: v for k, v in s["attr"].items()}, ensure_ascii=False))
+        if not scelti:
+            return esito
+        tieni = {s["email"] for s in scelti}
+        tolti = 0
+        for x in contatti:
+            e = (x.get("email") or "").lower()
+            if e and e not in tieni and not invii.contatto_bloccato(x):
+                if c.delete(f"{API}/contacts/{quote(e, safe='')}").status_code in (200, 204, 404):
+                    tolti += 1
+        esito["tolti_da_brevo"] = tolti
+        nome = "Skovo rinvio non aperti 10-11"
+        lid = _liste(c).get(nome)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        for k in range(0, len(scelti), 500):
+            r = c.post(f"{API}/contacts/import", json={
+                "jsonBody": [{"email": s["email"], "attributes": s["attr"]} for s in scelti[k:k + 500]],
+                "listIds": [lid], "updateExistingContacts": True, "emptyContactsAttributes": False})
+            esito[f"import_{k}"] = r.status_code
+            _aspetta_import(c, r)
+        esito["lista_id"] = lid
+        r = c.post(f"{API}/emailCampaigns", json={
+            "name": "Skovo rinvio non aperti 10-11", "subject": "Nuove auto da privati sotto mercato, oggi",
+            "sender": MITTENTE, "replyTo": RISPOSTE, "htmlContent": html_email_secondo(),
+            "recipients": {"listIds": [lid]}, "inlineImageActivation": False, "scheduledAt": quando})
+        esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code} {r.text[:120]}"
+        esito["quando"] = quando
+    return esito

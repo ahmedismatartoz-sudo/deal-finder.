@@ -58,3 +58,9 @@ def test_officine_mulino_mai():
     from dealfinder.marketing.brevo_liste import scegli_pulita
     assert not SM.email_buona("matteo@officinemulino.com")
     assert scegli_pulita(["matteo@officinemulino.com", "a@gmail.com"], set(), set(), 5) == ["a@gmail.com"]
+
+
+def test_righe_solo_tiene_solo_i_non_aperti():
+    from dealfinder.marketing.su_misura import righe_solo
+    r = righe_solo([{"nome": "A", "email": ["a@x.it", "b@x.it"]}, {"nome": "B", "email": ["c@x.it"]}], {"b@x.it"})
+    assert r == [{"nome": "A", "email": ["b@x.it"]}]

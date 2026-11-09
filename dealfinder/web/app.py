@@ -3284,6 +3284,25 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("SU_MISURA2 non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("rinvio_sm:"):        # 9/11 sera (cliente): rinvio su misura a chi non ha aperto 70/72, programmato
+            time.sleep(30)
+            try:
+                from ..marketing import su_misura as SM
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"rinvio_sm:{v}"):
+                    lg.warning("RINVIO_SM %s già fatto", v)
+                    return
+                for _ in range(30):
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                camp, quando = v.split(":", 1)[1].split("@", 1)
+                lg.warning("RINVIO_SM %s", json.dumps(SM.prepara_rinvio(list(_elenco.get("items") or []),
+                                                                     campagne=tuple(int(x) for x in camp.split(",")),
+                                                                     quando=quando)))
+            except Exception as e:
+                lg.warning("RINVIO_SM non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("su_misura:"):        # 8/11 (cliente): 1.450 email su misura (2 auto vicine al salone), a scaglioni
             time.sleep(30)
             try:
