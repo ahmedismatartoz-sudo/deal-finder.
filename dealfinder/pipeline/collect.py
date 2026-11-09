@@ -847,7 +847,7 @@ def riepilogo_scarti(stats) -> dict:
             "non_contati": letti - int(stats.get("salvati", 0)) - sum(scarti.values())}
 
 
-def lavori_zona(esito: dict) -> None:
+def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
     """3/11 (studio 4): dopo il giro della zona. 1) il giro si registra in job_runs ('zona_cron:giro', con i
     contatori degli scarti); 2) AutoScout24: gli annunci non visti nelle ultime riletture si controllano uno per uno
     e diventano 'scomparso' solo con una prova (pagine gratuite; prima le AutoScout sparite restavano attive per
@@ -855,7 +855,7 @@ def lavori_zona(esito: dict) -> None:
     from ..db import connect as _cn, log_job as _lj
     try:
         with _cn() as c:
-            _lj(c, "zona_cron:giro")(True, {k: v for k, v in esito.items() if isinstance(v, (int, float, str))})
+            _lj(c, nome)(True, {k: v for k, v in esito.items() if isinstance(v, (int, float, str))})
     except Exception as e:
         log.warning("ZONA_CRON non registrata: %s", str(e)[:200])
     letti_as = sum(v for k, v in esito.items() if k.startswith("letti_autoscout") and isinstance(v, int))
@@ -967,7 +967,7 @@ if __name__ == "__main__":
     if _torino_ora or (os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1"):
         try:
             from .ciclo import _due
-            if _torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "3"))):
+            if _torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "6"))):
                 from ..zone import TORINO
                 vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
                 prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
@@ -985,7 +985,7 @@ if __name__ == "__main__":
                     from . import benzina_mi as B
                     esito = B.giro()
                     log.warning("TORINO_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
-                    lavori_zona(esito)
+                    lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
                 finally:
                     for k in [k for k in os.environ if k.startswith("BENZ_")]:
                         del os.environ[k]
