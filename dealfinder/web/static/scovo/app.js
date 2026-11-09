@@ -444,48 +444,83 @@ function boxTop(t){
   </section>`;
 }
 function grassetto(x){ return esc(x).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
-/* 10/11 (cliente): parere a blocchi colorati (numeri in evidenza + una riga), poi il comportamento del venditore
-   e solo gli esempi del venduto. Le schede vecchie (senza blocchi) cadono sui paragrafi di prima. */
-const PB_ICO = {prezzo: "€", trattativa: "↔", rivendita: "↗", attenzione: "!"};
-function pbNum(x){ return `<div class="pb-n ${esc(x.tono || "")}"><span>${esc(x.k)}</span><b>${x.tipo === "eur" ? eur(x.v) : esc(x.v)}</b></div>`; }
-function pbBlocco(b){
-  return `<div class="pb ${esc(b.tono || "info")}"><div class="pb-h"><i aria-hidden="true">${PB_ICO[b.tipo] || "•"}</i><span>${esc(b.titolo)}</span></div>
-    ${(b.numeri || []).length ? `<div class="pb-nums n${Math.min(b.numeri.length, 4)}">${b.numeri.map(pbNum).join("")}</div>` : ""}
-    ${(b.punti || []).length ? `<ul class="pb-ul">${b.punti.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-    ${b.testo ? `<p>${esc(b.testo)}</p>` : ""}</div>`;
+/* 10/11 notte (cliente: "troppo a bocconi, deve sembrare un design da 100k"): niente riquadri dentro riquadri.
+   Una superficie sola per sezione, gerarchia fatta coi caratteri, righe sottili, e UN elemento forte: la scala dei
+   prezzi (offri, chiudi, chiesta, non oltre, mercato) dove si vede a colpo d'occhio lo spazio per guadagnare. */
+const e2 = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " €";
+function scalaPrezzi(pt){
+  // pt: [{k, v, tono}] ; i segni stanno al posto vero, le etichette si spostano quel tanto che basta per non toccarsi
+  pt = pt.filter(x => x.v != null && x.v > 0).sort((a, b) => a.v - b.v);
+  if (pt.length < 3) return "";
+  const lo = pt[0].v, hi = pt[pt.length - 1].v; if (hi <= lo) return "";
+  pt.forEach(x => { x.x = (x.v - lo) / (hi - lo) * 100; });
+  const righe = [pt.filter((_, i) => i % 2 === 0), pt.filter((_, i) => i % 2 === 1)];
+  const GAP = 30;
+  righe.forEach(r => {
+    r.forEach((x, i) => { x.lx = i ? Math.max(x.x, r[i - 1].lx + GAP) : x.x; });
+    for (let i = r.length - 1; i >= 0; i--) { const max = i === r.length - 1 ? 100 : r[i + 1].lx - GAP; r[i].lx = Math.max(0, Math.min(r[i].lx, max)); }
+  });
+  const ch = pt.find(x => x.id === "chiudi"), me = pt.find(x => x.id === "mercato"), of = pt.find(x => x.id === "offri");
+  const lab = (x, su) => { const al = x.lx > 70 ? "r" : "l";
+    return `<div class="sp-l ${su ? "su" : "giu"} ${al} ${esc(x.tono || "")}" style="${al === "r" ? `right:${100 - x.lx}%` : `left:${x.lx}%`}"><span>${esc(x.k)}</span><b>${e2(x.v)}</b></div>`; };
+  return `<div class="sp" role="img" aria-label="${esc(pt.map(x => x.k + " " + e2(x.v)).join(", "))}">
+    <div class="sp-row">${righe[0].map(x => lab(x, true)).join("")}</div>
+    <div class="sp-track">${of && ch && ch.x > of.x ? `<i class="sp-fill info" style="left:${of.x}%;width:${ch.x - of.x}%"></i>` : ""}${ch && me && me.x > ch.x ? `<i class="sp-fill good" style="left:${ch.x}%;width:${me.x - ch.x}%"></i>` : ""}${pt.map(x => `<i class="sp-tick ${esc(x.tono || "")}" style="left:${x.x}%"></i>`).join("")}</div>
+    <div class="sp-row">${righe[1].map(x => lab(x, false)).join("")}</div>
+  </div>`;
+}
+function boxParere(t){
+  const pa = t.parere, bl = {}; (pa.blocchi || []).forEach(b => { bl[b.tipo] = b; });
+  const n = (b, k) => { const x = b && (b.numeri || []).find(y => y.k === k); return x ? x.v : null; };
+  const chiesta = n(bl.prezzo, "Chiesta"), merc = n(bl.prezzo, "Mercato"), sotto = n(bl.prezzo, "Sotto di"), sopra = n(bl.prezzo, "Sopra di");
+  const offri = n(bl.trattativa, "Offri"), chiudi = n(bl.trattativa, "Chiudi a"), oltre = n(bl.trattativa, "Non oltre");
+  const ann = n(bl.rivendita, "Annuncio a"), vend = n(bl.rivendita, "Si chiude a"), netto = n(bl.rivendita, "Netto"), tempo = n(bl.rivendita, "Tempo");
+  const lede = [sotto ? `${e2(sotto)} sotto il mercato` : sopra ? `${e2(sopra)} sopra il mercato` : "", netto != null && netto > 0 ? `${e2(netto)} netti stimati` : ""].filter(Boolean).join(", ");
+  const scala = merc && offri && chiudi && merc > chiudi ? scalaPrezzi([
+    {id: "offri", k: "Offri", v: offri, tono: "info"}, {id: "chiudi", k: "Chiudi a", v: chiudi, tono: "good"},
+    chiesta && Math.abs(chiesta - chiudi) > (merc - offri) * .04 ? {id: "chiesta", k: "Chiesta", v: chiesta} : {},
+    oltre && oltre < merc && Math.abs(oltre - chiudi) > (merc - offri) * .04 ? {id: "oltre", k: "Non oltre", v: oltre, tono: "warn"} : {},
+    {id: "mercato", k: "Mercato", v: merc}]) : "";
+  const riga = (nome, val, sub, tono) => `<div class="lg-r"><span class="lg-k">${nome}</span><div class="lg-v"><b class="${tono || ""}">${val}</b>${sub ? `<small>${sub}</small>` : ""}</div></div>`;
+  let righe = "";
+  if (chiesta) righe += riga("Prezzo", e2(chiesta), merc ? `chiesti dal venditore, il mercato è ${e2(merc)}` : "chiesti dal venditore");
+  if (offri) righe += riga("Trattativa", `${e2(offri).replace(" €", "")} → ${e2(chiudi)}`, [`offri e chiudi qui${oltre ? `, non oltre ${e2(oltre)}` : ""}`, bl.trattativa && esc(bl.trattativa.testo || "")].filter(Boolean).join(". ").replace("..", "."));
+  if (vend) righe += riga("Rivendita", e2(vend), [`mettila a ${e2(ann)}${tempo ? `, venduta in ${esc(String(tempo)).replace("~", "circa ").replace(" gg", " giorni")}` : ""}`, bl.rivendita && esc(bl.rivendita.testo || "")].filter(Boolean).join(". ").replace("..", "."));
+  if (netto != null) righe += riga("Ti resta", (netto > 0 ? "+" : "") + e2(netto), "netti, tolti i costi e i giorni di giacenza", netto > 0 ? "good big" : "warn big");
+  if (bl.attenzione) righe += `<div class="lg-r"><span class="lg-k warn">Attenzione</span><div class="lg-v"><ul>${(bl.attenzione.punti || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div></div>`;
+  return `<div class="pr ${esc(pa.tono)}"><p class="pr-eye">Il nostro parere</p><h2>${esc(pa.giudizio)}</h2>${lede ? `<p class="pr-lede">${lede}.</p>` : ""}${scala}<div class="lg">${righe}</div></div>`;
 }
 function boxVenditore(c){
   if (!c || !(c.righe || []).length) return "";
-  const col = c.tono === "good" ? "var(--good)" : c.tono === "warn" ? "var(--warn)" : "var(--tag)";
-  return `<section class="d-sec tr"><h2>Il venditore</h2><div class="vd ${esc(c.tono || "info")}">
-    <div class="vd-top"><div><span class="tr-lab">Si può trattare?</span><b class="vd-sint">${esc(c.sintesi || "")}</b></div>
-      <div class="vd-voto" role="img" aria-label="Trattativa ${c.voto} su 10" style="--c:${col}"><b>${c.voto}</b><small>/10</small></div></div>
-    <div class="vd-bar" aria-hidden="true"><i style="width:${Math.max(1, Math.min(10, c.voto)) * 10}%;background:${col}"></i></div>
-    <div class="vd-righe">${c.righe.map(r => `<div class="vd-r ${esc(r.tono || "")}"><span>${esc(r.k)}</span><b>${esc(r.v)}</b></div>`).join("")}</div>
-    ${c.attesa ? `<div class="vd-att"><span class="tr-lab">Cosa aspettarsi</span><p>${esc(c.attesa)}</p></div>` : ""}
+  const seg = Array.from({length: 10}, (_, i) => `<i class="${i < c.voto ? "on" : ""}"></i>`).join("");
+  return `<section class="d-sec tr"><div class="vd ${esc(c.tono || "info")}">
+    <p class="pr-eye">Il venditore</p>
+    <div class="vd-top"><h2>${esc(c.sintesi || "")}</h2><div class="vd-voto" role="img" aria-label="Trattativa ${c.voto} su 10"><b>${c.voto}</b><small>/10</small></div></div>
+    <div class="vd-seg" aria-hidden="true">${seg}</div>
+    ${c.attesa ? `<p class="vd-att">${esc(c.attesa)}</p>` : ""}
+    <div class="lg">${c.righe.map(r => `<div class="lg-r fatto"><span class="lg-k">${esc(r.k)}</span><b class="${esc(r.tono || "")}">${esc(r.v)}</b></div>`).join("")}</div>
   </div></section>`;
 }
 function boxVendute(mk){
   if (!mk) return "";
   const casi = mk.casi || [];
   if (!casi.length && !mk.giorni_vendita) return "";
-  const gg = n => n <= 7 ? "good" : n <= 21 ? "info" : "warn";
-  return `<section class="d-sec tr"><h2>Uguali vendute di recente</h2><div class="tr-merc">
-    ${casi.map(c => `<div class="vn"><div class="vn-p"><b>${eur(c.prezzo)}</b><small>${[c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(" · ")}</small></div>
-      <div class="vn-g ${gg(c.giorni)}"><b>${c.giorni} ${c.giorni === 1 ? "giorno" : "giorni"}</b><small>${c.quando ? "venduta il " + esc(c.quando.slice(5).split("-").reverse().join("/")) : "per venderla"}</small></div></div>`).join("")}
-    ${mk.giorni_vendita ? `<p class="vn-nota">${casi.length ? "In media" : "Auto uguali: in media"} si vendono in <b>${mk.giorni_vendita} giorni</b>${mk.trend != null && Math.abs(mk.trend) >= 2 ? `, prezzi ${mk.trend > 0 ? "in salita" : "in calo"} del ${Math.abs(mk.trend)}% nel mese` : ""}.</p>` : ""}
+  const gg = n => n <= 7 ? "good" : n <= 21 ? "" : "warn";
+  return `<section class="d-sec tr"><div class="vn-card"><p class="pr-eye">Uguali vendute di recente</p>
+    ${mk.giorni_vendita ? `<h2>In media in ${mk.giorni_vendita} giorni</h2>` : ""}
+    <div class="lg">${casi.map(c => `<div class="lg-r vn"><div class="vn-p"><b>${e2(c.prezzo)}</b><small>${[c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(", ")}</small></div>
+      <div class="vn-g"><b class="${gg(c.giorni)}">${c.giorni} ${c.giorni === 1 ? "giorno" : "giorni"}</b><small>${c.quando ? "venduta il " + esc(c.quando.slice(5).split("-").reverse().join("/")) : ""}</small></div></div>`).join("")}</div>
+    ${mk.trend != null && Math.abs(mk.trend) >= 2 ? `<p class="vn-nota">Prezzi ${mk.trend > 0 ? "in salita" : "in calo"} del ${Math.abs(mk.trend)}% nell'ultimo mese.</p>` : ""}
   </div></section>`;
 }
 function boxTrattativa(t){
   if (!t || !t.parere) return "";
   const pa = t.parere, mk = t.mercato, ds = t.da_sapere;
-  const corpo = (pa.blocchi || []).length ? `<div class="pb-list">${pa.blocchi.map(pbBlocco).join("")}</div>`
-    : (pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("");
-  let h = `<section class="d-sec tr"><div class="tr-parere pbx ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2><i class="pb-dot" aria-hidden="true"></i>${esc(pa.giudizio)}</h2>${corpo}</div>
+  let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t)
+      : `<div class="tr-parere ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2>${esc(pa.giudizio)}</h2>${(pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("")}</div>`}
     ${t.messaggio ? `<button class="pill" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
   h += boxVenditore(t.comportamento);
-  if (t.comportamento) h += boxVendute(mk);
-  else if (mk && (mk.medio || mk.giorni_vendita)) h += boxVendute(mk);
+  if (mk) h += boxVendute(mk);
   if (ds) {
     const bits = [ds.kw ? `${ds.kw} kW (${ds.cv} CV)` : "", ds.classe_euro ? esc(ds.classe_euro) + " probabile" : "",
       ds.bollo_anno ? "bollo ~" + eur(ds.bollo_anno) + "/anno" : "", ds.passaggio ? "passaggio " + eur(ds.passaggio[0]) + "–" + eur(ds.passaggio[1]) : ""].filter(Boolean);
