@@ -950,7 +950,7 @@ function applyRoute(){
   if (isList(S.route) && canBrowse()) loadCars();
   if (S.route === "vendute" && canBrowse()) { loadVendute(); if (!S.cars) loadCars(); }
 }
-window.addEventListener("popstate", () => { if (S.sheet) { S.sheet = null; } applyRoute(); });
+window.addEventListener("popstate", () => { if (S.sheet === "cerca") cmSpegni(); if (S.sheet) { S.sheet = null; } applyRoute(); });
 
 /* ---------- disegno ---------- */
 /* ---------- Assistente a voce ---------- */
@@ -1335,7 +1335,7 @@ function cmFab(){
 async function cmCarica(){
   try { const d = await api("/api/richieste-auto"); CM.max = !!d.max; CM.lista = d.richieste || []; }
   catch (e) { CM.max = perm("appuntamenti"); CM.lista = CM.lista || []; }
-  if (S.sheet === "cerca") render({keep:true});
+  if (S.sheet === "cerca" && !(document.activeElement && document.activeElement.id === "cm-text")) render({keep:true});
 }
 function cmQuando(iso){
   const d = new Date(iso), m = Math.round((Date.now() - d) / 60000);
@@ -1368,7 +1368,7 @@ function sheetCerca(){
       <button class="l-btn l-btn-blue" data-act="abbonati" data-v="pro" style="width:100%" ${S.payBusy ? "disabled" : ""}>${S.payBusy ? "Apro il pagamento…" : "Passa al piano Max"}</button>${cmLista()}`);
   if (CM.sent) return wrap(`<div class="cm-done"><div class="cm-ok" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h3>Richiesta ricevuta!</h3><p>Ci mettiamo subito a cercare: <b>entro 30 minuti</b> ti mandiamo la migliore auto che troviamo dai privati in zona.</p>
-      <blockquote class="cm-quote">${esc(CM.sent.testo)}</blockquote>
+      <blockquote class="cm-quote">${esc(CM.sent.testo)}</blockquote>${CM.sent.avviso_ok ? "" : `<p class="hint">La richiesta è salvata. Se entro 30 minuti non ti abbiamo scritto, chiamaci al 348 242 5633.</p>`}
       <button class="btn btn-blue" data-act="cm-nuova" style="width:100%">Cerca un'altra auto</button></div>${cmIntanto()}${cmLista()}`);
   const parla = SR || EARS();
   const stato = CM.rec ? `<span class="cm-live"><i></i>Ti ascolto… tocca quando hai finito</span>` : CM.trascrivo ? `<span class="cm-live">Scrivo quello che hai detto…</span>`
@@ -1390,6 +1390,15 @@ function cmStop(){
   if (CM.sr) { try { CM.sr.stop(); } catch (e) {} }
 }
 function cmChiudiMic(){ if (CM.stream) { CM.stream.getTracks().forEach(t => t.stop()); CM.stream = null; } }
+/* 9/11 revisione: microfono spento davvero (niente trascrizione) se il foglio si chiude o la pagina va in secondo piano */
+function cmSpegni(){
+  clearTimeout(CM.timer);
+  if (CM.mr) { const mr = CM.mr; CM.mr = null; mr.onstop = null; try { mr.stop(); } catch (e) {} }
+  if (CM.sr) { try { CM.sr.abort(); } catch (e) {} CM.sr = null; }
+  cmChiudiMic(); CM.rec = false;
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden && CM.rec) { cmSpegni(); cmPaint(); } });
+window.addEventListener("pagehide", () => { if (CM.rec) cmSpegni(); });
 async function cmMic(){
   if (CM.rec) { cmStop(); return; }
   CM.err = ""; stopVoice();
@@ -1439,7 +1448,7 @@ async function cmInvia(){
   CM.busy = true; CM.err = ""; cmPaint();
   try {
     const d = await api("/api/richieste-auto", {method: "POST", body: {testo: CM.testo.trim(), zona: S.zona || "tutte"}});
-    CM.sent = {id: d.id, testo: CM.testo.trim()}; CM.lista = d.richieste || CM.lista; CM.intanto = d.intanto || []; CM.testo = "";
+    CM.sent = {id: d.id, testo: CM.testo.trim(), avviso_ok: d.avviso_ok !== false}; CM.lista = d.richieste || CM.lista; CM.intanto = d.intanto || []; CM.testo = "";
   } catch (e) { CM.err = e.message || "Invio non riuscito: riprova"; }
   CM.busy = false; cmPaint();
 }
@@ -1476,7 +1485,7 @@ function render(opts){
   $app.innerHTML = html;
   $app.classList.toggle("vc-on", VC.on);
   document.body.style.overflow = S.sheet ? "hidden" : "";
-  if (active) { const el = document.getElementById(active); if (el && el.tagName === "INPUT") { el.focus({preventScroll:true}); try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} } }
+  if (active) { const el = document.getElementById(active); if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) { el.focus({preventScroll:true}); try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} } }
   document.querySelectorAll(".chips").forEach((c, i) => { if (chipsX[i]) c.scrollLeft = chipsX[i]; });
   const slides = document.getElementById("slides");
   if (slides) slides.addEventListener("scroll", () => {
@@ -1657,7 +1666,7 @@ $app.addEventListener("click", e => {
     case "cm-idea": CM.testo = v; break;
     case "cm-send": cmInvia(); return;
     case "cm-nuova": CM.sent = null; CM.intanto = []; CM.testo = ""; break;
-    case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); if (S.sheet === "cerca" && CM.rec) cmStop(); S.sheet = null; break;
+    case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); if (S.sheet === "cerca" && CM.rec) cmSpegni(); S.sheet = null; break;
     case "bot": {
       // dal bottone "Chiedi": conversazione a voce, un tocco solo
       if ((t.dataset.voce || t.classList.contains("bb-ask")) && (SR || EARS())) { vcStart(); return; }

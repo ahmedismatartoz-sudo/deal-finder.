@@ -1860,9 +1860,15 @@ _RICHIESTE_SQL = """CREATE TABLE IF NOT EXISTS richieste_auto (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())"""
 
 
+_RICHIESTE_PRONTA = {"ok": False}
+
+
 def _richieste_tabella(conn) -> None:
+    if _RICHIESTE_PRONTA["ok"]:                 # 9/11 revisione: la tabella si crea una volta sola per processo
+        return
     conn.execute(_RICHIESTE_SQL)
     conn.execute("CREATE INDEX IF NOT EXISTS richieste_auto_dealer ON richieste_auto (dealer_id, created_at DESC)")
+    _RICHIESTE_PRONTA["ok"] = True
 
 
 def _richiesta_righe(conn, did: int) -> list[dict]:
@@ -1874,12 +1880,15 @@ def _richiesta_righe(conn, did: int) -> list[dict]:
 
 async def richieste_get(request: Request):
     user = current_user(request)
-    with connect() as conn:
-        _richieste_tabella(conn)
-        perm = permessi_di(conn, user)
-        righe = _richiesta_righe(conn, user["id"])
-        conn.commit()
-    return jsonify({"max": user.get("role") == "admin" or "appuntamenti" in perm, "richieste": righe})
+
+    def work():
+        with connect() as conn:
+            _richieste_tabella(conn)
+            perm = permessi_di(conn, user)
+            righe = _richiesta_righe(conn, user["id"])
+            conn.commit()
+        return {"max": user.get("role") == "admin" or "appuntamenti" in perm, "richieste": righe}
+    return jsonify(await run_in_threadpool(work))
 
 
 async def richieste_post(request: Request):
@@ -1911,7 +1920,7 @@ async def richieste_post(request: Request):
             intanto = []
             try:
                 from . import assistente as bot
-                bot.ELENCO = _elenco_per
+                bot.ELENCO = bot.ELENCO or _elenco_per
                 q = bot.parse(testo)
                 if q.get("marca") or q.get("modello"):
                     a = {k: q.get(k) for k in ("marca", "modello", "prezzo_max", "stato")}
@@ -1920,7 +1929,12 @@ async def richieste_post(request: Request):
                     if q.get("km"):
                         a["km_max"] = q["km"]
                     a["limite"] = 3
+                    a["limite"] = 10
                     intanto = bot.cerca_affari(conn, user, a).get("auto") or []
+                    if zona and zona != "tutte":           # 9/11 revisione: solo auto della zona scelta sul sito
+                        aree = {it["id"]: it.get("area") for it in (_elenco_per(user["id"]) or [])}
+                        intanto = [c for c in intanto if aree.get(c["id"], "milano") == zona]
+                    intanto = intanto[:3]
             except Exception as e:
                 logging.getLogger("scovo").warning("RICHIESTA_AUTO %s ricerca nel sito non riuscita: %s", rid, type(e).__name__)
             righe = _richiesta_righe(conn, user["id"])
@@ -1943,9 +1957,9 @@ async def richieste_post(request: Request):
                 conn.commit()
         except Exception:
             pass
-        logging.getLogger("scovo").warning("RICHIESTA_AUTO %s dealer=%s email=%s simili=%d", rid, user["id"],
-                                           "ok" if ok else "no", len(intanto))
-        return {"ok": True, "id": rid, "richieste": righe, "intanto": intanto}
+        (logging.getLogger("scovo").warning if ok else logging.getLogger("scovo").error)(
+            "RICHIESTA_AUTO %s dealer=%s email=%s simili=%d", rid, user["id"], "ok" if ok else "NON_PARTITA", len(intanto))
+        return {"ok": True, "id": rid, "richieste": righe, "intanto": intanto, "avviso_ok": ok}
     return jsonify(await run_in_threadpool(work))
 
 
@@ -1968,9 +1982,11 @@ async def admin_richiesta_auto_aggiorna(request: Request):
         err(400, "Stato non valido")
     with connect() as conn:
         _richieste_tabella(conn)
-        conn.execute("UPDATE richieste_auto SET stato=%s, risposta=COALESCE(%s, risposta), updated_at=now() WHERE id=%s",
-                     (stato, (str(data.get("risposta") or "").strip()[:1000] or None), int(request.path_params["id"])))
+        n = conn.execute("UPDATE richieste_auto SET stato=%s, risposta=COALESCE(%s, risposta), updated_at=now() WHERE id=%s",
+                         (stato, (str(data.get("risposta") or "").strip()[:1000] or None), int(request.path_params["id"]))).rowcount
         conn.commit()
+    if not n:
+        err(404, "Richiesta non trovata")
     return jsonify({"ok": True})
 
 
@@ -5302,7 +5318,6 @@ def _tempo_reale():
             try:
                 from ..pricing import valore_reale as VR
                 from ..zone import tutte
-                from . import scovo as _sc
                 with connect() as conn:
                     conn.execute("SET statement_timeout = '900s'")
                     pr = VR.prova(conn, limite_gruppi=int(os.environ.get("VR_GRUPPI_PROVA", "400")))
@@ -5492,7 +5507,6 @@ def _tempo_reale():
             from collections import Counter as _C
             from ..pipeline import tempo_reale as tr
             from ..zone import tutte
-            from . import scovo as _sc
             L.warning("SOGLIA7K soglie in uso: SOGLIE_PV env=%r tabella=%s policy=%s esempi 5500->%s 6900->%s",
                       os.environ.get("SOGLIE_PV"), _sc.SOGLIE_PV[:3], _sc.POLICY_SITO, _sc.soglia(5500), _sc.soglia(6900))
             prov = list(tutte())
@@ -5610,7 +5624,6 @@ def _tempo_reale():
             from ..pipeline import tempo_reale as tr
             from ..pricing import policy_v2 as P
             from ..zone import tutte
-            from . import scovo as _sc
             L.warning("RIVCOSTI costo fisso in uso: %s €", P.PolicyConfig.from_env().costo_fisso)
             with connect() as conn:
                 conn.execute("SET statement_timeout = '600s'")
@@ -5894,7 +5907,6 @@ def _tempo_reale():
                 rows = sorted(rows, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or ""))
                 st = _C()
                 perse = [0]
-                from . import scovo as _sc
                 for i in range(0, len(rows), 40):
                     _aspetta_memoria(L, "BENZINA_SUBITO")
                     pezzo = [r["id"] for r in rows[i:i + 40]]

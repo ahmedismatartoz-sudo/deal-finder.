@@ -50,7 +50,7 @@ ZONE = {
 
 
 # zone su cui si lavora (raccolte e sito): per ora solo Milano e dintorni
-ATTIVE = [z.strip() for z in os.environ.get("ZONE_ATTIVE", "milano,torino").split(",") if z.strip() in ZONE]
+ATTIVE = [z.strip() for z in os.environ.get("ZONE_ATTIVE", "milano,torino" if os.environ.get("SITO_TORINO", "1") == "1" else "milano").split(",") if z.strip() in ZONE]
 
 
 def tutte() -> list[str]:

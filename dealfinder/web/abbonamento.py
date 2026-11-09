@@ -128,7 +128,7 @@ def non_rinnovare(conn) -> None:
             if not clienti:
                 clienti = [c["id"] for c in _get("/customers", {"email": em, "limit": 10}).get("data", [])]
             if not clienti:
-                log.warning("NON_RINNOVA %s: nessun cliente su Stripe", em)
+                log.warning("NON_RINNOVA %s: nessun cliente su Stripe", _imp(em))
                 continue
             trovati = 0
             for cu in clienti:
@@ -139,13 +139,13 @@ def non_rinnovare(conn) -> None:
                     if not sub.get("cancel_at_period_end"):
                         sub = _post(f"/subscriptions/{sub['id']}", {"cancel_at_period_end": "true"})
                     fine = sub.get("current_period_end") or (sub.get("items", {}).get("data") or [{}])[0].get("current_period_end")
-                    log.warning("NON_RINNOVA %s: abbonamento %s stato=%s rinnovo_spento=%s attivo_fino=%s", em, sub.get("id"),
+                    log.warning("NON_RINNOVA %s: abbonamento %s stato=%s rinnovo_spento=%s attivo_fino=%s", _imp(em), sub.get("id"),
                                 sub.get("status"), sub.get("cancel_at_period_end"),
                                 time.strftime("%Y-%m-%d", time.localtime(fine)) if fine else "?")
             if not trovati:
-                log.warning("NON_RINNOVA %s: nessun abbonamento attivo da fermare", em)
+                log.warning("NON_RINNOVA %s: nessun abbonamento attivo da fermare", _imp(em))
         except Exception as e:
-            log.warning("NON_RINNOVA %s: errore %s", em, str(e)[:300])
+            log.warning("NON_RINNOVA %s: errore %s", _imp(em), str(e)[:300])
 
 
 def prova_pronto() -> None:
@@ -467,3 +467,9 @@ def puo_vedere(row: dict | None) -> bool:
 
 def dump(evento: dict) -> str:
     return json.dumps({"id": evento.get("id"), "type": evento.get("type")})
+
+
+def _imp(em: str) -> str:
+    """9/11 (regola del cliente: mai email nei log): impronta corta dell'indirizzo al posto dell'indirizzo."""
+    import hashlib
+    return "h:" + hashlib.sha256(str(em or "").strip().lower().encode()).hexdigest()[:12]
