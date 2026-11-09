@@ -448,57 +448,58 @@ function grassetto(x){ return esc(x).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
    Una superficie sola per sezione, gerarchia fatta coi caratteri, righe sottili, e UN elemento forte: la scala dei
    prezzi (offri, chiudi, chiesta, non oltre, mercato) dove si vede a colpo d'occhio lo spazio per guadagnare. */
 const e2 = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " €";
-function scalaPrezzi(pt){
-  // pt: [{k, v, tono}] ; i segni stanno al posto vero, le etichette si spostano quel tanto che basta per non toccarsi
-  pt = pt.filter(x => x.v != null && x.v > 0).sort((a, b) => a.v - b.v);
-  if (pt.length < 3) return "";
-  const lo = pt[0].v, hi = pt[pt.length - 1].v; if (hi <= lo) return "";
-  pt.forEach(x => { x.x = (x.v - lo) / (hi - lo) * 100; });
-  const righe = [pt.filter((_, i) => i % 2 === 0), pt.filter((_, i) => i % 2 === 1)];
-  const GAP = 30;
-  righe.forEach(r => {
-    r.forEach((x, i) => { x.lx = i ? Math.max(x.x, r[i - 1].lx + GAP) : x.x; });
-    for (let i = r.length - 1; i >= 0; i--) { const max = i === r.length - 1 ? 100 : r[i + 1].lx - GAP; r[i].lx = Math.max(0, Math.min(r[i].lx, max)); }
-  });
-  const ch = pt.find(x => x.id === "chiudi"), me = pt.find(x => x.id === "mercato"), of = pt.find(x => x.id === "offri");
-  const lab = (x, su) => { const al = x.lx > 70 ? "r" : "l";
-    return `<div class="sp-l ${su ? "su" : "giu"} ${al} ${esc(x.tono || "")}" style="${al === "r" ? `right:${100 - x.lx}%` : `left:${x.lx}%`}"><span>${esc(x.k)}</span><b>${e2(x.v)}</b></div>`; };
-  return `<div class="sp" role="img" aria-label="${esc(pt.map(x => x.k + " " + e2(x.v)).join(", "))}">
-    <div class="sp-row">${righe[0].map(x => lab(x, true)).join("")}</div>
-    <div class="sp-track">${of && ch && ch.x > of.x ? `<i class="sp-fill info" style="left:${of.x}%;width:${ch.x - of.x}%"></i>` : ""}${ch && me && me.x > ch.x ? `<i class="sp-fill good" style="left:${ch.x}%;width:${me.x - ch.x}%"></i>` : ""}${pt.map(x => `<i class="sp-tick ${esc(x.tono || "")}" style="left:${x.x}%"></i>`).join("")}</div>
-    <div class="sp-row">${righe[1].map(x => lab(x, false)).join("")}</div>
-  </div>`;
-}
+/* 10/11 notte (cliente: "fallo come li fa Apple"): linguaggio di iOS. Una scheda riassunto con UN numero grande
+   (come Salute/Borsa), la barra a capsula col punto (come Meteo), poi elenchi raggruppati con etichetta a sinistra e
+   valore a destra, intestazione piccola sopra e nota grigia sotto (come Impostazioni). Carattere di sistema. */
+function apRiga(k, v, tono, sub){ return `<div class="ap-row"><div class="ap-k"><span>${k}</span>${sub ? `<small>${sub}</small>` : ""}</div><b class="${tono || ""}">${v}</b></div>`; }
+function apGruppo(titolo, righe, nota){ return righe ? `<h3 class="ap-head">${titolo}</h3><div class="ap-list">${righe}</div>${nota ? `<p class="ap-foot">${nota}</p>` : ""}` : ""; }
 function boxParere(t){
   const pa = t.parere, bl = {}; (pa.blocchi || []).forEach(b => { bl[b.tipo] = b; });
   const n = (b, k) => { const x = b && (b.numeri || []).find(y => y.k === k); return x ? x.v : null; };
   const chiesta = n(bl.prezzo, "Chiesta"), merc = n(bl.prezzo, "Mercato"), sotto = n(bl.prezzo, "Sotto di"), sopra = n(bl.prezzo, "Sopra di");
   const offri = n(bl.trattativa, "Offri"), chiudi = n(bl.trattativa, "Chiudi a"), oltre = n(bl.trattativa, "Non oltre");
   const ann = n(bl.rivendita, "Annuncio a"), vend = n(bl.rivendita, "Si chiude a"), netto = n(bl.rivendita, "Netto"), tempo = n(bl.rivendita, "Tempo");
-  const lede = [sotto ? `${e2(sotto)} sotto il mercato` : sopra ? `${e2(sopra)} sopra il mercato` : "", netto != null && netto > 0 ? `${e2(netto)} netti stimati` : ""].filter(Boolean).join(", ");
-  const scala = merc && offri && chiudi && merc > chiudi ? scalaPrezzi([
-    {id: "offri", k: "Offri", v: offri, tono: "info"}, {id: "chiudi", k: "Chiudi a", v: chiudi, tono: "good"},
-    chiesta && Math.abs(chiesta - chiudi) > (merc - offri) * .04 ? {id: "chiesta", k: "Chiesta", v: chiesta} : {},
-    oltre && oltre < merc && Math.abs(oltre - chiudi) > (merc - offri) * .04 ? {id: "oltre", k: "Non oltre", v: oltre, tono: "warn"} : {},
-    {id: "mercato", k: "Mercato", v: merc}]) : "";
-  const riga = (nome, val, sub, tono) => `<div class="lg-r"><span class="lg-k">${nome}</span><div class="lg-v"><b class="${tono || ""}">${val}</b>${sub ? `<small>${sub}</small>` : ""}</div></div>`;
-  let righe = "";
-  if (chiesta) righe += riga("Prezzo", e2(chiesta), merc ? `chiesti dal venditore, il mercato è ${e2(merc)}` : "chiesti dal venditore");
-  if (offri) righe += riga("Trattativa", `${e2(offri).replace(" €", "")} → ${e2(chiudi)}`, [`offri e chiudi qui${oltre ? `, non oltre ${e2(oltre)}` : ""}`, bl.trattativa && esc(bl.trattativa.testo || "")].filter(Boolean).join(". ").replace("..", "."));
-  if (vend) righe += riga("Rivendita", e2(vend), [`mettila a ${e2(ann)}${tempo ? `, venduta in ${esc(String(tempo)).replace("~", "circa ").replace(" gg", " giorni")}` : ""}`, bl.rivendita && esc(bl.rivendita.testo || "")].filter(Boolean).join(". ").replace("..", "."));
-  if (netto != null) righe += riga("Ti resta", (netto > 0 ? "+" : "") + e2(netto), "netti, tolti i costi e i giorni di giacenza", netto > 0 ? "good big" : "warn big");
-  if (bl.attenzione) righe += `<div class="lg-r"><span class="lg-k warn">Attenzione</span><div class="lg-v"><ul>${(bl.attenzione.punti || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div></div>`;
-  return `<div class="pr ${esc(pa.tono)}"><p class="pr-eye">Il nostro parere</p><h2>${esc(pa.giudizio)}</h2>${lede ? `<p class="pr-lede">${lede}.</p>` : ""}${scala}<div class="lg">${righe}</div></div>`;
+  const tono = pa.tono === "good" ? "good" : pa.tono === "warn" ? "warn" : "info";
+  const eroe = netto != null ? {v: netto, segno: netto > 0 ? "+" : "", cap: "Guadagno netto stimato, tolti i costi", tono: netto > 0 ? "good" : "warn"}
+    : sotto ? {v: sotto, segno: "", cap: "Sotto il valore di mercato", tono: "good"} : null;
+  let barra = "";
+  if (merc && offri && chiesta && merc > offri && chiesta >= offri && chiesta <= merc) {
+    const x = (chiesta - offri) / (merc - offri) * 100;
+    barra = `<div class="ap-g" role="img" aria-label="Offri ${e2(offri)}, prezzo chiesto ${e2(chiesta)}, mercato ${e2(merc)}">
+      <div class="ap-g-top"><span style="left:${Math.max(14, Math.min(86, x))}%">Chiesta ${e2(chiesta)}</span></div>
+      <div class="ap-g-t"><i style="left:${x}%"></i></div>
+      <div class="ap-g-l"><span>Offri <b>${e2(offri)}</b></span><span>Mercato <b>${e2(merc)}</b></span></div></div>`;
+  }
+  const acquisto = (chiesta ? apRiga("Prezzo chiesto", e2(chiesta)) : "") + (merc ? apRiga("Valore di mercato", e2(merc)) : "")
+    + (offri ? apRiga("Offri", e2(offri), "info") : "") + (chiudi ? apRiga("Chiudi a", e2(chiudi)) : "") + (oltre ? apRiga("Non oltre", e2(oltre), "warn") : "");
+  const rivendita = (ann ? apRiga("Metti l'annuncio a", e2(ann)) : "") + (vend ? apRiga("Si vende a", e2(vend)) : "")
+    + (tempo ? apRiga("Tempo di vendita", esc(String(tempo)).replace("~", "circa ").replace(" gg", " giorni")) : "")
+    + (netto != null ? apRiga("Guadagno netto", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "");
+  const att = bl.attenzione ? (bl.attenzione.punti || []).map(x => `<div class="ap-row"><div class="ap-k"><span>${esc(x)}</span></div><i class="ap-warn" aria-hidden="true">!</i></div>`).join("") : "";
+  return `<div class="ap">
+    <div class="ap-card ap-hero">
+      <div class="ap-cat ${tono}"><i aria-hidden="true"></i>Il nostro parere</div>
+      <h2>${esc(pa.giudizio)}</h2>
+      ${eroe ? `<div class="ap-num ${eroe.tono}">${eroe.segno}${e2(eroe.v).replace(" €", "")}<span>€</span></div><p class="ap-cap">${eroe.cap}</p>` : ""}
+      ${barra}
+    </div>
+    ${apGruppo("Acquisto", acquisto, bl.trattativa && esc(bl.trattativa.testo || ""))}
+    ${apGruppo("Rivendita", rivendita, bl.rivendita && esc(bl.rivendita.testo || ""))}
+    ${apGruppo("Da controllare", att, "")}
+  </div>`;
 }
 function boxVenditore(c){
   if (!c || !(c.righe || []).length) return "";
+  const tono = c.tono === "good" ? "good" : c.tono === "warn" ? "warn" : "info";
   const seg = Array.from({length: 10}, (_, i) => `<i class="${i < c.voto ? "on" : ""}"></i>`).join("");
-  return `<section class="d-sec tr"><div class="vd ${esc(c.tono || "info")}">
-    <p class="pr-eye">Il venditore</p>
-    <div class="vd-top"><h2>${esc(c.sintesi || "")}</h2><div class="vd-voto" role="img" aria-label="Trattativa ${c.voto} su 10"><b>${c.voto}</b><small>/10</small></div></div>
-    <div class="vd-seg" aria-hidden="true">${seg}</div>
-    ${c.attesa ? `<p class="vd-att">${esc(c.attesa)}</p>` : ""}
-    <div class="lg">${c.righe.map(r => `<div class="lg-r fatto"><span class="lg-k">${esc(r.k)}</span><b class="${esc(r.tono || "")}">${esc(r.v)}</b></div>`).join("")}</div>
+  return `<section class="d-sec tr"><div class="ap">
+    <h3 class="ap-title">Il venditore</h3>
+    <div class="ap-card ap-vd ${tono}">
+      <div class="ap-vd-top"><div><span class="ap-sub">Disponibilità a trattare</span><b>${esc(c.sintesi || "")}</b></div><div class="ap-voto" role="img" aria-label="${c.voto} su 10">${c.voto}<span>/10</span></div></div>
+      <div class="ap-seg" aria-hidden="true">${seg}</div>
+    </div>
+    <div class="ap-list">${c.righe.map(r => /^abbassato /.test(r.v) ? apRiga("Ha abbassato", esc(r.v.replace(/^abbassato /, "").replace(" · ", ", ")), r.tono) : apRiga(esc(r.k), esc(r.v.replace(" · ", ", ")), r.tono)).join("")}</div>
+    ${c.attesa ? `<h3 class="ap-head">Cosa aspettarsi</h3><div class="ap-card ap-text">${esc(c.attesa)}</div>` : ""}
   </div></section>`;
 }
 function boxVendute(mk){
@@ -506,19 +507,19 @@ function boxVendute(mk){
   const casi = mk.casi || [];
   if (!casi.length && !mk.giorni_vendita) return "";
   const gg = n => n <= 7 ? "good" : n <= 21 ? "" : "warn";
-  return `<section class="d-sec tr"><div class="vn-card"><p class="pr-eye">Uguali vendute di recente</p>
-    ${mk.giorni_vendita ? `<h2>In media in ${mk.giorni_vendita} giorni</h2>` : ""}
-    <div class="lg">${casi.map(c => `<div class="lg-r vn"><div class="vn-p"><b>${e2(c.prezzo)}</b><small>${[c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(", ")}</small></div>
-      <div class="vn-g"><b class="${gg(c.giorni)}">${c.giorni} ${c.giorni === 1 ? "giorno" : "giorni"}</b><small>${c.quando ? "venduta il " + esc(c.quando.slice(5).split("-").reverse().join("/")) : ""}</small></div></div>`).join("")}</div>
-    ${mk.trend != null && Math.abs(mk.trend) >= 2 ? `<p class="vn-nota">Prezzi ${mk.trend > 0 ? "in salita" : "in calo"} del ${Math.abs(mk.trend)}% nell'ultimo mese.</p>` : ""}
-  </div></section>`;
+  const nota = [mk.giorni_vendita ? `In media un'auto uguale si vende in ${mk.giorni_vendita} giorni` : "",
+    mk.trend != null && Math.abs(mk.trend) >= 2 ? `prezzi ${mk.trend > 0 ? "in salita" : "in calo"} del ${Math.abs(mk.trend)}% nell'ultimo mese` : ""].filter(Boolean).join("; ");
+  return `<section class="d-sec tr"><div class="ap"><h3 class="ap-title">Vendute di recente</h3>
+    ${casi.length ? `<div class="ap-list">${casi.map(c => apRiga(e2(c.prezzo), `${c.giorni} ${c.giorni === 1 ? "giorno" : "giorni"}`, gg(c.giorni) + " det",
+        [c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(", "))).join("")}</div>` : ""}
+    ${nota ? `<p class="ap-foot">${nota}.</p>` : ""}</div></section>`;
 }
 function boxTrattativa(t){
   if (!t || !t.parere) return "";
   const pa = t.parere, mk = t.mercato, ds = t.da_sapere;
   let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t)
       : `<div class="tr-parere ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2>${esc(pa.giudizio)}</h2>${(pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("")}</div>`}
-    ${t.messaggio ? `<button class="pill" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
+    ${t.messaggio ? `<button class="ap-btn" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
   h += boxVenditore(t.comportamento);
   if (mk) h += boxVendute(mk);
   if (ds) {

@@ -626,47 +626,48 @@ a{color:var(--focus)}
 .cm-tip b{display:block;color:#5fb2ff;font:800 12px var(--body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .cm-tip::after{content:"";position:absolute;right:34px;bottom:-7px;width:14px;height:14px;background:var(--ink);transform:rotate(45deg)}
 .cm-tip-x{position:absolute;top:4px;right:4px;width:30px;height:30px;border:0;background:transparent;color:inherit;font:400 22px/1 var(--body);opacity:.7}
-/* 10/11 notte, scheda auto: una superficie per sezione, niente riquadri annidati; la scala dei prezzi è l'unico elemento forte */
-.pr,.vd,.vn-card{--c:var(--tag);background:var(--card);border-radius:20px;padding:22px 20px 8px;font-variant-numeric:tabular-nums}
-.pr.good,.vd.good{--c:var(--good)} .pr.warn,.vd.warn{--c:var(--warn)}
-.pr-eye{margin:0 0 6px;font:600 13.5px var(--body);color:var(--muted)}
-.pr h2,.vd h2,.vn-card h2{margin:0;font:800 27px/1.1 var(--disp);letter-spacing:-.015em;color:var(--ink)}
-.pr h2{color:var(--c)}
-.pr-lede{margin:6px 0 0;font:500 16px/1.4 var(--body);color:var(--ink-2)}
-.sp{position:relative;margin:22px 2px 6px}
-.sp-row{position:relative;height:40px}
-.sp-l{position:absolute;display:flex;flex-direction:column;gap:1px;white-space:nowrap;transform:translateX(-50%);text-align:center}
-.sp-l.l{transform:none;text-align:left} .sp-l.r{transform:none;text-align:right}
-.sp-l.su{bottom:8px} .sp-l.giu{top:8px}
-.sp-l span{font:500 12.5px var(--body);color:var(--muted)}
-.sp-l b{font:700 15px var(--body);color:var(--ink)}
-.sp-l.info b{color:var(--tag)} .sp-l.good b{color:var(--good)} .sp-l.warn b{color:var(--warn)}
-.sp-track{position:relative;height:6px;border-radius:3px;background:var(--line)}
-.sp-fill{position:absolute;top:0;bottom:0;border-radius:3px}
-.sp-fill.info{background:var(--tag);opacity:.9} .sp-fill.good{background:var(--good);opacity:.55}
-.sp-tick{position:absolute;top:-5px;width:2px;height:16px;margin-left:-1px;border-radius:1px;background:var(--ink)}
-.sp-tick.info{background:var(--tag)} .sp-tick.good{background:var(--good)} .sp-tick.warn{background:var(--warn)}
-.lg{margin-top:14px}
-.lg-r{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;padding:14px 0;border-top:1px solid var(--line);align-items:baseline}
-.lg-k{font:500 14.5px var(--body);color:var(--muted)} .lg-k.warn{color:var(--warn)}
-.lg-v{display:flex;flex-direction:column;gap:3px;min-width:0}
-.lg-v b{font:700 20px/1.15 var(--disp);color:var(--ink);letter-spacing:-.01em}
-.lg-v b.big{font-size:30px;font-weight:800} .lg-v b.good,.lg-r b.good{color:var(--good)} .lg-v b.warn,.lg-r b.warn{color:var(--warn)}
-.lg-v small{font:400 14.5px/1.4 var(--body);color:var(--ink-2)}
-.lg-v ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
-.lg-v li{font:400 15px/1.4 var(--body);color:var(--ink-2)}
-.lg-r.fatto{grid-template-columns:auto minmax(0,1fr);padding:12px 0}
-.lg-r.fatto b{font:600 16px var(--body);color:var(--ink);text-align:right}
-.vd-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.vd h2{color:var(--c)}
-.vd-voto{color:var(--c);flex:none} .vd-voto b{font:800 27px/1 var(--disp)} .vd-voto small{font:600 14px var(--body);opacity:.75}
-.vd-seg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:12px}
-.vd-seg i{height:5px;border-radius:2.5px;background:var(--line)} .vd-seg i.on{background:var(--c)}
-.vd-att{margin:14px 0 0;font:500 16.5px/1.45 var(--body);color:var(--ink)}
-.lg-r.vn{grid-template-columns:minmax(0,1fr) auto;align-items:center}
-.vn-p,.vn-g{display:flex;flex-direction:column;gap:2px;min-width:0} .vn-g{text-align:right}
-.vn-p b{font:700 20px/1.15 var(--disp);letter-spacing:-.01em;color:var(--ink)}
-.vn-g b{font:600 16px var(--body);color:var(--ink)}
-.vn-p small,.vn-g small{font:400 13.5px var(--body);color:var(--muted)}
-.vn-nota{margin:0;padding:12px 0;border-top:1px solid var(--line);font:400 14px var(--body);color:var(--muted)}
-.lg-r.fatto b.good{color:var(--good)} .lg-r.fatto b.warn{color:var(--warn)}
+/* 10/11 notte, scheda auto in stile iOS: scheda riassunto, barra a capsula, elenchi raggruppati */
+.ap{--sep:rgba(60,60,67,.29);--lab2:rgba(60,60,67,.6);--fill:rgba(120,120,128,.16);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ap{--sep:rgba(84,84,88,.65);--lab2:rgba(235,235,245,.6);--fill:rgba(120,120,128,.24)}}
+:root[data-theme="dark"] .ap{--sep:rgba(84,84,88,.65);--lab2:rgba(235,235,245,.6);--fill:rgba(120,120,128,.24)}
+.ap .good{--c:var(--good)} .ap .warn{--c:var(--warn)} .ap .info{--c:var(--tag)}
+.ap-card{background:var(--card);border-radius:16px;padding:16px}
+.ap-title{margin:6px 4px 10px;font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.26px;color:var(--ink)}
+.ap-head{margin:22px 16px 7px;font-size:13px;line-height:18px;font-weight:400;letter-spacing:-.08px;text-transform:uppercase;color:var(--lab2)}
+.ap-foot{margin:7px 16px 0;font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--lab2)}
+.ap-hero{padding:16px 16px 18px}
+.ap-cat{display:flex;align-items:center;gap:6px;font-size:15px;line-height:20px;font-weight:600;letter-spacing:-.24px;color:var(--c)}
+.ap-cat i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.ap-hero h2{margin:10px 0 0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:.36px;letter-spacing:-.4px;color:var(--ink)}
+.ap-num{margin-top:14px;font-family:ui-rounded,"SF Pro Rounded",-apple-system,Inter,system-ui,sans-serif;font-size:52px;line-height:1;font-weight:700;letter-spacing:-1px;color:var(--c)}
+.ap-num span{margin-left:6px;font-size:24px;font-weight:600;letter-spacing:0;color:var(--lab2)}
+.ap-cap{margin:6px 0 0;font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--lab2)}
+.ap-g{margin-top:22px}
+.ap-g-top{position:relative;height:22px}
+.ap-g-top span{position:absolute;bottom:6px;transform:translateX(-50%);white-space:nowrap;font-size:13px;line-height:16px;font-weight:600;color:var(--ink)}
+.ap-g-t{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--tag),var(--good))}
+.ap-g-t i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#fff;border:3px solid var(--card);box-shadow:0 0 0 .5px rgba(0,0,0,.2);box-sizing:content-box;margin:-10px 0 0 -10px}
+.ap-g-l{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;line-height:18px;color:var(--lab2)}
+.ap-g-l b{font-weight:600;color:var(--ink)}
+.ap-list{background:var(--card);border-radius:16px;overflow:hidden}
+.ap-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:11px 16px}
+.ap-row + .ap-row::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--sep);transform:scaleY(.5);transform-origin:top}
+.ap-k{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ap-k span{font-size:17px;line-height:22px;letter-spacing:-.43px;color:var(--ink)}
+.ap-k small{font-size:13px;line-height:18px;letter-spacing:-.08px;color:var(--lab2)}
+.ap-row>b{flex:none;max-width:62%;text-align:right;font-size:17px;line-height:22px;font-weight:400;letter-spacing:-.43px;color:var(--lab2)}
+.ap-row>b.good,.ap-row>b.warn,.ap-row>b.info{color:var(--c);font-weight:600}
+.ap-list .ap-row .ap-k span:only-child{font-weight:400}
+.ap-warn{flex:none;width:22px;height:22px;border-radius:50%;background:var(--warn);color:#fff;font:700 14px/22px -apple-system,system-ui,sans-serif;font-style:normal;text-align:center}
+.ap-vd{margin-bottom:12px}
+.ap-vd-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.ap-vd-top>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ap-sub{font-size:15px;line-height:20px;letter-spacing:-.24px;color:var(--lab2)}
+.ap-vd-top b{font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.26px;color:var(--ink)}
+.ap-voto{font-family:ui-rounded,"SF Pro Rounded",-apple-system,Inter,system-ui,sans-serif;font-size:34px;line-height:1;font-weight:700;color:var(--c)}
+.ap-voto span{font-size:17px;font-weight:600;color:var(--lab2)}
+.ap-seg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:14px}
+.ap-seg i{height:6px;border-radius:3px;background:var(--fill)} .ap-seg i.on{background:var(--c)}
+.ap-text{font-size:17px;line-height:22px;letter-spacing:-.43px;color:var(--ink)}
+.ap-btn{width:100%;min-height:50px;margin-top:12px;border:0;border-radius:14px;background:var(--fill, rgba(120,120,128,.2));background:rgba(120,120,128,.2);color:var(--tag);font:600 17px/22px -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;letter-spacing:-.43px}
+.ap-btn:active{opacity:.6}
