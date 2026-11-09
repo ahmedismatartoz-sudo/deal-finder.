@@ -961,10 +961,13 @@ if __name__ == "__main__":
     # soprattutto fascia medio-alta, senza gonfiare i prezzi"): giro dedicato a Torino PRIMA della zona di Milano, ogni
     # TORINO_ORE ore. Stessa raccolta + valutazione + pubblicazione del giro di zona (stesse regole di prezzo e margine:
     # niente di diverso nel calcolo), ma centrato su Torino, raggio 100 km, auto da TORINO_MIN a TORINO_MAX euro.
-    if os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1":
+    # TORINO_ORA=1 (9/11 16:25, cliente: "fallo partire adesso"): su un cron lanciato a mano fa SOLO il giro di Torino
+    # e si ferma (niente altro lavoro di quel cron). Da togliere da Render dopo il giro.
+    _torino_ora = os.environ.get("TORINO_ORA") == "1"
+    if _torino_ora or (os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1"):
         try:
             from .ciclo import _due
-            if _due("torino_cron", int(os.environ.get("TORINO_ORE", "3"))):
+            if _torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "3"))):
                 from ..zone import TORINO
                 vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
                 prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
@@ -989,6 +992,9 @@ if __name__ == "__main__":
                     os.environ.update({k: v for k, v in vecchie.items() if v is not None})
         except Exception as e:
             log.warning("TORINO_CRON non riuscita: %s", str(e)[:300])
+        if _torino_ora:
+            log.warning("TORINO_ORA: giro di Torino finito, il cron si ferma qui")
+            sys.exit(0)
     # 28/10 22:08 (cliente: "300 auto medie e basse, supercar a parte, base di tutte le auto e quelle nuove"): raccolta
     # degli annunci nuovi della zona + scelta sulla base di TUTTE le auto del database + valutazione e pubblicazione,
     # qui nel cron (prima girava sul sito e lo mandava in crash per memoria). Impostazioni ZC_* (fascia media e bassa).
