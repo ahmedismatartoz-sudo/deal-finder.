@@ -73,7 +73,7 @@ const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
 function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:3, sort:S.sort,
   modello:S.modello, kmMin:S.kmMin, kmMax:S.kmMax, annoMin:S.annoMin, annoMax:S.annoMax, carb:S.carb, raggio:S.raggio, centro:S.centro}); }
-function resetFilters(){ Object.assign(S, {brands:[], modello:"", min:"", max:"", kmMin:"", kmMax:"", annoMin:"", annoMax:"", carb:[], raggio:0, stato:"tutte", bot:null}); }
+function resetFilters(){ Object.assign(S, {brands:[], modello:"", min:"", max:"", kmMin:"", kmMax:"", annoMin:"", annoMax:"", carb:[], raggio:0, stato:"tutte", zona:"tutte", bot:null}); }
 
 /* ---------- API ---------- */
 async function api(path, opts = {}) {
@@ -132,7 +132,7 @@ function filtered(over){
     .filter(c => (s.annoMin === "" || (c.anno || 0) >= Number(s.annoMin)) && (s.annoMax === "" || !c.anno || c.anno <= Number(s.annoMax)))
     .filter(c => !s.carb.length || s.carb.includes(carbKey(c.carb)))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
-    .filter(c => inc || sc || !s.zona || s.zona === "tutte" || (c.area || "milano") === s.zona)   // incidentate: tutta Italia
+    .filter(c => inc || sc || ((!s.zona || s.zona === "tutte") ? (c.area || "milano") !== "torino" : (c.area || "milano") === s.zona))   // incidentate: tutta Italia; 9/11: Torino solo se scelta nei filtri
     .filter(c => botMatch(c, s.bot))
     .filter(c => { if (!s.raggio || sc) return true; const d = distKm(c); return d == null || d <= s.raggio; })
     .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova))
@@ -220,7 +220,7 @@ function botMatch(c, b){
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
 const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["torino","Torino e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
-function zoneCounts(){ const o = {milano:0, torino:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.torino + o.ravenna + (o.italia || 0); return o; }
+function zoneCounts(){ const o = {milano:0, torino:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.ravenna + (o.italia || 0); return o; }
 function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","torino","ravenna"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
 const CARB = [["benzina","Benzina"],["diesel","Diesel"],["gpl","GPL"],["metano","Metano"],["ibrida","Ibrida"],["elettrica","Elettrica"]];
@@ -331,7 +331,7 @@ function viewList(){
   return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${!scV && !incV && zc.torino ? zoneBar : ""}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -532,6 +532,7 @@ function sheetFilters(){
   <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
     <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
     <div class="sheet-body">
+      <section class="fgrp"><h3>Zona</h3>${seg([["tutte", "Milano e dintorni"], ["torino", "Torino e dintorni"]], S.zona === "torino" ? "torino" : "tutte", "zona-f", 2)}</section>
       <section class="fgrp"><h3>Marca e modello</h3><div class="fgrid">
         ${sel("f-marca", "Marca", opts(marche.map(m => [m, m + " (" + bc[m] + ")"]), S.brands[0] || "", "Tutte le marche"))}
         ${sel("f-modello", "Modello", S.brands.length ? opts(modelli.map(m => [m, m + " (" + mc[m] + ")"]), S.modello, "Tutti i modelli") : `<option value="">Scegli prima la marca</option>`)}
@@ -1696,6 +1697,7 @@ $app.addEventListener("click", e => {
     }
     case "stato": S.stato = v; saveFilters(); break;
     case "zona": S.zona = S.zona === v ? "tutte" : v; saveFilters(); window.scrollTo(0, 0); break;
+    case "zona-f": S.zona = v; saveFilters(); break;
     case "raggio": S.raggio = Number(v); saveFilters(); window.scrollTo(0, 0); break;
     case "posizione": chiediPosizione(false); return;
     case "sconto": S.sconto = Number(v); saveFilters(); break;
