@@ -1480,3 +1480,36 @@ body,.app,.detail{background:var(--page)}
 .tab-ind{box-shadow:0 0 18px -4px color-mix(in srgb,var(--acc) 60%,transparent),inset 0 1px 0 rgba(255,255,255,.12)}
 @media (max-width:359px){.viz-row{gap:12px}.viz-ring{width:88px;height:88px}.ring-c b{font-size:18px}.ring-c span{font-size:9.5px;max-width:58px}.viz-card{padding:16px 14px 14px}}
 @media (max-width:359px){.viz-soft{display:none}}.viz-h h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ============ v4.1 ============ */
+/* prugna solo sul tasto Chiedi e sull'anello delle nuove */
+.viz-line .line{stroke:var(--link)}
+.viz-line .gs1{stop-color:var(--link);stop-opacity:.22} .viz-line .gs2{stop-color:var(--link)}
+.viz-line .pt{stroke:var(--link)}
+.viz-line .end{stroke:var(--link);filter:drop-shadow(0 0 5px color-mix(in srgb,var(--link) 45%,transparent))}
+.viz-line .ax{font:500 12px var(--body);fill:var(--muted);opacity:.85}
+.viz-line .grid{stroke:var(--ring-tr);stroke-width:1;stroke-dasharray:3 5}
+.tab-ind{box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+/* riassunto dell'elenco: una riga compatta */
+.viz-oggi{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;min-height:76px;border-radius:24px}
+.vo-c{display:flex;align-items:center;gap:9px;min-width:0}
+.vo-c>div{display:flex;flex-direction:column;min-width:0}
+.vo-c b{font:700 18px/22px var(--round);letter-spacing:-.3px;color:var(--ink);white-space:nowrap}
+.vo-c b small{font:600 13px var(--round);color:var(--muted)}
+.vo-c b.good{color:var(--good)}
+.vo-c span{font:500 11.5px/14px var(--body);color:var(--muted);white-space:nowrap}
+.vo-c .viz-ring{width:30px;height:30px}
+.vo-m{padding-left:10px;box-shadow:inset 1px 0 0 var(--line)}
+/* prezzo e costi: barre solo per le parti grandi */
+.vc-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
+.vb-plain{display:flex;flex-direction:column;gap:7px;padding-top:10px;box-shadow:inset 0 1px 0 var(--line)}
+.vb-plain div{display:flex;justify-content:space-between;gap:8px;font:var(--t-foot);color:var(--muted)}
+.vb-plain b{font:600 14px/18px var(--body);color:var(--ink);white-space:nowrap}
+.vb-plain b.warn{color:var(--warn)}
+.ring-c span{font:500 13px/15px var(--body);max-width:76px}
+@media (max-width:359px){.ring-c span{font-size:11.5px;max-width:60px}.vo-c span{font-size:10.5px}.vo-c b{font-size:16px}.vo-c{gap:6px}.vo-c .viz-ring{width:24px;height:24px}.viz-oggi{padding:12px}}
+/* vetro scuro più profondo, senza schiarire */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--glass:linear-gradient(180deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,.045) 100%);--glass-edge:inset 0 1px 0 rgba(255,255,255,.06)}
+  :root:not([data-theme="light"]) .ap-hero,:root:not([data-theme="light"]) .viz-oggi{background:radial-gradient(90% 70% at 15% 0%,rgba(77,102,131,.06),transparent 70%),radial-gradient(70% 60% at 100% 100%,rgba(164,150,181,.04),transparent 70%),var(--glass)}}
+:root[data-theme="dark"]{--glass:linear-gradient(180deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,.045) 100%);--glass-edge:inset 0 1px 0 rgba(255,255,255,.06)}
+:root[data-theme="dark"] .ap-hero,:root[data-theme="dark"] .viz-oggi{background:radial-gradient(90% 70% at 15% 0%,rgba(77,102,131,.06),transparent 70%),radial-gradient(70% 60% at 100% 100%,rgba(164,150,181,.04),transparent 70%),var(--glass)}
+@media (max-width:359px){.viz-h h3{font-size:16px}.viz-r b{font-size:18px}}

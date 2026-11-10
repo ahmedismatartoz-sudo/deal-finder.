@@ -1636,29 +1636,28 @@ function barre(righe){
 }
 function vizTesta(ic, titolo, destra){ return `<div class="viz-h"><span class="viz-ic">${ic}</span><h3>${titolo}</h3>${destra ? `<span class="viz-r">${destra}</span>` : ""}</div>`; }
 function vizOggi(list){
-  // riassunto dell'elenco: valori calcolati dalle auto caricate
+  // riassunto dell'elenco in una riga: valori calcolati dalle auto caricate
   const N = list.length; if (N < 2) return "";
   const g = list.map(c => c.gain).filter(x => x > -1e5 && isFinite(x));
-  const media = g.length ? g.reduce((a, b) => a + b, 0) / g.length : null, max = g.length ? Math.max(...g) : 0;
+  const media = g.length ? g.reduce((a, b) => a + b, 0) / g.length : null;
   const daCont = list.filter(c => !c.aperta).length;
   const conData = list.filter(c => c.nuova && !isNaN(Date.parse(c.nuova)));
   const nuove = conData.filter(c => Date.now() - Date.parse(c.nuova) < 864e5).length;
-  const righe = [{k: "Da contattare", v: `${daCont}/${N}`, p: daCont / N, tono: "info"}];
-  if (conData.length) righe.push({k: "Nuove da ieri", v: `${nuove}/${N}`, p: nuove / N, tono: "acc"});
-  if (media != null && max > 0) righe.push({k: "Margine medio", v: eur(media), p: media / max, tono: "good", tonoTesto: "good"});
-  return `<section class="viz-card viz-oggi" data-viz="oggi-${S.route}">${vizTesta(ICON.spark, "Oggi su Scovo", `${N} auto`)}
-    <div class="viz-row">${anelli(righe.map(r => ({p: r.p, tono: r.tono})), 104)}${barre(righe)}</div></section>`;
+  const cella = (ring, num, k) => `<div class="vo-c">${ring}<div><b>${num}</b><span>${k}</span></div></div>`;
+  return `<section class="viz-card viz-oggi" data-viz="oggi-${S.route}" aria-label="Oggi su Scovo">
+    ${cella(anelli([{p: daCont / N, tono: "info"}], 30), `${daCont}<small>/${N}</small>`, "da contattare")}
+    ${conData.length ? cella(anelli([{p: nuove / N, tono: "acc"}], 30), `${nuove}<small>/${N}</small>`, "nuove da ieri") : ""}
+    ${media != null ? `<div class="vo-c vo-m"><div><b class="good">${eur(media)}</b><span>margine medio</span></div></div>` : ""}</section>`;
 }
 function vizCosti(c){
   // prezzo rispetto al mercato (anello) e come si divide la rivendita (barre); torna esatto: prezzo + pezzi + costi + guadagno = rivendita
   if (c.pv || !c.mercato || !c.riv || !(c.gain > -1e5)) return "";
   const riv = c.riv, rip = c.rip_hi || 0, cf = S.costs || 0, f = c.prezzo / c.mercato, sotto = Math.round((1 - f) * 100);
   const righe = [{k: "Prezzo chiesto", v: eur(c.prezzo), p: c.prezzo / riv, tono: "info"},
-    {k: "Riparazioni", v: ripTxt(c), p: rip / riv, tono: "warn", tonoTesto: rip ? "warn" : ""},
-    {k: "Tagliando e pulizia", v: eur(cf), p: cf / riv, tono: "mute"},
     {k: "Guadagno", v: gainTxt(c), p: Math.max(0, c.gain) / riv, tono: "good", tonoTesto: "good"}];
+  const piccole = `<div class="vb-plain"><div><span>Riparazioni</span><b class="${rip ? "warn" : ""}">${ripTxt(c)}</b></div><div><span>Tagliando e pulizia</span><b>${eur(cf)}</b></div></div>`;
   return `<section class="viz-card" data-viz="costi-${c.id}">${vizTesta(ICON.cardp, "Prezzo e costi", `<span class="viz-soft">su ${eur(riv)} di rivendita</span>`)}
-    <div class="viz-row"><div class="ring-wrap">${anelli([{p: Math.min(1, f), tono: sotto >= 0 ? "info" : "warn"}], 112)}<div class="ring-c"><b class="${sotto >= 0 ? "good" : "warn"}">${sotto >= 0 ? "−" : "+"}${Math.abs(sotto)}%</b><span>${sotto >= 0 ? "sotto" : "sopra"} il mercato</span></div></div>${barre(righe)}</div>
+    <div class="viz-row"><div class="ring-wrap">${anelli([{p: Math.min(1, f), tono: sotto >= 0 ? "info" : "warn"}], 112)}<div class="ring-c"><b class="${sotto >= 0 ? "good" : "warn"}">${sotto >= 0 ? "−" : "+"}${Math.abs(sotto)}%</b><span>${sotto >= 0 ? "sotto" : "sopra"} il mercato</span></div></div><div class="vc-right">${barre(righe)}${piccole}</div></div>
     <p class="viz-foot">Mercato ${eur(c.mercato)}, rivendita veloce ${eur(riv)}. Già tolti i costi: al massimo ${eur(cf)} fissi più i pezzi.</p></section>`;
 }
 function vizStorico(c, t){
@@ -1667,22 +1666,29 @@ function vizStorico(c, t){
   const st = ((t && t.storico) || []).filter(x => x && x.prezzo && !isNaN(Date.parse(x.data)));
   const byDay = new Map(); st.forEach(x => byDay.set(x.data, x.prezzo));
   let pts = [...byDay].map(([d, p]) => [Date.parse(d), p]).sort((a, b) => a[0] - b[0]);
-  if (pts.length && Date.now() - pts[pts.length - 1][0] > 864e5) pts.push([Date.now(), pts[pts.length - 1][1]]);   // da allora l'annuncio è rimasto a quel prezzo
-  if (pts.length >= 2 && new Set(pts.map(p => p[1])).size >= 1 && st.length >= 2) {
-    const t0 = pts[0][0], t1 = pts[pts.length - 1][0], lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])), pad = Math.max((hi - lo) * .25, hi * .03);
-    const X = x => L + (x - t0) / Math.max(t1 - t0, 1) * (Rr - L), Y = y => bot - (y - (lo - pad)) / ((hi + pad) - (lo - pad)) * (bot - top);
+  if (pts.length && c.prezzo && Date.now() - pts[pts.length - 1][0] > 864e5) pts.push([Date.now(), c.prezzo]);   // oggi: il prezzo attuale dell'annuncio
+  else if (pts.length && c.prezzo) pts[pts.length - 1][1] = c.prezzo;
+  if (pts.length >= 2 && st.length >= 2) {
+    const t0 = pts[0][0], t1 = pts[pts.length - 1][0], lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1]));
+    const span = Math.max(hi - lo, hi * .2), y0 = lo - (span - (hi - lo)) / 2 - span * .12, y1 = hi + (span - (hi - lo)) / 2 + span * .12;
+    const LL = 8, RR = W - 8, X = x => LL + (x - t0) / Math.max(t1 - t0, 1) * (RR - LL), Y = y => bot - (y - y0) / (y1 - y0) * (bot - top);
     const P = pts.map(p => [X(p[0]), Y(p[1])]), d = curva(P), last = P[P.length - 1];
-    const diff = pts[pts.length - 1][1] - pts[0][1], gg = Math.round((t1 - t0) / 864e5);
-    return `<section class="viz-card" data-viz="storico-${c.id}">${vizTesta(ICON.spark, "Prezzo dell'annuncio", `<b>${eur(pts[pts.length - 1][1])}</b>`)}
-      <svg class="viz-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prezzo dell'annuncio da ${eur(pts[0][1])} a ${eur(pts[pts.length - 1][1])} in ${gg} giorni">
+    const diff = pts[pts.length - 1][1] - pts[0][1];
+    const gg = t && Number.isFinite(t.giorni_in_vendita) ? t.giorni_in_vendita : Math.round((t1 - t0) / 864e5);
+    const griglia = [hi, lo].filter((v, i, a) => a.indexOf(v) === i).map(v => `<line class="grid" x1="${LL}" x2="${RR}" y1="${R1(Y(v))}" y2="${R1(Y(v))}"/><text x="${LL}" y="${R1(Y(v)) + (v === lo && lo !== hi ? 15 : -7)}" class="ax">${eur(v)}</text>`).join("");
+    return `<section class="viz-card" data-viz="storico-${c.id}">${vizTesta(ICON.spark, "Prezzo annuncio", `<b>${eur(c.prezzo)}</b>`)}
+      <svg class="viz-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prezzo dell'annuncio da ${eur(pts[0][1])} a ${eur(c.prezzo)} in ${gg} giorni">
         <defs><linearGradient id="gl${c.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="gs1"/><stop offset="1" class="gs2"/></linearGradient></defs>
+        ${griglia}
         <path class="area" d="${d} L${R1(last[0])},${bot} L${R1(P[0][0])},${bot} Z" fill="url(#gl${c.id})"/>
         <path class="line" d="${d}" pathLength="1"/>
         ${P.slice(1, -1).map(p => `<circle class="pt" cx="${R1(p[0])}" cy="${R1(p[1])}" r="3"/>`).join("")}
+        <circle class="pt" cx="${R1(P[0][0])}" cy="${R1(P[0][1])}" r="3.5"/>
+        ${pts[0][1] !== hi && pts[0][1] !== lo ? `<text x="${R1(P[0][0])}" y="${R1(P[0][1]) - 9}" class="ax">${eur(pts[0][1])}</text>` : ""}
         <circle class="end" cx="${R1(last[0])}" cy="${R1(last[1])}" r="5"/>
-        <text x="${L}" y="${H - 6}" class="ax">${dataBreve(t0)}</text><text x="${Rr}" y="${H - 6}" class="ax" text-anchor="end">oggi</text>
+        <text x="${LL}" y="${H - 4}" class="ax">${dataBreve(t0)}</text><text x="${RR}" y="${H - 4}" class="ax" text-anchor="end">oggi</text>
       </svg>
-      <p class="viz-foot">${diff < 0 ? `Sceso di ${eur(-diff)} in ${gg} giorni` : diff > 0 ? `Salito di ${eur(diff)} in ${gg} giorni` : `Fermo a questo prezzo da ${gg} giorni`}</p></section>`;
+      <p class="viz-foot">${diff < 0 ? `Sceso di ${eur(-diff)}: in vendita da ${gg} giorni` : diff > 0 ? `Salito di ${eur(diff)}: in vendita da ${gg} giorni` : `Fermo a questo prezzo: in vendita da ${gg} giorni`}</p></section>`;
   }
   const casi = ((t && t.mercato && t.mercato.casi) || []).filter(x => x && x.prezzo);
   if (casi.length >= 2 && c.prezzo) {
