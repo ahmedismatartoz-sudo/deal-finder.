@@ -1513,3 +1513,11 @@ body,.app,.detail{background:var(--page)}
 :root[data-theme="dark"]{--glass:linear-gradient(180deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,.045) 100%);--glass-edge:inset 0 1px 0 rgba(255,255,255,.06)}
 :root[data-theme="dark"] .ap-hero,:root[data-theme="dark"] .viz-oggi{background:radial-gradient(90% 70% at 15% 0%,rgba(77,102,131,.06),transparent 70%),radial-gradient(70% 60% at 100% 100%,rgba(164,150,181,.04),transparent 70%),var(--glass)}
 @media (max-width:359px){.viz-h h3{font-size:16px}.viz-r b{font-size:18px}}
+/* ============ v4.2 ============ */
+/* tasto Chiedi: grafite come la barra, prugna solo nel microfono e in un alone sottile */
+.bot-fab,.cm-fab,.bot-fab.cm-fab{background:var(--dock);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);transform:none;box-shadow:var(--sh-dock),0 0 0 1.5px color-mix(in srgb,var(--acc) 38%,transparent)}
+.cm-fab .cm-fab-ic,.bot-fab .cm-fab-ic{color:color-mix(in srgb,var(--acc) 55%,#fff 45%)}
+.bot-fab:active,.cm-fab:active{transform:scale(.97)}
+@media (max-width:359px){.vo-c .viz-ring{display:none}.vo-c span{font-size:12px}.vo-m{padding-left:8px}}
+.vb-top span{white-space:normal}
+@media (max-width:374px){.d-body{padding-bottom:calc(58px + 30px + 16px + 16px + env(safe-area-inset-bottom,0px))}}

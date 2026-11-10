@@ -480,7 +480,7 @@ function boxParere(t, extra){
   const offri = n(bl.trattativa, "Offri"), chiudi = n(bl.trattativa, "Chiudi a"), oltre = n(bl.trattativa, "Non oltre");
   const ann = n(bl.rivendita, "Annuncio a"), vend = n(bl.rivendita, "Si chiude a"), netto = n(bl.rivendita, "Netto"), tempo = n(bl.rivendita, "Tempo");
   const tono = pa.tono === "good" ? "good" : pa.tono === "warn" ? "warn" : "info";
-  const eroe = netto != null ? {v: netto, segno: netto > 0 ? "+" : "", cap: "Guadagno netto stimato, tolti i costi", tono: netto > 0 ? "good" : "warn"}
+  const eroe = netto != null ? {v: netto, segno: netto > 0 ? "+" : "", cap: "Guadagno netto stimato dopo la trattativa, tolti i costi", tono: netto > 0 ? "good" : "warn"}
     : sotto ? {v: sotto, segno: "", cap: "Sotto il valore di mercato", tono: "good"} : null;
   let barra = "";
   if (merc && offri && chiesta && merc > offri && chiesta >= offri && chiesta <= merc) {
@@ -1654,7 +1654,7 @@ function vizCosti(c){
   if (c.pv || !c.mercato || !c.riv || !(c.gain > -1e5)) return "";
   const riv = c.riv, rip = c.rip_hi || 0, cf = S.costs || 0, f = c.prezzo / c.mercato, sotto = Math.round((1 - f) * 100);
   const righe = [{k: "Prezzo chiesto", v: eur(c.prezzo), p: c.prezzo / riv, tono: "info"},
-    {k: "Guadagno", v: gainTxt(c), p: Math.max(0, c.gain) / riv, tono: "good", tonoTesto: "good"}];
+    {k: "Guadagno al prezzo chiesto", v: gainTxt(c), p: Math.max(0, c.gain) / riv, tono: "good", tonoTesto: "good"}];
   const piccole = `<div class="vb-plain"><div><span>Riparazioni</span><b class="${rip ? "warn" : ""}">${ripTxt(c)}</b></div><div><span>Tagliando e pulizia</span><b>${eur(cf)}</b></div></div>`;
   return `<section class="viz-card" data-viz="costi-${c.id}">${vizTesta(ICON.cardp, "Prezzo e costi", `<span class="viz-soft">su ${eur(riv)} di rivendita</span>`)}
     <div class="viz-row"><div class="ring-wrap">${anelli([{p: Math.min(1, f), tono: sotto >= 0 ? "info" : "warn"}], 112)}<div class="ring-c"><b class="${sotto >= 0 ? "good" : "warn"}">${sotto >= 0 ? "−" : "+"}${Math.abs(sotto)}%</b><span>${sotto >= 0 ? "sotto" : "sopra"} il mercato</span></div></div><div class="vc-right">${barre(righe)}${piccole}</div></div>
