@@ -10,7 +10,7 @@ const store = {
   del(k) { try { localStorage.removeItem("scovo." + k); } catch (e) {} }
 };
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const num = n => Math.round(n).toLocaleString("it-IT");
+const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const eur = n => num(n) + " €";
 const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
 const plateOk = t => /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(t);
@@ -25,6 +25,8 @@ const ICON = {
   refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
   chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   phone: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+  cal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  eye: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
   camera: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>'
 };
 const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
@@ -309,7 +311,7 @@ function viewList(){
         ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
         <div class="gain"><span>${c.trattare ? "Guadagno se la tratti a " + eur(c.trattare.prezzo_obiettivo) : c.pv ? esc(c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
       </div>
-    </button>`).join("");
+    </button>${i === 0 && S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}`).join("");
   const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
@@ -317,11 +319,9 @@ function viewList(){
   const incV = S.route === "incidentate", ecoV = S.route === "economiche", scV = S.route === "supercar", trV = S.route === "trattare";
   const ac = activeChips();
   const SORTS = [["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
-  const fbar = `<div class="fbar">
+  const fbar = `<div class="qf" role="group" aria-label="Filtri e ordinamento">
       <button class="fbtn" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}<span>Filtri</span>${nf ? `<span class="count-pill">${nf}</span>` : ""}</button>
       <label class="fsort"><span class="sr">Ordina</span><select id="f-sort" aria-label="Ordina">${SORTS.map(([v,l]) => `<option value="${v}" ${S.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-    </div>
-    <div class="qf" role="group" aria-label="Filtri veloci">
       <label class="qsel ${S.max !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="q-pmax">${opts(P_STEPS.map(v => [v, "Fino a " + num(v) + " €"]), S.max, "Prezzo")}</select></label>
       <label class="qsel ${S.carb.length ? "on" : ""}"><span class="sr">Alimentazione</span><select id="q-carb">${S.carb.length > 1 ? `<option value="__multi" selected>${S.carb.length} alimentazioni</option>` : ""}${opts(CARB, S.carb.length === 1 ? S.carb[0] : "", "Alimentazione")}</select></label>
       <label class="qsel ${S.kmMax !== "" ? "on" : ""}"><span class="sr">Chilometri massimi</span><select id="q-kmax">${opts(KM_STEPS.map(v => [v, "Fino a " + num(v) + " km"]), S.kmMax, "Km")}</select></label>
@@ -331,7 +331,7 @@ function viewList(){
   return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${cmNovita()}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -393,7 +393,7 @@ function botBanner(n){
 function boxV1(c){ return `
       <div class="box">
         <div class="row"><span class="k">Prezzo richiesto</span><span class="v">${eur(c.prezzo)}</span></div>
-        <div class="row"><span class="k">Riparazioni (solo pezzi)</span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
+        <div class="row"><span class="k">Riparazioni<span class="only-wide"> (solo pezzi)</span></span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
         <div class="row" style="border-bottom:0"><span class="k">Rivendita veloce</span><span class="v">${c.economica && !c.mercato ? "da stimare" : eur(c.riv)}</span></div>
         <div class="note">${c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`}${c.economica ? " Auto non ancora controllata a mano: guarda bene foto e descrizione." : ""}</div>
         <div class="row total"><span class="k">Guadagno stimato</span><span class="v">${gainTxt(c)}</span></div>
@@ -474,7 +474,7 @@ function boxParere(t){
     + (offri ? apRiga("Offri", e2(offri), "info") : "") + (chiudi ? apRiga("Chiudi a", e2(chiudi)) : "") + (oltre ? apRiga("Non oltre", e2(oltre), "warn") : "");
   const rivendita = (ann ? apRiga("Metti l'annuncio a", e2(ann)) : "") + (vend ? apRiga("Si vende a", e2(vend)) : "")
     + (tempo ? apRiga("Tempo di vendita", esc(String(tempo)).replace("~", "circa ").replace(" gg", " giorni")) : "")
-    + (netto != null ? apRiga("Guadagno netto", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "");
+    + (netto != null ? apRiga("Guadagno dopo la trattativa", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "");
   const att = bl.attenzione ? (bl.attenzione.punti || []).map(x => `<div class="ap-row"><div class="ap-k"><span>${esc(x)}</span></div><i class="ap-warn" aria-hidden="true">!</i></div>`).join("") : "";
   return `<div class="ap">
     <div class="ap-card ap-hero">
@@ -514,11 +514,19 @@ function boxVendute(mk){
         [c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(", "))).join("")}</div>` : ""}
     ${nota ? `<p class="ap-foot">${nota}.</p>` : ""}</div></section>`;
 }
-function boxTrattativa(t){
+function boxSenzaTrattare(c){
+  const nota = c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`;
+  return `<div class="ap">${apGruppo("Al prezzo chiesto, senza trattare",
+    apRiga("Riparazioni", ripTxt(c), c.rip_hi ? "warn" : "", "solo pezzi") + apRiga("Rivendita veloce", c.economica && !c.mercato ? "da stimare" : eur(c.riv))
+    + apRiga("Guadagno al prezzo chiesto", gainTxt(c), "good"),
+    nota + ` Già tolti i costi del commerciante: al massimo ${eur(S.costs)} fissi (tagliando e pulizia) più i pezzi.${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}`)}</div>`;
+}
+function boxTrattativa(t, extra){
   if (!t || !t.parere) return "";
   const pa = t.parere, mk = t.mercato, ds = t.da_sapere;
   let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t)
       : `<div class="tr-parere ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2>${esc(pa.giudizio)}</h2>${(pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("")}</div>`}
+    ${extra || ""}
     ${t.messaggio ? `<button class="ap-btn" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
   h += boxVenditore(t.comportamento);
   if (mk) h += boxVendute(mk);
@@ -561,20 +569,20 @@ function viewDetail(){
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
-      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : boxV1(c)}
-      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
+      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere ? "" : boxV1(c)}
+      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv ? "" : boxSenzaTrattare(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
       ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
       ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
+      <p class="hint dock-note">${contact.note}.${perm("appuntamenti") && d && !d.err ? " Scegli giorno e ora: l'appuntamento col privato lo fissiamo noi." : ""}</p>
       <span class="where">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</span>
     </div>
-    <div class="dock"><div class="dock-in">
-      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}${contact.label}</a>`
-          : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}${contact.label}</button>`}
-      <span class="talk-note">${contact.note}</span>
-      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open">${ICON.chat}Fissa l'appuntamento</button><span class="talk-note">Scegli giorno e ora: l'appuntamento col privato lo fissiamo noi</span>` : ""}
-    </div></div>
+    <div class="dock"><div class="dock-in"><div class="dock-row">
+      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`
+          : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}<span>${contact.label}</span></button>`}
+      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open">${ICON.cal}<span>Fissa l'appuntamento</span></button>` : ""}
+    </div></div></div>
   </div>`;
 }
 
@@ -592,7 +600,7 @@ function sheetFilters(){
   const cc = {}; filtered({carb: []}).forEach(c => { const k = carbKey(c.carb); cc[k] = (cc[k] || 0) + 1; });
   const anni = []; for (let y = new Date().getFullYear(); y >= 2007; y--) anni.push([y, String(y)]);
   const seg = (items, cur, act, cols) => `<div class="seg" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${items.map(([v,l]) => `<button data-act="${act}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join("")}</div>`;
-  const sel = (id, label, inner) => `<label class="fsel"><span>${label}</span><select id="${id}">${inner}</select></label>`;
+  const sel = (id, label, inner) => `<label class="frow"><span class="frow-k">${label}</span><span class="frow-v" aria-hidden="true">${(inner.match(/<option[^>]*\sselected[^>]*>([^<]*)/) || inner.match(/<option[^>]*>([^<]*)/) || ["", ""])[1]}</span>${ICON.next}<select id="${id}">${inner}</select></label>`;
   return `
   <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
     <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
@@ -850,7 +858,7 @@ function viewRicambi(){
 const P = {open:false, err:"", ok:false, busy:false};
 function viewProfilo(){
   const u = S.user || {};
-  return svcHead("Profilo", u.email || "") + `<main class="list">
+  return svcHead("Profilo", u.email || "").replace('class="top"', 'class="top top-plain"') + `<main class="list">
     <div class="sec-title">Account</div>
     <div class="plist"><div><span>Nome</span><span class="v">${esc(u.name || "")}</span></div><div><span>Email</span><span class="v">${esc(u.email || "")}</span></div>
       <button data-act="pwd"><span>Cambia password</span>${ICON.next}</button>
@@ -866,8 +874,8 @@ function viewProfilo(){
     <span class="hint" style="padding:0 4px">Lo sconto di rivendita si cambia dai Filtri. Ogni auto sparisce dopo che 7 commercianti l'hanno contattata.</span>
     ${installHint()}
     <div class="sec-title">Scovo</div>
-    <div class="plist">${u.role === "admin" ? `<a href="/gestione"><span>Gestione (amministratore)</span>${ICON.next}</a>` : ""}<a href="/chi-siamo"><span>Chi siamo</span>${ICON.next}</a><a href="/privacy"><span>Privacy</span>${ICON.next}</a><a href="/condizioni"><span>Condizioni d'uso</span>${ICON.next}</a>
-      <button data-act="logout"><span class="danger">Esci</span></button></div>
+    <div class="plist">${u.role === "admin" ? `<a href="/gestione"><span>Gestione (amministratore)</span>${ICON.next}</a>` : ""}<a href="/chi-siamo"><span>Chi siamo</span>${ICON.next}</a><a href="/privacy"><span>Privacy</span>${ICON.next}</a><a href="/condizioni"><span>Condizioni d'uso</span>${ICON.next}</a></div>
+    <div class="plist plist-solo"><button data-act="logout"><span class="danger">Esci</span></button></div>
   </main>`;
 }
 let installEvt = null;
@@ -903,7 +911,7 @@ function socialButtons(){
 function viewLogin(){
   const req = S.route === "prova";
   const esito = ESITI_ACCESSO[S.esitoAccesso || ""];
-  const top = `<div class="auth-top"><a class="l-brand" href="#/">${LOGO(34)}<span>scovo</span></a><a class="l-link" href="#/">Torna alla pagina iniziale</a></div>`;
+  const top = `<div class="auth-top"><a class="l-brand" href="#/">${LOGO(34)}<span>scovo</span></a><a class="l-link auth-back" href="#/" aria-label="Indietro, torna alla pagina iniziale">${ICON.back}Indietro</a></div>`;
   if (req) return `<div class="auth">${top}
     <div><h1>Prova Scovo</h1><p class="l-sub">Lasciaci i tuoi dati: ti attiviamo l'accesso e ti spieghiamo come funziona.</p></div>
     ${L.sent ? `<div class="note-box info">Richiesta inviata. Ti contattiamo entro un giorno lavorativo.</div><a class="l-btn l-btn-blue" href="#/">Torna alla pagina iniziale</a>` : `
@@ -926,8 +934,7 @@ function viewLogin(){
     ${socialButtons()}
     <form id="login-form" novalidate>
       <label class="field">Email<input name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required value="${esc(L.email)}"></label>
-      <label class="field">Password<input name="password" id="l-pwd" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
-      <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:-4px"><input type="checkbox" onchange="document.getElementById('l-pwd').type=this.checked?'text':'password'" style="width:20px;height:20px"> Mostra password</label>
+      <label class="field">Password<span class="pw-wrap"><input name="password" id="l-pwd" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><button type="button" class="pw-eye" aria-label="Mostra password" aria-pressed="false" onclick="var i=document.getElementById('l-pwd'),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',s)">${ICON.eye}</button></span></label>
       ${L.err ? `<span class="err" role="alert">${esc(L.err)}</span>` : ""}
       <button class="l-btn l-btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Entro…" : "Entra"}</button>
     </form>
@@ -1394,9 +1401,12 @@ const CM = {testo: "", rec: false, busy: false, trascrivo: false, err: "", sent:
 const CM_IDEE = ["Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €",
                  "Una 500 o una Panda a benzina sotto i 5.000 €, anche con qualche graffio",
                  "SUV ibrido, Toyota C-HR o Kia Niro, dal 2019, budget 17.000 €"];
+function cmNovita(){
+  if (store.get("cmTipVisto", false) || !canBrowse() || S.paywall) return "";
+  return `<div class="tip cm-nov" role="note"><span class="eur" aria-hidden="true">${MIC}</span><span><b>Novità.</b> Dicci a voce che auto cerchi: la troviamo noi in 30 minuti</span><button class="tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>`;
+}
 function cmFab(){
-  const tip = !store.get("cmTipVisto", false);
-  return `${tip ? `<div class="cm-tip" role="note"><b>Novità</b> Dicci a voce che auto cerchi: la troviamo noi in 30 minuti<button class="cm-tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>` : ""}<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;
+  return `<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;
 }
 async function cmCarica(){
   try { const d = await api("/api/richieste-auto"); CM.max = !!d.max; CM.lista = d.richieste || []; }
@@ -1423,8 +1433,8 @@ function cmIntanto(){
       <span>${eur(c.prezzo)} · <em>+${eur(Math.max(c.guadagno_da, 0))}</em></span></span></button>`).join("")}</div>`;
 }
 function sheetCerca(){
-  const head = `<div class="sheet-head"><h2 id="cmh">Cercamela tu</h2><button class="link" data-act="close">Chiudi</button></div>`;
-  const wrap = b => `<div class="sheet-wrap" data-act="close-bg"><div class="sheet cm-sheet" role="dialog" aria-modal="true" aria-labelledby="cmh">${head}<div class="sheet-body cm-body">${b}</div></div></div>`;
+  const head = `<div class="sheet-head"><h2 id="cmh" class="sr">Cercamela tu</h2><button class="link" data-act="close">Chiudi</button></div>`;
+  const wrap = (b, foot) => `<div class="sheet-wrap" data-act="close-bg"><div class="sheet cm-sheet" role="dialog" aria-modal="true" aria-labelledby="cmh">${head}<div class="sheet-body cm-body">${b}</div>${foot ? `<div class="sheet-foot">${foot}</div>` : ""}</div></div>`;
   if (CM.max === null) return wrap(`<div class="cm-wait"><span class="spin" aria-hidden="true"></span>Un attimo…</div>`);
   if (!S.token) return wrap(`<div class="cm-hero"><div class="cm-badge">Piano Max</div><h3>Dicci che auto cerchi, la troviamo noi</h3>
       <p>Entra con il tuo account per chiederci un'auto su misura.</p></div><a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a>`);
@@ -1443,10 +1453,8 @@ function sheetCerca(){
       <p>Dillo come lo diresti a un collega: marca, modello, anno, km, alimentazione e quanto vuoi spendere. La migliore dei privati in zona la troviamo noi.</p></div>
     ${parla ? `<div class="cm-mic-wrap"><button class="cm-mic${CM.rec ? " on" : ""}" data-act="cm-mic" aria-label="${CM.rec ? "Ho finito di parlare" : "Parla"}" ${CM.trascrivo || CM.busy ? "disabled" : ""}>${CM.rec ? '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></svg>' : MIC.replace(/width="26" height="26"/, 'width="38" height="38"')}<span class="cm-ring"></span></button>${stato}</div>` : `<div class="cm-mic-wrap">${stato}</div>`}
     <label class="cm-field"><span>La tua richiesta</span><textarea id="cm-text" rows="4" maxlength="1500" placeholder="Es. Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €">${esc(CM.testo)}</textarea></label>
-    ${!CM.testo ? `<div class="cm-ideas">${CM_IDEE.map(t => `<button class="pill" data-act="cm-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>` : ""}
-    ${CM.err ? `<span class="err" role="alert">${esc(CM.err)}</span>` : ""}
-    <button class="btn btn-blue cm-send" data-act="cm-send" ${CM.busy || CM.rec || CM.trascrivo || CM.testo.trim().length < 6 ? "disabled" : ""}>${CM.busy ? "Invio…" : "Trovamela"}</button>
-    ${cmLista()}`);
+    ${!CM.testo ? `<div class="cm-sec">Esempi</div><div class="cm-ideas">${CM_IDEE.map(t => `<button class="pill" data-act="cm-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>` : ""}
+    ${cmLista()}`, `${CM.err ? `<span class="err" role="alert">${esc(CM.err)}</span>` : ""}<button class="btn btn-blue cm-send" data-act="cm-send" ${CM.busy || CM.rec || CM.trascrivo || CM.testo.trim().length < 6 ? "disabled" : ""}>${CM.busy ? "Invio…" : "Trovamela"}</button>`);
 }
 function cmPaint(){ if (S.sheet === "cerca") render({keep:true}); }
 function cmAggiungi(t){ t = String(t || "").trim(); if (!t) return; CM.testo = (CM.testo ? CM.testo.replace(/\s+$/, "") + " " : "") + t; }
@@ -1518,10 +1526,24 @@ async function cmInvia(){
   } catch (e) { CM.err = e.message || "Invio non riuscito: riprova"; }
   CM.busy = false; cmPaint();
 }
+const ALTRE = ["incidentate","economiche","supercar"];
 function tabBar(){
   const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
-  return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg><span>${l}</span></button>`).join("")}</nav>`;
+  const ok = TABS.filter(([id]) => tabOk(id)), altre = ok.filter(([id]) => ALTRE.includes(id));
+  const ic = p => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  const voce = ([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}">${ic(p)}<span>${l}</span></button>`;
+  const altro = altre.length ? `<button data-act="altro" aria-haspopup="dialog" aria-current="${ALTRE.includes(cur) ? "page" : "false"}">${ic('<circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01"/>')}<span>Altro</span></button>` : "";
+  return `<nav class="tabs" aria-label="Sezioni">${ok.filter(([id]) => !ALTRE.includes(id) && id !== "profilo").map(voce).join("")}${altro}${ok.filter(([id]) => id === "profilo").map(voce).join("")}</nav>`;
 }
+function sheetAltro(){
+  const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet al-sheet" role="dialog" aria-modal="true" aria-labelledby="alh">
+    <div class="sheet-head"><h2 id="alh">Altro</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body"><div class="sec-title">Altre sezioni</div><div class="plist">${TABS.filter(([id]) => ALTRE.includes(id) && tabOk(id)).map(([id,l,p]) =>
+      `<button data-act="altro-vai" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><span class="pl-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</span>${ICON.next}</button>`).join("")}</div></div>
+  </div></div>`;
+}
+
 function render(opts){
   opts = opts || {};
   const y = window.scrollY;
@@ -1544,7 +1566,7 @@ function render(opts){
   if (canBrowse()) {
     if ((isList(S.route) || S.route === "vendute") && !S.sheet && !VC.on && !S.paywall) html += cmFab();     // 9/11: "Chiedi" = Cercamela (piano Max)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : "";
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : S.sheet === "altro" ? sheetAltro() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", trattare:"Da trattare", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
@@ -1718,6 +1740,8 @@ $app.addEventListener("click", e => {
     case "brand": S.brands = S.brands.includes(v) ? S.brands.filter(x => x !== v) : S.brands.concat([v]); saveFilters(); break;
     case "band": setBand(v); saveFilters(); break;
     case "filters": S.sheet = "filters"; break;
+    case "altro": S.sheet = "altro"; break;
+    case "altro-vai": S.sheet = null; if (v === S.route) break; go(v); return;
     case "parts": S.sheet = "parts"; break;
     case "app-open": apApri(); return;
     case "ap-giorno": apNota(); AP.giorno = v; AP.err = ""; break;

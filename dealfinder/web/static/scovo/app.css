@@ -934,3 +934,73 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .row .v{margin-left:auto;text-align:right}
 .auth-top{gap:12px} .auth-top .l-link{text-align:right;justify-content:flex-end}
 .cm-ideas,.cm-list,.cm-req,.cm-hero,.cm-field,.cm-send,.fgrp,.fgrid,.seg{flex:none}
+/* ============ 10/11 giro 2: correzioni del giudice ============ */
+/* elenco: intestazione corta, una riga sola di controlli che scorre */
+.top{gap:8px;padding-bottom:10px}
+.qf{align-items:center}
+.qf .fbtn{flex:none;padding:0 16px;border-radius:22px}
+.qf .fsort{flex:none;position:relative}
+.qf .fsort select{border-radius:22px;width:auto;max-width:none;padding:0 28px 0 14px;font-weight:500}
+.vet-h{font:var(--t-foot);color:var(--muted);margin:0 var(--gut) -8px;text-wrap:auto}
+.card .photo{aspect-ratio:auto;height:150px}
+.tip .eur svg{width:16px;height:16px}
+.list{padding-top:12px;gap:12px}
+/* tasto Chiedi: cerchio da 56pt col solo microfono */
+.bot-fab.cm-fab{width:56px;height:56px;min-height:56px;padding:0;justify-content:center;border-radius:28px}
+.cm-fab .cm-fab-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.cm-fab .cm-fab-ic{background:none;width:auto;height:auto} .cm-fab .cm-fab-ic svg{width:26px;height:26px}
+/* barra in fondo: 5 voci */
+.tabs button{font:500 10px/12px var(--body);letter-spacing:0}
+.tabs button span{overflow:visible;text-overflow:clip}
+.pl-ic{display:flex;align-items:center;gap:12px} .plist .pl-ic svg{color:var(--link);width:24px;height:24px}
+.plist [aria-current="page"] .pl-ic{font-weight:600}
+/* scheda: barra opaca, due tasti sulla stessa riga */
+.dock-in{background:var(--card);-webkit-backdrop-filter:none;backdrop-filter:none}
+.dock-row{display:flex;gap:8px}
+.dock-row .talk{flex:1 1 0;min-width:0;width:auto;margin:0;padding:6px 8px;font:600 15px/18px var(--body);text-align:center}
+.dock-row .talk svg{flex:none;width:18px;height:18px}
+.d-body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.dock-note{margin:0}
+@media (max-width:359px){.only-wide{display:none}.dock-row .talk svg{display:none}.dock-row .talk{font-size:14px}}
+/* pannelli: titolo centrato 17 semibold, Chiudi a destra */
+.fpanel .sheet-head,.al-sheet .sheet-head,.cm-sheet .sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 var(--gut) 2px}
+.fpanel .sheet-head h2,.al-sheet .sheet-head h2{grid-column:2;font:var(--t-head);letter-spacing:-.2px}
+.fpanel .sheet-head .link,.al-sheet .sheet-head .link,.cm-sheet .sheet-head .link{grid-column:3;justify-self:end}
+.al-sheet .sheet-body{gap:16px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+/* filtri: righe da elenco raggruppato, il select nativo sta invisibile sopra la riga */
+.fgrid{display:block;padding:0;overflow:hidden}
+.frow{position:relative;display:flex;align-items:center;gap:8px;min-height:var(--tap);padding:11px var(--gut);font:var(--t-body);color:var(--ink)}
+.frow + .frow::before{content:"";position:absolute;top:0;left:var(--gut);right:0;height:.5px;background:var(--line)}
+.frow-k{flex:none}
+.frow-v{flex:1;min-width:0;text-align:right;color:var(--muted)}
+.frow svg{flex:none;width:14px;height:14px;color:var(--grab)}
+.frow select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;-webkit-appearance:none;appearance:none;border:0}
+.frow:focus-within{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r-ctl)}
+.fcheck{display:block;background:var(--card);border-radius:var(--r-card);overflow:hidden}
+.fck{position:relative;width:100%;min-height:var(--tap);padding:11px var(--gut);border-radius:0;background:transparent;font:var(--t-body);gap:0}
+.fck + .fck::before{content:"";position:absolute;top:0;left:var(--gut);right:0;height:.5px;background:var(--line)}
+.fck i{order:3;margin-left:auto;width:22px;height:22px;border:0;border-radius:0;background:none!important}
+.fck[aria-pressed="true"] i::after{width:12px;height:6px;border:2.5px solid var(--link);border-top:0;border-right:0}
+.fck .n{margin-left:8px;font:var(--t-sub);color:var(--muted)}
+.fck:disabled{opacity:.45}
+.seg button{padding:4px 8px;font:500 15px/18px var(--body)}
+/* Cercamela: un titolo, tasto fisso in basso */
+.cm-sheet .sheet-foot{display:flex;flex-direction:column;gap:6px}
+.cm-badge{background:none;padding:0;border-radius:0;color:var(--muted);font:var(--t-foot);text-transform:none;letter-spacing:0}
+.cm-hero{padding-top:0} .cm-hero h3{margin-top:2px}
+.cm-field textarea{resize:none}
+.cm-body{padding-bottom:var(--gut)}
+/* profilo */
+.top-plain .logo{display:none} .top-plain .word{font:var(--t-large);letter-spacing:-.4px}
+.plist svg{width:14px;height:14px;color:var(--grab)}
+.plist-solo>*{justify-content:center}
+/* entra */
+.auth-top{flex-direction:row-reverse}
+.auth .auth-back{gap:2px;font:var(--t-body);margin-left:-6px}
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{padding-right:52px!important}
+.pw-eye{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:var(--tap);height:var(--tap);border:0;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center;border-radius:22px}
+.pw-eye[aria-pressed="true"]{color:var(--link)}
+.foot a,.auth .hint a{color:var(--link);text-decoration:none}
+.dock-row .talk{flex:1 1 auto;padding:6px;gap:5px;letter-spacing:-.2px}
+@media (min-width:375px){.dock-row .talk span{white-space:nowrap}}
