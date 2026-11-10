@@ -10,7 +10,7 @@ const store = {
   del(k) { try { localStorage.removeItem("scovo." + k); } catch (e) {} }
 };
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const num = n => Math.round(n).toLocaleString("it-IT");
+const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const eur = n => num(n) + " €";
 const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
 const plateOk = t => /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(t);
@@ -25,6 +25,22 @@ const ICON = {
   refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
   chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   phone: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+  cal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  eye: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+  search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  sliders: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+  pin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  lock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  cardp: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></svg>',
+  build: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V7l8-4 8 4v14"/><path d="M9 21v-5h6v5M9 10h.01M15 10h.01"/></svg>',
+  info: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  shield: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg>',
+  doc: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
+  out: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg>',
+  gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>',
+  spark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
+  quote: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h4v4c0 3-1.5 5-4 6M14 7h4v4c0 3-1.5 5-4 6"/></svg>',
+  x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   camera: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>'
 };
 const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
@@ -275,13 +291,16 @@ async function loadDetail(id){
 }
 
 /* ---------- viste: Affari ---------- */
-function header(title, sub, right){
-  return `<header class="top"><div class="top-row"><div class="brand">${LOGO(38)}<div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="word">${title}</span><span class="sub" id="count">${sub}</span></div></div>${right || ""}</div>`;
+function header(title, sub, right, kick){
+  return `<header class="top"><div class="top-row"><div class="hello">${String(kick || "Scovo").toLowerCase() === String(title).toLowerCase() ? "" : `<span class="kick">${LOGO(18)}<span>${kick || "Scovo"}</span></span>`}<span class="word" role="heading" aria-level="1">${title}</span><span class="sub" id="count">${sub}</span></div>${right || ""}</div>`;
 }
+function oggi(){ const t = new Date().toLocaleDateString("it-IT", {weekday: "long", day: "numeric", month: "long"}); return t.charAt(0).toUpperCase() + t.slice(1); }
+function iniziali(){ const n = ((S.user && (S.user.name || S.user.email)) || "").trim(); return esc(n ? n.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("") : "·"); }
+function avatarBtn(){ return S.token ? `<button class="avatar" data-act="tab" data-v="profilo" aria-label="Profilo">${iniziali()}</button>` : ""; }
 function viewList(){
   if (!S.cars) {
     const sk = `<div class="skel" aria-hidden="true"><div class="photo"></div><div class="bar"></div><div class="bar s"></div><div class="bar"></div></div>`;
-    return header("scovo", S.loadErr ? "Non riesco a caricare le auto" : "Carico le auto…") + `</header><main class="list">${S.loadErr
+    return header(S.user && S.user.name ? "Ciao, " + esc(String(S.user.name).trim().split(/\s+/)[0]) : "Le auto di oggi", S.loadErr ? "Non riesco a caricare le auto" : "Carico le auto…", "", oggi()) + `</header><main class="list">${S.loadErr
       ? `<div class="empty"><strong style="font:700 19px var(--disp)">${esc(S.loadErr)}</strong><button class="btn" data-act="reload">Riprova</button></div>`
       : sk + sk + sk}</main>`;
   }
@@ -293,12 +312,12 @@ function viewList(){
   const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
-  const TIT = {all: "Dalla più conveniente: margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
+  const TIT = {all: "Margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</h2>` : ""}
     <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
       <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}</div>
       <div class="card-body">
-        <div><div class="name">${esc(c.nome)}</div><div class="meta">${esc(meta(c))}</div></div>
+        <div class="c-head"><div class="name">${esc(c.nome)}</div><div class="info-chips">${meta(c).split(" · ").map((x, k, a) => `<span${k === a.length - 1 && a.length > 3 ? ' class="loc"' : ""}>${k === a.length - 1 && a.length > 3 ? ICON.pin : ""}${esc(x)}</span>`).join("")}</div></div>
         <div class="trio">
           <div><span class="lbl">Prezzo</span><span class="val">${eur(c.prezzo)}</span></div>
           ${c.economica ? `<div><span class="lbl">Mercato</span><span class="val">${c.mercato ? "~" + eur(c.mercato) : "da stimare"}</span></div>
@@ -310,28 +329,29 @@ function viewList(){
         <div class="gain"><span>${c.trattare ? "Guadagno se la tratti a " + eur(c.trattare.prezzo_obiettivo) : c.pv ? esc(c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
       </div>
     </button>`).join("");
-  const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
+  const empty = `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
-  const right = `<div style="display:flex;gap:8px;align-items:center"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button></div>`;
+  const right = `<div class="top-act"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>${avatarBtn()}</div>`;
   const incV = S.route === "incidentate", ecoV = S.route === "economiche", scV = S.route === "supercar", trV = S.route === "trattare";
   const ac = activeChips();
   const SORTS = [["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
-  const fbar = `<div class="fbar">
-      <button class="fbtn" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.filter}<span>Filtri</span>${nf ? `<span class="count-pill">${nf}</span>` : ""}</button>
+  const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar"].includes(id) && tabOk(id));
+  const fbar = `<button class="search-pill" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.search}<span class="sp-t">Marca, modello, prezzo, km…</span><span class="sp-f">${nf ? `<span class="count-pill">${nf}</span>` : ICON.sliders}</span></button>
+    ${SEZ.length > 1 ? `<nav class="cats" aria-label="Sezioni">${SEZ.map(([id,l,p]) => `<button class="cat" data-act="tab" data-v="${id}" aria-current="${S.route === id ? "page" : "false"}"><span class="cat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg></span><span class="cat-l">${l}</span></button>`).join("")}</nav>` : ""}
+    <div class="qf" role="group" aria-label="Ordinamento e filtri veloci">
       <label class="fsort"><span class="sr">Ordina</span><select id="f-sort" aria-label="Ordina">${SORTS.map(([v,l]) => `<option value="${v}" ${S.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-    </div>
-    <div class="qf" role="group" aria-label="Filtri veloci">
       <label class="qsel ${S.max !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="q-pmax">${opts(P_STEPS.map(v => [v, "Fino a " + num(v) + " €"]), S.max, "Prezzo")}</select></label>
       <label class="qsel ${S.carb.length ? "on" : ""}"><span class="sr">Alimentazione</span><select id="q-carb">${S.carb.length > 1 ? `<option value="__multi" selected>${S.carb.length} alimentazioni</option>` : ""}${opts(CARB, S.carb.length === 1 ? S.carb[0] : "", "Alimentazione")}</select></label>
       <label class="qsel ${S.kmMax !== "" ? "on" : ""}"><span class="sr">Chilometri massimi</span><select id="q-kmax">${opts(KM_STEPS.map(v => [v, "Fino a " + num(v) + " km"]), S.kmMax, "Km")}</select></label>
       <label class="qsel ${S.raggio ? "on" : ""}"><span class="sr">Distanza</span><select id="q-raggio">${opts(DIST_STEPS.map(v => [v, "Entro " + v + " km"]), S.raggio || "", "Distanza")}</select></label>
     </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
-  return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
+  const nome1 = S.user && S.user.name ? esc(String(S.user.name).trim().split(/\s+/)[0]) : "";
+  return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : nome1 ? "Ciao, " + nome1 : "Le auto di oggi", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto<span class="only-wide"> da girare</span> · ${S.policy ? "solo margini prudenti" : '<span class="only-wide">rivendita </span>−' + S.sconto + "%"}`, right, trV || scV || incV || ecoV ? "Scovo" : oggi()) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${cmNovita()}${list.length ? vizOggi(list) : ""}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -393,7 +413,7 @@ function botBanner(n){
 function boxV1(c){ return `
       <div class="box">
         <div class="row"><span class="k">Prezzo richiesto</span><span class="v">${eur(c.prezzo)}</span></div>
-        <div class="row"><span class="k">Riparazioni (solo pezzi)</span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
+        <div class="row"><span class="k">Riparazioni<span class="only-wide"> (solo pezzi)</span></span><span class="v ${c.rip_hi ? "warn" : ""}">${ripTxt(c)}</span></div>
         <div class="row" style="border-bottom:0"><span class="k">Rivendita veloce</span><span class="v">${c.economica && !c.mercato ? "da stimare" : eur(c.riv)}</span></div>
         <div class="note">${c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`}${c.economica ? " Auto non ancora controllata a mano: guarda bene foto e descrizione." : ""}</div>
         <div class="row total"><span class="k">Guadagno stimato</span><span class="v">${gainTxt(c)}</span></div>
@@ -453,14 +473,14 @@ const e2 = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " 
    valore a destra, intestazione piccola sopra e nota grigia sotto (come Impostazioni). Carattere di sistema. */
 function apRiga(k, v, tono, sub){ return `<div class="ap-row"><div class="ap-k"><span>${k}</span>${sub ? `<small>${sub}</small>` : ""}</div><b class="${tono || ""}">${v}</b></div>`; }
 function apGruppo(titolo, righe, nota){ return righe ? `<h3 class="ap-head">${titolo}</h3><div class="ap-list">${righe}</div>${nota ? `<p class="ap-foot">${nota}</p>` : ""}` : ""; }
-function boxParere(t){
+function boxParere(t, extra){
   const pa = t.parere, bl = {}; (pa.blocchi || []).forEach(b => { bl[b.tipo] = b; });
   const n = (b, k) => { const x = b && (b.numeri || []).find(y => y.k === k); return x ? x.v : null; };
   const chiesta = n(bl.prezzo, "Chiesta"), merc = n(bl.prezzo, "Mercato"), sotto = n(bl.prezzo, "Sotto di"), sopra = n(bl.prezzo, "Sopra di");
   const offri = n(bl.trattativa, "Offri"), chiudi = n(bl.trattativa, "Chiudi a"), oltre = n(bl.trattativa, "Non oltre");
   const ann = n(bl.rivendita, "Annuncio a"), vend = n(bl.rivendita, "Si chiude a"), netto = n(bl.rivendita, "Netto"), tempo = n(bl.rivendita, "Tempo");
   const tono = pa.tono === "good" ? "good" : pa.tono === "warn" ? "warn" : "info";
-  const eroe = netto != null ? {v: netto, segno: netto > 0 ? "+" : "", cap: "Guadagno netto stimato, tolti i costi", tono: netto > 0 ? "good" : "warn"}
+  const eroe = netto != null ? {v: netto, segno: netto > 0 ? "+" : "", cap: "Guadagno netto stimato dopo la trattativa, tolti i costi", tono: netto > 0 ? "good" : "warn"}
     : sotto ? {v: sotto, segno: "", cap: "Sotto il valore di mercato", tono: "good"} : null;
   let barra = "";
   if (merc && offri && chiesta && merc > offri && chiesta >= offri && chiesta <= merc) {
@@ -474,13 +494,13 @@ function boxParere(t){
     + (offri ? apRiga("Offri", e2(offri), "info") : "") + (chiudi ? apRiga("Chiudi a", e2(chiudi)) : "") + (oltre ? apRiga("Non oltre", e2(oltre), "warn") : "");
   const rivendita = (ann ? apRiga("Metti l'annuncio a", e2(ann)) : "") + (vend ? apRiga("Si vende a", e2(vend)) : "")
     + (tempo ? apRiga("Tempo di vendita", esc(String(tempo)).replace("~", "circa ").replace(" gg", " giorni")) : "")
-    + (netto != null ? apRiga("Guadagno netto", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "");
+    + (netto != null ? apRiga("Guadagno dopo la trattativa", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "") + (extra || "");
   const att = bl.attenzione ? (bl.attenzione.punti || []).map(x => `<div class="ap-row"><div class="ap-k"><span>${esc(x)}</span></div><i class="ap-warn" aria-hidden="true">!</i></div>`).join("") : "";
   return `<div class="ap">
     <div class="ap-card ap-hero">
       <div class="ap-cat ${tono}"><i aria-hidden="true"></i>Il nostro parere</div>
       <h2>${esc(pa.giudizio)}</h2>
-      ${eroe ? `<div class="ap-num ${eroe.tono}">${eroe.segno}${e2(eroe.v).replace(" €", "")}<span>€</span></div><p class="ap-cap">${eroe.cap}</p>` : ""}
+      ${eroe ? `<p class="ap-cap ap-cap-top">${eroe.cap}</p><div class="ap-num ${eroe.tono}">${eroe.segno}${e2(eroe.v).replace(" €", "")}<span>€</span></div>` : ""}
       ${barra}
     </div>
     ${apGruppo("Acquisto", acquisto, bl.trattativa && esc(bl.trattativa.testo || ""))}
@@ -514,20 +534,21 @@ function boxVendute(mk){
         [c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(", "))).join("")}</div>` : ""}
     ${nota ? `<p class="ap-foot">${nota}.</p>` : ""}</div></section>`;
 }
-function boxTrattativa(t){
+function rigaChiesto(c){
+  return (c.rip_hi ? apRiga("Riparazioni", ripTxt(c), "warn", "solo pezzi") : "") + apRiga("Guadagno al prezzo chiesto", gainTxt(c), "good");
+}
+function boxTrattativa(t, extra){
   if (!t || !t.parere) return "";
   const pa = t.parere, mk = t.mercato, ds = t.da_sapere;
-  let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t)
+  let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t, extra)
       : `<div class="tr-parere ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2>${esc(pa.giudizio)}</h2>${(pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("")}</div>`}
     ${t.messaggio ? `<button class="ap-btn" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
   h += boxVenditore(t.comportamento);
   if (mk) h += boxVendute(mk);
-  if (ds) {
-    const bits = [ds.kw ? `${ds.kw} kW (${ds.cv} CV)` : "", ds.classe_euro ? esc(ds.classe_euro) + " probabile" : "",
-      ds.bollo_anno ? "bollo ~" + eur(ds.bollo_anno) + "/anno" : "", ds.passaggio ? "passaggio " + eur(ds.passaggio[0]) + "–" + eur(ds.passaggio[1]) : ""].filter(Boolean);
-    if (bits.length) h += `<div class="note" style="border:0">${bits.join(" · ")}</div>`;
-  }
-  h += `<div class="note" style="border:0">Stime dai nostri dati: un annuncio sparito è quasi sempre un'auto venduta, ma vediamo l'ultimo prezzo dell'annuncio, non quello finale.</div>`;
+  const STIME = "Stime dai nostri dati: un annuncio sparito è quasi sempre un'auto venduta, ma vediamo l'ultimo prezzo dell'annuncio, non quello finale.";
+  const tec = ds ? (ds.kw ? apRiga("Potenza", `${ds.kw} kW (${ds.cv} CV)`) : "") + (ds.classe_euro ? apRiga("Classe", esc(ds.classe_euro) + " probabile") : "")
+    + (ds.bollo_anno ? apRiga("Bollo", "~" + eur(ds.bollo_anno) + "/anno") : "") + (ds.passaggio ? apRiga("Passaggio", eur(ds.passaggio[0]) + "–" + eur(ds.passaggio[1])) : "") : "";
+  h += tec ? `<div class="ap">${apGruppo("Dati tecnici", tec, STIME)}</div>` : `<p class="hint dock-note">${STIME}</p>`;
   return h;
 }
 function c_prezzo(t){ const d = S.detail[S.sel]; return d && d.prezzo; }
@@ -557,24 +578,25 @@ function viewDetail(){
       ${photos.length > 1 ? `<div class="dots" id="dots">${photos.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}
     </div>
     <div class="d-body">
-      <div><h1 class="d-name">${esc(c.nome)}</h1><div class="meta" style="margin-top:4px">${esc(meta(c))}</div></div>
+      <div class="d-head"><h1 class="d-name">${esc(c.nome)}</h1><div class="d-loc">${ICON.pin}<span>${esc([c.carb, c.zona].filter(Boolean).join(" · "))}</span></div></div>
+      <div class="d-stats"><div><b>${eur(c.prezzo)}</b><span>Prezzo</span></div><div><b>${c.km ? num(c.km) : "—"}</b><span>Chilometri</span></div><div><b>${esc(String(c.anno || "—"))}</b><span>Anno</span></div></div>
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
-      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : boxV1(c)}
-      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
+      ${vizCosti(c)}${d && !d.err ? vizStorico(c, d.trattativa) : ""}
+      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c)}
+      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
       ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
       ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
-      <span class="where">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</span>
+      <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</p>
     </div>
-    <div class="dock"><div class="dock-in">
-      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}${contact.label}</a>`
-          : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}${contact.label}</button>`}
-      <span class="talk-note">${contact.note}</span>
-      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open">${ICON.chat}Fissa l'appuntamento</button><span class="talk-note">Scegli giorno e ora: l'appuntamento col privato lo fissiamo noi</span>` : ""}
-    </div></div>
+    <div class="dock"><div class="dock-in"><div class="dock-row">
+      ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`
+          : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}<span>${contact.label}</span></button>`}
+      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open" aria-label="Fissa l'appuntamento" title="Fissa l'appuntamento">${ICON.cal}<span class="ta-l" aria-hidden="true">Appuntamento</span></button>` : ""}
+    </div></div></div>
   </div>`;
 }
 
@@ -592,7 +614,7 @@ function sheetFilters(){
   const cc = {}; filtered({carb: []}).forEach(c => { const k = carbKey(c.carb); cc[k] = (cc[k] || 0) + 1; });
   const anni = []; for (let y = new Date().getFullYear(); y >= 2007; y--) anni.push([y, String(y)]);
   const seg = (items, cur, act, cols) => `<div class="seg" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${items.map(([v,l]) => `<button data-act="${act}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join("")}</div>`;
-  const sel = (id, label, inner) => `<label class="fsel"><span>${label}</span><select id="${id}">${inner}</select></label>`;
+  const sel = (id, label, inner) => `<label class="frow"><span class="frow-k">${label}</span><span class="frow-v" aria-hidden="true">${(inner.match(/<option[^>]*\sselected[^>]*>([^<]*)/) || inner.match(/<option[^>]*>([^<]*)/) || ["", ""])[1].replace("Scegli prima la marca", 'Scegli <span class="only-wide">prima la </span>marca')}</span>${ICON.next}<select id="${id}">${inner}</select></label>`;
   return `
   <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
     <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
@@ -622,7 +644,7 @@ function sheetFilters(){
       </section>
       <section class="fgrp"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Senza danni"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
       ${S.policy ? `<section class="fgrp"><h3>Rivendita</h3><span class="hint">Rivendita prudente calcolata per ogni auto: il più basso tra la mediana ridotta per fascia e il 25° percentile dei confronti equivalenti, meno tutti i costi.</span></section>`
-        : `<section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
+        : `<section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
         <span class="hint">I guadagni si ricalcolano subito.</span></section>`}
     </div>
     <div class="sheet-foot fpanel-foot"><button class="btn" data-act="reset">Azzera</button><button class="btn btn-dark" data-act="close" id="show">${n ? `Mostra ${n} auto` : "Nessuna auto: cambia i filtri"}</button></div>
@@ -850,12 +872,14 @@ function viewRicambi(){
 const P = {open:false, err:"", ok:false, busy:false};
 function viewProfilo(){
   const u = S.user || {};
-  return svcHead("Profilo", u.email || "") + `<main class="list">
+  const ri = (ic, t) => `<span class="pl-ic"><i>${ICON[ic]}</i>${t}</span>`;
+  return svcHead("Profilo", "").replace('class="top"', 'class="top top-plain"') + `<main class="list">
+    <section class="me-card"><span class="avatar big" aria-hidden="true">${iniziali()}</span><div><b>${esc(u.name || "")}</b><span>${esc(u.email || "")}</span></div></section>
     <div class="sec-title">Account</div>
-    <div class="plist"><div><span>Nome</span><span class="v">${esc(u.name || "")}</span></div><div><span>Email</span><span class="v">${esc(u.email || "")}</span></div>
-      <button data-act="pwd"><span>Cambia password</span>${ICON.next}</button>
-      ${u.ha_pagamento ? `<button data-act="portale"><span>Abbonamento: carta, fatture, disdetta</span>${ICON.next}</button>` : ""}
-      ${perm("appuntamenti") ? `<button data-act="az-open"><span>Dati della tua azienda</span>${ICON.next}</button>` : ""}</div>
+    <div class="plist">
+      <button data-act="pwd">${ri("lock", "Cambia password")}${ICON.next}</button>
+      ${u.ha_pagamento ? `<button data-act="portale">${ri("cardp", "Abbonamento: carta, fatture, disdetta")}${ICON.next}</button>` : ""}
+      ${perm("appuntamenti") ? `<button data-act="az-open">${ri("build", "Dati della tua azienda")}${ICON.next}</button>` : ""}</div>
     ${P.open ? `<section class="box form" style="padding:16px">
       <label class="field">Password attuale<input id="p-old" type="password" autocomplete="current-password"></label>
       <label class="field">Nuova password (almeno 8 caratteri)<input id="p-new" type="password" autocomplete="new-password" minlength="8"></label>
@@ -864,15 +888,20 @@ function viewProfilo(){
     <div class="sec-title">Come calcoliamo</div>
     <div class="plist"><div><span>Rivendita</span><span class="v">${S.sconto}% sotto mercato</span></div><div><span>Tagliando e pulizia</span><span class="v">max ${eur(S.costs)}</span></div><div><span>Riparazioni</span><span class="v">solo pezzi</span></div></div>
     <span class="hint" style="padding:0 4px">Lo sconto di rivendita si cambia dai Filtri. Ogni auto sparisce dopo che 7 commercianti l'hanno contattata.</span>
-    ${installHint()}
     <div class="sec-title">Scovo</div>
-    <div class="plist">${u.role === "admin" ? `<a href="/gestione"><span>Gestione (amministratore)</span>${ICON.next}</a>` : ""}<a href="/chi-siamo"><span>Chi siamo</span>${ICON.next}</a><a href="/privacy"><span>Privacy</span>${ICON.next}</a><a href="/condizioni"><span>Condizioni d'uso</span>${ICON.next}</a>
-      <button data-act="logout"><span class="danger">Esci</span></button></div>
+    <div class="plist">${installRiga(ri)}${u.role === "admin" ? `<a href="/gestione">${ri("gear", "Gestione (amministratore)")}${ICON.next}</a>` : ""}<a href="/chi-siamo">${ri("info", "Chi siamo")}${ICON.next}</a><a href="/privacy">${ri("shield", "Privacy")}${ICON.next}</a><a href="/condizioni">${ri("doc", "Condizioni d'uso")}${ICON.next}</a></div>
+    <div class="plist plist-solo"><button data-act="logout"><span class="danger">${ICON.out}Esci</span></button></div>
   </main>`;
 }
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (S.route === "profilo") render({keep:true}); });
 function standalone(){ return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
+function installRiga(ri){
+  if (standalone()) return "";
+  if (installEvt) return `<button data-act="install">${ri("spark", "Metti Scovo sulla schermata Home")}${ICON.next}</button>`;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  return `<div class="pl-inst">${ri("spark", `<span class="pl-2"><span>Scovo come un'app</span><small>${ios ? "Tocca Condividi e poi “Aggiungi alla schermata Home”." : "Dal menu del browser scegli “Installa app” o “Aggiungi a schermata Home”."}</small></span>`)}</div>`;
+}
 function installHint(){
   if (standalone()) return "";
   if (installEvt) return `<button class="btn btn-blue" data-act="install">Metti Scovo sulla schermata Home</button>`;
@@ -903,7 +932,7 @@ function socialButtons(){
 function viewLogin(){
   const req = S.route === "prova";
   const esito = ESITI_ACCESSO[S.esitoAccesso || ""];
-  const top = `<div class="auth-top"><a class="l-brand" href="#/">${LOGO(34)}<span>scovo</span></a><a class="l-link" href="#/">Torna alla pagina iniziale</a></div>`;
+  const top = `<div class="auth-top"><a class="l-brand" href="#/">${LOGO(34)}<span>scovo</span></a><a class="l-link auth-back" href="#/" aria-label="Indietro, torna alla pagina iniziale">${ICON.back}Indietro</a></div>`;
   if (req) return `<div class="auth">${top}
     <div><h1>Prova Scovo</h1><p class="l-sub">Lasciaci i tuoi dati: ti attiviamo l'accesso e ti spieghiamo come funziona.</p></div>
     ${L.sent ? `<div class="note-box info">Richiesta inviata. Ti contattiamo entro un giorno lavorativo.</div><a class="l-btn l-btn-blue" href="#/">Torna alla pagina iniziale</a>` : `
@@ -926,8 +955,7 @@ function viewLogin(){
     ${socialButtons()}
     <form id="login-form" novalidate>
       <label class="field">Email<input name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required value="${esc(L.email)}"></label>
-      <label class="field">Password<input name="password" id="l-pwd" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
-      <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:-4px"><input type="checkbox" onchange="document.getElementById('l-pwd').type=this.checked?'text':'password'" style="width:20px;height:20px"> Mostra password</label>
+      <label class="field">Password<span class="pw-wrap"><input name="password" id="l-pwd" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><button type="button" class="pw-eye" aria-label="Mostra password" aria-pressed="false" onclick="var i=document.getElementById('l-pwd'),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',s)">${ICON.eye}</button></span></label>
       ${L.err ? `<span class="err" role="alert">${esc(L.err)}</span>` : ""}
       <button class="l-btn l-btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Entro…" : "Entra"}</button>
     </form>
@@ -1394,9 +1422,12 @@ const CM = {testo: "", rec: false, busy: false, trascrivo: false, err: "", sent:
 const CM_IDEE = ["Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €",
                  "Una 500 o una Panda a benzina sotto i 5.000 €, anche con qualche graffio",
                  "SUV ibrido, Toyota C-HR o Kia Niro, dal 2019, budget 17.000 €"];
+function cmNovita(){
+  if (store.get("cmTipVisto", false) || !canBrowse() || S.paywall) return "";
+  return `<div class="tip cm-nov" role="note"><span class="eur" aria-hidden="true">${MIC}</span><span><b>Novità:</b> cercala a voce</span><button class="tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>`;
+}
 function cmFab(){
-  const tip = !store.get("cmTipVisto", false);
-  return `${tip ? `<div class="cm-tip" role="note"><b>Novità</b> Dicci a voce che auto cerchi: la troviamo noi in 30 minuti<button class="cm-tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>` : ""}<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;
+  return `<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;
 }
 async function cmCarica(){
   try { const d = await api("/api/richieste-auto"); CM.max = !!d.max; CM.lista = d.richieste || []; }
@@ -1423,8 +1454,8 @@ function cmIntanto(){
       <span>${eur(c.prezzo)} · <em>+${eur(Math.max(c.guadagno_da, 0))}</em></span></span></button>`).join("")}</div>`;
 }
 function sheetCerca(){
-  const head = `<div class="sheet-head"><h2 id="cmh">Cercamela tu</h2><button class="link" data-act="close">Chiudi</button></div>`;
-  const wrap = b => `<div class="sheet-wrap" data-act="close-bg"><div class="sheet cm-sheet" role="dialog" aria-modal="true" aria-labelledby="cmh">${head}<div class="sheet-body cm-body">${b}</div></div></div>`;
+  const head = `<div class="sheet-head"><h2 id="cmh" class="sr">Cercamela tu</h2><button class="link" data-act="close">Chiudi</button></div>`;
+  const wrap = (b, foot) => `<div class="sheet-wrap" data-act="close-bg"><div class="sheet cm-sheet" role="dialog" aria-modal="true" aria-labelledby="cmh">${head}<div class="sheet-body cm-body">${b}</div>${foot ? `<div class="sheet-foot">${foot}</div>` : ""}</div></div>`;
   if (CM.max === null) return wrap(`<div class="cm-wait"><span class="spin" aria-hidden="true"></span>Un attimo…</div>`);
   if (!S.token) return wrap(`<div class="cm-hero"><div class="cm-badge">Piano Max</div><h3>Dicci che auto cerchi, la troviamo noi</h3>
       <p>Entra con il tuo account per chiederci un'auto su misura.</p></div><a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a>`);
@@ -1443,10 +1474,8 @@ function sheetCerca(){
       <p>Dillo come lo diresti a un collega: marca, modello, anno, km, alimentazione e quanto vuoi spendere. La migliore dei privati in zona la troviamo noi.</p></div>
     ${parla ? `<div class="cm-mic-wrap"><button class="cm-mic${CM.rec ? " on" : ""}" data-act="cm-mic" aria-label="${CM.rec ? "Ho finito di parlare" : "Parla"}" ${CM.trascrivo || CM.busy ? "disabled" : ""}>${CM.rec ? '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></svg>' : MIC.replace(/width="26" height="26"/, 'width="38" height="38"')}<span class="cm-ring"></span></button>${stato}</div>` : `<div class="cm-mic-wrap">${stato}</div>`}
     <label class="cm-field"><span>La tua richiesta</span><textarea id="cm-text" rows="4" maxlength="1500" placeholder="Es. Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €">${esc(CM.testo)}</textarea></label>
-    ${!CM.testo ? `<div class="cm-ideas">${CM_IDEE.map(t => `<button class="pill" data-act="cm-idea" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>` : ""}
-    ${CM.err ? `<span class="err" role="alert">${esc(CM.err)}</span>` : ""}
-    <button class="btn btn-blue cm-send" data-act="cm-send" ${CM.busy || CM.rec || CM.trascrivo || CM.testo.trim().length < 6 ? "disabled" : ""}>${CM.busy ? "Invio…" : "Trovamela"}</button>
-    ${cmLista()}`);
+    ${!CM.testo ? `<div class="cm-sec">Esempi</div><div class="cm-ideas">${CM_IDEE.map(t => `<button class="pill" data-act="cm-idea" data-v="${esc(t)}"><span class="ic-dot">${ICON.quote}</span><span>${esc(t)}</span></button>`).join("")}</div>` : ""}
+    ${cmLista()}`, `${CM.err ? `<span class="err" role="alert">${esc(CM.err)}</span>` : ""}<button class="btn btn-blue cm-send" data-act="cm-send" ${CM.busy || CM.rec || CM.trascrivo || CM.testo.trim().length < 6 ? "disabled" : ""}>${CM.busy ? "Invio…" : "Trovamela"}</button>`);
 }
 function cmPaint(){ if (S.sheet === "cerca") render({keep:true}); }
 function cmAggiungi(t){ t = String(t || "").trim(); if (!t) return; CM.testo = (CM.testo ? CM.testo.replace(/\s+$/, "") + " " : "") + t; }
@@ -1518,10 +1547,24 @@ async function cmInvia(){
   } catch (e) { CM.err = e.message || "Invio non riuscito: riprova"; }
   CM.busy = false; cmPaint();
 }
+const ALTRE = ["incidentate","economiche","supercar"];
 function tabBar(){
   const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
-  return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
+  const ok = TABS.filter(([id]) => tabOk(id)), altre = ok.filter(([id]) => ALTRE.includes(id));
+  const ic = p => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  const voce = ([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}">${ic(p)}<span>${l}</span></button>`;
+  const altro = altre.length ? `<button data-act="altro" aria-haspopup="dialog" aria-current="${ALTRE.includes(cur) ? "page" : "false"}">${ic('<circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01"/>')}<span>Altro</span></button>` : "";
+  return `<nav class="tabs" aria-label="Sezioni"><span class="tab-ind" aria-hidden="true"></span>${ok.filter(([id]) => !ALTRE.includes(id) && id !== "profilo").map(voce).join("")}${altro}${ok.filter(([id]) => id === "profilo").map(voce).join("")}</nav>`;
 }
+function sheetAltro(){
+  const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet al-sheet" role="dialog" aria-modal="true" aria-labelledby="alh">
+    <div class="sheet-head"><h2 id="alh">Altro</h2><button class="link" data-act="close">Chiudi</button></div>
+    <div class="sheet-body"><div class="sec-title">Altre sezioni</div><div class="plist">${TABS.filter(([id]) => ALTRE.includes(id) && tabOk(id)).map(([id,l,p]) =>
+      `<button data-act="altro-vai" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><span class="pl-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</span>${ICON.next}</button>`).join("")}</div></div>
+  </div></div>`;
+}
+
 function render(opts){
   opts = opts || {};
   const y = window.scrollY;
@@ -1538,16 +1581,18 @@ function render(opts){
   let html;
   if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
   else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
-  else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall() + tabBar(); }
+  else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall(); }
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : viewList()) + tabBar();
   if (canBrowse()) {
     if ((isList(S.route) || S.route === "vendute") && !S.sheet && !VC.on && !S.paywall) html += cmFab();     // 9/11: "Chiedi" = Cercamela (piano Max)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : "";
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : S.sheet === "altro" ? sheetAltro() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", trattare:"Da trattare", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
+  if (S.sheet && S.sheet === FX.sheet) html = html.replace('class="sheet-wrap', 'class="sheet-wrap still');
+  FX.sheet = S.sheet;
   $app.innerHTML = html;
   $app.classList.toggle("vc-on", VC.on);
   document.body.style.overflow = S.sheet ? "hidden" : "";
@@ -1558,12 +1603,154 @@ function render(opts){
     const i = Math.round(slides.scrollLeft / slides.clientWidth);
     document.querySelectorAll("#dots i").forEach((d, k) => d.classList.toggle("on", k === i));
   }, {passive:true});
+  fx();
   if (opts.top) window.scrollTo(0, 0);
   else if (opts.y != null) window.scrollTo(0, opts.y);
   else if (opts.keep) window.scrollTo(0, y);
   else window.scrollTo(0, y);
   if (S.sheet && S.sheet !== "bot") { const sh = document.querySelector(".sheet"); if (sh && !sh.contains(document.activeElement)) { const f = sh.querySelector("h2"); if (f) { f.tabIndex = -1; f.focus({preventScroll:true}); } } }
 }
+
+/* ---------- grafici (SVG in linea, solo dati veri; si disegnano una volta, spenti con "riduci movimento") ---------- */
+const R1 = n => Math.round(n * 10) / 10;
+function curva(P){
+  // curva morbida che non va oltre i punti veri (cubica monotona)
+  const n = P.length; if (n < 2) return "";
+  const dx = [], s = [], m = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = Math.max(P[i + 1][0] - P[i][0], 0.01); s[i] = (P[i + 1][1] - P[i][1]) / dx[i]; }
+  m[0] = s[0]; m[n - 1] = s[n - 2];
+  for (let i = 1; i < n - 1; i++) m[i] = s[i - 1] * s[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / s[i - 1] + (dx[i] + 2 * dx[i - 1]) / s[i]);
+  let d = `M${R1(P[0][0])},${R1(P[0][1])}`;
+  for (let i = 0; i < n - 1; i++) d += ` C${R1(P[i][0] + dx[i] / 3)},${R1(P[i][1] + m[i] * dx[i] / 3)} ${R1(P[i + 1][0] - dx[i] / 3)},${R1(P[i + 1][1] - m[i + 1] * dx[i] / 3)} ${R1(P[i + 1][0])},${R1(P[i + 1][1])}`;
+  return d;
+}
+const dataBreve = t => new Date(t).toLocaleDateString("it-IT", {day: "numeric", month: "short"});
+function anelli(archi, size){
+  // archi: [{p: 0..1, tono}] dall'esterno all'interno
+  const sw = archi.length > 1 ? 9 : 12, gap = 3;
+  return `<svg class="viz-ring" viewBox="0 0 120 120" width="${size}" height="${size}" aria-hidden="true">${archi.map((a, i) => { const r = 54 - sw / 2 - i * (sw + gap);
+    return `<circle cx="60" cy="60" r="${r}" class="ring-tr" stroke-width="${sw}"/><circle cx="60" cy="60" r="${r}" class="ring-arc t-${a.tono}" stroke-width="${sw}" pathLength="100" stroke-dasharray="${R1(Math.max(0, Math.min(1, a.p)) * 100)} 100" style="animation-delay:${i * 120}ms" transform="rotate(-90 60 60)"/>`; }).join("")}</svg>`;
+}
+function barre(righe){
+  return `<div class="viz-bars">${righe.map((r, i) => `<div class="vb"><div class="vb-top"><span>${r.k}</span><b class="${r.tonoTesto || ""}">${r.v}</b></div><span class="vb-tr"><i class="t-${r.tono}" style="width:${R1(Math.max(0, Math.min(1, r.p)) * 100)}%;animation-delay:${i * 90}ms"></i></span></div>`).join("")}</div>`;
+}
+function vizTesta(ic, titolo, destra){ return `<div class="viz-h"><span class="viz-ic">${ic}</span><h3>${titolo}</h3>${destra ? `<span class="viz-r">${destra}</span>` : ""}</div>`; }
+function vizOggi(list){
+  // riassunto dell'elenco in una riga: valori calcolati dalle auto caricate
+  const N = list.length; if (N < 2) return "";
+  const g = list.map(c => c.gain).filter(x => x > -1e5 && isFinite(x));
+  const media = g.length ? g.reduce((a, b) => a + b, 0) / g.length : null;
+  const daCont = list.filter(c => !c.aperta).length;
+  const conData = list.filter(c => c.nuova && !isNaN(Date.parse(c.nuova)));
+  const nuove = conData.filter(c => Date.now() - Date.parse(c.nuova) < 864e5).length;
+  const cella = (ring, num, k) => `<div class="vo-c">${ring}<div><b>${num}</b><span>${k}</span></div></div>`;
+  return `<section class="viz-card viz-oggi" data-viz="oggi-${S.route}" aria-label="Oggi su Scovo">
+    ${cella(anelli([{p: daCont / N, tono: "info"}], 30), `${daCont}<small>/${N}</small>`, "da contattare")}
+    ${conData.length ? cella(anelli([{p: nuove / N, tono: "acc"}], 30), `${nuove}<small>/${N}</small>`, "nuove da ieri") : ""}
+    ${media != null ? `<div class="vo-c vo-m"><div><b class="good">${eur(media)}</b><span>margine medio</span></div></div>` : ""}</section>`;
+}
+function vizCosti(c){
+  // prezzo rispetto al mercato (anello) e come si divide la rivendita (barre); torna esatto: prezzo + pezzi + costi + guadagno = rivendita
+  if (c.pv || !c.mercato || !c.riv || !(c.gain > -1e5)) return "";
+  const riv = c.riv, rip = c.rip_hi || 0, cf = S.costs || 0, f = c.prezzo / c.mercato, sotto = Math.round((1 - f) * 100);
+  const righe = [{k: "Prezzo chiesto", v: eur(c.prezzo), p: c.prezzo / riv, tono: "info"},
+    {k: "Guadagno al prezzo chiesto", v: gainTxt(c), p: Math.max(0, c.gain) / riv, tono: "good", tonoTesto: "good"}];
+  const piccole = `<div class="vb-plain"><div><span>Riparazioni</span><b class="${rip ? "warn" : ""}">${ripTxt(c)}</b></div><div><span>Tagliando e pulizia</span><b>${eur(cf)}</b></div></div>`;
+  return `<section class="viz-card" data-viz="costi-${c.id}">${vizTesta(ICON.cardp, "Prezzo e costi", `<span class="viz-soft">su ${eur(riv)} di rivendita</span>`)}
+    <div class="viz-row"><div class="ring-wrap">${anelli([{p: Math.min(1, f), tono: sotto >= 0 ? "info" : "warn"}], 112)}<div class="ring-c"><b class="${sotto >= 0 ? "good" : "warn"}">${sotto >= 0 ? "−" : "+"}${Math.abs(sotto)}%</b><span>${sotto >= 0 ? "sotto" : "sopra"} il mercato</span></div></div><div class="vc-right">${barre(righe)}${piccole}</div></div>
+    <p class="viz-foot">Mercato ${eur(c.mercato)}, rivendita veloce ${eur(riv)}. Già tolti i costi: al massimo ${eur(cf)} fissi più i pezzi.</p></section>`;
+}
+function vizStorico(c, t){
+  // prezzo dell'annuncio nel tempo; senza storico: le vendute di recente come punti; senza nemmeno quelle: niente grafico
+  const W = 320, H = 132, top = 14, bot = 104, L = 8, Rr = W - 10;
+  const st = ((t && t.storico) || []).filter(x => x && x.prezzo && !isNaN(Date.parse(x.data)));
+  const byDay = new Map(); st.forEach(x => byDay.set(x.data, x.prezzo));
+  let pts = [...byDay].map(([d, p]) => [Date.parse(d), p]).sort((a, b) => a[0] - b[0]);
+  if (pts.length && c.prezzo && Date.now() - pts[pts.length - 1][0] > 864e5) pts.push([Date.now(), c.prezzo]);   // oggi: il prezzo attuale dell'annuncio
+  else if (pts.length && c.prezzo) pts[pts.length - 1][1] = c.prezzo;
+  if (pts.length >= 2 && st.length >= 2) {
+    const t0 = pts[0][0], t1 = pts[pts.length - 1][0], lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1]));
+    const span = Math.max(hi - lo, hi * .2), y0 = lo - (span - (hi - lo)) / 2 - span * .12, y1 = hi + (span - (hi - lo)) / 2 + span * .12;
+    const LL = 8, RR = W - 8, X = x => LL + (x - t0) / Math.max(t1 - t0, 1) * (RR - LL), Y = y => bot - (y - y0) / (y1 - y0) * (bot - top);
+    const P = pts.map(p => [X(p[0]), Y(p[1])]), d = curva(P), last = P[P.length - 1];
+    const diff = pts[pts.length - 1][1] - pts[0][1];
+    const gg = t && Number.isFinite(t.giorni_in_vendita) ? t.giorni_in_vendita : Math.round((t1 - t0) / 864e5);
+    const griglia = [hi, lo].filter((v, i, a) => a.indexOf(v) === i).map(v => `<line class="grid" x1="${LL}" x2="${RR}" y1="${R1(Y(v))}" y2="${R1(Y(v))}"/><text x="${LL}" y="${R1(Y(v)) + (v === lo && lo !== hi ? 15 : -7)}" class="ax">${eur(v)}</text>`).join("");
+    return `<section class="viz-card" data-viz="storico-${c.id}">${vizTesta(ICON.spark, "Prezzo annuncio", `<b>${eur(c.prezzo)}</b>`)}
+      <svg class="viz-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prezzo dell'annuncio da ${eur(pts[0][1])} a ${eur(c.prezzo)} in ${gg} giorni">
+        <defs><linearGradient id="gl${c.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="gs1"/><stop offset="1" class="gs2"/></linearGradient></defs>
+        ${griglia}
+        <path class="area" d="${d} L${R1(last[0])},${bot} L${R1(P[0][0])},${bot} Z" fill="url(#gl${c.id})"/>
+        <path class="line" d="${d}" pathLength="1"/>
+        ${P.slice(1, -1).map(p => `<circle class="pt" cx="${R1(p[0])}" cy="${R1(p[1])}" r="3"/>`).join("")}
+        <circle class="pt" cx="${R1(P[0][0])}" cy="${R1(P[0][1])}" r="3.5"/>
+        ${pts[0][1] !== hi && pts[0][1] !== lo ? `<text x="${R1(P[0][0])}" y="${R1(P[0][1]) - 9}" class="ax">${eur(pts[0][1])}</text>` : ""}
+        <circle class="end" cx="${R1(last[0])}" cy="${R1(last[1])}" r="5"/>
+        <text x="${LL}" y="${H - 4}" class="ax">${dataBreve(t0)}</text><text x="${RR}" y="${H - 4}" class="ax" text-anchor="end">oggi</text>
+      </svg>
+      <p class="viz-foot">${diff < 0 ? `Sceso di ${eur(-diff)}: in vendita da ${gg} giorni` : diff > 0 ? `Salito di ${eur(diff)}: in vendita da ${gg} giorni` : `Fermo a questo prezzo: in vendita da ${gg} giorni`}</p></section>`;
+  }
+  const casi = ((t && t.mercato && t.mercato.casi) || []).filter(x => x && x.prezzo);
+  if (casi.length >= 2 && c.prezzo) {
+    const v = casi.map(x => x.prezzo).concat([c.prezzo]), lo = Math.min(...v), hi = Math.max(...v), pad = Math.max((hi - lo) * .2, hi * .03);
+    const Y = y => bot - (y - (lo - pad)) / ((hi + pad) - (lo - pad)) * (bot - top), step = (Rr - L - 40) / Math.max(casi.length - 1, 1);
+    const ord = casi.slice().sort((a, b) => String(a.quando || "").localeCompare(String(b.quando || "")));
+    return `<section class="viz-card" data-viz="vendute-${c.id}">${vizTesta(ICON.spark, "Rispetto alle vendute", `<b>${eur(c.prezzo)}</b>`)}
+      <svg class="viz-line viz-dots" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prezzo chiesto ${eur(c.prezzo)}; auto uguali vendute a ${ord.map(x => eur(x.prezzo)).join(", ")}">
+        <line class="ref" x1="${L}" x2="${Rr}" y1="${R1(Y(c.prezzo))}" y2="${R1(Y(c.prezzo))}"/>
+        <text x="${Rr}" y="${R1(Y(c.prezzo)) - 7}" class="ax" text-anchor="end">chiesta ${eur(c.prezzo)}</text>
+        ${ord.map((x, i) => `<circle class="pt-good" cx="${R1(L + 20 + i * step)}" cy="${R1(Y(x.prezzo))}" r="6"/><text x="${R1(L + 20 + i * step)}" y="${R1(Y(x.prezzo)) - 11}" class="ax" text-anchor="middle">${eur(x.prezzo)}</text>`).join("")}
+      </svg>
+      <p class="viz-foot">Auto uguali vendute di recente: i punti sono i loro ultimi prezzi.</p></section>`;
+  }
+  return "";
+}
+/* ---------- movimento: discreto, una volta sola, spento con "riduci movimento" ---------- */
+const FX = {sheet: null, tab: null, seen: new Set(), counted: new Set(), drawn: new Set(), io: null};
+const calmo = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function fx(){
+  // capsula della barra in fondo: scorre dalla voce di prima a quella attiva
+  const nav = document.querySelector(".tabs"), ind = nav && nav.querySelector(".tab-ind"), on = nav && nav.querySelector('[aria-current="page"]');
+  if (ind) {
+    if (!on) { ind.style.opacity = "0"; }
+    else {
+      const nr = nav.getBoundingClientRect(), r = on.getBoundingClientRect(), to = {x: r.left - nr.left, w: r.width};
+      if (FX.tab && !calmo()) { ind.style.transition = "none"; ind.style.transform = `translateX(${FX.tab.x}px)`; ind.style.width = FX.tab.w + "px"; ind.getBoundingClientRect(); ind.style.transition = ""; }
+      ind.style.transform = `translateX(${to.x}px)`; ind.style.width = to.w + "px"; FX.tab = to;
+    }
+  }
+  // card che salgono piano quando entrano nello schermo (una volta per auto)
+  if (FX.io) { FX.io.disconnect(); FX.io = null; }
+  if (!calmo() && "IntersectionObserver" in window) {
+    FX.io = new IntersectionObserver(es => { let k = 0; es.forEach(e => { if (!e.isIntersecting) return; const el = e.target, d = Math.min(k++, 6) * 40;
+      el.style.transitionDelay = d + "ms"; el.classList.remove("pre"); FX.seen.add(el.dataset.v); FX.io.unobserve(el); setTimeout(() => { el.style.transitionDelay = ""; }, d + 400); }); }, {rootMargin: "0px 0px -4% 0px"});
+    document.querySelectorAll(".card[data-v]").forEach(el => { if (FX.seen.has(el.dataset.v)) return; el.classList.add("pre"); FX.io.observe(el); });
+  }
+  // il numero grande della scheda conta fino al valore (una volta per auto)
+  const big = S.route === "auto" && document.querySelector(".ap-num");
+  if (big && !FX.counted.has(S.sel)) {
+    FX.counted.add(S.sel);
+    const t = big.firstChild, m = t && t.nodeType === 3 && t.nodeValue.match(/^([+\u2212-]?)([\d.]+)$/);
+    if (m && !calmo()) { const to = Number(m[2].replace(/\./g, "")), t0 = performance.now(), dur = 720;
+      const step = now => { const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3); t.nodeValue = m[1] + num(to * e); if (p < 1) requestAnimationFrame(step); };
+      t.nodeValue = m[1] + "0"; requestAnimationFrame(step); }
+  }
+  // grafici: si disegnano una volta per grafico
+  document.querySelectorAll("[data-viz]").forEach(el => { const k = el.dataset.viz; if (FX.drawn.has(k)) return; FX.drawn.add(k); if (!calmo()) el.classList.add("anim"); });
+  parallasse();
+}
+function parallasse(){
+  const g = S.route === "auto" && document.querySelector(".gallery .slides");
+  if (!g) return;
+  if (calmo()) { g.style.transform = ""; return; }
+  const y = window.scrollY;
+  g.style.transform = y >= 0 ? `translate3d(0,${Math.min(y, 420) * 0.3}px,0)` : `scale(${1 + Math.min(-y, 160) / 420})`;
+}
+let fxRaf = 0, fxY = 0;
+// il tasto "Chiedi" si fa da parte quando si scorre in giù e torna quando si risale
+window.addEventListener("scroll", () => { const y = window.scrollY, f = document.querySelector(".cm-fab"); if (f && Math.abs(y - fxY) > 6) { f.classList.toggle("away", y > fxY && y > 80); fxY = y; } }, {passive: true});
+window.addEventListener("scroll", () => { if (fxRaf || S.route !== "auto") return; fxRaf = requestAnimationFrame(() => { fxRaf = 0; parallasse(); }); }, {passive: true});
+window.addEventListener("resize", () => { FX.tab = null; const nav = document.querySelector(".tabs"); if (nav) fx(); }, {passive: true});
 /* foto che non si caricano: resta il disegno dell'auto (niente codice nell'HTML: CSP) */
 document.addEventListener("error", e => { const t = e.target; if (t && t.tagName === "IMG") t.classList.add("ko"); }, true);
 
@@ -1592,7 +1779,7 @@ function shrinkPhoto(file){
 function viewPaywall(){
   const ab = (S.metodi && S.metodi.abbonamento) || {};
   const prova = ab.prova_giorni ? `<span class="meta">I primi ${ab.prova_giorni} giorni sono gratis: puoi disdire quando vuoi.</span>` : `<span class="meta">Puoi disdire quando vuoi dal tuo profilo.</span>`;
-  return svcHead("Scovo", "Abbonamento") + `<main class="list"><div class="empty paywall">
+  return header("Abbonamento", "", `<button class="pw-x" data-act="tab" data-v="profilo" aria-label="Chiudi">${ICON.x}</button>`).replace('class="top"', 'class="top top-plain pw-top"') + `</header><main class="list pw-main"><div class="empty paywall">
     <strong style="font:800 24px var(--disp)">Le auto sotto prezzo, ogni giorno</strong>
     <ul class="checks" style="text-align:left;margin:4px 0 6px">
       <li>Auto di privati sotto il prezzo di mercato entro 100 km da Milano</li>
@@ -1718,6 +1905,8 @@ $app.addEventListener("click", e => {
     case "brand": S.brands = S.brands.includes(v) ? S.brands.filter(x => x !== v) : S.brands.concat([v]); saveFilters(); break;
     case "band": setBand(v); saveFilters(); break;
     case "filters": S.sheet = "filters"; break;
+    case "altro": S.sheet = "altro"; break;
+    case "altro-vai": S.sheet = null; if (v === S.route) break; go(v); return;
     case "parts": S.sheet = "parts"; break;
     case "app-open": apApri(); return;
     case "ap-giorno": apNota(); AP.giorno = v; AP.err = ""; break;
