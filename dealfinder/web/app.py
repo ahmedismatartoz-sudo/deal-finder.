@@ -3300,7 +3300,17 @@ def _tempo_reale():
                 with _hx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
                     via = set()
                     for cid in camp.split(","):
-                        via |= set(_esporta(c, int(cid), "all"))
+                        if cid.startswith("L"):          # L82 = i contatti della lista 82 (chi ha ricevuto quella campagna)
+                            off = 0
+                            while True:
+                                r = c.get(f"{_API}/contacts/lists/{int(cid[1:])}/contacts", params={"limit": 500, "offset": off})
+                                cs = (r.json() or {}).get("contacts") or [] if r.status_code < 300 else []
+                                via |= {x["email"].lower() for x in cs if x.get("email")}
+                                if len(cs) < 500:
+                                    break
+                                off += 500
+                        else:
+                            via |= set(_esporta(c, int(cid), "all"))
                     via = sorted(via)
                     tolti = 0
                     for k in range(0, len(via), 150):
