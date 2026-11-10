@@ -1624,3 +1624,48 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .gain-pill{grid-area:pill}
 .card .ph-shade{height:72%}
 .round{background:rgba(255,255,255,.74);color:#24272c;-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6)}
+/* ============ v5.1 ============ */
+/* una sola riga che scorre: sezioni + ordinamento + filtri veloci */
+.ctl-row{display:flex;gap:8px;overflow-x:auto;margin:0 calc(-1*var(--gut));padding:2px var(--gut) 4px;scrollbar-width:none}
+.ctl-row::-webkit-scrollbar{display:none}
+.ctl-row .cats,.ctl-row .qf{display:contents}
+.top .sub{line-height:20px}
+.top .sub b.good{color:var(--good);font-weight:600}
+.top{gap:10px;padding-bottom:2px}
+.list{padding-top:8px}
+/* prima card più grande */
+.card.card-first .photo{aspect-ratio:7/6}
+/* capsula del margine: vetro salvia scuro, testo bianco (contrasto >= 5:1 anche su foto chiare) */
+.gain-pill{background:rgba(34,62,46,.76);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 18px -8px rgba(0,0,0,.45)}
+.gain-pill b{font:600 17px/22px var(--body);color:#fff;letter-spacing:-.2px}
+.gain-pill small{color:rgba(255,255,255,.86)}
+/* titolo sulla foto: marca e modello in una riga, allestimento sotto più piccolo */
+.ph-t .name{display:flex;flex-direction:column;-webkit-line-clamp:unset}
+.nm-1,.nm-2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm-2{font:500 15px/20px var(--body);color:rgba(255,255,255,.86)}
+.card .ph-shade{height:45%;background:linear-gradient(to top,rgba(10,12,14,.84) 0%,rgba(10,12,14,.5) 50%,rgba(10,12,14,0) 100%)}
+.card .ph-over{row-gap:4px}
+/* scheda: capsula del margine sulla foto, velo in alto per la freccia, sfondo galleria */
+.gallery{background:#0e0f11}
+.gallery::before{content:"";position:absolute;z-index:1;left:0;right:0;top:0;height:20%;background:linear-gradient(to bottom,rgba(10,12,14,.45),rgba(10,12,14,0));pointer-events:none}
+.gallery .round{z-index:2}
+.g-pill{position:absolute;z-index:2;left:16px;bottom:44px;flex-direction:row;align-items:baseline;gap:7px;padding:8px 14px}
+.g-pill b{font:600 17px/22px var(--body)}
+.gallery .dots{z-index:2;bottom:50px;left:auto;right:76px;width:auto;gap:5px}
+.gallery .dots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.5)}
+.gallery .dots i.on{width:16px;background:#fff}
+@media (max-width:389px){.gallery .dots{display:none}}
+.lightbox{background:#0e0f11}
+/* la prima volta la galleria accenna lo scorrimento */
+.slides.hint .slide{animation:nudge 1.3s var(--ease) .7s 1}
+@keyframes nudge{0%,100%{transform:none}40%{transform:translateX(-34px)}}
+@media (max-width:359px){.nm-2{font-size:14px}.g-pill{left:12px}}
+/* intestazione: sottotitolo a tutta larghezza sotto il saluto */
+.top-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px}
+.top-row>.hello{display:contents}
+.top-row .word{grid-column:1;grid-row:1}
+.top-row>.top-act{grid-column:2;grid-row:1}
+.top-row .sub{grid-column:1/-1;grid-row:2;margin-top:2px}
+.sec-h{margin-top:4px}
+.sec-h small{flex-basis:auto;margin-left:2px}
+.cm-nov{padding:6px 4px 6px 10px}
