@@ -500,7 +500,7 @@ function boxParere(t, extra){
     <div class="ap-card ap-hero">
       <div class="ap-cat ${tono}"><i aria-hidden="true"></i>Il nostro parere</div>
       <h2>${esc(pa.giudizio)}</h2>
-      ${eroe ? `<div class="ap-num ${eroe.tono}">${eroe.segno}${e2(eroe.v).replace(" €", "")}<span>€</span></div><p class="ap-cap">${eroe.cap}</p>` : ""}
+      ${eroe ? `<p class="ap-cap ap-cap-top">${eroe.cap}</p><div class="ap-num ${eroe.tono}">${eroe.segno}${e2(eroe.v).replace(" €", "")}<span>€</span></div>` : ""}
       ${barra}
     </div>
     ${apGruppo("Acquisto", acquisto, bl.trattativa && esc(bl.trattativa.testo || ""))}
@@ -1423,7 +1423,7 @@ const CM_IDEE = ["Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €
                  "SUV ibrido, Toyota C-HR o Kia Niro, dal 2019, budget 17.000 €"];
 function cmNovita(){
   if (store.get("cmTipVisto", false) || !canBrowse() || S.paywall) return "";
-  return `<div class="tip cm-nov" role="note"><span class="eur" aria-hidden="true">${MIC}</span><span><b>Novità:</b> dicci a voce che auto cerchi</span><button class="tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>`;
+  return `<div class="tip cm-nov" role="note"><span class="eur" aria-hidden="true">${MIC}</span><span><b>Novità:</b> cercala a voce</span><button class="tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>`;
 }
 function cmFab(){
   return `<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;

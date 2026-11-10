@@ -1366,3 +1366,14 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 .app:has(.cm-fab) .tabs button{min-width:34px;padding:0 4px}
 .app:has(.cm-fab) .tabs button[aria-current="page"]{padding:0 12px}
 @media (max-width:359px){.app:has(.cm-fab) .tabs button{min-width:30px;padding:0 2px}.app:has(.cm-fab) .tabs button[aria-current="page"]{padding:0 8px;gap:5px;flex:3.4 1 0}}
+/* v3.3: aree di tocco >= 44px senza cambiare l'aspetto; capsula solo icona sotto i 360px */
+.tabs button::after{content:"";position:absolute;top:50%;left:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+@media (max-width:359px){
+  .tabs button[aria-current="page"] span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tabs button[aria-current="page"],.app:has(.cm-fab) .tabs button[aria-current="page"]{flex:1.5 1 0;padding:0 6px}
+  .app:has(.cm-fab) .tabs button{min-width:36px}
+}
+.ap-cap-top{margin:12px 0 0}
+.ap-cap-top + .ap-num{margin-top:4px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dock-row .talk-app{background:var(--card)}}
+:root[data-theme="dark"] .dock-row .talk-app{background:var(--card)}
