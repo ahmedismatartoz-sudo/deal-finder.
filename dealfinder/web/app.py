@@ -1582,7 +1582,7 @@ def api_vendute(request: Request):
 
 def affari(request: Request):
     user = viewer(request, "auto")
-    items = [dict(it) for it in _elenco_per(user["id"])]
+    items = [dict(scovo.prezzo_sito(it)) for it in _elenco_per(user["id"])]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     per_id = {it["id"]: it for it in items}
@@ -1619,8 +1619,8 @@ def affare(request: Request):
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
             d = scovo.detail(dict(it), extra)
-            _con_trattativa(conn, lid, d)
-            return jsonify(d)
+            _con_trattativa(conn, lid, d)   # la trattativa (storico, offerta) resta sul prezzo vero dell'annuncio
+            return jsonify(scovo.prezzo_sito(d))
         if not admin:
             err(404, "Questa auto non è più disponibile")
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()

@@ -66,6 +66,35 @@ def soglia(prezzo: int) -> int:
     return next(m for limite, m in SOGLIE if prezzo <= limite)
 
 
+
+# 10/11 (cliente: "abbassa di 700 euro sul sito le auto sotto i 6k, quelle sotto i 2.000 lasciale così"): il prezzo
+# MOSTRATO al commerciante (elenco e scheda) è quello dell'annuncio meno il ribasso; il margine mostrato sale di
+# altrettanto. Le regole del sito continuano a lavorare sul prezzo vero: nessuna auto entra grazie al ribasso.
+# SITO_RIBASSO "da:a:euro" (predefinito 2000:6000:700; "0" = spento). Il prezzo vero resta in prezzo_annuncio.
+def _ribasso_sito() -> tuple[int, int, int]:
+    try:
+        da, a, eur = (int(x) for x in os.environ.get("SITO_RIBASSO", "2000:6000:700").split(":"))
+        return da, a, max(0, eur)
+    except Exception:
+        return 0, 0, 0
+
+
+def prezzo_sito(it: dict) -> dict:
+    """Copia dell'auto con il prezzo mostrato ribassato, se rientra nella fascia; altrimenti l'auto com'è."""
+    da, a, eur = _ribasso_sito()
+    if not eur or it.get("supercar") or it.get("trattare") or it.get("prezzo_annuncio"):
+        return it
+    p = int(it.get("prezzo") or 0)
+    if not (da <= p < a):
+        return it
+    out = dict(it, prezzo=p - eur, prezzo_annuncio=p)
+    for k in ("pv", "valutazione"):
+        v = out.get(k)
+        if isinstance(v, dict) and v.get("margine") is not None:
+            out[k] = dict(v, margine=v["margine"] + eur)
+    return out
+
+
 def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
     riv = round(it["mercato"] * (1 - sconto / 100))
     return riv - it["prezzo"] - sum(COSTI_FISSI.values()) - it["rip_hi"]
