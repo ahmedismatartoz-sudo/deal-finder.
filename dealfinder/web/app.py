@@ -3286,6 +3286,33 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("SU_MISURA2 non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("togli_lista:"):      # 10/11 sera (cliente): dalla lista di domani via chi ha ricevuto le campagne indicate
+            time.sleep(20)
+            try:
+                import httpx as _hx
+                from ..marketing.brevo_liste import _esporta, API as _API
+                from ..marketing.su_misura import _chiave
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"togli_lista:{v}"):
+                    lg.warning("TOGLI_LISTA %s già fatto", v)
+                    return
+                lista, camp = v.split(":", 1)[1].split("@", 1)
+                with _hx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
+                    via = set()
+                    for cid in camp.split(","):
+                        via |= set(_esporta(c, int(cid), "all"))
+                    via = sorted(via)
+                    tolti = 0
+                    for k in range(0, len(via), 150):
+                        r = c.post(f"{_API}/contacts/lists/{int(lista)}/contacts/remove", json={"emails": via[k:k + 150]})
+                        if r.status_code < 300:
+                            tolti += len((r.json().get("contacts") or {}).get("success") or [])
+                    rl = c.get(f"{_API}/contacts/lists/{int(lista)}").json()
+                lg.warning("TOGLI_LISTA %s", json.dumps({"da_togliere": len(via), "tolti": tolti,
+                                                           "rimasti": rl.get("uniqueSubscribers")}))
+            except Exception as e:
+                lg.warning("TOGLI_LISTA non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("nuovi_sm:"):         # 10/11 sera (cliente): 1.450 dal nostro archivio con esempi nuovi, programmata
             time.sleep(30)
             try:
