@@ -326,7 +326,7 @@ function riassunto(list){
   const g = list.map(c => c.gain).filter(x => x > -1e5 && isFinite(x));
   const media = g.length ? g.reduce((a, b) => a + b, 0) / g.length : null;
   const daCont = list.filter(c => !c.aperta).length;
-  return [`${list.length} auto`, list.length ? `${daCont} da contattare` : "", media != null && list.length > 1 ? `margine medio <b class="good">${eur(media)}</b>` : ""].filter(Boolean).join(" · ");
+  return [`${list.length} auto`, list.length ? `${daCont} da contattare` : "", media != null && list.length > 1 ? `<span class="only-wide">margine medio</span><span class="only-narrow">media</span> <b class="good">${eur(media)}</b>` : ""].filter(Boolean).join(" · ");
 }
 function topOggi(list){
   // le 5 con il margine più alto tra quelle in elenco (stessi dati, nessun conto nuovo)
@@ -600,12 +600,14 @@ function viewDetail(){
     <div class="gallery">
       <div class="slides" id="slides" aria-label="Foto">${photos.length ? photos.map((p, i) => `<div class="slide" data-act="foto-full" data-v="${i}" role="button" tabindex="0" aria-label="Apri la foto ${i + 1} di ${photos.length} a schermo intero">${CAR_SVG}${img(p, "Foto " + (i + 1) + " di " + photos.length, i === 0)}</div>`).join("") : `<div class="slide">${CAR_SVG}<span>Nessuna foto</span></div>`}</div>
       <button class="round left" data-act="back" aria-label="Torna all'elenco">${ICON.back}</button>
-      ${c.gain > -1e5 || c.pv ? `<span class="gain-pill g-pill"><b>${gainTxt(c)}</b><small>${gainLbl(c, true)}</small></span>` : ""}
+      ${c.gain > -1e5 || c.pv ? `<span class="gain-pill g-pill"><b>${gainTxt(c)}</b><small>${gainLbl(c)}</small></span>` : ""}
       ${photos.length > 1 ? `<span class="g-count" id="gcount" aria-live="polite">1/${photos.length}</span>${photos.length <= 12 ? `<div class="dots" id="dots" aria-hidden="true">${photos.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}` : ""}
     </div>
     ${S.full != null && photos.length ? `<div class="lightbox" role="dialog" aria-modal="true" aria-label="Foto a schermo intero">
+      <div class="lb-top"><span class="lb-count" id="lbcount">${S.full + 1}/${photos.length}</span><button class="lb-x" data-act="foto-chiudi" aria-label="Chiudi le foto">${ICON.x}</button></div>
       <div class="lb-slides" id="lbs">${photos.map((p, i) => `<div class="lb-s"><img src="${esc(p)}" alt="Foto ${i + 1} di ${photos.length}" decoding="async"></div>`).join("")}</div>
-      <button class="lb-x" data-act="foto-chiudi" aria-label="Chiudi le foto">${ICON.x}</button><span class="lb-count" id="lbcount">${S.full + 1}/${photos.length}</span></div>` : ""}
+      ${photos.length > 1 && photos.length <= 12 ? `<div class="lb-dots" id="lbdots" aria-hidden="true">${photos.map((_, i) => `<i class="${i === S.full ? "on" : ""}"></i>`).join("")}</div>` : ""}
+      ${photos.length > 1 ? `<div class="lb-thumbs" id="lbth">${photos.map((p, i) => `<button class="lb-t" data-act="foto-vai" data-v="${i}" aria-label="Foto ${i + 1}" aria-current="${i === S.full}"><img src="${esc(p)}" alt="" loading="lazy" decoding="async"></button>`).join("")}</div>` : ""}</div>` : ""}
     <div class="d-body">
       <div class="d-head"><h1 class="d-name">${esc(c.nome)}</h1><div class="d-loc">${ICON.pin}<span>${esc([c.carb, c.zona].filter(Boolean).join(" · "))}</span></div></div>
       <div class="d-stats"><div><b>${eur(c.prezzo)}</b><span>Prezzo</span></div><div><b>${c.km ? num(c.km) : "—"}</b><span>Chilometri</span></div><div><b>${esc(String(c.anno || "—"))}</b><span>Anno</span></div></div>
@@ -1636,8 +1638,13 @@ function render(opts){
     const gc = document.getElementById("gcount"); if (gc) gc.textContent = (i + 1) + "/" + slides.children.length;
   }, {passive:true});
   const lbs = document.getElementById("lbs");
-  if (lbs) { lbs.scrollLeft = (S.full || 0) * lbs.clientWidth;
-    lbs.addEventListener("scroll", () => { const i = Math.round(lbs.scrollLeft / lbs.clientWidth); S.full = i; const n = document.getElementById("lbcount"); if (n) n.textContent = (i + 1) + "/" + lbs.children.length; }, {passive:true}); }
+  if (lbs) {
+    const k = lbs.children[S.full || 0]; if (k) lbs.scrollLeft = k.offsetLeft - (lbs.clientWidth - k.clientWidth) / 2;
+    const segna = i => { S.full = i; const n = document.getElementById("lbcount"); if (n) n.textContent = (i + 1) + "/" + lbs.children.length;
+      document.querySelectorAll("#lbdots i").forEach((d, j) => d.classList.toggle("on", j === i));
+      document.querySelectorAll("#lbth .lb-t").forEach((t, j) => { t.setAttribute("aria-current", String(j === i)); if (j === i) t.scrollIntoView({block: "nearest", inline: "center"}); }); };
+    lbs.addEventListener("scroll", () => { const c = lbs.scrollLeft + lbs.clientWidth / 2; let b = 0, d = 1e9;
+      [...lbs.children].forEach((el, j) => { const x = Math.abs(el.offsetLeft + el.clientWidth / 2 - c); if (x < d) { d = x; b = j; } }); if (b !== S.full) segna(b); }, {passive:true}); }
   fx();
   if (opts.top) window.scrollTo(0, 0);
   else if (opts.y != null) window.scrollTo(0, opts.y);
@@ -1949,6 +1956,7 @@ $app.addEventListener("click", e => {
     case "reload": loadCars(true); return;
     case "foto-full": S.full = Number(v) || 0; document.body.style.overflow = "hidden"; break;
     case "foto-chiudi": S.full = null; break;
+    case "foto-vai": { const lb = document.getElementById("lbs"), k = lb && lb.children[Number(v)]; if (k) lb.scrollTo({left: k.offsetLeft - (lb.clientWidth - k.clientWidth) / 2, behavior: calmo() ? "auto" : "smooth"}); return; }
     case "talk": talk(); return;
     case "talk-link":  // link vero in una nuova scheda: Scovo resta qui com'era
       if (!S.token && !guest()) { e.preventDefault(); toast("Entra per contattare il venditore"); go("entra"); return; }

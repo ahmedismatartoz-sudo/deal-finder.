@@ -1669,3 +1669,29 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .sec-h{margin-top:4px}
 .sec-h small{flex-basis:auto;margin-left:2px}
 .cm-nov{padding:6px 4px 6px 10px}
+/* ============ v5.2 ============ */
+.only-narrow{display:none}
+@media (max-width:359px){.only-narrow{display:inline}}
+/* card senza foto nel tema chiaro: niente velo scuro, titolo scuro */
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .photo.nofoto .ph-shade{display:none}
+  :root:not([data-theme="dark"]) .photo.nofoto .name,:root:not([data-theme="dark"]) .photo.nofoto .nm-1{color:var(--ink);text-shadow:none}
+  :root:not([data-theme="dark"]) .photo.nofoto .nm-2,:root:not([data-theme="dark"]) .photo.nofoto .ph-price{color:var(--ink-2)}}
+:root[data-theme="light"] .photo.nofoto .ph-shade{display:none}
+:root[data-theme="light"] .photo.nofoto .name,:root[data-theme="light"] .photo.nofoto .nm-1{color:var(--ink);text-shadow:none}
+:root[data-theme="light"] .photo.nofoto .nm-2,:root[data-theme="light"] .photo.nofoto .ph-price{color:var(--ink-2)}
+/* visore a schermo intero: fondo #0E0F11, foto successiva che si intravede, puntini, striscia di miniature */
+.lightbox{display:flex;flex-direction:column;background:#0e0f11;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.lb-top{flex:none;display:flex;align-items:center;justify-content:center;position:relative;height:calc(64px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px)}
+.lb-count{position:static;transform:none;color:rgba(255,255,255,.85)}
+.lb-x{top:auto;bottom:10px}
+.lb-slides{flex:1;min-height:0;height:auto;gap:10px;padding:0 22px;scroll-padding:0 22px}
+.lb-s{width:calc(100% - 44px);height:100%;scroll-snap-align:center;border-radius:14px;overflow:hidden}
+.lb-s img{border-radius:14px}
+.lb-dots{flex:none;display:flex;justify-content:center;gap:6px;padding:14px 0 10px}
+.lb-dots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.35);transition:width var(--t-mid) var(--ease)}
+.lb-dots i.on{width:18px;background:#fff}
+.lb-thumbs{flex:none;display:flex;gap:8px;overflow-x:auto;padding:4px 16px 4px;scrollbar-width:none}
+.lb-thumbs::-webkit-scrollbar{display:none}
+.lb-t{flex:none;width:56px;height:56px;padding:0;border:0;border-radius:12px;overflow:hidden;background:#1b1d20;opacity:.55;transition:opacity var(--t-fast),box-shadow var(--t-fast)}
+.lb-t img{width:100%;height:100%;object-fit:cover;display:block}
+.lb-t[aria-current="true"]{opacity:1;box-shadow:0 0 0 2px #fff}
