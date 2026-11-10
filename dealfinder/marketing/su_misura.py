@@ -465,7 +465,8 @@ def righe_solo(righe: list[dict], voluti: set) -> list[dict]:
 
 
 def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-10T09:00:00+01:00",
-                   totale: int = 1450) -> dict:
+                   totale: int = 1450, solo_non_aperti: bool = True, nome: str = "Skovo rinvio non aperti 10-11",
+                   oggetto: str = "Nuove auto da privati sotto mercato, oggi") -> dict:
     """Chi ha ricevuto le campagne 70/72 e NON le ha aperte né cliccate (tolti rimbalzati, disiscritti, esclusi):
     2 auto NUOVE ciascuno (le stesse regole del secondo giro: entro 50/120 km, altrimenti Milano), lista e campagna
     PROGRAMMATA in Brevo all'ora data (invia Brevo). Nei log solo conteggi ed esempi senza indirizzi né nomi."""
@@ -484,26 +485,34 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
         if c.get(f"{API}/account").status_code != 200:
             return {"errore": "chiave rifiutata"}
-        ricevuto, via = set(), set()
-        for cid in campagne:
-            ricevuto |= set(_esporta(c, cid, "all"))
-            for tipo in ("openers", "clickers", "hardBounces", "softBounces", "unsubscribed"):
-                via |= set(_esporta(c, cid, tipo))
-        voluti = ricevuto - via
-        esito.update({"ricevuto": len(ricevuto), "aperto_cliccato_rimbalzato_disiscritto": len(via), "da_rimandare": len(voluti)})
-        if len(ricevuto) < int(os.environ.get("RINVIO_SM_MIN", "500")) or not voluti:
-            esito["fermo"] = "elenchi_brevo_incompleti"
-            return esito
+        ricevuto, via, fuori = set(), set(), set()
+        if solo_non_aperti:
+            for cid in campagne:
+                ricevuto |= set(_esporta(c, cid, "all"))
+                for tipo in ("openers", "clickers", "hardBounces", "softBounces", "unsubscribed"):
+                    via |= set(_esporta(c, cid, tipo))
+            voluti = ricevuto - via
+            esito.update({"ricevuto": len(ricevuto), "aperto_cliccato_rimbalzato_disiscritto": len(via), "da_rimandare": len(voluti)})
+            if len(ricevuto) < int(os.environ.get("RINVIO_SM_MIN", "500")) or not voluti:
+                esito["fermo"] = "elenchi_brevo_incompleti"
+                return esito
+        else:
+            # 10/11 sera (cliente): 1.450 dal nostro archivio con esempi nuovi; fuori rimbalzati e disiscritti delle campagne
+            voluti = None
+            for cid in campagne:
+                for tipo in ("hardBounces", "unsubscribed"):
+                    fuori |= set(_esporta(c, cid, tipo))
+            esito["fuori_rimbalzi_disiscritti"] = len(fuori)
         contatti = _contatti_brevo(c)
         with connect() as conn:
             invii.sincronizza_da_brevo(conn, contatti)
             bloccati = invii.disiscritti(conn) | _bloccati_0111()
-            righe = righe_solo(_righe_db(conn), voluti)
+            righe = righe_solo(_righe_db(conn), voluti) if voluti is not None else _righe_db(conn)
         if len(bloccati) < BLOCCATI_MINIMI:
             return {**esito, "fermo": "disiscritti_incompleti"}
         bloccati_in_brevo = [x for x in contatti if invii.contatto_bloccato(x)]
         posto = TETTO_BREVO - len(bloccati_in_brevo)
-        saloni = scegli_secondo(righe, bloccati, set(), totale * 2)
+        saloni = scegli_secondo(righe, bloccati, fuori, totale * 2)
         scelti = assegna_secondo(saloni, auto, min(totale, posto))
         esito.update({"saloni": len(saloni), "scelti": len(scelti), "bloccati_tenuti_in_brevo": len(bloccati_in_brevo)})
         for s in scelti[:: max(1, len(scelti) // 6)][:6]:
@@ -518,7 +527,6 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
                 if c.delete(f"{API}/contacts/{quote(e, safe='')}").status_code in (200, 204, 404):
                     tolti += 1
         esito["tolti_da_brevo"] = tolti
-        nome = "Skovo rinvio non aperti 10-11"
         lid = _liste(c).get(nome)
         if lid is None:
             r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
@@ -532,7 +540,7 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
             _aspetta_import(c, r)
         esito["lista_id"] = lid
         r = c.post(f"{API}/emailCampaigns", json={
-            "name": "Skovo rinvio non aperti 10-11", "subject": "Nuove auto da privati sotto mercato, oggi",
+            "name": nome, "subject": oggetto,
             "sender": MITTENTE, "replyTo": RISPOSTE, "htmlContent": html_email_secondo(),
             "recipients": {"listIds": [lid]}, "inlineImageActivation": False, "scheduledAt": quando})
         esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code} {r.text[:120]}"

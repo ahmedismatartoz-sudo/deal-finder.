@@ -455,10 +455,14 @@ def puo_vedere(row: dict | None) -> bool:
     dopo un pagamento non riuscito)."""
     if os.environ.get("ABBONAMENTO_OBBLIGATORIO", "1") == "0":
         return True              # pagamento spento da Render: tutti gli account entrano
-    if not row or not row.get("richiede_abbonamento"):
+    if row and row.get("role") == "admin":
         return True
-    if row.get("con_password") or row.get("role") == "admin":
-        return True              # account creati da noi (con password): accesso completo senza abbonamento
+    paga = bool(row and row.get("paga_carta"))   # 10/11: creato da noi ma deve pagare con carta
+    if not paga:
+        if not row or not row.get("richiede_abbonamento"):
+            return True
+        if row.get("con_password"):
+            return True          # account creati da noi (con password): accesso completo senza abbonamento
     stato = row.get("abbonamento_stato") or ""
     if stato == "past_due" and row.get("abbonamento_tolleranza"):
         return row["abbonamento_tolleranza"] > _ora()

@@ -370,6 +370,7 @@ async function viewAdmin() {
           `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"], ["appuntamenti", "Appuntamenti (200 €)"]].map(([k, l]) =>
           `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
+        ["paga_carta", "Pagamento", (v, r) => r.role === "admin" ? "" : `<label style="white-space:nowrap"><input type="checkbox" data-paga="${r.id}" ${v ? "checked" : ""}> Deve pagare con carta</label>${v ? ` <small class="note">${["active", "trialing"].includes(r.abbonamento_stato) ? "pagato" : "non ancora pagato"}</small>` : ""}`],
         ["active", "Attivo", (v, r) => `${v ? '<span class="ok">Attivo</span>' : '<b class="ko">Disattivato</b>'} <button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Riattiva"}</button>`],
         ["id", "Accesso", (v, r) => `<button class="btn primary" data-link="${v}" data-who="${esc(r.email)}">Link di accesso</button> <button class="btn" data-pwd="${v}" data-who="${esc(r.email)}">Nuova password</button>`]])}</div>
       <h2>Nuovo commerciante</h2>
@@ -388,6 +389,11 @@ async function viewAdmin() {
           <label style="display:inline-flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="nd-app" style="width:20px;height:20px"> Appuntamenti (200 €)</label></fieldset>
         <button class="btn primary" type="submit">Crea account</button>
       </form>`;
+    box.querySelectorAll("[data-paga]").forEach((c) => c.onchange = async () => {
+      try { await api("/api/admin/dealers/" + c.dataset.paga, { method: "PATCH", body: { paga_carta: c.checked } });
+            toast(c.checked ? "Ora vede le auto solo dopo aver pagato con carta" : "Accesso completo senza pagamento"); viewAdmin(); }
+      catch (e) { toast(e.message); c.checked = !c.checked; }
+    });
     box.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => {
       await api("/api/admin/dealers/" + b.dataset.toggle, { method: "PATCH", body: { active: b.dataset.active !== "true" } });
       viewAdmin();

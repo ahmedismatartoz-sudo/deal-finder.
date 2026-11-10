@@ -93,7 +93,7 @@ def richiede(request: Request, permesso: str) -> dict:
                 err(403, "Il tuo account non ha accesso a questa sezione")
             if permesso == "auto":
                 row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, abbonamento_tolleranza, "
-                                   "(password_hash IS NOT NULL) AS con_password, role FROM dealers WHERE id=%s",
+                                   "(password_hash IS NOT NULL) AS con_password, role, paga_carta FROM dealers WHERE id=%s",
                                    (user["id"],)).fetchone()
                 if not abbonamento.puo_vedere(row):
                     err(402, "Per vedere le auto serve l'abbonamento")
@@ -206,7 +206,7 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts, resale_as, lat, lon, (richiede_abbonamento AND password_hash IS NULL AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
+                         "preferred_parts, resale_as, lat, lon, ((richiede_abbonamento AND password_hash IS NULL OR paga_carta) AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
                          "abbonamento_fino, (stripe_customer IS NOT NULL) AS ha_pagamento "
                          "FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
@@ -498,7 +498,7 @@ def admin_dealers(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
         rows = conn.execute(
-            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at, d.permessi,
+            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at, d.permessi, d.paga_carta, d.abbonamento_stato,
                       (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id) AS opens,
                       (SELECT count(*) FROM dealer_feedback f WHERE f.dealer_id=d.id AND f.status='comprata') AS bought,
                       (SELECT count(*) FROM dealer_sessions s WHERE s.dealer_id=d.id AND s.revoked_at IS NULL) AS sessions,
@@ -556,6 +556,8 @@ async def admin_update_dealer(request: Request):
         if isinstance(data.get("permessi"), list):
             conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
                          ([p for p in data["permessi"] if p in PERMESSI], did))
+        if "paga_carta" in data:               # 10/11: deve pagare con carta prima di vedere le auto
+            conn.execute("UPDATE dealers SET paga_carta=%s WHERE id=%s", (bool(data["paga_carta"]), did))
         sessions.dimentica_account(did)          # ruolo e stato riletti subito dal database
         if "active" in data:
             # disattivato_da_admin: né il pagamento Stripe né l'avvio lo riaccendono
@@ -1582,7 +1584,7 @@ def api_vendute(request: Request):
 
 def affari(request: Request):
     user = viewer(request, "auto")
-    items = [dict(it) for it in _elenco_per(user["id"])]
+    items = [dict(scovo.prezzo_sito(it)) for it in _elenco_per(user["id"])]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     per_id = {it["id"]: it for it in items}
@@ -1618,7 +1620,7 @@ def affare(request: Request):
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
-            d = scovo.detail(dict(it), extra)
+            d = scovo.prezzo_sito(scovo.detail(dict(it), extra))   # 10/11: anche dentro la scheda vale il prezzo ribassato
             _con_trattativa(conn, lid, d)
             return jsonify(d)
         if not admin:
@@ -2150,7 +2152,7 @@ def vai_annuncio(request: Request):
                     if "auto" not in permessi_di(conn, data):
                         err(403, "Nessun accesso")
                     row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) "
-                                       "AS con_password, role FROM dealers WHERE id=%s", (data["id"],)).fetchone()
+                                       "AS con_password, role, paga_carta FROM dealers WHERE id=%s", (data["id"],)).fetchone()
                     if not abbonamento.puo_vedere(row):
                         err(402, "Serve l'abbonamento")
             r = _apri_contatto(request, data)
@@ -3283,6 +3285,63 @@ def _tempo_reale():
                                                                           totale=int(v.split(":")[1] or 1100))))
             except Exception as e:
                 lg.warning("SU_MISURA2 non riuscito: %s", str(e)[:300])
+            return
+        if v.startswith("togli_lista:"):      # 10/11 sera (cliente): dalla lista di domani via chi ha ricevuto le campagne indicate
+            time.sleep(20)
+            try:
+                import httpx as _hx
+                from ..marketing.brevo_liste import _esporta, API as _API
+                from ..marketing.su_misura import _chiave
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"togli_lista:{v}"):
+                    lg.warning("TOGLI_LISTA %s già fatto", v)
+                    return
+                lista, camp = v.split(":", 1)[1].split("@", 1)
+                with _hx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=60) as c:
+                    via = set()
+                    for cid in camp.split(","):
+                        if cid.startswith("L"):          # L82 = i contatti della lista 82 (chi ha ricevuto quella campagna)
+                            off = 0
+                            while True:
+                                r = c.get(f"{_API}/contacts/lists/{int(cid[1:])}/contacts", params={"limit": 500, "offset": off})
+                                cs = (r.json() or {}).get("contacts") or [] if r.status_code < 300 else []
+                                via |= {x["email"].lower() for x in cs if x.get("email")}
+                                if len(cs) < 500:
+                                    break
+                                off += 500
+                        else:
+                            via |= set(_esporta(c, int(cid), "all"))
+                    via = sorted(via)
+                    tolti = 0
+                    for k in range(0, len(via), 150):
+                        r = c.post(f"{_API}/contacts/lists/{int(lista)}/contacts/remove", json={"emails": via[k:k + 150]})
+                        if r.status_code < 300:
+                            tolti += len((r.json().get("contacts") or {}).get("success") or [])
+                    rl = c.get(f"{_API}/contacts/lists/{int(lista)}").json()
+                lg.warning("TOGLI_LISTA %s", json.dumps({"da_togliere": len(via), "tolti": tolti,
+                                                           "rimasti": rl.get("uniqueSubscribers")}))
+            except Exception as e:
+                lg.warning("TOGLI_LISTA non riuscito: %s", str(e)[:300])
+            return
+        if v.startswith("nuovi_sm:"):         # 10/11 sera (cliente): 1.450 dal nostro archivio con esempi nuovi, programmata
+            time.sleep(30)
+            try:
+                from ..marketing import su_misura as SM
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"nuovi_sm:{v}"):
+                    lg.warning("NUOVI_SM %s già fatto", v)
+                    return
+                for _ in range(30):
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                n, quando = v.split(":", 1)[1].split("@", 1)
+                lg.warning("NUOVI_SM %s", json.dumps(SM.prepara_rinvio(
+                    list(_elenco.get("items") or []), campagne=(70, 72, 73), quando=quando, totale=int(n or 1450),
+                    solo_non_aperti=False, nome="Skovo esempi nuovi " + quando[8:10] + "-" + quando[5:7],
+                    oggetto="Due nuove auto da privati sotto mercato")))
+            except Exception as e:
+                lg.warning("NUOVI_SM non riuscito: %s", str(e)[:300])
             return
         if v.startswith("rinvio_sm:"):        # 9/11 sera (cliente): rinvio su misura a chi non ha aperto 70/72, programmato
             time.sleep(30)
