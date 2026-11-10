@@ -3286,6 +3286,26 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("SU_MISURA2 non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("nuovi_sm:"):         # 10/11 sera (cliente): 1.450 dal nostro archivio con esempi nuovi, programmata
+            time.sleep(30)
+            try:
+                from ..marketing import su_misura as SM
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"nuovi_sm:{v}"):
+                    lg.warning("NUOVI_SM %s già fatto", v)
+                    return
+                for _ in range(30):
+                    if _elenco.get("items"):
+                        break
+                    time.sleep(60)
+                n, quando = v.split(":", 1)[1].split("@", 1)
+                lg.warning("NUOVI_SM %s", json.dumps(SM.prepara_rinvio(
+                    list(_elenco.get("items") or []), campagne=(70, 72, 73), quando=quando, totale=int(n or 1450),
+                    solo_non_aperti=False, nome="Skovo esempi nuovi " + quando[8:10] + "-" + quando[5:7],
+                    oggetto="Due nuove auto da privati sotto mercato")))
+            except Exception as e:
+                lg.warning("NUOVI_SM non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("rinvio_sm:"):        # 9/11 sera (cliente): rinvio su misura a chi non ha aperto 70/72, programmato
             time.sleep(30)
             try:
