@@ -40,6 +40,7 @@ const ICON = {
   gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>',
   spark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
   quote: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h4v4c0 3-1.5 5-4 6M14 7h4v4c0 3-1.5 5-4 6"/></svg>',
+  x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   camera: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>'
 };
 const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
@@ -327,7 +328,7 @@ function viewList(){
         ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
         <div class="gain"><span>${c.trattare ? "Guadagno se la tratti a " + eur(c.trattare.prezzo_obiettivo) : c.pv ? esc(c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
       </div>
-    </button>`).join("");
+    </button>${i === 0 ? cmNovita() : ""}`).join("");
   const empty = `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
@@ -350,7 +351,7 @@ function viewList(){
   return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : nome1 ? "Ciao, " + nome1 : "Le auto di oggi", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto<span class="only-wide"> da girare</span> · ${S.policy ? "solo margini prudenti" : '<span class="only-wide">rivendita </span>−' + S.sconto + "%"}`, right, trV || scV || incV || ecoV ? "Scovo" : oggi()) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${cmNovita()}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -588,12 +589,12 @@ function viewDetail(){
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
       ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
       ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
-      <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}. ${contact.note}.${perm("appuntamenti") && d && !d.err ? " Col tasto del calendario scegli giorno e ora: l'appuntamento col privato lo fissiamo noi." : ""}${d && !d.err && d.trattativa ? " Tratta sempre: più sconto, più guadagno." : ""}</p>
+      <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</p>
     </div>
     <div class="dock"><div class="dock-in"><div class="dock-row">
       ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`
           : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}<span>${contact.label}</span></button>`}
-      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open" aria-label="Fissa l'appuntamento" title="Fissa l'appuntamento">${ICON.cal}</button>` : ""}
+      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open" aria-label="Fissa l'appuntamento" title="Fissa l'appuntamento">${ICON.cal}<span class="ta-l" aria-hidden="true">Appuntamento</span></button>` : ""}
     </div></div></div>
   </div>`;
 }
@@ -886,15 +887,20 @@ function viewProfilo(){
     <div class="sec-title">Come calcoliamo</div>
     <div class="plist"><div><span>Rivendita</span><span class="v">${S.sconto}% sotto mercato</span></div><div><span>Tagliando e pulizia</span><span class="v">max ${eur(S.costs)}</span></div><div><span>Riparazioni</span><span class="v">solo pezzi</span></div></div>
     <span class="hint" style="padding:0 4px">Lo sconto di rivendita si cambia dai Filtri. Ogni auto sparisce dopo che 7 commercianti l'hanno contattata.</span>
-    ${installHint()}
     <div class="sec-title">Scovo</div>
-    <div class="plist">${u.role === "admin" ? `<a href="/gestione">${ri("gear", "Gestione (amministratore)")}${ICON.next}</a>` : ""}<a href="/chi-siamo">${ri("info", "Chi siamo")}${ICON.next}</a><a href="/privacy">${ri("shield", "Privacy")}${ICON.next}</a><a href="/condizioni">${ri("doc", "Condizioni d'uso")}${ICON.next}</a></div>
+    <div class="plist">${installRiga(ri)}${u.role === "admin" ? `<a href="/gestione">${ri("gear", "Gestione (amministratore)")}${ICON.next}</a>` : ""}<a href="/chi-siamo">${ri("info", "Chi siamo")}${ICON.next}</a><a href="/privacy">${ri("shield", "Privacy")}${ICON.next}</a><a href="/condizioni">${ri("doc", "Condizioni d'uso")}${ICON.next}</a></div>
     <div class="plist plist-solo"><button data-act="logout"><span class="danger">${ICON.out}Esci</span></button></div>
   </main>`;
 }
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (S.route === "profilo") render({keep:true}); });
 function standalone(){ return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
+function installRiga(ri){
+  if (standalone()) return "";
+  if (installEvt) return `<button data-act="install">${ri("spark", "Metti Scovo sulla schermata Home")}${ICON.next}</button>`;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  return `<div class="pl-inst">${ri("spark", `<span class="pl-2"><span>Scovo come un'app</span><small>${ios ? "Tocca Condividi e poi “Aggiungi alla schermata Home”." : "Dal menu del browser scegli “Installa app” o “Aggiungi a schermata Home”."}</small></span>`)}</div>`;
+}
 function installHint(){
   if (standalone()) return "";
   if (installEvt) return `<button class="btn btn-blue" data-act="install">Metti Scovo sulla schermata Home</button>`;
@@ -1574,7 +1580,7 @@ function render(opts){
   let html;
   if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
   else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
-  else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall() + tabBar(); }
+  else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall(); }
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : viewList()) + tabBar();
   if (canBrowse()) {
@@ -1642,7 +1648,9 @@ function parallasse(){
   const y = window.scrollY;
   g.style.transform = y >= 0 ? `translate3d(0,${Math.min(y, 420) * 0.3}px,0)` : `scale(${1 + Math.min(-y, 160) / 420})`;
 }
-let fxRaf = 0;
+let fxRaf = 0, fxY = 0;
+// il tasto "Chiedi" si fa da parte quando si scorre in giù e torna quando si risale
+window.addEventListener("scroll", () => { const y = window.scrollY, f = document.querySelector(".cm-fab"); if (f && Math.abs(y - fxY) > 6) { f.classList.toggle("away", y > fxY && y > 80); fxY = y; } }, {passive: true});
 window.addEventListener("scroll", () => { if (fxRaf || S.route !== "auto") return; fxRaf = requestAnimationFrame(() => { fxRaf = 0; parallasse(); }); }, {passive: true});
 window.addEventListener("resize", () => { FX.tab = null; const nav = document.querySelector(".tabs"); if (nav) fx(); }, {passive: true});
 /* foto che non si caricano: resta il disegno dell'auto (niente codice nell'HTML: CSP) */
@@ -1673,7 +1681,7 @@ function shrinkPhoto(file){
 function viewPaywall(){
   const ab = (S.metodi && S.metodi.abbonamento) || {};
   const prova = ab.prova_giorni ? `<span class="meta">I primi ${ab.prova_giorni} giorni sono gratis: puoi disdire quando vuoi.</span>` : `<span class="meta">Puoi disdire quando vuoi dal tuo profilo.</span>`;
-  return svcHead("Scovo", "Abbonamento") + `<main class="list"><div class="empty paywall">
+  return header("Abbonamento", "", `<button class="pw-x" data-act="tab" data-v="profilo" aria-label="Chiudi">${ICON.x}</button>`).replace('class="top"', 'class="top top-plain pw-top"') + `</header><main class="list pw-main"><div class="empty paywall">
     <strong style="font:800 24px var(--disp)">Le auto sotto prezzo, ogni giorno</strong>
     <ul class="checks" style="text-align:left;margin:4px 0 6px">
       <li>Auto di privati sotto il prezzo di mercato entro 100 km da Milano</li>
