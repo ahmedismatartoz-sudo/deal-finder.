@@ -432,5 +432,12 @@
  {
   "id": 60545,
   "motivo": "furgone (Fiat Ducato)"
+ },
+ {
+  "marca": "fiat",
+  "modello": "500",
+  "km": 68000,
+  "prezzo": 7900,
+  "motivo": "tolta dal cliente 10/11 (Fiat 500 rossa in cima al sito)"
  }
 ]

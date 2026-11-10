@@ -1,6 +1,10 @@
 from datetime import datetime, timezone
 
+import os
+
 from dealfinder.web import scovo
+
+os.environ.setdefault("SITO_RIBASSO", scovo.RIBASSO_SCHEMA)
 
 PRIMA = datetime(2026, 11, 10, 15, 0, tzinfo=timezone.utc)      # 16:00 a Roma: ribasso acceso
 DOPO = datetime(2026, 11, 10, 16, 0, tzinfo=timezone.utc)       # 17:00 a Roma: spento da solo
@@ -26,3 +30,13 @@ def test_ribasso_auto():
 def test_si_spegne_da_solo():
     it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000}}
     assert scovo.prezzo_sito(it, DOPO) is it
+
+
+def test_spento_di_base():
+    prima = os.environ.pop("SITO_RIBASSO", None)
+    try:
+        it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000}}
+        assert scovo.prezzo_sito(it, PRIMA) is it
+    finally:
+        if prima is not None:
+            os.environ["SITO_RIBASSO"] = prima

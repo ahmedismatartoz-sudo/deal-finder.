@@ -83,7 +83,7 @@ def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
         fino = os.environ.get("SITO_RIBASSO_FINO", RIBASSO_FINO)
         if fino and (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino):
             return []
-        raw = os.environ.get("SITO_RIBASSO", RIBASSO_SCHEMA)
+        raw = os.environ.get("SITO_RIBASSO", "0")
         return sorted((int(a), max(0, min(3000, int(b)))) for a, b in (x.split(":") for x in raw.split(",") if x.strip()))
     except Exception:
         return []

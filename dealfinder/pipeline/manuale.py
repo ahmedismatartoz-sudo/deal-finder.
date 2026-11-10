@@ -46,6 +46,12 @@ def applica_scarti_cliente(conn) -> int:
                               "AND stage IS DISTINCT FROM 'scartato'",
                               ("analisi_manuale: " + e.get("motivo", "tolta dal sito"), e["id"])).rowcount
             continue
+        if not e.get("anno"):                             # 10/11: senza anno, marca + modello + km + prezzo
+            n += conn.execute("UPDATE listings SET stage='scartato', stage_reason='analisi_manuale: tolta dal cliente' "
+                              "WHERE make ILIKE %s AND model ILIKE %s AND mileage_km=%s AND price_eur=%s "
+                              "AND status='attivo' AND stage IS DISTINCT FROM 'scartato'",
+                              (e["marca"] + "%", "%" + e.get("modello", "") + "%", e["km"], e["prezzo"])).rowcount
+            continue
         n += conn.execute("UPDATE listings SET stage='scartato', stage_reason='analisi_manuale: tolta dal cliente' "
                           "WHERE make ILIKE %s AND year=%s AND mileage_km=%s AND price_eur=%s "
                           "AND stage IS DISTINCT FROM 'scartato'",
