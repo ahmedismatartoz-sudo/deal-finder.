@@ -1328,3 +1328,41 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 @media (min-width:375px){.dock-row .talk-app,.talk.talk-app{padding:0 14px;gap:6px}}
 @media (max-width:429px){.dock-row .talk:not(.talk-app) svg{display:none!important}}
 @media (max-width:359px){.gain{flex-wrap:nowrap}.gain span:first-child{font-size:14px}.gain b{font-size:20px}}
+/* ============ v3.2 ============ */
+:root{--dock:rgba(42,44,47,.88);--dock-ink:rgba(255,255,255,.6);--dock-on:rgba(236,233,227,.16);--dock-on-ink:#ffffff;--sh-dock:0 10px 28px rgba(20,18,14,.18),0 1px 2px rgba(20,18,14,.08)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--dock:rgba(52,55,59,.88);--dock-ink:rgba(255,255,255,.6);--dock-on:rgba(236,233,227,.18);--dock-on-ink:#ffffff;--sh-dock:0 12px 30px rgba(0,0,0,.45)}}
+:root[data-theme="dark"]{--dock:rgba(52,55,59,.88);--dock-ink:rgba(255,255,255,.6);--dock-on:rgba(236,233,227,.18);--dock-on-ink:#ffffff;--sh-dock:0 12px 30px rgba(0,0,0,.45)}
+/* tasto Chiedi: 52px, 16px sopra la barra; l'elenco lascia spazio a barra + tasto */
+.bot-fab,.cm-fab,.bot-fab.cm-fab{width:52px;height:52px;min-height:52px;border-radius:26px;right:max(20px,calc(50% - 240px + 20px));bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+.list{padding-bottom:calc(188px + env(safe-area-inset-bottom,0px))}
+/* Novità: riga compatta sopra la prima auto */
+.cm-nov{padding:8px 4px 8px 12px;gap:10px;border-radius:18px;font:var(--t-foot)}
+.cm-nov .eur{width:28px;height:28px}
+.cm-nov .eur svg{width:14px;height:14px}
+.cm-nov .tip-x{margin:-6px 0}
+.vet-h{font:500 13px/18px var(--body)}
+/* scheda: icone sempre su entrambi i tasti */
+.dock-row .talk:not(.talk-app) svg,.dock-row .talk-app svg{display:block!important;width:17px;height:17px;flex:none}
+.dock-row .talk-app svg{width:20px;height:20px}
+.list>.cm-nov{margin-bottom:-6px}
+@media (min-width:375px) and (max-width:429px){
+  .dock-row .talk:not(.talk-app){padding:0 12px;gap:6px;font-size:16px}
+  .dock-row .talk-app,.talk.talk-app{padding:0 12px;font-size:14px}
+}
+/* tasto Chiedi accanto alla barra (come il tasto rotondo accanto alla capsula nel riferimento): mai sopra le auto */
+.app:has(.cm-fab) .tabs{right:calc(16px + 56px + 8px);margin:0}
+.bot-fab,.cm-fab,.bot-fab.cm-fab{width:56px;height:56px;min-height:56px;border-radius:28px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--dock);color:#fff;-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);box-shadow:var(--sh-dock)}
+.cm-fab .cm-fab-ic{color:#fff}
+.cm-fab.away{transform:none;opacity:1;pointer-events:auto}
+.list{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+@media (min-width:500px){.app:has(.cm-fab) .tabs{left:calc(50% - 224px);right:auto;width:360px}.bot-fab,.cm-fab,.bot-fab.cm-fab{right:auto;left:calc(50% + 144px)}}
+@media (max-width:359px){
+  .app:has(.cm-fab) .tabs{left:10px;right:calc(10px + 56px + 6px);padding:6px 4px}
+  .bot-fab,.cm-fab,.bot-fab.cm-fab{right:10px}
+  .app:has(.cm-fab) .tabs button{min-width:34px;padding:0 4px}
+  .app:has(.cm-fab) .tabs button[aria-current="page"]{padding:0 10px}
+}
+.app:has(.cm-fab) .tabs{padding:6px 4px}
+.app:has(.cm-fab) .tabs button{min-width:34px;padding:0 4px}
+.app:has(.cm-fab) .tabs button[aria-current="page"]{padding:0 12px}
+@media (max-width:359px){.app:has(.cm-fab) .tabs button{min-width:30px;padding:0 2px}.app:has(.cm-fab) .tabs button[aria-current="page"]{padding:0 8px;gap:5px;flex:3.4 1 0}}
