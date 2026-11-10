@@ -93,7 +93,7 @@ def richiede(request: Request, permesso: str) -> dict:
                 err(403, "Il tuo account non ha accesso a questa sezione")
             if permesso == "auto":
                 row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, abbonamento_tolleranza, "
-                                   "(password_hash IS NOT NULL) AS con_password, role FROM dealers WHERE id=%s",
+                                   "(password_hash IS NOT NULL) AS con_password, role, paga_carta FROM dealers WHERE id=%s",
                                    (user["id"],)).fetchone()
                 if not abbonamento.puo_vedere(row):
                     err(402, "Per vedere le auto serve l'abbonamento")
@@ -206,7 +206,7 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts, resale_as, lat, lon, (richiede_abbonamento AND password_hash IS NULL AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
+                         "preferred_parts, resale_as, lat, lon, ((richiede_abbonamento AND password_hash IS NULL OR paga_carta) AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
                          "abbonamento_fino, (stripe_customer IS NOT NULL) AS ha_pagamento "
                          "FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
@@ -498,7 +498,7 @@ def admin_dealers(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
         rows = conn.execute(
-            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at, d.permessi,
+            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at, d.permessi, d.paga_carta, d.abbonamento_stato,
                       (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id) AS opens,
                       (SELECT count(*) FROM dealer_feedback f WHERE f.dealer_id=d.id AND f.status='comprata') AS bought,
                       (SELECT count(*) FROM dealer_sessions s WHERE s.dealer_id=d.id AND s.revoked_at IS NULL) AS sessions,
@@ -556,6 +556,8 @@ async def admin_update_dealer(request: Request):
         if isinstance(data.get("permessi"), list):
             conn.execute("UPDATE dealers SET permessi=%s WHERE id=%s",
                          ([p for p in data["permessi"] if p in PERMESSI], did))
+        if "paga_carta" in data:               # 10/11: deve pagare con carta prima di vedere le auto
+            conn.execute("UPDATE dealers SET paga_carta=%s WHERE id=%s", (bool(data["paga_carta"]), did))
         sessions.dimentica_account(did)          # ruolo e stato riletti subito dal database
         if "active" in data:
             # disattivato_da_admin: né il pagamento Stripe né l'avvio lo riaccendono
@@ -2150,7 +2152,7 @@ def vai_annuncio(request: Request):
                     if "auto" not in permessi_di(conn, data):
                         err(403, "Nessun accesso")
                     row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) "
-                                       "AS con_password, role FROM dealers WHERE id=%s", (data["id"],)).fetchone()
+                                       "AS con_password, role, paga_carta FROM dealers WHERE id=%s", (data["id"],)).fetchone()
                     if not abbonamento.puo_vedere(row):
                         err(402, "Serve l'abbonamento")
             r = _apri_contatto(request, data)
