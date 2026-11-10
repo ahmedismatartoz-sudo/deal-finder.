@@ -1520,7 +1520,7 @@ async function cmInvia(){
 }
 function tabBar(){
   const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
-  return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${l}</button>`).join("")}</nav>`;
+  return `<nav class="tabs" aria-label="Sezioni">${TABS.filter(([id]) => tabOk(id)).map(([id,l,p]) => `<button data-act="tab" data-v="${id}" aria-current="${cur === id ? "page" : "false"}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg><span>${l}</span></button>`).join("")}</nav>`;
 }
 function render(opts){
   opts = opts || {};
