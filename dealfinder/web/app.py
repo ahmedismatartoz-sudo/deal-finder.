@@ -1618,9 +1618,9 @@ def affare(request: Request):
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
-            d = scovo.detail(dict(it), extra)
-            _con_trattativa(conn, lid, d)   # la trattativa (storico, offerta) resta sul prezzo vero dell'annuncio
-            return jsonify(scovo.prezzo_sito(d))
+            d = scovo.prezzo_sito(scovo.detail(dict(it), extra))   # 10/11: anche dentro la scheda vale il prezzo ribassato
+            _con_trattativa(conn, lid, d)
+            return jsonify(d)
         if not admin:
             err(404, "Questa auto non è più disponibile")
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()

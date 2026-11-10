@@ -815,8 +815,9 @@ def calcola(b: dict, st: dict, dop: list, d: dict, soglia_fn, ora=None, gruppi: 
     giorni = _giorni(st.get("inizio") or b.get("first_seen_at"), ora)
     giorni_annuncio = _giorni(b.get("first_seen_at"), ora)
     rib = int(st.get("ribassi") or 0)
-    iniziale = st.get("prezzo_iniziale") or prezzo
-    sceso = (iniziale - prezzo) if iniziale and iniziale > prezzo else 0
+    vero = int(d.get("prezzo_annuncio") or prezzo)      # 10/11: i ribassi del venditore si contano sul prezzo vero
+    iniziale = st.get("prezzo_iniziale") or vero
+    sceso = (iniziale - vero) if iniziale and iniziale > vero else 0
 
     motivi, voto = [], 3.0
     if giorni >= 60:
