@@ -311,7 +311,7 @@ function viewList(){
         ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
         <div class="gain"><span>${c.trattare ? "Guadagno se la tratti a " + eur(c.trattare.prezzo_obiettivo) : c.pv ? esc(c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
       </div>
-    </button>${i === 0 && S.tip && !S.bot ? `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span><button class="tip-x" data-act="tip" aria-label="Chiudi il consiglio">×</button></div>` : ""}`).join("");
+    </button>`).join("");
   const empty = `<div class="empty"><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
@@ -328,7 +328,7 @@ function viewList(){
       <label class="qsel ${S.raggio ? "on" : ""}"><span class="sr">Distanza</span><select id="q-raggio">${opts(DIST_STEPS.map(v => [v, "Entro " + v + " km"]), S.raggio || "", "Distanza")}</select></label>
     </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
-  return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto da girare · ${S.policy ? "solo margini prudenti" : "rivendita −" + S.sconto + "%"}`, right) + `
+  return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "scovo", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto<span class="only-wide"> da girare</span> · ${S.policy ? "solo margini prudenti" : '<span class="only-wide">rivendita </span>−' + S.sconto + "%"}`, right) + `
     ${fbar}
   </header>
   <main class="list" aria-live="polite">${cmNovita()}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
@@ -453,7 +453,7 @@ const e2 = v => String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " 
    valore a destra, intestazione piccola sopra e nota grigia sotto (come Impostazioni). Carattere di sistema. */
 function apRiga(k, v, tono, sub){ return `<div class="ap-row"><div class="ap-k"><span>${k}</span>${sub ? `<small>${sub}</small>` : ""}</div><b class="${tono || ""}">${v}</b></div>`; }
 function apGruppo(titolo, righe, nota){ return righe ? `<h3 class="ap-head">${titolo}</h3><div class="ap-list">${righe}</div>${nota ? `<p class="ap-foot">${nota}</p>` : ""}` : ""; }
-function boxParere(t){
+function boxParere(t, extra){
   const pa = t.parere, bl = {}; (pa.blocchi || []).forEach(b => { bl[b.tipo] = b; });
   const n = (b, k) => { const x = b && (b.numeri || []).find(y => y.k === k); return x ? x.v : null; };
   const chiesta = n(bl.prezzo, "Chiesta"), merc = n(bl.prezzo, "Mercato"), sotto = n(bl.prezzo, "Sotto di"), sopra = n(bl.prezzo, "Sopra di");
@@ -474,7 +474,7 @@ function boxParere(t){
     + (offri ? apRiga("Offri", e2(offri), "info") : "") + (chiudi ? apRiga("Chiudi a", e2(chiudi)) : "") + (oltre ? apRiga("Non oltre", e2(oltre), "warn") : "");
   const rivendita = (ann ? apRiga("Metti l'annuncio a", e2(ann)) : "") + (vend ? apRiga("Si vende a", e2(vend)) : "")
     + (tempo ? apRiga("Tempo di vendita", esc(String(tempo)).replace("~", "circa ").replace(" gg", " giorni")) : "")
-    + (netto != null ? apRiga("Guadagno dopo la trattativa", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "");
+    + (netto != null ? apRiga("Guadagno dopo la trattativa", (netto > 0 ? "+" : "") + e2(netto), netto > 0 ? "good" : "warn") : "") + (extra || "");
   const att = bl.attenzione ? (bl.attenzione.punti || []).map(x => `<div class="ap-row"><div class="ap-k"><span>${esc(x)}</span></div><i class="ap-warn" aria-hidden="true">!</i></div>`).join("") : "";
   return `<div class="ap">
     <div class="ap-card ap-hero">
@@ -514,28 +514,21 @@ function boxVendute(mk){
         [c.anno, c.km != null ? num(c.km) + " km" : "", c.dove ? esc(c.dove) : ""].filter(Boolean).join(", "))).join("")}</div>` : ""}
     ${nota ? `<p class="ap-foot">${nota}.</p>` : ""}</div></section>`;
 }
-function boxSenzaTrattare(c){
-  const nota = c.economica && !c.mercato ? "Per questa auto non abbiamo ancora un prezzo di mercato affidabile." : `Il ${S.sconto}% sotto la media del mercato (${eur(c.mercato)}): un prezzo giusto per rivendere.`;
-  return `<div class="ap">${apGruppo("Al prezzo chiesto, senza trattare",
-    apRiga("Riparazioni", ripTxt(c), c.rip_hi ? "warn" : "", "solo pezzi") + apRiga("Rivendita veloce", c.economica && !c.mercato ? "da stimare" : eur(c.riv))
-    + apRiga("Guadagno al prezzo chiesto", gainTxt(c), "good"),
-    nota + ` Già tolti i costi del commerciante: al massimo ${eur(S.costs)} fissi (tagliando e pulizia) più i pezzi.${c.rip_hi ? " Più spendi in riparazioni, meno guadagni." : ""}`)}</div>`;
+function rigaChiesto(c){
+  return (c.rip_hi ? apRiga("Riparazioni", ripTxt(c), "warn", "solo pezzi") : "") + apRiga("Guadagno al prezzo chiesto", gainTxt(c), "good");
 }
 function boxTrattativa(t, extra){
   if (!t || !t.parere) return "";
   const pa = t.parere, mk = t.mercato, ds = t.da_sapere;
-  let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t)
+  let h = `<section class="d-sec tr">${(pa.blocchi || []).length ? boxParere(t, extra)
       : `<div class="tr-parere ${esc(pa.tono)}"><span class="tr-lab">Il nostro parere</span><h2>${esc(pa.giudizio)}</h2>${(pa.paragrafi || []).map(x => `<p>${grassetto(x)}</p>`).join("")}</div>`}
-    ${extra || ""}
     ${t.messaggio ? `<button class="ap-btn" data-act="copy-msg">Copia il messaggio per il venditore</button>` : ""}</section>`;
   h += boxVenditore(t.comportamento);
   if (mk) h += boxVendute(mk);
-  if (ds) {
-    const bits = [ds.kw ? `${ds.kw} kW (${ds.cv} CV)` : "", ds.classe_euro ? esc(ds.classe_euro) + " probabile" : "",
-      ds.bollo_anno ? "bollo ~" + eur(ds.bollo_anno) + "/anno" : "", ds.passaggio ? "passaggio " + eur(ds.passaggio[0]) + "–" + eur(ds.passaggio[1]) : ""].filter(Boolean);
-    if (bits.length) h += `<div class="note" style="border:0">${bits.join(" · ")}</div>`;
-  }
-  h += `<div class="note" style="border:0">Stime dai nostri dati: un annuncio sparito è quasi sempre un'auto venduta, ma vediamo l'ultimo prezzo dell'annuncio, non quello finale.</div>`;
+  const STIME = "Stime dai nostri dati: un annuncio sparito è quasi sempre un'auto venduta, ma vediamo l'ultimo prezzo dell'annuncio, non quello finale.";
+  const tec = ds ? (ds.kw ? apRiga("Potenza", `${ds.kw} kW (${ds.cv} CV)`) : "") + (ds.classe_euro ? apRiga("Classe", esc(ds.classe_euro) + " probabile") : "")
+    + (ds.bollo_anno ? apRiga("Bollo", "~" + eur(ds.bollo_anno) + "/anno") : "") + (ds.passaggio ? apRiga("Passaggio", eur(ds.passaggio[0]) + "–" + eur(ds.passaggio[1])) : "") : "";
+  h += tec ? `<div class="ap">${apGruppo("Dati tecnici", tec, STIME)}</div>` : `<p class="hint dock-note">${STIME}</p>`;
   return h;
 }
 function c_prezzo(t){ const d = S.detail[S.sel]; return d && d.prezzo; }
@@ -569,19 +562,18 @@ function viewDetail(){
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
-      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere ? "" : boxV1(c)}
-      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv ? "" : boxSenzaTrattare(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
+      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : boxV1(c)}
+      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
       ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
       ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
-      <p class="hint dock-note">${contact.note}.${perm("appuntamenti") && d && !d.err ? " Scegli giorno e ora: l'appuntamento col privato lo fissiamo noi." : ""}</p>
-      <span class="where">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</span>
+      <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}. ${contact.note}.${perm("appuntamenti") && d && !d.err ? " Col tasto del calendario scegli giorno e ora: l'appuntamento col privato lo fissiamo noi." : ""}${d && !d.err && d.trattativa ? " Tratta sempre: più sconto, più guadagno." : ""}</p>
     </div>
     <div class="dock"><div class="dock-in"><div class="dock-row">
       ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`
           : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}<span>${contact.label}</span></button>`}
-      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open">${ICON.cal}<span>Fissa l'appuntamento</span></button>` : ""}
+      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open" aria-label="Fissa l'appuntamento" title="Fissa l'appuntamento">${ICON.cal}</button>` : ""}
     </div></div></div>
   </div>`;
 }
@@ -600,7 +592,7 @@ function sheetFilters(){
   const cc = {}; filtered({carb: []}).forEach(c => { const k = carbKey(c.carb); cc[k] = (cc[k] || 0) + 1; });
   const anni = []; for (let y = new Date().getFullYear(); y >= 2007; y--) anni.push([y, String(y)]);
   const seg = (items, cur, act, cols) => `<div class="seg" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${items.map(([v,l]) => `<button data-act="${act}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join("")}</div>`;
-  const sel = (id, label, inner) => `<label class="frow"><span class="frow-k">${label}</span><span class="frow-v" aria-hidden="true">${(inner.match(/<option[^>]*\sselected[^>]*>([^<]*)/) || inner.match(/<option[^>]*>([^<]*)/) || ["", ""])[1]}</span>${ICON.next}<select id="${id}">${inner}</select></label>`;
+  const sel = (id, label, inner) => `<label class="frow"><span class="frow-k">${label}</span><span class="frow-v" aria-hidden="true">${(inner.match(/<option[^>]*\sselected[^>]*>([^<]*)/) || inner.match(/<option[^>]*>([^<]*)/) || ["", ""])[1].replace("Scegli prima la marca", 'Scegli <span class="only-wide">prima la </span>marca')}</span>${ICON.next}<select id="${id}">${inner}</select></label>`;
   return `
   <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
     <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
@@ -630,7 +622,7 @@ function sheetFilters(){
       </section>
       <section class="fgrp"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Senza danni"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
       ${S.policy ? `<section class="fgrp"><h3>Rivendita</h3><span class="hint">Rivendita prudente calcolata per ogni auto: il più basso tra la mediana ridotta per fascia e il 25° percentile dei confronti equivalenti, meno tutti i costi.</span></section>`
-        : `<section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Mercato pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
+        : `<section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
         <span class="hint">I guadagni si ricalcolano subito.</span></section>`}
     </div>
     <div class="sheet-foot fpanel-foot"><button class="btn" data-act="reset">Azzera</button><button class="btn btn-dark" data-act="close" id="show">${n ? `Mostra ${n} auto` : "Nessuna auto: cambia i filtri"}</button></div>
@@ -858,7 +850,7 @@ function viewRicambi(){
 const P = {open:false, err:"", ok:false, busy:false};
 function viewProfilo(){
   const u = S.user || {};
-  return svcHead("Profilo", u.email || "").replace('class="top"', 'class="top top-plain"') + `<main class="list">
+  return svcHead("Profilo", "").replace('class="top"', 'class="top top-plain"') + `<main class="list">
     <div class="sec-title">Account</div>
     <div class="plist"><div><span>Nome</span><span class="v">${esc(u.name || "")}</span></div><div><span>Email</span><span class="v">${esc(u.email || "")}</span></div>
       <button data-act="pwd"><span>Cambia password</span>${ICON.next}</button>
@@ -1403,7 +1395,7 @@ const CM_IDEE = ["Golf 7 diesel dal 2017, sotto i 120.000 km, massimo 11.000 €
                  "SUV ibrido, Toyota C-HR o Kia Niro, dal 2019, budget 17.000 €"];
 function cmNovita(){
   if (store.get("cmTipVisto", false) || !canBrowse() || S.paywall) return "";
-  return `<div class="tip cm-nov" role="note"><span class="eur" aria-hidden="true">${MIC}</span><span><b>Novità.</b> Dicci a voce che auto cerchi: la troviamo noi in 30 minuti</span><button class="tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>`;
+  return `<div class="tip cm-nov" role="note"><span class="eur" aria-hidden="true">${MIC}</span><span><b>Novità:</b> dicci a voce che auto cerchi</span><button class="tip-x" data-act="cm-tip-x" aria-label="Chiudi">×</button></div>`;
 }
 function cmFab(){
   return `<button class="bot-fab cm-fab" data-act="cm-open" aria-label="Chiedi l'auto che cerchi"><span class="cm-fab-ic">${MIC}</span><span class="cm-fab-t"><b>Chiedi</b><small>la troviamo noi</small></span></button>`;

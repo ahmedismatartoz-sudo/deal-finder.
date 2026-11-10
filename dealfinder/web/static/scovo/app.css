@@ -1004,3 +1004,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .foot a,.auth .hint a{color:var(--link);text-decoration:none}
 .dock-row .talk{flex:1 1 auto;padding:6px;gap:5px;letter-spacing:-.2px}
 @media (min-width:375px){.dock-row .talk span{white-space:nowrap}}
+/* ============ 10/11 giro 3 ============ */
+.dock-row .talk{flex:1 1 0;padding:0 16px;font:var(--t-head);letter-spacing:-.2px;gap:8px}
+.dock-row .talk svg{display:block!important;width:20px;height:20px}
+.dock-row .talk-app{flex:none;width:50px;height:50px;padding:0}
+.dock-row .talk-app svg{width:22px;height:22px}
+.tabs{background:var(--card);-webkit-backdrop-filter:none;backdrop-filter:none}
+.sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fck .n{margin-left:auto} .fck i{margin-left:10px}
+.seg button{white-space:nowrap}
+@media (max-width:359px){.seg button{font-size:14px;padding:4px}}
+.btn:disabled,.btn[disabled],.cm-send:disabled{background:var(--fill)!important;color:var(--muted)!important;opacity:1}
+.auth-top .l-brand{display:none}
+.top-plain .sub:empty{display:none}
+.d-body .dock-note{font:var(--t-foot);color:var(--muted);padding:0 var(--gut)}
+.auth-top{flex-direction:row;justify-content:flex-start}
