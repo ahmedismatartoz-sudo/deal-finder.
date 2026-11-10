@@ -297,6 +297,30 @@ function header(title, sub, right, kick){
 function oggi(){ const t = new Date().toLocaleDateString("it-IT", {weekday: "long", day: "numeric", month: "long"}); return t.charAt(0).toUpperCase() + t.slice(1); }
 function iniziali(){ const n = ((S.user && (S.user.name || S.user.email)) || "").trim(); return esc(n ? n.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("") : "·"); }
 function avatarBtn(){ return S.token ? `<button class="avatar" data-act="tab" data-v="profilo" aria-label="Profilo">${iniziali()}</button>` : ""; }
+function carCard(c, i, hero){
+  const badges = `<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
+  const lbl = c.trattare ? "se la tratti a " + eur(c.trattare.prezzo_obiettivo) : c.pv ? (c.pv.margine != null ? "margine prudente" : "sotto la media") : c.economica ? "guadagno possibile" : "guadagno stimato";
+  const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
+  const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => `<span${k === a.length - 1 && a.length > 3 ? ' class="loc"' : ""}>${k === a.length - 1 && a.length > 3 ? ICON.pin : ""}${esc(x)}</span>`).join("")}</div>`;
+  const cella = (k, v, cls) => `<div><span class="lbl">${k}</span><span class="val ${cls || ""}">${v}</span></div>`;
+  const trio = c.economica ? cella("Mercato", c.mercato ? "~" + eur(c.mercato) : "da stimare") + cella("Rivendita", c.mercato ? eur(c.riv) : "—")
+    : cella("Riparazioni", ripTxt(c), c.rip_hi ? "small warn" : "") + cella("Rivendita", eur(c.riv)) + (c.mercato ? cella("Mercato", eur(c.mercato)) : "");
+  return `<button class="card${hero ? " card-hero" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}">
+      <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}<span class="ph-shade" aria-hidden="true"></span>${badges}
+        <div class="ph-over"><div class="ph-t"><div class="name">${esc(c.nome)}</div><div class="ph-price">${eur(c.prezzo)}</div></div>
+          <span class="gain-pill"><small>${lbl}</small><b>${gainTxt(c)}</b></span></div></div>
+      <div class="card-body">${chips}${hero ? "" : `<div class="trio">${trio}</div>
+        ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
+        ${tag ? `<span class="c-tag">${ICON.spark}${esc(tag)}</span>` : ""}`}</div>
+    </button>`;
+}
+function topOggi(list){
+  // le 5 con il margine più alto tra quelle in elenco (stessi dati, nessun conto nuovo)
+  const top = list.filter(c => c.gain > -1e5 && c.foto).slice().sort((a, b) => b.gain - a.gain).slice(0, 5);
+  if (top.length < 3) return "";
+  return `<section class="hero-row" aria-label="Le migliori di oggi"><h2 class="sec-h"><b>Le migliori di oggi</b><span class="cnt">${top.length}</span><small>margine più alto</small></h2>
+    <div class="hero-scroll">${top.map(c => carCard(c, 0, true)).join("")}</div></section>`;
+}
 function viewList(){
   if (!S.cars) {
     const sk = `<div class="skel" aria-hidden="true"><div class="photo"></div><div class="bar"></div><div class="bar s"></div><div class="bar"></div></div>`;
@@ -313,22 +337,8 @@ function viewList(){
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
   const TIT = {all: "Margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
-  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? `<h2 class="vet-h">${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</h2>` : ""}
-    <button class="card${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, guadagno ${gainTxt(c)}">
-      <div class="photo">${CAR_SVG}${img(c.foto, c.nome, i < 2)}<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}</div>
-      <div class="card-body">
-        <div class="c-head"><div class="name">${esc(c.nome)}</div><div class="info-chips">${meta(c).split(" · ").map((x, k, a) => `<span${k === a.length - 1 && a.length > 3 ? ' class="loc"' : ""}>${k === a.length - 1 && a.length > 3 ? ICON.pin : ""}${esc(x)}</span>`).join("")}</div></div>
-        <div class="trio">
-          <div><span class="lbl">Prezzo</span><span class="val">${eur(c.prezzo)}</span></div>
-          ${c.economica ? `<div><span class="lbl">Mercato</span><span class="val">${c.mercato ? "~" + eur(c.mercato) : "da stimare"}</span></div>
-          <div><span class="lbl">Rivendita</span><span class="val">${c.mercato ? eur(c.riv) : "—"}</span></div>`
-          : `<div><span class="lbl">Riparazioni</span><span class="val ${c.rip_hi ? "small warn" : "good"}">${ripTxt(c)}</span></div>
-          <div><span class="lbl">Rivendita</span><span class="val">${eur(c.riv)}</span></div>`}
-        </div>
-        ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
-        <div class="gain"><span>${c.trattare ? "Guadagno se la tratti a " + eur(c.trattare.prezzo_obiettivo) : c.pv ? esc(c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") + (c.pv.margine != null ? " · margine prudente" : "") : c.economica ? "Guadagno possibile" : "Guadagno stimato"}</span><b>${gainTxt(c)}</b></div>
-      </div>
-    </button>`).join("");
+  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? (c._grp === "all" ? `<h2 class="sec-h"><b>Tutte le auto</b><span class="cnt">${list.length}</span><small>${TIT.all}</small></h2>` : `<h2 class="sec-h"><b>${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</b></h2>`) : ""}
+    ${carCard(c, i)}`).join("");
   const empty = `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
       ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
@@ -348,10 +358,11 @@ function viewList(){
     </div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
   const nome1 = S.user && S.user.name ? esc(String(S.user.name).trim().split(/\s+/)[0]) : "";
-  return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : nome1 ? "Ciao, " + nome1 : "Le auto di oggi", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto<span class="only-wide"> da girare</span> · ${S.policy ? "solo margini prudenti" : '<span class="only-wide">rivendita </span>−' + S.sconto + "%"}`, right, trV || scV || incV || ecoV ? "Scovo" : oggi()) + `
+  const mini = `<div class="minibar" id="minibar"><span class="mb-t">${trV ? "Da trattare" : scV ? "Supercar" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : "Affari"}<small>${list.length} auto</small></span><button class="mb-b" data-act="filters" aria-label="Filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.sliders}${nf ? `<span class="count-pill">${nf}</span>` : ""}</button></div>`;
+  return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : nome1 ? "Ciao, " + nome1 : "Le auto di oggi", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto<span class="only-wide"> da girare</span> · ${S.policy ? "solo margini prudenti" : '<span class="only-wide">rivendita </span>−' + S.sconto + "%"}`, right, trV || scV || incV || ecoV ? "Scovo" : oggi()) + `${mini}
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${cmNovita()}${list.length ? vizOggi(list) : ""}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${cmNovita()}${list.length ? vizOggi(list) : ""}${!scV && !incV && !ecoV && !trV && S.sort === "guadagno" && list.length >= 4 ? topOggi(list) : ""}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -573,10 +584,13 @@ function viewDetail(){
   return `
   <div class="detail">
     <div class="gallery">
-      <div class="slides" id="slides" aria-label="Foto">${photos.length ? photos.map((p, i) => `<div class="slide">${CAR_SVG}${img(p, "Foto " + (i + 1) + " di " + photos.length, i === 0)}</div>`).join("") : `<div class="slide">${CAR_SVG}<span>Nessuna foto</span></div>`}</div>
+      <div class="slides" id="slides" aria-label="Foto">${photos.length ? photos.map((p, i) => `<div class="slide" data-act="foto-full" data-v="${i}" role="button" tabindex="0" aria-label="Apri la foto ${i + 1} di ${photos.length} a schermo intero">${CAR_SVG}${img(p, "Foto " + (i + 1) + " di " + photos.length, i === 0)}</div>`).join("") : `<div class="slide">${CAR_SVG}<span>Nessuna foto</span></div>`}</div>
       <button class="round left" data-act="back" aria-label="Torna all'elenco">${ICON.back}</button>
-      ${photos.length > 1 ? `<div class="dots" id="dots">${photos.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}
+      ${photos.length > 1 ? `<span class="g-count" id="gcount" aria-live="polite">1/${photos.length}</span>` : ""}
     </div>
+    ${S.full != null && photos.length ? `<div class="lightbox" role="dialog" aria-modal="true" aria-label="Foto a schermo intero">
+      <div class="lb-slides" id="lbs">${photos.map((p, i) => `<div class="lb-s"><img src="${esc(p)}" alt="Foto ${i + 1} di ${photos.length}" decoding="async"></div>`).join("")}</div>
+      <button class="lb-x" data-act="foto-chiudi" aria-label="Chiudi le foto">${ICON.x}</button><span class="lb-count" id="lbcount">${S.full + 1}/${photos.length}</span></div>` : ""}
     <div class="d-body">
       <div class="d-head"><h1 class="d-name">${esc(c.nome)}</h1><div class="d-loc">${ICON.pin}<span>${esc([c.carb, c.zona].filter(Boolean).join(" · "))}</span></div></div>
       <div class="d-stats"><div><b>${eur(c.prezzo)}</b><span>Prezzo</span></div><div><b>${c.km ? num(c.km) : "—"}</b><span>Chilometri</span></div><div><b>${esc(String(c.anno || "—"))}</b><span>Anno</span></div></div>
@@ -1595,14 +1609,18 @@ function render(opts){
   FX.sheet = S.sheet;
   $app.innerHTML = html;
   $app.classList.toggle("vc-on", VC.on);
-  document.body.style.overflow = S.sheet ? "hidden" : "";
+  document.body.style.overflow = S.sheet || S.full != null ? "hidden" : "";
   if (active) { const el = document.getElementById(active); if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) { el.focus({preventScroll:true}); try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} } }
   document.querySelectorAll(".chips").forEach((c, i) => { if (chipsX[i]) c.scrollLeft = chipsX[i]; });
   const slides = document.getElementById("slides");
   if (slides) slides.addEventListener("scroll", () => {
     const i = Math.round(slides.scrollLeft / slides.clientWidth);
     document.querySelectorAll("#dots i").forEach((d, k) => d.classList.toggle("on", k === i));
+    const gc = document.getElementById("gcount"); if (gc) gc.textContent = (i + 1) + "/" + slides.children.length;
   }, {passive:true});
+  const lbs = document.getElementById("lbs");
+  if (lbs) { lbs.scrollLeft = (S.full || 0) * lbs.clientWidth;
+    lbs.addEventListener("scroll", () => { const i = Math.round(lbs.scrollLeft / lbs.clientWidth); S.full = i; const n = document.getElementById("lbcount"); if (n) n.textContent = (i + 1) + "/" + lbs.children.length; }, {passive:true}); }
   fx();
   if (opts.top) window.scrollTo(0, 0);
   else if (opts.y != null) window.scrollTo(0, opts.y);
@@ -1737,8 +1755,11 @@ function fx(){
   }
   // grafici: si disegnano una volta per grafico
   document.querySelectorAll("[data-viz]").forEach(el => { const k = el.dataset.viz; if (FX.drawn.has(k)) return; FX.drawn.add(k); if (!calmo()) el.classList.add("anim"); });
+  document.querySelectorAll(".photo img,.slide img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ok"); });
+  barraMini();
   parallasse();
 }
+function barraMini(){ document.body.classList.toggle("scrolled", isList(S.route) && window.scrollY > 150 && !S.sheet); }
 function parallasse(){
   const g = S.route === "auto" && document.querySelector(".gallery .slides");
   if (!g) return;
@@ -1747,11 +1768,24 @@ function parallasse(){
   g.style.transform = y >= 0 ? `translate3d(0,${Math.min(y, 420) * 0.3}px,0)` : `scale(${1 + Math.min(-y, 160) / 420})`;
 }
 let fxRaf = 0, fxY = 0;
+window.addEventListener("scroll", barraMini, {passive: true});
+// trascina giù in cima all'elenco per aggiornare (usa lo stesso aggiornamento del tasto)
+(() => {
+  let y0 = null, dy = 0; const ptr = document.createElement("div"); ptr.className = "ptr"; ptr.setAttribute("aria-hidden", "true"); ptr.innerHTML = ICON.refresh; document.body.appendChild(ptr);
+  const pronto = () => isList(S.route) && !S.sheet && window.scrollY <= 0 && !S.loading;
+  window.addEventListener("touchstart", e => { y0 = pronto() ? e.touches[0].clientY : null; dy = 0; }, {passive: true});
+  window.addEventListener("touchmove", e => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); const k = Math.min(dy / 80, 1);
+    ptr.style.opacity = String(k); ptr.style.transform = `translate(-50%,${Math.min(dy * .5, 56)}px) rotate(${dy * 3}deg)`; ptr.classList.toggle("pronto", dy > 80); }, {passive: true});
+  window.addEventListener("touchend", () => { if (y0 == null) return; const go = dy > 80; y0 = null; dy = 0;
+    if (go) { ptr.classList.add("gira"); loadCars(true); const t = setInterval(() => { if (!S.loading) { clearInterval(t); ptr.classList.remove("gira", "pronto"); ptr.style.opacity = "0"; ptr.style.transform = ""; } }, 200); }
+    else { ptr.style.opacity = "0"; ptr.style.transform = ""; ptr.classList.remove("pronto"); } }, {passive: true});
+})();
 // il tasto "Chiedi" si fa da parte quando si scorre in giù e torna quando si risale
 window.addEventListener("scroll", () => { const y = window.scrollY, f = document.querySelector(".cm-fab"); if (f && Math.abs(y - fxY) > 6) { f.classList.toggle("away", y > fxY && y > 80); fxY = y; } }, {passive: true});
 window.addEventListener("scroll", () => { if (fxRaf || S.route !== "auto") return; fxRaf = requestAnimationFrame(() => { fxRaf = 0; parallasse(); }); }, {passive: true});
 window.addEventListener("resize", () => { FX.tab = null; const nav = document.querySelector(".tabs"); if (nav) fx(); }, {passive: true});
 /* foto che non si caricano: resta il disegno dell'auto (niente codice nell'HTML: CSP) */
+document.addEventListener("load", e => { const t = e.target; if (t && t.tagName === "IMG") t.classList.add("ok"); }, true);
 document.addEventListener("error", e => { const t = e.target; if (t && t.tagName === "IMG") t.classList.add("ko"); }, true);
 
 /* ---------- azioni ---------- */
@@ -1891,9 +1925,11 @@ $app.addEventListener("click", e => {
   if (act === "close-bg" && e.target !== t) return;
   switch (act) {
     case "tab": if (v === "incentivi") { location.href = "/incentivi/"; return; } if (v === S.route) { window.scrollTo({top: 0, behavior: "smooth"}); return; } go(v); return;
-    case "open": if (VC.on) vcEnd(); S.fromList = true; S.fromInc = S.route === "affari" ? null : S.route; go("auto/" + v); return;
-    case "back": if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go(S.fromInc || "affari", true); return;
+    case "open": S.full = null; if (VC.on) vcEnd(); S.fromList = true; S.fromInc = S.route === "affari" ? null : S.route; go("auto/" + v); return;
+    case "back": S.full = null; if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go(S.fromInc || "affari", true); return;
     case "reload": loadCars(true); return;
+    case "foto-full": S.full = Number(v) || 0; document.body.style.overflow = "hidden"; break;
+    case "foto-chiudi": S.full = null; break;
     case "talk": talk(); return;
     case "talk-link":  // link vero in una nuova scheda: Scovo resta qui com'era
       if (!S.token && !guest()) { e.preventDefault(); toast("Entra per contattare il venditore"); go("entra"); return; }
@@ -2014,6 +2050,7 @@ $app.addEventListener("change", async e => {
   render();
 });
 $app.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.act === "foto-full") { e.preventDefault(); e.target.click(); return; }
   if (e.key === "Enter" && e.target.id === "r-pezzo") { e.preventDefault(); addPezzo(R.pezzo); render(); }
   if (e.key === "Enter" && (e.target.id === "v-targa" || e.target.id === "v-km" || e.target.id === "v-note")) { e.preventDefault(); e.target.blur(); }
 });
@@ -2033,7 +2070,7 @@ $app.addEventListener("input", e => {
     document.querySelectorAll('.pill[data-act="band"]').forEach(p => p.setAttribute("aria-pressed", String(p.dataset.v === bandId())));
   }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && S.sheet) { S.sheet = null; render({keep:true}); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && S.full != null) { S.full = null; render({keep:true}); return; } if (e.key === "Escape" && S.sheet) { S.sheet = null; render({keep:true}); } });
 window.addEventListener("online", () => { S.offline = false; if (canBrowse() && isList(S.route)) loadCars(true); });
 window.addEventListener("offline", () => { S.offline = true; if (isList(S.route)) render({keep:true}); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && canBrowse() && isList(S.route)) loadCars(); });
