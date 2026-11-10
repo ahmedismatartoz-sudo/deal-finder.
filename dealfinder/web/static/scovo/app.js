@@ -351,7 +351,7 @@ function viewList(){
   return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : nome1 ? "Ciao, " + nome1 : "Le auto di oggi", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : `${list.length} auto<span class="only-wide"> da girare</span> · ${S.policy ? "solo margini prudenti" : '<span class="only-wide">rivendita </span>−' + S.sconto + "%"}`, right, trV || scV || incV || ecoV ? "Scovo" : oggi()) + `
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${cmNovita()}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${cmNovita()}${list.length ? vizOggi(list) : ""}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -583,8 +583,9 @@ function viewDetail(){
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
-      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : boxV1(c)}
-      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
+      ${vizCosti(c)}${d && !d.err ? vizStorico(c, d.trattativa) : ""}
+      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c)}
+      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
       ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
@@ -1609,8 +1610,97 @@ function render(opts){
   else window.scrollTo(0, y);
   if (S.sheet && S.sheet !== "bot") { const sh = document.querySelector(".sheet"); if (sh && !sh.contains(document.activeElement)) { const f = sh.querySelector("h2"); if (f) { f.tabIndex = -1; f.focus({preventScroll:true}); } } }
 }
+
+/* ---------- grafici (SVG in linea, solo dati veri; si disegnano una volta, spenti con "riduci movimento") ---------- */
+const R1 = n => Math.round(n * 10) / 10;
+function curva(P){
+  // curva morbida che non va oltre i punti veri (cubica monotona)
+  const n = P.length; if (n < 2) return "";
+  const dx = [], s = [], m = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = Math.max(P[i + 1][0] - P[i][0], 0.01); s[i] = (P[i + 1][1] - P[i][1]) / dx[i]; }
+  m[0] = s[0]; m[n - 1] = s[n - 2];
+  for (let i = 1; i < n - 1; i++) m[i] = s[i - 1] * s[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / s[i - 1] + (dx[i] + 2 * dx[i - 1]) / s[i]);
+  let d = `M${R1(P[0][0])},${R1(P[0][1])}`;
+  for (let i = 0; i < n - 1; i++) d += ` C${R1(P[i][0] + dx[i] / 3)},${R1(P[i][1] + m[i] * dx[i] / 3)} ${R1(P[i + 1][0] - dx[i] / 3)},${R1(P[i + 1][1] - m[i + 1] * dx[i] / 3)} ${R1(P[i + 1][0])},${R1(P[i + 1][1])}`;
+  return d;
+}
+const dataBreve = t => new Date(t).toLocaleDateString("it-IT", {day: "numeric", month: "short"});
+function anelli(archi, size){
+  // archi: [{p: 0..1, tono}] dall'esterno all'interno
+  const sw = archi.length > 1 ? 9 : 12, gap = 3;
+  return `<svg class="viz-ring" viewBox="0 0 120 120" width="${size}" height="${size}" aria-hidden="true">${archi.map((a, i) => { const r = 54 - sw / 2 - i * (sw + gap);
+    return `<circle cx="60" cy="60" r="${r}" class="ring-tr" stroke-width="${sw}"/><circle cx="60" cy="60" r="${r}" class="ring-arc t-${a.tono}" stroke-width="${sw}" pathLength="100" stroke-dasharray="${R1(Math.max(0, Math.min(1, a.p)) * 100)} 100" style="animation-delay:${i * 120}ms" transform="rotate(-90 60 60)"/>`; }).join("")}</svg>`;
+}
+function barre(righe){
+  return `<div class="viz-bars">${righe.map((r, i) => `<div class="vb"><div class="vb-top"><span>${r.k}</span><b class="${r.tonoTesto || ""}">${r.v}</b></div><span class="vb-tr"><i class="t-${r.tono}" style="width:${R1(Math.max(0, Math.min(1, r.p)) * 100)}%;animation-delay:${i * 90}ms"></i></span></div>`).join("")}</div>`;
+}
+function vizTesta(ic, titolo, destra){ return `<div class="viz-h"><span class="viz-ic">${ic}</span><h3>${titolo}</h3>${destra ? `<span class="viz-r">${destra}</span>` : ""}</div>`; }
+function vizOggi(list){
+  // riassunto dell'elenco: valori calcolati dalle auto caricate
+  const N = list.length; if (N < 2) return "";
+  const g = list.map(c => c.gain).filter(x => x > -1e5 && isFinite(x));
+  const media = g.length ? g.reduce((a, b) => a + b, 0) / g.length : null, max = g.length ? Math.max(...g) : 0;
+  const daCont = list.filter(c => !c.aperta).length;
+  const conData = list.filter(c => c.nuova && !isNaN(Date.parse(c.nuova)));
+  const nuove = conData.filter(c => Date.now() - Date.parse(c.nuova) < 864e5).length;
+  const righe = [{k: "Da contattare", v: `${daCont}/${N}`, p: daCont / N, tono: "info"}];
+  if (conData.length) righe.push({k: "Nuove da ieri", v: `${nuove}/${N}`, p: nuove / N, tono: "acc"});
+  if (media != null && max > 0) righe.push({k: "Margine medio", v: eur(media), p: media / max, tono: "good", tonoTesto: "good"});
+  return `<section class="viz-card viz-oggi" data-viz="oggi-${S.route}">${vizTesta(ICON.spark, "Oggi su Scovo", `${N} auto`)}
+    <div class="viz-row">${anelli(righe.map(r => ({p: r.p, tono: r.tono})), 104)}${barre(righe)}</div></section>`;
+}
+function vizCosti(c){
+  // prezzo rispetto al mercato (anello) e come si divide la rivendita (barre); torna esatto: prezzo + pezzi + costi + guadagno = rivendita
+  if (c.pv || !c.mercato || !c.riv || !(c.gain > -1e5)) return "";
+  const riv = c.riv, rip = c.rip_hi || 0, cf = S.costs || 0, f = c.prezzo / c.mercato, sotto = Math.round((1 - f) * 100);
+  const righe = [{k: "Prezzo chiesto", v: eur(c.prezzo), p: c.prezzo / riv, tono: "info"},
+    {k: "Riparazioni", v: ripTxt(c), p: rip / riv, tono: "warn", tonoTesto: rip ? "warn" : ""},
+    {k: "Tagliando e pulizia", v: eur(cf), p: cf / riv, tono: "mute"},
+    {k: "Guadagno", v: gainTxt(c), p: Math.max(0, c.gain) / riv, tono: "good", tonoTesto: "good"}];
+  return `<section class="viz-card" data-viz="costi-${c.id}">${vizTesta(ICON.cardp, "Prezzo e costi", `<span class="viz-soft">su ${eur(riv)} di rivendita</span>`)}
+    <div class="viz-row"><div class="ring-wrap">${anelli([{p: Math.min(1, f), tono: sotto >= 0 ? "info" : "warn"}], 112)}<div class="ring-c"><b class="${sotto >= 0 ? "good" : "warn"}">${sotto >= 0 ? "−" : "+"}${Math.abs(sotto)}%</b><span>${sotto >= 0 ? "sotto" : "sopra"} il mercato</span></div></div>${barre(righe)}</div>
+    <p class="viz-foot">Mercato ${eur(c.mercato)}, rivendita veloce ${eur(riv)}. Già tolti i costi: al massimo ${eur(cf)} fissi più i pezzi.</p></section>`;
+}
+function vizStorico(c, t){
+  // prezzo dell'annuncio nel tempo; senza storico: le vendute di recente come punti; senza nemmeno quelle: niente grafico
+  const W = 320, H = 132, top = 14, bot = 104, L = 8, Rr = W - 10;
+  const st = ((t && t.storico) || []).filter(x => x && x.prezzo && !isNaN(Date.parse(x.data)));
+  const byDay = new Map(); st.forEach(x => byDay.set(x.data, x.prezzo));
+  let pts = [...byDay].map(([d, p]) => [Date.parse(d), p]).sort((a, b) => a[0] - b[0]);
+  if (pts.length && Date.now() - pts[pts.length - 1][0] > 864e5) pts.push([Date.now(), pts[pts.length - 1][1]]);   // da allora l'annuncio è rimasto a quel prezzo
+  if (pts.length >= 2 && new Set(pts.map(p => p[1])).size >= 1 && st.length >= 2) {
+    const t0 = pts[0][0], t1 = pts[pts.length - 1][0], lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])), pad = Math.max((hi - lo) * .25, hi * .03);
+    const X = x => L + (x - t0) / Math.max(t1 - t0, 1) * (Rr - L), Y = y => bot - (y - (lo - pad)) / ((hi + pad) - (lo - pad)) * (bot - top);
+    const P = pts.map(p => [X(p[0]), Y(p[1])]), d = curva(P), last = P[P.length - 1];
+    const diff = pts[pts.length - 1][1] - pts[0][1], gg = Math.round((t1 - t0) / 864e5);
+    return `<section class="viz-card" data-viz="storico-${c.id}">${vizTesta(ICON.spark, "Prezzo dell'annuncio", `<b>${eur(pts[pts.length - 1][1])}</b>`)}
+      <svg class="viz-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prezzo dell'annuncio da ${eur(pts[0][1])} a ${eur(pts[pts.length - 1][1])} in ${gg} giorni">
+        <defs><linearGradient id="gl${c.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="gs1"/><stop offset="1" class="gs2"/></linearGradient></defs>
+        <path class="area" d="${d} L${R1(last[0])},${bot} L${R1(P[0][0])},${bot} Z" fill="url(#gl${c.id})"/>
+        <path class="line" d="${d}" pathLength="1"/>
+        ${P.slice(1, -1).map(p => `<circle class="pt" cx="${R1(p[0])}" cy="${R1(p[1])}" r="3"/>`).join("")}
+        <circle class="end" cx="${R1(last[0])}" cy="${R1(last[1])}" r="5"/>
+        <text x="${L}" y="${H - 6}" class="ax">${dataBreve(t0)}</text><text x="${Rr}" y="${H - 6}" class="ax" text-anchor="end">oggi</text>
+      </svg>
+      <p class="viz-foot">${diff < 0 ? `Sceso di ${eur(-diff)} in ${gg} giorni` : diff > 0 ? `Salito di ${eur(diff)} in ${gg} giorni` : `Fermo a questo prezzo da ${gg} giorni`}</p></section>`;
+  }
+  const casi = ((t && t.mercato && t.mercato.casi) || []).filter(x => x && x.prezzo);
+  if (casi.length >= 2 && c.prezzo) {
+    const v = casi.map(x => x.prezzo).concat([c.prezzo]), lo = Math.min(...v), hi = Math.max(...v), pad = Math.max((hi - lo) * .2, hi * .03);
+    const Y = y => bot - (y - (lo - pad)) / ((hi + pad) - (lo - pad)) * (bot - top), step = (Rr - L - 40) / Math.max(casi.length - 1, 1);
+    const ord = casi.slice().sort((a, b) => String(a.quando || "").localeCompare(String(b.quando || "")));
+    return `<section class="viz-card" data-viz="vendute-${c.id}">${vizTesta(ICON.spark, "Rispetto alle vendute", `<b>${eur(c.prezzo)}</b>`)}
+      <svg class="viz-line viz-dots" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prezzo chiesto ${eur(c.prezzo)}; auto uguali vendute a ${ord.map(x => eur(x.prezzo)).join(", ")}">
+        <line class="ref" x1="${L}" x2="${Rr}" y1="${R1(Y(c.prezzo))}" y2="${R1(Y(c.prezzo))}"/>
+        <text x="${Rr}" y="${R1(Y(c.prezzo)) - 7}" class="ax" text-anchor="end">chiesta ${eur(c.prezzo)}</text>
+        ${ord.map((x, i) => `<circle class="pt-good" cx="${R1(L + 20 + i * step)}" cy="${R1(Y(x.prezzo))}" r="6"/><text x="${R1(L + 20 + i * step)}" y="${R1(Y(x.prezzo)) - 11}" class="ax" text-anchor="middle">${eur(x.prezzo)}</text>`).join("")}
+      </svg>
+      <p class="viz-foot">Auto uguali vendute di recente: i punti sono i loro ultimi prezzi.</p></section>`;
+  }
+  return "";
+}
 /* ---------- movimento: discreto, una volta sola, spento con "riduci movimento" ---------- */
-const FX = {sheet: null, tab: null, seen: new Set(), counted: new Set(), io: null};
+const FX = {sheet: null, tab: null, seen: new Set(), counted: new Set(), drawn: new Set(), io: null};
 const calmo = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function fx(){
   // capsula della barra in fondo: scorre dalla voce di prima a quella attiva
@@ -1639,6 +1729,8 @@ function fx(){
       const step = now => { const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3); t.nodeValue = m[1] + num(to * e); if (p < 1) requestAnimationFrame(step); };
       t.nodeValue = m[1] + "0"; requestAnimationFrame(step); }
   }
+  // grafici: si disegnano una volta per grafico
+  document.querySelectorAll("[data-viz]").forEach(el => { const k = el.dataset.viz; if (FX.drawn.has(k)) return; FX.drawn.add(k); if (!calmo()) el.classList.add("anim"); });
   parallasse();
 }
 function parallasse(){
