@@ -1384,12 +1384,15 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
    anello "nuove"). Tema scuro: grafite con una velatura fredda/prugna appena percettibile.
    ====================================================================================== */
 :root{
+  /* 10/11 sera (cliente: "voglio più bianco"): versione chiara più bianca e luminosa, sempre senza bordi */
+  --bg:#fafaf9; --card:#ffffff; --soft:#f4f4f3; --fill:#eeeeec; --raised:#ffffff; --seg-on:#ffffff;
+  --bar:rgba(255,255,255,.78);
   --tag:#34506b; --link:#34506b; --focus:#34506b; --tip:#e1e6ec; --tip-ink:#34506b;
   --good:#4b6b5a; --good-soft:#e4eae5;
   --acc:#7a6a8c; --acc-ink:#6f5f82; --acc-soft:#ebe6f0;
-  --glass:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.72));
+  --glass:linear-gradient(180deg,#ffffff,rgba(255,255,255,.94));
   --glass-edge:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(255,255,255,.35);
-  --page:radial-gradient(120% 60% at 85% -10%,rgba(122,106,140,.07),transparent 60%),radial-gradient(90% 50% at -10% 30%,rgba(52,80,107,.05),transparent 60%),var(--bg);
+  --page:radial-gradient(120% 60% at 85% -10%,rgba(122,106,140,.035),transparent 60%),radial-gradient(90% 50% at -10% 30%,rgba(52,80,107,.025),transparent 60%),var(--bg);
   --ring-tr:rgba(36,39,44,.07); --bar-tr:rgba(36,39,44,.07); --mute-c:#a8a59e;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
