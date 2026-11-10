@@ -1,48 +1,28 @@
-import os
+from datetime import datetime, timezone
 
 from dealfinder.web import scovo
 
-
-def _con(v, f):
-    prima = os.environ.get("SITO_RIBASSO")
-    os.environ["SITO_RIBASSO"] = v
-    try:
-        f()
-    finally:
-        if prima is None:
-            os.environ.pop("SITO_RIBASSO", None)
-        else:
-            os.environ["SITO_RIBASSO"] = prima
+PRIMA = datetime(2026, 11, 10, 15, 0, tzinfo=timezone.utc)      # 16:00 a Roma: ribasso acceso
+DOPO = datetime(2026, 11, 10, 16, 0, tzinfo=timezone.utc)       # 17:00 a Roma: spento da solo
 
 
-def test_spento_di_base():
-    os.environ.pop("SITO_RIBASSO", None)
-    it = {"id": 1, "prezzo": 5000, "pv": {"margine": 1800}}
-    assert scovo.prezzo_sito(it) is it
+def test_schema():
+    attesi = {1999: 0, 2000: 700, 5999: 700, 6000: 1000, 9999: 1000, 10000: 1500, 15000: 2000, 20000: 2500,
+              29999: 2500, 30000: 3000, 80000: 3000}
+    for p, e in attesi.items():
+        assert scovo.ribasso_per(p, PRIMA) == e, p
 
 
-def test_ribasso_fascia():
-    _con("2000:6000:700", _fascia)
+def test_ribasso_auto():
+    it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000, "M": 17000}}
+    o = scovo.prezzo_sito(it, PRIMA)
+    assert o["prezzo"] == 10500 and o["prezzo_annuncio"] == 12000 and o["pv"]["margine"] == 4500
+    assert it["prezzo"] == 12000 and it["pv"]["margine"] == 3000
+    assert scovo.prezzo_sito(o, PRIMA) is o
+    for x in ({"prezzo": 5000, "supercar": True}, {"prezzo": 5000, "trattare": {"sconto": 300}}, {"prezzo": 1500}):
+        assert scovo.prezzo_sito(x, PRIMA) is x
 
 
-def _fascia():
-    it = {"id": 1, "prezzo": 5000, "pv": {"margine": 1800, "M": 8000}}
-    o = scovo.prezzo_sito(it)
-    assert o["prezzo"] == 4300 and o["prezzo_annuncio"] == 5000 and o["pv"]["margine"] == 2500
-    assert it["prezzo"] == 5000 and it["pv"]["margine"] == 1800      # l'originale non cambia
-    assert scovo.prezzo_sito(o) is o                                    # mai due volte
-
-
-def test_ribasso_fuori_fascia():
-    _con("2000:6000:700", _fuori)
-
-
-def _fuori():
-    for p in (1999, 6000, 12000):
-        it = {"id": 2, "prezzo": p, "pv": {"margine": 1500}}
-        assert scovo.prezzo_sito(it) is it
-    assert scovo.prezzo_sito({"prezzo": 2000})["prezzo"] == 1300
-    sc = {"prezzo": 5000, "supercar": True}
-    assert scovo.prezzo_sito(sc) is sc
-    tr = {"prezzo": 5000, "trattare": {"sconto": 300}}
-    assert scovo.prezzo_sito(tr) is tr
+def test_si_spegne_da_solo():
+    it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000}}
+    assert scovo.prezzo_sito(it, DOPO) is it

@@ -67,26 +67,43 @@ def soglia(prezzo: int) -> int:
 
 
 
-# 10/11 (cliente: "abbassa di 700 euro sul sito le auto sotto i 6k, quelle sotto i 2.000 lasciale così"): il prezzo
-# MOSTRATO al commerciante (elenco e scheda) è quello dell'annuncio meno il ribasso; il margine mostrato sale di
-# altrettanto. Le regole del sito continuano a lavorare sul prezzo vero: nessuna auto entra grazie al ribasso.
-# SITO_RIBASSO "da:a:euro", es. 2000:6000:700. Predefinito SPENTO dal 10/11 pomeriggio (cliente: "rimetti i prezzi
-# originali tutti sul sito"). Il prezzo vero resta in prezzo_annuncio.
-def _ribasso_sito() -> tuple[int, int, int]:
+# 10/11 (cliente: "riabbassa tutte le auto, per le più piccole togli poco, parti da 700 e sali fino a un massimo di
+# 3.000 €; tra un'oretta rimettile"): il prezzo MOSTRATO al commerciante (elenco e scheda) è quello dell'annuncio meno
+# il ribasso della sua fascia; il margine mostrato sale di altrettanto. Le regole del sito lavorano sempre sul prezzo
+# vero: nessuna auto entra grazie al ribasso. Il prezzo vero resta in prezzo_annuncio.
+#   SITO_RIBASSO       "da:euro,da:euro,..." (prezzo da cui parte la fascia : euro tolti); "0" = spento
+#   SITO_RIBASSO_FINO  data e ora ISO dopo cui il ribasso si spegne da solo
+RIBASSO_SCHEMA = "2000:700,6000:1000,10000:1500,15000:2000,20000:2500,30000:3000"
+RIBASSO_FINO = "2026-11-10T16:55:00+01:00"
+
+
+def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
+    from datetime import datetime, timezone
     try:
-        da, a, eur = (int(x) for x in os.environ.get("SITO_RIBASSO", "0").split(":"))
-        return da, a, max(0, eur)
+        fino = os.environ.get("SITO_RIBASSO_FINO", RIBASSO_FINO)
+        if fino and (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino):
+            return []
+        raw = os.environ.get("SITO_RIBASSO", RIBASSO_SCHEMA)
+        return sorted((int(a), max(0, min(3000, int(b)))) for a, b in (x.split(":") for x in raw.split(",") if x.strip()))
     except Exception:
-        return 0, 0, 0
+        return []
 
 
-def prezzo_sito(it: dict) -> dict:
-    """Copia dell'auto con il prezzo mostrato ribassato, se rientra nella fascia; altrimenti l'auto com'è."""
-    da, a, eur = _ribasso_sito()
-    if not eur or it.get("supercar") or it.get("trattare") or it.get("prezzo_annuncio"):
+def ribasso_per(prezzo: int, ora=None) -> int:
+    eur = 0
+    for da, e in _ribasso_fasce(ora):
+        if prezzo >= da:
+            eur = e
+    return eur
+
+
+def prezzo_sito(it: dict, ora=None) -> dict:
+    """Copia dell'auto con il prezzo mostrato ribassato secondo la fascia; altrimenti l'auto com'è."""
+    if it.get("supercar") or it.get("trattare") or it.get("prezzo_annuncio"):
         return it
     p = int(it.get("prezzo") or 0)
-    if not (da <= p < a):
+    eur = ribasso_per(p, ora)
+    if not eur:
         return it
     out = dict(it, prezzo=p - eur, prezzo_annuncio=p)
     for k in ("pv", "valutazione"):
