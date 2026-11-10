@@ -70,10 +70,11 @@ def soglia(prezzo: int) -> int:
 # 10/11 (cliente: "abbassa di 700 euro sul sito le auto sotto i 6k, quelle sotto i 2.000 lasciale così"): il prezzo
 # MOSTRATO al commerciante (elenco e scheda) è quello dell'annuncio meno il ribasso; il margine mostrato sale di
 # altrettanto. Le regole del sito continuano a lavorare sul prezzo vero: nessuna auto entra grazie al ribasso.
-# SITO_RIBASSO "da:a:euro" (predefinito 2000:6000:700; "0" = spento). Il prezzo vero resta in prezzo_annuncio.
+# SITO_RIBASSO "da:a:euro", es. 2000:6000:700. Predefinito SPENTO dal 10/11 pomeriggio (cliente: "rimetti i prezzi
+# originali tutti sul sito"). Il prezzo vero resta in prezzo_annuncio.
 def _ribasso_sito() -> tuple[int, int, int]:
     try:
-        da, a, eur = (int(x) for x in os.environ.get("SITO_RIBASSO", "2000:6000:700").split(":"))
+        da, a, eur = (int(x) for x in os.environ.get("SITO_RIBASSO", "0").split(":"))
         return da, a, max(0, eur)
     except Exception:
         return 0, 0, 0
