@@ -1020,6 +1020,8 @@ async function onSubmit(e){
 function loggedIn(r){
   S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user); syncCookie();
   S.scroll = {}; go("affari", true); loadCars(true); window.scrollTo(0, 0);
+  let dopo = null; try { dopo = store.get("paga_dopo"); store.del("paga_dopo"); } catch (e) {}
+  if (dopo) abbonati(dopo === "max" ? "pro" : dopo);
 
 }
 async function redeemCode(code){
@@ -1045,6 +1047,8 @@ function parseHash(){
   const e = h.match(/^entra(?:\/([\w-]+))?$/);
   if (e) return {route: "entra", esito: e[1] || ""};
   if (h === "prova") return {route: "prova"};
+  const pg = h.match(/^paga(?:\/(base|max|pro))?$/);   // 11/11: link diretto al pagamento (dopo l'accesso)
+  if (pg) return {route: "paga", piano: pg[1] || "base"};
   const ab = h.match(/^abbonamento\/(ok|annullato)$/);
   if (ab) return {route: "abbonamento", esito: ab[1]};
   if (!canBrowse()) return {route: "vetrina"};
@@ -1060,6 +1064,12 @@ function applyRoute(){
   const prev = S.route;
   S.scroll[prev === "auto" ? "auto" : prev] = window.scrollY;
   const r = parseHash();
+  if (r.route === "paga") {
+    try { store.set("paga_dopo", r.piano); } catch (e) {}
+    if (S.token) { abbonati(r.piano === "max" ? "pro" : r.piano); return; }
+    toast("Entra con email e password: poi si apre subito il pagamento");
+    go("entra", true); return;
+  }
   if (r.route === "abbonamento") {
     history.replaceState(null, "", "#/affari");
     if (r.esito === "ok") { S.paywall = false; toast("Abbonamento attivo: benvenuto in Scovo!"); }
