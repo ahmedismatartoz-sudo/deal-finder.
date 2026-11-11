@@ -1718,3 +1718,8 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .dock-row .talk.app-row{flex:1 1 0;min-width:0;display:flex!important;align-items:center;justify-content:center;gap:6px;background:#0a84ff!important;color:#fff!important;border:0;box-shadow:none}
 .dock-row .talk.app-row svg{display:block!important;width:18px;height:18px;stroke:#fff;color:#fff}
 .dock-row .talk.app-row span{white-space:nowrap}
+
+/* 11/11 (cliente): "Verificare prima di pagare" fuori dalla foto, niente sovrapposto al titolo */
+.avviso-riga{display:block;margin:0 0 10px;padding:8px 12px;border-radius:12px;background:#ffe2d6;color:#7a2e12;font:700 14px/18px var(--body,system-ui);text-align:left}
+:root[data-theme="dark"] .avviso-riga{background:#3a2219;color:#ffb899}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .avviso-riga{background:#3a2219;color:#ffb899}}

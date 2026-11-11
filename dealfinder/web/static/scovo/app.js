@@ -305,7 +305,7 @@ function nomeDue(c){
   return `<span class="nm-1">${esc(w.slice(0, k).join(" "))}</span>${w.length > k ? `<span class="nm-2">${esc(w.slice(k).join(" "))}</span>` : ""}`;
 }
 function carCard(c, i, hero){
-  const badges = `<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.avviso_verifica ? `<span class="badge avviso">Verificare prima di pagare</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
+  const badges = `<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
   const lbl = gainLbl(c);
   const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
   const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => `<span${k === a.length - 1 && a.length > 3 ? ' class="loc"' : ""}>${k === a.length - 1 && a.length > 3 ? ICON.pin : ""}${esc(x)}</span>`).join("")}</div>`;
@@ -316,7 +316,7 @@ function carCard(c, i, hero){
       <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}<span class="ph-shade" aria-hidden="true"></span>${badges}
         <div class="ph-over"><div class="ph-t"><div class="name">${nomeDue(c)}</div><div class="ph-price">${eur(c.prezzo)}</div></div>
           <span class="gain-pill"><small>${lbl}</small><b>${gainTxt(c)}</b></span></div></div>
-      <div class="card-body">${chips}${hero ? "" : `<div class="trio">${trio}</div>
+      <div class="card-body">${c.avviso_verifica ? `<div class="avviso-riga">⚠︎ Verificare prima di pagare</div>` : ""}${chips}${hero ? "" : `<div class="trio">${trio}</div>
         ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
         ${tag ? `<span class="c-tag">${ICON.spark}${esc(tag)}</span>` : ""}`}</div>
     </button>`;
