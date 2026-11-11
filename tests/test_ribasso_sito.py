@@ -28,15 +28,19 @@ def test_ribasso_auto():
 
 
 def test_si_spegne_da_solo():
-    it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000}}
-    assert scovo.prezzo_sito(it, DOPO) is it
+    os.environ["SITO_RIBASSO_FINO"] = "2026-11-10T16:55:00+01:00"
+    try:
+        it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000}}
+        assert scovo.prezzo_sito(it, DOPO) is it
+    finally:
+        os.environ.pop("SITO_RIBASSO_FINO", None)
 
 
-def test_spento_di_base():
+def test_acceso_di_base():
     prima = os.environ.pop("SITO_RIBASSO", None)
     try:
         it = {"id": 1, "prezzo": 12000, "pv": {"margine": 3000}}
-        assert scovo.prezzo_sito(it, PRIMA) is it
+        assert scovo.prezzo_sito(it, PRIMA)["prezzo"] == 10500
     finally:
         if prima is not None:
             os.environ["SITO_RIBASSO"] = prima

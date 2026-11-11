@@ -74,7 +74,7 @@ def soglia(prezzo: int) -> int:
 #   SITO_RIBASSO       "da:euro,da:euro,..." (prezzo da cui parte la fascia : euro tolti); "0" = spento
 #   SITO_RIBASSO_FINO  data e ora ISO dopo cui il ribasso si spegne da solo
 RIBASSO_SCHEMA = "2000:700,6000:1000,10000:1500,15000:2000,20000:2500,30000:3000"
-RIBASSO_FINO = "2026-11-10T16:55:00+01:00"
+RIBASSO_FINO = ""   # 11/11 10:46 (cliente: "i ribassi di ieri, riattivali subito"): acceso, senza scadenza
 
 
 def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
@@ -83,7 +83,7 @@ def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
         fino = os.environ.get("SITO_RIBASSO_FINO", RIBASSO_FINO)
         if fino and (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino):
             return []
-        raw = os.environ.get("SITO_RIBASSO", "0")
+        raw = os.environ.get("SITO_RIBASSO", RIBASSO_SCHEMA)
         return sorted((int(a), max(0, min(3000, int(b)))) for a, b in (x.split(":") for x in raw.split(",") if x.strip()))
     except Exception:
         return []
