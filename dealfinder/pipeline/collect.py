@@ -964,6 +964,12 @@ if __name__ == "__main__":
     # TORINO_ORA=1 (9/11 16:25, cliente: "fallo partire adesso"): su un cron lanciato a mano fa SOLO il giro di Torino
     # e si ferma (niente altro lavoro di quel cron). Da togliere da Render dopo il giro.
     _torino_ora = os.environ.get("TORINO_ORA") == "1"
+    # 11/11 10:45 (cliente: "incontro un cliente di Novara, fammi entrare tante auto di Novara"): NOVARA_ORA=1 fa lo
+    # stesso giro, centrato su Novara (CAP 28100, raggio NOVARA_RAGGIO_KM), poi il cron si ferma. Stesse regole di prezzo.
+    _novara_ora = os.environ.get("NOVARA_ORA") == "1"
+    if _novara_ora:
+        os.environ.setdefault("TORINO_PROVINCE_EXTRA", "")
+        _torino_ora = True
     if _torino_ora or (os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1"):
         try:
             from .ciclo import _due
@@ -971,7 +977,11 @@ if __name__ == "__main__":
                 from ..zone import TORINO
                 vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
                 prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
-                for k, v in {"BENZ_CAP": "10121", "BENZ_RAGGIO": os.environ.get("TORINO_RAGGIO_KM", "100"), "BENZ_CAP_EXTRA": "",
+                cap, raggio = "10121", os.environ.get("TORINO_RAGGIO_KM", "100")
+                if _novara_ora:
+                    prov = [p for p in os.environ.get("NOVARA_PROVINCE", "NO,VC,BI,VA").split(",") if p.strip()]
+                    cap, raggio = "28100", os.environ.get("NOVARA_RAGGIO_KM", "60")
+                for k, v in {"BENZ_CAP": cap, "BENZ_RAGGIO": raggio, "BENZ_CAP_EXTRA": "",
                              "BENZ_MIN": os.environ.get("TORINO_MIN", "4000"), "BENZ_PMAX": os.environ.get("TORINO_MAX", "45000"),
                              "BENZ_PROVINCE": ",".join(prov), "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "1",
                              "BENZ_SUB_PROFONDA": os.environ.get("TORINO_SUB_PROFONDA", "1"), "BENZ_SUB_PASSO": "1000",
@@ -984,8 +994,9 @@ if __name__ == "__main__":
                 try:
                     from . import benzina_mi as B
                     esito = B.giro()
-                    log.warning("TORINO_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
-                    lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
+                    log.warning("%s fatta: %s", "NOVARA_ORA" if _novara_ora else "TORINO_CRON", {k: v for k, v in esito.items() if isinstance(v, int)})
+                    if not _novara_ora:
+                        lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
                 finally:
                     for k in [k for k in os.environ if k.startswith("BENZ_")]:
                         del os.environ[k]

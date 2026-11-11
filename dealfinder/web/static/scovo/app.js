@@ -148,7 +148,7 @@ function filtered(over){
     .filter(c => (s.annoMin === "" || (c.anno || 0) >= Number(s.annoMin)) && (s.annoMax === "" || !c.anno || c.anno <= Number(s.annoMax)))
     .filter(c => !s.carb.length || s.carb.includes(carbKey(c.carb)))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
-    .filter(c => inc || sc || ((!s.zona || s.zona === "tutte") ? (c.area || "milano") !== "torino" : (c.area || "milano") === s.zona))   // incidentate: tutta Italia; 9/11: Torino solo se scelta nei filtri
+    .filter(c => inc || sc || ((!s.zona || s.zona === "tutte") ? (c.area || "milano") !== "torino" : s.zona === "novara" ? /\((NO|VC)\)\s*$/.test(c.zona || "") : (c.area || "milano") === s.zona))   // incidentate: tutta Italia; 9/11: Torino solo se scelta nei filtri
     .filter(c => botMatch(c, s.bot))
     .filter(c => { if (!s.raggio || sc) return true; const d = distKm(c); return d == null || d <= s.raggio; })
     .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova))
@@ -235,7 +235,7 @@ function botMatch(c, b){
 }
 function brandsAll(){ return [...new Set((S.cars || []).map(c => c.marca))].sort((a,b) => (a === "Altro") - (b === "Altro") || a.localeCompare(b, "it")); }
 function brandCounts(){ const o = {}; filtered({brands: []}).forEach(c => o[c.marca] = (o[c.marca] || 0) + 1); return o; }
-const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["torino","Torino e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
+const ZONE_ALL = [["tutte","Tutte le zone"],["milano","Milano e dintorni"],["torino","Torino e dintorni"],["novara","Novara e dintorni"],["ravenna","Ravenna e dintorni"]];   // 4/11: Roma mai sul sito
 function zoneCounts(){ const o = {milano:0, torino:0, ravenna:0, italia:0}; filtered({zona:"tutte"}).forEach(c => { const a = c.area || "milano"; o[a] = (o[a] || 0) + 1; }); o.tutte = o.milano + o.ravenna + (o.italia || 0); return o; }
 function zoneList(){ return ZONE_ALL.filter(([k]) => ["milano","torino","ravenna"].includes(k)); }
 function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei filtri
@@ -650,7 +650,7 @@ function sheetFilters(){
   <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
     <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
     <div class="sheet-body">
-      <section class="fgrp"><h3>Zona</h3>${seg([["tutte", "Milano e dintorni"], ["torino", "Torino e dintorni"]], S.zona === "torino" ? "torino" : "tutte", "zona-f", 2)}</section>
+      <section class="fgrp"><h3>Zona</h3>${seg([["tutte", "Milano"], ["torino", "Torino"], ["novara", "Novara"]], ["torino","novara"].includes(S.zona) ? S.zona : "tutte", "zona-f", 3)}</section>
       <section class="fgrp"><h3>Marca e modello</h3><div class="fgrid">
         ${sel("f-marca", "Marca", opts(marche.map(m => [m, m + " (" + bc[m] + ")"]), S.brands[0] || "", "Tutte le marche"))}
         ${sel("f-modello", "Modello", S.brands.length ? opts(modelli.map(m => [m, m + " (" + mc[m] + ")"]), S.modello, "Tutti i modelli") : `<option value="">Scegli prima la marca</option>`)}

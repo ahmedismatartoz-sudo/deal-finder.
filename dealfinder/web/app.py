@@ -1491,6 +1491,12 @@ def _calcola_elenco() -> None:
         if SR.fascia(it):
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(out), time.time() - t0, dict(sorted(c.items())))
+    try:   # 11/11: quante auto per provincia (es. Novara)
+        import collections as _co, re as _re
+        _pp = _co.Counter((_re.search(r"\(([A-Z]{2})\)\s*$", str(it.get("zona") or "")) or [None, "?"])[1] for it in out)
+        logging.getLogger("scovo").warning("ELENCO_PROV %s", dict(_pp.most_common(25)))
+    except Exception:
+        pass
     try:      # 19/10: auto sul sito a metà prezzo (o meno) rispetto al mercato, e quante entrate nelle ultime 14 ore
         from datetime import datetime, timedelta, timezone
         dal = datetime.now(timezone.utc) - timedelta(hours=14)
