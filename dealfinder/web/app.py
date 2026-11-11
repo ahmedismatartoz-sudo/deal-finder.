@@ -81,7 +81,17 @@ def permessi_di(conn, user: dict) -> list[str]:
     if user.get("role") == "admin":
         return list(PERMESSI)
     row = conn.execute("SELECT permessi FROM dealers WHERE id=%s", (user["id"],)).fetchone()
-    return list((row or {}).get("permessi") or [])
+    perm = list((row or {}).get("permessi") or [])
+    if "appuntamenti" not in perm:
+        # 11/11 (cliente): chi paga il Max ha SEMPRE gli appuntamenti, anche se il permesso è stato tolto dal pannello
+        try:
+            mx = conn.execute("SELECT 1 FROM abbonamenti WHERE dealer_id=%s AND piano IN ('pro','max') "
+                              "AND stato IN ('active','trialing','past_due') LIMIT 1", (user["id"],)).fetchone()
+            if mx:
+                perm.append("appuntamenti")
+        except Exception:
+            log.exception("PERMESSI_MAX")
+    return perm
 
 
 def richiede(request: Request, permesso: str) -> dict:
