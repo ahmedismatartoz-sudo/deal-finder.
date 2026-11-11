@@ -1695,3 +1695,15 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .lb-t{flex:none;width:56px;height:56px;padding:0;border:0;border-radius:12px;overflow:hidden;background:#1b1d20;opacity:.55;transition:opacity var(--t-fast),box-shadow var(--t-fast)}
 .lb-t img{width:100%;height:100%;object-fit:cover;display:block}
 .lb-t[aria-current="true"]{opacity:1;box-shadow:0 0 0 2px #fff}
+
+/* 11/11 (cliente: "troppo spento, voglio un bianco e un nero ben chiaro"): contrasto alto.
+   Chiaro: testo nero su bianco. Scuro: fondo nero, testo bianco. */
+:root{--ink:#0b0b0c;--ink-2:#1d1d1f;--muted:#4a4a4f;--ink-3:var(--muted)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#000;--page:#000;--card:#141416;--soft:#1c1c1f;--fill:#232327;--raised:#1c1c1f;
+  --glass:linear-gradient(180deg,#19191c 0%,#141416 100%);
+  --ink:#ffffff;--ink-2:rgba(255,255,255,.9);--muted:rgba(255,255,255,.68);--ink-3:var(--muted)}}
+:root[data-theme="dark"]{
+  --bg:#000;--page:#000;--card:#141416;--soft:#1c1c1f;--fill:#232327;--raised:#1c1c1f;
+  --glass:linear-gradient(180deg,#19191c 0%,#141416 100%);
+  --ink:#ffffff;--ink-2:rgba(255,255,255,.9);--muted:rgba(255,255,255,.68);--ink-3:var(--muted)}
