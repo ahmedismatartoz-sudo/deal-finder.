@@ -1825,7 +1825,7 @@ async def azienda_get(request: Request):
         perm = permessi_di(conn, user)
     d = _azienda_norm((r or {}).get("dati"))
     return jsonify({"dati": d, "completa": _azienda_ok(d), "ore": APP_ORE, "max": APP_MAX, "campi": [{"k": k, "l": l, "obbligatorio": o} for k, l, o in AZIENDA_CAMPI],
-                    "appuntamenti": user.get("role") == "admin" or "appuntamenti" in perm})
+                    "appuntamenti": True})   # 11/11: aperto a tutti
 
 
 async def azienda_put(request: Request):
@@ -2025,8 +2025,7 @@ async def appuntamento(request: Request):
     nota = str(data.get("nota") or "").strip()[:500] or None
     impronta = _impronta_appuntamento(user["id"], lid, proposte, nota)
     with connect() as conn:
-        if not (user.get("role") == "admin" or "appuntamenti" in permessi_di(conn, user)):
-            err(402, "Fissare gli appuntamenti è incluso nell'abbonamento da 200 €")
+        # 11/11 (cliente): "Fissa l'appuntamento" aperto a tutti gli account, non solo al Max
         az = _azienda_norm((conn.execute("SELECT dati FROM aziende_abbonati WHERE dealer_id=%s", (user["id"],)).fetchone() or {}).get("dati"))
         if not _azienda_ok(az):
             return jsonify({"serve_azienda": True, "errore": "Prima inserisci i dati della tua azienda"}, 409)

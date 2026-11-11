@@ -626,8 +626,8 @@ function viewDetail(){
     <div class="dock"><div class="dock-in"><div class="dock-row">
       ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`
           : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}<span>${contact.label}</span></button>`}
+      ${d && !d.err ? `<button class="talk app-row" data-act="app-open">${ICON.cal}<span>Fissa appuntamento</span></button>` : ""}
     </div>
-      ${perm("appuntamenti") && d && !d.err ? `<button class="app-big" data-act="app-open">${ICON.cal}<span>Fissa l'appuntamento</span></button><p class="app-nota">Incluso nel tuo piano Max: l'appuntamento col venditore lo fissiamo noi.</p>` : ""}
     </div></div>
   </div>`;
 }
@@ -911,7 +911,7 @@ function viewProfilo(){
     <div class="plist">
       <button data-act="pwd">${ri("lock", "Cambia password")}${ICON.next}</button>
       ${u.ha_pagamento ? `<button data-act="portale">${ri("cardp", "Abbonamento: carta, fatture, disdetta")}${ICON.next}</button>` : ""}
-      ${perm("appuntamenti") ? `<button data-act="az-open">${ri("build", "Dati della tua azienda")}${ICON.next}</button>` : ""}</div>
+      <button data-act="az-open">${ri("build", "Dati della tua azienda")}${ICON.next}</button></div>
     ${P.open ? `<section class="box form" style="padding:16px">
       <label class="field">Password attuale<input id="p-old" type="password" autocomplete="current-password"></label>
       <label class="field">Nuova password (almeno 8 caratteri)<input id="p-new" type="password" autocomplete="new-password" minlength="8"></label>

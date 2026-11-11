@@ -1713,3 +1713,8 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .app-big svg{width:22px;height:22px;stroke:#fff;color:#fff}
 .app-big:active{transform:scale(.98)}
 .app-nota{margin:6px 0 0;text-align:center;font-size:13px;color:var(--ink2,#555)}
+
+/* 11/11 (cliente): "Fissa appuntamento" accanto a "Parla col venditore", per tutti */
+.dock-row .talk.app-row{flex:1 1 0;min-width:0;display:flex!important;align-items:center;justify-content:center;gap:6px;background:#0a84ff!important;color:#fff!important;border:0;box-shadow:none}
+.dock-row .talk.app-row svg{display:block!important;width:18px;height:18px;stroke:#fff;color:#fff}
+.dock-row .talk.app-row span{white-space:nowrap}
