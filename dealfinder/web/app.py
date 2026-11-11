@@ -1590,7 +1590,7 @@ def api_vendute(request: Request):
 
 def affari(request: Request):
     user = viewer(request, "auto")
-    items = [dict(scovo.prezzo_sito(it)) for it in _elenco_per(user["id"])]
+    items = [dict(scovo.in_cima(scovo.prezzo_sito(it))) for it in _elenco_per(user["id"])]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     per_id = {it["id"]: it for it in items}
@@ -1626,7 +1626,7 @@ def affare(request: Request):
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
-            d = scovo.prezzo_sito(scovo.detail(dict(it), extra))   # 10/11: anche dentro la scheda vale il prezzo ribassato
+            d = scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra)))   # 10/11: anche dentro la scheda vale il prezzo ribassato
             _con_trattativa(conn, lid, d)
             return jsonify(d)
         if not admin:

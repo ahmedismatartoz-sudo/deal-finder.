@@ -41,6 +41,13 @@ def applica_scarti_cliente(conn) -> int:
         return 0
     n = 0
     for e in json.loads(f.read_text()):
+        if e.get("rimetti"):                              # 11/11: il cliente la rivuole sul sito
+            r = conn.execute("UPDATE listings SET stage='approfondito', stage_reason='da_verificare', last_checked_at=now() "
+                             "WHERE make ILIKE %s AND model ILIKE %s AND mileage_km=%s AND price_eur=%s "
+                             "AND stage='scartato' AND stage_reason ILIKE '%%tolta dal cliente%%'",
+                             (e["marca"] + "%", "%" + e.get("modello", "") + "%", e["km"], e["prezzo"])).rowcount
+            log.warning("SCARTI_CLIENTE rimessa sul sito: %d", r)
+            continue
         if e.get("id"):                                   # annuncio preciso (es. anno sbagliato nell'annuncio)
             n += conn.execute("UPDATE listings SET stage='scartato', stage_reason=%s WHERE id=%s "
                               "AND stage IS DISTINCT FROM 'scartato'",

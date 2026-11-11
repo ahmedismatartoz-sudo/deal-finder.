@@ -113,6 +113,25 @@ def prezzo_sito(it: dict, ora=None) -> dict:
     return out
 
 
+
+# 11/11 11:10 (cliente: "rimetti subito la Fiat 500 rossa, mettila per prima come ieri a 6.900"): auto messe in cima
+# dal cliente, con il prezzo da mostrare. Riconosciute da marca + km + prezzo dell'annuncio.
+IN_CIMA = [{"marca": "fiat", "km": 68000, "prezzo": 7900, "mostra": 6900}]
+
+
+def in_cima(it: dict) -> dict:
+    for k, e in enumerate(IN_CIMA):
+        vero = int(it.get("prezzo_annuncio") or it.get("prezzo") or 0)
+        if str(it.get("marca") or "").lower().startswith(e["marca"]) and int(it.get("km") or 0) == e["km"] and vero == e["prezzo"]:
+            out = dict(it, prezzo=e["mostra"], prezzo_annuncio=vero, vetrina=-100 + k)
+            diff = int(it.get("prezzo") or vero) - e["mostra"]
+            for kk in ("pv", "valutazione"):
+                v = out.get(kk)
+                if isinstance(v, dict) and v.get("margine") is not None:
+                    out[kk] = dict(v, margine=v["margine"] + diff)
+            return out
+    return it
+
 def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
     riv = round(it["mercato"] * (1 - sconto / 100))
     return riv - it["prezzo"] - sum(COSTI_FISSI.values()) - it["rip_hi"]
