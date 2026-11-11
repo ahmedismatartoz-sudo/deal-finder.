@@ -1707,3 +1707,9 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
   --bg:#000;--page:#000;--card:#141416;--soft:#1c1c1f;--fill:#232327;--raised:#1c1c1f;
   --glass:linear-gradient(180deg,#19191c 0%,#141416 100%);
   --ink:#ffffff;--ink-2:rgba(255,255,255,.9);--muted:rgba(255,255,255,.68);--ink-3:var(--muted)}
+
+/* 11/11 (cliente): "Fissa l'appuntamento" ben visibile per gli abbonati Max */
+.app-big{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;margin-top:10px;border:0;border-radius:var(--r-btn,16px);background:#0a84ff;color:#fff!important;font:700 17px/22px var(--body,system-ui);cursor:pointer;box-shadow:0 6px 18px rgba(10,132,255,.28)}
+.app-big svg{width:22px;height:22px;stroke:#fff;color:#fff}
+.app-big:active{transform:scale(.98)}
+.app-nota{margin:6px 0 0;text-align:center;font-size:13px;color:var(--ink2,#555)}

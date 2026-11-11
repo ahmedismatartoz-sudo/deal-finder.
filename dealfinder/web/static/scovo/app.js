@@ -626,8 +626,9 @@ function viewDetail(){
     <div class="dock"><div class="dock-in"><div class="dock-row">
       ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`
           : `<button class="talk" id="talk" data-act="talk" ${d ? "" : 'aria-disabled="true"'}>${contact.icon}<span>${contact.label}</span></button>`}
-      ${perm("appuntamenti") && d && !d.err ? `<button class="talk talk-app" data-act="app-open" aria-label="Fissa l'appuntamento" title="Fissa l'appuntamento">${ICON.cal}<span class="ta-l" aria-hidden="true">Appuntamento</span></button>` : ""}
-    </div></div></div>
+    </div>
+      ${perm("appuntamenti") && d && !d.err ? `<button class="app-big" data-act="app-open">${ICON.cal}<span>Fissa l'appuntamento</span></button><p class="app-nota">Incluso nel tuo piano Max: l'appuntamento col venditore lo fissiamo noi.</p>` : ""}
+    </div></div>
   </div>`;
 }
 
