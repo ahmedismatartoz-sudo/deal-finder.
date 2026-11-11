@@ -116,7 +116,7 @@ def prezzo_sito(it: dict, ora=None) -> dict:
 
 # 11/11 11:10 (cliente: "rimetti subito la Fiat 500 rossa, mettila per prima come ieri a 6.900"): auto messe in cima
 # dal cliente, con il prezzo da mostrare. Riconosciute da marca + km + prezzo dell'annuncio.
-IN_CIMA = [{"marca": "fiat", "km": 68000, "prezzo": 7900, "mostra": 6900}]
+IN_CIMA = []   # 11/11 12:43 cliente: Fiat 500 rossa tolta dal sito
 
 
 def in_cima(it: dict) -> dict:
