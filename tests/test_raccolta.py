@@ -539,9 +539,11 @@ def test_giro_zona_salva_i_commercianti():
     for k in ("BENZ_RACCOLTA_TUTTI", "BENZ_CAP_EXTRA", "BENZ_FOCUS", "BENZ_SUB_PROFONDA", "BENZ_SOLO_INSUFF"):
         os.environ.pop(k, None)
     os.environ.update(BENZ_SOLO_PRIVATI="1", BENZ_PROVINCE="MI,BG,NO,PC", BENZ_MIN="1000", BENZ_PMAX="70000")
+    prov_prima = B.PROVINCE_100                # stesso oggetto: giro() lo sostituisce, non lo cambia
     try:
         st = B.giro()
     finally:
+        B.PROVINCE_100 = prov_prima              # giro() riscrive la variabile di modulo
         db.connect, subito.SubitoCollector, lusso.bande_parallele, tr._salva, tr.valuta_e_pubblica = vecchi
         os.environ.clear()
         os.environ.update(env)

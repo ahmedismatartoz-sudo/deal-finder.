@@ -249,7 +249,7 @@ def giro() -> dict:
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
-            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), noti=noti)):
+            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}))):
                 pacco.append(l); n += 1
                 salva()
         except Exception as e:
@@ -263,7 +263,7 @@ def giro() -> dict:
             os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = cap.strip(), rag.strip()
             n0 = n
             try:
-                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), noti=noti)):
+                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}))):
                     pacco.append(l); n += 1
                     salva()
             except Exception as e:
@@ -290,7 +290,7 @@ def giro() -> dict:
             nf = 0
             try:
                 for l in bande_parallele(fmin, fmax, passo_as if noti is not None else int(os.environ.get("FOCUS_PASSO", "250")),
-                                         [("P", "privato")], workers=int(os.environ.get("BENZ_PARALLELI", "3")), noti=noti):
+                                         [("P", "privato")], workers=int(os.environ.get("BENZ_PARALLELI", "3")), **({"noti": noti} if noti is not None else {})):
                     pacco.append(l); nf += 1
                     salva()
             except Exception as e:

@@ -281,7 +281,7 @@ class SubitoCollector(Collector):
             reg = self._trova_regione(wanted, 100) or 4
         letti = tenuti = 0
         from ..pipeline.incrementale import Arresto
-        stop = Arresto(self.noti) if self.noti is not None else None
+        stop = Arresto(self.noti) if getattr(self, "noti", None) is not None else None
         for page in range(max_pages):
             r = self._api({"c": 2, "r": reg, "t": "s", "lim": 100, "start": page * 100, "sort": "datedesc"})
             self.pause()
@@ -508,7 +508,7 @@ class SubitoCollector(Collector):
                 esito: dict) -> Iterator[Listing]:
         piena = False
         from ..pipeline.incrementale import Arresto
-        stop = Arresto(self.noti) if self.noti is not None else None
+        stop = Arresto(self.noti) if getattr(self, "noti", None) is not None else None
         for page in range(pages):
             r = self._api({"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
                            "lim": lim, "start": page * lim, "sort": "datedesc"})

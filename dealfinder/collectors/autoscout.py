@@ -349,7 +349,7 @@ class AutoScoutCollector(Collector):
     def _band(self, lo: int, hi: int, ctype: str, seller: str, years=None) -> Iterator[Listing]:
         if self.blocked or self.stop:
             return
-        if self.noti is not None:
+        if getattr(self, "noti", None) is not None:
             yield from self._band_incr(lo, hi, ctype, seller, years)
             return
         items, total, ok = self._page(self.search_url(lo, hi, 1, ctype, years))
@@ -404,7 +404,7 @@ class AutoScoutCollector(Collector):
                     continue
                 # 12/11 (memoria del cron mercato): le fasce non si sovrappongono, i già visti servono solo dentro la
                 # fascia: prima l'insieme cresceva per tutto il giro (centinaia di migliaia di id)
-                if self.svuota_visti:
+                if getattr(self, "svuota_visti", False):
                     letti_venditore += len(self.visti)
                     self.visti.clear()
                 self.incompleta = False
@@ -415,7 +415,7 @@ class AutoScoutCollector(Collector):
                     log.warning("autoscout massiva: fascia %s incompleta, non segnata come fatta", chiave)
                     continue
                 passi.segna(chiave)
-            if self.svuota_visti:
+            if getattr(self, "svuota_visti", False):
                 letti_venditore += len(self.visti)
                 self.visti.clear()
             else:
