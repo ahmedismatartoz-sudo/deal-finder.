@@ -265,7 +265,7 @@ function gainTxt(c){
   const lo = Math.max(c.gain, 0);
   return c.gainMax !== c.gain ? (c.gain < 0 ? "fino a +" + eur(c.gainMax) : "+" + num(lo) + "–" + num(c.gainMax) + " €") : "+" + eur(c.gain);
 }
-function meta(c){ const d = distKm(c); return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, c.zona].filter(Boolean).join(" · "); }
+function meta(c){ const d = distKm(c); return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, ...stRigaElenco(c), c.zona].filter(Boolean).join(" · "); }
 function img(src, alt, eager){ return src ? `<img src="${esc(src)}" alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">` : ""; }
 
 /* ---------- dati ---------- */
@@ -614,6 +614,7 @@ function viewDetail(){
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
+      ${schedaTecnica(c, d)}
       ${vizCosti(c)}${d && !d.err ? vizStorico(c, d.trattativa) : ""}
       ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c)}
       ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
@@ -631,6 +632,49 @@ function viewDetail(){
     </div></div>
   </div>`;
 }
+
+/* ---------- 12/11 scheda tecnica (dati dall'API: d.scheda; vedi dealfinder/web/scheda_tecnica.py) ---------- */
+const ST_MOSTRATI = 6;          // optional visibili per gruppo prima di "mostra tutti"
+function stChiaveBase(c){
+  // finché la scheda completa non è arrivata: i dati che l'elenco ha già
+  return [["anno","Anno",c.anno], ["km","Chilometri",c.km ? num(c.km) + " km" : null], ["carburante","Carburante",c.carb ? cap(String(c.carb)) : null],
+          ["cambio","Cambio",c.cambio ? cap(String(c.cambio)) : null], ["allestimento","Allestimento",c.allestimento]]
+    .filter(x => x[2] != null && x[2] !== "").map(([k, label, v]) => ({k, label, v: String(v)}));
+}
+function stData(iso){ const t = iso ? new Date(iso) : null; return t && !isNaN(t) ? t.toLocaleDateString("it-IT", {day: "numeric", month: "long"}) : ""; }
+function schedaTecnica(c, d){
+  const s = d && !d.err ? d.scheda : null;
+  const chiave = s ? s.chiave || [] : stChiaveBase(c);
+  const dati = s ? s.dati || [] : [];
+  const gruppi = s && s.optional ? s.optional.gruppi || [] : [];
+  const nOpt = s && s.optional ? s.optional.n || 0 : 0;
+  if (!chiave.length && !dati.length && !nOpt) return "";
+  S.stAperti = S.stAperti || {};
+  const aperto = !!S.stAperti[c.id];
+  const tiles = chiave.map(x => {
+    // potenza: i CV in grande, i kW sotto (una riga sola anche su telefono stretto)
+    const pz = x.k === "potenza" ? String(x.v).split(" · ") : null;
+    const v = pz && pz.length === 2 ? `${esc(pz[1])}<small>${esc(pz[0])}</small>` : esc(x.v);
+    return `<div class="st-t st-${esc(x.k)}"><span class="st-l">${esc(x.label)}</span><b>${v}</b></div>`; }).join("");
+  const griglia = dati.length ? `<dl class="st-grid">${dati.map(x => `<div class="st-r${x.largo ? " st-wide" : ""}"><dt>${esc(x.label)}</dt><dd>${esc(x.v)}</dd></div>`).join("")}</dl>` : "";
+  const nascosti = gruppi.reduce((a, g) => a + Math.max(0, g.voci.length - ST_MOSTRATI), 0);
+  const opt = nOpt ? `<div class="st-opt"><h3 class="st-h3">Optional <span class="st-n">${nOpt}</span></h3>${gruppi.map(g => {
+      const voci = aperto ? g.voci : g.voci.slice(0, ST_MOSTRATI);
+      return `<div class="st-g"><h4>${esc(g.nome)}<small>${g.voci.length}</small></h4><ul class="st-chips">${voci.map(v => `<li>${esc(v)}</li>`).join("")}</ul></div>`; }).join("")}
+      ${nascosti ? `<button class="st-more" data-st="opt" data-v="${c.id}" aria-expanded="${aperto}">${aperto ? "Mostra meno" : `Mostra tutti gli optional (${nOpt})`}</button>` : ""}</div>` : "";
+  const nota = s && s.letto_il ? `<p class="st-nota">Dati dall'annuncio, letti il ${esc(stData(s.letto_il))}</p>` : "";
+  return `<section class="st" aria-labelledby="st-h-${c.id}"><h2 class="st-h" id="st-h-${c.id}">Scheda tecnica</h2>
+    ${tiles ? `<div class="st-key">${tiles}</div>` : ""}${griglia}${opt}${nota}</section>`;
+}
+function stRigaElenco(c){
+  // allestimento nella riga dei dati dell'elenco solo se non è già nel nome
+  const a = c.allestimento && !String(c.nome || "").toLowerCase().includes(String(c.allestimento).toLowerCase()) ? c.allestimento : null;
+  return [c.cambio ? cap(String(c.cambio)) : null, a];
+}
+$app.addEventListener("click", e => {
+  const t = e.target.closest("[data-st]"); if (!t) return;
+  if (t.dataset.st === "opt") { S.stAperti = S.stAperti || {}; const id = Number(t.dataset.v); S.stAperti[id] = !S.stAperti[id]; render({keep:true}); }
+});
 
 /* ---------- fogli dal basso ---------- */
 function opts(list, cur, vuoto){ return `<option value="">${vuoto}</option>` + list.map(([v,l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? "selected" : ""}>${esc(l)}</option>`).join(""); }

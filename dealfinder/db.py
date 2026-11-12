@@ -218,13 +218,13 @@ _SCHEMA: dict = {"colonne": None, "indici": None, "at": 0.0}
 def _schema(conn) -> tuple[set, set]:
     import time
     if _SCHEMA["colonne"] is not None:
-        completo = len(_SCHEMA["colonne"]) == 2 and bool(_SCHEMA["indici"])
+        completo = len(_SCHEMA["colonne"]) == 3 and bool(_SCHEMA["indici"])
         if time.time() - _SCHEMA["at"] < (86400 if completo else 600):
             return _SCHEMA["colonne"], _SCHEMA["indici"]
     try:
         col = {r["column_name"] for r in conn.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='listings' "
-            "AND column_name IN ('disappear_reason','fuel_tipo')").fetchall()}
+            "AND column_name IN ('disappear_reason','fuel_tipo','dati_auto')").fetchall()}
         idx = {r["indexname"] for r in conn.execute(
             "SELECT indexname FROM pg_indexes WHERE tablename='listings' AND indexname='listings_vehicle_idx'").fetchall()}
     except Exception:
@@ -358,6 +358,9 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     )
     if getattr(listing, "fuel_tipo", None) is not None and ha_colonna(conn, "fuel_tipo"):
         params["fuel_tipo"] = listing.fuel_tipo
+    dati_ricerca = _dati_auto_ricerca(listing)
+    if dati_ricerca and ha_colonna(conn, "dati_auto"):          # 12/11 (migrazione 046): scheda tecnica dalla ricerca
+        params["dati_auto"] = json.dumps({"ricerca": dati_ricerca}, ensure_ascii=False)
     if prev is None:
         cols = ", ".join(params)
         vals = ", ".join(f"%({k})s" for k in params)
@@ -387,6 +390,8 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         "mileage_km": "COALESCE(%(mileage_km)s, listings.mileage_km)",
         "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
         "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
+        # 12/11: la ricerca riscrive solo la sua parte ("ricerca"); quello letto dalla pagina dell'annuncio resta
+        "dati_auto": DATI_AUTO_SQL,
     }
     sets = ", ".join(f"{k} = {_tenere[k]}" if k in _tenere else f"{k} = %({k})s"
                      for k in params if k not in ("source", "source_id"))
@@ -408,6 +413,22 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)",
                      (lid, listing.price_eur))
     return lid, event
+
+
+DATI_AUTO_SQL = ("COALESCE(jsonb_set(COALESCE(listings.dati_auto, '{}'::jsonb), '{ricerca}', "
+                 "(%(dati_auto)s::jsonb) -> 'ricerca'), listings.dati_auto)")
+
+
+def _dati_auto_ricerca(listing: Listing) -> dict:
+    """12/11: parte della scheda tecnica letta dalla ricerca, senza i dati che hanno già una colonna. DATI_AUTO_RICERCA=0
+    la spegne (default acceso). Mai un errore verso il salvataggio dell'annuncio."""
+    if os.environ.get("DATI_AUTO_RICERCA", "1") != "1":
+        return {}
+    try:
+        from .core.dati_auto import per_ricerca
+        return per_ricerca(getattr(listing, "dati_auto", None) or {})
+    except Exception:
+        return {}
 
 
 # 3/11 (Subito e AutoScout24): una nuova lettura SENZA un dato non cancella più quello già salvato. Es. le pagine di

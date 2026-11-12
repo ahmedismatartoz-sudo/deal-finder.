@@ -314,6 +314,8 @@ def run(mode: str) -> Counter:
         os.environ.setdefault("PASSI_JOB", f"collect:{mode}")     # dopo un riavvio si riprende da dove si era arrivati
     if mode == "opportunita":
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
+        from . import schede_auto                # 12/11: scheda tecnica delle auto sul sito e candidate (SCHEDA_PAGINE=0 la spegne)
+        schede_auto.giornaliero(stats)
         _autohero_giornaliero(stats)
     else:
         provinces, max_price = settings.market_provinces, settings.market_max_price_eur

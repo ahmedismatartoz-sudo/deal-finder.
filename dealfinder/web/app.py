@@ -1478,6 +1478,8 @@ def _calcola_elenco() -> None:
     for it in out:
         it.pop("_r", None)
         it.pop("_tipo", None)
+    from . import scheda_tecnica                # 12/11: allestimento e cambio nella riga dei dati dell'elenco
+    scheda_tecnica.arricchisci_elenco(out)
     _elenco.update(t=time.time(), items=out, opens=opens)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute
@@ -1631,12 +1633,14 @@ def affare(request: Request):
     mie = _elenco_per(user["id"])
     it = next((x for x in mie if x.get("id") == lid), None)
     admin = user.get("role") == "admin"
+    from . import scheda_tecnica                # 12/11: scheda tecnica dell'auto
     with connect() as conn:
         if it is not None:
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
             d = scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra)))   # 10/11: anche dentro la scheda vale il prezzo ribassato
+            scheda_tecnica.aggiungi(conn, lid, d)            # 12/11: scheda tecnica (allestimento, cambio, optional...)
             _con_trattativa(conn, lid, d)
             return jsonify(d)
         if not admin:
@@ -1652,6 +1656,7 @@ def affare(request: Request):
     d = scovo.detail(base, extra or {})
     d["non_sul_sito"] = True                    # solo amministratore: auto valutata ma tolta dalle regole del sito
     with connect() as conn:
+        scheda_tecnica.aggiungi(conn, lid, d)
         _con_trattativa(conn, lid, d)
     return jsonify(d)
 
