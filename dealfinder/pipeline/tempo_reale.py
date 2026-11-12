@@ -813,10 +813,9 @@ def _autoscout_nuovi(conn) -> list:
         url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
                f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom=300&priceto=150000"
                f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
-        try:
-            r = client.get(url)
-        except Exception as e:
-            log.warning("TR autoscout ricerca: %s", str(e)[:120])
+        from . import as_riprova                   # 12/11 (§3.4): riprova con attesa crescente su 429/5xx/rete
+        r = as_riprova.get(client, url, "TR autoscout ricerca")
+        if r is None:
             break
         if r.status_code != 200:
             log.warning("TR autoscout ricerca HTTP %s", r.status_code)
@@ -877,17 +876,25 @@ def _autoscout_tutti(conn) -> list:
     from ..collectors.base import next_data
     from ..zone import MILANO
     zona = set(MILANO)
+    from . import as_riprova
     client = _client_as()
     visti, out, pagine, fuori = set(), [], 0, 0
-    for lo, hi in FASCE_AS:
-        for page in range(1, 21):
+    # 12/11 (§3.4): si parte dalla fascia (e pagina) dove la lettura precedente si era fermata per un 429
+    ripresa = as_riprova.leggi_ripresa(conn) if as_riprova.attivo() else None
+    interrotta = False
+    for idx, p0 in as_riprova.ordine_fasce(len(FASCE_AS), ripresa):
+        lo, hi = FASCE_AS[idx]
+        if interrotta:
+            break
+        for page in range(p0, 21):
             url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
                    f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom={lo}&priceto={hi}"
                    f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
-            try:
-                r = client.get(url)
-            except Exception as e:
-                log.warning("TR completo autoscout: %s", str(e)[:120])
+            r = as_riprova.get(client, url, f"TR completo autoscout fascia {lo}-{hi} pagina {page}")
+            if r is None:
+                if as_riprova.attivo():
+                    as_riprova.salva_ripresa(conn, idx, page)     # il prossimo giro riparte da qui
+                    interrotta = True
                 break
             if r.status_code != 200:
                 log.warning("TR completo autoscout HTTP %s (fascia %s-%s pagina %s)", r.status_code, lo, hi, page)
@@ -914,7 +921,11 @@ def _autoscout_tutti(conn) -> list:
             if len(items) < 20:
                 break
             time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
-    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona", pagine, len(out), fuori)
+    if not interrotta and ripresa:
+        as_riprova.togli_ripresa(conn)
+    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona%s%s", pagine, len(out), fuori,
+                f", ripresa dalla fascia {FASCE_AS[ripresa['fascia']]}" if ripresa else "",
+                ", interrotta (si riprende al giro dopo)" if interrotta else "")
     return _as_completa(client, out)
 
 
@@ -1125,6 +1136,11 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         if os.environ.get("TR_AUTOSCOUT", "1") == "1":
             try:
                 letti += _autoscout_nuovi(conn)
+                # 12/11 (§3.4): lettura completa interrotta da un 429: si riprende al primo giro utile, non dopo un'ora
+                from . import as_riprova
+                if as_riprova.attivo() and not as_riprova.fermo() and as_riprova.leggi_ripresa(conn):
+                    stats["as_ripresa"] = 1
+                    letti += _autoscout_tutti(conn)
             except Exception as e:
                 log.warning("TR autoscout: %s", str(e)[:200])
         stats["letti"] = len(letti)
