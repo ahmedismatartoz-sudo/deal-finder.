@@ -487,6 +487,162 @@ async function viewFunnel(el) {
   } catch (err) { el.innerHTML = `<p class="note">Filtri del sito non disponibili ora (${esc(err.message)}).</p>`; }
 }
 
+/* ---------- 12/11: Sito — ribassi, auto in cima, auto tolte, senza riavvio (endpoint /api/admin/sito) ---------- */
+const SITO = { cima: [] };
+const dtLocale = (iso) => { if (!iso) return ""; const d = new Date(iso); if (isNaN(d)) return "";
+  const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+const dtTesto = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("it-IT", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }); };
+const fasciaRiga = (da, eur) => `<tr><td><input type="number" min="0" step="500" value="${esc(da)}" data-f="da" aria-label="Da prezzo" style="width:8rem"></td>
+  <td><input type="number" min="0" max="3000" step="50" value="${esc(eur)}" data-f="eur" aria-label="Euro tolti" style="width:7rem"></td>
+  <td><button class="btn" data-f-via>Togli</button></td></tr>`;
+
+const rigaTolta = (x) => `<tr><td>${esc(x.descrizione)}</td><td>${esc(x.motivo || "")}</td><td>${esc(dtTesto(x.creato_at))}</td><td><button class="btn" data-rimetti="${x.id}">Rimetti</button></td></tr>`;
+
+async function viewSito() {
+  $view.innerHTML = `<h1>Sito</h1><p class="sub">Modifiche senza riavvio: si vedono sul sito entro un minuto.</p><div id="sito"><p class="note">Carico…</p></div>`;
+  const box = document.getElementById("sito");
+  let d;
+  try { d = await api("/api/admin/sito"); } catch (err) { box.innerHTML = `<div class="empty error">${esc(err.message)}</div>`; return; }
+  SITO.cima = (d.in_cima || []).map((e) => ({ ...e }));     // descrizione e sul_sito il server li ignora
+  const r = d.ribasso || {}, el = d.elenco || {};
+  const fasce = String(r.schema || "").split(",").filter(Boolean).map((x) => x.split(":"));
+  const statoRib = r.acceso_ora ? `<b class="ok">Accesi</b>${r.fino ? " fino a " + esc(dtTesto(r.fino)) : " senza scadenza"}` : `<b>Spenti</b>${r.attivo && r.fino ? " (scaduti il " + esc(dtTesto(r.fino)) + ")" : ""}`;
+  box.innerHTML = `
+    <div class="panel" style="margin-bottom:16px"><b>${el.auto || 0} auto sul sito</b>${el.aggiornato ? " · elenco del " + esc(dtTesto(el.aggiornato)) : ""}
+      ${el.fonte === "database" ? ' · <span class="note">ripreso dal database all\'avvio, ricalcolo in corso</span>' : ""}${el.calcolo_in_corso ? ' · <span class="note">ricalcolo in corso</span>' : ""}</div>
+
+    <h2>Ribassi del prezzo mostrato</h2>
+    <div class="panel">
+      <p>Ora: ${statoRib}${r.fonte === "codice" ? ' <small class="note">(valori del codice: al primo salvataggio passano qui)</small>' : ""}</p>
+      <label style="display:inline-flex;gap:8px;align-items:center"><input type="checkbox" id="rb-on" ${r.attivo ? "checked" : ""} style="width:20px;height:20px"> Ribassi accesi</label>
+      <table class="kv" style="max-width:420px;margin-top:10px"><thead><tr><th>Da prezzo dell'annuncio (€)</th><th>Euro tolti</th><th></th></tr></thead><tbody id="rb-fasce">${fasce.map(([a, b]) => fasciaRiga(a, b)).join("")}</tbody></table>
+      <button class="btn" id="rb-add" style="margin-top:8px">Aggiungi fascia</button>
+      <div class="field" style="max-width:320px;margin-top:12px"><label for="rb-fino">Fino a (ora italiana)</label><input type="datetime-local" id="rb-fino" value="${esc(dtLocale(r.fino))}"><small>Vuoto = finché non li spegni. Dopo questa ora si spengono da soli.</small></div>
+      <button class="btn primary" id="rb-salva">Salva ribassi</button>
+      <p class="note">Il prezzo mostrato è quello dell'annuncio meno il ribasso della sua fascia (al massimo 3.000 €); il margine mostrato sale di altrettanto. Le regole del sito usano sempre il prezzo vero.</p>
+    </div>
+
+    <h2>Cerca un'auto sul sito</h2>
+    <div class="field" style="max-width:420px"><input id="s-q" placeholder="Marca, modello, anno, zona o id annuncio" autocomplete="off"></div>
+    <div id="s-ris"></div>
+
+    <h2>Auto in cima</h2>
+    <div class="panel"><div id="s-cima"></div>
+      <details style="margin-top:10px"><summary>Aggiungi a mano (auto non trovata con la ricerca)</summary>
+        <div class="grid2" style="margin-top:8px">
+          <div class="field"><label for="c-id">Id annuncio</label><input id="c-id" inputmode="numeric"><small>Oppure marca, km e prezzo qui sotto</small></div>
+          <div class="field"><label for="c-marca">Marca</label><input id="c-marca"></div>
+          <div class="field"><label for="c-modello">Modello (facoltativo)</label><input id="c-modello"></div>
+          <div class="field"><label for="c-km">Km</label><input id="c-km" inputmode="numeric"></div>
+          <div class="field"><label for="c-prezzo">Prezzo dell'annuncio (€)</label><input id="c-prezzo" inputmode="numeric"></div>
+          <div class="field"><label for="c-mostra">Prezzo da mostrare (€, facoltativo)</label><input id="c-mostra" inputmode="numeric"></div>
+        </div><button class="btn" id="c-add">Aggiungi in cima</button></details>
+    </div>
+
+    <h2>Auto tolte dal sito</h2>
+    <div class="panel">
+      <details style="margin-top:10px"><summary>Togli a mano (per id o per marca, km e prezzo)</summary>
+        <div class="grid2" style="margin-top:8px">
+          <div class="field"><label for="t-id">Id annuncio</label><input id="t-id" inputmode="numeric"><small>Oppure i dati qui sotto</small></div>
+          <div class="field"><label for="t-marca">Marca</label><input id="t-marca"></div>
+          <div class="field"><label for="t-modello">Modello (facoltativo)</label><input id="t-modello"></div>
+          <div class="field"><label for="t-anno">Anno (facoltativo)</label><input id="t-anno" inputmode="numeric"></div>
+          <div class="field"><label for="t-km">Km</label><input id="t-km" inputmode="numeric"></div>
+          <div class="field"><label for="t-prezzo">Prezzo dell'annuncio (€)</label><input id="t-prezzo" inputmode="numeric"></div>
+        </div>
+        <div class="field"><label for="t-motivo">Motivo</label><input id="t-motivo" placeholder="es. il cliente non la vuole"></div>
+        <button class="btn" id="t-add">Togli dal sito</button></details>
+      ${(d.scarti || []).length ? `<div style="overflow-x:auto;margin-top:10px"><table class="kv"><tr><th>Auto</th><th>Motivo</th><th>Dal</th><th></th></tr>
+        ${d.scarti.slice(0, 10).map(rigaTolta).join("")}</table></div>
+        ${d.scarti.length > 10 ? `<details style="margin-top:8px"><summary>Le altre ${d.scarti.length - 10} auto tolte</summary><div style="overflow-x:auto"><table class="kv">
+        ${d.scarti.slice(10).map(rigaTolta).join("")}</table></div></details>` : ""}`
+        : '<p class="note">Nessuna auto tolta.</p>'}
+      ${(d.rimessi || []).length ? `<details style="margin-top:8px"><summary>Rimesse di recente (${d.rimessi.length})</summary><table class="kv">
+        ${d.rimessi.map((x) => `<tr><td>${esc(x.descrizione)}</td><td>${esc(x.motivo || "")}</td><td>rimessa il ${esc(dtTesto(x.rimesso_at))}</td></tr>`).join("")}</table></details>` : ""}
+      <p class="note">Un'auto tolta esce subito dall'elenco. "Rimetti" la fa tornare entro uno o due minuti (l'elenco si ricalcola in sottofondo).</p>
+    </div>
+
+    <h2>Commercianti</h2>
+    <p class="note">"Deve pagare con carta" e "Accesso a" (auto, incentivi, appuntamenti) si cambiano in <a href="#/admin">Gestione → Commercianti</a> e valgono subito, senza riavvio.</p>`;
+
+  const fasceBox = document.getElementById("rb-fasce");
+  const legaVia = () => fasceBox.querySelectorAll("[data-f-via]").forEach((b) => b.onclick = () => b.closest("tr").remove());
+  legaVia();
+  document.getElementById("rb-add").onclick = () => { fasceBox.insertAdjacentHTML("beforeend", fasciaRiga("", "")); legaVia(); };
+  document.getElementById("rb-salva").onclick = async () => {
+    const schema = [...fasceBox.querySelectorAll("tr")].map((tr) => [tr.querySelector('[data-f="da"]').value, tr.querySelector('[data-f="eur"]').value])
+      .filter(([a, b]) => a !== "" && b !== "").map(([a, b]) => `${parseInt(a, 10)}:${parseInt(b, 10)}`).join(",");
+    const v = document.getElementById("rb-fino").value;
+    const fino = v ? new Date(v).toISOString().replace("Z", "+00:00") : null;
+    try { const x = await api("/api/admin/sito/ribasso", { method: "PUT", body: { attivo: document.getElementById("rb-on").checked, schema, fino } });
+          toast(x.acceso_ora ? "Ribassi accesi: sul sito entro un minuto" : "Ribassi spenti: sul sito entro un minuto"); viewSito(); }
+    catch (err) { toast(err.message); }
+  };
+
+  const disegnaCima = () => {
+    const el2 = document.getElementById("s-cima");
+    if (!SITO.cima.length) { el2.innerHTML = '<p class="note">Nessuna auto in cima.</p>'; return; }
+    el2.innerHTML = `<div style="overflow-x:auto"><table class="kv"><tr><th>#</th><th>Auto</th><th>Prezzo mostrato (€)</th><th>Sul sito</th><th></th></tr>
+      ${SITO.cima.map((e, k) => { const ss = e.sul_sito;
+        return `<tr><td>${k + 1}</td><td>${esc(ss ? ss.auto : (e.nota || e.descrizione || (e.id ? "annuncio " + e.id : e.marca)))}</td>
+        <td><input type="number" min="1" value="${esc(e.mostra ?? "")}" data-mostra="${k}" style="width:7rem" placeholder="come annuncio"></td>
+        <td>${ss ? '<span class="ok">sì</span> ' + esc(eur(ss.prezzo)) : '<span class="note">non ora</span>'}</td>
+        <td style="white-space:nowrap">${k ? `<button class="btn" data-su="${k}" aria-label="Sposta su">Su</button> ` : ""}<button class="btn" data-giu-cima="${k}">Togli dalla cima</button></td></tr>`; }).join("")}</table></div>
+      <button class="btn primary" id="cima-salva" style="margin-top:8px">Salva auto in cima</button>`;
+    el2.querySelectorAll("[data-mostra]").forEach((i) => i.onchange = () => { const k = +i.dataset.mostra; if (i.value) SITO.cima[k].mostra = parseInt(i.value, 10); else delete SITO.cima[k].mostra; });
+    el2.querySelectorAll("[data-su]").forEach((b) => b.onclick = () => { const k = +b.dataset.su; [SITO.cima[k - 1], SITO.cima[k]] = [SITO.cima[k], SITO.cima[k - 1]]; disegnaCima(); });
+    el2.querySelectorAll("[data-giu-cima]").forEach((b) => b.onclick = () => { SITO.cima.splice(+b.dataset.giuCima, 1); disegnaCima(); });
+    document.getElementById("cima-salva").onclick = salvaCima;
+  };
+  const salvaCima = async () => {
+    try { await api("/api/admin/sito/in-cima", { method: "PUT", body: { voci: SITO.cima } }); toast("Auto in cima salvate: sul sito entro un minuto"); viewSito(); }
+    catch (err) { toast(err.message); }
+  };
+  disegnaCima();
+  const num = (id) => document.getElementById(id).value.trim();
+  document.getElementById("c-add").onclick = () => {
+    const e = num("c-id") ? { id: num("c-id") } : { marca: num("c-marca"), modello: num("c-modello"), km: num("c-km"), prezzo: num("c-prezzo") };
+    if (num("c-mostra")) e.mostra = num("c-mostra");
+    SITO.cima.push(e); salvaCima();
+  };
+
+  const togli = async (body) => {
+    try { await api("/api/admin/sito/scarti", { method: "POST", body }); toast("Auto tolta dal sito"); viewSito(); }
+    catch (err) { toast(err.message); }
+  };
+  document.getElementById("t-add").onclick = () => togli(num("t-id") ? { id: num("t-id"), motivo: num("t-motivo") }
+    : { marca: num("t-marca"), modello: num("t-modello"), anno: num("t-anno"), km: num("t-km"), prezzo: num("t-prezzo"), motivo: num("t-motivo") });
+  box.querySelectorAll("[data-rimetti]").forEach((b) => b.onclick = async () => {
+    try { await api("/api/admin/sito/scarti/" + b.dataset.rimetti + "/rimetti", { method: "POST" }); toast("Rimessa: torna sul sito entro uno o due minuti"); viewSito(); }
+    catch (err) { toast(err.message); }
+  });
+
+  const q = document.getElementById("s-q"), ris = document.getElementById("s-ris");
+  let tq = null;
+  q.oninput = () => { clearTimeout(tq); tq = setTimeout(async () => {
+    if (!q.value.trim()) { ris.innerHTML = ""; return; }
+    try {
+      const x = await api("/api/admin/sito/cerca?q=" + encodeURIComponent(q.value.trim()));
+      ris.innerHTML = x.items.length ? `<div style="overflow-x:auto"><table class="kv"><tr><th>Auto</th><th>Prezzo</th><th>Zona</th><th></th></tr>
+        ${x.items.map((it) => `<tr><td>${esc(it.auto)} <small class="note">id ${esc(it.id)}</small></td><td>${esc(eur(it.prezzo))}</td><td>${esc(it.zona || "")}</td>
+          <td style="white-space:nowrap"><button class="btn" data-cima="${esc(it.id)}" data-nome="${esc(it.auto)}">Metti in cima</button> <button class="btn" data-via="${esc(it.id)}" data-nome="${esc(it.auto)}">Togli dal sito</button></td></tr>`).join("")}</table></div>`
+        : '<p class="note">Nessuna auto sul sito con queste parole.</p>';
+      ris.querySelectorAll("[data-cima]").forEach((b) => b.onclick = () => {
+        const m = prompt("Prezzo da mostrare per " + b.dataset.nome + " (vuoto = prezzo dell'annuncio):", "");
+        if (m === null) return;
+        const e = { id: parseInt(b.dataset.cima, 10), nota: b.dataset.nome };
+        if (m.trim()) e.mostra = m.trim();
+        SITO.cima.unshift(e); salvaCima();
+      });
+      ris.querySelectorAll("[data-via]").forEach((b) => b.onclick = () => {
+        const m = prompt("Togli dal sito " + b.dataset.nome + ". Motivo (facoltativo):", "");
+        if (m === null) return;
+        togli({ id: parseInt(b.dataset.via, 10), motivo: m.trim() });
+      });
+    } catch (err) { ris.innerHTML = `<p class="note">${esc(err.message)}</p>`; }
+  }, 250); };
+}
+
 /* ---------- navigazione ---------- */
 async function checkNotifications() {
   if (!state.token) return;
@@ -503,6 +659,7 @@ function route() {
   if (h === "#/login") return viewLogin();
   document.getElementById("topbar").hidden = false;
   document.getElementById("nav-admin").hidden = !(state.user && state.user.role === "admin");
+  document.getElementById("nav-sito").hidden = !(state.user && state.user.role === "admin");
   const name = h.startsWith("#/o/") ? "list" : (h.slice(2) || "list");
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === name));
   window.scrollTo(0, 0);
@@ -510,6 +667,7 @@ function route() {
   if (h === "#/attivita") return viewActivity();
   if (h === "#/profilo") return viewProfile();
   if (h === "#/admin") return viewAdmin();
+  if (h === "#/sito") return viewSito();
   return viewList();
 }
 

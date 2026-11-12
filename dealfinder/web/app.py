@@ -31,6 +31,9 @@ from .auth import check_link_code, hash_password, make_link_code, make_token, pa
 
 log = logging.getLogger("web")
 STATIC = Path(__file__).parent / "static"
+
+from .. import memoria as _memoria  # noqa: E402
+_memoria.limita_arene()             # 12/11: poche arene glibc con ~90 thread (memoria riusata, meno fuori memoria)
 FEEDBACK_STATUSES = {"scartata", "contattato", "trattativa", "comprata", "venduta"}
 
 
@@ -584,8 +587,22 @@ async def admin_update_dealer(request: Request):
     return jsonify({"ok": True})
 
 
+_AVVIO = time.monotonic()
+
+
 def health(request: Request):
-    return JSONResponse({"ok": True})
+    """12/11: 503 finché il sito non ha un elenco (letto dal database o calcolato), poi sempre 200 (anche durante i
+    ricalcoli). Con healthCheckPath=/health su Render il vecchio processo resta acceso finché il nuovo è pronto.
+    Senza DATABASE_URL (prove) o con HEALTH_ATTENDE_ELENCO=0 risponde subito 200; dopo HEALTH_ATTESA_MAX_S (600) di
+    attesa risponde 200 lo stesso, così un elenco che non si riesce a calcolare non tiene il sito spento per sempre."""
+    pronto = bool(_elenco.get("pronto")) or not os.environ.get("DATABASE_URL") \
+        or os.environ.get("HEALTH_ATTENDE_ELENCO", "1") != "1"
+    attesa = time.monotonic() - _AVVIO
+    scaduto = not pronto and attesa > float(os.environ.get("HEALTH_ATTESA_MAX_S", "600"))
+    d = {"ok": pronto or scaduto, "auto": len(_elenco.get("items") or []), "elenco": _elenco.get("fonte") or "in preparazione"}
+    if scaduto:
+        d["avviso"] = "elenco non ancora pronto dopo %d s" % attesa
+    return JSONResponse(d, status_code=200 if d["ok"] else 503, headers={"Cache-Control": "no-store"})
 
 
 # ---------------------------------------------------------------------------
@@ -980,7 +997,7 @@ def _commercianti_nomi_re() -> str:
     return "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
 
 
-_elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False}
+_elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False, "pronto": False, "fonte": None, "imp_v": None}
 _elenco_lock = threading.Lock()
 ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
@@ -1027,8 +1044,13 @@ from .sito_regole import PROVINCE_100KM  # noqa: E402  (12 province entro 100 km
 
 
 def _scarti_cliente_ids() -> set:
-    """23/10: auto tolte a mano per id (data/scarti_sito.json): fuori dal sito da qualunque strada arrivino."""
+    """23/10: auto tolte a mano per id (data/scarti_sito.json): fuori dal sito da qualunque strada arrivino.
+    12/11: dal database (pannello /gestione → Sito, tabella sito_scarti); il file vale solo se la tabella è vuota."""
     from pathlib import Path
+    from . import impostazioni as _imp
+    ids = _imp.scarti_ids()
+    if ids is not None:
+        return ids
     try:
         return {int(e["id"]) for e in json.loads((Path(__file__).resolve().parents[2] / "data" / "scarti_sito.json").read_text())
                 if e.get("id")}
@@ -1260,6 +1282,23 @@ def _dal_testo(t: str, nomi) -> dict:
             "solo_fin": bool(_SOLO_FIN_RE.search(t)), "loconte_testo": bool(nomi and nomi.search(t))}
 
 
+# 12/11 (memoria): in cache non un dizionario per annuncio (~500 byte) ma un numero (un bit per sì/no) con chiave
+# intera id+prezzo: con 60.000 voci da ~30 MB a ~8 MB (misurato con dati simulati)
+_TESTO_BIT = ("tel_testo", "tel_estero", "testo_truffa", "segni_commerciante", "promo_testo", "solo_fin", "loconte_testo")
+
+
+def _testo_chiave(lid, prezzo) -> int:
+    return int(lid) * 100_000_000 + (int(prezzo or 0) % 100_000_000)
+
+
+def _testo_in_bit(d: dict) -> int:
+    return sum(1 << i for i, k in enumerate(_TESTO_BIT) if d.get(k))
+
+
+def _testo_da_bit(n: int | None) -> dict:
+    return {} if n is None else {k: bool(n >> i & 1) for i, k in enumerate(_TESTO_BIT)}
+
+
 def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
     """Dati per le regole del sito, letti UNA volta per giro (nessun numero di telefono salvato: solo sì/no)."""
     from . import sito_regole as SR
@@ -1276,18 +1315,18 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
     jev: dict = {}
     jev_errore = False
     with connect() as conn:
-        senza_testo = [i for i in ids if (i, prezzi.get(i)) not in _testo_cache]
+        senza_testo = [i for i in ids if _testo_chiave(i, prezzi.get(i)) not in _testo_cache]
         for k in range(0, len(senza_testo), 2000):
             for r in conn.execute("SELECT id, title, description FROM listings WHERE id = ANY(%s)",
-                                  (senza_testo[k:k + 2000],)).fetchall():
-                _testo_cache[(r["id"], prezzi.get(r["id"]))] = _dal_testo(
-                    f"{r.get('title') or ''} {r.get('description') or ''}", nomi)
+                                  (senza_testo[k:k + 2000],)):
+                _testo_cache[_testo_chiave(r["id"], prezzi.get(r["id"]))] = _testo_in_bit(_dal_testo(
+                    f"{r.get('title') or ''} {r.get('description') or ''}", nomi))
         stats["testi_letti"] = len(senza_testo)
         for k in range(0, len(ids), 2000):
             for r in conn.execute(
                     "SELECT id, seller_type, telefono_ok, price_flags, province, city, stage, stage_reason, damage_class "
                     "FROM listings WHERE id = ANY(%s)", (ids[k:k + 2000],)).fetchall():
-                tx = _testo_cache.get((r["id"], prezzi.get(r["id"]))) or {}
+                tx = _testo_da_bit(_testo_cache.get(_testo_chiave(r["id"], prezzi.get(r["id"]))))
                 flags = set(r.get("price_flags") or [])
                 dati[r["id"]] = {
                     "tel": bool(r.get("telefono_ok") or tx.get("tel_testo")),
@@ -1353,19 +1392,21 @@ def _carica_candidati() -> tuple[list[dict], dict, dict]:
     stats: Counter = Counter()
     with connect() as conn:
         # 28/10: senza ORDER BY il LIMIT prendeva ogni volta 3000 righe a caso: il sito oscillava tra 70 e 170 auto
-        rows = conn.execute(scovo.LIST_SQL + " ORDER BY l.id DESC LIMIT %(lim)s",
-                            {"me": 0, "lim": int(os.environ.get("ELENCO_LIMITE", "8000"))}).fetchall()
-    scovo.POLICY_PRONTA["ok"] = sum(1 for r in rows if r.get("pv")) >= max(1, len(rows) // 2)
-    items, opens, pv_at = [], {}, {}
-    stats["lista"] = len(rows)
-    for r in rows:
-        it = scovo.item(r)
-        if not it:
-            stats["lista_senza_scheda"] += 1
-            continue
-        items.append(it)
-        opens[it["id"]] = int(r["opens"] or 0)
-        pv_at[it["id"]] = r.get("pv_at")
+        # 12/11 (memoria): le righe si trasformano una alla volta in schede compatte, senza tenere in memoria la
+        # lista di ~8.000 righe grezze (con i JSON della valutazione) insieme alle schede
+        items, opens, pv_at, con_pv = [], {}, {}, 0
+        for r in conn.execute(scovo.LIST_SQL + " ORDER BY l.id DESC LIMIT %(lim)s",
+                              {"me": 0, "lim": int(os.environ.get("ELENCO_LIMITE", "8000"))}):
+            stats["lista"] += 1
+            con_pv += 1 if r.get("pv") else 0
+            it = scovo.item(r)
+            if not it:
+                stats["lista_senza_scheda"] += 1
+                continue
+            items.append(it)
+            opens[it["id"]] = int(r["opens"] or 0)
+            pv_at[it["id"]] = r.get("pv_at")
+    scovo.POLICY_PRONTA["ok"] = con_pv >= max(1, stats["lista"] // 2)
     gia = {it["id"] for it in items}
     # sezione economiche (regola di sempre: auto di privati dal 2010 fino a ECONOMICHE_MAX, valutate dalla policy con
     # categoria del sito); il margine minimo poi lo controlla sito_regole come per tutte
@@ -1478,7 +1519,11 @@ def _calcola_elenco() -> None:
     for it in out:
         it.pop("_r", None)
         it.pop("_tipo", None)
-    _elenco.update(t=time.time(), items=out, opens=opens)
+    from . import impostazioni as _imp, elenco_salvato as _es
+    imp_v = _imp.versione()
+    out = _imp.togli_scartate(out)                # 12/11: auto tolte dal pannello (anche se l'annuncio non è cambiato)
+    _elenco.update(t=time.time(), items=out, opens=opens, pronto=True, fonte="calcolato", imp_v=imp_v)
+    _es.salva_elenco(out, opens)                  # 12/11: copia per il prossimo avvio (sito mai vuoto)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute
         vendute.salva_sito(out)
@@ -1501,6 +1546,8 @@ def _calcola_elenco() -> None:
         if SR.fascia(it):
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(out), time.time() - t0, dict(sorted(c.items())))
+    del items, fun
+    _memoria.rilascia("elenco")
     try:   # 11/11: quante auto per provincia (es. Novara)
         import collections as _co, re as _re
         _pp = _co.Counter((_re.search(r"\(([A-Z]{2})\)\s*$", str(it.get("zona") or "")) or [None, "?"])[1] for it in out)
@@ -1570,7 +1617,40 @@ def _aggiorna_elenco(attendi: bool) -> None:
         threading.Thread(target=go, daemon=True, name="elenco").start()
 
 
+def _filtra_impostazioni() -> None:
+    """12/11: impostazioni del sito cambiate (pannello, al massimo ogni 45 s): l'elenco già calcolato si ri-filtra
+    togliendo le auto tolte dal cliente, senza ricalcolo. Prezzi e auto in cima si applicano a ogni richiesta."""
+    from . import impostazioni as _imp
+    try:
+        v = _imp.versione()
+        if _elenco.get("imp_v") != v and _elenco.get("items"):
+            _elenco["items"] = _imp.togli_scartate(list(_elenco["items"]))
+        _elenco["imp_v"] = v
+    except Exception as e:
+        logging.getLogger("scovo").warning("IMPOSTAZIONI elenco non ri-filtrato: %s", str(e)[:200])
+
+
+def _carica_elenco_salvato() -> bool:
+    """12/11: all'avvio l'ultimo elenco buono dal database: il sito ha subito le auto mentre ricalcola."""
+    if _elenco.get("items"):
+        return False
+    from . import elenco_salvato as _es
+    t0 = time.time()
+    r = _es.carica_elenco()
+    if not r:
+        return False
+    items, opens, eta = r
+    if _elenco.get("items"):                    # nel frattempo è arrivato il calcolo vero
+        return False
+    _elenco.update(t=time.time(), items=items, opens=opens, pronto=True, fonte="database")
+    _filtra_impostazioni()
+    logging.getLogger("scovo").warning("ELENCO_SALVATO %d auto lette dal database in %.1fs (copia di %.0f minuti fa)",
+                                       len(items), time.time() - t0, eta / 60)
+    return True
+
+
 def _elenco_per(dealer_id: int) -> list[dict]:
+    _filtra_impostazioni()
     eta = time.time() - _elenco["t"]
     if not _elenco["items"]:
         _aggiorna_elenco(attendi=True)
@@ -2185,12 +2265,12 @@ def vai_annuncio(request: Request):
     return RedirectResponse(r["url"], status_code=302)
 
 
-# foto già lette dal database tenute in memoria (fino a FOTO_MEMORIA_MB, 48 MB): la stessa foto vista da più
+# foto già lette dal database tenute in memoria (fino a FOTO_MEMORIA_MB, 24 MB): la stessa foto vista da più
 # commercianti non passa più dal database
 from collections import OrderedDict
 _foto_mem: OrderedDict = OrderedDict()
 _foto_mem_tot = [0]
-FOTO_MEMORIA = int(os.environ.get("FOTO_MEMORIA_MB", "48")) * 1024 * 1024
+FOTO_MEMORIA = int(os.environ.get("FOTO_MEMORIA_MB", "24")) * 1024 * 1024     # 12/11: 24 MB (era 48) su 512
 
 
 def foto_auto(request: Request):
@@ -2583,6 +2663,7 @@ def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
 
 
 from .vetrina import api_vetrina, foto_vetrina
+from . import admin_sito as _admin_sito  # noqa: E402
 
 routes = [
     Route("/api/vetrina/{slug}", api_vetrina),
@@ -2625,6 +2706,7 @@ routes = [
     Route("/api/opportunities/{id:int}/feedback", feedback, methods=["POST"]),
     Route("/api/affari/{id:int}/esito", esito_affare, methods=["POST"]),
     Route("/api/admin/sito-funnel", admin_sito_funnel),
+    *_admin_sito.ROTTE,                   # 12/11: pannello → Sito (ribassi, in cima, auto tolte) senza deploy
     Route("/api/activity", my_activity),
     Route("/api/notifications", notifications),
     Route("/api/notifications/seen", notifications_seen, methods=["POST"]),
@@ -3007,6 +3089,7 @@ def _tempo_reale():
                         if conn.execute("SELECT pg_try_advisory_lock(734105) AS ok").fetchone()["ok"]:
                             try:
                                 res = jev.giro(conn, int(os.environ.get("JEV_LOTTO_PICCOLO", "60")) if piccolo else None)
+                                _memoria.rilascia("jev")
                                 lg.warning("JEV_RIEPILOGO 3 giorni: %s", jev.riepilogo(conn))
                                 if res.get("pubblicate"):
                                     _telefoni_scelte()
@@ -3228,8 +3311,13 @@ def _tempo_reale():
                         from ..pipeline.ciclo import una_volta_sicura   # 6/11: riga chiusa anche dopo un riavvio
                         with una_volta_sicura("subito_completo:" + giorno, tentativi_max=6) as fare:
                             if fare:
+                                # 12/11: dentro il sito (512 MB) il giro si ferma se la memoria supera
+                                # SUBITO_COMPLETO_MAX_MB (400) o dopo SUBITO_COMPLETO_MINUTI (60): riprende dai passi fatti
+                                _aspetta_memoria(lg, "SUBITO_COMPLETO", float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "400")) - 60)
                                 with _c() as conn:
-                                    tr.subito_completo(conn)
+                                    tr.subito_completo(conn, minuti=float(os.environ.get("SUBITO_COMPLETO_MINUTI", "60")),
+                                                       basta=lambda: _rss_mb() > float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "400")))
+                                _memoria.rilascia("subito_completo")
                         _elenco["t"] = 0.0
                         _aggiorna_elenco(attendi=False)
             except Exception as e:
@@ -6437,6 +6525,16 @@ def _lavoro_subito():
         logging.getLogger("lavoro").warning("LAVORO_SUBITO avviato: %s", modo)
 
 
+def _avvia_controllo_impostazioni() -> None:
+    """12/11: ogni SITO_IMPOSTAZIONI_CONTROLLO_S (30) secondi le impostazioni del sito: le auto tolte dal pannello
+    escono anche dalle email e dalle foto (che usano l'elenco in memoria), non solo dalle pagine."""
+    def giro():
+        while True:
+            time.sleep(float(os.environ.get("SITO_IMPOSTAZIONI_CONTROLLO_S", "30")))
+            _filtra_impostazioni()
+    threading.Thread(target=giro, daemon=True, name="impostazioni").start()
+
+
 @asynccontextmanager
 async def _lifespan(app):
     try:
@@ -6461,7 +6559,12 @@ async def _lifespan(app):
         _migrazioni_in_sottofondo()           # 4/11: quelle rimandate da init_db (lucchetto occupato)
         _pulizia_disco()
         _tabelle_sito()                       # 4/11: contatori giornalieri dei filtri del sito (mai nelle richieste)
+        try:                                  # 12/11: l'ultimo elenco buono dal database, subito (niente sito vuoto)
+            _carica_elenco_salvato()
+        except Exception as e:
+            logging.getLogger("scovo").warning("ELENCO_SALVATO non letto: %s", str(e)[:200])
         _aggiorna_elenco(attendi=False)       # elenco auto pronto prima del primo visitatore
+        _avvia_controllo_impostazioni()
     if os.environ.get("DATABASE_URL") and os.environ.get("VISIBILI_SOTTOFONDO", "1") == "1":
         _aggiorna_visibili()
     if os.environ.get("DATABASE_URL") and os.environ.get("POLICY_RICALCOLO", "1") == "1":
