@@ -175,3 +175,89 @@ def test_subito_fascia_incrementale_non_divide():
     sub.noti = INC.Noti([("subito", u, p) for u, p in annunci[100:]], k=2)
     letti = list(sub._fascia(4, "k", "MI", 3000, 4000, 10, 100, {"MI"}, set(), 0, {"letti": 0, "tenuti": 0}, {"ok": True}))
     assert finto.richieste == 3 and len(letti) == 300          # 1 pagina di nuovi + 2 note; nessuna divisione
+
+
+def test_buco_di_4_ore_non_si_salta():
+    """Il sito è stato giù 4 ore: alla ripartenza il tempo reale salva solo le prime pagine (60 annunci recenti).
+    Sotto restano 80 annunci usciti durante il fermo, MAI salvati. Prima (noti = tutto il database, K=2) le 3 pagine
+    salvate dal tempo reale fermavano la lettura e il buco si saltava; ora sono noti solo gli annunci già nel database
+    prima dell'inizio del giro precedente, quindi la lettura scende fino al buco e oltre, fino a 3 pagine vecchie."""
+    riavvio = [(f"r{i}", 5000 + i) for i in range(60)]           # salvati dal tempo reale DOPO il giro precedente
+    buco = [(f"b{i}", 5100 + i) for i in range(80)]               # mai salvati
+    vecchi = [(f"v{i}", 5000 + i % 900) for i in range(3000)]     # già visti dal giro precedente
+    sito = SitoAS(riavvio + buco + vecchi)
+    tutto_il_db = INC.Noti([("autoscout24", s, p) for s, p in riavvio + vecchi], k=2)
+    letti_prima = {l.source_id for l in _collettore(sito, tutto_il_db)._band(5000, 6999, "P", "privato")}
+    assert not ({s for s, _ in buco} <= letti_prima)                # il difetto di prima: buco saltato
+    sito2 = SitoAS(riavvio + buco + vecchi)
+    noti = INC.Noti([("autoscout24", s, p) for s, p in vecchi])     # k di default (3)
+    assert noti.k == 3
+    letti = {l.source_id for l in _collettore(sito2, noti)._band(5000, 6999, "P", "privato")}
+    assert {s for s, _ in buco} <= letti
+    assert sito2.richieste == 7 + 3                                 # 140 nuovi (7 pagine) + 3 pagine note
+
+
+def test_pagina_senza_annunci_rilevanti_e_neutra():
+    n = INC.Noti([("autoscout24", "a", 5000)], k=2, rilevante=INC.zona_rilevante(["MI"], 1000, 70000))
+    fuori = [_l("x", 9000, prov="RM")]
+    assert n.pagina_nota(fuori) is None
+    a = INC.Arresto(n)
+    assert not a.pagina([_l("a", 5000)]) and not a.pagina(fuori) and a.pagina([_l("a", 5000)])   # neutra: non azzera
+    a = INC.Arresto(n)
+    assert not a.pagina(fuori) and not a.pagina(fuori) and not a.pagina(fuori)                  # e non conta
+
+
+def test_noti_carica_solo_visti_prima_del_giro_precedente():
+    try:
+        import pg_scheda as P
+    except Exception:
+        return
+    c = P.nuovo_db("buchi_noti")
+    if c is None:
+        return
+    P.migra_tutte(c)
+    for sid, quando in (("vecchio", "now() - interval '5 hours'"), ("nuovo", "now() - interval '1 hour'")):
+        c.execute(f"INSERT INTO listings (source, source_id, url, price_eur, province, first_seen_at) "
+                  f"VALUES ('autoscout24', '{sid}', 'u{sid}', 5000, 'MI', {quando})")
+    prec = c.execute("SELECT now() - interval '3 hours' AS t").fetchone()["t"]
+    n = INC.Noti.carica(c, ["MI"], visti_prima_di=prec)
+    assert n.noto("autoscout24", "vecchio", 5000) and not n.noto("autoscout24", "nuovo", 5000)
+    assert len(INC.Noti.carica(c, ["MI"])) == 2
+
+
+def test_inizio_del_giro_e_ribassi():
+    righe = {}
+
+    class C:
+        def execute(self, sql, p=None):
+            class R:
+                def __init__(s, r):
+                    s.r = r
+
+                def fetchone(s):
+                    return s.r[0] if s.r else None
+
+                def fetchall(s):
+                    return s.r
+            if sql.startswith("INSERT INTO tempo_reale"):
+                righe[p[0]] = p[1]
+                return R([])
+            if sql.startswith("SELECT ultimo_at"):
+                return R([{"ultimo_at": righe[p[0]]}] if p[0] in righe else [])
+            if "FROM listings WHERE source" in sql:
+                return R([{"source_id": "a", "price_eur": 6000}, {"source_id": "b", "price_eur": 4000}])
+            raise AssertionError(sql)
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+    c = C()
+    assert INC.inizio_precedente(c, "zona_cron") is None
+    INC.segna_inizio(c, "zona_cron", "T1")
+    assert INC.inizio_precedente(c, "zona_cron") == "T1" and INC.inizio_precedente(c, "zona_cron", "completo") is None
+    from collections import Counter
+    st = Counter()
+    INC.conta_ribassi(c, [_l("a", 5500), _l("b", 4500)], st)
+    assert st["ribassi"] == 1

@@ -954,14 +954,19 @@ def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
     letti_as = sum(v for k, v in esito.items() if k.startswith("letti_autoscout") and isinstance(v, int))
     if os.environ.get("AS_SCOMPARSI", "1") != "1" or letti_as < int(os.environ.get("AS_SCOMPARSI_MIN_LETTI", "200")):
         return
+    ore_non_visti = int(os.environ.get("AS_NON_VISTI_ORE", "8"))
     if esito.get("lettura_incrementale"):
-        return       # 12/11: dopo una lettura incrementale molti annunci non sono stati riletti: il controllo solo dopo il completo
+        # 12/11 revisione: anche dopo un giro incrementale, ma SOLO gli annunci non visti dall'inizio dell'ultimo giro
+        # completo (quelli dopo l'incrementale non li rilegge apposta). Senza giro completo registrato: niente.
+        if not esito.get("incr_ore_dal_completo"):
+            return
+        ore_non_visti = max(ore_non_visti, int(esito["incr_ore_dal_completo"]))
     try:
         from .benzina_mi import PROVINCE_100
         from .verify import scomparsi_con_prova
         with _cn() as c:
             fin = _lj(c, "scomparsi:autoscout24")
-            st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=int(os.environ.get("AS_NON_VISTI_ORE", "8")),
+            st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=ore_non_visti,
                                      limite=int(os.environ.get("AS_SCOMPARSI_MAX", "600")),
                                      minuti=float(os.environ.get("AS_SCOMPARSI_MINUTI", "20")),
                                      pausa=(0.5, 1.2), zona=PROVINCE_100)
@@ -1121,6 +1126,7 @@ if __name__ == "__main__":
                 from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
                 _completo = _torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
                 os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+                os.environ["BENZ_INCR_NOME"] = "novara_ora" if _novara_ora else "torino_cron"
                 try:
                     from . import benzina_mi as B
                     esito = B.giro()
@@ -1168,10 +1174,12 @@ if __name__ == "__main__":
                 from . import incrementale as INC                 # 12/11: giro completo solo ogni ZC_COMPLETO_ORE ore
                 _completo = INC.completo_dovuto("zona_cron")
                 os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+                os.environ["BENZ_INCR_NOME"] = "zona_cron"
                 try:
                     esito = B.giro()
                 finally:
                     os.environ.pop("BENZ_INCREMENTALE", None)
+                    os.environ.pop("BENZ_INCR_NOME", None)
                 if _completo:
                     INC.segna_completo("zona_cron", esito)
                 log.warning("ZONA_CRON fatta (%s): %s", "completa" if _completo else "incrementale",

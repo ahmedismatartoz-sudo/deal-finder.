@@ -163,11 +163,16 @@ def giro() -> dict:
 
         def salva(forza=False):
             if pacco and (forza or len(pacco) >= 150):
+                INC.conta_ribassi(conn, pacco, st)           # 12/11: ribassi trovati da questo giro (riga INCREMENTALE)
                 tr._salva(conn, pacco, st)
                 conn.commit()
                 pacco.clear()
 
         solo_valuta = os.environ.get("BENZ_SOLO_VALUTA") == "1"   # annunci già raccolti: si passa subito alla scelta
+        from . import incrementale as INC
+        from datetime import datetime as _dt, timezone as _tz
+        nome_giro = os.environ.get("BENZ_INCR_NOME", "zona_cron")
+        inizio_giro = _dt.now(_tz.utc)
         # 2/11: prima di tutto le auto con anno/km mancanti: dati letti dal testo e subito rivalutate (pochi minuti)
         if os.environ.get("BENZ_SOLO_INSUFF") == "mai":
             try:
@@ -182,15 +187,21 @@ def giro() -> dict:
         # 12/11 (buchi della raccolta §0.1): lettura INCREMENTALE (BENZ_INCREMENTALE=1, deciso da collect.py: il giro
         # completo solo ogni ZC_COMPLETO_ORE ore): ogni ricerca si ferma a K pagine di fila già viste e invariate
         noti = None
-        if os.environ.get("BENZ_INCREMENTALE") == "1" and not solo_valuta:
+        prec = INC.inizio_precedente(conn, nome_giro) if not solo_valuta else None
+        if os.environ.get("BENZ_INCREMENTALE") == "1" and not solo_valuta and prec is None:
+            log.warning("BENZ lettura incrementale: nessun giro precedente registrato per %s, giro completo", nome_giro)
+        elif os.environ.get("BENZ_INCREMENTALE") == "1" and not solo_valuta:
             try:
-                from . import incrementale as INC
                 from ..zone import MILANO, TORINO
+                # 12/11 revisione: "noto" = già nel database PRIMA dell'inizio del giro precedente (vedi Noti.carica)
                 noti = INC.Noti.carica(conn, list(MILANO) + list(TORINO) + PROVINCE_100,
-                                       rilevante=INC.zona_rilevante(PROVINCE_100, PMIN, PMAX))
+                                       rilevante=INC.zona_rilevante(PROVINCE_100, PMIN, PMAX), visti_prima_di=prec)
                 conn.commit()
                 st["lettura_incrementale"] = 1
                 st["incr_noti"] = len(noti)
+                completo_at = INC.inizio_precedente(conn, nome_giro, "completo")
+                if completo_at is not None:   # per il controllo degli spariti AutoScout24 nel giro incrementale
+                    st["incr_ore_dal_completo"] = int((inizio_giro - completo_at).total_seconds() // 3600) + 1
                 log.warning("BENZ lettura incrementale: %d annunci già noti, fermata a %d pagine note di fila", len(noti), noti.k)
             except Exception as e:
                 conn.rollback()
@@ -329,8 +340,16 @@ def giro() -> dict:
 
         if noti is not None:
             st.update({f"incr_{k}": v for k, v in noti.stats.items()})
-            log.warning("INCREMENTALE %s", json.dumps({k: v for k, v in st.items() if k.startswith("incr_")}))
-            sub.noti = noti = None
+        if not solo_valuta:
+            # 12/11 revisione: l'inizio di questo giro diventa il "già visto" del prossimo, solo a lettura finita
+            INC.segna_inizio(conn, nome_giro, inizio_giro)
+            if noti is None:
+                INC.segna_inizio(conn, nome_giro, inizio_giro, "completo")
+            log.warning("INCREMENTALE %s", json.dumps({"giro": nome_giro, "modo": "incrementale" if noti is not None else "completo",
+                                                       "ribassi": st.get("ribassi", 0),
+                                                       "minuti_lettura": round((_dt.now(_tz.utc) - inizio_giro).total_seconds() / 60),
+                                                       **{k: v for k, v in st.items() if k.startswith("incr_")}}))
+        sub.noti = noti = None
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
         conn.execute("SET statement_timeout = '900s'")
         # 12/11 (buchi della raccolta §3.1): scarti sicuri e auto invariate fuori PRIMA del tetto (scelta_candidate)
