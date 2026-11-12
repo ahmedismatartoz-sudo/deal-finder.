@@ -53,6 +53,11 @@ TITOLI = [   # (titolo vero dai log, livello atteso)
     ("MINI Mini 1.5 Classic auto", 0), ("MINI Mini 2.0 Hype 3p", 2),
     ("Alfa Romeo Giulietta 1.6 jtdm-2 Progression", 0), ("Alfa Romeo Giulietta 2.0 jtdm(2) Distinctive", 1),
     ("Land Rover Range Rover Sport 3.0 SDV6 249 CV HSE", 2),
+    # 12/11, controllo del giudice (prova3): falsi positivi corretti
+    ("Fiat 500L 1.3 Mjt 95 CV Pop Star", 1), ("Fiat Panda 1.2 City Cross", 2), ("Fiat Panda 1.2 Easypower", None),
+    ("Fiat Punto 1.4 8V 5 porte Easypower Lounge", 2), ("Land Rover Discovery 3.0 SDV6 tetto e pelle", None),
+    ("Volvo XC60 B4 Geartronic Momentum Pro", 1), ("Kia Picanto 1.0 12V 5 porte Cool Plus", 0),
+    ("Hyundai Tucson 1.6 CRDi XPrime", 2),
 ]
 
 
@@ -107,8 +112,10 @@ def test_confronti_livello_diverso_portati_al_livello_mai_oltre():
     assert all(abs(c["prezzo"] / 10000 - .96) < .01 for c in sel["validi"])
     mk = [_trim(300 + i, 10000, "Panda 1.2 Pop") for i in range(3)]
     sel = P.seleziona(t, mk, CFG, NOW)
-    f = (1 - RG.regole().allestimento.fattore) ** -2
-    assert all(abs(c["prezzo"] / 10000 - f) < .01 for c in sel["validi"])      # Pop portate al livello Lounge, non oltre
+    f = (1 - RG.regole().allestimento.fattore) ** -1
+    assert all(abs(c["prezzo"] / 10000 - f) < .01 for c in sel["validi"])      # Pop: al massimo UN livello in su
+    mk = [_trim(400 + i, 10000, "Panda 1.2") for i in range(3)]                 # senza allestimento: nessuna correzione
+    assert all(c["prezzo"] == 10000 for c in P.seleziona(t, mk, CFG, NOW)["validi"])
 
 
 def test_interruttore_allestimento():
@@ -132,9 +139,18 @@ def test_giudice_vede_campione_per_somiglianza_non_i_piu_economici():
     assert {c["id"] for c in v["confronti"]} == {c["id"] for c in vicini}
 
 
+def test_calibrazione_misura_vecchia_non_alza_il_fattore():
+    # misura per fascia di prezzo (senza "_per_M"): l'interpolazione può solo abbassare il fattore della fascia
+    fat = RG.fattori_calibrazione({"<5k": {"n": 100, "prezzo_su_M": .8}, "5-10k": {"n": 100, "prezzo_su_M": .98}})
+    assert RG.fattore_per(4900, fat) == .8 and RG.fattore_per(3600, fat) == .8
+    assert .8 < RG.fattore_per(5400, fat) < .98
+    assert RG.calibrazione_vecchia({"fasce": {"<5k": {}}, "correzione_due_sensi": False})
+    assert not RG.calibrazione_vecchia({"fasce": {"<5k": {}}, "fasce_su": "M", "correzione_due_sensi": False})
+
+
 def test_calibrazione_senza_scalino_a_5000():
     fat = RG.fattori_calibrazione({"<5k": {"n": 100, "prezzo_su_M": .8}, "5-10k": {"n": 100, "prezzo_su_M": .98},
-                                   "10-20k": {"n": 100, "prezzo_su_M": .99}})
+                                   "10-20k": {"n": 100, "prezzo_su_M": .99}}, per_M=True)
     a, b = RG.fattore_per(4990, fat), RG.fattore_per(5010, fat)
     assert abs(a - b) < .002                                 # prima 0,80 contro 0,98
     assert RG.fattore_per(3000, fat) == .8 and abs(RG.fattore_per(7071, fat) - .98) < 1e-9
@@ -155,13 +171,22 @@ def test_calibrazione_valore_reale_solo_se_misurata():
     assert abs(pv2["R"] - 6000 * .95) <= 1 and pv2["calibrato"] == .95
     fat_poche = RG.fattori_calibrazione({}, misurate_vr={"5-10k": {"n": 5, "prezzo_su_M": .8}})
     assert RG.calibra_vendita(pv, fat_poche) == pv           # meno di n_min auto misurate: niente
+    # misurata solo <5k: un M da 6.000 (fascia 5-10k, non misurata) resta com'è, niente interpolazione verso <5k
+    fat_solo = RG.fattori_calibrazione({}, misurate_vr={"<5k": {"n": 50, "prezzo_su_M": .85}})
+    assert RG.fattore_per(6000, fat_solo, vr=True) == 1.0 and RG.fattore_per(4000, fat_solo, vr=True) == .85
+    assert RG.calibra_vendita(dict(pv, metodo="valore_reale_combinato"), fat_vr) == dict(pv, metodo="valore_reale_combinato")
 
 
-def test_calibrazione_non_tocca_la_rivendita_dei_commercianti():
-    pv = {"M": 9000, "R": 9500, "R_finale": 9500, "margine": 2500, "M_fonte": "annunci", "R_da": "commercianti"}
-    fat = RG.fattori_calibrazione({"5-10k": {"n": 100, "prezzo_su_M": .9}})
-    pv2 = RG.calibra_vendita(pv, fat)
-    assert pv2["R"] == 9500 and pv2["margine"] == 2500 and pv2["M"] < 9000
+def test_calibrazione_con_rivendita_commercianti_prende_il_minimo():
+    fat = RG.fattori_calibrazione({"5-10k": {"n": 100, "prezzo_su_M": .9}, "10-20k": {"n": 100, "prezzo_su_M": .9}},
+                                  per_M=True)
+    pv = {"M": 9000, "R": 8500, "R_finale": 8500, "margine": 1500, "M_fonte": "annunci", "R_commercianti": 8500,
+          "R_da": "commercianti"}
+    pv2 = RG.calibra_vendita(pv, fat)                       # M × 0,9 = 8.100 < 8.500
+    assert pv2["R"] == 8100 and pv2["margine"] == 1100
+    pv = dict(pv, R=9000, R_finale=9000, margine=2000, R_commercianti=7800, R_da="mercato vero")
+    pv2 = RG.calibra_vendita(pv, fat)                       # R_commercianti sotto M × f: vale quella
+    assert pv2["R"] == 7800 and pv2["margine"] == 800
 
 
 def _vr(v, sigma=.1, n_vendute=30):
@@ -211,6 +236,9 @@ def test_esame_non_chiama_il_giudice(monkeypatch=None):
             class R:
                 def fetchone(self_):
                     return None
+
+                def fetchall(self_):
+                    return []
             return R()
 
         def rollback(self):
@@ -243,12 +271,70 @@ def test_rivendita_dai_commercianti_venduti():
     assert rc["fonte"] == "venduti" and rc["n_venduti"] == 5 and rc["giorni_vendita"] == 25
     assert 10700 <= rc["R"] <= 11200
     assert rc["sconto"] is not None and .025 < rc["sconto"] < .035   # media del gruppo: 5 × 400 € su ~11.000 e una a 0
+    # mercato più basso dei commercianti (~9.800): R resta M, R_commercianti a parte (cliente: "non gonfiare")
     mk = [car(100 + n, p, km=85000 + n * 900) for n, p in enumerate([9000, 9200, 9400, 9500, 9600, 9800, 10000, 10100])]
+    v0 = P.valuta(dict(t), mk, 1500, CFG, NOW)
     v = P.valuta(dict(t, commercianti=comm), mk, 1500, CFG, NOW)
-    assert v["R_da"] == "commercianti" and v["R"] == rc["R"] and v["R_finale"] == rc["R"]
-    assert v["margine"] == rc["R"] - 7000 - v["totale_costi"]
+    assert v["R"] == v["M"] == v0["R"] and v["margine"] == v0["margine"] and v["R_commercianti"] == rc["R"]
+    assert v["R_da"].startswith("mercato vero") and v["categoria"] == v0["categoria"]
     assert v["giorni_vendita_commercianti"] == 25 and v["n_dati_rivendita"] == 5
-    assert v["netto"] < v["margine"] and v["costi_netto"]["sconto_da"] == "osservato sui commercianti"
+    assert v["netto"] < v["margine"] and v["costi_netto"]["sconto_da"] == "valore standard"
+    # mercato più alto dei commercianti: R scende al prezzo dei commercianti
+    mk_alto = [car(100 + n, p, km=85000 + n * 900) for n, p in enumerate([12500, 12600, 12800, 13000, 13100, 13300, 13500, 13600])]
+    v = P.valuta(dict(t, commercianti=comm), mk_alto, 1500, CFG, NOW)
+    assert v["R_da"] == "commercianti" and v["R"] == rc["R"] < v["M"]
+    assert v["margine"] == rc["R"] - 7000 - v["totale_costi"]
+
+
+def test_prova1_commercianti_sopra_m_non_cambiano_niente():
+    """Controllo del giudice, prova1: auto a 8.000 €, M 9.529 €, commercianti venduti a ~11.400 €: prima R 11.400 e
+    margine 3.400 (opportunità); ora R e margine invariati, anche dopo la calibrazione del sito."""
+    t = car(1, 8000)
+    mk = [car(100 + n, p, km=85000 + n * 900) for n, p in enumerate([9000, 9200, 9400, 9500, 9600, 9800, 10000, 10100])]
+    comm = [_comm(400 + i, p, venduta_giorni=g, prezzo_iniziale=p + 300)
+            for i, (p, g) in enumerate([(10900, 20), (11200, 30), (11400, 15), (11600, 25), (11900, 35)])]
+    v0 = P.valuta(dict(t), mk, 1800, CFG, NOW)
+    v1 = P.valuta(dict(t, commercianti=comm), mk, 1800, CFG, NOW)
+    assert v0["M"] == v1["M"] == 9529
+    for k in ("R", "R_finale", "margine", "categoria", "netto"):
+        assert v0[k] == v1[k], k
+    fat = RG.fattori_calibrazione({"5-10k": {"n": 99, "prezzo_su_M": .95}, "<5k": {"n": 99, "prezzo_su_M": .8},
+                                   "10-20k": {"n": 99, "prezzo_su_M": .97}})
+    c0, c1 = RG.calibra_vendita(P.riassunto(v0), fat), RG.calibra_vendita(P.riassunto(v1), fat)
+    assert (c0["R"], c0["margine"]) == (c1["R"], c1["margine"])
+
+
+def test_gruppo_commercianti_senza_cache_per_id():
+    """prova1: la cache per id(lista) dava lo sconto di un altro gruppo; ora i dati stanno sul Gruppo."""
+    t = car(1, 8000)
+    g1 = RV.Gruppo(_comm(600 + i, 10000, venduta_giorni=20, prezzo_iniziale=12000) for i in range(5))
+    assert RV.calcola(t, g1, CFG, NOW)["sconto"] > .16
+    del g1
+    g2 = RV.Gruppo(_comm(700 + i, 10000, venduta_giorni=20, prezzo_iniziale=10000) for i in range(5))
+    assert RV.calcola(t, g2, CFG, NOW)["sconto"] == 0
+    import threading
+    g3 = RV.Gruppo(_comm(800 + i, 10000, venduta_giorni=20, prezzo_iniziale=10500) for i in range(5))
+    ris = []
+    th = [threading.Thread(target=lambda: ris.append(RV.calcola(t, g3, CFG, NOW)["sconto"])) for _ in range(8)]
+    [x.start() for x in th]
+    [x.join() for x in th]
+    assert len(set(ris)) == 1 and len(g3._dati) == 1
+
+
+def test_commercianti_ripubblicate_e_stage_reason():
+    t = car(1, 7000)
+    vend = [_comm(400 + i, 10500 + i * 100, venduta_giorni=20) for i in range(5)]
+    assert RV.calcola(t, vend, CFG, NOW)["n_venduti"] == 5
+    # un annuncio uguale ricompare 3 giorni dopo sullo stesso portale, stesso anno, km vicini: non è venduta
+    nuova = _comm(900, 10900)
+    nuova["mileage_km"] = vend[0]["mileage_km"] + 500
+    nuova["first_seen_at"] = vend[0]["disappeared_at"] + timedelta(days=3)
+    rip = RV.ripubblicate(vend + [nuova], RG.regole().rivendita)
+    assert rip == {vend[4]["id"]}                            # una sola sparizione spiegata, la più vicina di km
+    assert RV.calcola(t, vend + [nuova], CFG, NOW)["n_venduti"] == 4
+    vend[1]["stage_reason"] = "doppione_autoscout"
+    vend[2]["stage_reason"] = "Truffa probabile"
+    assert RV.calcola(t, vend, CFG, NOW)["n_venduti"] == 3
 
 
 def test_rivendita_dai_commercianti_attivi_con_sconto_osservato():
@@ -277,9 +363,10 @@ def test_rivendita_pochi_dati_resta_come_prima():
 
 def test_netto_voci():
     r = NT.calcola(10000, 7000, 0)
+    # regime del margine: IVA su (vendita 10.000 − 300 di trattativa) − acquisto 7.000 = 2.700 → 487
     assert r["voci"] == {"trattativa": 300, "passaggio": 180, "preparazione": 250, "garanzia": 150,
-                         "ricambi_difetti": 0, "iva_margine": 382}
-    assert r["netto"] == 10000 - 7000 - 880 - 382
+                         "ricambi_difetti": 0, "iva_margine": 487}
+    assert r["netto"] == 10000 - 7000 - 880 - 487
     r = NT.calcola(30000, 20000, 500, sconto_osservato=.05)
     assert r["voci"]["trattativa"] == 1500 and r["voci"]["preparazione"] == 600 and r["voci"]["garanzia"] == 450
     assert NT.calcola(8000, 9000, 0)["voci"]["iva_margine"] == 0          # margine negativo: niente IVA
@@ -314,3 +401,70 @@ def test_simulazione_dai_log():
         assert r.returncode == 0, r.stderr
         testo = open(out).read()
     assert "| 5–7.000 € | 1 | 1 | 1 |" in testo and '"auto": 2' in testo
+
+
+def test_giudice_riusa_i_giudizi_gia_dati():
+    """Controllo del giudice M1: il campione cambia, ma i confronti già giudicati non si ripagano."""
+    from dealfinder.ai import giudice
+    chieste = []
+    orig = giudice._chiedi, giudice.AI.available, giudice.AI.budget_finito
+    giudice._chiedi = lambda conn, t, conf: chieste.append([c["id"] for c in conf]) or "VIA 3 versione diversa\nNOTA ok"
+    giudice.AI.available = lambda: True
+    giudice.AI.budget_finito = lambda conn: False
+
+    class Conn:
+        def __init__(self):
+            self.righe = []
+
+        def execute(self, sql, args=()):
+            conn = self
+
+            class R:
+                def fetchone(self_):
+                    return None
+
+                def fetchall(self_):
+                    return [dict(chiave=c, via=v, nota=n) for (lid, c, v, n) in conn.righe if lid == args[0]]
+            if sql.startswith("INSERT INTO ai_giudizi"):
+                self.righe.append(args)
+            return R()
+
+        def rollback(self):
+            pass
+    try:
+        c = Conn()
+        t = {"id": 1, "price_eur": 5000}
+        g = giudice.giudica(c, t, [{"id": i} for i in (1, 2, 3)])
+        assert g["via"] == {3: "versione diversa"} and chieste == [[1, 2, 3]]
+        g = giudice.giudica(c, t, [{"id": i} for i in (2, 3)])          # campione diverso, tutti già giudicati
+        assert g["via"] == {3: "versione diversa"} and g.get("da_archivio") and len(chieste) == 1
+        g = giudice.giudica(c, t, [{"id": i} for i in (2, 3, 4)])       # solo il 4 è nuovo: l'AI vede solo lui
+        assert chieste[-1] == [4] and g["via"] == {3: "versione diversa"}
+        assert giudice.giudica(c, dict(t, price_eur=4500), [{"id": 2}], solo_archivio=True) is None   # prezzo cambiato
+    finally:
+        giudice._chiedi, giudice.AI.available, giudice.AI.budget_finito = orig
+
+
+def test_simula_regole_vecchie_e_server_senza_dati():
+    from dealfinder.pricing import simula
+    v = simula.regole_vecchie(RG.regole())
+    assert not v.allestimento.attivo and not v.rivendita.attiva and v.correzione.km_min == 0
+    assert not v.calibrazione.interpola and not v.confronti.ampiezza_poche and v.confronti.dispersione_max > 100
+    fat = RG.fattori_calibrazione({"<5k": {"n": 99, "prezzo_su_M": .8}, "5-10k": {"n": 99, "prezzo_su_M": .98}}, per_M=True)
+    assert RG.fattore_per(5100, fat, v) == .98 and RG.fattore_per(4900, fat, v) == .8     # scalini come prima
+
+    class R:
+        def __init__(s, x):
+            s.x = x
+
+        def fetchall(s):
+            return s.x
+
+    class C:
+        def execute(s, sql, args=None):
+            return R([])
+
+        def rollback(s):
+            pass
+    out = simula.esegui(C(), [1, 2])
+    assert out["auto"] == 0 and out["sopra_soglia_solo_grazie_ai_commercianti"] == 0

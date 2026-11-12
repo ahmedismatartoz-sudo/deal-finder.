@@ -63,6 +63,7 @@ class Confronti:
     # 12/11 (rapporto 2 §4 E1): il giudice AI vede un campione di 40 confronti scelti per SOMIGLIANZA (prima i 40 più
     # economici: l'AI poteva togliere solo dal basso e la mediana poteva solo salire)
     giudice_campione: int = 40
+    ampiezza_poche: bool = True        # 2–4 gemelle: errore dall'ampiezza (False = regola di prima, simulazioni)
 
     def serve(self, prezzo) -> int:
         return max(self.n_minimo, self.min_eco if (prezzo or 0) < self.eco_sotto else self.min_sito)
@@ -198,6 +199,7 @@ class Calibrazione:
     # 12/11 (rapporto 2 E2): il fattore non salta più al confine delle fasce: si interpola (in scala log di M) tra i
     # centri delle fasce; fuori dal primo e dall'ultimo centro resta quello della fascia. Le fasce sono di M sia nella
     # misura (pricing/calibra.py, "fasce_su": "M") sia nell'applicazione.
+    interpola: bool = True             # False = scalini per fascia (regola di prima, solo per le simulazioni)
     centri: tuple = (("<5k", 3500), ("5-10k", 7071), ("10-20k", 14142), ("20-35k", 26458), ("35-60k", 45826),
                      (">60k", 85000))
 
@@ -366,12 +368,15 @@ def fattore_correzione(anni_piu_nuovo: float, km_in_meno_10k: float, ya: float, 
     return min(f, 1.0)
 
 
-def fattori_calibrazione(misurate: dict | None, r: Regole | None = None, misurate_vr: dict | None = None) -> list:
+def fattori_calibrazione(misurate: dict | None, r: Regole | None = None, misurate_vr: dict | None = None,
+                         per_M: bool = False) -> list:
     """[(limite, fascia, fattore)] dalla misura (dati->'fasce' dell'ultima riga di `calibrazione`): fattore misurato
     se la fascia ha almeno n_min auto, altrimenti la riserva; sempre tra minimo e massimo.
     12/11 (rapporto 2 E4): con misurate_vr (dati->'fasce_vr': prezzo delle auto vendute / M quando M viene dal valore
     reale) si aggiungono le voci (limite, "vr:<fascia>", fattore) SOLO per le fasce misurate su almeno n_min auto:
-    il valore reale è già un prezzo di vendita, quindi senza misura non si corregge (nessuna riserva)."""
+    il valore reale è già un prezzo di vendita, quindi senza misura non si corregge (nessuna riserva).
+    per_M=True: la misura è per fascia di M (calibra.py dal 12/11, "fasce_su": "M"): voce (0, "_per_M", 1.0); senza
+    questa voce l'interpolazione non può ALZARE il fattore rispetto alla fascia (misura vecchia, per prezzo)."""
     cal = (r or regole()).calibrazione
     riserva = dict(cal.riserva)
     out = []
@@ -384,33 +389,27 @@ def fattori_calibrazione(misurate: dict | None, r: Regole | None = None, misurat
         f = (misurate_vr or {}).get(nome) or {}
         if (f.get("n") or 0) >= cal.n_min and f.get("prezzo_su_M") is not None:
             out.append((lim, "vr:" + nome, max(cal.minimo, min(cal.massimo, float(f["prezzo_su_M"])))))
+    if per_M:
+        out.append((0, "_per_M", 1.0))
     return out
 
 
 def calibrazione_vecchia(dati: dict | None, r: Regole | None = None) -> bool:
-    """La misura chiesto → venduto (dati dell'ultima riga di `calibrazione`) è stata fatta con una correzione anno/km
-    diversa da quella in vigore (o prima del 4/11, quando si correggeva solo verso il basso): va rimisurata (CALIBRA=1)."""
+    """La misura chiesto → venduto (dati dell'ultima riga di `calibrazione`) va rifatta (CALIBRA=1): fatta con una
+    correzione anno/km diversa da quella in vigore, oppure (12/11) per fascia di prezzo e non di M."""
     if not dati:
         return False
+    if dati.get("fasce") and dati.get("fasce_su") != "M":
+        return True
     return bool(dati.get("correzione_due_sensi", False)) != bool((r or regole()).correzione.due_sensi)
 
 
-def fattore_per(M: float, fattori: list | None, r: Regole | None = None, vr: bool = False) -> float:
-    """Fattore chiesto → venduto per questo M, interpolato in scala log tra i centri delle fasce (niente scalini).
-    vr=True: i fattori misurati per M dal valore reale (voci "vr:"), 1,0 dove non misurati."""
-    r = r or regole()
-    fattori = fattori if fattori is not None else fattori_calibrazione(None, r)
-    pref = "vr:" if vr else ""
-    per_nome = {str(nome)[len(pref):]: x for _, nome, x in fattori
-                if (str(nome).startswith("vr:") if vr else not str(nome).startswith("vr:"))}
-    if not per_nome:
-        return 1.0
-    centri = dict(r.calibrazione.centri)
-    punti = sorted((centri[n], (per_nome.get(n, 1.0) if vr else per_nome[n])) for n in centri
-                   if n in per_nome or vr)
-    if not punti:
-        return 1.0
-    M = float(M or 0)
+def _fascia_di(M: float, r: Regole) -> str:
+    return next((n for lim, n in r.calibrazione.fasce if M < lim), r.calibrazione.fasce[-1][1])
+
+
+def _interpola(M: float, punti: list) -> float:
+    """Interpolazione lineare in scala log di M tra punti (centro, fattore) ordinati; piatta fuori dagli estremi."""
     if M <= punti[0][0]:
         return punti[0][1]
     if M >= punti[-1][0]:
@@ -419,7 +418,40 @@ def fattore_per(M: float, fattori: list | None, r: Regole | None = None, vr: boo
         if c0 <= M <= c1:
             w = (math.log(M) - math.log(c0)) / (math.log(c1) - math.log(c0))
             return f0 + w * (f1 - f0)
-    return 1.0
+    return punti[-1][1]
+
+
+def fattore_per(M: float, fattori: list | None, r: Regole | None = None, vr: bool = False) -> float:
+    """Fattore chiesto → venduto per questo M (12/11, rapporto 2 E2): interpolato in scala log tra i centri delle
+    fasce, niente scalini. Con una misura vecchia (per fascia di prezzo, senza la voce "_per_M") il fattore non può
+    superare quello della sua fascia (l'interpolazione può solo abbassarlo finché non c'è la misura nuova).
+    vr=True: solo le fasce MISURATE sul valore reale (voci "vr:"); fascia non misurata = 1,0; si interpola solo verso
+    una fascia vicina anch'essa misurata."""
+    r = r or regole()
+    fattori = fattori if fattori is not None else fattori_calibrazione(None, r)
+    M = float(M or 0)
+    centri = dict(r.calibrazione.centri)
+    ordine = [n for _, n in r.calibrazione.fasce]
+    fascia = _fascia_di(M, r)
+    if vr:
+        mis = {str(n)[3:]: x for _, n, x in fattori if str(n).startswith("vr:")}
+        if fascia not in mis:
+            return 1.0
+        k = ordine.index(fascia)
+        vicine = [ordine[j] for j in (k - 1, k, k + 1) if 0 <= j < len(ordine) and ordine[j] in mis]
+        # solo il tratto continuo di fasce misurate attorno a questa
+        punti = sorted((centri[n], mis[n]) for n in vicine)
+        return _interpola(M, punti)
+    per_nome = {str(n): x for _, n, x in fattori if not str(n).startswith(("vr:", "_"))}
+    if not per_nome:
+        return 1.0
+    if not r.calibrazione.interpola:
+        return per_nome.get(fascia, 1.0)
+    punti = sorted((centri[n], x) for n, x in per_nome.items() if n in centri)
+    f = _interpola(M, punti)
+    if not any(str(n) == "_per_M" for _, n, _ in fattori) and fascia in per_nome:
+        f = min(f, per_nome[fascia])
+    return f
 
 
 def da_calibrare(pv: dict) -> bool:
@@ -435,24 +467,25 @@ def da_calibrare(pv: dict) -> bool:
 def calibra_vendita(pv: dict, fattori: list | None, r: Regole | None = None) -> dict:
     """UNICA correzione prezzo chiesto → prezzo di vendita, per il sito (_mercato_calibrato). Restituisce una COPIA di
     pv con M, R, R_finale e margine portati al prezzo di vendita, e `calibrato` = fattore (così non si applica due
-    volte). Nessun'altra riduzione (niente ×0,95, niente "metà correzione"). pv invariato se non va calibrato.
-    12/11: fattore interpolato (fattore_per); M dal valore reale si corregge solo con il fattore MISURATO sul valore
-    reale (voci "vr:", rapporto 2 E4); con la rivendita dai commercianti (R_da = "commercianti") R è già un prezzo
-    di vendita vero e non si tocca: si porta al venduto solo M."""
+    volte). pv invariato se non va calibrato.
+    12/11: fattore interpolato (fattore_per). M dal valore reale (metodo valore_reale / valore_reale_modello, mai il
+    "combinato", dove le gemelle sono già portate al venduto) si corregge solo con il fattore MISURATO sul valore
+    reale (voci "vr:", rapporto 2 E4). R = min(R, M × f, R_commercianti): la rivendita dei commercianti può solo
+    confermare o abbassare R, mai alzarlo (cliente: "non gonfiare")."""
     r = r or regole()
     if not r.calibrazione.attiva or not isinstance(pv, dict) or not pv.get("M") or pv.get("calibrato") is not None:
         return pv
     vr = not da_calibrare(pv)
-    if vr and not (pv.get("M_fonte") == "vendite" and any(str(n).startswith("vr:") for _, n, _ in (fattori or []))):
+    if vr and not (pv.get("M_fonte") == "vendite" and pv.get("metodo") in ("valore_reale", "valore_reale_modello")
+                   and any(str(n).startswith("vr:") for _, n, _ in (fattori or []))):
         return pv
     M = float(pv["M"])
     f = fattore_per(M, fattori, r, vr=vr)
     if f >= 1:
         return dict(pv, calibrato=1.0)
-    if pv.get("R_da") == "commercianti":
-        return dict(pv, M=int(round(M * f)), M_annunci=int(M), calibrato=round(f, 3))
     R = float(pv.get("R_finale") or pv.get("R") or M)
-    R2 = min(R, M * f)
+    limiti = [R, M * f] + ([float(pv["R_commercianti"])] if pv.get("R_commercianti") else [])
+    R2 = min(limiti)
     giu = int(round(R - R2))
     out = dict(pv, M=int(round(M * f)), M_annunci=int(M), R=int(round(R2)), R_finale=int(round(R2)),
                calibrato=round(f, 3), M_fonte="vendite_calibrate" if not vr else "vendite")

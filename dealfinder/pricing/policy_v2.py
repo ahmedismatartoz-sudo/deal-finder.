@@ -520,8 +520,9 @@ def _liv(x: dict):
 def _per_allestimento(t: dict, validi: list[dict], serve: int, cfg: PolicyConfig) -> tuple[list, list]:
     """12/11: confronti per livello di allestimento. Prima lo stesso livello; se non bastano (serve) si aggiungono
     quelli a ±1, poi quelli senza allestimento scritto, poi (solo sotto n_minimo) tutti gli altri. I confronti di livello diverso si portano
-    al livello dell'auto con (1 − fattore)^(livello confronto − livello auto): un confronto più accessoriato scende,
-    uno meno accessoriato sale fino al livello dell'auto e mai oltre."""
+    al livello dell'auto con (1 − fattore)^(livello confronto − livello auto): un confronto più accessoriato scende di
+    tutti i livelli, uno meno accessoriato sale al massimo di UN livello (mai oltre il livello dell'auto). Quelli
+    senza allestimento scritto non si correggono."""
     lt = _liv(t)
     f = cfg.regole.allestimento.fattore
     gruppi = {"stesso": [], "vicino": [], "ignoto": [], "lontano": []}
@@ -540,7 +541,9 @@ def _per_allestimento(t: dict, validi: list[dict], serve: int, cfg: PolicyConfig
         for c in gruppi[k]:
             lc = _liv(c)
             if lc is not None and lc != lt:
-                c = dict(c, prezzo=c["prezzo"] * (1 - f) ** (lc - lt), allestimento_corr=round((1 - f) ** (lc - lt), 4))
+                # più accessoriato: scende di tutti i livelli; meno accessoriato: sale al massimo di UN livello
+                d = max(lc - lt, -1)
+                c = dict(c, prezzo=c["prezzo"] * (1 - f) ** d, allestimento_corr=round((1 - f) ** d, 4))
             presi.append(c)
     return presi, scartati
 
@@ -686,13 +689,14 @@ def _comp_json(c, now):
             "verificato": str(max((d for d in (c.get("last_checked_at"), c.get("last_seen_at")) if d), default=""))[:10] or None}
 
 
-def _errore_gemelle(prezzi: list, reg: dict | None, metodo: str, sigma_v: float, errore_min: float) -> float:
+def _errore_gemelle(prezzi: list, reg: dict | None, metodo: str, sigma_v: float, errore_min: float,
+                    ampiezza: bool = True) -> float:
     """Errore di previsione (in log) della stima delle gemelle per una nuova auto uguale (vedi docstring del modulo)."""
     n = len(prezzi)
     if metodo == "modello" and reg:
         return max(errore_min, float(reg["errore_tipico"]) * math.sqrt(1 + 1 / max(int(reg["n"]), 1)))
-    if n >= 5:
-        s = _sigma_robusta(prezzi)
+    if n >= 5 or not ampiezza:
+        s = _sigma_robusta(prezzi) if n >= 5 else sigma_v
     else:
         # 12/11 (rapporto 2 E3): con 2–4 gemelle la dispersione si stima dall'ampiezza (ln(max/min)/d2) e non è mai
         # sotto l'errore del valore reale: due confronti lontanissimi non pesano più come se fossero concordi
@@ -845,7 +849,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
             out["ipotesi"].append(f"valore reale {V} € (modello su {vr.get('n')} annunci e auto vendute, errore tipico "
                                   f"±{sg*100:.0f}%); le gemelle al prezzo di vendita ({int(round(G))} €) concordano")
         else:
-            sG = _errore_gemelle(prezzi, reg, out["metodo_gemelle"], sg, vrr.errore_min)
+            sG = _errore_gemelle(prezzi, reg, out["metodo_gemelle"], sg, vrr.errore_min, r.confronti.ampiezza_poche)
             M, pesi = RG.media_pesata_log([(V, sg), (G, sG)], vrr.errore_min)
             metodo = "valore_reale_combinato"
             out["valore_reale"].update(pesi={"V": round(pesi[0], 3), "gemelle": round(pesi[1], 3)},
@@ -918,16 +922,26 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
         out["giorni_vendita_commercianti"] = rc.get("giorni_vendita")
         out["n_dati_rivendita"] = rc.get("n_usati") or 0
         if rc.get("R"):
-            R = int(rc["R"])
-            out.update(R=R, centrale_ridotto=R, R_da="commercianti",
-                       fascia="rivendita = prezzo dei commercianti " + ("venduti" if rc["fonte"] == "venduti"
-                                                                        else "in vendita meno lo sconto osservato"))
-            out["ipotesi"].append(
-                f"rivendita {R} € dai commercianti: " + (
-                    f"ultimo prezzo di {rc['n_venduti']} auto uguali vendute negli ultimi {r.rivendita.giorni} giorni"
-                    + (f" (in media in {rc['giorni_vendita']:.0f} giorni)" if rc.get("giorni_vendita") is not None else "")
-                    if rc["fonte"] == "venduti" else
-                    f"{rc['n_attivi']} auto uguali in vendita meno lo sconto osservato del {rc['sconto']*100:.1f}%"))
+            # 12/11 (controllo del giudice, cliente "non gonfiare"): i commercianti servono solo a CONFERMARE o
+            # ABBASSARE la rivendita (R è il più basso tra M e R_commercianti; M non cambia). R_commercianti resta a parte (anche per il sito, che
+            # dopo la calibrazione rifà il minimo: regole.calibra_vendita).
+            Rc = int(rc["R"])
+            out["R_commercianti"] = Rc
+            fonte_txt = (f"ultimo prezzo di {rc['n_venduti']} auto uguali vendute da commercianti negli ultimi "
+                         f"{r.rivendita.giorni} giorni" + (f" (in media in {rc['giorni_vendita']:.0f} giorni)"
+                                                          if rc.get("giorni_vendita") is not None else "")
+                         if rc["fonte"] == "venduti" else
+                         f"{rc['n_attivi']} auto uguali in vendita da commercianti meno lo sconto osservato del "
+                         f"{rc['sconto']*100:.1f}%")
+            if Rc < R:
+                R = Rc
+                out.update(R=R, centrale_ridotto=R, R_da="commercianti",
+                           fascia="rivendita = prezzo dei commercianti, più basso del mercato")
+                out["ipotesi"].append(f"rivendita abbassata a {R} € dai commercianti: {fonte_txt}")
+            else:
+                out["R_da"] = "mercato vero (confermato dai commercianti)"
+                out["ipotesi"].append(f"rivendita dei commercianti {Rc} € non sotto il mercato ({fonte_txt}): "
+                                      f"resta {R} €")
     danno = t.get("damage_class") or "sconosciuto"
     # 4/11 (Incidentate): con solo_sane restano fuori solo i danni gravi/strutturali e quelli non ancora stimati;
     # un danno dichiarato con il costo di riparazione stimato (ricambi o lettura AI) si valuta col costo tolto
@@ -956,7 +970,9 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     out["margine"] = int(margine)
     out["sotto_R"] = prezzo_t < R
     from . import netto as NT                         # 12/11: secondo numero, il margine lordo resta quello sopra
-    nt = NT.calcola(R, prezzo_t, cs["totale_costi"], (rc or {}).get("sconto"))
+    # trattativa: standard (3%). Lo sconto osservato dei commercianti è già dentro R_commercianti (ultimo prezzo dei
+    # venduti, o attivi già scontati): non si conta due volte (controllo del giudice M4)
+    nt = NT.calcola(R, prezzo_t, cs["totale_costi"])
     if nt:
         out["netto"] = nt["netto"]
         out["costi_netto"] = dict(nt["voci"], sconto_pct=nt["sconto_pct"], sconto_da=nt["sconto_da"])
@@ -1064,7 +1080,7 @@ def riassunto(v: dict) -> dict:
             "totale_costi", "campione", "policy", "metodo", "M_fonte", "prudente_pochi", "pochi_confronti", "vr_accordo",
             "vr_poche_gemelle", "policy_rev", "regole", "R_da", "vr_solo_modello", "serve_controllo_ai",
             "costo_difetti_incluso", "motivo_esclusione", "fonte_valutazione", "da_trattare", "netto",
-            "giorni_vendita_commercianti", "n_dati_rivendita", "dispersione")
+            "giorni_vendita_commercianti", "n_dati_rivendita", "dispersione", "R_commercianti")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

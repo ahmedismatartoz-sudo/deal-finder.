@@ -63,9 +63,10 @@ def misura(conn) -> dict:
     per_prezzo = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
     try:
         from .valutazione import ingressi
-        vrs = ingressi(conn, [r["id"] for r in rows], solo=("vr",))["vr"] if rows else {}
+        _ing = ingressi(conn, [r["id"] for r in rows], solo=("vr", "calibra")) if rows else {}
+        vrs, fattori = _ing.get("vr") or {}, _ing.get("fattori_calibra")
     except Exception:
-        vrs = {}
+        vrs, fattori = {}, None
     mercato, chiave, cache = [], None, {}
     tot = 0
     for r in rows:
@@ -78,7 +79,7 @@ def misura(conn) -> dict:
             chiave = key
         prezzo = float(r["price_eur"])
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True)
+                 rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True, fattori_calibra=fattori)
         confronti = [m for m in mercato if m.get("id") != r["id"]]
         try:
             v, _ = _valuta_base(conn, t, confronti, scovo.soglia(int(prezzo)), cfg, cache)
@@ -99,7 +100,9 @@ def misura(conn) -> dict:
                 v2, _ = _valuta_base(conn, dict(t, vr=vrs[r["id"]]), confronti, scovo.soglia(int(prezzo)), cfg, cache)
             except Exception:
                 continue
-            if v2.get("M") and v2.get("M_fonte") == "vendite":
+            # solo M dal valore reale puro: nel "combinato" le gemelle sono già portate al venduto (niente fattore)
+            if v2.get("M") and v2.get("M_fonte") == "vendite" and v2.get("metodo") in ("valore_reale",
+                                                                                        "valore_reale_modello"):
                 d = per_vr[_fascia(v2["M"])]
                 d["n"] += 1
                 d["rapp_M"].append(prezzo / v2["M"])

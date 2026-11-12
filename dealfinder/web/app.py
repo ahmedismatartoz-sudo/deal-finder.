@@ -993,7 +993,7 @@ def _fattori_calibra() -> list:
     della tabella calibrazione; riserva e limiti in dealfinder/regole.py, niente variabili d'ambiente)."""
     if time.time() - _calib_cache["t"] < 1800 and _calib_cache["f"] is not None:
         return _calib_cache["f"]
-    fasce, fasce_vr = {}, {}
+    fasce, fasce_vr, per_M = {}, {}, False
     try:
         with connect() as conn:
             if conn.execute("SELECT to_regclass('calibrazione') AS t").fetchone()["t"]:
@@ -1002,12 +1002,13 @@ def _fattori_calibra() -> list:
                 dati = (json.loads(d) if isinstance(d, str) else d or {})
                 fasce = dati.get("fasce") or {}
                 fasce_vr = dati.get("fasce_vr") or {}      # 12/11 margini: misura sul valore reale
+                per_M = dati.get("fasce_su") == "M"
                 if _RG.calibrazione_vecchia(dati):
                     logging.getLogger("scovo").warning("CALIBRA_VECCHIA misura fatta con un'altra correzione anno/km: "
                                                        "va rifatta (CALIBRA=1)")
     except Exception as e:
         logging.getLogger("scovo").warning("CALIBRA fattori non letti: %s", str(e)[:120])
-    out = _RG.fattori_calibrazione(fasce, misurate_vr=fasce_vr)
+    out = _RG.fattori_calibrazione(fasce, misurate_vr=fasce_vr, per_M=per_M)
     _calib_cache.update(t=time.time(), f=out)
     logging.getLogger("scovo").warning("CALIBRA_FATTORI %s", {n: x for _, n, x in out})
     return out
@@ -3509,27 +3510,6 @@ def _tempo_reale():
                 lg.warning("ZONA_ATTIVI %s", json.dumps([dict(r) for r in righe], default=str))
             except Exception as e:
                 lg.warning("ZONA_CONTA non riuscito: %s", str(e)[:300])
-            return
-        if v.startswith("simula_margini"):    # 12/11 (margini precisi): vecchio contro nuovo sul database, solo log
-            time.sleep(60)
-            try:
-                from ..pipeline.ciclo import _una_volta
-                if not _una_volta(f"simula_margini:{v}"):     # una volta per valore (es. simula_margini:2 per rifarla)
-                    lg.warning("SIMULA_MARGINI %s già fatta", v)
-                    return
-                for _ in range(30):
-                    if _elenco.get("items"):
-                        break
-                    time.sleep(60)
-                from ..pricing import simula as _sim
-                parti = v.split(":")                          # simula_margini[:giro[:quante]]
-                quante = int(parti[2]) if len(parti) > 2 and parti[2].isdigit() else 1500
-                with connect() as conn:
-                    _sim.esegui(conn, [it["id"] for it in list(_elenco.get("items") or []) if not it.get("supercar")],
-                                quante=quante)
-                    conn.rollback()                           # nessuna scrittura: si scarta tutto
-            except Exception as e:
-                lg.warning("SIMULA_MARGINI non riuscita: %s", str(e)[:300])
             return
         if v.startswith("wa30:"):             # 6/11 notte (cliente): profili di 30 commercianti + auto del sito per WhatsApp su misura
             time.sleep(30)

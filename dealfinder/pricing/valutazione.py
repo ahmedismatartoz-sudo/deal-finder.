@@ -134,7 +134,8 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
         if RG.calibrazione_vecchia(dati):
             log.warning("CALIBRA_VECCHIA la misura chiesto -> venduto è stata fatta con un'altra correzione anno/km: "
                         "va rifatta (CALIBRA=1)")
-        out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {}, misurate_vr=dati.get("fasce_vr") or {})
+        out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {}, misurate_vr=dati.get("fasce_vr") or {},
+                                                    per_M=dati.get("fasce_su") == "M")
     return out
 
 

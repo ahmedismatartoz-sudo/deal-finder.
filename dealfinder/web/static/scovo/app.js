@@ -462,10 +462,11 @@ function boxNetto(c){
 }
 function rivComm(p, v){
   const r = (v && v.rivendita_commercianti) || p.rivendita_commercianti;
-  if (!r || p.R_da !== "commercianti") return "";
+  if (!r || !r.R) return "";
   const t = r.fonte === "venduti" ? `ultimo prezzo di ${r.n_venduti} auto uguali vendute da commercianti${r.giorni_vendita != null ? `, in media in ${Math.round(r.giorni_vendita)} giorni` : ""}`
     : `${r.n_attivi} auto uguali in vendita da commercianti, meno lo sconto osservato (${pct(r.sconto || 0)})`;
-  return `<div class="note">Rivendita dai commercianti: ${t}.</div>`;
+  return p.R_da === "commercianti" ? `<div class="note">Rivendita abbassata dai commercianti: ${t}.</div>`
+    : `<div class="note">Confermata dai commercianti (${eur(r.R)}: ${t}); la rivendita resta quella del mercato.</div>`;
 }
 function boxPolicy(c, v){
   const p = c.pv, row = (k, val, cls) => `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${val}</span></div>`;
@@ -476,7 +477,7 @@ function boxPolicy(c, v){
     ${p.M != null ? row(`Prezzo di mercato M <small>(${v && v.metodo === "modello" ? "modello su " + p.n + " annunci dello stesso modello" : p.n + " confronti"}, per anno e km di questa auto)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
     ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
-    ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}
+    ${p.R != null ? row(p.R_da === "commercianti" ? "Rivendita R <small>(dai commercianti)</small>" : "Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}
     ${rivComm(p, v)}`;
   if (v && v.R != null && p.R_da !== "commercianti") h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
   if (v && v.costi) {

@@ -31,7 +31,7 @@ _RUMORE = re.compile(
     r"(?i)\bs[\s-]?tronic\b|\bsteptronic\b|\bs\s?&\s?s\b|\bstart\s?&\s?stop\b|\bsport\s?back\b|\bspb\b|"
     r"\bsports?\s?wagon\b|\bsports?\s?tourer\b|\bsport\s?brake\b|\bgrand\s?sport\b|\bactive\s?tourer\b|"
     r"\bgran\s?tourer\b|\bsport\s?utility\b|\btouring\s?sports?\b|\bsports?\b(?=\s+(?:tourer|wagon|back))|"
-    r"\bdiscovery\s+sport\b|\brange\s+rover\s+sport\b|\bclubsport\b")
+    r"\bdiscovery\s+sport\b|\brange\s+rover\s+sport\b|\bclubsport\b|\beasy\s?power\b")   # Easypower = impianto GPL Fiat
 
 # (regex, classe, nome mostrato, livello). L'ordine non conta: vale il livello più alto trovato.
 _T = tuple[str, str, str, int]
@@ -63,16 +63,16 @@ _MARCHE: dict[str, list[_T]] = {
     "fiat": [
         (r"pop(?!\s?star)", "pop", "Pop", 0), (r"base", "base", "Base", 0), (r"actual", "actual", "Actual", 0),
         (r"active", "active", "Active", 0), (r"young", "young", "Young", 0), (r"classic", "classic", "Classic", 0),
-        (r"easy(?:power)?(?!\s?power)", "easy", "Easy", 1), (r"pop\s?star", "pop_star", "Pop Star", 1),
+        (r"easy", "easy", "Easy", 1), (r"pop\s?star", "pop_star", "Pop Star", 1),
         (r"cult", "cult", "Cult", 1), (r"club", "club", "Club", 1), (r"connect", "connect", "Connect", 1),
         (r"dynamic", "dynamic", "Dynamic", 1), (r"mirror", "mirror", "Mirror", 1), (r"urban", "urban", "Urban", 1),
         (r"city\s?life", "city_life", "City Life", 1), (r"street", "street", "Street", 1),
         (r"lounge", "lounge", "Lounge", 2), (r"emotion", "emotion", "Emotion", 2), (r"dolce\s?vita", "dolcevita", "Dolcevita", 2),
         (r"gq", "gq", "GQ", 2), (r"collezione", "collezione", "Collezione", 2), (r"anniversar\w*|50th", "anniversario", "Anniversario", 2),
-        (r"rock\s?star|star", "star", "Star", 2), (r"city\s?cross", "city_cross", "City Cross", 2),
+        (r"rock\s?star|(?<!pop\s)(?<!pop)star", "star", "Star", 2), (r"city\s?cross", "city_cross", "City Cross", 2),
         (r"trekking", "trekking", "Trekking", 2), (r"red", "red", "(RED)", 2), (r"mopar", "mopar", "Mopar", 2),
         (r"opening\s+edition|lusso", "lusso", "Lusso", 2), (r"la\s?prima", "la_prima", "La Prima", 3),
-        (r"sport", "sport", "Sport", 3), (r"s[\s-]?design", "s_design", "S-Design", 3), (r"cross(?!\s?over)", "cross", "Cross", 3),
+        (r"sport", "sport", "Sport", 3), (r"s[\s-]?design", "s_design", "S-Design", 3), (r"(?<!city\s)(?<!city)cross(?!\s?over)", "cross", "Cross", 3),
         (r"riva|by\s+gucci|by\s+diesel", "serie_speciale", "Serie speciale", 3),
     ],
     "abarth": [(r"custom", "custom", "Custom", 1), (r"turismo", "turismo", "Turismo", 2),
@@ -152,13 +152,13 @@ _MARCHE: dict[str, list[_T]] = {
     "kia": [
         (r"urban|cool|active|lx|base|city", "urban", "Urban", 0), (r"business|style|energy|evolution|feel",
                                                                    "business", "Business / Style", 1),
-        (r"high\s?tech|class|premium|plus", "high_tech", "High Tech", 2),
+        (r"high\s?tech|class|premium", "high_tech", "High Tech", 2),
         (r"gt[\s-]?line|\bgt\b", "gt_line", "GT Line", 3),
     ],
     "hyundai": [
         (r"classic|base|go!?|login|pure|access", "classic", "Classic", 0), (r"comfort|business|style|xtech|x[\s-]?possible",
                                                                              "comfort", "Comfort / Xtech", 1),
-        (r"prime|xline|x[\s-]?class|exellence|excellence|sound\s+edition|tech", "xline", "Xline / Prime", 2),
+        (r"x?prime|xline|x[\s-]?class|exellence|excellence|sound\s+edition|tech", "xline", "Xline / Prime", 2),
         (r"n[\s-]?line|\bn\b(?=\s|$)", "n_line", "N Line", 3),
     ],
     "dacia": [
@@ -185,7 +185,7 @@ _MARCHE: dict[str, list[_T]] = {
     "cupra": [(r"base|business", "base", "Base", 1), (r"\bvz\w*|tribe|impulse|adrenaline", "vz", "VZ", 3)],
     "volvo": [
         (r"kinetic|base|core", "kinetic", "Kinetic / Core", 0), (r"momentum|business(?:\s+plus)?|plus", "momentum", "Momentum", 1),
-        (r"inscription|summum|ocean\s+race|pro", "inscription", "Inscription", 2),
+        (r"inscription|summum|ocean\s+race", "inscription", "Inscription", 2),
         (r"r[\s-]?design|ultimate|polestar", "r_design", "R-Design / Ultimate", 3),
     ],
     "mini": [
@@ -217,7 +217,7 @@ _MARCHE: dict[str, list[_T]] = {
         (r"homura|signature|takumi|zenith", "homura", "Homura / Signature", 3),
     ],
     "land-rover": [
-        (r"\bs\b(?=\s|$)|pure|base|\be\b(?=\s|$)", "s", "S / Pure", 0), (r"\bse\b|business", "se", "SE", 1),
+        (r"\bs\b(?=\s|$)|pure|base", "s", "S / Pure", 0), (r"\bse\b|business", "se", "SE", 1),
         (r"\bhse\b|dynamic", "hse", "HSE", 2), (r"autobiography|first\s+edition|svr|hse\s+dynamic|r[\s-]?dynamic\s+hse",
                                                 "autobiography", "Autobiography", 3),
         (r"r[\s-]?dynamic", "r_dynamic", "R-Dynamic", 2),
