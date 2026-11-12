@@ -98,9 +98,16 @@ FIAT = {"id": 77, "marca": "Fiat", "modello": "500", "nome": "Fiat 500", "km": 6
 
 def test_in_cima_dal_database_come_dal_codice():
     altra = dict(FIAT, id=78, km=68001)
-    dal_codice = [scovo.in_cima(dict(FIAT)), scovo.in_cima(dict(altra))]       # nessun database: vale IN_CIMA
+    # 12/11 19:13: IN_CIMA del codice è vuota (Fiat tolta dal sito); il meccanismo si prova con la voce della 048
+    assert scovo.IN_CIMA == [] and scovo.in_cima(dict(FIAT)) == FIAT           # nessun database: niente in cima
+    voce = {"marca": "fiat", "km": 68000, "prezzo": 7900, "mostra": 6900}
+    try:
+        scovo.IN_CIMA.append(voce)                                              # il codice di prima
+        dal_codice = [scovo.in_cima(dict(FIAT)), scovo.in_cima(dict(altra))]
+    finally:
+        scovo.IN_CIMA.remove(voce)
     assert dal_codice[0]["prezzo"] == 6900 and dal_codice[0]["vetrina"] == -100 and dal_codice[0]["pv"]["margine"] == 3100
-    seme = [dict(e, nota="Fiat 500 rossa") for e in scovo.IN_CIMA]             # come la migrazione 048
+    seme = [dict(voce, nota="Fiat 500 rossa")]                                 # come la migrazione 048
     try:
         _con({"in_cima": seme})
         assert [scovo.in_cima(dict(FIAT)), scovo.in_cima(dict(altra))] == dal_codice
@@ -726,19 +733,19 @@ def test_pg_migrazioni_e_valori_di_oggi():
     c = pg_vero.nuovo_db("senza_riavvii_1")
     if c is None:
         return
-    pg_vero.migra(c, "047_impostazioni_sito.sql", "048_impostazioni_iniziali.sql")
-    pg_vero.migra(c, "048_impostazioni_iniziali.sql")                  # due volte: niente doppioni
+    pg_vero.migra(c, "047_impostazioni_sito.sql", "048_impostazioni_iniziali.sql", "050_togli_fiat.sql")
+    pg_vero.migra(c, "048_impostazioni_iniziali.sql", "050_togli_fiat.sql")   # due volte: niente doppioni
     d = IMP.leggi_db(c)
     assert d["ribasso"] == {"attivo": False, "schema": scovo.RIBASSO_SCHEMA, "fino": scovo.RIBASSO_FINO}
-    assert [{k: v for k, v in e.items() if k != "nota"} for e in d["in_cima"]] == scovo.IN_CIMA
+    assert [{k: v for k, v in e.items() if k != "nota"} for e in d["in_cima"]] == scovo.IN_CIMA == []
     file = _scarti_file()
-    assert len(d["scarti"]) == len(file) - 1                              # la Fiat 500 è già rimessa
+    assert len(d["scarti"]) == len(file)                                  # 12/11 19:13: anche la Fiat 500 è fuori
     assert {x["listing_id"] for x in d["scarti"] if x["listing_id"]} == {e["id"] for e in file if e.get("id")}
     assert sorted((x["marca"], x["anno"], x["km"], x["prezzo"]) for x in d["scarti"] if not x["listing_id"]) == \
-        sorted((e["marca"], e["anno"], e["km"], e["prezzo"]) for e in file if not e.get("id") and not e.get("rimetti"))
+        sorted((e["marca"], e.get("anno"), e["km"], e["prezzo"]) for e in file if not e.get("id") and not e.get("rimetti"))
     try:
         IMP.usa_lettore(lambda: IMP.leggi_db(c))
-        assert scovo.in_cima(dict(FIAT))["prezzo"] == 6900
+        assert scovo.in_cima(dict(FIAT)) == FIAT                               # 12/11 19:13: niente più in cima
         assert scovo.ribasso_per(12000, PRIMA) == 0                            # spento come oggi
     finally:
         _fine()
@@ -946,3 +953,54 @@ def test_ribasso_variabile_con_spazi():
         _fine()
         for k, v in vecchie.items():
             os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+
+# ------------------------------------------------------------------------------------------------ 12/11 19:13 Fiat tolta
+def test_fiat_tolta_ne_in_cima_ne_sul_sito():
+    """Cliente 12/11 19:13: la Fiat 500 rossa (fiat, 68.000 km, 7.900 €) né in cima né sul sito, con le impostazioni
+    iniziali: codice + data/scarti_sito.json senza database, e migrazioni 047+048+050 sul Postgres vero."""
+    assert scovo.IN_CIMA == [] and scovo.in_cima(dict(FIAT)) == FIAT and "vetrina" not in scovo.in_cima(dict(FIAT))
+    voce = [e for e in _scarti_file() if e.get("marca") == "fiat" and e.get("km") == 68000 and e.get("prezzo") == 7900]
+    assert len(voce) == 1 and not voce[0].get("rimetti") and voce[0]["motivo"] == "12/11 19:13 il cliente la toglie dal sito"
+    righe = [{"sid": k, "listing_id": e.get("id"), "marca": e.get("marca"), "modello": e.get("modello"), "anno": e.get("anno"),
+              "km": e.get("km"), "prezzo": e.get("prezzo"), "motivo": e.get("motivo"), "attivo": not e.get("rimetti")}
+             for k, e in enumerate(_scarti_file())]
+    try:
+        _con({"scarti": [r for r in righe if r["attivo"]]})                   # le voci del file come righe attive
+        assert IMP.togli_scartate([dict(FIAT), dict(FIAT, id=78, km=68001)]) == [dict(FIAT, id=78, km=68001)]
+    finally:
+        _fine()
+    c = pg_vero.nuovo_db("senza_riavvii_fiat")
+    if c is None:
+        return
+    pg_vero.migra(c, "047_impostazioni_sito.sql", "048_impostazioni_iniziali.sql", "050_togli_fiat.sql")
+    pg_vero.migra(c, "050_togli_fiat.sql")                                 # due volte: nessun doppione
+    c.execute("CREATE TABLE listings (id BIGINT PRIMARY KEY, make TEXT, model TEXT, year INT, mileage_km INT, price_eur INT, "
+              "status TEXT DEFAULT 'attivo', stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ)")
+    c.execute("INSERT INTO listings (id, make, model, year, mileage_km, price_eur, stage, stage_reason) VALUES "
+              "(77, 'fiat', '500', 2016, 68000, 7900, 'approfondito', 'da_verificare')")
+    n = c.execute("SELECT count(*) AS n, bool_and(attivo) AS a FROM sito_scarti WHERE marca='fiat' AND km=68000 "
+                  "AND prezzo=7900").fetchone()
+    assert (n["n"], n["a"]) == (1, True)
+    d = IMP.leggi_db(c)
+    assert d["in_cima"] == []
+    try:
+        IMP.usa_lettore(lambda: IMP.leggi_db(c))
+        assert scovo.in_cima(dict(FIAT)) == FIAT
+        assert IMP.togli_scartate([dict(FIAT)]) == []
+    finally:
+        _fine()
+    from dealfinder.pipeline import manuale
+    manuale.applica_scarti_cliente(c)                                      # il lavoro di avvio la scarta anche nel database
+    assert c.execute("SELECT stage FROM listings WHERE id=77").fetchone()["stage"] == "scartato"
+    # 050 su un database dove il pannello ha messo altre auto in cima e la Fiat era rimessa: tocca solo la Fiat
+    c2 = pg_vero.nuovo_db("senza_riavvii_fiat_2")
+    pg_vero.migra(c2, "047_impostazioni_sito.sql", "048_impostazioni_iniziali.sql")
+    c2.execute("UPDATE sito_impostazioni SET valore = valore || '[{\"id\": 5, \"mostra\": 9000}]'::jsonb WHERE chiave='in_cima'")
+    pg_vero.migra(c2, "050_togli_fiat.sql")
+    pg_vero.migra(c2, "050_togli_fiat.sql")
+    assert IMP.leggi_db(c2)["in_cima"] == [{"id": 5, "mostra": 9000}]
+    # tabella sito_scarti vuota (vale il file): la 050 non aggiunge una riga sola che nasconderebbe le altre voci
+    c3 = pg_vero.nuovo_db("senza_riavvii_fiat_3")
+    pg_vero.migra(c3, "047_impostazioni_sito.sql", "050_togli_fiat.sql")
+    assert c3.execute("SELECT count(*) AS n FROM sito_scarti").fetchone()["n"] == 0
