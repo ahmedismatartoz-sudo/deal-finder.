@@ -3346,7 +3346,7 @@ def _tempo_reale():
                 if not _una_volta(f"fermi:{v[:80]}"):
                     lg.warning("FERMI %s già fatto", v)
                     return
-                corpo, _, pref = v.split(":", 1)[1].partition("#")      # dopo '#': inizio impronte di chi ha ricevuto oggi
+                corpo, _, pref = v.split(":", 1)[1].replace("#", "~").partition("~")  # dopo '~': impronte di oggi (Render toglie da '#')
                 n, quando = corpo.split("@", 1)
                 pref = {x for x in pref.split(",") if len(x) == 16}
                 lg.warning("FERMI %s", json.dumps(SM.ripesca_fermi(totale=int(n or 1400), quando=quando,
