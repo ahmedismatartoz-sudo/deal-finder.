@@ -214,30 +214,58 @@ def subito_esito_con_prova(client, url: str, lenient: bool = False) -> tuple[str
     item = find_key(data, "ad", "item") if isinstance(data, dict) else None
     if isinstance(item, dict) and (item.get("urn") or item.get("subject") or item.get("features")):
         return "attivo", None
-    low = text.lower()
+    low = _testo_chiaro(text)          # 12/11 revisione: scritte cercate anche nel JSON escapato (\u00e8 = è)
     trovate = [k for k in _SUBITO_TOLTO if k in low]
-    if trovate:
-        return "scomparso", ("scaduto" if any("scadut" in k for k in trovate) else "rimosso")
     # 12/11 (buchi della raccolta §2.3): le pagine di Subito non hanno più __NEXT_DATA__ (i dati sono nel JSON escapato
     # di self.__next_f): ogni annuncio dava "errore" e il controllo notturno degli spariti si fermava dopo 15 pagine,
-    # ogni notte (0 controllati). I dati DELL'annuncio (il suo numero nell'urn più i campi
-    # dell'annuncio) valgono come prima "pagina con i dati" = attivo. urn di Subito: "id:ad:<numero>:list:<n>".
-    if _dati_annuncio_nella_pagina(text, m.group(1) if m else None):
-        return "attivo", None
+    # ogni notte (0 controllati). I dati DELL'annuncio (il suo urn "id:ad:<numero>:", con titolo e prezzo vicini)
+    # valgono come prima "pagina con i dati" = attivo. Dati e scritta di rimozione insieme: nessuna decisione.
+    dati = _dati_annuncio_nella_pagina(text, m.group(1) if m else None)
+    if trovate and not dati:
+        return "scomparso", ("scaduto" if any("scadut" in k for k in trovate) else "rimosso")
+    if dati and not trovate:
+        return "attivo", "pagina_app"      # contato a parte (motivo:pagina_app nella riga SCOMPARSI)
+    if dati and trovate:
+        return ("attivo", None) if lenient else ("errore", None)
     _diag_pagina_subito(text, m.group(1) if m else None)
     return ("attivo", None) if lenient else ("errore", None)
 
 
 _RE_CAMPI_ANNUNCIO = re.compile(r'\\*"(subject|features|advertiser|urn)\\*"\s*:')
+_RE_SUBJECT = re.compile(r'\\*"subject\\*"\s*:\s*\\*"[^"\\]{2,}')
+_RE_PREZZO = re.compile(r'\\*"(?:/price|price)\\*"|\\*"key\\*"\s*:\s*\\*"\d{3,7}\\*"\s*,\s*\\*"value\\*"\s*:\s*\\*"[\d.]+\s*(?:€|\\u20ac)')
+FINESTRA_URN = 6000            # caratteri intorno all'urn in cui devono esserci titolo e prezzo
 _diag_pag_sub = {"n": 0}
+_campione_app = {"n": 0}
+
+
+def _testo_chiaro(text: str) -> str:
+    """Minuscolo, con le sequenze del JSON escapato rese leggibili (\\u00e8 -> è, \\" -> ")."""
+    t = (text or "").lower()
+    for a, b in (("\\u00e8", "è"), ("\\u00e9", "é"), ("\\u00f9", "ù"), ("\\u00e0", "à"), ("\\u00ec", "ì"),
+                 ("\\u00f2", "ò"), ('\\"', '"'), ("\\/", "/")):
+        t = t.replace(a, b)
+    return t
 
 
 def _dati_annuncio_nella_pagina(text: str, numero: str | None) -> bool:
-    """Pagina Subito (App Router, JSON escapato) con i dati di QUESTO annuncio: il suo urn ("id:ad:<numero>:") e
-    almeno un campo dell'annuncio. Senza il numero nell'indirizzo non si decide."""
+    """Pagina Subito (App Router, JSON escapato) con i dati di QUESTO annuncio: il suo urn ("id:ad:<numero>:" o
+    "list:<numero>" con un delimitatore dopo il numero) e, entro FINESTRA_URN caratteri, un titolo (subject) e un
+    prezzo. Senza il numero nell'indirizzo non si decide."""
     if not numero or not text:
         return False
-    return (f"ad:{numero}:" in text or f"list:{numero}" in text) and bool(_RE_CAMPI_ANNUNCIO.search(text))
+    for mu in re.finditer(r"(?:ad:%s:|list:%s(?!\d))" % (re.escape(numero), re.escape(numero)), text):
+        a = max(0, mu.start() - FINESTRA_URN)
+        pezzo = text[a:mu.end() + FINESTRA_URN]
+        ms, mp = _RE_SUBJECT.search(pezzo), _RE_PREZZO.search(pezzo)
+        if ms and mp:
+            if _campione_app["n"] < 3:              # campione: solo la FORMA, mai i contenuti
+                _campione_app["n"] += 1
+                log.warning("SCOMPARSI subito attivo dal criterio nuovo (pagina senza __NEXT_DATA__): byte=%d "
+                            "titolo_a=%d prezzo_a=%d caratteri dall'urn", len(text), abs(a + ms.start() - mu.start()),
+                            abs(a + mp.start() - mu.start()))
+            return True
+    return False
 
 
 def _diag_pagina_subito(text: str, numero: str | None) -> None:
@@ -247,7 +275,7 @@ def _diag_pagina_subito(text: str, numero: str | None) -> None:
     _diag_pag_sub["n"] += 1
     t = text or ""
     log.warning("SCOMPARSI subito pagina non riconosciuta: byte=%d next_data=%s next_f=%s numero_nell_urn=%s campi=%s",
-                len(t), "__NEXT_DATA__" in t, "self.__next_f" in t, bool(numero and (f"ad:{numero}:" in t or f"list:{numero}" in t)),
+                len(t), "__NEXT_DATA__" in t, "self.__next_f" in t, bool(numero and re.search(r"(?:ad:%s:|list:%s(?!\d))" % (numero, numero), t)),
                 sorted(set(x.group(1) for x in _RE_CAMPI_ANNUNCIO.finditer(t[:2_000_000])))[:6])
 
 
