@@ -257,6 +257,8 @@ def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=N
         frasi.append(f"Prezzi di vendita {'in salita' if trend > 0 else 'in calo'} del {abs(trend)}% nell'ultimo mese.")
     esempi = STATS.get("esempi", {}) if esempi is None else esempi
     casi = [c for y in anni for c in esempi.get(k0 + (y,), [])]
+    if len(casi) < 3:      # 12/11: poche vendute con il carburante scritto uguale: stesso modello, tutti i carburanti
+        casi = [c for k, lst in esempi.items() if k[0] == k0[0] and k[1] == k0[1] and k[3] in anni for c in lst]
     if km is not None:
         casi.sort(key=lambda c: (abs((c[1] if c[1] is not None else 10 ** 7) - km), -int((c[4] or "0").replace("-", ""))))
     casi = [{"prezzo": c[0], "km": c[1], "dove": c[2], "giorni": c[3], "quando": c[4], "anno": c[5]} for c in casi[:3]]
