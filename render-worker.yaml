@@ -14,4 +14,4 @@ services:
       - key: DATABASE_URL
         fromService: { type: cron, name: dealfinder-opportunita, envVarKey: DATABASE_URL }
       - key: SCRAPER_PROXY
-        fromService: { type: cron, name: dealfinder-opportunita, envVarKey: SCRAPER_PROXY }
+        fromService: { type: web, name: scovo, envVarKey: SCRAPER_PROXY }
