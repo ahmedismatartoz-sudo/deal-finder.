@@ -200,9 +200,21 @@ def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=N
         n90 = sum(x[0] for x in v)
         if n90 >= 12:
             break
+    stesso_carb = True
     if n90 < 6:
-        return None
-    a = [attivi[k0 + (y,)] for y in anni if k0 + (y,) in attivi]
+        # 12/11: carburante scritto in modi diversi (es. "Elettrica/Benzina" e "ibrida") o pochi casi: stesso modello,
+        # tutti i carburanti, anni vicini, così la scheda mostra comunque i tempi di vendita
+        anni = range(int(anno) - 2, int(anno) + 3)
+        mk, md = k0[0], k0[1]
+        v = [x for k, x in modelli.items() if k[0] == mk and k[1] == md and k[3] in anni]
+        n90 = sum(x[0] for x in v)
+        if n90 < 6:
+            return None
+        stesso_carb = False
+    if stesso_carb:
+        a = [attivi[k0 + (y,)] for y in anni if k0 + (y,) in attivi]
+    else:
+        a = [x for k, x in attivi.items() if k[0] == k0[0] and k[1] == k0[1] and k[3] in anni]
     n30 = sum(x[1] for x in v)
     giorni = sum(x[2] * x[0] for x in v) / n90
     giorni_p25 = sum(x[3] * x[0] for x in v) / n90
@@ -252,7 +264,7 @@ def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=N
             "vendute_90g": n90, "vendute_30g": n30, "vendute_mese": round(vendite_mese, 1), "in_vendita": in_vendita,
             "nuove_30g": nuovi_30, "settimane_di_offerta": settimane_stock, "concorrenza": conc, "trend_prezzi_pct": trend,
             "anni": f"{min(anni)}–{max(anni)}", "frasi": frasi,
-            "nota": "Auto dello stesso modello, carburante e anni vicini sparite dagli annunci negli ultimi 90 giorni "
+            "nota": ("Auto dello stesso modello, carburante e anni vicini" if stesso_carb else "Auto dello stesso modello e anni vicini (tutti i carburanti)") + " sparite dagli annunci negli ultimi 90 giorni "
                     "(Subito e AutoScout24, nord Italia): un annuncio sparito è quasi sempre un'auto venduta."}
 
 
