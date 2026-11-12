@@ -74,7 +74,7 @@ def soglia(prezzo: int) -> int:
 #   SITO_RIBASSO       "da:euro,da:euro,..." (prezzo da cui parte la fascia : euro tolti); "0" = spento
 #   SITO_RIBASSO_FINO  data e ora ISO dopo cui il ribasso si spegne da solo
 RIBASSO_SCHEMA = "2000:700,6000:1000,10000:1500,15000:2000,20000:2500,30000:3000"
-RIBASSO_FINO = "2026-11-11T11:52:00+01:00"   # 11/11 10:52 cliente: "tra un'ora spegnili completamente"
+RIBASSO_FINO = "2026-11-12T11:50:00+01:00"   # 12/11 10:24 cliente: ribassi come ieri, per un'ora durante l'incontro
 
 
 def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
