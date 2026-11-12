@@ -1335,16 +1335,41 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
             conn.rollback()
             jev_errore = True          # fail closed: le auto da controllare restano fuori (regola truffa)
             logging.getLogger("scovo").warning("JEV decisioni non lette: %s", str(e)[:200])
+        perizie, perizia_errore = _perizie_lette(conn, ids)        # 12/11: perizia AI (ai/perizia.py)
     difetti = _difetti_letti(ids)
     stats["jev_decise"] = len(jev)
     stats["jev_errore"] = int(jev_errore)
+    stats["perizie"] = len(perizie)
     for it in items:
         r = dict(dati.get(it["id"]) or {}, **(it.get("_r") or {}))
         r.update(loconte=it["id"] in loconte, jev=jev.get(it["id"]), jev_errore=jev_errore,
-                 difetto=difetti.get(it["id"]), valutazione_nuova=_dopo(pv_at.get(it["id"]), COMMERCIANTI_VALUTATI_DAL))
+                 difetto=difetti.get(it["id"]), valutazione_nuova=_dopo(pv_at.get(it["id"]), COMMERCIANTI_VALUTATI_DAL),
+                 perizia=perizie.get(it["id"]), perizia_errore=perizia_errore)
         if it.get("supercar"):
             r["seller_type"] = "privato"           # SITO_SQL e la query lusso prendono solo privati
         it["_r"] = r
+
+
+def _perizie_lette(conn, ids: list) -> tuple[dict, bool]:
+    """12/11: perizie AI al prezzo attuale (ai/perizia.py). Errore: nessuna perizia (le auto senza Jev restano in attesa)."""
+    try:
+        from ..ai import perizia as _per
+        return _per.leggi_per_sito(conn, ids), False
+    except Exception as e:
+        conn.rollback()
+        logging.getLogger("scovo").warning("PERIZIA perizie non lette: %s", str(e)[:200])
+        return {}, True
+
+
+def _coda_perizia(items: list[dict], out: list[dict]) -> None:
+    """12/11: coda del giro della perizia AI: prima le auto in attesa (passerebbero tutte le regole), poi quelle già
+    sul sito senza perizia (riquadro "Parere del perito" nella scheda). Solo id."""
+    try:
+        from ..ai import perizia as _per
+        _per.metti_in_coda([it["id"] for it in items if it.get("_perizia_attesa")],
+                           [it["id"] for it in out if not it.get("supercar") and not (it.get("_r") or {}).get("perizia")])
+    except Exception as e:
+        logging.getLogger("scovo").warning("PERIZIA coda non aggiornata: %s", str(e)[:200])
 
 
 def _carica_candidati() -> tuple[list[dict], dict, dict]:
@@ -1475,9 +1500,11 @@ def _calcola_elenco() -> None:
     out, fun = SR.elenco_sito(items, g=_g, caricamento=stats)
     # auto tolte solo perché il numero non è mai stato letto: le ricontrolla il lavoro telefoni_candidate
     _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
+    _coda_perizia(items, out)
     for it in out:
         it.pop("_r", None)
         it.pop("_tipo", None)
+        it.pop("perizia_verifica", None)
     _elenco.update(t=time.time(), items=out, opens=opens)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute
@@ -1638,6 +1665,7 @@ def affare(request: Request):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
             d = scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra)))   # 10/11: anche dentro la scheda vale il prezzo ribassato
             _con_trattativa(conn, lid, d)
+            _con_perizia(conn, lid, it, d)
             return jsonify(d)
         if not admin:
             err(404, "Questa auto non è più disponibile")
@@ -1654,6 +1682,17 @@ def affare(request: Request):
     with connect() as conn:
         _con_trattativa(conn, lid, d)
     return jsonify(d)
+
+
+def _con_perizia(conn, lid: int, it: dict, d: dict) -> None:
+    """12/11: riquadro "Parere del perito" (ai/perizia.py), perizia al prezzo dell'annuncio. Mai blocca la scheda."""
+    try:
+        from ..ai import perizia as _per
+        p = _per.leggi_per_scheda(conn, lid, it.get("prezzo_annuncio") or it.get("prezzo"))
+        if p:
+            d["perizia"] = p
+    except Exception as e:
+        logging.getLogger("scovo").warning("PERIZIA scheda %s: %s", lid, str(e)[:200])
 
 
 def _con_trattativa(conn, lid: int, d: dict) -> None:
@@ -3023,6 +3062,33 @@ def _tempo_reale():
             time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
+    def perizia_ai():
+        """12/11: perizia AI da commerciante (ai/perizia.py) sulle auto in attesa e su quelle del sito senza perizia.
+        Pochi elementi per giro (PERIZIA_PER_GIRO), niente foto; pausa di un'ora su credito/limite (dentro giro)."""
+        from ..ai import perizia as _per
+        time.sleep(int(os.environ.get("PERIZIA_RITARDO_S", "150")))
+        while True:
+            attesa = float(os.environ.get("PERIZIA_MIN", "4")) * 60
+            try:
+                if _per.attiva() and (_per.CODA["attesa"] or _per.CODA["sito"]):
+                    with connect() as conn:
+                        if conn.execute("SELECT pg_try_advisory_lock(734107) AS ok").fetchone()["ok"]:
+                            try:
+                                res = _per.giro(conn)
+                                if res.get("da_attesa") or res.get("giudizio:caro"):
+                                    _elenco["t"] = 0.0             # auto uscite dall'attesa: elenco rifatto subito
+                                    _aggiorna_elenco(attendi=False)
+                                if res.get("fatte") and _per.CODA["attesa"]:
+                                    attesa = 60                    # ce ne sono ancora in attesa: giro dopo un minuto
+                            finally:
+                                conn.rollback()
+                                conn.execute("SELECT pg_advisory_unlock(734107)")
+                                conn.commit()
+            except Exception as e:
+                lg.warning("PERIZIA non riuscita: %s", str(e)[:300])
+            time.sleep(attesa)
+    threading.Thread(target=perizia_ai, daemon=True, name="perizia-ai").start()
+
     def lettore_annunci():
         """25/10 (cliente): agente lettore (ai/lettore.py) sulle auto candidate, ogni LETTORE_MIN minuti."""
         from ..ai import lettore
@@ -3272,6 +3338,20 @@ def _tempo_reale():
                     except Exception as e:
                         lg.warning("LAVORO %s non riuscito: %s", parte.split(":")[0], str(e)[:200])
                 return
+        if v.startswith("prova_cieca:"):      # 12/11 (cliente): prova alla cieca M / perizia AI / Autohero (solo log)
+            time.sleep(60)
+            try:
+                from ..ai import prova_cieca as _pc
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"prova_cieca:{v}"):
+                    lg.warning("PROVA_CIECA %s già fatta (togli il valore da BREVO_IMPORT_LISTE)", v)
+                    return
+                parti = v.split(":")
+                with connect() as conn:
+                    _pc.esegui(conn, n=int(parti[1] or 30), giorni=int(parti[2]) if len(parti) > 2 and parti[2] else 30)
+            except Exception as e:
+                lg.warning("PROVA_CIECA non riuscita: %s", str(e)[:300])
+            return
         if v.startswith("mix:"):              # 5/11 (cliente): nuove + richiamo del 3/11 fino a 1.200, invio subito
             time.sleep(30)
             try:
