@@ -107,15 +107,6 @@ def test_allestimento():
     assert DA.allestimento_testo(None, "Fiat Panda 1.2 Lounge") == "Lounge"
 
 
-def test_gruppi_optional():
-    g = DA.raggruppa_optional(["Climatizzatore", "ABS", "Bluetooth", "Cerchi in lega", "Sensore pioggia", "Gancio traino",
-                               "Sensori di parcheggio", "Qualcosa di strano"])
-    assert g["comfort"] == ["Climatizzatore", "Sensore pioggia"]
-    assert g["sicurezza"] == ["ABS", "Sensori di parcheggio"]
-    assert g["multimedia"] == ["Bluetooth"] and g["esterni"] == ["Cerchi in lega", "Gancio traino"]
-    assert g["altro"] == ["Qualcosa di strano"]
-
-
 def test_unisci_pagina_sopra_ricerca_e_colonne():
     colonne = {"version_raw": "1.6 TDI Business", "gearbox": "manuale", "power_kw": 85, "title": "VW Golf"}
     dati = {"ricerca": {"colore": "Nero", "porte": 3}, "pagina": {"porte": 5, "cilindrata": 1598}, "letto_il": "2026-11-12T10:00:00+00:00"}
@@ -221,13 +212,15 @@ def test_giro_tetto_giornaliero_e_blocchi():
     st = SA.giro(conn, per_giro=10, per_giorno=600, tempo_s=60, client_as=object(), client_sub=cl, dormi=lambda s: None)
     assert st["subito:bloccato"] == 2 and st["subito:saltata_blocco"] == 2 and len(cl.chiesti) == 2
     assert not any(s.startswith("UPDATE") for s, _ in conn.sql)              # un blocco non consuma i tentativi
+    assert [p for s, p in conn.sql if "INSERT INTO scheda_fonti" in s] == [("subito",)]   # ferma per 6 ore
 
 
 def test_sql_da_leggere_parametri():
     assert "%%" in SA.DA_LEGGERE_SQL and "sito_istantanea" in SA.DA_LEGGERE_SQL
     import re
     nomi = set(re.findall(r"%\((\w+)\)s", SA.DA_LEGGERE_SQL))
-    assert nomi == {"giorni_cand", "rileggi", "tentativi", "n"}
+    assert nomi == {"giorni_cand", "rileggi", "tentativi", "n", "ore_blocco", "subito"}
+    assert "ROW_NUMBER() OVER (PARTITION BY c.source" in SA.DA_LEGGERE_SQL
 
 
 def test_upsert_parte_ricerca():
@@ -244,17 +237,194 @@ def test_elenco_allestimento_e_cambio():
 
     class C(_Conn):
         def execute(self, sql, params=None):
-            if "dati_auto" in sql:
-                raise RuntimeError("colonna dati_auto mancante")          # migrazione non ancora applicata
-            return _Ris([{"id": 1, "version_raw": "1.6 TDI Highline", "title": "VW Golf", "gearbox": "automatico"},
-                         {"id": 2, "version_raw": None, "title": "Fiat Panda", "gearbox": None}])
+            assert "dati_auto" not in sql                          # l'elenco legge solo colonne leggere
+            return _Ris([{"id": 1, "make": "volkswagen", "model": "golf", "version_raw": "1.6 TDI Highline", "title": "VW Golf",
+                          "gearbox": "automatico"},
+                         {"id": 2, "make": "fiat", "model": "panda", "version_raw": None, "title": "Fiat Panda", "gearbox": None}])
 
     vecchio = db.connect
     db.connect = lambda: contextlib.nullcontext(C([]))
     try:
-        items = [{"id": 1, "nome": "Volkswagen Golf", "cambio": "automatico"}, {"id": 2, "nome": "Fiat Panda"}]
+        items = [{"id": 1, "nome": "Volkswagen Golf", "cambio": "automatico", "allestimento": {"livello": 2}},
+                 {"id": 2, "nome": "Fiat Panda"}]
         assert ST.arricchisci_elenco(items) == 1
     finally:
         db.connect = vecchio
-    assert items[0]["allestimento"] == "Highline" and items[0]["cambio"] == "Automatico"
-    assert "allestimento" not in items[1]
+    assert items[0]["allestimento_testo"] == "Highline" and items[0]["cambio"] == "Automatico"
+    assert items[0]["allestimento"] == {"livello": 2}                # la chiave del ramo dei margini non si tocca
+    assert "allestimento_testo" not in items[1]
+
+
+def test_allestimento_una_sola_fonte_col_modulo_dei_margini():
+    import sys
+    import types
+    finto = types.ModuleType("dealfinder.pricing.allestimento")
+    visti = []
+
+    def allestimento(auto):
+        visti.append(auto)
+        return {"classe": "lounge", "nome": "Lounge", "livello": 2, "descrizione": "alto"} if "lounge" in str(auto).lower() else None
+    finto.allestimento = allestimento
+    vecchio = sys.modules.get("dealfinder.pricing.allestimento")
+    sys.modules["dealfinder.pricing.allestimento"] = finto
+    import dealfinder.pricing as P
+    prima = getattr(P, "allestimento", None)
+    P.allestimento = finto
+    try:
+        assert DA.allestimento_testo("1.2 Lounge", "Fiat Panda", "fiat", "panda") == "Lounge"
+        assert visti[0]["make"] == "fiat" and visti[0]["version_raw"] == "1.2 Lounge"
+        assert DA.allestimento_testo("1.6 TDI Business", None) is None    # niente seconda fonte: vale il modulo dei margini
+    finally:
+        if vecchio is None:
+            sys.modules.pop("dealfinder.pricing.allestimento", None)
+        else:
+            sys.modules["dealfinder.pricing.allestimento"] = vecchio
+        if prima is None:
+            delattr(P, "allestimento")
+        else:
+            P.allestimento = prima
+
+
+def test_subito_etichette_difficili():
+    item = {"features": {
+        "/c1": {"label": "Consumo extraurbano", "values": [{"value": "4,1 l/100km"}]},
+        "/c2": {"label": "Consumo urbano", "values": [{"value": "6,9 l/100km"}]},
+        "/c3": {"label": "Consumo misto", "values": [{"value": "5,2 l/100km"}]},
+        "/cc": {"label": "Cilindrata", "values": [{"value": "1,598"}]},
+        "/t": {"label": "Tipo", "values": [{"value": "Usato"}]},
+        "/x": {"label": "Extra", "values": [{"value": "Gancio traino"}]}}}
+    d = DA.da_subito(item)
+    assert d["consumo"].startswith("5,2") and d["cilindrata"] == 1598
+    assert "carrozzeria" not in d and d["optional"] == ["Gancio traino"]
+    assert DA.norm_cilindrata("1.598 cm³") == 1598 and DA.norm_cilindrata("1.6") == 1600 and DA.norm_cilindrata("1,6 l") == 1600
+
+
+def test_autoscout_pagina_solo_veicolo_e_chiavi_elencate():
+    det = {"vehicle": {"previousOwnerCount": 2, "gears": float("nan"), "numberOfSeats": float("inf"), "numberOfDoors": 5},
+           "features": {"showFinancing": True, "hasVideo": True, "numberOfDoors": 3},
+           "ratings": {"numberOfSeats": 7, "bodyType": "Valutazione"},
+           "warranty": "12 mesi", "equipment": {"extras": [{"formatted": "Gancio traino"}]}}
+    d = DA.da_autoscout_pagina(det)
+    assert d["proprietari"] == 2 and d["porte"] == 5            # NaN e infinito saltano solo il loro campo
+    assert "posti" not in d and "marce" not in d and "carrozzeria" not in d
+    assert d["garanzia"] == "12 mesi" and d["optional"] == ["Gancio traino"]
+
+
+def test_giro_chiude_i_client_creati():
+    from dealfinder.pipeline import tempo_reale as TR
+
+    class Cl(_Client):
+        chiuso = False
+
+        def close(self):
+            Cl.chiuso = True
+    vecchio = TR._client_as
+    TR._client_as = lambda: Cl([_Resp(404)])
+    try:
+        conn = _Conn([{"id": 1, "source": "autoscout24", "url": "https://www.autoscout24.it/annunci/x"}])
+        SA.giro(conn, per_giro=5, per_giorno=600, tempo_s=60, dormi=lambda s: None)
+    finally:
+        TR._client_as = vecchio
+    assert Cl.chiuso
+
+
+# ------------------------------------------------------------------ Postgres vero
+def _pg():
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import pg_scheda
+    c = pg_scheda.nuovo_db("scheda_auto")
+    if c is not None:
+        pg_scheda.migra_tutte(c)
+    return c
+
+
+def _annuncio(c, sid, fonte, ricerca=None, sul_sito=False, stage="approfondito"):
+    r = c.execute("INSERT INTO listings (source, source_id, url, stage, stage_reason, status, last_seen_at, deep_at, dati_auto) "
+                  "VALUES (%s, %s, %s, %s, 'opportunita', 'attivo', now(), now(), %s) RETURNING id",
+                  (fonte, sid, f"https://www.{fonte}.it/annunci/{sid}-1234567.htm", stage,
+                   json.dumps({"ricerca": ricerca}) if ricerca is not None else None)).fetchone()["id"]
+    if sul_sito:
+        c.execute("INSERT INTO sito_istantanea (listing_id) VALUES (%s)", (r,))
+    return r
+
+
+def test_pg_coda_alterna_le_fonti_e_rispetta_i_blocchi():
+    c = _pg()
+    if c is None:
+        return                                       # Postgres non disponibile qui
+    sub = [_annuncio(c, f"s{i}", "subito") for i in range(6)]
+    sub_ricerca = _annuncio(c, "sr", "subito", ricerca={"porte": 5}, sul_sito=True)
+    as_ = [_annuncio(c, f"a{i}", "autoscout24") for i in range(3)]
+    as_sito = _annuncio(c, "asito", "autoscout24", sul_sito=True)
+    righe = SA.da_leggere(c, 4)
+    assert [r["source"] for r in righe] == ["autoscout24", "subito", "autoscout24", "subito"]
+    assert righe[0]["id"] == as_sito                          # dentro la fonte: prima quella sul sito
+    assert sub_ricerca not in {r["id"] for r in SA.da_leggere(c, 50)}   # Subito con la ricerca già piena: no
+    SA.segna_bloccata(c, "subito")
+    assert {r["source"] for r in SA.da_leggere(c, 50)} == {"autoscout24"}
+    c.execute("UPDATE scheda_fonti SET bloccato_il = now() - interval '7 hours'")
+    assert {r["source"] for r in SA.da_leggere(c, 50)} == {"autoscout24", "subito"}
+    # pagina letta: fuori dalla coda; errori: dopo 3 tentativi fuori
+    SA.salva(c, as_[0], "ok", {"porte": 5})
+    for _ in range(3):
+        SA.salva(c, sub[0], "errore", {})
+    ids = {r["id"] for r in SA.da_leggere(c, 50)}
+    assert as_[0] not in ids and sub[0] not in ids and sub[1] in ids
+    SA._conta(c, 1, 0)
+    assert SA.lette_oggi(c) == 1
+
+
+def test_pg_parte_ricerca_si_unisce_e_non_si_riscrive():
+    from dealfinder import db
+    c = _pg()
+    if c is None:
+        return
+    lid = _annuncio(c, "u1", "autoscout24", ricerca={"optional": ["ABS", "Bluetooth"], "porte": 3})
+    c.execute("UPDATE listings SET dati_auto = dati_auto || '{\"pagina\": {\"porte\": 5}}'::jsonb WHERE id = %s", (lid,))
+
+    def aggiorna(nuovo, qui=False):
+        sql = "UPDATE listings SET dati_auto = " + db.DATI_AUTO_SQL.replace("__QUI__", "true" if qui else "false") + \
+              " WHERE id = %(id)s"
+        c.execute(sql, {"dati_auto": json.dumps({"ricerca": nuovo}), "id": lid})
+        return c.execute("SELECT dati_auto FROM listings WHERE id = %s", (lid,)).fetchone()["dati_auto"]
+    d = aggiorna({"porte": 3, "colore": "Nero"})                # una ricerca SENZA optional: gli optional restano
+    assert d["ricerca"] == {"optional": ["ABS", "Bluetooth"], "porte": 3, "colore": "Nero"} and d["pagina"] == {"porte": 5}
+    assert aggiorna({"porte": 3}) == d                           # niente di nuovo: resta uguale
+    c.execute("UPDATE listings SET stage = 'nuovo' WHERE id = %s", (lid,))
+    assert aggiorna({"colore": "Blu"}) == d                      # cron mercato su un annuncio non approfondito: no
+    assert aggiorna({"colore": "Blu"}, qui=True)["ricerca"]["colore"] == "Blu"   # cron opportunità / tempo reale: sì
+
+
+def test_pg_upsert_vero_solo_nel_cron_giusto():
+    import contextlib
+    from dealfinder import db
+    from dealfinder.core.models import Listing
+    c = _pg()
+    if c is None:
+        return
+    c.transaction = lambda: contextlib.nullcontext()
+    vecchio_schema, vecchio_lettura = dict(db._SCHEMA), db._LETTURA_OK
+    db._SCHEMA["colonne"] = None
+    db._LETTURA_OK = False                       # database nuovo: la tabella lettura_ai va creata
+
+    def mk(d):
+        return Listing(source="subito", source_id="x1", url="https://www.subito.it/a-1234567.htm", title="Fiat Panda",
+                       make="fiat", model="panda", year=2015, mileage_km=90000, fuel="benzina", price_eur=5000, dati_auto=d,
+                       price_flags=["p"], missing_fields=["gearbox"])
+    try:
+        db.upsert_listing(c, mk({"porte": 5, "optional": ["ABS"]}))            # cron mercato: niente scheda
+        db.upsert_listing(c, mk({"porte": 5, "optional": ["ABS"]}))
+        assert c.execute("SELECT dati_auto FROM listings").fetchone()["dati_auto"] is None
+        db.dati_auto_ricerca_processo(True)                                      # cron opportunità
+        c.execute("DELETE FROM price_events")
+        c.execute("DELETE FROM listings")
+        db.upsert_listing(c, mk({"porte": 5, "optional": ["ABS"]}))
+        db.upsert_listing(c, mk({"colore": "Nero"}))
+        assert c.execute("SELECT dati_auto FROM listings").fetchone()["dati_auto"] == \
+            {"ricerca": {"porte": 5, "colore": "Nero", "optional": ["ABS"]}}
+    finally:
+        db.dati_auto_ricerca_processo(False)
+        db._SCHEMA.update(vecchio_schema)
+        db._LETTURA_OK = vecchio_lettura

@@ -9,8 +9,12 @@ per RILEGGI_GIORNI giorni; una pagina che dà errore si riprova al massimo TENTA
 Mai dati del venditore: si salvano solo i dati del veicolo (dealfinder/core/dati_auto.py). Lo stato dell'annuncio
 (attivo/sparito) NON si cambia qui: lo decidono i controlli di sempre (verify, tempo reale).
 
-Interruttori (default nel codice, variabili facoltative): SCHEDA_PAGINE=0 spegne tutto; SCHEDA_PAGINE_GIRO,
-SCHEDA_PAGINE_GIORNO, SCHEDA_PAGINE_TEMPO_S.
+Le fonti si alternano (Subito non può occupare tutto il giro); Subito solo per le auto senza dati dalla ricerca; una
+fonte bloccata (403/429 di fila) si lascia stare per ORE_BLOCCO ore (tabella scheda_fonti). Gira a FINE giro del cron
+opportunità, solo se il giro dura da meno di 5 ore (collect.py, CRON_ORE_SCHEDE_PAGINE).
+
+Interruttori (default nel codice, variabili facoltative): SCHEDA_PAGINE=0 spegne tutto; SCHEDA_PAGINE_SUBITO=0 solo
+Subito; SCHEDA_PAGINE_GIRO, SCHEDA_PAGINE_GIORNO, SCHEDA_PAGINE_TEMPO_S.
 """
 from __future__ import annotations
 
@@ -35,19 +39,31 @@ TENTATIVI = 3
 STOP_DOPO_BLOCCHI = 2     # 403/429 di fila sulla stessa fonte: quella fonte si ferma per il giro
 CANDIDATE_GIORNI = 5
 
+ORE_BLOCCO = 6           # dopo un blocco (403/429 di fila) la fonte si lascia stare per 6 ore
+
+# Le fonti si ALTERNANO (ROW_NUMBER per fonte): Subito non può riempire tutto il giro e lasciare fuori AutoScout24.
+# Subito solo se la ricerca non ha già dato la scheda (la ricerca di Subito ha quasi tutto; la pagina da Render è spesso
+# bloccata). Dentro ogni fonte: prima le auto sul sito, poi le candidate più recenti.
 DA_LEGGERE_SQL = """
-SELECT l.id, l.source, l.url, (s.listing_id IS NOT NULL) AS sul_sito
-FROM listings l
-LEFT JOIN sito_istantanea s ON s.listing_id = l.id
-WHERE l.source IN ('autoscout24', 'subito') AND l.status = 'attivo' AND l.url LIKE 'http%%'
-  AND (s.listing_id IS NOT NULL
-       OR (l.stage = 'approfondito' AND l.stage_reason IN ('opportunita', 'da_verificare', 'incidentata')
-           AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - make_interval(days => %(giorni_cand)s)))
-  AND (l.dati_auto IS NULL OR l.dati_auto->>'letto_il' IS NULL
-       OR (l.dati_auto->>'letto_il')::timestamptz < now() - make_interval(days => %(rileggi)s))
-  AND COALESCE((l.dati_auto->>'tentativi_pagina')::int, 0) < %(tentativi)s
-ORDER BY (s.listing_id IS NOT NULL) DESC, l.deep_at DESC NULLS LAST, l.id DESC
-LIMIT %(n)s
+WITH cand AS (
+  SELECT l.id, l.source, l.url, l.deep_at, (s.listing_id IS NOT NULL) AS sul_sito
+  FROM listings l
+  LEFT JOIN sito_istantanea s ON s.listing_id = l.id
+  WHERE l.source IN ('autoscout24', 'subito') AND l.status = 'attivo' AND l.url LIKE 'http%%'
+    AND l.source NOT IN (SELECT f.fonte FROM scheda_fonti f
+                         WHERE f.bloccato_il > now() - make_interval(hours => %(ore_blocco)s))
+    AND (l.source <> 'subito' OR (%(subito)s AND COALESCE(l.dati_auto->'ricerca', '{}'::jsonb) = '{}'::jsonb))
+    AND (s.listing_id IS NOT NULL
+         OR (l.stage = 'approfondito' AND l.stage_reason IN ('opportunita', 'da_verificare', 'incidentata')
+             AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - make_interval(days => %(giorni_cand)s)))
+    AND (l.dati_auto IS NULL OR l.dati_auto->>'letto_il' IS NULL
+         OR (l.dati_auto->>'letto_il')::timestamptz < now() - make_interval(days => %(rileggi)s))
+    AND COALESCE((l.dati_auto->>'tentativi_pagina')::int, 0) < %(tentativi)s
+), ord AS (
+  SELECT c.*, ROW_NUMBER() OVER (PARTITION BY c.source ORDER BY c.sul_sito DESC, c.deep_at DESC NULLS LAST, c.id DESC) AS rn
+  FROM cand c
+)
+SELECT id, source, url, sul_sito FROM ord ORDER BY rn, source LIMIT %(n)s
 """
 
 
@@ -70,8 +86,14 @@ def _conta(conn, lette: int, errori: int) -> None:
 
 
 def da_leggere(conn, n: int) -> list[dict]:
-    return [dict(r) for r in conn.execute(DA_LEGGERE_SQL, {"n": n, "giorni_cand": CANDIDATE_GIORNI,
-                                                           "rileggi": RILEGGI_GIORNI, "tentativi": TENTATIVI}).fetchall()]
+    return [dict(r) for r in conn.execute(DA_LEGGERE_SQL, {
+        "n": n, "giorni_cand": CANDIDATE_GIORNI, "rileggi": RILEGGI_GIORNI, "tentativi": TENTATIVI,
+        "ore_blocco": ORE_BLOCCO, "subito": os.environ.get("SCHEDA_PAGINE_SUBITO", "1") == "1"}).fetchall()]
+
+
+def segna_bloccata(conn, fonte: str) -> None:
+    conn.execute("INSERT INTO scheda_fonti (fonte, bloccato_il) VALUES (%s, now()) "
+                 "ON CONFLICT (fonte) DO UPDATE SET bloccato_il = now()", (fonte,))
 
 
 # ------------------------------------------------------------------------------------------------ lettura pagine
@@ -156,33 +178,60 @@ def giro(conn, per_giro: int | None = None, per_giorno: int | None = None, tempo
     st["da_leggere"] = len(righe)
     if not righe:
         return st
+    da_chiudere = []
     if client_as is None and any(r["source"] == "autoscout24" for r in righe):
         from .tempo_reale import _client_as
         client_as = _client_as()
+        da_chiudere.append(client_as)
     if client_sub is None and any(r["source"] == "subito" for r in righe):
         from .tempo_reale import _client_subito
         client_sub = _client_subito()
+        da_chiudere.append(client_sub)
+    try:
+        _leggi_tutte(conn, righe, client_as, client_sub, tempo_s, dormi, st)
+    finally:
+        for c in da_chiudere:
+            try:
+                c.close()
+            except Exception:
+                pass
+    return st
+
+
+def _leggi_tutte(conn, righe, client_as, client_sub, tempo_s, dormi, st: Counter) -> None:
     blocchi: Counter = Counter()
+    ferme: set = set()
     t0 = time.time()
     for i, r in enumerate(righe):
         if time.time() - t0 > tempo_s:
             st["tempo_finito"] += 1
             break
         fonte = r["source"]
-        if blocchi[fonte] >= STOP_DOPO_BLOCCHI:
+        if fonte in ferme:
             st[f"{fonte}:saltata_blocco"] += 1
             continue
         if fonte == "autoscout24":
             esito, dati = leggi_autoscout(client_as, r["url"])
         else:
             esito, dati = leggi_subito(client_sub, r["url"])
-        blocchi[fonte] = blocchi[fonte] + 1 if esito == "bloccato" else 0
         if esito == "bloccato":               # un blocco non consuma i tentativi dell'annuncio
             st[f"{fonte}:bloccato"] += 1
+            blocchi[fonte] += 1
+            if blocchi[fonte] >= STOP_DOPO_BLOCCHI:
+                ferme.add(fonte)
+                try:
+                    segna_bloccata(conn, fonte)
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    log.warning("SCHEDA_PAGINE blocco %s non salvato: %s", fonte, str(e)[:150])
+                log.warning("SCHEDA_PAGINE %s bloccata: ferma per %d ore", fonte, ORE_BLOCCO)
             continue
+        blocchi[fonte] = 0
         try:
             salva(conn, r["id"], esito, dati)
-            _conta(conn, 1 if esito in ("ok", "non_disponibile") else 0, 0 if esito in ("ok", "non_disponibile") else 1)
+            letta = esito in ("ok", "non_disponibile")
+            _conta(conn, 1 if letta else 0, 0 if letta else 1)
             conn.commit()
         except Exception as e:
             conn.rollback()
@@ -196,7 +245,6 @@ def giro(conn, per_giro: int | None = None, per_giorno: int | None = None, tempo
             st["sul_sito"] += 1 if r.get("sul_sito") else 0
         if i < len(righe) - 1:
             dormi(random.uniform(*PAUSA))
-    return st
 
 
 def giornaliero(stats: Counter | None = None) -> Counter:

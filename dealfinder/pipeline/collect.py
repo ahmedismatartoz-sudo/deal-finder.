@@ -314,8 +314,8 @@ def run(mode: str) -> Counter:
         os.environ.setdefault("PASSI_JOB", f"collect:{mode}")     # dopo un riavvio si riprende da dove si era arrivati
     if mode == "opportunita":
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
-        from . import schede_auto                # 12/11: scheda tecnica delle auto sul sito e candidate (SCHEDA_PAGINE=0 la spegne)
-        schede_auto.giornaliero(stats)
+        from ..db import dati_auto_ricerca_processo
+        dati_auto_ricerca_processo(True)         # 12/11: la parte "ricerca" della scheda tecnica solo in questo cron
         _autohero_giornaliero(stats)
     else:
         provinces, max_price = settings.market_provinces, settings.market_max_price_eur
@@ -1702,5 +1702,10 @@ if __name__ == "__main__":
     if mode in ("opportunita", "facebook") and analisi:
         from .process import run as process_run
         process_run("tutto")
+    if mode == "opportunita" and tempo_ok("schede_pagine", 5, _t0_loop):
+        # 12/11: scheda tecnica (pagina dell'annuncio) delle auto sul sito e candidate, a fine giro e solo se il giro
+        # dura da meno di 5 ore (CRON_ORE_SCHEDE_PAGINE); SCHEDA_PAGINE=0 la spegne
+        from . import schede_auto
+        schede_auto.giornaliero()
     if mode in ("opportunita", "mercato") and tempo_ok("ai_prezzi", 10.5, _t0_loop):
         _ai_prezzi()                       # ultimo passo: sostituisce il processo (memoria pulita)

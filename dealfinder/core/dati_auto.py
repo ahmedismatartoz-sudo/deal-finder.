@@ -13,8 +13,8 @@ Tutto difensivo: i nomi dei campi delle fonti non sono documentati, quindi si ce
 si riconosce si ignora (mai un errore verso chi chiama).
 
 Chiavi: allestimento, versione, cambio, marce, cilindrata, potenza_kw, potenza_cv, carrozzeria, porte, posti, colore,
-proprietari, tagliandi, classe_euro, consumo, co2, trazione, immatricolazione, garanzia, non_fumatori, optional (elenco),
-optional_gruppi ({gruppo: [voci]}).
+proprietari, tagliandi, classe_euro, consumo (solo il misto), co2, trazione, immatricolazione, garanzia, non_fumatori,
+optional (elenco semplice di etichette).
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from typing import Any
 
 CHIAVI = ("allestimento", "versione", "cambio", "marce", "cilindrata", "potenza_kw", "potenza_cv", "carrozzeria",
           "porte", "posti", "colore", "proprietari", "tagliandi", "classe_euro", "consumo", "co2", "trazione",
-          "immatricolazione", "garanzia", "non_fumatori", "optional", "optional_gruppi")
+          "immatricolazione", "garanzia", "non_fumatori", "optional")
 
 # Nel salvataggio dalla RICERCA non si ripetono i dati che hanno già una colonna (version_raw, gearbox, power_kw) o che
 # si ricavano da quelle (allestimento): la colonna resta piccola anche su centinaia di migliaia di annunci.
@@ -101,7 +101,8 @@ def norm_cilindrata(v: Any) -> int | None:
         x = float(t)
     else:
         s = str(t or "").replace(" ", "")
-        m = re.search(r"(\d{1,2}[.,]\d)(?:l|litri)?$", s, re.I) if not re.search(r"\d\.\d{3}", s) else None
+        s = re.sub(r"(\d)[.,](\d{3})(?!\d)", r"\1\2", s)        # "1.598" e "1,598" sono migliaia, non litri
+        m = re.search(r"(\d{1,2}[.,]\d)(?:l|litri)?$", s, re.I)
         if m:
             x = float(m.group(1).replace(",", "."))
         else:
@@ -277,59 +278,32 @@ def _allestimento_semplice(versione: str | None, titolo: str | None = None) -> s
     return None
 
 
-def allestimento_testo(versione: str | None, titolo: str | None = None) -> str | None:
-    """Allestimento leggibile (es. "Business", "AMG Line") dalla versione o dal titolo. Interfaccia minima: se c'è il
-    modulo dealfinder.pricing.allestimento (ramo margini-precisi) con la stessa funzione, si usa quello."""
+def _modulo_allestimento():
+    """dealfinder.pricing.allestimento (ramo margini-precisi), se c'è: allestimento(auto) -> {"nome", "livello"...}."""
     try:
-        from ..pricing import allestimento as _a           # type: ignore[attr-defined]
-        f = getattr(_a, "allestimento_testo", None)
-        if f is not None:
-            r = f(versione, titolo)
-            if r is None or isinstance(r, str):
-                return _pulito(r, 40) if r else None
+        from ..pricing import allestimento as _a            # type: ignore[attr-defined]
+        f = getattr(_a, "allestimento", None)
+        return f if callable(f) else None
     except Exception:
-        pass
+        return None
+
+
+def allestimento_testo(versione: str | None, titolo: str | None = None, marca: str | None = None,
+                       modello: str | None = None) -> str | None:
+    """Nome dell'allestimento da mostrare (es. "Business", "AMG Line"). UNA sola fonte: se c'è il modulo dei margini
+    (dealfinder.pricing.allestimento, che sa le gerarchie per marca) vale il suo campo "nome"; altrimenti la lettura
+    semplice di questo modulo."""
+    f = _modulo_allestimento()
+    if f is not None:
+        try:
+            r = f({"version_raw": versione, "title": titolo, "make": marca, "model": modello})
+            return _pulito(r.get("nome"), 40) if isinstance(r, dict) and r.get("nome") else None
+        except Exception:
+            return None
     return _pulito(_allestimento_semplice(versione, titolo), 40)
 
 
 # ------------------------------------------------------------------------------------------------ optional
-GRUPPI = (("comfort", "Comfort"), ("sicurezza", "Sicurezza"), ("multimedia", "Multimedia"), ("esterni", "Esterni"),
-          ("altro", "Altro"))
-_GRUPPI_FONTE = {"comfortandconvenience": "comfort", "comfort": "comfort", "safetyandsecurity": "sicurezza",
-                 "safety": "sicurezza", "sicurezza": "sicurezza", "entertainmentandmedia": "multimedia",
-                 "entertainment": "multimedia", "multimedia": "multimedia", "extras": "esterni", "extra": "esterni",
-                 "esterni": "esterni"}
-_CLASSI = [
-    (re.compile(r"(?i)sensore\s+(?:di\s+)?(?:pioggia|luce|crepuscol)"), "comfort"),
-    (re.compile(r"(?i)radio|navig|bluetooth|usb|carplay|android\s*auto|mp3|\bcd\b|dab|schermo|display|touch|audio|hi-?fi|"
-                r"vivavoce|wi-?fi|\baux\b|infotainment|soundsystem|altoparlant|lettore|tv\b|apple|cockpit|connect|"
-                r"strumentazione\s+digitale|ricarica\s+(?:wireless|induzione)|smartphone"), "multimedia"),
-    (re.compile(r"(?i)\babs\b|\besp\b|\basr\b|\bebd\b|airbag|isofix|frenata|frenat|assistent|corsia|lane|angolo\s+cieco|"
-                r"blind|sensori?\s+(?:di\s+)?parcheggio|park|telecamera|camera|retrocamera|antifurto|immobilizer|"
-                r"allarme|controllo\s+(?:della\s+)?(?:trazione|stabilit|pressione)|pressione\s+pneumatici|"
-                r"riconoscimento|stanchezza|collision|emergenza|\be-?call\b|hill|partenza\s+in\s+salita|sicurezza|"
-                r"cruise\s+control\s+adattiv|acc\b|limitatore|abbaglianti\s+automatici|night"), "sicurezza"),
-    (re.compile(r"(?i)cerch|lega|gancio|traino|tetto|barre|portapacchi|vetri\s+oscurat|privacy|fari|faro|\bled\b|xeno|"
-                r"bi-?xeno|fendinebbia|luci|spoiler|minigonne|pneumatic|ruotino|ruota\s+di\s+scorta|vernice|"
-                r"metallizzat|specchietti\s+(?:in\s+tinta|ripiegabili)|kit\s+estetico|paraurti|portellone|tettuccio"), "esterni"),
-    (re.compile(r"(?i)clima|aria\s+condizionata|sedil|volante|cruise|alzacristall|chiusura\s+centralizzata|keyless|"
-                r"specchiett|servosterzo|start|bracciolo|head-?up|pelle|alcantara|riscald|massagg|ventilat|"
-                r"climatizzat|bagagliaio|tendin|portabicchier|illuminazione\s+interna|ambient|parabrezza\s+riscald|"
-                r"computer\s+di\s+bordo|sospensioni|regolazione|lombare|memoria|accensione|chiave|interni"), "comfort"),
-]
-
-
-def gruppo_optional(voce: str, gruppo_fonte: str | None = None) -> str:
-    for rx, g in _CLASSI:
-        if rx.search(voce):
-            return g
-    if gruppo_fonte:
-        g = _GRUPPI_FONTE.get(re.sub(r"[^a-z]", "", gruppo_fonte.lower()))
-        if g:
-            return g
-    return "altro"
-
-
 def _voci(v: Any) -> list[str]:
     out = []
     if isinstance(v, dict) and not any(k in v for k in ("formatted", "value", "label", "text", "name", "data", "id")):
@@ -346,33 +320,14 @@ def _voci(v: Any) -> list[str]:
     return out
 
 
-def raggruppa_optional(voci: list[str], gruppi_fonte: dict[str, list[str]] | None = None) -> dict[str, list[str]]:
-    """{gruppo: [voci]} nei 5 gruppi del sito, senza doppioni (si confronta senza maiuscole)."""
-    origine = {}
-    for g, xs in (gruppi_fonte or {}).items():
-        for x in xs:
-            origine.setdefault(x.lower(), g)
-    out: dict[str, list[str]] = {}
-    visti = set()
+def _con_optional(d: dict, voci: list[str]) -> dict:
+    visti, uniche = set(), []
     for x in voci:
-        if x.lower() in visti:
-            continue
-        visti.add(x.lower())
-        out.setdefault(gruppo_optional(x, origine.get(x.lower())), []).append(x)
-    return {g: out[g] for g, _ in GRUPPI if g in out}
-
-
-def _con_optional(d: dict, voci: list[str], gruppi_fonte: dict[str, list[str]] | None = None) -> dict:
-    voci = [x for x in voci if x][:MAX_OPTIONAL]
-    if voci:
-        visti, uniche = set(), []
-        for x in voci:
-            if x.lower() not in visti:
-                visti.add(x.lower())
-                uniche.append(x)
-        d["optional"] = uniche
-        if gruppi_fonte:
-            d["optional_gruppi"] = {g: xs for g, xs in gruppi_fonte.items() if xs}
+        if x and x.lower() not in visti:
+            visti.add(x.lower())
+            uniche.append(x)
+    if uniche:
+        d["optional"] = uniche[:MAX_OPTIONAL]
     return d
 
 
@@ -403,7 +358,7 @@ ALIAS = {
     "firstregistrationdate": "immatricolazione", "firstregistration": "immatricolazione",
     "warranty": "garanzia", "warrantyinmonths": "garanzia_mesi", "warrantyduration": "garanzia",
     "nonsmoking": "non_fumatori", "nonsmokingvehicle": "non_fumatori",
-    "equipment": "equipment", "equipments": "equipment", "features": "equipment_lista",
+    "equipment": "equipment", "equipments": "equipment",
 }
 # rami che non si visitano mai: dati del venditore, posizione, statistiche, prezzi, annunci simili
 _SALTA = re.compile(r"(?i)seller|contact|phone|dealer|user|owner(?!s)|location|address|tracking|similar|recommend|"
@@ -411,6 +366,14 @@ _SALTA = re.compile(r"(?i)seller|contact|phone|dealer|user|owner(?!s)|location|a
 
 
 def _metti(d: dict, chiave: str, v: Any) -> None:
+    """Un campo alla volta: un valore strano (NaN, infinito, tipo inatteso) salta solo quel campo."""
+    try:
+        _metti_campo(d, chiave, v)
+    except Exception:
+        pass
+
+
+def _metti_campo(d: dict, chiave: str, v: Any) -> None:
     if v in (None, "", [], {}):
         return
     if chiave == "versione":
@@ -503,18 +466,9 @@ def _metti(d: dict, chiave: str, v: Any) -> None:
 
 
 def _equipment(d: dict, v: Any) -> None:
-    gruppi: dict[str, list[str]] = {}
-    voci: list[str] = []
-    if isinstance(v, dict):
-        for g, xs in v.items():
-            vv = _voci(xs)
-            if vv:
-                gruppi[str(g)] = vv
-                voci += vv
-    else:
-        voci = _voci(v)
+    voci = _voci(list(v.values()) if isinstance(v, dict) else v)
     if voci:
-        _con_optional(d, d.get("optional", []) + voci, {**d.get("optional_gruppi", {}), **gruppi} if gruppi else None)
+        _con_optional(d, d.get("optional", []) + voci)
 
 
 def da_json(obj: Any, d: dict | None = None, livello: int = 0) -> dict:
@@ -525,14 +479,11 @@ def da_json(obj: Any, d: dict | None = None, livello: int = 0) -> dict:
     if isinstance(obj, dict):
         for k, v in obj.items():
             kk = re.sub(r"[^a-z0-9]", "", str(k).lower())
-            if _SALTA.search(str(k)):
+            if kk not in ALIAS and _SALTA.search(str(k)):      # previousOwnerCount & co. sono del veicolo
                 continue
             c = ALIAS.get(kk)
             if c == "equipment":
                 _equipment(d, v)
-            elif c == "equipment_lista":
-                if isinstance(v, list) and v and all(isinstance(x, (str, dict)) for x in v):
-                    _equipment(d, v)
             elif c:
                 _metti(d, c, v)
                 if isinstance(v, (dict, list)) and _testo(v) is None:
@@ -594,15 +545,22 @@ def da_autoscout_ricerca(it: dict) -> dict:
         return {}
 
 
+# Chiavi di primo livello di listingDetails che si leggono (oltre a "vehicle"): una per una, niente altro (non
+# "features" tipo showFinancing/hasVideo, non recensioni o valutazioni del venditore, non prezzi).
+PAGINA_AS_CHIAVI = ("warranty", "warrantyInMonths", "warrantyDuration", "equipment", "numberOfPreviousOwners",
+                    "previousOwnerCount", "hasFullServiceHistory", "nonSmoking", "environmentEuDirective",
+                    "fuelConsumptionCombined", "co2emissionInGramPerKm")
+
+
 def da_autoscout_pagina(det: dict) -> dict:
-    """Pagina dell'annuncio di AutoScout24 (`listingDetails`): prima `vehicle`, poi il resto (senza venditore)."""
+    """Pagina dell'annuncio di AutoScout24 (`listingDetails`): `vehicle` più le sole chiavi di PAGINA_AS_CHIAVI."""
     if not isinstance(det, dict):
         return {}
     try:
         d: dict = {}
         if isinstance(det.get("vehicle"), dict):
             da_json(det["vehicle"], d)
-        da_json({k: v for k, v in det.items() if k != "vehicle"}, d)
+        da_json({k: det[k] for k in PAGINA_AS_CHIAVI if k in det}, d)
         return _chiudi(d)
     except Exception:
         return {}
@@ -610,20 +568,22 @@ def da_autoscout_pagina(det: dict) -> dict:
 
 # ------------------------------------------------------------------------------------------------ Subito
 _ETICHETTE_SUB = [
-    (re.compile(r"(?i)optional|accessor|dotazion|equipaggiam|comfort|sicurezza|extra"), "optional"),
+    # consumo prima degli optional ("Consumo extraurbano" non è un optional); urbano ed extraurbano non si prendono
+    (re.compile(r"(?i)consumo.*urban|urban.*consumo"), None),
+    (re.compile(r"(?i)consumo"), "consumo"),
+    (re.compile(r"(?i)optional|accessor|dotazion|equipaggiam|\bextra\b"), "optional"),
     (re.compile(r"(?i)co2|emissioni\s+co"), "co2"),
     (re.compile(r"(?i)classe\s+(?:di\s+)?emission|classe\s+euro|\beuro\b|inquinament|emission"), "classe_euro"),
     (re.compile(r"(?i)cilindrata"), "cilindrata"),
     (re.compile(r"(?i)^cambio|tipo\s+di\s+cambio"), "cambio"),
     (re.compile(r"(?i)marce"), "marce"),
     (re.compile(r"(?i)potenza"), "potenza"),
-    (re.compile(r"(?i)carrozzeria|tipo\s+di\s+(?:auto|veicolo)|tipologia|^tipo$"), "carrozzeria"),
+    (re.compile(r"(?i)carrozzeria|tipo\s+di\s+(?:auto|veicolo)|tipologia"), "carrozzeria"),
     (re.compile(r"(?i)porte"), "porte"),
     (re.compile(r"(?i)posti"), "posti"),
     (re.compile(r"(?i)colore"), "colore"),
     (re.compile(r"(?i)proprietari"), "proprietari"),
     (re.compile(r"(?i)tagliand|libretto|manutenz"), "tagliandi"),
-    (re.compile(r"(?i)consumo"), "consumo"),
     (re.compile(r"(?i)trazione"), "trazione"),
     (re.compile(r"(?i)versione|allestimento"), "versione"),
     (re.compile(r"(?i)garanzia"), "garanzia"),
@@ -653,7 +613,9 @@ def da_subito(item: dict) -> dict:
                 continue
             for rx, chiave in _ETICHETTE_SUB:
                 if rx.search(label):
-                    if chiave == "optional":
+                    if chiave is None:
+                        pass
+                    elif chiave == "optional":
                         optional += _voci([x.get("value") if isinstance(x, dict) else x for x in vals]
                                           if isinstance(vals, list) else vals)
                     elif chiave == "colore":
@@ -705,7 +667,8 @@ def unisci(colonne: dict, dati_auto: Any) -> dict:
         out.pop("potenza_cv")                # potenze che non tornano tra loro: si ricalcola dai kW
     completa_potenza(out)
     if not out.get("allestimento"):
-        a = allestimento_testo(out.get("versione"), colonne.get("title"))
+        a = allestimento_testo(out.get("versione") or colonne.get("version_raw"), colonne.get("title"),
+                               colonne.get("make"), colonne.get("model"))
         if a:
             out["allestimento"] = a
     if dati_auto.get("letto_il"):

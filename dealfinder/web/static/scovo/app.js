@@ -308,7 +308,9 @@ function carCard(c, i, hero){
   const badges = `<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
   const lbl = gainLbl(c);
   const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
-  const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => `<span${k === a.length - 1 && a.length > 3 ? ' class="loc"' : ""}>${k === a.length - 1 && a.length > 3 ? ICON.pin : ""}${esc(x)}</span>`).join("")}</div>`;
+  // l'icona della posizione solo sulla zona (se manca la zona non finisce sull'allestimento o sul cambio)
+  const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => { const loc = !!c.zona && k === a.length - 1 && x === String(c.zona) && a.length > 3;
+    return `<span${loc ? ' class="loc"' : ""}>${loc ? ICON.pin : ""}${esc(x)}</span>`; }).join("")}</div>`;
   const cella = (k, v, cls) => `<div><span class="lbl">${k}</span><span class="val ${cls || ""}">${v}</span></div>`;
   const trio = c.economica ? cella("Mercato", c.mercato ? "~" + eur(c.mercato) : "da stimare") + cella("Rivendita", c.mercato ? eur(c.riv) : "—")
     : cella("Riparazioni", ripTxt(c), c.rip_hi ? "small warn" : "") + cella("Rivendita", eur(c.riv)) + (c.mercato ? cella("Mercato", eur(c.mercato)) : "");
@@ -639,7 +641,7 @@ function stCella(x){ return `<div class="st-c${x.largo ? " st-wide" : ""}"><dt>$
 function schedaTecnica(c, d){
   // 12/11 sera (cliente): un blocchetto compatto. Subito al massimo 6 dati; il resto e gli optional dietro un link.
   const s = d && !d.err ? d.scheda : null;
-  const princ = s ? s.principali || [] : [["allestimento","Allestimento",c.allestimento], ["cambio","Cambio",c.cambio ? cap(String(c.cambio)) : null]]
+  const princ = s ? s.principali || [] : [["allestimento","Allestimento",c.allestimento_testo], ["cambio","Cambio",c.cambio ? cap(String(c.cambio)) : null]]
     .filter(x => x[2]).map(([k, label, v]) => ({k, label, v: String(v)}));
   const altri = s ? s.altri || [] : [];
   const voci = s && s.optional ? s.optional.voci || [] : [];
@@ -655,7 +657,8 @@ function schedaTecnica(c, d){
 }
 function stRigaElenco(c){
   // allestimento nella riga dei dati dell'elenco solo se non è già nel nome
-  const a = c.allestimento && !String(c.nome || "").toLowerCase().includes(String(c.allestimento).toLowerCase()) ? c.allestimento : null;
+  const t = c.allestimento_testo;          // chiave della scheda tecnica (c.allestimento è del calcolo dei margini)
+  const a = t && !String(c.nome || "").toLowerCase().includes(String(t).toLowerCase()) ? t : null;
   return [c.cambio ? cap(String(c.cambio)) : null, a];
 }
 $app.addEventListener("click", e => {

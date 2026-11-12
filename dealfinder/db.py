@@ -359,7 +359,8 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     if getattr(listing, "fuel_tipo", None) is not None and ha_colonna(conn, "fuel_tipo"):
         params["fuel_tipo"] = listing.fuel_tipo
     dati_ricerca = _dati_auto_ricerca(listing)
-    if dati_ricerca and ha_colonna(conn, "dati_auto"):          # 12/11 (migrazione 046): scheda tecnica dalla ricerca
+    qui = dati_auto_ricerca_qui()
+    if dati_ricerca and ha_colonna(conn, "dati_auto") and (qui or prev is not None):   # 12/11 (migrazione 046)
         params["dati_auto"] = json.dumps({"ricerca": dati_ricerca}, ensure_ascii=False)
     if prev is None:
         cols = ", ".join(params)
@@ -391,7 +392,7 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
         "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
         # 12/11: la ricerca riscrive solo la sua parte ("ricerca"); quello letto dalla pagina dell'annuncio resta
-        "dati_auto": DATI_AUTO_SQL,
+        "dati_auto": DATI_AUTO_SQL.replace("__QUI__", "true" if qui else "false"),
     }
     sets = ", ".join(f"{k} = {_tenere[k]}" if k in _tenere else f"{k} = %({k})s"
                      for k in params if k not in ("source", "source_id"))
@@ -415,8 +416,38 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     return lid, event
 
 
-DATI_AUTO_SQL = ("COALESCE(jsonb_set(COALESCE(listings.dati_auto, '{}'::jsonb), '{ricerca}', "
-                 "(%(dati_auto)s::jsonb) -> 'ricerca'), listings.dati_auto)")
+# 12/11: parte "ricerca" della scheda tecnica (listings.dati_auto). Si UNISCE a quella già salvata (gli optional letti
+# dalla pagina dal tempo reale non si perdono a una lettura della ricerca senza optional) e non si riscrive se non
+# cambia niente. Fuori dal cron opportunità e dal tempo reale (__QUI__ = false: es. cron mercato) si scrive solo per
+# gli annunci già 'approfondito'. La parte "pagina" la scrive solo pipeline/schede_auto.py.
+DATI_AUTO_SQL = (
+    "(CASE WHEN NOT (__QUI__ OR listings.stage = 'approfondito') "
+    "OR COALESCE(listings.dati_auto->'ricerca', '{}'::jsonb) @> ((%(dati_auto)s::jsonb) -> 'ricerca') "
+    "THEN listings.dati_auto "
+    "ELSE COALESCE(jsonb_set(COALESCE(listings.dati_auto, '{}'::jsonb), '{ricerca}', "
+    "COALESCE(listings.dati_auto->'ricerca', '{}'::jsonb) || ((%(dati_auto)s::jsonb) -> 'ricerca')), listings.dati_auto) END)")
+
+_DATI_AUTO_PROCESSO = {"on": False}
+_dati_auto_locale = __import__("threading").local()
+
+
+def dati_auto_ricerca_processo(on: bool = True) -> None:
+    """Il processo intero salva la parte "ricerca" (cron opportunità)."""
+    _DATI_AUTO_PROCESSO["on"] = on
+
+
+def dati_auto_ricerca_qui() -> bool:
+    return bool(_DATI_AUTO_PROCESSO["on"] or getattr(_dati_auto_locale, "on", False))
+
+
+def upsert_listing_con_scheda(conn, listing: Listing) -> tuple[int, str]:
+    """upsert_listing che salva anche la parte "ricerca" della scheda tecnica (tempo reale: annunci nuovi da valutare)."""
+    prima = getattr(_dati_auto_locale, "on", False)
+    _dati_auto_locale.on = True
+    try:
+        return upsert_listing(conn, listing)
+    finally:
+        _dati_auto_locale.on = prima
 
 
 def _dati_auto_ricerca(listing: Listing) -> dict:

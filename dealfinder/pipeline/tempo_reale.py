@@ -893,7 +893,7 @@ def _autoscout_tutti(conn) -> list:
 def _salva(conn, listings: list, stats: Counter) -> list[int]:
     """Salva gli annunci letti; ritorna gli id da valutare (privati nuovi o con prezzo cambiato, nelle regole)."""
     from ..core.normalize import normalize_fields
-    from ..db import upsert_listing
+    from ..db import upsert_listing_con_scheda as upsert_listing      # 12/11: anche la scheda tecnica (dati_auto)
     from ..zone import MILANO, TORINO
     from .collect import doppione_altro_sito
     da_valutare = []

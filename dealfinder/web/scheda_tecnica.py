@@ -1,9 +1,11 @@
 """12/11 (cliente: "sul sito l'auto deve essere più completa"): scheda tecnica dell'auto per il sito.
 
-- `aggiungi(conn, lid, d)`: nella scheda di un'auto mette d["scheda"] (dati chiave, griglia, optional per gruppo) e
-  d["allestimento"]; una sola lettura per chiave primaria, mai un errore verso la scheda.
-- `arricchisci_elenco(items)`: nell'elenco del sito (circa 600 auto) aggiunge allestimento e cambio; una sola query
-  su listings per id, solo i due campi (niente optional: l'elenco resta leggero in memoria).
+- `aggiungi(conn, lid, d)`: nella scheda di un'auto mette d["scheda"] (dati principali, altri dati, optional); una sola
+  lettura per chiave primaria, mai un errore verso la scheda. Chiavi SOLO dentro d["scheda"]: d["allestimento"] è del
+  ramo dei margini (dizionario con livello e descrizione) e qui non si tocca.
+- `arricchisci_elenco(items)`: nell'elenco del sito (circa 600 auto) aggiunge it["allestimento_testo"] e normalizza
+  it["cambio"]; una sola query su listings per id, solo le colonne che servono (niente dati_auto: l'elenco resta
+  leggero in memoria).
 
 Mai il telefono o altri dati del venditore: si leggono solo i dati del veicolo (dealfinder/core/dati_auto.py).
 Senza la colonna dati_auto (migrazione 046 non ancora applicata) tutto funziona con le sole colonne dell'annuncio.
@@ -92,7 +94,7 @@ def scheda(colonne: dict, dati: object, base: dict | None = None) -> dict:
             "allestimento": d.get("allestimento"), "cambio": d.get("cambio"), "letto_il": d.get("letto_il")}
 
 
-_COLONNE = "l.id, l.version_raw, l.title, l.gearbox, l.power_kw, l.year, l.mileage_km, l.fuel"
+_COLONNE = "l.id, l.make, l.model, l.version_raw, l.title, l.gearbox, l.power_kw, l.year, l.mileage_km, l.fuel"
 
 
 def _leggi(conn, sql_con: str, sql_senza: str, params) -> list[dict]:
@@ -108,7 +110,7 @@ def _leggi(conn, sql_con: str, sql_senza: str, params) -> list[dict]:
 
 
 def aggiungi(conn, lid: int, d: dict) -> dict:
-    """Scheda di un'auto: d["scheda"] e d["allestimento"]. Mai blocca la scheda."""
+    """Scheda di un'auto: d["scheda"]. Mai blocca la scheda."""
     if not acceso():
         return d
     try:
@@ -117,11 +119,7 @@ def aggiungi(conn, lid: int, d: dict) -> dict:
         if not righe:
             return d
         r = righe[0]
-        s = scheda(r, r.get("dati_auto"), d)
-        d["scheda"] = s
-        for k in ("allestimento", "cambio"):
-            if s.get(k):
-                d[k] = s[k]
+        d["scheda"] = scheda(r, r.get("dati_auto"), d)
     except Exception as e:
         log.warning("SCHEDA_TECNICA %s: %s", lid, str(e)[:200])
         try:
@@ -132,31 +130,29 @@ def aggiungi(conn, lid: int, d: dict) -> dict:
 
 
 def arricchisci_elenco(items: list[dict]) -> int:
-    """Allestimento e cambio per le auto dell'elenco (una query). Ritorna quante auto hanno l'allestimento."""
+    """it["allestimento_testo"] e cambio normalizzato per le auto dell'elenco (una query). Ritorna quante hanno
+    l'allestimento. L'allestimento viene dalle sole colonne (stessa fonte della scheda: allestimento_testo)."""
     if not acceso() or not items:
         return 0
     try:
         from ..db import connect
-        ids = [int(it["id"]) for it in items if isinstance(it.get("id"), int)]
+        ids = [int(it["id"]) for it in items if it.get("id") is not None]
         if not ids:
             return 0
-        corto = ("l.id, l.version_raw, l.title, l.gearbox, "
-                 "COALESCE(l.dati_auto->'pagina'->>'allestimento', l.dati_auto->'ricerca'->>'allestimento') AS allestimento_letto, "
-                 "COALESCE(l.dati_auto->'pagina'->>'cambio', l.dati_auto->'ricerca'->>'cambio') AS cambio_letto")
         with connect() as conn:
-            righe = _leggi(conn, f"SELECT {corto} FROM listings l WHERE l.id = ANY(%s)",
-                           "SELECT l.id, l.version_raw, l.title, l.gearbox FROM listings l WHERE l.id = ANY(%s)", (ids,))
+            righe = conn.execute("SELECT l.id, l.make, l.model, l.version_raw, l.title, l.gearbox FROM listings l "
+                                 "WHERE l.id = ANY(%s)", (ids,)).fetchall()
         per_id = {r["id"]: r for r in righe}
         n = 0
         for it in items:
             r = per_id.get(it.get("id"))
             if not r:
                 continue
-            all_ = DA._pulito(r.get("allestimento_letto"), 40) or DA.allestimento_testo(r.get("version_raw"), r.get("title"))
-            cambio = DA.norm_cambio(r.get("cambio_letto") or r.get("gearbox") or it.get("cambio"))
+            all_ = DA.allestimento_testo(r.get("version_raw"), r.get("title"), r.get("make"), r.get("model"))
             if all_:
-                it["allestimento"] = all_
+                it["allestimento_testo"] = all_
                 n += 1
+            cambio = DA.norm_cambio(r.get("gearbox"))
             if cambio:
                 it["cambio"] = cambio
         return n

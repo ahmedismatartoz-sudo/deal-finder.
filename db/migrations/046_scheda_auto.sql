@@ -14,3 +14,9 @@ CREATE TABLE IF NOT EXISTS scheda_letture (
     errori  INTEGER NOT NULL DEFAULT 0,
     aggiornato TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Fonte bloccata (403/429 di fila): per ORE_BLOCCO ore (6) il lettore non la prova più e legge le altre.
+CREATE TABLE IF NOT EXISTS scheda_fonti (
+    fonte        TEXT PRIMARY KEY,
+    bloccato_il  TIMESTAMPTZ
+);
