@@ -513,11 +513,12 @@ async function viewSito() {
 
     <h2>Ribassi del prezzo mostrato</h2>
     <div class="panel">
-      <p>Ora: ${statoRib}${r.fonte === "codice" ? ' <small class="note">(valori del codice: al primo salvataggio passano qui)</small>' : ""}</p>
+      <p>Ora: ${statoRib}${r.fonte === "codice" ? ' <small class="note">(nessuna impostazione salvata: valgono le variabili di Render, dove una data vuota vuol dire spenti; al primo salvataggio comanda questo pannello)</small>' : ""}</p>
+      <p class="note">Comanda la spunta "Ribassi accesi". Con la spunta e "Fino a" vuoto i ribassi restano accesi finché non togli la spunta; con una data si spengono da soli a quell'ora. Senza spunta sono spenti, qualunque data ci sia.</p>
       <label style="display:inline-flex;gap:8px;align-items:center"><input type="checkbox" id="rb-on" ${r.attivo ? "checked" : ""} style="width:20px;height:20px"> Ribassi accesi</label>
       <table class="kv" style="max-width:420px;margin-top:10px"><thead><tr><th>Da prezzo dell'annuncio (€)</th><th>Euro tolti</th><th></th></tr></thead><tbody id="rb-fasce">${fasce.map(([a, b]) => fasciaRiga(a, b)).join("")}</tbody></table>
       <button class="btn" id="rb-add" style="margin-top:8px">Aggiungi fascia</button>
-      <div class="field" style="max-width:320px;margin-top:12px"><label for="rb-fino">Fino a (ora italiana)</label><input type="datetime-local" id="rb-fino" value="${esc(dtLocale(r.fino))}"><small>Vuoto = finché non li spegni. Dopo questa ora si spengono da soli.</small></div>
+      <div class="field" style="max-width:320px;margin-top:12px"><label for="rb-fino">Fino a (ora italiana)</label><input type="datetime-local" id="rb-fino" value="${esc(dtLocale(r.fino))}"><small>Vuoto = accesi finché non togli la spunta. Con una data si spengono da soli a quell'ora.</small></div>
       <button class="btn primary" id="rb-salva">Salva ribassi</button>
       <p class="note">Il prezzo mostrato è quello dell'annuncio meno il ribasso della sua fascia (al massimo 3.000 €); il margine mostrato sale di altrettanto. Le regole del sito usano sempre il prezzo vero.</p>
     </div>

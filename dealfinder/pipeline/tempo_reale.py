@@ -594,6 +594,31 @@ def subito_completo(conn, minuti: float | None = None, col=None, basta=None) -> 
     return dict(st)
 
 
+def subito_completo_notte(conn, giorno: str, basta=None) -> dict:
+    """12/11: lettura completa notturna dentro il sito, con i passi del giorno (PASSI_JOB="subito_completo:"+giorno,
+    come rilettura_subito): se `basta` la ferma (memoria alta) il giro dopo riprende dalle fasce già lette; finita
+    tutta, i passi si cancellano. Nessun limite di tempo (il giro intero dura 2-2,5 ore)."""
+    from . import passi
+    job = "subito_completo:" + giorno
+    vecchio = os.environ.get("PASSI_JOB")
+    os.environ["PASSI_JOB"] = job
+    passi._cache = None
+    try:
+        st = subito_completo(conn, basta=basta)
+        if not st.get("fermato_memoria"):
+            try:
+                passi.finito(job)
+            except Exception as e:
+                log.warning("SUBITO_COMPLETO passi non cancellati: %s", str(e)[:150])
+        return st
+    finally:
+        if vecchio is None:
+            os.environ.pop("PASSI_JOB", None)
+        else:
+            os.environ["PASSI_JOB"] = vecchio
+        passi._cache = None
+
+
 def rilettura_subito(minuti: float | None = None) -> dict:
     """3/11 (studio 4 §4.2): rilettura settimanale di tutti gli annunci Subito della zona, nel CRON (mai nel sito).
     A pezzi: ogni giro al massimo RS_MINUTI minuti, i passi fatti restano (PASSI_JOB per settimana); il lavoro

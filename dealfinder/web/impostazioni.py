@@ -76,9 +76,13 @@ def dati() -> dict:
     database non risponde resta l'ultima lettura buona."""
     if time.monotonic() - _stato["t"] < CACHE_S:
         return _stato["dati"]
-    if not _lock.acquire(blocking=False):            # un altro thread sta già leggendo: si usa quella di prima
+    # un altro thread sta già leggendo: si usa la lettura di prima; alla PRIMA lettura (niente di prima) si aspetta
+    # quella dell'altro thread, al massimo 3 secondi, invece di partire con i valori del codice
+    if not (_lock.acquire(timeout=3) if _stato["firma"] is None else _lock.acquire(blocking=False)):
         return _stato["dati"]
     try:
+        if time.monotonic() - _stato["t"] < CACHE_S:  # l'ha appena letta l'altro thread
+            return _stato["dati"]
         try:
             d = _da_db()
         except Exception as e:
@@ -126,6 +130,8 @@ def ribasso() -> dict | None:
 
 
 def ribasso_acceso(r: dict, ora=None) -> bool:
+    """Regola del pannello: comanda l'interruttore. Acceso con "fino a" vuoto = acceso finché non lo spegni; acceso con
+    una data = si spegne da solo a quell'ora. (Senza impostazioni nel database vale scovo: variabile vuota = spento.)"""
     if not r or not r.get("attivo"):
         return False
     try:
@@ -208,6 +214,22 @@ def valida_ribasso(d: dict) -> dict:
     return {"attivo": bool(d.get("attivo")), "schema": ",".join(f"{a}:{b}" for a, b in fasce), "fino": fino}
 
 
+def _like(s: str) -> str:
+    """Testo letterale dentro ILIKE: % e _ scritti nel pannello non fanno da jolly."""
+    return str(s).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _filtri_listing(e: dict) -> tuple[list[str], list]:
+    filtri, par = ["make ILIKE %s", "mileage_km=%s", "price_eur=%s"], [_like(e["marca"]) + "%", e["km"], e["prezzo"]]
+    if e.get("modello"):
+        filtri.append("model ILIKE %s")
+        par.append("%" + _like(e["modello"]) + "%")
+    if e.get("anno"):
+        filtri.append("year=%s")
+        par.append(e["anno"])
+    return filtri, par
+
+
 def _intero(v, nome: str, lo: int = 0, hi: int = 10_000_000) -> int | None:
     if v in (None, ""):
         return None
@@ -277,13 +299,7 @@ def applica_scarto_listing(conn, e: dict) -> int:
                             ("analisi_manuale: tolta dal cliente: " + str(e.get("motivo") or "")[:120], e["listing_id"])).rowcount
     if not e.get("marca") or e.get("km") is None or e.get("prezzo") is None:
         return 0
-    filtri, par = ["make ILIKE %s", "mileage_km=%s", "price_eur=%s"], [e["marca"] + "%", e["km"], e["prezzo"]]
-    if e.get("modello"):
-        filtri.append("model ILIKE %s")
-        par.append("%" + e["modello"] + "%")
-    if e.get("anno"):
-        filtri.append("year=%s")
-        par.append(e["anno"])
+    filtri, par = _filtri_listing(e)
     return conn.execute("UPDATE listings SET stage='scartato', stage_reason='analisi_manuale: tolta dal cliente' WHERE "
                         + " AND ".join(filtri) + " AND stage IS DISTINCT FROM 'scartato'", tuple(par)).rowcount
 
@@ -300,15 +316,8 @@ def rimetti_scarto(conn, sid: int, da: str | None = None) -> dict | None:
     if e.get("listing_id"):
         conn.execute("UPDATE listings SET stage='approfondito', stage_reason='da_verificare', last_checked_at=now() "
                      "WHERE id=%s AND stage='scartato' AND stage_reason LIKE 'analisi_manuale:%%'", (e["listing_id"],))
-    elif e.get("marca"):
-        filtri = ["make ILIKE %s", "mileage_km=%s", "price_eur=%s"]
-        par = [e["marca"] + "%", e["km"], e["prezzo"]]
-        if e.get("modello"):
-            filtri.append("model ILIKE %s")
-            par.append("%" + e["modello"] + "%")
-        if e.get("anno"):
-            filtri.append("year=%s")
-            par.append(e["anno"])
+    elif e.get("marca") and e.get("km") is not None and e.get("prezzo") is not None:
+        filtri, par = _filtri_listing(e)
         conn.execute("UPDATE listings SET stage='approfondito', stage_reason='da_verificare', last_checked_at=now() WHERE "
                      + " AND ".join(filtri) + " AND stage='scartato' AND stage_reason ILIKE '%%tolta dal cliente%%'", tuple(par))
     conn.commit()

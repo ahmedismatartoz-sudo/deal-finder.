@@ -308,7 +308,9 @@ def test_avvio_legge_elenco_dal_database_e_health():
         assert c.get("/health").status_code == 200
         A._elenco.update(items=[], pronto=False, busy=False)
         A._AVVIO_PRIMA = A._AVVIO
-        A._AVVIO = time.monotonic() - 601                                         # 10 minuti senza elenco: 200 lo stesso
+        A._AVVIO = time.monotonic() - 60                                          # 60 s senza elenco: ancora 503
+        assert c.get("/health").status_code == 503
+        A._AVVIO = time.monotonic() - 91                                          # oltre 90 s: 200 (niente riavvii a catena)
         r = c.get("/health")
         assert r.status_code == 200 and "avviso" in r.json()
     finally:
@@ -488,7 +490,8 @@ def test_jev_foto_a_blocchi():
             os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
 
 
-def test_subito_completo_si_ferma_con_memoria_alta():
+def test_subito_completo_freno_ferma_dopo_un_pacchetto_salvato():
+    """Il freno (basta) si controlla solo con il pacchetto appena salvato: nessun annuncio letto va perso."""
     from dealfinder.pipeline import tempo_reale as tr
     salvati = []
 
@@ -505,22 +508,123 @@ def test_subito_completo_si_ferma_con_memoria_alta():
 
         def basta():
             mem["n"] += 1
-            return mem["n"] >= 3                  # alla terza verifica la memoria è "alta"
+            return mem["n"] >= 3
         st = tr.subito_completo(conn, col=_Col(), basta=basta)
         assert st["fermato_memoria"] == 1 and sum(salvati) == 450 and max(salvati) == 150
+        salvati.clear()
+        st = tr.subito_completo(conn, col=_Col())                          # senza freno né tempo: legge tutto
+        assert not st.get("fermato_memoria") and sum(salvati) >= 10_000 and sum(salvati) % 10_000 == 0   # tutte le regioni
     finally:
         tr._salva = orig
+
+
+def test_subito_completo_notte_passi_del_giorno():
+    """PASSI_JOB="subito_completo:"+giorno durante il giro (come rilettura_subito); passi cancellati solo a giro finito."""
+    from dealfinder.pipeline import tempo_reale as tr, passi
+    visti, finiti = [], []
+    orig = (tr.subito_completo, passi.finito, os.environ.get("PASSI_JOB"))
+    try:
+        os.environ.pop("PASSI_JOB", None)
+        passi.finito = finiti.append
+        tr.subito_completo = lambda conn, basta=None: (visti.append((os.environ.get("PASSI_JOB"), basta)), {"letti": 5})[1]
+        assert tr.subito_completo_notte(None, "2026-11-12")["letti"] == 5
+        assert visti == [("subito_completo:2026-11-12", None)] and finiti == ["subito_completo:2026-11-12"]
+        assert "PASSI_JOB" not in os.environ
+        tr.subito_completo = lambda conn, basta=None: {"fermato_memoria": 1, "fermato_tempo": 1}
+        tr.subito_completo_notte(None, "2026-11-12")
+        assert finiti == ["subito_completo:2026-11-12"]                     # fermato: i passi restano per riprendere
+    finally:
+        tr.subito_completo, passi.finito = orig[0], orig[1]
+        os.environ.pop("PASSI_JOB", None) if orig[2] is None else os.environ.__setitem__("PASSI_JOB", orig[2])
+
+
+def test_subito_completo_nel_sito_rimandato_non_fatto():
+    """Freno a 470 MB (non 400, nessun limite di 60 minuti): se scatta il lavoro non è fatto né fallito."""
+    from dealfinder.web import app as A
+    from dealfinder.pipeline import ciclo, tempo_reale as tr
+    esiti, freni = [], []
+
+    class _Lav:
+        def fatto(self, st=None):
+            esiti.append("fatto")
+
+        def rimanda(self, st=None):
+            esiti.append("rimandato")
+
+        def fallito(self, e=None):
+            esiti.append("fallito")
+
+    class _Cm:
+        def __enter__(self):
+            return None
+
+        def __exit__(self, *a):
+            return False
+    orig = (ciclo.inizia, tr.subito_completo_notte, A._rss_mb, os.environ.get("SUBITO_COMPLETO_MAX_MB"))
+    try:
+        os.environ.pop("SUBITO_COMPLETO_MAX_MB", None)
+        ciclo.inizia = lambda job, tentativi_max=3, connetti=None: _Lav()
+        mem = {"mb": 450.0}
+        A._rss_mb = lambda: mem["mb"]
+
+        def notte(conn, giorno, basta=None):
+            freni.append(basta())
+            return {"fermato_memoria": 1} if basta() else {"letti": 9}
+        tr.subito_completo_notte = notte
+        assert A._subito_completo_giro("2026-11-12", connetti=_Cm) == "fatto"     # 450 MB: sotto il freno di 470
+        mem["mb"] = 480.0
+        assert A._subito_completo_giro("2026-11-12", connetti=_Cm) == "rimandato"
+        assert esiti == ["fatto", "rimandato"] and freni == [False, True]
+        tr.subito_completo_notte = lambda conn, giorno, basta=None: 1 / 0
+        try:
+            A._subito_completo_giro("2026-11-12", connetti=_Cm)
+        except ZeroDivisionError:
+            pass
+        assert esiti[-1] == "fallito"
+        ciclo.inizia = lambda job, tentativi_max=3, connetti=None: None
+        assert A._subito_completo_giro("2026-11-12", connetti=_Cm) == "saltato"
+    finally:
+        ciclo.inizia, tr.subito_completo_notte, A._rss_mb = orig[:3]
+        if orig[3] is not None:
+            os.environ["SUBITO_COMPLETO_MAX_MB"] = orig[3]
+
+
+def test_rimanda_toglie_la_riga_senza_contare_un_tentativo():
+    from dealfinder.pipeline import ciclo
+    sql, rilasciato = [], []
+
+    class _C:
+        def execute(self, q, p=None):
+            sql.append(q)
+
+        def commit(self):
+            pass
+    lav = ciclo.LavoroUnaVolta("subito_completo:2026-11-12", _C(), lambda *a: rilasciato.append(1))
+    lav.id = 7
+    lav.rimanda({"fermato_memoria": 1})
+    assert sql[0].startswith("DELETE FROM job_runs") and rilasciato == [1]
+    lav.fatto()                                                              # già chiuso: niente altro
+    assert not any("UPDATE job_runs" in q for q in sql)
 
 
 def test_memoria_rilascia_non_rompe():
     from dealfinder import memoria
     assert memoria.rss_mb() > 0
-    assert memoria.rilascia("prova") >= 0
+    memoria._ultimo_rilascio[0] = float("-inf")
+    chiamate = []
+    orig_gc = memoria.gc.collect
     vecchia = os.environ.get("MEMORIA_RILASCIA")
     try:
+        memoria.gc.collect = lambda: chiamate.append(1)
+        assert memoria.rilascia("prova") >= 0 and memoria.rilascia("prova") == 0      # al massimo ogni 10 minuti
+        assert chiamate == [1]
+        memoria.rilascia("prova", forza=True)                                          # dopo Subito completo: sempre
+        assert chiamate == [1, 1]
+        memoria.gc.collect = orig_gc
         os.environ["MEMORIA_RILASCIA"] = "0"
         assert memoria.rilascia("prova") == 0
     finally:
+        memoria.gc.collect = orig_gc
         os.environ.pop("MEMORIA_RILASCIA", None) if vecchia is None else os.environ.__setitem__("MEMORIA_RILASCIA", vecchia)
 
 
@@ -610,3 +714,120 @@ def test_pg_elenco_e_stats_salvati():
     assert c.execute("SELECT count(*) AS n, max(n) AS auto FROM sito_cache").fetchone() == {"n": 1, "auto": 5}
     c.execute("UPDATE sito_cache SET salvato_at = now() - interval '13 hours'")
     assert ES.carica_elenco(connetti=con) is None
+
+
+# ------------------------------------------------------------------------------------------------ revisione
+def test_filtro_non_rimette_un_elenco_vecchio():
+    """Corsa tra thread: se mentre si filtra arriva il calcolo nuovo, il filtro non lo sovrascrive."""
+    A, prima = _salva_elenco_app()
+    orig = IMP.togli_scartate
+    try:
+        _con({"scarti": [{"sid": 1, "listing_id": 2, "attivo": True}]})
+        vecchio = _items()
+        nuovo_calcolo = [dict(FIAT, id=500)]
+        A._elenco.update(items=vecchio, imp_v=None, fonte="calcolato", copia_t=None)
+
+        def lento(items):
+            A._elenco["items"] = nuovo_calcolo          # il calcolo finisce proprio adesso
+            return orig(items)
+        IMP.togli_scartate = lento
+        A._filtra_impostazioni()
+        assert A._elenco["items"] is nuovo_calcolo
+        IMP.togli_scartate = orig
+        A._filtra_impostazioni()                          # giro dopo: il filtro si applica al calcolo nuovo
+        assert [it["id"] for it in A._elenco["items"]] == [500] and A._elenco["imp_v"] == IMP.versione()
+    finally:
+        IMP.togli_scartate = orig
+        _fine()
+        _rimetti_elenco_app(A, prima)
+
+
+def test_copia_del_database_salvata_ora_e_calcolo_vince():
+    A, prima = _salva_elenco_app()
+    orig = ES.carica_elenco
+    try:
+        _con({})
+        A._elenco.update(items=[], imp_v=None, fonte=None, copia_t=None, pronto=False)
+        calcolato = [dict(FIAT, id=900)]
+
+        def carica(connetti=None):
+            A._elenco["items"] = calcolato                # il calcolo arriva mentre si legge la copia
+            return _items(), {}, 60.0
+        ES.carica_elenco = carica
+        assert not A._carica_elenco_salvato() and A._elenco["items"] is calcolato
+    finally:
+        ES.carica_elenco = orig
+        _fine()
+        _rimetti_elenco_app(A, prima)
+
+
+def test_copia_del_database_scade_dopo_12_ore():
+    A, prima = _salva_elenco_app()
+    orig = ES.carica_elenco
+    try:
+        _con({})
+        A._elenco.update(items=[], imp_v=None, fonte=None, copia_t=None)
+        ES.carica_elenco = lambda connetti=None: (_items(), {}, 11.5 * 3600)
+        assert A._carica_elenco_salvato() and A._elenco["fonte"] == "database"
+        assert abs(time.time() - A._elenco["copia_t"] - 11.5 * 3600) < 5      # età della copia salvata in _elenco
+        assert not A._scadenza_copia() and len(A._elenco["items"]) == 39
+        A._elenco["copia_t"] -= 3600                                          # ora ha 12,5 ore
+        A._filtra_impostazioni()
+        assert A._elenco["items"] == [] and A._elenco["fonte"] == "copia scaduta"
+        A._elenco.update(items=_items(), fonte="calcolato", copia_t=None)    # un elenco calcolato non scade
+        assert not A._scadenza_copia() and len(A._elenco["items"]) == 39
+    finally:
+        ES.carica_elenco = orig
+        _fine()
+        _rimetti_elenco_app(A, prima)
+
+
+def test_prima_lettura_aspetta_quella_in_corso():
+    import threading
+    try:
+        partito = threading.Event()
+
+        def lento():
+            partito.set()
+            time.sleep(.5)
+            return {"ribasso": {"attivo": True, "schema": "0:100", "fino": None}}
+        IMP.usa_lettore(lento)
+        IMP._stato.update(firma=None, dati={})
+        t = threading.Thread(target=IMP.dati)
+        t.start()
+        partito.wait(2)
+        assert IMP.ribasso() == {"attivo": True, "schema": "0:100", "fino": None}   # non i valori del codice
+        t.join()
+    finally:
+        _fine()
+
+
+def test_ribasso_variabile_data_vuota_spento():
+    """Senza impostazioni nel database: SITO_RIBASSO_FINO vuota = spento (come nel ramo pagamenti-sicurezza)."""
+    vecchie = {k: os.environ.get(k) for k in ("SITO_RIBASSO", "SITO_RIBASSO_FINO")}
+    try:
+        _con({})
+        os.environ.update(SITO_RIBASSO=scovo.RIBASSO_SCHEMA, SITO_RIBASSO_FINO="")
+        assert scovo.ribasso_per(12000, PRIMA) == 0
+        os.environ["SITO_RIBASSO_FINO"] = "2026-11-10T16:55:00+01:00"
+        assert scovo.ribasso_per(12000, PRIMA) == 1500
+        _con({"ribasso": {"attivo": True, "schema": "0:500", "fino": ""}})      # pannello: acceso e data vuota = acceso
+        assert scovo.ribasso_per(12000, DOPO) == 500
+    finally:
+        _fine()
+        for k, v in vecchie.items():
+            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+
+def test_pg_jolly_ilike_non_passano():
+    c = pg_vero.nuovo_db("senza_riavvii_4")
+    if c is None:
+        return
+    pg_vero.migra(c, "047_impostazioni_sito.sql")
+    c.execute("CREATE TABLE listings (id BIGINT PRIMARY KEY, make TEXT, model TEXT, year INT, mileage_km INT, price_eur INT, "
+              "status TEXT DEFAULT 'attivo', stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ)")
+    c.execute("INSERT INTO listings (id, make, model, mileage_km, price_eur, stage) VALUES "
+              "(1, 'fiat', '500', 68000, 7900, 'approfondito'), (2, 'f_at', '5%0', 68000, 7900, 'approfondito')")
+    IMP.aggiungi_scarto(c, IMP.valida_voce({"marca": "f_at", "modello": "5%0", "km": 68000, "prezzo": 7900}), "", "1")
+    stati = {r["id"]: r["stage"] for r in c.execute("SELECT id, stage FROM listings").fetchall()}
+    assert stati == {1: "approfondito", 2: "scartato"}                    # "_" e "%" scritti nel pannello non sono jolly

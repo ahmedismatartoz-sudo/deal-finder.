@@ -593,12 +593,13 @@ _AVVIO = time.monotonic()
 def health(request: Request):
     """12/11: 503 finché il sito non ha un elenco (letto dal database o calcolato), poi sempre 200 (anche durante i
     ricalcoli). Con healthCheckPath=/health su Render il vecchio processo resta acceso finché il nuovo è pronto.
-    Senza DATABASE_URL (prove) o con HEALTH_ATTENDE_ELENCO=0 risponde subito 200; dopo HEALTH_ATTESA_MAX_S (600) di
-    attesa risponde 200 lo stesso, così un elenco che non si riesce a calcolare non tiene il sito spento per sempre."""
+    Senza DATABASE_URL (prove) o con HEALTH_ATTENDE_ELENCO=0 risponde subito 200. Al massimo HEALTH_ATTESA_MAX_S (90)
+    secondi di 503 dall'avvio, poi 200 anche senza elenco: dopo un crash per memoria Render non deve riavviare il
+    processo a catena perché il controllo non passa (il primo elenco arriva in 40-210 s)."""
     pronto = bool(_elenco.get("pronto")) or not os.environ.get("DATABASE_URL") \
         or os.environ.get("HEALTH_ATTENDE_ELENCO", "1") != "1"
     attesa = time.monotonic() - _AVVIO
-    scaduto = not pronto and attesa > float(os.environ.get("HEALTH_ATTESA_MAX_S", "600"))
+    scaduto = not pronto and attesa > float(os.environ.get("HEALTH_ATTESA_MAX_S", "90"))
     d = {"ok": pronto or scaduto, "auto": len(_elenco.get("items") or []), "elenco": _elenco.get("fonte") or "in preparazione"}
     if scaduto:
         d["avviso"] = "elenco non ancora pronto dopo %d s" % attesa
@@ -993,12 +994,39 @@ def _aspetta_memoria(L, nome: str, limite: float = 420.0) -> None:
         time.sleep(30)
 
 
+def _subito_completo_giro(giorno: str, connetti=None) -> str:
+    """12/11: lettura completa notturna di Subito dentro il sito, con i passi del giorno. Freno di sicurezza a
+    SUBITO_COMPLETO_MAX_MB (470; 0 = spento): se scatta il lavoro NON è segnato fatto né fallito (rimandato) e il
+    giro dopo (30 minuti) riprende dalle fasce già lette. Ritorna "fatto", "rimandato" o "saltato"."""
+    from ..pipeline import tempo_reale as tr
+    from ..pipeline.ciclo import inizia         # 6/11: riga chiusa anche dopo un riavvio
+    lav = inizia("subito_completo:" + giorno, tentativi_max=6)
+    if not lav:
+        return "saltato"
+    tetto = float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "470") or 0)
+    try:
+        with (connetti or connect)() as conn:
+            st = tr.subito_completo_notte(conn, giorno, basta=(lambda: _rss_mb() > tetto) if tetto > 0 else None)
+    except BaseException as e:
+        lav.fallito(e)
+        raise
+    finally:
+        _memoria.rilascia("subito_completo", forza=True)
+    if st.get("fermato_memoria"):
+        lav.rimanda(dict(st, memoria_mb=round(_rss_mb())))
+        return "rimandato"
+    lav.fatto(st)
+    return "fatto"
+
+
 def _commercianti_nomi_re() -> str:
     return "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
 
 
-_elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False, "pronto": False, "fonte": None, "imp_v": None}
+_elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False, "pronto": False, "fonte": None, "imp_v": None,
+                 "copia_t": None}
 _elenco_lock = threading.Lock()
+_elenco_agg_lock = threading.Lock()      # 12/11: chi sostituisce _elenco["items"] (calcolo, filtro, copia del database)
 ELENCO_SECONDI = int(os.environ.get("ELENCO_SECONDI", "90"))
 
 
@@ -1522,7 +1550,8 @@ def _calcola_elenco() -> None:
     from . import impostazioni as _imp, elenco_salvato as _es
     imp_v = _imp.versione()
     out = _imp.togli_scartate(out)                # 12/11: auto tolte dal pannello (anche se l'annuncio non è cambiato)
-    _elenco.update(t=time.time(), items=out, opens=opens, pronto=True, fonte="calcolato", imp_v=imp_v)
+    with _elenco_agg_lock:
+        _elenco.update(t=time.time(), items=out, opens=opens, pronto=True, fonte="calcolato", imp_v=imp_v, copia_t=None)
     _es.salva_elenco(out, opens)                  # 12/11: copia per il prossimo avvio (sito mai vuoto)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute
@@ -1547,7 +1576,6 @@ def _calcola_elenco() -> None:
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(out), time.time() - t0, dict(sorted(c.items())))
     del items, fun
-    _memoria.rilascia("elenco")
     try:   # 11/11: quante auto per provincia (es. Novara)
         import collections as _co, re as _re
         _pp = _co.Counter((_re.search(r"\(([A-Z]{2})\)\s*$", str(it.get("zona") or "")) or [None, "?"])[1] for it in out)
@@ -1619,15 +1647,44 @@ def _aggiorna_elenco(attendi: bool) -> None:
 
 def _filtra_impostazioni() -> None:
     """12/11: impostazioni del sito cambiate (pannello, al massimo ogni 45 s): l'elenco già calcolato si ri-filtra
-    togliendo le auto tolte dal cliente, senza ricalcolo. Prezzi e auto in cima si applicano a ogni richiesta."""
+    togliendo le auto tolte dal cliente, senza ricalcolo. Prezzi e auto in cima si applicano a ogni richiesta.
+    Il filtro lavora su una copia e la sostituisce (sotto lucchetto) solo se nel frattempo nessuno (calcolo nuovo,
+    copia del database) ha cambiato l'elenco: altrimenti rimetterebbe l'elenco vecchio al posto di quello nuovo."""
     from . import impostazioni as _imp
     try:
+        _scadenza_copia()
         v = _imp.versione()
-        if _elenco.get("imp_v") != v and _elenco.get("items"):
-            _elenco["items"] = _imp.togli_scartate(list(_elenco["items"]))
-        _elenco["imp_v"] = v
+        if _elenco.get("imp_v") == v:
+            return
+        prima = _elenco.get("items")
+        nuovi = _imp.togli_scartate(list(prima or []))
+        with _elenco_agg_lock:
+            if _elenco.get("items") is prima:
+                if prima:
+                    _elenco["items"] = nuovi
+                _elenco["imp_v"] = v
     except Exception as e:
         logging.getLogger("scovo").warning("IMPOSTAZIONI elenco non ri-filtrato: %s", str(e)[:200])
+
+
+def _copia_max_s() -> float:
+    return float(os.environ.get("ELENCO_SALVATO_MAX_ORE", "12")) * 3600
+
+
+def _scadenza_copia() -> bool:
+    """12/11: l'elenco ripreso dal database non si serve oltre ELENCO_SALVATO_MAX_ORE (12) dalla sua copia, se nel
+    frattempo il calcolo non è mai riuscito: meglio nessuna auto che auto vendute da mezza giornata."""
+    ct = _elenco.get("copia_t")
+    if _elenco.get("fonte") != "database" or not ct or time.time() - ct <= _copia_max_s():
+        return False
+    with _elenco_agg_lock:
+        if _elenco.get("fonte") != "database" or _elenco.get("copia_t") != ct:
+            return False
+        n = len(_elenco.get("items") or [])
+        _elenco.update(items=[], opens={}, fonte="copia scaduta", copia_t=None)
+    logging.getLogger("scovo").warning("ELENCO_SALVATO scaduto: la copia del database ha più di %.0f ore e il calcolo "
+                                       "non è ancora riuscito, tolte %d auto dal sito", _copia_max_s() / 3600, n)
+    return True
 
 
 def _carica_elenco_salvato() -> bool:
@@ -1640,9 +1697,11 @@ def _carica_elenco_salvato() -> bool:
     if not r:
         return False
     items, opens, eta = r
-    if _elenco.get("items"):                    # nel frattempo è arrivato il calcolo vero
-        return False
-    _elenco.update(t=time.time(), items=items, opens=opens, pronto=True, fonte="database")
+    with _elenco_agg_lock:
+        if _elenco.get("items"):                # nel frattempo è arrivato il calcolo vero: vince lui
+            return False
+        _elenco.update(t=time.time(), items=items, opens=opens, pronto=True, fonte="database", imp_v=None,
+                       copia_t=time.time() - eta)
     _filtra_impostazioni()
     logging.getLogger("scovo").warning("ELENCO_SALVATO %d auto lette dal database in %.1fs (copia di %.0f minuti fa)",
                                        len(items), time.time() - t0, eta / 60)
@@ -3308,16 +3367,7 @@ def _tempo_reale():
                     with _c() as conn:
                         fatto = conn.execute("SELECT 1 FROM job_runs WHERE job=%s AND ok", ("subito_completo:" + giorno,)).fetchone()
                     if not fatto:
-                        from ..pipeline.ciclo import una_volta_sicura   # 6/11: riga chiusa anche dopo un riavvio
-                        with una_volta_sicura("subito_completo:" + giorno, tentativi_max=6) as fare:
-                            if fare:
-                                # 12/11: dentro il sito (512 MB) il giro si ferma se la memoria supera
-                                # SUBITO_COMPLETO_MAX_MB (400) o dopo SUBITO_COMPLETO_MINUTI (60): riprende dai passi fatti
-                                _aspetta_memoria(lg, "SUBITO_COMPLETO", float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "400")) - 60)
-                                with _c() as conn:
-                                    tr.subito_completo(conn, minuti=float(os.environ.get("SUBITO_COMPLETO_MINUTI", "60")),
-                                                       basta=lambda: _rss_mb() > float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "400")))
-                                _memoria.rilascia("subito_completo")
+                        _subito_completo_giro(giorno)
                         _elenco["t"] = 0.0
                         _aggiorna_elenco(attendi=False)
             except Exception as e:

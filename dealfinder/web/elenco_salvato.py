@@ -28,6 +28,7 @@ TABELLA_SQL = """CREATE TABLE IF NOT EXISTS sito_cache (chiave TEXT PRIMARY KEY,
     salvato_at TIMESTAMPTZ NOT NULL DEFAULT now())"""
 _ultimo: dict = {}                     # chiave -> (firma, monotonic) dell'ultimo salvataggio
 _lock = threading.Lock()
+_in_corso: set = set()                 # chiavi che un thread sta scrivendo (un salvataggio alla volta per chiave)
 
 
 def acceso() -> bool:
@@ -82,11 +83,13 @@ def salva(chiave: str, obj, n: int | None = None, connetti=None, min_s: float = 
     try:
         blob = comprimi(obj)
         firma = hashlib.sha1(blob).hexdigest()
-        with _lock:
+        with _lock:                       # solo il controllo: la scrittura nel database avviene fuori dal lucchetto
             prima = _ultimo.get(chiave)
             ora = time.monotonic()
-            if prima and (ora - prima[1] < min_s or (prima[0] == firma and ora - prima[1] < max_s)):
+            if chiave in _in_corso or (prima and (ora - prima[1] < min_s or (prima[0] == firma and ora - prima[1] < max_s))):
                 return False
+            _in_corso.add(chiave)
+        try:
             with _connetti(connetti) as conn:
                 conn.execute("SET LOCAL statement_timeout = '20s'")
                 if not _ultimo.get("_tabella"):
@@ -96,7 +99,11 @@ def salva(chiave: str, obj, n: int | None = None, connetti=None, min_s: float = 
                              "ON CONFLICT (chiave) DO UPDATE SET dati=EXCLUDED.dati, n=EXCLUDED.n, firma=EXCLUDED.firma, "
                              "salvato_at=now()", (chiave, blob, n, firma))
                 conn.commit()
-            _ultimo[chiave] = (firma, ora)
+            with _lock:
+                _ultimo[chiave] = (firma, ora)
+        finally:
+            with _lock:
+                _in_corso.discard(chiave)
         return True
     except Exception as e:
         log.warning("SITO_CACHE %s non salvato: %s", chiave, str(e)[:200])

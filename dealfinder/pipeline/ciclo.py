@@ -89,6 +89,19 @@ class LavoroUnaVolta:
     def fatto(self, stats: dict | None = None) -> None:
         self._chiudi(True, stats or {})
 
+    def rimanda(self, stats: dict | None = None) -> None:
+        """12/11: lavoro interrotto apposta (es. memoria alta nel sito): non è fatto e non conta come tentativo
+        fallito; la riga si toglie e il prossimo giro riprende dai passi fatti."""
+        if self.chiuso:
+            return
+        self.chiuso = True
+        try:
+            self.conn.execute("DELETE FROM job_runs WHERE id=%s", (self.id,))
+            self.conn.commit()
+            log.warning("LAVORO %s rimandato: %s", self.job, json.dumps(stats or {}, default=str)[:300])
+        finally:
+            self._rilascia()
+
     def fallito(self, errore=None) -> None:
         self._chiudi(False, {"errore": (type(errore).__name__ + ": " + str(errore)[:200]) if errore else "errore"})
 
