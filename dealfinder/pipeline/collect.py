@@ -285,12 +285,33 @@ def _fuori_regole_raccolta(l) -> str | None:
     return None
 
 
+def _autohero_giornaliero(stats: Counter) -> None:
+    """12/11 (cliente): una volta al giorno i prezzi di Autohero Italia (circa 3.100 auto, ~130 pagine a ritmo basso).
+    Tabella separata autohero_prezzi; non tocca annunci né sito. AUTOHERO=0 la spegne. Mai blocca il giro."""
+    if os.environ.get("AUTOHERO", "1") != "1":
+        return
+    try:
+        from datetime import datetime, timezone
+        from ..collectors import autohero
+        with connect() as conn:
+            r = conn.execute("SELECT max(ultimo_visto) AS u FROM autohero_prezzi").fetchone()
+            if r and r["u"] is not None and r["u"].date() == datetime.now(timezone.utc).date():
+                return
+            st = autohero.raccogli(conn, int(os.environ.get("AUTOHERO_MAX", "10000")),
+                                                       int(os.environ.get("AUTOHERO_TEMPO_S", "1800")))
+            stats["autohero_auto"] = st.get("auto_lette", 0)
+            log.warning("AUTOHERO_RIEPILOGO %s", autohero.riepilogo(conn))
+    except Exception as e:
+        log.warning("AUTOHERO non riuscito: %s", str(e)[:300])
+
+
 def run(mode: str) -> Counter:
     stats: Counter = Counter()
     if mode in ("as5k", "roma", "lombardia", "ravenna", "economiche", "incidentate", "massiva"):
         os.environ.setdefault("PASSI_JOB", f"collect:{mode}")     # dopo un riavvio si riprende da dove si era arrivati
     if mode == "opportunita":
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
+        _autohero_giornaliero(stats)
     else:
         provinces, max_price = settings.market_provinces, settings.market_max_price_eur
         settings.max_pages_per_province = settings.market_max_pages
