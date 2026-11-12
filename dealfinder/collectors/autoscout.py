@@ -201,6 +201,7 @@ class AutoScoutCollector(Collector):
         self.incompleta = False
         self.debug = False
         self._debug_done = False
+        self.noti = None             # 12/11: pipeline.incrementale.Noti = lettura incrementale (vedi _band_incr)
 
     @property
     def client(self):
@@ -303,8 +304,51 @@ class AutoScoutCollector(Collector):
                 l.damage_declared, l.problem_search = True, True
             yield l
 
+    def _dividi(self, lo: int, hi: int, years) -> list:
+        """Pezzi di una fascia troppo piena: metà di prezzo, poi gli anni, poi metà degli anni (come _band)."""
+        if hi - lo >= 100:
+            mid = (lo + hi) // 2
+            return [(lo, mid, years), (mid + 1, hi, years)]
+        if years is None:
+            return [(lo, hi, ys) for ys in self.ANNI]
+        if years[1] > years[0]:
+            y_mid = (years[0] + min(years[1], 2026)) // 2
+            if years[0] <= y_mid < years[1]:
+                return [(lo, hi, (years[0], y_mid)), (lo, hi, (y_mid + 1, years[1]))]
+        return []
+
+    def _band_incr(self, lo: int, hi: int, ctype: str, seller: str, years=None) -> Iterator[Listing]:
+        """12/11 lettura incrementale: pagine dal più recente finché K pagine di fila sono già note e invariate
+        (pipeline.incrementale). Nessuna divisione preventiva della fascia: servono solo le prime pagine. Se si arriva
+        a 20 pagine piene senza trovare il già noto, la fascia si divide e ogni pezzo si legge allo stesso modo."""
+        from ..pipeline.incrementale import Arresto
+        stop = Arresto(self.noti)
+        page = 1
+        while not (self.blocked or self.stop):
+            items, _total, ok = self._page(self.search_url(lo, hi, page, ctype, years))
+            if not ok:
+                return
+            yield from self._emit(items, ctype, seller)
+            if stop.pagina([parse_item(it) for it in items]):
+                return
+            if len(items) < 20:
+                return
+            if page >= 20:
+                pezzi = self._dividi(lo, hi, years)
+                if not pezzi:
+                    log.warning("autoscout incrementale: fascia %s-%s anni %s con 20 pagine di nuovi, non divisibile", lo, hi, years)
+                    return
+                self.noti.conta("fasce_divise")
+                for a, b, ys in pezzi:
+                    yield from self._band(a, b, ctype, seller, ys)
+                return
+            page += 1
+
     def _band(self, lo: int, hi: int, ctype: str, seller: str, years=None) -> Iterator[Listing]:
         if self.blocked or self.stop:
+            return
+        if self.noti is not None:
+            yield from self._band_incr(lo, hi, ctype, seller, years)
             return
         items, total, ok = self._page(self.search_url(lo, hi, 1, ctype, years))
         if not ok:

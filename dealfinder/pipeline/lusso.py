@@ -22,8 +22,9 @@ log = logging.getLogger("lusso")
 from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 
 
-def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None = None):
-    """Ricerca AutoScout24 aggressiva: tante fasce di prezzo lette insieme (più collegamenti in parallelo)."""
+def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None = None, noti=None):
+    """Ricerca AutoScout24 aggressiva: tante fasce di prezzo lette insieme (più collegamenti in parallelo).
+    noti (12/11, pipeline.incrementale.Noti): lettura incrementale, ogni fascia si ferma al già visto."""
     from concurrent.futures import ThreadPoolExecutor
     from ..collectors.autoscout import AutoScoutCollector
     workers = workers or int(os.environ.get("RACCOLTA_PARALLELI", "4"))
@@ -33,6 +34,7 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
     def leggi(c):
         col = AutoScoutCollector()
         col.min_delay_s, col.max_delay_s = pausa
+        col.noti = noti
         try:
             out = list(col._band(*c))
             for l in out:                     # memoria (512 MB): dell'annuncio originale serve solo il venditore

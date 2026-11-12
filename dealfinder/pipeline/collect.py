@@ -887,6 +887,8 @@ def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
     letti_as = sum(v for k, v in esito.items() if k.startswith("letti_autoscout") and isinstance(v, int))
     if os.environ.get("AS_SCOMPARSI", "1") != "1" or letti_as < int(os.environ.get("AS_SCOMPARSI_MIN_LETTI", "200")):
         return
+    if esito.get("lettura_incrementale"):
+        return       # 12/11: dopo una lettura incrementale molti annunci non sono stati riletti: il controllo solo dopo il completo
     try:
         from .benzina_mi import PROVINCE_100
         from .verify import scomparsi_con_prova
@@ -1038,9 +1040,14 @@ if __name__ == "__main__":
                              "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
                              "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
                     os.environ[k] = v
+                from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
+                _completo = _torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
+                os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
                 try:
                     from . import benzina_mi as B
                     esito = B.giro()
+                    if _completo and not _torino_ora:
+                        INC.segna_completo("torino_cron", esito)
                     log.warning("%s fatta: %s", "NOVARA_ORA" if _novara_ora else "TORINO_CRON", {k: v for k, v in esito.items() if isinstance(v, int)})
                     if not _novara_ora:
                         lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
@@ -1080,8 +1087,17 @@ if __name__ == "__main__":
                     if "10121:" not in extra:
                         os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:100")) if x)
                 from . import benzina_mi as B
-                esito = B.giro()
-                log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+                from . import incrementale as INC                 # 12/11: giro completo solo ogni ZC_COMPLETO_ORE ore
+                _completo = INC.completo_dovuto("zona_cron")
+                os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+                try:
+                    esito = B.giro()
+                finally:
+                    os.environ.pop("BENZ_INCREMENTALE", None)
+                if _completo:
+                    INC.segna_completo("zona_cron", esito)
+                log.warning("ZONA_CRON fatta (%s): %s", "completa" if _completo else "incrementale",
+                            {k: v for k, v in esito.items() if isinstance(v, int)})
                 lavori_zona(esito)
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
