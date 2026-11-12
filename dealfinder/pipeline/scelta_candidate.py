@@ -9,9 +9,10 @@
        margine in più (SCELTA_SOVRA, 1,4 × il tetto): via quelle con un motivo di esclusione sicuro, poi il taglio.
        "danni_da_leggere" NON è sicuro (la valutazione mette l'auto in coda per la lettura dei difetti): resta.
 2. Le stesse auto venivano rivalutate a ogni giro senza che nulla fosse cambiato. Ora un'auto valutata da meno di
-   SCELTA_INVARIATE_ORE ore (20, sotto le 36 di validità di regole.scrittura) con le regole di oggi e senza cambi da
-   allora (prezzo: price_events; testo/dati: listings.contenuto_at, migrazione 051, se c'è) non prende un posto: il
-   posto va alla prossima della lista. 0 = spento.
+   SCELTA_INVARIATE_ORE ore (10, sotto le 36 di validità di regole.scrittura) con le regole di oggi, senza cambi da
+   allora (prezzo: price_events; testo/dati: listings.contenuto_at, migrazione 051, se c'è) e con il margine lontano
+   dalla soglia del sito (più di SCELTA_GAP_INVARIATE, 1.500 €) non prende un posto: il posto va alla prossima della
+   lista. 0 = spento.
 3. Cambi di prezzo (§3.2): prima LIMIT senza ordine (oltre i 1.500 si perdevano a caso). Ora tutti i cambi delle
    ultime ore vengono letti con il prezzo di prima e il margine dell'ultima valutazione, e si tengono per primi:
    fascia 0 = con il ribasso il margine raggiunge la soglia del sito; fascia 1 = vicino alla soglia (entro
@@ -27,7 +28,8 @@ from collections import Counter
 log = logging.getLogger("scelta_candidate")
 
 SOVRA = 1.4                 # righe lette in più rispetto al tetto, per riempirlo dopo il filtro sicuro
-INVARIATE_ORE = 20          # sotto regole.scrittura.ore_validita (36): una valutazione non scade mai per colpa di questo
+INVARIATE_ORE = 10          # 12/11 revisione: 10 ore (sotto le 36 di regole.scrittura.ore_validita)
+GAP_INVARIATE = 1500        # euro: si salta solo un'auto il cui margine è lontano dalla soglia del sito più di così
 GAP_VICINO = 1000           # euro sotto la soglia di margine per dire "vicina"
 
 # motivi di esclusione di valutazione.prepara che non cambiano rivalutando subito: l'auto verrebbe scartata comunque
@@ -91,11 +93,23 @@ def condizione_invariate(conn) -> str:
     cambiato da allora. Parametri: %(inv_ore)s (0 = mai vero), %(inv_regole)s."""
     contenuto = ha_contenuto_at(conn)
     extra = " AND (t.contenuto_at IS NULL OR t.contenuto_at <= vp.computed_at)" if contenuto else ""
+    # 12/11 revisione: si salta solo se l'ultima valutazione era LONTANA dalla soglia (soglia − margine > GAP); le auto
+    # vicine alla soglia si rivalutano a ogni giro (un confronto nuovo può farle entrare)
     return ("(%(inv_ore)s > 0 AND EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id"
             " AND vp.computed_at > now() - make_interval(hours => %(inv_ore)s)"
-            " AND vp.impronta_regole = %(inv_regole)s" + extra +
+            " AND vp.impronta_regole = %(inv_regole)s"
+            " AND vp.margine IS NOT NULL AND " + soglia_sql("t.price_eur") + " - vp.margine > %(inv_gap)s" + extra +
             " AND NOT EXISTS (SELECT 1 FROM price_events pe WHERE pe.listing_id = t.id"
             " AND pe.event IN ('prezzo', 'riapparso') AND pe.at > vp.computed_at)))")
+
+
+def soglia_sql(col: str) -> str:
+    """scovo.soglia(prezzo) scritta come CASE di SQL, dalla stessa tabella (SOGLIE_PV o SOGLIE): niente soglie nuove."""
+    from ..web import scovo
+    tab, op = (scovo.SOGLIE_PV, "<") if scovo.POLICY_SITO == "pv2" else (scovo.SOGLIE, "<=")
+    rami = " ".join(f"WHEN {col} {op} {int(lim)} THEN {int(m)}" for lim, m in tab if lim != 10**9)
+    ultima = next((m for lim, m in tab if lim == 10**9), tab[-1][1])
+    return f"(CASE {rami} ELSE {int(ultima)} END)"
 
 
 def parametri_invariate() -> dict:
@@ -104,7 +118,7 @@ def parametri_invariate() -> dict:
         imp = impronta_regole()
     except Exception:
         imp = ""
-    return {"inv_ore": ore_invariate(), "inv_regole": imp}
+    return {"inv_ore": ore_invariate(), "inv_regole": imp, "inv_gap": int(_num("SCELTA_GAP_INVARIATE", GAP_INVARIATE))}
 
 
 # ------------------------------------------------------------------ 1. scarti sicuri prima del tetto

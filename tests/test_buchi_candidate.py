@@ -129,10 +129,12 @@ def test_candidate_sql_su_postgres_vero():
     c.execute("UPDATE listings SET mileage_km = NULL WHERE id = %s", (ids["f"],))  # km mancanti: fuori prima del tetto
     imp = SC.parametri_invariate()["inv_regole"]
     vp = ("INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, "
-          "impronta_regole, computed_at) VALUES (%s, 'v', 'non_conveniente', 100, '{}', '{}', %s, now() - interval '1 hour')")
+          "impronta_regole, computed_at) VALUES (%s, 'v', 'non_conveniente', %s, '{}', '{}', %s, now() - interval '1 hour')")
     for k in ("a", "b", "c"):
-        c.execute(vp, (ids[k], imp))
-    c.execute(vp, (ids["d"], "vecchie"))
+        c.execute(vp, (ids[k], -500, imp))                    # margine lontano dalla soglia (1.500): gap 2.000
+    c.execute(vp, (ids["d"], -500, "vecchie"))
+    ids["h"] = c.execute(ins, ("h", "uh", 90000, 3600)).fetchone()["id"]          # invariata ma vicina alla soglia: entra
+    c.execute(vp, (ids["h"], 500, imp))
     c.execute("INSERT INTO price_events (listing_id, event, price_eur, at) VALUES (%s, 'apparso', 3600, now() - interval '3 hours')",
               (ids["b"],))
     c.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s, 'prezzo', 3100)", (ids["b"],))
@@ -144,12 +146,12 @@ def test_candidate_sql_su_postgres_vero():
            "pmax": 70000, "solo_privati": True, "gmax": 400000, "util": 1000000, "tutti_carb": True, "kmmax": 150000,
            "solo_nuove": False}
     presi = {r["id"] for r in c.execute(sql, par).fetchall()}
-    assert presi == {ids["b"], ids["c"], ids["d"], ids["e"]}, presi
+    assert presi == {ids["b"], ids["c"], ids["d"], ids["e"], ids["h"]}, presi
     par["inv_ore"] = 0                                         # spento: torna anche "a"
     assert ids["a"] in {r["id"] for r in c.execute(sql, par).fetchall()}
     cambi = c.execute(SC.CAMBI_SQL, {"ore": 8, "prov": ["MI"], "pmax": 70000, "kmmax": 150000, "tutti_carb": True,
                                      "km_obblig": True, "lettura_max": 100}).fetchall()
-    assert [(r["id"], r["prezzo_prima"], r["margine_prima"]) for r in cambi] == [(ids["b"], 3600, 100)]
+    assert [(r["id"], r["prezzo_prima"], r["margine_prima"]) for r in cambi] == [(ids["b"], 3600, -500)]
 
 
 def simula(n_pop: int = 20000, tetto: int = 5000, giri: int = 8, seme: int = 7) -> dict:
@@ -177,7 +179,7 @@ def simula(n_pop: int = 20000, tetto: int = 5000, giri: int = 8, seme: int = 7) 
                 if modo == "dopo":
                     if a["motivo"]:
                         continue                                    # scarto sicuro: fuori prima del tetto
-                    if a["valutata_giro"] is not None and g - a["valutata_giro"] < 7:   # < 20 ore (giri da ~3 ore)
+                    if a["valutata_giro"] is not None and g - a["valutata_giro"] < 3:   # < 10 ore (giri da ~3 ore)
                         continue
                 posti.append(a)
                 if len(posti) >= tetto:
@@ -186,7 +188,7 @@ def simula(n_pop: int = 20000, tetto: int = 5000, giri: int = 8, seme: int = 7) 
                 if a["motivo"]:
                     sprecati += 1
                     continue
-                if a["valutata_giro"] is not None:
+                if a["valutata_giro"] is not None and g - a["valutata_giro"] < 3:    # rifatta entro 10 ore, invariata
                     ripetute += 1
                 diverse.add(a["id"])
                 a["valutata_giro"] = g
@@ -205,3 +207,14 @@ def test_simulazione_posti_liberati():
 
 if __name__ == "__main__":
     print(simula())
+
+
+def test_soglia_sql_uguale_a_scovo():
+    P, c = _pg()
+    if c is None:
+        return
+    from dealfinder.web import scovo
+    prezzi = [500, 1499, 1500, 4999, 5000, 6999, 7000, 9999, 10000, 14999, 15000, 25000, 29999, 30000, 80000]
+    sql = "SELECT " + ", ".join(f"{SC.soglia_sql(str(p))} AS p{p}" for p in prezzi)
+    r = c.execute(sql).fetchone()
+    assert [r[f"p{p}"] for p in prezzi] == [scovo.soglia(p) for p in prezzi]
