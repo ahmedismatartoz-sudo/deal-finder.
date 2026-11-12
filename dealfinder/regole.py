@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 
 log = logging.getLogger("config")
 
-VERSIONE = "regole-2026-11-12a"
+VERSIONE = "regole-2026-11-12b"
 
 
 @dataclass(frozen=True)
@@ -87,6 +87,17 @@ class Correzione:
     anno_max: float = .25
     km_min: float = .008               # 12/11 (rapporto 2 E8): almeno 0,8% ogni 10.000 km (prima anche 0%)
     km_max: float = .05
+    # 12/11 sera (margini fase 2, punto 3): pooling gerarchico dei tassi modello → marca → tutti. La stima del gruppo
+    # (almeno pooling_n_min annunci) si restringe verso il tasso a priori con peso n / (n + pooling_k); a priori = la
+    # marca (misurata su almeno pooling_marca_min annunci, calibra.py "tassi") → tutti → riserva. Sempre nei limiti.
+    pooling: bool = True               # False = regola di prima (stima del gruppo o riserva)
+    pooling_n_min: int = 5
+    pooling_k: int = 40
+    pooling_marca_min: int = 300
+    # 12/11 sera (punto 2): correzione nei due sensi solo per auto da due_sensi_da € in su. SPENTA: alza M; si accende
+    # solo se la prova sulle vendute (prova_correzione, prova alla cieca "tutte") dice che è più precisa
+    due_sensi_alto: bool = False
+    due_sensi_da: int = 20000
 
 
 @dataclass(frozen=True)
@@ -202,6 +213,15 @@ class Calibrazione:
     interpola: bool = True             # False = scalini per fascia (regola di prima, solo per le simulazioni)
     centri: tuple = (("<5k", 3500), ("5-10k", 7071), ("10-20k", 14142), ("20-35k", 26458), ("35-60k", 45826),
                      (">60k", 85000))
+    # 12/11 sera (margini fase 2, punto 1): nel metodo "combinato" anche V (valore reale) si porta al venduto con il
+    # fattore MISURATO sul valore reale (voci "vr:"): senza misura vale 1,0. Le gemelle lo erano già.
+    vr_nel_combinato: bool = True
+    # punto 2: fattore oltre 1,0 per le fasce di M da alza_da € in su, solo con misura per M su almeno alza_n_min
+    # auto, al massimo alza_max. SPENTO (alza i prezzi): si accende solo dopo la prova alla cieca.
+    alza: bool = False
+    alza_da: int = 20000
+    alza_n_min: int = 40
+    alza_max: float = 1.05
 
 
 @dataclass(frozen=True)
@@ -211,6 +231,37 @@ class Allestimento:
     dell'auto con `fattore` per livello (mai oltre il suo livello). Interruttore ALLESTIMENTO_CONFRONTI."""
     attivo: bool = True
     fattore: float = .04
+
+
+@dataclass(frozen=True)
+class Trazione:
+    """12/11 sera (margini fase 2, punto 4): trazione "a livelli" (pricing/dotazioni.py: dati_auto della scheda tecnica,
+    altrimenti il testo). Auto 4x4: solo confronti 4x4 se sono almeno n_minimo; auto non 4x4: via i confronti 4x4
+    riconosciuti se ne restano almeno n_minimo; confronti 4x4 in maggioranza e auto senza indicazione: nessun filtro
+    (modello quasi sempre 4x4). Non cambia prezzi, sceglie i confronti. Interruttore TRAZIONE_LIVELLI."""
+    attiva: bool = True
+    maggioranza: float = .5
+
+
+@dataclass(frozen=True)
+class Dotazioni:
+    """12/11 sera (punto 4): aggiustamento per optional importanti (pelle, navigatore, tetto) e 4x4 con il premio
+    MISURATO (calibra.py "dotazioni"), solo se noto su entrambe le auto. SPENTO finché la misura non c'è e la prova
+    alla cieca non dice che serve. Interruttore DOTAZIONI_PREZZO."""
+    aggiusta: bool = False
+    n_min: int = 50                    # annunci con l'optional nella misura
+    z_min: float = 2.0                 # premio oltre z_min errori standard
+    tetto_voce: float = .04
+    tetto_totale: float = .06
+
+
+@dataclass(frozen=True)
+class Forbice:
+    """12/11 sera (punto 5): forbice della rivendita (P25–P75) e probabilità di vendere ad almeno R dai quantili di
+    prezzo/M delle auto sparite (calibra.py). Solo informazione nella scheda: margine e soglia non cambiano."""
+    attiva: bool = True
+    prob_min: float = .05
+    prob_max: float = .95
 
 
 @dataclass(frozen=True)
@@ -235,6 +286,9 @@ class RivenditaCommercianti:
 class Scrittura:
     """Guardia sulle scritture di valutazioni_policy (pricing/valutazione.py)."""
     ore_validita: int = 36             # oltre: si riscrive anche con meno confronti (mercato cambiato davvero)
+    # 12/11 sera (rapporto 2 E5, punto 7): una valutazione passata dal giudice AI (confronti tolti) si scrive sempre,
+    # anche con meno confronti; una NON giudicata non sostituisce una giudicata (finché vale la guardia)
+    giudice_vince: bool = True
 
 
 @dataclass(frozen=True)
@@ -253,6 +307,9 @@ class Regole:
     allestimento: Allestimento = field(default_factory=Allestimento)
     rivendita: RivenditaCommercianti = field(default_factory=RivenditaCommercianti)
     scrittura: Scrittura = field(default_factory=Scrittura)
+    trazione: Trazione = field(default_factory=Trazione)
+    dotazioni: Dotazioni = field(default_factory=Dotazioni)
+    forbice: Forbice = field(default_factory=Forbice)
     giudice_ai: bool = True            # l'AI toglie i confronti non uguali (6/11: default = produzione, così cron mercato,
                                        # cron opportunità e sito calcolano con le STESSE regole anche senza variabili)
     fascia_richiesta: bool = True
@@ -270,7 +327,32 @@ INTERRUTTORI = {
     "MERCATO_CALIBRATO": "calibrazione.attiva",
     "ALLESTIMENTO_CONFRONTI": "allestimento.attivo",
     "RIVENDITA_COMMERCIANTI": "rivendita.attiva",
+    # 12/11 sera, margini fase 2
+    "TASSI_POOLING": "correzione.pooling",
+    "CORREZIONE_DUE_SENSI_ALTO": "correzione.due_sensi_alto",
+    "CALIBRA_VR_COMBINATO": "calibrazione.vr_nel_combinato",
+    "CALIBRA_ALZA": "calibrazione.alza",
+    "TRAZIONE_LIVELLI": "trazione.attiva",
+    "DOTAZIONI_PREZZO": "dotazioni.aggiusta",
+    "RIVENDITA_FORBICE": "forbice.attiva",
+    "GIUDICE_VINCE": "scrittura.giudice_vince",
 }
+
+# Interruttori nuovi del 12/11 sera (margini fase 2) con il valore "prima" (comportamento di 4e26d24): la prova alla
+# cieca (ai/prova_cieca.py) rifà M con queste regole per misurare prima/dopo sulle stesse auto.
+NOVITA_FASE2 = {"correzione.pooling": False, "correzione.due_sensi_alto": False, "calibrazione.vr_nel_combinato": False,
+                "calibrazione.alza": False, "trazione.attiva": False, "dotazioni.aggiusta": False}
+
+
+def con_campi(r: "Regole", campi: dict) -> "Regole":
+    """Copia di r con i campi "sezione.campo" (o "campo") cambiati: per prove e misure, mai per il sito."""
+    for campo, val in campi.items():
+        if "." in campo:
+            sez, k = campo.split(".")
+            r = dataclasses.replace(r, **{sez: dataclasses.replace(getattr(r, sez), **{k: val})})
+        else:
+            r = dataclasses.replace(r, **{campo: val})
+    return r
 _VERO = {"1", "true", "si", "sì", "yes", "on"}
 _FALSO = {"0", "false", "no", "off"}
 
@@ -380,18 +462,45 @@ def fattori_calibrazione(misurate: dict | None, r: Regole | None = None, misurat
     cal = (r or regole()).calibrazione
     riserva = dict(cal.riserva)
     out = []
+    da = 0
     for lim, nome in cal.fasce:
         f = (misurate or {}).get(nome) or {}
         x = f.get("prezzo_su_M") if (f.get("n") or 0) >= cal.n_min else None
         x = riserva.get(nome, 1.0) if x is None else float(x)
-        out.append((lim, nome, max(cal.minimo, min(cal.massimo, float(x)))))
+        # 12/11 sera (punto 2, spento di default): sopra 1,0 solo fasce di M da alza_da, misura per M su alza_n_min auto
+        alto = cal.alza_max if (cal.alza and per_M and da >= cal.alza_da and (f.get("n") or 0) >= cal.alza_n_min) \
+            else cal.massimo
+        out.append((lim, nome, max(cal.minimo, min(alto, float(x)))))
+        da = lim
     for lim, nome in cal.fasce:
         f = (misurate_vr or {}).get(nome) or {}
         if (f.get("n") or 0) >= cal.n_min and f.get("prezzo_su_M") is not None:
             out.append((lim, "vr:" + nome, max(cal.minimo, min(cal.massimo, float(f["prezzo_su_M"])))))
+    # 12/11 sera (punto 5): quantili 10/25/50/75/90 di prezzo/M delle sparite per fascia (forbice della rivendita),
+    # voci "_q:" (M dai prezzi chiesti) e "_qvr:" (M dal valore reale); ignorate da fattore_per
+    for pref, mis in (("_q:", misurate), ("_qvr:", misurate_vr)):
+        for lim, nome in cal.fasce:
+            q = quantili_di((mis or {}).get(nome), cal.n_min)
+            if q:
+                out.append((lim, pref + nome, q))
     if per_M:
         out.append((0, "_per_M", 1.0))
     return out
+
+
+def quantili_di(f: dict | None, n_min: int) -> tuple | None:
+    """(q10, q25, q50, q75, q90) di prezzo/M di una fascia misurata (calibra.py "q"), se misurata su n_min auto e
+    crescente; altrimenti None."""
+    if not isinstance(f, dict) or (f.get("n") or 0) < n_min:
+        return None
+    q = f.get("q")
+    try:
+        q = tuple(float(x) for x in q)
+    except (TypeError, ValueError):
+        return None
+    if len(q) != 5 or any(x <= 0 for x in q) or any(b < a for a, b in zip(q, q[1:])):
+        return None
+    return q
 
 
 def calibrazione_vecchia(dati: dict | None, r: Regole | None = None) -> bool:
@@ -481,10 +590,13 @@ def calibra_vendita(pv: dict, fattori: list | None, r: Regole | None = None) -> 
         return pv
     M = float(pv["M"])
     f = fattore_per(M, fattori, r, vr=vr)
-    if f >= 1:
+    if f == 1:
         return dict(pv, calibrato=1.0)
     R = float(pv.get("R_finale") or pv.get("R") or M)
-    limiti = [R, M * f] + ([float(pv["R_commercianti"])] if pv.get("R_commercianti") else [])
+    # 12/11 sera: f > 1 solo con calibrazione.alza (spento di default) e solo per R uguale al mercato (mai sopra i
+    # commercianti né sopra una R già abbassata da costi o difetti)
+    limiti = ([M * f] if f > 1 and R >= M - .5 else [R, M * f]) + \
+        ([float(pv["R_commercianti"])] if pv.get("R_commercianti") else [])
     R2 = min(limiti)
     giu = int(round(R - R2))
     out = dict(pv, M=int(round(M * f)), M_annunci=int(M), R=int(round(R2)), R_finale=int(round(R2)),

@@ -221,22 +221,60 @@ def _days(d, now):
     return (now - d).total_seconds() / 86400
 
 
-def tassi(gruppo: list[dict], cfg: PolicyConfig) -> tuple[float, float, str]:
-    """Svalutazione per anno e per 10.000 km: stimata sul gruppo (regressione del log-prezzo) se ci sono almeno
-    15 annunci e i valori sono sensati, altrimenti quelli configurati."""
+def _stima_gruppo(g: list[dict]):
+    """(ya, ka) dalla regressione del log-prezzo su anno e km del gruppo, oppure None."""
+    try:
+        import numpy as np
+        y = np.log([c["price_eur"] for c in g])
+        X = np.column_stack([np.ones(len(g)), [c["year"] for c in g], [c["mileage_km"] / 10000 for c in g]])
+        if np.linalg.matrix_rank(X) < 3:
+            return None
+        beta = np.linalg.lstsq(X, y, rcond=None)[0]
+        return 1 - math.exp(-beta[1]), 1 - math.exp(beta[2])
+    except Exception:
+        return None
+
+
+def priore_tassi(priori: dict | None, make, c_) -> tuple[float, float, str]:
+    """Tasso a priori del pooling (12/11 sera, punto 3): marca (misurata su almeno pooling_marca_min annunci e nei
+    limiti) → tutti → riserva."""
+    def ok(x):
+        return (isinstance(x, dict) and x.get("anno") is not None and x.get("km_10000") is not None
+                and c_.anno_min <= float(x["anno"]) <= c_.anno_max and c_.km_min <= float(x["km_10000"]) <= c_.km_max)
+    pr = priori or {}
+    m = (pr.get("marche") or {}).get(str(make or "").lower())
+    if ok(m) and int(m.get("n") or 0) >= c_.pooling_marca_min:
+        return float(m["anno"]), float(m["km_10000"]), f"marca ({m['n']} annunci)"
+    if ok(pr.get("tutti")):
+        return float(pr["tutti"]["anno"]), float(pr["tutti"]["km_10000"]), "tutte le marche"
+    return c_.svalutazione_anno, c_.svalutazione_10km, "valori di riserva"
+
+
+def tassi(gruppo: list[dict], cfg: PolicyConfig, priori: dict | None = None, make=None) -> tuple[float, float, str]:
+    """Svalutazione per anno e per 10.000 km.
+    Con il pooling (regole.correzione.pooling, 12/11 sera): stima del gruppo (almeno pooling_n_min annunci) ristretta
+    verso il tasso a priori (marca → tutti → riserva) con peso n / (n + pooling_k), sempre nei limiti.
+    Senza: stimata sul gruppo con almeno 15 annunci se i valori sono sensati, altrimenti quelli configurati."""
     g = [c for c in gruppo if c.get("year") and c.get("mileage_km") is not None and c.get("price_eur")]
     c_ = cfg.regole.correzione
+    if c_.pooling:
+        pa, pk, da = priore_tassi(priori, make, c_)
+        if cfg.svalutazione_anno != c_.svalutazione_anno or cfg.svalutazione_10km != c_.svalutazione_10km:
+            if da == "valori di riserva":                # PolicyConfig con riserva cambiata (prove): vale quella
+                pa, pk = cfg.svalutazione_anno, cfg.svalutazione_10km
+        st = _stima_gruppo(g) if len(g) >= c_.pooling_n_min else None
+        if st is None:
+            return pa, pk, f"a priori: {da}" if da != "valori di riserva" else "valori configurati"
+        w = len(g) / (len(g) + c_.pooling_k)
+        ya = min(c_.anno_max, max(c_.anno_min, w * st[0] + (1 - w) * pa))
+        ka = min(c_.km_max, max(c_.km_min, w * st[1] + (1 - w) * pk))
+        return float(ya), float(ka), f"stimata su {len(g)} annunci, ristretta verso {da} (peso {w:.2f})"
     if len(g) >= c_.stima_min_annunci:
-        try:
-            import numpy as np
-            y = np.log([c["price_eur"] for c in g])
-            X = np.column_stack([np.ones(len(g)), [c["year"] for c in g], [c["mileage_km"] / 10000 for c in g]])
-            beta = np.linalg.lstsq(X, y, rcond=None)[0]
-            ya, ka = 1 - math.exp(-beta[1]), 1 - math.exp(beta[2])
+        st = _stima_gruppo(g)
+        if st is not None:
+            ya, ka = st
             if c_.anno_min <= ya <= c_.anno_max and c_.km_min <= ka <= c_.km_max:
                 return float(ya), float(ka), f"stimata su {len(g)} annunci"
-        except Exception:
-            pass
     return cfg.svalutazione_anno, cfg.svalutazione_10km, "valori configurati"
 
 
@@ -571,11 +609,24 @@ def campione_giudice(t: dict, validi: list[dict], quanti: int) -> list[dict]:
 
 def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict:
     puliti, esclusi = pulisci(t, mercato, cfg, now)
+    rg = cfg.regole
+    due = cfg.due_sensi
     if cfg.correzione and t.get("year") and t.get("mileage_km") is not None:
-        ya, ka, origine = tassi(puliti, cfg)
-        corr = dataclasses.replace(cfg.regole.correzione, due_sensi=cfg.due_sensi, tetto=cfg.correzione_tetto)
+        ya, ka, origine = tassi(puliti, cfg, t.get("tassi_priori"), t.get("make"))
+        # 12/11 sera (punto 2, spento di default): nei due sensi solo per le auto care
+        if rg.correzione.due_sensi_alto and float(t.get("price_eur") or 0) >= rg.correzione.due_sensi_da:
+            due = True
+        corr = dataclasses.replace(rg.correzione, due_sensi=due, tetto=cfg.correzione_tetto)
         puliti = [dict(c, prezzo=prezzo_corretto(c, t, ya, ka, corr) if c.get("year") and c.get("mileage_km") is not None
                        else float(c["price_eur"])) for c in puliti]      # senza anno/km: escluse dopo, non corrette
+        # 12/11 sera (punto 4, spento di default): optional e 4x4 noti su entrambe le auto, con il premio misurato
+        if rg.dotazioni.aggiusta and t.get("dotazioni_misura"):
+            from . import dotazioni as DT
+            agg = []
+            for c in puliti:
+                f = DT.fattore(t, c, t.get("dotazioni_misura"), rg)
+                agg.append(dict(c, prezzo=c["prezzo"] * f, dotazioni_corr=round(f, 4)) if f != 1.0 else c)
+            puliti = agg
     else:
         ya = ka = 0.0
         origine = "nessuna correzione"
@@ -586,6 +637,7 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
     if cfg.livello_3 and 2 in livelli:
         livelli = livelli + [3]
     motivi = {}
+    note_trazione, via_trazione = {}, {}
     _serve = cfg.serve(t.get("price_eur"))
     _migliore = None
     for liv in livelli:            # si amplia SOLO se il livello stretto non arriva al minimo
@@ -619,6 +671,14 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
                     if allestimento(c) != ta:
                         scartati.append((c, "allestimento diverso (sportivo/normale)"))
                 validi = stessi
+        # 12/11 sera (punto 4): trazione a livelli (4x4 con 4x4 se bastano; via i 4x4 per un'auto a 2 ruote)
+        if validi and rg.trazione.attiva and not cfg.trazione:
+            from . import dotazioni as DT
+            validi, scart_tr, nota_tr = DT.per_trazione(t, validi, cfg.n_minimo, rg)
+            scartati += scart_tr
+            via_trazione[liv] = {c.get("id") for c, _ in scart_tr if c.get("id") is not None}
+            if nota_tr:
+                note_trazione[liv] = nota_tr
         if _migliore is None or len(validi) > len(_migliore[1]):
             _migliore = (liv, validi, scartati)
         if len(validi) >= _serve:
@@ -627,10 +687,13 @@ def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict
         liv, validi, scartati = _migliore      # il livello con più confronti validi
     for c, why in scartati:
         motivi[why] = motivi.get(why, 0) + 1
-    reg = regressione(t, puliti, cfg) if cfg.reg else None
+    # 12/11 sera: il modello del gruppo non usa gli annunci tolti per trazione (altrimenti riporta il 4x4 alla media)
+    _via = via_trazione.get(liv) or set()
+    reg = regressione(t, [c for c in puliti if c.get("id") not in _via] if _via else puliti, cfg) if cfg.reg else None
     return {"livello": liv, "validi": validi, "esclusi": esclusi, "regressione": reg,
             "correzione": {"anno": round(ya, 4), "km_10000": round(ka, 4), "origine": origine,
-                           "due_sensi": bool(cfg.due_sensi) if cfg.correzione else None},
+                           "due_sensi": bool(due) if cfg.correzione else None},
+            "nota_trazione": note_trazione.get(liv),
             "non_equivalenti": [{"id": c.get("id"), "prezzo": c.get("price_eur"), "motivo": why} for c, why in scartati],
             "motivi_non_equivalenti": motivi}
 
@@ -752,9 +815,11 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if n and cfg.correzione:
         cz = sel["correzione"]
         out["ipotesi"].append(f"prezzi dei confronti corretti verso {t['year']} e {int(t['mileage_km']):,} km "
-                              f"({'nei due sensi, tetto ±' + str(int(cfg.correzione_tetto * 100)) + '%' if cfg.due_sensi else 'solo verso il basso'}): "
+                              f"({'nei due sensi, tetto ±' + str(int(cfg.correzione_tetto * 100)) + '%' if cz.get('due_sensi') else 'solo verso il basso'}): "
                               f"{cz['anno']*100:.1f}% per anno, {cz['km_10000']*100:.1f}% ogni 10.000 km "
                               f"({cz['origine']})".replace(",", "."))
+    if sel.get("nota_trazione"):
+        out["ipotesi"].append(sel["nota_trazione"])
     # 12/11 (rapporto 2 E3): 2–7 gemelle con prezzi corretti molto dispersi (max/min oltre dispersione_max) non dicono
     # il prezzo: si usa solo un valore reale affidabile, altrimenti "dati_insufficienti"
     cc = r.confronti
@@ -850,7 +915,13 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
                                   f"±{sg*100:.0f}%); le gemelle al prezzo di vendita ({int(round(G))} €) concordano")
         else:
             sG = _errore_gemelle(prezzi, reg, out["metodo_gemelle"], sg, vrr.errore_min, r.confronti.ampiezza_poche)
-            M, pesi = RG.media_pesata_log([(V, sg), (G, sG)], vrr.errore_min)
+            # 12/11 sera (margini fase 2 punto 1): anche V al venduto con il fattore MISURATO sul valore reale (voci
+            # "vr:"; 1,0 senza misura). Le gemelle G lo sono già; il sito non corregge più il combinato.
+            fv = RG.fattore_per(V, t.get("fattori_calibra"), r, vr=True) if r.calibrazione.vr_nel_combinato else 1.0
+            fv = min(1.0, fv)
+            if fv < 1.0:
+                out["valore_reale"]["fattore_V"] = round(fv, 3)
+            M, pesi = RG.media_pesata_log([(V * fv, sg), (G, sG)], vrr.errore_min)
             metodo = "valore_reale_combinato"
             out["valore_reale"].update(pesi={"V": round(pesi[0], 3), "gemelle": round(pesi[1], 3)},
                                        errore_gemelle=round(sG, 3))

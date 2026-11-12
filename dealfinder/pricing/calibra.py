@@ -42,6 +42,56 @@ ORDER BY l.make, l.model, l.fuel
 LIMIT %(lim)s"""
 
 
+def quantili(valori: list) -> list | None:
+    """Quantili 10/25/50/75/90 (tipo 7) di prezzo/M, arrotondati a 3 decimali."""
+    from .policy_v2 import percentile
+    if len(valori) < 5:
+        return None
+    return [round(percentile(valori, q), 3) for q in (.10, .25, .50, .75, .90)]
+
+
+# Tassi anno/km per marca (punto 3): regressione del log-prezzo su anno e km CENTRATI dentro ogni gruppo marca/modello/
+# carburante (così conta solo come cambia il prezzo dentro lo stesso modello), con le somme calcolate nel database.
+TASSI_SQL = """
+WITH a AS (
+  SELECT make, model, fuel, ln(price_eur::float) AS lp, year::float AS y, mileage_km / 10000.0 AS k
+  FROM listings
+  WHERE status = 'attivo' AND price_eur BETWEEN 1000 AND 200000 AND year >= 2005
+    AND mileage_km BETWEEN 1000 AND 300000 AND make IS NOT NULL AND model IS NOT NULL AND fuel IS NOT NULL
+    AND {zona}),
+c AS (
+  SELECT make, lp - avg(lp) OVER w AS lp, y - avg(y) OVER w AS y, k - avg(k) OVER w AS k, count(*) OVER w AS n
+  FROM a WINDOW w AS (PARTITION BY make, model, fuel))
+SELECT make, count(*) AS n, sum(y * y) AS syy, sum(k * k) AS skk, sum(y * k) AS syk, sum(y * lp) AS syl,
+       sum(k * lp) AS skl
+FROM c WHERE n >= 5 GROUP BY make"""
+
+
+def tassi_da_somme(n, syy, skk, syk, syl, skl) -> dict | None:
+    """Risolve la regressione a due variabili dalle somme: {"anno", "km_10000", "n"} oppure None."""
+    det = float(syy) * float(skk) - float(syk) ** 2
+    if not n or det <= 0:
+        return None
+    b1 = (float(syl) * float(skk) - float(skl) * float(syk)) / det
+    b2 = (float(skl) * float(syy) - float(syl) * float(syk)) / det
+    import math
+    return {"anno": round(1 - math.exp(-b1), 4), "km_10000": round(1 - math.exp(b2), 4), "n": int(n)}
+
+
+def misura_tassi(conn) -> dict:
+    """{"marche": {marca: {"anno", "km_10000", "n"}}, "tutti": {...}} sulla zona di casa."""
+    from ..store import HOME_REGION_SQL
+    righe = conn.execute(TASSI_SQL.format(zona=HOME_REGION_SQL)).fetchall()
+    marche, tot = {}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    for r in righe:
+        v = [r["n"], r["syy"], r["skk"], r["syk"], r["syl"], r["skl"]]
+        t = tassi_da_somme(*v)
+        if t and r["make"]:
+            marche[str(r["make"]).lower()] = t
+        tot = [a + float(b or 0) for a, b in zip(tot, v)]
+    return {"marche": marche, "tutti": tassi_da_somme(*tot)}
+
+
 def misura(conn) -> dict:
     from . import policy_v2 as P
     from .ricalcolo import MARKET_SQL, TARGET_COLS, _j, _rischio, _valuta_base
@@ -65,8 +115,9 @@ def misura(conn) -> dict:
         from .valutazione import ingressi
         _ing = ingressi(conn, [r["id"] for r in rows], solo=("vr", "calibra")) if rows else {}
         vrs, fattori = _ing.get("vr") or {}, _ing.get("fattori_calibra")
+        priori = _ing.get("tassi_priori")              # 12/11 sera: stessi tassi anno/km (pooling) della valutazione
     except Exception:
-        vrs, fattori = {}, None
+        vrs, fattori, priori = {}, None, None
     mercato, chiave, cache = [], None, {}
     tot = 0
     for r in rows:
@@ -79,7 +130,8 @@ def misura(conn) -> dict:
             chiave = key
         prezzo = float(r["price_eur"])
         t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
-                 rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True, fattori_calibra=fattori)
+                 rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True, fattori_calibra=fattori,
+                 tassi_priori=priori)
         confronti = [m for m in mercato if m.get("id") != r["id"]]
         try:
             v, _ = _valuta_base(conn, t, confronti, scovo.soglia(int(prezzo)), cfg, cache)
@@ -120,7 +172,24 @@ def misura(conn) -> dict:
             out[chiave][f] = {"n": d["n"],
                               "prezzo_su_M": round(median(d["rapp_M"]), 3),
                               "errore_R_pct": round(median(d["err_R"]), 1),
-                              "copertura_R": round(d["coperte"] / d["n"], 2)}
+                              "copertura_R": round(d["coperte"] / d["n"], 2),
+                              # 12/11 sera (margini fase 2 punto 5): quantili di prezzo/M per la forbice della rivendita
+                              "q": quantili(d["rapp_M"])}
+    # 12/11 sera (punti 3 e 4): tassi anno/km per marca e di tutti (pooling), premi di 4x4 e optional. Calcolati nel
+    # database (somme per gruppo), mai le righe in memoria; un errore non ferma la misura principale.
+    try:
+        out["tassi"] = misura_tassi(conn)
+    except Exception as e:
+        conn.rollback()
+        log.warning("CALIBRA tassi non misurati: %s", str(e)[:150])
+    try:
+        from . import dotazioni as DT
+        d = DT.misura(conn)
+        if d:
+            out["dotazioni"] = d
+    except Exception as e:
+        conn.rollback()
+        log.warning("CALIBRA dotazioni non misurate: %s", str(e)[:150])
     log.warning("CALIBRA_RISULTATO %s", json.dumps(out, ensure_ascii=False))
     try:      # 28/10 sera: il sito corregge il mercato con questi valori (vedi app._mercato_calibrato)
         conn.execute("CREATE TABLE IF NOT EXISTS calibrazione (at TIMESTAMPTZ PRIMARY KEY DEFAULT now(), dati JSONB)")

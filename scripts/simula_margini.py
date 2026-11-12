@@ -48,7 +48,7 @@ def fattori(d: dict) -> list:
 
 
 def f_vecchio(M: float, fat: list) -> float:
-    return next((x for lim, _, x in fat if M < lim and not str(_).startswith("vr:")), 1.0)
+    return next((x for lim, _, x in fat if M < lim and not str(_).startswith(("vr:", "_"))), 1.0)
 
 
 def leggi(path: str) -> list[dict]:

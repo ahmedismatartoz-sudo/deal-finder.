@@ -39,7 +39,7 @@ STATS_SQL = [
          AND COALESCE(l.disappear_reason, '') NOT IN ('scaduto', 'ripubblicato')
          AND l.source IN ('subito', 'autoscout24') AND l.price_eur BETWEEN 1000 AND 100000
          AND l.disappeared_at > l.first_seen_at + interval '1 day'
-       ORDER BY l.disappeared_at DESC LIMIT 40000""",
+       {ordine} LIMIT {tetto}""",
     "DROP TABLE IF EXISTS _tr_e",
     """CREATE TEMP TABLE _tr_e AS
        SELECT x.listing_id AS id, x.at, x.price_eur AS p,
@@ -67,10 +67,37 @@ SELECT vend, g, LEAST(rib, 3)::int AS rib, count(*) AS n,
 FROM st WHERE p > 0 GROUP BY 1, 2, 3"""
 
 
+# 12/11 sera (margini fase 2 punto 6): prima le 40.000 sparite PIÙ RECENTI (log: sempre 39.999): la finestra dei 90
+# giorni si riduceva a poche settimane e gli annunci rimasti online a lungo sparivano dal campione (privato_30g_1rib
+# n=3). Ora un campione UNIFORME su tutti i 90 giorni (md5 dell'id, stabile tra un giro e l'altro), tetto più alto.
+# Il calcolo è tutto nel database (tabelle temporanee): in memoria arrivano solo i ~32 gruppi.
+# Interruttore SCHEDA_STATS_CAMPIONE=0 per tornare alle più recenti con il tetto di prima.
+STATS_TETTO = 100000
+STATS_TETTO_VECCHIO = 40000
+
+
+def _campione_uniforme() -> bool:
+    import os
+    return str(os.environ.get("SCHEDA_STATS_CAMPIONE", "1")).strip().lower() not in ("0", "false", "no", "off")
+
+
+def stats_sql(uniforme: bool | None = None) -> list[str]:
+    uniforme = _campione_uniforme() if uniforme is None else uniforme
+    ordine, tetto = ("ORDER BY md5(l.id::text)", STATS_TETTO) if uniforme else ("ORDER BY l.disappeared_at DESC",
+                                                                               STATS_TETTO_VECCHIO)
+    return [q.format(ordine=ordine, tetto=tetto) if "{ordine}" in q else q for q in STATS_SQL]
+
+
 def aggiorna_statistiche(conn) -> dict:
     """Ricalcola i gruppi (venditore, età, ribassi) dagli annunci spariti. Poche decine di righe in memoria."""
-    for q in STATS_SQL:
+    for q in stats_sql():
         conn.execute(q)
+    try:
+        fin = conn.execute("SELECT count(*) AS n, extract(epoch FROM now() - min(a)) / 86400.0 AS giorni "
+                           "FROM _tr_v").fetchone()
+        finestra = {"campione": int(fin["n"]), "giorni_coperti": round(float(fin["giorni"] or 0), 1)}
+    except Exception:
+        finestra = {}
     rows = conn.execute(GRUPPI_SQL, {"punti": list(PUNTI)}).fetchall()
     gruppi = {}
     for r in rows:
@@ -81,7 +108,8 @@ def aggiorna_statistiche(conn) -> dict:
     conn.execute("DROP TABLE IF EXISTS _tr_v")
     conn.commit()
     STATS.update(t=time.time(), gruppi=gruppi, n=sum(g["n"] for k, g in gruppi.items() if k[1] == 0))
-    log.warning("SCHEDA_STATS %s", {"gruppi": len(gruppi), "annunci": STATS["n"],
+    log.warning("SCHEDA_STATS %s", {"gruppi": len(gruppi), "annunci": STATS["n"], **finestra,
+                                    "tetto": STATS_TETTO if _campione_uniforme() else STATS_TETTO_VECCHIO,
                                     "privato_0g_0rib": gruppi.get(("privato", 0, 0)),
                                     "privato_30g_1rib": gruppi.get(("privato", 30, 1))})
     return gruppi
@@ -199,6 +227,21 @@ def aggiorna_modelli(conn) -> int:
     return len(mod)
 
 
+_VUOTE: dict = {}
+
+
+def _vuota(make, model, fuel, anno, n90) -> None:
+    """12/11 sera (punto 6): una riga di log per modello quando la scheda non trova vendite simili (es. Fiat 500), con
+    i nomi del modello che ci sono nei dati per la stessa marca: così si vede se è un problema di nomi."""
+    k = (str(make).lower(), str(model).lower(), fuel, int(anno))
+    if k in _VUOTE or len(_VUOTE) > 2000:
+        return
+    _VUOTE[k] = time.time()
+    simili = sorted({m for (mk, m, _f, _a) in STATS.get("modelli", {}) if mk == k[0] and (k[1][:3] in m or m[:3] in k[1])})[:8]
+    log.warning("SCHEDA_RIVENDITA_VUOTA %s", {"marca": k[0], "modello": k[1], "carburante": fuel, "anno": k[3],
+                                              "vendute_90g": n90, "modelli_simili_nei_dati": simili})
+
+
 def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=None, attivi=None, esempi=None) -> dict | None:
     """Quanto velocemente si vende questo modello (anni vicini, stesso carburante) e quanta concorrenza c'è."""
     modelli = STATS["modelli"] if modelli is None else modelli
@@ -221,6 +264,7 @@ def rivendita(make, model, fuel, anno, km=None, prezzo_rivendita=None, modelli=N
         v = [x for k, x in modelli.items() if k[0] == mk and k[1] == md and k[3] in anni]
         n90 = sum(x[0] for x in v)
         if n90 < 6:
+            _vuota(make, model, fuel, anno, n90)
             return None
         stesso_carb = False
     if stesso_carb:

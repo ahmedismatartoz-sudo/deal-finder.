@@ -380,17 +380,35 @@ def calibra_venduto(it, g) -> int:
         return 0
     R = float(pv.get("R_finale") or pv.get("R") or 0)
     R2 = float(pv2.get("R_finale") or pv2.get("R") or R)
+    if RG.regole().calibrazione.alza:      # 12/11 sera: fattore oltre 1 (spento di default), solo misurato sopra 20.000 €
+        return int(round(R - R2))
     return int(round(max(0.0, R - R2)))
+
+
+def forbice_rivendita(it, g) -> None:
+    """12/11 sera (margini fase 2 punto 5): forbice della rivendita e probabilità di vendere ad almeno R
+    (pricing/forbice.py) nel pv dell'auto, campo `forbice_R`. Solo informazione: margine e soglia non cambiano."""
+    pv = it.get("pv") if isinstance(it.get("pv"), dict) else None
+    if not pv or it.get("supercar") or not g.fattori_calibra or pv.get("forbice_R") is not None:
+        return
+    try:
+        from ..pricing import forbice as FB
+        fb = FB.calcola(pv, list(g.fattori_calibra))
+    except Exception:
+        return
+    if fb:
+        it["pv"] = dict(pv, forbice_R=fb)
 
 
 def t_margine_sito(it, g):
     """Modifiche al margine: correzione misurata chiesto -> venduto (solo mercato da prezzi chiesti) e costo del
     difetto letto dall'AI (tabella ai_difetti)."""
     giu = calibra_venduto(it, g)
-    if giu > 0 and it["pv"].get("margine") is not None:
+    if giu != 0 and it["pv"].get("margine") is not None:
         pv = it["pv"]
         R = int(pv.get("R_finale") or pv.get("R"))
         it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, calibrato_venduto=giu, calibrato=True)
+    forbice_rivendita(it, g)
     costo = int((_r(it).get("difetto") or {}).get("costo") or 0)
     if isinstance(it.get("pv"), dict) and it["pv"].get("costo_difetti_incluso"):
         costo = 0                          # 4/11: già tolto nella valutazione (policy_v2.costi), non due volte

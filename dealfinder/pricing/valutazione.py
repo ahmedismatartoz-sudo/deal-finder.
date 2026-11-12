@@ -48,6 +48,7 @@ UPSERT_SQL = """INSERT INTO valutazioni_policy (listing_id, policy_version, cate
       OR valutazioni_policy.impronta_regole IS DISTINCT FROM EXCLUDED.impronta_regole
       OR valutazioni_policy.computed_at < now() - make_interval(hours => %s)
       OR COALESCE(EXCLUDED.n, 0) >= COALESCE(valutazioni_policy.n, 0)
+      OR %s
    RETURNING listing_id"""
 # Database senza la migrazione 036 (colonne n, impronte, fonte, metodo): scrittura di prima, senza guardia nel database
 # (la guardia resta in deve_scrivere, sulle righe lette).
@@ -107,7 +108,8 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
     """Dati esterni per questi annunci, gli stessi per ogni strada: l'ULTIMO valore disponibile, con la sua data
     (computed_at). Niente scadenza dura: se il lavoro notturno salta, la stima non cambia da sola (avviso nei log)."""
     ids = list(ids)
-    out = {"vr": {}, "ai": {}, "difetti": {}, "parti": {}, "fattori_calibra": RG.fattori_calibrazione(None)}
+    out = {"vr": {}, "ai": {}, "difetti": {}, "parti": {}, "fattori_calibra": RG.fattori_calibrazione(None),
+           "tassi_priori": None, "dotazioni_misura": None}
     if "vr" in solo:
         out["vr"] = {r["listing_id"]: dict(r) for r in _q(conn,
                      "SELECT listing_id, v, p25, sigma, n, n_vendute, computed_at FROM valore_reale "
@@ -136,6 +138,9 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
                         "va rifatta (CALIBRA=1)")
         out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {}, misurate_vr=dati.get("fasce_vr") or {},
                                                     per_M=dati.get("fasce_su") == "M")
+        # 12/11 sera (margini fase 2): tassi anno/km per marca (pooling) e premi di 4x4/optional, dalla stessa misura
+        out["tassi_priori"] = dati.get("tassi") or None
+        out["dotazioni_misura"] = dati.get("dotazioni") or None
     return out
 
 
@@ -161,7 +166,8 @@ def prepara(r: dict, ing: dict, rg: RG.Regole | None = None) -> tuple[dict, str 
     pa = ing["parti"].get(lid) or {}
     t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), rischio_strutturale=_rischio(r),
              parts_cost_low=pa.get("parts_cost_low"), parts_cost_high=pa.get("parts_cost_high"),
-             ai=ing["ai"].get(lid), vr=ing["vr"].get(lid), fattori_calibra=ing["fattori_calibra"], telefono=tel)
+             ai=ing["ai"].get(lid), vr=ing["vr"].get(lid), fattori_calibra=ing["fattori_calibra"], telefono=tel,
+             tassi_priori=ing.get("tassi_priori"), dotazioni_misura=ing.get("dotazioni_misura"))
     privato = (r.get("seller_type") or "privato") != "commerciante"
     # prezzo molto basso ammesso solo con il numero, e mai per un commerciante (prezzo esca)
     t["targa_e_telefono"] = bool(tel is True and (privato or not rg.antitruffa.eccezione_solo_privati)
@@ -216,15 +222,24 @@ def esclusa(t: dict, motivo: str, rg: RG.Regole | None = None) -> dict:
 
 # ---------------------------------------------------------------- guardia sulle scritture
 
+def giudicata(v: dict | None) -> bool:
+    """La valutazione è passata dal giudice AI e ha tolto confronti (12/11 sera, rapporto 2 E5)."""
+    return bool(isinstance(v, dict) and ((v.get("ai_confronti") or {}).get("tolti") or 0) > 0)
+
+
 def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regole: str, now=None,
-                  ore: int | None = None) -> tuple[bool, str]:
-    """Stessa regola della condizione SQL di UPSERT_SQL (qui per i contatori e per i test)."""
+                  ore: int | None = None, giudicata_nuova: bool = False) -> tuple[bool, str]:
+    """Stessa regola della condizione SQL di UPSERT_SQL (qui per i contatori e per i test).
+    12/11 sera (regole.Scrittura.giudice_vince): una valutazione passata dal giudice AI con confronti tolti si scrive
+    sempre (prima restava rifiutata fino a 36 ore perché il giudice riduce n)."""
     if not esistente:
         return True, "nuova"
     if esistente.get("impronta_auto") != imp_auto:
         return True, "auto_cambiata"
     if esistente.get("impronta_regole") != imp_regole:
         return True, "regole_cambiate"
+    if giudicata_nuova and RG.regole().scrittura.giudice_vince:
+        return True, "giudicata"
     now = now or datetime.now(timezone.utc)
     ore = RG.regole().scrittura.ore_validita if ore is None else ore
     at = esistente.get("computed_at")
@@ -267,7 +282,9 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     soglia_fn = soglia_fn or scovo.soglia
     now = datetime.now(timezone.utc)
     ordine = _ordina(conn, ids)
+    from . import dotazioni as DT
     from . import rivendita as RV
+    usa_dot = bool(rg.trazione.attiva or rg.dotazioni.aggiusta)
     gruppo, mercato, cache, commercianti = None, [], {}, None
     vecchi_vr = 0
     for k in range(0, len(ordine), blocco):
@@ -276,6 +293,7 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                                                   (pezzo,)).fetchall()}
         ing = ingressi(conn, pezzo)
         prima = _salvate(conn, pezzo)
+        dot_auto = DT.carica_ids(conn, pezzo) if usa_dot else {}
         for lid in pezzo:
             r = righe.get(lid)
             if r is None:
@@ -297,7 +315,12 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                                    for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
                         # 12/11: annunci di commercianti del gruppo (venduti e attivi) per la rivendita
                         commercianti = RV.carica(conn, *key, HOME_REGION_SQL, rg) if rg.rivendita.attiva else None
+                        # 12/11 sera (margini fase 2 punto 4): trazione e optional dalla scheda tecnica (dati_auto)
+                        if usa_dot:
+                            mercato = DT.arricchisci(mercato, DT.carica_gruppo(conn, *key))
                     t["commercianti"] = commercianti
+                    if usa_dot and lid in dot_auto:
+                        t.update(dot_auto[lid])
                     v = valuta_con_ripiego(conn, t, mercato, soglia_fn(int(r["price_eur"])), cfg, cache)
                     vr_at = (t.get("vr") or {}).get("computed_at")
                     if vr_at is not None and hasattr(vr_at, "tzinfo"):
@@ -311,11 +334,12 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 if extra and lid in extra:
                     v.update(extra[lid])
                 imp_a = impronta_auto(t)
-                ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r, now, ore)
+                giu = giudicata(v) and rg.scrittura.giudice_vince
+                ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r, now, ore, giu)
                 es.stats[f"scrittura:{perche}"] += 1
                 if ok:
                     pr = v.pop("prima", None)
-                    scritta = _scrivi(conn, lid, v, pr, imp_a, imp_r, fonte, ore)
+                    scritta = _scrivi(conn, lid, v, pr, imp_a, imp_r, fonte, ore, giu)
                     if not scritta:
                         es.stats["scrittura:rifiutata_dal_database"] += 1
                         ok = False
@@ -357,7 +381,7 @@ def _salvate(conn, ids: list) -> dict:
     return {r["listing_id"]: dict(r) for r in righe}
 
 
-def _scrivi(conn, lid, v: dict, pr, imp_a: str, imp_r: str, fonte: str, ore: int) -> bool:
+def _scrivi(conn, lid, v: dict, pr, imp_a: str, imp_r: str, fonte: str, ore: int, giudicata_nuova: bool = False) -> bool:
     """Upsert con la guardia anche nel database (vale se due processi scrivono insieme). True se scritta."""
     riass = json.dumps(P.riassunto(v), default=str)
     dati = json.dumps(v, default=str)
@@ -365,7 +389,8 @@ def _scrivi(conn, lid, v: dict, pr, imp_a: str, imp_r: str, fonte: str, ore: int
     if _SCHEMA["nuovo"] is not False:
         try:
             cur = conn.execute(UPSERT_SQL, (lid, P.POLICY_VERSION, v["categoria"], v.get("margine"), riass, dati, prj,
-                                            int(v.get("n") or 0), imp_a, imp_r, fonte, v.get("metodo"), ore))
+                                            int(v.get("n") or 0), imp_a, imp_r, fonte, v.get("metodo"), ore,
+                                            bool(giudicata_nuova)))
             _SCHEMA["nuovo"] = True
             return cur.fetchone() is not None if hasattr(cur, "fetchone") else True
         except Exception as e:
