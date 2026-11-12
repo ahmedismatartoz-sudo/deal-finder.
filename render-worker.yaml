@@ -1,0 +1,16 @@
+# Solo il servizio separato "tempo reale" (lettura continua dei nuovi annunci).
+# Le chiavi arrivano dal gruppo e dal database già esistenti: nessun segreto qui.
+services:
+  - type: worker
+    name: scovo-tempo-reale
+    runtime: python
+    region: frankfurt
+    plan: starter
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m dealfinder.pipeline.tempo_reale_worker
+    envVars:
+      - fromGroup: dealfinder-secrets
+      - key: DATABASE_URL
+        fromDatabase: { name: dealfinder-db, property: connectionString }
