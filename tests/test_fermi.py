@@ -18,3 +18,4 @@ def test_scegli_fermi_salta_oggi_disiscritti_ed_esclusi():
 def test_scegli_fermi_rispetta_il_totale():
     righe = [{"chiave": str(i), "email": [f"info@s{i}.it"], "prov": "MI"} for i in range(20)]
     assert len(SM.scegli_fermi(righe, set(), set(), 7)) == 7
+

@@ -556,7 +556,7 @@ def scegli_fermi(righe: list[dict], bloccati: set, gia: set, totale: int) -> lis
 
 
 def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00", campagna_oggi: int = 75,
-                  campagne_disiscritti=(73, 74, 75), minimi=None) -> dict:
+                  campagne_disiscritti=(73, 74, 75), minimi=None, oggi_pref=None) -> dict:
     """Carica in Brevo i contatti del nostro archivio che oggi NON hanno ricevuto la campagna `campagna_oggi` e
     programma la stessa email (senza esempi) per `quando`. Sicurezze: i disiscritti/rimbalzati delle ultime campagne
     (che Brevo ha perso con la cancellazione dei contatti) entrano prima nella tabella disiscritti; se le esportazioni
@@ -576,7 +576,9 @@ def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00",
         contatti = _contatti_brevo(c)
         esito["contatti_in_brevo"] = len(contatti)
         persi = set()
-        for cid in campagne_disiscritti:
+        oggi = set(oggi_pref or ())          # inizio (16) delle impronte di chi ha ricevuto oggi, mai email
+        esito["ricevuto_oggi_file"] = len(oggi)
+        for cid in (campagne_disiscritti if not oggi else ()):
             dis = _esporta(c, cid, "unsubscribed")
             esito[f"disiscritti_{cid}"] = len(dis)
             if len(dis) < minimi.get(cid, 0):
@@ -586,9 +588,9 @@ def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00",
             hb = _esporta(c, cid, "hardBounces")
             esito[f"rimbalzi_{cid}"] = len(hb)
             persi |= set(hb)
-        gia = set(_esporta(c, campagna_oggi, "all"))
-        esito["ricevuto_oggi"] = len(gia)
-        if len(gia) < 500:
+        gia = set() if oggi else set(_esporta(c, campagna_oggi, "all"))
+        esito["ricevuto_oggi"] = len(gia) or len(oggi)
+        if len(gia) < 500 and len(oggi) < 1000:
             esito["fermo"] = "elenco_di_oggi_non_disponibile"
             return esito
         with connect() as conn:
@@ -600,6 +602,10 @@ def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00",
         if len(bloccati) < BLOCCATI_MINIMI:
             esito["fermo"] = "disiscritti_incompleti"
             return esito
+        # chi ha ricevuto oggi (e quindi anche chi si è disiscritto dalle campagne 74/75) resta sempre fuori
+        if oggi:
+            righe = [{**r, "email": [e for e in (r.get("email") or []) if invii.impronta(invii.norm_email(e))[:16] not in oggi]}
+                     for r in righe]
         posto = _TETTO - len(contatti)
         scelti = scegli_fermi(righe, bloccati, gia, min(totale, posto))
         esito.update({"archivio": len(righe), "scelti": len(scelti), "posto": posto})
@@ -633,3 +639,4 @@ def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00",
         r = c.post(f"{API}/emailCampaigns", json=corpo)
         esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
     return esito
+
