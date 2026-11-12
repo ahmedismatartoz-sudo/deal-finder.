@@ -37,12 +37,14 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=30)
     ap.add_argument("--giorni", type=int, default=30)
     ap.add_argument("--finta", action="store_true", help="risposte AI finte (nessuna chiamata)")
+    ap.add_argument("--solo-calcolo", action="store_true", help="niente perizia AI: solo M (prima/dopo) e Autohero")
     a = ap.parse_args()
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     from dealfinder.ai import prova_cieca
     from dealfinder.db import connect
     with connect() as conn:
-        res = prova_cieca.esegui(conn, n=a.n, giorni=a.giorni, chiama=risposta_finta if a.finta else None)
+        res = prova_cieca.esegui(conn, n=a.n, giorni=a.giorni, chiama=risposta_finta if a.finta else None,
+                                 ai=not a.solo_calcolo)
         conn.rollback()                                   # solo lettura
     print(json.dumps(res, ensure_ascii=False, indent=1, default=str))
 

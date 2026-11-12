@@ -3715,7 +3715,8 @@ def _tempo_reale():
                 parti = v.split(":")
                 with connect() as conn:
                     _pc.esegui(conn, n=min(int(parti[1] or 30), 200),
-                               giorni=min(int(parti[2]), 90) if len(parti) > 2 and parti[2] else 30)
+                               giorni=min(int(parti[2]), 90) if len(parti) > 2 and parti[2] else 30,
+                               ai=not (len(parti) > 3 and parti[3] == "solo_calcolo"))   # 12/11 sera margini fase 2
             except Exception as e:
                 lg.warning("PROVA_CIECA non riuscita: %s", str(e)[:300])
             return

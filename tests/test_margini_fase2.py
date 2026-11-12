@@ -1,0 +1,414 @@
+"""12/11 sera (ramo margini-fase2): calibrazione del combinato, fattore oltre 1 (spento), pooling dei tassi anno/km,
+trazione a livelli e optional, forbice della rivendita, guardia delle 36 ore e giudice, statistiche della scheda,
+prova alla cieca per fascia e prima/dopo."""
+import math
+import os
+
+from dealfinder import regole as RG
+from dealfinder.ai import prova_cieca as PC
+from dealfinder.pricing import calibra as CB
+from dealfinder.pricing import dotazioni as DT
+from dealfinder.pricing import forbice as FB
+from dealfinder.pricing import policy_v2 as P
+from dealfinder.pricing import valutazione as VZ
+from dealfinder.web import sito_regole as SR
+from dealfinder.web import trattativa as TR
+from tests.test_policy import CFG, NOW, car
+
+QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _cfg(**campi):
+    return P.PolicyConfig(RG.con_campi(RG.regole(), campi))
+
+
+# ------------------------------------------------------------------ interruttori
+
+def test_interruttori_e_default():
+    r = RG.regole()
+    assert r.correzione.pooling and r.calibrazione.vr_nel_combinato
+    assert not r.trazione.attiva                      # giudice M3: spenta finché la prova alla cieca non la conferma
+    assert RG.VERSIONE == "regole-2026-11-12a"
+    assert not r.forbice.attiva                       # 12/11 notte: il cliente non vuole la forbice nella scheda
+    assert r.scrittura.giudice_vince
+    # le novità che possono ALZARE un prezzo restano spente
+    assert not r.correzione.due_sensi_alto and not r.calibrazione.alza and not r.dotazioni.aggiusta
+    for nome in ("TASSI_POOLING", "CORREZIONE_DUE_SENSI_ALTO", "CALIBRA_VR_COMBINATO", "CALIBRA_ALZA",
+                 "TRAZIONE_LIVELLI", "DOTAZIONI_PREZZO", "RIVENDITA_FORBICE", "GIUDICE_VINCE"):
+        assert nome in RG.INTERRUTTORI
+    r0 = RG.regole({"TASSI_POOLING": "0", "TRAZIONE_LIVELLI": "1"})
+    assert not r0.correzione.pooling and r0.trazione.attiva
+    prima = RG.con_campi(r, RG.NOVITA_FASE2)
+    assert not prima.correzione.pooling and not prima.calibrazione.vr_nel_combinato
+    assert RG.impronta(prima) != RG.impronta(r)
+
+
+# ------------------------------------------------------------------ calibrazione
+
+def _fasce(x, n=100, q=None):
+    return {k: {"n": n, "prezzo_su_M": x, **({"q": q} if q else {})}
+            for k in ("<5k", "5-10k", "10-20k", "20-35k", "35-60k", ">60k")}
+
+
+def test_fattore_oltre_uno_solo_se_acceso_e_sopra_20000():
+    mis = _fasce(1.10)
+    f = RG.fattori_calibrazione(mis, per_M=True)
+    assert all(x <= 1.0 for _, n, x in f if not str(n).startswith("_"))           # spento: mai sopra 1
+    r = RG.con_campi(RG.regole(), {"calibrazione.alza": True})
+    f = dict((n, x) for _, n, x in RG.fattori_calibrazione(mis, r, per_M=True))
+    assert f["<5k"] == 1.0 and f["5-10k"] == 1.0 and f["10-20k"] == 1.0          # sotto 20.000: mai
+    assert f["20-35k"] == r.calibrazione.alza_max and f[">60k"] == r.calibrazione.alza_max
+    # misura vecchia (per prezzo) o poche auto: niente
+    assert all(x <= 1 for _, n, x in RG.fattori_calibrazione(mis, r, per_M=False) if not str(n).startswith("_"))
+    assert all(x <= 1 for _, n, x in RG.fattori_calibrazione(_fasce(1.1, n=30), r, per_M=True)
+               if not str(n).startswith("_"))
+
+
+def test_quantili_nei_fattori_ignorati_dal_fattore():
+    q = [.7, .8, .9, 1.0, 1.1]
+    f = RG.fattori_calibrazione(_fasce(.9, q=q), per_M=True)
+    assert any(n == "_q:<5k" and x == tuple(q) for _, n, x in f)
+    f0 = RG.fattori_calibrazione(_fasce(.9), per_M=True)
+    assert RG.fattore_per(8000, f) == RG.fattore_per(8000, f0)
+    assert RG.quantili_di({"n": 100, "q": [1, .9, 1, 1, 1]}, 20) is None           # non crescente
+    assert RG.quantili_di({"n": 5, "q": q}, 20) is None
+
+
+def _gemelle(prezzi, **kw):
+    return [car(100 + i, p, km=88000 + i * 500, **kw) for i, p in enumerate(prezzi)]
+
+
+def test_combinato_porta_V_al_venduto_solo_con_misura():
+    t = dict(car(1, 4000, year=2012, km=120000), vr={"v": 6000, "sigma": .12, "n": 200, "n_vendute": 60})
+    t["fattori_calibra"] = RG.fattori_calibrazione({}, per_M=True)
+    merc = [car(100 + i, p, year=2012, km=118000 + i * 300) for i, p in enumerate([7600, 7800, 8000, 8100, 8300, 8500,
+                                                                                   8700, 8900])]
+    v0 = P.valuta(t, merc, 1500, CFG, NOW)
+    assert v0["metodo"] == "valore_reale_combinato" and "fattore_V" not in v0["valore_reale"]
+    t2 = dict(t, fattori_calibra=RG.fattori_calibrazione({}, misurate_vr={"<5k": {"n": 50, "prezzo_su_M": .85},
+                                                                             "5-10k": {"n": 50, "prezzo_su_M": .9}},
+                                                         per_M=True))
+    v1 = P.valuta(t2, merc, 1500, CFG, NOW)
+    assert v1["valore_reale"]["fattore_V"] < 1 and v1["M"] < v0["M"]
+    v2 = P.valuta(t2, merc, 1500, _cfg(**{"calibrazione.vr_nel_combinato": False}), NOW)
+    assert v2["M"] == v0["M"]
+
+
+# ------------------------------------------------------------------ tassi (pooling)
+
+def test_priore_tassi_marca_tutti_riserva():
+    c_ = RG.regole().correzione
+    pr = {"marche": {"fiat": {"anno": .07, "km_10000": .02, "n": 900}, "seat": {"anno": .07, "km_10000": .02, "n": 50},
+                     "bmw": {"anno": .40, "km_10000": .02, "n": 900}},
+          "tutti": {"anno": .09, "km_10000": .018, "n": 50000}}
+    assert P.priore_tassi(pr, "Fiat", c_)[:2] == (.07, .02)
+    assert P.priore_tassi(pr, "seat", c_)[:2] == (.09, .018)              # marca con pochi annunci: tutti
+    assert P.priore_tassi(pr, "bmw", c_)[:2] == (.09, .018)               # marca fuori limite: tutti
+    assert P.priore_tassi(None, "fiat", c_)[:2] == (c_.svalutazione_anno, c_.svalutazione_10km)
+
+
+def _gruppo(n, a, k, sd, anni, seme, base=20000):
+    import random
+    rnd = random.Random(seme)
+    g = []
+    for i in range(n):
+        y, km = rnd.randint(*anni), rnd.randint(20000, 150000)
+        g.append(car(100 + i, round(base * (1 - a) ** (2022 - y) * (1 - k) ** (km / 10000) * math.exp(rnd.gauss(0, sd))),
+                     year=y, km=km))
+    return g
+
+
+PRIORI = {"tutti": {"anno": .08, "km_10000": .012, "n": 50000}}
+
+
+def test_pooling_senza_misura_regola_di_prima():
+    """Giudice A1 (pool*.py): con i soli valori di riserva M non deve cambiare (né salire) rispetto a prima."""
+    import statistics as S
+    vecchio = _cfg(**{"correzione.pooling": False})
+    corr = RG.regole().correzione
+    for seme in range(40):
+        for (n, a, k, sd, anni) in ((60, .14, .02, .12, (2014, 2022)), (40, .08, .012, .20, (2019, 2021)),
+                                    (20, .10, .015, .15, (2020, 2021)), (10, .12, .02, .15, (2016, 2022))):
+            g = _gruppo(n, a, k, sd, anni, seme)
+            assert P.tassi(g, CFG) == P.tassi(g, vecchio)
+            assert P.tassi(g, CFG, {"marche": {}}, "volkswagen") == P.tassi(g, vecchio)
+            t = car(1, 1, year=anni[0], km=120000)
+            assert S.median(P.prezzo_corretto(c, t, *P.tassi(g, CFG)[:2], corr) for c in g) == \
+                S.median(P.prezzo_corretto(c, t, *P.tassi(g, vecchio)[:2], corr) for c in g)
+
+
+def test_pooling_con_misura_taglia_e_pesa_con_la_precisione():
+    c_ = RG.regole().correzione
+    # stima grezza fuori limite (anno negativo, x poco variabile): tagliata PRIMA di mescolare → mai sotto il minimo
+    for seme in range(200):
+        g = _gruppo(40, .08, .012, .20, (2019, 2021), seme)
+        st = P._stima_gruppo(g)
+        if st and st[0] < -.03:
+            break
+    ya, ka, o = P.tassi(g, CFG, PRIORI, "volkswagen")
+    assert c_.anno_min <= ya <= .08 and "ristretta" in o
+    # gruppo grande e anni ampi: pesa la stima del gruppo; gruppo con anni vicini (poco informativo): pesa il priore
+    g = _gruppo(200, .14, .02, .05, (2012, 2022), 1)
+    ya, ka, o = P.tassi(g, CFG, PRIORI, "volkswagen")
+    assert abs(ya - .14) < .01 and abs(ka - .02) < .003
+    g2 = _gruppo(15, .14, .02, .15, (2021, 2022), 2)
+    ya2, _, o2 = P.tassi(g2, CFG, PRIORI, "volkswagen")
+    assert abs(ya2 - .08) < abs(ya2 - .14)
+    # priore della marca misurato su abbastanza annunci
+    pr = {"marche": {"volkswagen": {"anno": .1, "km_10000": .03, "n": 1000}}}
+    ya3, ka3, o3 = P.tassi(g[:3], CFG, pr, "volkswagen")                 # troppo pochi: solo il priore
+    assert (round(ya3, 4), round(ka3, 4)) == (.1, .03) and "marca" in o3
+    assert P.tassi(g, _cfg(**{"correzione.pooling": False}))[2] == "stimata su 200 annunci"
+
+
+def test_calibrazione_vecchia_con_pooling_e_due_sensi_alto():
+    base = {"fasce": {"<5k": {"n": 50, "prezzo_su_M": .8}}, "fasce_su": "M", "correzione_due_sensi": False}
+    assert not RG.calibrazione_vecchia(base)
+    assert RG.calibrazione_vecchia(dict(base, tassi={"tutti": {}}))                  # tassi nuovi, misura senza pooling
+    assert not RG.calibrazione_vecchia(dict(base, tassi={"tutti": {}}, tassi_pooling=True))
+    assert RG.calibrazione_vecchia(dict(base, correzione_due_sensi_alto=True))
+
+
+def test_tassi_da_somme_della_misura():
+    import random
+    rnd = random.Random(3)
+    righe = []
+    for i in range(400):
+        y, k = rnd.uniform(-4, 4), rnd.uniform(-5, 5)
+        righe.append((y, k, -math.log(1 - .08) * y + math.log(1 - .02) * k + rnd.gauss(0, .01)))
+    s = dict(n=len(righe), syy=sum(y * y for y, _, _ in righe), skk=sum(k * k for _, k, _ in righe),
+             syk=sum(y * k for y, k, _ in righe), syl=sum(y * l for y, _, l in righe), skl=sum(k * l for _, k, l in righe))
+    t = CB.tassi_da_somme(**s)
+    assert abs(t["anno"] - .08) < .005 and abs(t["km_10000"] - .02) < .003
+    assert CB.tassi_da_somme(0, 0, 0, 0, 0, 0) is None
+    assert CB.quantili([1, 2, 3, 4, 5]) == [1.4, 2.0, 3.0, 4.0, 4.6] and CB.quantili([1, 2]) is None
+
+
+def test_due_sensi_solo_per_le_auto_care_se_acceso():
+    t = car(1, 25000, year=2019, km=60000)
+    merc = [car(100 + i, 30000, year=2017, km=60000) for i in range(8)]    # confronti più vecchi di 2 anni
+    v0 = P.valuta(t, merc, 4000, CFG, NOW)
+    v1 = P.valuta(t, merc, 4000, _cfg(**{"correzione.due_sensi_alto": True}), NOW)
+    assert v1["M"] > v0["M"] and v1["correzione"]["due_sensi"] and not v0["correzione"]["due_sensi"]
+    t2 = car(2, 9000, year=2019, km=60000)                                   # sotto 20.000: come prima
+    assert P.valuta(t2, merc, 1800, _cfg(**{"correzione.due_sensi_alto": True}), NOW)["M"] == \
+        P.valuta(t2, merc, 1800, CFG, NOW)["M"]
+
+
+# ------------------------------------------------------------------ trazione e optional
+
+def test_trazione_di():
+    assert DT.trazione_di({"version_raw": "2.0 TDI 4MOTION Highline"}) == "4x4"
+    assert DT.trazione_di({"title": "BMW X1 sDrive18d"}) == "2wd"
+    assert DT.trazione_di({"trazione_dati": "Integrale", "version_raw": "2.0"}) == "4x4"
+    assert DT.trazione_di({"trazione_dati": "Anteriore", "version_raw": "4x4"}) == "2wd"   # la scheda vince
+    assert DT.trazione_di({"version_raw": "1.6 TDI"}) is None
+
+
+TR_ON = {"trazione.attiva": True}
+
+
+def test_trazione_a_livelli():
+    r = RG.con_campi(RG.regole(), TR_ON)
+    q = [dict(car(100 + i, 20000), version_raw="2.0 TDI 4motion") for i in range(3)]
+    d = [dict(car(200 + i, 17000), version_raw="2.0 TDI") for i in range(6)]
+    t4 = dict(car(1, 15000), version_raw="2.0 TDI 4Motion")
+    tenuti, via, nota = DT.per_trazione(t4, q + d, 2, r)
+    assert tenuti == q and len(via) == 6 and nota is None
+    tenuti, via, nota = DT.per_trazione(t4, q[:1] + d, 2, r)               # un solo 4x4: tutti, con avviso
+    assert len(tenuti) == 7 and "4x4" in nota
+    t2 = dict(car(2, 12000), version_raw="2.0 TDI")
+    tenuti, via, _ = DT.per_trazione(t2, q + d, 2, r)
+    assert tenuti == d and len(via) == 3
+    tenuti, _, _ = DT.per_trazione(t2, q + d[:2], 2, r)                    # 4x4 in maggioranza e auto muta: tutti
+    assert len(tenuti) == 5
+    off = RG.con_campi(r, {"trazione.attiva": False})
+    assert DT.per_trazione(t4, q + d, 2, off)[0] == q + d
+
+
+def test_trazione_nella_valutazione():
+    q = [dict(car(100 + i, 21000 + i * 100, km=90000 + i * 300), version_raw="2.0 TDI 4motion") for i in range(6)]
+    d = [dict(car(200 + i, 17000 + i * 100, km=90000 + i * 300), version_raw="2.0 TDI") for i in range(10)]
+    t4 = dict(car(1, 16000), version_raw="2.0 TDI 4motion")
+    v = P.valuta(t4, q + d, 3200, _cfg(**TR_ON), NOW)
+    v0 = P.valuta(t4, q + d, 3200, CFG, NOW)                               # spenta di default
+    assert v["n_gemelle"] == 6 and v0["n_gemelle"] == 16 and v["M"] > v0["M"]
+    assert v["non_equivalenti"].get("trazione diversa (non 4x4)") == 10
+
+
+def test_premio_dotazioni_e_aggiustamento_spento():
+    p = DT.premio([(.05, 10, 10), (.03, 20, 20), (.04, 5, 30)])
+    assert p["celle"] == 3 and 0.03 < p["premio"] < 0.05 and p["n_con"] == 35 and p["se"] > 0
+    r = RG.regole()
+    mis = {"pelle": {"premio": .05, "se": .005, "n_con": 300}, "navigatore": {"premio": .01, "se": .02, "n_con": 300}}
+    assert DT.misurato(mis["pelle"], r) == r.dotazioni.tetto_voce                # tetto per voce
+    assert DT.misurato(mis["navigatore"], r) is None                             # non significativo
+    t = {"opt": {"pelle": True, "navigatore": False, "tetto": False}}
+    c = {"opt": {"pelle": False, "navigatore": False, "tetto": False}}
+    assert DT.fattore(t, c, mis, r) == 1.0                                       # spento di default
+    on = RG.con_campi(r, {"dotazioni.aggiusta": True})
+    assert abs(DT.fattore(t, c, mis, on) - math.exp(.04)) < 1e-9
+    assert DT.fattore(t, {"opt": None}, mis, on) == 1.0                          # optional del confronto non noti
+    assert DT.arricchisci([{"id": 1}, {"id": 2}], {1: {"trazione_dati": "Integrale", "opt": None}})[0]["trazione_dati"]
+
+
+def test_dotazioni_senza_colonna_nessuna_query():
+    class Conn:
+        sql = []
+
+        def execute(self, s, a=()):
+            self.sql.append(s)
+            raise AssertionError("nessuna query senza colonna")
+    import dealfinder.db as DB
+    orig = DB.ha_colonna
+    DB.ha_colonna = lambda conn, nome: False
+    try:
+        assert DT.carica_mercato(Conn(), [{"id": 1}]) == {} and DT.misura(Conn()) == {}
+    finally:
+        DB.ha_colonna = orig
+
+
+# ------------------------------------------------------------------ forbice della rivendita
+
+Q = [.70, .80, .90, 1.0, 1.08]
+
+
+def _fatt():
+    return RG.fattori_calibrazione(_fasce(.9, q=Q), misurate_vr={}, per_M=True)
+
+
+ON = RG.con_campi(RG.regole(), {"forbice.attiva": True})
+
+
+def test_forbice_da_annunci_e_probabilita():
+    pv = {"M": 10000, "R": 9000, "R_finale": 9000, "M_fonte": "annunci", "metodo": "mediana", "margine": 2000}
+    assert FB.calcola(pv, _fatt()) is None                                        # spenta di default
+    f = FB.calcola(pv, _fatt(), ON)
+    assert (f["p25"], f["p50"], f["p75"]) == (8000, 9000, 10000) and f["base"] == "annunci"
+    assert f["prob_R"] == .5
+    assert FB.probabilita(8000, [7000, 8000, 9000, 10000, 10800]) == .75
+    assert FB.probabilita(20000, [7000, 8000, 9000, 10000, 10800]) == .05      # limiti 5–95%
+    assert FB.probabilita(1000, [7000, 8000, 9000, 10000, 10800]) == .95
+    # valore reale senza la sua misura: solo la larghezza, centrata su M
+    g = FB.calcola(dict(pv, M_fonte="vendite", metodo="valore_reale_combinato"), _fatt(), ON)
+    assert g["base"] == "larghezza" and g["p50"] == 10000 and g["p25"] == 8900
+    assert FB.calcola(pv, RG.fattori_calibrazione({}, per_M=True), ON) is None   # senza quantili: niente
+
+
+def test_forbice_non_compare_sul_sito():
+    g = SR.Regole(fattori_calibra=tuple(_fatt()))
+    it = {"id": 1, "prezzo": 7000, "pv": {"M": 10000, "R": 10000, "R_finale": 10000, "M_fonte": "annunci",
+                                         "metodo": "mediana", "margine": 3000, "categoria": "opportunita"}}
+    SR.t_margine_sito(it, g)
+    pv = it["pv"]
+    assert "forbice_R" not in pv and pv["R"] == 9000 and pv["margine"] == 2000   # solo la calibrazione
+    js = open(os.path.join(QUI, "dealfinder", "web", "static", "scovo", "app.js"), encoding="utf-8").read()
+    assert "boxForbice" not in js and "probVendita" not in js and "forbice_R" not in js
+
+
+# ------------------------------------------------------------------ guardia delle 36 ore
+
+def test_giudicata_si_scrive_sempre():
+    from datetime import datetime, timedelta, timezone
+    ora = datetime.now(timezone.utc)
+    es = {"n": 20, "impronta_auto": "a", "impronta_regole": "r", "computed_at": ora}
+    assert VZ.deve_scrivere(es, 12, "a", "r", ora) == (False, "meno_confronti")
+    assert VZ.deve_scrivere(es, 12, "a", "r", ora, giudicata_nuova=True) == (True, "giudicata")
+    # giudice M5: una NON giudicata non sostituisce una giudicata entro ore_validita, anche con più confronti
+    gi = dict(es, tolti=4)
+    assert VZ.deve_scrivere(gi, 30, "a", "r", ora) == (False, "giudicata_protetta")
+    assert VZ.deve_scrivere(gi, 30, "a", "r", ora, giudicata_nuova=True)[0]
+    assert VZ.deve_scrivere(gi, 30, "b", "r", ora) == (True, "auto_cambiata")
+    assert VZ.deve_scrivere(dict(gi, computed_at=ora - timedelta(hours=40)), 30, "a", "r", ora) == (True, "vecchia")
+    assert VZ.giudicata({"ai_confronti": {"tolti": 3}}) and not VZ.giudicata({"ai_confronti": {"tolti": 0}})
+    assert "OR %s" in VZ.UPSERT_SQL and VZ.UPSERT_SQL.count("%s") == 15 and "'tolti'" in VZ.UPSERT_SQL
+
+
+# ------------------------------------------------------------------ statistiche della scheda
+
+def test_statistiche_scheda_campione_uniforme():
+    q = TR.stats_sql(True)[1]
+    assert "md5(l.id::text)" in q and f"LIMIT {TR.STATS_TETTO}" in q and "disappeared_at DESC" not in q
+    q0 = TR.stats_sql(False)[1]
+    assert "ORDER BY l.disappeared_at DESC LIMIT 40000" in q0
+    assert all("{" not in x for x in TR.stats_sql(True))
+    TR._VUOTE.clear()
+    TR._vuota("fiat", "500", "benzina", 2018, 0)
+    TR._VUOTE["_giorno"] = "2000-01-01"                                    # il giorno dopo si ricomincia
+    TR._vuota("fiat", "500", "benzina", 2018, 0)
+    assert ("fiat", "500", "benzina", 2018) in TR._VUOTE and TR._VUOTE["_giorno"] != "2000-01-01"
+
+
+# ------------------------------------------------------------------ prova alla cieca
+
+def test_prova_cieca_per_fascia_e_prima_dopo():
+    righe = [{"vero": 4000, "m_calcolo": 5200, "m_prima": 5200, "m_dopo": 4600, "m_tutte": 4600},
+             {"vero": 4500, "m_calcolo": 5400, "m_prima": 5400, "m_dopo": 4900, "m_tutte": 4900},
+             {"vero": 30000, "m_calcolo": 26000, "m_prima": 26000, "m_dopo": 26500, "m_tutte": 29000},
+             {"vero": 12000, "m_calcolo": 12500, "m_prima": None, "m_dopo": 12400, "m_tutte": 12400}]
+    res = PC.riepilogo(righe)
+    pd = res["prima_dopo_per_fascia_M"]
+    assert pd["5-10k"]["m_prima"]["n"] == 2 and pd["5-10k"]["m_dopo"]["scostamento_medio_pct"] < \
+        pd["5-10k"]["m_prima"]["scostamento_medio_pct"]
+    assert pd["20-35k"]["m_tutte"]["errore_medio_eur"] == 1000
+    assert res["prima_dopo"]["m_prima"]["n"] == 3                        # solo le auto con tutte le stime
+    assert res["per_fascia_prezzo"]["<5k"]["m_calcolo"]["n"] == 2
+    assert set(res["per_sconto_apparente"]) <= {n for _, n in PC.SCONTO}
+    v = PC.regole_varianti()
+    assert not v["prima"].correzione.pooling and v["dopo"].correzione.pooling and v["tutte"].dotazioni.aggiusta
+
+
+def test_calibra_vendita_oltre_uno_solo_con_alza_e_mai_sopra_i_commercianti():
+    mis = _fasce(1.10)
+    pv = {"M": 30000, "R": 30000, "R_finale": 30000, "M_fonte": "annunci", "metodo": "modello", "margine": 5000}
+    f0 = RG.fattori_calibrazione(mis, per_M=True)
+    assert RG.calibra_vendita(pv, f0)["R"] == 30000                                  # spento: niente
+    r = RG.con_campi(RG.regole(), {"calibrazione.alza": True})
+    f1 = RG.fattori_calibrazione(mis, r, per_M=True)
+    out = RG.calibra_vendita(pv, f1, r)
+    assert out["R"] == 31500 and out["margine"] == 6500
+    assert RG.calibra_vendita(dict(pv, R_commercianti=30500), f1, r)["R"] == 30500
+    assert RG.calibra_vendita(dict(pv, R=29000, R_finale=29000), f1, r)["R"] == 29000   # R già sotto M: resta
+
+
+def test_simula_fase2_gira_sul_dump_di_prova():
+    import json
+    import subprocess
+    import sys
+    import tempfile
+    righe = [{"_tipo": "DUMP_CANDIDATI", "id": 1, "auto": "Fiat Panda 1.2 Easy", "prezzo": 4300, "M": 6000, "R": 6000,
+              "margine": 1700, "cat": "opportunita", "sito": True, "metodo": "valore_reale_combinato"},
+             {"_tipo": "DUMP_CANDIDATI", "id": 2, "auto": "BMW X3 xDrive20d", "prezzo": 21000, "M": 26000, "R": 26000,
+              "margine": 5000, "cat": "opportunita", "sito": True, "metodo": "modello"}]
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "dump.jsonl")
+        open(p, "w").write("\n".join(json.dumps(x) for x in righe))
+        out = subprocess.run([sys.executable, os.path.join(QUI, "scripts", "simula_fase2.py"), p, "--vr", "<5k:0.8,5-10k:0.9"],
+                             capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr
+    assert "**Totale** | 2 | 1 |" in out.stdout                    # la Panda combinata esce (V al venduto)
+
+
+def test_tassi_applicati_solo_da_misura_con_pooling():
+    """Ricontrollo M2: valutazioni con i tassi solo se la riga dice tassi_pooling=true; CALIBRA li legge sempre."""
+    tassi = {"tutti": {"anno": .09, "km_10000": .018, "n": 9000}}
+
+    class Conn:
+        def __init__(self, dati):
+            self.dati = dati
+
+        def execute(self, sql, args=()):
+            dati = self.dati
+
+            class R:
+                def fetchall(self_):
+                    return [{"dati": dati}] if "FROM calibrazione" in sql else []
+            return R()
+
+        def rollback(self):
+            pass
+    primo = VZ.ingressi(Conn({"fasce_su": "M", "tassi": tassi, "tassi_pooling": False}), [1], solo=("calibra",))
+    assert primo["tassi_priori"] is None and primo["tassi_misurati"] == tassi
+    secondo = VZ.ingressi(Conn({"fasce_su": "M", "tassi": tassi, "tassi_pooling": True}), [1], solo=("calibra",))
+    assert secondo["tassi_priori"] == tassi
+    assert '_ing.get("tassi_misurati")' in open(os.path.join(QUI, "dealfinder", "pricing", "calibra.py")).read()

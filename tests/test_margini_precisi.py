@@ -220,8 +220,15 @@ def test_tasso_km_minimo():
     g = [car(100 + i, 10000 + (i % 3) * 50, year=2015 + i % 5, km=20000 + i * 7000) for i in range(30)]
     for c in g:                                              # prezzo dipende dall'anno, non dai km: tasso km 0%
         c["price_eur"] = int(8000 * 1.08 ** (c["year"] - 2015))
-    ya, ka, origine = P.tassi(g, CFG)
+    # regola di prima (pooling spento, 12/11 sera): stima fuori limite → valori configurati
+    cfg0 = P.PolicyConfig(RG.con_campi(RG.regole(), {"correzione.pooling": False}))
+    ya, ka, origine = P.tassi(g, cfg0)
     assert origine == "valori configurati" and ka == RG.regole().correzione.svalutazione_10km
+    # con il pooling ma senza tassi misurati (12/11 sera, giudice A1): la regola di prima
+    assert P.tassi(g, CFG) == (ya, ka, origine)
+    # con i tassi misurati: la stima 0%, tagliata al minimo, si mescola e resta almeno km_min
+    ya, ka, origine = P.tassi(g, CFG, {"tutti": {"anno": .08, "km_10000": .015, "n": 9000}}, "volkswagen")
+    assert "ristretta" in origine and ka >= RG.regole().correzione.km_min
 
 
 def test_esame_non_chiama_il_giudice(monkeypatch=None):

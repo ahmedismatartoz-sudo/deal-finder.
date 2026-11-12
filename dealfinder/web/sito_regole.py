@@ -380,6 +380,8 @@ def calibra_venduto(it, g) -> int:
         return 0
     R = float(pv.get("R_finale") or pv.get("R") or 0)
     R2 = float(pv2.get("R_finale") or pv2.get("R") or R)
+    if RG.regole().calibrazione.alza:      # 12/11 sera: fattore oltre 1 (spento di default), solo misurato sopra 20.000 €
+        return int(round(R - R2))
     return int(round(max(0.0, R - R2)))
 
 
@@ -387,7 +389,7 @@ def t_margine_sito(it, g):
     """Modifiche al margine: correzione misurata chiesto -> venduto (solo mercato da prezzi chiesti) e costo del
     difetto letto dall'AI (tabella ai_difetti)."""
     giu = calibra_venduto(it, g)
-    if giu > 0 and it["pv"].get("margine") is not None:
+    if giu != 0 and it["pv"].get("margine") is not None:
         pv = it["pv"]
         R = int(pv.get("R_finale") or pv.get("R"))
         it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, calibrato_venduto=giu, calibrato=True)
