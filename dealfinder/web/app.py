@@ -3311,8 +3311,24 @@ def _tempo_reale():
     def nuovi():
         time.sleep(int(os.environ.get("TR_RITARDO_S", "90")) + 30)
         ultimo_completo = 0.0
+        visto_worker = [None]
         while True:
             t0 = time.time()
+            # 12/11 (buchi della raccolta): con il worker separato attivo (pipeline/tempo_reale_worker.py) il giro lo fa
+            # lui; qui solo l'elenco aggiornato quando pubblica. TR_WORKER=0: il sito gira sempre.
+            try:
+                from ..pipeline import tempo_reale_worker as trw
+                with connect() as _cw:
+                    if trw.worker_attivo(_cw):
+                        quando, pubblicate = trw.ultimo_giro(_cw)
+                        if quando != visto_worker[0] and pubblicate and visto_worker[0] is not None:
+                            _elenco["t"] = 0.0
+                            _aggiorna_elenco(attendi=False)
+                        visto_worker[0] = quando
+                        time.sleep(60)
+                        continue
+            except Exception as e:
+                lg.warning("TR worker non controllato (giro nel sito): %s", str(e)[:200])
             try:
                 # ogni TR_COMPLETO_MIN minuti (e al primo giro) si rilegge TUTTO il nuovo delle ultime 24 ore
                 completo = (t0 - ultimo_completo >= float(os.environ.get("TR_COMPLETO_MIN", "60")) * 60
