@@ -298,6 +298,22 @@ WHERE l.stage='approfondito' AND l.status='attivo'
 """
 
 
+def _apertura(conn, lid: int, dealer_id: int, da_appuntamento: bool = False) -> None:
+    """Registra l'apertura di un annuncio (una riga per commerciante e auto: chiave listing_id, dealer_id).
+    12/11: da_appuntamento=True se nasce da una richiesta di appuntamento (lo staff può annullarla e liberare il posto);
+    un contatto vero la rende definitiva (da_appuntamento=false) e un appuntamento non la sovrascrive mai.
+    Senza la colonna (migrazione 049 non ancora fatta) come prima."""
+    if not abbonamento.ha_colonna(conn, "listing_opens", "da_appuntamento"):
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
+                     (lid, dealer_id))
+    elif da_appuntamento:
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id, da_appuntamento) VALUES (%s,%s,true) "
+                     "ON CONFLICT DO NOTHING", (lid, dealer_id))
+    else:
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT (listing_id, dealer_id) "
+                     "DO UPDATE SET da_appuntamento=false", (lid, dealer_id))
+
+
 def _dealer_context(conn, dealer_id: int):
     d = conn.execute("SELECT * FROM dealers WHERE id=%s", (dealer_id,)).fetchone()
     c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (dealer_id,)).fetchone()
@@ -378,8 +394,7 @@ def open_listing(request: Request):
             "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, user["id"], lid)).fetchone()
         if not row or (not row["mine"] and row["opens"] >= settings.max_dealer_opens):
             err(404, "Annuncio non più disponibile")
-        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
-                     (lid, user["id"]))
+        _apertura(conn, lid, user["id"])
         conn.commit()
     return jsonify({"url": row["url"]})
 
@@ -648,6 +663,10 @@ async def abbonamento_checkout(request: Request):
                     conn.commit()
                     return {"url": pend["url"], "ripreso": True}
                 abbonamento.scadi_checkout(pend["id"])          # cambio di piano: la sessione vecchia non vale più
+            # 12/11: abbonamenti rimasti "incomplete" da più di un'ora: si chiudono su Stripe prima del checkout nuovo,
+            # così la loro fattura non si può pagare insieme al nuovo abbonamento
+            for vecchio in sit.get("incomplete_vecchi") or []:
+                abbonamento.chiudi_abbonamento(vecchio)
             sess = abbonamento.crea_checkout(d, social.base_url(request), None, piano)
             abbonamento.segna_checkout(conn, d["id"], sess.get("id"))
             conn.commit()
@@ -2175,7 +2194,7 @@ async def appuntamento(request: Request):
         # la richiesta è confermata subito: conta come apertura (occupa uno dei posti "max commercianti per auto").
         # 12/11: solo account con accesso alle auto e al massimo APP_GIORNO al giorno; se lo staff la annulla
         # (admin_appuntamento_stato) il posto si libera.
-        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (lid, user["id"]))
+        _apertura(conn, lid, user["id"], da_appuntamento=True)
         conn.commit()
     tel = scovo.find_phone(car.get("description"))
     testo = (f"Richiesta appuntamento n. {aid}\n\n"
@@ -2197,8 +2216,8 @@ async def appuntamento(request: Request):
 async def admin_appuntamento_stato(request: Request):
     """12/11: lo staff annulla una richiesta di appuntamento ({"stato": "annullato"}): la richiesta resta in tabella
     come annullata e l'apertura (listing_opens) di quel commerciante su quell'auto si toglie, così il posto "max
-    commercianti per auto" torna libero per gli altri. Nota: se il commerciante aveva anche aperto il contatto, si
-    toglie anche quell'apertura."""
+    commercianti per auto" torna libero per gli altri. Se il commerciante aveva anche aperto il contatto
+    (da_appuntamento=false) l'apertura resta. Senza la colonna (049 non ancora fatta) non si toglie nulla."""
     current_user(request, admin=True)
     aid = int(request.path_params["id"])
     if str((await body(request)).get("stato") or "") != "annullato":
@@ -2208,7 +2227,10 @@ async def admin_appuntamento_stato(request: Request):
                          (aid,)).fetchone()
         if not r:
             err(404, "Appuntamento non trovato")
-        conn.execute("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s", (r["listing_id"], r["dealer_id"]))
+        if abbonamento.ha_colonna(conn, "listing_opens", "da_appuntamento"):
+            # solo l'apertura nata dall'appuntamento: un contatto vero dello stesso commerciante resta
+            conn.execute("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s AND da_appuntamento",
+                         (r["listing_id"], r["dealer_id"]))
         conn.commit()
     logging.getLogger("scovo").warning("APPUNTAMENTO %s stato=annullato (posto liberato)", aid)
     return jsonify({"ok": True})
@@ -2274,8 +2296,7 @@ def _apri_contatto(request: Request, user: dict | None) -> dict:
             "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, uid, lid)).fetchone()
         if not row or (not row["mine"] and row["opens"] >= settings.max_dealer_opens):
             err(404, "Questa auto non è più disponibile")
-        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
-                     (lid, uid))
+        _apertura(conn, lid, uid)
         conn.commit()
     return {"url": row["url"], "tel": scovo.find_phone(row["description"])}
 

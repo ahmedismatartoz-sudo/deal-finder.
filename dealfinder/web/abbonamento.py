@@ -108,6 +108,23 @@ def _post(path: str, data: dict, http=None) -> dict:
     return r.json()
 
 
+def chiudi_abbonamento(sub_id: str, http=None) -> bool:
+    """12/11: chiude su Stripe un abbonamento rimasto "incomplete" (DELETE /v1/subscriptions/{id}) prima di aprire un
+    checkout nuovo: la sua fattura non si può più pagare, quindi niente doppio addebito. 400/404 = già chiuso o
+    scaduto da Stripe: va bene lo stesso. Altri errori: RuntimeError (il checkout nuovo non si apre)."""
+    if http is None:
+        import httpx as http
+    r = http.delete(f"{API}/subscriptions/{sub_id}", auth=(os.environ["STRIPE_SECRET_KEY"], ""), timeout=20)
+    if r.status_code in (400, 404):
+        log.warning("STRIPE abbonamento incomplete %s già chiuso (%s)", sub_id, r.status_code)
+        return False
+    if r.status_code >= 400:
+        log.warning("STRIPE abbonamento incomplete %s non chiuso: %s", sub_id, r.status_code)
+        raise RuntimeError("Stripe non risponde, riprova tra poco")
+    log.warning("STRIPE abbonamento incomplete %s chiuso prima di un checkout nuovo", sub_id)
+    return True
+
+
 def _get(path: str, params: dict) -> dict:
     import httpx
     r = httpx.get(API + path, params=params, auth=(os.environ["STRIPE_SECRET_KEY"], ""), timeout=20)
@@ -500,7 +517,7 @@ def situazione(conn, dealer: dict, leggi=None, ora: float | None = None) -> dict
     {"attivo": abbonamento attivo, in prova o in tolleranza -> portale,
      "in_conferma": primo pagamento incomplete da meno di INCOMPLETE_ORE -> niente checkout nuovo,
      "url": pagina Stripe della fattura da pagare/confermare (latest_invoice.hosted_invoice_url), se c'è}"""
-    out = {"attivo": False, "in_conferma": False, "url": None}
+    out = {"attivo": False, "in_conferma": False, "url": None, "incomplete_vecchi": []}
     if (dealer.get("abbonamento_stato") or "") in STATI_OK:
         out["attivo"] = True
         return out
@@ -515,6 +532,10 @@ def situazione(conn, dealer: dict, leggi=None, ora: float | None = None) -> dict
                         "AND aggiornato_at > now() - make_interval(hours => %s) LIMIT 1",
                         (dealer["id"], INCOMPLETE_ORE)).fetchone():
             out["in_conferma"] = True
+        out["incomplete_vecchi"] = [r["subscription_id"] for r in conn.execute(
+            "SELECT subscription_id FROM abbonamenti WHERE dealer_id=%s AND stato='incomplete' "
+            "AND aggiornato_at <= now() - make_interval(hours => %s)", (dealer["id"], INCOMPLETE_ORE)).fetchall()
+            if r.get("subscription_id")]
     cu = dealer.get("stripe_customer")
     if cu and (leggi is not None or attivo()):
         ora = ora or time.time()
@@ -532,8 +553,12 @@ def situazione(conn, dealer: dict, leggi=None, ora: float | None = None) -> dict
                 fattura = sub.get("latest_invoice")
                 if isinstance(fattura, dict) and str(fattura.get("hosted_invoice_url") or "").startswith("https://"):
                     out["url"] = fattura["hosted_invoice_url"]
+            elif sub.get("status") == "incomplete" and sub.get("id") and sub["id"] not in out["incomplete_vecchi"]:
+                out["incomplete_vecchi"].append(sub["id"])
     if out["attivo"]:
         out["in_conferma"], out["url"] = False, None
+    if out["in_conferma"]:
+        out["incomplete_vecchi"] = []          # finché uno è in conferma non si chiude nulla e non si apre checkout
     return out
 
 

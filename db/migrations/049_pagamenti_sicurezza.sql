@@ -27,3 +27,7 @@ UPDATE dealers d SET permessi = array_remove(d.permessi, 'appuntamenti')
  WHERE 'appuntamenti' = ANY(COALESCE(d.permessi, '{}'))
    AND EXISTS (SELECT 1 FROM abbonamenti a WHERE a.dealer_id = d.id AND a.piano IN ('pro', 'max')
                  AND a.stato IN ('active', 'trialing'));
+
+-- 4. Aperture: si distingue quella nata da una richiesta di appuntamento (annullabile dallo staff, che libera il
+--    posto) da quella del contatto vero ("Parla col venditore"), che l'annullamento non tocca.
+ALTER TABLE listing_opens ADD COLUMN IF NOT EXISTS da_appuntamento BOOLEAN NOT NULL DEFAULT false;

@@ -1,7 +1,7 @@
 """Postgres VERO per i test che devono eseguire l'SQL (migrazioni, query): un cluster temporaneo creato con initdb,
 fermato e cancellato alla fine. Se Postgres non è installato, avvia() restituisce None e il test lo dice e si ferma.
 
-    with pg_vero.avvia() as pg:          # None se non disponibile
+    with pg_vero_pagamenti.avvia() as pg:   # None se non disponibile
         pg.sql("SELECT 1")               # righe come dizionari (valori in testo, NULL = None)
         pg.file("db/migrations/049_x.sql")
 
@@ -18,7 +18,7 @@ import shutil
 import subprocess
 import tempfile
 
-PORTA = 55439
+PORTA = 55441
 
 
 def _bin() -> str | None:
@@ -56,7 +56,7 @@ def avvia():
         yield None
         return
     root = os.geteuid() == 0
-    cartella = tempfile.mkdtemp(prefix="pgvero_", dir="/tmp")
+    cartella = tempfile.mkdtemp(prefix="pgvero_pag_", dir="/tmp")
     dati = os.path.join(cartella, "dati")
 
     def come_pg(cmd: list[str]) -> int:

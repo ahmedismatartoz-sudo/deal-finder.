@@ -143,6 +143,10 @@ class StripeFinto:
     def scadi(self, sid, http=None):
         self.post.append(("scadi", sid))
 
+    def chiudi(self, sub_id, http=None):
+        self.post.append(("chiudi", sub_id))
+        return True
+
 
 def _con_stripe(db, st, monkeypatch):
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_finto")
@@ -152,6 +156,7 @@ def _con_stripe(db, st, monkeypatch):
                         (A, "current_user", lambda r, admin=False: {"id": 7, "role": "commerciante", "sid": "s"}),
                         (ab, "_get", lambda path, params: st.leggi(path, params) if st else get_vero(path, params)),
                         (ab, "crea_checkout", st.crea), (ab, "scadi_checkout", st.scadi),
+                        (ab, "chiudi_abbonamento", st.chiudi),
                         (ab, "portale", lambda cu, base, http=None: "https://billing.stripe.com/portale"))
 
 
@@ -255,9 +260,11 @@ def test_abbonamento_incompleto_e_in_conferma_non_attivo():
     db = FintoStripeDB()
     d = {"id": 7, "abbonamento_stato": None, "stripe_customer": "cus_1"}
     sit = ab.situazione(db, d, _incomplete(600))
-    assert sit == {"attivo": False, "in_conferma": True, "url": "https://invoice.stripe.com/i/acct_1/test_xyz"}
+    assert sit == {"attivo": False, "in_conferma": True, "url": "https://invoice.stripe.com/i/acct_1/test_xyz",
+                   "incomplete_vecchi": []}
     assert not ab.abbonamento_in_corso(db, d, _incomplete(600))            # non è "Hai già un abbonamento attivo"
-    assert ab.situazione(db, d, _incomplete(2 * 3600)) == {"attivo": False, "in_conferma": False, "url": None}
+    assert ab.situazione(db, d, _incomplete(2 * 3600)) == {"attivo": False, "in_conferma": False, "url": None,
+                                                            "incomplete_vecchi": ["sub_9"]}
 
 
 def test_checkout_con_pagamento_in_conferma(monkeypatch):
@@ -272,7 +279,32 @@ def test_checkout_con_pagamento_in_conferma(monkeypatch):
     st.leggi = _incomplete(2 * 3600)
     with _con_stripe(db, st, monkeypatch):
         out, code, _ = _esegui(A.abbonamento_checkout, _req("/api/abbonamento/checkout", {"piano": "base"}))
-    assert code == 200 and st.post == [("crea", "base")] and not out.get("in_conferma")
+    # il vecchio incomplete si chiude su Stripe PRIMA del checkout nuovo (la sua fattura non si potrà più pagare)
+    assert code == 200 and st.post == [("chiudi", "sub_9"), ("crea", "base")] and not out.get("in_conferma")
+
+
+def test_chiudi_abbonamento_incomplete(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    chiamate = []
+
+    def http(codice):
+        class H:
+            @staticmethod
+            def delete(url, **k):
+                chiamate.append(url)
+
+                class R:
+                    status_code = codice
+                return R()
+        return H
+    assert ab.chiudi_abbonamento("sub_9", http(200)) is True
+    assert chiamate == ["https://api.stripe.com/v1/subscriptions/sub_9"]
+    assert ab.chiudi_abbonamento("sub_9", http(404)) is False            # già chiuso o scaduto: va bene
+    try:
+        ab.chiudi_abbonamento("sub_9", http(500))
+        assert False, "doveva fermare il checkout"
+    except RuntimeError:
+        pass
 
 
 def test_checkout_pendente_non_chiude_la_transazione():
@@ -471,6 +503,7 @@ def test_appuntamenti_massimo_5_al_giorno():
 
 
 def test_annullare_appuntamento_libera_il_posto():
+    ab._COLONNE.clear()
     q = []
 
     class DB:
@@ -488,6 +521,8 @@ def test_annullare_appuntamento_libera_il_posto():
             q.append((s, p))
             if s.startswith("UPDATE appuntamenti SET stato='annullato'"):
                 return _R([{"dealer_id": 7, "listing_id": 11}])
+            if s.startswith("SELECT 1 FROM information_schema.columns"):
+                return _R([{"x": 1}])
             return _R()
     with _Sostituisci((A, "connect", lambda: DB()), (A, "current_user", lambda r, admin=False: {"id": 1, "role": "admin"})):
         _, code, _ = _esegui(A.admin_appuntamento_stato, _req("/api/admin/appuntamenti/3", {"stato": "confermato"},
@@ -496,7 +531,9 @@ def test_annullare_appuntamento_libera_il_posto():
         _, code, _ = _esegui(A.admin_appuntamento_stato, _req("/api/admin/appuntamenti/3", {"stato": "annullato"},
                                                                path_params={"id": 3}))
     assert code == 200
-    assert ("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s", (11, 7)) in q
+    # solo l'apertura nata dall'appuntamento
+    assert ("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s AND da_appuntamento", (11, 7)) in q
+    ab._COLONNE.clear()
 
 
 # --------------------------------------------------------- 5. MEDIA: niente telefoni nelle risposte API
@@ -578,7 +615,7 @@ def test_migrazione_049_su_postgres_vero():
     """049 eseguita davvero (Postgres locale): perde il permesso scritto solo chi oggi ha un Max active/trialing
     (coperto dal permesso automatico); chi l'ha avuto a mano lo tiene."""
     import glob
-    from tests import pg_vero
+    from tests import pg_vero_pagamenti as pg_vero
     cartella = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db", "migrations")
     with pg_vero.avvia() as pg:
         if pg is None:
@@ -615,6 +652,54 @@ def test_migrazione_049_su_postgres_vero():
                       "AND column_name IN ('checkout_session','checkout_session_at')")[0]["n"] == "2"
         assert pg.sql("SELECT to_regclass('link_accesso_usati') AS t")[0]["t"] == "link_accesso_usati"
         pg.file(os.path.join(cartella, "049_pagamenti_sicurezza.sql"))     # rieseguita: nessun errore
+
+
+def test_aperture_appuntamento_e_contatto_su_postgres_vero():
+    """Una riga per (auto, commerciante): l'appuntamento la crea con da_appuntamento=true, il contatto vero la rende
+    definitiva; l'annullamento toglie solo quella nata dall'appuntamento."""
+    import glob
+    import re
+    from tests import pg_vero_pagamenti as pg_vero
+    cartella = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db", "migrations")
+
+    class Conn:                                     # esegue l'SQL vero dell'app sul Postgres temporaneo
+        def __init__(self, pg):
+            self.pg = pg
+
+        def commit(self):
+            pass
+
+        def execute(self, sql, p=()):
+            it = iter(p)
+            lit = lambda v: "NULL" if v is None else str(v) if isinstance(v, int) else "'" + str(v).replace("'", "''") + "'"  # noqa: E731
+            return _R([{k: (v == "t" if v in ("t", "f") else v) for k, v in r.items()}
+                       for r in self.pg.sql(re.sub(r"%s", lambda m: lit(next(it)), sql))])
+    with pg_vero.avvia() as pg:
+        if pg is None:
+            print("Postgres non disponibile: test saltato")
+            return
+        for f in sorted(glob.glob(os.path.join(cartella, "*.sql"))):
+            pg.file(f)
+        assert pg.sql("SELECT count(*) AS n FROM pg_constraint WHERE conrelid='listing_opens'::regclass "
+                      "AND contype IN ('p','u')")[0]["n"] == "1"            # vincolo unico (listing_id, dealer_id)
+        pg.sql("INSERT INTO dealers (id, name, email, role) VALUES (7,'a','a@prova.test','commerciante'), "
+               "(8,'b','b@prova.test','commerciante')")
+        pg.sql("INSERT INTO listings (id, source, source_id, url, title, price_eur, status) VALUES "
+               "(11,'subito','x11','https://x','Panda',5000,'attivo')")
+        c = Conn(pg)
+        ab._COLONNE.clear()
+        A._apertura(c, 11, 7, da_appuntamento=True)          # appuntamento del 7
+        A._apertura(c, 11, 7, da_appuntamento=True)          # doppio: nessun errore
+        A._apertura(c, 11, 8, da_appuntamento=True)          # appuntamento dell'8...
+        A._apertura(c, 11, 8)                                # ...che poi apre anche il contatto vero
+        A._apertura(c, 11, 8, da_appuntamento=True)          # un altro appuntamento non lo riporta indietro
+        righe = {r["dealer_id"]: r["da_appuntamento"] for r in
+                 pg.sql("SELECT dealer_id, da_appuntamento FROM listing_opens WHERE listing_id=11")}
+        assert righe == {"7": "t", "8": "f"}
+        for did in (7, 8):                                   # lo staff annulla entrambi gli appuntamenti
+            c.execute("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s AND da_appuntamento", (11, did))
+        assert [r["dealer_id"] for r in pg.sql("SELECT dealer_id FROM listing_opens")] == ["8"]
+        ab._COLONNE.clear()
 
 
 # ---------------------------------------------------- 9. MEDIA: sessione 90 giorni, link monouso di 1 ora
