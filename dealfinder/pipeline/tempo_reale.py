@@ -218,7 +218,37 @@ def subito_esito_con_prova(client, url: str, lenient: bool = False) -> tuple[str
     trovate = [k for k in _SUBITO_TOLTO if k in low]
     if trovate:
         return "scomparso", ("scaduto" if any("scadut" in k for k in trovate) else "rimosso")
+    # 12/11 (buchi della raccolta §2.3): le pagine di Subito non hanno più __NEXT_DATA__ (i dati sono nel JSON escapato
+    # di self.__next_f): ogni annuncio dava "errore" e il controllo notturno degli spariti si fermava dopo 15 pagine,
+    # ogni notte (0 controllati). I dati DELL'annuncio (il suo numero nell'urn più i campi
+    # dell'annuncio) valgono come prima "pagina con i dati" = attivo. urn di Subito: "id:ad:<numero>:list:<n>".
+    if _dati_annuncio_nella_pagina(text, m.group(1) if m else None):
+        return "attivo", None
+    _diag_pagina_subito(text, m.group(1) if m else None)
     return ("attivo", None) if lenient else ("errore", None)
+
+
+_RE_CAMPI_ANNUNCIO = re.compile(r'\\*"(subject|features|advertiser|urn)\\*"\s*:')
+_diag_pag_sub = {"n": 0}
+
+
+def _dati_annuncio_nella_pagina(text: str, numero: str | None) -> bool:
+    """Pagina Subito (App Router, JSON escapato) con i dati di QUESTO annuncio: il suo urn ("id:ad:<numero>:") e
+    almeno un campo dell'annuncio. Senza il numero nell'indirizzo non si decide."""
+    if not numero or not text:
+        return False
+    return (f"ad:{numero}:" in text or f"list:{numero}" in text) and bool(_RE_CAMPI_ANNUNCIO.search(text))
+
+
+def _diag_pagina_subito(text: str, numero: str | None) -> None:
+    """Le prime 3 pagine non riconosciute per processo: solo la FORMA (byte, marcatori), mai contenuti."""
+    if _diag_pag_sub["n"] >= 3:
+        return
+    _diag_pag_sub["n"] += 1
+    t = text or ""
+    log.warning("SCOMPARSI subito pagina non riconosciuta: byte=%d next_data=%s next_f=%s numero_nell_urn=%s campi=%s",
+                len(t), "__NEXT_DATA__" in t, "self.__next_f" in t, bool(numero and (f"ad:{numero}:" in t or f"list:{numero}" in t)),
+                sorted(set(x.group(1) for x in _RE_CAMPI_ANNUNCIO.finditer(t[:2_000_000])))[:6])
 
 
 def subito_stato_con_prova(client, url: str) -> str:
