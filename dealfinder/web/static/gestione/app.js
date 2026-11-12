@@ -369,7 +369,8 @@ async function viewAdmin() {
         ["provinces", "Zona", (v, r) => r.role === "admin" ? "Tutte" : `<select data-zona="${r.id}">${[["milano", "Milano e dintorni"], ["ravenna", "Ravenna e dintorni"], ["tutte", "Tutte"]].map(([k, l]) =>
           `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"], ["appuntamenti", "Appuntamenti (200 €)"]].map(([k, l]) =>
-          `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>`).join("")],
+          `<label style="margin-right:.6rem;white-space:nowrap"><input type="checkbox" data-perm="${r.id}" data-k="${k}" ${(v || []).includes(k) ? "checked" : ""}> ${l}</label>` +
+          (k === "appuntamenti" && r.appuntamenti_auto ? ` <small class="note">automatico: Max pagato</small>` : "")).join("")],
         ["paga_carta", "Pagamento", (v, r) => r.role === "admin" ? "" : `<label style="white-space:nowrap"><input type="checkbox" data-paga="${r.id}" ${v ? "checked" : ""}> Deve pagare con carta</label>${v ? ` <small class="note">${["active", "trialing"].includes(r.abbonamento_stato) ? "pagato" : "non ancora pagato"}</small>` : ""}`],
         ["active", "Attivo", (v, r) => `${v ? '<span class="ok">Attivo</span>' : '<b class="ko">Disattivato</b>'} <button class="btn" data-toggle="${r.id}" data-active="${v}">${v ? "Disattiva" : "Riattiva"}</button>`],
         ["id", "Accesso", (v, r) => `<button class="btn primary" data-link="${v}" data-who="${esc(r.email)}">Link di accesso</button> <button class="btn" data-pwd="${v}" data-who="${esc(r.email)}">Nuova password</button>`]])}</div>
@@ -403,7 +404,7 @@ async function viewAdmin() {
         const r = await api("/api/admin/dealers/" + b.dataset.link + "/link", { method: "POST" });
         const testo = "Ecco il tuo accesso a Scovo (apri il link, entri subito): " + r.url;
         if (navigator.share) { try { await navigator.share({ title: "Accesso a Scovo", text: testo }); return; } catch (e) { /* annullato */ } }
-        try { await navigator.clipboard.writeText(r.url); toast("Link copiato: incollalo su WhatsApp. Vale " + r.giorni + " giorni."); }
+        try { await navigator.clipboard.writeText(r.url); toast("Link copiato: incollalo su WhatsApp. Vale " + (r.validita || r.giorni + " giorni") + "."); }
         catch (e) { prompt("Copia questo link e mandalo a " + b.dataset.who + ":", r.url); }
       } catch (err) { toast(err.message); }
     });

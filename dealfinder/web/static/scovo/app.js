@@ -79,7 +79,7 @@ const L = {mode:"login", err:"", busy:false, sent:false, email:"", req:{}};
 // Il token vive anche in un cookie, così le sezioni aperte come pagina (Incentivi) sanno chi sei.
 function syncCookie(){
   try {
-    if (S.token) document.cookie = "scovo_t=" + encodeURIComponent(S.token) + "; path=/; max-age=315360000; samesite=lax" + (location.protocol === "https:" ? "; secure" : "");
+    if (S.token) document.cookie = "scovo_t=" + encodeURIComponent(S.token) + "; path=/; max-age=7776000; samesite=lax" + (location.protocol === "https:" ? "; secure" : "");
     else document.cookie = "scovo_t=; path=/; max-age=0; samesite=lax";
   } catch (e) { /* cookie non disponibili */ }
 }
@@ -103,8 +103,11 @@ async function api(path, opts = {}) {
   }
   let data = null;
   try { data = await res.json(); } catch (e) {}
+  // 12/11: il server rinnova il token con l'uso (90 giorni): si salva quello nuovo
+  const nuovo = res.headers && res.headers.get("X-Scovo-Token");
+  if (nuovo && S.token && nuovo !== S.token && headers.Authorization === "Bearer " + S.token) { S.token = nuovo; store.set("token", nuovo); syncCookie(); }
   if (res.status === 401 && S.token && !path.includes("/auth/")) { const m = (data && data.error) || "Accesso scaduto: entra di nuovo"; logout(m); throw new Error(m); }
-  if (res.status === 402) { S.paywall = true; if (typeof render === "function") render({keep:true}); }
+  if (res.status === 402 && !(S.pagaStato && S.pagaStato.fase === "verifica")) { S.paywall = true; if (typeof render === "function") render({keep:true}); }
   if (!res.ok) { const e = new Error((data && (data.error || data.errore)) || "Errore " + res.status); e.data = data; e.status = res.status; throw e; }
   return data;
 }
@@ -1020,8 +1023,8 @@ async function onSubmit(e){
 function loggedIn(r){
   S.token = r.token; S.user = r.user; store.set("token", r.token); store.set("user", r.user); syncCookie();
   S.scroll = {}; go("affari", true); loadCars(true); window.scrollTo(0, 0);
-  let dopo = null; try { dopo = store.get("paga_dopo"); store.del("paga_dopo"); } catch (e) {}
-  if (dopo) abbonati(dopo === "max" ? "pro" : dopo);
+  const dopo = pagaDopoLeggi();          // 12/11: si cancella sempre, vale un'ora, mai a chi è già abbonato
+  if (dopo) pagaSeServe(dopo);
 
 }
 async function redeemCode(code){
@@ -1065,16 +1068,25 @@ function applyRoute(){
   S.scroll[prev === "auto" ? "auto" : prev] = window.scrollY;
   const r = parseHash();
   if (r.route === "paga") {
-    try { store.set("paga_dopo", r.piano); } catch (e) {}
-    if (S.token) { abbonati(r.piano === "max" ? "pro" : r.piano); return; }
-    toast("Entra con email e password: poi si apre subito il pagamento");
+    const piano = r.piano === "max" ? "pro" : r.piano;
+    if (S.token) {
+      // 12/11: niente "paga_dopo" in memoria; la voce #/paga si sostituisce (il tasto indietro da Stripe non riapre
+      // il pagamento) e la pagina si disegna prima di andare su Stripe
+      history.replaceState(null, "", "#/affari"); S.route = "affari"; render({top:true}); loadCars();
+      pagaSeServe(piano); return;
+    }
+    store.set("paga_dopo", {piano, t: Date.now()});
+    toast("Entra (con Google, Apple o email): poi si apre subito il pagamento");
     go("entra", true); return;
   }
   if (r.route === "abbonamento") {
-    history.replaceState(null, "", "#/affari");
-    if (r.esito === "ok") { S.paywall = false; toast("Abbonamento attivo: benvenuto in Scovo!"); }
-    else toast("Pagamento annullato");
-    S.route = "affari"; render({top:true}); loadCars(true); return;
+    // 12/11: al ritorno da Stripe si verifica il pagamento sul server (session_id) invece di aspettare solo il webhook
+    const sid = new URLSearchParams(location.search).get("session_id");
+    history.replaceState(null, "", location.pathname + "#/affari");
+    S.route = "affari";
+    if (r.esito === "ok" && S.token) { verificaPagamento(sid); return; }
+    toast(r.esito === "ok" ? "Pagamento ricevuto: entra per vedere le auto" : "Pagamento annullato");
+    render({top:true}); loadCars(true); return;
   }
   if (r.route === "accesso") { history.replaceState(null, "", "#/entra"); S.route = "entra"; render({top:true}); redeemCode(r.code); return; }
   if (S.token && ["entra","prova","vetrina"].includes(r.route)) { go("affari", true); return; }
@@ -1625,6 +1637,7 @@ function render(opts){
   let html;
   if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
   else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
+  else if (S.token && S.pagaStato && (isList(S.route) || S.route === "auto")) { html = viewPagamento(); }
   else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall(); }
   else if (S.route === "auto") { html = viewDetail(); }
   else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : viewList()) + tabBar();
@@ -1870,9 +1883,59 @@ function viewPaywall(){
     <button class="link" data-act="logout">Esci</button></div></main>`;
 }
 async function abbonati(piano){
-  if (S.payBusy) return; S.payBusy = piano || true; render({keep:true});
-  try { const d = await api("/api/abbonamento/checkout", {method: "POST", body: {piano: piano || "base"}}); location.href = d.url; }
-  catch (e) { S.payBusy = false; toast(e.message); render({keep:true}); }
+  if (S.payBusy || (S.pagaStato && S.pagaStato.fase === "verifica")) return;
+  S.payBusy = piano || true; render({keep:true});
+  try {
+    const d = await api("/api/abbonamento/checkout", {method: "POST", body: {piano: piano || "base"}});
+    if (d.portale) toast("Hai già un abbonamento: ti porto alla gestione su Stripe");
+    location.href = d.url;
+  } catch (e) {
+    // 12/11: messaggio chiaro che resta sulla pagina (prima: pagina vuota e un avviso che spariva)
+    S.payBusy = false;
+    S.pagaStato = e.status === 409 ? {fase: "info", msg: e.message || "Hai già un abbonamento attivo."}
+      : e.status === 503 ? {fase: "errore", piano, msg: "I pagamenti online non sono ancora attivi. Scrivici dalla pagina di contatto e attiviamo l'account."}
+      : {fase: "errore", piano, msg: "Non siamo riusciti ad aprire la pagina di pagamento (" + (e.message || "errore") + "). Non ti è stato addebitato nulla: riprova tra poco."};
+    render({top:true});
+  }
+}
+
+/* ---------- 12/11: pagamento: verifica al ritorno da Stripe, link #/paga, errori chiari ---------- */
+const ABB_IN_CORSO = ["active", "trialing", "past_due", "incomplete"];
+function pagaDopoLeggi(){
+  const v = store.get("paga_dopo", null); store.del("paga_dopo");
+  return v && typeof v === "object" && v.piano && Date.now() - (v.t || 0) < 3600 * 1000 ? v.piano : null;
+}
+async function pagaSeServe(piano){
+  // mai il pagamento a chi è già abbonato (prima finiva sul portale Stripe a ogni accesso)
+  let u = null; try { u = await api("/api/me"); } catch (e) {}
+  if (u && (!u.richiede_abbonamento || ABB_IN_CORSO.includes(u.abbonamento_stato))) { toast("Hai già un abbonamento attivo"); return; }
+  abbonati(piano);
+}
+async function verificaPagamento(sid){
+  S.pagaSid = sid || ""; S.pagaStato = {fase: "verifica"}; S.paywall = false; render({top:true});
+  const fine = Date.now() + 60000; let r = null;
+  while (Date.now() < fine && S.token) {
+    try { r = await api("/api/abbonamento/verifica", {method: "POST", body: {session_id: S.pagaSid}}); if (r && r.accesso) break; }
+    catch (e) { if (e.status === 404 || e.status === 503) break; }
+    await new Promise(ok => setTimeout(ok, 3000));
+  }
+  if (r && r.accesso) {
+    S.pagaStato = null; S.paywall = false; toast("Abbonamento attivo: benvenuto in Scovo!");
+    api("/api/me").then(u => { S.user = Object.assign({}, S.user, {permessi: u.permessi, ha_pagamento: u.ha_pagamento}); store.set("user", S.user); }).catch(() => {});
+    render({top:true}); loadCars(true); return;
+  }
+  S.pagaStato = {fase: "attesa", msg: "Stripe non ci ha ancora confermato il pagamento. Non pagare di nuovo: controlla tra qualche minuto. Se non si sblocca, scrivici e lo attiviamo noi."};
+  render({top:true});
+}
+function viewPagamento(){
+  const p = S.pagaStato;
+  const tit = p.fase === "verifica" ? "Sto confermando il pagamento…" : p.fase === "attesa" ? "Pagamento in conferma" : p.fase === "info" ? "Abbonamento" : "Pagamento non aperto";
+  const msg = p.fase === "verifica" ? "Un attimo: aspettiamo la conferma di Stripe. Non chiudere e non pagare di nuovo." : p.msg;
+  const tasti = p.fase === "verifica" ? "" : (p.fase === "attesa" ? `<button class="l-btn l-btn-blue" data-act="pagaverifica" style="width:100%">Controlla di nuovo</button>`
+    : p.fase === "errore" ? `<button class="l-btn l-btn-blue" data-act="pagariprova" data-v="${esc(p.piano || "base")}" style="width:100%">Riprova</button>` : "")
+    + `<button class="link" data-act="pagachiudi">Torna alle auto</button>`;
+  return header("Abbonamento", "", "").replace('class="top"', 'class="top top-plain pw-top"') + `</header><main class="list pw-main"><div class="empty paywall" role="status">
+    <strong style="font:800 22px var(--disp)">${esc(tit)}</strong><span class="meta">${esc(msg)}</span>${tasti}</div></main>`;
 }
 async function portaleAbbonamento(){
   try { const d = await api("/api/abbonamento/portale", {method: "POST", body: {}}); location.href = d.url; }
@@ -2038,6 +2101,9 @@ $app.addEventListener("click", e => {
     case "cerca-pezzi": { const d = S.detail[S.sel] || {}; R.pezzi = (d.pezzi || []).map(p => p.pezzo).slice(0, 8); R.stato = "form"; R.err = ""; S.sheet = null; go("ricambi"); return; }
     case "logout": logout(); return;
     case "abbonati": abbonati(v); return;
+    case "pagariprova": S.pagaStato = null; abbonati(v); return;
+    case "pagaverifica": verificaPagamento(S.pagaSid); return;
+    case "pagachiudi": S.pagaStato = null; render({top:true}); loadCars(true); return;
     case "portale": portaleAbbonamento(); return;
     case "install": if (installEvt) { installEvt.prompt(); installEvt = null; } break;
     case "pwd": P.open = !P.open; P.err = ""; P.ok = false; break;

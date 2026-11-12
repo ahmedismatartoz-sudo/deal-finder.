@@ -18,6 +18,18 @@ import time
 from collections import Counter
 
 log = logging.getLogger("benzina_mi")
+
+
+def km_max_scelta() -> int:
+    """12/11: km massimi delle auto da valutare = regola del sito (regole.ammissione.km_max, 150.000). Prima 180.000:
+    ~2.300 delle 5.000 candidate a giro erano auto oltre 150.000 km, scartate subito dopo, che toglievano il posto a
+    auto buone. BENZ_KM_MAX su Render può solo abbassare il limite, mai superare la regola."""
+    from ..regole import regole
+    tetto = regole().ammissione.km_max
+    try:
+        return min(int(os.environ.get("BENZ_KM_MAX") or tetto), tetto)
+    except ValueError:
+        return tetto
 # entro circa 100 km da Milano (cliente 20/10)
 PMIN, PMAX, SOLO_P = 3000, 15000, False
 PROVINCE_100 = [p.strip() for p in os.environ.get("BENZ_PROVINCE", "MI,MB,VA,CO,LC,BG,LO,PV,CR,NO,VB,PC,AL,VC,BS").split(",")]
@@ -297,7 +309,7 @@ def giro() -> dict:
                                             "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
                                             "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
-                                            "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
+                                            "kmmax": km_max_scelta(),
                                             "solo_nuove": os.environ.get("BENZ_SOLO_NUOVE") == "1"}).fetchall()
         # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
         # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
@@ -317,7 +329,7 @@ def giro() -> dict:
                        LIMIT %(lim)s""",
                     {"ore": int(os.environ.get("BENZ_CAMBI_ORE", "8")), "prov": PROVINCE_100, "pmax": PMAX,
                      "lim": int(os.environ.get("BENZ_CAMBI_MAX", "1500")),
-                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                     "kmmax": km_max_scelta(), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 nuovi_c = [r for r in cambi if r["id"] not in gia]
                 cand = nuovi_c + list(cand)
                 st["cambi_prezzo"] = len(cambi)
@@ -348,7 +360,7 @@ def giro() -> dict:
                        ORDER BY t.first_seen_at DESC
                        LIMIT %(lim)s""",
                     {"prov": PROVINCE_100, "pmax": PMAX, "lim": int(os.environ.get("BENZ_AS24_MAX", "1500")),
-                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                     "kmmax": km_max_scelta(), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 agg = [r for r in top if r["id"] not in gia]
                 cand = agg + list(cand)
                 st["as24_super_prezzo"] = len(top)
@@ -373,7 +385,7 @@ def giro() -> dict:
                          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
                        ORDER BY t.price_eur ASC LIMIT %(lim)s""",
                     {"prov": PROVINCE_100, "pmin": PMIN, "pmax": PMAX, "lim": int(os.environ.get("BENZ_MAX", "2000")),
-                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
+                     "kmmax": km_max_scelta(),
                      "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 log.warning("BENZ dati insufficienti da rivalutare con i confronti ampliati: %d", len(cand))
             except Exception as e:
@@ -400,7 +412,7 @@ def giro() -> dict:
                          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
                        ORDER BY (t.id = ANY(%(corr)s)) DESC, t.last_seen_at DESC NULLS LAST LIMIT %(lim)s""",
                     {"prov": PROVINCE_100, "pmin": PMIN, "pmax": PMAX, "lim": int(os.environ.get("BENZ_MAX", "4000")), "corr": corretti,
-                     "kmmax": int(os.environ.get("BENZ_KM_MAX", "180000")),
+                     "kmmax": km_max_scelta(),
                      "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
                 log.warning("BENZ mai valutate da valutare: %d", len(cand))
             except Exception as e:

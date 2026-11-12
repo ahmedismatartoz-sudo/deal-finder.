@@ -19,6 +19,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import time
 
 log = logging.getLogger("abbonamento")
@@ -171,10 +172,18 @@ def prova_pronto() -> None:
 
 def checkout(dealer: dict, base: str, http=None, piano: str = "base") -> str:
     """Pagina di pagamento Stripe per abbonarsi: ritorna l'indirizzo dove mandare il cliente."""
+    return crea_checkout(dealer, base, http, piano)["url"]
+
+
+def crea_checkout(dealer: dict, base: str, http=None, piano: str = "base") -> dict:
+    """Come checkout(), ma restituisce la sessione intera (id e url): l'id si salva per riconoscere un pagamento in
+    corso. 12/11: al ritorno da Stripe il sito riceve session_id e verifica il pagamento lato server (verifica_checkout)
+    senza aspettare il webhook."""
     piano = "pro" if piano == "max" else (piano if piano in PIANI else "base")
     data = {"mode": "subscription", "line_items[0][price]": _prezzo(piano, http),
             "line_items[0][quantity]": "1", "client_reference_id": str(dealer["id"]),
-            "success_url": base + "/#/abbonamento/ok", "cancel_url": base + "/#/abbonamento/annullato",
+            "success_url": base + "/?session_id={CHECKOUT_SESSION_ID}#/abbonamento/ok",
+            "cancel_url": base + "/#/abbonamento/annullato",
             "locale": "it", "metadata[piano]": piano,
             "subscription_data[metadata][dealer_id]": str(dealer["id"]), "subscription_data[metadata][piano]": piano}
     sc = sconto_primo_mese()
@@ -189,7 +198,7 @@ def checkout(dealer: dict, base: str, http=None, piano: str = "base") -> str:
     giorni = info()["prova_giorni"]
     if giorni > 0:
         data["subscription_data[trial_period_days]"] = str(giorni)
-    return _post("/checkout/sessions", data, http)["url"]
+    return _post("/checkout/sessions", data, http)
 
 
 def portale(customer: str, base: str, http=None) -> str:
@@ -261,10 +270,42 @@ def _dealer_di(conn, customer: str | None, metadata: dict | None, sid: str | Non
     return None
 
 
+# 12/11: ordine degli stati di un abbonamento Stripe. Da "incomplete" si va avanti (active, trialing, ...) e non si
+# torna mai indietro; "canceled" e "incomplete_expired" sono definitivi (Stripe non riattiva quell'abbonamento).
+RANGO_STATO = {"incomplete": 0, "trialing": 1, "active": 2, "past_due": 3, "unpaid": 4, "paused": 4,
+               "canceled": 5, "incomplete_expired": 5}
+STATI_FINALI = ("canceled", "incomplete_expired")
+
+
+def _rango(stato: str | None) -> int:
+    return RANGO_STATO.get(stato or "", 2)
+
+
+def evento_vince(vecchio_stato: str | None, vecchio_created: int | None, nuovo_stato: str | None,
+                 nuovo_created: int) -> bool:
+    """Un evento Stripe sovrascrive lo stato salvato? (stessa regola dell'SQL di _salva_abbonamento)
+    - mai sopra uno stato definitivo (canceled, incomplete_expired);
+    - "incomplete" mai sopra uno stato già andato avanti (Stripe manda created/updated/completed nello stesso
+      secondo e senza ordine garantito: il pagante restava "incomplete");
+    - altrimenti vince il più recente; a parità di secondo vince lo stato più avanti."""
+    if vecchio_stato in STATI_FINALI:
+        return False
+    if nuovo_stato == "incomplete" and vecchio_stato and vecchio_stato != "incomplete":
+        return False
+    vc, nc = int(vecchio_created or 0), int(nuovo_created or 0)
+    if nc != vc:
+        return nc > vc
+    return nuovo_stato is None or _rango(nuovo_stato) >= _rango(vecchio_stato)
+
+
+_RANGO_SQL = "CASE {c} " + " ".join(f"WHEN '{k}' THEN {v}" for k, v in RANGO_STATO.items()) + " ELSE 2 END"
+
+
 def _salva_abbonamento(conn, sid: str, did: int | None, customer: str | None, stato: str | None, piano: str | None,
                        price_id: str | None, fino, created: int) -> bool:
     """Stato per abbonamento. Un evento più vecchio di quello già applicato (Stripe non garantisce l'ordine) non
-    sovrascrive nulla: ritorna False."""
+    sovrascrive nulla: ritorna False. Regola completa in evento_vince (12/11: niente più "<=" che a parità di secondo
+    lasciava vincere l'ultimo arrivato, anche "incomplete" dopo "active")."""
     r = conn.execute(
         """INSERT INTO abbonamenti (subscription_id, dealer_id, customer, stato, piano, price_id, fino, past_due_dal,
                                     evento_created, aggiornato_at)
@@ -280,7 +321,14 @@ def _salva_abbonamento(conn, sid: str, did: int | None, customer: str | None, st
                past_due_dal = CASE WHEN COALESCE(EXCLUDED.stato, abbonamenti.stato) = 'past_due'
                                    THEN COALESCE(abbonamenti.past_due_dal, now()) END,
                evento_created = EXCLUDED.evento_created, aggiornato_at = now()
-           WHERE abbonamenti.evento_created <= EXCLUDED.evento_created
+           WHERE abbonamenti.stato IS DISTINCT FROM 'canceled'
+             AND abbonamenti.stato IS DISTINCT FROM 'incomplete_expired'
+             AND NOT (EXCLUDED.stato = 'incomplete' AND abbonamenti.stato IS NOT NULL
+                      AND abbonamenti.stato <> 'incomplete')
+             AND (COALESCE(abbonamenti.evento_created, 0) < EXCLUDED.evento_created
+                  OR (COALESCE(abbonamenti.evento_created, 0) = EXCLUDED.evento_created
+                      AND (EXCLUDED.stato IS NULL OR """ + _RANGO_SQL.format(c="EXCLUDED.stato") + " >= "
+        + _RANGO_SQL.format(c="abbonamenti.stato") + """)))
            RETURNING subscription_id""",
         {"sid": sid, "did": did, "cu": customer, "st": stato, "pi": piano, "pr": price_id, "fino": fino,
          "cr": int(created or 0)}).fetchone()
@@ -310,9 +358,18 @@ def stato_complessivo(righe: list[dict], ora=None) -> dict | None:
         stato = next((s for s in STATI_PRIORITA if s in stati), stati[0])
     buoni = validi + toll
     fini = [r["fino"] for r in (buoni or righe) if r.get("fino")]
-    return {"stato": stato, "accesso": bool(buoni), "max": any(r.get("piano") == "pro" for r in buoni),
+    return {"stato": stato, "accesso": bool(buoni), "max": any(r.get("piano") in ("pro", "max") for r in buoni),
             "fino": max(fini) if fini else None,
             "tolleranza": (min(r["past_due_dal"] for r in toll) + g) if (toll and not validi) else None}
+
+
+def max_valido(conn, did: int, ora=None) -> bool:
+    """12/11: permesso "appuntamenti" automatico = un abbonamento Max active/trialing, oppure past_due ancora entro i
+    giorni di tolleranza (stessa regola dell'accesso alle auto, stato_complessivo)."""
+    righe = conn.execute("SELECT subscription_id, stato, piano, fino, past_due_dal FROM abbonamenti WHERE dealer_id=%s",
+                         (did,)).fetchall()
+    s = stato_complessivo([dict(r) for r in righe], ora)
+    return bool(s and s["max"])
 
 
 def _ricalcola(conn, did: int | None) -> dict | None:
@@ -330,14 +387,12 @@ def _ricalcola(conn, did: int | None) -> dict | None:
     if s["accesso"]:
         conn.execute("UPDATE dealers SET permessi = array_append(COALESCE(permessi, '{}'), 'auto') "
                      "WHERE id=%s AND NOT ('auto' = ANY(COALESCE(permessi, '{}')))", (did,))
-    if s["max"]:
-        conn.execute("UPDATE dealers SET permessi = array_append(COALESCE(permessi, '{}'), 'appuntamenti'), "
-                     "appuntamenti_da_stripe = true WHERE id=%s AND NOT ('appuntamenti' = ANY(COALESCE(permessi, '{}')))",
-                     (did,))
-    else:
-        # si toglie solo se l'aveva dato Stripe (non quello dato a mano dal pannello o da PERMESSO_APPUNTAMENTI)
-        conn.execute("UPDATE dealers SET permessi = array_remove(permessi, 'appuntamenti'), appuntamenti_da_stripe = false "
-                     "WHERE id=%s AND appuntamenti_da_stripe", (did,))
+    # 12/11: il permesso "appuntamenti" del piano Max NON si scrive più in dealers.permessi: lo calcola a ogni richiesta
+    # permessi_di (app.py) dagli abbonamenti (Max active/trialing, o past_due entro la tolleranza). In dealers.permessi
+    # restano solo i permessi dati a mano (pannello, PERMESSO_APPUNTAMENTI), che durano finché l'admin non li toglie.
+    # Quello scritto qui in passato (appuntamenti_da_stripe) si toglie: da ora è automatico.
+    conn.execute("UPDATE dealers SET permessi = array_remove(permessi, 'appuntamenti'), appuntamenti_da_stripe = false "
+                 "WHERE id=%s AND appuntamenti_da_stripe", (did,))
     return s
 
 
@@ -429,8 +484,15 @@ def applica(conn, evento: dict, leggi=None) -> str:
     return esito
 
 
+# 12/11: un abbonamento in questi stati blocca un secondo checkout (si manda al portale di Stripe). "incomplete" =
+# pagamento appena avviato (es. conferma della banca in corso): un secondo checkout lì era un doppio addebito.
+STATI_IN_CORSO = ("active", "trialing", "past_due", "incomplete")
+INCOMPLETE_ORE = 24          # Stripe chiude da solo un "incomplete" dopo 23 ore (incomplete_expired)
+
+
 def abbonamento_in_corso(conn, dealer: dict, leggi=None) -> bool:
-    """Prima di un nuovo checkout: c'è già un abbonamento attivo, in prova o in tolleranza? (database e Stripe)"""
+    """Prima di un nuovo checkout: c'è già un abbonamento attivo, in prova, in tolleranza o con il primo pagamento in
+    corso (incomplete)? (database e Stripe)"""
     if (dealer.get("abbonamento_stato") or "") in STATI_OK:
         return True
     righe = conn.execute("SELECT subscription_id, stato, piano, fino, past_due_dal FROM abbonamenti WHERE dealer_id=%s",
@@ -438,16 +500,131 @@ def abbonamento_in_corso(conn, dealer: dict, leggi=None) -> bool:
     s = stato_complessivo([dict(r) for r in righe])
     if s and s["accesso"]:
         return True
+    if any(r.get("stato") == "incomplete" for r in righe):
+        recente = conn.execute("SELECT 1 FROM abbonamenti WHERE dealer_id=%s AND stato='incomplete' "
+                               "AND aggiornato_at > now() - make_interval(hours => %s) LIMIT 1",
+                               (dealer["id"], INCOMPLETE_ORE)).fetchone()
+        if recente:
+            return True
     cu = dealer.get("stripe_customer")
     if cu and (leggi is not None or attivo()):
         try:
             for sub in (leggi or _get)("/subscriptions", {"customer": cu, "status": "all", "limit": 20}).get("data", []):
-                if sub.get("status") in ("active", "trialing", "past_due"):
+                if sub.get("status") in STATI_IN_CORSO:
                     return True
         except Exception as e:
             log.warning("STRIPE controllo abbonamenti di %s non riuscito: %s", cu, str(e)[:200])
             raise RuntimeError("Stripe non risponde, riprova tra poco")
     return False
+
+
+# ---------- 12/11: pagamento in corso e verifica al ritorno da Stripe ----------
+SESSIONE_RE = re.compile(r"cs_(?:test|live)_[A-Za-z0-9]{8,250}")
+_COLONNE: dict = {}
+
+
+def ha_colonna(conn, tabella: str, colonna: str) -> bool:
+    """La migrazione 049 c'è già? (si ricorda solo il sì: se le migrazioni sono rimandate si riprova)"""
+    k = (tabella, colonna)
+    if _COLONNE.get(k):
+        return True
+    try:
+        ok = bool(conn.execute("SELECT 1 FROM information_schema.columns WHERE table_name=%s AND column_name=%s",
+                               (tabella, colonna)).fetchone())
+    except Exception:
+        ok = False
+    if ok:
+        _COLONNE[k] = True
+    return ok
+
+
+def sessione_checkout(session_id: str, leggi=None) -> dict:
+    """Sessione di checkout letta da Stripe, con l'abbonamento per intero."""
+    try:
+        return (leggi or _get)(f"/checkout/sessions/{session_id}", {"expand[]": "subscription"})
+    except RuntimeError as e:
+        log.warning("STRIPE sessione %s non letta: %s", session_id[:40], str(e)[:120])
+        if "-> 404" in str(e):
+            raise SessioneAssente(session_id)
+        raise RuntimeError("Stripe non risponde, riprova tra poco")
+
+
+class SessioneAssente(RuntimeError):
+    """Stripe non conosce la sessione (es. creata con la chiave di prova): come se non ci fosse."""
+
+
+def scadi_checkout(session_id: str, http=None) -> None:
+    """Chiude una sessione di checkout ancora aperta (cambio di piano prima di pagare): non si potrà più pagare lì."""
+    _post(f"/checkout/sessions/{session_id}/expire", {}, http)
+
+
+def segna_checkout(conn, dealer_id: int, session_id: str | None) -> None:
+    """Ricorda la sessione di checkout aperta per l'account (None = nessun pagamento in corso)."""
+    if ha_colonna(conn, "dealers", "checkout_session"):
+        conn.execute("UPDATE dealers SET checkout_session=%s, checkout_session_at=CASE WHEN %s::text IS NULL THEN NULL "
+                     "ELSE now() END WHERE id=%s", (session_id, session_id, dealer_id))
+
+
+def verifica_checkout(conn, dealer_id: int, session_id: str, leggi=None) -> dict:
+    """Ritorno da Stripe (#/abbonamento/ok?session_id=…): rilegge la sessione da Stripe e, se è pagata, aggiorna
+    l'account esattamente come il webhook checkout.session.completed. Idempotente: la stessa sessione si applica una
+    volta sola (id "verifica_<sessione>" in stripe_eventi) e il webhook vero, arrivando dopo, non cambia nulla.
+    Ritorna {"esito": ...}; "di_altri" se la sessione non è di questo account."""
+    if not SESSIONE_RE.fullmatch(session_id or ""):
+        return {"esito": "sessione_non_valida"}
+    try:
+        sess = sessione_checkout(session_id, leggi)
+    except SessioneAssente:
+        return {"esito": "sessione_non_valida"}
+    if str(sess.get("client_reference_id") or "") != str(dealer_id):
+        return {"esito": "di_altri"}
+    stato = sess.get("status")                      # open | complete | expired
+    if stato != "complete":
+        if stato == "expired":
+            segna_checkout(conn, dealer_id, None)
+            conn.commit()
+        return {"esito": f"sessione_{stato}", "in_corso": stato == "open"}
+    sub = sess.get("subscription")
+    sub_id = sub if isinstance(sub, str) else (sub or {}).get("id")
+    created = int(sess.get("created") or 0)
+    # created della SESSIONE (orologio di Stripe): gli eventi veri dell'abbonamento, tutti successivi, restano validi
+    esito = applica(conn, {"id": f"verifica_{session_id}", "type": "checkout.session.completed", "created": created,
+                           "data": {"object": dict(sess, subscription=sub_id)}}, leggi)
+    if isinstance(sub, dict) and sub.get("id"):
+        # stato vero dell'abbonamento (es. ancora "incomplete" se la banca deve confermare)
+        if _salva_abbonamento(conn, sub["id"], dealer_id, sess.get("customer"), sub.get("status"), piano_di(sub),
+                              _price_id(sub), _fine_periodo(sub), created):
+            _ricalcola(conn, dealer_id)
+    segna_checkout(conn, dealer_id, None)
+    conn.commit()
+    return {"esito": esito}
+
+
+def checkout_pendente(conn, dealer: dict, leggi=None) -> dict | None:
+    """Sessione di checkout aperta negli ultimi 24 ore per l'account, riletta da Stripe:
+    {"stato": "open", "id", "url", "piano"} -> si riusa (niente seconda sessione, niente doppio addebito);
+    {"stato": "complete"} -> pagata ma il webhook non è ancora arrivato: si applica subito;
+    {"stato": "expired"} o None -> si può aprire un checkout nuovo."""
+    if not ha_colonna(conn, "dealers", "checkout_session"):
+        return None
+    r = conn.execute("SELECT checkout_session FROM dealers WHERE id=%s AND checkout_session IS NOT NULL "
+                     "AND checkout_session_at > now() - interval '24 hours'", (dealer["id"],)).fetchone()
+    if not r or not r.get("checkout_session"):
+        return None
+    sid = r["checkout_session"]
+    try:
+        sess = sessione_checkout(sid, leggi)
+    except SessioneAssente:
+        segna_checkout(conn, dealer["id"], None)
+        return None
+    st = sess.get("status")
+    if st == "open":
+        return {"stato": "open", "id": sid, "url": sess.get("url"), "piano": (sess.get("metadata") or {}).get("piano")}
+    if st == "complete":
+        verifica_checkout(conn, dealer["id"], sid, leggi)
+        return {"stato": "complete", "id": sid}
+    segna_checkout(conn, dealer["id"], None)
+    return {"stato": st or "expired", "id": sid}
 
 
 def puo_vedere(row: dict | None) -> bool:
