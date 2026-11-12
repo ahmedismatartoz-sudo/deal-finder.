@@ -546,3 +546,97 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
         esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code} {r.text[:120]}"
         esito["quando"] = quando
     return esito
+
+
+# ---------- 12/11 sera (cliente: "ho eliminato i contatti da Brevo, metti gli altri fermi nel database, non gli stessi
+# di oggi, e rimanda la mail senza esempi") ----------
+def scegli_fermi(righe: list[dict], bloccati: set, gia: set, totale: int) -> list[dict]:
+    """Un indirizzo per salone, mai chi ha ricevuto oggi (gia), mai disiscritti/bloccati/esclusi. Pura."""
+    return scegli_secondo(righe, bloccati, gia, totale)
+
+
+def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00", campagna_oggi: int = 75,
+                  campagne_disiscritti=(73, 74, 75), minimi=None, oggi_pref=None) -> dict:
+    """Carica in Brevo i contatti del nostro archivio che oggi NON hanno ricevuto la campagna `campagna_oggi` e
+    programma la stessa email (senza esempi) per `quando`. Sicurezze: i disiscritti/rimbalzati delle ultime campagne
+    (che Brevo ha perso con la cancellazione dei contatti) entrano prima nella tabella disiscritti; se le esportazioni
+    non tornano o i disiscritti noti sono pochi, ci si ferma senza caricare nulla. Mai email nei log: solo numeri."""
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    from .brevo_liste import BLOCCATI_MINIMI, TETTO_BREVO as _TETTO, _bloccati_0111, _esporta
+    minimi = minimi or {74: 6, 75: 3}
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    esito: dict = {}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        if c.get(f"{API}/account").status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        contatti = _contatti_brevo(c)
+        esito["contatti_in_brevo"] = len(contatti)
+        persi = set()
+        oggi = set(oggi_pref or ())          # inizio (16) delle impronte di chi ha ricevuto oggi, mai email
+        esito["ricevuto_oggi_file"] = len(oggi)
+        for cid in (campagne_disiscritti if not oggi else ()):
+            dis = _esporta(c, cid, "unsubscribed")
+            esito[f"disiscritti_{cid}"] = len(dis)
+            if len(dis) < minimi.get(cid, 0):
+                esito["fermo"] = f"esportazione_disiscritti_{cid}_incompleta"
+                return esito
+            persi |= set(dis)
+            hb = _esporta(c, cid, "hardBounces")
+            esito[f"rimbalzi_{cid}"] = len(hb)
+            persi |= set(hb)
+        gia = set() if oggi else set(_esporta(c, campagna_oggi, "all"))
+        esito["ricevuto_oggi"] = len(gia) or len(oggi)
+        if len(gia) < 500 and len(oggi) < 1000:
+            esito["fermo"] = "elenco_di_oggi_non_disponibile"
+            return esito
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            esito["disiscritti_aggiunti"] = invii.aggiungi_disiscritti(conn, persi, "brevo_1211")
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            righe = _righe_db(conn)
+        esito["disiscritti"] = len(bloccati)
+        if len(bloccati) < BLOCCATI_MINIMI:
+            esito["fermo"] = "disiscritti_incompleti"
+            return esito
+        # chi ha ricevuto oggi (e quindi anche chi si è disiscritto dalle campagne 74/75) resta sempre fuori
+        if oggi:
+            righe = [{**r, "email": [e for e in (r.get("email") or []) if invii.impronta(invii.norm_email(e))[:16] not in oggi]}
+                     for r in righe]
+        posto = _TETTO - len(contatti)
+        scelti = scegli_fermi(righe, bloccati, gia, min(totale, posto))
+        esito.update({"archivio": len(righe), "scelti": len(scelti), "posto": posto})
+        if not scelti:
+            return esito
+        cart = _cartella(c)
+        nome = "Skovo fermi " + quando[8:10] + "-" + quando[5:7]
+        lid = _liste(c).get(nome)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": cart})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        for k in range(0, len(scelti), 500):
+            r = c.post(f"{API}/contacts/import", json={
+                "jsonBody": [{"email": s["email"]} for s in scelti[k:k + 500]],
+                "listIds": [lid], "updateExistingContacts": True, "emptyContactsAttributes": False})
+            esito[f"import_{k}"] = r.status_code
+            _aspetta_import(c, r)
+        esito["lista"] = lid
+        esito["in_lista"] = (c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers")
+        base = c.get(f"{API}/emailCampaigns/{campagna_oggi}").json() or {}
+        corpo = {"name": "Skovo servizio fermi " + quando[8:10] + "-" + quando[5:7],
+                 "subject": base.get("subject") or "Auto da privati sotto mercato, ogni giorno",
+                 "previewText": base.get("previewText") or "", "sender": MITTENTE, "replyTo": RISPOSTE,
+                 "htmlContent": base.get("htmlContent"), "recipients": {"listIds": [lid]},
+                 "header": "[DEFAULT_HEADER]", "footer": "[DEFAULT_FOOTER]", "inlineImageActivation": False,
+                 "scheduledAt": quando}
+        if not corpo["htmlContent"]:
+            esito["fermo"] = "testo_campagna_non_letto"
+            return esito
+        r = c.post(f"{API}/emailCampaigns", json=corpo)
+        esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
+    return esito
+
