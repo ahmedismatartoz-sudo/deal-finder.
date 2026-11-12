@@ -259,7 +259,7 @@ class Dotazioni:
 class Forbice:
     """12/11 sera (punto 5): forbice della rivendita (P25–P75) e probabilità di vendere ad almeno R dai quantili di
     prezzo/M delle auto sparite (calibra.py). Solo informazione nella scheda: margine e soglia non cambiano."""
-    attiva: bool = True
+    attiva: bool = False               # 12/11 notte: il cliente non vuole la forbice nella scheda (spenta)
     prob_min: float = .05
     prob_max: float = .95
 

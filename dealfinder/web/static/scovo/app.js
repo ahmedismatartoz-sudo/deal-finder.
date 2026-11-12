@@ -473,22 +473,6 @@ function rivComm(p, v){
   return p.R_da === "commercianti" ? `<div class="note">Rivendita abbassata dai commercianti: ${t}.</div>`
     : `<div class="note">Rivendita dei commercianti più alta del mercato: non usata (${t}); la rivendita resta quella del mercato.</div>`;
 }
-/* 12/11 sera margini fase 2: forbice della rivendita e probabilità di vendere ad almeno R (dalle auto sparite);
-   solo informazione, il margine resta quello sopra. Stessa interpolazione di pricing/forbice.py */
-function probVendita(R, q){
-  if (!R || !q || q.length !== 5 || q.some(x => x == null)) return null;
-  const xs = [q[0] - (q[1] - q[0]) * .1 / .15].concat(q, [q[4] + (q[4] - q[3]) * .1 / .15]), ys = [0, .1, .25, .5, .75, .9, 1];
-  let F = R <= xs[0] ? 0 : 1;
-  for (let i = 0; i < xs.length - 1; i++) if (xs[i] <= R && R <= xs[i + 1]) { F = xs[i + 1] === xs[i] ? ys[i] : ys[i] + (R - xs[i]) / (xs[i + 1] - xs[i]) * (ys[i + 1] - ys[i]); break; }
-  return Math.max(.05, Math.min(.95, 1 - F));
-}
-function boxForbice(p){
-  const f = p && p.forbice_R;
-  if (!f || f.p25 == null || f.p75 == null) return "";
-  const R = p.R_finale != null ? p.R_finale : p.R, pr = probVendita(R, [f.p10, f.p25, f.p50, f.p75, f.p90]);
-  return `<div class="row"><span class="k">Rivendita probabile <small>(metà delle auto simili si vende in questa forbice)</small></span><span class="v" style="font-size:16px">${eur(f.p25)} – ${eur(f.p75)}</span></div>`
-    + (pr != null ? `<div class="note" style="border:0">Probabilità di rivenderla ad almeno ${eur(R)}: circa ${Math.round(pr * 100)}%. Dalle auto della stessa fascia sparite dagli annunci entro 7 giorni (ultimo prezzo chiesto); il margine sopra non cambia.</div>` : "");
-}
 function boxPolicy(c, v){
   const p = c.pv, row = (k, val, cls) => `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${val}</span></div>`;
   const ok = p.categoria === "opportunita";
@@ -500,7 +484,7 @@ function boxPolicy(c, v){
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
     ${p.R != null ? (p.perizia_giu ? row(p.R_da === "commercianti" ? "Rivendita R <small>(dai commercianti)</small>" : "Rivendita prudente R", eur(p.R_calcolo)) + row("Stima del perito più bassa <small>(si usa la più prudente)</small>", "−" + eur(p.perizia_giu))
         : row(p.R_da === "commercianti" ? "Rivendita R <small>(dai commercianti)</small>" : "Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R))) : ""}
-    ${rivComm(p, v)}${boxForbice(p)}`;
+    ${rivComm(p, v)}`;
   if (v && v.R != null && p.R_da !== "commercianti") h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
   if (v && v.costi) {
     h += Object.entries(v.costi).filter(([, x]) => x.euro).map(([k, x]) => `<div class="row"><span class="k">${esc(VOCI[k] || k)} <small>· ${esc(ORIG[x.origine] || x.origine)}</small></span><span class="v" style="font-size:16px">−${eur(x.euro)}</span></div>`).join("");

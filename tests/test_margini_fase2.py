@@ -26,7 +26,8 @@ def _cfg(**campi):
 
 def test_interruttori_e_default():
     r = RG.regole()
-    assert r.correzione.pooling and r.calibrazione.vr_nel_combinato and r.trazione.attiva and r.forbice.attiva
+    assert r.correzione.pooling and r.calibrazione.vr_nel_combinato and r.trazione.attiva
+    assert not r.forbice.attiva                       # 12/11 notte: il cliente non vuole la forbice nella scheda
     assert r.scrittura.giudice_vince
     # le novità che possono ALZARE un prezzo restano spente
     assert not r.correzione.due_sensi_alto and not r.calibrazione.alza and not r.dotazioni.aggiusta
@@ -226,32 +227,33 @@ def _fatt():
     return RG.fattori_calibrazione(_fasce(.9, q=Q), misurate_vr={}, per_M=True)
 
 
+ON = RG.con_campi(RG.regole(), {"forbice.attiva": True})
+
+
 def test_forbice_da_annunci_e_probabilita():
     pv = {"M": 10000, "R": 9000, "R_finale": 9000, "M_fonte": "annunci", "metodo": "mediana", "margine": 2000}
-    f = FB.calcola(pv, _fatt())
+    assert FB.calcola(pv, _fatt()) is None                                        # spenta di default
+    f = FB.calcola(pv, _fatt(), ON)
     assert (f["p25"], f["p50"], f["p75"]) == (8000, 9000, 10000) and f["base"] == "annunci"
     assert f["prob_R"] == .5
     assert FB.probabilita(8000, [7000, 8000, 9000, 10000, 10800]) == .75
     assert FB.probabilita(20000, [7000, 8000, 9000, 10000, 10800]) == .05      # limiti 5–95%
     assert FB.probabilita(1000, [7000, 8000, 9000, 10000, 10800]) == .95
     # valore reale senza la sua misura: solo la larghezza, centrata su M
-    g = FB.calcola(dict(pv, M_fonte="vendite", metodo="valore_reale_combinato"), _fatt())
+    g = FB.calcola(dict(pv, M_fonte="vendite", metodo="valore_reale_combinato"), _fatt(), ON)
     assert g["base"] == "larghezza" and g["p50"] == 10000 and g["p25"] == 8900
-    assert FB.calcola(pv, RG.fattori_calibrazione({}, per_M=True)) is None       # senza quantili: niente
-    off = RG.con_campi(RG.regole(), {"forbice.attiva": False})
-    assert FB.calcola(pv, _fatt(), off) is None
+    assert FB.calcola(pv, RG.fattori_calibrazione({}, per_M=True), ON) is None   # senza quantili: niente
 
 
-def test_forbice_sul_sito_non_cambia_il_margine():
+def test_forbice_non_compare_sul_sito():
     g = SR.Regole(fattori_calibra=tuple(_fatt()))
     it = {"id": 1, "prezzo": 7000, "pv": {"M": 10000, "R": 10000, "R_finale": 10000, "M_fonte": "annunci",
                                          "metodo": "mediana", "margine": 3000, "categoria": "opportunita"}}
     SR.t_margine_sito(it, g)
     pv = it["pv"]
-    assert pv["forbice_R"]["p25"] == 8000 and pv["R"] == 9000 and pv["margine"] == 2000   # solo la calibrazione
-    assert pv["forbice_R"]["prob_R"] == .5
+    assert "forbice_R" not in pv and pv["R"] == 9000 and pv["margine"] == 2000   # solo la calibrazione
     js = open(os.path.join(QUI, "dealfinder", "web", "static", "scovo", "app.js"), encoding="utf-8").read()
-    assert "function boxForbice(" in js and "${boxForbice(p)}" in js and "function probVendita(" in js
+    assert "boxForbice" not in js and "probVendita" not in js and "forbice_R" not in js
 
 
 # ------------------------------------------------------------------ guardia delle 36 ore
