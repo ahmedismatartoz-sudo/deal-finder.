@@ -284,7 +284,9 @@ def test_allestimento_una_sola_fonte_col_modulo_dei_margini():
     try:
         assert DA.allestimento_testo("1.2 Lounge", "Fiat Panda", "fiat", "panda") == "Lounge"
         assert visti[0]["make"] == "fiat" and visti[0]["version_raw"] == "1.2 Lounge"
-        assert DA.allestimento_testo("1.6 TDI Business", None) is None    # niente seconda fonte: vale il modulo dei margini
+        # 12/11 sera: se il modulo dei margini non riconosce niente si mostra la lettura semplice
+        assert DA.allestimento_testo("1.6 TDI Business", None) == "Business"
+        assert DA.allestimento_testo("1.2 Collezione easypower", None) != "Easy"
     finally:
         if vecchio is None:
             sys.modules.pop("dealfinder.pricing.allestimento", None)

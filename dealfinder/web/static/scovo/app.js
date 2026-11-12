@@ -458,7 +458,7 @@ function pct(x){ return Math.round(x * 1000) / 10 + "%"; }
 const VOCI_NETTO = {trattativa: "Sconto di trattativa in vendita", passaggio: "Passaggio di proprietà",
   preparazione: "Preparazione (pulizia, tagliando, ritocchi)", garanzia: "Garanzia legale", ricambi_difetti: "Ricambi e difetti già stimati",
   iva_margine: "IVA sul margine (22/122)"};
-function nettoTag(c){ return c.netto != null && !c.supercar ? `<small class="netto-tag">netto ~${eur(c.netto)}</small>` : ""; }
+function nettoTag(c){ return c.netto != null && !c.supercar ? `<small class="netto-tag">netto ${c.netto < 0 ? "−" : "~"}${eur(Math.abs(c.netto))}</small>` : ""; }
 function boxNetto(c){
   if (c.netto == null || !c.costi_netto) return "";
   const k = c.costi_netto, voci = Object.keys(VOCI_NETTO).filter(x => k[x]).map(x => `<div class="row"><span class="k">${VOCI_NETTO[x]}${x === "trattativa" ? ` <small>· ${pct(k.sconto_pct || 0)}, ${esc(k.sconto_da || "")}</small>` : ""}</span><span class="v" style="font-size:16px">−${eur(k[x])}</span></div>`).join("");

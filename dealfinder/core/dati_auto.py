@@ -297,10 +297,15 @@ def allestimento_testo(versione: str | None, titolo: str | None = None, marca: s
     if f is not None:
         try:
             r = f({"version_raw": versione, "title": titolo, "make": marca, "model": modello})
-            return _pulito(r.get("nome"), 40) if isinstance(r, dict) and r.get("nome") else None
+            if isinstance(r, dict) and r.get("nome"):
+                return _pulito(r.get("nome"), 40)
         except Exception:
-            return None
-    return _pulito(_allestimento_semplice(versione, titolo), 40)
+            pass
+    # 12/11 sera: se il modulo dei margini non lo riconosce (es. Lounge, Highline) si mostra la lettura semplice;
+    # "easypower" è l'impianto GPL, non un allestimento
+    v = re.sub(r"easy\s?power", " ", f"{versione or ''}", flags=re.I)
+    t = re.sub(r"easy\s?power", " ", f"{titolo or ''}", flags=re.I)
+    return _pulito(_allestimento_semplice(v or None, t or None), 40)
 
 
 # ------------------------------------------------------------------------------------------------ optional
