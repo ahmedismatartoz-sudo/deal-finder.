@@ -13,3 +13,5 @@ services:
     envVars:
       - key: DATABASE_URL
         fromService: { type: cron, name: dealfinder-opportunita, envVarKey: DATABASE_URL }
+      - key: PLATE_SALT
+        fromService: { type: web, name: scovo, envVarKey: PLATE_SALT }
