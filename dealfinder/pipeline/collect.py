@@ -359,7 +359,7 @@ def run(mode: str) -> Counter:
         # privati e concessionari, entro NORD_RAGGIO km da Milano, solo le province del Nord FUORI dalle nostre zone.
         from ..collectors.autoscout import AutoScoutCollector
         os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("NORD_RAGGIO", "350")
-        os.environ["PASSI_JOB"] = "collect:mercato_nord:" + time.strftime("%Y-%W")   # si riparte ogni settimana
+        os.environ["PASSI_JOB"] = chiave_ciclo_nord()     # 12/11 revisione: un ciclo finisce anche in più notti
         asc = AutoScoutCollector()
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
@@ -900,6 +900,22 @@ def run(mode: str) -> Counter:
 
 NORD_RSS_MB = 420          # MB: oltre si ferma (512 MB del cron mercato, margine per il salvataggio)
 NORD_ORE_MAX = 9.5         # ore dall'avvio del cron: poi c'è il modello AI dei prezzi (entro 10,5) e il limite di 12
+
+
+def chiave_ciclo_nord(conn=None) -> str:
+    """Chiave dei passi di mercato_nord = numero del CICLO (giri finiti finora): i passi fatti valgono finché il giro
+    non è finito, anche se servono più notti o si passa a un'altra settimana (prima la chiave cambiava ogni settimana e
+    un giro lungo ripartiva da zero). Finito il ciclo (riga 'collect:mercato_nord'), il prossimo riparte da capo.
+    Senza database: chiave del mese."""
+    try:
+        if conn is None:
+            from ..db import connect as _cn
+            with _cn() as c:
+                return chiave_ciclo_nord(c)
+        r = conn.execute("SELECT count(*) AS n FROM job_runs WHERE job='collect:mercato_nord' AND ok").fetchone()
+        return f"collect:mercato_nord:ciclo{int(r['n']) + 1}"
+    except Exception:
+        return "collect:mercato_nord:" + time.strftime("%Y-%m")
 
 
 def nord_da_fermare(stats, ora: float | None = None, rss=None) -> bool:

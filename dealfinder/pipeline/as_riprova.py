@@ -7,8 +7,8 @@ Ora:
   - get(): riprova con attesa crescente (TR_AS_ATTESE, "15,45,90" secondi) su 429, 5xx ed errori di rete;
   - se il 429 resta, AutoScout24 si lascia stare per TR_AS_FERMO_MIN minuti (10) in tutto il processo (niente raffica
     di richieste respinte) e la lettura completa salva il punto in cui si è fermata (fascia e pagina, tabella
-    tempo_reale, riga 'as_ripresa': sopravvive a un riavvio del sito): il giro dopo riparte da lì e poi fa le fasce
-    rimaste dall'inizio, così nessuna fascia viene saltata per sempre.
+    tempo_reale, riga 'as_ripresa': sopravvive a un riavvio del sito): il giro dopo legge solo le fasce mancanti,
+    da lì alla fine.
 Interruttore: TR_AS_RIPROVA=0 torna al comportamento di prima (una richiesta, nessuna attesa).
 """
 from __future__ import annotations
@@ -127,9 +127,9 @@ def togli_ripresa(conn) -> None:
 
 
 def ordine_fasce(n: int, ripresa: dict | None) -> list[tuple[int, int]]:
-    """[(indice fascia, pagina da cui partire)]: dalla fascia interrotta (e dalla sua pagina) fino all'ultima, poi le
-    prime. Senza ripresa: tutte dall'inizio."""
+    """[(indice fascia, pagina da cui partire)]: SOLO le fasce mancanti, cioè dalla fascia interrotta (e dalla sua
+    pagina) fino all'ultima: le precedenti erano già state lette (12/11 revisione). Senza ripresa: tutte."""
     if not ripresa or not (0 <= int(ripresa.get("fascia", -1)) < n):
         return [(i, 1) for i in range(n)]
     i0, p0 = int(ripresa["fascia"]), max(1, min(20, int(ripresa.get("pagina") or 1)))
-    return [(i0, p0)] + [((i0 + j) % n, 1) for j in range(1, n)]
+    return [(i0, p0)] + [(j, 1) for j in range(i0 + 1, n)]

@@ -58,7 +58,7 @@ def test_404_non_si_riprova():
 
 def test_ordine_fasce_dalla_ripresa():
     assert AR.ordine_fasce(4, None) == [(0, 1), (1, 1), (2, 1), (3, 1)]
-    assert AR.ordine_fasce(4, {"fascia": 2, "pagina": 5}) == [(2, 5), (3, 1), (0, 1), (1, 1)]
+    assert AR.ordine_fasce(4, {"fascia": 2, "pagina": 5}) == [(2, 5), (3, 1)]          # solo le mancanti
     assert AR.ordine_fasce(4, {"fascia": 9, "pagina": 1}) == [(0, 1), (1, 1), (2, 1), (3, 1)]
 
 
@@ -134,7 +134,7 @@ def test_lettura_completa_riprende_dalla_fascia_interrotta():
         tr._client_as = lambda: sito2
         tr._autoscout_tutti(conn)
         assert sito2.richieste[0] == (7000, 2)                   # si riparte dalla fascia e pagina interrotte
-        assert {lo for lo, _ in sito2.richieste} == {lo for lo, _ in tr.FASCE_AS}     # poi tutte le altre
+        assert {lo for lo, _ in sito2.richieste} == {lo for lo, _ in tr.FASCE_AS[4:]}  # poi solo le mancanti
         assert conn.ripresa is None
     finally:
         tr._client_as = vecchio_client

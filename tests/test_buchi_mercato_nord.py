@@ -94,3 +94,24 @@ def test_massiva_svuota_i_gia_visti_per_fascia():
     with _env(PASSI_JOB=None):
         letti = list(c.search_massiva({"min_price": 1000, "max_price": 4000, "step": 1000, "venditori": [("P", "privato")]}))
     assert len({l.source_id for l in letti}) == 600 and len(c.visti) == 0
+
+
+def test_chiave_dei_passi_per_ciclo():
+    class Cn:
+        def __init__(self, n):
+            self.n = n
+
+        def execute(self, sql, p=None):
+            n = self.n
+
+            class R:
+                def fetchone(s):
+                    return {"n": n}
+            return R()
+    assert C.chiave_ciclo_nord(Cn(0)) == "collect:mercato_nord:ciclo1"
+    assert C.chiave_ciclo_nord(Cn(7)) == "collect:mercato_nord:ciclo8"
+
+    class Rotta:
+        def execute(self, *a):
+            raise RuntimeError("giù")
+    assert C.chiave_ciclo_nord(Rotta()).startswith("collect:mercato_nord:20")
