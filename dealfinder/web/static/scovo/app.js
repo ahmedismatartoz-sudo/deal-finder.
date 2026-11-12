@@ -482,7 +482,8 @@ function boxPolicy(c, v){
     ${p.M != null ? row(`Prezzo di mercato M <small>(${v && v.metodo === "modello" ? "modello su " + p.n + " annunci dello stesso modello" : p.n + " confronti"}, per anno e km di questa auto)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
     ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
-    ${p.R != null ? row(p.R_da === "commercianti" ? "Rivendita R <small>(dai commercianti)</small>" : "Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}
+    ${p.R != null ? (p.perizia_giu ? row(p.R_da === "commercianti" ? "Rivendita R <small>(dai commercianti)</small>" : "Rivendita prudente R", eur(p.R_calcolo)) + row("Stima del perito più bassa <small>(si usa la più prudente)</small>", "−" + eur(p.perizia_giu))
+        : row(p.R_da === "commercianti" ? "Rivendita R <small>(dai commercianti)</small>" : "Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R))) : ""}
     ${rivComm(p, v)}`;
   if (v && v.R != null && p.R_da !== "commercianti") h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
   if (v && v.costi) {
@@ -498,6 +499,26 @@ function boxPolicy(c, v){
   const li = a => a.map(x => `<li>${esc(x)}</li>`).join("");
   if ((v.mancanti || []).length) h += `<div class="note" style="border:0">Dati mancanti: ${esc(v.mancanti.join(", "))}.</div>`;
   return h;
+}
+
+/* ---------- 12/11: parere del perito (perizia AI da commerciante, ai/perizia.py) ---------- */
+const PERITO_RISCHI = {versione_dubbia: "Versione", km_sospetti: "Chilometri", difetti_dichiarati: "Difetti",
+  prezzo_troppo_basso: "Prezzo basso", possibile_truffa: "Possibile truffa", altro: "Da sapere"};
+function boxPerito(pe, c){
+  if (!pe || !pe.giudizio) return "";
+  const g = pe.giudizio, fb = pe.prezzo_vendita, gv = pe.giorni_vendita, p = c.pv || {};
+  const col = g === "affare" ? "var(--good)" : g === "caro" || g === "da verificare" ? "var(--warn)" : "var(--ink)";
+  const row = (k, v) => `<div class="row"><span class="k">${k}</span><span class="v" style="font-size:16px">${v}</span></div>`;
+  const rischi = (pe.rischi || []).filter(r => r && r.nota);
+  return `<section class="d-sec perito"><h2>Parere del perito</h2><div class="box">
+    <div class="row"><span class="k">Giudizio</span><span class="v" style="color:${col};font-size:17px">${esc(g.charAt(0).toUpperCase() + g.slice(1))}</span></div>
+    ${fb && pe.dati_sufficienti !== false ? row("Si rivende a <small>(forbice realistica)</small>", `${eur(fb.basso)} – ${eur(fb.alto)}`) + row("Stima media", eur(fb.medio)) : row("Prezzo di vendita", "dati insufficienti")}
+    ${pe.acquisto_max ? row("Da commerciante, pagala al massimo", eur(pe.acquisto_max)) : ""}
+    ${gv ? row("Tempi di vendita", gv.min === gv.max ? `circa ${gv.min} giorni` : `${gv.min}–${gv.max} giorni`) : ""}
+    ${pe.motivazione ? `<div class="note" style="border:0">${esc(pe.motivazione)}</div>` : ""}
+    ${p.perizia_giu ? `<div class="note" style="border:0">La stima del perito è più bassa della nostra rivendita (${eur(p.R_calcolo)}): il guadagno mostrato usa la cifra più prudente (−${eur(p.perizia_giu)}).</div>` : ""}
+  </div>${rischi.length ? `<ul class="checks">${rischi.map(r => `<li${r.gravita === "alta" ? ' style="color:var(--warn)"' : ""}><b>${esc(PERITO_RISCHI[r.tipo] || "Da sapere")}:</b> ${esc(r.nota)}</li>`).join("")}</ul>` : ""}
+  <p class="hint dock-note">Perizia scritta da un'AI sui dati dell'annuncio e sulle auto simili vendute e in vendita${pe.data ? " (" + esc(pe.data) + ")" : ""}: va sempre confermata guardando l'auto.</p></section>`;
 }
 
 /* ---------- 7/11: scheda trattativa e rivendita ---------- */
@@ -643,6 +664,7 @@ function viewDetail(){
       ${schedaTecnica(c, d)}
       ${vizCosti(c)}${d && !d.err ? vizStorico(c, d.trattativa) : ""}
       ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c)}
+      ${d && !d.err && d.perizia ? boxPerito(d.perizia, c) : ""}
       ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
       ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
