@@ -48,11 +48,13 @@ WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
   AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')   -- 23/10: con BENZ_TUTTI_CARB=1 tutte le alimentazioni (tetto diesel 30 per cento sul sito)
   AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s AND t.year >= 2007
   AND (%(solo_privati)s = false OR t.seller_type = 'privato') AND coalesce(t.mileage_km, 0) <= %(kmmax)s
+  AND (t.mileage_km IS NOT NULL OR NOT %(km_obblig)s) AND t.fuel IS NOT NULL   -- 12/11: scarti sicuri prima del LIMIT
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
   AND (NOT %(solo_nuove)s OR NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
                                           AND vp.computed_at > now() - interval '3 days'))   -- 2/11: solo mai valutate di recente
+  AND NOT {invariate}   -- 12/11: valutate da poco e invariate: il posto va alla prossima (scelta_candidate)
 ORDER BY (t.price_eur > %(util)s) ASC, t.price_eur / g.med ASC   -- 22/10: utilitarie per prime (BENZ_UTIL_PRIMA)
 LIMIT %(lim)s"""
 
@@ -161,11 +163,16 @@ def giro() -> dict:
 
         def salva(forza=False):
             if pacco and (forza or len(pacco) >= 150):
+                INC.conta_ribassi(conn, pacco, st)           # 12/11: ribassi trovati da questo giro (riga INCREMENTALE)
                 tr._salva(conn, pacco, st)
                 conn.commit()
                 pacco.clear()
 
         solo_valuta = os.environ.get("BENZ_SOLO_VALUTA") == "1"   # annunci già raccolti: si passa subito alla scelta
+        from . import incrementale as INC
+        from datetime import datetime as _dt, timezone as _tz
+        nome_giro = os.environ.get("BENZ_INCR_NOME", "zona_cron")
+        inizio_giro = _dt.now(_tz.utc)
         # 2/11: prima di tutto le auto con anno/km mancanti: dati letti dal testo e subito rivalutate (pochi minuti)
         if os.environ.get("BENZ_SOLO_INSUFF") == "mai":
             try:
@@ -177,10 +184,36 @@ def giro() -> dict:
             except Exception as e:
                 conn.rollback()
                 log.warning("BENZ dati completati (inizio) non riuscito: %s", str(e)[:200])
+        # 12/11 (buchi della raccolta §0.1): lettura INCREMENTALE (BENZ_INCREMENTALE=1, deciso da collect.py: il giro
+        # completo solo ogni ZC_COMPLETO_ORE ore): ogni ricerca si ferma a K pagine di fila già viste e invariate
+        noti = None
+        prec = INC.inizio_precedente(conn, nome_giro) if not solo_valuta else None
+        if os.environ.get("BENZ_INCREMENTALE") == "1" and not solo_valuta and prec is None:
+            log.warning("BENZ lettura incrementale: nessun giro precedente registrato per %s, giro completo", nome_giro)
+        elif os.environ.get("BENZ_INCREMENTALE") == "1" and not solo_valuta:
+            try:
+                from ..zone import MILANO, TORINO
+                # 12/11 revisione: "noto" = già nel database PRIMA dell'inizio del giro precedente (vedi Noti.carica)
+                noti = INC.Noti.carica(conn, list(MILANO) + list(TORINO) + PROVINCE_100,
+                                       rilevante=INC.zona_rilevante(PROVINCE_100, PMIN, PMAX), visti_prima_di=prec)
+                conn.commit()
+                st["lettura_incrementale"] = 1
+                st["incr_noti"] = len(noti)
+                completo_at = INC.inizio_precedente(conn, nome_giro, "completo")
+                if completo_at is not None:   # per il controllo degli spariti AutoScout24 nel giro incrementale
+                    st["incr_ore_dal_completo"] = int((inizio_giro - completo_at).total_seconds() // 3600) + 1
+                log.warning("BENZ lettura incrementale: %d annunci già noti, fermata a %d pagine note di fila", len(noti), noti.k)
+            except Exception as e:
+                conn.rollback()
+                noti = None
+                log.warning("BENZ lettura incrementale non disponibile (giro completo): %s", str(e)[:200])
         # 1a. Subito: tutte le regioni della zona (3/11, studio 4 P3: prima solo la Lombardia, quindi Novara e
         # Piacenza, dentro i 100 km, non arrivavano mai da questo giro), dal più recente
         sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
         sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
+        sub.noti = noti
+        esito_as: dict = {}
+        _es_as = {"esito": esito_as}         # 12/11 ricontrollo: fasce AutoScout24 bloccate o incomplete
         n = 0
         for reg, provs in regioni_zona(PROVINCE_100):
             try:
@@ -192,11 +225,12 @@ def giro() -> dict:
                         salva()
             except Exception as e:
                 log.warning("BENZ subito %s: %s", reg, str(e)[:200])
+                st["lettura_errori"] += 1
             salva(True)
         # 1a-bis (21/10 sera, cliente: "tutti gli annunci del mercato, solo privati, a benzina"): raccolta profonda
         # di Subito provincia per provincia e fascia di prezzo per fascia (la ricerca per data si ferma prima),
         # in Lombardia, Piemonte ed Emilia entro il raggio
-        if not solo_valuta and os.environ.get("BENZ_SUB_PROFONDA") == "1":
+        if not solo_valuta and os.environ.get("BENZ_SUB_PROFONDA") == "1" and noti is None:   # 12/11: solo nel completo
             passo = int(os.environ.get("BENZ_SUB_PASSO", "500"))
             fasce = [(a, min(a + passo, PMAX)) for a in range(PMIN, PMAX, passo)]
             regioni = [(4, ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "SO", "MN"]),
@@ -214,21 +248,28 @@ def giro() -> dict:
                             salva()
                 except Exception as e:
                     log.warning("BENZ subito profonda regione %s: %s", reg, str(e)[:200])
+                    st["lettura_errori"] += 1
                 salva(True)
                 log.warning("BENZ subito profonda regione %s: letti finora %d", reg, n)
         st["letti_subito"] = n
         log.warning("BENZ subito letti %d (%d-%d €)", n, PMIN, PMAX)
         # 1b. AutoScout24: entro 100 km da Milano, a fasce di 500 €, più fasce insieme
+        # (12/11: in lettura incrementale fasce larghe ZC_INCR_PASSO: si leggono solo le prime pagine di ognuna)
+        passo_as = int(os.environ.get("BENZ_PASSO", "500"))
+        if noti is not None:
+            from .incrementale import passo_as as _passo_incr
+            passo_as = max(passo_as, _passo_incr())
         from .lusso import bande_parallele
         os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = os.environ.get("BENZ_CAP", "20121"), os.environ.get("BENZ_RAGGIO", "100")   # 28/10: BENZ_CAP (es. 24064 Grumello)
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
-            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, int(os.environ.get("BENZ_PASSO", "500")), [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
+            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}), **_es_as)):
                 pacco.append(l); n += 1
                 salva()
         except Exception as e:
             log.warning("BENZ autoscout: %s", str(e)[:200])
+            st["lettura_errori"] += 1
         salva(True)
         # 31/10 (cliente: "più a fondo sul mercato, senza cambiare regole"): Milano + 130 km non copre tutta la zona
         # (Mantova e la bassa bresciana sono oltre): ricerche AutoScout24 in più da altri centri (BENZ_CAP_EXTRA,
@@ -238,11 +279,12 @@ def giro() -> dict:
             os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = cap.strip(), rag.strip()
             n0 = n
             try:
-                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, int(os.environ.get("BENZ_PASSO", "500")), [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")))):
+                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}), **_es_as)):
                     pacco.append(l); n += 1
                     salva()
             except Exception as e:
                 log.warning("BENZ autoscout %s: %s", voce, str(e)[:200])
+                st["lettura_errori"] += 1
             salva(True)
             st[f"letti_autoscout_{cap.strip()}"] = n - n0
             log.warning("BENZ autoscout centro %s letti %d", voce, n - n0)
@@ -264,17 +306,18 @@ def giro() -> dict:
                                "PASSI_JOB": "focus:" + time.strftime("%Y%m%d") + str(int(time.strftime("%H")) // 6)})
             nf = 0
             try:
-                for l in bande_parallele(fmin, fmax, int(os.environ.get("FOCUS_PASSO", "250")), [("P", "privato")],
-                                         workers=int(os.environ.get("BENZ_PARALLELI", "3"))):
+                for l in bande_parallele(fmin, fmax, passo_as if noti is not None else int(os.environ.get("FOCUS_PASSO", "250")),
+                                         [("P", "privato")], workers=int(os.environ.get("BENZ_PARALLELI", "3")), **({"noti": noti} if noti is not None else {}), **_es_as):
                     pacco.append(l); nf += 1
                     salva()
             except Exception as e:
                 log.warning("BENZ focus autoscout: %s", str(e)[:200])
+                st["lettura_errori"] += 1
             salva(True)
             st["focus_autoscout"] = nf
             log.warning("BENZ focus AutoScout benzina %d-%d €, <= %d km: letti %d", fmin, fmax, fkm, nf)
             ns = 0
-            if os.environ.get("FOCUS_SUBITO", "1") == "1":
+            if os.environ.get("FOCUS_SUBITO", "1") == "1" and noti is None:      # 12/11: Subito profondo solo nel completo
                 passo_s = int(os.environ.get("FOCUS_SUB_PASSO", "500"))
                 fasce = [(a, min(a + passo_s, fmax)) for a in range(fmin, fmax, passo_s)]
                 regioni = [(4, ["MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "SO", "MN"]),
@@ -293,6 +336,7 @@ def giro() -> dict:
                                 salva()
                     except Exception as e:
                         log.warning("BENZ focus subito regione %s: %s", reg, str(e)[:200])
+                        st["lettura_errori"] += 1
                     salva(True)
             st["focus_subito"] = ns
             log.warning("BENZ focus Subito benzina: tenuti %d", ns)
@@ -302,34 +346,50 @@ def giro() -> dict:
                 else:
                     os.environ[k] = v
 
+        if noti is not None:
+            st.update({f"incr_{k}": v for k, v in noti.stats.items()})
+        st["lettura_errori"] += int(getattr(sub, "errori", 0) or 0) + int(esito_as.get("fasce_non_complete", 0))
+        if not st["lettura_errori"]:
+            del st["lettura_errori"]
+        if not solo_valuta and st.get("lettura_errori"):
+            # 12/11 ricontrollo: lettura con errori o blocchi: il "già visto" NON avanza (il prossimo giro rilegge da qui)
+            log.warning("INCREMENTALE inizio del giro non salvato: %d letture con errori o blocchi", st["lettura_errori"])
+        elif not solo_valuta:
+            # 12/11 revisione: l'inizio di questo giro diventa il "già visto" del prossimo, solo a lettura finita
+            INC.segna_inizio(conn, nome_giro, inizio_giro)
+            if noti is None:
+                INC.segna_inizio(conn, nome_giro, inizio_giro, "completo")
+            log.warning("INCREMENTALE %s", json.dumps({"giro": nome_giro, "modo": "incrementale" if noti is not None else "completo",
+                                                       "ribassi": st.get("ribassi", 0),
+                                                       "minuti_lettura": round((_dt.now(_tz.utc) - inizio_giro).total_seconds() / 60),
+                                                       **{k: v for k, v in st.items() if k.startswith("incr_")}}))
+        sub.noti = noti = None
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
         conn.execute("SET statement_timeout = '900s'")
-        cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
-                                            "lim": int(os.environ.get("BENZ_MAX", "500")), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
+        # 12/11 (buchi della raccolta §3.1): scarti sicuri e auto invariate fuori PRIMA del tetto (scelta_candidate)
+        from . import scelta_candidate as SC
+        tetto = int(os.environ.get("BENZ_MAX", "500"))
+        cand = conn.execute(CANDIDATI_SQL.format(invariate=SC.condizione_invariate(conn)), {
+                                            **SC.parametri_invariate(), "km_obblig": SC.km_obbligatori(),
+                                            "prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
+                                            "lim": int(tetto * SC.sovra()), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
                                             "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
                                             "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
                                             "kmmax": km_max_scelta(),
                                             "solo_nuove": os.environ.get("BENZ_SOLO_NUOVE") == "1"}).fetchall()
+        st["candidate_lette"] = len(cand)
+        cand = SC.filtra_sicuri(conn, cand, tetto, st)
         # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
         # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
         if os.environ.get("BENZ_CAMBI_PREZZO", "1") == "1":
             try:
                 gia = {r["id"] for r in cand}
-                cambi = conn.execute(
-                    """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
-                       FROM listings t
-                       WHERE t.id IN (SELECT DISTINCT listing_id FROM price_events
-                                      WHERE event = 'prezzo' AND at > now() - make_interval(hours => %(ore)s))
-                         AND t.status = 'attivo' AND upper(t.province) = ANY(%(prov)s)
-                         AND t.price_eur BETWEEN 1000 AND %(pmax)s AND coalesce(t.year, 2007) >= 2007
-                         AND coalesce(t.mileage_km, 0) <= %(kmmax)s
-                         AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
-                         AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
-                       LIMIT %(lim)s""",
-                    {"ore": int(os.environ.get("BENZ_CAMBI_ORE", "8")), "prov": PROVINCE_100, "pmax": PMAX,
-                     "lim": int(os.environ.get("BENZ_CAMBI_MAX", "1500")),
-                     "kmmax": km_max_scelta(), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                # 12/11 (§3.2): tutti i cambi letti, poi in ordine (ribassi grandi e auto vicine alla soglia per prime)
+                cambi = SC.cambi_prezzo(conn, PROVINCE_100, PMAX, km_max_scelta(),
+                                        os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
+                                        int(os.environ.get("BENZ_CAMBI_ORE", "8")),
+                                        int(os.environ.get("BENZ_CAMBI_MAX", "1500")), st)
                 nuovi_c = [r for r in cambi if r["id"] not in gia]
                 cand = nuovi_c + list(cand)
                 st["cambi_prezzo"] = len(cambi)

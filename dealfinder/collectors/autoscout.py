@@ -26,7 +26,8 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML
 # CAP -> provincia (Lombardia), per gli annunci che riportano solo il CAP
 CAP_PROVINCE = [("208", "MB"), ("209", "MB"), ("20", "MI"), ("21", "VA"), ("238", "LC"), ("239", "LC"), ("22", "CO"), ("230", "SO"), ("231", "SO"), ("232", "SO"), ("24", "BG"), ("25", "BS"),
                 ("268", "LO"), ("269", "LO"), ("26", "CR"), ("27", "PV"), ("46", "MN"),
-                ("288", "VB"), ("289", "VB"), ("28", "NO"), ("29", "PC"), ("15", "AL"), ("13", "VC"),
+                ("288", "VB"), ("289", "VB"), ("28", "NO"), ("29", "PC"), ("15", "AL"),
+                ("138", "BI"), ("139", "BI"), ("13", "VC"),   # 12/11: Biella (138xx-139xx) prima finiva a Vercelli
                 # Ravenna e dintorni
                 ("48", "RA"), ("478", "RN"), ("479", "RN"), ("47", "FC"), ("44", "FE"), ("40", "BO"),
                 ("41", "MO"), ("42", "RE"), ("43", "PR"), ("61", "PU")]
@@ -107,6 +108,7 @@ def righe_commercianti(items) -> tuple[dict, list]:
 
 
 _GIA_SALVATI: set = set()
+GIA_SALVATI_MAX = 200_000        # 12/11: mercato_nord lo abbassa (memoria del cron mercato, 512 MB)
 
 
 def _salva_commercianti(items) -> None:
@@ -115,7 +117,7 @@ def _salva_commercianti(items) -> None:
     try:
         righe, annunci = righe_commercianti(items)
         # una sola scrittura per commerciante/annuncio per processo (prima: una connessione per ogni pagina)
-        if len(_GIA_SALVATI) > 200_000:
+        if len(_GIA_SALVATI) > GIA_SALVATI_MAX:
             _GIA_SALVATI.clear()
         righe = {k: v for k, v in righe.items() if ("s", k) not in _GIA_SALVATI}
         annunci = [a for a in annunci if ("a", a[0], a[1]) not in _GIA_SALVATI]
@@ -201,6 +203,8 @@ class AutoScoutCollector(Collector):
         self.incompleta = False
         self.debug = False
         self._debug_done = False
+        self.svuota_visti = False    # 12/11: True = già visti solo dentro la fascia (mercato_nord, memoria)
+        self.noti = None             # 12/11: pipeline.incrementale.Noti = lettura incrementale (vedi _band_incr)
 
     @property
     def client(self):
@@ -303,8 +307,51 @@ class AutoScoutCollector(Collector):
                 l.damage_declared, l.problem_search = True, True
             yield l
 
+    def _dividi(self, lo: int, hi: int, years) -> list:
+        """Pezzi di una fascia troppo piena: metà di prezzo, poi gli anni, poi metà degli anni (come _band)."""
+        if hi - lo >= 100:
+            mid = (lo + hi) // 2
+            return [(lo, mid, years), (mid + 1, hi, years)]
+        if years is None:
+            return [(lo, hi, ys) for ys in self.ANNI]
+        if years[1] > years[0]:
+            y_mid = (years[0] + min(years[1], 2026)) // 2
+            if years[0] <= y_mid < years[1]:
+                return [(lo, hi, (years[0], y_mid)), (lo, hi, (y_mid + 1, years[1]))]
+        return []
+
+    def _band_incr(self, lo: int, hi: int, ctype: str, seller: str, years=None) -> Iterator[Listing]:
+        """12/11 lettura incrementale: pagine dal più recente finché K pagine di fila sono già note e invariate
+        (pipeline.incrementale). Nessuna divisione preventiva della fascia: servono solo le prime pagine. Se si arriva
+        a 20 pagine piene senza trovare il già noto, la fascia si divide e ogni pezzo si legge allo stesso modo."""
+        from ..pipeline.incrementale import Arresto
+        stop = Arresto(self.noti)
+        page = 1
+        while not (self.blocked or self.stop):
+            items, _total, ok = self._page(self.search_url(lo, hi, page, ctype, years))
+            if not ok:
+                return
+            yield from self._emit(items, ctype, seller)
+            if stop.pagina([parse_item(it) for it in items]):
+                return
+            if len(items) < 20:
+                return
+            if page >= 20:
+                pezzi = self._dividi(lo, hi, years)
+                if not pezzi:
+                    log.warning("autoscout incrementale: fascia %s-%s anni %s con 20 pagine di nuovi, non divisibile", lo, hi, years)
+                    return
+                self.noti.conta("fasce_divise")
+                for a, b, ys in pezzi:
+                    yield from self._band(a, b, ctype, seller, ys)
+                return
+            page += 1
+
     def _band(self, lo: int, hi: int, ctype: str, seller: str, years=None) -> Iterator[Listing]:
         if self.blocked or self.stop:
+            return
+        if getattr(self, "noti", None) is not None:
+            yield from self._band_incr(lo, hi, ctype, seller, years)
             return
         items, total, ok = self._page(self.search_url(lo, hi, 1, ctype, years))
         if not ok:
@@ -348,13 +395,19 @@ class AutoScoutCollector(Collector):
         self.debug = os.environ.get("AUTOSCOUT_DEBUG") == "1"
         lo, hi = query.get("min_price", 500), query.get("max_price", 40000)
         step = query.get("step", 2000)
+        letti_tot = 0
         for ctype, seller in query.get("venditori", [("P", "privato"), ("D", "commerciante")]):
-            n0 = len(self.visti)
+            letti_venditore = 0
             from ..pipeline import passi
             for a in range(lo, hi, step):
                 chiave = f"as:{os.environ.get('AUTOSCOUT_CAP', '')}:{os.environ.get('AUTOSCOUT_RAGGIO', '')}:{ctype}:{a}"
                 if passi.fatto(chiave):
                     continue
+                # 12/11 (memoria del cron mercato): le fasce non si sovrappongono, i già visti servono solo dentro la
+                # fascia: prima l'insieme cresceva per tutto il giro (centinaia di migliaia di id)
+                if getattr(self, "svuota_visti", False):
+                    letti_venditore += len(self.visti)
+                    self.visti.clear()
                 self.incompleta = False
                 yield from self._band(a, min(a + step - 1, hi), ctype, seller)
                 if self.blocked or self.stop:
@@ -363,10 +416,16 @@ class AutoScoutCollector(Collector):
                     log.warning("autoscout massiva: fascia %s incompleta, non segnata come fatta", chiave)
                     continue
                 passi.segna(chiave)
-            log.info("autoscout massiva %s: %d annunci letti", seller, len(self.visti) - n0)
+            if getattr(self, "svuota_visti", False):
+                letti_venditore += len(self.visti)
+                self.visti.clear()
+            else:
+                letti_venditore = len(self.visti) - letti_tot
+            letti_tot += letti_venditore
+            log.info("autoscout massiva %s: %d annunci letti", seller, letti_venditore)
             if self.blocked or self.stop:
                 break
-        log.info("autoscout massiva: %d annunci letti in tutto", len(self.visti))
+        log.info("autoscout massiva: %d annunci letti in tutto", letti_tot)
 
     def search(self, query: dict) -> Iterator[Listing]:
         if query.get("massiva"):

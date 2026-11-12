@@ -210,6 +210,8 @@ class SubitoCollector(Collector):
             import httpx
             client = httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True, proxy=proxy)
         self.client = client
+        self.errori = 0              # 12/11 ricontrollo: pagine di ricerca non lette (chi chiama sa che la lettura è incompleta)
+        self.noti = None             # 12/11: pipeline.incrementale.Noti = ci si ferma al già visto (search_recenti, _fascia)
         # Subito blocca le richieste dai server cloud (HTTP 403): se configurato,
         # le pagine passano dal Web Unlocker di Bright Data (stesso account dello scraper Facebook).
         self.unlocker_zone = os.environ.get("BRIGHTDATA_UNLOCKER_ZONE")
@@ -279,20 +281,25 @@ class SubitoCollector(Collector):
         if reg is None:
             reg = self._trova_regione(wanted, 100) or 4
         letti = tenuti = 0
+        from ..pipeline.incrementale import Arresto
+        stop = Arresto(self.noti) if getattr(self, "noti", None) is not None else None
         for page in range(max_pages):
             r = self._api({"c": 2, "r": reg, "t": "s", "lim": 100, "start": page * 100, "sort": "datedesc"})
             self.pause()
             if r.status_code != 200:
                 log.warning("subito recenti %s: HTTP %s a pagina %s", region, r.status_code, page)
+                self.errori = getattr(self, "errori", 0) + 1
                 break
             try:
                 ads = (r.json() or {}).get("ads") or []
             except Exception as e:
                 log.warning("subito recenti %s: risposta non leggibile a pagina %s (%s)", region, page, str(e)[:100])
+                self.errori = getattr(self, "errori", 0) + 1
                 break
             if not ads:
                 break
             vecchi = 0
+            pagina = []
             for it in ads:
                 quando = self._data_annuncio(it) if isinstance(it, dict) else None
                 if quando and quando < dal:
@@ -301,6 +308,7 @@ class SubitoCollector(Collector):
                 listing = parse_item(it)
                 if not listing:
                     continue
+                pagina.append(listing)
                 letti += 1
                 if listing.province and listing.province.upper() not in wanted:
                     continue
@@ -308,6 +316,8 @@ class SubitoCollector(Collector):
                 yield listing
             if vecchi >= len(ads) * 0.8:
                 break
+            if stop is not None and stop.pagina(pagina):
+                break                    # 12/11 lettura incrementale: K pagine di fila già viste e invariate
         log.info("subito recenti %s dal %s: %d letti, %d nelle province", region, dal, letti, tenuti)
 
     def search(self, query: dict) -> Iterator[Listing]:
@@ -487,6 +497,8 @@ class SubitoCollector(Collector):
                     esito["ok"] = False
                 if esito["ok"]:
                     passi.segna(chiave)
+                else:
+                    self.errori = getattr(self, "errori", 0) + 1
             log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot["letti"], tot["tenuti"],
                      query["price_bands"][-1][1])
 
@@ -500,6 +512,8 @@ class SubitoCollector(Collector):
     def _fascia(self, region, key, sn, ps, pe, pages, lim, wanted, visti: set, livello: int, tot: dict,
                 esito: dict) -> Iterator[Listing]:
         piena = False
+        from ..pipeline.incrementale import Arresto
+        stop = Arresto(self.noti) if getattr(self, "noti", None) is not None else None
         for page in range(pages):
             r = self._api({"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
                            "lim": lim, "start": page * lim, "sort": "datedesc"})
@@ -509,8 +523,11 @@ class SubitoCollector(Collector):
                 esito["ok"] = False
                 return
             ads = (r.json() or {}).get("ads") or []
+            pagina = []
             for it in ads:
                 listing = parse_item(it)
+                if listing:
+                    pagina.append(listing)
                 if not listing or listing.source_id in visti:
                     continue
                 visti.add(listing.source_id)
@@ -521,6 +538,8 @@ class SubitoCollector(Collector):
                 yield listing
             if len(ads) < lim:
                 return
+            if stop is not None and stop.pagina(pagina):
+                return                # 12/11 lettura incrementale: il resto della fascia è già visto e invariato
             piena = page == pages - 1
         if not piena:
             return

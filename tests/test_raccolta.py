@@ -514,7 +514,7 @@ def test_giro_zona_salva_i_commercianti():
             return list(sub_ads) if reg == "lombardia" else []
     venditori_chiesti = []
 
-    def bande(pmin, pmax, passo, venditori, workers=1):
+    def bande(pmin, pmax, passo, venditori, workers=1, **_k):
         venditori_chiesti.append([v for v, _ in venditori])
         return [_l(source="autoscout24", source_id=f"a{v}", make="fiat", model="panda", price_eur=5000, province="MI",
                    seller_type=t) for v, t in venditori]
@@ -539,9 +539,11 @@ def test_giro_zona_salva_i_commercianti():
     for k in ("BENZ_RACCOLTA_TUTTI", "BENZ_CAP_EXTRA", "BENZ_FOCUS", "BENZ_SUB_PROFONDA", "BENZ_SOLO_INSUFF"):
         os.environ.pop(k, None)
     os.environ.update(BENZ_SOLO_PRIVATI="1", BENZ_PROVINCE="MI,BG,NO,PC", BENZ_MIN="1000", BENZ_PMAX="70000")
+    prov_prima = B.PROVINCE_100                # stesso oggetto: giro() lo sostituisce, non lo cambia
     try:
         st = B.giro()
     finally:
+        B.PROVINCE_100 = prov_prima              # giro() riscrive la variabile di modulo
         db.connect, subito.SubitoCollector, lusso.bande_parallele, tr._salva, tr.valuta_e_pubblica = vecchi
         os.environ.clear()
         os.environ.update(env)

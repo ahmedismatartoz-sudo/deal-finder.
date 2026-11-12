@@ -67,11 +67,34 @@ def doppione_altro_sito(conn, l, lid) -> bool:
     l'annuncio di AutoScout24 resta solo come dato di mercato, così sul sito non compare due volte."""
     if not (l.make and l.model and l.year and l.mileage_km is not None and l.price_eur):
         return False
-    row = conn.execute(
-        """SELECT id FROM listings WHERE source <> 'autoscout24' AND status='attivo' AND make=%s AND model=%s
-             AND year=%s AND mileage_km BETWEEN %s AND %s AND price_eur BETWEEN %s AND %s LIMIT 1""",
-        (l.make, l.model, l.year, l.mileage_km - 1500, l.mileage_km + 1500,
-         int(l.price_eur * 0.93) - 200, int(l.price_eur * 1.07) + 200)).fetchone()
+    if os.environ.get("DOPPIONE_STRETTO", "1") == "1":
+        # 12/11 (buchi della raccolta §3.7): il 43% dei nuovi AutoScout24 del tempo reale risultava "doppione" e saltava
+        # la valutazione: con ~160.000 Subito attivi una Panda/500/Golf dello stesso anno, km ±1.500 e prezzo ±7% si
+        # trova quasi sempre. Ora la stessa auto deve avere anche lo stesso carburante e cambio (se noti da tutte e
+        # due le parti), la stessa regione (se nota) e km ±DOPPIONE_KM (500): lo stesso venditore scrive gli stessi km.
+        dk = int(os.environ.get("DOPPIONE_KM", "500"))
+        # 12/11 revisione: carburante e cambio normalizzati come nel database; per il luogo basta la stessa regione
+        # (il CAP di AutoScout24 e il comune di Subito possono dare province vicine diverse)
+        from ..core.normalize import PROVINCE_REGION, norm_fuel, norm_gearbox
+        pv = (l.province or "").upper() or None
+        reg = PROVINCE_REGION.get(pv) if pv else None
+        stesse = sorted(p for p, r in PROVINCE_REGION.items() if r == reg) if reg else ([pv] if pv else None)
+        row = conn.execute(
+            """SELECT id FROM listings WHERE source <> 'autoscout24' AND status='attivo' AND make=%(make)s AND model=%(model)s
+                 AND year=%(year)s AND mileage_km BETWEEN %(km0)s AND %(km1)s AND price_eur BETWEEN %(p0)s AND %(p1)s
+                 AND (%(fuel)s::text IS NULL OR fuel IS NULL OR lower(fuel) = lower(%(fuel)s::text))
+                 AND (%(gear)s::text IS NULL OR gearbox IS NULL OR lower(gearbox) = lower(%(gear)s::text))
+                 AND (%(senza_prov)s OR province IS NULL OR upper(province) = ANY(%(prov)s))
+               LIMIT 1""",
+            {"make": l.make, "model": l.model, "year": l.year, "km0": l.mileage_km - dk, "km1": l.mileage_km + dk,
+             "p0": int(l.price_eur * 0.93) - 200, "p1": int(l.price_eur * 1.07) + 200, "fuel": norm_fuel(l.fuel) or None,
+             "gear": norm_gearbox(l.gearbox) or None, "senza_prov": not stesse, "prov": stesse or [""]}).fetchone()
+    else:
+        row = conn.execute(
+            """SELECT id FROM listings WHERE source <> 'autoscout24' AND status='attivo' AND make=%s AND model=%s
+                 AND year=%s AND mileage_km BETWEEN %s AND %s AND price_eur BETWEEN %s AND %s LIMIT 1""",
+            (l.make, l.model, l.year, l.mileage_km - 1500, l.mileage_km + 1500,
+             int(l.price_eur * 0.93) - 200, int(l.price_eur * 1.07) + 200)).fetchone()
     if not row:
         return False
     conn.execute("UPDATE listings SET stage='scartato', stage_reason='doppione' WHERE id=%s", (lid,))
@@ -336,11 +359,17 @@ def run(mode: str) -> Counter:
         # privati e concessionari, entro NORD_RAGGIO km da Milano, solo le province del Nord FUORI dalle nostre zone.
         from ..collectors.autoscout import AutoScoutCollector
         os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = "20121", os.environ.get("NORD_RAGGIO", "350")
-        os.environ["PASSI_JOB"] = "collect:mercato_nord:" + time.strftime("%Y-%W")   # si riparte ogni settimana
+        os.environ["PASSI_JOB"] = chiave_ciclo_nord()     # 12/11 revisione: un ciclo finisce anche in più notti
         asc = AutoScoutCollector()
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
-        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("NORD_MAX_PREZZO", "40000"))})]
+        # 12/11 (buchi della raccolta §2.3/§4.1, fuori memoria e 12 ore): già visti solo dentro la fascia, meno
+        # commercianti ricordati, fasce da NORD_PASSO € (1.000: un'interruzione rilegge meno)
+        asc.svuota_visti = True
+        from ..collectors import autoscout as _as_mod
+        _as_mod.GIA_SALVATI_MAX = min(_as_mod.GIA_SALVATI_MAX, int(os.environ.get("NORD_GIA_SALVATI_MAX", "50000")))
+        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("NORD_MAX_PREZZO", "40000")),
+                          "step": int(os.environ.get("NORD_PASSO", "1000"))})]
     elif mode == "lombardia":
         # Raccolta pesante di tutta la Lombardia: Subito in fasce strette (tutte le province) e AutoScout24 entro
         # LOMBARDIA_RAGGIO km da Milano (privati da proporre, concessionari come prezzi). Si ferma a LOMBARDIA_OBIETTIVO.
@@ -678,8 +707,11 @@ def run(mode: str) -> Counter:
 
     with connect() as conn:
         from .ciclo import fb_job
+        # 12/11 ricontrollo: mercato_nord registra il GIRO con un nome suo; "collect:mercato_nord" (quello che lo rende
+        # fatto per 6 giorni e fa avanzare il ciclo dei passi) lo scrive solo fase_mercato_nord, a giro finito
         finish = log_job(conn, "collect:fb_backfill:v2" if mode == "fb_backfill"
-                         else fb_job() if mode == "facebook" else os.environ.get("COLLECT_JOB") or f"collect:{mode}")
+                         else fb_job() if mode == "facebook" else "collect:mercato_nord:giro" if mode == "mercato_nord"
+                         else os.environ.get("COLLECT_JOB") or f"collect:{mode}")
         from ..pricing.model import prescreen
         from ..pricing.train import load_active
         model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
@@ -705,6 +737,9 @@ def run(mode: str) -> Counter:
             try:
                 for listing in collector.search(query):
                     stats[f"letti:{listing.source}"] += 1
+                    if mode == "mercato_nord" and stats[f"letti:{listing.source}"] % 200 == 0 and nord_da_fermare(stats):
+                        collector.stop = True            # 12/11: memoria o tempo finiti: si riprende la notte dopo
+                        break
                     try:
                         # 3/11 (studio 4, P12): anche qui alimentazione, anno, km, cambio e kW dal testo, come in _salva
                         for k, v in completa({"fuel": listing.fuel, "year": listing.year, "mileage_km": listing.mileage_km,
@@ -856,13 +891,70 @@ def run(mode: str) -> Counter:
             log.info("QUALITA %s: %s annunci | %% presenti: marca %s, modello %s, anno %s, km %s, prezzo %s, "
                      "zona %s, foto %s | privati %s%%", q["source"], q["n"], q["marca"], q["modello"], q["anno"],
                      q["km"], q["prezzo"], q["zona"], q["foto"], q["privati"])
-        finish(not any(k.endswith(":errore") for k in stats), dict(stats))
-        if os.environ.get("PASSI_JOB") and not any(k.endswith(":errore") for k in stats):
+        finish(not any(k.endswith(":errore") for k in stats) and not stats.get("mercato_nord:interrotto"), dict(stats))
+        if os.environ.get("PASSI_JOB") and not any(k.endswith(":errore") for k in stats) \
+                and not stats.get("mercato_nord:interrotto"):          # 12/11: i passi fatti restano per la ripresa
             from . import passi
             passi.finito(os.environ["PASSI_JOB"])
     log.info("raccolta %s: %s", mode, dict(stats))
     log.warning("RACCOLTA_SCARTI %s", json.dumps(riepilogo_scarti(stats)))
     return stats
+
+
+NORD_RSS_MB = 420          # MB: oltre si ferma (512 MB del cron mercato, margine per il salvataggio)
+NORD_ORE_MAX = 9.5         # ore dall'avvio del cron: poi c'è il modello AI dei prezzi (entro 10,5) e il limite di 12
+
+
+def chiave_ciclo_nord(conn=None) -> str:
+    """Chiave dei passi di mercato_nord = numero del CICLO (giri finiti finora): i passi fatti valgono finché il giro
+    non è finito, anche se servono più notti o si passa a un'altra settimana (prima la chiave cambiava ogni settimana e
+    un giro lungo ripartiva da zero). Finito il ciclo (riga 'collect:mercato_nord'), il prossimo riparte da capo.
+    Senza database: chiave del mese."""
+    try:
+        if conn is None:
+            from ..db import connect as _cn
+            with _cn() as c:
+                return chiave_ciclo_nord(c)
+        r = conn.execute("SELECT count(*) AS n FROM job_runs WHERE job='collect:mercato_nord' AND ok").fetchone()
+        return f"collect:mercato_nord:ciclo{int(r['n']) + 1}"
+    except Exception:
+        return "collect:mercato_nord:" + time.strftime("%Y-%m")
+
+
+def nord_da_fermare(stats, ora: float | None = None, rss=None) -> bool:
+    """12/11 (buchi della raccolta §2.3/§4.1): mercato_nord si ferma DA SOLO, pulito, prima che Render lo uccida
+    (fuori memoria l'11/11 e il 4/11, 12 ore il 10/11): passi fatti salvati, ripresa la notte dopo, modello AI dei
+    prezzi addestrato comunque. Memoria: prima si prova a restituirla (gc + malloc_trim)."""
+    import time as _t
+    from .. import memoria
+    t0 = float(os.environ.get("CRON_T0") or _t.time())
+    ore = ((ora if ora is not None else _t.time()) - t0) / 3600
+    if ore >= float(os.environ.get("NORD_ORE_MAX") or NORD_ORE_MAX):
+        stats["mercato_nord:interrotto"] = stats["mercato_nord:interrotto_tempo"] = 1
+        log.warning("MERCATO_NORD fermato: già %.1f ore dall'avvio del cron (si riprende la notte dopo)", ore)
+        return True
+    limite = float(os.environ.get("NORD_RSS_MB") or NORD_RSS_MB)
+    mis = rss or memoria.rss_mb
+    if mis() >= limite:
+        memoria.rilascia("mercato_nord", forza=True)
+        if mis() >= limite:
+            stats["mercato_nord:interrotto"] = stats["mercato_nord:interrotto_memoria"] = 1
+            log.warning("MERCATO_NORD fermato: memoria %.0f MB (limite %.0f), si riprende la notte dopo", mis(), limite)
+            return True
+    return False
+
+
+def fase_mercato_nord() -> dict:
+    """mercato_nord + riga 'collect:mercato_nord' (quella che lo rende "fatto" per 6 giorni) SOLO se finito davvero."""
+    from ..db import connect as _cn
+    st_n = run("mercato_nord")
+    if not st_n.get("mercato_nord:interrotto") and not any(k.endswith(":errore") for k in st_n):
+        with _cn() as _c:
+            _c.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
+                       ("collect:mercato_nord", json.dumps(dict(st_n), default=str)))
+            _c.commit()
+    log.warning("MERCATO_NORD %s", dict(st_n))
+    return dict(st_n)
 
 
 def riepilogo_scarti(stats) -> dict:
@@ -887,12 +979,19 @@ def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
     letti_as = sum(v for k, v in esito.items() if k.startswith("letti_autoscout") and isinstance(v, int))
     if os.environ.get("AS_SCOMPARSI", "1") != "1" or letti_as < int(os.environ.get("AS_SCOMPARSI_MIN_LETTI", "200")):
         return
+    ore_non_visti = int(os.environ.get("AS_NON_VISTI_ORE", "8"))
+    if esito.get("lettura_incrementale"):
+        # 12/11 revisione: anche dopo un giro incrementale, ma SOLO gli annunci non visti dall'inizio dell'ultimo giro
+        # completo (quelli dopo l'incrementale non li rilegge apposta). Senza giro completo registrato: niente.
+        if not esito.get("incr_ore_dal_completo"):
+            return
+        ore_non_visti = max(ore_non_visti, int(esito["incr_ore_dal_completo"]))
     try:
         from .benzina_mi import PROVINCE_100
         from .verify import scomparsi_con_prova
         with _cn() as c:
             fin = _lj(c, "scomparsi:autoscout24")
-            st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=int(os.environ.get("AS_NON_VISTI_ORE", "8")),
+            st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=ore_non_visti,
                                      limite=int(os.environ.get("AS_SCOMPARSI_MAX", "600")),
                                      minuti=float(os.environ.get("AS_SCOMPARSI_MINUTI", "20")),
                                      pausa=(0.5, 1.2), zona=PROVINCE_100)
@@ -988,6 +1087,17 @@ if __name__ == "__main__":
     if not os.environ.get("DATABASE_URL"):
         log.info("DATABASE_URL non impostata: servizio non configurato, nulla da fare")
         sys.exit(0)
+    import time
+    os.environ.setdefault("CRON_T0", str(time.time()))      # 12/11: avvio del cron, anche dopo os.execv
+    if os.environ.pop("MERCATO_NORD_FASE", None) == "1":
+        # 12/11: seconda parte del cron mercato, in un processo pulito: prezzi del Nord, poi il modello AI dei prezzi
+        try:
+            fase_mercato_nord()
+        except Exception as e:
+            log.warning("MERCATO_NORD non riuscito: %s", str(e)[:300])
+        if tempo_ok("ai_prezzi", 10.5, float(os.environ["CRON_T0"])):
+            _ai_prezzi()
+        sys.exit(0)
     # 1/11 (regola del cliente: niente raccolta da Facebook): i giri Facebook non partono più, salvo FACEBOOK_ATTIVO=1
     if mode in ("facebook", "fb_backfill", "fb_importa") and os.environ.get("FACEBOOK_ATTIVO") != "1":
         log.warning("Facebook spento (regola del cliente): niente raccolta")
@@ -1038,9 +1148,15 @@ if __name__ == "__main__":
                              "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
                              "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
                     os.environ[k] = v
+                from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
+                _completo = _torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
+                os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+                os.environ["BENZ_INCR_NOME"] = "novara_ora" if _novara_ora else "torino_cron"
                 try:
                     from . import benzina_mi as B
                     esito = B.giro()
+                    if _completo and not _torino_ora:
+                        INC.segna_completo("torino_cron", esito)
                     log.warning("%s fatta: %s", "NOVARA_ORA" if _novara_ora else "TORINO_CRON", {k: v for k, v in esito.items() if isinstance(v, int)})
                     if not _novara_ora:
                         lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
@@ -1080,8 +1196,19 @@ if __name__ == "__main__":
                     if "10121:" not in extra:
                         os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:100")) if x)
                 from . import benzina_mi as B
-                esito = B.giro()
-                log.warning("ZONA_CRON fatta: %s", {k: v for k, v in esito.items() if isinstance(v, int)})
+                from . import incrementale as INC                 # 12/11: giro completo solo ogni ZC_COMPLETO_ORE ore
+                _completo = INC.completo_dovuto("zona_cron")
+                os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+                os.environ["BENZ_INCR_NOME"] = "zona_cron"
+                try:
+                    esito = B.giro()
+                finally:
+                    os.environ.pop("BENZ_INCREMENTALE", None)
+                    os.environ.pop("BENZ_INCR_NOME", None)
+                if _completo:
+                    INC.segna_completo("zona_cron", esito)
+                log.warning("ZONA_CRON fatta (%s): %s", "completa" if _completo else "incrementale",
+                            {k: v for k, v in esito.items() if isinstance(v, int)})
                 lavori_zona(esito)
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
@@ -1718,13 +1845,14 @@ if __name__ == "__main__":
         # una volta a settimana: prezzi di mercato da tutto il Nord (AutoScout24) per il modello AI e i confronti
         from .ciclo import _due as _due_job
         if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6):
-            from ..db import connect as _cn
-            st_n = run("mercato_nord")
-            with _cn() as _c:
-                _c.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
-                           ("collect:mercato_nord", json.dumps(dict(st_n), default=str)))
-                _c.commit()
-            log.warning("MERCATO_NORD %s", dict(st_n))
+            if os.environ.get("NORD_PROCESSO", "1") == "1":
+                # 12/11: in un processo NUOVO (la memoria dell'addestramento, ~270 MB, si libera tutta), che poi fa
+                # anche il modello AI dei prezzi. Dopo questa riga non si torna più qui.
+                os.environ["MERCATO_NORD_FASE"] = "1"
+                sys.stdout.flush()
+                sys.stderr.flush()
+                os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"])
+            fase_mercato_nord()
     # L'analisi parte se non è esclusa dal comando, oppure se ANALISI_ATTIVA=1 (impostabile da Render)
     analisi = "--senza-analisi" not in sys.argv or os.environ.get("ANALISI_ATTIVA") == "1"
     if mode in ("opportunita", "facebook") and analisi:

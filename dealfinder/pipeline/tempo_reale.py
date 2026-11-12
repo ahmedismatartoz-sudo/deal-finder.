@@ -214,11 +214,69 @@ def subito_esito_con_prova(client, url: str, lenient: bool = False) -> tuple[str
     item = find_key(data, "ad", "item") if isinstance(data, dict) else None
     if isinstance(item, dict) and (item.get("urn") or item.get("subject") or item.get("features")):
         return "attivo", None
-    low = text.lower()
+    low = _testo_chiaro(text)          # 12/11 revisione: scritte cercate anche nel JSON escapato (\u00e8 = è)
     trovate = [k for k in _SUBITO_TOLTO if k in low]
-    if trovate:
+    # 12/11 (buchi della raccolta §2.3): le pagine di Subito non hanno più __NEXT_DATA__ (i dati sono nel JSON escapato
+    # di self.__next_f): ogni annuncio dava "errore" e il controllo notturno degli spariti si fermava dopo 15 pagine,
+    # ogni notte (0 controllati). I dati DELL'annuncio (il suo urn "id:ad:<numero>:", con titolo e prezzo vicini)
+    # valgono come prima "pagina con i dati" = attivo. Dati e scritta di rimozione insieme: nessuna decisione.
+    dati = _dati_annuncio_nella_pagina(text, m.group(1) if m else None)
+    if trovate and not dati:
         return "scomparso", ("scaduto" if any("scadut" in k for k in trovate) else "rimosso")
+    if dati and not trovate:
+        return "attivo", "pagina_app"      # contato a parte (motivo:pagina_app nella riga SCOMPARSI)
+    if dati and trovate:
+        return ("attivo", None) if lenient else ("errore", None)
+    _diag_pagina_subito(text, m.group(1) if m else None)
     return ("attivo", None) if lenient else ("errore", None)
+
+
+_RE_CAMPI_ANNUNCIO = re.compile(r'\\*"(subject|features|advertiser|urn)\\*"\s*:')
+_RE_SUBJECT = re.compile(r'\\*"subject\\*"\s*:\s*\\*"[^"\\]{2,}')
+_RE_PREZZO = re.compile(r'\\*"(?:/price|price)\\*"|\\*"key\\*"\s*:\s*\\*"\d{3,7}\\*"\s*,\s*\\*"value\\*"\s*:\s*\\*"[\d.]+\s*(?:€|\\u20ac)')
+FINESTRA_URN = 6000            # caratteri intorno all'urn in cui devono esserci titolo e prezzo
+_diag_pag_sub = {"n": 0}
+_campione_app = {"n": 0}
+
+
+def _testo_chiaro(text: str) -> str:
+    """Minuscolo, con le sequenze del JSON escapato rese leggibili (\\u00e8 -> è, \\" -> ")."""
+    t = (text or "").lower()
+    for a, b in (("\\u00e8", "è"), ("\\u00e9", "é"), ("\\u00f9", "ù"), ("\\u00e0", "à"), ("\\u00ec", "ì"),
+                 ("\\u00f2", "ò"), ('\\"', '"'), ("\\/", "/")):
+        t = t.replace(a, b)
+    return t
+
+
+def _dati_annuncio_nella_pagina(text: str, numero: str | None) -> bool:
+    """Pagina Subito (App Router, JSON escapato) con i dati di QUESTO annuncio: il suo urn ("id:ad:<numero>:" o
+    "list:<numero>" con un delimitatore dopo il numero) e, entro FINESTRA_URN caratteri, un titolo (subject) e un
+    prezzo. Senza il numero nell'indirizzo non si decide."""
+    if not numero or not text:
+        return False
+    for mu in re.finditer(r"(?:ad:%s:|list:%s(?!\d))" % (re.escape(numero), re.escape(numero)), text):
+        a = max(0, mu.start() - FINESTRA_URN)
+        pezzo = text[a:mu.end() + FINESTRA_URN]
+        ms, mp = _RE_SUBJECT.search(pezzo), _RE_PREZZO.search(pezzo)
+        if ms and mp:
+            if _campione_app["n"] < 3:              # campione: solo la FORMA, mai i contenuti
+                _campione_app["n"] += 1
+                log.warning("SCOMPARSI subito attivo dal criterio nuovo (pagina senza __NEXT_DATA__): byte=%d "
+                            "titolo_a=%d prezzo_a=%d caratteri dall'urn", len(text), abs(a + ms.start() - mu.start()),
+                            abs(a + mp.start() - mu.start()))
+            return True
+    return False
+
+
+def _diag_pagina_subito(text: str, numero: str | None) -> None:
+    """Le prime 3 pagine non riconosciute per processo: solo la FORMA (byte, marcatori), mai contenuti."""
+    if _diag_pag_sub["n"] >= 3:
+        return
+    _diag_pag_sub["n"] += 1
+    t = text or ""
+    log.warning("SCOMPARSI subito pagina non riconosciuta: byte=%d next_data=%s next_f=%s numero_nell_urn=%s campi=%s",
+                len(t), "__NEXT_DATA__" in t, "self.__next_f" in t, bool(numero and re.search(r"(?:ad:%s:|list:%s(?!\d))" % (numero, numero), t)),
+                sorted(set(x.group(1) for x in _RE_CAMPI_ANNUNCIO.finditer(t[:2_000_000])))[:6])
 
 
 def subito_stato_con_prova(client, url: str) -> str:
@@ -813,10 +871,9 @@ def _autoscout_nuovi(conn) -> list:
         url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
                f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom=300&priceto=150000"
                f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
-        try:
-            r = client.get(url)
-        except Exception as e:
-            log.warning("TR autoscout ricerca: %s", str(e)[:120])
+        from . import as_riprova                   # 12/11 (§3.4): riprova con attesa crescente su 429/5xx/rete
+        r = as_riprova.get(client, url, "TR autoscout ricerca")
+        if r is None:
             break
         if r.status_code != 200:
             log.warning("TR autoscout ricerca HTTP %s", r.status_code)
@@ -877,17 +934,25 @@ def _autoscout_tutti(conn) -> list:
     from ..collectors.base import next_data
     from ..zone import MILANO
     zona = set(MILANO)
+    from . import as_riprova
     client = _client_as()
     visti, out, pagine, fuori = set(), [], 0, 0
-    for lo, hi in FASCE_AS:
-        for page in range(1, 21):
+    # 12/11 (§3.4): si parte dalla fascia (e pagina) dove la lettura precedente si era fermata per un 429
+    ripresa = as_riprova.leggi_ripresa(conn) if as_riprova.attivo() else None
+    interrotta = False
+    for idx, p0 in as_riprova.ordine_fasce(len(FASCE_AS), ripresa):
+        lo, hi = FASCE_AS[idx]
+        if interrotta:
+            break
+        for page in range(p0, 21):
             url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
                    f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom={lo}&priceto={hi}"
                    f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
-            try:
-                r = client.get(url)
-            except Exception as e:
-                log.warning("TR completo autoscout: %s", str(e)[:120])
+            r = as_riprova.get(client, url, f"TR completo autoscout fascia {lo}-{hi} pagina {page}")
+            if r is None:
+                if as_riprova.attivo():
+                    as_riprova.salva_ripresa(conn, idx, page)     # il prossimo giro riparte da qui
+                    interrotta = True
                 break
             if r.status_code != 200:
                 log.warning("TR completo autoscout HTTP %s (fascia %s-%s pagina %s)", r.status_code, lo, hi, page)
@@ -914,7 +979,11 @@ def _autoscout_tutti(conn) -> list:
             if len(items) < 20:
                 break
             time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
-    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona", pagine, len(out), fuori)
+    if not interrotta and ripresa:
+        as_riprova.togli_ripresa(conn)
+    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona%s%s", pagine, len(out), fuori,
+                f", ripresa dalla fascia {FASCE_AS[ripresa['fascia']]}" if ripresa else "",
+                ", interrotta (si riprende al giro dopo)" if interrotta else "")
     return _as_completa(client, out)
 
 
@@ -1125,6 +1194,11 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         if os.environ.get("TR_AUTOSCOUT", "1") == "1":
             try:
                 letti += _autoscout_nuovi(conn)
+                # 12/11 (§3.4): lettura completa interrotta da un 429: si riprende al primo giro utile, non dopo un'ora
+                from . import as_riprova
+                if as_riprova.attivo() and not as_riprova.fermo() and as_riprova.leggi_ripresa(conn):
+                    stats["as_ripresa"] = 1
+                    letti += _autoscout_tutti(conn)
             except Exception as e:
                 log.warning("TR autoscout: %s", str(e)[:200])
         stats["letti"] = len(letti)
