@@ -1723,6 +1723,8 @@ def _calcola_elenco() -> None:
     from . import impostazioni as _imp, elenco_salvato as _es
     imp_v = _imp.versione()
     out = _imp.togli_scartate(out)                # 12/11: auto tolte dal pannello (anche se l'annuncio non è cambiato)
+    from . import scheda_tecnica                # 12/11: allestimento e cambio nella riga dei dati dell'elenco
+    scheda_tecnica.arricchisci_elenco(out)      # prima della copia salvata, così anche l'elenco riletto all'avvio li ha
     with _elenco_agg_lock:
         _elenco.update(t=time.time(), items=out, opens=opens, pronto=True, fonte="calcolato", imp_v=imp_v, copia_t=None)
     _es.salva_elenco(out, opens)                  # 12/11: copia per il prossimo avvio (sito mai vuoto)
@@ -1943,12 +1945,14 @@ def affare(request: Request):
     mie = _elenco_per(user["id"])
     it = next((x for x in mie if x.get("id") == lid), None)
     admin = user.get("role") == "admin"
+    from . import scheda_tecnica                # 12/11: scheda tecnica dell'auto
     with connect() as conn:
         if it is not None:
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
             d = scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra))))   # 10/11: anche dentro la scheda vale il prezzo ribassato
+            scheda_tecnica.aggiungi(conn, lid, d)            # 12/11: scheda tecnica (allestimento, cambio, optional...)
             _con_trattativa(conn, lid, d)
             return jsonify(d)
         if not admin:
@@ -1964,6 +1968,7 @@ def affare(request: Request):
     d = scovo.con_netto(scovo.detail(base, extra or {}))
     d["non_sul_sito"] = True                    # solo amministratore: auto valutata ma tolta dalle regole del sito
     with connect() as conn:
+        scheda_tecnica.aggiungi(conn, lid, d)
         _con_trattativa(conn, lid, d)
     return jsonify(d)
 

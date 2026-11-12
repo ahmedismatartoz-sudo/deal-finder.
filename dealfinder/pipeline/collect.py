@@ -314,6 +314,8 @@ def run(mode: str) -> Counter:
         os.environ.setdefault("PASSI_JOB", f"collect:{mode}")     # dopo un riavvio si riprende da dove si era arrivati
     if mode == "opportunita":
         provinces, max_price = settings.opportunity_provinces, settings.max_purchase_eur
+        from ..db import dati_auto_ricerca_processo
+        dati_auto_ricerca_processo(True)         # 12/11: la parte "ricerca" della scheda tecnica solo in questo cron
         _autohero_giornaliero(stats)
     else:
         provinces, max_price = settings.market_provinces, settings.market_max_price_eur
@@ -939,6 +941,27 @@ def tempo_ok(fase: str, entro_ore: float, t0: float, ora: float | None = None) -
         return True
     log.warning("TEMPO_CRON %s rimandata al prossimo giro: già %.1f ore (limite %.1f)", fase, passate, limite)
     return False
+
+
+def tempo_schede_pagine(t0: float, ora: float | None = None) -> float:
+    """12/11: secondi concessi alla lettura delle pagine (scheda tecnica) a fine giro opportunità. Il giro dura 6–10
+    ore: la fase parte fino a 10 ore (CRON_ORE_SCHEDE_PAGINE) e dura al massimo 20 minuti, mai oltre 10,3 ore dall'avvio
+    (poi c'è _ai_prezzi entro 10,5 e il limite di Render a 12). 0 = non parte."""
+    import time as _t
+    ora = ora if ora is not None else _t.time()
+    if not tempo_ok("schede_pagine", 10, t0, ora):
+        return 0.0
+    resto = 10.3 * 3600 - (ora - t0)
+    return max(0.0, min(1200.0, resto)) if resto >= 60 else 0.0
+
+
+def _schede_pagine(t0: float) -> None:
+    """Scheda tecnica (pagina dell'annuncio) delle auto sul sito e candidate; SCHEDA_PAGINE=0 la spegne."""
+    secondi = tempo_schede_pagine(t0)
+    if secondi <= 0:
+        return
+    from . import schede_auto
+    schede_auto.giornaliero(tempo_s=secondi)
 
 
 def _ai_prezzi():
@@ -1707,5 +1730,7 @@ if __name__ == "__main__":
     if mode in ("opportunita", "facebook") and analisi:
         from .process import run as process_run
         process_run("tutto")
+    if mode == "opportunita":
+        _schede_pagine(_t0_loop)
     if mode in ("opportunita", "mercato") and tempo_ok("ai_prezzi", 10.5, _t0_loop):
         _ai_prezzi()                       # ultimo passo: sostituisce il processo (memoria pulita)

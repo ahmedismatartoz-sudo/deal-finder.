@@ -14,6 +14,7 @@ import os
 import re
 from typing import Iterator
 
+from ..core import dati_auto
 from ..core.models import Listing
 from .base import Collector, next_data
 
@@ -182,7 +183,7 @@ def parse_item(it: dict) -> Listing | None:
         year=year, mileage_km=km, fuel=fuel_raw, gearbox=gear, power_kw=kw,
         price_raw=str(p) if p else None, price_eur=p, seller_type=seller_type,
         city=city, province=province_from_cap(loc.get("zip")), photos=images[:20], raw=it,
-        price_flags=flags,
+        price_flags=flags, dati_auto=dati_auto.da_autoscout_ricerca(it),
     )
 
 

@@ -218,13 +218,13 @@ _SCHEMA: dict = {"colonne": None, "indici": None, "at": 0.0}
 def _schema(conn) -> tuple[set, set]:
     import time
     if _SCHEMA["colonne"] is not None:
-        completo = len(_SCHEMA["colonne"]) == 2 and bool(_SCHEMA["indici"])
+        completo = len(_SCHEMA["colonne"]) == 3 and bool(_SCHEMA["indici"])
         if time.time() - _SCHEMA["at"] < (86400 if completo else 600):
             return _SCHEMA["colonne"], _SCHEMA["indici"]
     try:
         col = {r["column_name"] for r in conn.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='listings' "
-            "AND column_name IN ('disappear_reason','fuel_tipo')").fetchall()}
+            "AND column_name IN ('disappear_reason','fuel_tipo','dati_auto')").fetchall()}
         idx = {r["indexname"] for r in conn.execute(
             "SELECT indexname FROM pg_indexes WHERE tablename='listings' AND indexname='listings_vehicle_idx'").fetchall()}
     except Exception:
@@ -358,6 +358,10 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     )
     if getattr(listing, "fuel_tipo", None) is not None and ha_colonna(conn, "fuel_tipo"):
         params["fuel_tipo"] = listing.fuel_tipo
+    dati_ricerca = _dati_auto_ricerca(listing)
+    qui = dati_auto_ricerca_qui()
+    if dati_ricerca and ha_colonna(conn, "dati_auto") and (qui or prev is not None):   # 12/11 (migrazione 046)
+        params["dati_auto"] = json.dumps({"ricerca": dati_ricerca}, ensure_ascii=False)
     if prev is None:
         cols = ", ".join(params)
         vals = ", ".join(f"%({k})s" for k in params)
@@ -387,6 +391,8 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         "mileage_km": "COALESCE(%(mileage_km)s, listings.mileage_km)",
         "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
         "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
+        # 12/11: la ricerca riscrive solo la sua parte ("ricerca"); quello letto dalla pagina dell'annuncio resta
+        "dati_auto": DATI_AUTO_SQL,
     }
     sets = ", ".join(f"{k} = {_tenere[k]}" if k in _tenere else f"{k} = %({k})s"
                      for k in params if k not in ("source", "source_id"))
@@ -408,6 +414,63 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)",
                      (lid, listing.price_eur))
     return lid, event
+
+
+# 12/11: parte "ricerca" della scheda tecnica (listings.dati_auto). Regole:
+#  - annuncio NUOVO (INSERT): si scrive solo nel cron opportunità o nel tempo reale (dati_auto_ricerca_qui());
+#  - annuncio GIÀ SALVATO (UPDATE): solo se è 'approfondito' (candidate e auto del sito), mai sulle altre centinaia di
+#    migliaia di righe (il primo giro le avrebbe riscritte tutte);
+#  - si UNISCE a quella salvata (gli optional letti dalla pagina dal tempo reale non si perdono), "optional" vecchio
+#    resta se è più lungo del nuovo, e non si riscrive se il nuovo è già contenuto. La parte "pagina" la scrive solo
+#    pipeline/schede_auto.py.
+_DA_NUOVO = "((%(dati_auto)s::jsonb) -> 'ricerca')"
+_DA_VECCHIO = "COALESCE(listings.dati_auto->'ricerca', '{}'::jsonb)"
+_DA_UNITO = (
+    f"(CASE WHEN jsonb_typeof({_DA_VECCHIO}->'optional') = 'array' AND jsonb_typeof({_DA_NUOVO}->'optional') = 'array' "
+    f"AND jsonb_array_length({_DA_VECCHIO}->'optional') > jsonb_array_length({_DA_NUOVO}->'optional') "
+    f"THEN ({_DA_VECCHIO} || {_DA_NUOVO}) || jsonb_build_object('optional', {_DA_VECCHIO}->'optional') "
+    f"ELSE {_DA_VECCHIO} || {_DA_NUOVO} END)")
+DATI_AUTO_SQL = (
+    f"(CASE WHEN listings.stage IS DISTINCT FROM 'approfondito' OR {_DA_VECCHIO} @> {_DA_NUOVO} "
+    f"THEN listings.dati_auto "
+    f"ELSE COALESCE(jsonb_set(COALESCE(listings.dati_auto, '{{}}'::jsonb), '{{ricerca}}', {_DA_UNITO}), listings.dati_auto) END)")
+
+# Interruttore di processo: lo accende SOLO collect.run("opportunita") (processo del cron opportunità, a sé). Serve per
+# gli annunci NUOVI: nel cron mercato (e negli altri giri) un annuncio nuovo non riceve la parte "ricerca".
+# Nel processo web il tempo reale usa invece upsert_listing_con_scheda (interruttore per thread, mai per processo).
+_DATI_AUTO_PROCESSO = {"on": False}
+_dati_auto_locale = __import__("threading").local()
+
+
+def dati_auto_ricerca_processo(on: bool = True) -> None:
+    """Il processo intero salva la parte "ricerca" (cron opportunità)."""
+    _DATI_AUTO_PROCESSO["on"] = on
+
+
+def dati_auto_ricerca_qui() -> bool:
+    return bool(_DATI_AUTO_PROCESSO["on"] or getattr(_dati_auto_locale, "on", False))
+
+
+def upsert_listing_con_scheda(conn, listing: Listing) -> tuple[int, str]:
+    """upsert_listing che salva anche la parte "ricerca" della scheda tecnica (tempo reale: annunci nuovi da valutare)."""
+    prima = getattr(_dati_auto_locale, "on", False)
+    _dati_auto_locale.on = True
+    try:
+        return upsert_listing(conn, listing)
+    finally:
+        _dati_auto_locale.on = prima
+
+
+def _dati_auto_ricerca(listing: Listing) -> dict:
+    """12/11: parte della scheda tecnica letta dalla ricerca, senza i dati che hanno già una colonna. DATI_AUTO_RICERCA=0
+    la spegne (default acceso). Mai un errore verso il salvataggio dell'annuncio."""
+    if os.environ.get("DATI_AUTO_RICERCA", "1") != "1":
+        return {}
+    try:
+        from .core.dati_auto import per_ricerca
+        return per_ricerca(getattr(listing, "dati_auto", None) or {})
+    except Exception:
+        return {}
 
 
 # 3/11 (Subito e AutoScout24): una nuova lettura SENZA un dato non cancella più quello già salvato. Es. le pagine di

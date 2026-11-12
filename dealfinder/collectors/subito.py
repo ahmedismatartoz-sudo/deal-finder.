@@ -16,6 +16,7 @@ import re
 from typing import Any, Iterator
 
 
+from ..core import dati_auto
 from ..core.models import Listing
 from ..core.normalize import parse_int
 from .base import Collector, find_key, next_data
@@ -184,7 +185,7 @@ def parse_item(item: dict) -> Listing | None:
         region=(geo.get("region") or {}).get("value") if isinstance(geo.get("region"), dict) else None,
         photos=_photos(item),
         damage_declared=True if ("danneg" in damage_raw or "incident" in damage_raw) else None,
-        raw=item,
+        raw=item, dati_auto=dati_auto.da_subito(item),
     )
     return listing
 

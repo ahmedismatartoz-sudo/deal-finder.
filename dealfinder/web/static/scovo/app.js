@@ -268,7 +268,7 @@ function gainTxt(c){
   const lo = Math.max(c.gain, 0);
   return c.gainMax !== c.gain ? (c.gain < 0 ? "fino a +" + eur(c.gainMax) : "+" + num(lo) + "–" + num(c.gainMax) + " €") : "+" + eur(c.gain);
 }
-function meta(c){ const d = distKm(c); return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, c.zona].filter(Boolean).join(" · "); }
+function meta(c){ const d = distKm(c); return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, ...stRigaElenco(c), c.zona].filter(Boolean).join(" · "); }
 function img(src, alt, eager){ return src ? `<img src="${esc(src)}" alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">` : ""; }
 
 /* ---------- dati ---------- */
@@ -311,7 +311,9 @@ function carCard(c, i, hero){
   const badges = `<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
   const lbl = gainLbl(c);
   const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
-  const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => `<span${k === a.length - 1 && a.length > 3 ? ' class="loc"' : ""}>${k === a.length - 1 && a.length > 3 ? ICON.pin : ""}${esc(x)}</span>`).join("")}</div>`;
+  // l'icona della posizione solo sulla zona (se manca la zona non finisce sull'allestimento o sul cambio)
+  const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => { const loc = !!c.zona && k === a.length - 1 && x === String(c.zona) && a.length > 3;
+    return `<span${loc ? ' class="loc"' : ""}>${loc ? ICON.pin : ""}${esc(x)}</span>`; }).join("")}</div>`;
   const cella = (k, v, cls) => `<div><span class="lbl">${k}</span><span class="val ${cls || ""}">${v}</span></div>`;
   const trio = c.economica ? cella("Mercato", c.mercato ? "~" + eur(c.mercato) : "da stimare") + cella("Rivendita", c.mercato ? eur(c.riv) : "—")
     : cella("Riparazioni", ripTxt(c), c.rip_hi ? "small warn" : "") + cella("Rivendita", eur(c.riv)) + (c.mercato ? cella("Mercato", eur(c.mercato)) : "");
@@ -638,6 +640,7 @@ function viewDetail(){
       ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
       ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
       ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
+      ${schedaTecnica(c, d)}
       ${vizCosti(c)}${d && !d.err ? vizStorico(c, d.trattativa) : ""}
       ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c)}
       ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
@@ -655,6 +658,37 @@ function viewDetail(){
     </div></div>
   </div>`;
 }
+
+/* ---------- 12/11 scheda tecnica (dati dall'API: d.scheda; vedi dealfinder/web/scheda_tecnica.py) ---------- */
+function stData(iso){ const t = iso ? new Date(iso) : null; return t && !isNaN(t) ? t.toLocaleDateString("it-IT", {day: "numeric", month: "long"}) : ""; }
+function stCella(x){ return `<div class="st-c${x.largo ? " st-wide" : ""}"><dt>${esc(x.label)}</dt><dd>${esc(x.v)}</dd></div>`; }
+function schedaTecnica(c, d){
+  // 12/11 sera (cliente): un blocchetto compatto. Subito al massimo 6 dati; il resto e gli optional dietro un link.
+  const s = d && !d.err ? d.scheda : null;
+  const princ = s ? s.principali || [] : [["allestimento","Allestimento",c.allestimento_testo], ["cambio","Cambio",c.cambio ? cap(String(c.cambio)) : null]]
+    .filter(x => x[2]).map(([k, label, v]) => ({k, label, v: String(v)}));
+  const altri = s ? s.altri || [] : [];
+  const voci = s && s.optional ? s.optional.voci || [] : [];
+  if (!princ.length && !altri.length && !voci.length) return "";
+  S.stAperti = S.stAperti || {};
+  const aperto = !!S.stAperti[c.id];
+  const n = altri.length + voci.length;
+  const resto = aperto ? `<div class="st-resto" id="st-resto-${c.id}">${altri.length ? `<dl class="st-dl">${altri.map(stCella).join("")}</dl>` : ""}
+      ${voci.length ? `<div class="st-optl">Optional <span>${voci.length}</span></div><ul class="st-tags">${voci.map(v => `<li>${esc(v)}</li>`).join("")}</ul>` : ""}
+      ${s && s.letto_il ? `<p class="st-nota">Dati dall'annuncio, letti il ${esc(stData(s.letto_il))}</p>` : ""}</div>` : "";
+  return `<section class="st" aria-label="Scheda tecnica">${princ.length ? `<dl class="st-dl">${princ.map(stCella).join("")}</dl>` : ""}
+    ${n ? `<button class="st-link" data-st="opt" data-v="${c.id}" aria-expanded="${aperto}" aria-controls="st-resto-${c.id}">${aperto ? "Meno dati ▴" : "Altri dati e optional ▾"}</button>` : ""}${resto}</section>`;
+}
+function stRigaElenco(c){
+  // allestimento nella riga dei dati dell'elenco solo se non è già nel nome
+  const t = c.allestimento_testo;          // chiave della scheda tecnica (c.allestimento è del calcolo dei margini)
+  const a = t && !String(c.nome || "").toLowerCase().includes(String(t).toLowerCase()) ? t : null;
+  return [c.cambio ? cap(String(c.cambio)) : null, a];
+}
+$app.addEventListener("click", e => {
+  const t = e.target.closest("[data-st]"); if (!t) return;
+  if (t.dataset.st === "opt") { S.stAperti = S.stAperti || {}; const id = Number(t.dataset.v); S.stAperti[id] = !S.stAperti[id]; render({keep:true}); }
+});
 
 /* ---------- fogli dal basso ---------- */
 function opts(list, cur, vuoto){ return `<option value="">${vuoto}</option>` + list.map(([v,l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? "selected" : ""}>${esc(l)}</option>`).join(""); }

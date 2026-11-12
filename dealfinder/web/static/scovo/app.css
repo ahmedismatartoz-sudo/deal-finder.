@@ -1731,3 +1731,23 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .netto-box summary .k::after{content:" ▾";font-size:12px;opacity:.6}
 .netto-box[open] summary .k::after{content:" ▴"}
 .netto-voci{padding-left:8px}
+
+/* ============ 12/11 scheda tecnica (app.js: schedaTecnica) ============
+   Cliente 12/11 sera: "un piccolo blocchetto compatto". Un solo riquadro: griglia fitta (2 colonne su telefono, 3 su
+   computer), etichetta piccola sopra e valore sotto; il resto e gli optional dietro "Altri dati e optional". */
+.st{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px 14px 4px;border-radius:18px;background:var(--glass);box-shadow:var(--glass-edge),var(--sh-1)}
+.st-dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
+@media (min-width:768px){.st-dl{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.st-c{min-width:0}
+.st-c.st-wide{grid-column:1/-1}
+.st-c dt{font:500 11px/14px var(--body);letter-spacing:.01em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-c dd{margin:0;font:600 14px/18px var(--body);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-c.st-wide dd{white-space:normal;font-weight:500}
+.st-link{align-self:flex-start;min-height:32px;padding:0;border:0;background:none;color:var(--link);font:600 13px/18px var(--body)}
+.st-resto{display:flex;flex-direction:column;gap:8px;padding:8px 0 10px;border-top:1px solid var(--line)}
+.st-resto .st-c dd{white-space:normal}
+.st-optl{font:500 11px/14px var(--body);color:var(--muted)}
+.st-optl span{font-weight:600;color:var(--ink-2)}
+.st-tags{list-style:none;margin:-4px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px}
+.st-tags li{max-width:100%;padding:2px 8px;border-radius:999px;background:var(--soft);font:500 12px/17px var(--body);color:var(--ink-2);overflow-wrap:anywhere}
+.st-nota{margin:0;font:400 11px/14px var(--body);color:var(--muted)}

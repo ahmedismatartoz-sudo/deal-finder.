@@ -48,6 +48,7 @@ class Listing:
     raw: dict = field(default_factory=dict)
     problem_search: bool = False   # trovato con una ricerca mirata ad auto con problemi
     fuel_tipo: str | None = None   # 3/11: mild | full | plug-in | bifuel (fuel resta il gruppo dei confronti)
+    dati_auto: dict = field(default_factory=dict)   # 12/11: scheda tecnica dalla fonte (core/dati_auto.py), chiavi in italiano
 
     REQUIRED = ("make", "model", "year", "mileage_km", "fuel", "price_eur")
 
