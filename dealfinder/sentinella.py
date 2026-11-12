@@ -270,6 +270,7 @@ def c_regole_cliente(conn, ctx: dict) -> dict:
     re_nomi = re.compile("|".join(re.escape(n) for n in nomi), re.I) if nomi else None
     mob, fisso = _regex_telefono()
     fb = {r["listing_id"] for r in sito if "facebook" in str(r.get("fonte") or "").lower()}   # chat di Marketplace
+    fb |= {r["listing_id"] for r in sito if str(r.get("sezione") or "").startswith("super")}  # 12/11: supercar esenti dal telefono
     loconte, senza_tel = [], []
     ids = _ids(sito)
     if ids:
@@ -297,7 +298,8 @@ def c_tetto_commercianti(conn, ctx: dict) -> dict:
     sito = _sito(ctx)
     if sito is None:
         return _esito("tetto_commercianti", {"istantanea": "assente"}, disponibile=False)
-    n = sum(1 for r in sito if r.get("commerciante"))
+    # 12/11: il tetto vale per i commercianti "lontani"; quelli della fascia richiesta dal cliente non hanno tetto
+    n = sum(1 for r in sito if r.get("commerciante") and not str(r.get("sezione") or "").startswith("fascia"))
     al = []
     if n > COMMERCIANTI_TETTO:
         al.append(_allarme("tetto_commercianti", f"{n} auto di commercianti sul sito: il tetto è {COMMERCIANTI_TETTO}",

@@ -254,10 +254,22 @@ WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.computed_at < now() -
 LIMIT 3000"""
 
 
+# 12/11: crediti finiti (HTTP 402) -> il giro si ferma per un'ora invece di riscaricare 300 foto ogni 3,5 minuti
+# (consumava memoria e mandava il sito fuori memoria). Alla ripresa si prova con una sola auto, senza foto in blocco.
+_PAUSA = {"fino": 0.0, "prova": False}
+
+
+def _credito_finito(e) -> bool:
+    t = str(e)
+    return "HTTP 402" in t or "billing" in t.lower() or "credits" in t.lower()
+
+
 def giro(conn, massimo: int | None = None) -> dict:
     """Un giro dell'AI decisionale sulle auto migliori non ancora decise."""
     if not attiva():
         return {"spenta": "manca TYPESAFE_API_KEY"}
+    if time.time() < _PAUSA["fino"]:
+        return {"saltato": "crediti Jev finiti, riprovo tra poco", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}
     t0 = time.time()
     fatte_oggi = conn.execute("SELECT count(*) AS n FROM decisione_ai WHERE computed_at > date_trunc('day', now())").fetchone()["n"]
     budget = int(os.environ.get("JEV_MAX_GIORNO", "4000")) - fatte_oggi
@@ -274,6 +286,8 @@ def giro(conn, massimo: int | None = None) -> dict:
     # le auto "troppo sotto prezzo" si guardano solo se hanno il numero (la regola le ammette con targa + numero)
     righe = [r for r in righe if r["cat"] != "dati_insufficienti" or _tel(r)]
     righe = righe[:min(budget, massimo or int(os.environ.get("JEV_PER_GIRO", "300")))]
+    if _PAUSA["prova"]:
+        righe = righe[:1]                                  # dopo una pausa per crediti: prima una sola auto di prova
     st, token = Counter(), 0
     nuove_targhe: list[int] = []
     import httpx
@@ -302,12 +316,18 @@ def giro(conn, massimo: int | None = None) -> dict:
         for r, x in ex.map(uno, righe):
             if isinstance(x, Exception):
                 st["errore"] += 1
+                if _credito_finito(x):
+                    _PAUSA.update(fino=time.time() + int(os.environ.get("JEV_PAUSA_CREDITO_S", "3600")), prova=True)
+                    st["credito_finito"] += 1
+                    log.warning("JEV crediti finiti: giro in pausa per un'ora (%s)", str(x)[:160])
+                    break
                 if st["errore"] <= 3:
                     log.warning("JEV errore: %s", str(x)[:250])
                 if st["errore"] >= 10 and not st["fatte"]:
                     break                          # chiave o indirizzo sbagliati: inutile insistere
                 continue
             st["fatte"] += 1
+            _PAUSA["prova"] = False
             st[f"jev:{x['decisione']}"] += 1
             st[f"calcoli:{r['cat']}|jev:{x['decisione']}"] += 1
             if (x.get("truffa") or 0) >= .7:
