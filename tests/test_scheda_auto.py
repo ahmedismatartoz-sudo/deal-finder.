@@ -125,19 +125,26 @@ def test_unisci_pagina_sopra_ricerca_e_colonne():
     assert DA.unisci({}, None) == {}
 
 
-def test_scheda_per_il_sito_senza_righe_vuote():
+def test_scheda_compatta_per_il_sito():
     colonne = {"version_raw": "1.6 TDI Business", "gearbox": "Manuale", "power_kw": 85, "year": 2017, "mileage_km": 120000,
                "fuel": "diesel"}
     s = ST.scheda(colonne, {"pagina": DA.da_autoscout_pagina(DETTAGLIO_AS)}, {"anno": 2017, "km": 120000, "carb": "diesel"})
-    chiavi = [x["k"] for x in s["chiave"]]
-    assert chiavi == ["anno", "km", "carburante", "cambio", "potenza", "allestimento"]
-    assert {x["k"]: x["v"] for x in s["chiave"]}["potenza"] == "85 kW · 116 CV"
-    assert all(x["v"] for x in s["dati"]) and {x["k"] for x in s["dati"]} >= {"cilindrata", "porte", "colore", "classe_euro"}
-    assert s["optional"]["n"] == 7 and [g["id"] for g in s["optional"]["gruppi"]] == ["comfort", "sicurezza", "multimedia", "esterni"]
+    # subito al massimo 6 dati, nell'ordine chiesto dal cliente
+    assert [x["k"] for x in s["principali"]] == ["allestimento", "cambio", "cilindrata", "potenza", "carrozzeria", "proprietari"]
+    assert {x["k"]: x["v"] for x in s["principali"]}["potenza"] == "116 CV"
+    altri = {x["k"]: x["v"] for x in s["altri"]}
+    assert {"porte", "posti", "consumo", "tagliandi", "colore", "classe_euro", "trazione", "versione"} <= set(altri)
+    assert altri["potenza_kw"] == "85 kW · 116 CV" and altri["classe_euro"] == "6"
+    assert all(x["v"] for x in s["principali"] + s["altri"])
+    assert s["optional"]["n"] == 7 and "ABS" in s["optional"]["voci"]
+    assert s["allestimento"] == "Business" and s["cambio"] == "Manuale"
     assert "333" not in json.dumps(s, ensure_ascii=False)
-    # dati scarsi: solo quello che c'è
-    poco = ST.scheda({"year": 2010}, None, {"anno": 2010})
-    assert [x["k"] for x in poco["chiave"]] == ["anno"] and poco["dati"] == [] and poco["optional"]["n"] == 0
+    # dati scarsi: solo quello che c'è, niente righe vuote
+    poco = ST.scheda({"year": 2010, "gearbox": "manuale"}, None, {"anno": 2010})
+    assert [x["k"] for x in poco["principali"]] == ["cambio"] and poco["altri"] == [] and poco["optional"]["n"] == 0
+    # se mancano i primi, trazione e colore riempiono i posti
+    s2 = ST.scheda({}, {"pagina": {"trazione": "Integrale", "colore": "Nero", "classe_euro": "Euro 6d"}})
+    assert [x["k"] for x in s2["principali"]] == ["classe_euro", "trazione", "colore"]
 
 
 # ------------------------------------------------------------------ cron: lettura delle pagine

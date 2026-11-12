@@ -45,46 +45,51 @@ def _riga(chiave: str, etichetta: str, valore, largo: bool = False) -> dict | No
     return r
 
 
+PRINCIPALI = 6     # dati visibili subito nel blocchetto (2 colonne su telefono, 3 su computer)
+# in quest'ordine; trazione e colore solo se mancano i primi
+ORDINE_PRINCIPALI = ("allestimento", "cambio", "cilindrata", "potenza", "carrozzeria", "proprietari", "classe_euro",
+                     "trazione", "colore")
+
+
 def scheda(colonne: dict, dati: object, base: dict | None = None) -> dict:
-    """Scheda pronta per il sito: solo le righe con un valore (niente righe vuote)."""
-    base = base or {}
+    """Scheda compatta per il sito (cliente 12/11 sera: "un piccolo blocchetto"): `principali` = al massimo 6 dati
+    visibili subito; `altri` = il resto, dietro "Altri dati e optional"; `optional` = elenco semplice di etichette.
+    Solo le righe con un valore (niente righe vuote). Anno, km e carburante sono già in cima alla scheda: qui no."""
     d = DA.unisci(colonne, dati)
-    km = base.get("km") if base.get("km") is not None else colonne.get("mileage_km")
-    chiave = [
-        _riga("anno", "Anno", base.get("anno") or colonne.get("year")),
-        _riga("km", "Chilometri", f"{_num(km)} km" if km else None),
-        _riga("carburante", "Carburante", DA._cap(base.get("carb") or colonne.get("fuel") or None)),
-        _riga("cambio", "Cambio", d.get("cambio")),
-        _riga("potenza", "Potenza", _potenza(d)),
-        _riga("allestimento", "Allestimento", d.get("allestimento")),
-    ]
-    porte, posti = d.get("porte"), d.get("posti")
-    griglia = [
+    cv = d.get("potenza_cv")
+    tutte = {
+        "allestimento": _riga("allestimento", "Allestimento", d.get("allestimento")),
+        "cambio": _riga("cambio", "Cambio", d.get("cambio")),
+        "cilindrata": _riga("cilindrata", "Cilindrata", f"{_num(d['cilindrata'])} cm³" if d.get("cilindrata") else None),
+        "potenza": _riga("potenza", "Potenza", f"{cv} CV" if cv else _potenza(d)),
+        "carrozzeria": _riga("carrozzeria", "Carrozzeria", d.get("carrozzeria")),
+        "proprietari": _riga("proprietari", "Proprietari", d.get("proprietari")),
+        "classe_euro": _riga("classe_euro", "Euro", (d.get("classe_euro") or "").replace("Euro ", "") or None),
+        "trazione": _riga("trazione", "Trazione", d.get("trazione")),
+        "colore": _riga("colore", "Colore", d.get("colore")),
+    }
+    principali = [tutte[k] for k in ORDINE_PRINCIPALI if tutte[k]][:PRINCIPALI]
+    visti = {r["k"] for r in principali}
+    altri = [
         _riga("versione", "Versione", d.get("versione"), largo=True),
+        _riga("potenza_kw", "Potenza", _potenza(d) if d.get("potenza_kw") and cv else None),
         _riga("immatricolazione", "Immatricolazione", d.get("immatricolazione")),
-        _riga("carrozzeria", "Carrozzeria", d.get("carrozzeria")),
-        _riga("porte", "Porte", porte),
-        _riga("posti", "Posti", posti),
-        _riga("colore", "Colore", d.get("colore")),
-        _riga("cilindrata", "Cilindrata", f"{_num(d['cilindrata'])} cm³" if d.get("cilindrata") else None),
+        _riga("porte", "Porte", d.get("porte")),
+        _riga("posti", "Posti", d.get("posti")),
         _riga("marce", "Marce", d.get("marce")),
-        _riga("trazione", "Trazione", d.get("trazione")),
-        _riga("classe_euro", "Classe emissioni", d.get("classe_euro")),
         _riga("consumo", "Consumo", d.get("consumo")),
-        _riga("co2", "Emissioni CO₂", d.get("co2")),
-        _riga("proprietari", "Proprietari", d.get("proprietari")),
+        _riga("co2", "CO₂", d.get("co2")),
         _riga("tagliandi", "Tagliandi", d.get("tagliandi")),
         _riga("garanzia", "Garanzia", d.get("garanzia")),
         _riga("non_fumatori", "Non fumatori", "Sì" if d.get("non_fumatori") else None),
-    ]
-    voci = [x for x in (d.get("optional") or []) if isinstance(x, str)]
-    gruppi = DA.raggruppa_optional(voci, d.get("optional_gruppi") if isinstance(d.get("optional_gruppi"), dict) else None)
-    nomi = dict(DA.GRUPPI)
-    out = {"chiave": [r for r in chiave if r], "dati": [r for r in griglia if r],
-           "optional": {"n": sum(len(v) for v in gruppi.values()),
-                        "gruppi": [{"id": g, "nome": nomi[g], "voci": v} for g, v in gruppi.items()]},
-           "letto_il": d.get("letto_il")}
-    return out
+    ] + [tutte[k] for k in ORDINE_PRINCIPALI if tutte[k] and k not in visti]
+    voci = []
+    for x in d.get("optional") or []:
+        if isinstance(x, str) and x.lower() not in {v.lower() for v in voci}:
+            voci.append(x)
+    return {"principali": principali, "altri": [r for r in altri if r],
+            "optional": {"n": len(voci), "voci": voci},
+            "allestimento": d.get("allestimento"), "cambio": d.get("cambio"), "letto_il": d.get("letto_il")}
 
 
 _COLONNE = "l.id, l.version_raw, l.title, l.gearbox, l.power_kw, l.year, l.mileage_km, l.fuel"
@@ -114,11 +119,9 @@ def aggiungi(conn, lid: int, d: dict) -> dict:
         r = righe[0]
         s = scheda(r, r.get("dati_auto"), d)
         d["scheda"] = s
-        for x in s["chiave"]:
-            if x["k"] == "allestimento":
-                d["allestimento"] = x["v"]
-            elif x["k"] == "cambio":
-                d["cambio"] = x["v"]
+        for k in ("allestimento", "cambio"):
+            if s.get(k):
+                d[k] = s[k]
     except Exception as e:
         log.warning("SCHEDA_TECNICA %s: %s", lid, str(e)[:200])
         try:

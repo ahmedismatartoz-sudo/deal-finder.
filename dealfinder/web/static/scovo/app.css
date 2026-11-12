@@ -1725,34 +1725,21 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .avviso-riga{background:#3a2219;color:#ffb899}}
 
 /* ============ 12/11 scheda tecnica (app.js: schedaTecnica) ============
-   In alto i dati chiave a colpo d'occhio (6 riquadri), poi la griglia di tutti gli altri dati, poi gli optional per
-   gruppo con "mostra tutti". Solo i dati che ci sono: niente righe vuote. Stessi colori del sito (chiaro e scuro). */
-.st{display:flex;flex-direction:column;gap:12px;min-width:0}
-.st-h{margin:0;font:var(--t-title2);letter-spacing:-.26px;color:var(--ink)}
-.st-key{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.st-t{display:flex;flex-direction:column;justify-content:space-between;gap:4px;min-width:0;min-height:68px;padding:10px 12px 11px;border-radius:18px;background:var(--glass);box-shadow:var(--glass-edge),var(--sh-1)}
-.st-l{min-width:0;font:500 12px/16px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-t b{font:600 15.5px/20px var(--body);letter-spacing:-.25px;color:var(--ink);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.st-t.st-km b,.st-t.st-anno b,.st-t.st-potenza b{white-space:nowrap;display:block;text-overflow:ellipsis}
-.st-t b small{display:block;font:500 12px/15px var(--body);letter-spacing:0;color:var(--muted)}
-.st-t.st-allestimento{background:var(--tip);box-shadow:none}
-.st-t.st-allestimento b,.st-t.st-allestimento .st-l{color:var(--tip-ink)}
-.st-grid{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:22px;background:var(--glass);box-shadow:var(--glass-edge),var(--sh-1);overflow:hidden}
-.st-r{position:relative;min-width:0;padding:11px 16px 12px;display:flex;flex-direction:column;gap:2px}
-.st-r::before{content:"";position:absolute;top:0;left:16px;right:16px;height:1px;background:var(--line)}
-.st-r:first-child::before,.st-r:first-child:not(.st-wide) + .st-r::before{display:none}
-.st-r.st-wide{grid-column:1/-1}
-.st-r dt{font:500 12px/16px var(--body);color:var(--muted)}
-.st-r dd{margin:0;font:600 15px/20px var(--body);color:var(--ink);overflow-wrap:anywhere}
-.st-r.st-wide dd{font-weight:500}
-.st-opt{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:22px;background:var(--glass);box-shadow:var(--glass-edge),var(--sh-1)}
-.st-h3{margin:0;display:flex;align-items:center;gap:8px;font:600 17px/22px var(--body);color:var(--ink)}
-.st-n{font:600 12px/18px var(--body);padding:0 8px;border-radius:999px;background:var(--tag);color:var(--tag-ink)}
-.st-g{display:flex;flex-direction:column;gap:7px;min-width:0}
-.st-g h4{margin:0;display:flex;align-items:baseline;gap:6px;font:600 12px/16px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.st-g h4 small{font:500 12px/16px var(--body);letter-spacing:0;color:var(--muted);opacity:.8}
-.st-chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
-.st-chips li{max-width:100%;padding:5px 11px;border-radius:999px;background:var(--soft);font:500 13.5px/18px var(--body);color:var(--ink-2);overflow-wrap:anywhere}
-.st-more{align-self:flex-start;min-height:var(--tap);margin:-4px 0 -8px;padding:0;border:0;background:none;color:var(--link);font:600 15px/20px var(--body)}
-.st-nota{margin:-4px 4px 0;font:var(--t-foot);color:var(--muted)}
-@media (max-width:359px){.st-key{grid-template-columns:repeat(2,minmax(0,1fr))}.st-grid{grid-template-columns:minmax(0,1fr)}.st-r:first-child:not(.st-wide) + .st-r::before{display:block}}
+   Cliente 12/11 sera: "un piccolo blocchetto compatto". Un solo riquadro: griglia fitta (2 colonne su telefono, 3 su
+   computer), etichetta piccola sopra e valore sotto; il resto e gli optional dietro "Altri dati e optional". */
+.st{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px 14px 4px;border-radius:18px;background:var(--glass);box-shadow:var(--glass-edge),var(--sh-1)}
+.st-dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
+@media (min-width:768px){.st-dl{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.st-c{min-width:0}
+.st-c.st-wide{grid-column:1/-1}
+.st-c dt{font:500 11px/14px var(--body);letter-spacing:.01em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-c dd{margin:0;font:600 14px/18px var(--body);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-c.st-wide dd{white-space:normal;font-weight:500}
+.st-link{align-self:flex-start;min-height:32px;padding:0;border:0;background:none;color:var(--link);font:600 13px/18px var(--body)}
+.st-resto{display:flex;flex-direction:column;gap:8px;padding:8px 0 10px;border-top:1px solid var(--line)}
+.st-resto .st-c dd{white-space:normal}
+.st-optl{font:500 11px/14px var(--body);color:var(--muted)}
+.st-optl span{font-weight:600;color:var(--ink-2)}
+.st-tags{list-style:none;margin:-4px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px}
+.st-tags li{max-width:100%;padding:2px 8px;border-radius:999px;background:var(--soft);font:500 12px/17px var(--body);color:var(--ink-2);overflow-wrap:anywhere}
+.st-nota{margin:0;font:400 11px/14px var(--body);color:var(--muted)}

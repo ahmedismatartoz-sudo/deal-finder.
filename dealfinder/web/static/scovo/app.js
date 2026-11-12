@@ -634,37 +634,24 @@ function viewDetail(){
 }
 
 /* ---------- 12/11 scheda tecnica (dati dall'API: d.scheda; vedi dealfinder/web/scheda_tecnica.py) ---------- */
-const ST_MOSTRATI = 6;          // optional visibili per gruppo prima di "mostra tutti"
-function stChiaveBase(c){
-  // finché la scheda completa non è arrivata: i dati che l'elenco ha già
-  return [["anno","Anno",c.anno], ["km","Chilometri",c.km ? num(c.km) + " km" : null], ["carburante","Carburante",c.carb ? cap(String(c.carb)) : null],
-          ["cambio","Cambio",c.cambio ? cap(String(c.cambio)) : null], ["allestimento","Allestimento",c.allestimento]]
-    .filter(x => x[2] != null && x[2] !== "").map(([k, label, v]) => ({k, label, v: String(v)}));
-}
 function stData(iso){ const t = iso ? new Date(iso) : null; return t && !isNaN(t) ? t.toLocaleDateString("it-IT", {day: "numeric", month: "long"}) : ""; }
+function stCella(x){ return `<div class="st-c${x.largo ? " st-wide" : ""}"><dt>${esc(x.label)}</dt><dd>${esc(x.v)}</dd></div>`; }
 function schedaTecnica(c, d){
+  // 12/11 sera (cliente): un blocchetto compatto. Subito al massimo 6 dati; il resto e gli optional dietro un link.
   const s = d && !d.err ? d.scheda : null;
-  const chiave = s ? s.chiave || [] : stChiaveBase(c);
-  const dati = s ? s.dati || [] : [];
-  const gruppi = s && s.optional ? s.optional.gruppi || [] : [];
-  const nOpt = s && s.optional ? s.optional.n || 0 : 0;
-  if (!chiave.length && !dati.length && !nOpt) return "";
+  const princ = s ? s.principali || [] : [["allestimento","Allestimento",c.allestimento], ["cambio","Cambio",c.cambio ? cap(String(c.cambio)) : null]]
+    .filter(x => x[2]).map(([k, label, v]) => ({k, label, v: String(v)}));
+  const altri = s ? s.altri || [] : [];
+  const voci = s && s.optional ? s.optional.voci || [] : [];
+  if (!princ.length && !altri.length && !voci.length) return "";
   S.stAperti = S.stAperti || {};
   const aperto = !!S.stAperti[c.id];
-  const tiles = chiave.map(x => {
-    // potenza: i CV in grande, i kW sotto (una riga sola anche su telefono stretto)
-    const pz = x.k === "potenza" ? String(x.v).split(" · ") : null;
-    const v = pz && pz.length === 2 ? `${esc(pz[1])}<small>${esc(pz[0])}</small>` : esc(x.v);
-    return `<div class="st-t st-${esc(x.k)}"><span class="st-l">${esc(x.label)}</span><b>${v}</b></div>`; }).join("");
-  const griglia = dati.length ? `<dl class="st-grid">${dati.map(x => `<div class="st-r${x.largo ? " st-wide" : ""}"><dt>${esc(x.label)}</dt><dd>${esc(x.v)}</dd></div>`).join("")}</dl>` : "";
-  const nascosti = gruppi.reduce((a, g) => a + Math.max(0, g.voci.length - ST_MOSTRATI), 0);
-  const opt = nOpt ? `<div class="st-opt"><h3 class="st-h3">Optional <span class="st-n">${nOpt}</span></h3>${gruppi.map(g => {
-      const voci = aperto ? g.voci : g.voci.slice(0, ST_MOSTRATI);
-      return `<div class="st-g"><h4>${esc(g.nome)}<small>${g.voci.length}</small></h4><ul class="st-chips">${voci.map(v => `<li>${esc(v)}</li>`).join("")}</ul></div>`; }).join("")}
-      ${nascosti ? `<button class="st-more" data-st="opt" data-v="${c.id}" aria-expanded="${aperto}">${aperto ? "Mostra meno" : `Mostra tutti gli optional (${nOpt})`}</button>` : ""}</div>` : "";
-  const nota = s && s.letto_il ? `<p class="st-nota">Dati dall'annuncio, letti il ${esc(stData(s.letto_il))}</p>` : "";
-  return `<section class="st" aria-labelledby="st-h-${c.id}"><h2 class="st-h" id="st-h-${c.id}">Scheda tecnica</h2>
-    ${tiles ? `<div class="st-key">${tiles}</div>` : ""}${griglia}${opt}${nota}</section>`;
+  const n = altri.length + voci.length;
+  const resto = aperto ? `<div class="st-resto" id="st-resto-${c.id}">${altri.length ? `<dl class="st-dl">${altri.map(stCella).join("")}</dl>` : ""}
+      ${voci.length ? `<div class="st-optl">Optional <span>${voci.length}</span></div><ul class="st-tags">${voci.map(v => `<li>${esc(v)}</li>`).join("")}</ul>` : ""}
+      ${s && s.letto_il ? `<p class="st-nota">Dati dall'annuncio, letti il ${esc(stData(s.letto_il))}</p>` : ""}</div>` : "";
+  return `<section class="st" aria-label="Scheda tecnica">${princ.length ? `<dl class="st-dl">${princ.map(stCella).join("")}</dl>` : ""}
+    ${n ? `<button class="st-link" data-st="opt" data-v="${c.id}" aria-expanded="${aperto}" aria-controls="st-resto-${c.id}">${aperto ? "Meno dati ▴" : "Altri dati e optional ▾"}</button>` : ""}${resto}</section>`;
 }
 function stRigaElenco(c){
   // allestimento nella riga dei dati dell'elenco solo se non è già nel nome
