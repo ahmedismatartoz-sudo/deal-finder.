@@ -89,7 +89,7 @@ class FintoStripeDB:
                                       "piano": v["pi"], "fino": fino, "evento_created": v["cr"],
                                       "past_due_dal": self.now if v["st"] == "past_due" else None}
                 return _R([{"subscription_id": v["sid"]}])
-            if a["evento_created"] > v["cr"]:
+            if not ab.evento_vince(a["stato"], a["evento_created"], v["st"], v["cr"]):     # stessa regola dell'SQL
                 return _R()
             a["dealer_id"] = v["did"] or a["dealer_id"]
             a["customer"] = v["cu"] or a["customer"]
@@ -176,15 +176,16 @@ def test_evento_vecchio_ignorato():
 
 
 def test_piano_max_segue_il_prezzo_attuale():
+    # 12/11: il permesso del Max è automatico (max_valido, letto da permessi_di) e non si scrive in dealers.permessi
     db = FintoStripeDB()
     ab.applica(db, _sub("sub_1", "active", 100, lookup="scovo_pro_200_mese"))
-    assert "appuntamenti" in db.dealers[7]["permessi"]
+    assert ab.max_valido(db, 7) and "appuntamenti" not in db.dealers[7]["permessi"]
     ab.applica(db, _sub("sub_1", "active", 200, lookup="scovo_base_100_mese", metadata={"dealer_id": "7", "piano": "pro"}))
-    assert "appuntamenti" not in db.dealers[7]["permessi"]                         # passato a Base dal portale
+    assert not ab.max_valido(db, 7)                                                # passato a Base dal portale
     ab.applica(db, _sub("sub_1", "active", 300, lookup="scovo_pro_200_mese", metadata={"dealer_id": "7", "piano": "base"}))
-    assert "appuntamenti" in db.dealers[7]["permessi"]                             # e di nuovo a Max
+    assert ab.max_valido(db, 7)                                                    # e di nuovo a Max
     ab.applica(db, _sub("sub_1", "unpaid", 400, lookup="scovo_pro_200_mese"))
-    assert "appuntamenti" not in db.dealers[7]["permessi"]
+    assert not ab.max_valido(db, 7)
 
 
 def test_appuntamenti_dati_a_mano_restano():
@@ -202,12 +203,13 @@ def test_pagamento_fallito_tolleranza():
     assert ab.applica(db, {"id": "evt_f", "type": "invoice.payment_failed", "created": 150,
                            "data": {"object": {"customer": "cus_1", "subscription": "sub_1"}}}) == "pagamento_fallito"
     d = db.dealers[7]
-    assert d["abbonamento_stato"] == "past_due" and "appuntamenti" in d["permessi"]   # nei giorni di tolleranza resta
+    assert d["abbonamento_stato"] == "past_due" and ab.max_valido(db, 7)              # nei giorni di tolleranza resta
     assert ab.puo_vedere({"richiede_abbonamento": True, **d})
     db.abb["sub_1"]["past_due_dal"] = db.now - timedelta(days=10)                      # tolleranza finita
+    assert not ab.max_valido(db, 7)                       # 12/11: anche senza nessun evento nuovo (prima restava)
     ab.applica(db, _sub("sub_1", "past_due", 300, lookup="scovo_pro_200_mese"))
     d = db.dealers[7]
-    assert "appuntamenti" not in d["permessi"] and not ab.puo_vedere({"richiede_abbonamento": True, **d})
+    assert not ab.max_valido(db, 7) and not ab.puo_vedere({"richiede_abbonamento": True, **d})
 
 
 def test_secondo_abbonamento_bloccato():
@@ -266,3 +268,34 @@ def _checkout_sconto_primo_mese():
     assert "allow_promotion_codes" not in d and d["subscription_data[metadata][piano]"] == "pro"
     assert [p["primo_mese"] for p in ab.info()["piani"]] == [50, 100]
     assert [p["nome"] for p in ab.info()["piani"]] == ["Base", "Max"]
+
+
+def test_eventi_nello_stesso_secondo():
+    """12/11: Stripe manda subscription.created (incomplete), subscription.updated (active) e checkout.session.completed
+    nello stesso secondo e senza ordine: il pagante non deve restare "incomplete"."""
+    db = FintoStripeDB()
+    ab.applica(db, _sub("sub_1", "active", 100))
+    assert ab.applica(db, _sub("sub_1", "incomplete", 100, tipo="customer.subscription.created")).startswith("vecchio")
+    assert db.dealers[7]["abbonamento_stato"] == "active"
+    # "incomplete" con un secondo in più (orologi diversi) non riporta indietro un abbonamento già pagato
+    assert ab.applica(db, _sub("sub_1", "incomplete", 101, tipo="customer.subscription.created")).startswith("vecchio")
+    assert db.dealers[7]["abbonamento_stato"] == "active"
+    # nell'ordine giusto, stesso secondo: incomplete poi active
+    db2 = FintoStripeDB()
+    ab.applica(db2, _sub("sub_2", "incomplete", 100, tipo="customer.subscription.created"))
+    ab.applica(db2, _sub("sub_2", "active", 100))
+    assert db2.dealers[7]["abbonamento_stato"] == "active"
+
+
+def test_regola_ordine_eventi():
+    v = ab.evento_vince
+    assert not v("active", 100, "incomplete", 100) and not v("active", 100, "incomplete", 200)
+    assert v("incomplete", 100, "active", 100) and v("active", 100, "past_due", 100)
+    assert not v("past_due", 100, "active", 100) and v("past_due", 100, "active", 101)
+    assert not v("canceled", 100, "active", 200) and not v("incomplete_expired", 100, "active", 200)   # definitivi
+    assert not v("active", 200, "canceled", 100)                                                     # più vecchio
+    assert v(None, 0, "active", 0) and v("active", 100, None, 100)
+    # l'SQL contiene le stesse regole (controllate a mano su Postgres 16: 192 combinazioni identiche)
+    import inspect
+    src = inspect.getsource(ab._salva_abbonamento)
+    assert "<= EXCLUDED.evento_created" not in src and "incomplete_expired" in src and "_RANGO_SQL" in src

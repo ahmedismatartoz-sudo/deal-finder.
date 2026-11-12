@@ -81,7 +81,9 @@ def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
     from datetime import datetime, timezone
     try:
         fino = os.environ.get("SITO_RIBASSO_FINO", RIBASSO_FINO)
-        if fino and (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino):
+        # 12/11: senza data di fine (variabile vuota su Render, o costante vuota) il ribasso è SPENTO, non acceso
+        # per sempre
+        if not (fino or "").strip() or (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino.strip()):
             return []
         raw = os.environ.get("SITO_RIBASSO", RIBASSO_SCHEMA)
         return sorted((int(a), max(0, min(3000, int(b)))) for a, b in (x.split(":") for x in raw.split(",") if x.strip()))
@@ -380,7 +382,7 @@ def version_short(v: str | None, model: str | None) -> str:
 def nome(r: dict) -> str:
     bits = [make_name(r.get("make")), model_name(r.get("model")), version_short(r.get("version_raw"), r.get("model"))]
     n = " ".join(b for b in bits if b).strip()
-    return n or (r.get("title") or "Auto")[:60]
+    return n or hide_phones(r.get("title") or "Auto")[:60]      # 12/11: titolo senza telefono
 
 
 def find_phone(text: str | None) -> str | None:

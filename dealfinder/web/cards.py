@@ -18,6 +18,16 @@ def _j(v):
     return json.loads(v) if isinstance(v, str) else v
 
 
+def senza_telefoni(testo: str | None) -> str | None:
+    """12/11: nelle risposte API (anche le vecchie /api/opportunities…) mai il telefono del venditore in chiaro né
+    email: stesse regole (regex) della descrizione del sito, scovo.hide_phones."""
+    if not testo:
+        return testo
+    import re
+    from .scovo import hide_phones
+    return re.sub(r"\S+@\S+\.\w+", "[email nascosta]", hide_phones(str(testo)))
+
+
 def valuation_from_row(v: dict) -> Valuation:
     val = Valuation()
     for k in ("engine_version", "private_median", "dealer_median", "resale_prudent", "resale_median",
@@ -71,7 +81,7 @@ def build(listing_row: dict, val_row: dict, photos: list[str], costs_row: dict |
         "id": listing_row["id"],
         "status": m.status,
         "score": m.score,
-        "title": l.title,
+        "title": senza_telefoni(l.title),
         "source": l.source, "source_label": SOURCE_LABELS.get(l.source, l.source),
         "photo": photos[0] if photos else None,
         "make": l.make, "model": l.model, "version": l.version_raw, "year": l.year, "km": l.mileage_km,
@@ -93,7 +103,7 @@ def build(listing_row: dict, val_row: dict, photos: list[str], costs_row: dict |
     }
     if full:
         card.update({
-            "description": l.description,
+            "description": senza_telefoni(l.description),
             "photos": photos,
             "seller_type": l.seller_type,
             "price_flags": l.price_flags,

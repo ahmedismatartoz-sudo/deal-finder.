@@ -9,7 +9,12 @@ import os
 import secrets
 import time
 
-TOKEN_DAYS = int(os.environ.get("TOKEN_GIORNI", "3650"))   # resta collegato: si esce solo con 'Esci' o se l'account viene chiuso
+# 12/11: token di 90 giorni (prima 10 anni), rinnovato con l'uso: il server manda un token nuovo nell'intestazione
+# X-Scovo-Token (rinnovo_token) e il sito lo salva. Chi entra almeno una volta ogni 90 giorni resta collegato.
+# I token di prima (10 anni) restano validi, ma la sessione si chiude dopo 90 giorni senza uso (sessions.check) e al
+# primo uso vengono sostituiti da un token di 90 giorni. TOKEN_GIORNI su Render vale al massimo 90.
+TOKEN_DAYS = max(1, min(int(os.environ.get("TOKEN_GIORNI", "90") or 90), 90))
+RINNOVO_DOPO_S = 86400           # un token nuovo al massimo una volta al giorno per sessione
 
 
 def _secret() -> bytes:
@@ -39,9 +44,10 @@ def verify_password(pwd: str, stored: str | None) -> bool:
     return hmac.compare_digest(calc, base64.b64decode(h))
 
 
-def make_token(dealer_id: int, role: str, sid: str | None = None) -> str:
+def make_token(dealer_id: int, role: str, sid: str | None = None, ora: float | None = None) -> str:
     payload = base64.urlsafe_b64encode(json.dumps(
-        {"id": dealer_id, "role": role, "sid": sid, "exp": int(time.time()) + TOKEN_DAYS * 86400}).encode()).decode()
+        {"id": dealer_id, "role": role, "sid": sid,
+         "exp": int(ora or time.time()) + TOKEN_DAYS * 86400}).encode()).decode()
     sig = hmac.new(_secret(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
 
@@ -59,8 +65,24 @@ def read_token(token: str | None) -> dict | None:
     return data if data.get("exp", 0) > time.time() else None
 
 
+def rinnovo_token(data: dict | None, ora: float | None = None) -> str | None:
+    """Token nuovo (stessa sessione, 90 giorni da adesso) se quello usato ha più di un giorno o dura più di 90 giorni
+    (token di prima). None se non serve. La validità della sessione la controlla sempre sessions.check."""
+    if not data or not data.get("sid"):
+        return None
+    ora = ora or time.time()
+    resta = int(data.get("exp") or 0) - ora
+    if resta <= 0:
+        return None
+    if resta > TOKEN_DAYS * 86400 or resta < TOKEN_DAYS * 86400 - RINNOVO_DOPO_S:
+        return make_token(int(data["id"]), str(data.get("role") or "commerciante"), data["sid"], ora)
+    return None
+
+
 # ---------- link di accesso (senza scrivere la password) ----------
-LINK_GIORNI = int(os.environ.get("LINK_GIORNI", "7"))
+# 12/11: il link vale 24 ore (prima 7 giorni) e SEMPRE una volta sola (app.auth_scambio, tabella link_accesso_usati).
+LINK_ORE = max(1, min(int(os.environ.get("LINK_ORE", "24") or 24), 24))
+LINK_GIORNI = LINK_ORE / 24          # compatibilità: chi legge ancora LINK_GIORNI
 
 
 def _link_sig(dealer_id: int, exp: int, pw_hash: str | None) -> str:
@@ -69,8 +91,8 @@ def _link_sig(dealer_id: int, exp: int, pw_hash: str | None) -> str:
 
 
 def make_link_code(dealer_id: int, pw_hash: str | None) -> str:
-    """Codice per entrare con un link: vale LINK_GIORNI giorni e smette di valere se cambia la password."""
-    exp = int(time.time()) + LINK_GIORNI * 86400
+    """Codice per entrare con un link: vale LINK_ORE ore, una volta sola, e smette di valere se cambia la password."""
+    exp = int(time.time()) + LINK_ORE * 3600
     return f"L{dealer_id}x{exp}x{_link_sig(dealer_id, exp, pw_hash)}"
 
 
@@ -80,6 +102,11 @@ def parse_link_code(code: str) -> tuple[int, int, str] | None:
         return int(a), int(b), sig
     except (ValueError, IndexError):
         return None
+
+
+def impronta_link(code: str) -> str:
+    """Impronta del link (mai il link in chiaro nel database) per ricordare che è già stato usato."""
+    return hashlib.sha256(code.encode()).hexdigest()
 
 
 def check_link_code(code: str, pw_hash: str | None) -> bool:

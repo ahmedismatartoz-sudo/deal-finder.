@@ -79,6 +79,90 @@ def _ripristina_env(prima: dict) -> list[str]:
     return diversi
 
 
+class MonkeyPatch:
+    """12/11: sostituto minimo della fixture `monkeypatch` di pytest (setattr, delattr, setenv, delenv, setitem,
+    delitem, syspath_prepend, chdir), annullato alla fine del test. I test che la chiedono come argomento girano
+    davvero anche senza pytest (prima: TypeError e 3 "falliti noti")."""
+    _NIENTE = object()
+
+    def __init__(self):
+        self._annulla = []
+
+    def setattr(self, target, name, value=_NIENTE, raising=True):
+        if value is MonkeyPatch._NIENTE:              # forma "modulo.attributo", valore
+            if not isinstance(target, str) or "." not in target:
+                raise TypeError("setattr(target, name, value) oppure setattr('modulo.attr', value)")
+            value, (modulo, name) = name, target.rsplit(".", 1)
+            target = importlib.import_module(modulo)
+        vecchio = getattr(target, name, MonkeyPatch._NIENTE)
+        if vecchio is MonkeyPatch._NIENTE and raising:
+            raise AttributeError(f"{target!r} non ha l'attributo {name!r}")
+        self._annulla.append(lambda: delattr(target, name) if vecchio is MonkeyPatch._NIENTE
+                             else setattr(target, name, vecchio))
+        setattr(target, name, value)
+
+    def delattr(self, target, name, raising=True):
+        if not hasattr(target, name):
+            if raising:
+                raise AttributeError(name)
+            return
+        vecchio = getattr(target, name)
+        self._annulla.append(lambda: setattr(target, name, vecchio))
+        delattr(target, name)
+
+    def setitem(self, d, k, v):
+        vecchio = d.get(k, MonkeyPatch._NIENTE)
+        self._annulla.append(lambda: d.pop(k, None) if vecchio is MonkeyPatch._NIENTE else d.__setitem__(k, vecchio))
+        d[k] = v
+
+    def delitem(self, d, k, raising=True):
+        if k not in d:
+            if raising:
+                raise KeyError(k)
+            return
+        vecchio = d[k]
+        self._annulla.append(lambda: d.__setitem__(k, vecchio))
+        del d[k]
+
+    def setenv(self, name, value, prepend=None):
+        value = str(value)
+        if prepend and os.environ.get(name):
+            value = value + prepend + os.environ[name]
+        self.setitem(os.environ, name, value)
+
+    def delenv(self, name, raising=True):
+        self.delitem(os.environ, name, raising)
+
+    def syspath_prepend(self, path):
+        sys.path.insert(0, str(path))
+        self._annulla.append(lambda: sys.path.remove(str(path)) if str(path) in sys.path else None)
+
+    def chdir(self, path):
+        vecchia = os.getcwd()
+        self._annulla.append(lambda: os.chdir(vecchia))
+        os.chdir(path)
+
+    def undo(self):
+        while self._annulla:
+            self._annulla.pop()()
+
+
+def _chiama(fn):
+    """Chiama il test passando `monkeypatch` se lo chiede (come pytest); poi annulla le sue modifiche."""
+    import inspect
+    try:
+        parametri = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        parametri = {}
+    if "monkeypatch" not in parametri:
+        return fn()
+    mp = MonkeyPatch()
+    try:
+        return fn(monkeypatch=mp)
+    finally:
+        mp.undo()
+
+
 def _rossi_noti() -> dict:
     out = {}
     try:
@@ -122,7 +206,7 @@ def esegui(produzione: bool = False, filtro: str | None = None) -> int:
             moduli_prima = _foto_moduli()
             errore = None
             try:
-                fn()
+                _chiama(fn)
             except Exception:
                 errore = traceback.format_exc()
             env_cambiati = _ripristina_env(env_modulo)

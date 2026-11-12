@@ -23,7 +23,10 @@ REVOKED_MSG = {
     "account_disattivato": "Il tuo account non è attivo",
     "password_cambiata": "La password è cambiata: entra di nuovo",
     "scaduto": "Il periodo di accesso è finito: contattaci per continuare",
+    "inattiva": "Non entravi da molto tempo: entra di nuovo",
 }
+# 12/11: una sessione non usata per SESSIONE_GIORNI giorni si chiude (vale anche per i token di 10 anni di prima)
+SESSIONE_GIORNI = max(1, min(int(os.environ.get("SESSIONE_GIORNI", "90") or 90), 90))
 
 
 def open_session(conn, dealer_id: int, method: str, user_agent: str | None) -> str:
@@ -83,11 +86,18 @@ def check(sid: str | None, dealer_id: int) -> tuple[bool, str | None]:
         row = hit[1]
     else:
         with connect() as conn:
+            # p = la stessa riga PRIMA dell'aggiornamento: serve l'ultimo uso precedente per la scadenza di 90 giorni
             row = conn.execute(
-                "UPDATE dealer_sessions s SET last_seen_at=now() FROM dealers d WHERE s.id=%s AND d.id=s.dealer_id "
+                "UPDATE dealer_sessions s SET last_seen_at=now() FROM dealers d, dealer_sessions p "
+                "WHERE s.id=%s AND d.id=s.dealer_id AND p.id=s.id "
                 "RETURNING s.dealer_id, s.revoked_why, (s.revoked_at IS NULL) AS open, d.active, d.role, "
-                "(d.accesso_fino IS NOT NULL AND d.accesso_fino < now()) AS scaduto",
-                (sid,)).fetchone()
+                "(d.accesso_fino IS NOT NULL AND d.accesso_fino < now()) AS scaduto, "
+                "(p.last_seen_at < now() - make_interval(days => %s)) AS inattiva",
+                (sid, SESSIONE_GIORNI)).fetchone()
+            if row and row.get("inattiva") and row["open"]:
+                conn.execute("UPDATE dealer_sessions SET revoked_at=now(), revoked_why='inattiva' WHERE id=%s "
+                             "AND revoked_at IS NULL", (sid,))
+                row = dict(row, open=False, revoked_why="inattiva")
             conn.commit()
         _cache[sid] = (now, row)
         if len(_cache) > 5000:

@@ -26,7 +26,7 @@ from starlette.staticfiles import StaticFiles
 from .. import regole as _RG
 from ..config import settings
 from ..db import connect, usa_pool
-from . import abbonamento, cards, foto, scovo, sessions, social
+from . import abbonamento, cards, foto, scovo, sessions, sicurezza_http, social
 from .auth import check_link_code, hash_password, make_link_code, make_token, parse_link_code, read_token, verify_password
 
 log = logging.getLogger("web")
@@ -81,17 +81,27 @@ def permessi_di(conn, user: dict) -> list[str]:
     if user.get("role") == "admin":
         return list(PERMESSI)
     row = conn.execute("SELECT permessi FROM dealers WHERE id=%s", (user["id"],)).fetchone()
-    perm = list((row or {}).get("permessi") or [])
+    perm = list((row or {}).get("permessi") or [])     # dati a mano (pannello): restano finché l'admin li toglie
     if "appuntamenti" not in perm:
-        # 11/11 (cliente): chi paga il Max ha SEMPRE gli appuntamenti, anche se il permesso è stato tolto dal pannello
+        # 11/11 (cliente): chi paga il Max ha SEMPRE gli appuntamenti, anche se il permesso è stato tolto dal pannello.
+        # 12/11: automatico (mai scritto in dealers.permessi): Max active/trialing, oppure past_due solo entro i giorni
+        # di tolleranza (prima: past_due senza limite, anche dopo settimane senza pagare).
         try:
-            mx = conn.execute("SELECT 1 FROM abbonamenti WHERE dealer_id=%s AND piano IN ('pro','max') "
-                              "AND stato IN ('active','trialing','past_due') LIMIT 1", (user["id"],)).fetchone()
-            if mx:
+            if abbonamento.max_valido(conn, user["id"]):
                 perm.append("appuntamenti")
         except Exception:
             log.exception("PERMESSI_MAX")
     return perm
+
+
+_ACCESSO_SQL = ("SELECT richiede_abbonamento, abbonamento_stato, abbonamento_tolleranza, "
+                "(password_hash IS NOT NULL) AS con_password, role, paga_carta FROM dealers WHERE id=%s")
+
+
+def puo_vedere_auto(conn, dealer_id: int) -> bool:
+    """12/11: UNA sola lettura della riga per la regola dell'abbonamento (con i giorni di tolleranza), usata da elenco,
+    scheda, "Parla col venditore" (anche come link /vai) e "Fissa appuntamento"."""
+    return abbonamento.puo_vedere(conn.execute(_ACCESSO_SQL, (dealer_id,)).fetchone())
 
 
 def richiede(request: Request, permesso: str) -> dict:
@@ -101,12 +111,8 @@ def richiede(request: Request, permesso: str) -> dict:
         with connect() as conn:
             if permesso not in permessi_di(conn, user):
                 err(403, "Il tuo account non ha accesso a questa sezione")
-            if permesso == "auto":
-                row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, abbonamento_tolleranza, "
-                                   "(password_hash IS NOT NULL) AS con_password, role, paga_carta FROM dealers WHERE id=%s",
-                                   (user["id"],)).fetchone()
-                if not abbonamento.puo_vedere(row):
-                    err(402, "Per vedere le auto serve l'abbonamento")
+            if permesso == "auto" and not puo_vedere_auto(conn, user["id"]):
+                err(402, "Per vedere le auto serve l'abbonamento")
     return user
 
 
@@ -292,6 +298,22 @@ WHERE l.stage='approfondito' AND l.status='attivo'
 """
 
 
+def _apertura(conn, lid: int, dealer_id: int, da_appuntamento: bool = False) -> None:
+    """Registra l'apertura di un annuncio (una riga per commerciante e auto: chiave listing_id, dealer_id).
+    12/11: da_appuntamento=True se nasce da una richiesta di appuntamento (lo staff può annullarla e liberare il posto);
+    un contatto vero la rende definitiva (da_appuntamento=false) e un appuntamento non la sovrascrive mai.
+    Senza la colonna (migrazione 049 non ancora fatta) come prima."""
+    if not abbonamento.ha_colonna(conn, "listing_opens", "da_appuntamento"):
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
+                     (lid, dealer_id))
+    elif da_appuntamento:
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id, da_appuntamento) VALUES (%s,%s,true) "
+                     "ON CONFLICT DO NOTHING", (lid, dealer_id))
+    else:
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT (listing_id, dealer_id) "
+                     "DO UPDATE SET da_appuntamento=false", (lid, dealer_id))
+
+
 def _dealer_context(conn, dealer_id: int):
     d = conn.execute("SELECT * FROM dealers WHERE id=%s", (dealer_id,)).fetchone()
     c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (dealer_id,)).fetchone()
@@ -372,8 +394,7 @@ def open_listing(request: Request):
             "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, user["id"], lid)).fetchone()
         if not row or (not row["mine"] and row["opens"] >= settings.max_dealer_opens):
             err(404, "Annuncio non più disponibile")
-        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
-                     (lid, user["id"]))
+        _apertura(conn, lid, user["id"])
         conn.commit()
     return jsonify({"url": row["url"]})
 
@@ -404,6 +425,7 @@ def my_activity(request: Request):
                       l.title, l.price_eur, l.url, l.status AS listing_status
                FROM dealer_feedback f JOIN listings l ON l.id=f.listing_id
                WHERE f.dealer_id=%s ORDER BY f.listing_id, f.at DESC""", (user["id"],)).fetchall()
+    rows = [dict(r, title=cards.senza_telefoni(r.get("title"))) for r in rows]     # 12/11: mai telefoni in chiaro
     rows.sort(key=lambda r: str(r["at"]), reverse=True)
     return jsonify({"items": rows})
 
@@ -515,8 +537,11 @@ def admin_dealers(request: Request):
                       (SELECT max(last_seen_at) FROM dealer_sessions s WHERE s.dealer_id=d.id) AS last_seen,
                       concat_ws(' ', CASE WHEN d.google_sub IS NOT NULL THEN 'Google' END,
                                 CASE WHEN d.apple_sub IS NOT NULL THEN 'Apple' END,
-                                CASE WHEN d.password_hash IS NOT NULL THEN 'Email' END) AS methods
-               FROM dealers d ORDER BY d.created_at DESC""").fetchall()
+                                CASE WHEN d.password_hash IS NOT NULL THEN 'Email' END) AS methods,
+                      EXISTS (SELECT 1 FROM abbonamenti a WHERE a.dealer_id=d.id AND a.piano IN ('pro','max')
+                              AND (a.stato IN ('active','trialing') OR (a.stato='past_due' AND a.past_due_dal IS NOT NULL
+                                   AND a.past_due_dal > now() - make_interval(days => %s)))) AS appuntamenti_auto
+               FROM dealers d ORDER BY d.created_at DESC""", (abbonamento.tolleranza_giorni(),)).fetchall()
     return jsonify({"items": rows})
 
 
@@ -551,8 +576,9 @@ def admin_link(request: Request):
     if not u:
         err(404, "Account non trovato")
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "scovo.onrender.com"
-    from .auth import LINK_GIORNI
+    from .auth import LINK_GIORNI, LINK_ORE
     return jsonify({"url": f"https://{host}/#/accesso/{make_link_code(did, u['password_hash'])}", "giorni": LINK_GIORNI,
+                    "ore": LINK_ORE, "validita": f"{LINK_ORE} or{'a' if LINK_ORE == 1 else 'e'}, una volta sola",
                     "attivo": u["active"]})
 
 
@@ -604,27 +630,104 @@ async def abbonamento_checkout(request: Request):
     if not abbonamento.attivo():
         err(503, "Pagamenti non ancora attivi")
     piano = str((await body(request)).get("piano") or "base")
+    piano = "pro" if piano == "max" else (piano if piano in abbonamento.PIANI else "base")
+    _D_SQL = "SELECT id, email, stripe_customer, abbonamento_stato FROM dealers WHERE id=%s"
 
     def go():
         # 3/11 notte: niente secondo abbonamento se ce n'è già uno attivo, in prova o in tolleranza (database o
-        # Stripe): si manda al portale di Stripe, dove si cambia piano (Base <-> Max) o carta
+        # Stripe): si manda al portale di Stripe, dove si cambia piano (Base <-> Max) o carta.
+        # 12/11: anche con il primo pagamento in corso (incomplete) o con una sessione di checkout ancora aperta (il
+        # webhook può non essere arrivato e stripe_customer essere ancora vuoto): la sessione aperta si RIUSA, una
+        # sessione già pagata si applica subito. Un lucchetto per account evita due sessioni da due clic insieme.
         with connect() as conn:
-            d = conn.execute("SELECT id, email, stripe_customer, abbonamento_stato FROM dealers WHERE id=%s",
-                             (user["id"],)).fetchone()
-            gia = abbonamento.abbonamento_in_corso(conn, d)
-        if gia:
-            if not d.get("stripe_customer"):
-                return {"gia_abbonato": True, "errore": "Hai già un abbonamento attivo"}
-            return {"url": abbonamento.portale(d["stripe_customer"], social.base_url(request)), "portale": True,
-                    "gia_abbonato": True}
-        return {"url": abbonamento.checkout(d, social.base_url(request), None, piano)}
+            conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (f"checkout:{user['id']}",))
+            d = conn.execute(_D_SQL, (user["id"],)).fetchone()
+            pend = abbonamento.checkout_pendente(conn, d)
+            if pend and pend["stato"] == "complete":
+                d = conn.execute(_D_SQL, (user["id"],)).fetchone()
+            sit = abbonamento.situazione(conn, d)
+            if sit["attivo"]:
+                conn.commit()
+                if not d.get("stripe_customer"):
+                    return {"gia_abbonato": True, "errore": "Hai già un abbonamento attivo"}
+                return {"url": abbonamento.portale(d["stripe_customer"], social.base_url(request)), "portale": True,
+                        "gia_abbonato": True}
+            if sit["in_conferma"]:
+                # 12/11: primo pagamento ancora da confermare (es. banca): niente secondo checkout per un'ora; se Stripe
+                # ha la pagina della fattura, si manda lì a completare il pagamento
+                conn.commit()
+                return {"in_conferma": True, "url": sit.get("url"),
+                        "errore": "Pagamento in conferma: controlla tra qualche minuto"}
+            if pend and pend["stato"] == "open":
+                if pend.get("piano") == piano and pend.get("url"):
+                    conn.commit()
+                    return {"url": pend["url"], "ripreso": True}
+                abbonamento.scadi_checkout(pend["id"])          # cambio di piano: la sessione vecchia non vale più
+            # 12/11: abbonamenti rimasti "incomplete" da più di un'ora: si chiudono su Stripe prima del checkout nuovo,
+            # così la loro fattura non si può pagare insieme al nuovo abbonamento
+            for vecchio in sit.get("incomplete_vecchi") or []:
+                abbonamento.chiudi_abbonamento(vecchio)
+            sess = abbonamento.crea_checkout(d, social.base_url(request), None, piano)
+            abbonamento.segna_checkout(conn, d["id"], sess.get("id"))
+            conn.commit()
+            return {"url": sess["url"]}
     try:
         out = await run_in_threadpool(go)
     except RuntimeError as e:
         err(502, str(e))
     if out.get("gia_abbonato"):
         log.warning("STRIPE checkout rifiutato: commerciante %s ha già un abbonamento (portale)", user["id"])
-    return jsonify(out, 200 if out.get("url") else 409)
+    elif out.get("in_conferma"):
+        log.warning("STRIPE checkout rifiutato: commerciante %s ha un pagamento in conferma (fattura=%s)", user["id"],
+                    "sì" if out.get("url") else "no")
+    elif out.get("ripreso"):
+        log.warning("STRIPE checkout ripreso: commerciante %s ha già una sessione aperta (nessuna sessione nuova)",
+                    user["id"])
+    return jsonify(out, 200 if out.get("url") or out.get("in_conferma") else 409)
+
+
+_verifiche: dict[int, float] = {}
+VERIFICA_OGNI_S = 2.0
+
+
+def _verifica_troppo_presto(uid: int, ora: float | None = None) -> bool:
+    """12/11: al massimo una verifica ogni 2 secondi per account (ogni verifica è una chiamata a Stripe)."""
+    ora = ora or time.time()
+    if ora - _verifiche.get(uid, 0.0) < VERIFICA_OGNI_S:
+        return True
+    _verifiche[uid] = ora
+    if len(_verifiche) > 5000:
+        for k in [k for k, t in _verifiche.items() if ora - t > 60]:
+            _verifiche.pop(k, None)
+    return False
+
+
+async def abbonamento_verifica(request: Request):
+    """12/11: ritorno da Stripe (#/abbonamento/ok?session_id=cs_…). Il sito non aspetta solo il webhook: rilegge la
+    sessione da Stripe e aggiorna l'account come farebbe il webhook (idempotente). Il telefono riprova per circa un
+    minuto finché "accesso" è vero."""
+    user = current_user(request)
+    if not abbonamento.attivo():
+        err(503, "Pagamenti non ancora attivi")
+    sid = str((await body(request)).get("session_id") or "").strip()[:300]
+    if _verifica_troppo_presto(user["id"]):
+        err(429, "Un attimo: sto già controllando il pagamento")
+
+    def go():
+        with connect() as conn:
+            out = abbonamento.verifica_checkout(conn, user["id"], sid) if sid else {"esito": "senza_sessione"}
+            ok = user.get("role") == "admin" or puo_vedere_auto(conn, user["id"])
+            st = conn.execute("SELECT abbonamento_stato FROM dealers WHERE id=%s", (user["id"],)).fetchone()
+        return out, ok, (st or {}).get("abbonamento_stato")
+    try:
+        out, ok, stato = await run_in_threadpool(go)
+    except RuntimeError as e:
+        log.warning("STRIPE_VERIFICA account=%s esito=errore_stripe", user["id"])
+        err(502, str(e))
+    log.warning("STRIPE_VERIFICA account=%s esito=%s accesso=%s stato=%s", user["id"], out.get("esito"), ok, stato)
+    if out.get("esito") in ("di_altri", "sessione_non_valida"):
+        err(404, "Pagamento non trovato")
+    return jsonify({"accesso": ok, "stato": stato, "esito": out.get("esito"), "in_corso": bool(out.get("in_corso"))})
 
 
 async def abbonamento_portale(request: Request):
@@ -649,8 +752,16 @@ async def stripe_webhook(request: Request):
     def go():
         with connect() as conn:
             return abbonamento.applica(conn, evento)
-    esito = await run_in_threadpool(go)
-    log.info("STRIPE %s -> %s", abbonamento.dump(evento), esito)
+    try:
+        esito = await run_in_threadpool(go)
+    except Exception as e:
+        # 12/11: anche l'errore nel log (WARNING: il sito non scrive gli INFO). Stripe riceve 500 e riprova.
+        log.warning("STRIPE_WEBHOOK evento=%s tipo=%s esito=errore:%s", evento.get("id"), evento.get("type"),
+                    type(e).__name__)
+        raise
+    # 12/11: a WARNING (prima INFO, che in produzione non esce): id evento, tipo, esito con l'id interno dell'account.
+    # Mai email o dati della carta.
+    log.warning("STRIPE_WEBHOOK evento=%s tipo=%s esito=%s", evento.get("id"), evento.get("type"), esito)
     return jsonify({"ok": True})
 
 
@@ -705,6 +816,18 @@ async def auth_callback(request: Request):
     return resp
 
 
+def _usa_link(conn, code: str, dealer_id: int) -> bool:
+    """Segna il link come usato; False se lo era già. Senza la tabella (migrazione 049 non ancora fatta) il link vale
+    comunque solo LINK_ORE ore: si lascia entrare e lo si scrive nel log."""
+    from .auth import impronta_link
+    if not abbonamento.ha_colonna(conn, "link_accesso_usati", "impronta"):
+        log.warning("ACCESSO_LINK tabella link_accesso_usati assente: link non segnato come usato")
+        return True
+    return bool(conn.execute("INSERT INTO link_accesso_usati (impronta, dealer_id) VALUES (%s,%s) "
+                             "ON CONFLICT (impronta) DO NOTHING RETURNING impronta",
+                             (impronta_link(code), dealer_id)).fetchone())
+
+
 async def auth_scambio(request: Request):
     data = await body(request)
     code = str(data.get("code", ""))[:200]
@@ -716,10 +839,19 @@ async def auth_scambio(request: Request):
                 return None
             with connect() as conn:
                 u = conn.execute("SELECT * FROM dealers WHERE id=%s AND active", (p[0],)).fetchone()
-            return u if u and check_link_code(code, u["password_hash"]) else None
+                if not (u and check_link_code(code, u["password_hash"])):
+                    return None
+                # 12/11: il link vale una volta sola (lo si manda su WhatsApp: inoltrato non deve dare accesso)
+                if not _usa_link(conn, code, u["id"]):
+                    return "usato"
+                conn.commit()
+            return u
         u = await run_in_threadpool(by_link)
+        if u == "usato":
+            log.warning("ACCESSO_LINK già usato: account %s", parse_link_code(code)[0])
+            err(401, "Questo link è già stato usato: chiedi un link nuovo all'assistenza")
         if not u:
-            err(401, "Link scaduto o non valido: chiedine uno nuovo")
+            err(401, "Link scaduto o non valido: chiedi un link nuovo all'assistenza")
         return jsonify(await run_in_threadpool(start_session, request, u, "link"))
     d = social.redeem(code)
     if not d:
@@ -1754,7 +1886,8 @@ AZIENDA_CAMPI = [("nome_azienda", "Nome dell'azienda", True), ("indirizzo", "Ind
 APP_FASCE = {"mattina": "Mattina (9–12)", "pranzo": "Pranzo (12–14)", "pomeriggio": "Pomeriggio (14–18)", "sera": "Sera (18–20)"}
 APP_ORE = [f"{h}:{m}" for h in range(9, 20) for m in ("00", "30")][:-1]       # 9:00 … 19:00
 APP_MAX = 8
-APP_GIORNO = int(os.environ.get("APPUNTAMENTI_GIORNO", "20"))    # richieste al giorno per commerciante
+# 12/11: 5 al giorno per account (prima 20): il tasto è aperto a tutti gli account con accesso alle auto
+APP_GIORNO = int(os.environ.get("APPUNTAMENTI_GIORNO", "5"))     # richieste al giorno per commerciante
 APP_DOPPIA_ORE = 24                                                 # stessa richiesta per la stessa auto: non si rimanda
 APP_PREAVVISO_MIN = int(os.environ.get("APPUNTAMENTI_PREAVVISO_MIN", "60"))
 # Le tabelle aziende_abbonati e appuntamenti nascono con la migrazione 031 (prima alla prima richiesta del sito).
@@ -1842,6 +1975,11 @@ async def azienda_put(request: Request):
     return jsonify({"ok": True, "dati": d, "completa": True})
 
 
+def _senza_email(testo: str) -> str:
+    """Toglie gli indirizzi email da un testo che va nei log (es. risposta di errore di Brevo)."""
+    return re.sub(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", "[email]", testo or "")
+
+
 def _avvisa_appuntamento(testo: str, oggetto: str, aid: int | None = None) -> bool:
     """Email a info@skovo.app con la richiesta (Brevo transazionale, chiave su Render). 4/11: si guarda la risposta
     di Brevo; l'esito va nel log (APPUNTAMENTO email esito=...) e in appuntamenti.email_ok/email_esito, così una
@@ -1857,7 +1995,8 @@ def _avvisa_appuntamento(testo: str, oggetto: str, aid: int | None = None) -> bo
         esito = f"http {r.status_code}" + ("" if ok else " " + (r.text or "")[:200])
     except Exception as e:
         ok, esito = False, f"{type(e).__name__}: {str(e)[:200]}"
-    (lg.info if ok else lg.error)("APPUNTAMENTO %s email esito=%s", aid, "ok" if ok else esito)
+    # 12/11: anche l'esito "ok" a WARNING (gli INFO in produzione non escono); nel log mai indirizzi email
+    (lg.warning if ok else lg.error)("APPUNTAMENTO %s email esito=%s", aid, "ok" if ok else _senza_email(esito))
     if aid:
         try:
             with connect() as conn:
@@ -2009,7 +2148,9 @@ async def admin_richiesta_auto_aggiorna(request: Request):
 
 
 async def appuntamento(request: Request):
-    user = current_user(request)
+    # 11/11 (cliente): aperto a tutti gli account (non solo al Max). 12/11: ma solo a chi ha accesso alle auto
+    # (permesso "auto" e abbonamento valido, stessa regola dell'elenco): niente richieste da account mai pagati.
+    user = richiede(request, "auto")
     lid = int(request.path_params["id"])
     data = await body(request)
     grezze = data.get("proposte")
@@ -2050,7 +2191,10 @@ async def appuntamento(request: Request):
                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                            (user["id"], lid, giorno, fascia, ora, nota,
                             json.dumps([{"giorno": str(g), "ora": o} for g, o in proposte]), impronta)).fetchone()["id"]
-        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (lid, user["id"]))
+        # la richiesta è confermata subito: conta come apertura (occupa uno dei posti "max commercianti per auto").
+        # 12/11: solo account con accesso alle auto e al massimo APP_GIORNO al giorno; se lo staff la annulla
+        # (admin_appuntamento_stato) il posto si libera.
+        _apertura(conn, lid, user["id"], da_appuntamento=True)
         conn.commit()
     tel = scovo.find_phone(car.get("description"))
     testo = (f"Richiesta appuntamento n. {aid}\n\n"
@@ -2067,6 +2211,29 @@ async def appuntamento(request: Request):
                      daemon=True).start()
     logging.getLogger("scovo").warning("APPUNTAMENTO %s richiesto: commerciante %s, auto %s, %s %s", aid, user["id"], lid, giorno, fascia)
     return jsonify({"ok": True, "id": aid, "scartate": scartate})
+
+
+async def admin_appuntamento_stato(request: Request):
+    """12/11: lo staff annulla una richiesta di appuntamento ({"stato": "annullato"}): la richiesta resta in tabella
+    come annullata e l'apertura (listing_opens) di quel commerciante su quell'auto si toglie, così il posto "max
+    commercianti per auto" torna libero per gli altri. Se il commerciante aveva anche aperto il contatto
+    (da_appuntamento=false) l'apertura resta. Senza la colonna (049 non ancora fatta) non si toglie nulla."""
+    current_user(request, admin=True)
+    aid = int(request.path_params["id"])
+    if str((await body(request)).get("stato") or "") != "annullato":
+        err(400, "Si può solo annullare: {\"stato\": \"annullato\"}")
+    with connect() as conn:
+        r = conn.execute("UPDATE appuntamenti SET stato='annullato' WHERE id=%s RETURNING dealer_id, listing_id",
+                         (aid,)).fetchone()
+        if not r:
+            err(404, "Appuntamento non trovato")
+        if abbonamento.ha_colonna(conn, "listing_opens", "da_appuntamento"):
+            # solo l'apertura nata dall'appuntamento: un contatto vero dello stesso commerciante resta
+            conn.execute("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s AND da_appuntamento",
+                         (r["listing_id"], r["dealer_id"]))
+        conn.commit()
+    logging.getLogger("scovo").warning("APPUNTAMENTO %s stato=annullato (posto liberato)", aid)
+    return jsonify({"ok": True})
 
 
 async def admin_appuntamenti(request: Request):
@@ -2129,8 +2296,7 @@ def _apri_contatto(request: Request, user: dict | None) -> dict:
             "FROM listings WHERE id=%s AND status='attivo'", (lid, lid, uid, lid)).fetchone()
         if not row or (not row["mine"] and row["opens"] >= settings.max_dealer_opens):
             err(404, "Questa auto non è più disponibile")
-        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
-                     (lid, uid))
+        _apertura(conn, lid, uid)
         conn.commit()
     return {"url": row["url"], "tel": scovo.find_phone(row["description"])}
 
@@ -2166,9 +2332,9 @@ def vai_annuncio(request: Request):
                 with connect() as conn:
                     if "auto" not in permessi_di(conn, data):
                         err(403, "Nessun accesso")
-                    row = conn.execute("SELECT richiede_abbonamento, abbonamento_stato, (password_hash IS NOT NULL) "
-                                       "AS con_password, role, paga_carta FROM dealers WHERE id=%s", (data["id"],)).fetchone()
-                    if not abbonamento.puo_vedere(row):
+                    # 12/11: stessa regola di elenco e scheda (prima mancava abbonamento_tolleranza: chi era nei
+                    # giorni di tolleranza vedeva le auto ma qui riceveva 402)
+                    if not puo_vedere_auto(conn, data["id"]):
                         err(402, "Serve l'abbonamento")
             r = _apri_contatto(request, data)
         elif site_open():
@@ -2527,16 +2693,17 @@ class SecurityMiddleware:
             qs = scope.get("query_string", b"").decode()
             url = f"https://{host}{scope['path']}" + (f"?{qs}" if qs else "")
             return await RedirectResponse(url, status_code=301)(scope, receive, send)
-        try:
-            if int(headers.get(b"content-length", b"0") or 0) > MAX_BODY:
-                return await JSONResponse({"error": "Richiesta troppo grande: usa meno foto"}, status_code=413)(
-                    scope, receive, send)
-        except ValueError:
-            pass
+        # 12/11: limite letto a pezzi, anche senza Content-Length (sicurezza_http.limita_corpo)
+        receive = await sicurezza_http.limita_corpo(scope, receive, send, MAX_BODY)
+        if receive is None:
+            return
         https = self.force_https
+
+        partita = [False]
 
         async def send_wrapper(message):
             if message["type"] == "http.response.start":
+                partita[0] = True
                 h = list(message.get("headers") or [])
                 if scope["path"].startswith("/vetrina/"):   # 23/10: siti vetrina dei commercianti clienti
                     h += [x for x in SECURITY_HEADERS if x[0] != b"content-security-policy"] + [(b"content-security-policy",
@@ -2548,9 +2715,21 @@ class SecurityMiddleware:
                     h.append((b"strict-transport-security", b"max-age=31536000; includeSubDomains"))
                 if scope["path"].startswith("/api/") and not scope["path"].startswith("/api/foto/"):
                     h.append((b"cache-control", b"no-store"))
+                if message.get("status", 500) < 400:      # 12/11: token rinnovato con l'uso (90 giorni)
+                    try:
+                        t = sicurezza_http.token_rinnovato(scope)
+                    except Exception:
+                        t = None
+                    if t:
+                        h.append((b"x-scovo-token", t))
                 message["headers"] = h
             await send(message)
-        await self.app(scope, receive, send_wrapper)
+        try:
+            await self.app(scope, receive, send_wrapper)
+        except sicurezza_http.CorpoTroppoGrande:
+            log.warning("RICHIESTA troppo grande fermata durante la lettura: %s", scope.get("path"))
+            if not partita[0]:
+                await sicurezza_http._rispondi_413(send)
 
 
 def _incentivi_app():
@@ -2592,6 +2771,7 @@ routes = [
     Route("/api/auth/metodi", auth_metodi),
     Route("/api/abbonamento/checkout", abbonamento_checkout, methods=["POST"]),
     Route("/api/abbonamento/portale", abbonamento_portale, methods=["POST"]),
+    Route("/api/abbonamento/verifica", abbonamento_verifica, methods=["POST"]),
     Route("/api/stripe/webhook", stripe_webhook, methods=["POST"]),
     Route("/api/auth/scambio", auth_scambio, methods=["POST"]),
     Route("/api/auth/esci", esci, methods=["POST"]),
@@ -2609,6 +2789,7 @@ routes = [
     Route("/api/me/azienda", azienda_get, methods=["GET"]),
     Route("/api/me/azienda", azienda_put, methods=["PUT"]),
     Route("/api/admin/appuntamenti", admin_appuntamenti),
+    Route("/api/admin/appuntamenti/{id:int}", admin_appuntamento_stato, methods=["POST"]),
     Route("/api/richieste-auto", richieste_get, methods=["GET"]),
     Route("/api/richieste-auto", richieste_post, methods=["POST"]),
     Route("/api/admin/richieste-auto", admin_richieste_auto),
