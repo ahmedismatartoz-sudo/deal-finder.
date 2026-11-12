@@ -143,6 +143,29 @@ def in_cima(it: dict) -> dict:
             return out
     return it
 
+def con_netto(it: dict) -> dict:
+    """12/11 (margini precisi): `netto` e `costi_netto` (guadagno netto stimato, pricing/netto.py) calcolati sul
+    prezzo MOSTRATO: da chiamare DOPO prezzo_sito/in_cima. Il margine lordo e le soglie non cambiano."""
+    try:
+        from ..pricing import netto as _NT
+        return _NT.per_auto(it)
+    except Exception:
+        return it
+
+
+def allestimento_auto(it: dict, extra: dict | None = None) -> dict | None:
+    """Allestimento riconosciuto (pricing/allestimento.allestimento) per la scheda: dai dati dell'annuncio se ci sono
+    (extra = riga completa), altrimenti dal nome mostrato."""
+    try:
+        from ..pricing.allestimento import allestimento
+        e = extra or {}
+        return allestimento({"make": e.get("make") or it.get("marca"), "model": e.get("model"),
+                             "version_raw": e.get("version_raw"), "title": e.get("title") or it.get("nome"),
+                             "description": e.get("description")})
+    except Exception:
+        return None
+
+
 def guadagno_minimo(it: dict, sconto: int = SCONTO_DEFAULT) -> int:
     riv = round(it["mercato"] * (1 - sconto / 100))
     return riv - it["prezzo"] - sum(COSTI_FISSI.values()) - it["rip_hi"]
@@ -557,9 +580,12 @@ def detail(base: dict, extra: dict) -> dict:
             "policy", "categoria", "acquisto", "M", "L", "n", "livello", "campione", "riduzione", "riduzione_base", "fascia",
             "centrale_ridotto", "R", "R_da", "V", "perdita_storico_danno", "R_finale", "costi", "totale_costi", "riserva",
             "margine", "soglia", "mancanti", "ipotesi", "motivi", "confronti", "n_esclusi", "non_equivalenti", "venditori",
-            "metodo", "modello", "M_confronti")}
+            "metodo", "modello", "M_confronti", "rivendita_commercianti", "giorni_vendita_commercianti",
+            "n_dati_rivendita", "allestimento", "dispersione")}
         d["valutazione"]["etichetta"] = CATEGORIE.get(pv.get("categoria"))
         d["valutazione"]["esclusi_motivi"] = _conta_motivi(pv.get("esclusi") or [])
+    # 12/11 (margini precisi): allestimento riconosciuto con il suo livello (dalla valutazione, o dal nome mostrato)
+    d["allestimento"] = (pv or {}).get("allestimento") or allestimento_auto(base, {"description": extra.get("description")})
     stessi_numeri(d)
     return d
 

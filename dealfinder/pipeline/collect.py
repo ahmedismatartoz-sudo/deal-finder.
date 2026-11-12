@@ -1127,6 +1127,13 @@ if __name__ == "__main__":
             elif voce.startswith("leadmaps"):                              # 26/10 notte: commercianti da Google Maps via Apify
                 from . import lead_maps as LM
                 esito = LM.giro()
+            elif voce.startswith("simulamargini"):                         # 12/11: vecchio contro nuovo, solo log
+                from ..pricing import simula                               # "simulamargini:1500" = quante valutazioni
+                q = voce.split(":")[1].split("@")[0] if ":" in voce else ""
+                with connect() as conn:
+                    esito = simula.esegui(conn, quante=int(q) if q.isdigit() else 1500)
+                    conn.rollback()
+                esito = {k: esito.get(k) for k in ("auto", "sul_sito", "sopra_soglia_solo_grazie_ai_commercianti")}
             elif voce.startswith("provacorrezione"):                       # 4/11: prova correzione anno/km sulle vendute
                 from ..pricing import prova_correzione
                 with connect() as conn:

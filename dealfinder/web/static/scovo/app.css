@@ -1723,3 +1723,11 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .avviso-riga{display:block;margin:0 0 10px;padding:8px 12px;border-radius:12px;background:#ffe2d6;color:#7a2e12;font:700 14px/18px var(--body,system-ui);text-align:left}
 :root[data-theme="dark"] .avviso-riga{background:#3a2219;color:#ffb899}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .avviso-riga{background:#3a2219;color:#ffb899}}
+
+/* 12/11 margini precisi: guadagno netto stimato */
+.gain-pill .netto-tag{display:block;font:600 11px/14px var(--body);color:#fff;opacity:1;white-space:nowrap;text-align:right;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.netto-box summary{cursor:pointer;list-style:none}
+.netto-box summary::-webkit-details-marker{display:none}
+.netto-box summary .k::after{content:" ▾";font-size:12px;opacity:.6}
+.netto-box[open] summary .k::after{content:" ▴"}
+.netto-voci{padding-left:8px}

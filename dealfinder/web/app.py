@@ -1208,7 +1208,7 @@ def _fattori_calibra() -> list:
     della tabella calibrazione; riserva e limiti in dealfinder/regole.py, niente variabili d'ambiente)."""
     if time.time() - _calib_cache["t"] < 1800 and _calib_cache["f"] is not None:
         return _calib_cache["f"]
-    fasce = {}
+    fasce, fasce_vr, per_M = {}, {}, False
     try:
         with connect() as conn:
             if conn.execute("SELECT to_regclass('calibrazione') AS t").fetchone()["t"]:
@@ -1216,12 +1216,14 @@ def _fattori_calibra() -> list:
                 d = r["dati"] if r else None
                 dati = (json.loads(d) if isinstance(d, str) else d or {})
                 fasce = dati.get("fasce") or {}
+                fasce_vr = dati.get("fasce_vr") or {}      # 12/11 margini: misura sul valore reale
+                per_M = dati.get("fasce_su") == "M"
                 if _RG.calibrazione_vecchia(dati):
                     logging.getLogger("scovo").warning("CALIBRA_VECCHIA misura fatta con un'altra correzione anno/km: "
                                                        "va rifatta (CALIBRA=1)")
     except Exception as e:
         logging.getLogger("scovo").warning("CALIBRA fattori non letti: %s", str(e)[:120])
-    out = _RG.fattori_calibrazione(fasce)
+    out = _RG.fattori_calibrazione(fasce, misurate_vr=fasce_vr, per_M=per_M)
     _calib_cache.update(t=time.time(), f=out)
     logging.getLogger("scovo").warning("CALIBRA_FATTORI %s", {n: x for _, n, x in out})
     return out
@@ -1432,7 +1434,8 @@ def _dump_candidati(pool: list[dict], sul_sito: set | None = None) -> None:
                       "M": pv.get("M"), "R": pv.get("R_finale") or pv.get("R"), "margine": pv.get("margine"),
                       "n": pv.get("n"), "cat": pv.get("categoria"), "zona": it.get("zona"),
                       "sito": (it["id"] in sul_sito) if sul_sito is not None else None,
-                      "metodo": pv.get("metodo"), "livello": pv.get("livello")})
+                      "metodo": pv.get("metodo"), "livello": pv.get("livello"),
+                      "R_da": pv.get("R_da"), "netto": pv.get("netto"), "n_gemelle": pv.get("n_gemelle")})   # 12/11 margini
     for k in range(0, len(righe), 40):
         lg.warning("DUMP_CANDIDATI %d/%d %s", k, len(righe), json.dumps(righe[k:k + 40], ensure_ascii=False))
     lg.warning("DUMP_CANDIDATI_FINE %d", len(righe))
@@ -1909,7 +1912,7 @@ def api_vendute(request: Request):
 
 def affari(request: Request):
     user = viewer(request, "auto")
-    items = [dict(scovo.in_cima(scovo.prezzo_sito(it))) for it in _elenco_per(user["id"])]
+    items = [dict(scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(it)))) for it in _elenco_per(user["id"])]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     per_id = {it["id"]: it for it in items}
@@ -1945,7 +1948,7 @@ def affare(request: Request):
             extra = dict(conn.execute(scovo.DETAIL_EXTRA_SQL, (lid,)).fetchone() or {})
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
-            d = scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra)))   # 10/11: anche dentro la scheda vale il prezzo ribassato
+            d = scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra))))   # 10/11: anche dentro la scheda vale il prezzo ribassato
             _con_trattativa(conn, lid, d)
             return jsonify(d)
         if not admin:
@@ -1958,7 +1961,7 @@ def affare(request: Request):
     base = (scovo.item_eco(row) if eco else scovo.item(row)) if row else None
     if not base:
         err(404, "Questa auto non è più disponibile")
-    d = scovo.detail(base, extra or {})
+    d = scovo.con_netto(scovo.detail(base, extra or {}))
     d["non_sul_sito"] = True                    # solo amministratore: auto valutata ma tolta dalle regole del sito
     with connect() as conn:
         _con_trattativa(conn, lid, d)

@@ -71,23 +71,38 @@ def _chiedi(conn, t: dict, confronti: list[dict]) -> str:
     return testo
 
 
-def giudica(conn, t: dict, confronti: list[dict]) -> dict | None:
-    """Restituisce {"via": {id: motivo}, "nota": str} oppure None (AI non disponibile / budget finito / errore)."""
-    if not confronti or not AI.available():
+def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -> dict | None:
+    """Restituisce {"via": {id: motivo}, "nota": str} oppure None (AI non disponibile / budget finito / errore).
+    solo_archivio: solo un giudizio già in tabella (misure e prove: nessuna chiamata nuova)."""
+    if not confronti or (not solo_archivio and not AI.available()):
         return None
     ids = sorted(int(c["id"]) for c in confronti if c.get("id") is not None)
     chiave = hashlib.sha1(json.dumps([t.get("price_eur"), ids]).encode()).hexdigest()[:16]
     try:
         _tabella(conn)
-        r = conn.execute("SELECT via, nota FROM ai_giudizi WHERE listing_id=%s AND chiave=%s",
-                         (t.get("id"), chiave)).fetchone()
-        if r:
-            via = r["via"] if isinstance(r["via"], dict) else json.loads(r["via"] or "{}")
-            return {"via": {int(k): v for k, v in via.items()}, "nota": r["nota"], "da_archivio": True}
-        if AI.budget_finito(conn):
+        # 12/11 (controllo del giudice M1): il campione dei confronti cambia (somiglianza), quindi la chiave esatta
+        # cambia spesso. Si riusano i giudizi GIÀ DATI su questa auto allo stesso prezzo, confronto per confronto
+        # (ogni riga salva in via["_giudicati"] gli id esaminati): l'AI vede solo i confronti mai giudicati.
+        righe = conn.execute("SELECT chiave, via, nota FROM ai_giudizi WHERE listing_id=%s", (t.get("id"),)).fetchall()
+        giudicati, via_arch, nota_arch = set(), {}, ""
+        for r in righe:
+            v = r["via"] if isinstance(r["via"], dict) else json.loads(r["via"] or "{}")
+            if r["chiave"] == chiave:
+                return {"via": {int(k): m for k, m in v.items() if not k.startswith("_")}, "nota": r["nota"],
+                        "da_archivio": True}
+            if v.get("_prezzo") != t.get("price_eur") or not isinstance(v.get("_giudicati"), list):
+                continue
+            giudicati |= {int(x) for x in v["_giudicati"]}
+            via_arch.update({int(k): m for k, m in v.items() if not k.startswith("_")})
+            nota_arch = r["nota"] or nota_arch
+        nuovi = [c for c in confronti if c.get("id") is not None and int(c["id"]) not in giudicati]
+        if not nuovi and giudicati:
+            return {"via": {i: m for i, m in via_arch.items() if i in set(ids)}, "nota": nota_arch,
+                    "da_archivio": True}
+        if solo_archivio or AI.budget_finito(conn):
             return None
-        testo = _chiedi(conn, t, confronti)
-        validi = set(ids)
+        testo = _chiedi(conn, t, nuovi)
+        validi = {int(c["id"]) for c in nuovi}
         via, nota = {}, ""
         for riga in testo.splitlines():
             m = re.match(r"\s*[*_#\-]*\s*VIA[*_]*\s*:?\s*(?:id\s*)?(\d+)\s*[-:|]?\s*(.*)", riga, re.I)
@@ -100,10 +115,14 @@ def giudica(conn, t: dict, confronti: list[dict]) -> dict | None:
         if not via and not nota:
             log.warning("GIUDICE_AI %s risposta non leggibile: %s", t.get("id"), testo[:300].replace("\n", " | "))
             return None
+        salva = {str(k): v for k, v in via.items()}
+        salva.update(_giudicati=sorted(validi), _prezzo=t.get("price_eur"))
         conn.execute("INSERT INTO ai_giudizi (listing_id, chiave, via, nota) VALUES (%s,%s,%s,%s) "
                      "ON CONFLICT (listing_id, chiave) DO NOTHING",
-                     (t.get("id"), chiave, json.dumps({str(k): v for k, v in via.items()}), nota))
-        return {"via": via, "nota": nota}
+                     (t.get("id"), chiave, json.dumps(salva), nota))
+        tutti = {i: m for i, m in via_arch.items() if i in set(ids)}
+        tutti.update(via)
+        return {"via": tutti, "nota": nota or nota_arch}
     except Exception as e:
         try:
             conn.rollback()

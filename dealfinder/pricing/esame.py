@@ -107,7 +107,8 @@ def varianti(conn) -> dict:
             t = dict(r, vehicle_identity=_j(r.get("vehicle_identity")), parts_cost_low=None, parts_cost_high=None,
                      rischio_strutturale=_rischio(r), ai=None, targa_e_telefono=True)
             try:
-                v = valuta_con_ripiego(conn, t, mercati[key], scovo.soglia(int(r["price_eur"] or 0)), cfg, {})
+                v = valuta_con_ripiego(conn, t, mercati[key], scovo.soglia(int(r["price_eur"] or 0)), cfg, {},
+                                       giudice="esame")
             except Exception as e:
                 log.warning("ESAME_VARIANTI %s %s: %s", nome, r["id"], str(e)[:120])
                 continue
@@ -180,7 +181,7 @@ def venduti(conn) -> dict:
         vero = float(r["price_eur"])
         for nome, cfg in cfgs.items():
             try:
-                v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(vero)), cfg, cache)
+                v = valuta_con_ripiego(conn, t, mercato, scovo.soglia(int(vero)), cfg, cache, giudice="esame")
             except Exception:
                 continue
             R = v.get("R_finale") or v.get("R")
