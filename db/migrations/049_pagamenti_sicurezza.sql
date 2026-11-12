@@ -19,9 +19,11 @@ CREATE INDEX IF NOT EXISTS link_accesso_usati_at_idx ON link_accesso_usati (usat
 --    a) quelli scritti da Stripe (appuntamenti_da_stripe) diventano automatici
 UPDATE dealers SET permessi = array_remove(permessi, 'appuntamenti'), appuntamenti_da_stripe = false
  WHERE appuntamenti_da_stripe;
---    b) quelli aggiunti dalla migrazione 039 a chi ha (o ha avuto) un abbonamento Max su Stripe: erano la copia del
---       pagamento, non una scelta dell'amministratore, e non si toglievano più alla disdetta. Diventano automatici.
---       Chi ha il permesso senza aver mai avuto un Max su Stripe (dato a mano) lo tiene.
+--    b) quelli aggiunti dalla migrazione 039 a chi OGGI ha un Max attivo o in prova su Stripe: sono già coperti dal
+--       permesso automatico (che alla disdetta sparisce da solo), quindi si tolgono da permessi. Tutti gli altri lo
+--       tengono come permesso dato a mano: chi non ha Stripe, chi ha un Max ancora "incomplete", chi ha disdetto il
+--       Max ma aveva avuto il permesso a mano. Lo toglie solo l'amministratore.
 UPDATE dealers d SET permessi = array_remove(d.permessi, 'appuntamenti')
  WHERE 'appuntamenti' = ANY(COALESCE(d.permessi, '{}'))
-   AND EXISTS (SELECT 1 FROM abbonamenti a WHERE a.dealer_id = d.id AND a.piano IN ('pro', 'max'));
+   AND EXISTS (SELECT 1 FROM abbonamenti a WHERE a.dealer_id = d.id AND a.piano IN ('pro', 'max')
+                 AND a.stato IN ('active', 'trialing'));

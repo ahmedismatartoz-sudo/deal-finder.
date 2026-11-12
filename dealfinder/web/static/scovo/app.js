@@ -1887,6 +1887,13 @@ async function abbonati(piano){
   S.payBusy = piano || true; render({keep:true});
   try {
     const d = await api("/api/abbonamento/checkout", {method: "POST", body: {piano: piano || "base"}});
+    if (d.in_conferma) {
+      // 12/11: primo pagamento ancora da confermare: niente secondo checkout; se c'è, si va alla fattura su Stripe
+      S.payBusy = false;
+      if (d.url) { toast("Completa il pagamento su Stripe"); location.href = d.url; return; }
+      S.pagaStato = {fase: "conferma", piano, msg: "Il tuo pagamento è in conferma: controlla tra qualche minuto. Non pagare di nuovo."};
+      render({top:true}); return;
+    }
     if (d.portale) toast("Hai già un abbonamento: ti porto alla gestione su Stripe");
     location.href = d.url;
   } catch (e) {
@@ -1900,7 +1907,7 @@ async function abbonati(piano){
 }
 
 /* ---------- 12/11: pagamento: verifica al ritorno da Stripe, link #/paga, errori chiari ---------- */
-const ABB_IN_CORSO = ["active", "trialing", "past_due", "incomplete"];
+const ABB_IN_CORSO = ["active", "trialing", "past_due"];      // "incomplete": ci pensa il server (pagamento in conferma)
 function pagaDopoLeggi(){
   const v = store.get("paga_dopo", null); store.del("paga_dopo");
   return v && typeof v === "object" && v.piano && Date.now() - (v.t || 0) < 3600 * 1000 ? v.piano : null;
@@ -1929,10 +1936,11 @@ async function verificaPagamento(sid){
 }
 function viewPagamento(){
   const p = S.pagaStato;
-  const tit = p.fase === "verifica" ? "Sto confermando il pagamento…" : p.fase === "attesa" ? "Pagamento in conferma" : p.fase === "info" ? "Abbonamento" : "Pagamento non aperto";
+  const tit = p.fase === "verifica" ? "Sto confermando il pagamento…" : (p.fase === "attesa" || p.fase === "conferma") ? "Pagamento in conferma" : p.fase === "info" ? "Abbonamento" : "Pagamento non aperto";
   const msg = p.fase === "verifica" ? "Un attimo: aspettiamo la conferma di Stripe. Non chiudere e non pagare di nuovo." : p.msg;
   const tasti = p.fase === "verifica" ? "" : (p.fase === "attesa" ? `<button class="l-btn l-btn-blue" data-act="pagaverifica" style="width:100%">Controlla di nuovo</button>`
-    : p.fase === "errore" ? `<button class="l-btn l-btn-blue" data-act="pagariprova" data-v="${esc(p.piano || "base")}" style="width:100%">Riprova</button>` : "")
+    : p.fase === "errore" ? `<button class="l-btn l-btn-blue" data-act="pagariprova" data-v="${esc(p.piano || "base")}" style="width:100%">Riprova</button>`
+    : p.fase === "conferma" ? `<button class="l-btn l-btn-blue" data-act="pagariprova" data-v="${esc(p.piano || "base")}" style="width:100%">Controlla di nuovo</button>` : "")
     + `<button class="link" data-act="pagachiudi">Torna alle auto</button>`;
   return header("Abbonamento", "", "").replace('class="top"', 'class="top top-plain pw-top"') + `</header><main class="list pw-main"><div class="empty paywall" role="status">
     <strong style="font:800 22px var(--disp)">${esc(tit)}</strong><span class="meta">${esc(msg)}</span>${tasti}</div></main>`;

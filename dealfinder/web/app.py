@@ -630,13 +630,19 @@ async def abbonamento_checkout(request: Request):
             pend = abbonamento.checkout_pendente(conn, d)
             if pend and pend["stato"] == "complete":
                 d = conn.execute(_D_SQL, (user["id"],)).fetchone()
-            gia = abbonamento.abbonamento_in_corso(conn, d)
-            if gia:
+            sit = abbonamento.situazione(conn, d)
+            if sit["attivo"]:
                 conn.commit()
                 if not d.get("stripe_customer"):
                     return {"gia_abbonato": True, "errore": "Hai già un abbonamento attivo"}
                 return {"url": abbonamento.portale(d["stripe_customer"], social.base_url(request)), "portale": True,
                         "gia_abbonato": True}
+            if sit["in_conferma"]:
+                # 12/11: primo pagamento ancora da confermare (es. banca): niente secondo checkout per un'ora; se Stripe
+                # ha la pagina della fattura, si manda lì a completare il pagamento
+                conn.commit()
+                return {"in_conferma": True, "url": sit.get("url"),
+                        "errore": "Pagamento in conferma: controlla tra qualche minuto"}
             if pend and pend["stato"] == "open":
                 if pend.get("piano") == piano and pend.get("url"):
                     conn.commit()
@@ -652,10 +658,29 @@ async def abbonamento_checkout(request: Request):
         err(502, str(e))
     if out.get("gia_abbonato"):
         log.warning("STRIPE checkout rifiutato: commerciante %s ha già un abbonamento (portale)", user["id"])
+    elif out.get("in_conferma"):
+        log.warning("STRIPE checkout rifiutato: commerciante %s ha un pagamento in conferma (fattura=%s)", user["id"],
+                    "sì" if out.get("url") else "no")
     elif out.get("ripreso"):
         log.warning("STRIPE checkout ripreso: commerciante %s ha già una sessione aperta (nessuna sessione nuova)",
                     user["id"])
-    return jsonify(out, 200 if out.get("url") else 409)
+    return jsonify(out, 200 if out.get("url") or out.get("in_conferma") else 409)
+
+
+_verifiche: dict[int, float] = {}
+VERIFICA_OGNI_S = 2.0
+
+
+def _verifica_troppo_presto(uid: int, ora: float | None = None) -> bool:
+    """12/11: al massimo una verifica ogni 2 secondi per account (ogni verifica è una chiamata a Stripe)."""
+    ora = ora or time.time()
+    if ora - _verifiche.get(uid, 0.0) < VERIFICA_OGNI_S:
+        return True
+    _verifiche[uid] = ora
+    if len(_verifiche) > 5000:
+        for k in [k for k, t in _verifiche.items() if ora - t > 60]:
+            _verifiche.pop(k, None)
+    return False
 
 
 async def abbonamento_verifica(request: Request):
@@ -666,6 +691,8 @@ async def abbonamento_verifica(request: Request):
     if not abbonamento.attivo():
         err(503, "Pagamenti non ancora attivi")
     sid = str((await body(request)).get("session_id") or "").strip()[:300]
+    if _verifica_troppo_presto(user["id"]):
+        err(429, "Un attimo: sto già controllando il pagamento")
 
     def go():
         with connect() as conn:
@@ -803,9 +830,9 @@ async def auth_scambio(request: Request):
         u = await run_in_threadpool(by_link)
         if u == "usato":
             log.warning("ACCESSO_LINK già usato: account %s", parse_link_code(code)[0])
-            err(401, "Questo link è già stato usato: chiedine uno nuovo")
+            err(401, "Questo link è già stato usato: chiedi un link nuovo all'assistenza")
         if not u:
-            err(401, "Link scaduto o non valido: chiedine uno nuovo")
+            err(401, "Link scaduto o non valido: chiedi un link nuovo all'assistenza")
         return jsonify(await run_in_threadpool(start_session, request, u, "link"))
     d = social.redeem(code)
     if not d:
@@ -1656,22 +1683,6 @@ def _aggiorna_elenco(attendi: bool) -> None:
         threading.Thread(target=go, daemon=True, name="elenco").start()
 
 
-def _appuntamenti_in_corso(conn, dealer_id: int) -> set:
-    """12/11: auto per cui il commerciante ha chiesto un appuntamento (ultimi 14 giorni, non annullato): restano
-    visibili a LUI anche se nel frattempo altri hanno riempito i posti, senza occupare un posto degli altri."""
-    try:
-        return {r["listing_id"] for r in conn.execute(
-            "SELECT DISTINCT listing_id FROM appuntamenti WHERE dealer_id=%s AND stato <> 'annullato' "
-            "AND created_at > now() - interval '14 days'", (dealer_id,)).fetchall()}
-    except Exception as e:
-        logging.getLogger("scovo").warning("appuntamenti in corso non letti: %s", type(e).__name__)
-        try:
-            conn.rollback()
-        except Exception:
-            pass
-        return set()
-
-
 def _elenco_per(dealer_id: int) -> list[dict]:
     eta = time.time() - _elenco["t"]
     if not _elenco["items"]:
@@ -1681,7 +1692,6 @@ def _elenco_per(dealer_id: int) -> list[dict]:
     with connect() as conn:
         mie = {r["listing_id"] for r in conn.execute(
             "SELECT DISTINCT listing_id FROM listing_opens WHERE dealer_id=%s", (dealer_id,)).fetchall()}
-        mie |= _appuntamenti_in_corso(conn, dealer_id)
     out, mx = [], settings.max_dealer_opens
     for it in _elenco["items"]:
         aperta = it["id"] in mie
@@ -2162,9 +2172,10 @@ async def appuntamento(request: Request):
                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                            (user["id"], lid, giorno, fascia, ora, nota,
                             json.dumps([{"giorno": str(g), "ora": o} for g, o in proposte]), impronta)).fetchone()["id"]
-        # 12/11: la richiesta NON conta più come apertura (listing_opens): non consuma i posti "max commercianti
-        # per auto" degli altri finché non è confermata (admin_appuntamento_stato). Chi l'ha chiesta continua a
-        # vedere l'auto (_elenco_per legge anche le sue richieste in corso).
+        # la richiesta è confermata subito: conta come apertura (occupa uno dei posti "max commercianti per auto").
+        # 12/11: solo account con accesso alle auto e al massimo APP_GIORNO al giorno; se lo staff la annulla
+        # (admin_appuntamento_stato) il posto si libera.
+        conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (lid, user["id"]))
         conn.commit()
     tel = scovo.find_phone(car.get("description"))
     testo = (f"Richiesta appuntamento n. {aid}\n\n"
@@ -2183,28 +2194,23 @@ async def appuntamento(request: Request):
     return jsonify({"ok": True, "id": aid, "scartate": scartate})
 
 
-APP_STATI = ("richiesto", "confermato", "annullato", "fatto")
-
-
 async def admin_appuntamento_stato(request: Request):
-    """12/11: lo staff conferma (o annulla) una richiesta di appuntamento. Solo alla conferma l'auto conta come aperta
-    da quel commerciante (listing_opens) e occupa uno dei posti "max commercianti per auto"."""
+    """12/11: lo staff annulla una richiesta di appuntamento ({"stato": "annullato"}): la richiesta resta in tabella
+    come annullata e l'apertura (listing_opens) di quel commerciante su quell'auto si toglie, così il posto "max
+    commercianti per auto" torna libero per gli altri. Nota: se il commerciante aveva anche aperto il contatto, si
+    toglie anche quell'apertura."""
     current_user(request, admin=True)
     aid = int(request.path_params["id"])
-    stato = str((await body(request)).get("stato") or "")
-    if stato not in APP_STATI:
-        err(400, "Stato non valido")
+    if str((await body(request)).get("stato") or "") != "annullato":
+        err(400, "Si può solo annullare: {\"stato\": \"annullato\"}")
     with connect() as conn:
-        r = conn.execute("UPDATE appuntamenti SET stato=%s WHERE id=%s RETURNING dealer_id, listing_id",
-                         (stato, aid)).fetchone()
+        r = conn.execute("UPDATE appuntamenti SET stato='annullato' WHERE id=%s RETURNING dealer_id, listing_id",
+                         (aid,)).fetchone()
         if not r:
             err(404, "Appuntamento non trovato")
-        if stato in ("confermato", "fatto"):
-            conn.execute("INSERT INTO listing_opens (listing_id, dealer_id) SELECT %s, %s WHERE EXISTS "
-                         "(SELECT 1 FROM listings WHERE id=%s) ON CONFLICT DO NOTHING",
-                         (r["listing_id"], r["dealer_id"], r["listing_id"]))
+        conn.execute("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s", (r["listing_id"], r["dealer_id"]))
         conn.commit()
-    logging.getLogger("scovo").warning("APPUNTAMENTO %s stato=%s", aid, stato)
+    logging.getLogger("scovo").warning("APPUNTAMENTO %s stato=annullato (posto liberato)", aid)
     return jsonify({"ok": True})
 
 

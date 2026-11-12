@@ -146,6 +146,7 @@ class StripeFinto:
 
 def _con_stripe(db, st, monkeypatch):
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_finto")
+    A._verifiche.clear()                     # limite di una verifica ogni 2 s per account: ogni prova parte da zero
     get_vero = ab._get
     return _Sostituisci((A, "connect", lambda: db),
                         (A, "current_user", lambda r, admin=False: {"id": 7, "role": "commerciante", "sid": "s"}),
@@ -183,6 +184,7 @@ def test_verifica_pagamento_senza_webhook(monkeypatch):
         assert code == 200 and out["accesso"] is True and out["stato"] == "active"
         assert db.dealers[7]["stripe_customer"] == "cus_1"
         # di nuovo (il telefono riprova; poi arriva il webhook): idempotente, nessun cambiamento
+        A._verifiche.clear()
         out, code, _ = _esegui(A.abbonamento_verifica, _req("/api/abbonamento/verifica", {"session_id": SID}))
         assert code == 200 and out["accesso"] is True and out["esito"] == "doppione"
         ev = {"id": "evt_vero", "type": "checkout.session.completed", "created": 1003,
@@ -243,10 +245,60 @@ def test_sessione_sconosciuta_a_stripe_non_blocca_il_checkout(monkeypatch):
     assert code == 200 and st.post == [("crea", "base")]
 
 
-def test_abbonamento_incompleto_blocca_il_checkout():
+def _incomplete(eta_s, url="https://invoice.stripe.com/i/acct_1/test_xyz"):
+    ora = time.time()
+    return lambda path, params: {"data": [{"id": "sub_9", "status": "incomplete", "created": int(ora - eta_s),
+                                           "latest_invoice": {"id": "in_1", "hosted_invoice_url": url}}]}
+
+
+def test_abbonamento_incompleto_e_in_conferma_non_attivo():
     db = FintoStripeDB()
-    leggi = lambda path, params: {"data": [{"id": "sub_9", "status": "incomplete"}]}    # noqa: E731
-    assert ab.abbonamento_in_corso(db, {"id": 7, "abbonamento_stato": None, "stripe_customer": "cus_1"}, leggi)
+    d = {"id": 7, "abbonamento_stato": None, "stripe_customer": "cus_1"}
+    sit = ab.situazione(db, d, _incomplete(600))
+    assert sit == {"attivo": False, "in_conferma": True, "url": "https://invoice.stripe.com/i/acct_1/test_xyz"}
+    assert not ab.abbonamento_in_corso(db, d, _incomplete(600))            # non è "Hai già un abbonamento attivo"
+    assert ab.situazione(db, d, _incomplete(2 * 3600)) == {"attivo": False, "in_conferma": False, "url": None}
+
+
+def test_checkout_con_pagamento_in_conferma(monkeypatch):
+    db, st = DBStripe(), StripeFinto()
+    db.dealers[7]["stripe_customer"] = "cus_1"
+    st.leggi = _incomplete(600)
+    with _con_stripe(db, st, monkeypatch):
+        out, code, _ = _esegui(A.abbonamento_checkout, _req("/api/abbonamento/checkout", {"piano": "base"}))
+    assert code == 200 and out["in_conferma"] and out["url"].startswith("https://invoice.stripe.com/")
+    assert "già un abbonamento" not in json.dumps(out) and "in conferma" in out["errore"] and st.post == []
+    # dopo circa un'ora: si può fare un checkout nuovo
+    st.leggi = _incomplete(2 * 3600)
+    with _con_stripe(db, st, monkeypatch):
+        out, code, _ = _esegui(A.abbonamento_checkout, _req("/api/abbonamento/checkout", {"piano": "base"}))
+    assert code == 200 and st.post == [("crea", "base")] and not out.get("in_conferma")
+
+
+def test_checkout_pendente_non_chiude_la_transazione():
+    """Il lucchetto per account (pg_advisory_xact_lock) vive nella transazione: verifica_checkout chiamata da
+    checkout_pendente non deve fare commit né rollback a metà."""
+    db = DBStripe()
+    fatti = []
+    db.commit, db.rollback = (lambda: fatti.append("commit")), (lambda: fatti.append("rollback"))
+    st = StripeFinto(_sessione())
+    db.dealers[7]["checkout_session"] = SID
+    assert ab.checkout_pendente(db, {"id": 7}, st.leggi)["stato"] == "complete"
+    assert db.dealers[7]["abbonamento_stato"] == "active" and fatti == []
+    db.dealers[7]["checkout_session"] = SID                                  # di nuovo: "doppione", niente rollback
+    ab.checkout_pendente(db, {"id": 7}, st.leggi)
+    assert fatti == []
+
+
+def test_verifica_al_massimo_ogni_2_secondi(monkeypatch):
+    db, st = DBStripe(), StripeFinto(_sessione(stato="open", pagato="unpaid"))
+    A._verifiche.pop(7, None)
+    with _con_stripe(db, st, monkeypatch):
+        _, c1, _ = _esegui(A.abbonamento_verifica, _req("/api/abbonamento/verifica", {"session_id": SID}))
+        _, c2, _ = _esegui(A.abbonamento_verifica, _req("/api/abbonamento/verifica", {"session_id": SID}))
+    assert (c1, c2) == (200, 429)
+    assert not A._verifica_troppo_presto(7, time.time() + 2.5)
+    A._verifiche.pop(7, None)
 
 
 def test_frontend_verifica_e_niente_paywall_durante_la_verifica():
@@ -407,39 +459,18 @@ def test_appuntamento_senza_accesso_alle_auto():
     assert code == 402 and db.app == []
 
 
-def test_appuntamenti_massimo_5_al_giorno_e_nessun_posto_consumato():
+def test_appuntamenti_massimo_5_al_giorno():
     db = DBApp()
     for lid in range(1, 6):
         out, code, _ = _appuntamento(db, lid)
         assert code == 200, out
     out, code, _ = _appuntamento(db, 6)
     assert code == 429 and len(db.app) == 5
-    assert not any(q.startswith("INSERT INTO listing_opens") for q in db.q)      # la richiesta non occupa posti
+    # conferma automatica: ogni richiesta accettata conta come apertura (una per auto)
+    assert sum(q.startswith("INSERT INTO listing_opens") for q in db.q) == 5
 
 
-def test_richiesta_in_corso_resta_visibile_a_chi_la_fa():
-    class DB:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-        def execute(self, sql, p=()):
-            s = " ".join(sql.split())
-            if s.startswith("SELECT DISTINCT listing_id FROM listing_opens"):
-                return _R([])
-            if s.startswith("SELECT DISTINCT listing_id FROM appuntamenti"):
-                return _R([{"listing_id": 2}])
-            raise AssertionError(s)
-    from dealfinder.config import settings
-    el = {"t": time.time(), "items": [{"id": 1}, {"id": 2}], "opens": {1: 0, 2: settings.max_dealer_opens}, "busy": False}
-    with _Sostituisci((A, "connect", lambda: DB()), (A, "_elenco", el)):
-        ids = [it["id"] for it in A._elenco_per(7)]
-    assert ids == [1, 2]
-
-
-def test_conferma_appuntamento_conta_come_apertura():
+def test_annullare_appuntamento_libera_il_posto():
     q = []
 
     class DB:
@@ -454,20 +485,18 @@ def test_conferma_appuntamento_conta_come_apertura():
 
         def execute(self, sql, p=()):
             s = " ".join(sql.split())
-            q.append(s)
-            if s.startswith("UPDATE appuntamenti SET stato"):
+            q.append((s, p))
+            if s.startswith("UPDATE appuntamenti SET stato='annullato'"):
                 return _R([{"dealer_id": 7, "listing_id": 11}])
             return _R()
     with _Sostituisci((A, "connect", lambda: DB()), (A, "current_user", lambda r, admin=False: {"id": 1, "role": "admin"})):
-        _, code, _ = _esegui(A.admin_appuntamento_stato, _req("/api/admin/appuntamenti/3", {"stato": "annullato"},
-                                                               path_params={"id": 3}))
-        assert code == 200 and not any(x.startswith("INSERT INTO listing_opens") for x in q)
         _, code, _ = _esegui(A.admin_appuntamento_stato, _req("/api/admin/appuntamenti/3", {"stato": "confermato"},
                                                                path_params={"id": 3}))
-        assert code == 200 and any(x.startswith("INSERT INTO listing_opens") for x in q)
-        _, code, _ = _esegui(A.admin_appuntamento_stato, _req("/api/admin/appuntamenti/3", {"stato": "boh"},
+        assert code == 400 and q == []                        # la conferma è automatica: si può solo annullare
+        _, code, _ = _esegui(A.admin_appuntamento_stato, _req("/api/admin/appuntamenti/3", {"stato": "annullato"},
                                                                path_params={"id": 3}))
-        assert code == 400
+    assert code == 200
+    assert ("DELETE FROM listing_opens WHERE listing_id=%s AND dealer_id=%s", (11, 7)) in q
 
 
 # --------------------------------------------------------- 5. MEDIA: niente telefoni nelle risposte API
@@ -518,6 +547,9 @@ def test_paga_dopo_si_cancella_e_non_si_usa_se_gia_abbonati():
     assert "pagaDopoLeggi()" in js and 'store.del("paga_dopo")' in js and "ABB_IN_CORSO.includes" in js
     # checkout fallito: messaggio che resta (vista dedicata), non solo un avviso che sparisce
     assert "function viewPagamento" in js and "S.pagaStato = e.status === 409" in js
+    # pagamento in conferma (incomplete): niente "già abbonato", si va alla fattura Stripe o si mostra l'attesa
+    assert "if (d.in_conferma)" in js and 'fase: "conferma"' in js
+    assert 'const ABB_IN_CORSO = ["active", "trialing", "past_due"];' in js
 
 
 # ---------------------------------------------------- 7. MEDIA: permesso appuntamenti coerente
@@ -542,12 +574,47 @@ def test_permesso_appuntamenti_max_past_due_oltre_tolleranza():
     assert "appuntamenti" in A.permessi_di(db, {"id": 7, "role": "commerciante"})
 
 
-def test_migrazione_049_appuntamenti_automatici():
-    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db", "migrations",
-                     "049_pagamenti_sicurezza.sql")
-    sql = open(p, encoding="utf-8").read()
-    assert "WHERE appuntamenti_da_stripe" in sql and "a.piano IN ('pro', 'max')" in sql
-    assert "checkout_session" in sql and "link_accesso_usati" in sql
+def test_migrazione_049_su_postgres_vero():
+    """049 eseguita davvero (Postgres locale): perde il permesso scritto solo chi oggi ha un Max active/trialing
+    (coperto dal permesso automatico); chi l'ha avuto a mano lo tiene."""
+    import glob
+    from tests import pg_vero
+    cartella = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db", "migrations")
+    with pg_vero.avvia() as pg:
+        if pg is None:
+            print("Postgres non disponibile: test della 049 sul database vero saltato")
+            return
+        for f in sorted(glob.glob(os.path.join(cartella, "*.sql"))):
+            if not os.path.basename(f).startswith("049"):
+                pg.file(f)
+        casi = {  # email: (ruolo, stato dell'abbonamento Max o None, appuntamenti_da_stripe)
+            "admin@prova.test": ("admin", None, False),
+            "a@primama.test": ("commerciante", None, False),               # Primama senza Stripe
+            "b@primama.test": ("commerciante", "active", False),           # Primama con Max attivo
+            "t@primama.test": ("commerciante", "trialing", False),
+            "c@primama.test": ("commerciante", "incomplete", False),       # Max ancora da pagare
+            "d@prova.test": ("commerciante", "canceled", False),           # Max disdetto, permesso dato a mano
+            "s@prova.test": ("commerciante", "canceled", True),            # scritto da Stripe (vecchio sistema)
+        }
+        for i, (em, (ruolo, stato, da_stripe)) in enumerate(casi.items()):
+            pg.sql(f"INSERT INTO dealers (name, email, role, permessi, appuntamenti_da_stripe) VALUES "
+                   f"('n{i}', '{em}', '{ruolo}', ARRAY['auto','appuntamenti'], {str(da_stripe).lower()})")
+            if stato:
+                pg.sql(f"INSERT INTO abbonamenti (subscription_id, dealer_id, stato, piano) SELECT 'sub_{i}', id, "
+                       f"'{stato}', 'pro' FROM dealers WHERE email='{em}'")
+        pg.file(os.path.join(cartella, "049_pagamenti_sicurezza.sql"))
+        righe = {r["email"]: r for r in pg.sql("SELECT email, 'appuntamenti' = ANY(permessi) AS app, "
+                                               "appuntamenti_da_stripe AS ds FROM dealers")}
+        tiene = {em: righe[em]["app"] == "t" for em in casi}
+        assert tiene == {"admin@prova.test": True, "a@primama.test": True, "b@primama.test": False,
+                         "t@primama.test": False, "c@primama.test": True, "d@prova.test": True,
+                         "s@prova.test": False}, tiene
+        assert all(r["ds"] == "f" for r in righe.values())
+        # le colonne e la tabella nuove ci sono
+        assert pg.sql("SELECT count(*) AS n FROM information_schema.columns WHERE table_name='dealers' "
+                      "AND column_name IN ('checkout_session','checkout_session_at')")[0]["n"] == "2"
+        assert pg.sql("SELECT to_regclass('link_accesso_usati') AS t")[0]["t"] == "link_accesso_usati"
+        pg.file(os.path.join(cartella, "049_pagamenti_sicurezza.sql"))     # rieseguita: nessun errore
 
 
 # ---------------------------------------------------- 9. MEDIA: sessione 90 giorni, link monouso di 1 ora
@@ -570,6 +637,7 @@ def test_rinnovo_nell_intestazione():
     scope = {"path": "/api/me", "headers": [(b"authorization", b"Bearer " + t.encode())]}
     assert sicurezza_http.token_rinnovato(scope)
     assert sicurezza_http.token_rinnovato(dict(scope, path="/static/x.js")) is None
+    assert sicurezza_http.token_rinnovato(dict(scope, path="/api/foto/5/0")) is None
 
 
 def test_sessione_chiusa_dopo_90_giorni_senza_uso():
@@ -601,10 +669,10 @@ def test_sessione_chiusa_dopo_90_giorni_senza_uso():
     assert any(s.startswith("UPDATE dealer_sessions SET revoked_at=now(), revoked_why='inattiva'") for s, _ in eseguite)
 
 
-def test_link_di_accesso_monouso_e_di_un_ora():
+def test_link_di_accesso_monouso_e_di_24_ore():
     from dealfinder.web import auth
     c = auth.make_link_code(7, "scrypt$a$b")
-    assert auth.parse_link_code(c)[1] - time.time() <= 3600 + 1
+    assert 23 * 3600 < auth.parse_link_code(c)[1] - time.time() <= 24 * 3600 + 1
     usati = set()
 
     class DB:
@@ -633,7 +701,9 @@ def test_link_di_accesso_monouso_e_di_un_ora():
         out, code, _ = _esegui(A.auth_scambio, _req("/api/auth/scambio", {"code": c}))
         assert code == 200
         out, code, _ = _esegui(A.auth_scambio, _req("/api/auth/scambio", {"code": c}))
-        assert code == 401 and "già stato usato" in out["error"]
+        assert code == 401 and "già stato usato" in out["error"] and "chiedi un link nuovo all'assistenza" in out["error"]
+        out, code, _ = _esegui(A.auth_scambio, _req("/api/auth/scambio", {"code": c[:-1] + ("0" if c[-1] != "0" else "1")}))
+        assert code == 401 and "chiedi un link nuovo all'assistenza" in out["error"]
     assert all(c not in u for u in usati)                                  # nel database solo l'impronta
 
 

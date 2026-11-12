@@ -86,7 +86,8 @@ def _riproduci(messaggi: list, receive):
 
 def token_rinnovato(scope) -> bytes | None:
     """Token nuovo da mandare al sito, se la richiesta ha un token valido da rinnovare."""
-    if not str(scope.get("path") or "").startswith("/api/"):
+    path = str(scope.get("path") or "")
+    if not path.startswith("/api/") or path.startswith("/api/foto/"):      # foto: risposte in cache, niente token
         return None
     auth = dict(scope.get("headers") or []).get(b"authorization", b"").decode("latin-1")
     if not auth.lower().startswith("bearer "):

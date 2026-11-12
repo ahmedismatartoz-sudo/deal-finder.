@@ -80,8 +80,8 @@ def rinnovo_token(data: dict | None, ora: float | None = None) -> str | None:
 
 
 # ---------- link di accesso (senza scrivere la password) ----------
-# 12/11: il link vale 1 ora (prima 7 giorni) e una volta sola (app.auth_scambio, tabella link_accesso_usati).
-LINK_ORE = max(1, min(int(os.environ.get("LINK_ORE", "1") or 1), 24))
+# 12/11: il link vale 24 ore (prima 7 giorni) e SEMPRE una volta sola (app.auth_scambio, tabella link_accesso_usati).
+LINK_ORE = max(1, min(int(os.environ.get("LINK_ORE", "24") or 24), 24))
 LINK_GIORNI = LINK_ORE / 24          # compatibilità: chi legge ancora LINK_GIORNI
 
 
