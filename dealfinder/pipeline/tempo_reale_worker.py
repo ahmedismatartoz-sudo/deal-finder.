@@ -53,9 +53,13 @@ def worker_attivo(conn=None) -> bool:
             from ..db import connect
             with connect() as c:
                 return worker_attivo(c)
-        r = conn.execute("SELECT ultimo_at > now() - make_interval(mins => %s) AS fresco FROM tempo_reale "
-                         "WHERE giro='worker_nuovi'", (int(fresco),)).fetchone()
-        return bool(r and r["fresco"])
+        # 12/11 revisione: il battito (thread a parte) da solo non basta: un worker col giro bloccato batte lo stesso.
+        # Vivo = battito fresco E ultimo giro "nuovi" finito da meno di 3 × TR_NUOVI_MIN minuti.
+        giro_min = 3 * float(os.environ.get("TR_NUOVI_MIN") or 5)
+        r = conn.execute("SELECT (SELECT ultimo_at > now() - make_interval(mins => %s) FROM tempo_reale "
+                         "WHERE giro='worker_nuovi') AS fresco, (SELECT ultimo_at > now() - make_interval(mins => %s) "
+                         "FROM tempo_reale WHERE giro='nuovi') AS giro_ok", (int(fresco), int(giro_min))).fetchone()
+        return bool(r and r["fresco"] and r["giro_ok"])
     except Exception:
         try:
             conn.rollback()
@@ -106,6 +110,36 @@ def _battiti(fine: _Fine) -> None:
         fine.ev.wait(BATTITO_S)
 
 
+GIRO_MAX_MIN = 45
+
+
+class Guardiano:
+    """12/11 revisione: un giro bloccato (rete appesa, database fermo) terrebbe il lucchetto "nuovi" per sempre e il
+    sito non potrebbe riprendere. Se un giro dura più di TR_WORKER_GIRO_MAX_MIN minuti (45) il processo si chiude:
+    la connessione si chiude, Postgres libera il lucchetto, Render riavvia il worker."""
+
+    def __init__(self, esci=None):
+        self.inizio = None
+        self.esci = esci or (lambda: os._exit(3))
+
+    def scaduto(self, ora: float | None = None) -> bool:
+        lim = float(os.environ.get("TR_WORKER_GIRO_MAX_MIN") or GIRO_MAX_MIN) * 60
+        return self.inizio is not None and (ora if ora is not None else time.time()) - self.inizio > lim
+
+    def controlla(self, ora: float | None = None) -> bool:
+        if self.scaduto(ora):
+            log.error("TR WORKER: giro bloccato da oltre %s minuti, chiudo il processo (lucchetto liberato)",
+                      os.environ.get("TR_WORKER_GIRO_MAX_MIN") or GIRO_MAX_MIN)
+            self.esci()
+            return True
+        return False
+
+    def gira(self, fine) -> None:
+        while not fine.ev.is_set():
+            self.controlla()
+            fine.ev.wait(30)
+
+
 def un_giro(completo: bool, tr=None) -> dict | None:
     from . import tempo_reale as _tr
     tr = tr or _tr
@@ -133,6 +167,8 @@ def main(giri: int | None = None, dormi=None) -> None:
     except Exception:
         pass
     threading.Thread(target=_battiti, args=(fine,), daemon=True, name="tr-battito").start()
+    guardiano = Guardiano()
+    threading.Thread(target=guardiano.gira, args=(fine,), daemon=True, name="tr-guardiano").start()
     from ..memoria import rilascia
     ultimo_completo, n = 0.0, 0
     while not fine.ev.is_set() and (giri is None or n < giri):
@@ -140,6 +176,7 @@ def main(giri: int | None = None, dormi=None) -> None:
         t0 = time.time()
         completo = (t0 - ultimo_completo >= float(os.environ.get("TR_COMPLETO_MIN", "60")) * 60
                     and os.environ.get("TR_COMPLETO", "1") == "1")
+        guardiano.inizio = time.time()
         try:
             st = un_giro(completo)
             if st is not None and completo:
@@ -148,6 +185,7 @@ def main(giri: int | None = None, dormi=None) -> None:
                 log.warning("TR NUOVI (worker) in %.0fs: %s", time.time() - t0, dict(st))
         except Exception as e:
             log.warning("TR WORKER giro non riuscito: %s", str(e)[:300])
+        guardiano.inizio = None
         rilascia("tempo reale worker")
         attesa = max(30.0, float(os.environ.get("TR_NUOVI_MIN", "5")) * 60 - (time.time() - t0))
         (dormi or fine.ev.wait)(attesa)

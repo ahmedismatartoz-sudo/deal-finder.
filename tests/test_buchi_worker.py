@@ -11,8 +11,8 @@ from dealfinder.pipeline import tempo_reale_worker as W      # noqa: E402
 
 
 class Conn:
-    def __init__(self, fresco=None, nuovi=None):
-        self.fresco, self.nuovi, self.sql = fresco, nuovi, []
+    def __init__(self, fresco=None, nuovi=None, giro_ok=True):
+        self.fresco, self.nuovi, self.sql, self.giro_ok = fresco, nuovi, [], giro_ok
 
     def execute(self, sql, params=None):
         self.sql.append((sql, params))
@@ -24,7 +24,7 @@ class Conn:
             def fetchone(s):
                 return s.r
         if "giro='worker_nuovi'" in sql and sql.startswith("SELECT"):
-            return R(None if self.fresco is None else {"fresco": self.fresco})
+            return R({"fresco": self.fresco, "giro_ok": self.giro_ok})
         if "giro='nuovi'" in sql:
             return R(self.nuovi)
         return R(None)
@@ -98,3 +98,17 @@ def test_un_giro_usa_il_lucchetto_e_i_telefoni():
 
 def test_senza_database_esce_subito():
     assert _con_env("DATABASE_URL", None, lambda: W.main(giri=1)) is None
+
+
+def test_battito_senza_giro_recente_non_basta():
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=False))) is False
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=None))) is False
+
+
+def test_guardiano_chiude_il_giro_bloccato():
+    uscite = []
+    g = W.Guardiano(esci=lambda: uscite.append(1))
+    assert not g.controlla(ora=1000.0)                       # nessun giro in corso
+    g.inizio = 1000.0
+    assert not g.controlla(ora=1000.0 + 44 * 60)
+    assert g.controlla(ora=1000.0 + 46 * 60) and uscite == [1]
