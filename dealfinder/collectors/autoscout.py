@@ -107,6 +107,7 @@ def righe_commercianti(items) -> tuple[dict, list]:
 
 
 _GIA_SALVATI: set = set()
+GIA_SALVATI_MAX = 200_000        # 12/11: mercato_nord lo abbassa (memoria del cron mercato, 512 MB)
 
 
 def _salva_commercianti(items) -> None:
@@ -115,7 +116,7 @@ def _salva_commercianti(items) -> None:
     try:
         righe, annunci = righe_commercianti(items)
         # una sola scrittura per commerciante/annuncio per processo (prima: una connessione per ogni pagina)
-        if len(_GIA_SALVATI) > 200_000:
+        if len(_GIA_SALVATI) > GIA_SALVATI_MAX:
             _GIA_SALVATI.clear()
         righe = {k: v for k, v in righe.items() if ("s", k) not in _GIA_SALVATI}
         annunci = [a for a in annunci if ("a", a[0], a[1]) not in _GIA_SALVATI]
@@ -201,6 +202,7 @@ class AutoScoutCollector(Collector):
         self.incompleta = False
         self.debug = False
         self._debug_done = False
+        self.svuota_visti = False    # 12/11: True = già visti solo dentro la fascia (mercato_nord, memoria)
         self.noti = None             # 12/11: pipeline.incrementale.Noti = lettura incrementale (vedi _band_incr)
 
     @property
@@ -392,13 +394,19 @@ class AutoScoutCollector(Collector):
         self.debug = os.environ.get("AUTOSCOUT_DEBUG") == "1"
         lo, hi = query.get("min_price", 500), query.get("max_price", 40000)
         step = query.get("step", 2000)
+        letti_tot = 0
         for ctype, seller in query.get("venditori", [("P", "privato"), ("D", "commerciante")]):
-            n0 = len(self.visti)
+            letti_venditore = 0
             from ..pipeline import passi
             for a in range(lo, hi, step):
                 chiave = f"as:{os.environ.get('AUTOSCOUT_CAP', '')}:{os.environ.get('AUTOSCOUT_RAGGIO', '')}:{ctype}:{a}"
                 if passi.fatto(chiave):
                     continue
+                # 12/11 (memoria del cron mercato): le fasce non si sovrappongono, i già visti servono solo dentro la
+                # fascia: prima l'insieme cresceva per tutto il giro (centinaia di migliaia di id)
+                if self.svuota_visti:
+                    letti_venditore += len(self.visti)
+                    self.visti.clear()
                 self.incompleta = False
                 yield from self._band(a, min(a + step - 1, hi), ctype, seller)
                 if self.blocked or self.stop:
@@ -407,10 +415,16 @@ class AutoScoutCollector(Collector):
                     log.warning("autoscout massiva: fascia %s incompleta, non segnata come fatta", chiave)
                     continue
                 passi.segna(chiave)
-            log.info("autoscout massiva %s: %d annunci letti", seller, len(self.visti) - n0)
+            if self.svuota_visti:
+                letti_venditore += len(self.visti)
+                self.visti.clear()
+            else:
+                letti_venditore = len(self.visti) - letti_tot
+            letti_tot += letti_venditore
+            log.info("autoscout massiva %s: %d annunci letti", seller, letti_venditore)
             if self.blocked or self.stop:
                 break
-        log.info("autoscout massiva: %d annunci letti in tutto", len(self.visti))
+        log.info("autoscout massiva: %d annunci letti in tutto", letti_tot)
 
     def search(self, query: dict) -> Iterator[Listing]:
         if query.get("massiva"):

@@ -340,7 +340,13 @@ def run(mode: str) -> Counter:
         asc = AutoScoutCollector()
         asc.min_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MIN", "1.0"))
         asc.max_delay_s = float(os.environ.get("AUTOSCOUT_PAUSA_MAX", "2.4"))
-        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("NORD_MAX_PREZZO", "40000"))})]
+        # 12/11 (buchi della raccolta §2.3/§4.1, fuori memoria e 12 ore): già visti solo dentro la fascia, meno
+        # commercianti ricordati, fasce da NORD_PASSO € (1.000: un'interruzione rilegge meno)
+        asc.svuota_visti = True
+        from ..collectors import autoscout as _as_mod
+        _as_mod.GIA_SALVATI_MAX = min(_as_mod.GIA_SALVATI_MAX, int(os.environ.get("NORD_GIA_SALVATI_MAX", "50000")))
+        sources = [(asc, {"massiva": True, "min_price": 500, "max_price": int(os.environ.get("NORD_MAX_PREZZO", "40000")),
+                          "step": int(os.environ.get("NORD_PASSO", "1000"))})]
     elif mode == "lombardia":
         # Raccolta pesante di tutta la Lombardia: Subito in fasce strette (tutte le province) e AutoScout24 entro
         # LOMBARDIA_RAGGIO km da Milano (privati da proporre, concessionari come prezzi). Si ferma a LOMBARDIA_OBIETTIVO.
@@ -705,6 +711,9 @@ def run(mode: str) -> Counter:
             try:
                 for listing in collector.search(query):
                     stats[f"letti:{listing.source}"] += 1
+                    if mode == "mercato_nord" and stats[f"letti:{listing.source}"] % 200 == 0 and nord_da_fermare(stats):
+                        collector.stop = True            # 12/11: memoria o tempo finiti: si riprende la notte dopo
+                        break
                     try:
                         # 3/11 (studio 4, P12): anche qui alimentazione, anno, km, cambio e kW dal testo, come in _salva
                         for k, v in completa({"fuel": listing.fuel, "year": listing.year, "mileage_km": listing.mileage_km,
@@ -857,12 +866,53 @@ def run(mode: str) -> Counter:
                      "zona %s, foto %s | privati %s%%", q["source"], q["n"], q["marca"], q["modello"], q["anno"],
                      q["km"], q["prezzo"], q["zona"], q["foto"], q["privati"])
         finish(not any(k.endswith(":errore") for k in stats), dict(stats))
-        if os.environ.get("PASSI_JOB") and not any(k.endswith(":errore") for k in stats):
+        if os.environ.get("PASSI_JOB") and not any(k.endswith(":errore") for k in stats) \
+                and not stats.get("mercato_nord:interrotto"):          # 12/11: i passi fatti restano per la ripresa
             from . import passi
             passi.finito(os.environ["PASSI_JOB"])
     log.info("raccolta %s: %s", mode, dict(stats))
     log.warning("RACCOLTA_SCARTI %s", json.dumps(riepilogo_scarti(stats)))
     return stats
+
+
+NORD_RSS_MB = 420          # MB: oltre si ferma (512 MB del cron mercato, margine per il salvataggio)
+NORD_ORE_MAX = 9.5         # ore dall'avvio del cron: poi c'è il modello AI dei prezzi (entro 10,5) e il limite di 12
+
+
+def nord_da_fermare(stats, ora: float | None = None, rss=None) -> bool:
+    """12/11 (buchi della raccolta §2.3/§4.1): mercato_nord si ferma DA SOLO, pulito, prima che Render lo uccida
+    (fuori memoria l'11/11 e il 4/11, 12 ore il 10/11): passi fatti salvati, ripresa la notte dopo, modello AI dei
+    prezzi addestrato comunque. Memoria: prima si prova a restituirla (gc + malloc_trim)."""
+    import time as _t
+    from .. import memoria
+    t0 = float(os.environ.get("CRON_T0") or _t.time())
+    ore = ((ora if ora is not None else _t.time()) - t0) / 3600
+    if ore >= float(os.environ.get("NORD_ORE_MAX") or NORD_ORE_MAX):
+        stats["mercato_nord:interrotto"] = stats["mercato_nord:interrotto_tempo"] = 1
+        log.warning("MERCATO_NORD fermato: già %.1f ore dall'avvio del cron (si riprende la notte dopo)", ore)
+        return True
+    limite = float(os.environ.get("NORD_RSS_MB") or NORD_RSS_MB)
+    mis = rss or memoria.rss_mb
+    if mis() >= limite:
+        memoria.rilascia("mercato_nord", forza=True)
+        if mis() >= limite:
+            stats["mercato_nord:interrotto"] = stats["mercato_nord:interrotto_memoria"] = 1
+            log.warning("MERCATO_NORD fermato: memoria %.0f MB (limite %.0f), si riprende la notte dopo", mis(), limite)
+            return True
+    return False
+
+
+def fase_mercato_nord() -> dict:
+    """mercato_nord + riga 'collect:mercato_nord' (quella che lo rende "fatto" per 6 giorni) SOLO se finito davvero."""
+    from ..db import connect as _cn
+    st_n = run("mercato_nord")
+    if not st_n.get("mercato_nord:interrotto") and not any(k.endswith(":errore") for k in st_n):
+        with _cn() as _c:
+            _c.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
+                       ("collect:mercato_nord", json.dumps(dict(st_n), default=str)))
+            _c.commit()
+    log.warning("MERCATO_NORD %s", dict(st_n))
+    return dict(st_n)
 
 
 def riepilogo_scarti(stats) -> dict:
@@ -989,6 +1039,17 @@ if __name__ == "__main__":
     import os
     if not os.environ.get("DATABASE_URL"):
         log.info("DATABASE_URL non impostata: servizio non configurato, nulla da fare")
+        sys.exit(0)
+    import time
+    os.environ.setdefault("CRON_T0", str(time.time()))      # 12/11: avvio del cron, anche dopo os.execv
+    if os.environ.pop("MERCATO_NORD_FASE", None) == "1":
+        # 12/11: seconda parte del cron mercato, in un processo pulito: prezzi del Nord, poi il modello AI dei prezzi
+        try:
+            fase_mercato_nord()
+        except Exception as e:
+            log.warning("MERCATO_NORD non riuscito: %s", str(e)[:300])
+        if tempo_ok("ai_prezzi", 10.5, float(os.environ["CRON_T0"])):
+            _ai_prezzi()
         sys.exit(0)
     # 1/11 (regola del cliente: niente raccolta da Facebook): i giri Facebook non partono più, salvo FACEBOOK_ATTIVO=1
     if mode in ("facebook", "fb_backfill", "fb_importa") and os.environ.get("FACEBOOK_ATTIVO") != "1":
@@ -1734,13 +1795,14 @@ if __name__ == "__main__":
         # una volta a settimana: prezzi di mercato da tutto il Nord (AutoScout24) per il modello AI e i confronti
         from .ciclo import _due as _due_job
         if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6):
-            from ..db import connect as _cn
-            st_n = run("mercato_nord")
-            with _cn() as _c:
-                _c.execute("INSERT INTO job_runs (job, finished_at, ok, stats) VALUES (%s, now(), true, %s)",
-                           ("collect:mercato_nord", json.dumps(dict(st_n), default=str)))
-                _c.commit()
-            log.warning("MERCATO_NORD %s", dict(st_n))
+            if os.environ.get("NORD_PROCESSO", "1") == "1":
+                # 12/11: in un processo NUOVO (la memoria dell'addestramento, ~270 MB, si libera tutta), che poi fa
+                # anche il modello AI dei prezzi. Dopo questa riga non si torna più qui.
+                os.environ["MERCATO_NORD_FASE"] = "1"
+                sys.stdout.flush()
+                sys.stderr.flush()
+                os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"])
+            fase_mercato_nord()
     # L'analisi parte se non è esclusa dal comando, oppure se ANALISI_ATTIVA=1 (impostabile da Render)
     analisi = "--senza-analisi" not in sys.argv or os.environ.get("ANALISI_ATTIVA") == "1"
     if mode in ("opportunita", "facebook") and analisi:
