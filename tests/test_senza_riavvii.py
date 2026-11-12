@@ -490,8 +490,8 @@ def test_jev_foto_a_blocchi():
             os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
 
 
-def test_subito_completo_freno_ferma_dopo_un_pacchetto_salvato():
-    """Il freno (basta) si controlla solo con il pacchetto appena salvato: nessun annuncio letto va perso."""
+def test_subito_completo_freno_non_perde_annunci():
+    """Quando il freno dice basta, il pacchetto in corso si salva prima di fermarsi: nessun annuncio letto va perso."""
     from dealfinder.pipeline import tempo_reale as tr
     salvati = []
 
@@ -508,9 +508,9 @@ def test_subito_completo_freno_ferma_dopo_un_pacchetto_salvato():
 
         def basta():
             mem["n"] += 1
-            return mem["n"] >= 3
+            return mem["n"] >= 400
         st = tr.subito_completo(conn, col=_Col(), basta=basta)
-        assert st["fermato_memoria"] == 1 and sum(salvati) == 450 and max(salvati) == 150
+        assert st["fermato_memoria"] == 1 and sum(salvati) == 400 and max(salvati) == 150   # salvato fino all'ultimo letto
         salvati.clear()
         st = tr.subito_completo(conn, col=_Col())                          # senza freno né tempo: legge tutto
         assert not st.get("fermato_memoria") and sum(salvati) >= 10_000 and sum(salvati) % 10_000 == 0   # tutte le regioni
@@ -518,75 +518,167 @@ def test_subito_completo_freno_ferma_dopo_un_pacchetto_salvato():
         tr._salva = orig
 
 
-def test_subito_completo_notte_passi_del_giorno():
-    """PASSI_JOB="subito_completo:"+giorno durante il giro (come rilettura_subito); passi cancellati solo a giro finito."""
-    from dealfinder.pipeline import tempo_reale as tr, passi
-    visti, finiti = [], []
-    orig = (tr.subito_completo, passi.finito, os.environ.get("PASSI_JOB"))
-    try:
+class _Notte:
+    """Banco di prova della lettura notturna: 5 fasce da 200 annunci, passi e job_runs in memoria."""
+    FASCE = 5
+
+    def __init__(self):
+        from dealfinder.web import app as A
+        from dealfinder.pipeline import ciclo, passi, tempo_reale as tr
+        self.A, self.ciclo, self.passi, self.tr = A, ciclo, passi, tr
+        self.passi_db, self.rimandi, self.salvati, self.esiti, self.job_visti = {}, 0, [], [], []
+        self.orig = (ciclo.inizia, passi.connect, tr._salva, A._rss_mb, A._aspetta_memoria, A._memoria.rilascia,
+                     os.environ.get("SUBITO_COMPLETO_MAX_MB"), os.environ.get("PASSI_JOB"))
+        banco = self
+
+        class _Lav:
+            def fatto(self, st=None):
+                banco.esiti.append("fatto")
+
+            def rimanda(self, st=None):
+                banco.esiti.append("rimandato")
+
+            def fallito(self, e=None):
+                banco.esiti.append("fallito")
+
+        class _C:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def commit(self):
+                pass
+
+            def rollback(self):
+                pass
+
+            def execute(self, q, p=None):
+                r = types.SimpleNamespace(fetchone=lambda: None, fetchall=lambda: [], rowcount=0)
+                if "FROM job_runs" in q:
+                    r.fetchone = lambda: {"n": banco.rimandi}
+                elif q.startswith("INSERT INTO job_runs"):
+                    banco.rimandi += 1
+                elif q.startswith("SELECT chiave FROM raccolta_passi"):
+                    righe = [{"chiave": k} for k in banco.passi_db.get(p[0], set())]
+                    r.fetchall = lambda: righe
+                elif q.startswith("INSERT INTO raccolta_passi"):
+                    banco.passi_db.setdefault(p[0], set()).add(p[1])
+                elif q.startswith("DELETE FROM raccolta_passi WHERE job=%s"):
+                    banco.passi_db.pop(p[0], None)
+                return r
+        self.C = _C
+        ciclo.inizia = lambda job, tentativi_max=3, connetti=None: _Lav()
+        passi.connect = _C
+        tr._salva = lambda conn, pacco, st: self.salvati.extend(x.n for x in pacco)
+        A._aspetta_memoria = lambda L, nome, limite=420.0: None
+        A._memoria.rilascia = lambda motivo="", forza=False: 0.0
         os.environ.pop("PASSI_JOB", None)
-        passi.finito = finiti.append
-        tr.subito_completo = lambda conn, basta=None: (visti.append((os.environ.get("PASSI_JOB"), basta)), {"letti": 5})[1]
-        assert tr.subito_completo_notte(None, "2026-11-12")["letti"] == 5
-        assert visti == [("subito_completo:2026-11-12", None)] and finiti == ["subito_completo:2026-11-12"]
-        assert "PASSI_JOB" not in os.environ
-        tr.subito_completo = lambda conn, basta=None: {"fermato_memoria": 1, "fermato_tempo": 1}
-        tr.subito_completo_notte(None, "2026-11-12")
-        assert finiti == ["subito_completo:2026-11-12"]                     # fermato: i passi restano per riprendere
-    finally:
-        tr.subito_completo, passi.finito = orig[0], orig[1]
-        os.environ.pop("PASSI_JOB", None) if orig[2] is None else os.environ.__setitem__("PASSI_JOB", orig[2])
+
+    def col(self):
+        from dealfinder.pipeline import passi
+        banco = self
+
+        class _Col:
+            def _deep(self, q, voluti, code, lim):
+                for f in range(banco.FASCE):
+                    chiave = f"sub:{code}:MI:{f}"
+                    if passi.fatto(chiave):
+                        continue
+                    banco.job_visti.append((passi.job(), os.environ.get("PASSI_JOB")))
+                    for i in range(200):
+                        yield types.SimpleNamespace(raw=None, n=f * 1000 + i)
+                    passi.segna(chiave)
+        return _Col()
+
+    def giro(self):
+        orig = self.tr.subito_completo
+        col = self.col()
+        self.tr.subito_completo = lambda conn, minuti=None, basta=None: orig(conn, col=col, basta=basta)
+        try:
+            return self.A._subito_completo_giro("2026-11-12", connetti=self.C)
+        finally:
+            self.tr.subito_completo = orig
+
+    def fine(self):
+        (self.ciclo.inizia, self.passi.connect, self.tr._salva, self.A._rss_mb, self.A._aspetta_memoria,
+         self.A._memoria.rilascia, mb, pj) = self.orig
+        os.environ.pop("SUBITO_COMPLETO_MAX_MB", None) if mb is None else os.environ.__setitem__("SUBITO_COMPLETO_MAX_MB", mb)
+        os.environ.pop("PASSI_JOB", None) if pj is None else os.environ.__setitem__("PASSI_JOB", pj)
 
 
-def test_subito_completo_nel_sito_rimandato_non_fatto():
-    """Freno a 470 MB (non 400, nessun limite di 60 minuti): se scatta il lavoro non è fatto né fallito."""
-    from dealfinder.web import app as A
-    from dealfinder.pipeline import ciclo, tempo_reale as tr
-    esiti, freni = [], []
-
-    class _Lav:
-        def fatto(self, st=None):
-            esiti.append("fatto")
-
-        def rimanda(self, st=None):
-            esiti.append("rimandato")
-
-        def fallito(self, e=None):
-            esiti.append("fallito")
-
-    class _Cm:
-        def __enter__(self):
-            return None
-
-        def __exit__(self, *a):
-            return False
-    orig = (ciclo.inizia, tr.subito_completo_notte, A._rss_mb, os.environ.get("SUBITO_COMPLETO_MAX_MB"))
+def test_subito_completo_freno_spento_arriva_in_fondo():
+    """Memoria sempre sopra ogni tetto, freno a 0 (default, come in main): la lettura arriva in fondo e si segna fatta."""
+    b = _Notte()
     try:
         os.environ.pop("SUBITO_COMPLETO_MAX_MB", None)
-        ciclo.inizia = lambda job, tentativi_max=3, connetti=None: _Lav()
-        mem = {"mb": 450.0}
-        A._rss_mb = lambda: mem["mb"]
-
-        def notte(conn, giorno, basta=None):
-            freni.append(basta())
-            return {"fermato_memoria": 1} if basta() else {"letti": 9}
-        tr.subito_completo_notte = notte
-        assert A._subito_completo_giro("2026-11-12", connetti=_Cm) == "fatto"     # 450 MB: sotto il freno di 470
-        mem["mb"] = 480.0
-        assert A._subito_completo_giro("2026-11-12", connetti=_Cm) == "rimandato"
-        assert esiti == ["fatto", "rimandato"] and freni == [False, True]
-        tr.subito_completo_notte = lambda conn, giorno, basta=None: 1 / 0
-        try:
-            A._subito_completo_giro("2026-11-12", connetti=_Cm)
-        except ZeroDivisionError:
-            pass
-        assert esiti[-1] == "fallito"
-        ciclo.inizia = lambda job, tentativi_max=3, connetti=None: None
-        assert A._subito_completo_giro("2026-11-12", connetti=_Cm) == "saltato"
+        b.A._rss_mb = lambda: 999.0
+        assert b.giro() == "fatto" and b.esiti == ["fatto"]
+        assert len(set(b.salvati)) == _Notte.FASCE * 200
+        assert b.passi_db == {}                                             # finita: passi cancellati
+        assert b.job_visti and all(j == "subito_completo:2026-11-12" and env is None for j, env in b.job_visti)
     finally:
-        ciclo.inizia, tr.subito_completo_notte, A._rss_mb = orig[:3]
-        if orig[3] is not None:
-            os.environ["SUBITO_COMPLETO_MAX_MB"] = orig[3]
+        b.fine()
+
+
+def test_subito_completo_freno_a_fascia_chiusa_e_al_massimo_3_rimandi():
+    b = _Notte()
+    try:
+        os.environ["SUBITO_COMPLETO_MAX_MB"] = "470"
+        b.A._rss_mb = lambda: 520.0                                         # resta alta anche dopo rilascio e attesa
+        for _ in range(3):
+            assert b.giro() == "rimandato"
+        assert b.esiti == ["rimandato"] * 3 and b.rimandi == 3
+        assert len(b.passi_db["subito_completo:2026-11-12"]) == 3          # una fascia intera segnata per giro
+        assert b.giro() == "fatto"                                          # quarto giro: freno spento, arriva in fondo
+        assert len(set(b.salvati)) == _Notte.FASCE * 200 and b.passi_db == {}
+    finally:
+        b.fine()
+
+
+def test_subito_completo_freno_memoria_scesa_dopo_rilascio():
+    b = _Notte()
+    try:
+        os.environ["SUBITO_COMPLETO_MAX_MB"] = "470"
+        mem = {"mb": 520.0}
+        b.A._rss_mb = lambda: mem["mb"]
+        b.A._aspetta_memoria = lambda L, nome, limite=420.0: mem.update(mb=400.0)   # dopo l'attesa scende
+        assert b.giro() == "fatto" and b.rimandi == 0
+    finally:
+        b.fine()
+
+
+def test_subito_completo_non_parte_con_un_giro_pesante():
+    import threading
+    b = _Notte()
+    fermo = threading.Event()
+    t = threading.Thread(target=fermo.wait, name="lusso", daemon=True)
+    t.start()
+    try:
+        assert b.giro() == "aspetta" and b.esiti == []
+    finally:
+        fermo.set()
+        t.join()
+        b.fine()
+
+
+def test_passi_locali_al_thread():
+    import threading
+    from dealfinder.pipeline import passi
+    vecchia = os.environ.get("PASSI_JOB")
+    visti = {}
+    try:
+        os.environ["PASSI_JOB"] = "benzina:altro"
+        with passi.locale("subito_completo:2026-11-12"):
+            visti["qui"] = passi.job()
+            t = threading.Thread(target=lambda: visti.update(altro=passi.job()))
+            t.start()
+            t.join()
+        visti["dopo"] = passi.job()
+        assert visti == {"qui": "subito_completo:2026-11-12", "altro": "benzina:altro", "dopo": "benzina:altro"}
+    finally:
+        os.environ.pop("PASSI_JOB", None) if vecchia is None else os.environ.__setitem__("PASSI_JOB", vecchia)
 
 
 def test_rimanda_toglie_la_riga_senza_contare_un_tentativo():
@@ -831,3 +923,26 @@ def test_pg_jolly_ilike_non_passano():
     IMP.aggiungi_scarto(c, IMP.valida_voce({"marca": "f_at", "modello": "5%0", "km": 68000, "prezzo": 7900}), "", "1")
     stati = {r["id"]: r["stage"] for r in c.execute("SELECT id, stage FROM listings").fetchall()}
     assert stati == {1: "approfondito", 2: "scartato"}                    # "_" e "%" scritti nel pannello non sono jolly
+
+
+def test_errore_alla_prima_lettura_non_fa_aspettare_le_altre():
+    try:
+        IMP.usa_lettore(_Lettore(RuntimeError("database giù")))
+        IMP._stato.update(firma=None, dati={})
+        assert IMP.dati() == {} and IMP._stato["firma"] == ""
+    finally:
+        _fine()
+
+
+def test_ribasso_variabile_con_spazi():
+    vecchie = {k: os.environ.get(k) for k in ("SITO_RIBASSO", "SITO_RIBASSO_FINO")}
+    try:
+        _con({})
+        os.environ.update(SITO_RIBASSO=scovo.RIBASSO_SCHEMA, SITO_RIBASSO_FINO="   ")
+        assert scovo.ribasso_per(12000, PRIMA) == 0
+        os.environ["SITO_RIBASSO_FINO"] = " 2026-11-10T16:55:00+01:00 "
+        assert scovo.ribasso_per(12000, PRIMA) == 1500
+    finally:
+        _fine()
+        for k, v in vecchie.items():
+            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)

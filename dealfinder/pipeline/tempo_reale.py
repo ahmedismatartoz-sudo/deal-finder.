@@ -576,7 +576,8 @@ def subito_completo(conn, minuti: float | None = None, col=None, basta=None) -> 
                 if fine and time.time() > fine:
                     st["fermato_tempo"] += 1
                     break
-                if basta is not None and len(pacco) == 0 and basta():   # controllato dopo ogni pacchetto salvato
+                if basta is not None and basta():  # deve essere economica (subito_completo_notte: un sì/no già deciso)
+                    salva()                        # niente di letto va perso
                     st["fermato_tempo"] += 1
                     st["fermato_memoria"] += 1
                     break
@@ -595,28 +596,25 @@ def subito_completo(conn, minuti: float | None = None, col=None, basta=None) -> 
 
 
 def subito_completo_notte(conn, giorno: str, basta=None) -> dict:
-    """12/11: lettura completa notturna dentro il sito, con i passi del giorno (PASSI_JOB="subito_completo:"+giorno,
-    come rilettura_subito): se `basta` la ferma (memoria alta) il giro dopo riprende dalle fasce già lette; finita
-    tutta, i passi si cancellano. Nessun limite di tempo (il giro intero dura 2-2,5 ore)."""
+    """12/11: lettura completa notturna dentro il sito, con i passi del giorno (job "subito_completo:"+giorno, come
+    rilettura_subito, ma SOLO per questo thread: passi.locale, così gli altri giri del sito non lo vedono). Il freno
+    `basta()` (facoltativo) si chiede solo a fascia chiusa, subito dopo che il passo è segnato: se dice sì, il giro si
+    ferma alla fascia dopo e il prossimo riprende da lì. Finita tutta la lettura, i passi si cancellano."""
     from . import passi
     job = "subito_completo:" + giorno
-    vecchio = os.environ.get("PASSI_JOB")
-    os.environ["PASSI_JOB"] = job
-    passi._cache = None
-    try:
-        st = subito_completo(conn, basta=basta)
-        if not st.get("fermato_memoria"):
-            try:
-                passi.finito(job)
-            except Exception as e:
-                log.warning("SUBITO_COMPLETO passi non cancellati: %s", str(e)[:150])
-        return st
-    finally:
-        if vecchio is None:
-            os.environ.pop("PASSI_JOB", None)
-        else:
-            os.environ["PASSI_JOB"] = vecchio
-        passi._cache = None
+    fermo = {"si": False}
+
+    def dopo_segna(chiave):
+        if basta is not None and not fermo["si"] and basta():
+            fermo["si"] = True
+    with passi.locale(job, dopo_segna=dopo_segna):
+        st = subito_completo(conn, basta=(lambda: fermo["si"]) if basta is not None else None)
+    if not st.get("fermato_memoria"):
+        try:
+            passi.finito(job)
+        except Exception as e:
+            log.warning("SUBITO_COMPLETO passi non cancellati: %s", str(e)[:150])
+    return st
 
 
 def rilettura_subito(minuti: float | None = None) -> dict:

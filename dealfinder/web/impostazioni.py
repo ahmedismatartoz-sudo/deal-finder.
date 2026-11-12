@@ -87,6 +87,8 @@ def dati() -> dict:
             d = _da_db()
         except Exception as e:
             log.warning("IMPOSTAZIONI non lette (resta l'ultima lettura): %s", str(e)[:160])
+            if _stato["firma"] is None:
+                _stato["firma"] = ""                     # le richieste dopo non aspettano più la prima lettura
             _stato["t"] = time.monotonic() - CACHE_S + 10        # si riprova tra 10 secondi
             return _stato["dati"]
         firma = json.dumps(d, sort_keys=True, default=str)

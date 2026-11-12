@@ -994,26 +994,64 @@ def _aspetta_memoria(L, nome: str, limite: float = 420.0) -> None:
         time.sleep(30)
 
 
+GIRI_PESANTI = ("benzina", "leadsp", "privati60", "lusso")      # thread del sito che usano anche loro i passi
+
+
 def _subito_completo_giro(giorno: str, connetti=None) -> str:
-    """12/11: lettura completa notturna di Subito dentro il sito, con i passi del giorno. Freno di sicurezza a
-    SUBITO_COMPLETO_MAX_MB (470; 0 = spento): se scatta il lavoro NON è segnato fatto né fallito (rimandato) e il
-    giro dopo (30 minuti) riprende dalle fasce già lette. Ritorna "fatto", "rimandato" o "saltato"."""
+    """12/11: lettura completa notturna di Subito dentro il sito, con i passi del giorno.
+    Freno di memoria SPENTO di base (SUBITO_COMPLETO_MAX_MB=0, come in main). Se acceso, si guarda solo a fascia
+    chiusa: prima si restituisce la memoria e si aspetta (_aspetta_memoria), e ci si ferma solo se è ancora sopra il
+    tetto; allora il lavoro è rimandato (né fatto né fallito) e il giro dopo riprende dalle fasce lette. Al massimo
+    SUBITO_COMPLETO_RIMANDI (3) rimandi al giorno, poi il freno si spegne e la lettura arriva in fondo.
+    Non parte mentre gira un altro giro pesante del sito (benzina, lusso, lead). Ritorna fatto/rimandato/saltato/aspetta."""
     from ..pipeline import tempo_reale as tr
-    from ..pipeline.ciclo import inizia         # 6/11: riga chiusa anche dopo un riavvio
-    lav = inizia("subito_completo:" + giorno, tentativi_max=6)
+    from ..pipeline import ciclo
+    occupati = [t.name for t in threading.enumerate() if t.name in GIRI_PESANTI and t.is_alive()]
+    if occupati:
+        logging.getLogger("lavoro").warning("SUBITO_COMPLETO aspetta: gira %s", occupati)
+        return "aspetta"
+    con = connetti or connect
+    rimandi = 0
+    try:
+        with con() as conn:
+            # passi dei giorni passati mai finiti: non servono più (oltre 2 giorni)
+            conn.execute("DELETE FROM raccolta_passi WHERE job LIKE 'subito_completo:%%' AND job < %s",
+                         ("subito_completo:" + time.strftime("%Y-%m-%d", time.gmtime(time.time() - 2 * 86400)),))
+            rimandi = int(conn.execute("SELECT count(*) AS n FROM job_runs WHERE job=%s",
+                                       ("subito_completo:" + giorno + ":rimandato",)).fetchone()["n"])
+            conn.commit()
+    except Exception as e:
+        logging.getLogger("lavoro").warning("SUBITO_COMPLETO pulizia passi: %s", str(e)[:150])
+    lav = ciclo.inizia("subito_completo:" + giorno, tentativi_max=6)
     if not lav:
         return "saltato"
-    tetto = float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "470") or 0)
+    tetto = float(os.environ.get("SUBITO_COMPLETO_MAX_MB", "0") or 0)
+    lg = logging.getLogger("lavoro")
+
+    def basta() -> bool:
+        if _rss_mb() <= tetto:
+            return False
+        _memoria.rilascia("subito_completo", forza=True)
+        _aspetta_memoria(lg, "SUBITO_COMPLETO", tetto)
+        return _rss_mb() > tetto
+    freno = tetto > 0 and rimandi < int(os.environ.get("SUBITO_COMPLETO_RIMANDI", "3"))
     try:
-        with (connetti or connect)() as conn:
-            st = tr.subito_completo_notte(conn, giorno, basta=(lambda: _rss_mb() > tetto) if tetto > 0 else None)
+        with con() as conn:
+            st = tr.subito_completo_notte(conn, giorno, basta=basta if freno else None)
     except BaseException as e:
         lav.fallito(e)
         raise
     finally:
         _memoria.rilascia("subito_completo", forza=True)
     if st.get("fermato_memoria"):
-        lav.rimanda(dict(st, memoria_mb=round(_rss_mb())))
+        lav.rimanda(dict(st, memoria_mb=round(_rss_mb()), rimando=rimandi + 1))
+        try:
+            with con() as conn:
+                conn.execute("INSERT INTO job_runs (job, finished_at, ok) VALUES (%s, now(), true)",
+                             ("subito_completo:" + giorno + ":rimandato",))
+                conn.commit()
+        except Exception as e:
+            lg.warning("SUBITO_COMPLETO rimando non contato: %s", str(e)[:150])
         return "rimandato"
     lav.fatto(st)
     return "fatto"
