@@ -47,9 +47,12 @@ UPSERT_SQL = """INSERT INTO valutazioni_policy (listing_id, policy_version, cate
    WHERE valutazioni_policy.impronta_auto IS DISTINCT FROM EXCLUDED.impronta_auto
       OR valutazioni_policy.impronta_regole IS DISTINCT FROM EXCLUDED.impronta_regole
       OR valutazioni_policy.computed_at < now() - make_interval(hours => %s)
-      OR COALESCE(EXCLUDED.n, 0) >= COALESCE(valutazioni_policy.n, 0)
+      OR (COALESCE(EXCLUDED.n, 0) >= COALESCE(valutazioni_policy.n, 0)
+          AND NOT (%s AND COALESCE((valutazioni_policy.dati->'ai_confronti'->>'tolti')::int, 0) > 0))
       OR %s
    RETURNING listing_id"""
+# 12/11 sera (controllo del giudice M5): penultimo parametro = proteggi (una riga giudicata dall'AI non si sostituisce
+# con una NON giudicata entro ore_validita, anche se ha più confronti); ultimo = la nuova è giudicata (si scrive sempre)
 # Database senza la migrazione 036 (colonne n, impronte, fonte, metodo): scrittura di prima, senza guardia nel database
 # (la guardia resta in deve_scrivere, sulle righe lette).
 UPSERT_SQL_VECCHIO = """INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, prima)
@@ -238,7 +241,8 @@ def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regol
         return True, "auto_cambiata"
     if esistente.get("impronta_regole") != imp_regole:
         return True, "regole_cambiate"
-    if giudicata_nuova and RG.regole().scrittura.giudice_vince:
+    vince = RG.regole().scrittura.giudice_vince
+    if giudicata_nuova and vince:
         return True, "giudicata"
     now = now or datetime.now(timezone.utc)
     ore = RG.regole().scrittura.ore_validita if ore is None else ore
@@ -251,6 +255,8 @@ def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regol
         if now - at > timedelta(hours=ore):
             return True, "vecchia"
     if int(n_nuovo or 0) >= int(esistente.get("n") or 0):
+        if vince and int(esistente.get("tolti") or 0) > 0:
+            return False, "giudicata_protetta"          # la riga salvata è giudicata, la nuova no
         return True, "dati_pari_o_piu"
     return False, "meno_confronti"
 
@@ -317,7 +323,7 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                         commercianti = RV.carica(conn, *key, HOME_REGION_SQL, rg) if rg.rivendita.attiva else None
                         # 12/11 sera (margini fase 2 punto 4): trazione e optional dalla scheda tecnica (dati_auto)
                         if usa_dot:
-                            mercato = DT.arricchisci(mercato, DT.carica_gruppo(conn, *key))
+                            mercato = DT.arricchisci(mercato, DT.carica_mercato(conn, mercato))
                     t["commercianti"] = commercianti
                     if usa_dot and lid in dot_auto:
                         t.update(dot_auto[lid])
@@ -362,7 +368,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     log.warning("VALUTAZIONE %s non riuscita (%s): %s", lid, fonte, str(e)[:200])
     if vecchi_vr:
         es.stats["valore_reale_vecchio"] = vecchi_vr
-    rif = sum(v for k, v in es.stats.items() if k in ("scrittura:meno_confronti", "scrittura:rifiutata_dal_database"))
+    rif = sum(v for k, v in es.stats.items() if k in ("scrittura:meno_confronti", "scrittura:rifiutata_dal_database",
+                                                       "scrittura:giudicata_protetta"))
     log.warning("VALUTAZIONE fonte=%s auto=%d rifiutate=%d %s", fonte, len(ordine), rif,
                 json.dumps(dict(es.stats), ensure_ascii=False))
     return es
@@ -371,7 +378,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
 def _salvate(conn, ids: list) -> dict:
     """Righe già salvate (per la guardia): n, impronte, data, categoria."""
     if _SCHEMA["nuovo"] is not False:
-        righe = _q(conn, "SELECT listing_id, n, impronta_auto, impronta_regole, computed_at, categoria "
+        righe = _q(conn, "SELECT listing_id, n, impronta_auto, impronta_regole, computed_at, categoria, "
+                         "COALESCE((dati->'ai_confronti'->>'tolti')::int, 0) AS tolti "
                          "FROM valutazioni_policy WHERE listing_id = ANY(%s) AND policy_version = %s",
                    (ids, P.POLICY_VERSION), "valutazioni salvate")
         if righe or _SCHEMA["nuovo"]:
@@ -390,7 +398,7 @@ def _scrivi(conn, lid, v: dict, pr, imp_a: str, imp_r: str, fonte: str, ore: int
         try:
             cur = conn.execute(UPSERT_SQL, (lid, P.POLICY_VERSION, v["categoria"], v.get("margine"), riass, dati, prj,
                                             int(v.get("n") or 0), imp_a, imp_r, fonte, v.get("metodo"), ore,
-                                            bool(giudicata_nuova)))
+                                            bool(RG.regole().scrittura.giudice_vince), bool(giudicata_nuova)))
             _SCHEMA["nuovo"] = True
             return cur.fetchone() is not None if hasattr(cur, "fetchone") else True
         except Exception as e:

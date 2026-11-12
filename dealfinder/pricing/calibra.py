@@ -162,8 +162,12 @@ def misura(conn) -> dict:
                 d["err_R"].append((R2 - prezzo) / prezzo * 100)
                 d["coperte"] += 1 if prezzo >= R2 else 0
     # 4/11: con quale correzione anno/km è stata misurata (il fattore cambia se cambia la regola: va rimisurato)
+    rg = cfg.regole
     out = {"vendute_lette": len(rows), "valutate": tot, "fasce": {}, "fasce_su": "M", "fasce_vr": {},
-           "fasce_prezzo": {}, "correzione_due_sensi": bool(cfg.due_sensi)}
+           "fasce_prezzo": {}, "correzione_due_sensi": bool(cfg.due_sensi),
+           # 12/11 sera (controllo del giudice M2): con quali regole è stata misurata (regole.calibrazione_vecchia)
+           "tassi_pooling": bool(rg.correzione.pooling and priori),
+           "correzione_due_sensi_alto": bool(rg.correzione.due_sensi_alto)}
     for chiave, dati in (("fasce", per), ("fasce_vr", per_vr), ("fasce_prezzo", per_prezzo)):
         for lim, f in FASCE:
             d = dati.get(f)

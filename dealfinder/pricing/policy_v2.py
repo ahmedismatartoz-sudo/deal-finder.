@@ -221,8 +221,9 @@ def _days(d, now):
     return (now - d).total_seconds() / 86400
 
 
-def _stima_gruppo(g: list[dict]):
-    """(ya, ka) dalla regressione del log-prezzo su anno e km del gruppo, oppure None."""
+def _stima_gruppo(g: list[dict], varianze: bool = False):
+    """(ya, ka) dalla regressione del log-prezzo su anno e km del gruppo, oppure None. varianze=True: anche le
+    pendenze in log (b_anno, b_km) e le loro varianze (σ²·(XᵀX)⁻¹), per il pooling pesato con la precisione."""
     try:
         import numpy as np
         y = np.log([c["price_eur"] for c in g])
@@ -230,7 +231,15 @@ def _stima_gruppo(g: list[dict]):
         if np.linalg.matrix_rank(X) < 3:
             return None
         beta = np.linalg.lstsq(X, y, rcond=None)[0]
-        return 1 - math.exp(-beta[1]), 1 - math.exp(beta[2])
+        st = (1 - math.exp(-beta[1]), 1 - math.exp(beta[2]))
+        if not varianze:
+            return st
+        if len(g) <= 3:
+            return None
+        res = y - X @ beta
+        s2 = float(res @ res) / (len(g) - 3)
+        cov = s2 * np.linalg.inv(X.T @ X)
+        return st + (float(beta[1]), float(beta[2]), float(cov[1, 1]), float(cov[2, 2]))
     except Exception:
         return None
 
@@ -252,23 +261,31 @@ def priore_tassi(priori: dict | None, make, c_) -> tuple[float, float, str]:
 
 def tassi(gruppo: list[dict], cfg: PolicyConfig, priori: dict | None = None, make=None) -> tuple[float, float, str]:
     """Svalutazione per anno e per 10.000 km.
-    Con il pooling (regole.correzione.pooling, 12/11 sera): stima del gruppo (almeno pooling_n_min annunci) ristretta
-    verso il tasso a priori (marca → tutti → riserva) con peso n / (n + pooling_k), sempre nei limiti.
-    Senza: stimata sul gruppo con almeno 15 annunci se i valori sono sensati, altrimenti quelli configurati."""
+    Regola di base: stimata sul gruppo con almeno 15 annunci se i valori sono sensati, altrimenti quelli configurati.
+    Pooling (regole.correzione.pooling, 12/11 sera, dopo il controllo del giudice A1): SOLO se la riga calibrazione ha i
+    tassi MISURATI (marca o tutti, lavoro CALIBRA); senza misura vale la regola di base (con i soli valori di riserva M
+    non cambia). La pendenza del gruppo, tagliata ai limiti PRIMA di mescolarla, si combina con quella a priori pesando
+    con le precisioni: w = (1/var_gruppo) / (1/var_gruppo + 1/τ²), var_gruppo = σ²/Σ(x−x̄)² dalla regressione."""
     g = [c for c in gruppo if c.get("year") and c.get("mileage_km") is not None and c.get("price_eur")]
     c_ = cfg.regole.correzione
     if c_.pooling:
         pa, pk, da = priore_tassi(priori, make, c_)
-        if cfg.svalutazione_anno != c_.svalutazione_anno or cfg.svalutazione_10km != c_.svalutazione_10km:
-            if da == "valori di riserva":                # PolicyConfig con riserva cambiata (prove): vale quella
-                pa, pk = cfg.svalutazione_anno, cfg.svalutazione_10km
-        st = _stima_gruppo(g) if len(g) >= c_.pooling_n_min else None
-        if st is None:
-            return pa, pk, f"a priori: {da}" if da != "valori di riserva" else "valori configurati"
-        w = len(g) / (len(g) + c_.pooling_k)
-        ya = min(c_.anno_max, max(c_.anno_min, w * st[0] + (1 - w) * pa))
-        ka = min(c_.km_max, max(c_.km_min, w * st[1] + (1 - w) * pk))
-        return float(ya), float(ka), f"stimata su {len(g)} annunci, ristretta verso {da} (peso {w:.2f})"
+        if da != "valori di riserva":
+            st = _stima_gruppo(g, varianze=True) if len(g) >= c_.pooling_n_min else None
+            if st is None:
+                return pa, pk, f"a priori: {da}"
+            lim_a = (-math.log(1 - c_.anno_min), -math.log(1 - c_.anno_max))
+            lim_k = (-math.log(1 - c_.km_min), -math.log(1 - c_.km_max))
+            # pendenze in log come svalutazione positiva, tagliate ai limiti prima di mescolare
+            ba = min(lim_a[1], max(lim_a[0], st[2]))
+            bk = min(lim_k[1], max(lim_k[0], -st[3]))
+            pa_l, pk_l = -math.log(1 - pa), -math.log(1 - pk)
+            wa = (1 / st[4]) / (1 / st[4] + 1 / c_.pooling_tau_anno ** 2) if st[4] > 0 else 0.0
+            wk = (1 / st[5]) / (1 / st[5] + 1 / c_.pooling_tau_km ** 2) if st[5] > 0 else 0.0
+            ya = 1 - math.exp(-(wa * ba + (1 - wa) * pa_l))
+            ka = 1 - math.exp(-(wk * bk + (1 - wk) * pk_l))
+            return float(ya), float(ka), (f"stimata su {len(g)} annunci, ristretta verso {da} "
+                                          f"(peso anno {wa:.2f}, km {wk:.2f})")
     if len(g) >= c_.stima_min_annunci:
         st = _stima_gruppo(g)
         if st is not None:

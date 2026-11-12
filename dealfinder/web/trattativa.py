@@ -29,16 +29,17 @@ PUNTI = (0, 7, 14, 21, 30, 45, 60, 90)          # età dell'annuncio (giorni) in
 N_MIN = 30                                       # annunci minimi in un gruppo per usarne la statistica
 STATS: dict = {"t": 0.0, "gruppi": {}, "n": 0, "in_corso": False, "modelli": {}, "attivi": {}, "esempi": {}}
 
+_STATS_DOVE = ("l.status = 'scomparso' AND l.disappeared_at > now() - interval '90 days' "
+               "AND COALESCE(l.disappear_reason, '') NOT IN ('scaduto', 'ripubblicato') "
+               "AND l.source IN ('subito', 'autoscout24') AND l.price_eur BETWEEN 1000 AND 100000 "
+               "AND l.disappeared_at > l.first_seen_at + interval '1 day'")
 STATS_SQL = [
     "DROP TABLE IF EXISTS _tr_v",
     """CREATE TEMP TABLE _tr_v AS
        SELECT l.id, l.price_eur AS ultimo, CASE WHEN l.seller_type = 'commerciante' THEN 'commerciante' ELSE 'privato' END AS vend,
               l.first_seen_at AS da, l.disappeared_at AS a
        FROM listings l
-       WHERE l.status = 'scomparso' AND l.disappeared_at > now() - interval '90 days'
-         AND COALESCE(l.disappear_reason, '') NOT IN ('scaduto', 'ripubblicato')
-         AND l.source IN ('subito', 'autoscout24') AND l.price_eur BETWEEN 1000 AND 100000
-         AND l.disappeared_at > l.first_seen_at + interval '1 day'
+       WHERE """ + _STATS_DOVE + """
        {ordine} LIMIT {tetto}""",
     "DROP TABLE IF EXISTS _tr_e",
     """CREATE TEMP TABLE _tr_e AS
@@ -92,10 +93,10 @@ def aggiorna_statistiche(conn) -> dict:
     """Ricalcola i gruppi (venditore, età, ribassi) dagli annunci spariti. Poche decine di righe in memoria."""
     for q in stats_sql():
         conn.execute(q)
-    try:
-        fin = conn.execute("SELECT count(*) AS n, extract(epoch FROM now() - min(a)) / 86400.0 AS giorni "
-                           "FROM _tr_v").fetchone()
-        finestra = {"campione": int(fin["n"]), "giorni_coperti": round(float(fin["giorni"] or 0), 1)}
+    try:     # quante sparite c'erano in tutto nei 90 giorni (prima del tetto) e quante sono nel campione
+        tot = conn.execute("SELECT count(*) AS n FROM listings l WHERE " + _STATS_DOVE).fetchone()
+        fin = conn.execute("SELECT count(*) AS n FROM _tr_v").fetchone()
+        finestra = {"campione": int(fin["n"]), "sparite_90g": int(tot["n"])}
     except Exception:
         finestra = {}
     rows = conn.execute(GRUPPI_SQL, {"punti": list(PUNTI)}).fetchall()
@@ -234,6 +235,10 @@ def _vuota(make, model, fuel, anno, n90) -> None:
     """12/11 sera (punto 6): una riga di log per modello quando la scheda non trova vendite simili (es. Fiat 500), con
     i nomi del modello che ci sono nei dati per la stessa marca: così si vede se è un problema di nomi."""
     k = (str(make).lower(), str(model).lower(), fuel, int(anno))
+    oggi = time.strftime("%Y-%m-%d")
+    if _VUOTE.get("_giorno") != oggi:          # una riga per modello al giorno (controllo del giudice: prima si smetteva)
+        _VUOTE.clear()
+        _VUOTE["_giorno"] = oggi
     if k in _VUOTE or len(_VUOTE) > 2000:
         return
     _VUOTE[k] = time.time()

@@ -34,7 +34,6 @@ _FLAG_SQL = {"pelle": r"(?i)\m(pelle|leather|cuoio)",
 _RIGHE_SQL = ("SELECT l.id, " + _TRAZ_SQL + " AS trazione_dati, (" + _OPT_SQL + ") IS NOT NULL AS opt_noti, "
               + ", ".join(f"COALESCE(({_OPT_SQL}) ~ '{rx}', false) AS {k}" for k, rx in _FLAG_SQL.items())
               + " FROM listings l WHERE l.dati_auto IS NOT NULL AND ")
-GRUPPO_SQL = _RIGHE_SQL + "l.status = 'attivo' AND l.make = %s AND l.model = %s AND l.fuel = %s"
 IDS_SQL = _RIGHE_SQL + "l.id = ANY(%s)"
 
 
@@ -65,9 +64,10 @@ def _righe(conn, sql: str, args) -> dict:
     return out
 
 
-def carica_gruppo(conn, make, model, fuel) -> dict:
-    """{id: {"trazione_dati", "opt"}} degli annunci attivi del gruppo con la scheda tecnica."""
-    return _righe(conn, GRUPPO_SQL, (make, model, fuel))
+def carica_mercato(conn, mercato: list[dict]) -> dict:
+    """{id: {"trazione_dati", "opt"}} dei SOLI confronti già caricati (controllo del giudice M4: prima tutto il gruppo
+    attivo in Italia)."""
+    return carica_ids(conn, [m["id"] for m in mercato if m.get("id") is not None])
 
 
 def carica_ids(conn, ids: list) -> dict:

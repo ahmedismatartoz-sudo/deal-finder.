@@ -26,7 +26,9 @@ def _cfg(**campi):
 
 def test_interruttori_e_default():
     r = RG.regole()
-    assert r.correzione.pooling and r.calibrazione.vr_nel_combinato and r.trazione.attiva
+    assert r.correzione.pooling and r.calibrazione.vr_nel_combinato
+    assert not r.trazione.attiva                      # giudice M3: spenta finché la prova alla cieca non la conferma
+    assert RG.VERSIONE == "regole-2026-11-12a"
     assert not r.forbice.attiva                       # 12/11 notte: il cliente non vuole la forbice nella scheda
     assert r.scrittura.giudice_vince
     # le novità che possono ALZARE un prezzo restano spente
@@ -34,10 +36,10 @@ def test_interruttori_e_default():
     for nome in ("TASSI_POOLING", "CORREZIONE_DUE_SENSI_ALTO", "CALIBRA_VR_COMBINATO", "CALIBRA_ALZA",
                  "TRAZIONE_LIVELLI", "DOTAZIONI_PREZZO", "RIVENDITA_FORBICE", "GIUDICE_VINCE"):
         assert nome in RG.INTERRUTTORI
-    r0 = RG.regole({"TASSI_POOLING": "0", "TRAZIONE_LIVELLI": "0"})
-    assert not r0.correzione.pooling and not r0.trazione.attiva
+    r0 = RG.regole({"TASSI_POOLING": "0", "TRAZIONE_LIVELLI": "1"})
+    assert not r0.correzione.pooling and r0.trazione.attiva
     prima = RG.con_campi(r, RG.NOVITA_FASE2)
-    assert not prima.correzione.pooling and not prima.calibrazione.vr_nel_combinato and not prima.trazione.attiva
+    assert not prima.correzione.pooling and not prima.calibrazione.vr_nel_combinato
     assert RG.impronta(prima) != RG.impronta(r)
 
 
@@ -105,21 +107,66 @@ def test_priore_tassi_marca_tutti_riserva():
     assert P.priore_tassi(None, "fiat", c_)[:2] == (c_.svalutazione_anno, c_.svalutazione_10km)
 
 
-def test_pooling_restringe_e_resta_nei_limiti():
-    g = [car(100 + i, 0, year=2014 + i % 6, km=30000 + i * 9000) for i in range(12)]
-    for c in g:                                         # vero: 10% per anno, 3% ogni 10.000 km
-        c["price_eur"] = int(10000 * 1.1 ** (c["year"] - 2014) * .97 ** (c["mileage_km"] / 10000))
-    ya, ka, origine = P.tassi(g, CFG)
-    w = 12 / (12 + RG.regole().correzione.pooling_k)
-    assert "ristretta" in origine and abs(ka - (w * .03 + (1 - w) * .012)) < .002
-    assert abs(ya - (w * (1 - 1 / 1.1) + (1 - w) * .08)) < .003
+def _gruppo(n, a, k, sd, anni, seme, base=20000):
+    import random
+    rnd = random.Random(seme)
+    g = []
+    for i in range(n):
+        y, km = rnd.randint(*anni), rnd.randint(20000, 150000)
+        g.append(car(100 + i, round(base * (1 - a) ** (2022 - y) * (1 - k) ** (km / 10000) * math.exp(rnd.gauss(0, sd))),
+                     year=y, km=km))
+    return g
+
+
+PRIORI = {"tutti": {"anno": .08, "km_10000": .012, "n": 50000}}
+
+
+def test_pooling_senza_misura_regola_di_prima():
+    """Giudice A1 (pool*.py): con i soli valori di riserva M non deve cambiare (né salire) rispetto a prima."""
+    import statistics as S
+    vecchio = _cfg(**{"correzione.pooling": False})
+    corr = RG.regole().correzione
+    for seme in range(40):
+        for (n, a, k, sd, anni) in ((60, .14, .02, .12, (2014, 2022)), (40, .08, .012, .20, (2019, 2021)),
+                                    (20, .10, .015, .15, (2020, 2021)), (10, .12, .02, .15, (2016, 2022))):
+            g = _gruppo(n, a, k, sd, anni, seme)
+            assert P.tassi(g, CFG) == P.tassi(g, vecchio)
+            assert P.tassi(g, CFG, {"marche": {}}, "volkswagen") == P.tassi(g, vecchio)
+            t = car(1, 1, year=anni[0], km=120000)
+            assert S.median(P.prezzo_corretto(c, t, *P.tassi(g, CFG)[:2], corr) for c in g) == \
+                S.median(P.prezzo_corretto(c, t, *P.tassi(g, vecchio)[:2], corr) for c in g)
+
+
+def test_pooling_con_misura_taglia_e_pesa_con_la_precisione():
+    c_ = RG.regole().correzione
+    # stima grezza fuori limite (anno negativo, x poco variabile): tagliata PRIMA di mescolare → mai sotto il minimo
+    for seme in range(200):
+        g = _gruppo(40, .08, .012, .20, (2019, 2021), seme)
+        st = P._stima_gruppo(g)
+        if st and st[0] < -.03:
+            break
+    ya, ka, o = P.tassi(g, CFG, PRIORI, "volkswagen")
+    assert c_.anno_min <= ya <= .08 and "ristretta" in o
+    # gruppo grande e anni ampi: pesa la stima del gruppo; gruppo con anni vicini (poco informativo): pesa il priore
+    g = _gruppo(200, .14, .02, .05, (2012, 2022), 1)
+    ya, ka, o = P.tassi(g, CFG, PRIORI, "volkswagen")
+    assert abs(ya - .14) < .01 and abs(ka - .02) < .003
+    g2 = _gruppo(15, .14, .02, .15, (2021, 2022), 2)
+    ya2, _, o2 = P.tassi(g2, CFG, PRIORI, "volkswagen")
+    assert abs(ya2 - .08) < abs(ya2 - .14)
+    # priore della marca misurato su abbastanza annunci
     pr = {"marche": {"volkswagen": {"anno": .1, "km_10000": .03, "n": 1000}}}
-    ya2, ka2, o2 = P.tassi(g, CFG, pr, "volkswagen")
-    assert "marca" in o2 and abs(ka2 - .03) < .002
     ya3, ka3, o3 = P.tassi(g[:3], CFG, pr, "volkswagen")                 # troppo pochi: solo il priore
-    assert (round(ya3, 4), round(ka3, 4)) == (.1, .03) and "a priori" in o3
-    # regola di prima: 12 annunci (< 15) → riserva
-    assert P.tassi(g, _cfg(**{"correzione.pooling": False}))[2] == "valori configurati"
+    assert (round(ya3, 4), round(ka3, 4)) == (.1, .03) and "marca" in o3
+    assert P.tassi(g, _cfg(**{"correzione.pooling": False}))[2] == "stimata su 200 annunci"
+
+
+def test_calibrazione_vecchia_con_pooling_e_due_sensi_alto():
+    base = {"fasce": {"<5k": {"n": 50, "prezzo_su_M": .8}}, "fasce_su": "M", "correzione_due_sensi": False}
+    assert not RG.calibrazione_vecchia(base)
+    assert RG.calibrazione_vecchia(dict(base, tassi={"tutti": {}}))                  # tassi nuovi, misura senza pooling
+    assert not RG.calibrazione_vecchia(dict(base, tassi={"tutti": {}}, tassi_pooling=True))
+    assert RG.calibrazione_vecchia(dict(base, correzione_due_sensi_alto=True))
 
 
 def test_tassi_da_somme_della_misura():
@@ -158,8 +205,11 @@ def test_trazione_di():
     assert DT.trazione_di({"version_raw": "1.6 TDI"}) is None
 
 
+TR_ON = {"trazione.attiva": True}
+
+
 def test_trazione_a_livelli():
-    r = RG.regole()
+    r = RG.con_campi(RG.regole(), TR_ON)
     q = [dict(car(100 + i, 20000), version_raw="2.0 TDI 4motion") for i in range(3)]
     d = [dict(car(200 + i, 17000), version_raw="2.0 TDI") for i in range(6)]
     t4 = dict(car(1, 15000), version_raw="2.0 TDI 4Motion")
@@ -180,8 +230,8 @@ def test_trazione_nella_valutazione():
     q = [dict(car(100 + i, 21000 + i * 100, km=90000 + i * 300), version_raw="2.0 TDI 4motion") for i in range(6)]
     d = [dict(car(200 + i, 17000 + i * 100, km=90000 + i * 300), version_raw="2.0 TDI") for i in range(10)]
     t4 = dict(car(1, 16000), version_raw="2.0 TDI 4motion")
-    v = P.valuta(t4, q + d, 3200, CFG, NOW)
-    v0 = P.valuta(t4, q + d, 3200, _cfg(**{"trazione.attiva": False}), NOW)
+    v = P.valuta(t4, q + d, 3200, _cfg(**TR_ON), NOW)
+    v0 = P.valuta(t4, q + d, 3200, CFG, NOW)                               # spenta di default
     assert v["n_gemelle"] == 6 and v0["n_gemelle"] == 16 and v["M"] > v0["M"]
     assert v["non_equivalenti"].get("trazione diversa (non 4x4)") == 10
 
@@ -213,7 +263,7 @@ def test_dotazioni_senza_colonna_nessuna_query():
     orig = DB.ha_colonna
     DB.ha_colonna = lambda conn, nome: False
     try:
-        assert DT.carica_gruppo(Conn(), "fiat", "panda", "benzina") == {} and DT.misura(Conn()) == {}
+        assert DT.carica_mercato(Conn(), [{"id": 1}]) == {} and DT.misura(Conn()) == {}
     finally:
         DB.ha_colonna = orig
 
@@ -259,13 +309,19 @@ def test_forbice_non_compare_sul_sito():
 # ------------------------------------------------------------------ guardia delle 36 ore
 
 def test_giudicata_si_scrive_sempre():
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
     ora = datetime.now(timezone.utc)
     es = {"n": 20, "impronta_auto": "a", "impronta_regole": "r", "computed_at": ora}
     assert VZ.deve_scrivere(es, 12, "a", "r", ora) == (False, "meno_confronti")
     assert VZ.deve_scrivere(es, 12, "a", "r", ora, giudicata_nuova=True) == (True, "giudicata")
+    # giudice M5: una NON giudicata non sostituisce una giudicata entro ore_validita, anche con più confronti
+    gi = dict(es, tolti=4)
+    assert VZ.deve_scrivere(gi, 30, "a", "r", ora) == (False, "giudicata_protetta")
+    assert VZ.deve_scrivere(gi, 30, "a", "r", ora, giudicata_nuova=True)[0]
+    assert VZ.deve_scrivere(gi, 30, "b", "r", ora) == (True, "auto_cambiata")
+    assert VZ.deve_scrivere(dict(gi, computed_at=ora - timedelta(hours=40)), 30, "a", "r", ora) == (True, "vecchia")
     assert VZ.giudicata({"ai_confronti": {"tolti": 3}}) and not VZ.giudicata({"ai_confronti": {"tolti": 0}})
-    assert "OR %s" in VZ.UPSERT_SQL and VZ.UPSERT_SQL.count("%s") == 14
+    assert "OR %s" in VZ.UPSERT_SQL and VZ.UPSERT_SQL.count("%s") == 15 and "'tolti'" in VZ.UPSERT_SQL
 
 
 # ------------------------------------------------------------------ statistiche della scheda
@@ -276,6 +332,11 @@ def test_statistiche_scheda_campione_uniforme():
     q0 = TR.stats_sql(False)[1]
     assert "ORDER BY l.disappeared_at DESC LIMIT 40000" in q0
     assert all("{" not in x for x in TR.stats_sql(True))
+    TR._VUOTE.clear()
+    TR._vuota("fiat", "500", "benzina", 2018, 0)
+    TR._VUOTE["_giorno"] = "2000-01-01"                                    # il giorno dopo si ricomincia
+    TR._vuota("fiat", "500", "benzina", 2018, 0)
+    assert ("fiat", "500", "benzina", 2018) in TR._VUOTE and TR._VUOTE["_giorno"] != "2000-01-01"
 
 
 # ------------------------------------------------------------------ prova alla cieca

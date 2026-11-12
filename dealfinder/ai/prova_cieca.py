@@ -237,7 +237,7 @@ def rivaluta(conn, lid: int, varianti: dict, cache: dict) -> dict:
         cache["_ing"] = ing
         mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                    for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
-        cache.update(_chiave=key, _mercato=DT.arricchisci(mercato, DT.carica_gruppo(conn, *key)))
+        cache.update(_chiave=key, _mercato=DT.arricchisci(mercato, DT.carica_mercato(conn, mercato)))
     confronti = [m for m in cache["_mercato"] if m.get("id") != lid]
     out = {}
     for nome, rg in varianti.items():

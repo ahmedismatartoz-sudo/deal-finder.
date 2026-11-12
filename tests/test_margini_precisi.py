@@ -224,8 +224,10 @@ def test_tasso_km_minimo():
     cfg0 = P.PolicyConfig(RG.con_campi(RG.regole(), {"correzione.pooling": False}))
     ya, ka, origine = P.tassi(g, cfg0)
     assert origine == "valori configurati" and ka == RG.regole().correzione.svalutazione_10km
-    # con il pooling: la stima 0% si restringe verso la riserva e resta almeno km_min
-    ya, ka, origine = P.tassi(g, CFG)
+    # con il pooling ma senza tassi misurati (12/11 sera, giudice A1): la regola di prima
+    assert P.tassi(g, CFG) == (ya, ka, origine)
+    # con i tassi misurati: la stima 0%, tagliata al minimo, si mescola e resta almeno km_min
+    ya, ka, origine = P.tassi(g, CFG, {"tutti": {"anno": .08, "km_10000": .015, "n": 9000}}, "volkswagen")
     assert "ristretta" in origine and ka >= RG.regole().correzione.km_min
 
 

@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 
 log = logging.getLogger("config")
 
-VERSIONE = "regole-2026-11-12b"
+VERSIONE = "regole-2026-11-12a"
 
 
 @dataclass(frozen=True)
@@ -87,12 +87,15 @@ class Correzione:
     anno_max: float = .25
     km_min: float = .008               # 12/11 (rapporto 2 E8): almeno 0,8% ogni 10.000 km (prima anche 0%)
     km_max: float = .05
-    # 12/11 sera (margini fase 2, punto 3): pooling gerarchico dei tassi modello → marca → tutti. La stima del gruppo
-    # (almeno pooling_n_min annunci) si restringe verso il tasso a priori con peso n / (n + pooling_k); a priori = la
-    # marca (misurata su almeno pooling_marca_min annunci, calibra.py "tassi") → tutti → riserva. Sempre nei limiti.
+    # 12/11 sera (margini fase 2, punto 3): pooling gerarchico dei tassi modello → marca → tutti, SOLO con i tassi
+    # misurati dal lavoro CALIBRA (calibra.py "tassi"); senza misura la regola di prima. La pendenza del gruppo (almeno
+    # pooling_n_min annunci), tagliata ai limiti, si combina con quella a priori pesando con le precisioni; τ = quanto
+    # i modelli di una marca differiscono tra loro (in log per anno e per 10.000 km). Marca solo se misurata su almeno
+    # pooling_marca_min annunci.
     pooling: bool = True               # False = regola di prima (stima del gruppo o riserva)
     pooling_n_min: int = 5
-    pooling_k: int = 40
+    pooling_tau_anno: float = .03
+    pooling_tau_km: float = .006
     pooling_marca_min: int = 300
     # 12/11 sera (punto 2): correzione nei due sensi solo per auto da due_sensi_da € in su. SPENTA: alza M; si accende
     # solo se la prova sulle vendute (prova_correzione, prova alla cieca "tutte") dice che è più precisa
@@ -239,7 +242,7 @@ class Trazione:
     altrimenti il testo). Auto 4x4: solo confronti 4x4 se sono almeno n_minimo; auto non 4x4: via i confronti 4x4
     riconosciuti se ne restano almeno n_minimo; confronti 4x4 in maggioranza e auto senza indicazione: nessun filtro
     (modello quasi sempre 4x4). Non cambia prezzi, sceglie i confronti. Interruttore TRAZIONE_LIVELLI."""
-    attiva: bool = True
+    attiva: bool = False               # spenta finché la prova alla cieca prima/dopo non dice che è più precisa
     maggioranza: float = .5
 
 
@@ -508,9 +511,16 @@ def calibrazione_vecchia(dati: dict | None, r: Regole | None = None) -> bool:
     correzione anno/km diversa da quella in vigore, oppure (12/11) per fascia di prezzo e non di M."""
     if not dati:
         return False
+    r = r or regole()
     if dati.get("fasce") and dati.get("fasce_su") != "M":
         return True
-    return bool(dati.get("correzione_due_sensi", False)) != bool((r or regole()).correzione.due_sensi)
+    # 12/11 sera (controllo del giudice M2): misura fatta con un pooling dei tassi o una correzione sopra 20.000 €
+    # diversi da quelli in vigore (chiavi assenti nelle misure di prima = spenti)
+    if bool(dati.get("tassi_pooling", False)) != bool(r.correzione.pooling and dati.get("tassi")):
+        return True
+    if bool(dati.get("correzione_due_sensi_alto", False)) != bool(r.correzione.due_sensi_alto):
+        return True
+    return bool(dati.get("correzione_due_sensi", False)) != bool(r.correzione.due_sensi)
 
 
 def _fascia_di(M: float, r: Regole) -> str:
