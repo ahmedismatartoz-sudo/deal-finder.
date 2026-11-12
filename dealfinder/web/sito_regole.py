@@ -182,6 +182,21 @@ class Regole:
     perizia_ombra: bool = False
     perizia_scarto: float = 0.10      # stima media del perito sotto R di oltre il 10%: margine prudente + avviso
     perizia_basta_jev: bool = True    # una decisione Jev valida conta come controllo (non serve aspettare la perizia)
+    # 13/11 (ramo piu-auto, cliente: "più auto senza cambiare le regole"): tre correzioni di falsi scarti, ognuna con
+    # il suo interruttore (default nel codice, acceso):
+    #  versione_tecnica (VERSIONE_TECNICA): "versioni molto diverse" dell'AI non toglie l'auto se i confronti hanno la
+    #    stessa scheda tecnica (potenza, cilindrata, generazione): la differenza era solo nel nome dell'allestimento
+    #    (pricing/versione_tecnica.py, calcolata al caricamento in _r["versione_tecnica"]);
+    #  sconto_ai (SCONTO_ALTO_AI): sconto in euro oltre il limite della fascia → entra solo se il controllo Claude
+    #    (ai/controllo_auto.py, domanda NON circolare: senza il nostro margine) conferma annuncio vero e coerente, foto
+    #    viste, niente truffa, niente perizia "caro"/"da verificare"; sempre con l'avviso "Verificare prima di pagare".
+    #    I segnali duri (45%/35%, sconto massimo 40%, testo, numero estero) restano esclusi come prima;
+    #  ripiego (RIPIEGO_PRUDENTE): auto "dati insufficienti" con una stima prudente da due fonti indipendenti che
+    #    concordano (pricing/ripiego_prudente.py): entra come candidato, con l'avviso e solo dopo il controllo AI.
+    versione_tecnica: bool = True
+    sconto_ai: bool = True
+    sconto_ai_vera: float = 0.7       # auto_vera minima (probabilità che l'annuncio sia vero e coerente)
+    ripiego: bool = True
 
     @classmethod
     def da_env(cls) -> "Regole":
@@ -194,7 +209,9 @@ class Regole:
                    fascia_fuori_max=int(e("FASCIA_FUORI_ZONA_MAX", "100")),
                    tratta_max=_fasce_tratta(e("TRATTA_MAX", "7000:500,1000000000:700")),
                    perizia=e("PERIZIA_AI", "log").strip().lower() == "1",
-                   perizia_ombra=e("PERIZIA_AI", "log").strip().lower() == "log")
+                   perizia_ombra=e("PERIZIA_AI", "log").strip().lower() == "log",
+                   versione_tecnica=e("VERSIONE_TECNICA", "1") == "1", sconto_ai=e("SCONTO_ALTO_AI", "1") == "1",
+                   ripiego=e("RIPIEGO_PRUDENTE", "1") == "1")
 
     def impronta(self) -> str:
         import dataclasses
@@ -230,7 +247,12 @@ def r_valutata(it, g: Regole):
     if not isinstance(pv, dict):
         return "senza_valutazione"
     if pv.get("categoria") == "dati_insufficienti":
-        return "dati_insufficienti"
+        rip = _r(it).get("ripiego")
+        if not (g.ripiego and isinstance(rip, dict) and rip.get("margine") is not None and rip.get("M")):
+            return "dati_insufficienti"
+        # 13/11: stima prudente da due fonti indipendenti (pricing/ripiego_prudente.py); candidato, avviso, controllo AI
+        it["pv"] = pv = dict(pv, **rip, categoria="candidato", serve_controllo_ai=True, ripiego_prudente=True)
+        it["ripiego_prudente"] = True
     if super_senza_margine(it, g) and pv.get("M") is not None and it.get("prezzo"):
         return None
     if pv.get("margine") is None or pv.get("M") is None or (pv.get("R_finale") is None and pv.get("R") is None):
@@ -363,6 +385,9 @@ def r_jev(it, g):
     if float(j.get("danni") or 0) >= g.jev_danni and not it.get("incidentata"):
         return "danni_nelle_foto"
     if j.get("versione_ok") is not None and float(j["versione_ok"]) < g.jev_versione_forte:
+        if g.versione_tecnica and r.get("versione_tecnica") == "uguale":
+            it["versione_solo_nome"] = True    # 13/11: stessa scheda tecnica, diverso solo il nome dell'allestimento
+            return None
         return "versioni_molto_diverse"
     return None
 
@@ -534,6 +559,30 @@ def sconto_da_controllare(it, g: Regole) -> bool:
     return (M - p) > lim
 
 
+def sconto_confermato_ai(it, g: Regole) -> bool:
+    """13/11 (piu-auto): un'auto con sconto alto entra solo se il controllo Claude ha visto le foto e conferma un
+    annuncio vero e coerente, senza segni di truffa, dati coerenti, niente danni o foto da internet, e la perizia (se
+    c'è) non dice "caro" o "da verificare". Le decisioni di Jev non bastano (la sua domanda di truffa era circolare)."""
+    r = _r(it)
+    j = r.get("jev") or {}
+    if not g.sconto_ai or j.get("fonte") != "claude":
+        return False
+    if j.get("danni") is None:                      # foto non viste: non si può confermare
+        return False
+    if float(j.get("auto_vera") or 0) < g.sconto_ai_vera or float(j.get("truffa") or 1) >= g.truffa_avviso:
+        return False
+    if j.get("dati_coerenti") is not None and float(j["dati_coerenti"]) < 0.5:
+        return False
+    if float(j.get("foto_internet") or 0) >= 0.5 or float(j.get("danni") or 0) >= g.jev_danni:
+        return False
+    if j.get("decisione") == "scarta":
+        return False
+    p = r.get("perizia") or {}
+    if p.get("giudizio") in ("caro", "da verificare"):
+        return False
+    return True
+
+
 def esito_truffa(it, g: Regole) -> tuple[str, str]:
     """('tieni'|'avviso'|'fuori', motivo). Studio 6 §4 con le regole del cliente."""
     r = _r(it)
@@ -559,6 +608,9 @@ def esito_truffa(it, g: Regole) -> tuple[str, str]:
         return "fuori", "truffa_probabile"
     controllo = sconto_da_controllare(it, g)
     if controllo and (not j or p >= g.ai_pulita):
+        if sconto_confermato_ai(it, g):
+            it["sconto_confermato_ai"] = True
+            return "avviso", "sconto_alto_confermato_ai"
         return "fuori", "sconto_alto_da_controllare"
     if p >= g.truffa_avviso - meno:
         return "avviso", "truffa_da_verificare"
@@ -712,6 +764,9 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         it.pop("fuori_zona_km", None)
         it.pop("perizia_verifica", None)
         it.pop("_perizia_attesa", None)
+        it.pop("sconto_confermato_ai", None)
+        it.pop("versione_solo_nome", None)
+        it.pop("ripiego_prudente", None)
     for nome, f in REGOLE:
         items = _applica(items, nome, f, g, fun)
     from collections import Counter
@@ -746,6 +801,8 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
             it["avviso_verifica"] = False
         if it.get("perizia_verifica"):
             it["avviso_verifica"] = True        # 12/11: stima del perito molto sotto R o perizia "da verificare"
+        if it.get("ripiego_prudente") or it.get("sconto_confermato_ai"):
+            it["avviso_verifica"] = True        # 13/11: stima di ripiego o sconto alto confermato dall'AI
     if scrivi_log:
         log.warning("SITO_FUNNEL %s", json.dumps({"regole": g.impronta(), "finale": len(items),
                                                   "fascia_finale": sum(1 for it in items if fascia(it)),
@@ -755,6 +812,9 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "avvisi_perizia": sum(1 for it in items if it.get("perizia_verifica")),
                                                   **({"perizia_ombra": ombra} if ombra else {}),
                                                   "da_trattare": sum(1 for it in items if it.get("trattare")),
+                                                  "piu_auto": {"sconto_alto_confermate": sum(1 for it in items if it.get("sconto_confermato_ai")),
+                                                               "versione_solo_nome": sum(1 for it in items if it.get("versione_solo_nome")),
+                                                               "ripiego_prudente": sum(1 for it in items if it.get("ripiego_prudente"))},
                                                   "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},
                                                   "passi": fun.passi}, ensure_ascii=False, default=str))

@@ -1568,7 +1568,9 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
                 "(d.risposta->'guasto'->>'noul')::float AS guasto, (d.risposta->'prezzo_rata'->>'noul')::float AS rata, "
                 "(d.risposta->'km_credibili'->>'noul')::float AS km_ok, "
                 "(COALESCE(d.risposta->'danni_foto', d.risposta->'answers'->'danni_foto')->>'noul')::float AS danni, "
-                "(COALESCE(d.risposta->'foto_internet', d.risposta->'answers'->'foto_internet')->>'noul')::float AS foto_internet "
+                "(COALESCE(d.risposta->'foto_internet', d.risposta->'answers'->'foto_internet')->>'noul')::float AS foto_internet, "
+                # 13/11 (piu-auto): controllo Claude al posto di Jev (ai/controllo_auto.py): annuncio vero e coerente
+                "(d.risposta->'auto_vera'->>'noul')::float AS auto_vera, d.risposta->>'_fonte' AS fonte "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
                 "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
         except Exception as e:
@@ -1576,6 +1578,8 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
             jev_errore = True          # fail closed: le auto da controllare restano fuori (regola truffa)
             logging.getLogger("scovo").warning("JEV decisioni non lette: %s", str(e)[:200])
         perizie, perizia_errore = _perizie_lette(conn, ids)        # 12/11: perizia AI (ai/perizia.py)
+        from . import piu_auto as _piu                             # 13/11 (piu-auto): versione tecnica, ripiego
+        versioni, ripieghi = _piu.dati_caricamento(conn, items, jev, stats)
     difetti = _difetti_letti(ids)
     stats["jev_decise"] = len(jev)
     stats["jev_errore"] = int(jev_errore)
@@ -1584,7 +1588,8 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
         r = dict(dati.get(it["id"]) or {}, **(it.get("_r") or {}))
         r.update(loconte=it["id"] in loconte, jev=jev.get(it["id"]), jev_errore=jev_errore,
                  difetto=difetti.get(it["id"]), valutazione_nuova=_dopo(pv_at.get(it["id"]), COMMERCIANTI_VALUTATI_DAL),
-                 perizia=perizie.get(it["id"]), perizia_errore=perizia_errore)
+                 perizia=perizie.get(it["id"]), perizia_errore=perizia_errore,
+                 versione_tecnica=versioni.get(it["id"]), ripiego=ripieghi.get(it["id"]))
         if it.get("supercar"):
             r["seller_type"] = "privato"           # SITO_SQL e la query lusso prendono solo privati
         it["_r"] = r
@@ -1612,17 +1617,22 @@ def _coda_perizia(items: list[dict], out: list[dict]) -> None:
         logging.getLogger("scovo").warning("PERIZIA coda non aggiornata: %s", str(e)[:200])
 
 
-def _carica_candidati() -> tuple[list[dict], dict, dict]:
-    """Caricamento (l'unico punto col database): elenco, sezione economiche, supercar, poi i dati per le regole."""
-    from collections import Counter
-    stats: Counter = Counter()
-    with connect() as conn:
-        # 28/10: senza ORDER BY il LIMIT prendeva ogni volta 3000 righe a caso: il sito oscillava tra 70 e 170 auto
-        # 12/11 (memoria): le righe si trasformano una alla volta in schede compatte, senza tenere in memoria la
-        # lista di ~8.000 righe grezze (con i JSON della valutazione) insieme alle schede
-        items, opens, pv_at, con_pv = [], {}, {}, 0
-        for r in conn.execute(scovo.LIST_SQL + " ORDER BY l.id DESC LIMIT %(lim)s",
-                              {"me": 0, "lim": int(os.environ.get("ELENCO_LIMITE", "8000"))}):
+def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
+    """Righe dell'elenco (scovo.LIST_SQL) trasformate una alla volta in schede compatte."""
+    items, opens, pv_at, con_pv = [], {}, {}, 0
+    # 13/11 (piu-auto): a pagine di ELENCO_PAGINA righe (2.000) per id decrescente, fino a ELENCO_LIMITE (12.000;
+    # prima 8.000 in una lettura sola). Misura: ~2,2 KB per scheda → +9 MB per 4.000 auto in più, mentre le righe
+    # grezze in memoria insieme scendono da 8.000 a 2.000. Se il tetto taglia, una riga ELENCO_TAGLIATO nei log.
+    limite = int(os.environ.get("ELENCO_LIMITE", "12000"))
+    pagina = max(200, int(os.environ.get("ELENCO_PAGINA", "2000")))
+    ultimo = None
+    while stats["lista"] < limite:
+        n_pag = 0
+        for r in conn.execute(scovo.LIST_SQL + (" AND l.id < %(ultimo)s" if ultimo else "")
+                              + " ORDER BY l.id DESC LIMIT %(lim)s",
+                              {"me": 0, "lim": min(pagina, limite - stats["lista"]), "ultimo": ultimo}):
+            n_pag += 1
+            ultimo = r["id"]
             stats["lista"] += 1
             con_pv += 1 if r.get("pv") else 0
             it = scovo.item(r)
@@ -1632,6 +1642,24 @@ def _carica_candidati() -> tuple[list[dict], dict, dict]:
             items.append(it)
             opens[it["id"]] = int(r["opens"] or 0)
             pv_at[it["id"]] = r.get("pv_at")
+        if n_pag < min(pagina, limite - stats["lista"] + n_pag):
+            break                                   # pagina incompleta: elenco finito
+    if stats["lista"] >= limite:
+        stats["lista_tagliata"] = 1
+        logging.getLogger("scovo").warning("ELENCO_TAGLIATO elenco fermo al tetto ELENCO_LIMITE=%d (id più basso "
+                                           "letto %s): le auto più vecchie restano fuori", limite, ultimo)
+    return items, opens, pv_at, con_pv
+
+
+def _carica_candidati() -> tuple[list[dict], dict, dict]:
+    """Caricamento (l'unico punto col database): elenco, sezione economiche, supercar, poi i dati per le regole."""
+    from collections import Counter
+    stats: Counter = Counter()
+    with connect() as conn:
+        # 28/10: senza ORDER BY il LIMIT prendeva ogni volta 3000 righe a caso: il sito oscillava tra 70 e 170 auto
+        # 12/11 (memoria): le righe si trasformano una alla volta in schede compatte, senza tenere in memoria la
+        # lista di ~8.000 righe grezze (con i JSON della valutazione) insieme alle schede
+        items, opens, pv_at, con_pv = _leggi_elenco(conn, stats)
     scovo.POLICY_PRONTA["ok"] = con_pv >= max(1, stats["lista"] // 2)
     gia = {it["id"] for it in items}
     # sezione economiche (regola di sempre: auto di privati dal 2010 fino a ECONOMICHE_MAX, valutate dalla policy con
@@ -1742,6 +1770,11 @@ def _calcola_elenco() -> None:
     out, fun = SR.elenco_sito(items, g=_g, caricamento=stats)
     # auto tolte solo perché il numero non è mai stato letto: le ricontrolla il lavoro telefoni_candidate
     _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
+    try:      # 13/11 (piu-auto): le tolte solo per il numero con margine già sopra il minimo, prima delle altre
+        from ..pipeline import telefono_nascosto as _tn
+        _tn.segna_prioritari(items, fun.tolti.get("telefono", []), fonte)
+    except Exception as e:
+        logging.getLogger("scovo").warning("TEL_NASCOSTO prioritari non segnati: %s", str(e)[:200])
     _coda_perizia(items, out)
     for it in out:
         it.pop("_r", None)

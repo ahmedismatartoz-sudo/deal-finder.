@@ -712,31 +712,68 @@ def telefoni_candidate(conn, ids) -> Counter:
     tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi
     oltre le pagine del giro giornaliero). Si apre la pagina una volta e si salva sì/no (mai il numero).
     Ogni auto al massimo una volta ogni TEL_CAND_ORE ore (12)."""
+    from . import telefono_nascosto as TN
     stats: Counter = Counter()
     ids = [int(i) for i in ids][:5000]
     if not ids:
         return stats
+    # 13/11 (piu-auto): Subito anche dall'interfaccia di ricerca (telefono_nascosto), solo per le auto PRIORITARIE
+    # (margine già sopra il minimo); prima le prioritarie, poi le altre
+    prio = sorted(i for i in TN.PRIORITARI if i in set(ids)) if TN.attivo() else []
+    TN.inizio_giro()
     rows = conn.execute(
-        "SELECT id, source, source_id, url FROM listings WHERE id = ANY(%s) AND status='attivo' "
-        "AND (source = 'autoscout24' OR (source = 'subito' AND %s)) "
+        "SELECT id, source, source_id, url, make, model, price_eur, province FROM listings WHERE id = ANY(%s) "
+        "AND status='attivo' AND (source = 'autoscout24' OR (source = 'subito' AND (%s OR id = ANY(%s)))) "
         "AND telefono_ok IS NOT TRUE AND (telefono_at IS NULL OR telefono_at < now() - make_interval(hours => %s)) "
-        "ORDER BY telefono_at NULLS FIRST LIMIT %s",
+        "ORDER BY (id = ANY(%s)) DESC, telefono_at NULLS FIRST LIMIT %s",
         (ids, os.environ.get("TEL_CAND_SUBITO", "0") == "1",       # Subito: la pagina pubblica dice sempre showPhone=false
-         int(os.environ.get("TEL_CAND_ORE", "12")), int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
+         prio, int(os.environ.get("TEL_CAND_ORE", "12")), prio, int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
     if not rows:
         return stats
     cas = _client_as() if any(r["source"] == "autoscout24" for r in rows) else None
     sub = None
+    api = None
     for r in rows:
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
         tel = None
         try:
             if r["source"] == "autoscout24":
-                st, det = _as_dettaglio(cas, r["url"])
+                st, det, motivo = _as_esito(cas, r["url"])
                 if st == "errore":
                     stats["errore"] += 1
                     continue
-                tel = telefono_autoscout(det) if st == "attivo" else None
+                if st == "scomparso":
+                    # 13/11: erano contati "non leggibile" e riprovati ogni 2 ore; sono annunci spariti (404, rimando
+                    # alla ricerca, "non più disponibile"): si segnano come fa la verifica delle auto del sito
+                    from .verify import _mark
+                    _mark(conn, r["id"], "scomparso", r.get("price_eur"), motivo=motivo)
+                    stats["autoscout24:scomparso"] += 1
+                    conn.commit()
+                    continue
+                tel = telefono_autoscout(det)
+            elif r["id"] in TN.PRIORITARI and TN.attivo() and os.environ.get("TEL_CAND_SUBITO", "0") != "1":
+                if TN.puo_cercare():
+                    stats["subito:" + TN.puo_cercare()] += 1
+                    continue
+                if api is None:
+                    api = TN.client_api()
+                st, tel = TN.subito_telefono_api(api, dict(r))
+                if st in ("bloccato", "tetto", "errore"):
+                    stats[f"subito_api:{st}"] += 1
+                    if st == "bloccato":
+                        log.warning("TEL_NASCOSTO subito: 403/429, pausa")
+                    continue
+                if st == "non_trovato":
+                    # non nella ricerca (prezzo appena cambiato o annuncio tolto): si riprova tra TEL_CAND_ORE ore
+                    stats["subito_api:non_trovato"] += 1
+                    conn.execute("UPDATE listings SET telefono_at=now() WHERE id=%s", (r["id"],))
+                    conn.commit()
+                    continue
+                if tel is not None:
+                    salva_telefono(conn, r["id"], tel, controllato=True)
+                    stats[f"subito_api:{'si' if tel else 'no'}"] += 1
+                    conn.commit()
+                    continue
             else:
                 if sub is None:
                     from ..collectors.subito import SubitoCollector
@@ -762,6 +799,10 @@ def telefoni_candidate(conn, ids) -> Counter:
         stats[f"{r['source']}:{'si' if tel else ('no' if tel is False else 'non_leggibile')}"] += 1
         conn.commit()
     conn.commit()
+    if api is not None:
+        api.close()
+    if prio or any(k.startswith(("subito_api", "autoscout24:scomparso")) for k in stats):
+        TN.diagnostica(stats)
     return stats
 
 

@@ -57,7 +57,17 @@ ISTRUZIONI = ("Sei un commerciante d'auto usate esperto in Lombardia. Compri aut
               "non inventare prezzi, ragiona su quelli. Considera stato, versione, km, credibilità del venditore.")
 
 
+def sostituto() -> str:
+    """13/11 (cliente: "niente più Jev"): JEV_SOSTITUTO=claude (default) fa lo stesso lavoro con Claude
+    (ai/controllo_auto.py, stessa tabella decisione_ai, stesse uscite per il sito); "jev" torna a TypeSafe Jev."""
+    v = os.environ.get("JEV_SOSTITUTO", "claude").strip().lower()
+    return v if v in ("claude", "jev") else "claude"
+
+
 def attiva() -> bool:
+    if sostituto() == "claude":
+        from ..ai import controllo_auto
+        return controllo_auto.attiva()
     return bool(os.environ.get("TYPESAFE_API_KEY"))
 
 
@@ -265,8 +275,26 @@ def _credito_finito(e) -> bool:
 
 
 def giro(conn, massimo: int | None = None) -> dict:
-    """Un giro dell'AI decisionale sulle auto migliori non ancora decise."""
-    if not attiva():
+    """Un giro dell'AI decisionale sulle auto migliori non ancora decise (Claude di default, vedi sostituto())."""
+    # 13/11 (piu-auto): prima la stima di ripiego prudente delle auto "dati insufficienti" (niente AI, solo database)
+    try:
+        from . import ripiego_prudente
+        ripiego_prudente.giro(conn)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("RIPIEGO_PRUDENTE non riuscito: %s", str(e)[:200])
+    if sostituto() == "claude":
+        from ..ai import controllo_auto
+        return controllo_auto.giro(conn, massimo)
+    return giro_jev(conn, massimo)
+
+
+def giro_jev(conn, massimo: int | None = None) -> dict:
+    """Il giro di TypeSafe Jev (JEV_SOSTITUTO=jev)."""
+    if not os.environ.get("TYPESAFE_API_KEY"):
         return {"spenta": "manca TYPESAFE_API_KEY"}
     if time.time() < _PAUSA["fino"]:
         return {"saltato": "crediti Jev finiti, riprovo tra poco", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}

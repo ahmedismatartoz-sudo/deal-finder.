@@ -473,9 +473,10 @@ def test_jev_foto_a_blocchi():
     fatte = []
     finto_httpx = types.SimpleNamespace(Client=lambda **k: types.SimpleNamespace(close=lambda: None))
     orig = (jev.attiva, jev.foto_base64, jev.chiedi, jev.leggi, jev.stato_auto, sys.modules.get("httpx"))
-    vecchie = {k: os.environ.get(k) for k in ("TYPESAFE_API_KEY", "JEV_FOTO_BLOCCO")}
+    vecchie = {k: os.environ.get(k) for k in ("TYPESAFE_API_KEY", "JEV_FOTO_BLOCCO", "JEV_SOSTITUTO", "RIPIEGO_PRUDENTE")}
     try:
-        os.environ.update(TYPESAFE_API_KEY="x", JEV_FOTO_BLOCCO="8")
+        # 13/11: il giro di Jev resta dietro JEV_SOSTITUTO=jev (di default ora fa il lavoro Claude, ai/controllo_auto)
+        os.environ.update(TYPESAFE_API_KEY="x", JEV_FOTO_BLOCCO="8", JEV_SOSTITUTO="jev", RIPIEGO_PRUDENTE="0")
         sys.modules["httpx"] = finto_httpx
         jev.attiva = lambda: True
         jev.foto_base64 = lambda conn, lid, client: _Foto()

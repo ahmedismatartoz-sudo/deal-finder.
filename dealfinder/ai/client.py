@@ -142,6 +142,28 @@ def image_block(url: str, http=None, side: int | None = None) -> dict | None:
         return None
 
 
+def image_url_block(src: str) -> dict | None:
+    """13/11: foto passata per INDIRIZZO (la scarica Anthropic, niente base64 nella memoria del sito). Le foto di
+    Subito salvate come "imgid:..." diventano il link vero. None se l'indirizzo non è utilizzabile.
+    Nota: l'API scarica la foto alla grandezza originale (fino a ~1.600 token per foto) e alcuni siti vogliono il
+    Referer: chi chiama deve saper ripiegare su image_block (base64, foto rimpicciolita) se il download fallisce."""
+    try:
+        from ..web.foto import candidate_urls
+        urls = candidate_urls(src)
+    except Exception:
+        urls = [src] if str(src or "").startswith("http") else []
+    if not urls or not urls[0].startswith("https://"):
+        return None
+    return {"type": "image", "source": {"type": "url", "url": urls[0]}}
+
+
+def errore_immagine(e) -> bool:
+    """La richiesta è stata rifiutata per una foto (indirizzo non scaricabile, formato, grandezza): si riprova con le
+    foto in base64 o senza foto."""
+    t = str(e).lower()
+    return any(k in t for k in ("image", "url", "download", "fetch", "media_type", "media type"))
+
+
 # ---------------------------------------------------------------------------
 # Fornitore AI: Anthropic (predefinito) oppure Google Gemini (ha un livello gratuito).
 # Si sceglie da solo in base alla chiave presente, o con AI_PROVIDER=anthropic|gemini.
@@ -179,6 +201,7 @@ def _gemini(task, model, system, content, max_tokens, web_search, usage_sink, li
             parts.append({"text": b["text"]})
         elif b.get("type") == "image" and b.get("source", {}).get("type") == "base64":
             parts.append({"inline_data": {"mime_type": b["source"]["media_type"], "data": b["source"]["data"]}})
+        # (le foto per indirizzo, image_url_block, Gemini non le scarica: si saltano)
     body = {"systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": parts}],
             "generationConfig": {"maxOutputTokens": max(max_tokens, 2048), "temperature": 0.2}}
