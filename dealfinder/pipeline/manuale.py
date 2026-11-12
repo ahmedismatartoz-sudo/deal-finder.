@@ -33,14 +33,41 @@ log = logging.getLogger("manuale")
 FILE = Path(__file__).resolve().parents[2] / "data" / "analisi_manuale.json"
 
 
+def _scarti_db(conn) -> list | None:
+    """Voci attive di sito_scarti nel formato di data/scarti_sito.json; None se la tabella non c'è o è vuota.
+    Le voci rimesse (attivo=false) non si riapplicano: il "rimetti" lo fa il pannello una volta sola."""
+    try:
+        if not conn.execute("SELECT to_regclass('sito_scarti') AS t").fetchone()["t"]:
+            return None
+        righe = conn.execute("SELECT listing_id, marca, modello, anno, km, prezzo, motivo, attivo FROM sito_scarti").fetchall()
+    except Exception as ex:
+        conn.rollback()
+        log.warning("SCARTI_CLIENTE tabella non letta, uso il file: %s", str(ex)[:150])
+        return None
+    if not righe:
+        return None
+    out = []
+    for r in righe:
+        if not r["attivo"]:
+            continue
+        e = {k: r[k] for k in ("marca", "modello", "anno", "km", "prezzo", "motivo") if r[k] is not None}
+        if r["listing_id"]:
+            e["id"] = int(r["listing_id"])
+        out.append(e)
+    return out
+
+
 def applica_scarti_cliente(conn) -> int:
     """Auto che il cliente ha chiesto di togliere dal sito (data/scarti_sito.json: marca, anno, km, prezzo).
     Si riconoscono da marca + anno + km + prezzo; non tornano più sul sito."""
     f = FILE.parent / "scarti_sito.json"
-    if not f.exists():
-        return 0
+    voci = _scarti_db(conn)              # 12/11: dal pannello (tabella sito_scarti); il file solo se la tabella è vuota
+    if voci is None:
+        if not f.exists():
+            return 0
+        voci = json.loads(f.read_text())
     n = 0
-    for e in json.loads(f.read_text()):
+    for e in voci:
         if e.get("rimetti"):                              # 11/11: il cliente la rivuole sul sito
             r = conn.execute("UPDATE listings SET stage='approfondito', stage_reason='da_verificare', last_checked_at=now() "
                              "WHERE make ILIKE %s AND model ILIKE %s AND mileage_km=%s AND price_eur=%s "

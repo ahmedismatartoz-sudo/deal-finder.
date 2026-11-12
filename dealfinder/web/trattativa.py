@@ -88,9 +88,19 @@ def aggiorna_statistiche(conn) -> dict:
 
 
 def avvia_statistiche(connect, ogni_ore: float = 12, attesa_s: int = 240) -> None:
-    """Thread del sito: calcola le statistiche dopo l'avvio e poi ogni 12 ore."""
+    """Thread del sito: calcola le statistiche dopo l'avvio e poi ogni 12 ore. 12/11: prima rilegge l'ultima copia
+    salvata nel database (elenco_salvato), così la scheda ha subito i dati di vendita; se la copia ha meno di
+    ogni_ore il calcolo aspetta la sua scadenza invece di rifarsi a ogni riavvio."""
     def giro():
-        time.sleep(attesa_s)
+        attesa = attesa_s
+        try:
+            from . import elenco_salvato as _es
+            ore = _es.carica_stats(STATS, connect)
+            if ore is not None and ore < ogni_ore:
+                attesa = max(attesa_s, (ogni_ore - ore) * 3600)
+        except Exception as e:
+            log.warning("SCHEDA_STATS copia non letta: %s", str(e)[:200])
+        time.sleep(attesa)
         while True:
             STATS["in_corso"] = True
             try:
@@ -98,6 +108,8 @@ def avvia_statistiche(connect, ogni_ore: float = 12, attesa_s: int = 240) -> Non
                     conn.execute("SET statement_timeout = '600s'")
                     aggiorna_statistiche(conn)
                     aggiorna_modelli(conn)
+                from . import elenco_salvato as _es
+                _es.salva_stats(STATS, connect)
             except Exception as e:
                 log.warning("SCHEDA_STATS non riuscite: %s", str(e)[:300])
             finally:

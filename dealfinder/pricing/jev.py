@@ -296,10 +296,12 @@ def giro(conn, massimo: int | None = None) -> dict:
 
     foto_client = httpx.Client(timeout=20, follow_redirects=True,
                                headers={"User-Agent": "Mozilla/5.0 (compatible; Scovo/1.0)"})
-    tutte_foto = {}
-    for r in righe:                                        # le foto si scaricano prima (la connessione DB è una sola)
-        tutte_foto[r["id"]] = foto_base64(conn, r["id"], foto_client)
-    foto_client.close()
+    # 12/11 (memoria): le foto si scaricano a blocchi di JEV_FOTO_BLOCCO auto (8) e si buttano dopo il blocco. Prima
+    # si scaricavano tutte insieme: 300 auto × 4 foto ≈ 230 MB di testo base64 nel processo del sito da 512 MB.
+    # La connessione al database resta usata da un solo thread (questo): le chiamate a Jev non la toccano.
+    blocco = max(1, int(os.environ.get("JEV_FOTO_BLOCCO", "8")))
+    tutte_foto: dict = {}
+    fermo = False
 
     def uno(r):
         try:
@@ -313,55 +315,64 @@ def giro(conn, massimo: int | None = None) -> dict:
         return x
 
     with ThreadPoolExecutor(max_workers=int(os.environ.get("JEV_PARALLELI", "4"))) as ex:
-        for r, x in ex.map(uno, righe):
-            if isinstance(x, Exception):
-                st["errore"] += 1
-                if _credito_finito(x):
-                    _PAUSA.update(fino=time.time() + int(os.environ.get("JEV_PAUSA_CREDITO_S", "3600")), prova=True)
-                    st["credito_finito"] += 1
-                    log.warning("JEV crediti finiti: giro in pausa per un'ora (%s)", str(x)[:160])
-                    break
-                if st["errore"] <= 3:
-                    log.warning("JEV errore: %s", str(x)[:250])
-                if st["errore"] >= 10 and not st["fatte"]:
-                    break                          # chiave o indirizzo sbagliati: inutile insistere
-                continue
-            st["fatte"] += 1
-            _PAUSA["prova"] = False
-            st[f"jev:{x['decisione']}"] += 1
-            st[f"calcoli:{r['cat']}|jev:{x['decisione']}"] += 1
-            if (x.get("truffa") or 0) >= .7:
-                st["truffa_probabile"] += 1
-            if (x.get("versione_ok") or 1) < .4:
-                st["confronti_sbagliati"] += 1
-            if x.get("targa_visibile") is not None:
-                st["con_foto"] += 1
-                esito = ("foto_internet" if (x.get("foto_internet") or 0) >= .7 else
-                         "visibile" if x["targa_visibile"] >= .7 else "coperta" if x["targa_visibile"] <= .3 else "incerta")
-                st[f"targa:{esito}"] += 1
-                if esito == "visibile" and r["cat"] == "dati_insufficienti":
-                    nuove_targhe.append(r["id"])
-                if (x.get("danni_foto") or 0) >= .7:
-                    st["danni_nelle_foto"] += 1
-                conn.execute("INSERT INTO controllo_targa (listing_id, esito, foto) VALUES (%s,%s,%s) "
-                             "ON CONFLICT (listing_id) DO UPDATE SET esito=EXCLUDED.esito, foto=EXCLUDED.foto, checked_at=now()",
-                             (r["id"], esito, len(tutte_foto.get(r["id"]) or {})))
-            token += x.get("token") or 0
-            conn.execute(
-                """INSERT INTO decisione_ai (listing_id, prezzo, decisione, confidenza, p_compra, truffa, versione_ok,
-                     dati_coerenti, stato, correzione_pct, categoria_calcoli, margine_calcoli, risposta, token, computed_at)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
-                   ON CONFLICT (listing_id) DO UPDATE SET prezzo=EXCLUDED.prezzo, decisione=EXCLUDED.decisione,
-                     confidenza=EXCLUDED.confidenza, p_compra=EXCLUDED.p_compra, truffa=EXCLUDED.truffa,
-                     versione_ok=EXCLUDED.versione_ok, dati_coerenti=EXCLUDED.dati_coerenti, stato=EXCLUDED.stato,
-                     correzione_pct=EXCLUDED.correzione_pct, categoria_calcoli=EXCLUDED.categoria_calcoli,
-                     margine_calcoli=EXCLUDED.margine_calcoli, risposta=EXCLUDED.risposta, token=EXCLUDED.token,
-                     computed_at=now()""",
-                (r["id"], r["price_eur"], x["decisione"], x["confidenza"], x["p_compra"], x["truffa"], x["versione_ok"],
-                 x["dati_coerenti"], x["stato"], x["correzione_pct"], r["cat"], r["margine"],
-                 json.dumps(x["_risposta"]), x.get("token")))
-            if st["fatte"] % 25 == 0:
-                conn.commit()
+        for k in range(0, len(righe), blocco):
+            parte = righe[k:k + blocco]
+            tutte_foto = {r["id"]: foto_base64(conn, r["id"], foto_client) for r in parte}
+            for r, x in ex.map(uno, parte):
+                if isinstance(x, Exception):
+                    st["errore"] += 1
+                    if _credito_finito(x):
+                        _PAUSA.update(fino=time.time() + int(os.environ.get("JEV_PAUSA_CREDITO_S", "3600")), prova=True)
+                        st["credito_finito"] += 1
+                        log.warning("JEV crediti finiti: giro in pausa per un'ora (%s)", str(x)[:160])
+                        fermo = True
+                        break
+                    if st["errore"] <= 3:
+                        log.warning("JEV errore: %s", str(x)[:250])
+                    if st["errore"] >= 10 and not st["fatte"]:
+                        fermo = True
+                        break                          # chiave o indirizzo sbagliati: inutile insistere
+                    continue
+                st["fatte"] += 1
+                _PAUSA["prova"] = False
+                st[f"jev:{x['decisione']}"] += 1
+                st[f"calcoli:{r['cat']}|jev:{x['decisione']}"] += 1
+                if (x.get("truffa") or 0) >= .7:
+                    st["truffa_probabile"] += 1
+                if (x.get("versione_ok") or 1) < .4:
+                    st["confronti_sbagliati"] += 1
+                if x.get("targa_visibile") is not None:
+                    st["con_foto"] += 1
+                    esito = ("foto_internet" if (x.get("foto_internet") or 0) >= .7 else
+                             "visibile" if x["targa_visibile"] >= .7 else "coperta" if x["targa_visibile"] <= .3 else "incerta")
+                    st[f"targa:{esito}"] += 1
+                    if esito == "visibile" and r["cat"] == "dati_insufficienti":
+                        nuove_targhe.append(r["id"])
+                    if (x.get("danni_foto") or 0) >= .7:
+                        st["danni_nelle_foto"] += 1
+                    conn.execute("INSERT INTO controllo_targa (listing_id, esito, foto) VALUES (%s,%s,%s) "
+                                 "ON CONFLICT (listing_id) DO UPDATE SET esito=EXCLUDED.esito, foto=EXCLUDED.foto, checked_at=now()",
+                                 (r["id"], esito, len(tutte_foto.get(r["id"]) or {})))
+                token += x.get("token") or 0
+                conn.execute(
+                    """INSERT INTO decisione_ai (listing_id, prezzo, decisione, confidenza, p_compra, truffa, versione_ok,
+                         dati_coerenti, stato, correzione_pct, categoria_calcoli, margine_calcoli, risposta, token, computed_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
+                       ON CONFLICT (listing_id) DO UPDATE SET prezzo=EXCLUDED.prezzo, decisione=EXCLUDED.decisione,
+                         confidenza=EXCLUDED.confidenza, p_compra=EXCLUDED.p_compra, truffa=EXCLUDED.truffa,
+                         versione_ok=EXCLUDED.versione_ok, dati_coerenti=EXCLUDED.dati_coerenti, stato=EXCLUDED.stato,
+                         correzione_pct=EXCLUDED.correzione_pct, categoria_calcoli=EXCLUDED.categoria_calcoli,
+                         margine_calcoli=EXCLUDED.margine_calcoli, risposta=EXCLUDED.risposta, token=EXCLUDED.token,
+                         computed_at=now()""",
+                    (r["id"], r["price_eur"], x["decisione"], x["confidenza"], x["p_compra"], x["truffa"], x["versione_ok"],
+                     x["dati_coerenti"], x["stato"], x["correzione_pct"], r["cat"], r["margine"],
+                     json.dumps(x["_risposta"]), x.get("token")))
+                if st["fatte"] % 25 == 0:
+                    conn.commit()
+            tutte_foto = {}
+            if fermo:
+                break
+    foto_client.close()
     conn.commit()
     client.close()
     if nuove_targhe:

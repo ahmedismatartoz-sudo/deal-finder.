@@ -79,11 +79,15 @@ RIBASSO_FINO = "2026-11-12T11:50:00+01:00"   # 12/11 10:24 cliente: ribassi come
 
 def _ribasso_fasce(ora=None) -> list[tuple[int, int]]:
     from datetime import datetime, timezone
+    from . import impostazioni          # 12/11: dal pannello (/gestione → Sito), senza deploy; vince sul codice
+    r = impostazioni.ribasso()
+    if r is not None:
+        return impostazioni.fasce_ribasso(r, ora)
     try:
-        fino = os.environ.get("SITO_RIBASSO_FINO", RIBASSO_FINO)
-        # 12/11: senza data di fine (variabile vuota su Render, o costante vuota) il ribasso è SPENTO, non acceso
-        # per sempre
-        if not (fino or "").strip() or (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino.strip()):
+        fino = os.environ.get("SITO_RIBASSO_FINO", RIBASSO_FINO).strip()
+        # 12/11 (allineato al ramo pagamenti-sicurezza): senza impostazioni nel database, data vuota = SPENTO
+        # (prima una variabile vuota su Render riaccendeva il ribasso per sempre)
+        if not fino or (ora or datetime.now(timezone.utc)) >= datetime.fromisoformat(fino):
             return []
         raw = os.environ.get("SITO_RIBASSO", RIBASSO_SCHEMA)
         return sorted((int(a), max(0, min(3000, int(b)))) for a, b in (x.split(":") for x in raw.split(",") if x.strip()))
@@ -122,11 +126,16 @@ IN_CIMA = [{"marca": "fiat", "km": 68000, "prezzo": 7900, "mostra": 6900}]   # 1
 
 
 def in_cima(it: dict) -> dict:
-    for k, e in enumerate(IN_CIMA):
+    from . import impostazioni          # 12/11: elenco dal pannello (/gestione → Sito); se vuoto vale IN_CIMA
+    voci = impostazioni.in_cima()
+    for k, e in enumerate(IN_CIMA if voci is None else voci):
         vero = int(it.get("prezzo_annuncio") or it.get("prezzo") or 0)
-        if str(it.get("marca") or "").lower().startswith(e["marca"]) and int(it.get("km") or 0) == e["km"] and vero == e["prezzo"]:
-            out = dict(it, prezzo=e["mostra"], prezzo_annuncio=vero, vetrina=-100 + k)
-            diff = int(it.get("prezzo") or vero) - e["mostra"]
+        if impostazioni.corrisponde(e, it):
+            mostra = e.get("mostra")
+            if not mostra or int(mostra) > vero:      # mai un prezzo più alto dell'annuncio: solo in cima
+                return dict(it, vetrina=-100 + k)
+            out = dict(it, prezzo=int(mostra), prezzo_annuncio=vero, vetrina=-100 + k)
+            diff = int(it.get("prezzo") or vero) - int(mostra)
             for kk in ("pv", "valutazione"):
                 v = out.get(kk)
                 if isinstance(v, dict) and v.get("margine") is not None:

@@ -526,7 +526,7 @@ FASCE_SUBITO = [(0, 1500), (1500, 2500), (2500, 3500), (3500, 5000), (5000, 6500
                 (10000, 13000), (13000, 17000), (17000, 22000), (22000, 30000), (30000, 45000), (45000, 80000)]
 
 
-def subito_completo(conn, minuti: float | None = None, col=None) -> dict:
+def subito_completo(conn, minuti: float | None = None, col=None, basta=None) -> dict:
     """25/10 (cliente: "leggi TUTTE le auto di Subito con le nostre regole nel raggio dei 100 km"): rilegge Subito
     provincia per provincia e fascia di prezzo per fascia (così non c'è il tetto delle 10.000 auto più recenti),
     salva gli annunci nuovi o cambiati e segna chi ha il numero (sì/no, mai il numero). La valutazione la fa poi
@@ -535,7 +535,8 @@ def subito_completo(conn, minuti: float | None = None, col=None) -> dict:
     si perdeva senza avviso), con i passi già fatti (PASSI_JOB) per riprendere dopo un riavvio. Solo l'interfaccia
     di ricerca (gratuita), mai il Web Unlocker. È anche la rilettura settimanale del cron (rilettura_subito): gli
     annunci ancora in vendita tornano "visti" e restano confronti validi. `minuti`: tempo massimo per giro (il resto
-    al giro dopo, dai passi)."""
+    al giro dopo, dai passi). `basta`: funzione senza argomenti; se ritorna True il giro si ferma come per il tempo
+    (12/11: dentro il sito, quando la memoria è alta)."""
     from ..collectors.subito import REGION_CODES, SubitoCollector
     col = col or SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
     province = [p.strip().upper() for p in os.environ.get("SUBITO_PROVINCE", ",".join(PROVINCE_100KM)).split(",") if p.strip()]
@@ -575,6 +576,11 @@ def subito_completo(conn, minuti: float | None = None, col=None) -> dict:
                 if fine and time.time() > fine:
                     st["fermato_tempo"] += 1
                     break
+                if basta is not None and basta():  # deve essere economica (subito_completo_notte: un sì/no già deciso)
+                    salva()                        # niente di letto va perso
+                    st["fermato_tempo"] += 1
+                    st["fermato_memoria"] += 1
+                    break
         except Exception as e:
             st["errore"] += 1
             log.warning("SUBITO_COMPLETO %s: %s", reg, str(e)[:150])
@@ -587,6 +593,28 @@ def subito_completo(conn, minuti: float | None = None, col=None) -> dict:
     st["letti"] = sum(v for k, v in st.items() if k.startswith("letti:"))
     log.warning("SUBITO_COMPLETO_FINE in %.0fs: %s", time.time() - t0, dict(st))
     return dict(st)
+
+
+def subito_completo_notte(conn, giorno: str, basta=None) -> dict:
+    """12/11: lettura completa notturna dentro il sito, con i passi del giorno (job "subito_completo:"+giorno, come
+    rilettura_subito, ma SOLO per questo thread: passi.locale, così gli altri giri del sito non lo vedono). Il freno
+    `basta()` (facoltativo) si chiede solo a fascia chiusa, subito dopo che il passo è segnato: se dice sì, il giro si
+    ferma alla fascia dopo e il prossimo riprende da lì. Finita tutta la lettura, i passi si cancellano."""
+    from . import passi
+    job = "subito_completo:" + giorno
+    fermo = {"si": False}
+
+    def dopo_segna(chiave):
+        if basta is not None and not fermo["si"] and basta():
+            fermo["si"] = True
+    with passi.locale(job, dopo_segna=dopo_segna):
+        st = subito_completo(conn, basta=(lambda: fermo["si"]) if basta is not None else None)
+    if not st.get("fermato_memoria"):
+        try:
+            passi.finito(job)
+        except Exception as e:
+            log.warning("SUBITO_COMPLETO passi non cancellati: %s", str(e)[:150])
+    return st
 
 
 def rilettura_subito(minuti: float | None = None) -> dict:
