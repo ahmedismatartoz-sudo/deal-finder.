@@ -592,6 +592,12 @@ _ETICHETTE_SUB = [
 ]
 
 
+# Valori di carrozzeria ammessi da Subito ("Tipologia"/"Tipo di veicolo" può anche dire "Usato", "Km 0"...)
+_RE_CARROZZERIA_OK = re.compile(
+    r"(?i)^\s*(?:berlin|utilitar|city\s*car|citycar|suv|fuoristrad|crossover|station|wagon|familiar|sw\b|monovolum|"
+    r"minivan|multispazi|coup|cabri|spider|roadster|decappott|pick|furgon|van\b|hatch|sedan|sportiv|compatt)")
+
+
 def da_subito(item: dict) -> dict:
     """Annuncio di Subito (ricerca o pagina): tutte le "features", con tutti i valori (gli optional sono un elenco)."""
     if not isinstance(item, dict):
@@ -618,6 +624,10 @@ def da_subito(item: dict) -> dict:
                     elif chiave == "optional":
                         optional += _voci([x.get("value") if isinstance(x, dict) else x for x in vals]
                                           if isinstance(vals, list) else vals)
+                    elif chiave == "carrozzeria":
+                        v0 = vals[0] if isinstance(vals, list) and vals else f.get("value")
+                        if _RE_CARROZZERIA_OK.search(str(_testo(v0) or "")):    # "Tipologia: Usato" no
+                            _metti(d, "carrozzeria", v0)
                     elif chiave == "colore":
                         _metti(d, "colore", vals[0] if vals else f.get("value"))
                     else:

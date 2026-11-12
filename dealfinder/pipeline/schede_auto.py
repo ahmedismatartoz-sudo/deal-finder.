@@ -11,7 +11,8 @@ Mai dati del venditore: si salvano solo i dati del veicolo (dealfinder/core/dati
 
 Le fonti si alternano (Subito non può occupare tutto il giro); Subito solo per le auto senza dati dalla ricerca; una
 fonte bloccata (403/429 di fila) si lascia stare per ORE_BLOCCO ore (tabella scheda_fonti). Gira a FINE giro del cron
-opportunità, solo se il giro dura da meno di 5 ore (collect.py, CRON_ORE_SCHEDE_PAGINE).
+opportunità (dura 6–10 ore): parte fino a 10 ore dall'avvio, al massimo 20 minuti e mai oltre 10,3 ore
+(collect.tempo_schede_pagine, CRON_ORE_SCHEDE_PAGINE).
 
 Interruttori (default nel codice, variabili facoltative): SCHEDA_PAGINE=0 spegne tutto; SCHEDA_PAGINE_SUBITO=0 solo
 Subito; SCHEDA_PAGINE_GIRO, SCHEDA_PAGINE_GIORNO, SCHEDA_PAGINE_TEMPO_S.
@@ -247,14 +248,14 @@ def _leggi_tutte(conn, righe, client_as, client_sub, tempo_s, dormi, st: Counter
             dormi(random.uniform(*PAUSA))
 
 
-def giornaliero(stats: Counter | None = None) -> Counter:
-    """Dal cron opportunità: un giro di letture. Mai un errore verso il giro del cron."""
+def giornaliero(stats: Counter | None = None, tempo_s: float | None = None) -> Counter:
+    """Dal cron opportunità: un giro di letture (al massimo tempo_s secondi). Mai un errore verso il giro del cron."""
     if os.environ.get("SCHEDA_PAGINE", "1") != "1":
         return Counter()
     from ..db import connect
     try:
         with connect() as conn:
-            st = giro(conn)
+            st = giro(conn, tempo_s=tempo_s)
         log.warning("SCHEDA_PAGINE %s", json.dumps(dict(st), ensure_ascii=False))
         if stats is not None:
             stats["schede_pagine"] = sum(v for k, v in st.items() if k.endswith(":ok"))

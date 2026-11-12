@@ -292,6 +292,7 @@ def test_subito_etichette_difficili():
         "/c3": {"label": "Consumo misto", "values": [{"value": "5,2 l/100km"}]},
         "/cc": {"label": "Cilindrata", "values": [{"value": "1,598"}]},
         "/t": {"label": "Tipo", "values": [{"value": "Usato"}]},
+        "/tp": {"label": "Tipologia", "values": [{"value": "Usato"}]},
         "/x": {"label": "Extra", "values": [{"value": "Gancio traino"}]}}}
     d = DA.da_subito(item)
     assert d["consumo"].startswith("5,2") and d["cilindrata"] == 1598
@@ -384,17 +385,19 @@ def test_pg_parte_ricerca_si_unisce_e_non_si_riscrive():
     lid = _annuncio(c, "u1", "autoscout24", ricerca={"optional": ["ABS", "Bluetooth"], "porte": 3})
     c.execute("UPDATE listings SET dati_auto = dati_auto || '{\"pagina\": {\"porte\": 5}}'::jsonb WHERE id = %s", (lid,))
 
-    def aggiorna(nuovo, qui=False):
-        sql = "UPDATE listings SET dati_auto = " + db.DATI_AUTO_SQL.replace("__QUI__", "true" if qui else "false") + \
-              " WHERE id = %(id)s"
-        c.execute(sql, {"dati_auto": json.dumps({"ricerca": nuovo}), "id": lid})
+    def aggiorna(nuovo):
+        c.execute("UPDATE listings SET dati_auto = " + db.DATI_AUTO_SQL + " WHERE id = %(id)s",
+                  {"dati_auto": json.dumps({"ricerca": nuovo}), "id": lid})
         return c.execute("SELECT dati_auto FROM listings WHERE id = %s", (lid,)).fetchone()["dati_auto"]
     d = aggiorna({"porte": 3, "colore": "Nero"})                # una ricerca SENZA optional: gli optional restano
     assert d["ricerca"] == {"optional": ["ABS", "Bluetooth"], "porte": 3, "colore": "Nero"} and d["pagina"] == {"porte": 5}
     assert aggiorna({"porte": 3}) == d                           # niente di nuovo: resta uguale
+    d2 = aggiorna({"optional": ["Clima"], "colore": "Blu"})      # optional più corto: resta quello vecchio, più lungo
+    assert d2["ricerca"]["optional"] == ["ABS", "Bluetooth"] and d2["ricerca"]["colore"] == "Blu"
+    assert aggiorna({"optional": ["ABS", "Bluetooth", "Clima"]})["ricerca"]["optional"] == ["ABS", "Bluetooth", "Clima"]
     c.execute("UPDATE listings SET stage = 'nuovo' WHERE id = %s", (lid,))
-    assert aggiorna({"colore": "Blu"}) == d                      # cron mercato su un annuncio non approfondito: no
-    assert aggiorna({"colore": "Blu"}, qui=True)["ricerca"]["colore"] == "Blu"   # cron opportunità / tempo reale: sì
+    prima = c.execute("SELECT dati_auto FROM listings WHERE id = %s", (lid,)).fetchone()["dati_auto"]
+    assert aggiorna({"colore": "Rosso"}) == prima                # annuncio già salvato e non approfondito: mai riscritto
 
 
 def test_pg_upsert_vero_solo_nel_cron_giusto():
@@ -420,11 +423,26 @@ def test_pg_upsert_vero_solo_nel_cron_giusto():
         db.dati_auto_ricerca_processo(True)                                      # cron opportunità
         c.execute("DELETE FROM price_events")
         c.execute("DELETE FROM listings")
-        db.upsert_listing(c, mk({"porte": 5, "optional": ["ABS"]}))
-        db.upsert_listing(c, mk({"colore": "Nero"}))
+        db.upsert_listing(c, mk({"porte": 5, "optional": ["ABS"]}))          # nuovo: sì
+        db.upsert_listing(c, mk({"colore": "Nero"}))                          # già salvato, non approfondito: no
+        assert c.execute("SELECT dati_auto FROM listings").fetchone()["dati_auto"] == {"ricerca": {"porte": 5, "optional": ["ABS"]}}
+        c.execute("UPDATE listings SET stage = 'approfondito'")
+        db.upsert_listing(c, mk({"colore": "Nero"}))                          # approfondito: sì, unito
         assert c.execute("SELECT dati_auto FROM listings").fetchone()["dati_auto"] == \
             {"ricerca": {"porte": 5, "colore": "Nero", "optional": ["ABS"]}}
     finally:
         db.dati_auto_ricerca_processo(False)
         db._SCHEMA.update(vecchio_schema)
         db._LETTURA_OK = vecchio_lettura
+
+
+def test_lettura_pagine_parte_anche_con_giro_di_8_ore():
+    import time
+    from dealfinder.pipeline import collect
+    t0 = time.time()
+    assert collect.tempo_schede_pagine(t0, t0 + 8 * 3600) == 1200          # giro di 8 ore: parte, 20 minuti
+    assert collect.tempo_schede_pagine(t0, t0 + 9.5 * 3600) == 1200
+    assert 0 < collect.tempo_schede_pagine(t0, t0 + 9.99 * 3600) < 1200      # vicino al limite: solo il tempo fino a 10,3 ore
+    assert collect.tempo_schede_pagine(t0, t0 + 10.5 * 3600) == 0           # oltre 10 ore: rimandata
+    d = DA.da_subito({"features": {"/tp": {"label": "Tipologia", "values": [{"value": "SUV/Fuoristrada"}]}}})
+    assert d["carrozzeria"] == "SUV/Fuoristrada"

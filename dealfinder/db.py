@@ -392,7 +392,7 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
         "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
         # 12/11: la ricerca riscrive solo la sua parte ("ricerca"); quello letto dalla pagina dell'annuncio resta
-        "dati_auto": DATI_AUTO_SQL.replace("__QUI__", "true" if qui else "false"),
+        "dati_auto": DATI_AUTO_SQL,
     }
     sets = ", ".join(f"{k} = {_tenere[k]}" if k in _tenere else f"{k} = %({k})s"
                      for k in params if k not in ("source", "source_id"))
@@ -416,17 +416,28 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     return lid, event
 
 
-# 12/11: parte "ricerca" della scheda tecnica (listings.dati_auto). Si UNISCE a quella già salvata (gli optional letti
-# dalla pagina dal tempo reale non si perdono a una lettura della ricerca senza optional) e non si riscrive se non
-# cambia niente. Fuori dal cron opportunità e dal tempo reale (__QUI__ = false: es. cron mercato) si scrive solo per
-# gli annunci già 'approfondito'. La parte "pagina" la scrive solo pipeline/schede_auto.py.
+# 12/11: parte "ricerca" della scheda tecnica (listings.dati_auto). Regole:
+#  - annuncio NUOVO (INSERT): si scrive solo nel cron opportunità o nel tempo reale (dati_auto_ricerca_qui());
+#  - annuncio GIÀ SALVATO (UPDATE): solo se è 'approfondito' (candidate e auto del sito), mai sulle altre centinaia di
+#    migliaia di righe (il primo giro le avrebbe riscritte tutte);
+#  - si UNISCE a quella salvata (gli optional letti dalla pagina dal tempo reale non si perdono), "optional" vecchio
+#    resta se è più lungo del nuovo, e non si riscrive se il nuovo è già contenuto. La parte "pagina" la scrive solo
+#    pipeline/schede_auto.py.
+_DA_NUOVO = "((%(dati_auto)s::jsonb) -> 'ricerca')"
+_DA_VECCHIO = "COALESCE(listings.dati_auto->'ricerca', '{}'::jsonb)"
+_DA_UNITO = (
+    f"(CASE WHEN jsonb_typeof({_DA_VECCHIO}->'optional') = 'array' AND jsonb_typeof({_DA_NUOVO}->'optional') = 'array' "
+    f"AND jsonb_array_length({_DA_VECCHIO}->'optional') > jsonb_array_length({_DA_NUOVO}->'optional') "
+    f"THEN ({_DA_VECCHIO} || {_DA_NUOVO}) || jsonb_build_object('optional', {_DA_VECCHIO}->'optional') "
+    f"ELSE {_DA_VECCHIO} || {_DA_NUOVO} END)")
 DATI_AUTO_SQL = (
-    "(CASE WHEN NOT (__QUI__ OR listings.stage = 'approfondito') "
-    "OR COALESCE(listings.dati_auto->'ricerca', '{}'::jsonb) @> ((%(dati_auto)s::jsonb) -> 'ricerca') "
-    "THEN listings.dati_auto "
-    "ELSE COALESCE(jsonb_set(COALESCE(listings.dati_auto, '{}'::jsonb), '{ricerca}', "
-    "COALESCE(listings.dati_auto->'ricerca', '{}'::jsonb) || ((%(dati_auto)s::jsonb) -> 'ricerca')), listings.dati_auto) END)")
+    f"(CASE WHEN listings.stage IS DISTINCT FROM 'approfondito' OR {_DA_VECCHIO} @> {_DA_NUOVO} "
+    f"THEN listings.dati_auto "
+    f"ELSE COALESCE(jsonb_set(COALESCE(listings.dati_auto, '{{}}'::jsonb), '{{ricerca}}', {_DA_UNITO}), listings.dati_auto) END)")
 
+# Interruttore di processo: lo accende SOLO collect.run("opportunita") (processo del cron opportunità, a sé). Serve per
+# gli annunci NUOVI: nel cron mercato (e negli altri giri) un annuncio nuovo non riceve la parte "ricerca".
+# Nel processo web il tempo reale usa invece upsert_listing_con_scheda (interruttore per thread, mai per processo).
 _DATI_AUTO_PROCESSO = {"on": False}
 _dati_auto_locale = __import__("threading").local()
 
