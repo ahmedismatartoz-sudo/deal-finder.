@@ -425,8 +425,8 @@ def fattore_per(M: float, fattori: list | None, r: Regole | None = None, vr: boo
     """Fattore chiesto → venduto per questo M (12/11, rapporto 2 E2): interpolato in scala log tra i centri delle
     fasce, niente scalini. Con una misura vecchia (per fascia di prezzo, senza la voce "_per_M") il fattore non può
     superare quello della sua fascia (l'interpolazione può solo abbassarlo finché non c'è la misura nuova).
-    vr=True: solo le fasce MISURATE sul valore reale (voci "vr:"); fascia non misurata = 1,0; si interpola solo verso
-    una fascia vicina anch'essa misurata."""
+    vr=True: solo le fasce MISURATE sul valore reale (voci "vr:"); al centro di una fascia non misurata vale 1,0, tra i
+    centri si interpola (nessuna misura = 1,0 ovunque)."""
     r = r or regole()
     fattori = fattori if fattori is not None else fattori_calibrazione(None, r)
     M = float(M or 0)
@@ -435,12 +435,12 @@ def fattore_per(M: float, fattori: list | None, r: Regole | None = None, vr: boo
     fascia = _fascia_di(M, r)
     if vr:
         mis = {str(n)[3:]: x for _, n, x in fattori if str(n).startswith("vr:")}
-        if fascia not in mis:
+        if not mis:
             return 1.0
-        k = ordine.index(fascia)
-        vicine = [ordine[j] for j in (k - 1, k, k + 1) if 0 <= j < len(ordine) and ordine[j] in mis]
-        # solo il tratto continuo di fasce misurate attorno a questa
-        punti = sorted((centri[n], mis[n]) for n in vicine)
+        # fasce misurate al loro fattore, le altre a 1,0 (nessuna correzione), interpolando in scala log tra i centri:
+        # oltre il centro dell'ultima fascia misurata si torna gradualmente a 1,0 fino al centro della fascia vicina
+        # (niente scalino al confine della fascia, ricontrollo del giudice M-a)
+        punti = sorted((centri[n], mis.get(n, 1.0)) for n in ordine if n in centri)
         return _interpola(M, punti)
     per_nome = {str(n): x for _, n, x in fattori if not str(n).startswith(("vr:", "_"))}
     if not per_nome:
@@ -489,6 +489,9 @@ def calibra_vendita(pv: dict, fattori: list | None, r: Regole | None = None) -> 
     giu = int(round(R - R2))
     out = dict(pv, M=int(round(M * f)), M_annunci=int(M), R=int(round(R2)), R_finale=int(round(R2)),
                calibrato=round(f, 3), M_fonte="vendite_calibrate" if not vr else "vendite")
+    if pv.get("R_commercianti"):                       # chi fa davvero il minimo dopo la calibrazione
+        Rc = float(pv["R_commercianti"])
+        out["R_da"] = "commercianti" if Rc <= M * f and Rc <= R else "mercato vero (confermato dai commercianti)"
     if pv.get("margine") is not None:
         out["margine"] = int(pv["margine"]) - giu
     return out

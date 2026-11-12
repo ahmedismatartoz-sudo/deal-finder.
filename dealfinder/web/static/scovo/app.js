@@ -466,7 +466,7 @@ function rivComm(p, v){
   const t = r.fonte === "venduti" ? `ultimo prezzo di ${r.n_venduti} auto uguali vendute da commercianti${r.giorni_vendita != null ? `, in media in ${Math.round(r.giorni_vendita)} giorni` : ""}`
     : `${r.n_attivi} auto uguali in vendita da commercianti, meno lo sconto osservato (${pct(r.sconto || 0)})`;
   return p.R_da === "commercianti" ? `<div class="note">Rivendita abbassata dai commercianti: ${t}.</div>`
-    : `<div class="note">Confermata dai commercianti (${eur(r.R)}: ${t}); la rivendita resta quella del mercato.</div>`;
+    : `<div class="note">Rivendita dei commercianti più alta del mercato: non usata (${t}); la rivendita resta quella del mercato.</div>`;
 }
 function boxPolicy(c, v){
   const p = c.pv, row = (k, val, cls) => `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${val}</span></div>`;

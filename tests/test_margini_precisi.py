@@ -173,7 +173,8 @@ def test_calibrazione_valore_reale_solo_se_misurata():
     assert RG.calibra_vendita(pv, fat_poche) == pv           # meno di n_min auto misurate: niente
     # misurata solo <5k: un M da 6.000 (fascia 5-10k, non misurata) resta com'è, niente interpolazione verso <5k
     fat_solo = RG.fattori_calibrazione({}, misurate_vr={"<5k": {"n": 50, "prezzo_su_M": .85}})
-    assert RG.fattore_per(6000, fat_solo, vr=True) == 1.0 and RG.fattore_per(4000, fat_solo, vr=True) == .85
+    assert RG.fattore_per(7071, fat_solo, vr=True) == 1.0 and RG.fattore_per(3500, fat_solo, vr=True) == .85
+    assert .85 < RG.fattore_per(6000, fat_solo, vr=True) < 1.0       # verso 1,0 fino al centro della fascia vicina
     assert RG.calibra_vendita(dict(pv, metodo="valore_reale_combinato"), fat_vr) == dict(pv, metodo="valore_reale_combinato")
 
 
@@ -468,3 +469,24 @@ def test_simula_regole_vecchie_e_server_senza_dati():
             pass
     out = simula.esegui(C(), [1, 2])
     assert out["auto"] == 0 and out["sopra_soglia_solo_grazie_ai_commercianti"] == 0
+
+
+def test_calibrazione_valore_reale_senza_salti():
+    """Ricontrollo M-a: prima M 4.900 → 0,85 e M 5.100 → 1,0."""
+    fat = RG.fattori_calibrazione({}, misurate_vr={"<5k": {"n": 50, "prezzo_su_M": .85},
+                                                   "10-20k": {"n": 50, "prezzo_su_M": .95}})
+    xs = [RG.fattore_per(m, fat, vr=True) for m in range(3000, 40000, 50)]
+    assert max(abs(a - b) for a, b in zip(xs, xs[1:])) < .005
+    assert abs(RG.fattore_per(4900, fat, vr=True) - RG.fattore_per(5100, fat, vr=True)) < .01
+    assert RG.fattore_per(7071, fat, vr=True) == 1.0 and RG.fattore_per(26458, fat, vr=True) == 1.0
+
+
+def test_calibrazione_r_da_chi_fa_il_minimo():
+    fat = RG.fattori_calibrazione({"5-10k": {"n": 99, "prezzo_su_M": .9}, "10-20k": {"n": 99, "prezzo_su_M": .9}},
+                                  per_M=True)
+    base = {"M": 9000, "R": 8800, "R_finale": 8800, "margine": 1800, "M_fonte": "annunci", "R_commercianti": 8800,
+            "R_da": "commercianti"}
+    out = RG.calibra_vendita(base, fat)                       # M × 0,9 = 8.100 < 8.800: vale il mercato
+    assert out["R"] == 8100 and out["R_da"].startswith("mercato vero")
+    out = RG.calibra_vendita(dict(base, R=9000, R_finale=9000, R_commercianti=7900, R_da="mercato vero"), fat)
+    assert out["R"] == 7900 and out["R_da"] == "commercianti"
