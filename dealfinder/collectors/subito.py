@@ -210,6 +210,7 @@ class SubitoCollector(Collector):
             import httpx
             client = httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True, proxy=proxy)
         self.client = client
+        self.errori = 0              # 12/11 ricontrollo: pagine di ricerca non lette (chi chiama sa che la lettura è incompleta)
         self.noti = None             # 12/11: pipeline.incrementale.Noti = ci si ferma al già visto (search_recenti, _fascia)
         # Subito blocca le richieste dai server cloud (HTTP 403): se configurato,
         # le pagine passano dal Web Unlocker di Bright Data (stesso account dello scraper Facebook).
@@ -287,11 +288,13 @@ class SubitoCollector(Collector):
             self.pause()
             if r.status_code != 200:
                 log.warning("subito recenti %s: HTTP %s a pagina %s", region, r.status_code, page)
+                self.errori = getattr(self, "errori", 0) + 1
                 break
             try:
                 ads = (r.json() or {}).get("ads") or []
             except Exception as e:
                 log.warning("subito recenti %s: risposta non leggibile a pagina %s (%s)", region, page, str(e)[:100])
+                self.errori = getattr(self, "errori", 0) + 1
                 break
             if not ads:
                 break
@@ -494,6 +497,8 @@ class SubitoCollector(Collector):
                     esito["ok"] = False
                 if esito["ok"]:
                     passi.segna(chiave)
+                else:
+                    self.errori = getattr(self, "errori", 0) + 1
             log.info("subito raccolta profonda %s: %d letti, %d tenuti (sotto %s €)", sn, tot["letti"], tot["tenuti"],
                      query["price_bands"][-1][1])
 

@@ -212,6 +212,8 @@ def giro() -> dict:
         sub = SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
         sub.min_delay_s, sub.max_delay_s = 0.4, 0.9
         sub.noti = noti
+        esito_as: dict = {}
+        _es_as = {"esito": esito_as}         # 12/11 ricontrollo: fasce AutoScout24 bloccate o incomplete
         n = 0
         for reg, provs in regioni_zona(PROVINCE_100):
             try:
@@ -223,6 +225,7 @@ def giro() -> dict:
                         salva()
             except Exception as e:
                 log.warning("BENZ subito %s: %s", reg, str(e)[:200])
+                st["lettura_errori"] += 1
             salva(True)
         # 1a-bis (21/10 sera, cliente: "tutti gli annunci del mercato, solo privati, a benzina"): raccolta profonda
         # di Subito provincia per provincia e fascia di prezzo per fascia (la ricerca per data si ferma prima),
@@ -245,6 +248,7 @@ def giro() -> dict:
                             salva()
                 except Exception as e:
                     log.warning("BENZ subito profonda regione %s: %s", reg, str(e)[:200])
+                    st["lettura_errori"] += 1
                 salva(True)
                 log.warning("BENZ subito profonda regione %s: letti finora %d", reg, n)
         st["letti_subito"] = n
@@ -260,11 +264,12 @@ def giro() -> dict:
         os.environ.pop("PASSI_JOB", None)
         n = 0
         try:
-            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}))):
+            for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}), **_es_as)):
                 pacco.append(l); n += 1
                 salva()
         except Exception as e:
             log.warning("BENZ autoscout: %s", str(e)[:200])
+            st["lettura_errori"] += 1
         salva(True)
         # 31/10 (cliente: "più a fondo sul mercato, senza cambiare regole"): Milano + 130 km non copre tutta la zona
         # (Mantova e la bassa bresciana sono oltre): ricerche AutoScout24 in più da altri centri (BENZ_CAP_EXTRA,
@@ -274,11 +279,12 @@ def giro() -> dict:
             os.environ["AUTOSCOUT_CAP"], os.environ["AUTOSCOUT_RAGGIO"] = cap.strip(), rag.strip()
             n0 = n
             try:
-                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}))):
+                for l in ([] if solo_valuta else bande_parallele(PMIN, PMAX, passo_as, [("P", "privato")] if racc_p else [("P", "privato"), ("D", "commerciante")], workers=int(os.environ.get("BENZ_PARALLELI", "4")), **({"noti": noti} if noti is not None else {}), **_es_as)):
                     pacco.append(l); n += 1
                     salva()
             except Exception as e:
                 log.warning("BENZ autoscout %s: %s", voce, str(e)[:200])
+                st["lettura_errori"] += 1
             salva(True)
             st[f"letti_autoscout_{cap.strip()}"] = n - n0
             log.warning("BENZ autoscout centro %s letti %d", voce, n - n0)
@@ -301,11 +307,12 @@ def giro() -> dict:
             nf = 0
             try:
                 for l in bande_parallele(fmin, fmax, passo_as if noti is not None else int(os.environ.get("FOCUS_PASSO", "250")),
-                                         [("P", "privato")], workers=int(os.environ.get("BENZ_PARALLELI", "3")), **({"noti": noti} if noti is not None else {})):
+                                         [("P", "privato")], workers=int(os.environ.get("BENZ_PARALLELI", "3")), **({"noti": noti} if noti is not None else {}), **_es_as):
                     pacco.append(l); nf += 1
                     salva()
             except Exception as e:
                 log.warning("BENZ focus autoscout: %s", str(e)[:200])
+                st["lettura_errori"] += 1
             salva(True)
             st["focus_autoscout"] = nf
             log.warning("BENZ focus AutoScout benzina %d-%d €, <= %d km: letti %d", fmin, fmax, fkm, nf)
@@ -329,6 +336,7 @@ def giro() -> dict:
                                 salva()
                     except Exception as e:
                         log.warning("BENZ focus subito regione %s: %s", reg, str(e)[:200])
+                        st["lettura_errori"] += 1
                     salva(True)
             st["focus_subito"] = ns
             log.warning("BENZ focus Subito benzina: tenuti %d", ns)
@@ -340,7 +348,13 @@ def giro() -> dict:
 
         if noti is not None:
             st.update({f"incr_{k}": v for k, v in noti.stats.items()})
-        if not solo_valuta:
+        st["lettura_errori"] += int(getattr(sub, "errori", 0) or 0) + int(esito_as.get("fasce_non_complete", 0))
+        if not st["lettura_errori"]:
+            del st["lettura_errori"]
+        if not solo_valuta and st.get("lettura_errori"):
+            # 12/11 ricontrollo: lettura con errori o blocchi: il "già visto" NON avanza (il prossimo giro rilegge da qui)
+            log.warning("INCREMENTALE inizio del giro non salvato: %d letture con errori o blocchi", st["lettura_errori"])
+        elif not solo_valuta:
             # 12/11 revisione: l'inizio di questo giro diventa il "già visto" del prossimo, solo a lettura finita
             INC.segna_inizio(conn, nome_giro, inizio_giro)
             if noti is None:

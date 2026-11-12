@@ -261,3 +261,66 @@ def test_inizio_del_giro_e_ribassi():
     st = Counter()
     INC.conta_ribassi(c, [_l("a", 5500), _l("b", 4500)], st)
     assert st["ribassi"] == 1
+
+
+def _giro_finto(sub_errore=False, as_incompleta=False, as_eccezione=False):
+    """benzina_mi.giro() vero con Subito, AutoScout24 e database finti (come tests/test_raccolta). Ritorna le righe
+    "inizio del giro" scritte e i contatori."""
+    import contextlib
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from test_raccolta import _Conn, _l, _schema_nuovo
+    from dealfinder import db
+    from dealfinder.collectors import subito
+    from dealfinder.pipeline import benzina_mi as B, lusso, tempo_reale as tr
+    scritte = []
+
+    class FintoSub:
+        errori = 0
+
+        def __init__(self, *a, **k):
+            pass
+
+        def search_recenti(self, reg, provs, dal, max_pages=0):
+            if sub_errore and reg == "lombardia":
+                raise RuntimeError("rete giù")
+            return [_l(source="subito", source_id="s1", make="fiat", model="panda", price_eur=4000, province="MI")]
+
+    def bande(pmin, pmax, passo, venditori, workers=1, esito=None, **_k):
+        if as_eccezione:
+            raise RuntimeError("bloccato")
+        if as_incompleta and esito is not None:
+            esito["fasce_non_complete"] = 1
+        return [_l(source="autoscout24", source_id="a1", make="fiat", model="panda", price_eur=5000, province="MI")]
+    conn = _Conn(colonne=False)
+
+    @contextlib.contextmanager
+    def connetti():
+        yield conn
+    vecchi = (db.connect, subito.SubitoCollector, lusso.bande_parallele, tr._salva, tr.valuta_e_pubblica,
+              INC.segna_inizio, INC.inizio_precedente, B.PROVINCE_100)
+    db.connect, subito.SubitoCollector, lusso.bande_parallele = connetti, FintoSub, bande
+    tr._salva = lambda c, lst, st: []
+    tr.valuta_e_pubblica = lambda c, ids, st: None
+    INC.segna_inizio = lambda c, nome, quando, tipo="giro": scritte.append((nome, tipo))
+    INC.inizio_precedente = lambda c, nome, tipo="giro": None
+    env = dict(os.environ)
+    for k in ("BENZ_CAP_EXTRA", "BENZ_FOCUS", "BENZ_SUB_PROFONDA", "BENZ_SOLO_INSUFF", "BENZ_INCREMENTALE"):
+        os.environ.pop(k, None)
+    os.environ.update(BENZ_SOLO_PRIVATI="1", BENZ_PROVINCE="MI", BENZ_MIN="1000", BENZ_PMAX="70000")
+    try:
+        st = B.giro()
+    finally:
+        (db.connect, subito.SubitoCollector, lusso.bande_parallele, tr._salva, tr.valuta_e_pubblica,
+         INC.segna_inizio, INC.inizio_precedente, B.PROVINCE_100) = vecchi
+        os.environ.clear()
+        os.environ.update(env)
+        _schema_nuovo()
+    return scritte, st
+
+
+def test_inizio_del_giro_scritto_solo_se_la_lettura_e_pulita():
+    scritte, st = _giro_finto()
+    assert scritte == [("zona_cron", "giro"), ("zona_cron", "completo")] and not st.get("lettura_errori")
+    for k in ({"sub_errore": True}, {"as_incompleta": True}, {"as_eccezione": True}):
+        scritte, st = _giro_finto(**k)
+        assert scritte == [] and st["lettura_errori"] >= 1, k

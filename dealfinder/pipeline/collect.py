@@ -707,8 +707,11 @@ def run(mode: str) -> Counter:
 
     with connect() as conn:
         from .ciclo import fb_job
+        # 12/11 ricontrollo: mercato_nord registra il GIRO con un nome suo; "collect:mercato_nord" (quello che lo rende
+        # fatto per 6 giorni e fa avanzare il ciclo dei passi) lo scrive solo fase_mercato_nord, a giro finito
         finish = log_job(conn, "collect:fb_backfill:v2" if mode == "fb_backfill"
-                         else fb_job() if mode == "facebook" else os.environ.get("COLLECT_JOB") or f"collect:{mode}")
+                         else fb_job() if mode == "facebook" else "collect:mercato_nord:giro" if mode == "mercato_nord"
+                         else os.environ.get("COLLECT_JOB") or f"collect:{mode}")
         from ..pricing.model import prescreen
         from ..pricing.train import load_active
         model = load_active(conn)          # caricato UNA volta: nessuna ricerca nel catalogo per annuncio
@@ -888,7 +891,7 @@ def run(mode: str) -> Counter:
             log.info("QUALITA %s: %s annunci | %% presenti: marca %s, modello %s, anno %s, km %s, prezzo %s, "
                      "zona %s, foto %s | privati %s%%", q["source"], q["n"], q["marca"], q["modello"], q["anno"],
                      q["km"], q["prezzo"], q["zona"], q["foto"], q["privati"])
-        finish(not any(k.endswith(":errore") for k in stats), dict(stats))
+        finish(not any(k.endswith(":errore") for k in stats) and not stats.get("mercato_nord:interrotto"), dict(stats))
         if os.environ.get("PASSI_JOB") and not any(k.endswith(":errore") for k in stats) \
                 and not stats.get("mercato_nord:interrotto"):          # 12/11: i passi fatti restano per la ripresa
             from . import passi

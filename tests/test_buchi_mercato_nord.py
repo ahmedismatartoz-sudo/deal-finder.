@@ -115,3 +115,86 @@ def test_chiave_dei_passi_per_ciclo():
         def execute(self, *a):
             raise RuntimeError("giù")
     assert C.chiave_ciclo_nord(Rotta()).startswith("collect:mercato_nord:20")
+
+
+def _nord_finto(interrompi_dopo: int | None):
+    """run("mercato_nord") vero, con database, AutoScout24 e passi finti. Ritorna (righe job_runs chiuse, passi fatti,
+    passi.finito chiamato?)."""
+    import dealfinder.collectors.autoscout as A
+    import dealfinder.pipeline.passi as PS
+    import dealfinder.pricing.train as TR
+    from dealfinder.core.models import Listing
+    righe, fatti, finito = [], set(), []
+
+    class Conn:
+        def execute(self, sql, p=None):
+            class R:
+                def fetchall(s):
+                    return []
+
+                def fetchone(s):
+                    return None
+            return R()
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+    @contextmanager
+    def connect():
+        yield Conn()
+
+    def log_job(conn, nome):
+        return lambda ok, st: righe.append((nome, ok))
+
+    def search_massiva(self, query):
+        for a in range(query["min_price"], query["max_price"], query["step"]):
+            chiave = f"as:{a}"
+            if PS.fatto(chiave):
+                continue
+            for i in range(250):
+                yield Listing(source="autoscout24", source_id=f"{a}-{i}", url="u", price_eur=a + i, province="VR",
+                              make="fiat", model="panda", year=2015, mileage_km=50000)
+                if self.stop:
+                    return
+            PS.segna(chiave)
+
+    vecchi = (C.connect, C.log_job, C.upsert_listing, A.AutoScoutCollector.search_massiva, PS.fatto, PS.segna, PS.finito,
+              TR.load_active, C.nord_da_fermare, A.GIA_SALVATI_MAX)
+    letti = [0]
+
+    def ferma(stats, *a, **k):
+        letti[0] += 200
+        if interrompi_dopo is not None and letti[0] >= interrompi_dopo:
+            stats["mercato_nord:interrotto"] = 1
+            return True
+        return False
+    try:
+        C.connect, C.log_job = connect, log_job
+        C.upsert_listing = lambda conn, l: (1, "invariato")
+        A.AutoScoutCollector.search_massiva = search_massiva
+        PS.fatto, PS.segna = (lambda k: k in fatti), (lambda k: fatti.add(k))
+        PS.finito = lambda j: finito.append(j)
+        TR.load_active = lambda conn: None
+        C.nord_da_fermare = ferma
+        with _env(NORD_MAX_PREZZO="3500", NORD_PASSO="1000", PASSI_JOB=None, COLLECT_JOB="collect:mercato",
+                  AUTOSCOUT_CAP=None, AUTOSCOUT_RAGGIO=None):
+            st = C.run("mercato_nord")
+    finally:
+        (C.connect, C.log_job, C.upsert_listing, A.AutoScoutCollector.search_massiva, PS.fatto, PS.segna, PS.finito,
+         TR.load_active, C.nord_da_fermare, A.GIA_SALVATI_MAX) = vecchi
+    return st, righe, fatti, finito
+
+
+def test_mercato_nord_interrotto_non_risulta_fatto_e_riprende_nello_stesso_ciclo():
+    st, righe, fatti, finito = _nord_finto(interrompi_dopo=600)
+    assert st["mercato_nord:interrotto"] == 1
+    assert righe == [("collect:mercato_nord:giro", False)]        # mai "collect:mercato_nord", mai ok=True
+    assert fatti == {"as:500", "as:1500"} and not finito             # passi fatti tenuti, job non chiuso
+    # il ciclo non avanza: nessuna riga "collect:mercato_nord" ok -> stessa chiave dei passi la notte dopo
+    assert all(n != "collect:mercato_nord" for n, _ in righe)
+    # giro completo: riga del giro ok e passi chiusi
+    st2, righe2, _f, finito2 = _nord_finto(interrompi_dopo=None)
+    assert righe2 == [("collect:mercato_nord:giro", True)] and finito2

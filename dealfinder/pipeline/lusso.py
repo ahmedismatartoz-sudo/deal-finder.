@@ -22,7 +22,7 @@ log = logging.getLogger("lusso")
 from ..marketing.consegne import consegna  # 4/11: lead nel database, non nei log
 
 
-def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None = None, noti=None):
+def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None = None, noti=None, esito: dict | None = None):
     """Ricerca AutoScout24 aggressiva: tante fasce di prezzo lette insieme (più collegamenti in parallelo).
     noti (12/11, pipeline.incrementale.Noti): lettura incrementale, ogni fascia si ferma al già visto."""
     from concurrent.futures import ThreadPoolExecutor
@@ -40,10 +40,10 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
             for l in out:                     # memoria (512 MB): dell'annuncio originale serve solo il venditore
                 if isinstance(l.raw, dict):
                     l.raw = {k: l.raw[k] for k in ("seller", "_telefono") if k in l.raw}
-            return out, col.blocked
+            return out, col.blocked or getattr(col, "incompleta", False)
         except Exception as e:
             log.warning("fascia %s: %s", c, str(e)[:120])
-            return [], False
+            return [], True
 
     visti = set()
     bloccate = 0
@@ -57,7 +57,9 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
                     visti.add(l.source_id)
                     yield l
                 del out
-    log.warning("RACCOLTA_VELOCE %d fasce, %d annunci, %d fasce bloccate", len(compiti), len(visti), bloccate)
+    if esito is not None:                     # 12/11: fasce bloccate, incomplete o fallite (per chi chiama)
+        esito["fasce_non_complete"] = esito.get("fasce_non_complete", 0) + bloccate
+    log.warning("RACCOLTA_VELOCE %d fasce, %d annunci, %d fasce bloccate o incomplete", len(compiti), len(visti), bloccate)
 
 
 def _ricerca(min_p: int, venditori, fasce):

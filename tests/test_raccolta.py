@@ -514,7 +514,7 @@ def test_giro_zona_salva_i_commercianti():
             return list(sub_ads) if reg == "lombardia" else []
     venditori_chiesti = []
 
-    def bande(pmin, pmax, passo, venditori, workers=1):
+    def bande(pmin, pmax, passo, venditori, workers=1, **_k):
         venditori_chiesti.append([v for v, _ in venditori])
         return [_l(source="autoscout24", source_id=f"a{v}", make="fiat", model="panda", price_eur=5000, province="MI",
                    seller_type=t) for v, t in venditori]
