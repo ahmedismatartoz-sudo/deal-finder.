@@ -48,11 +48,13 @@ WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
   AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')   -- 23/10: con BENZ_TUTTI_CARB=1 tutte le alimentazioni (tetto diesel 30 per cento sul sito)
   AND t.price_eur BETWEEN %(pmin)s AND %(pmax)s AND t.year >= 2007
   AND (%(solo_privati)s = false OR t.seller_type = 'privato') AND coalesce(t.mileage_km, 0) <= %(kmmax)s
+  AND (t.mileage_km IS NOT NULL OR NOT %(km_obblig)s) AND t.fuel IS NOT NULL   -- 12/11: scarti sicuri prima del LIMIT
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
   AND (NOT %(solo_nuove)s OR NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
                                           AND vp.computed_at > now() - interval '3 days'))   -- 2/11: solo mai valutate di recente
+  AND NOT {invariate}   -- 12/11: valutate da poco e invariate: il posto va alla prossima (scelta_candidate)
 ORDER BY (t.price_eur > %(util)s) ASC, t.price_eur / g.med ASC   -- 22/10: utilitarie per prime (BENZ_UTIL_PRIMA)
 LIMIT %(lim)s"""
 
@@ -304,32 +306,30 @@ def giro() -> dict:
 
         # 2. candidate: benzina, provincia di Milano, molto sotto il prezzo delle auto uguali
         conn.execute("SET statement_timeout = '900s'")
-        cand = conn.execute(CANDIDATI_SQL, {"prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
-                                            "lim": int(os.environ.get("BENZ_MAX", "500")), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
+        # 12/11 (buchi della raccolta §3.1): scarti sicuri e auto invariate fuori PRIMA del tetto (scelta_candidate)
+        from . import scelta_candidate as SC
+        tetto = int(os.environ.get("BENZ_MAX", "500"))
+        cand = conn.execute(CANDIDATI_SQL.format(invariate=SC.condizione_invariate(conn)), {
+                                            **SC.parametri_invariate(), "km_obblig": SC.km_obbligatori(),
+                                            "prov": PROVINCE_100, "soglia": float(os.environ.get("BENZ_SOGLIA", "0.85")),
+                                            "lim": int(tetto * SC.sovra()), "pmin": PMIN, "pmax": PMAX, "solo_privati": SOLO_P,
                                             "gmax": int(os.environ.get("BENZ_G_MAX", "60000")),
                                             "util": int(os.environ.get("BENZ_UTIL_PRIMA", "1000000")),
                                             "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
                                             "kmmax": km_max_scelta(),
                                             "solo_nuove": os.environ.get("BENZ_SOLO_NUOVE") == "1"}).fetchall()
+        st["candidate_lette"] = len(cand)
+        cand = SC.filtra_sicuri(conn, cand, tetto, st)
         # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
         # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
         if os.environ.get("BENZ_CAMBI_PREZZO", "1") == "1":
             try:
                 gia = {r["id"] for r in cand}
-                cambi = conn.execute(
-                    """SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, NULL::int AS n, NULL::float AS med
-                       FROM listings t
-                       WHERE t.id IN (SELECT DISTINCT listing_id FROM price_events
-                                      WHERE event = 'prezzo' AND at > now() - make_interval(hours => %(ore)s))
-                         AND t.status = 'attivo' AND upper(t.province) = ANY(%(prov)s)
-                         AND t.price_eur BETWEEN 1000 AND %(pmax)s AND coalesce(t.year, 2007) >= 2007
-                         AND coalesce(t.mileage_km, 0) <= %(kmmax)s
-                         AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
-                         AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
-                       LIMIT %(lim)s""",
-                    {"ore": int(os.environ.get("BENZ_CAMBI_ORE", "8")), "prov": PROVINCE_100, "pmax": PMAX,
-                     "lim": int(os.environ.get("BENZ_CAMBI_MAX", "1500")),
-                     "kmmax": km_max_scelta(), "tutti_carb": os.environ.get("BENZ_TUTTI_CARB", "1") == "1"}).fetchall()
+                # 12/11 (§3.2): tutti i cambi letti, poi in ordine (ribassi grandi e auto vicine alla soglia per prime)
+                cambi = SC.cambi_prezzo(conn, PROVINCE_100, PMAX, km_max_scelta(),
+                                        os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
+                                        int(os.environ.get("BENZ_CAMBI_ORE", "8")),
+                                        int(os.environ.get("BENZ_CAMBI_MAX", "1500")), st)
                 nuovi_c = [r for r in cambi if r["id"] not in gia]
                 cand = nuovi_c + list(cand)
                 st["cambi_prezzo"] = len(cambi)
