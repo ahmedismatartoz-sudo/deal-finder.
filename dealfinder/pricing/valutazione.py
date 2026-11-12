@@ -112,7 +112,7 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
     (computed_at). Niente scadenza dura: se il lavoro notturno salta, la stima non cambia da sola (avviso nei log)."""
     ids = list(ids)
     out = {"vr": {}, "ai": {}, "difetti": {}, "parti": {}, "fattori_calibra": RG.fattori_calibrazione(None),
-           "tassi_priori": None, "dotazioni_misura": None}
+           "tassi_priori": None, "tassi_misurati": None, "dotazioni_misura": None}
     if "vr" in solo:
         out["vr"] = {r["listing_id"]: dict(r) for r in _q(conn,
                      "SELECT listing_id, v, p25, sigma, n, n_vendute, computed_at FROM valore_reale "
@@ -142,7 +142,10 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
         out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {}, misurate_vr=dati.get("fasce_vr") or {},
                                                     per_M=dati.get("fasce_su") == "M")
         # 12/11 sera (margini fase 2): tassi anno/km per marca (pooling) e premi di 4x4/optional, dalla stessa misura
-        out["tassi_priori"] = dati.get("tassi") or None
+        # (ricontrollo M2) le valutazioni usano i tassi solo se la misura stessa è stata fatta con il pooling: al primo
+        # CALIBRA nuovo (tassi_pooling=false) resta la regola di prima, dal secondo misura e applicazione coincidono
+        out["tassi_priori"] = (dati.get("tassi") or None) if dati.get("tassi_pooling") else None
+        out["tassi_misurati"] = dati.get("tassi") or None          # per il lavoro CALIBRA, che li legge sempre
         out["dotazioni_misura"] = dati.get("dotazioni") or None
     return out
 

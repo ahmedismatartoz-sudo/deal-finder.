@@ -387,3 +387,28 @@ def test_simula_fase2_gira_sul_dump_di_prova():
                              capture_output=True, text=True, timeout=60)
     assert out.returncode == 0, out.stderr
     assert "**Totale** | 2 | 1 |" in out.stdout                    # la Panda combinata esce (V al venduto)
+
+
+def test_tassi_applicati_solo_da_misura_con_pooling():
+    """Ricontrollo M2: valutazioni con i tassi solo se la riga dice tassi_pooling=true; CALIBRA li legge sempre."""
+    tassi = {"tutti": {"anno": .09, "km_10000": .018, "n": 9000}}
+
+    class Conn:
+        def __init__(self, dati):
+            self.dati = dati
+
+        def execute(self, sql, args=()):
+            dati = self.dati
+
+            class R:
+                def fetchall(self_):
+                    return [{"dati": dati}] if "FROM calibrazione" in sql else []
+            return R()
+
+        def rollback(self):
+            pass
+    primo = VZ.ingressi(Conn({"fasce_su": "M", "tassi": tassi, "tassi_pooling": False}), [1], solo=("calibra",))
+    assert primo["tassi_priori"] is None and primo["tassi_misurati"] == tassi
+    secondo = VZ.ingressi(Conn({"fasce_su": "M", "tassi": tassi, "tassi_pooling": True}), [1], solo=("calibra",))
+    assert secondo["tassi_priori"] == tassi
+    assert '_ing.get("tassi_misurati")' in open(os.path.join(QUI, "dealfinder", "pricing", "calibra.py")).read()

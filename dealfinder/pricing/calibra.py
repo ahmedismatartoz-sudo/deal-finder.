@@ -115,7 +115,7 @@ def misura(conn) -> dict:
         from .valutazione import ingressi
         _ing = ingressi(conn, [r["id"] for r in rows], solo=("vr", "calibra")) if rows else {}
         vrs, fattori = _ing.get("vr") or {}, _ing.get("fattori_calibra")
-        priori = _ing.get("tassi_priori")              # 12/11 sera: stessi tassi anno/km (pooling) della valutazione
+        priori = _ing.get("tassi_misurati")            # 12/11 sera: la misura parte con il pooling se i tassi ci sono
     except Exception:
         vrs, fattori, priori = {}, None, None
     mercato, chiave, cache = [], None, {}
