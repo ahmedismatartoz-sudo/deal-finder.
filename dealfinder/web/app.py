@@ -3338,6 +3338,19 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("TOGLI_LISTA non riuscito: %s", str(e)[:300])
             return
+        if v.startswith("fermi:"):            # 12/11 sera (cliente): i contatti fermi nel database, non quelli di oggi
+            time.sleep(20)
+            try:
+                from ..marketing import su_misura as SM
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"fermi:{v}"):
+                    lg.warning("FERMI %s già fatto", v)
+                    return
+                n, quando = v.split(":", 1)[1].split("@", 1)
+                lg.warning("FERMI %s", json.dumps(SM.ripesca_fermi(totale=int(n or 1400), quando=quando)))
+            except Exception as e:
+                lg.warning("FERMI non riuscito: %s", str(e)[:300])
+            return
         if v.startswith("nuovi_sm:"):         # 10/11 sera (cliente): 1.450 dal nostro archivio con esempi nuovi, programmata
             time.sleep(30)
             try:
