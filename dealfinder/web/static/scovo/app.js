@@ -315,7 +315,7 @@ function carCard(c, i, hero){
   return `<button class="card${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}">
       <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}<span class="ph-shade" aria-hidden="true"></span>${badges}
         <div class="ph-over"><div class="ph-t"><div class="name">${nomeDue(c)}</div><div class="ph-price">${eur(c.prezzo)}</div></div>
-          <span class="gain-pill"><small>${lbl}</small><b>${gainTxt(c)}</b></span></div></div>
+          <span class="gain-pill"><small>${lbl}</small><b>${gainTxt(c)}</b>${nettoTag(c)}</span></div></div>
       <div class="card-body">${c.avviso_verifica ? `<div class="avviso-riga">⚠︎ Verificare prima di pagare</div>` : ""}${chips}${hero ? "" : `<div class="trio">${trio}</div>
         ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
         ${tag ? `<span class="c-tag">${ICON.spark}${esc(tag)}</span>` : ""}`}</div>
@@ -449,6 +449,24 @@ const VOCI = {ricambi: "Ricambi", manodopera: "Manodopera e verniciatura", passa
   giacenza: "Giacenza", iva_margine: "IVA (regime del margine)", costi_commerciante: "Tagliando e pulizia"};
 const ORIG = {annuncio: "dall'annuncio", stima_ricambi: "ricerca prezzi pezzi", config: "impostazione", stima: "stima prudente"};
 function pct(x){ return Math.round(x * 1000) / 10 + "%"; }
+/* 12/11 margini precisi: guadagno netto stimato (secondo numero; il margine lordo resta quello sopra) */
+const VOCI_NETTO = {trattativa: "Sconto di trattativa in vendita", passaggio: "Passaggio di proprietà",
+  preparazione: "Preparazione (pulizia, tagliando, ritocchi)", garanzia: "Garanzia legale", ricambi_difetti: "Ricambi e difetti già stimati",
+  iva_margine: "IVA sul margine (22/122)"};
+function nettoTag(c){ return c.netto != null && !c.supercar ? `<small class="netto-tag">netto ~${eur(c.netto)}</small>` : ""; }
+function boxNetto(c){
+  if (c.netto == null || !c.costi_netto) return "";
+  const k = c.costi_netto, voci = Object.keys(VOCI_NETTO).filter(x => k[x]).map(x => `<div class="row"><span class="k">${VOCI_NETTO[x]}${x === "trattativa" ? ` <small>· ${pct(k.sconto_pct || 0)}, ${esc(k.sconto_da || "")}</small>` : ""}</span><span class="v" style="font-size:16px">−${eur(k[x])}</span></div>`).join("");
+  return `<details class="netto-box"><summary class="row total"><span class="k">Guadagno netto stimato</span><span class="v ${c.netto < 0 ? "warn" : ""}">${c.netto < 0 ? "−" : "~"}${eur(Math.abs(c.netto))}</span></summary>
+    <div class="netto-voci">${voci}<div class="note" style="border:0">Rivendita meno prezzo e costi tipici di un commerciante. È una stima: i costi veri dipendono dalla tua attività.</div></div></details>`;
+}
+function rivComm(p, v){
+  const r = (v && v.rivendita_commercianti) || p.rivendita_commercianti;
+  if (!r || p.R_da !== "commercianti") return "";
+  const t = r.fonte === "venduti" ? `ultimo prezzo di ${r.n_venduti} auto uguali vendute da commercianti${r.giorni_vendita != null ? `, in media in ${Math.round(r.giorni_vendita)} giorni` : ""}`
+    : `${r.n_attivi} auto uguali in vendita da commercianti, meno lo sconto osservato (${pct(r.sconto || 0)})`;
+  return `<div class="note">Rivendita dai commercianti: ${t}.</div>`;
+}
 function boxPolicy(c, v){
   const p = c.pv, row = (k, val, cls) => `<div class="row"><span class="k">${k}</span><span class="v ${cls || ""}">${val}</span></div>`;
   const ok = p.categoria === "opportunita";
@@ -458,13 +476,15 @@ function boxPolicy(c, v){
     ${p.M != null ? row(`Prezzo di mercato M <small>(${v && v.metodo === "modello" ? "modello su " + p.n + " annunci dello stesso modello" : p.n + " confronti"}, per anno e km di questa auto)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
     ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
-    ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}`;
-  if (v && v.R != null) h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
+    ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}
+    ${rivComm(p, v)}`;
+  if (v && v.R != null && p.R_da !== "commercianti") h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
   if (v && v.costi) {
     h += Object.entries(v.costi).filter(([, x]) => x.euro).map(([k, x]) => `<div class="row"><span class="k">${esc(VOCI[k] || k)} <small>· ${esc(ORIG[x.origine] || x.origine)}</small></span><span class="v" style="font-size:16px">−${eur(x.euro)}</span></div>`).join("");
     if (v.riserva && v.riserva.euro) h += row(`Riserva imprevisti <small>· ${esc(v.riserva.nota || "")}</small>`, "−" + eur(v.riserva.euro));
   } else if (p.totale_costi != null) h += row("Costi e riserva", "−" + eur(p.totale_costi + (p.riserva || 0)));
   h += p.margine != null ? `<div class="row total"><span class="k">Margine operativo prudente</span><span class="v" style="${p.margine < (p.soglia || 0) ? "color:var(--warn)" : ""}">${gainTxt(c)}</span></div>
+    ${boxNetto(c)}
     <div class="note" style="border:0;margin-top:-8px">${p.difetto_costo ? `Già tolti ${eur(p.difetto_costo)} per un difetto scritto nell'annuncio${p.difetto ? " (" + esc(p.difetto) + ")" : ""}. ` : ""}${p.soglia ? `Soglia minima richiesta: ${eur(p.soglia)}.` : ""} Non è un utile netto dopo le imposte; l'auto e le condizioni d'acquisto vanno sempre verificate.</div>` : "";
   if (p.sconto_pct != null && p.margine == null) h += `<div class="note" style="border:0">Prezzo ${p.sconto_pct}% sotto la media di ${p.n} annunci uguali in Europa. Con la rivendita prudente e i costi di import il margine non è garantito: è un'auto da trattare.</div>`;
   h += `</div>`;

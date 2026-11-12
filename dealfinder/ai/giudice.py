@@ -71,9 +71,10 @@ def _chiedi(conn, t: dict, confronti: list[dict]) -> str:
     return testo
 
 
-def giudica(conn, t: dict, confronti: list[dict]) -> dict | None:
-    """Restituisce {"via": {id: motivo}, "nota": str} oppure None (AI non disponibile / budget finito / errore)."""
-    if not confronti or not AI.available():
+def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -> dict | None:
+    """Restituisce {"via": {id: motivo}, "nota": str} oppure None (AI non disponibile / budget finito / errore).
+    solo_archivio: solo un giudizio già in tabella (misure e prove: nessuna chiamata nuova)."""
+    if not confronti or (not solo_archivio and not AI.available()):
         return None
     ids = sorted(int(c["id"]) for c in confronti if c.get("id") is not None)
     chiave = hashlib.sha1(json.dumps([t.get("price_eur"), ids]).encode()).hexdigest()[:16]
@@ -84,7 +85,7 @@ def giudica(conn, t: dict, confronti: list[dict]) -> dict | None:
         if r:
             via = r["via"] if isinstance(r["via"], dict) else json.loads(r["via"] or "{}")
             return {"via": {int(k): v for k, v in via.items()}, "nota": r["nota"], "da_archivio": True}
-        if AI.budget_finito(conn):
+        if solo_archivio or AI.budget_finito(conn):
             return None
         testo = _chiedi(conn, t, confronti)
         validi = set(ids)

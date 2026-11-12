@@ -50,22 +50,30 @@ NORD = ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO", 
 NORD_SQL = "province IN (" + ",".join(f"'{p}'" for p in NORD) + ")"
 
 
-def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict) -> dict:
+def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict, giudice=True) -> dict:
+    """giudice: True (valutazioni vere), False (niente AI) o "esame" (misure: AI solo dall'archivio dei giudizi,
+    mai una chiamata nuova, e riga di log ESAME_GIUDICE invece di GIUDICE_AI).
+    12/11 (rapporto 2 E6, "stessa auto giudicata più volte nello stesso secondo con risultati diversi"): erano le
+    misure di pricing/esame.py, che rifacevano la valutazione per ogni variante di regole chiamando il giudice e
+    scrivendo GIUDICE_AI come se fossero valutazioni vere (e pagando una chiamata AI per ogni variante, perché i
+    confronti di ogni variante sono diversi)."""
     v, lista = _valuta_base(conn, t, mercato, soglia, cfg, cache)
-    return _giudice_ai(conn, t, v, lista, soglia, cfg)
+    if not giudice:
+        return v
+    return _giudice_ai(conn, t, v, lista, soglia, cfg, solo_archivio=(giudice == "esame"))
 
 
 def _regole(cfg) -> RG.Regole:
     return getattr(cfg, "regole", None) or RG.regole()
 
 
-def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg) -> dict:
+def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg, solo_archivio: bool = False) -> dict:
     """28/10: l'AI toglie i confronti che non sono davvero la stessa auto, poi si rifà il calcolo (interruttore
     POLICY_GIUDICE_AI, regole.giudice_ai). Solo per le auto che andrebbero sul sito: le altre non costano niente."""
     if not _regole(cfg).giudice_ai or v.get("categoria") not in ("opportunita", "candidato") or not v.get("confronti"):
         return v
     from ..ai import giudice
-    g = giudice.giudica(conn, t, v["confronti"])
+    g = giudice.giudica(conn, t, v["confronti"], solo_archivio=solo_archivio)
     if not g:
         return v
     if not g["via"]:
@@ -82,7 +90,7 @@ def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg) -> dict:
                                                            "margine": v.get("margine"), "n": v.get("n")}}
     v2.setdefault("ipotesi", []).append(f"l'AI ha tolto {len(via)} confronti non uguali (versione/allestimento/prezzo): "
                                         f"ricalcolato su {v2.get('n')}")
-    logging.getLogger("giudice").warning("GIUDICE_AI %s tolti %d: M %s→%s, margine %s→%s, %s→%s",
+    logging.getLogger("giudice").warning(("ESAME_GIUDICE" if solo_archivio else "GIUDICE_AI") + " %s tolti %d: M %s→%s, margine %s→%s, %s→%s",
                                          t.get("id"), len(via), v.get("M"), v2.get("M"), v.get("margine"),
                                          v2.get("margine"), v.get("categoria"), v2.get("categoria"))
     return v2

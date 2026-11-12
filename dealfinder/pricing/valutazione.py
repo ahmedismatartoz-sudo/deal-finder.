@@ -134,7 +134,7 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
         if RG.calibrazione_vecchia(dati):
             log.warning("CALIBRA_VECCHIA la misura chiesto -> venduto è stata fatta con un'altra correzione anno/km: "
                         "va rifatta (CALIBRA=1)")
-        out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {})
+        out["fattori_calibra"] = RG.fattori_calibrazione(dati.get("fasce") or {}, misurate_vr=dati.get("fasce_vr") or {})
     return out
 
 
@@ -266,7 +266,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     soglia_fn = soglia_fn or scovo.soglia
     now = datetime.now(timezone.utc)
     ordine = _ordina(conn, ids)
-    gruppo, mercato, cache = None, [], {}
+    from . import rivendita as RV
+    gruppo, mercato, cache, commercianti = None, [], {}, None
     vecchi_vr = 0
     for k in range(0, len(ordine), blocco):
         pezzo = ordine[k:k + blocco]
@@ -293,6 +294,9 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                         gruppo, cache = key, {}
                         mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                                    for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
+                        # 12/11: annunci di commercianti del gruppo (venduti e attivi) per la rivendita
+                        commercianti = RV.carica(conn, *key, HOME_REGION_SQL, rg) if rg.rivendita.attiva else None
+                    t["commercianti"] = commercianti
                     v = valuta_con_ripiego(conn, t, mercato, soglia_fn(int(r["price_eur"])), cfg, cache)
                     vr_at = (t.get("vr") or {}).get("computed_at")
                     if vr_at is not None and hasattr(vr_at, "tzinfo"):

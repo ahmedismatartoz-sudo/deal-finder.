@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 
 log = logging.getLogger("config")
 
-VERSIONE = "regole-2026-11-06a"
+VERSIONE = "regole-2026-11-12a"
 
 
 @dataclass(frozen=True)
@@ -56,6 +56,13 @@ class Confronti:
     allestimento: bool = True          # sportivo/normale separati se gli uguali sono almeno n_minimo
     trazione: bool = False             # 4x4 con 4x4 (spento)
     motore_senza_kw: bool = True       # senza kW il motore si riconosce dalla cilindrata scritta
+    # 12/11 (rapporto 2 §4 E3, cliente "più preciso"): 2–7 gemelle con prezzi corretti molto dispersi (massimo/minimo
+    # oltre 1,8) non dicono il prezzo: "dati_insufficienti", salvo un valore reale affidabile
+    dispersione_max: float = 1.8
+    dispersione_sotto_n: int = 8
+    # 12/11 (rapporto 2 §4 E1): il giudice AI vede un campione di 40 confronti scelti per SOMIGLIANZA (prima i 40 più
+    # economici: l'AI poteva togliere solo dal basso e la mediana poteva solo salire)
+    giudice_campione: int = 40
 
     def serve(self, prezzo) -> int:
         return max(self.n_minimo, self.min_eco if (prezzo or 0) < self.eco_sotto else self.min_sito)
@@ -77,7 +84,7 @@ class Correzione:
     stima_min_annunci: int = 15
     anno_min: float = .02              # stima accettata solo se plausibile
     anno_max: float = .25
-    km_min: float = 0.0
+    km_min: float = .008               # 12/11 (rapporto 2 E8): almeno 0,8% ogni 10.000 km (prima anche 0%)
     km_max: float = .05
 
 
@@ -188,6 +195,38 @@ class Calibrazione:
     riserva: tuple = (("<5k", .87), ("5-10k", .915), ("10-20k", .97))
     fasce: tuple = ((5000, "<5k"), (10000, "5-10k"), (20000, "10-20k"), (35000, "20-35k"), (60000, "35-60k"),
                     (10**9, ">60k"))
+    # 12/11 (rapporto 2 E2): il fattore non salta più al confine delle fasce: si interpola (in scala log di M) tra i
+    # centri delle fasce; fuori dal primo e dall'ultimo centro resta quello della fascia. Le fasce sono di M sia nella
+    # misura (pricing/calibra.py, "fasce_su": "M") sia nell'applicazione.
+    centri: tuple = (("<5k", 3500), ("5-10k", 7071), ("10-20k", 14142), ("20-35k", 26458), ("35-60k", 45826),
+                     (">60k", 85000))
+
+
+@dataclass(frozen=True)
+class Allestimento:
+    """12/11: allestimento normalizzato (pricing/allestimento.py, livello 0–3) nella scelta dei confronti: prima lo
+    stesso livello, poi ±1, poi gli sconosciuti, poi gli altri; i confronti di livello diverso si portano al livello
+    dell'auto con `fattore` per livello (mai oltre il suo livello). Interruttore ALLESTIMENTO_CONFRONTI."""
+    attivo: bool = True
+    fattore: float = .04
+
+
+@dataclass(frozen=True)
+class RivenditaCommercianti:
+    """12/11 (cliente: "la rivendita deve venire dai dati veri dei commercianti"): R dai SOLI annunci di commercianti
+    della stessa auto (pricing/rivendita.py). Venduti = spariti entro `venduta_entro` giorni dalla comparsa negli
+    ultimi `giorni` giorni e mai riapparsi (ultimo prezzo); attivi = prezzo di oggi meno lo sconto medio osservato tra
+    primo e ultimo prezzo dei venduti. Si usa con almeno `min_venduti` venduti o `min_attivi` attivi (con lo sconto
+    misurato su almeno `min_sconti` venduti); altrimenti R = M come prima. Interruttore RIVENDITA_COMMERCIANTI."""
+    attiva: bool = True
+    giorni: int = 90
+    venduta_entro: int = 60
+    min_venduti: int = 5
+    min_attivi: int = 8
+    min_sconti: int = 5
+    anni_tol: int = 2
+    km_tol: int = 40000
+    freschezza_giorni: int = 10        # attivi: visti negli ultimi giorni
 
 
 @dataclass(frozen=True)
@@ -209,6 +248,8 @@ class Regole:
     ammissione: Ammissione = field(default_factory=Ammissione)
     zona: Zona = field(default_factory=Zona)
     calibrazione: Calibrazione = field(default_factory=Calibrazione)
+    allestimento: Allestimento = field(default_factory=Allestimento)
+    rivendita: RivenditaCommercianti = field(default_factory=RivenditaCommercianti)
     scrittura: Scrittura = field(default_factory=Scrittura)
     giudice_ai: bool = True            # l'AI toglie i confronti non uguali (6/11: default = produzione, così cron mercato,
                                        # cron opportunità e sito calcolano con le STESSE regole anche senza variabili)
@@ -225,6 +266,8 @@ INTERRUTTORI = {
     "POLICY_ITALIA": "zona.italia",
     "BENZ_RICHIESTE": "fascia_richiesta",
     "MERCATO_CALIBRATO": "calibrazione.attiva",
+    "ALLESTIMENTO_CONFRONTI": "allestimento.attivo",
+    "RIVENDITA_COMMERCIANTI": "rivendita.attiva",
 }
 _VERO = {"1", "true", "si", "sì", "yes", "on"}
 _FALSO = {"0", "false", "no", "off"}
@@ -323,9 +366,12 @@ def fattore_correzione(anni_piu_nuovo: float, km_in_meno_10k: float, ya: float, 
     return min(f, 1.0)
 
 
-def fattori_calibrazione(misurate: dict | None, r: Regole | None = None) -> list:
+def fattori_calibrazione(misurate: dict | None, r: Regole | None = None, misurate_vr: dict | None = None) -> list:
     """[(limite, fascia, fattore)] dalla misura (dati->'fasce' dell'ultima riga di `calibrazione`): fattore misurato
-    se la fascia ha almeno n_min auto, altrimenti la riserva; sempre tra minimo e massimo."""
+    se la fascia ha almeno n_min auto, altrimenti la riserva; sempre tra minimo e massimo.
+    12/11 (rapporto 2 E4): con misurate_vr (dati->'fasce_vr': prezzo delle auto vendute / M quando M viene dal valore
+    reale) si aggiungono le voci (limite, "vr:<fascia>", fattore) SOLO per le fasce misurate su almeno n_min auto:
+    il valore reale è già un prezzo di vendita, quindi senza misura non si corregge (nessuna riserva)."""
     cal = (r or regole()).calibrazione
     riserva = dict(cal.riserva)
     out = []
@@ -334,6 +380,10 @@ def fattori_calibrazione(misurate: dict | None, r: Regole | None = None) -> list
         x = f.get("prezzo_su_M") if (f.get("n") or 0) >= cal.n_min else None
         x = riserva.get(nome, 1.0) if x is None else float(x)
         out.append((lim, nome, max(cal.minimo, min(cal.massimo, float(x)))))
+    for lim, nome in cal.fasce:
+        f = (misurate_vr or {}).get(nome) or {}
+        if (f.get("n") or 0) >= cal.n_min and f.get("prezzo_su_M") is not None:
+            out.append((lim, "vr:" + nome, max(cal.minimo, min(cal.massimo, float(f["prezzo_su_M"])))))
     return out
 
 
@@ -345,9 +395,31 @@ def calibrazione_vecchia(dati: dict | None, r: Regole | None = None) -> bool:
     return bool(dati.get("correzione_due_sensi", False)) != bool((r or regole()).correzione.due_sensi)
 
 
-def fattore_per(M: float, fattori: list | None, r: Regole | None = None) -> float:
+def fattore_per(M: float, fattori: list | None, r: Regole | None = None, vr: bool = False) -> float:
+    """Fattore chiesto → venduto per questo M, interpolato in scala log tra i centri delle fasce (niente scalini).
+    vr=True: i fattori misurati per M dal valore reale (voci "vr:"), 1,0 dove non misurati."""
+    r = r or regole()
     fattori = fattori if fattori is not None else fattori_calibrazione(None, r)
-    return next((x for lim, _, x in fattori if M < lim), 1.0)
+    pref = "vr:" if vr else ""
+    per_nome = {str(nome)[len(pref):]: x for _, nome, x in fattori
+                if (str(nome).startswith("vr:") if vr else not str(nome).startswith("vr:"))}
+    if not per_nome:
+        return 1.0
+    centri = dict(r.calibrazione.centri)
+    punti = sorted((centri[n], (per_nome.get(n, 1.0) if vr else per_nome[n])) for n in centri
+                   if n in per_nome or vr)
+    if not punti:
+        return 1.0
+    M = float(M or 0)
+    if M <= punti[0][0]:
+        return punti[0][1]
+    if M >= punti[-1][0]:
+        return punti[-1][1]
+    for (c0, f0), (c1, f1) in zip(punti, punti[1:]):
+        if c0 <= M <= c1:
+            w = (math.log(M) - math.log(c0)) / (math.log(c1) - math.log(c0))
+            return f0 + w * (f1 - f0)
+    return 1.0
 
 
 def da_calibrare(pv: dict) -> bool:
@@ -363,19 +435,27 @@ def da_calibrare(pv: dict) -> bool:
 def calibra_vendita(pv: dict, fattori: list | None, r: Regole | None = None) -> dict:
     """UNICA correzione prezzo chiesto → prezzo di vendita, per il sito (_mercato_calibrato). Restituisce una COPIA di
     pv con M, R, R_finale e margine portati al prezzo di vendita, e `calibrato` = fattore (così non si applica due
-    volte). Nessun'altra riduzione (niente ×0,95, niente "metà correzione"). pv invariato se non va calibrato."""
+    volte). Nessun'altra riduzione (niente ×0,95, niente "metà correzione"). pv invariato se non va calibrato.
+    12/11: fattore interpolato (fattore_per); M dal valore reale si corregge solo con il fattore MISURATO sul valore
+    reale (voci "vr:", rapporto 2 E4); con la rivendita dai commercianti (R_da = "commercianti") R è già un prezzo
+    di vendita vero e non si tocca: si porta al venduto solo M."""
     r = r or regole()
-    if not r.calibrazione.attiva or not da_calibrare(pv):
+    if not r.calibrazione.attiva or not isinstance(pv, dict) or not pv.get("M") or pv.get("calibrato") is not None:
+        return pv
+    vr = not da_calibrare(pv)
+    if vr and not (pv.get("M_fonte") == "vendite" and any(str(n).startswith("vr:") for _, n, _ in (fattori or []))):
         return pv
     M = float(pv["M"])
-    f = fattore_per(M, fattori, r)
+    f = fattore_per(M, fattori, r, vr=vr)
     if f >= 1:
         return dict(pv, calibrato=1.0)
+    if pv.get("R_da") == "commercianti":
+        return dict(pv, M=int(round(M * f)), M_annunci=int(M), calibrato=round(f, 3))
     R = float(pv.get("R_finale") or pv.get("R") or M)
     R2 = min(R, M * f)
     giu = int(round(R - R2))
     out = dict(pv, M=int(round(M * f)), M_annunci=int(M), R=int(round(R2)), R_finale=int(round(R2)),
-               calibrato=round(f, 3), M_fonte="vendite_calibrate")
+               calibrato=round(f, 3), M_fonte="vendite_calibrate" if not vr else "vendite")
     if pv.get("margine") is not None:
         out["margine"] = int(pv["margine"]) - giu
     return out

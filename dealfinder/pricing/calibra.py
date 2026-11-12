@@ -55,7 +55,17 @@ def misura(conn) -> dict:
                          "gg": int(os.environ.get("CALIBRA_GIORNI_VENDITA", "7")),
                          "lim": int(os.environ.get("CALIBRA_MAX", "3000"))}).fetchall()
     cfg = P.PolicyConfig.from_env()
+    # 12/11 (rapporto 2 E2/E4): fasce di M (come nell'applicazione, regole.fattore_per) e non di prezzo: scegliere la
+    # fascia sul prezzo (la variabile misurata) esagera la sovrastima. In più la stessa misura quando M viene dal
+    # valore reale (fasce_vr): senza misura il valore reale non si corregge.
     per = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
+    per_vr = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
+    per_prezzo = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
+    try:
+        from .valutazione import ingressi
+        vrs = ingressi(conn, [r["id"] for r in rows], solo=("vr",))["vr"] if rows else {}
+    except Exception:
+        vrs = {}
     mercato, chiave, cache = [], None, {}
     tot = 0
     for r in rows:
@@ -78,23 +88,36 @@ def misura(conn) -> dict:
         M, R = v.get("M"), v.get("R_finale") or v.get("R")
         if not M or not R or (v.get("n") or 0) < cfg.n_minimo:
             continue
-        f = _fascia(prezzo)
-        d = per[f]
-        d["n"] += 1
-        d["rapp_M"].append(prezzo / M)
-        d["err_R"].append((R - prezzo) / prezzo * 100)
-        d["coperte"] += 1 if prezzo >= R else 0
+        for d in (per[_fascia(M)], per_prezzo[_fascia(prezzo)]):
+            d["n"] += 1
+            d["rapp_M"].append(prezzo / M)
+            d["err_R"].append((R - prezzo) / prezzo * 100)
+            d["coperte"] += 1 if prezzo >= R else 0
         tot += 1
+        if r["id"] in vrs:
+            try:
+                v2, _ = _valuta_base(conn, dict(t, vr=vrs[r["id"]]), confronti, scovo.soglia(int(prezzo)), cfg, cache)
+            except Exception:
+                continue
+            if v2.get("M") and v2.get("M_fonte") == "vendite":
+                d = per_vr[_fascia(v2["M"])]
+                d["n"] += 1
+                d["rapp_M"].append(prezzo / v2["M"])
+                R2 = v2.get("R_finale") or v2.get("R") or v2["M"]
+                d["err_R"].append((R2 - prezzo) / prezzo * 100)
+                d["coperte"] += 1 if prezzo >= R2 else 0
     # 4/11: con quale correzione anno/km è stata misurata (il fattore cambia se cambia la regola: va rimisurato)
-    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": {}, "correzione_due_sensi": bool(cfg.due_sensi)}
-    for lim, f in FASCE:
-        d = per.get(f)
-        if not d or not d["n"]:
-            continue
-        out["fasce"][f] = {"n": d["n"],
-                           "prezzo_su_M": round(median(d["rapp_M"]), 3),
-                           "errore_R_pct": round(median(d["err_R"]), 1),
-                           "copertura_R": round(d["coperte"] / d["n"], 2)}
+    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": {}, "fasce_su": "M", "fasce_vr": {},
+           "fasce_prezzo": {}, "correzione_due_sensi": bool(cfg.due_sensi)}
+    for chiave, dati in (("fasce", per), ("fasce_vr", per_vr), ("fasce_prezzo", per_prezzo)):
+        for lim, f in FASCE:
+            d = dati.get(f)
+            if not d or not d["n"]:
+                continue
+            out[chiave][f] = {"n": d["n"],
+                              "prezzo_su_M": round(median(d["rapp_M"]), 3),
+                              "errore_R_pct": round(median(d["err_R"]), 1),
+                              "copertura_R": round(d["coperte"] / d["n"], 2)}
     log.warning("CALIBRA_RISULTATO %s", json.dumps(out, ensure_ascii=False))
     try:      # 28/10 sera: il sito corregge il mercato con questi valori (vedi app._mercato_calibrato)
         conn.execute("CREATE TABLE IF NOT EXISTS calibrazione (at TIMESTAMPTZ PRIMARY KEY DEFAULT now(), dati JSONB)")
