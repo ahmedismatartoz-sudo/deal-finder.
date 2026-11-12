@@ -5,8 +5,8 @@ ultimo prezzo. Il prezzo si nasconde e si confrontano tre stime:
   - M del nostro calcolo: l'ultima valutazione salvata quando l'auto era ancora online (non usa il suo prezzo);
   - stima media della perizia AI (ai/perizia.py), con prezzo "NON INDICATO" e i confronti di allora (solo quelli
     già online in quel momento, con lo stato che avevano allora);
-  - prezzo Autohero, se c'è nella tabella autohero_prezzi un'auto corrispondente (stesso slug marca-modello,
-    anno ±1, km ±20.000): mediana delle 5 più vicine.
+  - prezzo Autohero, se c'è nella tabella autohero_prezzi un'auto corrispondente (stessa marca-modello con i nomi
+    canonici di core/normalize su entrambi i lati, anno ±1, km ±20.000): mediana delle 5 più vicine.
 Per ciascuna: errore medio assoluto (€), errore percentuale medio, quante volte entro il 10%, scostamento medio
 (+ = stima troppo alta). Solo righe PROVA_CIECA nei log (niente dati del venditore); nessuna scrittura nel database
 (i token della perizia non si registrano in ai_usage: la prova non consuma il budget del sito, si scrive il costo
@@ -43,13 +43,43 @@ JOIN LATERAL (SELECT (v.dati->>'M')::numeric AS m, v.dati->'confronti' AS confro
 ORDER BY md5(l.id::text) LIMIT %(n)s"""
 
 AUTOHERO_SQL = """
-SELECT prezzo, anno, km FROM autohero_prezzi
-WHERE regexp_replace(lower(slug), '[^a-z0-9]', '', 'g') = %(slug)s AND prezzo IS NOT NULL
+SELECT slug, prezzo, anno, km FROM autohero_prezzi
+WHERE lower(slug) LIKE ANY(%(prefissi)s) AND prezzo IS NOT NULL
   AND anno BETWEEN %(a1)s AND %(a2)s AND km BETWEEN %(k1)s AND %(k2)s"""
 
 
-def slug(make, model) -> str:
-    return re.sub(r"[^a-z0-9]", "", f"{make or ''}{model or ''}".lower())
+def _canon(make, model) -> tuple[str | None, str | None]:
+    """Marca e modello canonici, con le stesse regole dei confronti (core/normalize: "a-180" = "classe-a",
+    "golf-variant" = "golf", "a-6" = "a6")."""
+    from ..core import normalize as N
+    mk = N.canon_make(N.slug(make)) if make else None
+    return mk, (N.canon_model(mk, N.slug(model)) if mk and model else None)
+
+
+def marche_slug(make) -> list[str]:
+    """Come può iniziare lo slug Autohero (marca-modello) per questa marca: forma canonica e nomi brevi."""
+    from ..core import normalize as N
+    mk, _ = _canon(make, None)
+    if not mk:
+        return []
+    out = {mk} | {k for k, v in N.MAKE_CANON.items() if v == mk}
+    return sorted(out, key=len, reverse=True)
+
+
+def stesso_modello(slug_ah: str, make, model) -> bool:
+    """Lo slug Autohero è la stessa marca-modello dell'auto? Si toglie la marca dallo slug e si confrontano i modelli
+    canonici da entrambe le parti (niente prefissi: "golf-sportsvan" o "golf-plus" non sono una "golf")."""
+    mk, md = _canon(make, model)
+    if not mk or not md:
+        return False
+    s = (slug_ah or "").lower().strip("-")
+    for m in marche_slug(make):
+        if s.startswith(m + "-"):
+            resto = s[len(m) + 1:]
+            md_ah = _canon(mk, resto)[1] or resto
+            if md_ah == md:
+                return True
+    return False
 
 
 def autohero_vicine(righe: list[dict], anno: int, km: int, quante: int = 5) -> int | None:
@@ -66,9 +96,13 @@ def prezzo_autohero(conn, auto: dict) -> int | None:
     if not auto.get("year") or auto.get("mileage_km") is None:
         return None
     a, k = int(auto["year"]), int(auto["mileage_km"])
-    righe = conn.execute(AUTOHERO_SQL, {"slug": slug(auto.get("make"), auto.get("model")), "a1": a - 1, "a2": a + 1,
+    prefissi = [m + "-%" for m in marche_slug(auto.get("make"))]
+    if not prefissi:
+        return None
+    righe = conn.execute(AUTOHERO_SQL, {"prefissi": prefissi, "a1": a - 1, "a2": a + 1,
                                         "k1": k - 20000, "k2": k + 20000}).fetchall()
-    return autohero_vicine([dict(r) for r in righe], a, k)
+    righe = [dict(r) for r in righe if stesso_modello(r.get("slug"), auto.get("make"), auto.get("model"))]
+    return autohero_vicine(righe, a, k)
 
 
 def confronti_al_momento(conn, confronti: list[dict], momento) -> list[dict]:
@@ -91,8 +125,7 @@ def confronti_al_momento(conn, confronti: list[dict], momento) -> list[dict]:
         sparito = r.get("status") == "scomparso" and r.get("disappeared_at") and r["disappeared_at"] <= momento
         c["stato"] = "venduto" if sparito else "attivo"
         c["giorni"] = PER._giorni(r.get("first_seen_at"), r["disappeared_at"] if sparito else momento)
-        if r.get("price_eur"):
-            c["prezzo"] = r["price_eur"]
+        # il prezzo resta quello salvato nella valutazione di allora (il prezzo di oggi verrebbe dal futuro)
         c["venditore"] = c.get("venditore") or r.get("seller_type")
         out.append(c)
     return out
@@ -129,6 +162,7 @@ def riepilogo(righe: list[dict]) -> dict:
 def esegui(conn, n: int = 30, giorni: int = 30, chiama=None) -> dict:
     """Prova alla cieca su n auto sparite negli ultimi `giorni` giorni. `chiama` = risposte finte (test)."""
     t0 = time.time()
+    n, giorni = max(1, min(int(n), 200)), max(1, min(int(giorni), 90))
     autos = [dict(r) for r in conn.execute(AUTO_SQL, {"giorni": giorni, "n": n, "pool": n * 4}).fetchall()]
     ah_ok = bool(conn.execute("SELECT to_regclass('autohero_prezzi') AS t").fetchone()["t"])
     righe, token, errori = [], [0, 0], {}

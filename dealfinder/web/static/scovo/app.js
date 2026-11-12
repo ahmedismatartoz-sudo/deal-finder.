@@ -458,7 +458,8 @@ function boxPolicy(c, v){
     ${p.M != null ? row(`Prezzo di mercato M <small>(${v && v.metodo === "modello" ? "modello su " + p.n + " annunci dello stesso modello" : p.n + " confronti"}, per anno e km di questa auto)</small>`, eur(p.M)) : row("Confronti validi", p.n || 0)}
     ${p.L != null ? row("Prezzo basso L <small>(25° percentile)</small>", eur(p.L)) : ""}
     ${p.riduzione != null ? row(`Riduzione prudenziale <small>(fascia ${esc(p.fascia || "")})</small>`, "−" + pct(p.riduzione)) : ""}
-    ${p.R != null ? row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R)) : ""}`;
+    ${p.R != null ? (p.perizia_giu ? row("Rivendita prudente R", eur(p.R_calcolo)) + row("Stima del perito più bassa <small>(si usa la più prudente)</small>", "−" + eur(p.perizia_giu))
+        : row("Rivendita prudente R", eur(p.R_finale != null ? p.R_finale : p.R))) : ""}`;
   if (v && v.R != null) h += `<div class="note">R = il più basso tra M ridotto (${eur(v.centrale_ridotto)}) e L (${eur(v.L)})${v.perdita_storico_danno ? `, meno ${eur(v.perdita_storico_danno)} per lo storico del danno` : ""}. Sono prezzi richiesti negli annunci, non vendite concluse.</div>`;
   if (v && v.costi) {
     h += Object.entries(v.costi).filter(([, x]) => x.euro).map(([k, x]) => `<div class="row"><span class="k">${esc(VOCI[k] || k)} <small>· ${esc(ORIG[x.origine] || x.origine)}</small></span><span class="v" style="font-size:16px">−${eur(x.euro)}</span></div>`).join("");
@@ -485,11 +486,11 @@ function boxPerito(pe, c){
   const rischi = (pe.rischi || []).filter(r => r && r.nota);
   return `<section class="d-sec perito"><h2>Parere del perito</h2><div class="box">
     <div class="row"><span class="k">Giudizio</span><span class="v" style="color:${col};font-size:17px">${esc(g.charAt(0).toUpperCase() + g.slice(1))}</span></div>
-    ${fb ? row("Si rivende a <small>(forbice realistica)</small>", `${eur(fb.basso)} – ${eur(fb.alto)}`) + row("Stima media", eur(fb.medio)) : row("Prezzo di vendita", "dati insufficienti")}
+    ${fb && pe.dati_sufficienti !== false ? row("Si rivende a <small>(forbice realistica)</small>", `${eur(fb.basso)} – ${eur(fb.alto)}`) + row("Stima media", eur(fb.medio)) : row("Prezzo di vendita", "dati insufficienti")}
     ${pe.acquisto_max ? row("Da commerciante, pagala al massimo", eur(pe.acquisto_max)) : ""}
     ${gv ? row("Tempi di vendita", gv.min === gv.max ? `circa ${gv.min} giorni` : `${gv.min}–${gv.max} giorni`) : ""}
     ${pe.motivazione ? `<div class="note" style="border:0">${esc(pe.motivazione)}</div>` : ""}
-    ${p.R_perizia ? `<div class="note" style="border:0">La stima del perito è più bassa della nostra rivendita (${eur(p.R_calcolo)}): il guadagno mostrato usa la cifra più prudente.</div>` : ""}
+    ${p.perizia_giu ? `<div class="note" style="border:0">La stima del perito è più bassa della nostra rivendita (${eur(p.R_calcolo)}): il guadagno mostrato usa la cifra più prudente (−${eur(p.perizia_giu)}).</div>` : ""}
   </div>${rischi.length ? `<ul class="checks">${rischi.map(r => `<li${r.gravita === "alta" ? ' style="color:var(--warn)"' : ""}><b>${esc(PERITO_RISCHI[r.tipo] || "Da sapere")}:</b> ${esc(r.nota)}</li>`).join("")}</ul>` : ""}
   <p class="hint dock-note">Perizia scritta da un'AI sui dati dell'annuncio e sulle auto simili vendute e in vendita${pe.data ? " (" + esc(pe.data) + ")" : ""}: va sempre confermata guardando l'auto.</p></section>`;
 }

@@ -30,7 +30,9 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
   margine_minimo   margine ≥ scovo.soglia(prezzo) (fascia richiesta, annunci degli ultimi 10 giorni: basta arrivarci con
                    uno sconto da chiedere di al massimo 500 € fino a 7.000 €, 700 € sopra: sezione "Da trattare"); supercar: ≥ 10.000 € e ≥ 15% del prezzo; supercar da 300.000 €
                    in su: nessun margine richiesto, prezzo non sopra il mercato (4/11 pom., cliente)
-  perizia          (12/11) giudizio "caro" del perito AI: fuori; senza perizia e senza decisione Jev valida: in attesa
+  perizia          (12/11) giudizio "caro" del perito AI: fuori (non le auto "Da trattare"); senza perizia e senza
+                   decisione Jev valida: in attesa. PERIZIA_AI=log (default, fase ombra): nessun effetto, nel
+                   SITO_FUNNEL "perizia_ombra" con sarebbero_caro / sarebbero_attesa / sarebbero_prudenti
                    (l'auto non passa pulita se l'AI è ferma o il budget è finito)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
 """
@@ -175,8 +177,9 @@ class Regole:
     # mediana dei prezzi chiesti (non dal valore reale, che è già un prezzo di vendita): [(limite_M, nome, fattore)]
     fattori_calibra: tuple = ()
     # 12/11 (cliente: "ChatGPT valuta meglio di noi"): perizia AI da commerciante (ai/perizia.py). Spenta nelle Regole()
-    # dei test; in produzione la accende da_env (PERIZIA_AI, default "1").
+    # dei test. PERIZIA_AI: "log" (default) = fase ombra (si conta cosa cambierebbe, il sito non cambia), "1" = applicata
     perizia: bool = False
+    perizia_ombra: bool = False
     perizia_scarto: float = 0.10      # stima media del perito sotto R di oltre il 10%: margine prudente + avviso
     perizia_basta_jev: bool = True    # una decisione Jev valida conta come controllo (non serve aspettare la perizia)
 
@@ -190,7 +193,8 @@ class Regole:
                    tratta_giorni=int(e("TRATTA_GIORNI", "10")),
                    fascia_fuori_max=int(e("FASCIA_FUORI_ZONA_MAX", "100")),
                    tratta_max=_fasce_tratta(e("TRATTA_MAX", "7000:500,1000000000:700")),
-                   perizia=e("PERIZIA_AI", "1") == "1")
+                   perizia=e("PERIZIA_AI", "log").strip().lower() == "1",
+                   perizia_ombra=e("PERIZIA_AI", "log").strip().lower() == "log")
 
     def impronta(self) -> str:
         import dataclasses
@@ -397,46 +401,95 @@ def t_margine_sito(it, g):
     return None
 
 
+def perizia_prudente(it, g) -> int:
+    """Euro da togliere alla rivendita se la stima media del perito è sotto R di oltre perizia_scarto (0 altrimenti).
+    Le perizie con dati insufficienti non hanno stima media e non toccano il margine."""
+    p = _r(it).get("perizia")
+    pv = it.get("pv") if isinstance(it.get("pv"), dict) else None
+    if it.get("supercar") or not p or not pv or pv.get("margine") is None or not p.get("medio"):
+        return 0
+    R = pv.get("R_finale") if pv.get("R_finale") is not None else pv.get("R")
+    if not R or float(p["medio"]) >= (1 - g.perizia_scarto) * float(R):
+        return 0
+    return int(round(float(R) - float(p["medio"])))
+
+
+def esito_perizia(it, g) -> str | None:
+    """'perizia_caro' | 'aspetta_perizia' | None, senza toccare l'auto (serve anche alla fase ombra)."""
+    if it.get("supercar"):
+        return None                          # le supercar hanno il loro controllo AI (regola jev, sc_ok)
+    r = _r(it)
+    p = r.get("perizia")
+    if p:
+        if p.get("giudizio") == "caro" and not it.get("trattare"):
+            return "perizia_caro"            # le auto "Da trattare" restano: il prezzo da offrire è già più basso
+        return None
+    if g.perizia_basta_jev and r.get("jev"):
+        return None
+    return "aspetta_perizia"
+
+
 def t_perizia(it, g):
-    """12/11: stima media del perito AI sotto R di oltre perizia_scarto → il margine usa la stima del perito (il valore
-    più prudente) e l'auto entra solo con l'avviso "Verificare prima di pagare" (se col margine prudente scende sotto
-    il minimo, esce al passo margine_minimo). Giudizio "da verificare" del perito: solo l'avviso."""
+    """12/11 (solo PERIZIA_AI=1): stima media del perito sotto R di oltre perizia_scarto → il margine usa la stima del
+    perito (il valore più prudente) e l'auto entra solo con l'avviso "Verificare prima di pagare" (se col margine
+    prudente scende sotto il minimo, esce al passo margine_minimo). Giudizio "da verificare": solo l'avviso."""
     if not g.perizia or it.get("supercar"):
         return None
     p = _r(it).get("perizia")
     if not p:
         return None
-    pv = it.get("pv") if isinstance(it.get("pv"), dict) else None
     esito = None
     if p.get("giudizio") == "da verificare":
         it["perizia_verifica"] = True
         esito = "perizia_da_verificare"
-    medio = p.get("medio")
-    if not pv or pv.get("margine") is None or not medio:
+    giu = perizia_prudente(it, g)
+    if not giu:
         return esito
-    R = pv.get("R_finale") if pv.get("R_finale") is not None else pv.get("R")
-    if not R or float(medio) >= (1 - g.perizia_scarto) * float(R):
-        return esito
-    giu = int(round(float(R) - float(medio)))
-    it["pv"] = dict(pv, R=int(medio), R_finale=int(medio), margine=int(pv["margine"]) - giu, R_calcolo=int(R),
-                    R_perizia=int(medio), perizia_giu=giu)
+    pv = it["pv"]
+    R = int(pv.get("R_finale") if pv.get("R_finale") is not None else pv.get("R"))
+    it["pv"] = dict(pv, R=R - giu, R_finale=R - giu, margine=int(pv["margine"]) - giu, R_calcolo=R,
+                    R_perizia=R - giu, perizia_giu=giu)
     it["perizia_verifica"] = True
     return "perizia_prudente"
 
 
 def r_perizia(it, g):
-    """12/11: giudizio "caro" del perito → fuori. Senza perizia (AI ferma, budget finito, tetto del giorno) e senza una
-    decisione Jev valida l'auto NON passa pulita: resta in attesa e il giro della perizia la prende per prima."""
-    if not g.perizia or it.get("supercar"):
-        return None                          # le supercar hanno il loro controllo AI (regola jev, sc_ok)
-    r = _r(it)
-    p = r.get("perizia")
-    if p:
-        return "perizia_caro" if p.get("giudizio") == "caro" else None
-    if g.perizia_basta_jev and r.get("jev"):
+    """12/11 (solo PERIZIA_AI=1): giudizio "caro" → fuori. Senza perizia (AI ferma, budget finito, tetto del giorno) e
+    senza una decisione Jev valida l'auto NON passa pulita: resta in attesa e il giro della perizia la prende per prima."""
+    if not g.perizia:
         return None
-    it["_perizia_attesa"] = True
-    return "aspetta_perizia"
+    m = esito_perizia(it, g)
+    if m == "aspetta_perizia":
+        it["_perizia_attesa"] = True
+    return m
+
+
+def ombra_perizia(items: list[dict], g) -> dict:
+    """PERIZIA_AI=log: cosa farebbe la perizia sulle auto del sito, senza cambiarle. Le auto che sarebbero in attesa
+    si segnano (_perizia_attesa) perché il giro le periziasse per prime."""
+    from collections import Counter
+    c = Counter()
+    for it in items:
+        if it.get("supercar"):
+            continue
+        m = esito_perizia(it, g)
+        if m == "perizia_caro":
+            c["sarebbero_caro"] += 1
+        elif m == "aspetta_perizia":
+            c["sarebbero_attesa"] += 1
+            it["_perizia_attesa"] = True
+        giu = perizia_prudente(it, g)
+        if giu:
+            c["sarebbero_prudenti"] += 1
+            if it.get("trattare") is None and margine(it) is not None and margine(it) - giu < scovo.soglia(int(it.get("prezzo") or 0)):
+                c["sarebbero_sotto_minimo"] += 1
+        if (_r(it).get("perizia") or {}).get("giudizio") == "da verificare":
+            c["sarebbero_da_verificare"] += 1
+        if _r(it).get("perizia"):
+            c["con_perizia"] += 1
+    return {"modo": "log", "auto": len(items), "sarebbero_caro": c["sarebbero_caro"],
+            "sarebbero_attesa": c["sarebbero_attesa"], "sarebbero_prudenti": c["sarebbero_prudenti"],
+            **{k: v for k, v in c.items() if k not in ("sarebbero_caro", "sarebbero_attesa", "sarebbero_prudenti")}}
 
 
 def margine_alto(it, g: Regole) -> bool:
@@ -619,6 +672,7 @@ def tetto_commercianti(items: list[dict], g: Regole) -> tuple[list[dict], set]:
 @dataclass
 class Funnel:
     passi: list = field(default_factory=list)
+    perizia_ombra: dict | None = None
     tolti: dict = field(default_factory=dict)       # passo -> ids tolti
 
     def passo(self, nome, prima, dopo, motivi=None):
@@ -683,6 +737,8 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
     if sotto:
         log.warning("SITO_SOTTO_SOGLIA %d auto tolte (bug): %s", len(sotto), sotto[:30])
         items = [it for it in items if it["id"] not in set(sotto)]
+    ombra = ombra_perizia(items, g) if g.perizia_ombra and not g.perizia else None
+    fun.perizia_ombra = ombra
     for it in items:
         if it.get("avviso_verifica") is None:
             it["avviso_verifica"] = False
@@ -695,6 +751,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "commercianti_fascia": sum(1 for it in items if it.get("_tipo") == "comm_fascia"),
                                                   "avvisi": sum(1 for it in items if it.get("avviso_verifica")),
                                                   "avvisi_perizia": sum(1 for it in items if it.get("perizia_verifica")),
+                                                  **({"perizia_ombra": ombra} if ombra else {}),
                                                   "da_trattare": sum(1 for it in items if it.get("trattare")),
                                                   "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},

@@ -82,7 +82,8 @@ def test_confronti_piu_simili_al_massimo_15_mai_se_stessa():
 def test_testo_richiesta_e_prova_alla_cieca():
     conf = [dict(c, stato="venduto" if c["id"] % 2 else "attivo", giorni=12) for c in _confronti(3)]
     t = P.testo_richiesta(AUTO, conf)
-    assert "8.500 €" in t and "1234567" not in t and "venduto dopo 12 giorni" in t and "attivo da 12 giorni" in t
+    assert "8.500 €" in t and "1234567" not in t and "sparito (probabilmente venduto) dopo 12 giorni" in t
+    assert "attivo da 12 giorni" in t
     tc = P.testo_richiesta(AUTO, conf, cieca=True)
     assert "8.500" not in tc and "NON INDICATO" in tc and "[prezzo]" in tc
     assert "98000" in tc                                         # i km restano
@@ -100,13 +101,26 @@ def test_perizia_con_risposta_finta():
     assert P.per_sito(p) == {"giudizio": "affare", "medio": 9800, "basso": 9000, "alto": 10500}
 
 
-def test_errore_di_credito():
-    class RateLimitError(Exception):
-        pass
-    assert P.errore_di_credito(RateLimitError("x"))
-    assert P.errore_di_credito(RuntimeError("Your credit balance is too low to access the Anthropic API"))
-    assert P.errore_di_credito(RuntimeError("Error code: 429 rate_limit_error"))
-    assert not P.errore_di_credito(RuntimeError("nessun JSON nella risposta"))
+class ErroreAPI(Exception):
+    def __init__(self, status, messaggio="", tipo="invalid_request_error"):
+        super().__init__(messaggio)
+        self.status_code = status
+        self.body = {"type": "error", "error": {"type": tipo, "message": messaggio}}
+
+
+class RateLimitError(Exception):
+    pass
+
+
+def test_tipo_errore_da_stato_e_classe():
+    assert P.tipo_errore(ErroreAPI(402, "payment required")) == "credito"
+    assert P.tipo_errore(ErroreAPI(400, "Your credit balance is too low to access the Anthropic API")) == "credito"
+    assert P.tipo_errore(ErroreAPI(429, "rate_limit_error")) == "limite"
+    assert P.tipo_errore(ErroreAPI(529, "Overloaded", "overloaded_error")) == "limite"
+    assert P.tipo_errore(RateLimitError("x")) == "limite"
+    assert P.tipo_errore(ErroreAPI(400, "max_tokens: 429 non valido")) is None       # niente sottostringhe
+    assert P.tipo_errore(RuntimeError("credit 402 429 nel testo")) is None
+    assert P.pausa_per(ErroreAPI(402)) == 3600 and P.pausa_per(ErroreAPI(429)) == 300
 
 
 # ------------------------------------------------------------------ regole del sito
@@ -150,12 +164,16 @@ class Env:
                 os.environ[k] = v
 
 
-def test_perizia_spenta_nelle_regole_dei_test_e_accesa_in_produzione():
-    assert SR.Regole().perizia is False
+def test_perizia_spenta_nei_test_ombra_di_default_applicata_con_1():
+    assert SR.Regole().perizia is False and SR.Regole().perizia_ombra is False
     with Env(PERIZIA_AI=None):
-        assert SR.Regole.da_env().perizia is True
+        g = SR.Regole.da_env()
+        assert g.perizia is False and g.perizia_ombra is True and P.modo() == "log" and P.attiva()
+    with Env(PERIZIA_AI="1"):
+        assert SR.Regole.da_env().perizia is True and P.modo() == "1"
     with Env(PERIZIA_AI="0"):
-        assert SR.Regole.da_env().perizia is False
+        g = SR.Regole.da_env()
+        assert g.perizia is False and g.perizia_ombra is False and not P.attiva()
     out, _ = elenco([auto(1)], SR.Regole())
     assert 1 in out                                            # spenta: come prima
 
@@ -172,6 +190,53 @@ def test_senza_perizia_e_senza_jev_in_attesa():
 def test_caro_fuori():
     out, fun = elenco([auto(1, jev={"truffa": 0.1}, perizia={"giudizio": "caro", "medio": 8300})])
     assert out == {} and next(p for p in fun.passi if p["passo"] == "perizia")["motivi"] == {"perizia_caro": 1}
+
+
+def test_caro_non_toglie_le_auto_da_trattare():
+    from datetime import datetime, timezone
+    s = scovo.soglia(6000)
+    it = auto(1, prezzo=6000, margine=s - 300, M=9000, carb="Benzina", anno=2016, km=80000,
+              visto_dal=datetime.now(timezone.utc).isoformat(), jev={"truffa": 0.1},
+              perizia={"giudizio": "caro", "medio": 9300})
+    out, _ = elenco([it])
+    assert 1 in out and out[1]["trattare"]
+
+
+def test_fase_ombra_conta_e_non_cambia_niente():
+    g = SR.Regole(perizia_ombra=True)
+    s = scovo.soglia(5000)
+    items = [auto(1), auto(2, jev={"truffa": 0.1}, perizia={"giudizio": "caro", "medio": 8300}),
+             auto(3, perizia={"giudizio": "nella media", "medio": 7000}),
+             auto(4, margine=s + 100, perizia={"giudizio": "affare", "medio": 5000})]
+    out, fun = elenco(items, g)
+    assert set(out) == {1, 2, 3, 4}
+    assert out[3]["pv"]["margine"] == 3000 and out[3]["avviso_verifica"] is False and "R_perizia" not in out[3]["pv"]
+    o = fun.perizia_ombra
+    assert (o["sarebbero_caro"], o["sarebbero_attesa"], o["sarebbero_prudenti"], o["sarebbero_sotto_minimo"]) == (1, 1, 2, 1)
+    assert out[1].get("_perizia_attesa") is True                  # il giro la prende per prima anche in ombra
+    assert not any(p["passo"] == "perizia" and p["uscite"] for p in fun.passi)
+
+
+def test_dati_insufficienti_non_tagliano_il_margine():
+    p = P.valida(dict(BUONA, dati_sufficienti=False, acquisto_max=None))
+    assert P.per_sito(p)["medio"] is None
+    conn = ConnFinta()
+    P.salva(conn, {"id": 1, "price_eur": 5000}, p)
+    assert conn.salvate[0][3:6] == (None, None, None)              # medio, basso, alto NULL
+    out, _ = elenco([auto(1, perizia=P.per_sito(p))])
+    assert out[1]["pv"]["margine"] == 3000
+
+
+def test_caro_incoerente_diventa_nella_media():
+    assert P.valida(dict(BUONA, giudizio="caro", acquisto_max=8000), prezzo=7900)["giudizio"] == "nella media"
+    assert P.valida(dict(BUONA, giudizio="caro", acquisto_max=None), prezzo=8500)["giudizio"] == "nella media"  # sotto il basso
+    assert P.valida(dict(BUONA, giudizio="caro", acquisto_max=8000), prezzo=9500)["giudizio"] == "caro"
+
+
+def test_prompt_senza_soglie_di_guadagno():
+    for x in ("400-1.500", "10-15%", "1.000-1.500"):
+        assert x not in P.SISTEMA
+    assert "probabilmente venduto" in P.SISTEMA and "margine minimo li applica il nostro sito" in P.SISTEMA
 
 
 def test_stima_molto_sotto_R_margine_prudente_e_avviso():
@@ -222,14 +287,19 @@ class ConnFinta:
         self.auto, self.listings, self.autohero, self.fatte = auto or [], listings or {}, autohero or [], fatte
         self.sql = []
         self.salvate = []
+        self.usage = []
+        self.commit_n = self.rollback_n = 0
 
     def execute(self, sql, params=None):
         s = " ".join(sql.split())
         self.sql.append(s)
+        if s.startswith("INSERT INTO ai_usage"):
+            self.usage.append(params)
+            return Risultato([])
         if s.startswith("INSERT INTO perizia_ai"):
             self.salvate.append(params)
             return Risultato([])
-        if "count(*) AS n FROM perizia_ai" in s:
+        if "count(*) AS n FROM ai_usage" in s:
             return Risultato([{"n": self.fatte}])
         if "FROM ai_usage" in s:
             return Risultato([])
@@ -244,10 +314,10 @@ class ConnFinta:
         return Risultato([])
 
     def commit(self):
-        pass
+        self.commit_n += 1
 
     def rollback(self):
-        pass
+        self.rollback_n += 1
 
 
 def _per_giro(i):
@@ -288,13 +358,62 @@ def test_giro_pausa_di_un_ora_su_credito():
 
     def finita(*a):
         chiamate.append(1)
-        raise RuntimeError("Error code: 400 - Your credit balance is too low")
+        raise ErroreAPI(400, "Your credit balance is too low to access the Anthropic API")
     res = P.giro(ConnFinta(auto=[_per_giro(21), _per_giro(22)]), chiama=finita)
     assert res["pausa_credito"] == 1 and len(chiamate) == 1
     assert P.CODA["attesa"] == [21, 22]                        # restano in coda per dopo la pausa
     assert P.giro(ConnFinta(), chiama=finita)["saltato"].startswith("pausa")
     assert P._PAUSA["fino"] > datetime.now().timestamp() + 3000
+    # limite (429): pausa breve
     P._PAUSA["fino"] = 0
+    res = P.giro(ConnFinta(auto=[_per_giro(21)]), chiama=lambda *a: (_ for _ in ()).throw(ErroreAPI(429, "rate")))
+    assert res["pausa_limite"] == 1 and P._PAUSA["fino"] < datetime.now().timestamp() + 400
+    P._PAUSA["fino"] = 0
+    P.metti_in_coda([], [])
+
+
+def test_risposta_troncata_una_chiamata_spesa_contata_e_fallita():
+    """Il JSON troncato arriva da ask_json come AIError DOPO la registrazione dei consumi: la spesa resta (commit, non
+    rollback), l'auto va in _FALLITE e alla seconda volta si salta: niente chiamate pagate all'infinito."""
+    from dealfinder.ai import client as AI
+    P._PAUSA["fino"] = 0
+    P._FALLITE.clear()
+    chiamate = []
+    vera = AI.ask_json
+
+    def troncata(task, model, system, content, max_tokens=0, web_search=None, usage_sink=None, listing_id=None):
+        chiamate.append(listing_id)
+        usage_sink(task, AI.AIResult(data=None, model=model, input_tokens=2000, output_tokens=900), listing_id)
+        return AI.extract_json('{"dati_sufficienti": true, "prezzo_vendita": {"basso": 9000, "medio"')
+    AI.ask_json = troncata
+    try:
+        P.metti_in_coda([41], [])
+        conn = ConnFinta(auto=[_per_giro(41)])
+        res = P.giro(conn, chiama=P._chiama_claude)
+        assert res["non_valida"] == 1 and chiamate == [41] and conn.salvate == []
+        assert len(conn.usage) == 1 and conn.usage[0][0] == "perizia" and conn.rollback_n == 0
+        assert P._FALLITE[41][0] == 1
+        P._segna_fallita(41)
+        P.metti_in_coda([41], [])
+        P.giro(ConnFinta(auto=[_per_giro(41)]), chiama=P._chiama_claude)
+        assert chiamate == [41]                                   # due fallimenti: per 6 ore non si richiama
+    finally:
+        AI.ask_json = vera
+        P.metti_in_coda([], [])
+        P._FALLITE.clear()
+
+
+def test_errore_generico_segna_fallita_e_limite_fallite():
+    P._PAUSA["fino"] = 0
+    P._FALLITE.clear()
+    P.metti_in_coda([51], [])
+    conn = ConnFinta(auto=[_per_giro(51)])
+    res = P.giro(conn, chiama=lambda *a: (_ for _ in ()).throw(ValueError("boh")))
+    assert res["errore"] == 1 and P._FALLITE[51][0] == 1 and P.CODA["attesa"] == [51]
+    for i in range(P.FALLITE_MAX + 50):
+        P._segna_fallita(10_000 + i)
+    assert len(P._FALLITE) == P.FALLITE_MAX
+    P._FALLITE.clear()
     P.metti_in_coda([], [])
 
 
@@ -318,7 +437,19 @@ def test_metriche():
 
 
 def test_autohero_corrispondenza():
-    assert PC.slug("volkswagen", "golf") == "volkswagengolf" and PC.slug("audi", "a-6") == PC.slug("Audi", "A6")
+    # Mercedes-Benz Classe A: slug Autohero "mercedes-benz-classe-a" o con il motore "mercedes-benz-a-180"
+    assert PC.stesso_modello("mercedes-benz-classe-a", "Mercedes-Benz", "Classe A")
+    assert PC.stesso_modello("mercedes-benz-a-180", "mercedes-benz", "classe-a")
+    assert PC.stesso_modello("mercedes-benz-classe-a", "mercedes", "a 180")
+    assert not PC.stesso_modello("mercedes-benz-classe-b", "mercedes-benz", "classe-a")
+    assert not PC.stesso_modello("mercedes-benz-cla", "mercedes-benz", "classe-a")
+    # varianti nello slug: carrozzeria e trattini
+    assert PC.stesso_modello("volkswagen-golf-variant", "volkswagen", "golf")
+    assert PC.stesso_modello("audi-a-6-avant", "audi", "a6")
+    assert PC.stesso_modello("bmw-serie-3-touring", "bmw", "serie-3") and PC.stesso_modello("bmw-320", "bmw", "serie-3")
+    assert not PC.stesso_modello("volkswagen-golf-sportsvan", "volkswagen", "golf")
+    assert not PC.stesso_modello("fiat-500-x", "fiat", "500") and PC.stesso_modello("fiat-500-x", "fiat", "500x")
+    assert PC.marche_slug("Mercedes-Benz") == ["mercedes-benz", "mercedes"]
     righe = [{"prezzo": 15000, "anno": 2017, "km": 90000}, {"prezzo": 14000, "anno": 2016, "km": 100000},
              {"prezzo": 30000, "anno": 2019, "km": 95000}, {"prezzo": 16000, "anno": 2016, "km": 130000}]
     assert PC.autohero_vicine(righe, 2016, 98000) == 14500          # anno ±1, km ±20.000
@@ -337,7 +468,8 @@ def test_prova_cieca_finta_senza_scritture():
                       "disappeared_at": sparita + timedelta(days=2), "seller_type": "commerciante"},
                 203: {"id": 203, "status": "attivo", "price_eur": 5000, "first_seen_at": sparita + timedelta(days=1),
                       "disappeared_at": None, "seller_type": "privato"}}
-    conn = ConnFinta(auto=[a], listings=listings, autohero=[{"prezzo": 11000, "anno": 2016, "km": 100000}])
+    conn = ConnFinta(auto=[a], listings=listings, autohero=[{"slug": "volkswagen-golf", "prezzo": 11000, "anno": 2016, "km": 100000},
+                                                            {"slug": "volkswagen-golf-plus", "prezzo": 6000, "anno": 2016, "km": 100000}])
     visti = {}
 
     def finta(sistema, testo, listing_id, sink):
@@ -348,7 +480,8 @@ def test_prova_cieca_finta_senza_scritture():
     assert "NON INDICATO" in t, t
     assert "8.500" not in t, t
     assert " 9000 €" not in t and "9.000" not in t, t
-    assert "venduto dopo 18 giorni" in t and "attivo da 9 giorni" in t     # 202 venduta DOPO: allora era attiva
+    assert "venduto) dopo 18 giorni" in t and "attivo da 9 giorni" in t    # 202 sparita DOPO: allora era attiva
+    assert "9500 €" in t and "9400 €" not in t                            # prezzo della valutazione, non quello di oggi
     assert "5000 €" not in t                                               # 203 comparsa dopo: tolta
     assert res["m_calcolo"]["n"] == 1 and res["m_calcolo"]["errore_medio_eur"] == 600
     assert res["perizia"]["errore_medio_eur"] == 300 and res["autohero"]["errore_medio_eur"] == 2000

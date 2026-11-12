@@ -1505,6 +1505,7 @@ def _calcola_elenco() -> None:
         it.pop("_r", None)
         it.pop("_tipo", None)
         it.pop("perizia_verifica", None)
+        it.pop("_perizia_attesa", None)
     _elenco.update(t=time.time(), items=out, opens=opens)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute
@@ -3343,12 +3344,13 @@ def _tempo_reale():
             try:
                 from ..ai import prova_cieca as _pc
                 from ..pipeline.ciclo import _una_volta
-                if not _una_volta(f"prova_cieca:{v}"):
+                if not _una_volta(v):
                     lg.warning("PROVA_CIECA %s già fatta (togli il valore da BREVO_IMPORT_LISTE)", v)
                     return
                 parti = v.split(":")
                 with connect() as conn:
-                    _pc.esegui(conn, n=int(parti[1] or 30), giorni=int(parti[2]) if len(parti) > 2 and parti[2] else 30)
+                    _pc.esegui(conn, n=min(int(parti[1] or 30), 200),
+                               giorni=min(int(parti[2]), 90) if len(parti) > 2 and parti[2] else 30)
             except Exception as e:
                 lg.warning("PROVA_CIECA non riuscita: %s", str(e)[:300])
             return
