@@ -22,3 +22,21 @@ def test_schede():
 def test_struttura():
     st = autohero.struttura(PAGINA)
     assert st["link_auto"] == 2 and st["next_data"] is False
+
+
+DETTAGLIO = """<html><body><h1>Volkswagen Golf</h1><dl><dt>Allestimento</dt><dd>Life 1.0 eTSI DSG</dd>
+<dt>Potenza</dt><dd>81 kW (110 CV)</dd><dt>Colore</dt><dd>Grigio</dd><dt>Proprietari</dt><dd>1</dd></dl>
+<h2>Equipaggiamento</h2><ul><li>Navigatore</li><li>Cruise control adattivo</li><li>Sensori di parcheggio</li></ul>
+</body></html>"""
+
+
+def test_dettaglio():
+    d = autohero.dettaglio_da_html(DETTAGLIO)
+    assert d["campi"]["allestimento"] == "Life 1.0 eTSI DSG"
+    assert d["campi"]["potenza"].startswith("81 kW") and d["campi"]["proprietari"] == "1"
+    assert d["optional"] == ["Navigatore", "Cruise control adattivo", "Sensori di parcheggio"]
+
+
+def test_versione_scheda():
+    a = autohero.schede_da_html(PAGINA)[0]
+    assert "City Life" in (a["versione"] or "")

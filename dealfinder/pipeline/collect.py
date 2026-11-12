@@ -295,11 +295,14 @@ def _autohero_giornaliero(stats: Counter) -> None:
         from ..collectors import autohero
         with connect() as conn:
             r = conn.execute("SELECT max(ultimo_visto) AS u FROM autohero_prezzi").fetchone()
-            if r and r["u"] is not None and r["u"].date() == datetime.now(timezone.utc).date():
-                return
-            st = autohero.raccogli(conn, int(os.environ.get("AUTOHERO_MAX", "10000")),
-                                                       int(os.environ.get("AUTOHERO_TEMPO_S", "1800")))
-            stats["autohero_auto"] = st.get("auto_lette", 0)
+            if not (r and r["u"] is not None and r["u"].date() == datetime.now(timezone.utc).date()):
+                st = autohero.raccogli(conn, int(os.environ.get("AUTOHERO_MAX", "10000")),
+                                       int(os.environ.get("AUTOHERO_TEMPO_S", "1800")))
+                stats["autohero_auto"] = st.get("auto_lette", 0)
+            if os.environ.get("AUTOHERO_DETTAGLI", "1") == "1":        # pagina di ogni auto nuova: tutto l'annuncio
+                d = autohero.dettagli(conn, int(os.environ.get("AUTOHERO_DETTAGLI_MAX", "800")),
+                                      int(os.environ.get("AUTOHERO_DETTAGLI_TEMPO_S", "3000")))
+                stats["autohero_dettagli"] = d.get("letti", 0)
             log.warning("AUTOHERO_RIEPILOGO %s", autohero.riepilogo(conn))
     except Exception as e:
         log.warning("AUTOHERO non riuscito: %s", str(e)[:300])
