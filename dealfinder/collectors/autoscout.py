@@ -26,7 +26,8 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML
 # CAP -> provincia (Lombardia), per gli annunci che riportano solo il CAP
 CAP_PROVINCE = [("208", "MB"), ("209", "MB"), ("20", "MI"), ("21", "VA"), ("238", "LC"), ("239", "LC"), ("22", "CO"), ("230", "SO"), ("231", "SO"), ("232", "SO"), ("24", "BG"), ("25", "BS"),
                 ("268", "LO"), ("269", "LO"), ("26", "CR"), ("27", "PV"), ("46", "MN"),
-                ("288", "VB"), ("289", "VB"), ("28", "NO"), ("29", "PC"), ("15", "AL"), ("13", "VC"),
+                ("288", "VB"), ("289", "VB"), ("28", "NO"), ("29", "PC"), ("15", "AL"),
+                ("138", "BI"), ("139", "BI"), ("13", "VC"),   # 12/11: Biella (138xx-139xx) prima finiva a Vercelli
                 # Ravenna e dintorni
                 ("48", "RA"), ("478", "RN"), ("479", "RN"), ("47", "FC"), ("44", "FE"), ("40", "BO"),
                 ("41", "MO"), ("42", "RE"), ("43", "PR"), ("61", "PU")]

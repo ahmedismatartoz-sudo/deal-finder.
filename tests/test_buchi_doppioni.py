@@ -33,13 +33,21 @@ def test_doppioni_stretti_su_postgres_vero():
     vecchio = os.environ.pop("DOPPIONE_STRETTO", None)
     try:
         assert doppione_altro_sito(c, _as(), lid)                                  # stessa auto: doppione
-        assert not doppione_altro_sito(c, _as(province="BG"), lid)                # altra provincia
+        assert doppione_altro_sito(c, _as(province="MB"), lid)                    # stessa regione: doppione
+        assert not doppione_altro_sito(c, _as(province="NO"), lid)                # altra regione (Piemonte)
+        assert doppione_altro_sito(c, _as(fuel="Benzina", gearbox="Manuale"), lid)   # valori grezzi normalizzati
         assert not doppione_altro_sito(c, _as(fuel="diesel"), lid)                # altro carburante
         assert not doppione_altro_sito(c, _as(mileage_km=81000), lid)             # km a 800 di distanza
         assert doppione_altro_sito(c, _as(fuel=None, province=None), lid)         # dato mancante: non esclude
         os.environ["DOPPIONE_STRETTO"] = "0"
-        assert doppione_altro_sito(c, _as(province="BG", mileage_km=81000), lid)  # criterio di prima
+        assert doppione_altro_sito(c, _as(province="NO", mileage_km=81000), lid)  # criterio di prima
     finally:
         os.environ.pop("DOPPIONE_STRETTO", None)
         if vecchio is not None:
             os.environ["DOPPIONE_STRETTO"] = vecchio
+
+
+def test_cap_di_biella():
+    from dealfinder.collectors.autoscout import province_from_cap
+    assert province_from_cap("13900") == "BI" and province_from_cap("13811") == "BI"
+    assert province_from_cap("13100") == "VC" and province_from_cap("13019") == "VC"

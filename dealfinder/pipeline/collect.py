@@ -71,18 +71,24 @@ def doppione_altro_sito(conn, l, lid) -> bool:
         # 12/11 (buchi della raccolta §3.7): il 43% dei nuovi AutoScout24 del tempo reale risultava "doppione" e saltava
         # la valutazione: con ~160.000 Subito attivi una Panda/500/Golf dello stesso anno, km ±1.500 e prezzo ±7% si
         # trova quasi sempre. Ora la stessa auto deve avere anche lo stesso carburante e cambio (se noti da tutte e
-        # due le parti), la stessa provincia (se nota) e km ±DOPPIONE_KM (500): lo stesso venditore scrive gli stessi km.
+        # due le parti), la stessa regione (se nota) e km ±DOPPIONE_KM (500): lo stesso venditore scrive gli stessi km.
         dk = int(os.environ.get("DOPPIONE_KM", "500"))
+        # 12/11 revisione: carburante e cambio normalizzati come nel database; per il luogo basta la stessa regione
+        # (il CAP di AutoScout24 e il comune di Subito possono dare province vicine diverse)
+        from ..core.normalize import PROVINCE_REGION, norm_fuel, norm_gearbox
+        pv = (l.province or "").upper() or None
+        reg = PROVINCE_REGION.get(pv) if pv else None
+        stesse = sorted(p for p, r in PROVINCE_REGION.items() if r == reg) if reg else ([pv] if pv else None)
         row = conn.execute(
             """SELECT id FROM listings WHERE source <> 'autoscout24' AND status='attivo' AND make=%(make)s AND model=%(model)s
                  AND year=%(year)s AND mileage_km BETWEEN %(km0)s AND %(km1)s AND price_eur BETWEEN %(p0)s AND %(p1)s
                  AND (%(fuel)s::text IS NULL OR fuel IS NULL OR lower(fuel) = lower(%(fuel)s::text))
                  AND (%(gear)s::text IS NULL OR gearbox IS NULL OR lower(gearbox) = lower(%(gear)s::text))
-                 AND (%(prov)s::text IS NULL OR province IS NULL OR upper(province) = upper(%(prov)s::text))
+                 AND (%(senza_prov)s OR province IS NULL OR upper(province) = ANY(%(prov)s))
                LIMIT 1""",
             {"make": l.make, "model": l.model, "year": l.year, "km0": l.mileage_km - dk, "km1": l.mileage_km + dk,
-             "p0": int(l.price_eur * 0.93) - 200, "p1": int(l.price_eur * 1.07) + 200, "fuel": l.fuel or None,
-             "gear": l.gearbox or None, "prov": l.province or None}).fetchone()
+             "p0": int(l.price_eur * 0.93) - 200, "p1": int(l.price_eur * 1.07) + 200, "fuel": norm_fuel(l.fuel) or None,
+             "gear": norm_gearbox(l.gearbox) or None, "senza_prov": not stesse, "prov": stesse or [""]}).fetchone()
     else:
         row = conn.execute(
             """SELECT id FROM listings WHERE source <> 'autoscout24' AND status='attivo' AND make=%s AND model=%s
