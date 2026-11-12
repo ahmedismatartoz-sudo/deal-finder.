@@ -119,7 +119,6 @@ def un_giro(completo: bool, tr=None) -> dict | None:
 
 
 def main(giri: int | None = None, dormi=None) -> None:
-    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     if not os.environ.get("DATABASE_URL"):
         log.warning("TR WORKER: DATABASE_URL non impostata, nulla da fare")
         return
@@ -155,4 +154,5 @@ def main(giri: int | None = None, dormi=None) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     main()
