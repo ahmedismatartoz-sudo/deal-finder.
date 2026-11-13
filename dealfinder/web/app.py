@@ -3491,6 +3491,46 @@ def _tempo_reale():
             time.sleep(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
+    def riprova_giudice():
+        """13/11 notte: le auto messe "in attesa" quando il budget AI comune era finito (giudice_mancante) non tornavano
+        più sul sito: nessuno le rivalutava. Ogni RIPROVA_GIUDICE_MIN minuti, se l'AI c'è e il budget non è finito,
+        si rivalutano (stessa strada di cron e sito: valuta_e_scrivi, il giudice ora risponde e la valutazione si scrive)."""
+        from ..ai import client as _AI
+        from ..pricing import policy_v2 as _PV
+        from ..pricing.valutazione import valuta_e_scrivi as _ves
+        from collections import Counter as _Cr
+        time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "420")))
+        while True:
+            attesa = float(os.environ.get("RIPROVA_GIUDICE_MIN", "15")) * 60
+            try:
+                if os.environ.get("RIPROVA_GIUDICE", "1") == "1" and _AI.available() and not _calcolo["in_corso"]:
+                    with connect() as conn:
+                        if not _AI.budget_finito(conn):
+                            ids = [r["listing_id"] for r in conn.execute(
+                                """SELECT v.listing_id FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
+                                   WHERE v.policy_version = %s AND l.status = 'attivo'
+                                     AND (v.dati->>'giudice_mancante') = 'true'
+                                   ORDER BY v.computed_at LIMIT %s""",
+                                (_PV.POLICY_VERSION, int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
+                            st = _Cr()
+                            for k in range(0, len(ids), 20):
+                                es = _ves(conn, ids[k:k + 20], "riprova-giudice")
+                                conn.commit()
+                                for chiave, n in es.stats.items():
+                                    st[chiave] += n
+                                if _AI.budget_finito(conn):
+                                    break
+                            if ids:
+                                lg.warning("RIPROVA_GIUDICE %s", json.dumps({"auto": len(ids), **dict(st)}))
+                                _elenco["t"] = 0.0
+                                _aggiorna_elenco(attendi=False)
+                                if len(ids) >= int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")):
+                                    attesa = 120
+            except Exception as e:
+                lg.warning("RIPROVA_GIUDICE non riuscito: %s", str(e)[:300])
+            time.sleep(attesa)
+    threading.Thread(target=riprova_giudice, daemon=True, name="riprova-giudice").start()
+
     def perizia_ai():
         """12/11: perizia AI da commerciante (ai/perizia.py) sulle auto in attesa e su quelle del sito senza perizia.
         Pochi elementi per giro (PERIZIA_PER_GIRO), niente foto; pausa di un'ora su credito/limite (dentro giro)."""

@@ -659,3 +659,14 @@ def test_autohero_anche_con_zona_cron():
     src = inspect.getsource(collect)
     i = src.index('log.warning("ZONA_CRON non riuscita')
     assert "_autohero_giornaliero(Counter())" in src[i:i + 400]
+
+
+def test_riprova_giudice_rivaluta_le_auto_in_attesa():
+    """13/11 notte: le auto 'in attesa' (giudice_mancante) vanno rivalutate quando il budget AI torna disponibile."""
+    import inspect
+    from dealfinder.web import app
+    src = inspect.getsource(app)
+    i = src.index("def riprova_giudice")
+    blocco = src[i:i + 2500]
+    assert "giudice_mancante" in blocco and "budget_finito" in blocco and "valuta_e_scrivi" in blocco
+    assert 'name="riprova-giudice"' in src
