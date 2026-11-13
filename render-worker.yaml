@@ -1,0 +1,15 @@
+# Solo il servizio separato "tempo reale" (lettura continua dei nuovi annunci).
+# Le chiavi arrivano dal cron dealfinder-opportunita: nessun segreto qui.
+services:
+  - type: worker
+    name: scovo-tempo-reale
+    runtime: python
+    region: frankfurt
+    plan: starter
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m dealfinder.pipeline.tempo_reale_worker
+    envVars:
+      - key: DATABASE_URL
+        fromService: { type: cron, name: dealfinder-opportunita, envVarKey: DATABASE_URL }
