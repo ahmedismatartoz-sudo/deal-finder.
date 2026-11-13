@@ -986,3 +986,18 @@ def test_fiat_rimessa_in_cima_e_ribassi_accesi():
     pg_vero.migra(c2, "053_rimetti_fiat_ribassi.sql")
     assert [e.get("id") or e.get("marca") for e in IMP.leggi_db(c2)["in_cima"]] == [5, "fiat"]
 
+
+
+def test_054_rimette_in_elenco_la_fiat():
+    c = pg_vero.nuovo_db("senza_riavvii_054")
+    if c is None:
+        return
+    c.execute("CREATE TABLE listings (id BIGINT PRIMARY KEY, make TEXT, model TEXT, year INT, mileage_km INT, price_eur INT, "
+              "status TEXT DEFAULT 'attivo', stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ)")
+    c.execute("INSERT INTO listings (id, make, model, year, mileage_km, price_eur, stage, stage_reason) VALUES "
+              "(77, 'Fiat', '500', 2016, 68000, 7900, 'scartato', 'analisi_manuale: tolta dal cliente'),"
+              "(78, 'Fiat', '500', 2016, 68000, 7900, 'scartato', 'danno_grave')")
+    pg_vero.migra(c, "054_fiat_stage.sql")
+    pg_vero.migra(c, "054_fiat_stage.sql")
+    st = {r["id"]: r["stage"] for r in c.execute("SELECT id, stage FROM listings").fetchall()}
+    assert st == {77: "approfondito", 78: "scartato"}
