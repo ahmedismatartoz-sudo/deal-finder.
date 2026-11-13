@@ -735,10 +735,10 @@ def test_pg_migrazioni_e_valori_di_oggi():
     if c is None:
         return
     c.execute("CREATE TABLE listings (id BIGINT PRIMARY KEY, make TEXT, model TEXT, mileage_km INT, price_eur INT, "
-              "stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ)")         # per la 056
+              "stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ, year INT)")   # per la 056 e la 057
     pg_vero.migra(c, "047_impostazioni_sito.sql", "048_impostazioni_iniziali.sql", "050_togli_fiat.sql",
-                  "053_rimetti_fiat_ribassi.sql", "056_togli_fiat_e_ribassi.sql")
-    pg_vero.migra(c, "048_impostazioni_iniziali.sql", "056_togli_fiat_e_ribassi.sql")   # due volte: niente doppioni
+                  "053_rimetti_fiat_ribassi.sql", "056_togli_fiat_e_ribassi.sql", "057_togli_grande_punto.sql")
+    pg_vero.migra(c, "048_impostazioni_iniziali.sql", "056_togli_fiat_e_ribassi.sql", "057_togli_grande_punto.sql")
     d = IMP.leggi_db(c)
     assert d["ribasso"] == {"attivo": False, "schema": scovo.RIBASSO_SCHEMA, "fino": None}  # 13/11 12:00: spenti
     assert [{k: v for k, v in e.items() if k != "nota"} for e in d["in_cima"]] == scovo.IN_CIMA == []

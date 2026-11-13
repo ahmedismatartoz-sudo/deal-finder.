@@ -439,5 +439,12 @@
   "km": 68000,
   "prezzo": 7900,
   "motivo": "13/11 12:00 il cliente la toglie dal sito"
+ },
+ {
+  "marca": "fiat",
+  "anno": 2009,
+  "km": 30000,
+  "prezzo": 2400,
+  "motivo": "13/11 13:17 il cliente la toglie dal sito (Grande Punto metano, Leffe BG)"
  }
 ]
