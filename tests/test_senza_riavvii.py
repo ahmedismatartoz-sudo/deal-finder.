@@ -745,8 +745,8 @@ def test_pg_migrazioni_e_valori_di_oggi():
     file = _scarti_file()
     assert len(d["scarti"]) == len([e for e in file if not e.get("rimetti")])   # 13/11 12:00: Fiat di nuovo fuori
     assert {x["listing_id"] for x in d["scarti"] if x["listing_id"]} == {e["id"] for e in file if e.get("id")}
-    assert sorted((x["marca"], x["anno"], x["km"], x["prezzo"]) for x in d["scarti"] if not x["listing_id"]) == \
-        sorted((e["marca"], e.get("anno"), e["km"], e["prezzo"]) for e in file if not e.get("id") and not e.get("rimetti"))
+    assert sorted((x["marca"], x["anno"] or 0, x["km"], x["prezzo"]) for x in d["scarti"] if not x["listing_id"]) == \
+        sorted((e["marca"], e.get("anno") or 0, e["km"], e["prezzo"]) for e in file if not e.get("id") and not e.get("rimetti"))
     try:
         IMP.usa_lettore(lambda: IMP.leggi_db(c))
         assert scovo.in_cima(dict(FIAT)) == FIAT                               # 13/11 12:00: niente in cima

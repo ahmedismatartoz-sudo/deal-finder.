@@ -11,7 +11,7 @@ from dealfinder import regole as RG
 from dealfinder.pricing import policy_v2 as P
 from dealfinder.pricing import valutazione as VZ
 
-NOW = datetime(2026, 11, 4, 12, tzinfo=timezone.utc)
+NOW = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)   # 13/11: prima era fissa al 4/11 e dopo 9 giorni le auto risultavano vecchie
 CFG = P.PolicyConfig()
 
 
