@@ -36,12 +36,13 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    (l'auto non passa pulita se l'AI è ferma o il budget è finito)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
   diesel_extra     (13/11 sera, cliente: "fai entrare più diesel ma solamente macchine per bene, altre 70") al massimo
-                   DIESEL_EXTRA (70; 0 = spento) auto DIESEL che oggi restano fuori SOLO perché diesel: commercianti
-                   che con la stessa auto a benzina sarebbero nella fascia richiesta (diesel lì solo dal 2017).
+                   DIESEL_EXTRA (70; 0 = spento) auto DIESEL di commercianti nelle 12 province entro 100 km da Milano
+                   (niente Torino, Ravenna, Roma), a qualsiasi prezzo, che oggi restano fuori per
+                   commerciante_non_ammesso o perché lontane oltre il tetto dei 40 (calcolato come prima, anche con
+                   loro dentro). Promo, solo finanziamento, prezzo esca, Loconte ed esclusi: fuori come oggi.
                    Solo "per bene": dal 2015, ≤ 150.000 km, margine ≥ soglia, nessun danno/guasto, controllo AI
-                   passato e pulito, numero presente, province entro 100 km da Milano. Le migliori per margine/soglia.
-                   Non contano nel tetto dei 40 commercianti lontani (che resta com'è). Nel SITO_FUNNEL
-                   "diesel_extra": {n, candidate, entrate}
+                   passato e pulito, numero presente, nessun avviso. Le migliori per margine/soglia, tetto separato N.
+                   Nel SITO_FUNNEL "diesel_extra": {n, candidate, entrate}
 """
 from __future__ import annotations
 
@@ -357,19 +358,22 @@ def e_diesel(it) -> bool:
     return "diesel" in str(it.get("carb") or it.get("fuel") or "").lower()
 
 
-def fuori_solo_per_diesel(it, g: Regole) -> bool:
-    """Commerciante che oggi resta fuori (tipo_venditore None) e che con la stessa auto a benzina sarebbe nella fascia
-    richiesta (regole.benzina_richiesta: il diesel lì vale solo dal 2017). Ogni altra condizione del venditore
-    (promo, solo finanziamento, prezzo esca, supercar) resta quella di oggi."""
+def diesel_commerciante_zona(it, g: Regole) -> bool:
+    """Diesel di commerciante nelle 12 province entro 100 km da Milano (niente Torino, Ravenna, Roma), a qualsiasi
+    prezzo. Le condizioni del venditore di oggi restano: niente promo, solo finanziamento, prezzo esca, supercar."""
     r = _r(it)
     if not e_diesel(it) or it.get("supercar") or r.get("seller_type") != "commerciante":
         return False
-    if r.get("promo") or r.get("solo_fin") or fascia(it):
+    if r.get("provincia") not in PROVINCE_100KM or r.get("promo") or r.get("solo_fin"):
         return False
     M = (it.get("pv") or {}).get("M")
-    if not M or (it.get("prezzo") or 0) < g.prezzo_min_su_m_comm * float(M):
-        return False
-    return fascia(dict(it, carb="benzina", fuel="benzina"))
+    return bool(M) and (it.get("prezzo") or 0) >= g.prezzo_min_su_m_comm * float(M)
+
+
+def fuori_solo_per_diesel(it, g: Regole) -> bool:
+    """Candidata al passo venditore: diesel di commerciante in zona che oggi esce con commerciante_non_ammesso
+    (tipo_venditore None). I diesel lontani oltre il tetto dei 40 si riprendono in elenco_sito (riprendi_diesel)."""
+    return tipo_venditore(it, g) is None and diesel_commerciante_zona(it, g)
 
 
 def diesel_per_bene(it, g: Regole) -> bool:
@@ -791,6 +795,22 @@ REGOLE = [("valutata", r_valutata), ("no_loconte", r_no_loconte), ("scarti_clien
 DOPO_MARGINE = [("truffa", r_truffa), ("margine_minimo", r_margine_minimo), ("perizia", r_perizia)]
 
 
+def riprendi_diesel(prima: list[dict], via: set, g: Regole) -> set:
+    """Diesel lontani tolti dal tetto dei 40 (che resta calcolato come prima): candidati al diesel in più; restano
+    (tipo comm_diesel) solo quelli per bene, poi decide tetto_diesel_extra."""
+    if g.diesel_extra <= 0 or not via:
+        return set()
+    out = set()
+    for it in prima:
+        if it.get("id") in via and it.get("_tipo") == "comm_lontano" and diesel_commerciante_zona(it, g):
+            it["_diesel_fuori"] = True
+            if diesel_per_bene(it, g):
+                it["_tipo"] = "comm_diesel"
+                it["diesel_extra"] = True
+                out.add(it["id"])
+    return out
+
+
 def tetto_diesel_extra(items: list[dict], g: Regole) -> tuple[list[dict], set]:
     """Diesel in più (DIESEL_EXTRA): dopo tutte le regole restano solo quelle con margine ≥ soglia e senza alcun
     avviso (truffa, perizia, ripiego, sconto alto), le migliori per margine/soglia fino a g.diesel_extra."""
@@ -878,7 +898,14 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         items = _applica(items, nome, f, g, fun)
     prima = items
     items, via = tetto_commercianti(items, g)
-    fun.passo("tetto_commercianti", prima, items, {"oltre_%d" % g.commercianti_max: len(via)} if via else None)
+    ripresi = riprendi_diesel(prima, via, g)
+    if ripresi:                                    # diesel lontani oltre i 40: al tetto separato del diesel in più
+        via = via - ripresi
+        items = [it for it in prima if it.get("id") not in via]
+    mot = {"oltre_%d" % g.commercianti_max: len(via) + len(ripresi)} if via or ripresi else {}
+    if ripresi:
+        mot["al_diesel_extra"] = len(ripresi)
+    fun.passo("tetto_commercianti", prima, items, mot or None)
     fun.tolti["tetto_commercianti"] = sorted(via)
     prima = items
     items, via = tetto_fuori_zona(items, g)

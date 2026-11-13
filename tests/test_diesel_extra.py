@@ -87,12 +87,17 @@ def test_diesel_non_per_bene_resta_fuori():
     assert fun.diesel_extra["entrate"] == 0
 
 
-def test_diesel_fuori_fascia_anche_a_benzina_non_entra():
-    # fuori anche se fosse a benzina (oltre 10.000 € o 100.000 km): il motivo non è il diesel
+def test_diesel_a_qualsiasi_prezzo_e_fino_a_150000_km():
+    # 13/11 sera (allargato): non serve più essere "nella fascia se fosse a benzina"
     a = auto(20, prezzo=12000, M=16000, margine=4000)
     b = auto(21, km=120000)
-    out, fun = elenco([a, b])
-    assert out == [] and fun.diesel_extra["candidate"] == 0
+    c = auto(22, anno=2019, prezzo=18000, M=22000, margine=4000, prov="BG")
+    d = auto(23, km=160000)                                            # oltre 150.000 km: fuori come oggi
+    out, fun = elenco([a, b, c, d])
+    assert sorted(it["id"] for it in out) == [20, 21, 22]
+    assert all(it["diesel_extra"] for it in out)
+    assert fun.diesel_extra == {"n": 70, "candidate": 3, "entrate": 3}
+    assert elenco([a, b, c, d], SPENTO)[0] == []
 
 
 def test_tetto_n_le_migliori_per_margine_su_soglia():
@@ -132,3 +137,32 @@ def test_tetto_40_commercianti_invariato():
     assert len(lont_s) == 40 and lont_a == lont_s
     assert sorted(it["id"] for it in out_a if it.get("diesel_extra")) == [1, 2]
     assert fun.diesel_extra["entrate"] == 2
+
+
+def test_diesel_lontani_oltre_il_tetto_dei_40():
+    def lont(i, carb, m, **kw):
+        return auto(i, carb=carb, prezzo=12000, M=16000, margine=m, prov="MB", _r={"valutazione_nuova": True}, **kw)
+    benz = [lont(400 + k, "benzina", 6000 + k) for k in range(40)]
+    dies = [lont(500, "diesel", 4500), lont(501, "diesel", 4600),
+            lont(502, "diesel", 4700, anno=2013),                     # oltre il tetto ma vecchio: fuori
+            lont(503, "diesel", 9000)]                                # tra i 40 migliori: comm_lontano come oggi
+    tutte = benz + dies
+    out_s, _ = elenco(tutte, SPENTO)
+    out_a, fun = elenco(tutte)
+    lont_s = sorted(it["id"] for it in out_s if it.get("_tipo") == "comm_lontano")
+    lont_a = sorted(it["id"] for it in out_a if it.get("_tipo") == "comm_lontano")
+    assert len(lont_s) == 40 and lont_a == lont_s and 503 in lont_a
+    assert sorted(it["id"] for it in out_a if it.get("diesel_extra")) == [500, 501]
+    assert fun.diesel_extra == {"n": 70, "candidate": 3, "entrate": 2}
+    p = next(x for x in fun.passi if x["passo"] == "tetto_commercianti")
+    assert p["motivi"]["al_diesel_extra"] == 2
+    g = dataclasses.replace(G, diesel_extra=1)                         # tetto separato N: la migliore
+    assert sorted(it["id"] for it in elenco(tutte, g)[0] if it.get("diesel_extra")) == [501]
+
+
+def test_diesel_lontano_fuori_zona_non_ripreso():
+    benz = [auto(600 + k, carb="benzina", prezzo=12000, M=16000, margine=6000 + k, prov="MB",
+                 _r={"valutazione_nuova": True}) for k in range(40)]
+    to = auto(700, prezzo=12000, M=16000, margine=4500, prov="TO", _r={"valutazione_nuova": True})
+    out, fun = elenco(benz + [to])
+    assert 700 not in {it["id"] for it in out} and fun.diesel_extra["candidate"] == 0
