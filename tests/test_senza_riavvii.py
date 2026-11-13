@@ -100,8 +100,12 @@ def test_in_cima_dal_database_come_dal_codice():
     altra = dict(FIAT, id=78, km=68001)
     # 13/11 10:52: IN_CIMA del codice ha di nuovo la Fiat 500 rossa a 6.900 €
     voce = {"marca": "fiat", "km": 68000, "prezzo": 7900, "mostra": 6900}
-    assert scovo.IN_CIMA == [voce]
-    dal_codice = [scovo.in_cima(dict(FIAT)), scovo.in_cima(dict(altra))]
+    assert scovo.IN_CIMA == []                                                  # 13/11 12:00: Fiat di nuovo tolta
+    try:
+        scovo.IN_CIMA.append(voce)
+        dal_codice = [scovo.in_cima(dict(FIAT)), scovo.in_cima(dict(altra))]
+    finally:
+        scovo.IN_CIMA.remove(voce)
     assert dal_codice[0]["prezzo"] == 6900 and dal_codice[0]["vetrina"] == -100 and dal_codice[0]["pv"]["margine"] == 3100
     seme = [dict(voce, nota="Fiat 500 rossa")]                                 # come la migrazione 048
     try:
@@ -730,21 +734,23 @@ def test_pg_migrazioni_e_valori_di_oggi():
     c = pg_vero.nuovo_db("senza_riavvii_1")
     if c is None:
         return
+    c.execute("CREATE TABLE listings (id BIGINT PRIMARY KEY, make TEXT, model TEXT, mileage_km INT, price_eur INT, "
+              "stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ)")         # per la 056
     pg_vero.migra(c, "047_impostazioni_sito.sql", "048_impostazioni_iniziali.sql", "050_togli_fiat.sql",
-                  "053_rimetti_fiat_ribassi.sql")
-    pg_vero.migra(c, "048_impostazioni_iniziali.sql", "053_rimetti_fiat_ribassi.sql")   # due volte: niente doppioni
+                  "053_rimetti_fiat_ribassi.sql", "056_togli_fiat_e_ribassi.sql")
+    pg_vero.migra(c, "048_impostazioni_iniziali.sql", "056_togli_fiat_e_ribassi.sql")   # due volte: niente doppioni
     d = IMP.leggi_db(c)
-    assert d["ribasso"] == {"attivo": True, "schema": scovo.RIBASSO_SCHEMA, "fino": None}   # 13/11: ribassi accesi
-    assert [{k: v for k, v in e.items() if k != "nota"} for e in d["in_cima"]] == scovo.IN_CIMA
+    assert d["ribasso"] == {"attivo": False, "schema": scovo.RIBASSO_SCHEMA, "fino": None}  # 13/11 12:00: spenti
+    assert [{k: v for k, v in e.items() if k != "nota"} for e in d["in_cima"]] == scovo.IN_CIMA == []
     file = _scarti_file()
-    assert len(d["scarti"]) == len([e for e in file if not e.get("rimetti")])   # 13/11: la Fiat 500 è di nuovo sul sito
+    assert len(d["scarti"]) == len([e for e in file if not e.get("rimetti")])   # 13/11 12:00: Fiat di nuovo fuori
     assert {x["listing_id"] for x in d["scarti"] if x["listing_id"]} == {e["id"] for e in file if e.get("id")}
     assert sorted((x["marca"], x["anno"], x["km"], x["prezzo"]) for x in d["scarti"] if not x["listing_id"]) == \
         sorted((e["marca"], e.get("anno"), e["km"], e["prezzo"]) for e in file if not e.get("id") and not e.get("rimetti"))
     try:
         IMP.usa_lettore(lambda: IMP.leggi_db(c))
-        assert scovo.in_cima(dict(FIAT))["prezzo"] == 6900                     # 13/11: di nuovo in cima a 6.900 €
-        assert scovo.ribasso_per(12000, PRIMA) > 0                             # 13/11: ribassi accesi
+        assert scovo.in_cima(dict(FIAT)) == FIAT                               # 13/11 12:00: niente in cima
+        assert scovo.ribasso_per(12000, PRIMA) == 0                            # 13/11 12:00: ribassi spenti
     finally:
         _fine()
     from dealfinder.pipeline import manuale
@@ -957,9 +963,6 @@ def test_ribasso_variabile_con_spazi():
 def test_fiat_rimessa_in_cima_e_ribassi_accesi():
     """Cliente 13/11 10:52: la Fiat 500 rossa (fiat, 68.000 km, 7.900 €) di nuovo sul sito, in cima a 6.900 €, e
     ribassi accesi. Codice + file senza database, e 047+048+050+053 sul Postgres vero (due volte)."""
-    assert scovo.in_cima(dict(FIAT))["prezzo"] == 6900
-    voce = [e for e in _scarti_file() if e.get("marca") == "fiat" and e.get("km") == 68000 and e.get("prezzo") == 7900]
-    assert len(voce) == 1 and voce[0].get("rimetti")
     c = pg_vero.nuovo_db("senza_riavvii_fiat")
     if c is None:
         return
@@ -976,6 +979,21 @@ def test_fiat_rimessa_in_cima_e_ribassi_accesi():
         IMP.usa_lettore(lambda: IMP.leggi_db(c))
         assert scovo.in_cima(dict(FIAT))["prezzo"] == 6900
         assert IMP.togli_scartate([dict(FIAT)]) == [dict(FIAT)]
+    finally:
+        _fine()
+    # 13/11 12:00: la 056 la toglie di nuovo e spegne i ribassi (due volte: nessun doppione)
+    c.execute("CREATE TABLE listings (id BIGINT PRIMARY KEY, make TEXT, model TEXT, mileage_km INT, price_eur INT, "
+              "stage TEXT, stage_reason TEXT, last_checked_at TIMESTAMPTZ)")
+    c.execute("INSERT INTO listings VALUES (77, 'Fiat', '500', 68000, 7900, 'approfondito', 'da_verificare', NULL)")
+    pg_vero.migra(c, "056_togli_fiat_e_ribassi.sql")
+    pg_vero.migra(c, "056_togli_fiat_e_ribassi.sql")
+    d = IMP.leggi_db(c)
+    assert d["in_cima"] == [] and d["ribasso"]["attivo"] is False
+    assert c.execute("SELECT stage FROM listings WHERE id=77").fetchone()["stage"] == "scartato"
+    try:
+        IMP.usa_lettore(lambda: IMP.leggi_db(c))
+        assert scovo.in_cima(dict(FIAT)) == FIAT and IMP.togli_scartate([dict(FIAT)]) == []
+        assert scovo.ribasso_per(12000) == 0
     finally:
         _fine()
     # con altre auto in cima messe dal pannello: la 053 aggiunge solo la Fiat
