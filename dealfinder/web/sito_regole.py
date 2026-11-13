@@ -35,6 +35,13 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    SITO_FUNNEL "perizia_ombra" con sarebbero_caro / sarebbero_attesa / sarebbero_prudenti
                    (l'auto non passa pulita se l'AI è ferma o il budget è finito)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
+  diesel_extra     (13/11 sera, cliente: "fai entrare più diesel ma solamente macchine per bene, altre 70") al massimo
+                   DIESEL_EXTRA (70; 0 = spento) auto DIESEL che oggi restano fuori SOLO perché diesel: commercianti
+                   che con la stessa auto a benzina sarebbero nella fascia richiesta (diesel lì solo dal 2017).
+                   Solo "per bene": dal 2015, ≤ 150.000 km, margine ≥ soglia, nessun danno/guasto, controllo AI
+                   passato e pulito, numero presente, province entro 100 km da Milano. Le migliori per margine/soglia.
+                   Non contano nel tetto dei 40 commercianti lontani (che resta com'è). Nel SITO_FUNNEL
+                   "diesel_extra": {n, candidate, entrate}
 """
 from __future__ import annotations
 
@@ -197,6 +204,11 @@ class Regole:
     sconto_ai: bool = True
     sconto_ai_vera: float = 0.7       # auto_vera minima (probabilità che l'annuncio sia vero e coerente)
     ripiego: bool = True
+    # 13/11 sera (cliente: "altre 70 macchine diesel, le migliori, solamente macchine per bene"): DIESEL_EXTRA
+    diesel_extra: int = 70            # 0 = spento (comportamento di prima)
+    diesel_anno_min: int = 2015       # Euro 6
+    diesel_km_max: int = 150000
+    diesel_pulita: float = 0.30       # danni nelle foto, truffa e guasto letti dall'AI sotto questo valore
 
     @classmethod
     def da_env(cls) -> "Regole":
@@ -211,7 +223,8 @@ class Regole:
                    perizia=e("PERIZIA_AI", "log").strip().lower() == "1",
                    perizia_ombra=e("PERIZIA_AI", "log").strip().lower() == "log",
                    versione_tecnica=e("VERSIONE_TECNICA", "1") == "1", sconto_ai=e("SCONTO_ALTO_AI", "1") == "1",
-                   ripiego=e("RIPIEGO_PRUDENTE", "1") == "1")
+                   ripiego=e("RIPIEGO_PRUDENTE", "1") == "1",
+                   diesel_extra=max(0, int(e("DIESEL_EXTRA", "70") or 0)))
 
     def impronta(self) -> str:
         import dataclasses
@@ -340,8 +353,60 @@ def tipo_venditore(it, g: Regole) -> str | None:
     return None
 
 
+def e_diesel(it) -> bool:
+    return "diesel" in str(it.get("carb") or it.get("fuel") or "").lower()
+
+
+def fuori_solo_per_diesel(it, g: Regole) -> bool:
+    """Commerciante che oggi resta fuori (tipo_venditore None) e che con la stessa auto a benzina sarebbe nella fascia
+    richiesta (regole.benzina_richiesta: il diesel lì vale solo dal 2017). Ogni altra condizione del venditore
+    (promo, solo finanziamento, prezzo esca, supercar) resta quella di oggi."""
+    r = _r(it)
+    if not e_diesel(it) or it.get("supercar") or r.get("seller_type") != "commerciante":
+        return False
+    if r.get("promo") or r.get("solo_fin") or fascia(it):
+        return False
+    M = (it.get("pv") or {}).get("M")
+    if not M or (it.get("prezzo") or 0) < g.prezzo_min_su_m_comm * float(M):
+        return False
+    return fascia(dict(it, carb="benzina", fuel="benzina"))
+
+
+def diesel_per_bene(it, g: Regole) -> bool:
+    """Condizioni "per bene" che si vedono prima del margine (margine e avvisi di truffa: alla fine, tetto_diesel_extra)."""
+    r = _r(it)
+    if it.get("incidentata") or it.get("economica") or it.get("supercar") or r.get("danno_dichiarato"):
+        return False
+    if r.get("difetto") or r.get("scarto_cliente") or r.get("loconte"):
+        return False
+    if not it.get("anno") or int(it["anno"]) < g.diesel_anno_min:
+        return False
+    if it.get("km") is None or int(it["km"]) > g.diesel_km_max:
+        return False
+    if not r.get("tel") or r.get("tel_estero") or r.get("testo_truffa"):
+        return False
+    if r.get("provincia") not in PROVINCE_100KM:      # Milano e dintorni: nessuna zona nuova
+        return False
+    j = r.get("jev")
+    if not j or r.get("jev_errore") or j.get("decisione") == "scarta":
+        return False
+    for k in ("danni", "truffa"):                   # foto viste e nessun segno: senza valore non si può confermare
+        if j.get(k) is None or float(j[k]) >= g.diesel_pulita:
+            return False
+    if float(j.get("guasto") or 0) >= g.diesel_pulita:
+        return False
+    if (r.get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
+        return False
+    return True
+
+
 def r_venditore(it, g):
     t = tipo_venditore(it, g)
+    if t is None and g.diesel_extra > 0 and fuori_solo_per_diesel(it, g):
+        it["_diesel_fuori"] = True                  # fuori oggi solo perché diesel
+        if diesel_per_bene(it, g):
+            t = "comm_diesel"
+            it["diesel_extra"] = True
     if t is None:
         r = _r(it)
         if r.get("seller_type") == "privato":
@@ -726,6 +791,22 @@ REGOLE = [("valutata", r_valutata), ("no_loconte", r_no_loconte), ("scarti_clien
 DOPO_MARGINE = [("truffa", r_truffa), ("margine_minimo", r_margine_minimo), ("perizia", r_perizia)]
 
 
+def tetto_diesel_extra(items: list[dict], g: Regole) -> tuple[list[dict], set]:
+    """Diesel in più (DIESEL_EXTRA): dopo tutte le regole restano solo quelle con margine ≥ soglia e senza alcun
+    avviso (truffa, perizia, ripiego, sconto alto), le migliori per margine/soglia fino a g.diesel_extra."""
+    def ok(it):
+        m, p = margine(it), int(it.get("prezzo") or 0)
+        return (m is not None and p > 0 and m >= scovo.soglia(p) and not it.get("trattare")
+                and not it.get("avviso_verifica") and not it.get("perizia_verifica")
+                and not it.get("ripiego_prudente") and not it.get("sconto_confermato_ai"))
+    extra = [it for it in items if it.get("_tipo") == "comm_diesel"]
+    buone = sorted((it for it in extra if ok(it)),
+                   key=lambda it: (-(margine(it) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))), it.get("id") or 0))
+    tenute = {it["id"] for it in buone[:max(0, g.diesel_extra)]}
+    via = {it["id"] for it in extra if it["id"] not in tenute}
+    return [it for it in items if it.get("id") not in via], via
+
+
 def tetto_commercianti(items: list[dict], g: Regole) -> tuple[list[dict], set]:
     lontani = sorted((it for it in items if it.get("_tipo") == "comm_lontano"),
                      key=lambda it: (-int(margine(it) or 0), it.get("id") or 0))
@@ -737,6 +818,7 @@ def tetto_commercianti(items: list[dict], g: Regole) -> tuple[list[dict], set]:
 class Funnel:
     passi: list = field(default_factory=list)
     perizia_ombra: dict | None = None
+    diesel_extra: dict = field(default_factory=dict)   # {n, candidate, entrate}
     tolti: dict = field(default_factory=dict)       # passo -> ids tolti
 
     def passo(self, nome, prima, dopo, motivi=None):
@@ -777,6 +859,9 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         it.pop("sconto_confermato_ai", None)
         it.pop("versione_solo_nome", None)
         it.pop("ripiego_prudente", None)
+        it.pop("diesel_extra", None)
+        it.pop("_diesel_fuori", None)
+    tutte = items
     for nome, f in REGOLE:
         items = _applica(items, nome, f, g, fun)
     from collections import Counter
@@ -799,6 +884,11 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
     items, via = tetto_fuori_zona(items, g)
     fun.passo("tetto_fuori_zona", prima, items, {"oltre_%d" % g.fascia_fuori_max: len(via)} if via else None)
     fun.tolti["tetto_fuori_zona"] = sorted(via)
+    if g.diesel_extra > 0:
+        prima = items
+        items, via = tetto_diesel_extra(items, g)
+        fun.passo("diesel_extra", prima, items, {"oltre_%d_o_con_avviso" % g.diesel_extra: len(via)} if via else None)
+        fun.tolti["diesel_extra"] = sorted(via)
     # controllo finale: nessuna auto sotto il minimo (non deve mai scattare)
     sotto = [it["id"] for it in items if r_margine_minimo(it, g)]
     if sotto:
@@ -813,6 +903,8 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
             it["avviso_verifica"] = True        # 12/11: stima del perito molto sotto R o perizia "da verificare"
         if it.get("ripiego_prudente") or it.get("sconto_confermato_ai"):
             it["avviso_verifica"] = True        # 13/11: stima di ripiego o sconto alto confermato dall'AI
+    fun.diesel_extra = {"n": g.diesel_extra, "candidate": sum(1 for it in tutte if it.get("_diesel_fuori")),
+                        "entrate": sum(1 for it in items if it.get("diesel_extra"))}
     if scrivi_log:
         log.warning("SITO_FUNNEL %s", json.dumps({"regole": g.impronta(), "finale": len(items),
                                                   "fascia_finale": sum(1 for it in items if fascia(it)),
@@ -825,6 +917,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "piu_auto": {"sconto_alto_confermate": sum(1 for it in items if it.get("sconto_confermato_ai")),
                                                                "versione_solo_nome": sum(1 for it in items if it.get("versione_solo_nome")),
                                                                "ripiego_prudente": sum(1 for it in items if it.get("ripiego_prudente"))},
+                                                  "diesel_extra": fun.diesel_extra,
                                                   "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},
                                                   "passi": fun.passi}, ensure_ascii=False, default=str))

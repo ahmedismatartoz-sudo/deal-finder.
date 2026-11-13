@@ -1783,6 +1783,7 @@ def _calcola_elenco() -> None:
     for it in out:
         it.pop("_r", None)
         it.pop("_tipo", None)
+        it.pop("_diesel_fuori", None)
         it.pop("perizia_verifica", None)
         it.pop("_perizia_attesa", None)
     from . import impostazioni as _imp, elenco_salvato as _es
@@ -1814,6 +1815,8 @@ def _calcola_elenco() -> None:
         c[f"{sez}:{it.get('area') or 'milano'}"] += 1
         if SR.fascia(it):
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
+        if it.get("diesel_extra"):
+            c["diesel_extra"] += 1          # 13/11 sera: diesel per bene entrate con DIESEL_EXTRA
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(out), time.time() - t0, dict(sorted(c.items())))
     del items, fun
     try:   # 11/11: quante auto per provincia (es. Novara)
