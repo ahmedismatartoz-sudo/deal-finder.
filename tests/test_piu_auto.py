@@ -650,3 +650,12 @@ def test_riuso_gratis_anche_col_budget_finito():
         res = CA.giro(conn, chiama=chiama)
     assert res["saltato"].startswith("budget") and res["riusate"] == 1
     assert any(q.startswith("UPDATE decisione_ai SET prezzo") and p == (5200, 1) for q, p in conn.scritte)
+
+
+def test_autohero_anche_con_zona_cron():
+    """13/11: con ZONA_CRON=1 il cron opportunità usciva prima di run() e Autohero non girava mai."""
+    import inspect
+    from dealfinder.pipeline import collect
+    src = inspect.getsource(collect)
+    i = src.index('log.warning("ZONA_CRON non riuscita')
+    assert "_autohero_giornaliero(Counter())" in src[i:i + 400]

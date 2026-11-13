@@ -1213,6 +1213,9 @@ if __name__ == "__main__":
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
         lavori_cron()
+        if mode == "opportunita":
+            # 13/11: con ZONA_CRON il cron non arriva a run(): Autohero non girava mai. Una volta al giorno.
+            _autohero_giornaliero(Counter())
     # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
     if os.environ.get("CONFRONTI_EXTRA") == "1" and tempo_ok("confronti", 6, _t0_loop):
         try:
