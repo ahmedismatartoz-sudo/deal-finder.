@@ -619,3 +619,34 @@ def test_giorno_di_roma_per_il_contatore():
     from datetime import datetime
     from zoneinfo import ZoneInfo
     assert TN._oggi() == datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m-%d")
+
+
+def test_senza_giudice_auto_cambiata_non_tiene_il_margine_vecchio():
+    from dealfinder.pricing import valutazione as VAL
+    v = {"categoria": "dati_insufficienti", "giudice_mancante": True, "n": 12}
+    esistente = {"impronta_auto": "prezzo-8000", "impronta_regole": "r1", "n": 12, "computed_at": None,
+                 "categoria": "opportunita", "margine": 3000}
+    ok, perche = VAL.deve_scrivere(esistente, 12, "prezzo-9000", "r1")       # prezzo salito: impronta diversa
+    assert ok and perche == "auto_cambiata" and not VAL.tieni_precedente(v, esistente, perche)   # si scrive "in attesa"
+    ok, perche = VAL.deve_scrivere(esistente, 12, "prezzo-8000", "r1")
+    assert perche == "dati_pari_o_piu" and VAL.tieni_precedente(v, esistente, perche)            # stessa auto: resta
+    assert not VAL.tieni_precedente(v, esistente, "regole_cambiate")
+    assert not VAL.tieni_precedente(dict(v, giudice_mancante=False), esistente, "dati_pari_o_piu")
+
+
+def test_riuso_gratis_anche_col_budget_finito():
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    CA._SALTATE.clear()
+    a = {"id": 1, "title": "Panda", "description": "ok", "price_eur": 5200, "foto": [], "confronti": []}
+    imp = CA.impronta(a, [])
+    cand = [{"id": 1, "price_eur": 5200, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+             "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": imp}]
+
+    def chiama(testo, foto):
+        raise AssertionError("nessuna chiamata pagata col budget finito")
+    conn = ConnFinta(cand, [a])
+    with env(CONTROLLO_BUDGET_USD="0", CONTROLLO_FOTO_MODO="0"):
+        res = CA.giro(conn, chiama=chiama)
+    assert res["saltato"].startswith("budget") and res["riusate"] == 1
+    assert any(q.startswith("UPDATE decisione_ai SET prezzo") and p == (5200, 1) for q, p in conn.scritte)

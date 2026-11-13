@@ -238,6 +238,14 @@ def giudicata(v: dict | None) -> bool:
     return bool(isinstance(v, dict) and ((v.get("ai_confronti") or {}).get("tolti") or 0) > 0)
 
 
+def tieni_precedente(v: dict, esistente: dict | None, perche: str) -> bool:
+    """13/11 (giudice N3/N12): senza il giudice AI resta la valutazione precedente SOLO se l'auto e le regole sono le
+    stesse (vecchia, dati pari o più, meno confronti). Se l'auto è cambiata (prezzo, testo, dati) o sono cambiate le
+    regole, la precedente non vale più: si scrive la valutazione "in attesa" (dati_insufficienti) e l'auto esce dal
+    sito finché il giudice non lavora, invece di restare col margine vecchio."""
+    return bool(v.get("giudice_mancante") and esistente and perche in ("vecchia", "dati_pari_o_piu", "meno_confronti"))
+
+
 def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regole: str, now=None,
                   ore: int | None = None, giudicata_nuova: bool = False) -> tuple[bool, str]:
     """Stessa regola della condizione SQL di UPSERT_SQL (qui per i contatori e per i test).
@@ -350,7 +358,7 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 imp_a = impronta_auto(t)
                 giu = giudicata(v) and rg.scrittura.giudice_vince
                 ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r, now, ore, giu)
-                if v.get("giudice_mancante") and prima.get(lid):
+                if tieni_precedente(v, prima.get(lid), perche):
                     ok, perche = False, "giudice_mancante"      # 13/11 (N3): resta la valutazione precedente
                 es.stats[f"scrittura:{perche}"] += 1
                 if ok:

@@ -350,7 +350,9 @@ WITH cand AS (
     AND (vp.margine >= %(quota)s * COALESCE(NULLIF(vp.dati->>'soglia', '')::int, 1500)
          OR (vp.categoria = 'dati_insufficienti' AND vp.dati::text LIKE '%%sotto la mediana%%'))"""
 # 13/11 (giudice N4): le auto con una stima di ripiego VALIDA (stesso prezzo, nessuna valutazione più nuova, margine
-# di ripiego almeno al minimo) senza controllo AI non vanno sul sito: entrano tra le candidate
+# di ripiego almeno al minimo) senza controllo AI non vanno sul sito: entrano tra le candidate. (N14) dati->'soglia' è
+# già la soglia del sito per quel prezzo: la valutazione la calcola con scovo.soglia(prezzo) (valutazione.soglia_fn) e
+# qui il prezzo è lo stesso
 _CAND_RIPIEGO = """
   UNION
   SELECT rp.listing_id FROM ripiego_prudente rp
@@ -543,20 +545,23 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     import threading
     if chiama is None and not attiva():
         return {"spenta": "manca ANTHROPIC_API_KEY"}
-    if time.time() < _PAUSA["fino"]:
-        return {"saltato": "pausa per credito/limite AI", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}
     t0 = time.time()
     assicura_colonne(conn)
     fatte_oggi, usd_oggi, usd_rinnovi = spesa_oggi(conn)
     tetto = int(_env("CONTROLLO_MAX_GIORNO", "1500")) - fatte_oggi
     budget = budget_usd()
     dosato = budget_dosato(budget)
-    if tetto <= 0:
-        return {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
-    if usd_oggi >= budget:
-        return {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
-    if usd_oggi >= dosato:
-        return {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi, "dosato": dosato}
+    # 13/11 (giudice N13): pausa, tetto e budget fermano solo le chiamate PAGATE; il riuso gratuito (decisione riportata
+    # al prezzo nuovo quando il contenuto è uguale) e gli scarti dal testo girano comunque
+    stop = None
+    if time.time() < _PAUSA["fino"]:
+        stop = {"saltato": "pausa per credito/limite AI", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}
+    elif tetto <= 0:
+        stop = {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
+    elif usd_oggi >= budget:
+        stop = {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
+    elif usd_oggi >= dosato:
+        stop = {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi, "dosato": dosato}
     sql = CAND_SQL_RIPIEGO if conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"] else CAND_SQL
     righe = [dict(r) for r in conn.execute(sql, {"quota": float(_env("JEV_QUOTA_SOGLIA", "0.7")),
                                                  "validi": valida_giorni()}).fetchall()]
@@ -564,14 +569,14 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     ora = time.time()
     righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok")) and not _da_saltare(r["id"], ora)]
     n_cand = len(righe)
-    quante = min(tetto, massimo or per_giro())
+    quante = 0 if stop else min(tetto, massimo or per_giro())
     if usd_rinnovi >= QUOTA_RINNOVI * budget:
         righe = [r for r in righe if classe(r) != 3]       # rinnovi finiti per oggi: solo nuove e prezzi cambiati
-    righe = ordina(righe)[:quante * 2]                 # qualcuna si riusa o si scarta senza chiamata
+    righe = ordina(righe)[:max(quante, per_giro()) * 2]  # qualcuna si riusa o si scarta senza chiamata
     leggere = {r["id"]: r for r in righe}
     st: Counter = Counter()
     if not righe:
-        return {"candidate": 0, "in_coda": n_cand, "fatte_oggi": fatte_oggi}
+        return dict(stop or {}, candidate=0, in_coda=n_cand, fatte_oggi=fatte_oggi)
     auto = {a["id"]: dict(a) for a in conn.execute(AUTO_SQL, {"ids": list(leggere), "nf": n_foto()}).fetchall()}
     perizie = _perizie(conn, list(auto))
     da_fare = []
@@ -597,6 +602,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         for k in [k for k, t in _SALTATE.items() if time.time() - t > 24 * 3600]:
             _SALTATE.pop(k, None)
     conn.commit()
+    if stop:
+        return dict(stop, candidate=0, in_coda=n_cand, **dict(st))
     http = None
     if modo_foto() == "base64" and n_foto():
         try:                                       # un solo client per le foto del giro (chiuso alla fine)
