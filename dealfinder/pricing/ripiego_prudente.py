@@ -5,8 +5,9 @@ provato i suoi ripieghi (confronti allargati per livello, Nord, Italia, valore r
 abbassano quelle soglie. Si prova solo a dare una stima quando DUE fonti indipendenti dicono la stessa cosa, e si
 prende la più bassa:
 
-    V  valore reale del gruppo (pricing/valore_reale.py, tabella valore_reale): prezzo di VENDITA stimato, accettato
-       qui con errore tipico fino al 25% e almeno 20 annunci nel gruppo (anche se le auto vendute sono poche);
+    V  valore reale del gruppo (pricing/valore_reale.py, tabella valore_reale): prezzo di VENDITA stimato, con le
+       STESSE soglie della regola "valore reale senza gemelle" (regole.ValoreReale.senza_gemelle_sigma_max 15%,
+       senza_gemelle_vendute_min 20 auto vendute);
     A  Autohero (tabella autohero_prezzi, stesso abbinamento della prova alla cieca: stessa marca-modello canonica,
        anno ±1, km ±20.000, almeno 2 auto): mediana delle più vicine × 0,92 (prezzo esposto di un rivenditore →
        prezzo di vendita, fattore di calibrazione della fascia 5-10k, la più severa sopra i 5.000 €);
@@ -35,8 +36,6 @@ log = logging.getLogger("ripiego_prudente")
 FATTORE_VENDITA = 0.92          # prezzo esposto → prezzo di vendita (prudente)
 PRUDENZA = 0.97                 # stima = fonte più bassa × 0,97
 ACCORDO_MAX = 1.15              # la fonte più alta al massimo +15% sulla più bassa
-VR_SIGMA_MAX = 0.25
-VR_N_MIN = 20
 AH_MIN = 2
 SOTTO_M = 0.55                  # come antitruffa.sotto_m della valutazione
 
@@ -62,7 +61,11 @@ def ammessa(auto: dict, dati: dict) -> str | None:
 
 def fonti(dati: dict, vr: dict | None, autohero: list[int] | None) -> dict:
     out = {}
-    if vr and vr.get("v") and float(vr.get("sigma") or 1) <= VR_SIGMA_MAX and int(vr.get("n") or 0) >= VR_N_MIN:
+    # 13/11 (giudice A4): le stesse soglie della regola del valore reale senza gemelle (regole.ValoreReale)
+    from .. import regole as RG
+    vrr = RG.regole().valore_reale
+    if (vr and vr.get("v") and float(vr.get("sigma") or 1) <= vrr.senza_gemelle_sigma_max
+            and int(vr.get("n_vendute") or 0) >= vrr.senza_gemelle_vendute_min):
         out["valore_reale"] = int(vr["v"])
     ah = [int(p) for p in (autohero or []) if p]
     if len(ah) >= AH_MIN:
@@ -110,7 +113,7 @@ def _tabella(conn) -> None:
 
 AUTO_SQL = """
 SELECT l.id, l.make, l.model, l.year, l.mileage_km, l.fuel, l.price_eur, l.damage_class, l.damage_declared,
-       vp.dati, vp.computed_at AS vp_at, vr.v, vr.sigma, vr.n
+       vp.dati, vp.computed_at AS vp_at, vr.v, vr.sigma, vr.n, vr.n_vendute
 FROM listings l
 JOIN LATERAL (SELECT dati, categoria, computed_at FROM valutazioni_policy v WHERE v.listing_id = l.id
               ORDER BY v.computed_at DESC LIMIT 1) vp ON vp.categoria = 'dati_insufficienti'
@@ -135,7 +138,7 @@ def giro(conn, limite: int | None = None) -> dict:
     if not conn.execute("SELECT to_regclass('valore_reale') AS t").fetchone()["t"]:
         sql = sql.replace("LEFT JOIN valore_reale vr ON vr.listing_id = l.id",
                           "LEFT JOIN (SELECT NULL::bigint AS listing_id, NULL::int AS v, NULL::real AS sigma, "
-                          "NULL::int AS n) vr ON false")
+                          "NULL::int AS n, NULL::int AS n_vendute) vr ON false")
     righe = conn.execute(sql, {"lim": int(limite or os.environ.get("RIPIEGO_PER_GIRO", "200"))}).fetchall()
     ah_ok = bool(conn.execute("SELECT to_regclass('autohero_prezzi') AS t").fetchone()["t"])
     for r in righe:
@@ -146,7 +149,7 @@ def giro(conn, limite: int | None = None) -> dict:
         motivo, est, pv = ammessa(r, dati), None, None
         if motivo is None:
             ah = _autohero(conn, r) if ah_ok else []
-            vr = {"v": r.get("v"), "sigma": r.get("sigma"), "n": r.get("n")} if r.get("v") else None
+            vr = {"v": r.get("v"), "sigma": r.get("sigma"), "n": r.get("n"), "n_vendute": r.get("n_vendute")} if r.get("v") else None
             est, f, motivo = stima(int(r["price_eur"]), dati, vr, ah)
             if est:
                 pv = riassunto_pv(r, est, f)
@@ -189,7 +192,11 @@ def leggi_per_sito(conn, ids: list[int]) -> dict:
     for k in range(0, len(ids), 2000):
         for r in conn.execute(
                 "SELECT rp.listing_id, rp.pv FROM ripiego_prudente rp JOIN listings l ON l.id = rp.listing_id "
-                "AND rp.prezzo = l.price_eur WHERE rp.listing_id = ANY(%s) AND rp.stima IS NOT NULL", (ids[k:k + 2000],)).fetchall():
+                "AND rp.prezzo = l.price_eur "
+                # 13/11 (giudice M5): solo se nessuna valutazione è più nuova di quella da cui è partita la stima
+                "JOIN LATERAL (SELECT max(computed_at) AS at FROM valutazioni_policy v WHERE v.listing_id = l.id) vp "
+                "ON vp.at <= rp.valutazione_at "
+                "WHERE rp.listing_id = ANY(%s) AND rp.stima IS NOT NULL", (ids[k:k + 2000],)).fetchall():
             pv = r["pv"] if isinstance(r["pv"], dict) else json.loads(r["pv"] or "null")
             if pv:
                 out[r["listing_id"]] = pv

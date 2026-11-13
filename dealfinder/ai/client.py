@@ -23,7 +23,9 @@ SCREEN_IMAGE_SIDE = int(os.environ.get("AI_FOTO_LATO_FILTRO", "768"))  # filtro:
 
 # Prezzi in dollari per milione di token (entrata, uscita) e per ricerca web: servono a calcolare
 # la spesa del giorno e a fermarsi al tetto AI_BUDGET_GIORNO. Aggiornabili con AI_PREZZI (JSON).
-PREZZI = {"haiku": (0.10, 0.50), "sonnet": (2.0, 10.0), "opus": (5.0, 25.0), "gemini": (0.0, 0.0)}
+# 13/11 (giudice, ramo piu-auto): prezzi veri di listino (prima haiku 0,10/0,50 e sonnet 2/10: la spesa contata era
+# circa un decimo di quella vera e il tetto AI_BUDGET_GIORNO non proteggeva).
+PREZZI = {"haiku": (1.0, 5.0), "sonnet": (3.0, 15.0), "opus": (5.0, 25.0), "gemini": (0.0, 0.0)}
 PREZZO_RICERCA_WEB = 0.01
 try:
     PREZZI.update({k: tuple(v) for k, v in json.loads(os.environ.get("AI_PREZZI", "{}")).items()})
@@ -38,11 +40,17 @@ def costo(model: str, input_tokens: int, output_tokens: int, web_searches: int =
     return input_tokens / 1e6 * pin + output_tokens / 1e6 * pout + web_searches * PREZZO_RICERCA_WEB
 
 
+# Lavori con un budget SEPARATO (non contano nel tetto comune AI_BUDGET_GIORNO, così perizia, lettore, difetti e
+# giudice non si fermano per colpa loro): il controllo delle auto al posto di Jev (ai/controllo_auto.py,
+# CONTROLLO_BUDGET_USD).
+TASK_BUDGET_SEPARATO = ("controllo_auto",)
+
+
 def spesa_oggi(conn) -> float:
-    """Dollari spesi oggi (ora italiana) in AI, dal registro ai_usage."""
+    """Dollari spesi oggi (ora italiana) in AI, dal registro ai_usage (senza i lavori con budget separato)."""
     rows = conn.execute("SELECT model, sum(input_tokens) AS i, sum(output_tokens) AS o, sum(web_searches) AS w "
                         "FROM ai_usage WHERE at > date_trunc('day', now() AT TIME ZONE 'Europe/Rome') AT TIME ZONE 'Europe/Rome' "
-                        "GROUP BY model").fetchall()
+                        "AND task <> ALL(%s) GROUP BY model", (list(TASK_BUDGET_SEPARATO),)).fetchall()
     return round(sum(costo(r["model"], int(r["i"] or 0), int(r["o"] or 0), int(r["w"] or 0)) for r in rows), 4)
 
 

@@ -18,14 +18,21 @@ Differenze volute rispetto a Jev:
     generazione): un allestimento con un altro nome non è una versione diversa;
   - cache per auto + contenuto (testo, dati, foto): se cambia solo il prezzo (al rialzo o in giù fino al 10%) la
     decisione si riusa senza nuova chiamata; vale CONTROLLO_VALIDA_GIORNI (14) giorni;
-  - foto a blocchi: si lavora CONTROLLO_PARALLELI auto alla volta, ognuna con al massimo CONTROLLO_FOTO foto
-    rimpicciolite (768 px) e buttate subito dopo la chiamata: in memoria mai più di qualche centinaio di KB.
-    CONTROLLO_FOTO_MODO=url manda invece gli indirizzi (li scarica Anthropic: zero memoria, ma foto intere ≈ 2,7
-    volte i token); se l'indirizzo non si scarica si riprova in base64 e poi senza foto.
+  - foto a blocchi: si lavora CONTROLLO_PARALLELI auto alla volta, ognuna con al massimo CONTROLLO_FOTO (2) foto
+    rimpicciolite a CONTROLLO_FOTO_LATO (512 px, ~260 token l'una) e buttate subito dopo la chiamata.
+    CONTROLLO_FOTO_MODO=url manda invece gli indirizzi (li scarica Anthropic: zero memoria, ma foto intere ≈ 1.600
+    token l'una); se l'indirizzo non si scarica si riprova in base64 e poi senza foto;
+  - nessuna chiamata quando il testo e i dati bastano già a togliere l'auto dal sito (segnali duri, solo leasing,
+    km o anno fuori regola): scartata_dal_testo.
+Priorità: auto nuove, poi prezzo cambiato, poi le altre (sconto alto e margine alto prima); per ultimo il rinnovo
+delle decisioni scadute (le vecchie di Jev restano valide sul sito finché il prezzo non cambia).
 
-Spesa: tetto proprio CONTROLLO_MAX_GIORNO chiamate (1.500) e CONTROLLO_BUDGET_USD dollari (1,5) al giorno, più il
-tetto comune AI_BUDGET_GIORNO (budget_finito). Errori di credito (402/400 credit balance) → pausa di un'ora; limite
-(429/529) → pausa di 5 minuti (stessa logica della perizia).
+Spesa (prezzi veri, ai/client.PREZZI): budget PROPRIO CONTROLLO_BUDGET_USD (4 $ al giorno), SEPARATO dal tetto comune
+AI_BUDGET_GIORNO (perizia, lettore, difetti, giudice non si fermano per il controllo), più CONTROLLO_MAX_GIORNO
+chiamate (1.500). Ogni chiamata si registra in ai_usage e si conferma (commit) subito dopo; un'auto che fallisce non
+si richiama per 6 ore (niente ripagamenti). Costo misurato sulla richiesta tipo: ~2.400 token in entrata e ~180 in
+uscita = ~0,0033 $ per auto con Haiku (1/5 $ per milione). Errori di credito (402/400 credit balance) → pausa di
+un'ora; limite (429/529) → pausa di 5 minuti (stessa logica della perizia).
 
 Interruttore: JEV_SOSTITUTO=claude (default) | jev (torna a TypeSafe Jev, pricing/jev.py).
 Mai numeri di telefono o email all'AI né nei log.
@@ -82,7 +89,7 @@ Per ogni domanda rispondi con una probabilità da 0 a 1 (0 = sicuramente no, 1 =
 - decisione: "compra" (auto in ordine, da andare a vedere), "tratta" (qualcosa da verificare), "scarta" (SOLO per un
   problema serio che la rende non comprabile: non marciante, guasto grave, incidentata non dichiarata, annuncio finto).
   Il prezzo non decide la decisione. "confidenza": quanto sei sicuro della decisione (0-1).
-- note: al massimo 160 caratteri, in italiano, senza numeri di telefono o nomi.
+- note: al massimo 120 caratteri, in italiano, senza numeri di telefono o nomi.
 
 Non inventare nulla: usa solo testo, dati e foto. RISPONDI SOLO CON QUESTO JSON:
 {"guasto": p, "prezzo_rata": p, "km_credibili": p, "danni_foto": p|null, "foto_internet": p|null,
@@ -100,7 +107,7 @@ def _env(nome: str, default: str) -> str:
 
 
 def n_foto() -> int:
-    return max(0, int(_env("CONTROLLO_FOTO", "3")))
+    return max(0, int(_env("CONTROLLO_FOTO", "2")))
 
 
 def modo_foto() -> str:
@@ -141,7 +148,8 @@ def testo_richiesta(r: dict, confronti: list[dict] | None = None, perizia: dict 
     righe = [
         "ANNUNCIO",
         f"titolo: {titolo or '-'}",
-        f"marca: {r.get('make') or '-'} | modello: {r.get('model') or '-'} | versione: {_t(r.get('version_raw'), 80) or '-'}",
+        f"marca: {r.get('make') or '-'} | modello: {r.get('model') or '-'} | versione: "
+        f"{_t(_senza_dati_personali(str(r.get('version_raw') or '')), 80) or '-'}",
         f"anno: {r.get('year') or '-'} | km: {r.get('mileage_km') if r.get('mileage_km') is not None else '-'} | "
         f"alimentazione: {r.get('fuel') or '-'} | cambio: {r.get('gearbox') or '-'} | potenza: "
         f"{str(r.get('power_kw')) + ' kW' if r.get('power_kw') else '-'}",
@@ -154,7 +162,7 @@ def testo_richiesta(r: dict, confronti: list[dict] | None = None, perizia: dict 
     if conf:
         righe.append(f"VERSIONI DELLE AUTO USATE PER IL CONFRONTO ({len(conf)}, senza prezzi)")
         for i, c in enumerate(conf, 1):
-            righe.append(f"{i}. versione {_t(c.get('versione'), 40) or '?'} | anno {c.get('anno') or '?'} | "
+            righe.append(f"{i}. versione {_t(_senza_dati_personali(str(c.get('versione') or '')), 40) or '?'} | anno {c.get('anno') or '?'} | "
                          f"kW {c.get('kw') or '?'} | cambio {c.get('cambio') or '?'} | km {c.get('km') if c.get('km') is not None else '?'}")
     else:
         righe.append("CONFRONTI: nessuno (versione_ok = null)")
@@ -246,7 +254,7 @@ def blocchi_foto(fonti: list[str], modo: str | None = None, http=None) -> list[d
     if modo == "0":
         return out
     for src in fonti[:n_foto()]:
-        b = AI.image_url_block(src) if modo == "url" else AI.image_block(src, http=http, side=int(_env("CONTROLLO_FOTO_LATO", "768")))
+        b = AI.image_url_block(src) if modo == "url" else AI.image_block(src, http=http, side=int(_env("CONTROLLO_FOTO_LATO", "512")))
         if b:
             out.append(b)
     return out
@@ -255,7 +263,7 @@ def blocchi_foto(fonti: list[str], modo: str | None = None, http=None) -> list[d
 # ------------------------------------------------------------------ chiamata
 def _chiama_claude(testo: str, foto: list[dict]):
     """(json, token_in, token_out, modello). L'AIResult non serve: la spesa la registra chi chiama."""
-    kwargs = dict(model=AI.MODEL_FAST, max_tokens=int(_env("CONTROLLO_MAX_TOKENS", "500")), system=SISTEMA,
+    kwargs = dict(model=AI.MODEL_FAST, max_tokens=int(_env("CONTROLLO_MAX_TOKENS", "350")), system=SISTEMA,
                   messages=[{"role": "user", "content": [*foto, {"type": "text", "text": testo}]}])
     resp = AI.crea(**kwargs)
     text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
@@ -267,9 +275,11 @@ def _chiama_claude(testo: str, foto: list[dict]):
     return dati, int(u.input_tokens or 0), int(u.output_tokens or 0), AI.MODEL_FAST
 
 
-def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chiama=None, http=None) -> dict:
+def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chiama=None, http=None,
+              paga=None) -> dict:
     """Un controllo con ripieghi sulle foto. Ritorna {"x": risposta validata | None, "errore": eccezione | None,
-    "token": [(in, out, modello), ...], "foto": n}. Non tocca il database (gira nei thread)."""
+    "token": [(in, out, modello), ...], "foto": n}. `paga(token_in, token_out, modello)` si chiama SUBITO dopo ogni
+    chiamata riuscita (registrazione e commit della spesa, anche se poi la risposta non è valida)."""
     chiama = chiama or _chiama_claude
     token: list = []
     modi = [modo_foto()] if fonti_foto and n_foto() else ["0"]
@@ -293,6 +303,8 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
         finally:
             foto = None                           # la memoria delle foto si libera subito
         token.append((tin, tout, modello))
+        if paga is not None:
+            paga(tin, tout, modello)
         if isinstance(dati, Exception):
             return {"x": None, "errore": ControlloNonValido(f"risposta non leggibile: {str(dati)[:80]}"),
                     "token": token, "foto": 0}
@@ -320,7 +332,10 @@ def assicura_colonne(conn) -> None:
     """Le colonne di migrazione 052 (fonte, impronta), una volta per processo (se la migrazione non è ancora passata)."""
     if _COLONNE_FATTE["ok"]:
         return
-    conn.execute("ALTER TABLE decisione_ai ADD COLUMN IF NOT EXISTS fonte TEXT, ADD COLUMN IF NOT EXISTS impronta TEXT")
+    n = conn.execute("SELECT count(*) AS n FROM information_schema.columns WHERE table_name = 'decisione_ai' "
+                     "AND column_name IN ('fonte', 'impronta')").fetchone()["n"]
+    if int(n or 0) < 2:                    # ALTER solo se servono (prende un blocco sulla tabella)
+        conn.execute("ALTER TABLE decisione_ai ADD COLUMN IF NOT EXISTS fonte TEXT, ADD COLUMN IF NOT EXISTS impronta TEXT")
     conn.commit()
     _COLONNE_FATTE["ok"] = True
 
@@ -333,10 +348,12 @@ WITH cand AS (
   WHERE vp.computed_at > now() - interval '12 hours' AND vp.margine IS NOT NULL
     AND (vp.margine >= %(quota)s * COALESCE(NULLIF(vp.dati->>'soglia', '')::int, 1500)
          OR (vp.categoria = 'dati_insufficienti' AND vp.dati::text LIKE '%%sotto la mediana%%'))
+  UNION
+  SELECT rp.listing_id FROM ripiego_prudente rp WHERE rp.stima IS NOT NULL      -- 13/11: senza AI non entrano
 )
 SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
        NULLIF(vp.riassunto->>'M', '')::numeric AS m, d.prezzo AS d_prezzo, d.impronta AS d_impronta,
-       d.fonte AS d_fonte, d.computed_at AS d_at
+       d.fonte AS d_fonte, d.computed_at AS d_at, (d.listing_id IS NOT NULL AND d.risposta->'guasto' IS NULL) AS d_incompleta
 FROM cand c
 JOIN listings l ON l.id = c.id AND l.status = 'attivo' AND l.price_eur IS NOT NULL
 JOIN LATERAL (SELECT categoria, margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
@@ -369,11 +386,44 @@ def sconto_alto(m, prezzo) -> bool:
     return float(m) - float(prezzo) > lim
 
 
+def classe(r: dict) -> int:
+    """0 auto nuova (mai decisa), 1 prezzo cambiato, 2 decisione incompleta, 3 rinnovo di una decisione scaduta
+    (soprattutto le vecchie di Jev, che sul sito valgono finché il prezzo non cambia): per ultime."""
+    if r.get("d_prezzo") is None:
+        return 0
+    if r.get("price_eur") is not None and int(r["d_prezzo"]) != int(r["price_eur"]):
+        return 1
+    if r.get("d_incompleta"):
+        return 2
+    return 3
+
+
 def ordina(righe: list[dict]) -> list[dict]:
-    """Prima le auto con sconto alto (fuori dal sito finché l'AI non le conferma), poi le più promettenti."""
-    return sorted(righe, key=lambda r: (not sconto_alto(r.get("m"), r.get("price_eur")),
+    """Prima le auto nuove, poi quelle col prezzo cambiato, poi le altre; in ogni gruppo prima lo sconto alto (fuori dal
+    sito finché l'AI non le conferma) e il margine più alto rispetto al prezzo."""
+    return sorted(righe, key=lambda r: (classe(r), not sconto_alto(r.get("m"), r.get("price_eur")),
                                         r.get("cat") == "dati_insufficienti",
                                         -((r.get("margine") or 0) / max(r.get("price_eur") or 1, 1))))
+
+
+def scartata_dal_testo(a: dict) -> str | None:
+    """Il testo e i dati da soli bastano a togliere l'auto dal sito (segnali duri e regole fisse di sito_regole):
+    nessuna chiamata, nessuna spesa."""
+    from ..web import scovo
+    from ..web import sito_regole as SR
+    t = f"{a.get('title') or ''} {a.get('description') or ''}"
+    if SR.testo_truffa(t):
+        return "testo_pagamento_estero"
+    if SR.tel_estero(t):
+        return "numero_estero"
+    if re.search(scovo.FIN_SOLO_RE, t, re.I):
+        return "solo_leasing_finanziamento"
+    g = SR.Regole()
+    if a.get("mileage_km") is not None and int(a["mileage_km"]) > g.km_max:
+        return "km"
+    if a.get("year") and int(a["year"]) < g.anno_min:
+        return "anno"
+    return None
 
 
 def spesa_oggi(conn) -> tuple[int, float]:
@@ -426,7 +476,8 @@ def _registra_spesa(conn, lid: int, token: list) -> None:
 
 # ------------------------------------------------------------------ giro
 _PAUSA = {"fino": 0.0}
-_FALLITE: dict = {}          # listing_id -> (tentativi, ultimo tempo): risposte non valide ripetute si saltano 6 ore
+_FALLITE: dict = {}          # listing_id -> (tentativi, ultimo tempo): auto fallite (pagate o no) si saltano 6 ore
+_SALTATE: dict = {}          # listing_id -> tempo: il testo basta a scartarle (nessuna chiamata) per 24 ore
 
 
 def _segna_fallita(lid: int) -> None:
@@ -437,9 +488,25 @@ def _segna_fallita(lid: int) -> None:
             _FALLITE.pop(k, None)
 
 
+def _da_saltare(lid: int, ora: float) -> bool:
+    if lid in _FALLITE and ora - _FALLITE[lid][1] < 6 * 3600:
+        return True                      # niente ripagamenti: un'auto fallita non si richiama per 6 ore
+    return lid in _SALTATE and ora - _SALTATE[lid] < 24 * 3600
+
+
+def per_giro() -> int:
+    return int(_env("CONTROLLO_PER_GIRO", "40"))
+
+
+def budget_usd() -> float:
+    """Budget proprio, SEPARATO da AI_BUDGET_GIORNO (client.TASK_BUDGET_SEPARATO): dollari veri al giorno."""
+    return float(_env("CONTROLLO_BUDGET_USD", "4"))
+
+
 def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     """Un giro sulle auto candidate non ancora controllate (stesso elenco di Jev). `chiama(testo, foto)` ->
     (json, token_in, token_out, modello) si sostituisce nei test."""
+    import threading
     if chiama is None and not attiva():
         return {"spenta": "manca ANTHROPIC_API_KEY"}
     if time.time() < _PAUSA["fino"]:
@@ -448,22 +515,22 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     assicura_colonne(conn)
     fatte_oggi, usd_oggi = spesa_oggi(conn)
     tetto = int(_env("CONTROLLO_MAX_GIORNO", "1500")) - fatte_oggi
-    budget_usd = float(_env("CONTROLLO_BUDGET_USD", "1.5"))
+    budget = budget_usd()
     if tetto <= 0:
         return {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
-    if usd_oggi >= budget_usd:
+    if usd_oggi >= budget:
         return {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
-    if chiama is None and AI.budget_finito(conn):
-        return {"saltato": "budget AI del giorno finito", "fatte_oggi": fatte_oggi}
-    righe = [dict(r) for r in conn.execute(CAND_SQL, {"quota": float(_env("JEV_QUOTA_SOGLIA", "0.7")),
-                                                      "validi": valida_giorni()}).fetchall()]
-    # le auto "troppo sotto prezzo" solo con il numero (come Jev); quelle che hanno fallito di recente aspettano
+    sql = CAND_SQL
+    if not conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"]:
+        sql = sql.replace("  UNION\n  SELECT rp.listing_id FROM ripiego_prudente rp WHERE rp.stima IS NOT NULL", "")
+    righe = [dict(r) for r in conn.execute(sql, {"quota": float(_env("JEV_QUOTA_SOGLIA", "0.7")),
+                                                 "validi": valida_giorni()}).fetchall()]
+    # le auto "troppo sotto prezzo" solo con il numero (come Jev); fallite o scartate dal testo aspettano
     ora = time.time()
-    righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok"))
-             and not (_FALLITE.get(r["id"], (0, 0))[0] >= 2 and ora - _FALLITE[r["id"]][1] < 6 * 3600)]
+    righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok")) and not _da_saltare(r["id"], ora)]
     n_cand = len(righe)
-    per_giro = min(tetto, massimo or int(_env("CONTROLLO_PER_GIRO", "40")))
-    righe = ordina(righe)[:per_giro * 2]                 # qualcuna si riusa senza chiamata
+    quante = min(tetto, massimo or per_giro())
+    righe = ordina(righe)[:quante * 2]                 # qualcuna si riusa o si scarta senza chiamata
     leggere = {r["id"]: r for r in righe}
     st: Counter = Counter()
     if not righe:
@@ -481,8 +548,16 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             conn.execute("UPDATE decisione_ai SET prezzo=%s WHERE listing_id=%s AND fonte='claude'", (a["price_eur"], a["id"]))
             st["riusate"] += 1
             continue
-        if len(da_fare) < per_giro:
+        motivo = scartata_dal_testo(a)
+        if motivo:
+            _SALTATE[a["id"]] = time.time()               # il sito la toglie comunque: nessuna spesa
+            st["senza_chiamata:" + motivo] += 1
+            continue
+        if len(da_fare) < quante:
             da_fare.append(a)
+    if len(_SALTATE) > 5000:
+        for k in [k for k, t in _SALTATE.items() if time.time() - t > 24 * 3600]:
+            _SALTATE.pop(k, None)
     conn.commit()
     http = None
     if modo_foto() == "base64" and n_foto():
@@ -493,71 +568,95 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         except Exception:
             http = None
     blocco = max(1, int(_env("CONTROLLO_PARALLELI", "3")))
+    lock = threading.Lock()                        # la connessione si usa da un thread alla volta
     token_tot = [0, 0]
+    spesa = {"usd": usd_oggi}
     nuove_targhe: list[int] = []
     fermo = False
 
+    def paga_per(lid):
+        def paga(tin, tout, modello):
+            # 13/11 (giudice C2): la spesa si registra e si conferma SUBITO dopo la chiamata (anche se poi il giro cade)
+            with lock:
+                try:
+                    _registra_spesa(conn, lid, [(tin, tout, modello)])
+                    conn.commit()
+                except Exception as e:
+                    log.warning("CONTROLLO_AI spesa non registrata: %s", str(e)[:120])
+                token_tot[0] += tin
+                token_tot[1] += tout
+                spesa["usd"] += AI.costo(modello, tin, tout)
+        return paga
+
     def uno(a):
-        conf = a.get("confronti") or []
-        if isinstance(conf, str):
-            conf = json.loads(conf)
-        return a, controlla(a, list(a.get("foto") or []), conf, perizie.get(a["id"]), chiama=chiama, http=http)
+        try:
+            conf = a.get("confronti") or []
+            if isinstance(conf, str):
+                conf = json.loads(conf)
+            return a, controlla(a, list(a.get("foto") or []), conf, perizie.get(a["id"]), chiama=chiama, http=http,
+                                paga=paga_per(a["id"]))
+        except Exception as e:                     # un'auto rotta non ferma il blocco
+            return a, {"x": None, "errore": e, "token": [], "foto": 0}
+
+    def esito(a, res):
+        e = res["errore"]
+        if e is not None:
+            st["errore" if not isinstance(e, ControlloNonValido) else "non_valida"] += 1
+            tipo = _tipo_errore(e)
+            if tipo:
+                from . import perizia as PER
+                _PAUSA["fino"] = time.time() + PER.pausa_per(e)
+                st["pausa_" + tipo] += 1
+                log.warning("CONTROLLO_AI %s: pausa di %d minuti (%s)", tipo, PER.pausa_per(e) // 60, str(e)[:160])
+                return True
+            _segna_fallita(a["id"])                # niente ripagamenti: per 6 ore non si richiama
+            if st["errore"] + st["non_valida"] <= 3:
+                log.warning("CONTROLLO_AI %s non riuscito: %s", a["id"], str(e)[:200])
+            return st["errore"] >= 5 and not st["fatte"]
+        x = res["x"]
+        salva(conn, a, x, a["_imp"], sum(t[0] for t in res["token"]))
+        _FALLITE.pop(a["id"], None)
+        st["fatte"] += 1
+        st[f"decisione:{x['decisione']}"] += 1
+        st["con_foto"] += 1 if x.get("_foto") else 0
+        for chiave, motivo in (("guasto", "guasto"), ("danni_foto", "danni_nelle_foto"), ("truffa", "truffa_alta")):
+            if (x.get(chiave) or 0) >= .7:
+                st[motivo] += 1
+        if x.get("km_credibili") is not None and x["km_credibili"] <= .3:
+            st["km_non_credibili"] += 1
+        if x.get("versione_ok") is not None and x["versione_ok"] < .25:
+            st["versioni_molto_diverse"] += 1
+        if sconto_alto(leggere[a["id"]].get("m"), a["price_eur"]):
+            st["sconto_alto"] += 1
+        if x.get("targa_visibile") is not None:
+            et = ("foto_internet" if (x.get("foto_internet") or 0) >= .7 else
+                  "visibile" if x["targa_visibile"] >= .7 else "coperta" if x["targa_visibile"] <= .3 else "incerta")
+            conn.execute("INSERT INTO controllo_targa (listing_id, esito, foto) VALUES (%s,%s,%s) "
+                         "ON CONFLICT (listing_id) DO UPDATE SET esito=EXCLUDED.esito, foto=EXCLUDED.foto, "
+                         "checked_at=now()", (a["id"], et, x.get("_foto") or 0))
+            if et == "visibile" and a.get("cat") == "dati_insufficienti":
+                nuove_targhe.append(a["id"])
+        return False
 
     try:
         with ThreadPoolExecutor(max_workers=blocco) as ex:
             for k in range(0, len(da_fare), blocco):
-                if chiama is None and (AI.budget_finito(conn) or spesa_oggi(conn)[1] >= budget_usd):
+                if spesa["usd"] >= budget:
                     st["budget_finito"] += 1
                     break
                 for a, res in ex.map(uno, da_fare[k:k + blocco]):
-                    _registra_spesa(conn, a["id"], res["token"])           # le chiamate pagate contano sempre
-                    for tin, tout, _m in res["token"]:
-                        token_tot[0] += tin
-                        token_tot[1] += tout
-                    e = res["errore"]
-                    if e is not None:
-                        st["errore" if not isinstance(e, ControlloNonValido) else "non_valida"] += 1
-                        tipo = _tipo_errore(e)
-                        if tipo:
-                            from . import perizia as PER
-                            _PAUSA["fino"] = time.time() + PER.pausa_per(e)
-                            st["pausa_" + tipo] += 1
-                            log.warning("CONTROLLO_AI %s: pausa di %d minuti (%s)", tipo, PER.pausa_per(e) // 60, str(e)[:160])
-                            fermo = True
-                        else:
+                    with lock:
+                        try:
+                            fermo = esito(a, res) or fermo
+                            conn.commit()
+                        except Exception as e:     # errore del database su un'auto: le altre vanno avanti
+                            try:
+                                conn.rollback()
+                            except Exception:
+                                pass
                             _segna_fallita(a["id"])
-                            if st["errore"] + st["non_valida"] <= 3:
-                                log.warning("CONTROLLO_AI %s non riuscito: %s", a["id"], str(e)[:200])
-                            if st["errore"] >= 5 and not st["fatte"]:
-                                fermo = True
-                        continue
-                    x = res["x"]
-                    salva(conn, a, x, a["_imp"], sum(t[0] for t in res["token"]))
-                    _FALLITE.pop(a["id"], None)
-                    st["fatte"] += 1
-                    st[f"decisione:{x['decisione']}"] += 1
-                    st["con_foto"] += 1 if x.get("_foto") else 0
-                    for chiave, motivo in (("guasto", "guasto"), ("danni_foto", "danni_nelle_foto"),
-                                           ("truffa", "truffa_alta")):
-                        if (x.get(chiave) or 0) >= .7:
-                            st[motivo] += 1
-                    if x.get("km_credibili") is not None and x["km_credibili"] <= .3:
-                        st["km_non_credibili"] += 1
-                    if x.get("versione_ok") is not None and x["versione_ok"] < .25:
-                        st["versioni_molto_diverse"] += 1
-                    if sconto_alto(leggere[a["id"]].get("m"), a["price_eur"]):
-                        st["sconto_alto"] += 1
-                        if (x.get("auto_vera") or 0) >= .7 and (x.get("truffa") or 0) < .5:
-                            st["sconto_alto_confermate"] += 1
-                    if x.get("targa_visibile") is not None:
-                        esito = ("foto_internet" if (x.get("foto_internet") or 0) >= .7 else
-                                 "visibile" if x["targa_visibile"] >= .7 else "coperta" if x["targa_visibile"] <= .3 else "incerta")
-                        conn.execute("INSERT INTO controllo_targa (listing_id, esito, foto) VALUES (%s,%s,%s) "
-                                     "ON CONFLICT (listing_id) DO UPDATE SET esito=EXCLUDED.esito, foto=EXCLUDED.foto, "
-                                     "checked_at=now()", (a["id"], esito, x.get("_foto") or 0))
-                        if esito == "visibile" and a.get("cat") == "dati_insufficienti":
-                            nuove_targhe.append(a["id"])
-                conn.commit()
+                            st["errore_salvataggio"] += 1
+                            log.warning("CONTROLLO_AI %s non salvato: %s", a["id"], str(e)[:200])
                 if fermo:
                     break
     finally:
@@ -578,7 +677,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     usd = AI.costo(AI.MODEL_FAST, token_tot[0], token_tot[1])
     res = {"fonte": "claude", "modello": AI.MODEL_FAST, "candidate": len(da_fare), "in_coda": n_cand,
            "secondi": round(time.time() - t0), "token_in": token_tot[0], "token_out": token_tot[1],
-           "costo_usd": round(usd, 4), "fatte_oggi": fatte_oggi + st["fatte"], "usd_oggi": round(usd_oggi + usd, 4),
-           "foto_modo": modo_foto(), **dict(st)}
+           "costo_usd": round(usd, 4), "usd_auto": round(usd / max(1, st["fatte"] + st["non_valida"]), 5),
+           "fatte_oggi": fatte_oggi + st["fatte"], "usd_oggi": round(spesa["usd"], 4), "budget_usd": budget,
+           "foto": f"{n_foto()}x{_env('CONTROLLO_FOTO_LATO', '512')}px {modo_foto()}", **dict(st)}
     log.warning("JEV_GIRO %s", json.dumps(res, ensure_ascii=False))   # stesso nome di riga di Jev (sentinella, cruscotti)
     return res

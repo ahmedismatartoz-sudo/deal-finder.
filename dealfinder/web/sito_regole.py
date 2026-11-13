@@ -569,7 +569,7 @@ def sconto_confermato_ai(it, g: Regole) -> bool:
         return False
     if j.get("danni") is None:                      # foto non viste: non si può confermare
         return False
-    if float(j.get("auto_vera") or 0) < g.sconto_ai_vera or float(j.get("truffa") or 1) >= g.truffa_avviso:
+    if float(j.get("auto_vera") or 0) < g.sconto_ai_vera or float(j.get("truffa") or 1) >= g.ai_pulita:
         return False
     if j.get("dati_coerenti") is not None and float(j["dati_coerenti"]) < 0.5:
         return False
@@ -607,10 +607,14 @@ def esito_truffa(it, g: Regole) -> tuple[str, str]:
     if p >= g.truffa_fuori - meno:
         return "fuori", "truffa_probabile"
     controllo = sconto_da_controllare(it, g)
-    if controllo and (not j or p >= g.ai_pulita):
+    if controllo and g.sconto_ai and j and j.get("fonte") == "claude":
+        # 13/11 (giudice A1): con il controllo Claude TUTTE le auto con sconto alto passano dalla conferma (truffa sotto
+        # ai_pulita, annuncio vero, foto viste...) ed entrano sempre con l'avviso; Jev resta con la regola di prima
         if sconto_confermato_ai(it, g):
             it["sconto_confermato_ai"] = True
             return "avviso", "sconto_alto_confermato_ai"
+        return "fuori", "sconto_alto_da_controllare"
+    if controllo and (not j or p >= g.ai_pulita):
         return "fuori", "sconto_alto_da_controllare"
     if p >= g.truffa_avviso - meno:
         return "avviso", "truffa_da_verificare"

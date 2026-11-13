@@ -1564,7 +1564,7 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
                     logging.getLogger("scovo").warning("COMMERCIANTI_NOMI non controllati: %s", str(e)[:200])
         try:
             jev = {r["listing_id"]: dict(r) for r in conn.execute(
-                "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.versione_ok, "
+                "SELECT d.listing_id, d.decisione, d.confidenza, d.truffa, d.versione_ok, d.dati_coerenti, "
                 "(d.risposta->'guasto'->>'noul')::float AS guasto, (d.risposta->'prezzo_rata'->>'noul')::float AS rata, "
                 "(d.risposta->'km_credibili'->>'noul')::float AS km_ok, "
                 "(COALESCE(d.risposta->'danni_foto', d.risposta->'answers'->'danni_foto')->>'noul')::float AS danni, "
@@ -1572,7 +1572,10 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
                 # 13/11 (piu-auto): controllo Claude al posto di Jev (ai/controllo_auto.py): annuncio vero e coerente
                 "(d.risposta->'auto_vera'->>'noul')::float AS auto_vera, d.risposta->>'_fonte' AS fonte "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
-                "WHERE d.listing_id = ANY(%s) AND d.prezzo = l.price_eur", (ids,)).fetchall()}
+                "WHERE d.listing_id = ANY(%s) AND (d.prezzo = l.price_eur "
+                # 13/11 (piu-auto): una decisione Claude vale anche dopo un rialzo o un calo fino al 10% (come la cache
+                # di ai/controllo_auto.riusabile); quelle di Jev solo allo stesso prezzo, come prima
+                "OR (d.risposta->>'_fonte' = 'claude' AND l.price_eur >= 0.9 * d.prezzo))", (ids,)).fetchall()}
         except Exception as e:
             conn.rollback()
             jev_errore = True          # fail closed: le auto da controllare restano fuori (regola truffa)
@@ -3470,7 +3473,7 @@ def _tempo_reale():
                                     _telefoni_scelte()
                                     _elenco["t"] = 0.0
                                     _aggiorna_elenco(attendi=False)
-                                if res.get("candidate", 0) >= int(os.environ.get("JEV_PER_GIRO", "300")):
+                                if res.get("candidate", 0) >= jev.per_giro():     # 13/11: CONTROLLO_PER_GIRO con Claude
                                     attesa = 120               # ce ne sono ancora: giro successivo subito
                             finally:
                                 conn.rollback()

@@ -29,7 +29,7 @@ import time
 
 log = logging.getLogger("tempo_reale")
 
-PRIORITARI: set = set()
+PRIORITARI: frozenset = frozenset()      # sostituito tutto insieme (mai svuotato a metà mentre un altro thread legge)
 _PAUSA = {"fino": 0.0}
 _CONTO = {"giorno": None, "n": 0}
 _DIAG = {"n": 0}
@@ -48,11 +48,15 @@ def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None) 
     """Auto tolte al passo telefono con margine già sopra il minimo (o "Da trattare" entro lo sconto massimo)."""
     from ..web import scovo
     from ..web import sito_regole as SR
+    global PRIORITARI
     tolti = set(tolti or [])
     g = SR.Regole()
     out = set()
     for it in items:
         if it.get("id") not in tolti or (fonte and fonte.get(it["id"]) not in ("Subito", "AutoScout24")):
+            continue
+        # 13/11 (giudice M3): solo auto che col numero potrebbero andare sul sito: in zona (o fascia fuori zona), mai Roma
+        if SR.r_no_roma(it, g) or SR.r_zona(dict(it), g):
             continue
         m, p = SR.margine(it), int(it.get("prezzo") or 0)
         if m is None or m <= 0 or p <= 0:
@@ -63,13 +67,50 @@ def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None) 
         tetto = next(x for fino, x in g.tratta_max if p < fino)
         if any(m + sc >= scovo.soglia(p - sc) for sc in range(50, tetto + 1, 50)):
             out.add(it["id"])
-    PRIORITARI.clear()
-    PRIORITARI.update(out)
+    PRIORITARI = frozenset(out)
     return len(out)
 
 
 def _oggi() -> str:
     return time.strftime("%Y-%m-%d")
+
+
+def _tabella(conn) -> None:
+    conn.execute("CREATE TABLE IF NOT EXISTS telefono_ricerche (giorno DATE PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)")
+
+
+def leggi_conto(conn) -> None:
+    """13/11 (giudice M4): il conto delle ricerche del giorno sta nel database (sopravvive ai riavvii)."""
+    try:
+        _tabella(conn)
+        r = conn.execute("SELECT n FROM telefono_ricerche WHERE giorno = (now() AT TIME ZONE 'Europe/Rome')::date").fetchone()
+        conn.commit()
+        n = int(r["n"]) if r else 0
+        if _CONTO["giorno"] != _oggi():
+            _CONTO.update(giorno=_oggi(), n=0)
+        _CONTO["n"] = max(_CONTO["n"], n)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("TEL_NASCOSTO conto non letto: %s", str(e)[:120])
+
+
+def _conta(conn) -> None:
+    _CONTO["n"] += 1
+    _GIRO["n"] += 1
+    if conn is None:
+        return
+    try:
+        conn.execute("INSERT INTO telefono_ricerche (giorno, n) VALUES ((now() AT TIME ZONE 'Europe/Rome')::date, 1) "
+                     "ON CONFLICT (giorno) DO UPDATE SET n = telefono_ricerche.n + 1")
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
 
 def puo_cercare() -> str | None:
@@ -128,7 +169,7 @@ def parametri(r: dict, con_testo: bool = True) -> dict:
     return params
 
 
-def subito_telefono_api(client, r: dict) -> tuple[str, bool | None]:
+def subito_telefono_api(client, r: dict, conn=None) -> tuple[str, bool | None]:
     """('attivo', sì/no) se l'annuncio è nella ricerca; ('non_trovato', None); ('bloccato', None) su 403/429;
     ('errore', None). Il campo letto è solo la presenza del numero (tempo_reale.telefono_subito)."""
     from ..collectors.subito import API_HEADERS, API_SEARCH
@@ -138,8 +179,7 @@ def subito_telefono_api(client, r: dict) -> tuple[str, bool | None]:
     for con_testo in (True, False):
         if puo_cercare():
             return "tetto", None
-        _CONTO["n"] += 1
-        _GIRO["n"] += 1
+        _conta(conn)
         time.sleep(float(os.environ.get("TEL_API_PAUSA_S", "2")))
         try:
             resp = client.get(API_SEARCH, headers=API_HEADERS, params=parametri(r, con_testo))

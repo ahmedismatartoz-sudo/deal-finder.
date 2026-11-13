@@ -15,3 +15,10 @@ CREATE TABLE IF NOT EXISTS ripiego_prudente (
     motivo         TEXT,
     computed_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 3) Numero nascosto di Subito (dealfinder/pipeline/telefono_nascosto.py): ricerche fatte nel giorno, per il tetto
+--    giornaliero TEL_API_MAX_GIORNO anche dopo un riavvio. Nessun dato del venditore.
+CREATE TABLE IF NOT EXISTS telefono_ricerche (
+    giorno DATE PRIMARY KEY,
+    n      INTEGER NOT NULL DEFAULT 0
+);

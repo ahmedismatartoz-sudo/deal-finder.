@@ -64,6 +64,14 @@ def sostituto() -> str:
     return v if v in ("claude", "jev") else "claude"
 
 
+def per_giro() -> int:
+    """Auto per giro: se un giro le ha prese tutte ce ne sono ancora e il prossimo parte subito (web/app.py)."""
+    if sostituto() == "claude":
+        from ..ai import controllo_auto
+        return controllo_auto.per_giro()
+    return int(os.environ.get("JEV_PER_GIRO", "300"))
+
+
 def attiva() -> bool:
     if sostituto() == "claude":
         from ..ai import controllo_auto

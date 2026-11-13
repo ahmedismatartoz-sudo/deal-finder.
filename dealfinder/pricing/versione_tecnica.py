@@ -21,7 +21,8 @@ from __future__ import annotations
 import re
 
 CONFRONTI_MIN = 3
-QUOTA_UGUALI = 0.7
+QUOTA_UGUALI = 1.0            # 13/11 (giudice A3): TUTTI i confronti verificabili compatibili
+QUOTA_VERIFICABILI = 0.6      # e verificabili almeno il 60% dei confronti
 TOL_KW = 0.10
 TOL_LITRI = 0.15
 ANNI_GENERAZIONE = 4
@@ -29,7 +30,9 @@ ANNI_GENERAZIONE = 4
 _DIESEL = re.compile(r"(?i)\b(tdi|jtd\w*|multijet|mjet|cdi|hdi|bluehdi|dci|crdi|tdci|d4d|d-4d|ecoblue|"
                      r"blue\s?motion\s?tdi|\d{3}d|diesel|dsl|sdi|ddis|cdti|i-dtec|skyactiv-d|jtdm)\b")
 _IBRIDO = re.compile(r"(?i)\b(hybrid|ibrid[ao]|phev|plug[\s-]?in|e-?tense|full\s?hybrid|mhev|mild)\b")
-_LITRI = re.compile(r"(?<![\d.,])([0-6][.,]\d)(?![\d.,]*\s*(?:kw|cv|hp|ps))", re.I)
+_LITRI = re.compile(r"(?<![\d.,])([0-6][.,]\d)(?![\d.,])(?!\s*(?:kw|cv|hp|ps)\b)", re.I)
+# cilindrata in cm³: "1598 cm3", "1.598 cc", "1598cm³" (prima "1.598" si leggeva 1,5 litri)
+_CC = re.compile(r"(?<![\d.,])(\d[.,]?\d{3})\s*(?:cm3|cm³|cc|ccm)\b", re.I)
 _CV = re.compile(r"(\d{2,3})\s*(?:cv|hp|ps)\b", re.I)
 _KW = re.compile(r"(\d{2,3})\s*kw\b", re.I)
 
@@ -54,7 +57,12 @@ def kw_da_testo(testo: str | None) -> float | None:
 
 
 def litri_da_testo(testo: str | None) -> float | None:
-    m = _LITRI.search(_pulisci(testo or ""))
+    t = _pulisci(testo or "")
+    m = _CC.search(t)
+    if m:
+        cc = int(re.sub(r"[.,]", "", m.group(1)))
+        return round(cc / 1000, 1) if 600 <= cc <= 6900 else None
+    m = _LITRI.search(t)
     if not m:
         return None
     x = float(m.group(1).replace(",", "."))
@@ -79,6 +87,17 @@ def tipo_motore(testo: str | None, fuel: str | None = None) -> str | None:
     return None
 
 
+def cilindrata_cc(v) -> int | None:
+    """Cilindrata della scheda tecnica (dati_auto): "1598 cm3", "1.598", 1598, "1,6 l" -> cm³ (core/dati_auto)."""
+    if v in (None, ""):
+        return None
+    try:
+        from ..core.dati_auto import norm_cilindrata
+        return norm_cilindrata(re.sub(r"(?i)\s*(cm3|cm³|cc|ccm)\s*$", "", str(v).strip()))
+    except Exception:
+        return None
+
+
 def _num(v) -> float | None:
     try:
         x = float(v)
@@ -91,7 +110,7 @@ def scheda(auto: dict) -> dict:
     """kW, litri, motore e anno dell'auto in vendita (colonne, scheda tecnica dati_auto, testo della versione)."""
     testo = f"{auto.get('version_raw') or ''} {auto.get('title') or ''}"
     kw = _num(auto.get("power_kw")) or kw_da_testo(testo)
-    cil = _num(auto.get("cilindrata"))
+    cil = _num(auto.get("cilindrata")) or cilindrata_cc(auto.get("cilindrata_testo"))
     litri = round(cil / 1000, 1) if cil and cil > 400 else litri_da_testo(auto.get("version_raw")) or litri_da_testo(auto.get("title"))
     return {"kw": kw, "litri": litri, "motore": tipo_motore(testo, auto.get("fuel")), "anno": _num(auto.get("year"))}
 
@@ -126,15 +145,14 @@ def verdetto(auto: dict, confronti: list[dict] | None) -> str | None:
         return None
     esiti = [compatibile(t, c)[0] for c in (confronti or []) if isinstance(c, dict)]
     ver = [e for e in esiti if e is not None]
-    if len(ver) < CONFRONTI_MIN:
-        return None
-    return "uguale" if sum(ver) / len(ver) >= QUOTA_UGUALI else "diversa"
+    if len(ver) < CONFRONTI_MIN or len(ver) < QUOTA_VERIFICABILI * len(esiti):
+        return None                                  # troppo pochi verificabili: vale il giudizio dell'AI
+    return "uguale" if sum(ver) / len(ver) >= QUOTA_UGUALI - 1e-9 else "diversa"
 
 
 VERSIONE_SQL = """
 SELECT l.id, l.power_kw, l.fuel, l.year, l.version_raw, l.title,
-       NULLIF(regexp_replace(COALESCE(l.dati_auto->'pagina'->>'cilindrata', l.dati_auto->'ricerca'->>'cilindrata', ''),
-                             '[^0-9]', '', 'g'), '')::int AS cilindrata,
+       COALESCE(l.dati_auto->'pagina'->>'cilindrata', l.dati_auto->'ricerca'->>'cilindrata') AS cilindrata_testo,
        vp.dati->'confronti' AS confronti
 FROM listings l
 JOIN LATERAL (SELECT dati FROM valutazioni_policy v WHERE v.listing_id = l.id ORDER BY v.computed_at DESC LIMIT 1) vp ON true

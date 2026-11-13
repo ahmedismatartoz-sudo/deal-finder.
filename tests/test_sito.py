@@ -157,9 +157,9 @@ def test_niente_auto_prima_del_2007():
 
 def test_costi_ai_e_tetto():
     from dealfinder.ai import client
-    # 1 milione di token in entrata con Haiku = 0,10 $; con Sonnet 2 $
-    assert abs(client.costo("claude-haiku-5-5", 1_000_000, 0) - 0.10) < 1e-9
-    assert abs(client.costo("claude-sonnet-5-5", 0, 100_000) - 1.0) < 1e-9
+    # 13/11: prezzi veri. 1 milione di token in entrata con Haiku = 1 $; 100.000 in uscita con Sonnet = 1,5 $
+    assert abs(client.costo("claude-haiku-5-5", 1_000_000, 0) - 1.0) < 1e-9
+    assert abs(client.costo("claude-sonnet-5-5", 0, 100_000) - 1.5) < 1e-9
     assert abs(client.costo("claude-haiku-5-5", 0, 0, web_searches=3) - 0.03) < 1e-9
 
 

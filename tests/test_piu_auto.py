@@ -108,11 +108,55 @@ def test_cache_auto_e_contenuto():
     assert not CA.riusabile(10000, "altro", 10000, imp)
 
 
-def test_prima_le_auto_con_sconto_alto():
+def test_priorita_nuove_prezzo_cambiato_poi_rinnovi():
     righe = [{"id": 1, "m": 9000, "price_eur": 7000, "margine": 2000, "cat": "opportunita"},
              {"id": 2, "m": 20000, "price_eur": 12000, "margine": 8000, "cat": "opportunita"},   # sconto 8.000 > 5.000
-             {"id": 3, "m": 9000, "price_eur": 5000, "margine": 3500, "cat": "opportunita"}]
-    assert [r["id"] for r in CA.ordina(righe)] == [2, 3, 1]
+             {"id": 3, "m": 9000, "price_eur": 5000, "margine": 3500, "cat": "opportunita"},
+             {"id": 4, "m": 20000, "price_eur": 12000, "margine": 8000, "cat": "opportunita", "d_prezzo": 12000,
+              "d_fonte": "jev"},                                                                 # rinnovo Jev scaduta
+             {"id": 5, "m": 9000, "price_eur": 6000, "margine": 2500, "cat": "opportunita", "d_prezzo": 6500}]
+    assert [r["id"] for r in CA.ordina(righe)] == [2, 3, 1, 5, 4]
+    with env(JEV_SOSTITUTO=None, CONTROLLO_PER_GIRO="25"):
+        assert jev.per_giro() == 25                               # il giro rapido guarda CONTROLLO_PER_GIRO
+
+
+def test_prezzi_veri_e_budget_separato():
+    assert abs(AI.costo("claude-haiku-5-5", 1_000_000, 0) - 1.0) < 1e-9
+    assert abs(AI.costo("claude-haiku-5-5", 0, 1_000_000) - 5.0) < 1e-9
+    assert abs(AI.costo("claude-sonnet-5-5", 1_000_000, 1_000_000) - 18.0) < 1e-9
+    assert "controllo_auto" in AI.TASK_BUDGET_SEPARATO
+
+    class C:
+        def execute(self, sql, p=None):
+            self.sql, self.p = sql, p
+            return _Ris([])
+    c = C()
+    assert AI.spesa_oggi(c) == 0 and "task <> ALL" in c.sql and p_ok(c.p)
+    with env(CONTROLLO_BUDGET_USD=None):
+        assert CA.budget_usd() == 4.0
+
+
+def p_ok(p):
+    return p == (["controllo_auto"],)
+
+
+def test_costo_per_auto_richiesta_tipo():
+    """La richiesta tipo (testo pieno, 10 confronti, 2 foto da 512 px) costa ~0,003 $ con Haiku."""
+    r = {"title": "Volkswagen Golf 1.6 TDI Highline", "description": "x" * 1800, "make": "volkswagen", "model": "golf",
+         "version_raw": "1.6 TDI 115 CV Highline", "year": 2018, "mileage_km": 90000, "fuel": "diesel",
+         "gearbox": "manuale", "power_kw": 85, "price_eur": 12500, "n_foto": 12}
+    conf = [{"anno": 2018, "kw": 85, "cambio": "manuale", "km": 80000, "versione": "1.6 TDI Business"}] * 10
+    caratteri = len(CA.SISTEMA) + len(CA.testo_richiesta(r, conf, None, foto=2))
+    token_in = caratteri / 3.2 + 2 * (512 * 384 / 750)           # ~3,2 caratteri per token in italiano
+    usd = AI.costo("claude-haiku-5-5", int(token_in), 180)
+    assert 1800 < token_in < 3200 and 0.002 < usd < 0.0045, (token_in, usd)
+
+
+def test_testo_basta_a_scartare_senza_chiamata():
+    assert CA.scartata_dal_testo({"title": "Golf", "description": "chiedo caparra con bonifico prima di vedere l'auto"}) \
+        == "testo_pagamento_estero"
+    assert CA.scartata_dal_testo({"title": "Golf", "description": "ok", "mileage_km": 190000}) == "km"
+    assert CA.scartata_dal_testo({"title": "Golf", "description": "tagliandata", "mileage_km": 90000, "year": 2015}) is None
 
 
 class _Err(Exception):
@@ -177,6 +221,8 @@ class ConnFinta:
             return _Ris([])
         if "FROM ai_usage" in s:
             return _Ris([])
+        if "information_schema" in s:
+            return _Ris([{"n": 2}])
         if "WITH cand AS" in s:
             return _Ris(self.cand)
         if "to_regclass" in s:
@@ -186,7 +232,7 @@ class ConnFinta:
         return _Ris([])
 
     def commit(self):
-        pass
+        self.scritte.append(("COMMIT", None))
 
     def rollback(self):
         pass
@@ -222,6 +268,29 @@ def test_giro_salva_come_jev_e_si_ferma_sul_credito():
     CA._PAUSA["fino"] = 0.0
 
 
+def test_spesa_confermata_subito_e_niente_ripagamenti():
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    cand = [{"id": i, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+             "d_prezzo": None} for i in (1, 2)]
+    auto_ = [{"id": i, "title": "Panda", "description": "ok", "price_eur": 5000, "foto": [], "confronti": []} for i in (1, 2)]
+    chiamate = []
+
+    def chiama(testo, foto):
+        chiamate.append(1)
+        return {"decisione": "forse"}, 900, 50, "claude-haiku-5-5"        # pagata ma non valida
+    conn = ConnFinta(cand, auto_)
+    with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0"):
+        res = CA.giro(conn, chiama=chiama)
+        assert res["non_valida"] == 2 and len(chiamate) == 2
+        voci = [q for q, _p in conn.scritte]
+        spese = [k for k, q in enumerate(voci) if q.startswith("INSERT INTO ai_usage")]
+        assert len(spese) == 2 and all(voci[k + 1] == "COMMIT" for k in spese)   # confermata subito dopo la chiamata
+        res = CA.giro(conn, chiama=chiama)                               # stesso giro dopo: nessuna nuova spesa
+        assert len(chiamate) == 2 and res.get("candidate", 0) == 0
+    CA._FALLITE.clear()
+
+
 # ------------------------------------------------------------------ 2. versioni diverse solo di nome
 def test_versione_tecnica():
     t = {"power_kw": 51, "fuel": "benzina", "year": 2016, "version_raw": "1.2 Lounge"}
@@ -233,6 +302,13 @@ def test_versione_tecnica():
     assert VT.verdetto(t, altra) == "diversa"
     assert VT.verdetto(t, [{"anno": 2016, "versione": "Lounge"}] * 5) is None          # niente da verificare
     assert VT.verdetto({"fuel": "benzina", "version_raw": "Lounge"}, stessa) is None    # auto senza scheda
+    misto = stessa + [{"kw": 81, "anno": 2016, "versione": "1.4 T-Jet"}]
+    assert VT.verdetto(t, misto) == "diversa"                                    # serve il 100% compatibile
+    pochi = stessa + [{"anno": 2016, "versione": "Lounge"}] * 3
+    assert VT.verdetto(t, pochi) is None                                         # verificabili 3 su 6 < 60%
+    assert VT.litri_da_testo("1598 cm3") == 1.6 and VT.litri_da_testo("1.598 cc") == 1.6
+    assert VT.cilindrata_cc("1598 cm3") == 1598
+    assert VT.scheda({"version_raw": "Highline", "cilindrata_testo": "1598 cm3"})["litri"] == 1.6
     assert VT.kw_da_testo("2.0 TDI 150 CV") == 110.3 and VT.litri_da_testo("1.6 TDI S tronic") == 1.6
     assert VT.tipo_motore("1.6 TDI Highline") == "diesel"
 
@@ -250,12 +326,14 @@ def test_sconto_alto_confermato_dall_ai():
     vera = {"truffa": 0.1, "auto_vera": 0.9, "dati_coerenti": 0.9, "danni": 0.05, "foto_internet": 0.1,
             "decisione": "compra", "fonte": "claude"}
     base = dict(prezzo=12000, M=17500, margine=5500)                  # sconto 5.500 € > 5.000 € della fascia
-    out, _ = elenco([auto(1, jev=dict(vera, truffa=0.35), **base)])
-    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, True)]      # entra, con l'avviso
+    out, _ = elenco([auto(1, jev=dict(vera, truffa=0.2), **base)])
+    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, True)]      # entra, sempre con l'avviso
     assert ids([auto(2, jev=dict(vera, truffa=0.35, fonte=None), **base)]) == []  # Jev: come prima
-    assert ids([auto(3, jev=dict(vera, truffa=0.35, auto_vera=0.5), **base)]) == []
-    assert ids([auto(4, jev=dict(vera, truffa=0.35, danni=None), **base)]) == []      # foto non viste
-    assert ids([auto(5, jev=dict(vera, truffa=0.35), _r={"perizia": {"giudizio": "caro"}}, **base)]) == []
+    assert ids([auto(21, jev=dict(vera, truffa=0.1, fonte=None), **base)]) == [21]  # Jev pulita: come prima
+    assert ids([auto(22, jev=dict(vera, truffa=0.35), **base)]) == []           # Claude: truffa sotto ai_pulita (0,30)
+    assert ids([auto(3, jev=dict(vera, truffa=0.1, auto_vera=0.5), **base)]) == []   # Claude pulita ma non confermata
+    assert ids([auto(4, jev=dict(vera, truffa=0.1, danni=None), **base)]) == []      # foto non viste
+    assert ids([auto(5, jev=dict(vera, truffa=0.1), _r={"perizia": {"giudizio": "caro"}}, **base)]) == []
     assert ids([auto(6, jev=dict(vera, truffa=0.6), **base)]) == []
     assert ids([auto(7, **base)]) == []                                        # nessun controllo: fuori come prima
     # i segnali duri restano: oltre il 40% di sconto fuori anche con l'AI che conferma
@@ -273,12 +351,14 @@ def test_ripiego_prudente_stima():
     assert RP.ammessa(a, dati) is None
     assert RP.ammessa(dict(a, damage_class="medio"), dati) == "danno"
     assert RP.ammessa(a, {"motivi": ["prezzo oltre il 45% sotto la mediana: ..."]}) == "altro_motivo"
-    est, f, mot = RP.stima(6000, dati, {"v": 9000, "sigma": 0.12, "n": 40}, [9900, 10100, 9800])
+    vr = {"v": 9000, "sigma": 0.12, "n": 40, "n_vendute": 25}
+    est, f, mot = RP.stima(6000, dati, vr, [9900, 10100, 9800])
     assert mot == "" and est == round(min(f.values()) * 0.97) and all(est <= v for v in f.values())
     assert RP.stima(6000, dati, None, [])[2] == "fonti_insufficienti"           # una fonte sola
-    assert RP.stima(6000, dati, {"v": 13000, "sigma": .1, "n": 40}, [9900, 10100])[2] == "fonti_discordi"
-    assert RP.stima(4000, dati, {"v": 9000, "sigma": .1, "n": 40}, [9900, 10100])[2] == "prezzo_troppo_basso"
-    assert RP.stima(6000, dati, {"v": 9000, "sigma": .4, "n": 40}, [])[2] == "fonti_insufficienti"   # V incerto
+    assert RP.stima(6000, dati, dict(vr, v=13000), [9900, 10100])[2] == "fonti_discordi"
+    assert RP.stima(4000, dati, vr, [9900, 10100])[2] == "prezzo_troppo_basso"
+    assert "valore_reale" not in RP.fonti(dati, dict(vr, sigma=0.2), [])      # soglie della regola: errore max 15%
+    assert "valore_reale" not in RP.fonti(dati, dict(vr, n_vendute=10), [])   # e almeno 20 auto vendute
 
 
 def test_ripiego_sul_sito_solo_con_controllo_ai():
@@ -323,9 +403,12 @@ def _azzera_tel():
 def test_prioritari_solo_con_margine():
     s = scovo.soglia(6000)
     items = [auto(1, prezzo=6000, margine=s), auto(2, prezzo=6000, margine=s - 300), auto(3, prezzo=6000, margine=200),
-             auto(4, prezzo=6000, margine=s)]
-    n = TN.segna_prioritari(items, [1, 2, 3], {1: "Subito", 2: "Subito", 3: "Subito", 4: "Subito"})
-    assert n == 2 and TN.PRIORITARI == {1, 2}          # 2 arriva al minimo con 300 € di sconto; 4 non è stata tolta
+             auto(4, prezzo=6000, margine=s), auto(5, prezzo=6000, margine=s, prov="RM"),
+             auto(6, prezzo=6000, margine=s, prov="NA")]
+    n = TN.segna_prioritari(items, [1, 2, 3, 5, 6], {i: "Subito" for i in range(1, 7)})
+    # 2 arriva al minimo con 300 € di sconto; 4 non è stata tolta; Roma mai; Napoli (diesel, non fascia) fuori zona
+    assert n == 2 and TN.PRIORITARI == frozenset({1, 2}) and isinstance(TN.PRIORITARI, frozenset)
+    TN.PRIORITARI = frozenset()
 
 
 def test_subito_numero_dalla_ricerca():
@@ -412,10 +495,11 @@ def test_telefoni_candidate_subito_prioritarie_e_spariti_as24():
     TN.client_api = lambda: type("H", (), {"close": lambda self: None})()
     tr._as_esito = lambda c, url: ("scomparso", None, "404")
     verify._mark = lambda conn, lid, st, price=None, motivo=None, sito=False: segnati.append((lid, st, motivo))
-    TN.subito_telefono_api = lambda client, r: ("attivo", True)
+    TN.subito_telefono_api = lambda client, r, conn=None: ("attivo", True)
     tr._client_as = lambda: None
-    TN.PRIORITARI.clear()
-    TN.PRIORITARI.update({2})
+    TN.PRIORITARI = frozenset({2})
+    salva_conto = TN.leggi_conto
+    TN.leggi_conto = lambda conn: None
     _azzera_tel()
     try:
         with env(TR_PAUSA_S="0", TEL_CAND_SUBITO=None, TEL_SUBITO_API=None):
@@ -423,7 +507,8 @@ def test_telefoni_candidate_subito_prioritarie_e_spariti_as24():
             st = tr.telefoni_candidate(c, [1, 2])
     finally:
         tr._as_esito, verify._mark, TN.subito_telefono_api, tr._client_as, TN.client_api = salva
-        TN.PRIORITARI.clear()
+        TN.leggi_conto = salva_conto
+        TN.PRIORITARI = frozenset()
     assert segnati == [(1, "scomparso", "404")] and st["autoscout24:scomparso"] == 1
     assert st["subito_api:si"] == 1
     assert any(q.startswith("UPDATE listings SET telefono_ok=%s, telefono_at=now()") and p == (True, 2) for q, p in c.scritte)

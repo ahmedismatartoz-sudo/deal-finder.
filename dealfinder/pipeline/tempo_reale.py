@@ -719,8 +719,12 @@ def telefoni_candidate(conn, ids) -> Counter:
         return stats
     # 13/11 (piu-auto): Subito anche dall'interfaccia di ricerca (telefono_nascosto), solo per le auto PRIORITARIE
     # (margine già sopra il minimo); prima le prioritarie, poi le altre
-    prio = sorted(i for i in TN.PRIORITARI if i in set(ids)) if TN.attivo() else []
+    tutti = set(ids)
+    prio_set = TN.PRIORITARI if TN.attivo() else frozenset()      # una fotografia per tutto il giro
+    prio = sorted(i for i in prio_set if i in tutti)
     TN.inizio_giro()
+    if prio:
+        TN.leggi_conto(conn)
     rows = conn.execute(
         "SELECT id, source, source_id, url, make, model, price_eur, province FROM listings WHERE id = ANY(%s) "
         "AND status='attivo' AND (source = 'autoscout24' OR (source = 'subito' AND (%s OR id = ANY(%s)))) "
@@ -751,13 +755,13 @@ def telefoni_candidate(conn, ids) -> Counter:
                     conn.commit()
                     continue
                 tel = telefono_autoscout(det)
-            elif r["id"] in TN.PRIORITARI and TN.attivo() and os.environ.get("TEL_CAND_SUBITO", "0") != "1":
+            elif r["id"] in prio_set and os.environ.get("TEL_CAND_SUBITO", "0") != "1":
                 if TN.puo_cercare():
                     stats["subito:" + TN.puo_cercare()] += 1
                     continue
                 if api is None:
                     api = TN.client_api()
-                st, tel = TN.subito_telefono_api(api, dict(r))
+                st, tel = TN.subito_telefono_api(api, dict(r), conn)
                 if st in ("bloccato", "tetto", "errore"):
                     stats[f"subito_api:{st}"] += 1
                     if st == "bloccato":
