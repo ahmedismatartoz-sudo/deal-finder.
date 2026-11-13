@@ -27,6 +27,11 @@ oppure GRAVE <motivo in max 10 parole>   (non marciante, motore o cambio da rifa
 senza documenti, oppure riparazione che costa più del 30% del prezzo)"""
 
 
+def chiave(descrizione: str | None) -> str:
+    """Impronta del testo letto (stessa di leggi): una lettura vale solo per lo stesso testo."""
+    return hashlib.sha1((descrizione or "").strip()[:3000].encode()).hexdigest()[:16]
+
+
 def _tabella(conn):
     conn.execute("""CREATE TABLE IF NOT EXISTS ai_difetti (
         listing_id BIGINT PRIMARY KEY, chiave TEXT, costo INTEGER, grave BOOLEAN DEFAULT false, motivo TEXT,
@@ -38,10 +43,10 @@ def leggi(conn, r: dict) -> dict | None:
     desc = (r.get("description") or "").strip()
     if not desc or not AI.available():
         return None
-    chiave = hashlib.sha1(desc[:3000].encode()).hexdigest()[:16]
+    imp = chiave(desc)
     _tabella(conn)
     vecchia = conn.execute("SELECT chiave, costo, grave, motivo FROM ai_difetti WHERE listing_id=%s", (r["id"],)).fetchone()
-    if vecchia and vecchia["chiave"] == chiave:
+    if vecchia and vecchia["chiave"] == imp:
         return dict(vecchia)
     if AI.budget_finito(conn):
         return None
@@ -66,7 +71,7 @@ def leggi(conn, r: dict) -> dict | None:
         return None
     conn.execute("""INSERT INTO ai_difetti (listing_id, chiave, costo, grave, motivo, computed_at) VALUES (%s,%s,%s,%s,%s,now())
                     ON CONFLICT (listing_id) DO UPDATE SET chiave=EXCLUDED.chiave, costo=EXCLUDED.costo, grave=EXCLUDED.grave,
-                    motivo=EXCLUDED.motivo, computed_at=now()""", (r["id"], chiave, costo, grave, motivo))
+                    motivo=EXCLUDED.motivo, computed_at=now()""", (r["id"], imp, costo, grave, motivo))
     conn.commit()
     if costo or grave:
         log.warning("DIFETTI %s %s: %s", r["id"], "GRAVE" if grave else f"{costo} €", motivo)

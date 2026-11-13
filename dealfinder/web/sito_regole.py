@@ -569,12 +569,18 @@ def sconto_confermato_ai(it, g: Regole) -> bool:
         return False
     if j.get("danni") is None:                      # foto non viste: non si può confermare
         return False
-    if float(j.get("auto_vera") or 0) < g.sconto_ai_vera or float(j.get("truffa") or 1) >= g.ai_pulita:
+    if j.get("stesso_prezzo") is False:
+        # 13/11 (giudice N5): con sconto alto la decisione vale solo allo stesso prezzo; se il contenuto è uguale il
+        # giro del controllo la riporta al prezzo nuovo (ai/controllo_auto.riusabile aggiorna decisione_ai.prezzo)
         return False
-    if j.get("dati_coerenti") is not None and float(j["dati_coerenti"]) < 0.5:
+    # 13/11 (giudice N1): niente "or 1"/"or 0" su valori che possono valere 0 (truffa 0 = nessun segno, non 1)
+    t, av = j.get("truffa"), j.get("auto_vera")
+    if t is None or float(t) >= g.ai_pulita or av is None or float(av) < g.sconto_ai_vera:
         return False
-    if float(j.get("foto_internet") or 0) >= 0.5 or float(j.get("danni") or 0) >= g.jev_danni:
+    if j.get("dati_coerenti") is None or float(j["dati_coerenti"]) < 0.5:
         return False
+    if j.get("foto_internet") is None or float(j["foto_internet"]) >= 0.5 or float(j["danni"]) >= g.jev_danni:
+        return False                                # (danni None è già uscito sopra: foto non viste)
     if j.get("decisione") == "scarta":
         return False
     p = r.get("perizia") or {}

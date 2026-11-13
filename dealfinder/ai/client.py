@@ -43,7 +43,7 @@ def costo(model: str, input_tokens: int, output_tokens: int, web_searches: int =
 # Lavori con un budget SEPARATO (non contano nel tetto comune AI_BUDGET_GIORNO, così perizia, lettore, difetti e
 # giudice non si fermano per colpa loro): il controllo delle auto al posto di Jev (ai/controllo_auto.py,
 # CONTROLLO_BUDGET_USD).
-TASK_BUDGET_SEPARATO = ("controllo_auto",)
+TASK_BUDGET_SEPARATO = ("controllo_auto", "controllo_auto_rinnovo")
 
 
 def spesa_oggi(conn) -> float:
@@ -58,11 +58,30 @@ def budget_giorno() -> float:
     return float(os.environ.get("AI_BUDGET_GIORNO", "5"))
 
 
+_BUDGET_LOG = {"giorno": None}
+
+
 def budget_finito(conn) -> bool:
     try:
-        return spesa_oggi(conn) >= budget_giorno()
+        spesa = spesa_oggi(conn)
     except Exception:
         return False
+    finito = spesa >= budget_giorno()
+    if finito:
+        try:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            ora = datetime.now(ZoneInfo("Europe/Rome"))
+        except Exception:
+            from datetime import datetime
+            ora = datetime.now()
+        if _BUDGET_LOG["giorno"] != ora.date():
+            # 13/11 (giudice N3): una riga al giorno, con l'ora: da qui giudice, difetti, lettore e perizia si fermano
+            # (il giudice e i difetti chiudono: l'auto resta fuori o con la valutazione precedente)
+            _BUDGET_LOG["giorno"] = ora.date()
+            log.warning("BUDGET_COMUNE_FINITO alle %s (ora di Roma): spesi %.2f $ su %.2f $", ora.strftime("%H:%M"),
+                        spesa, budget_giorno())
+    return finito
 
 
 @dataclass

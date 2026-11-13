@@ -72,18 +72,32 @@ def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None) 
 
 
 def _oggi() -> str:
-    return time.strftime("%Y-%m-%d")
+    """Giorno di Roma, lo stesso del conto nel database (13/11, giudice N8)."""
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m-%d")
+    except Exception:
+        return time.strftime("%Y-%m-%d")
+
+
+_TABELLA_OK = {"ok": False}
 
 
 def _tabella(conn) -> None:
-    conn.execute("CREATE TABLE IF NOT EXISTS telefono_ricerche (giorno DATE PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)")
+    """La tabella (migrazione 052) si crea solo se manca (to_regclass), una volta per processo (giudice N9)."""
+    if _TABELLA_OK["ok"]:
+        return
+    if not conn.execute("SELECT to_regclass('telefono_ricerche') AS t").fetchone()["t"]:
+        conn.execute("CREATE TABLE IF NOT EXISTS telefono_ricerche (giorno DATE PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)")
+    _TABELLA_OK["ok"] = True
 
 
 def leggi_conto(conn) -> None:
     """13/11 (giudice M4): il conto delle ricerche del giorno sta nel database (sopravvive ai riavvii)."""
     try:
         _tabella(conn)
-        r = conn.execute("SELECT n FROM telefono_ricerche WHERE giorno = (now() AT TIME ZONE 'Europe/Rome')::date").fetchone()
+        r = conn.execute("SELECT n FROM telefono_ricerche WHERE giorno = %s::date", (_oggi(),)).fetchone()
         conn.commit()
         n = int(r["n"]) if r else 0
         if _CONTO["giorno"] != _oggi():
@@ -103,8 +117,8 @@ def _conta(conn) -> None:
     if conn is None:
         return
     try:
-        conn.execute("INSERT INTO telefono_ricerche (giorno, n) VALUES ((now() AT TIME ZONE 'Europe/Rome')::date, 1) "
-                     "ON CONFLICT (giorno) DO UPDATE SET n = telefono_ricerche.n + 1")
+        conn.execute("INSERT INTO telefono_ricerche (giorno, n) VALUES (%s::date, 1) "
+                     "ON CONFLICT (giorno) DO UPDATE SET n = telefono_ricerche.n + 1", (_oggi(),))
         conn.commit()
     except Exception:
         try:

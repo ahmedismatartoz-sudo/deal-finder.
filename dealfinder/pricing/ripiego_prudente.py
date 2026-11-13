@@ -64,7 +64,7 @@ def fonti(dati: dict, vr: dict | None, autohero: list[int] | None) -> dict:
     # 13/11 (giudice A4): le stesse soglie della regola del valore reale senza gemelle (regole.ValoreReale)
     from .. import regole as RG
     vrr = RG.regole().valore_reale
-    if (vr and vr.get("v") and float(vr.get("sigma") or 1) <= vrr.senza_gemelle_sigma_max
+    if (vr and vr.get("v") and vr.get("sigma") is not None and float(vr["sigma"]) <= vrr.senza_gemelle_sigma_max
             and int(vr.get("n_vendute") or 0) >= vrr.senza_gemelle_vendute_min):
         out["valore_reale"] = int(vr["v"])
     ah = [int(p) for p in (autohero or []) if p]
@@ -73,7 +73,8 @@ def fonti(dati: dict, vr: dict | None, autohero: list[int] | None) -> dict:
     if not dati.get("dispersione"):
         conf = [c.get("prezzo_corretto") or c.get("prezzo") for c in (dati.get("confronti") or []) if isinstance(c, dict)]
         conf = [float(p) for p in conf if p]
-        if len(conf) == 1 or (int(dati.get("n_gemelle") or dati.get("n") or 0) == 1 and conf):
+        n_gem = dati.get("n_gemelle") if dati.get("n_gemelle") is not None else dati.get("n")
+        if len(conf) == 1 or (n_gem is not None and int(n_gem) == 1 and conf):
             out["gemella"] = int(round(conf[0] * FATTORE_VENDITA))
     return out
 
@@ -106,6 +107,8 @@ def riassunto_pv(auto: dict, est: int, f: dict) -> dict:
 
 # ------------------------------------------------------------------ database
 def _tabella(conn) -> None:
+    if conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"]:
+        return                                      # 13/11 (giudice N9): niente CREATE a ogni giro
     conn.execute("""CREATE TABLE IF NOT EXISTS ripiego_prudente (
         listing_id BIGINT PRIMARY KEY, prezzo INTEGER NOT NULL, valutazione_at TIMESTAMPTZ NOT NULL,
         stima INTEGER, pv JSONB, motivo TEXT, computed_at TIMESTAMPTZ NOT NULL DEFAULT now())""")

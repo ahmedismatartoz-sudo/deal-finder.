@@ -1570,7 +1570,8 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
                 "(COALESCE(d.risposta->'danni_foto', d.risposta->'answers'->'danni_foto')->>'noul')::float AS danni, "
                 "(COALESCE(d.risposta->'foto_internet', d.risposta->'answers'->'foto_internet')->>'noul')::float AS foto_internet, "
                 # 13/11 (piu-auto): controllo Claude al posto di Jev (ai/controllo_auto.py): annuncio vero e coerente
-                "(d.risposta->'auto_vera'->>'noul')::float AS auto_vera, d.risposta->>'_fonte' AS fonte "
+                "(d.risposta->'auto_vera'->>'noul')::float AS auto_vera, d.risposta->>'_fonte' AS fonte, "
+                "(d.prezzo = l.price_eur) AS stesso_prezzo "
                 "FROM decisione_ai d JOIN listings l ON l.id = d.listing_id "
                 "WHERE d.listing_id = ANY(%s) AND (d.prezzo = l.price_eur "
                 # 13/11 (piu-auto): una decisione Claude vale anche dopo un rialzo o un calo fino al 10% (come la cache

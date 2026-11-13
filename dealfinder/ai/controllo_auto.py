@@ -53,6 +53,7 @@ from . import client as AI
 log = logging.getLogger("controllo_auto")
 
 TASK = "controllo_auto"
+TASK_RINNOVO = "controllo_auto_rinnovo"   # rinnovi di decisioni scadute (stesso prezzo): tetto proprio del 30%
 CHIAVI_P = ("guasto", "prezzo_rata", "km_credibili", "danni_foto", "foto_internet", "targa_visibile", "versione_ok",
             "dati_coerenti", "truffa", "auto_vera")
 FOTO_CHIAVI = ("danni_foto", "foto_internet", "targa_visibile")
@@ -340,16 +341,25 @@ def assicura_colonne(conn) -> None:
     _COLONNE_FATTE["ok"] = True
 
 
-CAND_SQL = """
+_CAND_INIZIO = """
 WITH cand AS (
   SELECT ta.listing_id AS id FROM top_auto ta
   UNION
   SELECT vp.listing_id FROM valutazioni_policy vp
   WHERE vp.computed_at > now() - interval '12 hours' AND vp.margine IS NOT NULL
     AND (vp.margine >= %(quota)s * COALESCE(NULLIF(vp.dati->>'soglia', '')::int, 1500)
-         OR (vp.categoria = 'dati_insufficienti' AND vp.dati::text LIKE '%%sotto la mediana%%'))
+         OR (vp.categoria = 'dati_insufficienti' AND vp.dati::text LIKE '%%sotto la mediana%%'))"""
+# 13/11 (giudice N4): le auto con una stima di ripiego VALIDA (stesso prezzo, nessuna valutazione più nuova, margine
+# di ripiego almeno al minimo) senza controllo AI non vanno sul sito: entrano tra le candidate
+_CAND_RIPIEGO = """
   UNION
-  SELECT rp.listing_id FROM ripiego_prudente rp WHERE rp.stima IS NOT NULL      -- 13/11: senza AI non entrano
+  SELECT rp.listing_id FROM ripiego_prudente rp
+  JOIN listings l2 ON l2.id = rp.listing_id AND l2.price_eur = rp.prezzo
+  JOIN LATERAL (SELECT dati, computed_at FROM valutazioni_policy v WHERE v.listing_id = rp.listing_id
+                ORDER BY v.computed_at DESC LIMIT 1) v2 ON v2.computed_at <= rp.valutazione_at
+  WHERE rp.stima IS NOT NULL
+    AND (rp.pv->>'margine')::int >= COALESCE(NULLIF(v2.dati->>'soglia', '')::int, 1500)"""
+_CAND_FINE = """
 )
 SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
        NULLIF(vp.riassunto->>'M', '')::numeric AS m, d.prezzo AS d_prezzo, d.impronta AS d_impronta,
@@ -363,6 +373,8 @@ WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.computed_at < now() - interval '7 days')
    OR (d.fonte = 'claude' AND d.computed_at < now() - make_interval(days => %(validi)s))
 LIMIT 3000"""
+CAND_SQL = _CAND_INIZIO + _CAND_FINE
+CAND_SQL_RIPIEGO = _CAND_INIZIO + _CAND_RIPIEGO + _CAND_FINE
 
 AUTO_SQL = """
 SELECT l.id, l.source, l.title, l.description, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel,
@@ -426,13 +438,35 @@ def scartata_dal_testo(a: dict) -> str | None:
     return None
 
 
-def spesa_oggi(conn) -> tuple[int, float]:
-    rows = conn.execute("SELECT model, count(*) AS n, sum(input_tokens) AS i, sum(output_tokens) AS o FROM ai_usage "
-                        "WHERE task = %s AND at > date_trunc('day', now() AT TIME ZONE 'Europe/Rome') AT TIME ZONE 'Europe/Rome' "
-                        "GROUP BY model", (TASK,)).fetchall()
+def spesa_oggi(conn) -> tuple[int, float, float]:
+    """(chiamate, dollari, dollari dei soli rinnovi) di oggi, ora di Roma."""
+    rows = conn.execute("SELECT task, model, count(*) AS n, sum(input_tokens) AS i, sum(output_tokens) AS o FROM ai_usage "
+                        "WHERE task = ANY(%s) AND at > date_trunc('day', now() AT TIME ZONE 'Europe/Rome') AT TIME ZONE 'Europe/Rome' "
+                        "GROUP BY task, model", ([TASK, TASK_RINNOVO],)).fetchall()
     n = sum(int(r["n"] or 0) for r in rows)
     usd = sum(AI.costo(r["model"], int(r["i"] or 0), int(r["o"] or 0)) for r in rows)
-    return n, round(usd, 4)
+    rin = sum(AI.costo(r["model"], int(r["i"] or 0), int(r["o"] or 0)) for r in rows if r.get("task") == TASK_RINNOVO)
+    return n, round(usd, 4), round(rin, 4)
+
+
+def ore_roma() -> float:
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        o = datetime.now(ZoneInfo("Europe/Rome"))
+    except Exception:
+        o = __import__("datetime").datetime.utcnow()
+    return o.hour + o.minute / 60
+
+
+def budget_dosato(budget: float, ore: float | None = None) -> float:
+    """13/11 (giudice N2): spesa ammessa fino a quest'ora: budget × (ore passate, ora di Roma, + 2) / 24. Così il
+    budget non finisce la mattina sull'arretrato e restano soldi per le auto nuove della sera."""
+    ore = ore_roma() if ore is None else ore
+    return round(budget * min(24.0, ore + 2) / 24, 4)
+
+
+QUOTA_RINNOVI = 0.3            # i rinnovi delle decisioni scadute usano al massimo il 30% del budget del giorno
 
 
 def _perizie(conn, ids: list[int]) -> dict:
@@ -468,10 +502,10 @@ def salva(conn, r: dict, x: dict, imp: str, token: int) -> None:
          x.get("dati_coerenti"), x.get("stato"), r.get("cat"), r.get("margine"), json.dumps(risp), token, imp))
 
 
-def _registra_spesa(conn, lid: int, token: list) -> None:
+def _registra_spesa(conn, lid: int, token: list, task: str = TASK) -> None:
     for tin, tout, modello in token:
         conn.execute("INSERT INTO ai_usage (task, model, input_tokens, output_tokens, web_searches, listing_id) "
-                     "VALUES (%s,%s,%s,%s,0,%s)", (TASK, modello, tin, tout, lid))
+                     "VALUES (%s,%s,%s,%s,0,%s)", (task, modello, tin, tout, lid))
 
 
 # ------------------------------------------------------------------ giro
@@ -513,16 +547,17 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         return {"saltato": "pausa per credito/limite AI", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}
     t0 = time.time()
     assicura_colonne(conn)
-    fatte_oggi, usd_oggi = spesa_oggi(conn)
+    fatte_oggi, usd_oggi, usd_rinnovi = spesa_oggi(conn)
     tetto = int(_env("CONTROLLO_MAX_GIORNO", "1500")) - fatte_oggi
     budget = budget_usd()
+    dosato = budget_dosato(budget)
     if tetto <= 0:
         return {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
     if usd_oggi >= budget:
         return {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
-    sql = CAND_SQL
-    if not conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"]:
-        sql = sql.replace("  UNION\n  SELECT rp.listing_id FROM ripiego_prudente rp WHERE rp.stima IS NOT NULL", "")
+    if usd_oggi >= dosato:
+        return {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi, "dosato": dosato}
+    sql = CAND_SQL_RIPIEGO if conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"] else CAND_SQL
     righe = [dict(r) for r in conn.execute(sql, {"quota": float(_env("JEV_QUOTA_SOGLIA", "0.7")),
                                                  "validi": valida_giorni()}).fetchall()]
     # le auto "troppo sotto prezzo" solo con il numero (come Jev); fallite o scartate dal testo aspettano
@@ -530,6 +565,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok")) and not _da_saltare(r["id"], ora)]
     n_cand = len(righe)
     quante = min(tetto, massimo or per_giro())
+    if usd_rinnovi >= QUOTA_RINNOVI * budget:
+        righe = [r for r in righe if classe(r) != 3]       # rinnovi finiti per oggi: solo nuove e prezzi cambiati
     righe = ordina(righe)[:quante * 2]                 # qualcuna si riusa o si scarta senza chiamata
     leggere = {r["id"]: r for r in righe}
     st: Counter = Counter()
@@ -554,6 +591,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             st["senza_chiamata:" + motivo] += 1
             continue
         if len(da_fare) < quante:
+            a["_classe"] = classe(r)
             da_fare.append(a)
     if len(_SALTATE) > 5000:
         for k in [k for k, t in _SALTATE.items() if time.time() - t > 24 * 3600]:
@@ -570,16 +608,18 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     blocco = max(1, int(_env("CONTROLLO_PARALLELI", "3")))
     lock = threading.Lock()                        # la connessione si usa da un thread alla volta
     token_tot = [0, 0]
-    spesa = {"usd": usd_oggi}
+    spesa = {"usd": usd_oggi, "rinnovi": usd_rinnovi}
     nuove_targhe: list[int] = []
     fermo = False
 
-    def paga_per(lid):
+    def paga_per(lid, rinnovo=False):
         def paga(tin, tout, modello):
             # 13/11 (giudice C2): la spesa si registra e si conferma SUBITO dopo la chiamata (anche se poi il giro cade)
             with lock:
+                if rinnovo:
+                    spesa["rinnovi"] += AI.costo(modello, tin, tout)
                 try:
-                    _registra_spesa(conn, lid, [(tin, tout, modello)])
+                    _registra_spesa(conn, lid, [(tin, tout, modello)], TASK_RINNOVO if rinnovo else TASK)
                     conn.commit()
                 except Exception as e:
                     log.warning("CONTROLLO_AI spesa non registrata: %s", str(e)[:120])
@@ -594,7 +634,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             if isinstance(conf, str):
                 conf = json.loads(conf)
             return a, controlla(a, list(a.get("foto") or []), conf, perizie.get(a["id"]), chiama=chiama, http=http,
-                                paga=paga_per(a["id"]))
+                                paga=paga_per(a["id"], a.get("_classe") == 3))
         except Exception as e:                     # un'auto rotta non ferma il blocco
             return a, {"x": None, "errore": e, "token": [], "foto": 0}
 
@@ -641,10 +681,14 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     try:
         with ThreadPoolExecutor(max_workers=blocco) as ex:
             for k in range(0, len(da_fare), blocco):
-                if spesa["usd"] >= budget:
-                    st["budget_finito"] += 1
+                if spesa["usd"] >= min(budget, dosato):
+                    st["budget_finito" if spesa["usd"] >= budget else "budget_dosato"] += 1
                     break
-                for a, res in ex.map(uno, da_fare[k:k + blocco]):
+                parte = da_fare[k:k + blocco]
+                if spesa["rinnovi"] >= QUOTA_RINNOVI * budget:
+                    st["rinnovi_rimandati"] += sum(1 for a in parte if a.get("_classe") == 3)
+                    parte = [a for a in parte if a.get("_classe") != 3]
+                for a, res in ex.map(uno, parte):
                     with lock:
                         try:
                             fermo = esito(a, res) or fermo
@@ -679,6 +723,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
            "secondi": round(time.time() - t0), "token_in": token_tot[0], "token_out": token_tot[1],
            "costo_usd": round(usd, 4), "usd_auto": round(usd / max(1, st["fatte"] + st["non_valida"]), 5),
            "fatte_oggi": fatte_oggi + st["fatte"], "usd_oggi": round(spesa["usd"], 4), "budget_usd": budget,
+           "dosato_usd": dosato, "rinnovi_usd": round(spesa["rinnovi"], 4),
            "foto": f"{n_foto()}x{_env('CONTROLLO_FOTO_LATO', '512')}px {modo_foto()}", **dict(st)}
     log.warning("JEV_GIRO %s", json.dumps(res, ensure_ascii=False))   # stesso nome di riga di Jev (sentinella, cruscotti)
     return res

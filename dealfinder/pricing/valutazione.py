@@ -125,7 +125,7 @@ def ingressi(conn, ids: list, solo: tuple = _TUTTI) -> dict:
                                        "ORDER BY listing_id, computed_at DESC", (ids,), "stima AI")}
     if "difetti" in solo:
         out["difetti"] = {r["listing_id"]: dict(r) for r in _q(conn,
-                          "SELECT listing_id, costo, grave, motivo FROM ai_difetti WHERE listing_id = ANY(%s)",
+                          "SELECT listing_id, chiave, costo, grave, motivo FROM ai_difetti WHERE listing_id = ANY(%s)",
                           (ids,), "ai_difetti")}
     if "parti" in solo:
         # ricambi dall'analisi (AI/manuale): le righe scritte dalla valutazione stessa (engine pv*) hanno 0 e non contano
@@ -182,6 +182,11 @@ def prepara(r: dict, ing: dict, rg: RG.Regole | None = None) -> tuple[dict, str 
     t["damage_declared"] = False
     t["danni_testo"] = danni
     d = ing["difetti"].get(lid)
+    if d is not None and d.get("chiave") and r.get("description") is not None:
+        # 13/11 (giudice N3): lettura dei difetti fatta su un ALTRO testo (annuncio cambiato): non vale più
+        from ..ai.difetti import chiave as _chiave_difetti
+        if d["chiave"] != _chiave_difetti(r.get("description")):
+            d = None
     if danni:
         if d is None:
             return t, "danni_da_leggere"
@@ -345,6 +350,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 imp_a = impronta_auto(t)
                 giu = giudicata(v) and rg.scrittura.giudice_vince
                 ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r, now, ore, giu)
+                if v.get("giudice_mancante") and prima.get(lid):
+                    ok, perche = False, "giudice_mancante"      # 13/11 (N3): resta la valutazione precedente
                 es.stats[f"scrittura:{perche}"] += 1
                 if ok:
                     pr = v.pop("prima", None)

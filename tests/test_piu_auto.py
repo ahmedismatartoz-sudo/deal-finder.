@@ -137,7 +137,7 @@ def test_prezzi_veri_e_budget_separato():
 
 
 def p_ok(p):
-    return p == (["controllo_auto"],)
+    return p == (["controllo_auto", "controllo_auto_rinnovo"],)
 
 
 def test_costo_per_auto_richiesta_tipo():
@@ -513,3 +513,109 @@ def test_telefoni_candidate_subito_prioritarie_e_spariti_as24():
     assert st["subito_api:si"] == 1
     assert any(q.startswith("UPDATE listings SET telefono_ok=%s, telefono_at=now()") and p == (True, 2) for q, p in c.scritte)
     assert c.params[2] == [2]                                      # solo le prioritarie per Subito
+
+
+
+# ------------------------------------------------------------------ correzioni del giudice (seconda tornata)
+def test_truffa_zero_non_diventa_uno():
+    vera = {"truffa": 0, "auto_vera": 0.9, "dati_coerenti": 0.9, "danni": 0, "foto_internet": 0,
+            "decisione": "compra", "fonte": "claude"}
+    base = dict(prezzo=12000, M=17500, margine=5500)
+    out, _ = elenco([auto(1, jev=vera, **base)])
+    assert [(it["id"], it["avviso_verifica"]) for it in out] == [(1, True)]       # truffa 0 = nessun segno
+    assert ids([auto(2, jev=dict(vera, truffa=None), **base)]) == []              # truffa mancante: non confermata
+    assert ids([auto(3, jev=dict(vera, foto_internet=None), **base)]) == []
+    # N5: con sconto alto la decisione vale solo allo stesso prezzo
+    assert ids([auto(4, jev=dict(vera, stesso_prezzo=False), **base)]) == []
+    assert ids([auto(5, jev=dict(vera, stesso_prezzo=True), **base)]) == [5]
+    # ripiego: errore tipico 0 non diventa 1
+    dati = {"motivi": ["solo 1 confronti validi (servono almeno 2)"], "confronti": [{"prezzo_corretto": 9500}]}
+    assert "valore_reale" in RP.fonti(dati, {"v": 9000, "sigma": 0.0, "n_vendute": 30}, [])
+
+
+def test_budget_dosato_e_rinnovi():
+    assert CA.budget_dosato(4.0, 0) == round(4 * 2 / 24, 4)
+    assert CA.budget_dosato(4.0, 10) == 2.0 and CA.budget_dosato(4.0, 23.5) == 4.0
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    CA._SALTATE.clear()
+    cand = [{"id": 1, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+             "d_prezzo": 5000, "d_fonte": "jev"},                                   # rinnovo (stesso prezzo)
+            {"id": 2, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 2000, "m": 7000,
+             "d_prezzo": None}]                                                     # nuova
+    auto_ = [{"id": i, "title": "Panda", "description": "ok", "price_eur": 5000, "foto": [], "confronti": []} for i in (1, 2)]
+    ok = {"guasto": 0, "prezzo_rata": 0, "km_credibili": 1, "dati_coerenti": 1, "truffa": 0.1, "auto_vera": 0.9,
+          "stato": 2, "decisione": "tratta", "confidenza": .6, "note": ""}
+    fatte = []
+
+    def chiama(testo, foto):
+        return ok, 800, 80, "claude-haiku-5-5"
+
+    class Conn(ConnFinta):
+        def __init__(self, spesa_rinnovi):
+            super().__init__(cand, auto_)
+            self.rin = spesa_rinnovi
+
+        def execute(self, sql, params=None):
+            if "FROM ai_usage" in sql:
+                return _Ris([{"task": "controllo_auto_rinnovo", "model": "claude-haiku-5-5", "n": 1,
+                              "i": int(self.rin * 1e6), "o": 0}] if self.rin else [])
+            r = super().execute(sql, params)
+            if sql.startswith("INSERT INTO ai_usage"):
+                fatte.append(params[0])
+            return r
+    vecchia = CA.ore_roma
+    CA.ore_roma = lambda: 22.0
+    try:
+        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0"):
+            res = CA.giro(Conn(0), chiama=chiama)
+            assert fatte == ["controllo_auto", "controllo_auto_rinnovo"]        # prima la nuova, poi il rinnovo
+            fatte.clear()
+            CA._FALLITE.clear()
+            res = CA.giro(Conn(1.3), chiama=chiama)                            # rinnovi già oltre il 30% di 4 $
+            assert fatte == ["controllo_auto"] and res["fatte"] == 1
+            CA.ore_roma = lambda: 0.0                                           # 4 × 2/24 = 0,33 $ già spesi
+            assert "dosato" in CA.giro(Conn(1.3), chiama=chiama)["saltato"]
+    finally:
+        CA.ore_roma = vecchia
+
+
+def test_giudice_e_difetti_chiudono_senza_ai():
+    import dataclasses
+    import types
+    from dealfinder import regole as RGM
+    from dealfinder.ai import giudice
+    from dealfinder.pricing import ricalcolo
+    cfg = types.SimpleNamespace(regole=dataclasses.replace(RGM.regole(), giudice_ai=True))
+    v = {"categoria": "opportunita", "confronti": [{"id": 1}], "M": 9000, "margine": 3000, "motivi": []}
+    salva = (giudice.giudica, AI.available)
+    giudice.giudica = lambda conn, t, c, solo_archivio=False: None
+    AI.available = lambda: True
+    try:
+        v2 = ricalcolo._giudice_ai(None, {"id": 5}, v, [], 1500, cfg)
+        assert v2["categoria"] == "dati_insufficienti" and v2["giudice_mancante"] and v["categoria"] == "opportunita"
+        assert ricalcolo._giudice_ai(None, {"id": 5}, v, [], 1500, cfg, solo_archivio=True) is v
+    finally:
+        giudice.giudica, AI.available = salva
+    # difetti letti su un altro testo: non valgono più, l'auto aspetta la nuova lettura (fuori)
+    from dealfinder.ai import difetti
+    from dealfinder.pricing import valutazione as VAL
+    r = {"id": 9, "title": "Golf", "description": "frizione da fare, motore da sistemare", "make": "vw", "model": "golf",
+         "fuel": "benzina", "price_eur": 5000, "mileage_km": 90000, "year": 2015, "telefono_ok": True}
+    ing = {"parti": {}, "ai": {}, "vr": {}, "fattori_calibra": None,
+           "difetti": {9: {"chiave": difetti.chiave("auto perfetta"), "costo": 0, "grave": False, "motivo": None}}}
+    assert VAL.prepara(r, ing)[1] == "danni_da_leggere"
+    ing["difetti"][9]["chiave"] = difetti.chiave(r["description"])
+    assert VAL.prepara(r, ing)[1] != "danni_da_leggere"
+
+
+def test_ripiego_tra_le_candidate_solo_se_valido():
+    assert "ripiego_prudente" not in CA.CAND_SQL and "ripiego_prudente" in CA.CAND_SQL_RIPIEGO
+    for pezzo in ("l2.price_eur = rp.prezzo", "v2.computed_at <= rp.valutazione_at", "(rp.pv->>'margine')::int >="):
+        assert pezzo in CA.CAND_SQL_RIPIEGO
+
+
+def test_giorno_di_roma_per_il_contatore():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    assert TN._oggi() == datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m-%d")

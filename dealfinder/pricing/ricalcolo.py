@@ -75,6 +75,15 @@ def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg, solo_arch
     from ..ai import giudice
     g = giudice.giudica(conn, t, v["confronti"], solo_archivio=solo_archivio)
     if not g:
+        from ..ai import client as AI
+        if solo_archivio or not AI.available():
+            return v
+        # 13/11 (giudice N3): il giudice AI non ha potuto controllare i confronti (budget comune finito, errore,
+        # risposta illeggibile). Mai una valutazione con tutti i confronti non controllati (margine gonfiato): resta
+        # la valutazione precedente (valutazione.py non scrive) oppure, se non c'è, l'auto è in attesa e fuori dal sito.
+        v = dict(v, categoria="dati_insufficienti", giudice_mancante=True)
+        v["motivi"] = list(v.get("motivi") or []) + ["confronti non ancora controllati dal giudice AI (AI ferma o budget "
+                                                     "del giorno finito): in attesa"]
         return v
     if not g["via"]:
         v.setdefault("ipotesi", []).append(f"confronti controllati dall'AI: tutti validi ({v.get('n')})")
