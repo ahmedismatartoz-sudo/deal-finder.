@@ -40,8 +40,11 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    (niente Torino, Ravenna, Roma), a qualsiasi prezzo, che oggi restano fuori per
                    commerciante_non_ammesso o perché lontane oltre il tetto dei 40 (calcolato come prima, anche con
                    loro dentro). Promo, solo finanziamento, prezzo esca, Loconte ed esclusi: fuori come oggi.
-                   Solo "per bene": dal 2015, ≤ 150.000 km, margine ≥ soglia, nessun danno/guasto, controllo AI
-                   passato e pulito, numero presente, nessun avviso. Le migliori per margine/soglia, tetto separato N.
+                   Valutate col metodo nuovo (valutazione_nuova), come i lontani.
+                   Solo "per bene": dal 2015, ≤ 150.000 km, margine ≥ soglia, nessun danno/guasto, controllo
+                   Claude pulito (non "scarta", danni/truffa/guasto < 0,3, auto_vera ≥ 0,7, dati coerenti ≥ 0,5,
+                   foto non da internet, km credibili), numero presente, nessun avviso, versione non "solo nome".
+                   Le migliori per margine/soglia, tetto separato N. Coda del controllo Claude: ai/controllo_auto (dz).
                    Nel SITO_FUNNEL "diesel_extra": {n, candidate, entrate}
 """
 from __future__ import annotations
@@ -210,6 +213,7 @@ class Regole:
     diesel_anno_min: int = 2015       # Euro 6
     diesel_km_max: int = 150000
     diesel_pulita: float = 0.30       # danni nelle foto, truffa e guasto letti dall'AI sotto questo valore
+    diesel_auto_vera: float = 0.7     # controllo Claude: annuncio vero e coerente almeno a questo valore
 
     @classmethod
     def da_env(cls) -> "Regole":
@@ -366,6 +370,8 @@ def diesel_commerciante_zona(it, g: Regole) -> bool:
         return False
     if r.get("provincia") not in PROVINCE_100KM or r.get("promo") or r.get("solo_fin"):
         return False
+    if not r.get("valutazione_nuova"):              # giudice B1: valutati col metodo nuovo, come i lontani
+        return False
     M = (it.get("pv") or {}).get("M")
     return bool(M) and (it.get("prezzo") or 0) >= g.prezzo_min_su_m_comm * float(M)
 
@@ -393,6 +399,17 @@ def diesel_per_bene(it, g: Regole) -> bool:
         return False
     j = r.get("jev")
     if not j or r.get("jev_errore") or j.get("decisione") == "scarta":
+        return False
+    # giudice M2: solo il controllo Claude (domanda non circolare, foto viste), annuncio vero e dati coerenti
+    if j.get("fonte") != "claude":
+        return False
+    if j.get("auto_vera") is None or float(j["auto_vera"]) < g.diesel_auto_vera:
+        return False
+    if j.get("dati_coerenti") is None or float(j["dati_coerenti"]) < 0.5:
+        return False
+    if j.get("foto_internet") is None or float(j["foto_internet"]) >= 0.5:
+        return False
+    if j.get("km_ok") is not None and float(j["km_ok"]) < 0.5:
         return False
     for k in ("danni", "truffa"):                   # foto viste e nessun segno: senza valore non si può confermare
         if j.get(k) is None or float(j[k]) >= g.diesel_pulita:
@@ -818,7 +835,8 @@ def tetto_diesel_extra(items: list[dict], g: Regole) -> tuple[list[dict], set]:
         m, p = margine(it), int(it.get("prezzo") or 0)
         return (m is not None and p > 0 and m >= scovo.soglia(p) and not it.get("trattare")
                 and not it.get("avviso_verifica") and not it.get("perizia_verifica")
-                and not it.get("ripiego_prudente") and not it.get("sconto_confermato_ai"))
+                and not it.get("ripiego_prudente") and not it.get("sconto_confermato_ai")
+                and not it.get("versione_solo_nome"))       # giudice M2
     extra = [it for it in items if it.get("_tipo") == "comm_diesel"]
     buone = sorted((it for it in extra if ok(it)),
                    key=lambda it: (-(margine(it) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))), it.get("id") or 0))

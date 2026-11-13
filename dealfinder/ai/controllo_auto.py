@@ -361,12 +361,26 @@ _CAND_RIPIEGO = """
                 ORDER BY v.computed_at DESC LIMIT 1) v2 ON v2.computed_at <= rp.valutazione_at
   WHERE rp.stima IS NOT NULL
     AND (rp.pv->>'margine')::int >= COALESCE(NULLIF(v2.dati->>'soglia', '')::int, 1500)"""
+# 13/11 sera (ramo diesel70, giudice M2): i diesel candidati al diesel in più del sito (DIESEL_EXTRA: commercianti
+# delle province entro 100 km, dal 2015, ≤ 150.000 km, margine ≥ soglia) senza decisione Claude entrano nella coda
+# (anche con una decisione Jev valida: il sito per loro vuole quella di Claude), con la priorità delle auto nuove.
+# Stesso tetto giornaliero, budget e dosaggio del giro: cambia solo chi è in coda.
 _CAND_FINE = """
+), dz AS (
+  SELECT l.id FROM listings l
+  JOIN LATERAL (SELECT margine, dati FROM valutazioni_policy v WHERE v.listing_id = l.id
+                ORDER BY v.computed_at DESC LIMIT 1) v ON true
+  WHERE %(dz_attivo)s AND l.status = 'attivo' AND l.seller_type = 'commerciante' AND l.fuel ILIKE 'diesel%%'
+    AND l.stage = 'approfondito' AND l.stage_reason IN ('opportunita', 'da_verificare')
+    AND upper(l.province) = ANY(%(dz_prov)s) AND l.year >= %(dz_anno)s AND l.mileage_km <= %(dz_km)s
+    AND COALESCE(l.damage_declared, false) = false
+    AND v.margine >= COALESCE(NULLIF(v.dati->>'soglia', '')::int, 1500)
 )
 SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
        NULLIF(vp.riassunto->>'M', '')::numeric AS m, d.prezzo AS d_prezzo, d.impronta AS d_impronta,
-       d.fonte AS d_fonte, d.computed_at AS d_at, (d.listing_id IS NOT NULL AND d.risposta->'guasto' IS NULL) AS d_incompleta
-FROM cand c
+       d.fonte AS d_fonte, d.computed_at AS d_at, (d.listing_id IS NOT NULL AND d.risposta->'guasto' IS NULL) AS d_incompleta,
+       (c.id IN (SELECT id FROM dz)) AS dz
+FROM (SELECT id FROM cand UNION SELECT id FROM dz) c
 JOIN listings l ON l.id = c.id AND l.status = 'attivo' AND l.price_eur IS NOT NULL
 JOIN LATERAL (SELECT categoria, margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
               ORDER BY v.computed_at DESC LIMIT 1) vp ON true
@@ -374,6 +388,7 @@ LEFT JOIN decisione_ai d ON d.listing_id = l.id
 WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS NULL
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.computed_at < now() - interval '7 days')
    OR (d.fonte = 'claude' AND d.computed_at < now() - make_interval(days => %(validi)s))
+   OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz))
 LIMIT 3000"""
 CAND_SQL = _CAND_INIZIO + _CAND_FINE
 CAND_SQL_RIPIEGO = _CAND_INIZIO + _CAND_RIPIEGO + _CAND_FINE
@@ -405,6 +420,8 @@ def classe(r: dict) -> int:
     (soprattutto le vecchie di Jev, che sul sito valgono finché il prezzo non cambia): per ultime."""
     if r.get("d_prezzo") is None:
         return 0
+    if r.get("dz") and r.get("d_fonte") != "claude":
+        return 0                                  # diesel in più senza decisione Claude: come un'auto nuova
     if r.get("price_eur") is not None and int(r["d_prezzo"]) != int(r["price_eur"]):
         return 1
     if r.get("d_incompleta"):
@@ -539,6 +556,14 @@ def budget_usd() -> float:
     return float(_env("CONTROLLO_BUDGET_USD", "4"))
 
 
+def parametri_diesel() -> dict:
+    """Parametri della coda dei diesel in più (dz in CAND_SQL), dalle stesse regole del sito."""
+    from ..web import sito_regole as SR
+    g = SR.Regole.da_env()
+    return {"dz_attivo": g.diesel_extra > 0, "dz_prov": sorted(SR.PROVINCE_100KM), "dz_anno": g.diesel_anno_min,
+            "dz_km": g.diesel_km_max}
+
+
 def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     """Un giro sulle auto candidate non ancora controllate (stesso elenco di Jev). `chiama(testo, foto)` ->
     (json, token_in, token_out, modello) si sostituisce nei test."""
@@ -563,8 +588,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     elif usd_oggi >= dosato:
         stop = {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi, "dosato": dosato}
     sql = CAND_SQL_RIPIEGO if conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"] else CAND_SQL
-    righe = [dict(r) for r in conn.execute(sql, {"quota": float(_env("JEV_QUOTA_SOGLIA", "0.7")),
-                                                 "validi": valida_giorni()}).fetchall()]
+    righe = [dict(r) for r in conn.execute(sql, dict(parametri_diesel(), quota=float(_env("JEV_QUOTA_SOGLIA", "0.7")),
+                                                     validi=valida_giorni())).fetchall()]
     # le auto "troppo sotto prezzo" solo con il numero (come Jev); fallite o scartate dal testo aspettano
     ora = time.time()
     righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok")) and not _da_saltare(r["id"], ora)]

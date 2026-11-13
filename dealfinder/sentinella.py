@@ -220,7 +220,7 @@ def c_sotto_soglia(conn, ctx: dict) -> dict:
     soglia = _soglia_locale()
     sotto, senza, diverse, controllate = [], 0, 0, 0
     for r in sito:
-        if r.get("sezione") not in ("affari", "inc"):        # economiche e supercar hanno soglie loro (T2)
+        if r.get("sezione") not in ("affari", "inc", "diesel_extra"):   # economiche e supercar: soglie loro (T2)
             continue
         controllate += 1
         if r.get("margine") is None:
@@ -299,7 +299,9 @@ def c_tetto_commercianti(conn, ctx: dict) -> dict:
     if sito is None:
         return _esito("tetto_commercianti", {"istantanea": "assente"}, disponibile=False)
     # 12/11: il tetto vale per i commercianti "lontani"; quelli della fascia richiesta dal cliente non hanno tetto
-    n = sum(1 for r in sito if r.get("commerciante") and not str(r.get("sezione") or "").startswith("fascia"))
+    # 13/11 sera: i diesel in più (DIESEL_EXTRA) hanno il loro tetto separato, fuori dai 40
+    n = sum(1 for r in sito if r.get("commerciante") and not str(r.get("sezione") or "").startswith("fascia")
+            and r.get("sezione") != "diesel_extra")
     al = []
     if n > COMMERCIANTI_TETTO:
         al.append(_allarme("tetto_commercianti", f"{n} auto di commercianti sul sito: il tetto è {COMMERCIANTI_TETTO}",
@@ -761,7 +763,8 @@ def _riga_istantanea(it: dict, soglia) -> tuple | None:
         except Exception:
             s = None
     m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
-    sez = ("supercar" if it.get("supercar") else "eco" if it.get("economica") else
+    sez = ("diesel_extra" if it.get("diesel_extra") else       # 13/11 sera: tetto separato (DIESEL_EXTRA)
+           "supercar" if it.get("supercar") else "eco" if it.get("economica") else
            "inc" if it.get("incidentata") else "trattare" if it.get("trattare") else "affari")   # 6/11: "Da trattare"
                                                                                                  # è sotto soglia per scelta
     km = it.get("km")

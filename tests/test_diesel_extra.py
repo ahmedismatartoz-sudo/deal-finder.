@@ -8,12 +8,14 @@ from dealfinder.web import sito_regole as SR
 
 G = SR.Regole()
 SPENTO = dataclasses.replace(G, diesel_extra=0)
-PULITA = {"decisione": "tieni", "confidenza": 0.9, "danni": 0.05, "truffa": 0.05, "guasto": 0.0, "fonte": "claude"}
+PULITA = {"decisione": "tieni", "confidenza": 0.9, "danni": 0.05, "truffa": 0.05, "guasto": 0.0, "fonte": "claude",
+          "auto_vera": 0.9, "dati_coerenti": 0.9, "foto_internet": 0.1, "km_ok": None}
 
 
 def auto(i, carb="diesel", anno=2015, km=90000, prezzo=8000, margine=3000, M=10000, prov="MI", tel=True,
          seller="commerciante", jev="pulita", **kw):
-    r = {"tel": tel, "seller_type": seller, "provincia": prov, "jev": dict(PULITA) if jev == "pulita" else jev}
+    r = {"tel": tel, "seller_type": seller, "provincia": prov, "jev": dict(PULITA) if jev == "pulita" else jev,
+         "valutazione_nuova": True}
     r.update(kw.pop("_r", {}))
     it = {"id": i, "prezzo": prezzo, "anno": anno, "km": km, "carb": carb, "fonte": "Subito",
           "pv": {"categoria": "opportunita", "M": M, "R": prezzo + margine, "R_finale": prezzo + margine,
@@ -80,10 +82,23 @@ def test_diesel_non_per_bene_resta_fuori():
         auto(17, prezzo=7000, M=10000),                                 # prezzo esca (< 75% di M): come oggi
         auto(18, _r={"testo_truffa": True}),
         auto(19, _r={"difetto": {"grave": False, "costo": 300, "motivo": "frizione"}}),
+        # giudice M2: solo controllo Claude pulito
+        auto(30, jev=dict(PULITA, fonte="jev")),
+        auto(31, jev=dict(PULITA, auto_vera=0.6)),
+        auto(32, jev=dict(PULITA, auto_vera=None)),
+        auto(33, jev=dict(PULITA, dati_coerenti=0.4)),
+        auto(34, jev=dict(PULITA, foto_internet=0.5)),
+        auto(35, jev=dict(PULITA, foto_internet=None)),
+        auto(36, jev=dict(PULITA, km_ok=0.4)),
+        auto(37, jev=dict(PULITA, versione_ok=0.1), _r={"versione_tecnica": "uguale"}),   # versione "solo nome"
+        # giudice B1: valutazione col metodo nuovo
+        auto(38, _r={"valutazione_nuova": False}),
+        auto(39, prov="BG", _r={"valutazione_nuova": False}),
     ]
     assert scovo.soglia(8000) == 1800
     out, fun = elenco(casi)
-    assert out == [], [it["id"] for it in out]
+    # 12 (Torino, valutata col metodo nuovo) entra come oggi tra i 40 lontani, non come diesel in più
+    assert [it["id"] for it in out] == [12] and out[0]["_tipo"] == "comm_lontano", [it["id"] for it in out]
     assert fun.diesel_extra["entrate"] == 0
 
 
@@ -95,9 +110,10 @@ def test_diesel_a_qualsiasi_prezzo_e_fino_a_150000_km():
     d = auto(23, km=160000)                                            # oltre 150.000 km: fuori come oggi
     out, fun = elenco([a, b, c, d])
     assert sorted(it["id"] for it in out) == [20, 21, 22]
-    assert all(it["diesel_extra"] for it in out)
-    assert fun.diesel_extra == {"n": 70, "candidate": 3, "entrate": 3}
-    assert elenco([a, b, c, d], SPENTO)[0] == []
+    assert sorted(it["id"] for it in out if it.get("diesel_extra")) == [20, 21]
+    assert next(it for it in out if it["id"] == 22)["_tipo"] == "comm_lontano"      # Bergamo: lontano come oggi
+    assert fun.diesel_extra == {"n": 70, "candidate": 2, "entrate": 2}
+    assert [it["id"] for it in elenco([a, b, c, d], SPENTO)[0]] == [22]
 
 
 def test_tetto_n_le_migliori_per_margine_su_soglia():
@@ -166,3 +182,52 @@ def test_diesel_lontano_fuori_zona_non_ripreso():
     to = auto(700, prezzo=12000, M=16000, margine=4500, prov="TO", _r={"valutazione_nuova": True})
     out, fun = elenco(benz + [to])
     assert 700 not in {it["id"] for it in out} and fun.diesel_extra["candidate"] == 0
+
+
+def test_km_ok_buono_entra():
+    assert ids([auto(40, jev=dict(PULITA, km_ok=0.8))]) == [40]
+
+
+def test_dati_al_telefono_e_sentinella():
+    # giudice B3 e M1: diesel_extra non va al frontend; nella fotografia della sentinella sezione a parte, fuori dai 40
+    import inspect
+    from dealfinder import sentinella as S
+    from dealfinder.web import app
+    src = inspect.getsource(app._calcola_elenco)
+    assert 'it.pop("diesel_extra", None)' in src and "_sentinella(out, diesel_extra)" in src
+    out, _ = elenco([auto(1)])
+    riga = S._riga_istantanea(dict(out[0], diesel_extra=True), scovo.soglia)
+    assert riga[9] == "diesel_extra" and riga[5] is True
+    base = {"prezzo": 8000, "margine": 3000, "soglia": 1800, "commerciante": True, "sezione": "affari"}
+    sito = [dict(base, listing_id=i) for i in range(40)] + [dict(base, listing_id=100 + i, sezione="diesel_extra")
+                                                            for i in range(30)]
+    r = S.c_tetto_commercianti(None, {"istantanea": sito, "istantanea_ore": 0.5})
+    assert r["ok"] and r["numeri"]["commercianti"] == 40
+    r = S.c_tetto_commercianti(None, {"istantanea": sito + [dict(base, listing_id=999)], "istantanea_ore": 0.5})
+    assert not r["ok"]
+    # il controllo sotto soglia guarda anche la sezione dei diesel in più
+    sotto = [dict(base, listing_id=500, sezione="diesel_extra", margine=100, prezzo=8000, soglia=1800)]
+    assert not S.c_sotto_soglia(None, {"istantanea": sotto, "istantanea_ore": 0.5})["ok"]
+
+
+def test_coda_controllo_claude_per_i_diesel():
+    from dealfinder.ai import controllo_auto as CA
+    for sql in (CA.CAND_SQL, CA.CAND_SQL_RIPIEGO):
+        assert "dz AS (" in sql and "%(dz_attivo)s" in sql and "l.fuel ILIKE 'diesel%%'" in sql
+        assert "COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz)" in sql
+    p = CA.parametri_diesel()
+    assert p["dz_attivo"] is True and p["dz_anno"] == 2015 and p["dz_km"] == 150000
+    assert "MI" in p["dz_prov"] and "TO" not in p["dz_prov"] and "RA" not in p["dz_prov"]
+    # decisione Jev ancora valida: per il diesel in più conta come un'auto nuova (priorità più alta)
+    jev_ok = {"d_prezzo": 8000, "price_eur": 8000, "d_fonte": "jev", "d_incompleta": False}
+    assert CA.classe(jev_ok) == 3 and CA.classe(dict(jev_ok, dz=True)) == 0
+    assert CA.classe(dict(jev_ok, dz=True, d_fonte="claude")) == 3
+    prima = os.environ.get("DIESEL_EXTRA")
+    try:
+        os.environ["DIESEL_EXTRA"] = "0"
+        assert CA.parametri_diesel()["dz_attivo"] is False
+    finally:
+        if prima is None:
+            os.environ.pop("DIESEL_EXTRA", None)
+        else:
+            os.environ["DIESEL_EXTRA"] = prima

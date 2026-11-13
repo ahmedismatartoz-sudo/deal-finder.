@@ -1737,7 +1737,7 @@ def _salva_funnel_giorno(fun) -> None:
         logging.getLogger("scovo").warning("SITO_FUNNEL non salvato: %s", str(e)[:200])
 
 
-def _sentinella(items: list[dict]) -> None:
+def _sentinella(items: list[dict], diesel_extra: set | None = None) -> None:
     """Fotografia dell'elenco per dealfinder.sentinella (altro gruppo): se il modulo non c'è, non succede niente."""
     try:
         import importlib
@@ -1750,7 +1750,8 @@ def _sentinella(items: list[dict]) -> None:
     if f is None:
         return
     try:
-        f([dict(it) for it in items])
+        # 13/11 sera: i diesel in più (tolti dai dati del sito) tornano segnati solo nella fotografia (tetto separato)
+        f([dict(it, diesel_extra=True) if it.get("id") in (diesel_extra or ()) else dict(it) for it in items])
     except Exception as e:
         logging.getLogger("scovo").warning("SENTINELLA non riuscita: %s", str(e)[:200])
 
@@ -1780,10 +1781,12 @@ def _calcola_elenco() -> None:
     except Exception as e:
         logging.getLogger("scovo").warning("TEL_NASCOSTO prioritari non segnati: %s", str(e)[:200])
     _coda_perizia(items, out)
+    diesel_extra = {it["id"] for it in out if it.get("diesel_extra")}
     for it in out:
         it.pop("_r", None)
         it.pop("_tipo", None)
         it.pop("_diesel_fuori", None)
+        it.pop("diesel_extra", None)          # 13/11 sera: dato interno, non va al telefono
         it.pop("perizia_verifica", None)
         it.pop("_perizia_attesa", None)
     from . import impostazioni as _imp, elenco_salvato as _es
@@ -1800,7 +1803,7 @@ def _calcola_elenco() -> None:
         threading.Thread(target=vendute.dati, daemon=True).start()    # la sezione è pronta al primo clic
     except Exception as e:
         logging.getLogger("scovo").warning("VENDUTE storico: %s", str(e)[:200])
-    _sentinella(out)
+    _sentinella(out, diesel_extra)
     _salva_funnel_giorno(fun)
     if _pool_revisione is not None:
         try:
@@ -1815,7 +1818,7 @@ def _calcola_elenco() -> None:
         c[f"{sez}:{it.get('area') or 'milano'}"] += 1
         if SR.fascia(it):
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
-        if it.get("diesel_extra"):
+        if it.get("id") in diesel_extra:
             c["diesel_extra"] += 1          # 13/11 sera: diesel per bene entrate con DIESEL_EXTRA
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(out), time.time() - t0, dict(sorted(c.items())))
     del items, fun
