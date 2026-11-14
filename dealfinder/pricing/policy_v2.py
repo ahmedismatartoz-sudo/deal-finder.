@@ -648,6 +648,10 @@ def nucleo_coerente(validi: list[dict], cc, n_minimo: int) -> list[dict] | None:
             da, lung = i, j - i + 1
     if lung < n_minimo or lung >= n or lung <= cc.dispersione_quota * n:   # maggioranza stretta
         return None
+    if da != 0:
+        # 14/11 (giudice): si tolgono solo prezzi ALTI fuori gruppo. Auto uguali più economiche del nucleo possono essere
+        # il prezzo vero: con quelle fuori il gruppo resta "disperso" (niente margini gonfiati dal gruppo caro)
+        return None
     return ordinati[da:da + lung]
 
 
@@ -914,6 +918,8 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if p_priv:
         out["M_privati"], out["n_privati"] = int(round(percentile(p_priv, .5))), len(p_priv)
     reg = sel.get("regressione")
+    if tetto_nucleo is not None and reg:
+        reg = None                                   # 14/11 (giudice): col nucleo vale solo la mediana del nucleo
     if reg and reg["errore_tipico"] <= cfg.reg_errore_max and M_ann and n_gem >= cfg.n_minimo \
             and abs(reg["prezzo"] / M_ann - 1) > cfg.reg_accordo:
         # 6/11 (verifica prezzi): il modello del gruppo non concorda con le auto uguali vere (generazione, versione o

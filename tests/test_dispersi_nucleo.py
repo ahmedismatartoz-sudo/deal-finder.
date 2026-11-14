@@ -27,11 +27,13 @@ def test_un_prezzo_fuori_gruppo_non_toglie_le_altre_gemelle():
     assert any("fuori gruppo" in i for i in v["ipotesi"])
 
 
-def test_nucleo_alto_mai_sopra_la_mediana_di_tutte():
-    v = P.valuta(T, _mk([6000, 11000, 11500, 12000]), 1500, CFG, NOW)
-    assert v["n"] == 3
-    assert v["M_gemelle"] == 11250                      # nucleo 11.500, tetto = mediana di tutte: niente prezzi gonfiati
-    assert v["nucleo_dispersi"]["mediana_nucleo"] == 11500
+def test_nucleo_alto_resta_disperso():
+    # 14/11 (giudice): auto uguali PIU' ECONOMICHE fuori gruppo possono essere il prezzo vero: niente nucleo caro
+    for prezzi in ([6000, 11000, 11500, 12000], [5000, 9500, 10000]):
+        v = P.valuta(T, _mk(prezzi), 1500, CFG, NOW)
+        assert v["categoria"] == "dati_insufficienti" and v.get("dispersione") and "nucleo_dispersi" not in v
+    cc = RG.regole().confronti
+    assert P.nucleo_coerente([{"id": i, "prezzo": p} for i, p in enumerate([6000, 11000, 11500, 12000])], cc, 2) is None
 
 
 def test_senza_nucleo_restano_dispersi():
