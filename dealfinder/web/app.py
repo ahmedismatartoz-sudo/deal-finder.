@@ -3511,9 +3511,12 @@ def _tempo_reale():
                             if not _diag["fatto"]:
                                 _diag["fatto"] = True
                                 try:      # 14/11: perché tante "dati insufficienti"? (solo conteggi, niente dati personali)
+                                    # numeri tolti dal motivo (N): prima "dispersi (1.85×)" si spezzava in un gruppo per
+                                    # rapporto e spariva dal LIMIT 40, lasciando in vista solo "solo 0/1 confronti"
                                     righe = conn.execute(
                                         """SELECT to_char(v.computed_at AT TIME ZONE 'Europe/Rome', 'DD/MM HH24') AS ora,
-                                                  left(coalesce(v.dati->'motivi'->>0, v.dati->>'motivo', '?'), 70) AS motivo, count(*) AS n
+                                                  left(regexp_replace(coalesce(v.dati->'motivi'->>0, v.dati->>'motivo', '?'), '[0-9][0-9.,]*', 'N', 'g'), 70)
+                                                         AS motivo, count(*) AS n
                                            FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
                                            WHERE v.policy_version = %s AND l.status = 'attivo' AND v.categoria = 'dati_insufficienti'
                                              AND v.computed_at > now() - interval '4 days'

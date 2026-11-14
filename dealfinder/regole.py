@@ -60,6 +60,13 @@ class Confronti:
     # oltre 1,8) non dicono il prezzo: "dati_insufficienti", salvo un valore reale affidabile
     dispersione_max: float = 1.8
     dispersione_sotto_n: int = 8
+    # 14/11 (sito da ~580 a ~420 auto dopo il ricalcolo del 13/11 14:48): con la regola sopra TUTTE le gemelle sparivano
+    # anche quando la maggioranza (più di dispersione_quota, e almeno n_minimo) aveva prezzi stretti tra loro e i prezzi
+    # lontani erano uno o due annunci fuori gruppo. Ora si usa quel NUCLEO coerente (gli altri si scartano come prezzi
+    # fuori gruppo) e la mediana non supera mai quella di tutte le gemelle (mai prezzi gonfiati). False = regola del 12/11.
+    dispersione_nucleo: bool = True
+    dispersione_quota: float = .5      # il nucleo deve essere PIÙ della metà delle gemelle
+    dispersione_nucleo_max: float = 1.35   # nucleo stretto: massimo/minimo entro 1,35 (≈ √1,8)
     # 12/11 (rapporto 2 §4 E1): il giudice AI vede un campione di 40 confronti scelti per SOMIGLIANZA (prima i 40 più
     # economici: l'AI poteva togliere solo dal basso e la mediana poteva solo salire)
     giudice_campione: int = 40
@@ -339,6 +346,7 @@ INTERRUTTORI = {
     "DOTAZIONI_PREZZO": "dotazioni.aggiusta",
     "RIVENDITA_FORBICE": "forbice.attiva",
     "GIUDICE_VINCE": "scrittura.giudice_vince",
+    "DISPERSIONE_NUCLEO": "confronti.dispersione_nucleo",      # 14/11: 0 = regola dei dispersi del 12/11
 }
 
 # Interruttori nuovi del 12/11 sera (margini fase 2) con il valore "prima" (comportamento di 4e26d24): la prova alla

@@ -30,6 +30,33 @@ CAP_ITALIA = ",".join([
 ])
 
 
+def ordina_per_turno(dovute: list[str], ultimi: dict | None = None) -> list[str]:
+    """14/11: prima le città lette meno di recente (mai lette per prime), non nell'ordine della lista. Prima si
+    prendevano le prime CE_PER_GIRO città "dovute" in ordine di lista: con 2 per giro le prime 14 tornavano dovute
+    ogni 48 ore e le ultime 8 (Udine, Trieste, La Spezia, Savona, Rimini, Ferrara, Alessandria, Novara) non avevano
+    mai il turno, così i loro annunci non venivano più rivisti e dopo 10 giorni uscivano dai confronti.
+    `ultimi`: {cap: ultimo giro riuscito} (per i test); None = letti da job_runs."""
+    if ultimi is None:
+        ultimi = {}
+        try:
+            from ..db import connect
+            with connect() as conn:
+                for r in conn.execute("SELECT job, max(started_at) AS at FROM job_runs WHERE job = ANY(%s) AND ok "
+                                      "GROUP BY job", ([f"ce:{c}" for c in dovute],)).fetchall():
+                    ultimi[r["job"][3:]] = r["at"]
+        except Exception as e:                       # in dubbio resta l'ordine della lista
+            log.warning("CONFRONTI_EXTRA ultimi turni non letti: %s", str(e)[:120])
+            return list(dovute)
+    pos = {c: i for i, c in enumerate(dovute)}
+
+    def quando(c):
+        at = ultimi.get(c)
+        if at is None:
+            return (0, 0.0, pos[c])
+        return (1, at.timestamp() if hasattr(at, "timestamp") else float(at), pos[c])
+    return sorted(dovute, key=quando)
+
+
 def giro() -> dict:
     from ..core.dal_testo import completa
     from ..core.normalize import normalize_fields, PROVINCE_REGION
@@ -48,7 +75,8 @@ def giro() -> dict:
     # della zona non si allunga di ore e le città restano sempre aggiornate a rotazione.
     tutte = [c.strip() for c in os.environ.get("CE_CAP", CAP_ITALIA).split(",") if c.strip()]
     from .ciclo import _due
-    citta = [c for c in tutte if _due(f"ce:{c}", int(os.environ.get("CE_ORE", "48")))][: int(os.environ.get("CE_PER_GIRO", "5"))]
+    dovute = [c for c in tutte if _due(f"ce:{c}", int(os.environ.get("CE_ORE", "48")))]
+    citta = ordina_per_turno(dovute)[: int(os.environ.get("CE_PER_GIRO", "5"))]
     log.warning("CONFRONTI_EXTRA turno: %s (di %d città)", citta, len(tutte))
     lo, hi = int(os.environ.get("CE_MIN", "1000")), int(os.environ.get("CE_MAX", "70000"))
     venditori = [("P", "privato"), ("D", "commerciante")]

@@ -624,6 +624,33 @@ def campione_giudice(t: dict, validi: list[dict], quanti: int) -> list[dict]:
     return sorted(scelti, key=lambda c: c["prezzo"])
 
 
+def nucleo_coerente(validi: list[dict], cc, n_minimo: int) -> list[dict] | None:
+    """14/11: gemelle disperse (meno di cc.dispersione_sotto_n, massimo/minimo oltre cc.dispersione_max): il gruppo più
+    numeroso di prezzi consecutivi STRETTI tra loro (massimo/minimo entro cc.dispersione_nucleo_max, 1,35: metà della
+    dispersione ammessa in scala log), se ha almeno n_minimo auto ed è più della quota cc.dispersione_quota (metà) di
+    tutte; a parità di numero il gruppo più ECONOMICO (mai si sceglie verso l'alto).
+    None se le gemelle non sono disperse, se la regola è spenta o se non c'è un nucleo così (resta "dispersi")."""
+    if not getattr(cc, "dispersione_nucleo", False):
+        return None
+    n = len(validi)
+    if n < 2 or n >= cc.dispersione_sotto_n:
+        return None
+    ordinati = sorted(validi, key=lambda c: (c["prezzo"], c.get("id") or 0))
+    p = [c["prezzo"] for c in ordinati]
+    if p[0] <= 0 or p[-1] / p[0] <= cc.dispersione_max:
+        return None
+    da, lung, j = 0, 0, 0
+    for i in range(n):
+        j = max(j, i)
+        while j + 1 < n and p[j + 1] / p[i] <= cc.dispersione_nucleo_max:
+            j += 1
+        if j - i + 1 > lung:                         # strettamente maggiore: a parità resta il gruppo più basso
+            da, lung = i, j - i + 1
+    if lung < n_minimo or lung >= n or lung <= cc.dispersione_quota * n:   # maggioranza stretta
+        return None
+    return ordinati[da:da + lung]
+
+
 def seleziona(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> dict:
     puliti, esclusi = pulisci(t, mercato, cfg, now)
     rg = cfg.regole
@@ -818,6 +845,25 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     n = len(validi)
     n_gem = n
     prezzi = [c["prezzo"] for c in validi]           # prezzi corretti per anno e km
+    # 14/11: gemelle disperse con un nucleo coerente (maggioranza entro dispersione_max): si tiene il nucleo
+    nucleo = nucleo_coerente(validi, r.confronti, cfg.n_minimo)
+    tetto_nucleo = None
+    if nucleo is not None:
+        tetto_nucleo = percentile(prezzi, .5)        # la mediana del nucleo non supera mai quella di tutte
+        tenuti_id = {id(c) for c in nucleo}
+        fuori = [c for c in validi if id(c) not in tenuti_id]
+        disp_prima = max(prezzi) / min(prezzi)
+        validi = nucleo
+        n = n_gem = len(validi)
+        prezzi = [c["prezzo"] for c in validi]
+        why = f"prezzo lontano dalle altre auto uguali (gruppo disperso {disp_prima:.2f}×)"
+        sel["motivi_non_equivalenti"] = dict(sel["motivi_non_equivalenti"])
+        sel["motivi_non_equivalenti"][why] = sel["motivi_non_equivalenti"].get(why, 0) + len(fuori)
+        out["nucleo_dispersi"] = {"tenuti": len(nucleo), "tolti": len(fuori), "dispersione_prima": round(disp_prima, 2),
+                                  "tolti_prezzi": sorted(int(round(c["prezzo"])) for c in fuori)}
+        out["ipotesi"].append(f"{len(nucleo) + len(fuori)} auto uguali con prezzi molto diversi ({disp_prima:.1f}×): "
+                              f"usate le {len(nucleo)} con prezzi coerenti, tolte {len(fuori)} fuori gruppo; "
+                              "prezzo mai sopra la mediana di tutte")
     out.update(n=n, n_gemelle=n_gem, livello=sel["livello"], esclusi=sel["esclusi"][:40], n_esclusi=len(sel["esclusi"]),
                non_equivalenti=sel["motivi_non_equivalenti"],
                confronti=[_comp_json(c, now) for c in campione_giudice(t, validi, cfg.regole.confronti.giudice_campione)],
@@ -856,6 +902,9 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     metodo = None
     if n:
         M_ann = percentile(prezzi, .5)
+        if tetto_nucleo is not None and M_ann > tetto_nucleo:
+            out["nucleo_dispersi"]["mediana_nucleo"] = int(round(M_ann))
+            M_ann = tetto_nucleo                     # mai sopra la mediana di tutte le gemelle (niente prezzi gonfiati)
         out["L"] = int(round(percentile(prezzi, .25)))           # solo informazione: non taglia niente
         metodo = "mediana"
     p_comm = [c["prezzo"] for c in validi if c.get("seller_type") == "commerciante"]
