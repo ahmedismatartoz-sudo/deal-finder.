@@ -412,7 +412,7 @@ def test_prioritari_solo_con_margine():
 
 
 def test_subito_numero_dalla_ricerca():
-    with env(TEL_API_PAUSA_S="0"):
+    with env(TEL_API_PAUSA_S="0", TEL_SUBITO_API="1"):
         _numero_dalla_ricerca()
 
 
@@ -471,7 +471,7 @@ def _pagine(app, Conn):
         assert len(items) == 1000 and st["lista_tagliata"] == 1 and items[-1]["id"] == 501
 
 
-def test_telefoni_candidate_subito_prioritarie_e_spariti_as24():
+def test_telefoni_candidate_subito_prioritarie_e_spariti_as24(monkeypatch=None):
     from dealfinder.pipeline import tempo_reale as tr
     from dealfinder.pipeline import verify
 
@@ -502,7 +502,7 @@ def test_telefoni_candidate_subito_prioritarie_e_spariti_as24():
     TN.leggi_conto = lambda conn: None
     _azzera_tel()
     try:
-        with env(TR_PAUSA_S="0", TEL_CAND_SUBITO=None, TEL_SUBITO_API=None):
+        with env(TR_PAUSA_S="0", TEL_CAND_SUBITO=None, TEL_SUBITO_API="1"):   # 14/11: spento di default, qui acceso
             c = Conn()
             st = tr.telefoni_candidate(c, [1, 2])
     finally:

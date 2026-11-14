@@ -3499,6 +3499,8 @@ def _tempo_reale():
         from ..pricing import policy_v2 as _PV
         from ..pricing.valutazione import valuta_e_scrivi as _ves
         from collections import Counter as _Cr
+        _diag = {"fatto": False}
+        _visti: set = set()           # una volta sola per avvio: se la riscrittura non avviene, non si ripete all'infinito
         time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "420")))
         while True:
             attesa = float(os.environ.get("RIPROVA_GIUDICE_MIN", "15")) * 60
@@ -3506,12 +3508,35 @@ def _tempo_reale():
                 if os.environ.get("RIPROVA_GIUDICE", "1") == "1" and _AI.available() and not _calcolo["in_corso"]:
                     with connect() as conn:
                         if not _AI.budget_finito(conn):
+                            if not _diag["fatto"]:
+                                _diag["fatto"] = True
+                                try:      # 14/11: perché tante "dati insufficienti"? (solo conteggi, niente dati personali)
+                                    righe = conn.execute(
+                                        """SELECT to_char(v.computed_at AT TIME ZONE 'Europe/Rome', 'DD/MM HH24') AS ora,
+                                                  left(coalesce(v.riassunto, ''), 70) AS motivo, count(*) AS n
+                                           FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
+                                           WHERE v.policy_version = %s AND l.status = 'attivo' AND v.categoria = 'dati_insufficienti'
+                                             AND v.computed_at > now() - interval '4 days'
+                                           GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 40""", (_PV.POLICY_VERSION,)).fetchall()
+                                    lg.warning("DIAG_DATI_INSUFF %s", json.dumps([[r["ora"], r["motivo"], r["n"]] for r in righe],
+                                                                                ensure_ascii=False))
+                                except Exception as e:
+                                    lg.warning("DIAG_DATI_INSUFF non riuscito: %s", str(e)[:200])
+                            # 14/11 (cliente: "fai A"): oltre alle auto segnate "giudice mancante", si rivalutano una volta
+                            # le "dati insufficienti" scritte nella finestra del budget AI finito (13/11 dalle 11 alle 24).
+                            # Stessa strada di sempre (valuta_e_scrivi): regole identiche; riscrivendo esce dalla finestra.
                             ids = [r["listing_id"] for r in conn.execute(
                                 """SELECT v.listing_id FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
                                    WHERE v.policy_version = %s AND l.status = 'attivo'
-                                     AND (v.dati->>'giudice_mancante') = 'true'
+                                     AND ((v.dati->>'giudice_mancante') = 'true'
+                                          OR (v.categoria = 'dati_insufficienti' AND v.computed_at >= %s::timestamptz
+                                              AND v.computed_at < %s::timestamptz))
+                                     AND NOT (v.listing_id = ANY(%s))
                                    ORDER BY v.computed_at LIMIT %s""",
-                                (_PV.POLICY_VERSION, int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
+                                (_PV.POLICY_VERSION, os.environ.get("RIPROVA_DI_DA", "2026-11-13T10:00:00Z"),
+                                 os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"), list(_visti),
+                                 int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
+                            _visti.update(ids)
                             st = _Cr()
                             for k in range(0, len(ids), 20):
                                 es = _ves(conn, ids[k:k + 20], "riprova-giudice")

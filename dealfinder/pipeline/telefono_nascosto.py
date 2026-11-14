@@ -41,7 +41,7 @@ def inizio_giro() -> None:
 
 
 def attivo() -> bool:
-    return os.environ.get("TEL_SUBITO_API", "1") == "1"
+    return os.environ.get("TEL_SUBITO_API", "0") == "1"
 
 
 def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None) -> int:
