@@ -670,3 +670,17 @@ def test_riprova_giudice_rivaluta_le_auto_in_attesa():
     blocco = src[i:i + 2500]
     assert "giudice_mancante" in blocco and "budget_finito" in blocco and "valuta_e_scrivi" in blocco
     assert 'name="riprova-giudice"' in src
+
+
+def test_sconto_alto_fermo_con_jev_va_in_testa_alla_coda():
+    # 14/11 sera: sconto alto con sola decisione Jev e truffa >= ai_pulita (fuori dal sito) -> come un'auto nuova
+    base = {"price_eur": 8000, "m": 14000, "d_prezzo": 8000, "d_fonte": "jev", "d_truffa": 0.4}
+    assert CA.sconto_fermo(base) and CA.classe(base) == 0
+    assert not CA.sconto_fermo(dict(base, d_truffa=0.1))          # Jev pulita: oggi sul sito, non si tocca
+    assert not CA.sconto_fermo(dict(base, d_fonte="claude"))       # già deciso da Claude
+    assert not CA.sconto_fermo(dict(base, m=10000))               # sconto sotto il limite (4.000 € fino a 10.000)
+    assert not CA.sconto_fermo(dict(base, d_prezzo=8500))          # prezzo cambiato: classe 1 come prima
+    assert CA.classe(dict(base, d_truffa=0.1)) == 3
+    p = CA.parametri_diesel()
+    assert p["sa_min"] == 4000 and p["sa_pulita"] == 0.30
+    assert "%(sa_min)s" in CA.CAND_SQL and "%(sa_pulita)s" in CA.CAND_SQL_RIPIEGO
