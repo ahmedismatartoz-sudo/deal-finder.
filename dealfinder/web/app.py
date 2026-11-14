@@ -3513,7 +3513,7 @@ def _tempo_reale():
                                 try:      # 14/11: perché tante "dati insufficienti"? (solo conteggi, niente dati personali)
                                     righe = conn.execute(
                                         """SELECT to_char(v.computed_at AT TIME ZONE 'Europe/Rome', 'DD/MM HH24') AS ora,
-                                                  left(coalesce(v.riassunto, ''), 70) AS motivo, count(*) AS n
+                                                  left(coalesce(v.dati->'motivi'->>0, v.dati->>'motivo', '?'), 70) AS motivo, count(*) AS n
                                            FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
                                            WHERE v.policy_version = %s AND l.status = 'attivo' AND v.categoria = 'dati_insufficienti'
                                              AND v.computed_at > now() - interval '4 days'
@@ -3521,7 +3521,10 @@ def _tempo_reale():
                                     lg.warning("DIAG_DATI_INSUFF %s", json.dumps([[r["ora"], r["motivo"], r["n"]] for r in righe],
                                                                                 ensure_ascii=False))
                                 except Exception as e:
+                                    conn.rollback()          # la transazione abortita non deve bloccare il giro
                                     lg.warning("DIAG_DATI_INSUFF non riuscito: %s", str(e)[:200])
+                                else:
+                                    conn.commit()
                             # 14/11 (cliente: "fai A"): oltre alle auto segnate "giudice mancante", si rivalutano una volta
                             # le "dati insufficienti" scritte nella finestra del budget AI finito (13/11 dalle 11 alle 24).
                             # Stessa strada di sempre (valuta_e_scrivi): regole identiche; riscrivendo esce dalla finestra.
