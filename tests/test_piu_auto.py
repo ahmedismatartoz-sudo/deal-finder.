@@ -681,6 +681,9 @@ def test_sconto_alto_fermo_con_jev_va_in_testa_alla_coda():
     assert not CA.sconto_fermo(dict(base, m=10000))               # sconto sotto il limite (4.000 € fino a 10.000)
     assert not CA.sconto_fermo(dict(base, d_prezzo=8500))          # prezzo cambiato: classe 1 come prima
     assert CA.classe(dict(base, d_truffa=0.1)) == 3
+    assert not CA.sconto_fermo(dict(base, stage_reason="incidentata"))   # come il sito
+    assert not CA.sconto_fermo(dict(base, price_eur=80000, d_prezzo=80000, m=95000))   # supercar: a parte
     p = CA.parametri_diesel()
     assert p["sa_min"] == 4000 and p["sa_pulita"] == 0.30
-    assert "%(sa_min)s" in CA.CAND_SQL and "%(sa_pulita)s" in CA.CAND_SQL_RIPIEGO
+    assert "%(sa_min)s" in CA.CAND_SQL and "%(sa_pulita)s" in CA.CAND_SQL_RIPIEGO and p["sa_supercar"] == 70000
+    assert "risposta->>'truffa'" not in CA.CAND_SQL and "COALESCE(d.truffa, 0)" in CA.CAND_SQL   # colonna REAL

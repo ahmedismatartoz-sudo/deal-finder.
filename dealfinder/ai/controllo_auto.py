@@ -380,7 +380,9 @@ SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
        NULLIF(vp.riassunto->>'M', '')::numeric AS m, d.prezzo AS d_prezzo, d.impronta AS d_impronta,
        d.fonte AS d_fonte, d.computed_at AS d_at, (d.listing_id IS NOT NULL AND d.risposta->'guasto' IS NULL) AS d_incompleta,
        (c.id IN (SELECT id FROM dz)) AS dz,
-       NULLIF(d.risposta->>'truffa', '')::float AS d_truffa
+       d.truffa AS d_truffa, l.stage_reason AS stage_reason,
+       (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur AND d.risposta->'guasto' IS NOT NULL
+        AND d.computed_at >= now() - interval '7 days' AND c.id NOT IN (SELECT id FROM dz)) AS solo_sconto
 FROM (SELECT id FROM cand UNION SELECT id FROM dz) c
 JOIN listings l ON l.id = c.id AND l.status = 'attivo' AND l.price_eur IS NOT NULL
 JOIN LATERAL (SELECT categoria, margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
@@ -390,9 +392,11 @@ WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.computed_at < now() - interval '7 days')
    OR (d.fonte = 'claude' AND d.computed_at < now() - make_interval(days => %(validi)s))
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz))
-   OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur
+   OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur AND l.price_eur < %(sa_supercar)s
+       AND l.stage_reason IS DISTINCT FROM 'incidentata'
        AND NULLIF(vp.riassunto->>'M', '')::numeric - l.price_eur > %(sa_min)s
-       AND COALESCE(NULLIF(d.risposta->>'truffa', '')::float, 0) >= %(sa_pulita)s)
+       AND COALESCE(d.truffa, 0) >= %(sa_pulita)s)
+ORDER BY (d.listing_id IS NULL) DESC
 LIMIT 3000"""
 CAND_SQL = _CAND_INIZIO + _CAND_FINE
 CAND_SQL_RIPIEGO = _CAND_INIZIO + _CAND_RIPIEGO + _CAND_FINE
@@ -419,6 +423,9 @@ def sconto_alto(m, prezzo) -> bool:
     return float(m) - float(prezzo) > lim
 
 
+SA_SUPERCAR = 70000                               # supercar e lusso: valutate a parte (supercar_eu), fuori da qui
+
+
 def sconto_fermo(r: dict) -> bool:
     """14/11 sera (cliente: più auto): sconto alto fuori dal sito ("sconto_alto_da_controllare") perché ha solo la
     decisione di Jev con truffa da ai_pulita in su. Prima aspettava 7 giorni il rinnovo; ora va in coda come un'auto nuova
@@ -426,6 +433,8 @@ def sconto_fermo(r: dict) -> bool:
     from ..web.sito_regole import Regole
     if r.get("d_fonte") == "claude" or r.get("d_prezzo") is None:
         return False
+    if r.get("stage_reason") == "incidentata" or float(r.get("price_eur") or 0) >= SA_SUPERCAR:
+        return False                              # come il sito: incidentate e supercar non hanno il limite dello sconto
     if r.get("price_eur") is not None and int(r["d_prezzo"]) != int(r["price_eur"]):
         return False
     t = r.get("d_truffa")
@@ -582,7 +591,7 @@ def parametri_diesel() -> dict:
     return {"dz_attivo": g.diesel_extra > 0, "dz_prov": sorted(SR.PROVINCE_100KM), "dz_anno": g.diesel_anno_min,
             "dz_km": g.diesel_km_max,
             # 14/11 sera: sconto alto fermo con la sola decisione Jev (sconto_fermo); il limite esatto è in Python
-            "sa_min": min(e for _f, e in g.sconto_euro), "sa_pulita": g.ai_pulita}
+            "sa_min": min(e for _f, e in g.sconto_euro), "sa_pulita": g.ai_pulita, "sa_supercar": SA_SUPERCAR}
 
 
 def giro(conn, massimo: int | None = None, chiama=None) -> dict:
@@ -614,6 +623,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     # le auto "troppo sotto prezzo" solo con il numero (come Jev); fallite o scartate dal testo aspettano
     ora = time.time()
     righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok")) and not _da_saltare(r["id"], ora)]
+    # 14/11 sera (giudice): entrate solo per lo sconto fermo ma senza il limite esatto della fascia: non si rinnovano prima
+    righe = [r for r in righe if not r.get("solo_sconto") or sconto_fermo(r)]
     n_cand = len(righe)
     quante = 0 if stop else min(tetto, massimo or per_giro())
     if usd_rinnovi >= QUOTA_RINNOVI * budget:
