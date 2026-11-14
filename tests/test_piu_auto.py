@@ -133,7 +133,7 @@ def test_prezzi_veri_e_budget_separato():
     c = C()
     assert AI.spesa_oggi(c) == 0 and "task <> ALL" in c.sql and p_ok(c.p)
     with env(CONTROLLO_BUDGET_USD=None):
-        assert CA.budget_usd() == 8.0   # 14/11: 8 $
+        assert CA.budget_usd() == 12.0  # 14/11 sera: 12 $
 
 
 def p_ok(p):

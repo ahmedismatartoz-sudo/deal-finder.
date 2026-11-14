@@ -553,7 +553,7 @@ def per_giro() -> int:
 
 def budget_usd() -> float:
     """Budget proprio, SEPARATO da AI_BUDGET_GIORNO (client.TASK_BUDGET_SEPARATO): dollari veri al giorno."""
-    return float(_env("CONTROLLO_BUDGET_USD", "8"))   # 14/11 cliente: Claude a 8 $ al giorno
+    return float(_env("CONTROLLO_BUDGET_USD", "12"))  # 14/11 sera cliente: Claude a 12 $ al giorno
 
 
 def parametri_diesel() -> dict:
@@ -573,7 +573,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     t0 = time.time()
     assicura_colonne(conn)
     fatte_oggi, usd_oggi, usd_rinnovi = spesa_oggi(conn)
-    tetto = int(_env("CONTROLLO_MAX_GIORNO", "1500")) - fatte_oggi
+    tetto = int(_env("CONTROLLO_MAX_GIORNO", "3200")) - fatte_oggi
     budget = budget_usd()
     dosato = budget_dosato(budget)
     # 13/11 (giudice N13): pausa, tetto e budget fermano solo le chiamate PAGATE; il riuso gratuito (decisione riportata
