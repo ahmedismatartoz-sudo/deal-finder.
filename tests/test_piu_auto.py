@@ -133,7 +133,7 @@ def test_prezzi_veri_e_budget_separato():
     c = C()
     assert AI.spesa_oggi(c) == 0 and "task <> ALL" in c.sql and p_ok(c.p)
     with env(CONTROLLO_BUDGET_USD=None):
-        assert CA.budget_usd() == 4.0
+        assert CA.budget_usd() == 8.0   # 14/11: 8 $
 
 
 def p_ok(p):
@@ -567,7 +567,7 @@ def test_budget_dosato_e_rinnovi():
     vecchia = CA.ore_roma
     CA.ore_roma = lambda: 22.0
     try:
-        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0"):
+        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0", CONTROLLO_BUDGET_USD="4"):
             res = CA.giro(Conn(0), chiama=chiama)
             assert fatte == ["controllo_auto", "controllo_auto_rinnovo"]        # prima la nuova, poi il rinnovo
             fatte.clear()

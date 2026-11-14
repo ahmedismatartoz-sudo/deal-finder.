@@ -553,7 +553,7 @@ def per_giro() -> int:
 
 def budget_usd() -> float:
     """Budget proprio, SEPARATO da AI_BUDGET_GIORNO (client.TASK_BUDGET_SEPARATO): dollari veri al giorno."""
-    return float(_env("CONTROLLO_BUDGET_USD", "4"))
+    return float(_env("CONTROLLO_BUDGET_USD", "8"))   # 14/11 cliente: Claude a 8 $ al giorno
 
 
 def parametri_diesel() -> dict:
