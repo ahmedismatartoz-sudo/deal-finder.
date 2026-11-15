@@ -46,6 +46,45 @@ def coperte_dalla_zona() -> set:
     return {c.strip() for c in os.environ.get("CE_COPERTE", CAP_COPERTE).split(",") if c.strip()}
 
 
+def citta_turno() -> list[str]:
+    """Città dei confronti extra di questo giro (CE_CAP, senza quelle coperte dalla zona)."""
+    coperte = coperte_dalla_zona()
+    return [c.strip() for c in os.environ.get("CE_CAP", CAP_ITALIA).split(",") if c.strip() and c.strip() not in coperte]
+
+
+def in_ritardo(ultimi: dict | None = None, ora=None) -> bool:
+    """15/11 (revisione): vero se la città letta meno di recente (job ce:{cap} riuscito) è più vecchia di CE_ORE + 24
+    ore, o non è mai stata letta: allora i confronti extra tornano alla finestra di 6 ore dall'avvio del cron, così il
+    turno non si avvicina ai 10 giorni di freschezza dei confronti. `ultimi`: {cap: ultimo giro riuscito} (test).
+    In dubbio (database non leggibile): vero."""
+    from datetime import datetime, timedelta, timezone
+    citta = citta_turno()
+    if not citta:
+        return False
+    if ultimi is None:
+        ultimi = {}
+        try:
+            from ..db import connect
+            with connect() as conn:
+                for r in conn.execute("SELECT job, max(started_at) AS at FROM job_runs WHERE job = ANY(%s) AND ok "
+                                      "GROUP BY job", ([f"ce:{c}" for c in citta],)).fetchall():
+                    ultimi[r["job"][3:]] = r["at"]
+        except Exception as e:
+            log.warning("CONFRONTI_EXTRA ritardo non letto (finestra di 6 ore): %s", str(e)[:120])
+            return True
+    ora = ora or datetime.now(timezone.utc)
+    limite = ora - timedelta(hours=int(os.environ.get("CE_ORE", "48")) + 24)
+    for c in citta:
+        at = ultimi.get(c)
+        if at is None:
+            return True
+        if getattr(at, "tzinfo", None) is None:
+            at = at.replace(tzinfo=timezone.utc)
+        if at < limite:
+            return True
+    return False
+
+
 def ordina_per_turno(dovute: list[str], ultimi: dict | None = None) -> list[str]:
     """14/11: prima le città lette meno di recente (mai lette per prime), non nell'ordine della lista. Prima si
     prendevano le prime CE_PER_GIRO città "dovute" in ordine di lista: con 2 per giro le prime 14 tornavano dovute

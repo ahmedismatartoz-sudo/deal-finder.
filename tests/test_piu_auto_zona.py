@@ -285,17 +285,37 @@ def test_utilitarie_saltano_solo_le_invariate_lontane_su_postgres_vero():
 
 
 def test_confronti_extra_entro_3_ore_ma_mai_fermi():
-    from dealfinder.pipeline import ciclo, collect as C
-    prima = ciclo._due
+    from dealfinder.pipeline import ciclo, collect as C, confronti_extra as CE
+    prima = ciclo._due, CE.in_ritardo
     try:
         ciclo._due = lambda job, ore: False                   # girati da poco: solo entro 3 ore dall'avvio
+        CE.in_ritardo = lambda: False
         assert C.ore_confronti() == 3.0
         assert C.tempo_ok("confronti", C.ore_confronti(), 0.0, ora=2.5 * 3600)
         assert not C.tempo_ok("confronti", C.ore_confronti(), 0.0, ora=4 * 3600)
         ciclo._due = lambda job, ore: job == "confronti_extra" and ore == 36   # fermi da 36 ore: limite di prima
         assert C.ore_confronti() == 6.0
+        ciclo._due = lambda job, ore: False
+        CE.in_ritardo = lambda: True                          # una città oltre CE_ORE + 24 ore: limite di prima
+        assert C.ore_confronti() == 6.0
     finally:
-        ciclo._due = prima
+        ciclo._due, CE.in_ritardo = prima
+
+
+def test_confronti_extra_in_ritardo_dai_turni_delle_citta():
+    from datetime import datetime, timedelta, timezone
+    from dealfinder.pipeline import confronti_extra as CE
+    ora = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
+    env = _env(ZONA_CRON="1", ZONA_TORINO=None, CE_COPERTE=None, CE_CAP="16121,17100,10121", CE_ORE=None)
+    try:
+        recenti = {"16121": ora - timedelta(hours=50), "17100": (ora - timedelta(hours=60)).replace(tzinfo=None)}
+        assert not CE.in_ritardo(recenti, ora)                # 10121 coperta dalla zona: non conta
+        assert CE.in_ritardo(dict(recenti, **{"17100": ora - timedelta(hours=73)}), ora)   # oltre 48 + 24 ore
+        assert CE.in_ritardo({"16121": ora}, ora)             # 17100 mai letta
+        os.environ["CE_ORE"] = "100"
+        assert not CE.in_ritardo(dict(recenti, **{"17100": ora - timedelta(hours=73)}), ora)
+    finally:
+        _env(**env)
 
 
 def test_esegui_salta_le_approfondite_invariate_senza_cambiarle_di_sezione():

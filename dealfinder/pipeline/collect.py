@@ -1065,12 +1065,15 @@ def tempo_ok(fase: str, entro_ore: float, t0: float, ora: float | None = None) -
 
 def ore_confronti() -> float:
     """15/11 (punto 5): i confronti extra (1-2 ore) partono solo entro 3 ore dall'avvio del cron (prima 6): nei giri
-    lunghi (giro completo della zona) passano al run dopo, che è più corto. Se non girano da CE_ATTESA_MAX_ORE (36)
-    ore il limite torna a 6, così non restano mai fermi (le città hanno un turno di 48 ore e i confronti non visti da
-    10 giorni non contano più). CRON_ORE_CONFRONTI su Render vince sempre (tempo_ok)."""
+    lunghi (giro completo della zona) passano al run dopo, che è più corto. Il limite torna a 6 se non girano da
+    CE_ATTESA_MAX_ORE (36) ore o se la città letta meno di recente è oltre CE_ORE + 24 ore (confronti_extra.in_ritardo),
+    così il turno resta lontano dai 10 giorni di freschezza dei confronti. CRON_ORE_CONFRONTI su Render vince sempre."""
     try:
         from .ciclo import _due
         if _due("confronti_extra", int(os.environ.get("CE_ATTESA_MAX_ORE", "36"))):
+            return 6.0
+        from . import confronti_extra as CE              # 15/11 revisione: una città oltre CE_ORE + 24 ore: 6 ore
+        if CE.in_ritardo():
             return 6.0
     except Exception:
         return 6.0
