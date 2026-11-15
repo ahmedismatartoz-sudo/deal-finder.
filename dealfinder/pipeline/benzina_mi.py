@@ -486,9 +486,13 @@ def giro() -> dict:
             try:
                 gia = {r["id"] for r in cand}
                 # 12/11 (§3.2): tutti i cambi letti, poi in ordine (ribassi grandi e auto vicine alla soglia per prime)
+                # 15/11 (punto 6): finestra almeno dall'inizio del giro precedente (prec, letto prima della lettura)
+                prec_c = prec if prec is not None else INC.inizio_precedente(conn, nome_giro)
+                ore_c = SC.finestra_cambi(int(os.environ.get("BENZ_CAMBI_ORE", "8")), prec_c)
+                st["cambi_finestra_ore"] = ore_c
                 cambi = SC.cambi_prezzo(conn, PROVINCE_100, PMAX, km_max_scelta(),
                                         os.environ.get("BENZ_TUTTI_CARB", "1") == "1",
-                                        int(os.environ.get("BENZ_CAMBI_ORE", "8")),
+                                        ore_c,
                                         int(os.environ.get("BENZ_CAMBI_MAX", "1500")), st)
                 nuovi_c = [r for r in cambi if r["id"] not in gia]
                 cand = nuovi_c + list(cand)

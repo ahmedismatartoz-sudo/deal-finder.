@@ -321,3 +321,45 @@ def test_esegui_salta_le_approfondite_invariate_senza_cambiarle_di_sezione():
         assert visto["extra"][9] == {"sezione": "economiche"} and visto["extra"][1] == {"sezione": "affari"}
     finally:
         R.senza_invariate, V.valuta_e_scrivi = prima
+
+
+# ------------------------------------------------------------------ punto 6: cambi di prezzo tra un giro e l'altro
+
+def test_finestra_cambi_copre_dal_giro_precedente():
+    from datetime import datetime, timedelta, timezone
+    ora = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
+    assert SC.finestra_cambi(8, None, ora) == 8                               # nessun giro precedente: come prima
+    assert SC.finestra_cambi(8, ora - timedelta(hours=3), ora) == 8           # giro vicino: almeno 8 ore
+    assert SC.finestra_cambi(8, ora - timedelta(hours=10, minutes=20), ora) == 11
+    assert SC.finestra_cambi(8, ora - timedelta(days=5), ora) == 48           # tetto
+    assert SC.finestra_cambi(8, (ora - timedelta(hours=10)).replace(tzinfo=None), ora) == 11
+    env = _env(SCELTA_CAMBI_ADATTIVA="0")
+    try:
+        assert SC.finestra_cambi(8, ora - timedelta(hours=10), ora) == 8 and not SC.salta_valutate()
+    finally:
+        _env(**env)
+
+
+def test_cambi_gia_valutati_dopo_il_cambio_non_prendono_posto_su_postgres_vero():
+    P, c = _pg("piu_auto_cambi")
+    if c is None:
+        return
+    ins = ("INSERT INTO listings (source, source_id, url, make, model, fuel, year, mileage_km, price_eur, province, "
+           "seller_type, title, description, telefono_ok) VALUES ('subito', %s, %s, 'fiat', 'panda', 'benzina', 2015, "
+           "80000, 4000, 'MI', 'privato', 'Panda', 'ok', true) RETURNING id")
+    a = c.execute(ins, ("a", "ua")).fetchone()["id"]          # valutata DOPO il ribasso: già fatta
+    b = c.execute(ins, ("b", "ub")).fetchone()["id"]          # valutata PRIMA del ribasso: entra
+    for i in (a, b):
+        c.execute("INSERT INTO price_events (listing_id, event, price_eur, at) VALUES (%s, 'prezzo', 4000, "
+                  "now() - interval '10 hours')", (i,))
+    vp = ("INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, "
+          "impronta_regole, computed_at) VALUES (%s, 'v', 'non_conveniente', 0, '{}', '{}', 'x', now() - make_interval(hours => %s))")
+    c.execute(vp, (a, 2))
+    c.execute(vp, (b, 30))
+    par = {"ore": 11, "prov": ["MI"], "pmax": 70000, "kmmax": 150000, "tutti_carb": True, "km_obblig": True,
+           "lettura_max": 100, "salta_valutate": True}
+    assert [r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()] == [b]
+    par["ore"] = 8                                             # finestra fissa di prima: il ribasso di 10 ore fa è perso
+    assert c.execute(SC.CAMBI_SQL, par).fetchall() == []
+    par.update(ore=11, salta_valutate=False)
+    assert {r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()} == {a, b}

@@ -150,7 +150,7 @@ def test_candidate_sql_su_postgres_vero():
     par["inv_ore"] = 0                                         # spento: torna anche "a"
     assert ids["a"] in {r["id"] for r in c.execute(sql, par).fetchall()}
     cambi = c.execute(SC.CAMBI_SQL, {"ore": 8, "prov": ["MI"], "pmax": 70000, "kmmax": 150000, "tutti_carb": True,
-                                     "km_obblig": True, "lettura_max": 100}).fetchall()
+                                     "km_obblig": True, "lettura_max": 100, "salta_valutate": True}).fetchall()
     assert [(r["id"], r["prezzo_prima"], r["margine_prima"]) for r in cambi] == [(ids["b"], 3600, -500)]
 
 

@@ -183,7 +183,7 @@ def filtra_sicuri(conn, righe: list, limite: int | None = None, stats: Counter |
 
 CAMBI_SQL = """
 WITH c AS (
-  SELECT listing_id, min(at) AS primo FROM price_events
+  SELECT listing_id, min(at) AS primo, max(at) AS ultimo FROM price_events
   WHERE event = 'prezzo' AND at > now() - make_interval(hours => %(ore)s)
   GROUP BY listing_id
 )
@@ -198,7 +198,35 @@ WHERE t.status = 'attivo' AND upper(t.province) = ANY(%(prov)s)
   AND (t.mileage_km IS NOT NULL OR NOT %(km_obblig)s) AND coalesce(t.mileage_km, 0) <= %(kmmax)s
   AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+  AND (NOT %(salta_valutate)s OR NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
+                                             AND vp.computed_at > c.ultimo))
 LIMIT %(lettura_max)s"""
+
+# 15/11 (punto 6): finestra dei cambi di prezzo. Era fissa (BENZ_CAMBI_ORE, 8 ore) ma il cron dura 9-10 ore: i ribassi
+# trovati tra un giro e l'altro oltre le 8 ore (la rilettura notturna di Subito del sito, le riletture complete) non
+# arrivavano mai alla scelta, se il tempo reale non li aveva già valutati. Ora la finestra copre almeno dall'inizio
+# del giro precedente (+1 ora), al massimo CAMBI_ORE_MAX ore; i cambi già valutati DOPO l'ultimo cambio di prezzo non
+# prendono posto (niente rivalutazioni ripetute con la finestra più lunga). SCELTA_CAMBI_ADATTIVA=0 = come prima.
+CAMBI_ORE_MAX = 48
+
+
+def finestra_cambi(ore_base: int, prec=None, ora=None) -> int:
+    """Ore della finestra dei cambi: ore_base, oppure dall'inizio del giro precedente `prec` (+1), tetto CAMBI_ORE_MAX."""
+    if os.environ.get("SCELTA_CAMBI_ADATTIVA", "1") != "1" or prec is None:
+        return int(ore_base)
+    from datetime import datetime, timezone
+    ora = ora or datetime.now(timezone.utc)
+    try:
+        if getattr(prec, "tzinfo", None) is None:
+            prec = prec.replace(tzinfo=timezone.utc)
+        ore = int((ora - prec).total_seconds() // 3600) + 1
+    except Exception:
+        return int(ore_base)
+    return max(int(ore_base), min(ore, int(_num("SCELTA_CAMBI_ORE_MAX", CAMBI_ORE_MAX))))
+
+
+def salta_valutate() -> bool:
+    return os.environ.get("SCELTA_CAMBI_ADATTIVA", "1") == "1"
 
 
 def chiave_cambio(r: dict, soglia_fn=None, gap_vicino: float | None = None) -> tuple:
@@ -237,7 +265,7 @@ def ordina_cambi(righe: list, limite: int, soglia_fn=None, stats: Counter | None
 def cambi_prezzo(conn, prov: list, pmax: int, kmmax: int, tutti_carb: bool, ore: int, limite: int,
                  stats: Counter | None = None) -> list:
     righe = conn.execute(CAMBI_SQL, {"ore": ore, "prov": prov, "pmax": pmax, "kmmax": kmmax, "tutti_carb": tutti_carb,
-                                     "km_obblig": km_obbligatori(),
+                                     "km_obblig": km_obbligatori(), "salta_valutate": salta_valutate(),
                                      "lettura_max": int(_num("SCELTA_CAMBI_LETTURA_MAX", 20000))}).fetchall()
     righe = filtra_sicuri(conn, [dict(r) for r in righe], None, Counter())   # scarti sicuri prima del taglio
     return ordina_cambi(righe, limite, stats=stats)
