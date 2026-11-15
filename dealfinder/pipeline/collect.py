@@ -965,6 +965,24 @@ def riepilogo_scarti(stats) -> dict:
             "non_contati": letti - int(stats.get("salvati", 0)) - sum(scarti.values())}
 
 
+ZC_PROVINCE_DEFAULT = "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"
+
+
+def province_zona(lista: str | None = None) -> list[str]:
+    """15/11 (punto 2): province del giro della zona = quelle della lista (ZC_PROVINCE, altrimenti il default) PIÙ
+    sempre quelle del sito (sito_regole.PROVINCE_100KM, Novara e Piacenza comprese), senza dipendere da Render.
+    Le extra già presenti (Mantova, Sondrio, ...) restano, nello stesso ordine. ZC_PROVINCE_SITO=0 torna alla sola lista."""
+    pv = []
+    for p in (lista if lista is not None else os.environ.get("ZC_PROVINCE", ZC_PROVINCE_DEFAULT)).split(","):
+        p = p.strip().upper()
+        if p and p not in pv:
+            pv.append(p)
+    if os.environ.get("ZC_PROVINCE_SITO", "1") == "1":
+        from ..web.sito_regole import PROVINCE_100KM
+        pv += [p for p in sorted(PROVINCE_100KM) if p not in pv]
+    return pv
+
+
 def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
     """3/11 (studio 4): dopo il giro della zona. 1) il giro si registra in job_runs ('zona_cron:giro', con i
     contatori degli scarti); 2) AutoScout24: gli annunci non visti nelle ultime riletture si controllano uno per uno
@@ -989,12 +1007,15 @@ def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
     try:
         from .benzina_mi import PROVINCE_100
         from .verify import scomparsi_con_prova
+        zona = list(PROVINCE_100)
+        if nome.startswith("zona_cron"):          # 15/11 (punto 2): il controllo delle sparite sempre sulle province del sito
+            zona += [p for p in province_zona(",".join(PROVINCE_100)) if p not in zona]
         with _cn() as c:
             fin = _lj(c, "scomparsi:autoscout24")
             st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=ore_non_visti,
                                      limite=int(os.environ.get("AS_SCOMPARSI_MAX", "600")),
                                      minuti=float(os.environ.get("AS_SCOMPARSI_MINUTI", "20")),
-                                     pausa=(0.5, 1.2), zona=PROVINCE_100)
+                                     pausa=(0.5, 1.2), zona=zona)
             fin(not st.get("eccezione"), dict(st))
     except Exception as e:
         log.warning("SCOMPARSI autoscout24 non controllati (nessuno segnato senza prova): %s", str(e)[:200])
@@ -1178,7 +1199,7 @@ if __name__ == "__main__":
             if _due("zona_cron", int(os.environ.get("ZC_ORE", "3"))):
                 for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"), "BENZ_CAP_EXTRA": os.environ.get("ZC_CAP_EXTRA", "25121:90"),
                              "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "70000"),   # 31/10: anche 50-70k (prima nessuno le guardava)
-                             "BENZ_PROVINCE": os.environ.get("ZC_PROVINCE", "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA,NO,PC"),
+                             "BENZ_PROVINCE": ",".join(province_zona()),   # 15/11: sempre anche quelle del sito
                              "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": os.environ.get("ZC_RACCOLTA_TUTTI", "1"), "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
                              "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
                              "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),

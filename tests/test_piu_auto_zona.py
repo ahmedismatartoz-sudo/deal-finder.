@@ -101,3 +101,52 @@ def test_comm_fascia_sql_su_postgres_vero():
     righe = c.execute(B.COMM_FASCIA_SQL.format(invariate=SC.condizione_invariate(c)), par).fetchall()
     presi = {r["id"] for r in righe}
     assert presi == {ids["ok"], ids["pc"], ids["diesel17"]}, {k for k, v in ids.items() if v in presi}
+
+
+# ------------------------------------------------------------------ punto 2: province del sito sempre nel giro
+
+def test_province_zona_sempre_con_quelle_del_sito():
+    from dealfinder.pipeline import collect as C
+    from dealfinder.web.sito_regole import PROVINCE_100KM
+    pv = C.province_zona("MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA")      # lista di Render senza Novara e Piacenza
+    assert set(PROVINCE_100KM) <= set(pv) and pv[:12] == "MI,MB,BG,BS,CO,CR,LC,LO,MN,PV,SO,VA".split(",")
+    assert "MN" in pv and "SO" in pv                                  # le extra già presenti restano
+    assert len(pv) == len(set(pv))
+    vecchio = os.environ.get("ZC_PROVINCE_SITO")
+    try:
+        os.environ["ZC_PROVINCE_SITO"] = "0"
+        assert C.province_zona("MI,MB") == ["MI", "MB"]
+    finally:
+        if vecchio is None:
+            os.environ.pop("ZC_PROVINCE_SITO", None)
+        else:
+            os.environ["ZC_PROVINCE_SITO"] = vecchio
+
+
+def test_sparite_autoscout_sulle_province_del_sito():
+    """lavori_zona del giro della zona: il controllo delle AutoScout24 sparite include sempre Novara e Piacenza."""
+    import contextlib
+    from dealfinder import db as D
+    from dealfinder.pipeline import benzina_mi, collect as C, verify as V
+    visto = {}
+
+    @contextlib.contextmanager
+    def finta():
+        yield object()
+
+    def scomparsi(c, fonte, **k):
+        visto["zona"] = k.get("zona")
+        return Counter()
+    prima = (D.connect, D.log_job, V.scomparsi_con_prova, list(benzina_mi.PROVINCE_100))
+    try:
+        D.connect, D.log_job = finta, (lambda c, n: (lambda ok, st: None))
+        V.scomparsi_con_prova = scomparsi
+        benzina_mi.PROVINCE_100[:] = ["MI", "MB", "VA"]
+        C.lavori_zona({"letti_autoscout": 5000})
+        assert {"NO", "PC", "MI", "BS"} <= set(visto["zona"])
+        visto.clear()
+        C.lavori_zona({"letti_autoscout": 5000}, nome="torino_cron")      # Torino: le sue province, come prima
+        assert visto["zona"] == ["MI", "MB", "VA"]
+    finally:
+        D.connect, D.log_job, V.scomparsi_con_prova = prima[:3]
+        benzina_mi.PROVINCE_100[:] = prima[3]
