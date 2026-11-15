@@ -199,14 +199,15 @@ WHERE t.status = 'attivo' AND upper(t.province) = ANY(%(prov)s)
   AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND (NOT %(salta_valutate)s OR NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
-                                             AND vp.computed_at > c.ultimo))
+                                             AND vp.computed_at > c.ultimo
+                                             AND NOT coalesce((vp.dati->>'giudice_mancante') = 'true', false)))
 LIMIT %(lettura_max)s"""
 
 # 15/11 (punto 6): finestra dei cambi di prezzo. Era fissa (BENZ_CAMBI_ORE, 8 ore) ma il cron dura 9-10 ore: i ribassi
 # trovati tra un giro e l'altro oltre le 8 ore (la rilettura notturna di Subito del sito, le riletture complete) non
 # arrivavano mai alla scelta, se il tempo reale non li aveva già valutati. Ora la finestra copre almeno dall'inizio
-# del giro precedente (+1 ora), al massimo CAMBI_ORE_MAX ore; i cambi già valutati DOPO l'ultimo cambio di prezzo non
-# prendono posto (niente rivalutazioni ripetute con la finestra più lunga). SCELTA_CAMBI_ADATTIVA=0 = come prima.
+# del giro precedente (+1 ora), al massimo CAMBI_ORE_MAX ore; i cambi già valutati DOPO l'ultimo cambio di prezzo (non
+# "in attesa" del giudice) non prendono posto (niente rivalutazioni ripetute con la finestra più lunga). SCELTA_CAMBI_ADATTIVA=0 = come prima.
 CAMBI_ORE_MAX = 48
 
 

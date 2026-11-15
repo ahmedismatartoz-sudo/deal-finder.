@@ -389,13 +389,19 @@ def test_cambi_gia_valutati_dopo_il_cambio_non_prendono_posto_su_postgres_vero()
           "impronta_regole, computed_at) VALUES (%s, 'v', 'non_conveniente', 0, '{}', '{}', 'x', now() - make_interval(hours => %s))")
     c.execute(vp, (a, 2))
     c.execute(vp, (b, 30))
+    d = c.execute(ins, ("d", "ud")).fetchone()["id"]          # valutata dopo, ma in attesa del giudice: entra
+    c.execute("INSERT INTO price_events (listing_id, event, price_eur, at) VALUES (%s, 'prezzo', 4000, "
+              "now() - interval '10 hours')", (d,))
+    c.execute("INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, "
+              "impronta_regole, computed_at) VALUES (%s, 'v', 'dati_insufficienti', 0, '{}', "
+              "'{\"giudice_mancante\": true}', 'x', now() - interval '1 hour')", (d,))
     par = {"ore": 11, "prov": ["MI"], "pmax": 70000, "kmmax": 150000, "tutti_carb": True, "km_obblig": True,
            "lettura_max": 100, "salta_valutate": True}
-    assert [r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()] == [b]
+    assert sorted(r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()) == sorted([b, d])
     par["ore"] = 8                                             # finestra fissa di prima: il ribasso di 10 ore fa è perso
     assert c.execute(SC.CAMBI_SQL, par).fetchall() == []
     par.update(ore=11, salta_valutate=False)
-    assert {r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()} == {a, b}
+    assert {r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()} == {a, b, d}
 
 
 # ------------------------------------------------------------------ commercianti esclusi ovunque (revisione 15/11)
