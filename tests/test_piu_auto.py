@@ -712,3 +712,157 @@ def test_sconto_alto_fermo_con_jev_va_in_testa_alla_coda():
     assert p["sa_min"] == 4000 and p["sa_pulita"] == 0.30
     assert "%(sa_min)s" in CA.CAND_SQL and "%(sa_pulita)s" in CA.CAND_SQL_RIPIEGO and p["sa_supercar"] == 70000
     assert "risposta->>'truffa'" not in CA.CAND_SQL and "COALESCE(d.truffa, 0)" in CA.CAND_SQL   # colonna REAL
+
+
+# ------------------------------------------------------------------ 15/11 giudice A1/A6: coda di Claude
+_OK_CTRL = {"guasto": 0, "prezzo_rata": 0, "km_credibili": 1, "danni_foto": .05, "foto_internet": .05,
+            "targa_visibile": .5, "dati_coerenti": 1, "truffa": 0.1, "auto_vera": 0.9, "stato": 2,
+            "decisione": "tratta", "confidenza": .6, "note": ""}
+
+
+def _risposte_salvate(conn):
+    import json
+    return [json.loads(p[11]) for q, p in conn.scritte if q.startswith("INSERT INTO decisione_ai")]
+
+
+def test_decisione_senza_foto_viste_non_si_riusa_e_si_riprova():
+    from datetime import datetime, timedelta, timezone
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    CA._SALTATE.clear()
+    a = {"id": 1, "title": "Panda", "description": "ok", "price_eur": 5000, "foto": ["https://x/1.jpg"], "n_foto": 8,
+         "confronti": []}
+    imp = CA.impronta(a, a["foto"])
+    ieri = datetime.now(timezone.utc) - timedelta(days=1)
+    base = {"id": 1, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+            "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": imp, "d_at": ieri}
+    assert CA.senza_foto_da_rifare(dict(base, d_senza_foto=True, d_tentativi_foto=1))
+    assert not CA.senza_foto_da_rifare(dict(base, d_senza_foto=True, d_tentativi_foto=3))    # 3 tentativi: vale
+    assert not CA.senza_foto_da_rifare(dict(base, d_senza_foto=False))
+    assert CA.classe(dict(base, d_senza_foto=True, d_tentativi_foto=1)) == 2                  # non definitiva
+    assert CA.classe(dict(base, d_senza_foto=True, d_tentativi_foto=3)) == 3
+    chiamate = []
+
+    def chiama(testo, foto):
+        chiamate.append(len(foto))
+        return dict(_OK_CTRL), 800, 80, "claude-haiku-5-5"
+    for tent, attesa_chiamata in ((1, True), (2, True), (3, False)):
+        chiamate.clear()
+        CA._FALLITE.clear()
+        conn = ConnFinta([dict(base, d_senza_foto=True, d_tentativi_foto=tent)], [dict(a)])
+        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0"):        # foto non mandate (come un download fallito)
+            res = CA.giro(conn, chiama=chiama)
+        if attesa_chiamata:
+            assert chiamate == [0] and not res.get("riusate") and res["fatte"] == 1 and res["senza_foto_viste"] == 1
+            r = _risposte_salvate(conn)[0]
+            assert r["_foto"] == 0 and r["_tentativi_foto"] == tent + 1
+        else:
+            assert chiamate == [] and res["riusate"] == 1                                    # dopo 3: come oggi
+    # auto senza foto (n_foto = 0): nessun contatore, la decisione resta definitiva come oggi
+    assert CA.tentativi_foto(dict(a, n_foto=0), None, {"_foto": 0}) is None
+    assert CA.tentativi_foto(a, None, {"_foto": 2}) is None                                    # foto viste
+    assert CA.tentativi_foto(a, None, {"_foto": 0}) == 1                                       # primo salvataggio
+    assert CA.tentativi_foto(a, dict(base, d_senza_foto=True, d_tentativi_foto=2), {"_foto": 0}) == 3
+    # la coda: colonna e condizione (6 ore, al massimo 3 tentativi) in entrambe le query
+    for sql in (CA.CAND_SQL, CA.CAND_SQL_RIPIEGO):
+        assert "AS d_senza_foto" in sql and "AS d_tentativi_foto" in sql
+        assert "interval '6 hours'" in sql and "_tentativi_foto', '')::int, 1) < 3" in sql
+        assert "FROM listing_photos p WHERE p.listing_id = l.id" in sql
+
+
+def test_decisione_scaduta_non_si_riusa_e_va_coi_rinnovi():
+    from datetime import datetime, timedelta, timezone
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    CA._SALTATE.clear()
+    ora = datetime.now(timezone.utc)
+    vecchia, fresca = ora - timedelta(days=CA.valida_giorni() + 1), ora - timedelta(days=2)
+    assert CA.scaduta(vecchia) and not CA.scaduta(fresca) and not CA.scaduta(None)
+    assert CA.scaduta(vecchia.replace(tzinfo=None)) and CA.scaduta(vecchia.isoformat())
+    assert CA.riusabile(5000, "i", 5200, "i", fresca) and not CA.riusabile(5000, "i", 5200, "i", vecchia)
+    assert CA.riusabile(5000, "i", 5200, "i")                             # data sconosciuta: come prima
+    r = {"d_prezzo": 5000, "price_eur": 5200, "d_fonte": "claude", "d_at": vecchia}
+    assert CA.classe(r) == 3 and CA.classe(dict(r, d_at=fresca)) == 1    # scaduta = rinnovo anche col prezzo cambiato
+    assert CA.classe(dict(r, d_fonte="jev")) == 1                         # Jev: come prima
+    a = {"id": 1, "title": "Panda", "description": "ok", "price_eur": 5200, "foto": [], "confronti": []}
+    cand = [{"id": 1, "price_eur": 5200, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+             "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": CA.impronta(a, []), "d_at": vecchia}]
+    chiamate = []
+
+    def chiama(testo, foto):
+        chiamate.append(1)
+        return dict(_OK_CTRL), 800, 80, "claude-haiku-5-5"
+    conn = ConnFinta(cand, [dict(a)])
+    with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0"):
+        res = CA.giro(conn, chiama=chiama)
+    assert not res.get("riusate") and chiamate == [1] and res["fatte"] == 1
+    assert any(q.startswith("INSERT INTO ai_usage") and p[0] == CA.TASK_RINNOVO for q, p in conn.scritte)
+    # quota dei rinnovi finita: la scaduta aspetta (niente riuso gratis di una decisione scaduta)
+    chiamate.clear()
+
+    class ConnRinnoviFiniti(ConnFinta):
+        def execute(self, sql, params=None):
+            if "FROM ai_usage" in " ".join(sql.split()):
+                return _Ris([{"task": CA.TASK_RINNOVO, "model": "claude-haiku-5-5", "n": 1, "i": 4 * 10**8, "o": 0}])
+            return super().execute(sql, params)
+    conn = ConnRinnoviFiniti(cand, [dict(a)])
+    ore = CA.ore_roma
+    CA.ore_roma = lambda: 23.0                            # budget dosato = budget intero: conta solo la quota rinnovi
+    try:
+        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0", CONTROLLO_BUDGET_USD="1000"):
+            res = CA.giro(conn, chiama=chiama)            # 400 $ di rinnovi su 1.000: quota (30%) finita
+    finally:
+        CA.ore_roma = ore
+    assert "saltato" not in res and chiamate == [] and not res.get("riusate")
+
+
+def test_pg_coda_senza_foto_e_scadute():
+    """Postgres vero: CAND_SQL con decisioni senza foto viste (6 ore, 3 tentativi) e decisioni con foto."""
+    import json
+    import sys as _s
+    _s.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import pg_vero
+    c = pg_vero.nuovo_db("piu_auto_coda_foto")
+    if c is None:
+        return
+    pg_vero.psql(c.d, c.db, """
+        CREATE TABLE listings (id BIGINT PRIMARY KEY, status TEXT, price_eur INT, telefono_ok BOOLEAN, seller_type TEXT,
+          fuel TEXT, stage TEXT, stage_reason TEXT, province TEXT, year INT, mileage_km INT, damage_declared BOOLEAN);
+        CREATE TABLE top_auto (listing_id BIGINT);
+        CREATE TABLE listing_photos (listing_id BIGINT, source_url TEXT, position INT);
+        CREATE TABLE valutazioni_policy (listing_id BIGINT, categoria TEXT, margine INT, riassunto JSONB, dati JSONB,
+          computed_at TIMESTAMPTZ DEFAULT now());
+        CREATE TABLE decisione_ai (listing_id BIGINT PRIMARY KEY, prezzo INT, risposta JSONB, fonte TEXT, impronta TEXT,
+          truffa REAL, computed_at TIMESTAMPTZ);""")
+    nul = {"type": "noul", "noul": None}
+    vista = {"type": "noul", "noul": .05}
+    casi = {   # id: (foto nell'annuncio, risposta, ore fa)
+        1: (True, {"guasto": vista, "danni_foto": nul, "foto_internet": nul}, 7),                 # vecchia, senza foto
+        2: (True, {"guasto": vista, "danni_foto": nul, "foto_internet": nul}, 2),                 # meno di 6 ore
+        3: (True, {"guasto": vista, "danni_foto": nul, "foto_internet": nul, "_foto": 0, "_tentativi_foto": 3}, 7),
+        4: (True, {"guasto": vista, "danni_foto": vista, "foto_internet": vista, "_foto": 2}, 7),  # foto viste
+        5: (False, {"guasto": vista, "danni_foto": nul, "foto_internet": nul}, 7),                # auto senza foto
+        6: (True, {"guasto": vista, "danni_foto": nul, "foto_internet": nul, "_foto": 0, "_tentativi_foto": 2}, 7),
+        7: (True, {"guasto": vista, "danni_foto": nul, "foto_internet": nul, "_foto": 2}, 7),     # foto viste, null
+    }
+    for i, (foto, risp, ore) in casi.items():
+        pg_vero.psql(c.d, c.db, f"""
+            INSERT INTO listings VALUES ({i}, 'attivo', 5000, true, 'privato', 'benzina', 'approfondito', 'opportunita',
+                                         'MI', 2018, 80000, false);
+            INSERT INTO top_auto VALUES ({i});
+            INSERT INTO valutazioni_policy (listing_id, categoria, margine, riassunto, dati)
+              VALUES ({i}, 'opportunita', 3000, '{{"M": 8000}}', '{{"soglia": 1500}}');
+            INSERT INTO decisione_ai VALUES ({i}, 5000, '{json.dumps(risp)}', 'claude', 'imp', 0.1,
+                                             now() - interval '{ore} hours');""")
+        if foto:
+            pg_vero.psql(c.d, c.db, f"INSERT INTO listing_photos VALUES ({i}, 'https://x/{i}.jpg', 0)")
+    par = dict(CA.parametri_diesel(), quota=0.7, validi=CA.valida_giorni())
+    righe = {r["id"]: r for r in c.execute(CA.CAND_SQL, par).fetchall()}
+    assert set(righe) == {1, 6}, sorted(righe)
+    assert righe[1]["d_senza_foto"] is True and righe[1]["d_tentativi_foto"] == 1 and CA.classe(righe[1]) == 2
+    assert righe[6]["d_tentativi_foto"] == 2 and CA.senza_foto_da_rifare(righe[6])
+    # scaduta: torna in coda (e conta come rinnovo)
+    pg_vero.psql(c.d, c.db, f"UPDATE decisione_ai SET computed_at = now() - interval '{CA.valida_giorni() + 1} days' "
+                            "WHERE listing_id = 4")
+    righe = {r["id"]: r for r in c.execute(CA.CAND_SQL, par).fetchall()}
+    assert set(righe) == {1, 4, 6} and righe[4]["d_senza_foto"] is False and CA.classe(righe[4]) == 3

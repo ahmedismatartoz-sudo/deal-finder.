@@ -240,12 +240,39 @@ def impronta(r: dict, foto_src: list[str]) -> str:
     return hashlib.sha1("\x1f".join(parti).encode("utf-8", "ignore")).hexdigest()[:20]
 
 
-def riusabile(d_prezzo, d_impronta, prezzo, imp: str) -> bool:
+def scaduta(d_at, giorni: int | None = None) -> bool:
+    """15/11 (giudice A6): decisione più vecchia di CONTROLLO_VALIDA_GIORNI giorni (None = data sconosciuta: no)."""
+    if d_at is None:
+        return False
+    from datetime import datetime, timedelta, timezone
+    if isinstance(d_at, str):
+        try:
+            d_at = datetime.fromisoformat(d_at.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+    if d_at.tzinfo is None:
+        d_at = d_at.replace(tzinfo=timezone.utc)
+    return d_at <= datetime.now(timezone.utc) - timedelta(days=valida_giorni() if giorni is None else giorni)
+
+
+def riusabile(d_prezzo, d_impronta, prezzo, imp: str, d_at=None) -> bool:
     """Decisione Claude già fatta sullo stesso contenuto: si riusa se il prezzo è salito o sceso al massimo del 10%
-    (un calo forte si ricontrolla: può essere un prezzo esca)."""
-    if not d_impronta or d_impronta != imp or not d_prezzo or not prezzo:
+    (un calo forte si ricontrolla: può essere un prezzo esca). 15/11 (giudice A6): mai una decisione scaduta
+    (d_at più vecchia di valida_giorni()): quella si rinnova (classe 3, quota dei rinnovi)."""
+    if not d_impronta or d_impronta != imp or not d_prezzo or not prezzo or scaduta(d_at):
         return False
     return float(prezzo) >= 0.9 * float(d_prezzo)
+
+
+MAX_TENTATIVI_FOTO = 3        # decisioni salvate senza foto viste (auto CON foto): al massimo 3, poi vale com'è
+ORE_RIPROVA_FOTO = 6
+
+
+def senza_foto_da_rifare(r: dict) -> bool:
+    """15/11 (giudice A1): decisione Claude salvata SENZA foto viste (download fallito o modo "0") per un'auto che ha
+    foto: non si riusa e non è definitiva finché non si arriva a MAX_TENTATIVI_FOTO tentativi (d_senza_foto e
+    d_tentativi_foto da CAND_SQL). Le auto senza foto (n_foto = 0) restano come prima."""
+    return bool(r.get("d_senza_foto")) and int(r.get("d_tentativi_foto") or 1) < MAX_TENTATIVI_FOTO
 
 
 # ------------------------------------------------------------------ foto
@@ -365,6 +392,12 @@ _CAND_RIPIEGO = """
 # delle province entro 100 km, dal 2015, ≤ 150.000 km, margine ≥ soglia) senza decisione Claude entrano nella coda
 # (anche con una decisione Jev valida: il sito per loro vuole quella di Claude), con la priorità delle auto nuove.
 # Stesso tetto giornaliero, budget e dosaggio del giro: cambia solo chi è in coda.
+# 15/11 (giudice A1): decisione Claude salvata senza foto viste per un'auto che ha foto. "_foto" (foto mandate) si salva
+# nella risposta dal 15/11; per le decisioni di prima: danni_foto e foto_internet entrambi null
+_SENZA_FOTO = """(d.fonte = 'claude' AND EXISTS (SELECT 1 FROM listing_photos p WHERE p.listing_id = l.id)
+        AND CASE WHEN d.risposta->>'_foto' IS NOT NULL THEN (d.risposta->>'_foto')::int = 0
+                 ELSE d.risposta->'danni_foto'->>'noul' IS NULL AND d.risposta->'foto_internet'->>'noul' IS NULL END)"""
+_TENTATIVI_FOTO = "COALESCE(NULLIF(d.risposta->>'_tentativi_foto', '')::int, 1)"
 _CAND_FINE = """
 ), dz AS (
   SELECT l.id FROM listings l
@@ -382,7 +415,8 @@ SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
        (c.id IN (SELECT id FROM dz)) AS dz,
        d.truffa AS d_truffa, l.stage_reason AS stage_reason,
        (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur AND d.risposta->'guasto' IS NOT NULL
-        AND d.computed_at >= now() - interval '7 days' AND c.id NOT IN (SELECT id FROM dz)) AS solo_sconto
+        AND d.computed_at >= now() - interval '7 days' AND c.id NOT IN (SELECT id FROM dz)) AS solo_sconto,
+       """ + _SENZA_FOTO + """ AS d_senza_foto, """ + _TENTATIVI_FOTO + """ AS d_tentativi_foto
 FROM (SELECT id FROM cand UNION SELECT id FROM dz) c
 JOIN listings l ON l.id = c.id AND l.status = 'attivo' AND l.price_eur IS NOT NULL
 JOIN LATERAL (SELECT categoria, margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
@@ -391,6 +425,8 @@ LEFT JOIN decisione_ai d ON d.listing_id = l.id
 WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS NULL
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.computed_at < now() - interval '7 days')
    OR (d.fonte = 'claude' AND d.computed_at < now() - make_interval(days => %(validi)s))
+   OR (""" + _SENZA_FOTO + """ AND d.computed_at < now() - interval '""" + str(ORE_RIPROVA_FOTO) + """ hours'
+       AND """ + _TENTATIVI_FOTO + """ < """ + str(MAX_TENTATIVI_FOTO) + """)
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz))
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur AND l.price_eur < %(sa_supercar)s
        AND l.stage_reason IS DISTINCT FROM 'incidentata'
@@ -450,10 +486,12 @@ def classe(r: dict) -> int:
         return 0                                  # 14/11 sera: sconto alto fermo fuori dal sito con la sola decisione Jev
     if r.get("dz") and r.get("d_fonte") != "claude":
         return 0                                  # diesel in più senza decisione Claude: come un'auto nuova
+    if r.get("d_fonte") == "claude" and scaduta(r.get("d_at")):
+        return 3                                  # 15/11 (giudice A6): scaduta = rinnovo, anche col prezzo cambiato
     if r.get("price_eur") is not None and int(r["d_prezzo"]) != int(r["price_eur"]):
         return 1
-    if r.get("d_incompleta"):
-        return 2
+    if r.get("d_incompleta") or senza_foto_da_rifare(r):
+        return 2                                  # 15/11 (giudice A1): senza foto viste = non definitiva
     return 3
 
 
@@ -531,8 +569,20 @@ def _perizie(conn, ids: list[int]) -> dict:
         return {}
 
 
-def salva(conn, r: dict, x: dict, imp: str, token: int) -> None:
+def tentativi_foto(a: dict, cand: dict | None, x: dict) -> int | None:
+    """Contatore delle decisioni salvate senza foto viste per un'auto che ha foto (None: foto viste o auto senza foto)."""
+    if (x.get("_foto") or 0) > 0 or int(a.get("n_foto") or 0) <= 0:
+        return None
+    c = cand or {}
+    prima = int(c.get("d_tentativi_foto") or 1) if c.get("d_fonte") == "claude" and c.get("d_senza_foto") else 0
+    return prima + 1
+
+
+def salva(conn, r: dict, x: dict, imp: str, token: int, tentativi: int | None = None) -> None:
     risp = in_risposta(x, x.get("_modello") or AI.MODEL_FAST)
+    risp["_foto"] = int(x.get("_foto") or 0)          # 15/11 (giudice A1): foto davvero mandate all'AI
+    if tentativi:
+        risp["_tentativi_foto"] = int(tentativi)
     conn.execute(
         """INSERT INTO decisione_ai (listing_id, prezzo, decisione, confidenza, p_compra, truffa, versione_ok,
              dati_coerenti, stato, correzione_pct, categoria_calcoli, margine_calcoli, risposta, token, fonte, impronta,
@@ -642,7 +692,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         if not a:
             continue
         a["_imp"] = impronta(a, list(a.get("foto") or []))
-        if r.get("d_fonte") == "claude" and riusabile(r.get("d_prezzo"), r.get("d_impronta"), a["price_eur"], a["_imp"]):
+        if r.get("d_fonte") == "claude" and not senza_foto_da_rifare(r) \
+                and riusabile(r.get("d_prezzo"), r.get("d_impronta"), a["price_eur"], a["_imp"], r.get("d_at")):
             # stesso contenuto, solo il prezzo cambiato di poco: la decisione vale anche al prezzo nuovo
             conn.execute("UPDATE decisione_ai SET prezzo=%s WHERE listing_id=%s AND fonte='claude'", (a["price_eur"], a["id"]))
             st["riusate"] += 1
@@ -718,7 +769,10 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
                 log.warning("CONTROLLO_AI %s non riuscito: %s", a["id"], str(e)[:200])
             return st["errore"] >= 5 and not st["fatte"]
         x = res["x"]
-        salva(conn, a, x, a["_imp"], sum(t[0] for t in res["token"]))
+        tent = tentativi_foto(a, leggere.get(a["id"]), x)
+        salva(conn, a, x, a["_imp"], sum(t[0] for t in res["token"]), tent)
+        if tent:
+            st["senza_foto_viste"] += 1
         _FALLITE.pop(a["id"], None)
         st["fatte"] += 1
         st[f"decisione:{x['decisione']}"] += 1
