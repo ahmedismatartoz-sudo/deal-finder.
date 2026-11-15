@@ -3503,12 +3503,20 @@ def _tempo_reale():
         # 15/11 (giudice A2): in _visti solo le auto davvero riscritte e uscite dall'attesa (valutazione.esce_dall_attesa)
         # oppure dopo RIPROVA_GIUDICE_TENTATIVI tentativi: le altre (giudice ancora fermo, riga rifiutata, errore) si
         # riprovano al giro dopo, invece di restare "in attesa" fino al riavvio
+        # Un tentativo conta solo se il giudice non era bloccato (budget finito, illeggibile in attesa, AI spenta:
+        # giudice.BLOCCATO); _visti si azzera ogni RIPROVA_GIUDICE_AZZERA_ORE (12) ore
+        from ..ai import giudice as _GI
         _visti: set = set()
         _tentativi: dict = {}
         _max_tent = int(os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3"))
+        _azzera = {"t": time.time()}
         time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "420")))
         while True:
             attesa = float(os.environ.get("RIPROVA_GIUDICE_MIN", "15")) * 60
+            if time.time() - _azzera["t"] >= float(os.environ.get("RIPROVA_GIUDICE_AZZERA_ORE", "12")) * 3600:
+                _visti.clear()
+                _tentativi.clear()
+                _azzera["t"] = time.time()
             try:
                 if os.environ.get("RIPROVA_GIUDICE", "1") == "1" and _AI.available() and not _calcolo["in_corso"]:
                     with connect() as conn:
@@ -3549,11 +3557,15 @@ def _tempo_reale():
                                  int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
                             st = _Cr()
                             for k in range(0, len(ids), 20):
+                                _t0 = time.time()
                                 es = _ves(conn, ids[k:k + 20], "riprova-giudice")
                                 conn.commit()
                                 for chiave, n in es.stats.items():
                                     st[chiave] += n
                                 for lid in ids[k:k + 20]:
+                                    if not _esce(es, lid) and _GI.esito(lid, _t0) in _GI.BLOCCATO:
+                                        st["tentativo_non_contato"] += 1     # giudice bloccato: si riprova
+                                        continue
                                     _tentativi[lid] = _tentativi.get(lid, 0) + 1
                                     if _esce(es, lid) or _tentativi[lid] >= _max_tent:
                                         _visti.add(lid)

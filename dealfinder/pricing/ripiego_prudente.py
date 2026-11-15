@@ -14,7 +14,7 @@ prende la più bassa:
     G  le poche auto uguali trovate (1 sola, NON quando i prezzi erano troppo dispersi): prezzo corretto × fattore.
 15/11 (giudice C3): i fattori sono quelli della calibrazione (regole.fattore_per, gli stessi del calcolo e del sito):
 V × fattore misurato sul valore reale (voci "vr:", come il "combinato" e il sito per valore_reale_modello), annunci ×
-fattore della loro fascia; 0,92 fisso solo se non ci sono fattori. Così tutte le strade partono dalla stessa base.
+fattore della loro fascia ma mai sopra 0,92 (prezzi da rivenditore: niente stime gonfiate); 0,92 senza fattori.
 
 Regole (tutte devono valere, altrimenti l'auto resta fuori come oggi):
   - la valutazione è "dati_insufficienti" SOLO per pochi confronti o confronti dispersi (mai per danni, dati mancanti,
@@ -63,9 +63,11 @@ def ammessa(auto: dict, dati: dict) -> str | None:
 
 
 def _fattore_annunci(prezzo: float, fattori: list | None) -> float:
-    """Prezzo chiesto → venduto: fattore della calibrazione per questo prezzo; 0,92 solo senza fattori."""
+    """Prezzo chiesto → venduto: il fattore della calibrazione per questo prezzo, MAI sopra 0,92. 15/11 (giudice,
+    ricontrollo C3): nel giro i fattori ci sono sempre (almeno le riserve: 0,97 tra 10 e 20k, 1,0 sopra i 20k, misurati
+    sui privati) e Autohero è un prezzo da rivenditore: senza il tetto la stima saliva del 5-9% rispetto a × 0,92."""
     from .. import regole as RG
-    return RG.fattore_per(prezzo, fattori) if fattori else FATTORE_VENDITA
+    return min(FATTORE_VENDITA, RG.fattore_per(prezzo, fattori)) if fattori else FATTORE_VENDITA
 
 
 def fonti(dati: dict, vr: dict | None, autohero: list[int] | None, fattori: list | None = None) -> dict:

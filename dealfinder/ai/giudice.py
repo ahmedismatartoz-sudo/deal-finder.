@@ -53,6 +53,30 @@ def _tabella(conn):
         PRIMARY KEY (listing_id, chiave))""")
 
 
+# 15/11 (giudice, ricontrollo A2+A7): ultimo esito del giudice per auto, (tempo, esito). Esiti: "chiamata" (pagata,
+# anche se illeggibile o troncata e archiviata), "archivio" (giudizio già dato), "budget" (budget AI finito),
+# "attesa_illeggibile" (illeggibile da meno di 6 ore), "non_disponibile" (AI spenta), "errore". riprova_giudice conta
+# un tentativo solo se il giudice non era bloccato (BLOCCATO).
+_ESITI: dict = {}
+BLOCCATO = ("budget", "attesa_illeggibile", "non_disponibile")
+
+
+def _esito(lid, e: str) -> None:
+    import time
+    if lid is None:
+        return
+    _ESITI[lid] = (time.time(), e)
+    if len(_ESITI) > 20000:
+        for k, _v in sorted(_ESITI.items(), key=lambda kv: kv[1][0])[:5000]:
+            _ESITI.pop(k, None)
+
+
+def esito(lid, dopo: float = 0.0) -> str | None:
+    """Ultimo esito del giudice per l'auto lid, se successivo al tempo `dopo` (None: il giudice non è stato chiamato)."""
+    x = _ESITI.get(lid)
+    return x[1] if x and x[0] >= dopo else None
+
+
 ORE_ILLEGGIBILE = 6          # 15/11 (giudice A7): una risposta illeggibile o troncata non si ripaga prima di 6 ore
 
 
@@ -111,7 +135,10 @@ def _archivia_illeggibile(conn, t: dict, chiave: str, motivo: str) -> None:
 def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -> dict | None:
     """Restituisce {"via": {id: motivo}, "nota": str} oppure None (AI non disponibile / budget finito / errore).
     solo_archivio: solo un giudizio già in tabella (misure e prove: nessuna chiamata nuova)."""
-    if not confronti or (not solo_archivio and not AI.available()):
+    if not confronti:
+        return None
+    if not solo_archivio and not AI.available():
+        _esito(t.get("id"), "non_disponibile")
         return None
     ids = sorted(int(c["id"]) for c in confronti if c.get("id") is not None)
     chiave = hashlib.sha1(json.dumps([t.get("price_eur"), ids]).encode()).hexdigest()[:16]
@@ -130,6 +157,8 @@ def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -
                 illeggibile_recente |= _recente(r.get("at")) and v.get("_prezzo") == t.get("price_eur")
                 continue
             if r["chiave"] == chiave:
+                if not solo_archivio:
+                    _esito(t.get("id"), "archivio")
                 return {"via": {int(k): m for k, m in v.items() if not k.startswith("_")}, "nota": r["nota"],
                         "da_archivio": True}
             if v.get("_prezzo") != t.get("price_eur") or not isinstance(v.get("_giudicati"), list):
@@ -139,11 +168,21 @@ def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -
             nota_arch = r["nota"] or nota_arch
         nuovi = [c for c in confronti if c.get("id") is not None and int(c["id"]) not in giudicati]
         if not nuovi and giudicati:
+            if not solo_archivio:
+                _esito(t.get("id"), "archivio")
             return {"via": {i: m for i, m in via_arch.items() if i in set(ids)}, "nota": nota_arch,
                     "da_archivio": True}
-        if solo_archivio or illeggibile_recente or AI.budget_finito(conn):
+        if solo_archivio:
             return None
+        if illeggibile_recente:
+            _esito(t.get("id"), "attesa_illeggibile")
+            return None
+        if AI.budget_finito(conn):
+            _esito(t.get("id"), "budget")
+            return None
+        _esito(t.get("id"), "errore")                 # diventa "chiamata" appena la chiamata risponde
         testo, stop = _chiedi(conn, t, nuovi)
+        _esito(t.get("id"), "chiamata")
         if stop == "max_tokens":
             # 15/11 (giudice A7c): risposta troncata. I confronti dopo il taglio non sono stati letti: niente "validi"
             log.warning("GIUDICE_AI %s risposta troncata (max_tokens): %s", t.get("id"), testo[-200:].replace("\n", " | "))

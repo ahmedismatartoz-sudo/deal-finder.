@@ -271,8 +271,21 @@ ORE_RIPROVA_FOTO = 6
 def senza_foto_da_rifare(r: dict) -> bool:
     """15/11 (giudice A1): decisione Claude salvata SENZA foto viste (download fallito o modo "0") per un'auto che ha
     foto: non si riusa e non è definitiva finché non si arriva a MAX_TENTATIVI_FOTO tentativi (d_senza_foto e
-    d_tentativi_foto da CAND_SQL). Le auto senza foto (n_foto = 0) restano come prima."""
+    d_tentativi_foto da CAND_SQL). Le auto senza foto (n_foto = 0) restano come prima. Con le foto spente
+    (CONTROLLO_FOTO=0 o CONTROLLO_FOTO_MODO=0) riprovare non serve: False."""
+    if foto_spente():
+        return False
     return bool(r.get("d_senza_foto")) and int(r.get("d_tentativi_foto") or 1) < MAX_TENTATIVI_FOTO
+
+
+def foto_spente() -> bool:
+    return n_foto() == 0 or modo_foto() == "0"
+
+
+def senza_foto_per_giro() -> int:
+    """15/11 (giudice, ricontrollo A1): al massimo tante decisioni "senza foto" da rifare per giro (l'arretrato delle
+    decisioni di prima senza _foto non deve prendersi il giro): il resto aspetta il giro dopo."""
+    return max(0, int(_env("CONTROLLO_SENZA_FOTO_PER_GIRO", "10")))
 
 
 # ------------------------------------------------------------------ foto
@@ -486,10 +499,11 @@ def classe(r: dict) -> int:
         return 0                                  # 14/11 sera: sconto alto fermo fuori dal sito con la sola decisione Jev
     if r.get("dz") and r.get("d_fonte") != "claude":
         return 0                                  # diesel in più senza decisione Claude: come un'auto nuova
-    if r.get("d_fonte") == "claude" and scaduta(r.get("d_at")):
-        return 3                                  # 15/11 (giudice A6): scaduta = rinnovo, anche col prezzo cambiato
-    if r.get("price_eur") is not None and int(r["d_prezzo"]) != int(r["price_eur"]):
-        return 1
+    stesso_prezzo = r.get("price_eur") is None or int(r["d_prezzo"]) == int(r["price_eur"])
+    if r.get("d_fonte") == "claude" and stesso_prezzo and scaduta(r.get("d_at")):
+        return 3                                  # 15/11 (giudice A6): scaduta allo stesso prezzo = rinnovo
+    if not stesso_prezzo:
+        return 1                                  # prezzo cambiato: classe 1 anche se scaduta (riuso già escluso)
     if r.get("d_incompleta") or senza_foto_da_rifare(r):
         return 2                                  # 15/11 (giudice A1): senza foto viste = non definitiva
     return 3
@@ -571,8 +585,8 @@ def _perizie(conn, ids: list[int]) -> dict:
 
 def tentativi_foto(a: dict, cand: dict | None, x: dict) -> int | None:
     """Contatore delle decisioni salvate senza foto viste per un'auto che ha foto (None: foto viste o auto senza foto)."""
-    if (x.get("_foto") or 0) > 0 or int(a.get("n_foto") or 0) <= 0:
-        return None
+    if (x.get("_foto") or 0) > 0 or int(a.get("n_foto") or 0) <= 0 or foto_spente():
+        return None                               # foto viste, auto senza foto o foto spente: nessun contatore
     c = cand or {}
     prima = int(c.get("d_tentativi_foto") or 1) if c.get("d_fonte") == "claude" and c.get("d_senza_foto") else 0
     return prima + 1
@@ -704,6 +718,12 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             st["senza_chiamata:" + motivo] += 1
             continue
         if len(da_fare) < quante:
+            if senza_foto_da_rifare(r) and not (r.get("price_eur") is not None
+                                                 and int(r["d_prezzo"]) != int(r["price_eur"])):
+                if st["senza_foto_in_giro"] >= senza_foto_per_giro():
+                    st["senza_foto_rimandate"] += 1      # quota del giro finita: resta in coda per il giro dopo
+                    continue
+                st["senza_foto_in_giro"] += 1
             a["_classe"] = classe(r)
             da_fare.append(a)
     if len(_SALTATE) > 5000:

@@ -377,13 +377,30 @@ def test_ripiego_con_i_fattori_della_calibrazione():
     # stessa base della strada valore_reale_modello sul sito
     pv = {"M": 9000, "R": 9000, "R_finale": 9000, "margine": 2500, "metodo": "valore_reale_modello", "M_fonte": "vendite"}
     assert abs(RGM.calibra_vendita(pv, fat)["R"] - f["valore_reale"]) <= 1
-    assert f["autohero"] == round(10600 * RGM.fattore_per(10600, fat))
+    assert f["autohero"] == round(10600 * min(RP.FATTORE_VENDITA, RGM.fattore_per(10600, fat)))     # mai sopra 0,92
     assert f["gemella"] == round(4200 * RGM.fattore_per(4200, fat)) and RGM.fattore_per(4200, fat) < RP.FATTORE_VENDITA
     # senza fattori: come prima (0,92 sui prezzi chiesti, V senza correzione)
     f0 = RP.fonti(dati, vr, [10500, 10700])
     assert f0 == {"valore_reale": 9000, "autohero": round(10600 * .92), "gemella": round(4200 * .92)}
     est, fonti, mot = RP.stima(5000, dict(dati, confronti=[]), vr, [9000, 9100], fat)
     assert mot == "" and est == round(min(fonti.values()) * RP.PRUDENZA)
+
+
+def test_ripiego_con_le_riserve_sopra_10k_mai_sopra_092():
+    """15/11 (ricontrollo C3): nel giro i fattori ci sono sempre (almeno le riserve: 0,97 tra 10 e 20k, 1,0 sopra i 20k,
+    misurati sui privati). Autohero e la gemella non devono mai superare il risultato con × 0,92."""
+    from dealfinder import regole as RGM
+    riserve = RGM.fattori_calibrazione({})
+    assert RGM.fattore_per(15000, riserve) > .92 and RGM.fattore_per(30000, riserve) == 1.0    # il caso del giudice
+    for p in range(10000, 60001, 2500):
+        dati = {"motivi": ["solo 1 confronti validi"], "n": 1, "confronti": [{"prezzo": p, "prezzo_corretto": p}]}
+        vr = {"v": p, "sigma": .10, "n": 400, "n_vendute": 60}
+        f, f0 = RP.fonti(dati, vr, [p, p], riserve), RP.fonti(dati, vr, [p, p])
+        assert f["autohero"] <= f0["autohero"] == round(p * .92) and f["gemella"] <= f0["gemella"] == round(p * .92)
+        assert f["valore_reale"] <= f0["valore_reale"]
+        e, _f, _m = RP.stima(int(p * .6), dati, vr, [p, p], riserve)
+        e0, _f0, _m0 = RP.stima(int(p * .6), dati, vr, [p, p])
+        assert e is not None and e <= e0, (p, e, e0)
 
 
 def test_ripiego_sul_sito_solo_con_controllo_ai():
@@ -746,12 +763,21 @@ def test_decisione_senza_foto_viste_non_si_riusa_e_si_riprova():
     def chiama(testo, foto):
         chiamate.append(len(foto))
         return dict(_OK_CTRL), 800, 80, "claude-haiku-5-5"
-    for tent, attesa_chiamata in ((1, True), (2, True), (3, False)):
-        chiamate.clear()
-        CA._FALLITE.clear()
-        conn = ConnFinta([dict(base, d_senza_foto=True, d_tentativi_foto=tent)], [dict(a)])
-        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0"):        # foto non mandate (come un download fallito)
-            res = CA.giro(conn, chiama=chiama)
+    blocco = CA.AI.image_block
+    CA.AI.image_block = lambda *a, **k: None                              # download delle foto fallito
+    try:
+        esiti = []
+        for tent in (1, 2, 3):
+            chiamate.clear()
+            CA._FALLITE.clear()
+            conn = ConnFinta([dict(base, d_senza_foto=True, d_tentativi_foto=tent)], [dict(a)])
+            with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="base64", CONTROLLO_FOTO="2"):
+                esiti.append((tent, conn, CA.giro(conn, chiama=chiama), list(chiamate)))
+    finally:
+        CA.AI.image_block = blocco
+    for tent, conn, res, ch in esiti:
+        attesa_chiamata = tent < 3
+        chiamate[:] = ch
         if attesa_chiamata:
             assert chiamate == [0] and not res.get("riusate") and res["fatte"] == 1 and res["senza_foto_viste"] == 1
             r = _risposte_salvate(conn)[0]
@@ -760,6 +786,12 @@ def test_decisione_senza_foto_viste_non_si_riusa_e_si_riprova():
             assert chiamate == [] and res["riusate"] == 1                                    # dopo 3: come oggi
     # auto senza foto (n_foto = 0): nessun contatore, la decisione resta definitiva come oggi
     assert CA.tentativi_foto(dict(a, n_foto=0), None, {"_foto": 0}) is None
+    # foto spente (CONTROLLO_FOTO=0 o CONTROLLO_FOTO_MODO=0): riprovare non serve
+    for spente in ({"CONTROLLO_FOTO": "0"}, {"CONTROLLO_FOTO_MODO": "0"}):
+        with env(**spente):
+            assert CA.foto_spente() and not CA.senza_foto_da_rifare(dict(base, d_senza_foto=True, d_tentativi_foto=1))
+            assert CA.tentativi_foto(a, dict(base, d_senza_foto=True, d_tentativi_foto=1), {"_foto": 0}) is None
+            assert CA.classe(dict(base, d_senza_foto=True, d_tentativi_foto=1)) == 3
     assert CA.tentativi_foto(a, None, {"_foto": 2}) is None                                    # foto viste
     assert CA.tentativi_foto(a, None, {"_foto": 0}) == 1                                       # primo salvataggio
     assert CA.tentativi_foto(a, dict(base, d_senza_foto=True, d_tentativi_foto=2), {"_foto": 0}) == 3
@@ -782,11 +814,13 @@ def test_decisione_scaduta_non_si_riusa_e_va_coi_rinnovi():
     assert CA.riusabile(5000, "i", 5200, "i", fresca) and not CA.riusabile(5000, "i", 5200, "i", vecchia)
     assert CA.riusabile(5000, "i", 5200, "i")                             # data sconosciuta: come prima
     r = {"d_prezzo": 5000, "price_eur": 5200, "d_fonte": "claude", "d_at": vecchia}
-    assert CA.classe(r) == 3 and CA.classe(dict(r, d_at=fresca)) == 1    # scaduta = rinnovo anche col prezzo cambiato
+    assert CA.classe(r) == 1 and CA.classe(dict(r, d_at=fresca)) == 1    # prezzo cambiato: classe 1 anche se scaduta
+    assert CA.classe(dict(r, d_prezzo=5200)) == 3                         # scaduta allo stesso prezzo = rinnovo
     assert CA.classe(dict(r, d_fonte="jev")) == 1                         # Jev: come prima
+    assert not CA.riusabile(5000, "i", 5200, "i", vecchia)                # riuso escluso comunque
     a = {"id": 1, "title": "Panda", "description": "ok", "price_eur": 5200, "foto": [], "confronti": []}
     cand = [{"id": 1, "price_eur": 5200, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
-             "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": CA.impronta(a, []), "d_at": vecchia}]
+             "d_prezzo": 5200, "d_fonte": "claude", "d_impronta": CA.impronta(a, []), "d_at": vecchia}]
     chiamate = []
 
     def chiama(testo, foto):
@@ -1016,3 +1050,87 @@ def test_riprova_giudice_segna_viste_solo_le_uscite_dall_attesa():
     assert "_visti.update(ids)" not in blocco and "esce_dall_attesa as _esce" in blocco
     assert "_esce(es, lid) or _tentativi[lid] >= _max_tent" in blocco
     assert 'os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3")' in blocco
+
+
+
+def test_senza_foto_al_massimo_una_quota_per_giro():
+    """15/11 (ricontrollo A1): l'arretrato delle decisioni senza foto non si prende il giro."""
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    CA._SALTATE.clear()
+    auto_, cand = [], []
+    for i in range(1, 16):
+        a = {"id": i, "title": "Panda", "description": "ok", "price_eur": 5000, "foto": ["https://x/%d.jpg" % i],
+             "n_foto": 8, "confronti": []}
+        auto_.append(a)
+        cand.append({"id": i, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+                     "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": CA.impronta(a, a["foto"]), "d_at": None,
+                     "d_senza_foto": True, "d_tentativi_foto": 1})
+    cand.append({"id": 99, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+                 "d_prezzo": None})
+    auto_.append({"id": 99, "title": "Golf", "description": "ok", "price_eur": 5000, "foto": [], "confronti": []})
+    chiamate = []
+
+    def chiama(testo, foto):
+        chiamate.append(1)
+        return dict(_OK_CTRL), 800, 80, "claude-haiku-5-5"
+    blocco = CA.AI.image_block
+    CA.AI.image_block = lambda *a, **k: None
+    try:
+        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="base64", CONTROLLO_SENZA_FOTO_PER_GIRO=None):
+            assert CA.senza_foto_per_giro() == 10
+            res = CA.giro(ConnFinta(cand, auto_), chiama=chiama)
+    finally:
+        CA.AI.image_block = blocco
+    assert res["senza_foto_in_giro"] == 10 and res["senza_foto_rimandate"] == 5 and len(chiamate) == 11   # + l'auto nuova
+    assert not res.get("riusate")                                          # le rimandate restano in coda, non riusate
+
+
+def test_giudice_registra_l_esito_e_riprova_non_conta_i_blocchi():
+    import inspect
+    from dealfinder.ai import giudice as GI
+    from dealfinder.web import app
+    prima = (AI.available, AI.budget_finito, AI.crea)
+    t = {"id": 7, "price_eur": 8000}
+    conf = [{"id": 1}, {"id": 2}]
+    try:
+        AI.available = lambda: True
+        AI.budget_finito = lambda c: True
+        t0 = time.time()
+        assert GI.giudica(_ConnGiudizi(), t, conf) is None and GI.esito(7, t0) == "budget"
+        AI.budget_finito = lambda c: False
+        AI.crea, _ch = _finto_ai([("bla", "end_turn")])
+        c = _ConnGiudizi()
+        assert GI.giudica(c, t, conf) is None and GI.esito(7) == "chiamata"            # pagata, archiviata illeggibile
+        assert GI.giudica(c, t, conf) is None and GI.esito(7) == "attesa_illeggibile"
+        AI.available = lambda: False
+        assert GI.giudica(c, t, conf) is None and GI.esito(7) == "non_disponibile"
+        assert GI.esito(7, time.time() + 10) is None                                    # esito vecchio: non vale
+        assert set(GI.BLOCCATO) == {"budget", "attesa_illeggibile", "non_disponibile"}
+    finally:
+        AI.available, AI.budget_finito, AI.crea = prima
+    src = inspect.getsource(app)
+    i = src.index("def riprova_giudice")
+    blocco = src[i:src.index("def perizia_ai", i)]
+    j = blocco.index("_GI.esito(lid, _t0) in _GI.BLOCCATO")
+    assert j < blocco.index("_tentativi[lid] = _tentativi.get(lid, 0) + 1")           # prima di contare il tentativo
+    assert "_visti.clear()" in blocco and 'RIPROVA_GIUDICE_AZZERA_ORE", "12"' in blocco
+
+
+def test_tetto_giudice_sulle_righe_in_attesa_nel_cron():
+    from datetime import datetime, timezone
+    from dealfinder.pricing import valutazione as VAL
+    from tests import test_prezzo_vero as TPV
+    with env(GIUDICE_ATTESA_PER_GIRO=None):
+        assert VAL.tetto_attesa("cron") == 150 and VAL.tetto_attesa("cron-utilitarie") == 150
+        assert VAL.tetto_attesa("riprova-giudice") is None and VAL.tetto_attesa("web-nuovi") is None
+    attesa = {1: {"n": 8, "impronta_auto": "x", "impronta_regole": "y", "computed_at": datetime.now(timezone.utc),
+                  "categoria": "dati_insufficienti", "in_attesa": True}}
+    with env(GIUDICE_ATTESA_PER_GIRO="0"):                                 # tetto già pieno: resta in attesa
+        c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE), salvate=dict(attesa))
+        es = VAL.valuta_e_scrivi(c, [1], "cron")
+        assert c.scritte == [] and es.stats["attesa_rimandata_tetto_giudice"] == 1
+        assert es.salvata[1] == "dati_insufficienti"
+        c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE), salvate=dict(attesa))
+        VAL.valuta_e_scrivi(c, [1], "web-nuovi")                            # fuori dal cron: nessun tetto
+        assert len(c.scritte) == 1

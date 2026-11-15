@@ -285,6 +285,16 @@ def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regol
 
 # ---------------------------------------------------------------- calcolo e scrittura
 
+def tetto_attesa(fonte: str) -> int | None:
+    """15/11 (giudice, prudenza sul budget): nel ricalcolo del cron (fonte "cron...") al massimo GIUDICE_ATTESA_PER_GIRO
+    (150) chiamate al giudice per giro sulle righe in attesa (giudice_mancante); le altre restano in attesa al giro
+    dopo (o le prende riprova_giudice), così il budget comune non finisce come il 13/11. None = nessun tetto."""
+    import os
+    if not str(fonte or "").startswith("cron"):
+        return None
+    return max(0, int(os.environ.get("GIUDICE_ATTESA_PER_GIRO", "150")))
+
+
 def _ordina(conn, ids: list) -> list:
     righe = conn.execute("SELECT id, make, model, fuel FROM listings WHERE id = ANY(%s)", (list(ids),)).fetchall()
     righe = sorted(righe, key=lambda r: (r["make"] or "", r["model"] or "", r["fuel"] or "", r["id"]))
@@ -315,6 +325,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     usa_dot = bool(rg.trazione.attiva or rg.dotazioni.aggiusta)
     gruppo, mercato, cache, commercianti = None, [], {}, None
     vecchi_vr = 0
+    tetto = tetto_attesa(fonte)
+    from ..ai import giudice as GI
     for k in range(0, len(ordine), blocco):
         pezzo = ordine[k:k + blocco]
         righe = {r["id"]: r for r in conn.execute(f"SELECT {COLONNE} FROM listings l WHERE l.id = ANY(%s)",
@@ -335,6 +347,12 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     es.stats[f"esclusa:{motivo}"] += 1
                     if motivo == "danni_da_leggere":
                         _in_coda_danni(conn, lid)
+                elif tetto is not None and (prima.get(lid) or {}).get("in_attesa") \
+                        and es.stats["giudice_attesa_chiamate"] >= tetto:
+                    es.stats["attesa_rimandata_tetto_giudice"] += 1   # resta in attesa: nessuna chiamata, nessuna scrittura
+                    es.salvata[lid] = (prima.get(lid) or {}).get("categoria")
+                    conn.rollback()
+                    continue
                 else:
                     key = (r["make"], r["model"], r["fuel"])
                     if key != gruppo:
@@ -349,7 +367,10 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     t["commercianti"] = commercianti
                     if usa_dot and lid in dot_auto:
                         t.update(dot_auto[lid])
+                    _t0 = __import__("time").time()
                     v = valuta_con_ripiego(conn, t, mercato, soglia_fn(int(r["price_eur"])), cfg, cache)
+                    if tetto is not None and (prima.get(lid) or {}).get("in_attesa") and GI.esito(lid, _t0) == "chiamata":
+                        es.stats["giudice_attesa_chiamate"] += 1
                     vr_at = (t.get("vr") or {}).get("computed_at")
                     if vr_at is not None and hasattr(vr_at, "tzinfo"):
                         vr_at = vr_at if vr_at.tzinfo else vr_at.replace(tzinfo=timezone.utc)
