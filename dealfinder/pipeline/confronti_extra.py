@@ -30,6 +30,22 @@ CAP_ITALIA = ",".join([
 ])
 
 
+# 15/11 (punto 5, cron lento): città il cui cerchio di 100 km è già letto dal giro della zona, che salva le stesse
+# province (zone.MILANO a 150 km + Torino) con gli stessi prezzi (1.000-70.000 €) e venditori: Torino (10121 = la
+# ricerca ZC_TORINO_CAP del giro), Novara (45 km da Milano, dentro Milano 130 km + Torino 100 km) e Alessandria
+# (dentro Milano 130 km + Torino 100 km + i turni di Genova e Savona). Nei log del 14-15/11: 15121 92.329 invariati
+# su 92.425, 28100 96.700 su 96.740, 10121 43.737 su 43.774 (oltre il 99,9% già visti): 2 h 20 min di lettura per
+# meno di 200 annunci nuovi o cambiati. Si saltano solo se il giro della zona è acceso (ZONA_CRON=1, ZONA_TORINO non
+# 0). CE_COPERTE="" le rimette tutte.
+CAP_COPERTE = "10121,28100,15121"
+
+
+def coperte_dalla_zona() -> set:
+    if os.environ.get("ZONA_CRON") != "1" or os.environ.get("ZONA_TORINO", "1") == "0":
+        return set()
+    return {c.strip() for c in os.environ.get("CE_COPERTE", CAP_COPERTE).split(",") if c.strip()}
+
+
 def ordina_per_turno(dovute: list[str], ultimi: dict | None = None) -> list[str]:
     """14/11: prima le città lette meno di recente (mai lette per prime), non nell'ordine della lista. Prima si
     prendevano le prime CE_PER_GIRO città "dovute" in ordine di lista: con 2 per giro le prime 14 tornavano dovute
@@ -74,6 +90,10 @@ def giro() -> dict:
     # Ogni città ha il suo turno (CE_ORE ore); a ogni giro del cron se ne fanno al massimo CE_PER_GIRO, così il giro
     # della zona non si allunga di ore e le città restano sempre aggiornate a rotazione.
     tutte = [c.strip() for c in os.environ.get("CE_CAP", CAP_ITALIA).split(",") if c.strip()]
+    coperte = coperte_dalla_zona()
+    if coperte & set(tutte):
+        st["citta_coperte_dalla_zona"] = len(coperte & set(tutte))
+        tutte = [c for c in tutte if c not in coperte]
     from .ciclo import _due
     dovute = [c for c in tutte if _due(f"ce:{c}", int(os.environ.get("CE_ORE", "48")))]
     citta = ordina_per_turno(dovute)[: int(os.environ.get("CE_PER_GIRO", "5"))]

@@ -213,9 +213,18 @@ def esegui(conn, limite: int | None = None) -> dict:
     t0 = time.time()
     conn.execute("SET statement_timeout = '60s'")
     affari = [r["id"] for r in conn.execute("SELECT q.id FROM (" + scovo.LIST_SQL + ") q", {"me": 0}).fetchall()]
+    # 15/11 (punto 5): come le utilitarie, le approfondite valutate da poco, invariate e lontane SOTTO la soglia del sito
+    # non si rifanno (quelle sul sito, vicine alla soglia o cambiate sì). Solo la sezione affari: la sezione
+    # economica non ha soglia di margine. RIC_INVARIATE_ORE=0 = tutte come prima.
+    tutte_affari = set(affari)
+    n_affari = len(affari)
+    affari, saltate = senza_invariate(conn, affari, "RIC_INVARIATE_ORE")
     eco = [r["id"] for r in conn.execute(
         "SELECT q.id FROM (" + scovo.ECO_SQL + " ORDER BY l.first_seen_at DESC LIMIT %(lim)s) q",
         dict(scovo.eco_params(0), lim=int(os.environ.get("ECONOMICHE_QUANTE", "2500")))).fetchall()]
+    if saltate:                              # un'auto saltata come affare non si rifà come economica (cambierebbe sezione)
+        via = set(affari)
+        eco = [i for i in eco if i not in tutte_affari or i in via]
     extra = {i: {"sezione": "affari"} for i in affari}
     for i in eco:
         extra.setdefault(i, {"sezione": "economiche"})
@@ -231,7 +240,8 @@ def esegui(conn, limite: int | None = None) -> dict:
                 "metodo": v.get("metodo"), "R": v.get("R_finale"), "margine": v.get("margine"), "cat": v["categoria"],
                 "confronti": [[c.get("prezzo"), c.get("prezzo_corretto"), c.get("anno"), c.get("km"), c.get("kw")]
                               for c in (v.get("confronti") or [])[:12]]}, ensure_ascii=False, default=str))
-    stats = {"valutate": len(ids), "secondi": round(time.time() - t0, 1), **_riepilogo(es, extra),
+    stats = {"valutate": len(ids), "affari_lette": n_affari, "saltate_invariate": saltate,
+             "secondi": round(time.time() - t0, 1), **_riepilogo(es, extra),
              "contatori": dict(es.stats), "impronta_regole": RG.impronta()}
     log.warning("POLICY_RIEPILOGO %s", json.dumps(stats, ensure_ascii=False))
     return stats
@@ -266,6 +276,40 @@ UTIL_SQL = ("SELECT l.id FROM listings l "
 
 _UTIL_LOCK = __import__("threading").Lock()
 
+# 15/11 (punto 5, cron lento): le utilitarie rivalutavano TUTTI i ~45.000 privati della zona a ogni ricalcolo (4 h 40 min
+# il 14/11: 38.801 righe riscritte "dati_pari_o_piu", 36.713 non convenienti). Si salta un'auto valutata da meno di
+# UTIL_INVARIATE_ORE ore (30 per le utilitarie, sotto le 36 di regole.scrittura; 20 per le approfondite) con le regole di oggi, senza cambi da allora (prezzo,
+# testo/dati) e con il margine LONTANO sotto la soglia del sito (più di SCELTA_GAP_INVARIATE, 1.500 €): è la stessa
+# condizione della scelta delle candidate (pipeline/scelta_candidate.condizione_invariate). Le auto vicine alla soglia,
+# quelle sul sito, cambiate o senza margine si rivalutano sempre. 0 = spento (tutte, come prima).
+UTIL_INVARIATE_ORE = 30
+RIC_INVARIATE_ORE = 20
+
+
+def senza_invariate(conn, ids: list, var: str = "UTIL_INVARIATE_ORE") -> tuple[list, int]:
+    """(ids da valutare, quante saltate). `var`: variabile delle ore (UTIL_INVARIATE_ORE per le utilitarie, default
+    30; RIC_INVARIATE_ORE per le approfondite di esegui, default 20). In caso di errore: tutte."""
+    base = RIC_INVARIATE_ORE if var == "RIC_INVARIATE_ORE" else UTIL_INVARIATE_ORE
+    try:
+        ore = int(os.environ.get(var) or base)
+    except ValueError:
+        ore = base
+    if ore <= 0 or not ids:
+        return list(ids), 0
+    try:
+        from ..pipeline import scelta_candidate as SC
+        par = dict(SC.parametri_invariate(), inv_ore=ore, ids=list(ids))
+        via = {r["id"] for r in conn.execute("SELECT t.id FROM listings t WHERE t.id = ANY(%(ids)s) AND "
+                                             + SC.condizione_invariate(conn), par).fetchall()}
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("UTILITARIE invariate non lette (si valutano tutte): %s", str(e)[:200])
+        return list(ids), 0
+    return [i for i in ids if i not in via], len(via)
+
 
 def utilitarie(conn, pubblica: bool = False) -> dict:
     """Un solo calcolo completo alla volta nello stesso processo (memoria: 512 MB su Render)."""
@@ -292,6 +336,8 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     log.warning("DAL_TESTO %s", json.dumps(completa_db(conn)))          # anno, km, alimentazione mancanti: dal testo
     ids = [r["id"] for r in conn.execute(UTIL_SQL, {"lo": 500, "hi": 50000, "anno": a.anno_min, "km": a.km_max,
                                                     "prov": list(MILANO)}).fetchall()]
+    lette = len(ids)
+    ids, saltate = senza_invariate(conn, ids)
     es = valuta_e_scrivi(conn, ids, "cron-utilitarie")
     pass_ = [(lid, v) for lid, v in es.valutazioni.items()
              if es.salvata.get(lid) in scovo.CATEGORIE_SITO and v.get("categoria") in scovo.CATEGORIE_SITO
@@ -299,7 +345,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
              and v["margine"] >= scovo.soglia(int(v["acquisto"])) and es.telefono.get(lid) is not False]
     per_fascia = Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if int(v["acquisto"]) < lim)
                          for _, v in pass_)
-    out = {"lette": len(ids), "valutate": len(es.valutazioni), "stats": dict(es.stats),
+    out = {"lette": lette, "saltate_invariate": saltate, "valutate": len(es.valutazioni), "stats": dict(es.stats),
            "pubblicabili_per_fascia": dict(per_fascia), "secondi": round(time.time() - t0)}
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
     if pubblica:

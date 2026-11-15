@@ -150,3 +150,174 @@ def test_sparite_autoscout_sulle_province_del_sito():
     finally:
         D.connect, D.log_job, V.scomparsi_con_prova = prima[:3]
         benzina_mi.PROVINCE_100[:] = prima[3]
+
+
+# ------------------------------------------------------------------ punto 5: durata del cron
+
+def _env(**k):
+    prima = {n: os.environ.get(n) for n in k}
+    for n, v in k.items():
+        if v is None:
+            os.environ.pop(n, None)
+        else:
+            os.environ[n] = v
+    return prima
+
+
+def test_torino_dopo_zona_interruttori():
+    from dealfinder.pipeline import collect as C
+    prima = _env(ZONA_CRON="1", ZONA_TORINO=None, TORINO_DOPO_ZONA=None, ZC_SOLO_VALUTA=None)
+    try:
+        assert C.torino_dopo_zona()
+        os.environ["TORINO_DOPO_ZONA"] = "0"
+        assert not C.torino_dopo_zona()
+        os.environ["TORINO_DOPO_ZONA"] = "1"
+        os.environ["ZONA_TORINO"] = "0"                      # la zona non legge Torino: Torino legge da sé
+        assert not C.torino_dopo_zona()
+        os.environ.pop("ZONA_TORINO")
+        os.environ["ZONA_CRON"] = "0"
+        assert not C.torino_dopo_zona()
+    finally:
+        _env(**prima)
+
+
+def test_giro_torino_solo_valutazione_non_rilegge():
+    from dealfinder.pipeline import benzina_mi, ciclo, collect as C, incrementale as INC
+    visto = []
+
+    def giro():
+        visto.append({k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_INCREMENTALE", "BENZ_PROVINCE", "BENZ_MAX")})
+        return {"candidate": 3}
+    segnati = []
+    prima = (benzina_mi.giro, ciclo._due, INC.completo_dovuto, INC.segna_completo, C.lavori_zona)
+    env = _env(BENZ_SOLO_VALUTA="0", BENZ_PROVINCE="MI,MB")
+    try:
+        benzina_mi.giro, ciclo._due = giro, (lambda j, h: True)
+        INC.completo_dovuto, INC.segna_completo = (lambda *a, **k: True), (lambda *a: segnati.append(a))
+        C.lavori_zona = lambda esito, nome="": segnati.append(("lavori", nome))
+        C.giro_torino(solo_valuta=True)
+        assert visto[-1]["BENZ_SOLO_VALUTA"] == "1" and visto[-1]["BENZ_INCREMENTALE"] == "1"
+        assert segnati == [("lavori", "torino_cron")]            # completo non segnato, giro registrato per _due
+        assert os.environ["BENZ_SOLO_VALUTA"] == "0" and os.environ["BENZ_PROVINCE"] == "MI,MB"   # ambiente rimesso
+        segnati.clear()
+        C.giro_torino()
+        assert visto[-1]["BENZ_SOLO_VALUTA"] == "0" and visto[-1]["BENZ_INCREMENTALE"] == "0"
+        assert segnati[0][0] == "torino_cron" and segnati[1] == ("lavori", "torino_cron")
+    finally:
+        benzina_mi.giro, ciclo._due, INC.completo_dovuto, INC.segna_completo, C.lavori_zona = prima
+        _env(**env)
+
+
+def test_confronti_extra_salta_le_citta_gia_lette_dalla_zona():
+    import contextlib
+    from dealfinder import db as D
+    from dealfinder.pipeline import ciclo, confronti_extra as CE
+    chieste = []
+
+    class Finta:
+        def execute(self, *a, **k):
+            raise RuntimeError("nessun database")
+
+    @contextlib.contextmanager
+    def finta():
+        yield Finta()
+    prima = (D.connect, D.db_pieno, ciclo._due)
+    env = _env(ZONA_CRON="1", ZONA_TORINO=None, CE_COPERTE=None, CE_CAP=None)
+    try:
+        D.connect, D.db_pieno = finta, (lambda c: False)
+        ciclo._due = lambda job, ore: chieste.append(job) or False
+        st = CE.giro()
+        assert st["citta_coperte_dalla_zona"] == 3
+        assert not {"ce:10121", "ce:28100", "ce:15121"} & set(chieste) and "ce:16121" in chieste and len(chieste) == 19
+        os.environ["CE_COPERTE"] = ""                            # tutte di nuovo
+        chieste.clear()
+        assert "citta_coperte_dalla_zona" not in CE.giro() and len(chieste) == 22
+        os.environ.pop("CE_COPERTE")
+        os.environ["ZONA_CRON"] = "0"                            # senza giro della zona nessuna città è coperta
+        assert CE.coperte_dalla_zona() == set()
+    finally:
+        D.connect, D.db_pieno, ciclo._due = prima
+        _env(**env)
+
+
+def test_utilitarie_saltano_solo_le_invariate_lontane_su_postgres_vero():
+    P, c = _pg("piu_auto_util")
+    if c is None:
+        return
+    from dealfinder.pricing import ricalcolo as R
+    SC._COL.clear()
+    ins = ("INSERT INTO listings (source, source_id, url, make, model, fuel, year, mileage_km, price_eur, province, "
+           "seller_type, title, description, telefono_ok) VALUES ('subito', %s, %s, 'fiat', 'panda', 'benzina', 2015, "
+           "80000, %s, 'MI', 'privato', 'Panda', 'ok', true) RETURNING id")
+    ids = {k: c.execute(ins, (k, "u" + k, 5000)).fetchone()["id"] for k in ("lontana", "vicina", "vecchia", "cambiata", "mai", "sito")}
+    imp = SC.parametri_invariate()["inv_regole"]
+    vp = ("INSERT INTO valutazioni_policy (listing_id, policy_version, categoria, margine, riassunto, dati, "
+          "impronta_regole, computed_at) VALUES (%s, 'v', %s, %s, '{}', '{}', %s, now() - make_interval(hours => %s))")
+    c.execute(vp, (ids["lontana"], "non_conveniente", -2000, imp, 5))     # lontana dalla soglia, valutata 5 ore fa: salta
+    c.execute(vp, (ids["vicina"], "non_conveniente", 600, imp, 5))       # vicina alla soglia: si rivaluta
+    c.execute(vp, (ids["vecchia"], "non_conveniente", -2000, imp, 40))   # oltre 30 ore: si rivaluta
+    c.execute(vp, (ids["cambiata"], "non_conveniente", -2000, imp, 5))
+    c.execute(vp, (ids["sito"], "opportunita", 2500, imp, 5))            # sul sito: si rivaluta sempre
+    c.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s, 'prezzo', 4800)", (ids["cambiata"],))
+    tutte = list(ids.values())
+    da_fare, saltate = R.senza_invariate(c, tutte)
+    assert saltate == 1 and set(da_fare) == set(tutte) - {ids["lontana"]}
+    assert R.senza_invariate(c, tutte, "RIC_INVARIATE_ORE")[1] == 1        # approfondite: 20 ore
+    env = _env(UTIL_INVARIATE_ORE="0", RIC_INVARIATE_ORE="4")
+    try:
+        assert R.senza_invariate(c, tutte) == (tutte, 0)
+        assert R.senza_invariate(c, tutte, "RIC_INVARIATE_ORE") == (tutte, 0)   # 5 ore fa > 4: nessuna saltata
+    finally:
+        _env(**env)
+
+
+def test_confronti_extra_entro_3_ore_ma_mai_fermi():
+    from dealfinder.pipeline import ciclo, collect as C
+    prima = ciclo._due
+    try:
+        ciclo._due = lambda job, ore: False                   # girati da poco: solo entro 3 ore dall'avvio
+        assert C.ore_confronti() == 3.0
+        assert C.tempo_ok("confronti", C.ore_confronti(), 0.0, ora=2.5 * 3600)
+        assert not C.tempo_ok("confronti", C.ore_confronti(), 0.0, ora=4 * 3600)
+        ciclo._due = lambda job, ore: job == "confronti_extra" and ore == 36   # fermi da 36 ore: limite di prima
+        assert C.ore_confronti() == 6.0
+    finally:
+        ciclo._due = prima
+
+
+def test_esegui_salta_le_approfondite_invariate_senza_cambiarle_di_sezione():
+    from dealfinder.pricing import ricalcolo as R
+    from dealfinder.pricing import valutazione as V
+
+    class Ris:
+        def __init__(self, r):
+            self.r = r
+
+        def fetchall(self):
+            return self.r
+
+    class Conn:
+        def execute(self, sql, p=None):
+            if "ORDER BY l.first_seen_at DESC LIMIT" in sql:            # sezione economica
+                return Ris([{"id": 2}, {"id": 9}])
+            if sql.startswith("SELECT q.id FROM ("):                      # approfondite
+                return Ris([{"id": 1}, {"id": 2}, {"id": 3}])
+            return Ris([])
+    visto = {}
+
+    class Es:
+        valutazioni, stats = {}, {}
+
+    def finta(conn, ids, fonte, extra=None):
+        visto.update(ids=list(ids), extra=extra)
+        return Es()
+    prima = (R.senza_invariate, V.valuta_e_scrivi)
+    try:
+        R.senza_invariate = lambda conn, ids, var="": ([i for i in ids if i != 2], 1)
+        V.valuta_e_scrivi = finta
+        st = R.esegui(Conn())
+        assert st["saltate_invariate"] == 1 and st["affari_lette"] == 3
+        assert sorted(visto["ids"]) == [1, 3, 9]                          # la 2 non torna come "economica"
+        assert visto["extra"][9] == {"sezione": "economiche"} and visto["extra"][1] == {"sezione": "affari"}
+    finally:
+        R.senza_invariate, V.valuta_e_scrivi = prima

@@ -1063,6 +1063,20 @@ def tempo_ok(fase: str, entro_ore: float, t0: float, ora: float | None = None) -
     return False
 
 
+def ore_confronti() -> float:
+    """15/11 (punto 5): i confronti extra (1-2 ore) partono solo entro 3 ore dall'avvio del cron (prima 6): nei giri
+    lunghi (giro completo della zona) passano al run dopo, che è più corto. Se non girano da CE_ATTESA_MAX_ORE (36)
+    ore il limite torna a 6, così non restano mai fermi (le città hanno un turno di 48 ore e i confronti non visti da
+    10 giorni non contano più). CRON_ORE_CONFRONTI su Render vince sempre (tempo_ok)."""
+    try:
+        from .ciclo import _due
+        if _due("confronti_extra", int(os.environ.get("CE_ATTESA_MAX_ORE", "36"))):
+            return 6.0
+    except Exception:
+        return 6.0
+    return 3.0
+
+
 def tempo_schede_pagine(t0: float, ora: float | None = None) -> float:
     """12/11: secondi concessi alla lettura delle pagine (scheda tecnica) a fine giro opportunità. Il giro dura 6–10
     ore: la fase parte fino a 10 ore (CRON_ORE_SCHEDE_PAGINE) e dura al massimo 20 minuti, mai oltre 10,3 ore dall'avvio
@@ -1097,6 +1111,62 @@ def _ai_prezzi():
         os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pricing.ai_prezzi"])
     except Exception as e:
         log.warning("AI_PREZZI non avviato: %s", str(e)[:300])
+
+
+def torino_dopo_zona() -> bool:
+    """15/11 (punto 5, letture doppie): con ZONA_CRON=1 e ZONA_TORINO=1 il giro della zona legge già Torino e
+    dintorni (Subito Piemonte, AutoScout24 10121:100 da 1.000 a 70.000 €, focus), cioè tutto quello che legge il giro
+    di Torino (4.000-45.000 €): la seconda lettura costava ~50 minuti nei giri completi. Il giro di Torino allora
+    parte DOPO la zona e, se la zona ha letto davvero in questo run, solo con la scelta e la valutazione (stessa quota
+    TORINO_CANDIDATE, stesse regole). TORINO_DOPO_ZONA=0 torna a prima (giro di Torino con la sua lettura, prima)."""
+    return (os.environ.get("TORINO_DOPO_ZONA", "1") == "1" and os.environ.get("ZONA_CRON") == "1"
+            and os.environ.get("ZONA_TORINO", "1") == "1" and os.environ.get("ZC_SOLO_VALUTA", "0") != "1")
+
+
+def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_valuta: bool = False) -> None:
+    """Giro di Torino (9/11; NOVARA_ORA 11/11): stessa raccolta + valutazione + pubblicazione del giro della zona,
+    centrato su Torino. solo_valuta=True (15/11): niente lettura, solo scelta e valutazione (vedi torino_dopo_zona)."""
+    try:
+        from .ciclo import _due
+        if torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "6"))):
+            from ..zone import TORINO
+            vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
+            prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
+            cap, raggio = "10121", os.environ.get("TORINO_RAGGIO_KM", "100")
+            if novara_ora:
+                prov = [p for p in os.environ.get("NOVARA_PROVINCE", "NO,VC,BI,VA").split(",") if p.strip()]
+                cap, raggio = "28100", os.environ.get("NOVARA_RAGGIO_KM", "60")
+            for k, v in {"BENZ_CAP": cap, "BENZ_RAGGIO": raggio, "BENZ_CAP_EXTRA": "",
+                         "BENZ_MIN": os.environ.get("TORINO_MIN", "4000"), "BENZ_PMAX": os.environ.get("TORINO_MAX", "45000"),
+                         "BENZ_PROVINCE": ",".join(prov), "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "1",
+                         "BENZ_SUB_PROFONDA": os.environ.get("TORINO_SUB_PROFONDA", "1"), "BENZ_SUB_PASSO": "1000",
+                         "BENZ_SUB_PAG_FASCIA": os.environ.get("TORINO_PAG_FASCIA", "8"), "BENZ_TUTTI_CARB": "1",
+                         "BENZ_DAL": os.environ.get("TORINO_DAL", "2026-10-10 00:00"), "BENZ_SUB_PAGINE_ALTRE": os.environ.get("TORINO_SUB_PAGINE", "150"),
+                         "BENZ_MAX": os.environ.get("TORINO_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
+                         "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "1" if solo_valuta else "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
+                         "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
+                os.environ[k] = v
+            from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
+            _completo = torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
+            if solo_valuta:
+                _completo = False
+            os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+            os.environ["BENZ_INCR_NOME"] = "novara_ora" if novara_ora else "torino_cron"
+            try:
+                from . import benzina_mi as B
+                esito = B.giro()
+                if _completo and not torino_ora:
+                    INC.segna_completo("torino_cron", esito)
+                log.warning("%s fatta%s: %s", "NOVARA_ORA" if novara_ora else "TORINO_CRON",
+                            " (solo valutazione: annunci letti dal giro della zona)" if solo_valuta else "", {k: v for k, v in esito.items() if isinstance(v, int)})
+                if not novara_ora:
+                    lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
+            finally:
+                for k in [k for k in os.environ if k.startswith("BENZ_")]:
+                    del os.environ[k]
+                os.environ.update({k: v for k, v in vecchie.items() if v is not None})
+    except Exception as e:
+        log.warning("TORINO_CRON non riuscita: %s", str(e)[:300])
 
 
 if __name__ == "__main__":
@@ -1148,45 +1218,10 @@ if __name__ == "__main__":
     if _novara_ora:
         os.environ.setdefault("TORINO_PROVINCE_EXTRA", "")
         _torino_ora = True
-    if _torino_ora or (os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1"):
-        try:
-            from .ciclo import _due
-            if _torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "6"))):
-                from ..zone import TORINO
-                vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
-                prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
-                cap, raggio = "10121", os.environ.get("TORINO_RAGGIO_KM", "100")
-                if _novara_ora:
-                    prov = [p for p in os.environ.get("NOVARA_PROVINCE", "NO,VC,BI,VA").split(",") if p.strip()]
-                    cap, raggio = "28100", os.environ.get("NOVARA_RAGGIO_KM", "60")
-                for k, v in {"BENZ_CAP": cap, "BENZ_RAGGIO": raggio, "BENZ_CAP_EXTRA": "",
-                             "BENZ_MIN": os.environ.get("TORINO_MIN", "4000"), "BENZ_PMAX": os.environ.get("TORINO_MAX", "45000"),
-                             "BENZ_PROVINCE": ",".join(prov), "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": "1",
-                             "BENZ_SUB_PROFONDA": os.environ.get("TORINO_SUB_PROFONDA", "1"), "BENZ_SUB_PASSO": "1000",
-                             "BENZ_SUB_PAG_FASCIA": os.environ.get("TORINO_PAG_FASCIA", "8"), "BENZ_TUTTI_CARB": "1",
-                             "BENZ_DAL": os.environ.get("TORINO_DAL", "2026-10-10 00:00"), "BENZ_SUB_PAGINE_ALTRE": os.environ.get("TORINO_SUB_PAGINE", "150"),
-                             "BENZ_MAX": os.environ.get("TORINO_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
-                             "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
-                             "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
-                    os.environ[k] = v
-                from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
-                _completo = _torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
-                os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
-                os.environ["BENZ_INCR_NOME"] = "novara_ora" if _novara_ora else "torino_cron"
-                try:
-                    from . import benzina_mi as B
-                    esito = B.giro()
-                    if _completo and not _torino_ora:
-                        INC.segna_completo("torino_cron", esito)
-                    log.warning("%s fatta: %s", "NOVARA_ORA" if _novara_ora else "TORINO_CRON", {k: v for k, v in esito.items() if isinstance(v, int)})
-                    if not _novara_ora:
-                        lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
-                finally:
-                    for k in [k for k in os.environ if k.startswith("BENZ_")]:
-                        del os.environ[k]
-                    os.environ.update({k: v for k, v in vecchie.items() if v is not None})
-        except Exception as e:
-            log.warning("TORINO_CRON non riuscita: %s", str(e)[:300])
+    _torino_dopo = not _torino_ora and torino_dopo_zona()
+    _zona_letta = False
+    if _torino_ora or (os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1" and not _torino_dopo):
+        giro_torino(_torino_ora, _novara_ora)
         if _torino_ora:
             log.warning("TORINO_ORA: giro di Torino finito, il cron si ferma qui")
             sys.exit(0)
@@ -1226,6 +1261,8 @@ if __name__ == "__main__":
                 finally:
                     os.environ.pop("BENZ_INCREMENTALE", None)
                     os.environ.pop("BENZ_INCR_NOME", None)
+                # 15/11: lettura finita senza blocchi (letture con errori: il giro di Torino rilegge da sé)
+                _zona_letta = not esito.get("lettura_errori") and bool(esito.get("letti_subito") or esito.get("letti_autoscout"))
                 if _completo:
                     INC.segna_completo("zona_cron", esito)
                 log.warning("ZONA_CRON fatta (%s): %s", "completa" if _completo else "incrementale",
@@ -1233,12 +1270,14 @@ if __name__ == "__main__":
                 lavori_zona(esito)
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
+        if _torino_dopo and os.environ.get("TORINO_GIRO", "1") == "1":
+            giro_torino(solo_valuta=_zona_letta)
         lavori_cron()
         if mode == "opportunita":
             # 13/11: con ZONA_CRON il cron non arriva a run(): Autohero non girava mai. Una volta al giorno.
             _autohero_giornaliero(Counter())
     # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
-    if os.environ.get("CONFRONTI_EXTRA") == "1" and tempo_ok("confronti", 6, _t0_loop):
+    if os.environ.get("CONFRONTI_EXTRA") == "1" and tempo_ok("confronti", ore_confronti(), _t0_loop):
         try:
             from .ciclo import _due
             if _due("confronti_extra:v3", int(os.environ.get("CE_ORE_GIRO", "0"))):   # 1/11: a ogni giro, le città a turno
