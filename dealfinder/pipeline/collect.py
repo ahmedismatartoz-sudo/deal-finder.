@@ -1010,6 +1010,11 @@ def lavori_zona(esito: dict, nome: str = "zona_cron:giro") -> None:
         zona = list(PROVINCE_100)
         if nome.startswith("zona_cron"):          # 15/11 (punto 2): il controllo delle sparite sempre sulle province del sito
             zona += [p for p in province_zona(",".join(PROVINCE_100)) if p not in zona]
+            # 15/11 (revisione): anche le province extra del giro di Torino (AL, NO): Torino dopo la zona non legge più
+            # AutoScout24, quindi le sue sparite si controllano qui
+            if torino_dopo_zona():
+                zona += [p for p in (x.strip().upper() for x in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(","))
+                         if p and p not in zona]
         with _cn() as c:
             fin = _lj(c, "scomparsi:autoscout24")
             st = scomparsi_con_prova(c, "autoscout24", not_seen_hours=ore_non_visti,

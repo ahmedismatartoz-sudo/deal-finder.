@@ -142,8 +142,16 @@ def test_sparite_autoscout_sulle_province_del_sito():
         D.connect, D.log_job = finta, (lambda c, n: (lambda ok, st: None))
         V.scomparsi_con_prova = scomparsi
         benzina_mi.PROVINCE_100[:] = ["MI", "MB", "VA"]
-        C.lavori_zona({"letti_autoscout": 5000})
-        assert {"NO", "PC", "MI", "BS"} <= set(visto["zona"])
+        env = _env(ZONA_CRON="1", ZONA_TORINO=None, TORINO_DOPO_ZONA=None, ZC_SOLO_VALUTA=None, TORINO_PROVINCE_EXTRA=None)
+        try:
+            C.lavori_zona({"letti_autoscout": 5000})
+            assert {"NO", "PC", "MI", "BS", "AL"} <= set(visto["zona"])     # AL: extra di Torino (che salta AutoScout)
+            assert len(visto["zona"]) == len(set(visto["zona"]))
+            os.environ["TORINO_DOPO_ZONA"] = "0"                             # Torino legge AutoScout da sé: come prima
+            C.lavori_zona({"letti_autoscout": 5000})
+            assert "AL" not in visto["zona"] and "NO" in visto["zona"]
+        finally:
+            _env(**env)
         visto.clear()
         C.lavori_zona({"letti_autoscout": 5000}, nome="torino_cron")      # Torino: le sue province, come prima
         assert visto["zona"] == ["MI", "MB", "VA"]
