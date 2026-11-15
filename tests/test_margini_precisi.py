@@ -416,7 +416,7 @@ def test_giudice_riusa_i_giudizi_gia_dati():
     from dealfinder.ai import giudice
     chieste = []
     orig = giudice._chiedi, giudice.AI.available, giudice.AI.budget_finito
-    giudice._chiedi = lambda conn, t, conf: chieste.append([c["id"] for c in conf]) or "VIA 3 versione diversa\nNOTA ok"
+    giudice._chiedi = lambda conn, t, conf: chieste.append([c["id"] for c in conf]) or ("VIA 3 versione diversa\nNOTA ok", "end_turn")
     giudice.AI.available = lambda: True
     giudice.AI.budget_finito = lambda conn: False
 

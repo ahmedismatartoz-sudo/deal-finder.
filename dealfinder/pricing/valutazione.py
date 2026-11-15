@@ -50,7 +50,10 @@ UPSERT_SQL = """INSERT INTO valutazioni_policy (listing_id, policy_version, cate
       OR (COALESCE(EXCLUDED.n, 0) >= COALESCE(valutazioni_policy.n, 0)
           AND NOT (%s AND COALESCE((valutazioni_policy.dati->'ai_confronti'->>'tolti')::int, 0) > 0))
       OR %s
+      OR (valutazioni_policy.dati->>'giudice_mancante') = 'true'
    RETURNING listing_id"""
+# 15/11 (giudice A2): una riga "in attesa del giudice" (giudice_mancante) si sostituisce sempre: la guardia dei meno
+# confronti e la protezione delle giudicate valgono contro una valutazione vera, non contro un'attesa
 # 12/11 sera (controllo del giudice M5): penultimo parametro = proteggi (una riga giudicata dall'AI non si sostituisce
 # con una NON giudicata entro ore_validita, anche se ha più confronti); ultimo = la nuova è giudicata (si scrive sempre)
 # Database senza la migrazione 036 (colonne n, impronte, fonte, metodo): scrittura di prima, senza guardia nel database
@@ -69,6 +72,7 @@ class Esito:
     stats: Counter = field(default_factory=Counter)
     valutazioni: dict = field(default_factory=dict)      # id → valutazione (completa se tenuta, altrimenti compatta)
     salvata: dict = field(default_factory=dict)          # id → categoria della riga ora nel database
+    scritte: set = field(default_factory=set)            # id riscritti davvero in questo giro (15/11, giudice A2)
     telefono: dict = field(default_factory=dict)         # id → True / False / None
 
     def sul_sito(self, lid) -> bool:
@@ -257,6 +261,8 @@ def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regol
         return True, "auto_cambiata"
     if esistente.get("impronta_regole") != imp_regole:
         return True, "regole_cambiate"
+    if esistente.get("in_attesa"):
+        return True, "in_attesa_giudice"                # 15/11 (giudice A2): la riga salvata aspetta il giudice
     vince = RG.regole().scrittura.giudice_vince
     if giudicata_nuova and vince:
         return True, "giudicata"
@@ -369,12 +375,14 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                         ok = False
                 if ok:
                     es.salvata[lid] = v["categoria"]
+                    es.scritte.add(lid)
                 else:
                     es.salvata[lid] = (prima.get(lid) or {}).get("categoria")
                     log.info("VALUTAZIONE_RIFIUTATA %s fonte=%s n=%s < %s", lid, fonte, v.get("n"),
                              (prima.get(lid) or {}).get("n"))
                 completa = v["categoria"] in scovo.CATEGORIE_SITO or (tieni is not None and tieni(v))
-                es.valutazioni[lid] = v if completa else dict(P.riassunto(v), id=lid, motivi=(v.get("motivi") or [])[:2])
+                es.valutazioni[lid] = v if completa else dict(P.riassunto(v), id=lid, motivi=(v.get("motivi") or [])[:2],
+                                                              **({"giudice_mancante": True} if v.get("giudice_mancante") else {}))
                 conn.commit()
             except Exception as e:                  # un'auto sbagliata non ferma le altre
                 try:
@@ -393,11 +401,20 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     return es
 
 
+def esce_dall_attesa(es: "Esito", lid) -> bool:
+    """15/11 (giudice A2, riprova del giudice): l'auto è stata davvero riscritta e NON è di nuovo "in attesa"
+    (dati_insufficienti con giudice_mancante). Le altre si riprovano al giro dopo."""
+    if lid not in es.scritte:
+        return False
+    return not (es.salvata.get(lid) == "dati_insufficienti" and (es.valutazioni.get(lid) or {}).get("giudice_mancante"))
+
+
 def _salvate(conn, ids: list) -> dict:
-    """Righe già salvate (per la guardia): n, impronte, data, categoria."""
+    """Righe già salvate (per la guardia): n, impronte, data, categoria, in attesa del giudice."""
     if _SCHEMA["nuovo"] is not False:
         righe = _q(conn, "SELECT listing_id, n, impronta_auto, impronta_regole, computed_at, categoria, "
-                         "COALESCE((dati->'ai_confronti'->>'tolti')::int, 0) AS tolti "
+                         "COALESCE((dati->'ai_confronti'->>'tolti')::int, 0) AS tolti, "
+                         "COALESCE((dati->>'giudice_mancante') = 'true', false) AS in_attesa "
                          "FROM valutazioni_policy WHERE listing_id = ANY(%s) AND policy_version = %s",
                    (ids, P.POLICY_VERSION), "valutazioni salvate")
         if righe or _SCHEMA["nuovo"]:

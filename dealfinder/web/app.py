@@ -3497,10 +3497,15 @@ def _tempo_reale():
         si rivalutano (stessa strada di cron e sito: valuta_e_scrivi, il giudice ora risponde e la valutazione si scrive)."""
         from ..ai import client as _AI
         from ..pricing import policy_v2 as _PV
-        from ..pricing.valutazione import valuta_e_scrivi as _ves
+        from ..pricing.valutazione import valuta_e_scrivi as _ves, esce_dall_attesa as _esce
         from collections import Counter as _Cr
         _diag = {"fatto": False}
-        _visti: set = set()           # una volta sola per avvio: se la riscrittura non avviene, non si ripete all'infinito
+        # 15/11 (giudice A2): in _visti solo le auto davvero riscritte e uscite dall'attesa (valutazione.esce_dall_attesa)
+        # oppure dopo RIPROVA_GIUDICE_TENTATIVI tentativi: le altre (giudice ancora fermo, riga rifiutata, errore) si
+        # riprovano al giro dopo, invece di restare "in attesa" fino al riavvio
+        _visti: set = set()
+        _tentativi: dict = {}
+        _max_tent = int(os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3"))
         time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "420")))
         while True:
             attesa = float(os.environ.get("RIPROVA_GIUDICE_MIN", "15")) * 60
@@ -3542,13 +3547,18 @@ def _tempo_reale():
                                 (_PV.POLICY_VERSION, os.environ.get("RIPROVA_DI_DA", "2026-11-13T10:00:00Z"),
                                  os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"), list(_visti),
                                  int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
-                            _visti.update(ids)
                             st = _Cr()
                             for k in range(0, len(ids), 20):
                                 es = _ves(conn, ids[k:k + 20], "riprova-giudice")
                                 conn.commit()
                                 for chiave, n in es.stats.items():
                                     st[chiave] += n
+                                for lid in ids[k:k + 20]:
+                                    _tentativi[lid] = _tentativi.get(lid, 0) + 1
+                                    if _esce(es, lid) or _tentativi[lid] >= _max_tent:
+                                        _visti.add(lid)
+                                        st["uscite_dall_attesa" if _esce(es, lid) else "lasciate_dopo_tentativi"] += 1
+                                        _tentativi.pop(lid, None)
                                 if _AI.budget_finito(conn):
                                     break
                             if ids:

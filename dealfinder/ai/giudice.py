@@ -53,22 +53,59 @@ def _tabella(conn):
         PRIMARY KEY (listing_id, chiave))""")
 
 
-def _chiedi(conn, t: dict, confronti: list[dict]) -> str:
+ORE_ILLEGGIBILE = 6          # 15/11 (giudice A7): una risposta illeggibile o troncata non si ripaga prima di 6 ore
+
+
+def _chiedi(conn, t: dict, confronti: list[dict]) -> tuple[str, str | None]:
+    """(testo, stop_reason). stop_reason è l'attributo del messaggio dell'SDK Anthropic restituito da AI.crea
+    ("end_turn", "max_tokens", ...). 15/11 (giudice A7b): la spesa si registra e si conferma (commit) SUBITO dopo la
+    chiamata, prima di leggere la risposta, come controllo_auto con paga: un errore dopo non la cancella."""
     resp = AI.crea(
         model=AI.MODEL_FAST, max_tokens=int(os.environ.get("GIUDICE_MAX_TOKENS", "1200")), system=SYSTEM,
         messages=[{"role": "user", "content": _riga_auto(t) + "\n\nCONFRONTI:\n" + _righe_confronti(confronti)}])
-    testo = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
     try:
         AI.db_usage_sink(conn)("giudice_confronti", AI.AIResult(data=None, model=AI.MODEL_FAST,
                                                                 input_tokens=resp.usage.input_tokens,
                                                                 output_tokens=resp.usage.output_tokens),
                                t.get("id"))
-    except Exception:
-        pass
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("GIUDICE_AI %s spesa non registrata: %s", t.get("id"), str(e)[:120])
+    testo = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
+    stop = getattr(resp, "stop_reason", None)
     if not testo.strip():
-        log.warning("GIUDICE_AI %s risposta vuota (stop=%s, blocchi=%s)", t.get("id"), getattr(resp, "stop_reason", None),
+        log.warning("GIUDICE_AI %s risposta vuota (stop=%s, blocchi=%s)", t.get("id"), stop,
                     [getattr(b, "type", "") for b in resp.content])
-    return testo
+    return testo, stop
+
+
+def _recente(at) -> bool:
+    """Data entro ORE_ILLEGGIBILE ore (None o illeggibile: no)."""
+    from datetime import datetime, timedelta, timezone
+    if isinstance(at, str):
+        try:
+            at = datetime.fromisoformat(at.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+    if not isinstance(at, datetime):
+        return False
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - at < timedelta(hours=ORE_ILLEGGIBILE)
+
+
+def _archivia_illeggibile(conn, t: dict, chiave: str, motivo: str) -> None:
+    """15/11 (giudice A7a): l'esito "illeggibile" si archivia (pagato): per ORE_ILLEGGIBILE ore niente nuova chiamata
+    per questa auto a questo prezzo. Non conta come giudizio (nessun _giudicati): poi si riprova."""
+    salva = {"_illeggibile": True, "_motivo": motivo, "_prezzo": t.get("price_eur")}
+    conn.execute("INSERT INTO ai_giudizi (listing_id, chiave, via, nota) VALUES (%s,%s,%s,%s) "
+                 "ON CONFLICT (listing_id, chiave) DO UPDATE SET via=EXCLUDED.via, nota=EXCLUDED.nota, at=now()",
+                 (t.get("id"), chiave, json.dumps(salva), ""))
+    conn.commit()
 
 
 def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -> dict | None:
@@ -83,10 +120,15 @@ def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -
         # 12/11 (controllo del giudice M1): il campione dei confronti cambia (somiglianza), quindi la chiave esatta
         # cambia spesso. Si riusano i giudizi GIÀ DATI su questa auto allo stesso prezzo, confronto per confronto
         # (ogni riga salva in via["_giudicati"] gli id esaminati): l'AI vede solo i confronti mai giudicati.
-        righe = conn.execute("SELECT chiave, via, nota FROM ai_giudizi WHERE listing_id=%s", (t.get("id"),)).fetchall()
+        righe = conn.execute("SELECT chiave, via, nota, at FROM ai_giudizi WHERE listing_id=%s", (t.get("id"),)).fetchall()
         giudicati, via_arch, nota_arch = set(), {}, ""
+        illeggibile_recente = False
         for r in righe:
             v = r["via"] if isinstance(r["via"], dict) else json.loads(r["via"] or "{}")
+            if v.get("_illeggibile"):
+                # risposta pagata e non letta: non è un giudizio; blocca i ripagamenti per qualche ora
+                illeggibile_recente |= _recente(r.get("at")) and v.get("_prezzo") == t.get("price_eur")
+                continue
             if r["chiave"] == chiave:
                 return {"via": {int(k): m for k, m in v.items() if not k.startswith("_")}, "nota": r["nota"],
                         "da_archivio": True}
@@ -99,9 +141,14 @@ def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -
         if not nuovi and giudicati:
             return {"via": {i: m for i, m in via_arch.items() if i in set(ids)}, "nota": nota_arch,
                     "da_archivio": True}
-        if solo_archivio or AI.budget_finito(conn):
+        if solo_archivio or illeggibile_recente or AI.budget_finito(conn):
             return None
-        testo = _chiedi(conn, t, nuovi)
+        testo, stop = _chiedi(conn, t, nuovi)
+        if stop == "max_tokens":
+            # 15/11 (giudice A7c): risposta troncata. I confronti dopo il taglio non sono stati letti: niente "validi"
+            log.warning("GIUDICE_AI %s risposta troncata (max_tokens): %s", t.get("id"), testo[-200:].replace("\n", " | "))
+            _archivia_illeggibile(conn, t, chiave, "troncata")
+            return None
         validi = {int(c["id"]) for c in nuovi}
         via, nota = {}, ""
         for riga in testo.splitlines():
@@ -114,11 +161,14 @@ def giudica(conn, t: dict, confronti: list[dict], solo_archivio: bool = False) -
                 nota = m.group(1).strip()[:200]
         if not via and not nota:
             log.warning("GIUDICE_AI %s risposta non leggibile: %s", t.get("id"), testo[:300].replace("\n", " | "))
+            _archivia_illeggibile(conn, t, chiave, "illeggibile")
             return None
         salva = {str(k): v for k, v in via.items()}
         salva.update(_giudicati=sorted(validi), _prezzo=t.get("price_eur"))
+        # una riga "illeggibile" con la stessa chiave (scaduta) si sostituisce con il giudizio vero
         conn.execute("INSERT INTO ai_giudizi (listing_id, chiave, via, nota) VALUES (%s,%s,%s,%s) "
-                     "ON CONFLICT (listing_id, chiave) DO NOTHING",
+                     "ON CONFLICT (listing_id, chiave) DO UPDATE SET via=EXCLUDED.via, nota=EXCLUDED.nota, at=now() "
+                     "WHERE (ai_giudizi.via->>'_illeggibile') = 'true'",
                      (t.get("id"), chiave, json.dumps(salva), nota))
         tutti = {i: m for i, m in via_arch.items() if i in set(ids)}
         tutti.update(via)

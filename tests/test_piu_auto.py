@@ -866,3 +866,153 @@ def test_pg_coda_senza_foto_e_scadute():
                             "WHERE listing_id = 4")
     righe = {r["id"]: r for r in c.execute(CA.CAND_SQL, par).fetchall()}
     assert set(righe) == {1, 4, 6} and righe[4]["d_senza_foto"] is False and CA.classe(righe[4]) == 3
+
+
+# ------------------------------------------------------------------ 15/11 giudice A2/A7: giudice e riscrittura
+class _ConnGiudizi:
+    """ai_giudizi in memoria (con la data), ai_usage con commit e rollback veri."""
+    def __init__(self, rompi=False):
+        self.giud, self.usage, self.pend, self.rompi = {}, [], [], rompi
+
+    def execute(self, sql, p=()):
+        import json
+        s = " ".join(sql.split())
+        righe = []
+        if s.startswith("SELECT chiave, via, nota"):
+            from datetime import datetime, timezone
+            righe = [{"chiave": k, "via": json.loads(v), "nota": n, "at": datetime.fromtimestamp(at, timezone.utc)}
+                     for (l, k), (v, n, at) in self.giud.items() if l == p[0]]
+        elif s.startswith("INSERT INTO ai_usage"):
+            self.pend.append(("usage", p))
+        elif s.startswith("INSERT INTO ai_giudizi"):
+            if self.rompi:
+                raise RuntimeError("db giù")
+            self.pend.append(("giud", p, "DO UPDATE" in s and "WHERE" not in s.split("DO UPDATE")[1]))
+        return _Ris(righe)
+
+    def commit(self):
+        import json
+        for x in self.pend:
+            if x[0] == "usage":
+                self.usage.append(x[1])
+            else:
+                (lid, chiave, via, nota), sempre = x[1], x[2]
+                vecchia = self.giud.get((lid, chiave))
+                if vecchia is None or sempre or json.loads(vecchia[0]).get("_illeggibile"):
+                    self.giud[(lid, chiave)] = (via, nota, time.time())
+        self.pend = []
+
+    def rollback(self):
+        self.pend = []
+
+
+def _finto_ai(risposte):
+    import types
+    chiamate = []
+
+    def crea(**k):
+        chiamate.append(1)
+        txt, stop = risposte.pop(0)
+        return types.SimpleNamespace(content=[types.SimpleNamespace(type="text", text=txt)], stop_reason=stop,
+                                     usage=types.SimpleNamespace(input_tokens=1000, output_tokens=50))
+    return crea, chiamate
+
+
+def test_giudice_illeggibile_archiviato_spesa_subito_troncata_none():
+    import json
+    from dealfinder.ai import giudice as GI
+    prima = (AI.available, AI.budget_finito, AI.crea)
+    t = {"id": 1, "price_eur": 8000, "make": "VW", "model": "Golf"}
+    conf = [{"id": i, "prezzo": 9000} for i in range(10, 16)]
+    try:
+        AI.available = lambda: True
+        AI.budget_finito = lambda c: False
+        # (a) illeggibile: archiviata, la seconda volta nessuna nuova chiamata (6 ore)
+        AI.crea, chiamate = _finto_ai([("Tutti i confronti sono validi.", "end_turn")] * 2)
+        c = _ConnGiudizi()
+        assert GI.giudica(c, t, conf) is None and GI.giudica(c, t, conf) is None and len(chiamate) == 1
+        (via, _n, _at), = c.giud.values()
+        assert json.loads(via)["_illeggibile"] and "_giudicati" not in json.loads(via) and len(c.usage) == 1
+        # stessa auto a un altro prezzo: l'attesa non vale (il prezzo fa parte della chiave)
+        AI.crea, chiamate = _finto_ai([("VIA 10 versione diversa\nNOTA ok", "end_turn")])
+        assert GI.giudica(c, dict(t, price_eur=7500), conf)["via"] == {10: "versione diversa"}
+        # dopo 6 ore si riprova, e il giudizio vero sostituisce la riga illeggibile con la stessa chiave
+        for k, (v, n, at) in list(c.giud.items()):
+            c.giud[k] = (v, n, at - 7 * 3600)
+        AI.crea, chiamate = _finto_ai([("VIA 11 cabrio\nNOTA ok", "end_turn")])
+        g = GI.giudica(c, t, conf)
+        c.commit()                                                    # il giudizio lo conferma chi chiama
+        assert len(chiamate) == 1 and g["via"] == {11: "cabrio"}
+        assert not any(json.loads(v).get("_illeggibile") for (l, _k), (v, _n, _a) in c.giud.items() if l == 1)
+        # (b) la spesa si conferma prima di leggere la risposta: un errore nel salvataggio non la cancella
+        AI.crea, chiamate = _finto_ai([("VIA 10 versione diversa\nNOTA ok", "end_turn")])
+        c = _ConnGiudizi(rompi=True)
+        assert GI.giudica(c, t, conf) is None and len(c.usage) == 1
+        # (c) troncata (max_tokens): None, niente "validi" per i confronti non letti; archiviata come illeggibile
+        AI.crea, chiamate = _finto_ai([("VIA 10 versione diversa\nVIA 1", "max_tokens")])
+        c = _ConnGiudizi()
+        assert GI.giudica(c, t, conf) is None and len(c.usage) == 1
+        (via, _n, _at), = c.giud.values()
+        assert json.loads(via) == {"_illeggibile": True, "_motivo": "troncata", "_prezzo": 8000}
+        assert GI.giudica(c, t, conf) is None and len(chiamate) == 1                   # niente ripagamento
+    finally:
+        AI.available, AI.budget_finito, AI.crea = prima
+
+
+def test_riga_in_attesa_del_giudice_si_sostituisce_sempre():
+    from datetime import datetime, timedelta, timezone
+    from dealfinder.pricing import valutazione as VAL
+    ora = datetime.now(timezone.utc)
+    attesa = {"n": 8, "impronta_auto": "a", "impronta_regole": "r", "computed_at": ora - timedelta(hours=1), "tolti": 0,
+              "in_attesa": True}
+    for n, tolti in ((8, 0), (7, 0), (6, 2), (3, 0)):
+        ok, perche = VAL.deve_scrivere(attesa, n, "a", "r", ora, giudicata_nuova=VAL.giudicata({"ai_confronti": {"tolti": tolti}}))
+        assert ok and perche == "in_attesa_giudice", (n, tolti, perche)
+    vera = dict(attesa, in_attesa=False)
+    assert VAL.deve_scrivere(vera, 7, "a", "r", ora) == (False, "meno_confronti")       # contro una vera: come prima
+    assert VAL.deve_scrivere(dict(vera, tolti=2), 8, "a", "r", ora) == (False, "giudicata_protetta")
+    assert not VAL.tieni_precedente({"giudice_mancante": True}, attesa, "in_attesa_giudice")
+    # anche nella condizione del database e nelle righe lette per la guardia
+    assert "OR (valutazioni_policy.dati->>'giudice_mancante') = 'true'" in VAL.UPSERT_SQL
+    import inspect
+    assert "AS in_attesa" in inspect.getsource(VAL._salvate)
+    # riprova del giudice: esce dall'attesa solo se riscritta e non di nuovo "in attesa"
+    es = VAL.Esito()
+    es.scritte |= {1, 2, 3}
+    es.salvata.update({1: "opportunita", 2: "dati_insufficienti", 3: "dati_insufficienti", 4: "dati_insufficienti"})
+    es.valutazioni.update({2: {"giudice_mancante": True}, 3: {}, 4: {}})
+    assert [VAL.esce_dall_attesa(es, i) for i in (1, 2, 3, 4)] == [True, False, True, False]
+
+
+def test_pg_riga_in_attesa_sostituita_nel_database():
+    import json
+    import sys as _s
+    _s.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import pg_vero
+    from dealfinder.pricing import valutazione as VAL
+    c = pg_vero.nuovo_db("piu_auto_attesa")
+    if c is None:
+        return
+    pg_vero.psql(c.d, c.db, """CREATE TABLE valutazioni_policy (listing_id BIGINT, policy_version TEXT, categoria TEXT,
+        margine INT, riassunto JSONB, dati JSONB, prima JSONB, n INT, impronta_auto TEXT, impronta_regole TEXT, fonte TEXT,
+        metodo TEXT, computed_at TIMESTAMPTZ DEFAULT now(), PRIMARY KEY (listing_id, policy_version))""")
+
+    def scrivi(lid, dati, n, tolti_protetti=True, giudicata=False):
+        return c.execute(VAL.UPSERT_SQL, (lid, "v2", dati.get("categoria"), 1000, "{}", json.dumps(dati), None, n, "a", "r",
+                                          "prova", "mediana", 36, tolti_protetti, giudicata)).fetchall()
+    scrivi(1, {"categoria": "dati_insufficienti", "giudice_mancante": True}, 8)
+    scrivi(2, {"categoria": "opportunita"}, 8)
+    assert scrivi(1, {"categoria": "opportunita", "ai_confronti": {"tolti": 0}}, 6)          # meno confronti: scritta
+    assert not scrivi(2, {"categoria": "opportunita"}, 6)                                     # riga vera: rifiutata
+
+
+def test_riprova_giudice_segna_viste_solo_le_uscite_dall_attesa():
+    """15/11 (giudice A2): prima tutte le auto lette finivano in _visti, anche se il giudice era ancora fermo."""
+    import inspect
+    from dealfinder.web import app
+    src = inspect.getsource(app)
+    i = src.index("def riprova_giudice")
+    blocco = src[i:src.index("def perizia_ai", i)]
+    assert "_visti.update(ids)" not in blocco and "esce_dall_attesa as _esce" in blocco
+    assert "_esce(es, lid) or _tentativi[lid] >= _max_tent" in blocco
+    assert 'os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3")' in blocco
