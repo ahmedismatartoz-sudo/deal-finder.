@@ -269,8 +269,8 @@ def c_regole_cliente(conn, ctx: dict) -> dict:
     nomi = [n.strip() for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip()]
     try:                                             # 15/11: la stessa lista del sito (tutti i commercianti esclusi)
         from .web.sito_regole import nomi_esclusi_re
-        re_nomi = re.compile(nomi_esclusi_re(), re.I)
-        nomi = sorted(set(nomi) | {"officine mulino", "cosval", "auto e auto varese", "sr auto"})
+        re_nomi = re.compile(nomi_esclusi_re(commercianti=False), re.I)   # testo: solo i nomi non ambigui
+        nomi = sorted(set(nomi) | {"officine mulino"})
     except Exception:
         re_nomi = re.compile("|".join(re.escape(n) for n in nomi), re.I) if nomi else None
     mob, fisso = _regex_telefono()

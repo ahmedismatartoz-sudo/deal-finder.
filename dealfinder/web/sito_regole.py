@@ -84,17 +84,22 @@ _COMUNI: dict | None = None
 
 
 # 15/11 (revisione, regola del cliente): commercianti esclusi OVUNQUE (sito, candidate del giro, sentinella). Stessi nomi
-# di marketing/auto_invio.ESCLUSI_3_11 e di app.NON_COMMERCIANTI (Loconte, Officine Mulino, Cosval Auto, Auto & Auto
-# Varese, SR Auto), scritti come espressioni valide sia in Python (re, re.I) sia in Postgres (~*): niente \b (in
-# Postgres è un altro carattere), i confini di parola sono [^a-z]. Prima sul sito c'era solo "loconte".
-COMMERCIANTI_ESCLUSI = (r"loconte", r"officine\s*mulino", r"cosval", r"auto\s*(&|e)\s*auto\s*varese",
-                        r"(^|[^a-z])sr[\s.-]*auto([^a-z]|$)")
+# di marketing/auto_invio.ESCLUSI_3_11 e di app.NON_COMMERCIANTI, scritti come espressioni valide sia in Python (re, re.I)
+# sia in Postgres (~*): niente \b (in Postgres è un altro carattere), i confini di parola sono [^a-z].
+# - SEMPRE (anche nel testo di qualsiasi annuncio, come prima per Loconte): Loconte, Officine Mulino;
+# - SOLO COMMERCIANTI (nome del commerciante o testo di un annuncio di commerciante): Cosval Auto, Auto & Auto Varese,
+#   SR Auto. Nomi brevi: nel testo di un privato darebbero falsi positivi ("Yaris 1.5 SR auto", "Cosvaldo").
+COMMERCIANTI_ESCLUSI_SEMPRE = (r"loconte", r"officine[\s.-]*mulino")
+COMMERCIANTI_ESCLUSI_COMM = (r"(^|[^a-z])cosval", r"auto\s*(&|e)\s*auto\s*varese",
+                             r"(^|[^a-z])s\.?\s*r\.?[\s.-]*auto([^a-z]|$)")
+COMMERCIANTI_ESCLUSI = COMMERCIANTI_ESCLUSI_SEMPRE + COMMERCIANTI_ESCLUSI_COMM
 
 
-def nomi_esclusi_re(extra: str | None = None) -> str:
-    """Espressione unica dei commercianti esclusi: COMMERCIANTI_ESCLUSI più i nomi di SITO_COMMERCIANTI_NOMI (separati
-    da virgola, presi alla lettera)."""
-    parti = list(COMMERCIANTI_ESCLUSI)
+def nomi_esclusi_re(extra: str | None = None, commercianti: bool = True) -> str:
+    """Espressione dei commercianti esclusi. commercianti=True: tutta la lista (per nomi di commercianti o annunci di
+    commercianti); False: solo COMMERCIANTI_ESCLUSI_SEMPRE (testo di annunci di chiunque). In tutte e due i nomi di
+    SITO_COMMERCIANTI_NOMI (separati da virgola, presi alla lettera)."""
+    parti = list(COMMERCIANTI_ESCLUSI if commercianti else COMMERCIANTI_ESCLUSI_SEMPRE)
     for n in (extra if extra is not None else os.environ.get("SITO_COMMERCIANTI_NOMI", "")).split(","):
         n = n.strip()
         if n and n.lower() != "loconte":

@@ -406,10 +406,17 @@ def test_cambi_gia_valutati_dopo_il_cambio_non_prendono_posto_su_postgres_vero()
 
 # ------------------------------------------------------------------ commercianti esclusi ovunque (revisione 15/11)
 
-ESCLUSI_SI = ["Autosalone LOCONTE srl", "Officine Mulino Milano", "OfficineMulino", "Cosval Auto spa", "cosvalauto",
-              "Auto & Auto Varese", "auto e auto varese", "SR Auto", "srauto vende", "venduta da Sr-Auto"]
+# nomi da escludere quando il venditore è un commerciante (nome o testo del suo annuncio)
+ESCLUSI_SI = ["Autosalone LOCONTE srl", "Officine Mulino Milano", "OfficineMulino", "Officine-Mulino", "Cosval Auto spa",
+              "cosvalauto", "Auto & Auto Varese", "auto e auto varese", "SR Auto", "srauto vende", "venduta da Sr-Auto",
+              "S.R. Auto", "SR\nAuto"]
 ESCLUSI_NO = ["Fiat Panda ottime condizioni", "Alfa Romeo Giulia Veloce", "Suzuki Swift Sport", "auto varese centro",
-              "garanzia 12 mesi srl auto usate", "Classe A 180 d Automatic", "VW Polo GTI DSG", "Mulino bianco"]
+              "garanzia 12 mesi srl auto usate", "Classe A 180 d Automatic", "VW Polo GTI DSG", "Mulino bianco",
+              "Sr Automobili", "Usr Auto", "MSR Auto", "Autocosvalle", "Moto e Auto Varese"]
+# testo di un annuncio di PRIVATO: solo Loconte e Officine Mulino (i nomi brevi darebbero falsi positivi)
+PRIVATI_SI = ["auto di Loconte", "tagliandata da Officine-Mulino"]
+PRIVATI_NO = ["Yaris 1.5 SR auto", "Toyota Hilux SR auto 4x4", "privato vende Panda tagliandata da SR auto",
+              "Cosvaldo vende", "Cosval Auto", "auto e auto varese"]
 
 
 def test_commercianti_esclusi_stessa_lista_per_sito_e_candidate():
@@ -420,22 +427,45 @@ def test_commercianti_esclusi_stessa_lista_per_sito_e_candidate():
         assert rx.search(t), t
     for t in ESCLUSI_NO:
         assert not rx.search(t), t
+    rp = re.compile(SR.nomi_esclusi_re("", commercianti=False), re.I)
+    for t in PRIVATI_SI:
+        assert rp.search(t), t
+    for t in PRIVATI_NO:
+        assert not rp.search(t), t
     env = _env(SITO_COMMERCIANTI_NOMI="loconte,Autostar")
     try:
         assert app._commercianti_nomi_re() == SR.nomi_esclusi_re()          # il sito usa la lista unica
+        assert app._commercianti_nomi_re(commercianti=False) == SR.nomi_esclusi_re(commercianti=False)
         assert B.comm_fascia_parametri(["MI"], 1000, 0.92, 1, 1)["nomi"] == SR.nomi_esclusi_re()
-        assert re.search(SR.nomi_esclusi_re(), "Autostar Bergamo", re.I) and re.search(SR.nomi_esclusi_re(), "Loconte", re.I)
+        assert re.search(SR.nomi_esclusi_re(commercianti=False), "Autostar Bergamo", re.I)
     finally:
         _env(**env)
+
+
+def test_nomi_brevi_solo_per_i_commercianti_sul_sito():
+    """_dal_testo: loconte_testo (ogni venditore) solo per Loconte/Officine Mulino; i nomi brevi in loconte_comm_testo,
+    che _arricchisci usa solo se il venditore è un commerciante."""
+    import re
+    from dealfinder.web import app
+    nomi = re.compile(app._commercianti_nomi_re(commercianti=False), re.I)
+    tutti = re.compile(app._commercianti_nomi_re(), re.I)
+    d = app._dal_testo("Yaris 1.5 SR auto, tagliandata", nomi, tutti)
+    assert not d["loconte_testo"] and d["loconte_comm_testo"]
+    assert app._testo_da_bit(app._testo_in_bit(d))["loconte_comm_testo"] is True
+    d = app._dal_testo("auto di Loconte", nomi, tutti)
+    assert d["loconte_testo"]
+    import inspect
+    src = inspect.getsource(app._arricchisci)
+    assert 'tx.get("loconte_comm_testo") and r.get("seller_type") == "commerciante"' in src
 
 
 def test_commercianti_esclusi_anche_in_postgres():
     P, c = _pg("piu_auto_nomi")
     if c is None:
         return
+    import re
     from dealfinder.web import sito_regole as SR
-    rx = SR.nomi_esclusi_re("")
-    for t in ESCLUSI_SI:
-        assert c.execute("SELECT %s ~* %s AS x", (t, rx)).fetchone()["x"] is True, t
-    for t in ESCLUSI_NO:
-        assert c.execute("SELECT %s ~* %s AS x", (t, rx)).fetchone()["x"] is False, t
+    for rx, casi in ((SR.nomi_esclusi_re(""), ESCLUSI_SI + ESCLUSI_NO),
+                     (SR.nomi_esclusi_re("", commercianti=False), PRIVATI_SI + PRIVATI_NO)):
+        for t in casi:
+            assert c.execute("SELECT %s ~* %s AS x", (t, rx)).fetchone()["x"] is bool(re.search(rx, t, re.I)), t

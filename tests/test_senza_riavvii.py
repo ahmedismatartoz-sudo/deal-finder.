@@ -440,7 +440,7 @@ def test_paga_carta_e_permessi_dal_pannello_senza_riavvio():
 def test_cache_testo_in_bit():
     from dealfinder.web import app as A
     d = {"tel_testo": True, "tel_estero": False, "testo_truffa": True, "segni_commerciante": False, "promo_testo": False,
-         "solo_fin": True, "loconte_testo": False}
+         "solo_fin": True, "loconte_testo": False, "loconte_comm_testo": True}
     assert A._testo_da_bit(A._testo_in_bit(d)) == d and A._testo_da_bit(None) == {}
     assert A._testo_chiave(123, 4500) != A._testo_chiave(123, 4600) != A._testo_chiave(124, 4500)
     assert A._testo_chiave(123, None) == A._testo_chiave(123, 0)

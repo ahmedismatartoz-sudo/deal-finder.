@@ -1189,10 +1189,11 @@ def _subito_completo_giro(giorno: str, connetti=None) -> str:
     return "fatto"
 
 
-def _commercianti_nomi_re() -> str:
-    """15/11: commercianti esclusi ovunque (sito_regole.COMMERCIANTI_ESCLUSI, più SITO_COMMERCIANTI_NOMI)."""
+def _commercianti_nomi_re(commercianti: bool = True) -> str:
+    """15/11: commercianti esclusi ovunque (sito_regole.COMMERCIANTI_ESCLUSI, più SITO_COMMERCIANTI_NOMI).
+    commercianti=False: solo i nomi da cercare anche nel testo degli annunci di privati (Loconte, Officine Mulino)."""
     from .sito_regole import nomi_esclusi_re
-    return nomi_esclusi_re()
+    return nomi_esclusi_re(commercianti=commercianti)
 
 
 _elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False, "pronto": False, "fonte": None, "imp_v": None,
@@ -1477,17 +1478,21 @@ _testo_cache: dict = {}
 _testo_cache_t = {"t": time.time()}
 
 
-def _dal_testo(t: str, nomi) -> dict:
+def _dal_testo(t: str, nomi, nomi_comm=None) -> dict:
+    """nomi: commercianti esclusi da cercare in ogni annuncio; nomi_comm: quelli da cercare solo negli annunci di
+    commercianti (loconte_comm_testo, usato in _arricchisci solo se il venditore è un commerciante)."""
     from . import sito_regole as SR
     return {"tel_testo": bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)),
             "tel_estero": SR.tel_estero(t), "testo_truffa": SR.testo_truffa(t),
             "segni_commerciante": bool(_SEGNI_COMMERCIANTE.search(t)), "promo_testo": bool(_PROMO_RE.search(t)),
-            "solo_fin": bool(_SOLO_FIN_RE.search(t)), "loconte_testo": bool(nomi and nomi.search(t))}
+            "solo_fin": bool(_SOLO_FIN_RE.search(t)), "loconte_testo": bool(nomi and nomi.search(t)),
+            "loconte_comm_testo": bool(nomi_comm and nomi_comm.search(t))}
 
 
 # 12/11 (memoria): in cache non un dizionario per annuncio (~500 byte) ma un numero (un bit per sì/no) con chiave
 # intera id+prezzo: con 60.000 voci da ~30 MB a ~8 MB (misurato con dati simulati)
-_TESTO_BIT = ("tel_testo", "tel_estero", "testo_truffa", "segni_commerciante", "promo_testo", "solo_fin", "loconte_testo")
+_TESTO_BIT = ("tel_testo", "tel_estero", "testo_truffa", "segni_commerciante", "promo_testo", "solo_fin", "loconte_testo",
+              "loconte_comm_testo")
 
 
 def _testo_chiave(lid, prezzo) -> int:
@@ -1508,8 +1513,10 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
     ids = [it["id"] for it in items if isinstance(it.get("id"), int)]
     prezzi = {it["id"]: it.get("prezzo") for it in items}
     scarti = _scarti_cliente_ids()
-    nomi_re = _commercianti_nomi_re()
-    nomi = re.compile(nomi_re, re.I) if nomi_re else None
+    nomi_re = _commercianti_nomi_re()                  # nomi dei commercianti: tutta la lista
+    nomi_testo = _commercianti_nomi_re(commercianti=False)
+    nomi = re.compile(nomi_testo, re.I) if nomi_testo else None
+    nomi_comm = re.compile(nomi_re, re.I) if nomi_re else None
     if time.time() - _testo_cache_t["t"] > float(os.environ.get("TESTO_CACHE_ORE", "6")) * 3600 or len(_testo_cache) > 60000:
         _testo_cache.clear()
         _testo_cache_t["t"] = time.time()
@@ -1523,7 +1530,7 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
             for r in conn.execute("SELECT id, title, description FROM listings WHERE id = ANY(%s)",
                                   (senza_testo[k:k + 2000],)):
                 _testo_cache[_testo_chiave(r["id"], prezzi.get(r["id"]))] = _testo_in_bit(_dal_testo(
-                    f"{r.get('title') or ''} {r.get('description') or ''}", nomi))
+                    f"{r.get('title') or ''} {r.get('description') or ''}", nomi, nomi_comm))
         stats["testi_letti"] = len(senza_testo)
         for k in range(0, len(ids), 2000):
             for r in conn.execute(
@@ -1541,7 +1548,7 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
                     "da_verificare": r.get("stage_reason") == "da_verificare",
                     "danno_dichiarato": (r.get("damage_class") or "") in SR.DANNI_DICHIARATI,
                 }
-                if tx.get("loconte_testo"):
+                if tx.get("loconte_testo") or (tx.get("loconte_comm_testo") and r.get("seller_type") == "commerciante"):
                     loconte.add(r["id"])
         # commercianti: data dell'ultima valutazione (metodo nuovo dal COMMERCIANTI_VALUTATI_DAL), non più un confronto
         # di testo sulla versione del calcolo
