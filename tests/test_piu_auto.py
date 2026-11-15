@@ -1086,6 +1086,34 @@ def test_senza_foto_al_massimo_una_quota_per_giro():
     assert not res.get("riusate")                                          # le rimandate restano in coda, non riusate
 
 
+def test_senza_foto_in_eccesso_non_tolgono_il_posto_ai_rinnovi():
+    """15/11 (giudice): 100 decisioni senza foto e 5 rinnovi: i rinnovi entrano nel giro."""
+    CA._PAUSA["fino"] = 0.0
+    CA._FALLITE.clear()
+    CA._SALTATE.clear()
+    from datetime import datetime, timedelta, timezone
+    vecchia = datetime.now(timezone.utc) - timedelta(days=60)
+    auto_, cand = [], []
+    for i in range(1, 106):
+        a = {"id": i, "title": "Panda", "description": "ok", "price_eur": 5000, "foto": ["https://x/%d.jpg" % i],
+             "n_foto": 8, "confronti": []}
+        auto_.append(a)
+        r = {"id": i, "price_eur": 5000, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
+             "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": "diversa", "d_at": vecchia}
+        if i <= 100:
+            r.update(d_senza_foto=True, d_tentativi_foto=1)
+        cand.append(r)
+    fatti = []
+
+    def chiama(testo, foto):
+        fatti.append(1)
+        return dict(_OK_CTRL), 800, 80, "claude-haiku-5-5"
+    with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="base64", CONTROLLO_SENZA_FOTO_PER_GIRO=None):
+        res = CA.giro(ConnFinta(cand, auto_), chiama=chiama)
+    assert res["senza_foto_in_giro"] == 10 and res["senza_foto_rimandate"] == 90
+    assert len(fatti) == 15                                               # 10 senza foto + i 5 rinnovi
+
+
 def test_giudice_registra_l_esito_e_riprova_non_conta_i_blocchi():
     import inspect
     from dealfinder.ai import giudice as GI

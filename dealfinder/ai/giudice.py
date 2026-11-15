@@ -67,7 +67,7 @@ def _esito(lid, e: str) -> None:
         return
     _ESITI[lid] = (time.time(), e)
     if len(_ESITI) > 20000:
-        for k, _v in sorted(_ESITI.items(), key=lambda kv: kv[1][0])[:5000]:
+        for k, _v in sorted(list(_ESITI.items()), key=lambda kv: kv[1][0])[:5000]:
             _ESITI.pop(k, None)
 
 

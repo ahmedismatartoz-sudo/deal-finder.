@@ -693,9 +693,22 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     quante = 0 if stop else min(tetto, massimo or per_giro())
     if usd_rinnovi >= QUOTA_RINNOVI * budget:
         righe = [r for r in righe if classe(r) != 3]       # rinnovi finiti per oggi: solo nuove e prezzi cambiati
-    righe = ordina(righe)[:max(quante, per_giro()) * 2]  # qualcuna si riusa o si scarta senza chiamata
+    righe = ordina(righe)
+    # 15/11 (giudice): le senza foto oltre la quota del giro escono PRIMA del taglio, così non tolgono il posto ai rinnovi
+    _sf, _rimandate, _tenute = 0, 0, []
+    for r in righe:
+        if senza_foto_da_rifare(r) and not (r.get("price_eur") is not None and r.get("d_prezzo") is not None
+                                             and int(r["d_prezzo"]) != int(r["price_eur"])):
+            _sf += 1
+            if _sf > senza_foto_per_giro():
+                _rimandate += 1
+                continue
+        _tenute.append(r)
+    righe = _tenute[:max(quante, per_giro()) * 2]       # qualcuna si riusa o si scarta senza chiamata
     leggere = {r["id"]: r for r in righe}
     st: Counter = Counter()
+    if _rimandate:
+        st["senza_foto_rimandate"] += _rimandate
     if not righe:
         return dict(stop or {}, candidate=0, in_coda=n_cand, fatte_oggi=fatte_oggi)
     auto = {a["id"]: dict(a) for a in conn.execute(AUTO_SQL, {"ids": list(leggere), "nf": n_foto()}).fetchall()}
