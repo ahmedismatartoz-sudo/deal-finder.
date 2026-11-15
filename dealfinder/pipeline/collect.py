@@ -1114,18 +1114,18 @@ def _ai_prezzi():
 
 
 def torino_dopo_zona() -> bool:
-    """15/11 (punto 5, letture doppie): con ZONA_CRON=1 e ZONA_TORINO=1 il giro della zona legge già Torino e
-    dintorni (Subito Piemonte, AutoScout24 10121:100 da 1.000 a 70.000 €, focus), cioè tutto quello che legge il giro
-    di Torino (4.000-45.000 €): la seconda lettura costava ~50 minuti nei giri completi. Il giro di Torino allora
-    parte DOPO la zona e, se la zona ha letto davvero in questo run, solo con la scelta e la valutazione (stessa quota
-    TORINO_CANDIDATE, stesse regole). TORINO_DOPO_ZONA=0 torna a prima (giro di Torino con la sua lettura, prima)."""
+    """15/11 (punto 5, letture doppie): con ZONA_CRON=1 e ZONA_TORINO=1 il giro della zona legge già AutoScout24 intorno
+    a Torino (10121:100, da 1.000 a 70.000 €, focus), cioè tutto l'AutoScout24 del giro di Torino (4.000-45.000 €).
+    Il giro di Torino allora parte DOPO la zona e, se la zona ha letto davvero in questo run, salta SOLO AutoScout24:
+    Subito Piemonte resta (TORINO_SUB_PAGINE pagine, profonda nel giro completo), perché la zona legge il Piemonte solo
+    con le prime pagine recenti (revisione: Novara perdeva i ribassi degli annunci vecchi). TORINO_DOPO_ZONA=0 = prima."""
     return (os.environ.get("TORINO_DOPO_ZONA", "1") == "1" and os.environ.get("ZONA_CRON") == "1"
             and os.environ.get("ZONA_TORINO", "1") == "1" and os.environ.get("ZC_SOLO_VALUTA", "0") != "1")
 
 
-def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_valuta: bool = False) -> None:
+def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_subito: bool = False) -> None:
     """Giro di Torino (9/11; NOVARA_ORA 11/11): stessa raccolta + valutazione + pubblicazione del giro della zona,
-    centrato su Torino. solo_valuta=True (15/11): niente lettura, solo scelta e valutazione (vedi torino_dopo_zona)."""
+    centrato su Torino. solo_subito=True (15/11): niente AutoScout24 (già letto dalla zona), Subito sì (torino_dopo_zona)."""
     try:
         from .ciclo import _due
         if torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "6"))):
@@ -1143,13 +1143,11 @@ def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_valuta:
                          "BENZ_SUB_PAG_FASCIA": os.environ.get("TORINO_PAG_FASCIA", "8"), "BENZ_TUTTI_CARB": "1",
                          "BENZ_DAL": os.environ.get("TORINO_DAL", "2026-10-10 00:00"), "BENZ_SUB_PAGINE_ALTRE": os.environ.get("TORINO_SUB_PAGINE", "150"),
                          "BENZ_MAX": os.environ.get("TORINO_CANDIDATE", "1500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
-                         "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "1" if solo_valuta else "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
+                         "BENZ_PARALLELI": "3", "BENZ_SOLO_VALUTA": "0", "BENZ_SALTA_AUTOSCOUT": "1" if solo_subito else "0", "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"),
                          "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
                 os.environ[k] = v
             from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
             _completo = torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
-            if solo_valuta:
-                _completo = False
             os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
             os.environ["BENZ_INCR_NOME"] = "novara_ora" if novara_ora else "torino_cron"
             try:
@@ -1158,7 +1156,7 @@ def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_valuta:
                 if _completo and not torino_ora:
                     INC.segna_completo("torino_cron", esito)
                 log.warning("%s fatta%s: %s", "NOVARA_ORA" if novara_ora else "TORINO_CRON",
-                            " (solo valutazione: annunci letti dal giro della zona)" if solo_valuta else "", {k: v for k, v in esito.items() if isinstance(v, int)})
+                            " (AutoScout24 letto dal giro della zona)" if solo_subito else "", {k: v for k, v in esito.items() if isinstance(v, int)})
                 if not novara_ora:
                     lavori_zona(esito, nome="torino_cron")    # 9/11 revisione: registrato col nome che legge _due
             finally:
@@ -1271,7 +1269,7 @@ if __name__ == "__main__":
         except Exception as e:
             log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
         if _torino_dopo and os.environ.get("TORINO_GIRO", "1") == "1":
-            giro_torino(solo_valuta=_zona_letta)
+            giro_torino(solo_subito=_zona_letta)
         lavori_cron()
         if mode == "opportunita":
             # 13/11: con ZONA_CRON il cron non arriva a run(): Autohero non girava mai. Una volta al giorno.

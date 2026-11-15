@@ -181,32 +181,45 @@ def test_torino_dopo_zona_interruttori():
         _env(**prima)
 
 
-def test_giro_torino_solo_valutazione_non_rilegge():
+def test_giro_torino_dopo_la_zona_salta_solo_autoscout():
+    """Revisione 15/11: dopo la zona Torino salta SOLO AutoScout24; Subito (anche profonda nel completo) resta."""
     from dealfinder.pipeline import benzina_mi, ciclo, collect as C, incrementale as INC
     visto = []
 
     def giro():
-        visto.append({k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_INCREMENTALE", "BENZ_PROVINCE", "BENZ_MAX")})
+        visto.append({k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_SALTA_AUTOSCOUT", "BENZ_INCREMENTALE",
+                                                      "BENZ_SUB_PROFONDA", "BENZ_SUB_PAGINE_ALTRE", "BENZ_INCR_NOME")})
         return {"candidate": 3}
     segnati = []
     prima = (benzina_mi.giro, ciclo._due, INC.completo_dovuto, INC.segna_completo, C.lavori_zona)
-    env = _env(BENZ_SOLO_VALUTA="0", BENZ_PROVINCE="MI,MB")
+    env = _env(BENZ_SOLO_VALUTA="0", BENZ_PROVINCE="MI,MB", TORINO_SUB_PROFONDA=None, TORINO_SUB_PAGINE=None)
     try:
         benzina_mi.giro, ciclo._due = giro, (lambda j, h: True)
         INC.completo_dovuto, INC.segna_completo = (lambda *a, **k: True), (lambda *a: segnati.append(a))
         C.lavori_zona = lambda esito, nome="": segnati.append(("lavori", nome))
-        C.giro_torino(solo_valuta=True)
-        assert visto[-1]["BENZ_SOLO_VALUTA"] == "1" and visto[-1]["BENZ_INCREMENTALE"] == "1"
-        assert segnati == [("lavori", "torino_cron")]            # completo non segnato, giro registrato per _due
-        assert os.environ["BENZ_SOLO_VALUTA"] == "0" and os.environ["BENZ_PROVINCE"] == "MI,MB"   # ambiente rimesso
-        segnati.clear()
-        C.giro_torino()
-        assert visto[-1]["BENZ_SOLO_VALUTA"] == "0" and visto[-1]["BENZ_INCREMENTALE"] == "0"
+        C.giro_torino(solo_subito=True)
+        v = visto[-1]
+        assert v["BENZ_SOLO_VALUTA"] == "0" and v["BENZ_SALTA_AUTOSCOUT"] == "1"
+        assert v["BENZ_INCREMENTALE"] == "0" and v["BENZ_SUB_PROFONDA"] == "1" and v["BENZ_SUB_PAGINE_ALTRE"] == "150"
+        assert v["BENZ_INCR_NOME"] == "torino_cron"                 # inizio del giro precedente: quello di Torino
         assert segnati[0][0] == "torino_cron" and segnati[1] == ("lavori", "torino_cron")
+        assert os.environ["BENZ_SOLO_VALUTA"] == "0" and os.environ["BENZ_PROVINCE"] == "MI,MB"
+        assert "BENZ_SALTA_AUTOSCOUT" not in os.environ              # ambiente rimesso
+        C.giro_torino()
+        assert visto[-1]["BENZ_SALTA_AUTOSCOUT"] == "0"
     finally:
         benzina_mi.giro, ciclo._due, INC.completo_dovuto, INC.segna_completo, C.lavori_zona = prima
         _env(**env)
 
+
+def test_salta_autoscout_tocca_solo_le_letture_autoscout():
+    import inspect
+    src = inspect.getsource(B.giro)
+    assert src.count("[] if salta_as else bande_parallele(") == 3     # centro, centri extra, focus AutoScout24
+    assert "bande_parallele(" not in src.replace("[] if salta_as else bande_parallele(", "").split("def numero")[0].replace(
+        "from .lusso import bande_parallele", "")
+    assert "[] if solo_valuta else sub.search_recenti(" in src             # Subito recenti: resta
+    assert 'if not solo_valuta and os.environ.get("BENZ_SUB_PROFONDA") == "1"' in src   # Subito profonda: resta
 
 def test_confronti_extra_salta_le_citta_gia_lette_dalla_zona():
     import contextlib
