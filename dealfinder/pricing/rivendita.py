@@ -55,20 +55,29 @@ class Gruppo(list):
         self._lucchetto = threading.Lock()
         self._dati: dict = {}
 
-    def dati(self, rv, cfg) -> dict:
-        chiave = (rv, cfg.regole.correzione, cfg.svalutazione_anno, cfg.svalutazione_10km)
+    def dati(self, rv, cfg, priori: dict | None = None, make=None) -> dict:
+        chiave = (rv, cfg.regole.correzione, cfg.svalutazione_anno, cfg.svalutazione_10km, _chiave_priori(cfg, priori, make))
         with self._lucchetto:
             d = self._dati.get(chiave)
             if d is None:
-                d = self._dati[chiave] = _dati_gruppo(self, rv, cfg)
+                d = self._dati[chiave] = _dati_gruppo(self, rv, cfg, priori, make)
             return d
 
 
-def _dati_gruppo(righe: list, rv, cfg) -> dict:
+def _chiave_priori(cfg, priori: dict | None, make) -> tuple | None:
+    """Parte dei priori che decide i tassi (policy_v2.priore_tassi: marca → tutti → riserva), hashable e piccola."""
+    from . import policy_v2 as P
+    c_ = cfg.regole.correzione
+    return P.priore_tassi(priori, make, c_) if c_.pooling else None
+
+
+def _dati_gruppo(righe: list, rv, cfg, priori: dict | None = None, make=None) -> dict:
+    # 15/11 (giudice C5): gli stessi tassi anno/km della valutazione (pooling con i priori di t["tassi_priori"] e la
+    # marca, policy_v2.tassi): prima la rivendita li stimava senza priori e correggeva i km/anni in un altro modo
     from . import policy_v2 as P
     rip = ripubblicate(righe, rv)
     return {"sconto": sconto_osservato(righe, rv, rip), "ripubblicate": rip,
-            "tassi": P.tassi([c for c in righe if c.get("status") == "attivo"], cfg)}
+            "tassi": P.tassi([c for c in righe if c.get("status") == "attivo"], cfg, priori, make)}
 
 
 def ripubblicate(righe: list, rv) -> set:
@@ -206,7 +215,8 @@ def calcola(t: dict, righe: list[dict] | None, cfg=None, now=None) -> dict | Non
         return None
     now = now or datetime.now(timezone.utc)
     # dati di gruppo: calcolati una volta sul Gruppo (carica); una lista semplice (prove) si calcola ogni volta
-    gd = righe.dati(rv, cfg) if isinstance(righe, Gruppo) else _dati_gruppo(righe, rv, cfg)
+    pri, marca = t.get("tassi_priori"), t.get("make")
+    gd = righe.dati(rv, cfg, pri, marca) if isinstance(righe, Gruppo) else _dati_gruppo(righe, rv, cfg, pri, marca)
     sconto, n_sconti = gd["sconto"]
     ya, ka, _ = gd["tassi"]
     rip = gd["ripubblicate"]

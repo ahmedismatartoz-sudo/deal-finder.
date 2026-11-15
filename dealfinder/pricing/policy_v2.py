@@ -975,7 +975,13 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
     if vr and M_ann and n_gem >= cfg.n_minimo:
         f = RG.fattore_per(M_ann, t.get("fattori_calibra"), r)
         G = M_ann * f                                # gemelle portate al prezzo di vendita (fattore misurato)
-        diff = G / V - 1
+        # 12/11 sera (margini fase 2 punto 1): anche V al venduto con il fattore MISURATO sul valore reale (voci "vr:";
+        # 1,0 senza misura). 15/11 (giudice C1): l'accordo si decide su V portato al venduto, come le gemelle G: prima
+        # G si confrontava con V grezzo e al confine accordo/combinato la rivendita del sito saltava (V sale, R scende).
+        # Con l'accordo M resta V: il sito applica fv una volta sola (regole.calibra_vendita).
+        fv = RG.fattore_per(V, t.get("fattori_calibra"), r, vr=True) if r.calibrazione.vr_nel_combinato else 1.0
+        fv = min(1.0, fv)
+        diff = G / (V * fv) - 1
         accordo = abs(diff) <= vrr.accordo
         out["valore_reale"].update(differenza_gemelle=round(diff, 3), fattore_gemelle=round(f, 3),
                                    gemelle_vendita=int(round(G)))
@@ -987,10 +993,7 @@ def valuta(t: dict, mercato: list[dict], soglia: int, cfg: PolicyConfig | None =
                                   f"±{sg*100:.0f}%); le gemelle al prezzo di vendita ({int(round(G))} €) concordano")
         else:
             sG = _errore_gemelle(prezzi, reg, out["metodo_gemelle"], sg, vrr.errore_min, r.confronti.ampiezza_poche)
-            # 12/11 sera (margini fase 2 punto 1): anche V al venduto con il fattore MISURATO sul valore reale (voci
-            # "vr:"; 1,0 senza misura). Le gemelle G lo sono già; il sito non corregge più il combinato.
-            fv = RG.fattore_per(V, t.get("fattori_calibra"), r, vr=True) if r.calibrazione.vr_nel_combinato else 1.0
-            fv = min(1.0, fv)
+            # V al venduto con fv (sopra); le gemelle G lo sono già; il sito non corregge più il combinato.
             if fv < 1.0:
                 out["valore_reale"]["fattore_V"] = round(fv, 3)
             M, pesi = RG.media_pesata_log([(V * fv, sg), (G, sG)], vrr.errore_min)

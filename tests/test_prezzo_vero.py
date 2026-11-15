@@ -98,6 +98,41 @@ def test_nessun_min_tra_stime_nel_codice():
     assert "TARATURA" not in src and "riduzione(" not in src and "vendita_veloce" not in src
 
 
+def test_fattori_veri_accordo_su_v_al_venduto_e_un_fattore_solo_sul_sito():
+    """15/11 (giudice C1/C2): con fattori realistici (voci per fascia e voci "vr:") l'accordo si decide su V portato
+    al venduto; in accordo R del sito = V × fv; nel combinato M sta tra V × fv e G; il sito applica UN fattore solo
+    per ogni metodo (valore_reale, valore_reale_combinato, mediana). Nessun min/max tra le stime."""
+    fat = RG.fattori_calibrazione({"5-10k": {"n": 80, "prezzo_su_M": .91}, "10-20k": {"n": 80, "prezzo_su_M": .95}},
+                                  misurate_vr={"5-10k": {"n": 50, "prezzo_su_M": .92},
+                                               "10-20k": {"n": 50, "prezzo_su_M": .93}}, per_M=True)
+    visti = Counter()
+    for V in range(7600, 11201, 200):
+        vr = {"v": V, "sigma": .10, "n": 400, "n_vendute": 60}
+        v = P.valuta(car(1, 5500, vr=vr, fattori_calibra=fat), gemelle(BASE), 1500, CFG, NOW)
+        fv = min(1.0, RG.fattore_per(V, fat, vr=True))
+        G = v["valore_reale"]["gemelle_vendita"]
+        assert fv < 1
+        assert abs(v["valore_reale"]["differenza_gemelle"] - (G / (V * fv) - 1)) <= .002          # G salvato arrotondato all'euro
+        pv = P.riassunto(v)
+        sito = RG.calibra_vendita(pv, fat)
+        assert RG.calibra_vendita(sito, fat) == sito                  # mai due volte
+        visti[v["metodo"]] += 1
+        if v["metodo"] == "valore_reale":
+            assert v["M"] == V and abs(sito["R"] - V * fv) <= 1, (V, sito["R"], V * fv)
+            assert sito["calibrato"] == round(fv, 3)
+        else:
+            assert v["metodo"] == "valore_reale_combinato"
+            assert min(V * fv, G) - 1 <= v["M"] <= max(V * fv, G) + 1, (V, v["M"], V * fv, G)
+            assert sito == pv                                         # V e G già al venduto: il sito non tocca
+    assert visti["valore_reale"] and visti["valore_reale_combinato"]
+    # mediana (senza valore reale): il sito applica il fattore degli annunci una volta
+    pv = P.riassunto(P.valuta(car(1, 5500, fattori_calibra=fat), gemelle(BASE), 1500, CFG, NOW))
+    sito = RG.calibra_vendita(pv, fat)
+    f = RG.fattore_per(pv["M"], fat)
+    assert pv["metodo"] == "mediana" and f < 1 and sito["M"] == round(pv["M"] * f) and sito["calibrato"] == round(f, 3)
+    assert RG.calibra_vendita(sito, fat) == sito
+
+
 # ---------------------------------------------------------------- R = V una volta
 
 def test_r_uguale_v_una_volta():

@@ -361,6 +361,31 @@ def test_ripiego_prudente_stima():
     assert "valore_reale" not in RP.fonti(dati, dict(vr, n_vendute=10), [])   # e almeno 20 auto vendute
 
 
+def test_ripiego_con_i_fattori_della_calibrazione():
+    """15/11 (giudice C3): V al venduto con il fattore misurato sul valore reale (come il sito per valore_reale_modello)
+    e prezzi chiesti col fattore della loro fascia; 0,92 fisso solo senza fattori."""
+    from dealfinder import regole as RGM
+    fat = RGM.fattori_calibrazione({"<5k": {"n": 80, "prezzo_su_M": .87}, "5-10k": {"n": 80, "prezzo_su_M": .91},
+                                    "10-20k": {"n": 80, "prezzo_su_M": .95}},
+                                   misurate_vr={"5-10k": {"n": 50, "prezzo_su_M": .92},
+                                                "10-20k": {"n": 50, "prezzo_su_M": .93}}, per_M=True)
+    vr = {"v": 9000, "sigma": .10, "n": 400, "n_vendute": 60}
+    dati = {"motivi": ["solo 1 confronti validi"], "n": 1, "confronti": [{"prezzo": 4300, "prezzo_corretto": 4200}]}
+    f = RP.fonti(dati, vr, [10500, 10700], fat)
+    fv = RGM.fattore_per(9000, fat, vr=True)
+    assert fv < 1 and f["valore_reale"] == round(9000 * fv)
+    # stessa base della strada valore_reale_modello sul sito
+    pv = {"M": 9000, "R": 9000, "R_finale": 9000, "margine": 2500, "metodo": "valore_reale_modello", "M_fonte": "vendite"}
+    assert abs(RGM.calibra_vendita(pv, fat)["R"] - f["valore_reale"]) <= 1
+    assert f["autohero"] == round(10600 * RGM.fattore_per(10600, fat))
+    assert f["gemella"] == round(4200 * RGM.fattore_per(4200, fat)) and RGM.fattore_per(4200, fat) < RP.FATTORE_VENDITA
+    # senza fattori: come prima (0,92 sui prezzi chiesti, V senza correzione)
+    f0 = RP.fonti(dati, vr, [10500, 10700])
+    assert f0 == {"valore_reale": 9000, "autohero": round(10600 * .92), "gemella": round(4200 * .92)}
+    est, fonti, mot = RP.stima(5000, dict(dati, confronti=[]), vr, [9000, 9100], fat)
+    assert mot == "" and est == round(min(fonti.values()) * RP.PRUDENZA)
+
+
 def test_ripiego_sul_sito_solo_con_controllo_ai():
     rip = {"M": 8700, "R": 8700, "R_finale": 8700, "margine": 2500, "totale_costi": 200, "metodo": "ripiego_prudente",
            "calibrato": True}

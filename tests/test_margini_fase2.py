@@ -412,3 +412,27 @@ def test_tassi_applicati_solo_da_misura_con_pooling():
     secondo = VZ.ingressi(Conn({"fasce_su": "M", "tassi": tassi, "tassi_pooling": True}), [1], solo=("calibra",))
     assert secondo["tassi_priori"] == tassi
     assert '_ing.get("tassi_misurati")' in open(os.path.join(QUI, "dealfinder", "pricing", "calibra.py")).read()
+
+
+def test_rivendita_usa_i_tassi_della_valutazione_con_i_priori():
+    """15/11 (giudice C5): la rivendita dei commercianti stimava i tassi anno/km SENZA priori né marca (regola di
+    prima), la valutazione con il pooling: ora gli stessi tassi, e i priori stanno nella chiave dei dati di gruppo."""
+    from dealfinder.pricing import rivendita as RV
+    pr = {"tutti": {"anno": .09, "km_10000": .015, "n": 9000}}
+    righe = [dict(car(i, 12000 - 900 * (2020 - y) - 3 * km // 100, year=y, km=km), seller_type="commerciante")
+             for i, (y, km) in enumerate([(2018, 80000), (2019, 60000), (2020, 50000), (2018, 95000), (2019, 70000),
+                                          (2017, 110000)])]
+    attive = [c for c in righe if c.get("status") == "attivo"]
+    assert CFG.regole.correzione.pooling and P.tassi(attive, CFG, pr, "volkswagen") != P.tassi(attive, CFG)
+    g = RV.Gruppo(righe)
+    rv = CFG.regole.rivendita
+    assert g.dati(rv, CFG, pr, "volkswagen")["tassi"] == P.tassi(attive, CFG, pr, "volkswagen")
+    assert g.dati(rv, CFG)["tassi"] == P.tassi(attive, CFG)                # chiavi diverse: niente dati scambiati
+    assert len(g._dati) == 2
+    # calcola passa i priori e la marca di t (gli stessi che usa la valutazione)
+    g2 = RV.Gruppo(righe)
+    RV.calcola(car(1, 7000, year=2019, km=70000, tassi_priori=pr), g2, CFG, NOW)
+    (chiave, d), = g2._dati.items()
+    assert chiave[-1] == P.priore_tassi(pr, "volkswagen", CFG.regole.correzione)
+    assert d["tassi"] == P.tassi(attive, CFG, pr, "volkswagen")
+    assert RV._dati_gruppo(righe, rv, CFG, pr, "volkswagen")["tassi"] == d["tassi"]

@@ -9,9 +9,12 @@ prende la più bassa:
        STESSE soglie della regola "valore reale senza gemelle" (regole.ValoreReale.senza_gemelle_sigma_max 15%,
        senza_gemelle_vendute_min 20 auto vendute);
     A  Autohero (tabella autohero_prezzi, stesso abbinamento della prova alla cieca: stessa marca-modello canonica,
-       anno ±1, km ±20.000, almeno 2 auto): mediana delle più vicine × 0,92 (prezzo esposto di un rivenditore →
-       prezzo di vendita, fattore di calibrazione della fascia 5-10k, la più severa sopra i 5.000 €);
-    G  le poche auto uguali trovate (1 sola, NON quando i prezzi erano troppo dispersi): prezzo corretto × 0,92.
+       anno ±1, km ±20.000, almeno 2 auto): mediana delle più vicine × fattore chiesto → venduto (prezzo esposto di
+       un rivenditore → prezzo di vendita);
+    G  le poche auto uguali trovate (1 sola, NON quando i prezzi erano troppo dispersi): prezzo corretto × fattore.
+15/11 (giudice C3): i fattori sono quelli della calibrazione (regole.fattore_per, gli stessi del calcolo e del sito):
+V × fattore misurato sul valore reale (voci "vr:", come il "combinato" e il sito per valore_reale_modello), annunci ×
+fattore della loro fascia; 0,92 fisso solo se non ci sono fattori. Così tutte le strade partono dalla stessa base.
 
 Regole (tutte devono valere, altrimenti l'auto resta fuori come oggi):
   - la valutazione è "dati_insufficienti" SOLO per pochi confronti o confronti dispersi (mai per danni, dati mancanti,
@@ -33,7 +36,7 @@ import statistics
 
 log = logging.getLogger("ripiego_prudente")
 
-FATTORE_VENDITA = 0.92          # prezzo esposto → prezzo di vendita (prudente)
+FATTORE_VENDITA = 0.92          # prezzo esposto → prezzo di vendita: solo senza fattori della calibrazione
 PRUDENZA = 0.97                 # stima = fonte più bassa × 0,97
 ACCORDO_MAX = 1.15              # la fonte più alta al massimo +15% sulla più bassa
 AH_MIN = 2
@@ -59,29 +62,39 @@ def ammessa(auto: dict, dati: dict) -> str | None:
     return None
 
 
-def fonti(dati: dict, vr: dict | None, autohero: list[int] | None) -> dict:
+def _fattore_annunci(prezzo: float, fattori: list | None) -> float:
+    """Prezzo chiesto → venduto: fattore della calibrazione per questo prezzo; 0,92 solo senza fattori."""
+    from .. import regole as RG
+    return RG.fattore_per(prezzo, fattori) if fattori else FATTORE_VENDITA
+
+
+def fonti(dati: dict, vr: dict | None, autohero: list[int] | None, fattori: list | None = None) -> dict:
     out = {}
     # 13/11 (giudice A4): le stesse soglie della regola del valore reale senza gemelle (regole.ValoreReale)
     from .. import regole as RG
     vrr = RG.regole().valore_reale
     if (vr and vr.get("v") and vr.get("sigma") is not None and float(vr["sigma"]) <= vrr.senza_gemelle_sigma_max
             and int(vr.get("n_vendute") or 0) >= vrr.senza_gemelle_vendute_min):
-        out["valore_reale"] = int(vr["v"])
+        V = float(vr["v"])
+        # V al venduto con il fattore MISURATO sul valore reale (1,0 senza misura), come policy_v2 (mai sopra 1)
+        out["valore_reale"] = int(round(V * min(1.0, RG.fattore_per(V, fattori, vr=True))))
     ah = [int(p) for p in (autohero or []) if p]
     if len(ah) >= AH_MIN:
-        out["autohero"] = int(round(statistics.median(ah) * FATTORE_VENDITA))
+        med = statistics.median(ah)
+        out["autohero"] = int(round(med * _fattore_annunci(med, fattori)))
     if not dati.get("dispersione"):
         conf = [c.get("prezzo_corretto") or c.get("prezzo") for c in (dati.get("confronti") or []) if isinstance(c, dict)]
         conf = [float(p) for p in conf if p]
         n_gem = dati.get("n_gemelle") if dati.get("n_gemelle") is not None else dati.get("n")
         if len(conf) == 1 or (n_gem is not None and int(n_gem) == 1 and conf):
-            out["gemella"] = int(round(conf[0] * FATTORE_VENDITA))
+            out["gemella"] = int(round(conf[0] * _fattore_annunci(conf[0], fattori)))
     return out
 
 
-def stima(prezzo: int, dati: dict, vr: dict | None, autohero: list[int] | None) -> tuple[int | None, dict, str]:
-    """(stima, fonti, motivo). stima None = resta fuori (motivo)."""
-    f = fonti(dati, vr, autohero)
+def stima(prezzo: int, dati: dict, vr: dict | None, autohero: list[int] | None,
+          fattori: list | None = None) -> tuple[int | None, dict, str]:
+    """(stima, fonti, motivo). stima None = resta fuori (motivo). fattori: regole.fattori_calibrazione (come t["fattori_calibra"])."""
+    f = fonti(dati, vr, autohero, fattori)
     if len(f) < 2:
         return None, f, "fonti_insufficienti"
     lo, hi = min(f.values()), max(f.values())
@@ -144,6 +157,8 @@ def giro(conn, limite: int | None = None) -> dict:
                           "NULL::int AS n, NULL::int AS n_vendute) vr ON false")
     righe = conn.execute(sql, {"lim": int(limite or os.environ.get("RIPIEGO_PER_GIRO", "200"))}).fetchall()
     ah_ok = bool(conn.execute("SELECT to_regclass('autohero_prezzi') AS t").fetchone()["t"])
+    from . import valutazione as VZ
+    fattori = VZ.ingressi(conn, [], solo=("calibra",))["fattori_calibra"]     # stessi fattori della valutazione
     for r in righe:
         r = dict(r)
         dati = r.get("dati") or {}
@@ -153,7 +168,7 @@ def giro(conn, limite: int | None = None) -> dict:
         if motivo is None:
             ah = _autohero(conn, r) if ah_ok else []
             vr = {"v": r.get("v"), "sigma": r.get("sigma"), "n": r.get("n"), "n_vendute": r.get("n_vendute")} if r.get("v") else None
-            est, f, motivo = stima(int(r["price_eur"]), dati, vr, ah)
+            est, f, motivo = stima(int(r["price_eur"]), dati, vr, ah, fattori)
             if est:
                 pv = riassunto_pv(r, est, f)
                 motivo = "stima"
