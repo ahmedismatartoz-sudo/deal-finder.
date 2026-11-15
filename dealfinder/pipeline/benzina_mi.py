@@ -59,6 +59,93 @@ ORDER BY (t.price_eur > %(util)s) ASC, t.price_eur / g.med ASC   -- 22/10: utili
 LIMIT %(lim)s"""
 
 
+# 15/11 (ramo piu-auto, punto 1): COMMERCIANTI della fascia richiesta (sito_regole.tipo_venditore -> "comm_fascia",
+# senza tetto) nelle province del sito (sito_regole.PROVINCE_100KM). Il giro della zona sceglieva solo privati
+# (BENZ_SOLO_PRIVATI=1): questi commercianti erano letti e salvati ma valutati solo quando l'annuncio era nuovo (tempo
+# reale) e mai più rivalutati; commercianti_top (app.py) prende solo i commercianti FUORI provincia di Milano.
+# Stessa mediana, stessa soglia (BENZ_SOGLIA) e stessa condizione delle auto invariate dei privati; fascia richiesta
+# presa da regole.ammissione (prezzo, km, carburanti, diesel dal); in più due filtri che il sito applica comunque
+# dopo: niente prezzo "esca" (sotto il 70% della mediana; il sito scarta sotto il 75% di M) e niente
+# promo/leasing segnati nei flag, niente Loconte/Officine Mulino. Quota SEPARATA (BENZ_COMM_FASCIA_MAX, 300): non
+# toglie posti ai privati. BENZ_COMM_FASCIA=0 la spegne.
+COMM_FASCIA_MAX = 300
+COMM_FASCIA_ESCA = 0.70
+COMM_FLAG_PROMO = ["leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoerenti"]   # = app._FLAG_PROMO
+COMM_NOMI_ESCLUSI = ("loconte", r"officine\s*mulino")
+
+COMM_FASCIA_SQL = """
+WITH g AS (
+  SELECT make, model, fuel, year, count(*) AS n, percentile_cont(.5) WITHIN GROUP (ORDER BY price_eur) AS med
+  FROM listings
+  WHERE price_eur BETWEEN 800 AND %(gmax)s AND year >= 2005 AND make IS NOT NULL AND model IS NOT NULL
+  GROUP BY make, model, fuel, year
+)
+SELECT t.id, t.source, t.url, t.price_eur, t.telefono_ok, t.make, t.model, g.n, g.med
+FROM listings t
+JOIN g ON g.make=t.make AND g.model=t.model AND g.fuel IS NOT DISTINCT FROM t.fuel AND g.year=t.year
+WHERE t.status='attivo' AND t.seller_type = 'commerciante' AND upper(t.province) = ANY(%(prov)s)
+  AND t.price_eur >= %(pmin)s AND t.price_eur < %(fascia_prezzo)s
+  AND t.mileage_km IS NOT NULL AND t.mileage_km < %(fascia_km)s AND t.year >= %(anno_min)s
+  AND (lower(coalesce(t.fuel, '')) ~ %(carb_re)s OR (lower(coalesce(t.fuel, '')) LIKE '%%diesel%%' AND t.year >= %(diesel_dal)s))
+  AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
+  AND t.stage IS DISTINCT FROM 'approfondito'
+  AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s AND t.price_eur >= g.med * %(esca)s
+  AND NOT (coalesce(t.price_flags, '{{}}'::text[]) && %(flag)s::text[])
+  AND NOT ((coalesce(t.title,'') || ' ' || coalesce(t.description,'')) ~* %(nomi)s)
+  AND NOT {invariate}
+ORDER BY t.price_eur / g.med ASC
+LIMIT %(lim)s"""
+
+
+def comm_fascia_attiva() -> bool:
+    return os.environ.get("BENZ_COMM_FASCIA", "1") == "1"
+
+
+def comm_fascia_quota() -> int:
+    try:
+        return max(0, int(os.environ.get("BENZ_COMM_FASCIA_MAX") or COMM_FASCIA_MAX))
+    except ValueError:
+        return COMM_FASCIA_MAX
+
+
+def comm_fascia_province(prov: list) -> list:
+    """Solo le province del sito (Milano e dintorni): mai Torino, Ravenna o altre zone del giro."""
+    from ..web.sito_regole import PROVINCE_100KM
+    return [p for p in (x.strip().upper() for x in prov) if p in PROVINCE_100KM]
+
+
+def comm_fascia_parametri(prov: list, pmin: int, soglia: float, gmax: int, lim: int) -> dict:
+    """Parametri di COMM_FASCIA_SQL dalle regole del cliente (regole.ammissione): nessun valore nuovo."""
+    from ..regole import regole
+    rg = regole()
+    a = rg.ammissione
+    nomi = [n for n in COMM_NOMI_ESCLUSI] + [re.escape(n.strip()) for n in
+                                             os.environ.get("SITO_COMMERCIANTI_NOMI", "").split(",") if n.strip()]
+    return {"prov": comm_fascia_province(prov), "pmin": max(int(pmin), 1), "fascia_prezzo": int(a.richiesta_prezzo_max),
+            "fascia_km": int(a.richiesta_km_max), "anno_min": int(a.anno_min), "diesel_dal": int(a.richiesta_diesel_dal),
+            "carb_re": "(" + "|".join(re.escape(c) for c in a.richiesta_carburanti) + ")", "soglia": float(soglia),
+            "esca": COMM_FASCIA_ESCA, "flag": COMM_FLAG_PROMO, "nomi": "(" + "|".join(nomi) + ")", "gmax": int(gmax),
+            "lim": int(lim)}
+
+
+def candidate_comm_fascia(conn, prov: list, pmin: int, soglia: float, gmax: int, st: Counter) -> list:
+    """Commercianti della fascia richiesta da valutare in questo giro (quota separata). [] se spento o fuori zona."""
+    from ..regole import regole
+    if not comm_fascia_attiva() or not regole().fascia_richiesta:
+        return []
+    quota = comm_fascia_quota()
+    par = comm_fascia_parametri(prov, pmin, soglia, gmax, 0)
+    if quota <= 0 or not par["prov"]:
+        return []
+    from . import scelta_candidate as SC
+    par.update(SC.parametri_invariate(), lim=int(quota * SC.sovra()))
+    righe = conn.execute(COMM_FASCIA_SQL.format(invariate=SC.condizione_invariate(conn)), par).fetchall()
+    st["comm_fascia_lette"] = len(righe)
+    tenute = SC.filtra_sicuri(conn, [dict(r) for r in righe], quota, st)
+    st["comm_fascia"] = len(tenute)
+    return tenute
+
+
 _RE_ANNO = [re.compile(p, re.I) for p in (
     r"immatricolat\w*\s*(?:il|nel|a|ad|in)?\s*(?:\d{1,2}\s*[/.-]\s*)?((?:19|20)\d{2})\b",
     r"\banno\s*(?:di\s*)?(?:immatricolazione)?\s*[:\-]?\s*((?:19|20)\d{2})\b",
@@ -380,6 +467,19 @@ def giro() -> dict:
                                             "solo_nuove": os.environ.get("BENZ_SOLO_NUOVE") == "1"}).fetchall()
         st["candidate_lette"] = len(cand)
         cand = SC.filtra_sicuri(conn, cand, tetto, st)
+        # 15/11 (punto 1): commercianti della fascia richiesta nelle province del sito, quota separata (vedi sopra)
+        if SOLO_P and not solo_valuta and comm_fascia_attiva():
+            try:
+                gia = {r["id"] for r in cand}
+                comm = candidate_comm_fascia(conn, PROVINCE_100, PMIN, float(os.environ.get("BENZ_SOGLIA", "0.85")),
+                                             int(os.environ.get("BENZ_G_MAX", "60000")), st)
+                cand = list(cand) + [r for r in comm if r["id"] not in gia]
+                log.warning("BENZ commercianti fascia richiesta da valutare: %d (lette %d)", st.get("comm_fascia", 0),
+                            st.get("comm_fascia_lette", 0))
+            except Exception as e:
+                conn.rollback()
+                conn.execute("SET statement_timeout = '900s'")
+                log.warning("BENZ commercianti fascia richiesta non letti: %s", str(e)[:200])
         # 1/11 (cliente: "il software può fare di più"): le auto della zona che hanno CAMBIATO PREZZO nelle ultime ore
         # (di solito un ribasso) si rivalutano subito in questo giro, anche se non sono tra le prime BENZ_MAX candidate
         if os.environ.get("BENZ_CAMBI_PREZZO", "1") == "1":
