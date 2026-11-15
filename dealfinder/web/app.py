@@ -1190,7 +1190,9 @@ def _subito_completo_giro(giorno: str, connetti=None) -> str:
 
 
 def _commercianti_nomi_re() -> str:
-    return "|".join(re.escape(n.strip()) for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip())
+    """15/11: commercianti esclusi ovunque (sito_regole.COMMERCIANTI_ESCLUSI, più SITO_COMMERCIANTI_NOMI)."""
+    from .sito_regole import nomi_esclusi_re
+    return nomi_esclusi_re()
 
 
 _elenco: dict = {"t": 0.0, "items": [], "opens": {}, "busy": False, "pronto": False, "fonte": None, "imp_v": None,

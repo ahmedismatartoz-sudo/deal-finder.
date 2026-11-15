@@ -267,7 +267,12 @@ def c_regole_cliente(conn, ctx: dict) -> dict:
             or (r.get("provincia") or "").upper() == "RM"]
     km = [r["listing_id"] for r in sito if r.get("km") is not None and int(r["km"]) > km_max]
     nomi = [n.strip() for n in os.environ.get("SITO_COMMERCIANTI_NOMI", "loconte").split(",") if n.strip()]
-    re_nomi = re.compile("|".join(re.escape(n) for n in nomi), re.I) if nomi else None
+    try:                                             # 15/11: la stessa lista del sito (tutti i commercianti esclusi)
+        from .web.sito_regole import nomi_esclusi_re
+        re_nomi = re.compile(nomi_esclusi_re(), re.I)
+        nomi = sorted(set(nomi) | {"officine mulino", "cosval", "auto e auto varese", "sr auto"})
+    except Exception:
+        re_nomi = re.compile("|".join(re.escape(n) for n in nomi), re.I) if nomi else None
     mob, fisso = _regex_telefono()
     fb = {r["listing_id"] for r in sito if "facebook" in str(r.get("fonte") or "").lower()}   # chat di Marketplace
     fb |= {r["listing_id"] for r in sito if str(r.get("sezione") or "").startswith("super")}  # 12/11: supercar esenti dal telefono

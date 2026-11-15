@@ -83,6 +83,25 @@ _CAPOLUOGHI = {
 _COMUNI: dict | None = None
 
 
+# 15/11 (revisione, regola del cliente): commercianti esclusi OVUNQUE (sito, candidate del giro, sentinella). Stessi nomi
+# di marketing/auto_invio.ESCLUSI_3_11 e di app.NON_COMMERCIANTI (Loconte, Officine Mulino, Cosval Auto, Auto & Auto
+# Varese, SR Auto), scritti come espressioni valide sia in Python (re, re.I) sia in Postgres (~*): niente \b (in
+# Postgres è un altro carattere), i confini di parola sono [^a-z]. Prima sul sito c'era solo "loconte".
+COMMERCIANTI_ESCLUSI = (r"loconte", r"officine\s*mulino", r"cosval", r"auto\s*(&|e)\s*auto\s*varese",
+                        r"(^|[^a-z])sr[\s.-]*auto([^a-z]|$)")
+
+
+def nomi_esclusi_re(extra: str | None = None) -> str:
+    """Espressione unica dei commercianti esclusi: COMMERCIANTI_ESCLUSI più i nomi di SITO_COMMERCIANTI_NOMI (separati
+    da virgola, presi alla lettera)."""
+    parti = list(COMMERCIANTI_ESCLUSI)
+    for n in (extra if extra is not None else os.environ.get("SITO_COMMERCIANTI_NOMI", "")).split(","):
+        n = n.strip()
+        if n and n.lower() != "loconte":
+            parti.append(re.escape(n))
+    return "|".join(f"({x})" for x in parti)
+
+
 def _norm_citta(c) -> str:
     c = unicodedata.normalize("NFKD", str(c or "")).encode("ascii", "ignore").decode().lower()
     c = re.sub(r"\(.*?\)", "", c.split(",")[0])

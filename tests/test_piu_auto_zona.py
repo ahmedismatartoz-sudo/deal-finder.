@@ -396,3 +396,40 @@ def test_cambi_gia_valutati_dopo_il_cambio_non_prendono_posto_su_postgres_vero()
     assert c.execute(SC.CAMBI_SQL, par).fetchall() == []
     par.update(ore=11, salta_valutate=False)
     assert {r["id"] for r in c.execute(SC.CAMBI_SQL, par).fetchall()} == {a, b}
+
+
+# ------------------------------------------------------------------ commercianti esclusi ovunque (revisione 15/11)
+
+ESCLUSI_SI = ["Autosalone LOCONTE srl", "Officine Mulino Milano", "OfficineMulino", "Cosval Auto spa", "cosvalauto",
+              "Auto & Auto Varese", "auto e auto varese", "SR Auto", "srauto vende", "venduta da Sr-Auto"]
+ESCLUSI_NO = ["Fiat Panda ottime condizioni", "Alfa Romeo Giulia Veloce", "Suzuki Swift Sport", "auto varese centro",
+              "garanzia 12 mesi srl auto usate", "Classe A 180 d Automatic", "VW Polo GTI DSG", "Mulino bianco"]
+
+
+def test_commercianti_esclusi_stessa_lista_per_sito_e_candidate():
+    import re
+    from dealfinder.web import app, sito_regole as SR
+    rx = re.compile(SR.nomi_esclusi_re(""), re.I)
+    for t in ESCLUSI_SI:
+        assert rx.search(t), t
+    for t in ESCLUSI_NO:
+        assert not rx.search(t), t
+    env = _env(SITO_COMMERCIANTI_NOMI="loconte,Autostar")
+    try:
+        assert app._commercianti_nomi_re() == SR.nomi_esclusi_re()          # il sito usa la lista unica
+        assert B.comm_fascia_parametri(["MI"], 1000, 0.92, 1, 1)["nomi"] == SR.nomi_esclusi_re()
+        assert re.search(SR.nomi_esclusi_re(), "Autostar Bergamo", re.I) and re.search(SR.nomi_esclusi_re(), "Loconte", re.I)
+    finally:
+        _env(**env)
+
+
+def test_commercianti_esclusi_anche_in_postgres():
+    P, c = _pg("piu_auto_nomi")
+    if c is None:
+        return
+    from dealfinder.web import sito_regole as SR
+    rx = SR.nomi_esclusi_re("")
+    for t in ESCLUSI_SI:
+        assert c.execute("SELECT %s ~* %s AS x", (t, rx)).fetchone()["x"] is True, t
+    for t in ESCLUSI_NO:
+        assert c.execute("SELECT %s ~* %s AS x", (t, rx)).fetchone()["x"] is False, t

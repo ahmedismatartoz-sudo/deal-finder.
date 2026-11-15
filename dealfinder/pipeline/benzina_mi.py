@@ -66,12 +66,11 @@ LIMIT %(lim)s"""
 # Stessa mediana, stessa soglia (BENZ_SOGLIA) e stessa condizione delle auto invariate dei privati; fascia richiesta
 # presa da regole.ammissione (prezzo, km, carburanti, diesel dal); in più due filtri che il sito applica comunque
 # dopo: niente prezzo "esca" (sotto il 70% della mediana; il sito scarta sotto il 75% di M) e niente
-# promo/leasing segnati nei flag, niente Loconte/Officine Mulino. Quota SEPARATA (BENZ_COMM_FASCIA_MAX, 300): non
+# promo/leasing segnati nei flag, niente commercianti esclusi (sito_regole.COMMERCIANTI_ESCLUSI). Quota SEPARATA (BENZ_COMM_FASCIA_MAX, 300): non
 # toglie posti ai privati. BENZ_COMM_FASCIA=0 la spegne.
 COMM_FASCIA_MAX = 300
 COMM_FASCIA_ESCA = 0.70
 COMM_FLAG_PROMO = ["leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoerenti"]   # = app._FLAG_PROMO
-COMM_NOMI_ESCLUSI = ("loconte", r"officine\s*mulino")
 
 COMM_FASCIA_SQL = """
 WITH g AS (
@@ -119,12 +118,11 @@ def comm_fascia_parametri(prov: list, pmin: int, soglia: float, gmax: int, lim: 
     from ..regole import regole
     rg = regole()
     a = rg.ammissione
-    nomi = [n for n in COMM_NOMI_ESCLUSI] + [re.escape(n.strip()) for n in
-                                             os.environ.get("SITO_COMMERCIANTI_NOMI", "").split(",") if n.strip()]
+    from ..web.sito_regole import nomi_esclusi_re       # stessa lista del sito (Loconte, Officine Mulino, ...)
     return {"prov": comm_fascia_province(prov), "pmin": max(int(pmin), 1), "fascia_prezzo": int(a.richiesta_prezzo_max),
             "fascia_km": int(a.richiesta_km_max), "anno_min": int(a.anno_min), "diesel_dal": int(a.richiesta_diesel_dal),
             "carb_re": "(" + "|".join(re.escape(c) for c in a.richiesta_carburanti) + ")", "soglia": float(soglia),
-            "esca": COMM_FASCIA_ESCA, "flag": COMM_FLAG_PROMO, "nomi": "(" + "|".join(nomi) + ")", "gmax": int(gmax),
+            "esca": COMM_FASCIA_ESCA, "flag": COMM_FLAG_PROMO, "nomi": nomi_esclusi_re(), "gmax": int(gmax),
             "lim": int(lim)}
 
 
