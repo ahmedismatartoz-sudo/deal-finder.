@@ -627,3 +627,40 @@ def test_pg_ai_prezzi_contato_nel_giro(monkeypatch):
     assert "ai_prezzi" in r["stats"]["fasi"] and r["stats"]["minuti"] >= 100
     t = c.execute("SELECT ok FROM job_runs WHERE job = 'turno:ai_prezzi'").fetchone()
     assert t["ok"] is False
+
+
+def test_lavori_della_notte_in_un_processo_pulito():
+    """Correzione del giudice: la coda NON parte dal processo che ha fatto la zona completa (memoria non restituita):
+    os.execve in un processo nuovo (MERCATO_LAVORI_FASE), poi mercato_nord o ai_prezzi."""
+    src = inspect.getsource(collect.modo_notte)
+    assert "esegui_coda" not in src
+    av = inspect.getsource(collect.avvia_lavori_notte)
+    assert "os.execve" in av and 'env["MERCATO_LAVORI_FASE"] = "1"' in av
+    main = open(os.path.join(QUI, "dealfinder", "pipeline", "collect.py")).read()
+    main = main[main.index('if __name__ == "__main__":'):]
+    i = main.index('os.environ.pop("MERCATO_NOTTE_FASE", None)')
+    blocco = main[i:main.index('os.environ.pop("MERCATO_LAVORI_FASE", None)')]
+    assert blocco.index("modo_notte(") < blocco.index("avvia_lavori_notte()") < blocco.index("dopo_notte()")
+    assert "fase_lavori_notte(" in main and "FOTOGRAFIA servizio" in main
+    assert "MERCATO_LAVORI_FASE" in turni._DI_PROCESSO
+
+
+def test_pg_codice_di_uscita_diverso_da_zero_si_riprende(monkeypatch):
+    c = pg_vero.nuovo_db("fond_uscita")
+    if c is None:
+        return
+    cn = _connetti(c)
+    CL.metti("perche_fuori:z", connetti=cn)
+    import subprocess
+
+    class Finto:
+        returncode = -9                            # ucciso (memoria)
+    vero_run = subprocess.run
+    monkeypatch.setattr(subprocess, "run", lambda cmd, *a, **kw: Finto() if "dealfinder.pipeline.coda_lavori" in cmd
+                        else vero_run(cmd, *a, **kw))
+    es = CL.esegui_coda(True, budget_min=300, connetti=cn, separato=True)
+    assert es["perche_fuori:z"] == "errore"
+    assert c.execute("SELECT stato FROM coda_lavori").fetchone()["stato"] == "errore"
+    Finto.returncode = 0
+    es = CL.esegui_coda(True, budget_min=300, connetti=cn, separato=True)      # la notte dopo si riprende
+    assert es["perche_fuori:z"] == "fatto"

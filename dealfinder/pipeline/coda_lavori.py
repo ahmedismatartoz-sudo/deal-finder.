@@ -136,8 +136,8 @@ def prendi(chi: str, lunghi: bool | None, connetti=None, ripiego_ore: float | No
                 "now() - interval '13 hours') ORDER BY creato_at FOR UPDATE SKIP LOCKED", (int(ore_l), int(ore))).fetchall()
         else:
             righe = c.execute(
-                "SELECT valore FROM coda_lavori WHERE (stato = 'in_coda' OR (stato = 'in_corso' AND preso_at < now() - "
-                "interval '13 hours')) AND (%s::boolean IS NULL OR lungo = %s::boolean) ORDER BY creato_at "
+                "SELECT valore FROM coda_lavori WHERE (stato = 'in_coda' OR (stato = 'errore' AND lungo) OR "
+                "(stato = 'in_corso' AND preso_at < now() - interval '13 hours')) AND (%s::boolean IS NULL OR lungo = %s::boolean) ORDER BY creato_at "
                 "FOR UPDATE SKIP LOCKED", (lunghi, lunghi)).fetchall()
         vals = [r["valore"] for r in righe]
         if vals:
@@ -187,10 +187,12 @@ def esegui_in_processo(v: str, timeout_s: float) -> None:
     import subprocess
     import sys
     try:
-        subprocess.run([sys.executable, "-m", "dealfinder.pipeline.coda_lavori", v], timeout=max(60.0, timeout_s),
-                       check=False)
+        rc = subprocess.run([sys.executable, "-m", "dealfinder.pipeline.coda_lavori", v], timeout=max(60.0, timeout_s),
+                            check=False).returncode
     except subprocess.TimeoutExpired as e:
         raise TimeoutError(f"oltre {int(timeout_s // 60)} minuti") from e
+    if rc != 0:                       # errore o processo ucciso (memoria): NON fatta, si riprende
+        raise RuntimeError(f"codice di uscita {rc}")
 
 
 def esegui_coda(lunghi: bool | None, budget_min: float = 60.0, chi: str = "cron", connetti=None, esegui_fn=None,
@@ -242,7 +244,7 @@ def esegui_coda(lunghi: bool | None, budget_min: float = 60.0, chi: str = "cron"
     return esito
 
 
-def _lungo(chiave: str, nome_log: str, fn) -> None:
+def _lungo(chiave: str, nome_log: str, fn) -> bool | None:
     """Voce lunga (16/11, correzione del giudice): segnata "fatta" SOLO a lavoro finito (ciclo.inizia, riga con il
     battito e lucchetto). Prima _una_volta la segnava fatta alla partenza: un processo ucciso a metà (limite di tempo,
     memoria, deploy) la perdeva per sempre. Stessa chiave di prima: una voce già fatta (riga ok) non si rifà; una
@@ -252,17 +254,18 @@ def _lungo(chiave: str, nome_log: str, fn) -> None:
     lav = inizia(chiave)
     if not lav:
         lg.warning("%s %s già fatto (o in corso in un altro processo)", nome_log, chiave[:60])
-        return
+        return None
     try:
         fn()
     except Exception as e:
         lav.fallito(e)
         lg.warning("%s non riuscito: %s", nome_log, str(e)[:300])
-        return
+        return False
     lav.fatto()
+    return True
 
 
-def esegui(v: str) -> None:
+def esegui(v: str) -> bool | None:
     """Una voce spostabile: il codice che prima era in web/app.py (brevo_liste), invariato, senza le attese di avvio.
     Ogni ramo ha la sua chiave _una_volta (una voce già fatta non si rifà) e non solleva eccezioni."""
     from ..db import connect
@@ -270,8 +273,7 @@ def esegui(v: str) -> None:
         def _perche_fuori():
             from ..pricing import perche_fuori as _pf
             _pf.lavoro(v)
-        _lungo(v, "PERCHE_FUORI", _perche_fuori)
-        return
+        return _lungo(v, "PERCHE_FUORI", _perche_fuori)
     if v.startswith("prova_cieca:"):      # 12/11 (cliente): prova alla cieca M / perizia AI / Autohero (solo log)
         def _prova_cieca():
             from ..ai import prova_cieca as _pc
@@ -280,8 +282,7 @@ def esegui(v: str) -> None:
                 _pc.esegui(conn, n=min(int(parti[1] or 30), 200),
                            giorni=min(int(parti[2]), 90) if len(parti) > 2 and parti[2] else 30,
                            ai=not (len(parti) > 3 and parti[3] == "solo_calcolo"))   # 12/11 sera margini fase 2
-        _lungo(v, "PROVA_CIECA", _prova_cieca)
-        return
+        return _lungo(v, "PROVA_CIECA", _prova_cieca)
     if v.startswith("mix:"):              # 5/11 (cliente): nuove + richiamo del 3/11 fino a 1.200, invio subito
         try:
             from ..marketing import brevo_liste as bl
@@ -345,8 +346,7 @@ def esegui(v: str) -> None:
         def _r60():
             from ..pipeline import raccolta60 as R60
             R60.lavoro(re.sub(r"[^A-Za-z0-9-]", "", v.split(":", 1)[1])[:20] or "1611")
-        _lungo(f"raccolta60:{v[:60]}", "R60", _r60)
-        return
+        return _lungo(f"raccolta60:{v[:60]}", "R60", _r60)
     if v.startswith(("fuori84:", "liberoms:", "mattina:")):  # 16/11 (cliente): nuovi dal database, mai chi era nella lista 84
         try:
             from ..marketing import su_misura as SM
@@ -473,4 +473,5 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     if len(sys.argv) > 1 and os.environ.get("DATABASE_URL"):
-        esegui(sys.argv[1])
+        # codice di uscita 1 se la voce lunga non è riuscita: chi l'ha lanciata la rimette da fare
+        sys.exit(1 if esegui(sys.argv[1]) is False else 0)

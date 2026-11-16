@@ -1587,6 +1587,66 @@ def avvia_notte(t0: float) -> None:
     os.execve(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"], env)
 
 
+def lavori_in_coda_lunghi() -> int:
+    try:
+        from . import coda_lavori
+        with coda_lavori._connetti() as c:
+            coda_lavori.assicura(c)
+            r = c.execute("SELECT count(*) AS n FROM coda_lavori WHERE lungo AND stato IN ('in_coda', 'errore')").fetchone()
+        return int(r["n"]) if r else 0
+    except Exception:
+        return 0
+
+
+def avvia_lavori_notte() -> None:
+    """Dal processo notturno, finita la zona: i lavori lunghi in coda in un processo NUOVO (os.execve, ambiente del
+    mercato), così in nessun momento convivono due processi pesanti (cron a 512 MB). Non ritorna se ci sono lavori."""
+    if not lavori_in_coda_lunghi():
+        return
+    env = dict(os.environ)
+    env["MERCATO_LAVORI_FASE"] = "1"
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execve(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"], env)
+
+
+def fase_lavori_notte(t0: float) -> dict:
+    """Processo pulito e leggero: esegue i lavori lunghi in coda, ognuno in un suo processo (uno alla volta), solo se la
+    durata prevista sta nel tempo, sempre entro RENDER_ORE_MAX (11,5) ore dall'avvio del cron."""
+    import time as _t
+    from . import coda_lavori, turni
+    giro = turni.Giro("notte_lavori", t0, ore=float(os.environ.get("RENDER_ORE_MAX") or RENDER_ORE_MAX)).apri()
+    esito: dict = {}
+    try:
+        giro.fase("lavori_lunghi")
+        resto = min(float(os.environ.get("NOTTE_FINE_ORE") or NOTTE_FINE_ORE) * 60 + 60 - giro.passate_min(),
+                    giro.resto_min())
+        esito = coda_lavori.esegui_coda(lunghi=True, budget_min=max(0.0, resto), separato=True)
+    except Exception as e:
+        log.warning("NOTTE lavori in coda non fatti: %s", str(e)[:200])
+    finally:
+        giro.chiudi(True, lavori=json.dumps(esito, default=str)[:300])
+    log.warning("NOTTE lavori fatti in %.0f min dall'avvio del cron: %s", (_t.time() - t0) / 60,
+                json.dumps(esito, default=str)[:400])
+    return esito
+
+
+def dopo_notte() -> None:
+    """Fine del cron mercato dopo la notte: mercato_nord se dovuto (processo pulito) oppure il modello AI dei prezzi."""
+    try:
+        from .ciclo import _due as _due_job
+        if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6) \
+                and os.environ.get("NORD_PROCESSO", "1") == "1":
+            os.environ["MERCATO_NORD_FASE"] = "1"
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"])
+    except Exception as e:
+        log.warning("MERCATO_NORD dopo la notte non avviato: %s", str(e)[:300])
+    if tempo_ok("ai_prezzi", 10.5, float(os.environ["CRON_T0"])):
+        _ai_prezzi()
+
+
 def modo_notte(t0: float) -> dict:
     """Passo notturno (processo nuovo del cron mercato, ambiente dato da avvia_notte): giro COMPLETO della zona e, se
     resta tempo, Torino completo, solo se l'impronta delle regole è UGUALE a quella del cron opportunità; poi si torna
@@ -1621,15 +1681,8 @@ def modo_notte(t0: float) -> dict:
                     giro.fase("torino_completo")
                     esito["torino"] = turni.esegui("torino_completo", lambda: (
                         torino_del_giro(None, completo=True, solo_subito=torino_dopo_zona()), {"fatto": True})[1])
-        turni.applica_ambiente(turni.ambiente_mercato(dict(os.environ)))    # da qui l'ambiente del mercato
-        try:
-            from . import coda_lavori
-            giro.fase("lavori_lunghi")
-            resto = min(giro.resto_min() + 60,            # i lavori possono andare oltre le 10 ore della zona...
-                        float(os.environ.get("RENDER_ORE_MAX") or RENDER_ORE_MAX) * 60 - giro.passate_min())  # ...non le 12
-            esito["lavori"] = coda_lavori.esegui_coda(lunghi=True, budget_min=max(0.0, resto), separato=True)
-        except Exception as e:
-            log.warning("NOTTE lavori in coda non fatti: %s", str(e)[:200])
+        # i lavori in coda NON partono da qui: questo processo ha appena fatto ore di zona completa e non restituisce
+        # la memoria (correzione del giudice). Li fa un processo pulito (fase_lavori_notte, avviato con os.execve).
     finally:
         if "MERCATO_ENV_PRIMA" in os.environ:
             turni.applica_ambiente(turni.ambiente_mercato(dict(os.environ)))
@@ -1723,17 +1776,18 @@ if __name__ == "__main__":
         except Exception as e:
             log.warning("NOTTE non riuscita: %s", str(e)[:300])
         try:
-            from .ciclo import _due as _due_job
-            if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6) \
-                    and os.environ.get("NORD_PROCESSO", "1") == "1":
-                os.environ["MERCATO_NORD_FASE"] = "1"
-                sys.stdout.flush()
-                sys.stderr.flush()
-                os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"])
+            avvia_lavori_notte()              # lavori lunghi in coda: processo pulito (non ritorna se ce ne sono)
         except Exception as e:
-            log.warning("MERCATO_NORD dopo la notte non avviato: %s", str(e)[:300])
-        if tempo_ok("ai_prezzi", 10.5, float(os.environ["CRON_T0"])):
-            _ai_prezzi()
+            log.warning("NOTTE lavori in coda non avviati: %s", str(e)[:300])
+        dopo_notte()
+        sys.exit(0)
+    if os.environ.pop("MERCATO_LAVORI_FASE", None) == "1":
+        # 16/11 (correzione del giudice): lavori lunghi in coda in un processo pulito, poi la fine del cron mercato
+        try:
+            fase_lavori_notte(float(os.environ["CRON_T0"]))
+        except Exception as e:
+            log.warning("NOTTE lavori non riusciti: %s", str(e)[:300])
+        dopo_notte()
         sys.exit(0)
     # 1/11 (regola del cliente: niente raccolta da Facebook): i giri Facebook non partono più, salvo FACEBOOK_ATTIVO=1
     if mode in ("facebook", "fb_backfill", "fb_importa") and os.environ.get("FACEBOOK_ATTIVO") != "1":
@@ -1763,8 +1817,13 @@ if __name__ == "__main__":
         from . import turni as _turni
         # fotografia della configurazione PRIMA di ogni cambio dell'ambiente: la usa il passo notturno del cron mercato.
         # Solo dal servizio dealfinder-opportunita, mai con COLLECT_SOLO_PRIMA / TORINO_ORA / NOVARA_ORA.
+        _serv = os.environ.get("RENDER_SERVICE_NAME") or "(assente)"
         if _turni.fotografia_ammessa(mode):
-            _turni.salva_config()
+            log.warning("FOTOGRAFIA servizio %s: salvo la configurazione per il passo notturno (%d variabili)",
+                        _serv, _turni.salva_config())
+        else:
+            log.warning("FOTOGRAFIA servizio %s: configurazione NON salvata (solo da %s, mai con COLLECT_SOLO_PRIMA, "
+                        "TORINO_ORA, NOVARA_ORA)", _serv, _turni.SERVIZIO_FOTOGRAFIA)
         if _turni.giro_leggero():
             _giro = _turni.inizia_giro("opportunita", float(os.environ["CRON_T0"]))
             try:                                     # lavori una tantum brevi passati dal sito al cron (coda_lavori.py)

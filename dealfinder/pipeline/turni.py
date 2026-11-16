@@ -352,7 +352,7 @@ _SEGRETO_VALORE = re.compile(r"://[^/\s]*@"                                   # 
                              r"|^[A-Za-z0-9+/_=-]{40,}$", re.I)                 # stringa lunga senza spazi (token)
 _DI_PROCESSO = {"PATH", "HOME", "PWD", "OLDPWD", "HOSTNAME", "SHLVL", "_", "PORT", "LANG", "TERM", "USER", "SHELL",
                 "COLLECT_MODO", "COLLECT_PRIMA", "COLLECT_SOLO_PRIMA", "CRON_T0", "MERCATO_NORD_FASE",
-                "MERCATO_NOTTE_FASE", "MERCATO_ENV_PRIMA", "NOTTE_IMPRONTA_ATTESA", "NOTTE_CONFIG", "TORINO_ORA",
+                "MERCATO_NOTTE_FASE", "MERCATO_LAVORI_FASE", "MERCATO_ENV_PRIMA", "NOTTE_IMPRONTA_ATTESA", "NOTTE_CONFIG", "TORINO_ORA",
                 "NOVARA_ORA", "RICALCOLO_SUBITO", "PASSI_JOB", "COLLECT_JOB", "AUTOSCOUT_CAP", "AUTOSCOUT_RAGGIO",
                 "BREVO_IMPORT_LISTE", "FOTOGRAFIA_SERVIZIO"}
 _PREFISSI_PROCESSO = ("RENDER", "PYTHON", "LC_", "BENZ_INCR", "GIT_", "IS_PULL", "UV_", "PIP_", "VIRTUAL_ENV", "XDG_",

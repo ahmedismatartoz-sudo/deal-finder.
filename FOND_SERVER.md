@@ -103,8 +103,11 @@ Ora (`pipeline/turni.py`, `pipeline/collect.py`):
 
 - Le voci **lunghe** di `BREVO_IMPORT_LISTE` (raccolta60, perche_fuori, prova_cieca) il sito non le esegue più: le
   scrive nella tabella `coda_lavori` (creata dal codice, una riga per voce: un riavvio non la duplica). Le fa il passo
-  notturno del cron mercato, **ognuna in un processo nuovo** (memoria pulita, niente accumulo con zona e Torino) con un
-  tempo massimo, e solo se la sua **durata prevista** (raccolta60: R60_ORE / R60_ORE_TEL + 15 min; altre
+  notturno del cron mercato: finita la zona, il processo notturno si **sostituisce** (os.execve, fase
+  MERCATO_LAVORI_FASE) con un processo pulito e leggero che lancia le voci **una alla volta, ognuna in un processo
+  nuovo** (mai due processi pesanti insieme, cron a 512 MB) con un tempo massimo; poi mercato_nord o il modello AI.
+  Codice di uscita diverso da 0 (errore, processo ucciso) = stato `errore`, la voce si riprende la notte dopo. Ogni voce
+  parte solo se la sua **durata prevista** (raccolta60: R60_ORE / R60_ORE_TEL + 15 min; altre
   `LAVORO_MIN_<PREFISSO>`, default 60) sta nel tempo che resta, sempre entro 11,5 ore dall'avvio (12 di Render).
   Altrimenti resta in coda per la notte dopo.
 - Le voci lunghe sono segnate **fatte solo a lavoro finito** (`ciclo.inizia`: riga con battito e lucchetto; stessa
@@ -146,7 +149,8 @@ SELECT job, max(finished_at) FROM job_runs WHERE ok AND (job LIKE 'turno:%' OR j
 SELECT valore, stato, chi, nota FROM coda_lavori ORDER BY creato_at DESC LIMIT 20;
 ```
 
-Nei log: `GIRO opportunita fase …`, `GIRO opportunita finito in N min`, `GIRO lavori rimandati …`, `TURNO <nome> fatto
+Nei log: `FOTOGRAFIA servizio dealfinder-opportunita: salvo la configurazione…` (all'avvio del cron opportunità:
+se dice "NON salvata" controllare RENDER_SERVICE_NAME), `GIRO opportunita fase …`, `GIRO opportunita finito in N min`, `GIRO lavori rimandati …`, `TURNO <nome> fatto
 in N min`, `NOTTE fatta in N min`, `INTERROTTI chiusi N lavori`, `LAVORI (cron, lunghi) …`, `SENTINELLA` con
 `cron.giri_24h` = 8 e `cron.giri_lunghi_24h` = 0.
 
