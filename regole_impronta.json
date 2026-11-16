@@ -1,6 +1,6 @@
 {
  "ammessi_produzione": {
-  "regole_impronta": "c1380592c34a",
+  "regole_impronta": "f23abb1d281a",
   "scovo.MARGINE_MINIMO": 800,
   "scovo.SOGLIE": [
    [
@@ -14,36 +14,6 @@
    [
     1000000000,
     1600
-   ]
-  ],
-  "scovo.SOGLIE_PV": [
-   [
-    7000,
-    1500
-   ],
-   [
-    10000,
-    1800
-   ],
-   [
-    15000,
-    2500
-   ],
-   [
-    20000,
-    3200
-   ],
-   [
-    30000,
-    4000
-   ],
-   [
-    1000000000,
-    5000
-   ],
-   [
-    1000000000,
-    5000
    ]
   ],
   "sito_regole.jev_conf_scarta": 0.85
