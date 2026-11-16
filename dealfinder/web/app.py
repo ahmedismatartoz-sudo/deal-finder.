@@ -3972,6 +3972,18 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("GIRO_LOTTO non riuscito: %s", type(e).__name__)
             return
+        if v.startswith("raccolta60:"):        # 16/11 sera (cliente): TUTTI i commercianti entro 60 km, AS24 + Subito
+            time.sleep(30)
+            try:
+                from ..pipeline import raccolta60 as R60
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"raccolta60:{v[:60]}"):
+                    lg.warning("R60 %s già fatto", v[:60])
+                    return
+                R60.lavoro(re.sub(r"[^A-Za-z0-9-]", "", v.split(":", 1)[1])[:20] or "1611")
+            except Exception as e:
+                lg.warning("R60 non riuscito: %s", str(e)[:300])
+            return
         if v.startswith(("fuori84:", "liberoms:", "mattina:")):  # 16/11 (cliente): nuovi dal database, mai chi era nella lista 84
             time.sleep(20)
             try:
