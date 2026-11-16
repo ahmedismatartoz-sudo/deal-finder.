@@ -32,3 +32,14 @@ def test_fuori84_bloccati_e_totale():
     oggi = {p(f"info@s{i}.it") for i in range(10)}
     scelti, _ = SM.scegli_fuori84(righe, {impronta("info@s0.it")}, oggi, n84=1, margine=0, totale=4)
     assert len(scelti) == 4 and "info@s0.it" not in {s["email"] for s in scelti}
+
+
+def test_libero_ms_solo_saloni_senza_indirizzi_buoni():
+    righe = [{"chiave": "a", "nome": "A", "email": ["auto.a@libero.it"], "prov": "MI"},
+             {"chiave": "b", "nome": "B", "email": ["b@hotmail.it", "info@b.it"], "prov": "MI"},
+             {"chiave": "c", "nome": "C", "email": ["c@pec.it"], "prov": "MI"},
+             {"chiave": "d", "nome": "Loconte", "email": ["d@libero.it"], "prov": "MI"},
+             {"chiave": "e", "nome": "E", "email": ["e@outlook.it"], "prov": "BG"},
+             {"chiave": "f", "nome": "F", "email": ["f@virgilio.it"], "prov": "MI"}]
+    out = SM.scegli_libero_ms(righe, {impronta("f@virgilio.it")}, {p("x@x.it")})
+    assert [o["email"] for o in out] == ["auto.a@libero.it", "e@outlook.it"]

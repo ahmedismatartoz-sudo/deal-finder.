@@ -679,7 +679,38 @@ def scegli_fuori84(righe: list[dict], bloccati: set, oggi_75: set, n84: int = 10
                     "oltre_confine": len(sb), "lista84_rifatta": len(l84)}
 
 
-def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, campagna_testo: int = 81) -> dict:
+def scegli_libero_ms(righe: list[dict], bloccati: set, oggi_75: set, totale: int = 1495) -> list[dict]:
+    """16/11 pomeriggio (cliente: "aggiungi quelli nuovi dal database"): i saloni che hanno SOLO indirizzi Libero/
+    Virgilio/Hotmail/Outlook (fino a oggi sempre esclusi, quindi mai nella lista 84 né nella 82). Mai PEC,
+    bloccati, esclusi o impronte della 75. Funzione pura."""
+    from .auto_invio import ESCLUSI_3_11
+    from .giro_lotto import _esclusi_re
+    from .invii import impronta, norm_email
+    esc = _esclusi_re()
+    mi = coords("MI")
+    out, visti = [], set()
+    for r in righe:
+        if esc.search(str(r.get("nome") or "")):
+            continue
+        em = [norm_email(e) for e in (r.get("email") or []) if e]
+        if any(email_buona(e) for e in em):
+            continue                                      # ha un indirizzo "buono": era già fra i candidati normali
+        for e in em:
+            dom = e.split("@")[-1]
+            if (e in visti or esc.search(e) or ESCLUSI_3_11.search(e) or "loconte" in e or not _EMAIL_OK.match(e) or _NON_EMAIL.search(e) or "pec" in dom
+                    or "legalmail" in dom or impronta(e) in bloccati or impronta(e)[:16] in oggi_75
+                    or not any(dom == d or dom.startswith(d) for d in _DOMINI_FERMI)):
+                continue
+            visti.add(e)
+            c = coords(r.get("prov"))
+            out.append({**r, "email": e, "dmi": km(mi, c) if c else 10 ** 5})
+            break
+    out.sort(key=lambda x: x["dmi"])
+    return out[:max(0, totale)]
+
+
+def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, campagna_testo: int = 81,
+                   solo_libero_ms: bool = False) -> dict:
     """Carica in una lista nuova i contatti scelti da scegli_fuori84 e crea la campagna con testo, oggetto e mittente
     della campagna `campagna_testo`, programmata per `quando` ("subito" = fra 10 minuti). Mai email nei log."""
     from datetime import datetime, timedelta, timezone
@@ -710,13 +741,16 @@ def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, c
         if len(bloccati) < BLOCCATI_MINIMI:
             return {**esito, "fermo": "disiscritti_incompleti"}
         posto = _TETTO - len(contatti)
-        scelti, info = scegli_fuori84(righe, bloccati, oggi, totale=min(totale, posto))
+        if solo_libero_ms:
+            scelti, info = scegli_libero_ms(righe, bloccati, oggi, totale=min(totale, posto)), {"tipo": "libero_ms"}
+        else:
+            scelti, info = scegli_fuori84(righe, bloccati, oggi, totale=min(totale, posto))
         esito.update({**info, "posto": posto, "scelti": len(scelti)})
         if not scelti:
             return esito
         if quando == "subito":
             quando = (datetime.now(timezone.utc) + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        nome = "Skovo nuovi 16-11"
+        nome = "Skovo nuovi 16-11" + (" B" if solo_libero_ms else "")
         lid = _liste(c).get(nome)
         if lid is None:
             r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
@@ -730,7 +764,7 @@ def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, c
             _aspetta_import(c, r)
         esito["lista"] = lid
         esito["in_lista"] = (c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers")
-        corpo = {"name": "Skovo nuovi 16-11", "subject": base.get("subject"), "previewText": base.get("previewText") or "",
+        corpo = {"name": nome, "subject": base.get("subject"), "previewText": base.get("previewText") or "",
                  "sender": {"id": snd["id"]}, "replyTo": base.get("replyTo") or RISPOSTE,
                  "htmlContent": base["htmlContent"], "recipients": {"listIds": [lid]},
                  "header": "[DEFAULT_HEADER]", "footer": "[DEFAULT_FOOTER]", "inlineImageActivation": False,
