@@ -70,3 +70,14 @@ def test_email_dal_salone_autoscout_e_dal_sito():
     d = R.cerca_email_salone(c, {"link_autoscout": "https://www.autoscout24.it/annunci/x-1"}, pausa_as=0)
     assert d["email"] == ["info@autorossi.it"] and d["fonte_email"] == "sito"
     assert R._link_salone_as('<a href="/concessionari/regioni/lombardia/">') is None
+
+
+def test_osm_saloni_legge_nome_sito_email():
+    from types import SimpleNamespace as NS
+    el = {"elements": [{"tags": {"shop": "car", "name": "Auto Bianchi", "website": "www.autobianchi.it", "addr:city": "Monza"}},
+                       {"tags": {"shop": "car", "name": "Verdi Car", "email": "info@verdicar.it"}},
+                       {"tags": {"shop": "car"}}]}
+    c = NS(post=lambda *a, **k: NS(status_code=200, json=lambda: el))
+    out = R.osm_saloni(c)
+    assert [o["nome"] for o in out] == ["Auto Bianchi", "Verdi Car"]
+    assert out[0]["sito"] == "https://www.autobianchi.it" and out[1]["email"] == "info@verdicar.it"

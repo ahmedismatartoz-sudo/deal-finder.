@@ -540,6 +540,33 @@ def cerca_email_salone(c, r: dict, pausa_as: float = 1.0) -> dict:
     return out
 
 
+OVERPASS = "https://overpass-api.de/api/interpreter"
+
+
+def osm_saloni(c, raggio_m: int = 60000) -> list[dict]:
+    """16/11 sera: i concessionari di auto (shop=car) entro 60 km da Milano su OpenStreetMap (dati aperti, licenza
+    ODbL, API pubblica Overpass): nome, comune, sito, email e telefono quando dichiarati. Una sola richiesta."""
+    q = (f'[out:json][timeout:180];(node["shop"="car"](around:{raggio_m},45.4642,9.19);'
+         f'way["shop"="car"](around:{raggio_m},45.4642,9.19););out center tags;')
+    try:
+        r = c.post(OVERPASS, data={"data": q}, timeout=200)
+        el = (r.json() or {}).get("elements") or [] if r.status_code == 200 else []
+    except Exception:
+        el = []
+    out = []
+    for e in el:
+        t = e.get("tags") or {}
+        nome = (t.get("name") or t.get("brand") or "").strip()
+        if not nome:
+            continue
+        sito = t.get("website") or t.get("contact:website") or t.get("url")
+        mail = t.get("email") or t.get("contact:email")
+        out.append({"nome": nome[:150], "comune": t.get("addr:city"), "prov": None, "km": None,
+                    "cellulari": "", "fissi": "", "email": mail or "", "sito": sito if sito and sito.startswith("http") else
+                    (("https://" + sito) if sito else None), "fonti": "openstreetmap", "link_autoscout": None})
+    return out
+
+
 def lavoro_email(etichetta: str) -> dict:
     """16/11 sera (cliente: "dobbiamo raccogliere molte più email"): per ogni salone della raccolta R60 senza email,
     la pagina del salone su AutoScout24 (dal link dell'annuncio) e il sito (home, contatti, chi siamo, privacy, note
@@ -559,9 +586,25 @@ def lavoro_email(etichetta: str) -> dict:
         visti.add(k)
         if not r.get("email") and (r.get("sito") or "autoscout24" in (r.get("link_autoscout") or "")):
             cand.append(r)
+    # saloni in più dal web aperto (OpenStreetMap): quelli che non abbiamo già (per nome normalizzato)
+    gia_nomi = {nn(r.get("nome")) for r in tutte if nn(r.get("nome"))}
+    nuovi_osm, osm_con_email = [], []
+    if os.environ.get("R60E_OSM", "1") == "1":
+        with httpx.Client(headers={"User-Agent": "Skovo/1.0 (raccolta concessionari)"}) as c:
+            for r in osm_saloni(c):
+                if not nn(r["nome"]) or nn(r["nome"]) in gia_nomi:
+                    continue
+                gia_nomi.add(nn(r["nome"]))
+                if r["email"]:
+                    osm_con_email.append({**r, "fonte_email": "openstreetmap"})
+                elif r["sito"]:
+                    nuovi_osm.append(r)
+        cand += nuovi_osm
     log.warning("R60E parte: %d saloni senza email da cercare (su %d righe R60)", len(cand), len(tutte))
-    trovati: list[dict] = []
-    st = {"provati": 0, "trovati": 0, "da_autoscout": 0, "da_sito": 0}
+    trovati: list[dict] = [{k: r.get(k) for k in ("nome", "comune", "prov", "km", "cellulari", "link_autoscout", "email",
+                                                   "sito", "fonte_email")} for r in osm_con_email]
+    st = {"provati": 0, "trovati": len(trovati), "da_autoscout": 0, "da_sito": 0, "da_openstreetmap": len(trovati),
+          "osm_nuovi_con_sito": len(nuovi_osm)}
 
     def uno(r):
         if time.time() > fine:
