@@ -31,7 +31,7 @@ REGIONI = {
     "liguria": ["GE"],
 }
 _codici_regione: dict[str, int] = {}
-LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104}
+LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104, "completo": 734105}
 
 
 # ------------------------------------------------------------------ telefono
@@ -905,16 +905,35 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
     return out
 
 
+# 16/11 sera (cliente: "in 10 minuti le auto già sul sito"): gli annunci FUORI ZONA non finiscono mai nel database,
+# quindi la regola "fermati alla prima pagina tutta già nota" non scattava mai: ogni giro leggeva tutte le 30 pagine
+# e apriva la pagina di dettaglio di centinaia di annunci fuori zona (giri da 15 minuti, 476 fuori zona su 495).
+# Ora: gli id già visti (anche fuori zona) si ricordano, il fuori zona si scarta PRIMA del dettaglio, raggio 150 km.
+_AS_VISTI: set = set()
+_AS_VISTI_MAX = 60000
+
+
+def _as_zona() -> set:
+    from ..zone import MILANO, TORINO
+    return set(MILANO) | set(TORINO)
+
+
+def _raggio_as() -> str:
+    return os.environ.get("TR_RAGGIO_AS", "150")
+
+
 def _autoscout_nuovi(conn) -> list:
-    """Privati entro 150 km da Milano, dal più recente: si scorre finché una pagina è tutta già nota."""
+    """Annunci nuovi entro TR_RAGGIO_AS km da Milano, dal più recente: ci si ferma alla prima pagina tutta già vista."""
     from ..collectors.autoscout import BASE, parse_item
     from ..collectors.base import next_data
     client = _client_as()
-    noti = set()
+    zona = _as_zona()
+    if len(_AS_VISTI) > _AS_VISTI_MAX:
+        _AS_VISTI.clear()
     out = []
-    for page in range(1, int(os.environ.get("TR_AS_PAGINE", "30")) + 1):
+    for page in range(1, int(os.environ.get("TR_AS_PAGINE_VELOCE", "10")) + 1):
         url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
-               f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom=300&priceto=150000"
+               f"&zipr={_raggio_as()}&adage=1&pricefrom=300&priceto=150000"
                f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
         from . import as_riprova                   # 12/11 (§3.4): riprova con attesa crescente su 429/5xx/rete
         r = as_riprova.get(client, url, "TR autoscout ricerca")
@@ -929,13 +948,19 @@ def _autoscout_nuovi(conn) -> list:
         ids = [str(it.get("id")) for it in items if isinstance(it, dict)]
         noti = {x["source_id"] for x in conn.execute(
             "SELECT source_id FROM listings WHERE source='autoscout24' AND source_id = ANY(%s)", (ids,)).fetchall()}
+        gia = noti | (set(ids) & _AS_VISTI)
         for it in items:
             l = parse_item(it)
-            if l and l.source_id not in noti:
-                if _solo_privati():
-                    l.seller_type = "privato"
-                out.append(l)
-        if len(noti) >= len(ids):          # pagina tutta già vista: i successivi sono più vecchi
+            if not l or l.source_id in gia:
+                continue
+            _AS_VISTI.add(l.source_id)
+            if l.province and l.province.upper() not in zona:
+                continue                           # fuori zona: niente pagina di dettaglio
+            if _solo_privati():
+                l.seller_type = "privato"
+            out.append(l)
+        _AS_VISTI.update(ids)
+        if len(gia) >= len(ids):           # pagina tutta già vista: i successivi sono più vecchi
             break
         time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     return _as_completa(client, out)
@@ -991,7 +1016,7 @@ def _autoscout_tutti(conn) -> list:
             break
         for page in range(p0, 21):
             url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
-                   f"&zipr={os.environ.get('TR_RAGGIO', '200')}&adage=1&pricefrom={lo}&priceto={hi}"
+                   f"&zipr={_raggio_as()}&adage=1&pricefrom={lo}&priceto={hi}"
                    f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
             r = as_riprova.get(client, url, f"TR completo autoscout fascia {lo}-{hi} pagina {page}")
             if r is None:
@@ -1251,8 +1276,9 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         ids = _salva(conn, letti, stats)
         _lettore_nuovi(conn, ids, stats)
         valuta_e_pubblica(conn, ids, stats)
-    conn.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES ('nuovi', %s, %s) ON CONFLICT (giro) DO UPDATE "
-                 "SET ultimo_at=EXCLUDED.ultimo_at, stats=EXCLUDED.stats", (inizio, json.dumps(dict(stats))))
+    conn.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES (%s, %s, %s) ON CONFLICT (giro) DO UPDATE "
+                 "SET ultimo_at=EXCLUDED.ultimo_at, stats=EXCLUDED.stats",
+                 ("completo" if completo else "nuovi", inizio, json.dumps(dict(stats))))
     conn.commit()
     return stats
 

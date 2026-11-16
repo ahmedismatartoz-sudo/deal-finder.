@@ -152,7 +152,27 @@ def un_giro(completo: bool, tr=None) -> dict | None:
     return st
 
 
+def _completo_a_parte(fine) -> None:
+    """16/11 sera: la rilettura COMPLETA (15 minuti, 7.000 annunci quasi tutti già noti) gira in un filo suo, ogni
+    TR_COMPLETO_VELOCE_MIN minuti (180), con un lucchetto suo: il giro veloce non si ferma più ad aspettarla."""
+    from . import tempo_reale as tr
+    from ..memoria import rilascia
+    fine.ev.wait(float(os.environ.get("TR_COMPLETO_PRIMO_MIN", "20")) * 60)
+    while not fine.ev.is_set():
+        t0 = time.time()
+        try:
+            st = tr.con_lucchetto("completo", tr.giro_nuovi, True)
+            if st is not None:
+                log.warning("TR COMPLETO (a parte) in %.0fs: %s", time.time() - t0, dict(st))
+        except Exception as e:
+            log.warning("TR COMPLETO non riuscito: %s", str(e)[:300])
+        rilascia("tempo reale completo")
+        fine.ev.wait(float(os.environ.get("TR_COMPLETO_VELOCE_MIN", "180")) * 60)
+
+
 def main(giri: int | None = None, dormi=None) -> None:
+    """Giro veloce ogni TR_VELOCE_S secondi (90): solo il nuovo, dal più recente, fino alla prima pagina già vista.
+    La rilettura completa gira a parte (_completo_a_parte)."""
     if not os.environ.get("DATABASE_URL"):
         log.warning("TR WORKER: DATABASE_URL non impostata, nulla da fare")
         return
@@ -169,25 +189,23 @@ def main(giri: int | None = None, dormi=None) -> None:
     threading.Thread(target=_battiti, args=(fine,), daemon=True, name="tr-battito").start()
     guardiano = Guardiano()
     threading.Thread(target=guardiano.gira, args=(fine,), daemon=True, name="tr-guardiano").start()
+    if giri is None and os.environ.get("TR_COMPLETO", "1") == "1":
+        threading.Thread(target=_completo_a_parte, args=(fine,), daemon=True, name="tr-completo").start()
     from ..memoria import rilascia
-    ultimo_completo, n = 0.0, 0
+    n = 0
     while not fine.ev.is_set() and (giri is None or n < giri):
         n += 1
         t0 = time.time()
-        completo = (t0 - ultimo_completo >= float(os.environ.get("TR_COMPLETO_MIN", "60")) * 60
-                    and os.environ.get("TR_COMPLETO", "1") == "1")
         guardiano.inizio = time.time()
         try:
-            st = un_giro(completo)
-            if st is not None and completo:
-                ultimo_completo = t0
+            st = un_giro(False)
             if st is not None:
                 log.warning("TR NUOVI (worker) in %.0fs: %s", time.time() - t0, dict(st))
         except Exception as e:
             log.warning("TR WORKER giro non riuscito: %s", str(e)[:300])
         guardiano.inizio = None
         rilascia("tempo reale worker")
-        attesa = max(30.0, float(os.environ.get("TR_NUOVI_MIN", "5")) * 60 - (time.time() - t0))
+        attesa = max(20.0, float(os.environ.get("TR_VELOCE_S", "90")) - (time.time() - t0))
         (dormi or fine.ev.wait)(attesa)
 
 
