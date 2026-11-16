@@ -1,0 +1,423 @@
+{
+ "dati": {
+  "regole": {
+   "ai": {
+    "accordo": 0.08,
+    "attiva": false,
+    "disaccordo": 0.3,
+    "errore_max": 0.15,
+    "n_min": 8
+   },
+   "allestimento": {
+    "attivo": true,
+    "fattore": 0.04
+   },
+   "ammissione": {
+    "anno_min": 2007,
+    "km_max": 150000,
+    "km_obbligatori": true,
+    "perdita_storico_danno": 0.0,
+    "richiesta_carburanti": [
+     "benzin",
+     "ibrid",
+     "hybrid",
+     "gpl",
+     "lpg",
+     "metano"
+    ],
+    "richiesta_diesel_dal": 2017,
+    "richiesta_km_max": 100000,
+    "richiesta_prezzo_max": 10000,
+    "solo_sane": true,
+    "telefono_obbligatorio": true
+   },
+   "antitruffa": {
+    "basse": 0.45,
+    "basse_confronti": 5,
+    "basse_max": 3000,
+    "basso_solo_telefono": true,
+    "eccezione_solo_privati": true,
+    "minimo_reale": 0.2,
+    "sotto_m": 0.55
+   },
+   "calibrazione": {
+    "alza": false,
+    "alza_da": 20000,
+    "alza_max": 1.05,
+    "alza_n_min": 40,
+    "attiva": true,
+    "centri": [
+     [
+      "<5k",
+      3500
+     ],
+     [
+      "5-10k",
+      7071
+     ],
+     [
+      "10-20k",
+      14142
+     ],
+     [
+      "20-35k",
+      26458
+     ],
+     [
+      "35-60k",
+      45826
+     ],
+     [
+      ">60k",
+      85000
+     ]
+    ],
+    "fasce": [
+     [
+      5000,
+      "<5k"
+     ],
+     [
+      10000,
+      "5-10k"
+     ],
+     [
+      20000,
+      "10-20k"
+     ],
+     [
+      35000,
+      "20-35k"
+     ],
+     [
+      60000,
+      "35-60k"
+     ],
+     [
+      1000000000,
+      ">60k"
+     ]
+    ],
+    "interpola": true,
+    "massimo": 1.0,
+    "minimo": 0.8,
+    "n_min": 20,
+    "riserva": [
+     [
+      "<5k",
+      0.87
+     ],
+     [
+      "5-10k",
+      0.915
+     ],
+     [
+      "10-20k",
+      0.97
+     ]
+    ],
+    "vr_nel_combinato": true
+   },
+   "confronti": {
+    "allestimento": true,
+    "ampiezza_poche": true,
+    "amplia": true,
+    "anni_tol": 3,
+    "anni_tol_2": 4,
+    "dispersione_max": 1.8,
+    "dispersione_nucleo": true,
+    "dispersione_nucleo_max": 1.35,
+    "dispersione_quota": 0.5,
+    "dispersione_sotto_n": 8,
+    "eco_sotto": 10000,
+    "freschezza_giorni": 10,
+    "fuori_scala": 2.5,
+    "giudice_campione": 40,
+    "km_tol": 50000,
+    "km_tol_2": 70000,
+    "livello_3": true,
+    "min_eco": 8,
+    "min_sito": 5,
+    "motore_senza_kw": true,
+    "n_minimo": 2,
+    "n_preferito": 5,
+    "potenza_tol": 0.1,
+    "prezzo_min": 500,
+    "trazione": false
+   },
+   "correzione": {
+    "anno_max": 0.25,
+    "anno_min": 0.02,
+    "attiva": true,
+    "due_sensi": false,
+    "due_sensi_alto": false,
+    "due_sensi_da": 20000,
+    "km_max": 0.05,
+    "km_min": 0.008,
+    "pooling": true,
+    "pooling_marca_min": 300,
+    "pooling_n_min": 5,
+    "pooling_tau_anno": 0.03,
+    "pooling_tau_km": 0.006,
+    "stima_min_annunci": 15,
+    "svalutazione_10km": 0.012,
+    "svalutazione_anno": 0.08,
+    "tetto": 0.25
+   },
+   "costi": {
+    "costo_alto_da": 20000,
+    "costo_fisso": 0,
+    "costo_fisso_alto": 0,
+    "diagnosi_revisione": 0,
+    "fissi_max": 200,
+    "manodopera_su_ricambi": 0.0,
+    "passaggio": 0,
+    "pulizia": 0,
+    "trasporto": 0,
+    "vendita": 0
+   },
+   "dotazioni": {
+    "aggiusta": false,
+    "n_min": 50,
+    "tetto_totale": 0.06,
+    "tetto_voce": 0.04,
+    "z_min": 2.0
+   },
+   "fascia_richiesta": true,
+   "forbice": {
+    "attiva": false,
+    "prob_max": 0.95,
+    "prob_min": 0.05
+   },
+   "giudice_ai": true,
+   "modello_locale": {
+    "accordo": 0.1,
+    "anni": 3,
+    "attivo": true,
+    "errore_max": 0.18,
+    "n_min": 8,
+    "potenza": 0.1
+   },
+   "rivendita": {
+    "anni_tol": 2,
+    "attiva": true,
+    "freschezza_giorni": 10,
+    "giorni": 90,
+    "km_tol": 40000,
+    "min_attivi": 8,
+    "min_sconti": 5,
+    "min_venduti": 5,
+    "venduta_entro": 60
+   },
+   "scrittura": {
+    "giudice_vince": true,
+    "ore_validita": 36
+   },
+   "trazione": {
+    "attiva": false,
+    "maggioranza": 0.5
+   },
+   "valore_reale": {
+    "accordo": 0.08,
+    "attivo": true,
+    "errore_min": 0.05,
+    "max_giorni_avviso": 3,
+    "poche_diff_max": 0.15,
+    "poche_gruppo_min": 100,
+    "poche_sigma_max": 0.15,
+    "prezzo_max": 20000,
+    "senza_gemelle_sigma_max": 0.15,
+    "senza_gemelle_vendute_min": 20
+   },
+   "versione": "regole-2026-11-12a",
+   "zona": {
+    "italia": true,
+    "italia_da": 50000,
+    "italia_pmin": 25000,
+    "ripiego_nord": true
+   }
+  },
+  "regole_impronta": "f23abb1d281a",
+  "regole_versione": "regole-2026-11-12a",
+  "scovo": {
+   "ANNO_MINIMO": 2007,
+   "CATEGORIE_SITO": [
+    "candidato",
+    "opportunita"
+   ],
+   "COSTI_FISSI": {
+    "passaggio": 90,
+    "pulizia": 50
+   },
+   "KM_MASSIMO": 180000,
+   "MARGINE_MINIMO": 1000,
+   "MIN_MOSTRATO": 500,
+   "POLICY_SITO": "pv2",
+   "SCONTO_DEFAULT": 10,
+   "SOGLIE": [
+    [
+     1500,
+     1000
+    ],
+    [
+     5000,
+     1500
+    ],
+    [
+     1000000000,
+     2000
+    ]
+   ],
+   "SOGLIE_PV": [
+    [
+     7000,
+     1500
+    ],
+    [
+     10000,
+     1800
+    ],
+    [
+     15000,
+     2500
+    ],
+    [
+     20000,
+     3200
+    ],
+    [
+     30000,
+     4000
+    ],
+    [
+     1000000000,
+     5000
+    ]
+   ]
+  },
+  "sito_regole": {
+   "ai_pulita": 0.3,
+   "alto_euro": 3000,
+   "alto_pct": 1.0,
+   "anno_min": 2007,
+   "commercianti_max": 40,
+   "commercianti_totale": 60,
+   "diesel_anno_min": 2015,
+   "diesel_auto_vera": 0.7,
+   "diesel_extra": 70,
+   "diesel_km_max": 150000,
+   "diesel_pulita": 0.3,
+   "fascia_fuori_max": 100,
+   "fattori_calibra": [],
+   "fb_sito": false,
+   "foto_internet": 0.7,
+   "jev_conf_scarta": 0.6,
+   "jev_danni": 0.7,
+   "jev_guasto": 0.7,
+   "jev_km_ok": 0.3,
+   "jev_rata": 0.7,
+   "jev_versione_forte": 0.25,
+   "km_max": 150000,
+   "perizia": false,
+   "perizia_basta_jev": true,
+   "perizia_ombra": true,
+   "perizia_scarto": 0.1,
+   "prezzo_min_su_m_comm": 0.75,
+   "rapporto_basse_sotto": 3000,
+   "rapporto_duro": 0.45,
+   "rapporto_duro_basse": 0.35,
+   "ripiego": true,
+   "sc_margine_min": 10000,
+   "sc_margine_pct": 0.15,
+   "sc_senza_margine_da": 300000,
+   "sconto_ai": true,
+   "sconto_ai_vera": 0.7,
+   "sconto_euro": [
+    [
+     5000,
+     1000000000
+    ],
+    [
+     10000,
+     4000
+    ],
+    [
+     20000,
+     5000
+    ],
+    [
+     35000,
+     6000
+    ],
+    [
+     1000000000,
+     8000
+    ]
+   ],
+   "sconto_max": 0.4,
+   "tratta_giorni": 10,
+   "tratta_max": [
+    [
+     7000,
+     500
+    ],
+    [
+     1000000000,
+     700
+    ]
+   ],
+   "truffa_alto_meno": 0.1,
+   "truffa_avviso": 0.5,
+   "truffa_fuori": 0.85,
+   "versione_tecnica": true
+  },
+  "trattativa": [
+   [
+    7000,
+    500
+   ],
+   [
+    1000000000,
+    700
+   ]
+  ],
+  "zona": {
+   "PROVINCE_100KM": [
+    "BG",
+    "BS",
+    "CO",
+    "CR",
+    "LC",
+    "LO",
+    "MB",
+    "MI",
+    "NO",
+    "PC",
+    "PV",
+    "VA"
+   ],
+   "RAVENNA": [
+    "BO",
+    "FC",
+    "FE",
+    "RA",
+    "RN"
+   ],
+   "ROMA": [
+    "FR",
+    "LT",
+    "RI",
+    "RM",
+    "VT"
+   ],
+   "TORINO": [
+    "AT",
+    "BI",
+    "CN",
+    "TO",
+    "VC"
+   ]
+  }
+ },
+ "impronta": "e89916132c7b"
+}
