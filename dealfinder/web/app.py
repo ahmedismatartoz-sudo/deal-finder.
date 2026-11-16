@@ -3866,6 +3866,18 @@ def _tempo_reale():
                     except Exception as e:
                         lg.warning("LAVORO %s non riuscito: %s", parte.split(":")[0], str(e)[:200])
                 return
+        if v.startswith("perche_fuori:"):     # 16/11 (cliente): quali regole tengono fuori auto buone (solo log, niente AI)
+            time.sleep(90)
+            try:
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(v):
+                    lg.warning("PERCHE_FUORI %s già fatta (togli il valore da BREVO_IMPORT_LISTE)", v)
+                    return
+                from ..pricing import perche_fuori as _pf
+                _pf.lavoro(v)
+            except Exception as e:
+                lg.warning("PERCHE_FUORI non riuscita: %s", str(e)[:300])
+            return
         if v.startswith("prova_cieca:"):      # 12/11 (cliente): prova alla cieca M / perizia AI / Autohero (solo log)
             time.sleep(60)
             try:
