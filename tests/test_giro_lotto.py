@@ -195,10 +195,11 @@ def _prepara(monkeypatch, brevo, righe, db):
 def _scenario():
     ricevuti = [f"r{i}@salone{i}.it" for i in range(10)]
     esportazioni = {(77, "all"): ricevuti, (77, "unsubscribed"): ["r1@salone1.it"],
-                    (77, "hardBounces"): ["r2@salone2.it"], (77, "softBounces"): ["r3@salone3.it"],
+                    (77, "hardBounces"): ["r2@salone2.it"], (77, "softBounces"): ["r3@salone3.it", "r7@salone7.it"],
                     (75, "softBounces"): ["r3@salone3.it"], (74, "softBounces"): ["r4@salone4.it"]}
     brevo = FintoBrevo(ricevuti, bloccati_lista={"r1@salone1.it", "r5@salone5.it"}, esportazioni=esportazioni,
                        altri=["altro@lista90.it"])
+    brevo.contatti["r8@salone8.it"]["listIds"].append(90)          # anche in un'altra lista: non si cancella
     righe = [{"chiave": "a", "email": ["r0@salone0.it"], "prov": "MI", "nome": "Salone A"},          # già ricevuto
              {"chiave": "b", "email": ["nuovo1@b.it", "nuovo1bis@b.it"], "prov": "MI", "nome": "B"},  # uno solo
              {"chiave": "c", "email": ["nuovo2@c.it"], "prov": "CO", "nome": "C"},
@@ -207,7 +208,8 @@ def _scenario():
              {"chiave": "f", "email": ["nuovo3@f.it"], "prov": "MI", "nome": "Cosval Auto"},          # nome escluso
              {"chiave": "g", "email": ["via@g.it"], "prov": "MI", "nome": "G"},                        # disiscritto
              {"chiave": "h", "email": ["pec@pec.h.it"], "prov": "MI", "nome": "H"},
-             {"chiave": "i", "email": ["nuovo4@i.it"], "prov": None, "nome": "I"}]
+             {"chiave": "i", "email": ["nuovo4@i.it"], "prov": None, "nome": "I"},
+             {"chiave": "s7", "email": ["r7@salone7.it"], "prov": "VA", "nome": "S7"}]   # rimbalzo morbido 1 volta
     return brevo, righe, FintoDB(disiscritti={impronta("via@g.it")})
 
 
@@ -230,11 +232,13 @@ def test_giro_completo(monkeypatch):
     for e in ("r1@salone1.it", "r2@salone2.it", "r3@salone3.it", "r5@salone5.it"):
         assert impronta(e) in db.disiscritti, e
     assert impronta("r4@salone4.it") not in db.disiscritti
-    # 2. cancellati solo i ricevuti della lista 84 non bloccati; restano i bloccati e gli altri contatti
-    assert sorted(brevo.cancellati) == sorted(f"r{i}@salone{i}.it" for i in range(10) if i not in (1, 5))
+    # 2. cancellati solo i ricevuti della lista 84 non bloccati; restano i bloccati, i rimbalzi morbidi (r3 ripetuto
+    # = bloccato, r7 una volta = non arrivata), chi è anche in un'altra lista (r8) e gli altri contatti
+    assert sorted(brevo.cancellati) == sorted(f"r{i}@salone{i}.it" for i in range(10) if i not in (1, 3, 5, 7, 8))
     assert "r1@salone1.it" in brevo.contatti and "altro@lista90.it" in brevo.contatti
-    # 3. caricati: un indirizzo per salone, mai ricevuti/esclusi/disiscritti/PEC
-    assert sorted(brevo.importati) == ["nuovo1@b.it", "nuovo2@c.it", "nuovo4@i.it"]
+    assert "r7@salone7.it" in brevo.contatti and "r8@salone8.it" in brevo.contatti
+    # 3. caricati: un indirizzo per salone, mai ricevuti/esclusi/disiscritti/PEC; r7 (non arrivata) sì
+    assert sorted(brevo.importati) == ["nuovo1@b.it", "nuovo2@c.it", "nuovo4@i.it", "r7@salone7.it"]
     assert brevo.liste[out["lista"]] == "Skovo lotto 17-11"
     # 4. stessa email, stesso mittente (id 5), programmata
     (c,) = brevo.create
@@ -242,10 +246,12 @@ def test_giro_completo(monkeypatch):
     assert c["htmlContent"] == HTML and c["sender"] == {"id": 5} and c["replyTo"] == "info@skovo.app"
     assert c["scheduledAt"] == QUANDO and c["recipients"] == {"listIds": [out["lista"]]}
     assert c["name"] == "Skovo lotto 17-11 (r77)" and c["header"] == "[DEFAULT_HEADER]"
-    assert out["campagna"] == 78 and out["caricati"] == 3 and out["restano_dopo_questo_giro"] == 0
+    assert out["campagna"] == 78 and out["caricati"] == 4 and out["restano_dopo_questo_giro"] == 0
+    assert out["arrivati_base"] == 8
     # ricevuti e caricati segnati per la catena 77 (giri dopo)
     segnati = {h for (lav, h) in db.invii if lav == "giro_lotto:r77"}
     assert impronta("r0@salone0.it") in segnati and impronta("nuovo2@c.it") in segnati
+    assert impronta("r3@salone3.it") not in segnati          # rimbalzo morbido della base: non è "ricevuto"
     # le cancellazioni vengono DOPO tutte le esportazioni
     esportazioni = [i for i, (m, u) in enumerate(brevo.chiamate) if u.endswith("exportRecipients")]
     cancellazioni = [i for i, (m, u) in enumerate(brevo.chiamate) if m == "DELETE"]
@@ -263,9 +269,9 @@ def test_giro_dopo_non_ricarica_chi_ha_gia_ricevuto(monkeypatch):
     # secondo giro con base = la campagna 78 appena creata, inviata; nell'archivio un salone nuovo
     brevo.campagne[78] = {**brevo.campagne[77], "id": 78, "name": "Skovo lotto 17-11 (r77)",
                           "recipients": {"lists": [91]},
-                          "statistics": {"globalStats": {"sent": 3, "unsubscriptions": 0, "hardBounces": 0,
+                          "statistics": {"globalStats": {"sent": 4, "unsubscriptions": 0, "hardBounces": 0,
                                                          "softBounces": 0, "complaints": 0}}}
-    brevo.esportazioni[(78, "all")] = ["nuovo1@b.it", "nuovo2@c.it", "nuovo4@i.it"]
+    brevo.esportazioni[(78, "all")] = ["nuovo1@b.it", "nuovo2@c.it", "nuovo4@i.it", "r7@salone7.it"]
     righe.append({"chiave": "z", "email": ["nuovo5@z.it"], "prov": "MI", "nome": "Z"})
     brevo.importati.clear()
     brevo.create.clear()
@@ -333,10 +339,10 @@ def test_tetto_e_liste_in_attesa(monkeypatch):
     brevo.campagne[96] = {"id": 96, "name": "programmata", "status": "queued", "recipients": {"lists": [95]}}
     _prepara(monkeypatch, brevo, righe, db)
     import dealfinder.marketing.brevo_liste as BL
-    monkeypatch.setattr(BL, "TETTO_BREVO", 5)        # in Brevo dopo le cancellazioni: r1, r5, r6, altro = 4
+    monkeypatch.setattr(BL, "TETTO_BREVO", 8)        # dopo le cancellazioni: r1, r3, r5, r6, r7, r8, altro = 7
     out = GL.giro_lotto(77, QUANDO, client=brevo, pausa=0, pausa_cancella=0, adesso=ADESSO)
-    assert "r6@salone6.it" not in brevo.cancellati and out["caricati"] == 1 and out["restano_dopo_questo_giro"] == 2
-    assert len(brevo.contatti) <= 5
+    assert "r6@salone6.it" not in brevo.cancellati and out["caricati"] == 1 and out["restano_dopo_questo_giro"] == 3
+    assert len(brevo.contatti) <= 8
 
 
 def test_funzioni_pure():

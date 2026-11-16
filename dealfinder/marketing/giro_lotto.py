@@ -18,13 +18,16 @@ Cosa fa, in ordine (si ferma al primo problema, PRIMA di qualsiasi cancellazione
     spam). Poi i disiscritti noti devono essere almeno BLOCCATI_MINIMI.
     Chi ha ricevuto la base resta segnato nella tabella invii (lavoro "giro_lotto:r<radice>", radice = la prima
     campagna della catena, es. 77): ai giri successivi non viene mai ricaricato, anche se Brevo non lo ha più.
+    I rimbalzi morbidi della base NON contano come ricevuti (l'email non è arrivata): né segnati né cancellati, così
+    possono riceverla in un giro dopo (se non sono rimbalzi ripetuti, che diventano bloccati).
  2. sceglie i prossimi dell'archivio (lead_email): un indirizzo per salone, mai chi ha già ricevuto questa email
     (base + giri precedenti), mai disiscritti/bloccati/rimbalzati, mai Loconte, Officine Mulino, ESCLUSI_3_11 e
     sito_regole.COMMERCIANTI_ESCLUSI (su indirizzo e nome del salone), niente PEC e Libero/Microsoft (come per la
     campagna 77); prima i più vicini a Milano. Se non resta nessuno: niente cancellazioni, niente campagna, log.
  3. cancella da Brevo (DELETE /contacts/{email}: il contatto sparisce dal conto, IRREVERSIBILE) solo i contatti
-    delle liste della base che risultano fra i destinatari della base, non bloccati (i bloccati restano in Brevo,
-    così Brevo continua a bloccarli) e non in una lista di una campagna programmata o in invio. Rimuoverli solo dalla
+    delle liste della base che risultano fra i destinatari della base (tolti i rimbalzi morbidi), non bloccati (i
+    bloccati restano in Brevo, così Brevo continua a bloccarli), con TUTTE le liste fra quelle della base (chi è anche
+    in un'altra lista non si tocca) e non in una lista di una campagna programmata o in invio. Rimuoverli solo dalla
     lista non libera posto: il tetto del piano conta i contatti, non le iscrizioni.
  4. ricontare i contatti in Brevo, caricare i scelti entro TETTO_BREVO in una lista nuova "Skovo lotto gg-mm".
  5. creare la campagna con oggetto, anteprima, HTML, mittente (id), risposta, intestazione e piè di pagina della
@@ -287,6 +290,9 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
             else:
                 via |= set(ems)
     ripetuti = rimbalzi_ripetuti(soft)
+    soft_base = {(e or "").lower() for e in soft[0]}            # soft[0] = la base (prima nel giro sopra)
+    arrivati = [e for e in tutti if (e or "").lower() not in soft_base]
+    esito["arrivati_base"] = len(arrivati)
     esito["soft_ripetuti"] = len(ripetuti)
     contatti = _contatti_brevo(c)
     nella_base: list[dict] = []
@@ -308,9 +314,9 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
         # chi ha ricevuto la base: segnato per sempre come "ricevuto" per questa catena
         gia_prima = {x["destinatario_hash"] for x in conn.execute(
             "SELECT destinatario_hash FROM invii WHERE lavoro=%s", (lavoro,)).fetchall()}
-        segnati = invii.prenota(conn, lavoro, tutti)
+        segnati = invii.prenota(conn, lavoro, arrivati)
         invii.segna_inviati(conn, lavoro, segnati)
-        gia = gia_prima | {invii.impronta(e) for e in tutti}
+        gia = gia_prima | {invii.impronta(e) for e in arrivati}
         righe = _righe_db(conn)
     esito.update({"disiscritti_noti": len(bloccati), "ricevuto_catena": len(gia)})
     if len(bloccati) < BLOCCATI_MINIMI:
@@ -327,9 +333,11 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
     attesa = _liste_in_attesa(c, API)
     if attesa is None:
         return {**esito, "fermo": "campagne_programmate_non_lette"}
-    ricevuti = {(e or "").lower() for e in tutti}
+    ricevuti = {(e or "").lower() for e in arrivati}
+    solo_base = set(liste_base)
     da_togliere = sorted({(x.get("email") or "").lower() for x in nella_base
                           if (x.get("email") or "").lower() in ricevuti and not invii.contatto_bloccato(x)
+                          and set(x.get("listIds") or []) <= solo_base
                           and not (set(x.get("listIds") or []) & attesa)})
     tolti = errori = 0
     for e in da_togliere:
