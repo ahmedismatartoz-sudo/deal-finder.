@@ -118,7 +118,7 @@ class Raccolta:
         self.saloni: dict = {}            # chiave -> dict
         self.siti: queue.Queue = queue.Queue()
         self.st = {"comuni": 0, "pagine_elenco": 0, "saloni_autoscout": 0, "pagine_saloni": 0,
-                   "annunci_subito": 0, "negozi_subito": 0, "siti_letti": 0, "email_da_siti": 0, "errori": 0,
+                   "annunci_autoscout": 0, "pagine_annunci_as": 0, "annunci_subito": 0, "negozi_subito": 0, "siti_letti": 0, "email_da_siti": 0, "errori": 0,
                    "http_autoscout": {}, "http_subito": {}}
         self.zona = comuni_zona()
 
@@ -207,6 +207,77 @@ class Raccolta:
             if (j + 1) % 200 == 0:
                 log.warning("R60 AutoScout24 saloni: %d/%d, risposte %s", j + 1, len(slugs), dict(http))
         self.st["http_autoscout"] = dict(http)
+
+    # ---- A2) AutoScout24 dagli ANNUNCI (16/11 sera) ----
+    # Le pagine "concessionari a <comune>" mostrano solo ~10 saloni "ottimi": a Milano ce ne sono centinaia. Gli
+    # annunci dei concessionari entro 60 km (custtype=D, zipr=60), per fasce di prezzo/anno sotto il tetto di 400,
+    # danno OGNI salone che vende su AutoScout24, con ragione sociale, comune e telefoni del salone.
+    def _as_url(self, lo: int, hi: int, page: int, years) -> str:
+        anni = (f"&fregfrom={years[0]}" + (f"&fregto={years[1]}" if years[1] else "")) if years else ""
+        return (f"{BASE_AS}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include&custtype=D"
+                f"&zip={os.environ.get('R60_CAP', '20121')}&zipr={os.environ.get('R60_RAGGIO', '60')}"
+                f"&pricefrom={lo}&priceto={hi}{anni}&sort=age&desc=1&page={page}")
+
+    def _as_items(self, items) -> None:
+        from ..collectors.autoscout import province_from_cap
+        from .lead import TEL
+        from .lead_comuni import cell_validi, fissi
+        for it in items or []:
+            self.st["annunci_autoscout"] += 1
+            s = (it or {}).get("seller") or {}
+            if not isinstance(s, dict) or str(s.get("type") or "").lower().startswith("priv") or not s.get("id"):
+                continue
+            d = s.get("dealer") if isinstance(s.get("dealer"), dict) else {}
+            nome = (d.get("companyName") or s.get("companyName") or "").strip()
+            tel = " ; ".join(str(v) for p in (s.get("phones") or []) if isinstance(p, dict) for v in p.values()
+                             if isinstance(v, str))
+            loc = it.get("location") or {}
+            citta = str(loc.get("city") or "")
+            z = self.zona.get(slug(citta))
+            pv = z[1] if z else province_from_cap(loc.get("zip"))
+            url = it.get("url")
+            self.metti(f"as:{s['id']}", {"nome": nome[:150] or None, "comune": (z[0] if z else citta) or None,
+                                         "prov": pv, "km": z[2] if z else None, "cell": cell_validi(TEL.findall(tel)),
+                                         "fissi": fissi(tel)[:3], "fonti": {"autoscout24"},
+                                         "link_autoscout": (BASE_AS + url) if isinstance(url, str) and url.startswith("/") else None})
+
+    def _as_fascia(self, asc, lo: int, hi: int, years=None) -> None:
+        if not self.tempo() or asc.blocked:
+            return
+        items, total, ok = asc._page(self._as_url(lo, hi, 1, years))
+        self.st["pagine_annunci_as"] += 1
+        if not ok:
+            return
+        if total is not None and total > 400:
+            pezzi = asc._dividi(lo, hi, years)
+            if pezzi:
+                for a, b, ys in pezzi:
+                    self._as_fascia(asc, a, b, ys)
+                return
+        self._as_items(items)
+        page, last = 1, items
+        while len(last) >= 20 and page < 20 and self.tempo() and not asc.blocked:
+            page += 1
+            last, _, ok = asc._page(self._as_url(lo, hi, page, years))
+            self.st["pagine_annunci_as"] += 1
+            if not ok:
+                return
+            self._as_items(last)
+
+    def autoscout_annunci(self) -> None:
+        from ..collectors.autoscout import AutoScoutCollector
+        asc = AutoScoutCollector()
+        asc.min_delay_s = float(os.environ.get("R60_PAUSA_MIN", "0.45"))
+        asc.max_delay_s = float(os.environ.get("R60_PAUSA_MAX", "0.9"))
+        fasce = [(a, a + 999) for a in range(0, 40000, 1000)] + [(40000, 59999), (60000, 99999), (100000, 2000000)]
+        for n, (lo, hi) in enumerate(fasce, 1):
+            if not self.tempo() or asc.blocked:
+                break
+            self._as_fascia(asc, lo, hi)
+            if n % 5 == 0:
+                log.warning("R60 AutoScout24 annunci: fascia %d/%d, %d annunci, %d saloni", n, len(fasce),
+                            self.st["annunci_autoscout"], sum(1 for k in self.saloni if k.startswith("as:")))
+        self.st["saloni_da_annunci_as"] = sum(1 for k in self.saloni if k.startswith("as:"))
 
     # ---- B) Subito ----
     def subito(self) -> None:
@@ -337,7 +408,8 @@ def lavoro(etichetta: str) -> dict:
     R = Raccolta(time.time() + ore * 3600)
     fine = threading.Event()
     log.warning("R60 parte: %d comuni entro 60 km, fino a %.1f ore", len(R.zona), ore)
-    fili = [threading.Thread(target=R.autoscout, daemon=True, name="r60-as"),
+    fili = [threading.Thread(target=R.autoscout_annunci, daemon=True, name="r60-as-ann"),
+            threading.Thread(target=R.autoscout, daemon=True, name="r60-as"),
             threading.Thread(target=R.subito, daemon=True, name="r60-sub")]
     email = [threading.Thread(target=R.siti_email, args=(fine,), daemon=True, name=f"r60-email{i}") for i in range(3)]
     for t in fili + email:

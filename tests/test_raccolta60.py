@@ -34,3 +34,20 @@ def test_unisci_per_cellulare_e_per_nome():
 
 def test_nome_normalizzato():
     assert R.nn("Auto Rossi S.r.l.") == R.nn("AUTO ROSSI srl") == "rossi"
+
+
+def test_annunci_autoscout_danno_salone_con_telefono():
+    r = R.Raccolta.__new__(R.Raccolta)
+    import threading
+    r.lock, r.saloni, r.zona = threading.Lock(), {}, {"milano": ("Milano", "MI", 0.0)}
+    r.st = {"annunci_autoscout": 0}
+    items = [{"url": "/annunci/x-1", "location": {"city": "Milano", "zip": "20121"},
+              "seller": {"id": "77", "type": "Dealer", "companyName": "Auto Rossi Srl",
+                         "phones": [{"phoneType": "Mobile", "formattedNumber": "+39 347 1234567", "callTo": "+393471234567"},
+                                    {"phoneType": "Office", "formattedNumber": "02 1234567", "callTo": "+39021234567"}]}},
+             {"seller": {"id": "9", "type": "PrivateSeller"}}]
+    r._as_items(items)
+    assert list(r.saloni) == ["as:77"]
+    s = r.saloni["as:77"]
+    assert s["cell"] == ["3471234567"] and s["prov"] == "MI" and s["comune"] == "Milano"
+    assert s["link_autoscout"].endswith("/annunci/x-1")
