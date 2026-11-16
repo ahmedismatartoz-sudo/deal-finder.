@@ -302,6 +302,9 @@ def test_avvio_legge_elenco_dal_database_e_health():
         os.environ["DATABASE_URL"] = "postgresql://finto/finto"
         _con({"scarti": [{"sid": 1, "listing_id": 3, "attivo": True}]})
         A._elenco.update(t=0.0, items=[], opens={}, busy=False, pronto=False, fonte=None, imp_v=None)
+        # 16/11: avvio "adesso" (con la suite intera il modulo app può essere importato da oltre 90 s: /health dava 200)
+        A._AVVIO_PRIMA = A._AVVIO
+        A._AVVIO = time.monotonic()
         r = c.get("/health")
         assert r.status_code == 503 and r.json()["ok"] is False and r.json()["auto"] == 0
         ES.carica_elenco = lambda connetti=None: (_items(), {1: 2}, 120.0)
@@ -314,7 +317,6 @@ def test_avvio_legge_elenco_dal_database_e_health():
         A._elenco.update(busy=True)                                                # ricalcolo in corso: sempre 200
         assert c.get("/health").status_code == 200
         A._elenco.update(items=[], pronto=False, busy=False)
-        A._AVVIO_PRIMA = A._AVVIO
         A._AVVIO = time.monotonic() - 60                                          # 60 s senza elenco: ancora 503
         assert c.get("/health").status_code == 503
         A._AVVIO = time.monotonic() - 91                                          # oltre 90 s: 200 (niente riavvii a catena)

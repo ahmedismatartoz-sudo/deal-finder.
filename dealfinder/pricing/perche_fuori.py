@@ -83,7 +83,24 @@ VARIANTI = (
 )
 SIGLA = {"dati_insufficienti": "DI", "esclusa": "ES"}
 
-ATTIVE_SQL = """
+# 16/11 sera (produzione: "canceling statement due to statement timeout" dopo 3 minuti): prima UNA query leggeva il
+# JSON completo di valutazioni_policy.dati (decine di KB per riga, TOAST) e il testo dell'annuncio per TUTTE le auto
+# candidate della zona prima di ORDER BY md5 ... LIMIT. Ora due passi: (1) solo colonne leggere (id, categoria,
+# margine, prezzo) con il LIMIT; (2) JSON e testo solo per gli id scelti, a blocchi di DETTAGLI_BLOCCO.
+ATTIVE_IDS_SQL = """
+SELECT l.id FROM valutazioni_policy v
+JOIN listings l ON l.id = v.listing_id
+WHERE v.policy_version = %(pv)s
+  AND v.categoria IN ('dati_insufficienti', 'non_conveniente', 'candidato', 'opportunita')
+  AND (v.categoria = 'dati_insufficienti' OR (v.margine IS NOT NULL AND v.margine >= {soglia} - %(sotto)s))
+  AND l.status = 'attivo' AND l.province = ANY(%(prov)s) AND l.telefono_ok IS NOT FALSE
+  AND l.price_eur BETWEEN 500 AND 200000 AND l.year >= %(anno)s AND l.mileage_km BETWEEN 0 AND %(km)s
+  AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
+  AND COALESCE(l.stage_reason, '') NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti')
+  AND left(COALESCE(l.stage_reason, ''), 15) <> 'analisi_manuale'
+ORDER BY md5(l.id::text) LIMIT %(pool)s"""
+
+ATTIVE_DETTAGLI_SQL = """
 SELECT l.id, l.make, l.model, l.fuel, l.year, l.mileage_km, l.price_eur, l.seller_type, l.first_seen_at,
        l.telefono_ok, CASE WHEN l.telefono_ok IS NOT TRUE
                            THEN left(COALESCE(l.title, '') || ' ' || COALESCE(l.description, ''), 6000) END AS testo,
@@ -97,24 +114,18 @@ SELECT l.id, l.make, l.model, l.fuel, l.year, l.mileage_km, l.price_eur, l.selle
        v.dati->'motivi'->>0 AS motivo
 FROM listings l
 JOIN valutazioni_policy v ON v.listing_id = l.id AND v.policy_version = %(pv)s
-WHERE l.status = 'attivo' AND l.province = ANY(%(prov)s) AND l.telefono_ok IS NOT FALSE
-  AND l.price_eur BETWEEN 500 AND 200000 AND l.year >= %(anno)s AND l.mileage_km BETWEEN 0 AND %(km)s
-  AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
-  AND COALESCE(l.stage_reason, '') NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti')
-  AND COALESCE(l.stage_reason, '') NOT LIKE 'analisi_manuale%%'
-  AND (v.categoria = 'dati_insufficienti'
-       OR (v.categoria IN ('non_conveniente', 'candidato', 'opportunita') AND v.margine IS NOT NULL
-           AND v.margine >= {soglia} - %(sotto)s))
-ORDER BY md5(l.id::text) LIMIT %(pool)s"""
+WHERE l.id = ANY(%(ids)s)"""
+DETTAGLI_BLOCCO = 200
 
 VENDUTE_SQL = """
 SELECT l.id, l.make, l.model, l.fuel, l.price_eur FROM listings l
-WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days => %(giorni)s)
+WHERE l.status = 'scomparso' AND l.last_seen_at > now() - make_interval(days => %(giorni)s + 30)
+  AND l.disappeared_at > now() - make_interval(days => %(giorni)s)
   AND l.province = ANY(%(prov)s) AND l.price_eur BETWEEN 1000 AND 200000 AND l.year >= %(anno)s
   AND l.mileage_km BETWEEN 0 AND %(km)s AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
   AND COALESCE(l.damage_class, 'sconosciuto') IN ('nessuno', 'sconosciuto')
   AND COALESCE(l.stage_reason, '') NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti')
-  AND EXISTS (SELECT 1 FROM valutazioni_policy v WHERE v.listing_id = l.id)
+  AND EXISTS (SELECT 1 FROM valutazioni_policy v WHERE v.listing_id = l.id)       -- chiave primaria (listing_id, ...)
 ORDER BY md5(l.id::text) LIMIT %(n)s"""
 
 
@@ -246,7 +257,7 @@ def passa(cat, margine, row: dict) -> bool:
 
 
 def margine_salvato(row: dict, fat: list, rg: RG.Regole, difetto: int = 0) -> int | None:
-    """Margine del sito dell'ultima valutazione salvata (colonne ridotte di ATTIVE_SQL)."""
+    """Margine del sito dell'ultima valutazione salvata (colonne ridotte di ATTIVE_DETTAGLI_SQL)."""
     if row.get("margine") is None or row.get("m") is None:
         return None
     pv = {"categoria": row.get("categoria"), "M": float(row["m"]), "margine": int(row["margine"]),
@@ -327,6 +338,18 @@ def valuta_varianti(conn, r: dict, ing: dict, gr: Gruppo, var: list, fat: dict, 
 
 
 MEMORIA: dict = {}
+ERRORI: Counter = Counter()
+
+
+def _errore(conn, dove: str, e: Exception) -> None:
+    """Errore di una query (es. statement timeout): rollback, conteggio e riga di log; la diagnosi continua."""
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+    ERRORI[dove] += 1
+    if ERRORI[dove] <= 3:
+        log.warning("PERCHE_FUORI errore %s: %s: %s", dove, type(e).__name__, str(e)[:200])
 
 
 def _per_gruppi(conn, ids: list, rg, memoria_mb: float):
@@ -334,7 +357,11 @@ def _per_gruppi(conn, ids: list, rg, memoria_mb: float):
     del processo resta sopra memoria_mb anche dopo il rilascio."""
     from .. import memoria as MEM
     from . import valutazione as VA
-    righe = conn.execute("SELECT id, make, model, fuel FROM listings WHERE id = ANY(%s)", (list(ids),)).fetchall()
+    try:
+        righe = conn.execute("SELECT id, make, model, fuel FROM listings WHERE id = ANY(%s)", (list(ids),)).fetchall()
+    except Exception as e:
+        _errore(conn, "gruppi", e)
+        return
     gruppi: dict = {}
     for x in righe:
         gruppi.setdefault((x["make"], x["model"], x["fuel"]), []).append(x["id"])
@@ -347,10 +374,14 @@ def _per_gruppi(conn, ids: list, rg, memoria_mb: float):
                 yield None, None, None
                 return
         pezzo = gruppi[key]
-        complete = {x["id"]: dict(x) for x in conn.execute(f"SELECT {VA.COLONNE} FROM listings l WHERE l.id = ANY(%s)",
-                                                           (pezzo,)).fetchall()}
-        ing = VA.ingressi(conn, pezzo)
-        gr = Gruppo(conn, key, rg)
+        try:
+            complete = {x["id"]: dict(x) for x in conn.execute(
+                f"SELECT {VA.COLONNE} FROM listings l WHERE l.id = ANY(%s)", (pezzo,)).fetchall()}
+            ing = VA.ingressi(conn, pezzo)
+            gr = Gruppo(conn, key, rg)
+        except Exception as e:                        # una query lenta o un errore: si salta il gruppo, non tutto
+            _errore(conn, "gruppo", e)
+            continue
         yield gr, [complete[i] for i in pezzo if i in complete], ing
         del gr, complete, ing
 
@@ -369,10 +400,18 @@ def scegli_attive(conn, n: int, rg, fat_vigore: list) -> tuple[list[dict], Count
     from . import policy_v2 as P
     from . import valutazione as VA
     a = rg.ammissione
-    pool = [dict(x) for x in conn.execute(ATTIVE_SQL.format(soglia=soglia_sql("l.price_eur")),
-                                          {"pv": P.POLICY_VERSION, "prov": sorted(PROVINCE_100KM), "anno": a.anno_min,
-                                           "km": a.km_max, "sotto": FASCIA_SOTTO, "pool": n * 5}).fetchall()]
-    dif = VA.ingressi(conn, [x["id"] for x in pool], solo=("difetti",))["difetti"] if pool else {}
+    ids = [x["id"] for x in conn.execute(ATTIVE_IDS_SQL.format(soglia=soglia_sql("l.price_eur")),
+                                         {"pv": P.POLICY_VERSION, "prov": sorted(PROVINCE_100KM), "anno": a.anno_min,
+                                          "km": a.km_max, "sotto": FASCIA_SOTTO, "pool": n * 5}).fetchall()]
+    pool = []
+    for k in range(0, len(ids), DETTAGLI_BLOCCO):
+        pezzo = ids[k:k + DETTAGLI_BLOCCO]
+        det = {x["id"]: dict(x) for x in conn.execute(ATTIVE_DETTAGLI_SQL,
+                                                      {"pv": P.POLICY_VERSION, "ids": pezzo}).fetchall()}
+        pool += [det[i] for i in pezzo if i in det]              # stesso ordine (md5) del primo passo
+    dif = {}
+    for k in range(0, len(pool), DETTAGLI_BLOCCO):
+        dif.update(VA.ingressi(conn, [x["id"] for x in pool[k:k + DETTAGLI_BLOCCO]], solo=("difetti",))["difetti"])
     conta, scelte = Counter(), []
     for x in pool:
         x["title"], x["description"] = x.pop("testo", None), ""
@@ -404,7 +443,11 @@ def scegli_attive(conn, n: int, rg, fat_vigore: list) -> tuple[list[dict], Count
 
 
 def misura_attive(conn, n: int, rg, var, fat, memoria_mb: float) -> tuple[dict, list, dict]:
-    sel, conta = scegli_attive(conn, n, rg, fat["vigore"])
+    try:
+        sel, conta = scegli_attive(conn, n, rg, fat["vigore"])
+    except Exception as e:
+        _errore(conn, "scelta_attive", e)
+        sel, conta = [], Counter(scelta_non_riuscita=1)
     per_id = {x["id"]: x for x in sel}
     risultati = {}
     fermata = None
@@ -489,7 +532,11 @@ def scegli_vendute(conn, n: int, giorni: int, rg) -> list[dict]:
 
 def misura_vendute(conn, n: int, giorni: int, rg, var, fat, memoria_mb: float) -> dict:
     from ..ai.prova_cieca import metriche
-    sel = {x["id"]: x for x in scegli_vendute(conn, n, giorni, rg)}
+    try:
+        sel = {x["id"]: x for x in scegli_vendute(conn, n, giorni, rg)}
+    except Exception as e:
+        _errore(conn, "scelta_vendute", e)
+        sel = {}
     risultati, errori, fermata = {}, 0, None
     for gr, righe, ing in _per_gruppi(conn, list(sel), rg, memoria_mb):
         if gr is None:
@@ -558,6 +605,7 @@ def esegui(conn, n: int = 600, n_venduti: int = 300, giorni: int = 30, memoria_m
     from .. import memoria as MEM
     t0 = time.time()
     MEMORIA.clear()
+    ERRORI.clear()
     MEMORIA["inizio"] = round(MEM.rss_mb())
     rg = RG.regole()
     var = varianti(rg)
@@ -566,6 +614,7 @@ def esegui(conn, n: int = 600, n_venduti: int = 300, giorni: int = 30, memoria_m
     n, n_venduti, giorni = max(1, min(int(n), 2000)), max(0, min(int(n_venduti), 1000)), max(1, min(int(giorni), 90))
     att, righe, _ = misura_attive(conn, n, rg, var, fat, memoria_mb)
     att["secondi"] = round(time.time() - t0)
+    att["errori_query"] = dict(ERRORI)
     conn.rollback()
     ctrl = {"regole": rg.versione, "impronta": RG.impronta(rg), "giudice_vince": rg.scrittura.giudice_vince,
             "fattori_calibra": {str(nm): (x if not isinstance(x, tuple) else None) for _, nm, x in fat["vigore"]
@@ -582,6 +631,7 @@ def esegui(conn, n: int = 600, n_venduti: int = 300, giorni: int = 30, memoria_m
     ven = misura_vendute(conn, n_venduti, giorni, rg, var, fat, memoria_mb) if n_venduti else {"auto": 0}
     ven["secondi"] = round(time.time() - t1)
     ven["memoria_mb"] = dict(MEMORIA)
+    ven["errori_query"] = dict(ERRORI)
     conn.rollback()
     log.warning("PERCHE_FUORI riepilogo_vendute %s", json.dumps(ven, ensure_ascii=False, default=str))
     MEM.rilascia("perche_fuori", forza=True)
@@ -605,7 +655,9 @@ def lavoro(spec: str) -> dict | None:
     n = num(1, 600)
     with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
         conn.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY")
-        conn.execute("SET statement_timeout = '120s'")
+        # solo questa connessione (non quella del sito): una query può durare fino a 10 minuti; se scade comunque la
+        # diagnosi salta quel pezzo e scrive i risultati parziali (_errore)
+        conn.execute("SET statement_timeout = '600s'")
         conn.commit()
         try:
             return esegui(conn, n=n, n_venduti=num(2, n // 2), giorni=num(3, 30))

@@ -71,9 +71,10 @@ class _Ris:
 
 
 class Conn:
-    def __init__(self):
+    def __init__(self, rompi=()):
         self.sql = []
         self.commit_n = 0
+        self.rompi = rompi
 
     def execute(self, sql, p=None):
         s = " ".join(sql.split())
@@ -82,10 +83,17 @@ class Conn:
             return _Ris(COMMERCIANTI if tuple(p[:3]) == ("volkswagen", "golf", "diesel") else [])
         if "FROM calibrazione" in s:
             return _Ris([{"dati": json.dumps(CALIBRA)}])
-        if "JOIN valutazioni_policy v ON" in s:
+        for pezzo in self.rompi:
+            if pezzo in s:
+                raise RuntimeError("canceling statement due to statement timeout")
+        if s.startswith("SELECT l.id FROM valutazioni_policy v"):
             assert p["sotto"] == 3000 and "MI" in p["prov"] and "RM" not in p["prov"]
-            return _Ris(ATTIVE)
-        if "l.status = 'scomparso' AND l.disappeared_at" in s:
+            assert "v.dati" not in s and "description" not in s and "LIKE" not in s     # solo colonne leggere
+            return _Ris([{"id": a["id"]} for a in ATTIVE])
+        if "JOIN valutazioni_policy v ON" in s:
+            assert len(p["ids"]) <= PF.DETTAGLI_BLOCCO
+            return _Ris([a for a in reversed(ATTIVE) if a["id"] in p["ids"]])
+        if "l.status = 'scomparso' AND l.last_seen_at" in s:
             return _Ris([{k: VENDUTA[k] for k in ("id", "make", "model", "fuel", "price_eur")}])
         if s.startswith("SELECT id, make, model, fuel FROM listings WHERE id = ANY"):
             return _Ris([{k: TUTTE[i][k] for k in ("id", "make", "model", "fuel")} for i in p[0] if i in TUTTE])
@@ -196,3 +204,27 @@ def test_aggancio_una_tantum_in_app():
     assert "_una_volta(v)" in blocco and "_pf.lavoro(v)" in blocco
     pf = open(os.path.join(QUI, "dealfinder", "pricing", "perche_fuori.py")).read()
     assert "READ ONLY" in pf and "from ..ai import client" not in pf and "from ..ai import giudice" not in pf
+
+
+def test_query_che_scade_risultati_parziali():
+    """16/11 sera: in produzione "statement timeout" fermava tutto. Ora una query che scade salta solo il suo pezzo."""
+    h = _Log()
+    lg = logging.getLogger("perche_fuori")
+    lg.addHandler(h)
+    try:
+        res = PF.esegui(Conn(rompi=("SELECT l.id FROM valutazioni_policy v",)), n=10, n_venduti=5, memoria_mb=0)
+        assert res["attive"]["auto"] == 0 and res["attive"]["errori_query"] == {"scelta_attive": 1}
+        assert res["vendute"]["auto"] == 1                                        # le vendute girano lo stesso
+        # un gruppo che scade (mercato della Panda): la Golf si valuta comunque
+        res = PF.esegui(Conn(rompi=("make=%s",)), n=10, n_venduti=0, memoria_mb=0)
+        assert res["attive"]["errori_query"].get("gruppo", 0) >= 1
+    finally:
+        lg.removeHandler(h)
+    tipi = [r.split()[1] for r in h.righe if r.startswith("PERCHE_FUORI")]
+    assert "errore" in tipi and tipi.count("riepilogo_vendute") == 2
+
+
+def test_timeout_alto_solo_sulla_connessione_propria():
+    src = open(os.path.join(QUI, "dealfinder", "pricing", "perche_fuori.py")).read()
+    assert "statement_timeout = '600s'" in src and "120s" not in src
+    assert "psycopg.connect(settings.database_url" in src and "from ..db import connect" not in src
