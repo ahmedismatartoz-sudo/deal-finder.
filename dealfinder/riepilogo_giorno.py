@@ -13,7 +13,7 @@ Contenuto (tutto in lettura, ultime 24 ore):
 Una tabella che non c'è si salta (riga "non disponibile"), non ferma il riepilogo. Nessun dato personale.
 
 Invio: `esegui()` manda al massimo UNA email al giorno, dopo le 8 ora di Roma (tabella riepilogo_inviati, una riga
-per giorno). Va richiamata dal thread della sentinella del sito (vedi REGOLE_DEPLOY.md, "agganci"); da sola non
+per giorno); se l'invio non riesce riprova fino a 3 volte nello stesso giorno, mai due email. Va richiamata dal thread della sentinella del sito (vedi REGOLE_DEPLOY.md, "agganci"); da sola non
 parte mai.
 """
 from __future__ import annotations
@@ -166,12 +166,24 @@ def prepara(connetti=None, adesso: datetime | None = None) -> tuple[str, str]:
 
 TABELLA_SQL = """CREATE TABLE IF NOT EXISTS riepilogo_inviati (giorno DATE PRIMARY KEY, at TIMESTAMPTZ NOT NULL DEFAULT now(),
     ok BOOLEAN)"""
+COLONNA_SQL = "ALTER TABLE riepilogo_inviati ADD COLUMN IF NOT EXISTS tentativi INT NOT NULL DEFAULT 1"
+TENTATIVI_MAX = 3               # invii non riusciti: si riprova fino a 3 volte nello stesso giorno
+RIPROVA_MIN = 20                # non prima di 20 minuti dal tentativo precedente (anche se ancora in corso altrove)
+
+# Prenotazione atomica del tentativo: la prima volta del giorno, oppure di nuovo se l'invio non è riuscito, i tentativi
+# sono meno di TENTATIVI_MAX e il precedente ha più di RIPROVA_MIN minuti. Una riga sola per giorno: mai due email.
+PRENOTA_SQL = """INSERT INTO riepilogo_inviati (giorno, at, tentativi) VALUES (%s, %s, 1)
+ON CONFLICT (giorno) DO UPDATE SET tentativi = riepilogo_inviati.tentativi + 1, at = EXCLUDED.at, ok = NULL
+WHERE riepilogo_inviati.ok IS DISTINCT FROM true AND riepilogo_inviati.tentativi < %s
+  AND riepilogo_inviati.at < EXCLUDED.at - make_interval(mins => %s)
+RETURNING tentativi"""
 
 
 def esegui(connetti=None, invia=None, adesso: datetime | None = None) -> dict:
     """Una volta al giorno dopo le 8 di Roma: prepara il testo e lo passa a `invia(oggetto, corpo)` (default: lo
-    stesso canale della sentinella, sentinella._invia_brevo). Il giorno è segnato PRIMA dell'invio (mai due email
-    anche con due processi insieme). RIEPILOGO_GIORNO=0 lo spegne. Non solleva mai."""
+    stesso canale della sentinella, sentinella._invia_brevo). Il tentativo è prenotato PRIMA dell'invio (mai due email
+    anche con due processi insieme); se l'invio non riesce si riprova fino a TENTATIVI_MAX volte nello stesso giorno,
+    a distanza di almeno RIPROVA_MIN minuti. RIEPILOGO_GIORNO=0 lo spegne. Non solleva mai."""
     if os.environ.get("RIEPILOGO_GIORNO", "1") == "0":
         return {"spento": True}
     adesso = adesso or datetime.now(timezone.utc)
@@ -183,8 +195,8 @@ def esegui(connetti=None, invia=None, adesso: datetime | None = None) -> dict:
             from .db import connect as connetti
         with connetti() as conn:
             conn.execute(TABELLA_SQL)
-            nuovo = conn.execute("INSERT INTO riepilogo_inviati (giorno) VALUES (%s) ON CONFLICT (giorno) DO NOTHING "
-                                 "RETURNING giorno", (roma.date(),)).fetchone()
+            conn.execute(COLONNA_SQL)
+            nuovo = conn.execute(PRENOTA_SQL, (roma.date(), adesso, TENTATIVI_MAX, RIPROVA_MIN)).fetchone()
             conn.commit()
             if not nuovo:
                 return {"gia_fatto": True}
@@ -194,10 +206,11 @@ def esegui(connetti=None, invia=None, adesso: datetime | None = None) -> dict:
             if invia is None:
                 from .sentinella import _invia_brevo as invia
             ok = bool(invia(oggetto, corpo))
-            conn.execute("UPDATE riepilogo_inviati SET ok = %s, at = now() WHERE giorno = %s", (ok, roma.date()))
+            conn.execute("UPDATE riepilogo_inviati SET ok = %s WHERE giorno = %s", (ok, roma.date()))
             conn.commit()
-        log.warning("RIEPILOGO_GIORNO %s", json.dumps({"giorno": str(roma.date()), "inviato": ok}))
-        return {"inviato": ok, "oggetto": oggetto}
+        log.warning("RIEPILOGO_GIORNO %s", json.dumps({"giorno": str(roma.date()), "inviato": ok,
+                                                        "tentativo": int(nuovo["tentativi"])}))
+        return {"inviato": ok, "oggetto": oggetto, "tentativo": int(nuovo["tentativi"])}
     except Exception as e:
         log.warning("RIEPILOGO_GIORNO non riuscito: %s", type(e).__name__)
         return {"errore": type(e).__name__}

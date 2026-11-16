@@ -243,65 +243,42 @@ def esegui(produzione: bool = False, filtro: str | None = None) -> int:
 # fotografano con i default del codice in UN file versionato. Cambiarle per sbaglio fa fallire il controllo; cambiarle
 # apposta richiede di aggiornare il file con un commit esplicito "REGOLE: ...".
 IMPRONTA_FILE = os.path.join(QUI, "regole_impronta.json")
-# variabili d'ambiente lasciate al processo che calcola l'impronta (tutte le altre via: valgono i default del codice)
-_ENV_TECNICHE = ("PATH", "PYTHONPATH", "HOME", "LANG", "LC_ALL", "SYSTEMROOT", "TMPDIR")
-
-_CODICE_IMPRONTA = r"""
-import dataclasses, hashlib, json
-from dealfinder import regole as RG
-from dealfinder.pricing import policy_v2 as PV
-from dealfinder.web import scovo, sito_regole as SR
-r = RG.regole(environ={})
-dati = {
-    "regole": RG.come_dict(r),
-    "regole_versione": RG.VERSIONE,
-    "regole_impronta": RG.impronta(r, environ={}),
-    "scovo": {"POLICY_SITO": scovo.POLICY_SITO, "CATEGORIE_SITO": sorted(scovo.CATEGORIE_SITO),
-              "SOGLIE_PV": scovo.SOGLIE_PV, "SOGLIE": scovo.SOGLIE, "MARGINE_MINIMO": scovo.MARGINE_MINIMO,
-              "ANNO_MINIMO": scovo.ANNO_MINIMO, "KM_MASSIMO": scovo.KM_MASSIMO, "COSTI_FISSI": scovo.COSTI_FISSI,
-              "SCONTO_DEFAULT": scovo.SCONTO_DEFAULT, "MIN_MOSTRATO": scovo.MIN_MOSTRATO},
-    "sito_regole": dataclasses.asdict(SR.Regole.da_env()),
-    "zona": {"PROVINCE_100KM": sorted(SR.PROVINCE_100KM), "RAVENNA": sorted(SR.RAVENNA), "ROMA": sorted(SR.ROMA),
-             "TORINO": sorted(SR.TORINO)},
-    "trattativa": PV.TRATTA_MAX,
-}
-dati = json.loads(json.dumps(dati, sort_keys=True, default=str))
-canon = json.dumps(dati, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-print(json.dumps({"impronta": hashlib.sha256(canon.encode()).hexdigest()[:12], "dati": dati}, ensure_ascii=False))
-"""
+# variabili d'ambiente lasciate al processo che calcola l'impronta (tutte le altre via: valgono i default del codice).
+# LD_LIBRARY_PATH: il Python di actions/setup-python su Linux può averne bisogno per partire.
+_ENV_TECNICHE = ("PATH", "PYTHONPATH", "HOME", "LANG", "LC_ALL", "SYSTEMROOT", "TMPDIR", "LD_LIBRARY_PATH")
 
 
 def calcola_impronta() -> dict:
     """{"impronta": sha256 a 12 cifre, "dati": valori} con i soli default del codice (processo a parte, ambiente
-    pulito: le variabili lette all'import dei moduli valgono il loro default)."""
+    pulito: le variabili lette all'import dei moduli valgono il loro default). Il calcolo è in
+    dealfinder/impronta_regole.py, lo stesso che il canarino usa a runtime per le regole effettive."""
     import json
     env = {k: os.environ[k] for k in _ENV_TECNICHE if k in os.environ}
-    out = subprocess.run([sys.executable, "-c", _CODICE_IMPRONTA], cwd=QUI, env=env, capture_output=True, text=True,
-                         timeout=300)
+    out = subprocess.run([sys.executable, "-m", "dealfinder.impronta_regole"], cwd=QUI, env=env, capture_output=True,
+                         text=True, timeout=300)
     if out.returncode:
         raise RuntimeError("impronta non calcolata:\n" + out.stderr[-3000:])
     return json.loads(out.stdout.strip().splitlines()[-1])
 
 
-def _piatto(d, prefisso="") -> dict:
-    if isinstance(d, dict):
-        out = {}
-        for k, v in d.items():
-            out.update(_piatto(v, f"{prefisso}.{k}" if prefisso else str(k)))
-        return out
-    return {prefisso: d}
-
-
 def differenze_impronta(attesa: dict, ora: dict) -> list[str]:
-    a, b = _piatto(attesa.get("dati") or {}), _piatto(ora.get("dati") or {})
-    return [f"{k}: {a.get(k, '<assente>')!r} -> {b.get(k, '<assente>')!r}" for k in sorted(set(a) | set(b))
-            if a.get(k, "<assente>") != b.get(k, "<assente>")]
+    sys.path.insert(0, QUI)
+    from dealfinder.impronta_regole import differenze
+    return differenze(attesa.get("dati") or {}, ora.get("dati") or {})
 
 
 def controlla_impronta(aggiorna: bool = False) -> int:
     import json
     ora = calcola_impronta()
     if aggiorna:
+        try:                                   # le eccezioni di produzione dichiarate restano (si cambiano a mano)
+            with open(IMPRONTA_FILE, encoding="utf-8") as f:
+                vecchio = json.load(f)
+        except FileNotFoundError:
+            vecchio = {}
+        for k in ("ammessi_produzione", "nota"):
+            if k in vecchio:
+                ora[k] = vecchio[k]
         with open(IMPRONTA_FILE, "w", encoding="utf-8") as f:
             json.dump(ora, f, ensure_ascii=False, indent=1, sort_keys=True)
             f.write("\n")

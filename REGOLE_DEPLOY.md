@@ -41,7 +41,8 @@ Le regole del cliente non cambiano per sbaglio. Se il cliente decide un cambio:
 4. **commit a parte** con messaggio che comincia con `REGOLE:` e dice chi ha deciso cosa (es.
    `REGOLE: soglia 5-7.000 € da 1.500 a 1.400 (cliente, 18/11)`).
 
-Il controllo su GitHub rifiuta ogni commit che cambia `regole_impronta.json` senza `REGOLE:` nel messaggio.
+Il controllo su GitHub rifiuta ogni commit che cambia `regole_impronta.json` senza `REGOLE:` nel messaggio (titolo o
+corpo). Lo stesso vale per `ammessi_produzione` (valori impostati apposta su Render, vedi sezione 5).
 
 ## 3. Niente lavori pesanti nel sito
 
@@ -76,7 +77,25 @@ In ordine di velocità:
    intatta. Mai `git push --force` su main.
 3. Interruttori già previsti nel codice (senza deploy di codice, cambiando una variabile su Render: va comunque
    deciso e scritto nel registro): `SENTINELLA=0`, `CANARINO=0`, `RIEPILOGO_GIORNO=0`, `TR_WORKER=0/1`, ...
-   Le **regole di business non hanno interruttori** (sono in `regole.py`): si cambiano solo con un commit `REGOLE:`.
+
+**Attenzione: alcune regole di business si cambiano ANCORA con le variabili d'ambiente di Render.** Le regole di
+prezzo di `regole.py` leggono dall'ambiente solo gli interruttori di `regole.INTERRUTTORI`, ma:
+
+- `web/scovo.py` legge `SOGLIE_PV`, `MARGINE_FINO_1500`, `MARGINE_FINO_5000`, `MARGINE_OLTRE_5000`,
+  `GUADAGNO_MINIMO_MILLE`, `MODALITA_SITO`, `ANNO_MINIMO`, `KM_MASSIMO`, `SCONTO_RIVENDITA`,
+  `GUADAGNO_MOSTRATO_MINIMO`, `POLICY_SITO`, `POLICY_CATEGORIE_SITO`;
+- `web/sito_regole.py` (`Regole.da_env`) legge `KM_MASSIMO_SITO`, `ANNO_MINIMO_SITO`, `FB_SITO`, `JEV_CONF_SCARTA`,
+  `SC_SENZA_MARGINE_DA`, `TRATTA_GIORNI`, `TRATTA_MAX`, `FASCIA_FUORI_ZONA_MAX`, `DIESEL_EXTRA`,
+  `SITO_COMMERCIANTI_TOTALE`, `SITO_TORINO`, `PERIZIA_AI`, ...
+
+Il 16/11 il sito in produzione aveva impostate `MARGINE_FINO_1500=800`, `MARGINE_FINO_5000=1200`,
+`MARGINE_OLTRE_5000=1600`, `JEV_CONF_SCARTA=0.85` e `SOGLIE_PV` (uguale ai default, ma letta con una riga doppia
+in fondo): sono le eccezioni dichiarate in `regole_impronta.json` → `ammessi_produzione`.
+Per questo il controllo su GitHub (default del codice) **non basta**: il **canarino** confronta ogni ora le regole
+EFFETTIVE del sito (default + variabili di Render, `dealfinder/impronta_regole.py`) con `dati` + `ammessi_produzione`
+del file; se una variabile cambia una regola senza commit `REGOLE:` → `CANARINO ko: regole effettive diverse dal
+riferimento` con l'elenco dei valori diversi. Una variabile di regola si cambia su Render solo insieme a un commit
+`REGOLE:` che aggiorna `ammessi_produzione`.
 
 Le migrazioni del database sono solo aggiunte (`CREATE TABLE IF NOT EXISTS`, colonne nuove): tornare indietro col
 codice non richiede di toccare il database.
@@ -86,9 +105,12 @@ codice non richiede di toccare il database.
 - **Sentinella** (`dealfinder/sentinella.py`): regole del cliente e salute dei lavori, una volta all'ora, email solo
   per allarmi nuovi.
 - **Canarino** (`dealfinder/canarino.py`): una volta all'ora risponde a "un'auto nuova arriva sul sito con prezzo
-  giusto e foto?" (worker vivo, giro `nuovi` recente, almeno 100 auto, annuncio recente attivo con lo stesso prezzo,
-  foto 200). Esito nei log (`CANARINO ok` / `CANARINO ko: motivi`) e nella tabella `canarino_esiti`.
-- **Riepilogo giornaliero** (`dealfinder/riepilogo_giorno.py`): una email al giorno dopo le 8 con auto sul sito,
+  giusto e foto, con le regole giuste?" (worker vivo, giro `nuovi` recente, almeno 100 auto, auto entrata da almeno
+  15 minuti attiva con lo stesso prezzo, foto 200, regole effettive uguali al riferimento). Esito nei log
+  (`CANARINO ok` / `CANARINO attenzione` al primo esito negativo / `CANARINO ko` se si ripete al giro dopo; regole
+  diverse = ko subito) e nella tabella `canarino_esiti`.
+- **Riepilogo giornaliero** (`dealfinder/riepilogo_giorno.py`): una email al giorno dopo le 8 (se l'invio non
+  riesce, fino a 3 tentativi nello stesso giorno, mai due email) con auto sul sito,
   entrate/uscite, imbuto, versioni del codice (deploy), esiti del canarino, giri dei cron, allarmi.
   `python -m dealfinder.riepilogo_giorno` stampa il testo senza mandarlo.
 

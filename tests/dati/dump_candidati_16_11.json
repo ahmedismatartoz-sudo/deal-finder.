@@ -1,6 +1,6 @@
 {
 "origine": "righe DUMP_CANDIDATI dei log del sito (srv scovo) del 16/11/2026 18:21 UTC: auto di privati con il numero, fino a 150.000 km. Solo dati dell'auto e del calcolo: niente telefono, venditore, link; della zona solo la sigla della provincia.",
-"atteso": "soglia = scovo.soglia(prezzo); esito = sopra (margine >= soglia) | trattare:<sconto> (policy_v2._sconto_da_trattare) | sotto; costi = R - prezzo - margine del log. Calcolati col codice del 16/11 (7422ccf) e coerenti con categoria e sito del log.",
+"atteso": "soglia = scovo.soglia(prezzo); esito = sopra (margine >= soglia) | trattare:<sconto> (policy_v2._sconto_da_trattare) | sotto; costi = R - prezzo - margine del log. Calcolati col codice del 16/11 (7422ccf) e coerenti con categoria e sito del log. regole_sito = esito di sito_regole.r_anno/r_km/r_telefono/r_no_roma/r_zona con Regole() di default (None = passa).",
 "casi": [
 {
 "id": 152,
@@ -21,7 +21,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -43,7 +50,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -65,7 +79,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 100
+"costi": 100,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -87,7 +108,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -109,7 +137,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -131,7 +166,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -153,7 +195,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -175,7 +224,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -197,7 +253,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 250
+"costi": 250,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -219,7 +282,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -241,7 +311,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -263,7 +340,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -285,7 +369,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:100",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -307,7 +398,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -329,7 +427,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -351,7 +456,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -373,7 +485,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -395,7 +514,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -417,7 +543,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -439,7 +572,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -461,7 +601,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -483,7 +630,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -505,7 +659,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -527,7 +688,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -549,7 +717,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -571,7 +746,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -593,7 +775,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -615,7 +804,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -637,7 +833,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -659,7 +862,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -681,7 +891,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 100
+"costi": 100,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -703,7 +920,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -725,7 +949,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -747,7 +978,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -769,7 +1007,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -791,7 +1036,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 80
+"costi": 80,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -813,7 +1065,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -835,7 +1094,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -857,7 +1123,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -879,7 +1152,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:150",
-"costi": 400
+"costi": 400,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -901,7 +1181,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -923,7 +1210,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -945,7 +1239,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -967,7 +1268,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -989,7 +1297,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1011,7 +1326,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1033,7 +1355,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1055,7 +1384,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1077,7 +1413,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1099,7 +1442,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1121,7 +1471,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1143,7 +1500,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1165,7 +1529,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1187,7 +1558,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1209,7 +1587,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1231,7 +1616,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1253,7 +1645,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1275,7 +1674,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1297,7 +1703,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1319,7 +1732,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1341,7 +1761,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 200
+"costi": 200,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1363,7 +1790,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1385,7 +1819,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 1830
+"costi": 1830,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1407,7 +1848,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1429,7 +1877,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1451,7 +1906,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1473,7 +1935,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1495,7 +1964,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1517,7 +1993,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1539,7 +2022,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1561,7 +2051,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1583,7 +2080,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1605,7 +2109,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1627,7 +2138,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1649,7 +2167,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1671,7 +2196,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1693,7 +2225,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1715,7 +2254,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1737,7 +2283,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1759,7 +2312,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1781,7 +2341,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1803,7 +2370,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 100
+"costi": 100,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1825,7 +2399,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1847,7 +2428,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1869,7 +2457,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1891,7 +2486,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1913,7 +2515,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1935,7 +2544,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1957,7 +2573,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -1979,7 +2602,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2001,7 +2631,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2023,7 +2660,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2045,7 +2689,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2067,7 +2718,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2089,7 +2747,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2111,7 +2776,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2133,7 +2805,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2155,7 +2834,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2177,7 +2863,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2199,7 +2892,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2221,7 +2921,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2243,7 +2950,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2265,7 +2979,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2287,7 +3008,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2309,7 +3037,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2331,7 +3066,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2353,7 +3095,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2375,7 +3124,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2397,7 +3153,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2419,7 +3182,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2441,7 +3211,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2463,7 +3240,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2485,7 +3269,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 100
+"costi": 100,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2507,7 +3298,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2529,7 +3327,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2551,7 +3356,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2573,7 +3385,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2595,7 +3414,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2617,7 +3443,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2639,7 +3472,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2661,7 +3501,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2683,7 +3530,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2705,7 +3559,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2727,7 +3588,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2749,7 +3617,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2771,7 +3646,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2793,7 +3675,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2815,7 +3704,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2837,7 +3733,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2859,7 +3762,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 250
+"costi": 250,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2881,7 +3791,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2903,7 +3820,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2925,7 +3849,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2947,7 +3878,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2969,7 +3907,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -2991,7 +3936,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3013,7 +3965,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3035,7 +3994,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3057,7 +4023,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3079,7 +4052,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3101,7 +4081,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3123,7 +4110,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3145,7 +4139,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3167,7 +4168,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3189,7 +4197,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3211,7 +4226,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3233,7 +4255,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3255,7 +4284,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3277,7 +4313,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3299,7 +4342,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3321,7 +4371,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3343,7 +4400,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3365,7 +4429,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3387,7 +4458,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3409,7 +4487,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3431,7 +4516,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3453,7 +4545,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3475,7 +4574,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3497,7 +4603,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3519,7 +4632,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3541,7 +4661,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3563,7 +4690,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3585,7 +4719,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3607,7 +4748,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3629,7 +4777,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3651,7 +4806,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3673,7 +4835,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3695,7 +4864,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3717,7 +4893,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3739,7 +4922,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3761,7 +4951,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3783,7 +4980,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3805,7 +5009,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3827,7 +5038,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3849,7 +5067,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3871,7 +5096,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3893,7 +5125,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3915,7 +5154,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3937,7 +5183,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3959,7 +5212,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -3981,7 +5241,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4003,7 +5270,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4025,7 +5299,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4047,7 +5328,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4069,7 +5357,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4091,7 +5386,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4113,7 +5415,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4135,7 +5444,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4157,7 +5473,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4179,7 +5502,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -4201,7 +5531,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4223,7 +5560,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4245,7 +5589,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4267,7 +5618,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4289,7 +5647,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4311,7 +5676,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4333,7 +5705,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -4355,7 +5734,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -4377,7 +5763,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:700",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4399,7 +5792,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:250",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4421,7 +5821,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -4443,7 +5850,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -4465,7 +5879,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4487,7 +5908,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4509,7 +5937,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4531,7 +5966,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4553,7 +5995,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:300",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4575,7 +6024,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4597,7 +6053,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4619,7 +6082,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4641,7 +6111,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4663,7 +6140,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4685,7 +6169,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4707,7 +6198,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4729,7 +6227,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4751,7 +6256,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4773,7 +6285,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:600",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4795,7 +6314,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -4817,7 +6343,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -4839,7 +6372,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -4861,7 +6401,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4883,7 +6430,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -4905,7 +6459,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -4927,7 +6488,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4949,7 +6517,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4971,7 +6546,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -4993,7 +6575,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5015,7 +6604,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5037,7 +6633,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5059,7 +6662,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5081,7 +6691,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5103,7 +6720,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5125,7 +6749,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -5147,7 +6778,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5169,7 +6807,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5191,7 +6836,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5213,7 +6865,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5235,7 +6894,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5257,7 +6923,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5279,7 +6952,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -5301,7 +6981,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -5323,7 +7010,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5345,7 +7039,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -5367,7 +7068,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -5389,7 +7097,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -5411,7 +7126,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -5433,7 +7155,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VB"
+}
 }
 },
 {
@@ -5455,7 +7184,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5477,7 +7213,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5499,7 +7242,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -5521,7 +7271,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:650",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5543,7 +7300,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5565,7 +7329,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5587,7 +7358,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5609,7 +7387,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5631,7 +7416,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5653,7 +7445,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5675,7 +7474,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5697,7 +7503,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:200",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5719,7 +7532,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5741,7 +7561,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5763,7 +7590,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -5785,7 +7619,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5807,7 +7648,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5829,7 +7677,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -5851,7 +7706,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -5873,7 +7735,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5895,7 +7764,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5917,7 +7793,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -5939,7 +7822,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5961,7 +7851,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -5983,7 +7880,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6005,7 +7909,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -6027,7 +7938,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6049,7 +7967,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -6071,7 +7996,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -6093,7 +8025,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -6115,7 +8054,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6137,7 +8083,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6159,7 +8112,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6181,7 +8141,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6203,7 +8170,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6225,7 +8199,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -6247,7 +8228,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6269,7 +8257,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6291,7 +8286,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6313,7 +8315,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6335,7 +8344,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6357,7 +8373,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6379,7 +8402,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -6401,7 +8431,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6423,7 +8460,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -6445,7 +8489,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6467,7 +8518,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6489,7 +8547,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6511,7 +8576,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6533,7 +8605,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6555,7 +8634,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6577,7 +8663,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -6599,7 +8692,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -6621,7 +8721,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6643,7 +8750,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6665,7 +8779,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6687,7 +8808,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6709,7 +8837,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6731,7 +8866,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6753,7 +8895,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6775,7 +8924,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6797,7 +8953,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:250",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6819,7 +8982,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MO"
+}
 }
 },
 {
@@ -6841,7 +9011,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -6863,7 +9040,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6885,7 +9069,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -6907,7 +9098,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SV"
+}
 }
 },
 {
@@ -6929,7 +9127,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6951,7 +9156,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -6973,7 +9185,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -6995,7 +9214,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7017,7 +9243,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7039,7 +9272,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7061,7 +9301,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -7083,7 +9330,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_BZ"
+}
 }
 },
 {
@@ -7105,7 +9359,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7127,7 +9388,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7149,7 +9417,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:100",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7171,7 +9446,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_BZ"
+}
 }
 },
 {
@@ -7193,7 +9475,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7215,7 +9504,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SP"
+}
 }
 },
 {
@@ -7237,7 +9533,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AO"
+}
 }
 },
 {
@@ -7259,7 +9562,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7281,7 +9591,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -7303,7 +9620,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -7325,7 +9649,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MO"
+}
 }
 },
 {
@@ -7347,7 +9678,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7369,7 +9707,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7391,7 +9736,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7413,7 +9765,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_BZ"
+}
 }
 },
 {
@@ -7435,7 +9794,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -7457,7 +9823,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AO"
+}
 }
 },
 {
@@ -7479,7 +9852,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -7501,7 +9881,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -7523,7 +9910,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -7545,7 +9939,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -7567,7 +9968,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:200",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7589,7 +9997,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7611,7 +10026,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7633,7 +10055,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7655,7 +10084,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7677,7 +10113,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7699,7 +10142,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7721,7 +10171,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7743,7 +10200,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7765,7 +10229,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7787,7 +10258,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7809,7 +10287,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7831,7 +10316,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -7853,7 +10345,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -7875,7 +10374,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7897,7 +10403,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -7919,7 +10432,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -7941,7 +10461,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7963,7 +10490,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -7985,7 +10519,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8007,7 +10548,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8029,7 +10577,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8051,7 +10606,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:200",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8073,7 +10635,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8095,7 +10664,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -8117,7 +10693,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8139,7 +10722,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8161,7 +10751,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8183,7 +10780,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 150
+"costi": 150,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8205,7 +10809,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8227,7 +10838,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8249,7 +10867,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8271,7 +10896,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8293,7 +10925,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8315,7 +10954,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8337,7 +10983,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8359,7 +11012,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8381,7 +11041,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8403,7 +11070,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8425,7 +11099,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8447,7 +11128,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8469,7 +11157,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8491,7 +11186,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8513,7 +11215,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8535,7 +11244,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8557,7 +11273,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8579,7 +11302,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8601,7 +11331,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8623,7 +11360,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8645,7 +11389,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8667,7 +11418,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8689,7 +11447,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8711,7 +11476,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 450
+"costi": 450,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8733,7 +11505,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8755,7 +11534,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8777,7 +11563,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8799,7 +11592,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8821,7 +11621,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -8843,7 +11650,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -8865,7 +11679,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -8887,7 +11708,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8909,7 +11737,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8931,7 +11766,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8953,7 +11795,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 400
+"costi": 400,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8975,7 +11824,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -8997,7 +11853,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9019,7 +11882,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9041,7 +11911,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9063,7 +11940,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 400
+"costi": 400,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9085,7 +11969,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:200",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9107,7 +11998,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9129,7 +12027,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9151,7 +12056,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9173,7 +12085,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9195,7 +12114,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9217,7 +12143,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9239,7 +12172,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:600",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9261,7 +12201,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 1200
+"costi": 1200,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9283,7 +12230,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -9305,7 +12259,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -9327,7 +12288,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -9349,7 +12317,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -9371,7 +12346,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9393,7 +12375,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9415,7 +12404,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9437,7 +12433,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9459,7 +12462,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9481,7 +12491,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9503,7 +12520,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9525,7 +12549,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -9547,7 +12578,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9569,7 +12607,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9591,7 +12636,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9613,7 +12665,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9635,7 +12694,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -9657,7 +12723,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -9679,7 +12752,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9701,7 +12781,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9723,7 +12810,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9745,7 +12839,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9767,7 +12868,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9789,7 +12897,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9811,7 +12926,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9833,7 +12955,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9855,7 +12984,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9877,7 +13013,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9899,7 +13042,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9921,7 +13071,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9943,7 +13100,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:100",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9965,7 +13129,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -9987,7 +13158,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MO"
+}
 }
 },
 {
@@ -10009,7 +13187,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10031,7 +13216,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -10053,7 +13245,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -10075,7 +13274,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -10097,7 +13303,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -10119,7 +13332,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:700",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10141,7 +13361,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10163,7 +13390,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10185,7 +13419,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10207,7 +13448,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10229,7 +13477,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10251,7 +13506,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10273,7 +13535,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10295,7 +13564,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10317,7 +13593,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10339,7 +13622,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10361,7 +13651,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -10383,7 +13680,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10405,7 +13709,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10427,7 +13738,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -10449,7 +13767,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10471,7 +13796,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10493,7 +13825,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10515,7 +13854,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 450
+"costi": 450,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10537,7 +13883,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10559,7 +13912,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10581,7 +13941,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10603,7 +13970,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10625,7 +13999,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10647,7 +14028,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10669,7 +14057,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10691,7 +14086,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10713,7 +14115,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10735,7 +14144,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10757,7 +14173,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10779,7 +14202,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10801,7 +14231,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10823,7 +14260,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10845,7 +14289,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:650",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10867,7 +14318,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10889,7 +14347,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10911,7 +14376,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10933,7 +14405,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10955,7 +14434,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10977,7 +14463,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -10999,7 +14492,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:600",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11021,7 +14521,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -11043,7 +14550,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11065,7 +14579,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -11087,7 +14608,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MO"
+}
 }
 },
 {
@@ -11109,7 +14637,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11131,7 +14666,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11153,7 +14695,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11175,7 +14724,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -11197,7 +14753,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11219,7 +14782,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11241,7 +14811,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11263,7 +14840,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11285,7 +14869,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -11307,7 +14898,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VB"
+}
 }
 },
 {
@@ -11329,7 +14927,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 350
+"costi": 350,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11351,7 +14956,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -11373,7 +14985,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11395,7 +15014,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11417,7 +15043,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11439,7 +15072,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11461,7 +15101,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -11483,7 +15130,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11505,7 +15159,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11527,7 +15188,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11549,7 +15217,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SP"
+}
 }
 },
 {
@@ -11571,7 +15246,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SP"
+}
 }
 },
 {
@@ -11593,7 +15275,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11615,7 +15304,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:550",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11637,7 +15333,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11659,7 +15362,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11681,7 +15391,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:100",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11703,7 +15420,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11725,7 +15449,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11747,7 +15478,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11769,7 +15507,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11791,7 +15536,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 800
+"costi": 800,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11813,7 +15565,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 350
+"costi": 350,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11835,7 +15594,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -11857,7 +15623,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11879,7 +15652,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11901,7 +15681,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11923,7 +15710,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11945,7 +15739,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11967,7 +15768,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -11989,7 +15797,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SP"
+}
 }
 },
 {
@@ -12011,7 +15826,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12033,7 +15855,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12055,7 +15884,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12077,7 +15913,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12099,7 +15942,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12121,7 +15971,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12143,7 +16000,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12165,7 +16029,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -12187,7 +16058,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12209,7 +16087,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12231,7 +16116,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -12253,7 +16145,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12275,7 +16174,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12297,7 +16203,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12319,7 +16232,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12341,7 +16261,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12363,7 +16290,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12385,7 +16319,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12407,7 +16348,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 250
+"costi": 250,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12429,7 +16377,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12451,7 +16406,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12473,7 +16435,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12495,7 +16464,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12517,7 +16493,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12539,7 +16522,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12561,7 +16551,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12583,7 +16580,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12605,7 +16609,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12627,7 +16638,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12649,7 +16667,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12671,7 +16696,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12693,7 +16725,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12715,7 +16754,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12737,7 +16783,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -12759,7 +16812,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -12781,7 +16841,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -12803,7 +16870,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -12825,7 +16899,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12847,7 +16928,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12869,7 +16957,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 350
+"costi": 350,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12891,7 +16986,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12913,7 +17015,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12935,7 +17044,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12957,7 +17073,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -12979,7 +17102,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -13001,7 +17131,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13023,7 +17160,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13045,7 +17189,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13067,7 +17218,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13089,7 +17247,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:250",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13111,7 +17276,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13133,7 +17305,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13155,7 +17334,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13177,7 +17363,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13199,7 +17392,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13221,7 +17421,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13243,7 +17450,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13265,7 +17479,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13287,7 +17508,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13309,7 +17537,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13331,7 +17566,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13353,7 +17595,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13375,7 +17624,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:600",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13397,7 +17653,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:600",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13419,7 +17682,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13441,7 +17711,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -13463,7 +17740,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13485,7 +17769,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13507,7 +17798,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MO"
+}
 }
 },
 {
@@ -13529,7 +17827,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -13551,7 +17856,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -13573,7 +17885,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13595,7 +17914,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13617,7 +17943,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13639,7 +17972,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13661,7 +18001,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:250",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13683,7 +18030,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13705,7 +18059,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13727,7 +18088,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13749,7 +18117,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -13771,7 +18146,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13793,7 +18175,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13815,7 +18204,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13837,7 +18233,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13859,7 +18262,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13881,7 +18291,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13903,7 +18320,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13925,7 +18349,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13947,7 +18378,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13969,7 +18407,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -13991,7 +18436,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 650
+"costi": 650,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14013,7 +18465,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14035,7 +18494,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14057,7 +18523,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:100",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14079,7 +18552,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14101,7 +18581,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14123,7 +18610,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14145,7 +18639,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14167,7 +18668,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14189,7 +18697,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14211,7 +18726,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14233,7 +18755,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14255,7 +18784,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -14277,7 +18813,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14299,7 +18842,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14321,7 +18871,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14343,7 +18900,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14365,7 +18929,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14387,7 +18958,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -14409,7 +18987,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14431,7 +19016,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14453,7 +19045,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -14475,7 +19074,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14497,7 +19103,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14519,7 +19132,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14541,7 +19161,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14563,7 +19190,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14585,7 +19219,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -14607,7 +19248,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14629,7 +19277,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14651,7 +19306,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -14673,7 +19335,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14695,7 +19364,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 1200
+"costi": 1200,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14717,7 +19393,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14739,7 +19422,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14761,7 +19451,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14783,7 +19480,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14805,7 +19509,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14827,7 +19538,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14849,7 +19567,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14871,7 +19596,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14893,7 +19625,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14915,7 +19654,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14937,7 +19683,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14959,7 +19712,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -14981,7 +19741,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15003,7 +19770,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 250
+"costi": 250,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15025,7 +19799,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15047,7 +19828,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15069,7 +19857,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15091,7 +19886,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15113,7 +19915,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15135,7 +19944,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15157,7 +19973,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15179,7 +20002,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15201,7 +20031,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 150
+"costi": 150,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15223,7 +20060,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15245,7 +20089,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15267,7 +20118,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15289,7 +20147,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15311,7 +20176,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_RE"
+}
 }
 },
 {
@@ -15333,7 +20205,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15355,7 +20234,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15377,7 +20263,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15399,7 +20292,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -15421,7 +20321,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15443,7 +20350,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15465,7 +20379,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 650
+"costi": 650,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15487,7 +20408,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:300",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15509,7 +20437,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15531,7 +20466,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15553,7 +20495,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_TN"
+}
 }
 },
 {
@@ -15575,7 +20524,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15597,7 +20553,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15619,7 +20582,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15641,7 +20611,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15663,7 +20640,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -15685,7 +20669,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15707,7 +20698,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15729,7 +20727,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15751,7 +20756,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15773,7 +20785,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VI"
+}
 }
 },
 {
@@ -15795,7 +20814,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -15817,7 +20843,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15839,7 +20872,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15861,7 +20901,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_BZ"
+}
 }
 },
 {
@@ -15883,7 +20930,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15905,7 +20959,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 400
+"costi": 400,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15927,7 +20988,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 450
+"costi": 450,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VB"
+}
 }
 },
 {
@@ -15949,7 +21017,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15971,7 +21046,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -15993,7 +21075,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16015,7 +21104,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -16037,7 +21133,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -16059,7 +21162,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16081,7 +21191,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -16103,7 +21220,14 @@
 "atteso": {
 "soglia": 5000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16125,7 +21249,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16147,7 +21278,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16169,7 +21307,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16191,7 +21336,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 1200
+"costi": 1200,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -16213,7 +21365,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -16235,7 +21394,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16257,7 +21423,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16279,7 +21452,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16301,7 +21481,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16323,7 +21510,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16345,7 +21539,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16367,7 +21568,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16389,7 +21597,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16411,7 +21626,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16433,7 +21655,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16455,7 +21684,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16477,7 +21713,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16499,7 +21742,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16521,7 +21771,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16543,7 +21800,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:200",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16565,7 +21829,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_SO"
+}
 }
 },
 {
@@ -16587,7 +21858,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 400
+"costi": 400,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16609,7 +21887,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_GE"
+}
 }
 },
 {
@@ -16631,7 +21916,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16653,7 +21945,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16675,7 +21974,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16697,7 +22003,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16719,7 +22032,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16741,7 +22061,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16763,7 +22090,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:650",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16785,7 +22119,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16807,7 +22148,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:700",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16829,7 +22177,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16851,7 +22206,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16873,7 +22235,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16895,7 +22264,14 @@
 "atteso": {
 "soglia": 4000,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -16917,7 +22293,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16939,7 +22322,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -16961,7 +22351,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_AL"
+}
 }
 },
 {
@@ -16983,7 +22380,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -17005,7 +22409,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -17027,7 +22438,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17049,7 +22467,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17071,7 +22496,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:600",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17093,7 +22525,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17115,7 +22554,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17137,7 +22583,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17159,7 +22612,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 250
+"costi": 250,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17181,7 +22641,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17203,7 +22670,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17225,7 +22699,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_VR"
+}
 }
 },
 {
@@ -17247,7 +22728,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:50",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17269,7 +22757,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17291,7 +22786,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17313,7 +22815,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:450",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17335,7 +22844,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17357,7 +22873,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_PR"
+}
 }
 },
 {
@@ -17379,7 +22902,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17401,7 +22931,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:500",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17423,7 +22960,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17445,7 +22989,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17467,7 +23018,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:350",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17489,7 +23047,14 @@
 "atteso": {
 "soglia": 2500,
 "esito": "sotto",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": "provincia_MN"
+}
 }
 },
 {
@@ -17511,7 +23076,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17533,7 +23105,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17555,7 +23134,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "trattare:700",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17577,7 +23163,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17599,7 +23192,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17621,7 +23221,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17643,7 +23250,14 @@
 "atteso": {
 "soglia": 1500,
 "esito": "trattare:400",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17665,7 +23279,14 @@
 "atteso": {
 "soglia": 3200,
 "esito": "sopra",
-"costi": 0
+"costi": 0,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 },
 {
@@ -17687,7 +23308,14 @@
 "atteso": {
 "soglia": 1800,
 "esito": "sotto",
-"costi": 300
+"costi": 300,
+"regole_sito": {
+"anno": null,
+"km": null,
+"telefono": null,
+"no_roma": null,
+"zona": null
+}
 }
 }
 ]

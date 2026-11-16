@@ -1,6 +1,6 @@
 # Controllo automatico a ogni push e pull request (16/11, fondamenta: i test esistevano ma nessuno li imponeva).
 # 1) impronta delle regole di business uguale a regole_impronta.json, e ogni commit che cambia quel file deve avere
-#    un messaggio che comincia con "REGOLE:" (cambio di regola voluto e dichiarato);
+#    "REGOLE:" nel messaggio (titolo o corpo: cambio di regola voluto e dichiarato);
 # 2) python run_tests.py --deploy: compileall, import dei moduli principali, test con i default del codice e con le
 #    regole di produzione (gli stessi passi di prima_del_deploy.sh).
 # Nessun segreto, nessun database, nessun deploy: solo lettura del codice.
@@ -49,9 +49,15 @@ jobs:
             base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
           fi
           if [ -z "$base" ]; then echo "Nessuna base da confrontare: controllo saltato"; exit 0; fi
-          senza=$(git log --format='%h %s' "$base..HEAD" -- regole_impronta.json | grep -v -E '^[0-9a-f]+ REGOLE:' || true)
+          # "REGOLE:" va cercato in TUTTO il messaggio (%B): con lo squash merge i messaggi dei commit finiscono nel corpo
+          senza=""
+          for h in $(git log --format='%H' "$base..HEAD" -- regole_impronta.json); do
+            if ! git log -1 --format='%B' "$h" | grep -q 'REGOLE:'; then
+              senza="$senza$(git log -1 --format='%h %s' "$h")"$'\n'
+            fi
+          done
           if [ -n "$senza" ]; then
-            echo "Questi commit cambiano regole_impronta.json senza dichiararlo (il messaggio deve cominciare con 'REGOLE:'):"
+            echo "Questi commit cambiano regole_impronta.json senza dichiararlo (il messaggio deve contenere 'REGOLE:'):"
             echo "$senza"
             exit 1
           fi

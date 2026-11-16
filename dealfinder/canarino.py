@@ -12,8 +12,15 @@ arriva sul sito, con il prezzo giusto e la foto che si apre?". Cinque prove, tut
   4 annuncio recente   l'auto pubblicata più di recente (con foto) è nell'elenco, ancora 'attivo' nel database e con
                        lo STESSO prezzo dell'annuncio (listings.price_eur)
   5 foto               la sua prima foto risponde 200 con un'immagine
+  6 regole effettive   le regole di business di QUESTO processo (default + variabili d'ambiente di Render) uguali a
+                       regole_impronta.json ("dati" più le eccezioni dichiarate in "ammessi_produzione")
 
-Esito: una riga di log `CANARINO ok {json}` oppure `CANARINO ko: <motivi> {json}`, e una riga nella tabella
+L'auto della prova 4-5 è la più recente entrata da almeno RECENTE_MIN_MIN minuti (le foto di un'auto appena entrata
+possono non essere ancora pronte). Un problema delle prove 1-5 diventa "ko" solo se si ripete al giro dopo (due esiti
+negativi di fila): al primo giro la riga è "CANARINO attenzione". Le regole diverse (prova 6) sono "ko" subito.
+
+Esito: una riga di log `CANARINO ok {json}`, `CANARINO attenzione: <motivi> {json}` oppure
+`CANARINO ko: <motivi> {json}`, e una riga nella tabella
 canarino_esiti (creata qui se manca; si svuota da sola dopo 30 giorni). Nessun dato personale: solo id, numeri,
 minuti. Nessuna scrittura fuori da canarino_esiti. Nessuna funzione solleva eccezioni verso chi la chiama.
 
@@ -39,6 +46,8 @@ MIN_AUTO_SITO = 100            # il sito ha di solito 400-600 auto; sotto 100 qu
 ELENCO_MAX_ORE = 1.0           # copia salvata dell'elenco: il sito la riscrive almeno ogni 10 minuti se cambia
 TIMEOUT_S = 30                 # statement_timeout e timeout HTTP
 SITO = "https://scovo.onrender.com"
+RECENTE_MIN_MIN = 15           # auto della prova: entrata da almeno 15 minuti
+REGOLE_KO = "regole effettive diverse dal riferimento"
 
 TABELLA_SQL = """CREATE TABLE IF NOT EXISTS canarino_esiti (
     id BIGSERIAL PRIMARY KEY, at TIMESTAMPTZ NOT NULL DEFAULT now(), ok BOOLEAN NOT NULL,
@@ -99,14 +108,42 @@ def _quando(it: dict) -> str:
     return str(it.get("nuova") or it.get("visto_dal") or "")
 
 
+def _istante(it: dict):
+    """Quando l'auto è entrata (datetime con fuso) o None se non si legge."""
+    from datetime import datetime, timezone
+    v = it.get("nuova") or it.get("visto_dal")
+    if isinstance(v, str):
+        try:
+            v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if not isinstance(v, datetime):
+        return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
+def regole_diverse() -> list[str]:
+    """Prova 6: valori delle regole effettive diversi dal riferimento (solo valori di regola, mai segreti)."""
+    from . import impronta_regole
+    return impronta_regole.differenze_effettive()
+
+
 def controlla(conn, items: list | None = None, http_get=None, base_url: str | None = None,
-              min_auto: int | None = None) -> dict:
+              min_auto: int | None = None, adesso=None, regole=regole_diverse) -> dict:
     """Le cinque prove. `items` (facoltativo): l'elenco già in memoria (dentro il sito si passa app._elenco['items']
     e non si chiama l'API). Ritorna {"ok", "motivi", "numeri"}."""
     http_get = http_get or _http_get
     base = (base_url or _base_url()).rstrip("/")
     min_auto = MIN_AUTO_SITO if min_auto is None else min_auto
     motivi, num = [], {}
+    # 6) regole effettive (prima di tutto: non dipende dal database)
+    try:
+        diverse = regole() if regole else []
+    except Exception as e:
+        diverse = [f"impronta non calcolata ({type(e).__name__})"]
+    if diverse:
+        num["regole_diverse"] = diverse[:50]
+        motivi.append(f"{REGOLE_KO}: " + "; ".join(diverse[:10]) + (" ..." if len(diverse) > 10 else ""))
     conn.execute("SET LOCAL statement_timeout = '%ds'" % TIMEOUT_S)
 
     # 1-2) tempo reale
@@ -134,7 +171,12 @@ def controlla(conn, items: list | None = None, http_get=None, base_url: str | No
         motivi.append(f"poche auto sul sito: {len(items)} (minimo {min_auto})")
 
     # 4) annuncio pubblicato di recente: presente, attivo, stesso prezzo
-    con_foto = sorted((it for it in items if it.get("foto") and not it.get("supercar")), key=_quando, reverse=True)
+    from datetime import datetime, timedelta, timezone
+    limite = (adesso or datetime.now(timezone.utc)) - timedelta(minutes=RECENTE_MIN_MIN)
+    minimo = datetime.min.replace(tzinfo=timezone.utc)
+    con_foto = sorted((it for it in items if it.get("foto") and not it.get("supercar")
+                       and (_istante(it) is None or _istante(it) <= limite)),
+                      key=lambda it: _istante(it) or minimo, reverse=True)   # per istante, non per testo
     if not con_foto:
         if items:
             motivi.append("nessuna auto con foto nell'elenco")
@@ -180,11 +222,32 @@ def riga_log(esito: dict) -> str:
     dati = json.dumps(esito.get("numeri") or {}, ensure_ascii=False, default=str, sort_keys=True)
     if esito.get("ok"):
         return f"CANARINO ok {dati}"
-    return "CANARINO ko: " + "; ".join(esito.get("motivi") or ["errore"]) + " " + dati
+    parola = "attenzione" if esito.get("attenzione") else "ko"
+    return f"CANARINO {parola}: " + "; ".join(esito.get("motivi") or ["errore"]) + " " + dati
+
+
+def precedente_negativo(conn) -> bool:
+    """L'esito del giro prima (canarino_esiti) era negativo? Senza tabella o senza righe: no."""
+    try:
+        r = conn.execute("/*C:precedente*/ SELECT ok FROM canarino_esiti ORDER BY at DESC, id DESC LIMIT 1").fetchone()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+    return bool(r) and r["ok"] is False
+
+
+def conferma(esito: dict, prima_negativo: bool) -> dict:
+    """Due esiti negativi di fila = ko; il primo è "attenzione". Le regole diverse sono ko subito."""
+    if esito.get("ok") or prima_negativo or any(str(m).startswith(REGOLE_KO) for m in esito.get("motivi") or []):
+        return esito
+    return dict(esito, attenzione=True)
 
 
 def esegui(processo: str = "manuale", connetti=None, items: list | None = None, http_get=None,
-           salva: bool = True) -> dict:
+           salva: bool = True, regole=regole_diverse) -> dict:
     """Un giro: prove, riga di log, riga in canarino_esiti. Non solleva mai (un errore è un esito ko)."""
     if os.environ.get("CANARINO", "1") == "0":
         return {"ok": True, "spento": True, "motivi": [], "numeri": {}}
@@ -193,11 +256,12 @@ def esegui(processo: str = "manuale", connetti=None, items: list | None = None, 
         if connetti is None:
             from .db import connect as connetti
         with connetti() as conn:
-            esito = controlla(conn, items=items, http_get=http_get)
+            esito = controlla(conn, items=items, http_get=http_get, regole=regole)
             try:
                 conn.rollback()                   # chiude la transazione di sola lettura
             except Exception:
                 pass
+            esito = conferma(esito, precedente_negativo(conn))
             if salva:
                 try:
                     registra(conn, esito, processo)
@@ -206,7 +270,7 @@ def esegui(processo: str = "manuale", connetti=None, items: list | None = None, 
     except Exception as e:
         esito = {"ok": False, "motivi": [f"errore: {type(e).__name__}: {str(e).splitlines()[0][:160] if str(e) else ''}"],
                  "numeri": {}}
-    esito["numeri"]["secondi"] = round(time.monotonic() - t0, 1)
+    esito.setdefault("numeri", {})["secondi"] = round(time.monotonic() - t0, 1)
     try:
         log.warning("%s", riga_log(esito))
     except Exception:

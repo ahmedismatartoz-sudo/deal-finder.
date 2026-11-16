@@ -96,3 +96,31 @@ def test_costi_fissi_senza_danni_come_nei_log():
         cs = P.costi({"price_eur": int(c["prezzo"]), "damage_class": "nessuno"}, int(c["R"]), cfg)
         assert cs["totale_costi"] == 0, (c["id"], cs["totale_costi"])
         assert int(c["R"]) - int(c["prezzo"]) - cs["totale_costi"] == int(c["margine"])
+
+
+def _regole_sito(c: dict) -> dict:
+    """Le regole di telefono, zona, km e anno di web/sito_regole sull'auto del log (nel dump solo privati col numero)."""
+    from dealfinder.web import sito_regole as SR
+    g = SR.Regole()
+    it = {"id": c["id"], "anno": c["anno"], "km": c["km"], "carb": c["carb"], "prezzo": c["prezzo"], "fonte": c["fonte"],
+          "_r": {"tel": True, "provincia": c["prov"], "seller_type": "privato"}}
+    return {n: getattr(SR, "r_" + n)(it, g) for n in ("anno", "km", "telefono", "no_roma", "zona")}
+
+
+def test_telefono_zona_km_anno_uguali_al_16_11():
+    diversi = [(c["id"], c["atteso"]["regole_sito"], r) for c in _casi()
+               if (r := _regole_sito(c)) != c["atteso"]["regole_sito"]]
+    assert not diversi, f"{len(diversi)} auto con esito diverso, prime: {diversi[:5]}"
+
+
+def test_auto_sul_sito_passano_telefono_zona_km_anno():
+    """Coerenza con la produzione: ogni auto che il 16/11 era sul sito passa queste regole; quelle che non passano
+    sono tutte fuori per la zona (mai Roma)."""
+    fuori = Counter()
+    for c in _casi():
+        r = {k: v for k, v in _regole_sito(c).items() if v}
+        if c["sito"]:
+            assert not r, (c["id"], r)
+        fuori.update(r.keys())
+        assert c["prov"] not in ("RM", "LT", "FR", "VT", "RI") or "zona" in r or "no_roma" in r
+    assert set(fuori) <= {"zona"} and fuori["zona"] > 100
