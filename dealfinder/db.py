@@ -181,15 +181,112 @@ def migrate(conn, cartella: Path | None = None, attesa_max: float | None = None)
 
 
 def log_job(conn, job: str):
-    """Registra l'inizio di un lavoro; ritorna una funzione per chiuderlo."""
+    """Registra l'inizio di un lavoro; ritorna una funzione per chiuderlo.
+    16/11 (fond-server): finché la riga è aperta il processo le dà un BATTITO (stats.battito) ogni BATTITO_S secondi:
+    se il processo muore il battito si ferma e chiudi_interrotti() la chiude come 'interrotto'."""
     jid = conn.execute("INSERT INTO job_runs (job) VALUES (%s) RETURNING id", (job,)).fetchone()["id"]
     conn.commit()
+    batti(jid)
 
     def finish(ok: bool, stats: dict) -> None:
+        smetti(jid)
         conn.execute("UPDATE job_runs SET finished_at=now(), ok=%s, stats=%s WHERE id=%s",
                      (ok, json.dumps(stats, default=str), jid))
         conn.commit()
     return finish
+
+
+# ------------------------------------------------------------------ battito delle righe "in corso" (16/11, fond-server)
+# Prima una riga job_runs restava "in corso" (finished_at NULL) per sempre se il processo moriva (fuori memoria,
+# riavvio, limite di Render): la sentinella la contava per 48 ore e nessuno la chiudeva. Ora ogni processo aggiorna
+# stats.battito delle sue righe aperte (un filo daemon, una connessione breve ogni BATTITO_S secondi) e all'avvio di ogni
+# cron le righe con il battito fermo da più di BATTITO_FERMO_MIN minuti (o senza battito e più vecchie di
+# SENZA_BATTITO_ORE ore, scritte dal codice di prima) si chiudono come interrotte (ok=false).
+BATTITO_S = 300
+BATTITO_FERMO_MIN = 20
+SENZA_BATTITO_ORE = 13          # oltre il limite di 12 ore dei cron di Render: nessun lavoro vivo senza battito dura tanto
+_battiti: set = set()
+_battiti_stato = {"filo": None}
+
+SQL_BATTITO = ("UPDATE job_runs SET stats = COALESCE(stats, '{}'::jsonb) || jsonb_build_object('battito', now()) "
+               "WHERE id = ANY(%s::bigint[]) AND finished_at IS NULL")
+
+
+def batti(jid) -> None:
+    """Segna la riga `jid` come viva: il filo dei battiti la aggiorna finché non si chiama smetti(jid)."""
+    if jid is None:
+        return
+    _battiti.add(int(jid))
+    _avvia_filo_battiti()
+
+
+def smetti(jid) -> None:
+    if jid is not None:
+        _battiti.discard(int(jid))
+
+
+def battito_ora(conn, ids) -> int:
+    """Un battito subito per le righe `ids` (anche fuori dal filo). Ritorna quante righe ha toccato."""
+    ids = [int(i) for i in ids if i is not None]
+    if not ids:
+        return 0
+    r = conn.execute(SQL_BATTITO, (ids,))
+    conn.commit()
+    return int(getattr(r, "rowcount", 0) or 0)
+
+
+def _avvia_filo_battiti() -> None:
+    import threading
+    f = _battiti_stato["filo"]
+    if f is not None and f.is_alive():
+        return
+    if not (os.environ.get("DATABASE_URL") or getattr(settings, "database_url", None)) or os.environ.get("BATTITO") == "0":
+        return
+
+    def ciclo():
+        import time
+        while True:
+            time.sleep(float(os.environ.get("BATTITO_S") or BATTITO_S))
+            ids = list(_battiti)
+            if not ids:
+                continue
+            try:
+                with connect() as c:
+                    battito_ora(c, ids)
+            except Exception as e:                  # un battito perso non ferma nulla: il prossimo riprova
+                print("BATTITO non scritto:", type(e).__name__, flush=True)
+
+    f = threading.Thread(target=ciclo, daemon=True, name="battiti")
+    _battiti_stato["filo"] = f
+    f.start()
+
+
+SQL_INTERROTTI = """
+UPDATE job_runs
+   SET finished_at = now(), ok = false,
+       stats = COALESCE(stats, '{}'::jsonb) || jsonb_build_object('interrotto', true, 'motivo', %s::text)
+ WHERE finished_at IS NULL
+   AND (CASE WHEN stats ? 'battito'
+             THEN (stats->>'battito')::timestamptz < now() - make_interval(mins => %s)
+             ELSE started_at < now() - make_interval(hours => %s) END)
+   AND (%s::text IS NULL OR job = %s::text OR job LIKE %s::text)
+   AND NOT (id = ANY(%s::bigint[]))
+RETURNING id, job"""
+
+
+def chiudi_interrotti(conn, prefisso: str | None = None, fermo_min: int | None = None,
+                      senza_ore: int | None = None, escludi=()) -> list[dict]:
+    """Chiude come 'interrotto' (ok=false) le righe in corso con il battito fermo da più di `fermo_min` minuti, o
+    senza battito e iniziate da più di `senza_ore` ore. Con `prefisso` solo quel lavoro e i suoi fratelli
+    ("valore_reale_notte" chiude anche "valore_reale_notte:20261115"). Le righe battute da questo processo non si
+    toccano mai. Ritorna le righe chiuse [{id, job}]."""
+    mie = sorted(set(_battiti) | {int(i) for i in escludi})
+    pref_like = (prefisso.replace("%", r"\%").replace("_", r"\_") + ":%") if prefisso else None
+    righe = conn.execute(SQL_INTERROTTI, ("battito fermo", int(fermo_min or BATTITO_FERMO_MIN),
+                                          int(senza_ore or SENZA_BATTITO_ORE),
+                                          prefisso, prefisso, pref_like, mie)).fetchall()
+    conn.commit()
+    return [dict(r) for r in righe]
 
 
 def upsert_vehicle(conn, listing: Listing) -> int:
