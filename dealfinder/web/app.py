@@ -3972,6 +3972,22 @@ def _tempo_reale():
             except Exception as e:
                 lg.warning("GIRO_LOTTO non riuscito: %s", type(e).__name__)
             return
+        if v.startswith("fuori84:"):          # 16/11 (cliente): 1.495 nuovi dal database, mai chi era nella lista 84
+            time.sleep(20)
+            try:
+                from ..marketing import su_misura as SM
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"fuori84:{v[:60]}"):
+                    lg.warning("FUORI84 %s già fatto", v[:60])
+                    return
+                corpo, _, pref = v.split(":", 1)[1].replace("#", "~").partition("~")
+                n, _, quando = corpo.partition("@")
+                lg.warning("FUORI84 %s", json.dumps(SM.carica_fuori84(
+                    totale=int(n or 1495), quando=quando or "subito",
+                    oggi_pref={x for x in pref.split(",") if len(x) == 16})))
+            except Exception as e:
+                lg.warning("FUORI84 non riuscito: %s", str(e)[:300])
+            return
         if v.startswith(("fermi:", "fermi2:")):  # 12/11 sera (cliente): i contatti fermi nel database, non quelli di oggi
             time.sleep(20)
             try:

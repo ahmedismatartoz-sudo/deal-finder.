@@ -640,3 +640,102 @@ def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00",
         esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
     return esito
 
+
+
+# ---------- 16/11 (cliente: "ho tolto tutti, fai entrare altri 1.500 del database, diversi da quelli che c'erano") ----
+# La lista 84 ("Skovo fermi 12-11", 1.085 scelti) l'aveva fatta ripesca_fermi: i più vicini a Milano fra chi NON aveva
+# ricevuto la campagna 75 (impronte in `oggi_75`). I contatti sono stati cancellati da Brevo prima di salvarli e la
+# campagna 77 non si può esportare: chi era nella lista si ricostruisce per esclusione, larga, così nessuno di loro
+# (né i disiscritti della 76/77/79/80, che erano tutti lì) viene ripreso:
+#  A) saloni con TUTTI gli indirizzi buoni fra quelli che avevano ricevuto la 75 → non potevano essere nella lista 84;
+#  B) saloni più lontani da Milano del confine della lista 84 (rifatta oggi con un margine di sicurezza): i pari
+#     merito sul confine restano fuori, perché la scelta fra loro non è ripetibile.
+def scegli_fuori84(righe: list[dict], bloccati: set, oggi_75: set, n84: int = 1085, margine: int = 300,
+                   totale: int = 1495) -> tuple[list[dict], dict]:
+    """Funzione pura. `oggi_75`: inizi (16 caratteri) delle impronte di chi ha ricevuto la campagna 75."""
+    from .giro_lotto import _esclusi_re
+    from .invii import impronta, norm_email
+    esc = _esclusi_re()
+    pref = lambda e: impronta(norm_email(e))[:16]                       # noqa: E731
+    righe = [r for r in righe if not esc.search(str(r.get("nome") or ""))]
+    # la lista 84 rifatta come il 12/11 (indirizzi della 75 tolti), più un margine: il suo confine di distanza
+    resto = [{**r, "email": [e for e in (r.get("email") or []) if pref(e) not in oggi_75]} for r in righe]
+    l84 = scegli_secondo(resto, bloccati, set(), n84 + margine)
+    confine = max((x["dmi"] for x in l84), default=10 ** 6) if len(l84) >= n84 else 10 ** 6
+    a, b = [], []
+    for r in righe:
+        em = [norm_email(e) for e in (r.get("email") or []) if e and not esc.search(e)]
+        buone = [e for e in em if email_buona(e) and impronta(e) not in bloccati]
+        if not buone:
+            continue
+        if all(pref(e) in oggi_75 for e in buone):
+            a.append({**r, "email": buone})
+        else:
+            b.append({**r, "email": buone})
+    sa = scegli_secondo(a, bloccati, set(), 10 ** 6)
+    sb = [x for x in scegli_secondo(b, bloccati, set(), 10 ** 6) if x["dmi"] > confine]
+    scelti = sorted(sa + sb, key=lambda x: x["dmi"])[:max(0, totale)]
+    return scelti, {"confine_km": round(confine) if confine < 10 ** 6 else None, "da_75": len(sa),
+                    "oltre_confine": len(sb), "lista84_rifatta": len(l84)}
+
+
+def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, campagna_testo: int = 81) -> dict:
+    """Carica in una lista nuova i contatti scelti da scegli_fuori84 e crea la campagna con testo, oggetto e mittente
+    della campagna `campagna_testo`, programmata per `quando` ("subito" = fra 10 minuti). Mai email nei log."""
+    from datetime import datetime, timedelta, timezone
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    from .brevo_liste import BLOCCATI_MINIMI, TETTO_BREVO as _TETTO, _bloccati_0111
+    oggi = {x for x in (oggi_pref or ()) if len(x) == 16}
+    esito: dict = {"oggi_75": len(oggi)}
+    if len(oggi) < 1000:
+        return {**esito, "fermo": "impronte_75_mancanti"}
+    key = _chiave()
+    if not key:
+        return {**esito, "fermo": "chiave"}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c:
+        base = c.get(f"{API}/emailCampaigns/{campagna_testo}")
+        base = base.json() if base.status_code < 300 else {}
+        snd = (base.get("sender") or {})
+        if not base.get("htmlContent") or "unsubscribe" not in base["htmlContent"] or not snd.get("id"):
+            return {**esito, "fermo": "testo_o_mittente_non_letti"}
+        contatti = _contatti_brevo(c)
+        esito["contatti_in_brevo"] = len(contatti)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            righe = _righe_db(conn)
+        esito.update({"disiscritti": len(bloccati), "archivio": len(righe)})
+        if len(bloccati) < BLOCCATI_MINIMI:
+            return {**esito, "fermo": "disiscritti_incompleti"}
+        posto = _TETTO - len(contatti)
+        scelti, info = scegli_fuori84(righe, bloccati, oggi, totale=min(totale, posto))
+        esito.update({**info, "posto": posto, "scelti": len(scelti)})
+        if not scelti:
+            return esito
+        if quando == "subito":
+            quando = (datetime.now(timezone.utc) + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        nome = "Skovo nuovi 16-11"
+        lid = _liste(c).get(nome)
+        if lid is None:
+            r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
+            r.raise_for_status()
+            lid = r.json()["id"]
+        for k in range(0, len(scelti), 500):
+            r = c.post(f"{API}/contacts/import", json={
+                "jsonBody": [{"email": s["email"]} for s in scelti[k:k + 500]],
+                "listIds": [lid], "updateExistingContacts": True, "emptyContactsAttributes": False})
+            esito[f"import_{k}"] = r.status_code
+            _aspetta_import(c, r)
+        esito["lista"] = lid
+        esito["in_lista"] = (c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers")
+        corpo = {"name": "Skovo nuovi 16-11", "subject": base.get("subject"), "previewText": base.get("previewText") or "",
+                 "sender": {"id": snd["id"]}, "replyTo": base.get("replyTo") or RISPOSTE,
+                 "htmlContent": base["htmlContent"], "recipients": {"listIds": [lid]},
+                 "header": "[DEFAULT_HEADER]", "footer": "[DEFAULT_FOOTER]", "inlineImageActivation": False,
+                 "scheduledAt": quando}
+        r = c.post(f"{API}/emailCampaigns", json=corpo)
+        esito["campagna"] = r.json().get("id") if r.status_code < 300 else f"HTTP {r.status_code}"
+        esito["quando"] = quando
+    return esito
