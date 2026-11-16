@@ -379,6 +379,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                             v.setdefault("ipotesi", []).append(f"valore reale del {str(vr_at)[:10]}: più vecchio di "
                                                                f"{rg.valore_reale.max_giorni_avviso} giorni")
                     es.stats[f"categoria:{v['categoria']}"] += 1
+                    if isinstance(v.get("cascata"), dict):       # 16/11: cascata dei confronti (riga VALUTAZIONE)
+                        es.stats["cascata:" + str(v["cascata"].get("usata") or "nessun_aiuto")] += 1
                 v["fonte_valutazione"] = fonte
                 if extra and lid in extra:
                     v.update(extra[lid])
