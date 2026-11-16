@@ -710,7 +710,7 @@ def scegli_libero_ms(righe: list[dict], bloccati: set, oggi_75: set, totale: int
 
 
 def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, campagna_testo: int = 81,
-                   solo_libero_ms: bool = False) -> dict:
+                   solo_libero_ms: bool = False, mattina: bool = False) -> dict:
     """Carica in una lista nuova i contatti scelti da scegli_fuori84 e crea la campagna con testo, oggetto e mittente
     della campagna `campagna_testo`, programmata per `quando` ("subito" = fra 10 minuti). Mai email nei log."""
     from datetime import datetime, timedelta, timezone
@@ -741,7 +741,16 @@ def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, c
         if len(bloccati) < BLOCCATI_MINIMI:
             return {**esito, "fermo": "disiscritti_incompleti"}
         posto = _TETTO - len(contatti)
-        if solo_libero_ms:
+        if mattina:
+            # 16/11 pomeriggio (cliente, consapevole: "manda lo stesso"): di nuovo a chi era nella lista 84 di stamattina
+            # = la lista 84 rifatta (i più vicini fra chi non aveva ricevuto la 75), fino al posto in Brevo
+            from .giro_lotto import _esclusi_re as _er
+            from .invii import impronta as _imp, norm_email as _ne
+            _esc = _er()
+            resto = [{**r, "email": [e for e in (r.get("email") or []) if _imp(_ne(e))[:16] not in oggi and not _esc.search(e)]}
+                     for r in righe if not _esc.search(str(r.get("nome") or ""))]
+            scelti, info = scegli_secondo(resto, bloccati, set(), min(totale, posto)), {"tipo": "mattina"}
+        elif solo_libero_ms:
             scelti, info = scegli_libero_ms(righe, bloccati, oggi, totale=min(totale, posto)), {"tipo": "libero_ms"}
         else:
             scelti, info = scegli_fuori84(righe, bloccati, oggi, totale=min(totale, posto))
@@ -750,7 +759,7 @@ def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, c
             return esito
         if quando == "subito":
             quando = (datetime.now(timezone.utc) + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        nome = "Skovo nuovi 16-11" + (" B" if solo_libero_ms else "")
+        nome = "Skovo nuovi 16-11" + (" B" if solo_libero_ms else "") + (" mattina" if mattina else "")
         lid = _liste(c).get(nome)
         if lid is None:
             r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": _cartella(c)})
@@ -765,7 +774,7 @@ def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, c
         esito["lista"] = lid
         esito["in_lista"] = (c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers")
         corpo = {"name": nome, "subject": base.get("subject"), "previewText": base.get("previewText") or "",
-                 "sender": {"id": snd["id"]}, "replyTo": base.get("replyTo") or RISPOSTE,
+                 "sender": {"name": "Skovo", "id": snd["id"]}, "replyTo": base.get("replyTo") or RISPOSTE,
                  "htmlContent": base["htmlContent"], "recipients": {"listIds": [lid]},
                  "header": "[DEFAULT_HEADER]", "footer": "[DEFAULT_FOOTER]", "inlineImageActivation": False,
                  "scheduledAt": quando}
