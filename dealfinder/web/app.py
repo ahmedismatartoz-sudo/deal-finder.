@@ -3859,7 +3859,7 @@ def _tempo_reale():
         8/11: più lavori una tantum insieme separati da '+' (es. 'zona:0811+utenti:0811'), uno dopo l'altro."""
         if v is None:
             v = os.environ.get("BREVO_IMPORT_LISTE") or ""
-            if "+" in v and not v.startswith(("mix:", "rimetti:")):
+            if "+" in v and not v.startswith(("mix:", "rimetti:", "giro_lotto:")):   # 16/11: '+' del fuso orario
                 for parte in [x.strip() for x in v.split("+") if x.strip()]:
                     try:
                         brevo_liste(parte)
@@ -3959,6 +3959,18 @@ def _tempo_reale():
                                                            "rimasti": rl.get("uniqueSubscribers")}))
             except Exception as e:
                 lg.warning("TOGLI_LISTA non riuscito: %s", str(e)[:300])
+            return
+        if v.startswith("giro_lotto:"):       # 16/11 (cliente): chi ha ricevuto la base esce da Brevo, entrano gli altri
+            time.sleep(20)                     # dell'archivio con la stessa email programmata (marketing/giro_lotto.py)
+            try:
+                from ..marketing import giro_lotto as GL
+                from ..pipeline.ciclo import _una_volta
+                if not _una_volta(f"giro_lotto:{v[11:91]}"):
+                    lg.warning("GIRO_LOTTO %s già fatto (togli il valore da BREVO_IMPORT_LISTE)", v[:40])
+                    return
+                lg.warning("GIRO_LOTTO %s", json.dumps(GL.lavoro(v)))
+            except Exception as e:
+                lg.warning("GIRO_LOTTO non riuscito: %s", type(e).__name__)
             return
         if v.startswith(("fermi:", "fermi2:")):  # 12/11 sera (cliente): i contatti fermi nel database, non quelli di oggi
             time.sleep(20)
