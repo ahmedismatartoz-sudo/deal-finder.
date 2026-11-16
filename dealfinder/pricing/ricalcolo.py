@@ -180,21 +180,34 @@ def n_gate(v: dict) -> int:
 
 
 def serve_cascata(v: dict, t: dict, cfg) -> bool:
-    """La cascata serve solo alle auto rimaste "dati_insufficienti" con confronti SOTTO il minimo del sito (cfg.serve:
-    8 sotto 10.000 €, 5 sopra) e con i dati per cercarne altri. Le altre auto restano identiche: per un'auto già
-    valutata (opportunità, candidato, non conveniente) la cascata potrebbe solo abbassare il mercato (mai alzarlo),
-    quindi non aggiungerebbe nessuna auto al sito."""
+    """La cascata serve solo alle auto rimaste "dati_insufficienti" PERCHÉ il mercato non si è potuto stimare (pochi
+    confronti o confronti troppo dispersi: valutazione senza M) e con confronti sotto il minimo del sito (cfg.serve:
+    8 sotto 10.000 €, 5 sopra). Le altre restano identiche:
+    - un'auto già valutata (opportunità, candidato, non conveniente): la cascata potrebbe solo abbassarne il mercato;
+    - un'auto con M ma ferma per una protezione (prezzo sotto il 55% o il 20% del mercato, danni, costi non stimati,
+      prezzo dell'annuncio non affidabile): cercare altri confronti servirebbe solo ad aggirare la protezione."""
     if not cascata_attiva() or not (t.get("make") and t.get("model") and t.get("fuel") and t.get("price_eur")):
         return False
-    if v.get("categoria") != "dati_insufficienti":
+    if v.get("categoria") != "dati_insufficienti" or v.get("M") is not None:
         return False
     if set(t.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
         return False                                     # prezzo dell'annuncio non affidabile: più confronti non servono
+    danno = t.get("damage_class") or "sconosciuto"
+    if danno not in ("nessuno", "sconosciuto") or t.get("rischio_strutturale") or t.get("damage_declared"):
+        return False                                     # danni: la cascata non deve aggirare la protezione
     if v.get("mancanti") and any(m in v["mancanti"] for m in ("anno", "km", "alimentazione", "prezzo")) \
             or any(str(m).startswith("dati dell'auto incompleti") or str(m).startswith("km (scritto")
                    for m in (v.get("motivi") or [])[:1]):
         return False                                     # dati dell'auto mancanti: più confronti non servono
     return n_gate(v) < cfg.serve(t.get("price_eur"))
+
+
+def mediana_attivi(v: dict) -> float | None:
+    """Mediana dei prezzi CORRETTI (anno/km, solo verso il basso) dei confronti ATTIVI della valutazione (le auto
+    sparite escluse). È il tetto del mercato nella cascata quando la valutazione di partenza non ha M."""
+    p = [c["prezzo_corretto"] for c in (v.get("confronti") or [])
+         if not c.get("venduta") and c.get("prezzo_corretto") is not None]
+    return P.percentile(p, .5) if p else None
 
 
 def _righe(conn, sql: str, args) -> list[dict]:
@@ -242,6 +255,7 @@ def _cascata(conn, t: dict, v: dict, lista: list, soglia: int, cfg, cache: dict)
     serve = cfg.serve(t.get("price_eur"))
     giorni = _giorni_vendute()
     M0 = v.get("M")
+    tetto0 = M0 if M0 is not None else mediana_attivi(v)    # serve_cascata: qui M0 è sempre None
     gia_nord = bool(v.get("fuori_zona"))
     traccia = []
     migliore, lista_m, fonte_m = v, lista, None
@@ -252,6 +266,10 @@ def _cascata(conn, t: dict, v: dict, lista: list, soglia: int, cfg, cache: dict)
             passi.append(("nord+vendute", lambda: _unisci(_dati_cascata(conn, cache, key, "nord", giorni), vendute)))
         passi.append(("italia+vendute", lambda: _unisci(_dati_cascata(conn, cache, key, "italia", giorni), vendute)))
         for nome, crea in passi:
+            if nome == "vendute" and tetto0 is None:
+                # nessun confronto attivo prima della cascata: le sole auto sparite (ultimo prezzo chiesto) non bastano
+                traccia.append({"passo": nome, "esito": "nessun confronto attivo: sparite da sole non usate"})
+                continue
             m = crea()
             if len(m) <= len(lista_m) and nome != "vendute":
                 traccia.append({"passo": nome, "esito": "nessun dato in più"})
@@ -261,12 +279,18 @@ def _cascata(conn, t: dict, v: dict, lista: list, soglia: int, cfg, cache: dict)
             if n2 <= n_gate(migliore):
                 traccia.append({"passo": nome, "n": n2, "esito": "non più confronti"})
                 continue
-            rif = migliore.get("M")
-            if rif is not None and v2.get("M") is not None and v2["M"] > rif:
-                # non gonfiare i prezzi: con più dati il mercato salirebbe; si tiene la stima più prudente
-                traccia.append({"passo": nome, "n": n2, "M": v2["M"], "M_prima": rif, "esito": "M più alto: non usato"})
+            # non gonfiare i prezzi: M mai sopra la mediana dei confronti ATTIVI trovati prima della cascata (o, se
+            # non ce n'erano, di quelli attivi di questo passo) né sopra un passo già accettato: il valore più basso
+            tetto = tetto0 if tetto0 is not None else mediana_attivi(v2)
+            if migliore is not v and migliore.get("M") is not None:
+                tetto = migliore["M"] if tetto is None else min(tetto, migliore["M"])
+            if tetto is None or v2.get("M") is None or v2["M"] > tetto:
+                traccia.append({"passo": nome, "n": n2, "M": v2.get("M"),
+                                "tetto": int(round(tetto)) if tetto is not None else None,
+                                "esito": "M più alto: non usato" if v2.get("M") is not None and tetto is not None
+                                else "mercato non stimabile: non usato"})
                 continue
-            traccia.append({"passo": nome, "n": n2, "esito": "usato"})
+            traccia.append({"passo": nome, "n": n2, "M": v2["M"], "tetto": int(round(tetto)), "esito": "usato"})
             migliore, lista_m, fonte_m = v2, m, nome
             if n2 >= serve:
                 break
@@ -295,7 +319,8 @@ def _cascata(conn, t: dict, v: dict, lista: list, soglia: int, cfg, cache: dict)
                              f"uguali sparite negli ultimi {giorni} giorni (prezzi chiesti)",
              "italia+vendute": "confronti non sufficienti: aggiunti gli annunci uguali di tutta Italia della base prezzi "
                                f"e le auto uguali sparite negli ultimi {giorni} giorni (prezzi chiesti)"}[fonte_m]
-    migliore.setdefault("ipotesi", []).append(testo + "; mercato mai sopra la stima con meno confronti")
+    migliore.setdefault("ipotesi", []).append(testo + "; mercato mai sopra la mediana dei confronti attivi trovati "
+                                              "prima (prezzi corretti)")
     log.info("CASCATA %s %s: n %s→%s, M %s→%s, %s→%s", t.get("id"), fonte_m, n_gate(v), n_gate(migliore), M0,
              migliore.get("M"), v.get("categoria"), migliore.get("categoria"))
     return migliore, lista_m

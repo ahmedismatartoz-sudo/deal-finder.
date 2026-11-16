@@ -153,48 +153,74 @@ def test_cascata_con_le_auto_vendute_arriva_al_minimo_e_lo_dichiara():
     t = auto(1, 2500, "suzuki", "jimny", "diesel", 2009, 90000)
     m = confronti(t, 1, 4400)
     prima = P.valuta(t, m, soglia(2500), cfg)
-    assert prima["categoria"] == "dati_insufficienti" and RC.n_gate(prima) < cfg.serve(2500)
-    c = ConnCascata(vendute=sparite(t, 8, 4300))
+    assert prima["categoria"] == "dati_insufficienti" and prima.get("M") is None
+    assert RC.n_gate(prima) < cfg.serve(2500)
+    c = ConnCascata(vendute=sparite(t, 8, 4300))                  # sparite più economiche dell'attivo
     v, lista = RC._valuta_base(c, t, m, soglia(2500), cfg, {})
     assert v["fonte_confronti"] == "vendute" and v["cascata"]["usata"] == "vendute"
     assert RC.n_gate(v) >= cfg.serve(2500)
-    assert v["categoria"] != "dati_insufficienti"
+    assert v["M"] <= RC.mediana_attivi(prima)                     # mai sopra la mediana degli attivi
     assert any(c.get("venduta") for c in v["confronti"])
     assert any("sparite dagli annunci" in x for x in v["ipotesi"])
     assert len(lista) == 9
-    # stesse regole: soglia e minimo di confronti invariati
-    assert v["soglia"] == prima["soglia"] == soglia(2500)
+    assert v["soglia"] == prima["soglia"] == soglia(2500)         # stesse regole
 
 
-def test_cascata_non_gonfia_i_prezzi():
-    # 4 confronti a ~8.000 € e prezzo 2.500 €: "dati insufficienti" (oltre il 45% sotto il mercato), con M
+def test_cascata_sparite_piu_care_non_gonfiano():
+    # prova del giudice: Jimny a 3.500 €, 1 confronto attivo a 4.400 €, 8 sparite a 6.000 €. Prima: M 5.985 e
+    # "opportunità" con 2.485 € di margine. Ora il mercato non supera la mediana degli attivi: passo non usato
+    cfg = P.PolicyConfig()
+    t = auto(1, 3500, "suzuki", "jimny", "diesel", 2009, 90000)
+    m = confronti(t, 1, 4400)
+    prima = P.valuta(t, m, soglia(3500), cfg)
+    c = ConnCascata(vendute=sparite(t, 8, 6000))
+    v, _ = RC._valuta_base(c, t, m, soglia(3500), cfg, {})
+    assert v["categoria"] == "dati_insufficienti" and v.get("M") is None
+    assert v["cascata"]["usata"] is None
+    assert any(p.get("esito") == "M più alto: non usato" for p in v["cascata"]["passi"])
+    assert v == dict(prima, cascata=v["cascata"])
+
+
+def test_cascata_senza_attivi_le_sole_sparite_non_bastano():
+    cfg = P.PolicyConfig()
+    t = auto(1, 2500, "suzuki", "jimny", "diesel", 2009, 90000)
+    c = ConnCascata(vendute=sparite(t, 10, 4000))
+    v, _ = RC._valuta_base(c, t, [], soglia(2500), cfg, {})
+    assert v["categoria"] == "dati_insufficienti" and v["cascata"]["usata"] is None
+    assert v["cascata"]["passi"][0]["esito"].startswith("nessun confronto attivo")
+
+
+def test_cascata_non_aggira_le_protezioni():
+    # 4 confronti a ~8.000 € e prezzo 2.500 €: fermata dall'anti-truffa (oltre il 45% sotto il mercato), con M.
+    # La cascata non cerca confronti più bassi per farla passare
     cfg = P.PolicyConfig()
     t = auto(1, 2500, "suzuki", "jimny", "diesel", 2009, 90000)
     m = confronti(t, 4, 8000)
     prima = P.valuta(t, m, soglia(2500), cfg)
     assert prima["categoria"] == "dati_insufficienti" and prima.get("M")
-    c = ConnCascata(vendute=sparite(t, 6, 11000))                 # sparite più care: alzerebbero M
+    c = ConnCascata(vendute=sparite(t, 8, 4000))
     v, _ = RC._valuta_base(c, t, m, soglia(2500), cfg, {})
-    assert v["M"] == prima["M"] and v["categoria"] == prima["categoria"]
-    assert v["cascata"]["usata"] is None
-    assert any(p.get("esito") == "M più alto: non usato" for p in v["cascata"]["passi"])
+    assert v == prima and not any("scomparso" in q for q in c.query)
+    # auto con danni: niente cascata
+    td = dict(auto(2, 2500, "suzuki", "jimny", "diesel", 2009, 90000), damage_class="medio")
+    assert not RC.serve_cascata({"categoria": "dati_insufficienti", "n": 1}, td, cfg)
 
 
 def test_cascata_poi_altre_regioni():
-    # 6 confronti in zona (il ripiego Nord di prima scatta solo sotto 5) e prezzo oltre il 45% sotto la loro mediana:
-    # con gli annunci del Nord (più bassi) il mercato scende e l'auto si valuta
+    # 6 confronti in zona molto dispersi (il ripiego Nord di prima scatta solo sotto 5): mercato non stimabile.
+    # Con gli annunci del Nord il mercato si stima, sotto la mediana degli attivi di partenza
     cfg = P.PolicyConfig()
     t = auto(1, 4000, "fiat", "500x", "diesel", 2016, 120000)
-    m = confronti(t, 6, 9000)
+    m = [dict(x, price_eur=p) for x, p in zip(confronti(t, 6, 6000), (3500, 4200, 5000, 6500, 7800, 9500))]
     prima = P.valuta(t, m, soglia(4000), cfg)
-    assert prima["categoria"] == "dati_insufficienti"
-    nord = confronti(t, 9, 6800, inizio=3000)
+    assert prima["categoria"] == "dati_insufficienti" and prima.get("M") is None
+    nord = confronti(t, 9, 5600, inizio=3000)
     for k, x in enumerate(nord):
-        x["mileage_km"] += 9000 + 700 * k
+        x["mileage_km"] += 9000 + 2000 * k
     c = ConnCascata(vendute=[], nord=m + nord)
     v, _ = RC._valuta_base(c, t, m, soglia(4000), cfg, {})
     assert v["fonte_confronti"] == "nord+vendute" and v.get("fuori_zona") is True
-    assert RC.n_gate(v) >= cfg.serve(4000) and v["M"] < prima["M"]
+    assert RC.n_gate(v) >= cfg.serve(4000) and v["M"] <= RC.mediana_attivi(prima)
 
 
 def test_cascata_solo_per_dati_insufficienti():
@@ -285,6 +311,7 @@ def test_soglie_pv_dalla_variabile_uguali_al_default():
     assert [x for x in da_env if x[0] == 10**9] == [(10**9, 5000)]           # l'ultima fascia una volta sola
     # senza la fascia "oltre" nella variabile si aggiunge come prima (stessa soglia dell'ultima)
     assert scovo._soglie_pv("7000:1500,10000:1800")[-1] == (10**9, 1800)
+    assert scovo._soglie_pv("7000:1500,10000:1800,") == default      # virgola finale: default, come prima
 
 
 def test_soglie_pv_stessa_impronta_e_stessa_decisione():
@@ -337,8 +364,13 @@ def test_doppioni_una_sola_auto_per_coppia():
 
 def test_doppioni_regione_e_sito():
     from dealfinder.web import scovo
-    a, b = _it(1, "Subito"), _it(2, "AutoScout24", prov="BG")         # stessa regione (Lombardia)
+    a, b = _it(1, "Subito"), _it(2, "AutoScout24")
     assert scovo.stessa_auto_due_siti(a, b)
+    assert not scovo.stessa_auto_due_siti(a, _it(6, "AutoScout24", prov="BG"))        # provincia diversa
+    assert not scovo.stessa_auto_due_siti(dict(a, carb="diesel"), dict(b, carb="benzina"))
+    assert not scovo.stessa_auto_due_siti(dict(a, cambio="manuale"), dict(b, cambio="automatico"))
+    assert not scovo.stessa_auto_due_siti(dict(a, kw=51), dict(b, kw=70))
+    assert scovo.stessa_auto_due_siti(dict(a, carb="benzina"), b)                     # dato mancante: non separa
     assert not scovo.stessa_auto_due_siti(a, _it(3, "AutoScout24", prov="TO"))
     assert not scovo.stessa_auto_due_siti(a, _it(4, "Subito"))        # stesso sito: non è un doppione di sito
     assert not scovo.stessa_auto_due_siti(a, _it(5, "AutoScout24", km=63000))   # km oltre il 3%
@@ -361,54 +393,104 @@ def test_doppioni_nel_funnel_del_sito():
 
 def test_worker_solo_riferimenti_al_sito():
     testo = open(os.path.join(QUI, "..", "render-worker.yaml"), encoding="utf-8").read()
-    assert not re.search(r"^\s*value:", testo, re.M)                   # nessun valore scritto, nessun segreto
+    valori = re.findall(r"^\s*value:\s*(.*)$", testo, re.M)
+    assert valori and all(v.strip() == '""' for v in valori)          # solo valori VUOTI: nessun segreto
     assert "sync: false" not in testo
+    assert re.search(r"^\s*- fromGroup: dealfinder-secrets\s*$", testo, re.M)   # chiave AI e sale dal gruppo
     chiavi = re.findall(r"- key: (\w+)\n\s+fromService: \{ type: (\w+), name: ([\w-]+), envVarKey: (\w+) \}", testo)
     assert chiavi and all(k == ek for k, _, _, ek in chiavi)
     per = {k: (tipo, nome) for k, tipo, nome, _ in chiavi}
-    for k in ("ANTHROPIC_API_KEY", "TR_SUBITO_SENZA_NUMERO", "LETTORE", "SOGLIE_PV", "POLICY_GIUDICE_AI",
-              "TELEFONO_OBBLIGATORIO", "ZONA_SITO", "AI_BUDGET_GIORNO", "PLATE_SALT"):
+    # le variabili del gruppo NON si prendono con fromService (non si risolve: commit 1ce20d2)
+    for k in ("ANTHROPIC_API_KEY", "PLATE_SALT", "SECRET_KEY"):
+        assert k not in per
+    for k in ("TR_SUBITO_SENZA_NUMERO", "LETTORE", "SOGLIE_PV", "POLICY_GIUDICE_AI", "TELEFONO_OBBLIGATORIO",
+              "ZONA_SITO", "AI_BUDGET_GIORNO"):
         assert per.get(k) == ("web", "scovo"), k
     assert per["DATABASE_URL"] == ("cron", "dealfinder-opportunita")
-    assert not any(k.startswith("BRIGHTDATA") or k == "SCRAPER_PROXY" for k in per)
+    vuote = set(re.findall(r"- key: (\w+)\n\s+value: \"\"", testo))
+    assert {"SCRAPER_PROXY", "BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE", "PLATE_LOOKUP_URL"} <= vuote
     assert "TR_SUBITO" not in per
 
 
 # ---------------------------------------------------------------- recupero
 
-def test_recupero_rivaluta_le_auto_scelte():
-    from dealfinder.pricing import recupero, valutazione
+class ConnRecupero:
+    def __init__(self, ids, lucchetto=True):
+        self.ids, self.lucchetto, self.q = ids, lucchetto, []
 
-    class C:
-        def __init__(self):
-            self.q = []
+    def execute(self, sql, args=None):
+        s = " ".join(sql.split())
+        self.q.append((s, args))
+        if "pg_try_advisory_lock" in s:
+            return Cur([{"ok": self.lucchetto}])
+        if s.startswith("SELECT v.listing_id"):
+            return Cur([{"listing_id": i} for i in self.ids[:args["lim"]]])
+        return Cur([])
 
-        def execute(self, sql, args=None):
-            self.q.append((sql, args))
-            return Cur([{"listing_id": 7}, {"listing_id": 9}])
+    def rollback(self):
+        pass
 
-        def rollback(self):
-            pass
+    def commit(self):
+        pass
 
-    chiamate = []
-    salva = valutazione.valuta_e_scrivi
+
+def _finta_valutazione(chiamate, giudicate=()):
+    from dealfinder.ai import giudice
+    from dealfinder.pricing import valutazione
 
     def finta(conn, ids, fonte, **kw):
         chiamate.append((list(ids), fonte))
+        for lid in ids:
+            if lid in giudicate:
+                giudice._esito(lid, "chiamata")
         es = valutazione.Esito()
-        es.valutazioni = {7: {"fonte_confronti": "vendute"}, 9: {}}
-        es.salvata = {7: "candidato", 9: "dati_insufficienti"}
+        es.valutazioni = {i: ({"fonte_confronti": "vendute"} if i == 7 else {}) for i in ids}
+        es.salvata = {i: ("candidato" if i == 7 else "dati_insufficienti") for i in ids}
         return es
-    valutazione.valuta_e_scrivi = finta
+    return finta
+
+
+def test_recupero_rivaluta_e_segna_le_auto():
+    from dealfinder.pricing import recupero, valutazione
+    chiamate = []
+    salva = valutazione.valuta_e_scrivi
+    valutazione.valuta_e_scrivi = _finta_valutazione(chiamate)
     try:
-        c = C()
+        c = ConnRecupero([7, 9])
         with env(RECUPERO_PER_GIRO="2"):
             out = recupero.recupera(c)
-        assert chiamate == [([7, 9], "cron-recupero")]               # fonte "cron...": vale il tetto del giudice
+        assert chiamate == [([7, 9], "cron-recupero")]
         assert out["cascata_usata"] == {"vendute": 1} and out["auto"] == 2
-        assert c.q[0][1]["lim"] == 2
-        assert valutazione.tetto_attesa("cron-recupero") is not None
+        sel = next(a for q, a in c.q if q.startswith("SELECT v.listing_id"))
+        assert sel["lim"] == 2 and sel["ore"] == 24
+        q = next(q for q, a in c.q if q.startswith("SELECT v.listing_id"))
+        assert "ORDER BY v.computed_at ASC" in q and "recupero_provato" in q
+        segnate = [a[0] for q, a in c.q if q.startswith("INSERT INTO recupero_provato")]
+        assert segnate == [7, 9]                                      # tentate: non riprese per 24 ore
+        assert any("pg_advisory_unlock" in q for q, _ in c.q)
         with env(RECUPERO_CONFRONTI="0"):
             assert recupero.recupera(c) == {"spento": True}
+        assert recupero.recupera(ConnRecupero([7], lucchetto=False)) == {"in_corso": True}
     finally:
         valutazione.valuta_e_scrivi = salva
+
+
+def test_recupero_conta_tutte_le_chiamate_al_giudice():
+    from dealfinder.pricing import recupero, valutazione
+    chiamate = []
+    salva = valutazione.valuta_e_scrivi
+    ids = list(range(1000, 1060))
+    valutazione.valuta_e_scrivi = _finta_valutazione(chiamate, giudicate=set(ids))
+    try:
+        with env(RECUPERO_GIUDICE_MAX="25"):
+            out = recupero.recupera(ConnRecupero(ids))
+        assert out["fermo"] == "tetto_giudice" and out["auto"] == 40 and len(chiamate) == 2
+        assert out["chiamate_giudice"] == 40
+    finally:
+        valutazione.valuta_e_scrivi = salva
+
+
+def test_migrazione_059():
+    testo = open(os.path.join(QUI, "..", "db", "migrations", "059_recupero_confronti.sql"), encoding="utf-8").read()
+    assert "CREATE TABLE IF NOT EXISTS recupero_provato" in testo
+    assert "WHERE status = 'scomparso'" in testo

@@ -2,14 +2,17 @@
 # 16/11 (ramo fond-auto, punto 3): il worker valuta e pubblica con la STESSA configurazione del sito. Prima riceveva
 # solo DATABASE_URL: niente chiave AI (le valutazioni uscivano senza il controllo del giudice), lettore spento,
 # TR_SUBITO_SENZA_NUMERO mancante (il sito ce l'ha a 1), SOGLIE_PV e interruttori diversi → CONFIG_IMPRONTA diversa.
-# Ogni variabile qui sotto è un RIFERIMENTO a quella del servizio web "scovo" (fromService): nessun valore e nessun
-# segreto in questo file; se si cambia una variabile sul sito, il worker la riprende al deploy successivo.
-# Elenco ricavato dalla riga CONFIG_IMPRONTA del sito del 16/11 (variabili impostate, non "<default>"), più la chiave
-# AI e il sale delle targhe (stessi hash delle targhe del sito). NON si passano le variabili della sola raccolta a
-# pagamento (BRIGHTDATA_*, SCRAPER_PROXY): il worker legge come prima, nessuna spesa nuova di proxy.
-# Unica eccezione voluta: TR_SUBITO (sul sito "0") NON si copia: è la lettura COMPLETA di Subito, che oggi fa solo il
-# worker (default "1"); copiarla toglierebbe annunci invece di aggiungerne. Decide il cliente (vedi FOND_AUTO.md).
-# Da applicare con un sync del Blueprint (a mano, dopo la revisione): questo ramo non fa deploy.
+# - Segreti (chiave AI, sale delle targhe): stanno nel GRUPPO dealfinder-secrets, quindi `fromGroup` (un fromService
+#   verso una variabile di gruppo non si risolve: PLATE_SALT tolto il 13/11, commit 1ce20d2).
+# - Il gruppo porta anche le chiavi della raccolta a pagamento: qui sotto si spengono con un valore VUOTO a livello di
+#   servizio (vince sul gruppo), così il worker legge come prima, senza proxy né Bright Data né ricerca targhe a
+#   pagamento: nessuna spesa nuova. Nessun valore segreto in questo file.
+# - Regole e interruttori: riferimento alla variabile del servizio web "scovo" (fromService), elenco dalla riga
+#   CONFIG_IMPRONTA del sito del 16/11 (variabili impostate, non "<default>"), tutte dichiarate sul servizio.
+# - TR_SUBITO (sul sito "0") NON si copia: nel worker è la lettura COMPLETA di Subito (default "1"); copiarla
+#   toglierebbe annunci. Decide il cliente (FOND_AUTO.md).
+# Ordine di rilascio in FOND_AUTO.md: prima il sync di questo Blueprint (e la chiave AI verificata nel worker), poi il
+# codice "senza AI → in attesa". Questo ramo non fa sync né deploy.
 services:
   - type: worker
     name: scovo-tempo-reale
@@ -23,11 +26,21 @@ services:
     envVars:
       - key: DATABASE_URL
         fromService: { type: cron, name: dealfinder-opportunita, envVarKey: DATABASE_URL }
-      # segreti: solo riferimenti, mai valori
-      - key: ANTHROPIC_API_KEY
-        fromService: { type: web, name: scovo, envVarKey: ANTHROPIC_API_KEY }
-      - key: PLATE_SALT
-        fromService: { type: web, name: scovo, envVarKey: PLATE_SALT }
+      # segreti (ANTHROPIC_API_KEY, PLATE_SALT, SECRET_KEY): dal gruppo, mai valori
+      - fromGroup: dealfinder-secrets
+      # raccolta a pagamento del gruppo spenta nel worker (valore vuoto a livello di servizio: vince sul gruppo)
+      - key: SCRAPER_PROXY
+        value: ""
+      - key: BRIGHTDATA_API_KEY
+        value: ""
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        value: ""
+      - key: BRIGHTDATA_SEARCHES
+        value: ""
+      - key: PLATE_LOOKUP_URL
+        value: ""
+      - key: PLATE_LOOKUP_KEY
+        value: ""
       # regole, interruttori e soglie del sito (CONFIG_IMPRONTA del web, 16/11)
       - key: AI_BUDGET_GIORNO
         fromService: { type: web, name: scovo, envVarKey: AI_BUDGET_GIORNO }

@@ -49,7 +49,8 @@ def _soglie_pv(raw: str | None = None):
     raw = os.environ.get("SOGLIE_PV") if raw is None else raw
     if raw:
         try:
-            fasce = [(int(a), int(b)) for a, b in (x.split(":") for x in raw.split(",") if x.strip())]
+            # come prima: un pezzo vuoto o storto (anche una virgola finale) fa tornare al default
+            fasce = [(int(a), int(b)) for a, b in (x.split(":") for x in raw.split(","))]
             # 16/11 (bug dell'impronta): la fascia "oltre" (10**9) si aggiunge SOLO se la variabile non la contiene già.
             # Su Render SOGLIE_PV finisce con "1000000000:5000": prima la tabella del sito aveva l'ultima fascia due
             # volte, l'impronta delle regole (regole.impronta, che include SOGLIE_PV) era diversa da quella del cron
@@ -72,21 +73,27 @@ SOGLIE_PV = _soglie_pv()
 # 16/11 (fond-auto): la stessa auto pubblicata su Subito E su AutoScout24 compariva due volte sul sito (9 coppie su 323
 # privati il 16/11): pipeline/collect.doppione_altro_sito scatta solo sugli AutoScout24 NUOVI. Non è una regola nuova:
 # nell'elenco già calcolato (dopo tutte le regole del sito, prima dei tetti) si tiene UNA sola auto per coppia.
-# Stessa auto = siti diversi, stessa marca e modello, stesso anno, km entro ±3%, prezzo entro ±7%, stessa regione.
+# Stessa auto = siti diversi, stessa marca e modello, stesso anno, km entro ±3%, prezzo entro ±7%, stessa provincia,
+# stessa alimentazione e cambio (se noti da tutte e due le parti), potenza entro ±5% (se nota).
 # Si tiene quella con il numero, poi con più foto, poi col margine più alto, poi l'annuncio più vecchio (id più basso).
 # Interruttore SITO_DOPPIONI ("0" = spento, come prima).
 DOPPIONI_KM = .03
 DOPPIONI_PREZZO = .07
 
 
-def _regione_auto(it: dict) -> str | None:
-    from ..core.normalize import PROVINCE_REGION
+def _provincia_auto(it: dict) -> str | None:
     p = ((it.get("_r") or {}).get("provincia") or "")
     if not p:
         m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
         p = m.group(1) if m else ""
-    p = p.upper()
-    return PROVINCE_REGION.get(p) or (p or None)
+    return p.upper() or None
+
+
+def _uguali_se_noti(a, b) -> bool:
+    """Stesso valore se noto da tutte e due le parti (un dato mancante non separa due annunci)."""
+    if a in (None, "") or b in (None, ""):
+        return True
+    return str(a).strip().lower() == str(b).strip().lower()
 
 
 def _vicini(a, b, tol: float) -> bool:
@@ -114,8 +121,13 @@ def stessa_auto_due_siti(a: dict, b: dict) -> bool:
     pb = b.get("prezzo_annuncio") or b.get("prezzo")
     if not pa or not pb or not _vicini(pa, pb, DOPPIONI_PREZZO):
         return False
-    ra, rb = _regione_auto(a), _regione_auto(b)
-    return bool(ra and rb and ra == rb)
+    if not (_uguali_se_noti(a.get("carb"), b.get("carb")) and _uguali_se_noti(a.get("cambio"), b.get("cambio"))):
+        return False
+    ka, kb = a.get("kw") or a.get("potenza"), b.get("kw") or b.get("potenza")
+    if ka and kb and not _vicini(ka, kb, .05):
+        return False
+    pa_, pb_ = _provincia_auto(a), _provincia_auto(b)
+    return bool(pa_ and pb_ and pa_ == pb_)
 
 
 def _preferenza(it: dict) -> tuple:
