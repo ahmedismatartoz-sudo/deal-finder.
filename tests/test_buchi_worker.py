@@ -100,9 +100,12 @@ def test_senza_database_esce_subito():
     assert _con_env("DATABASE_URL", None, lambda: W.main(giri=1)) is None
 
 
-def test_battito_senza_giro_recente_non_basta():
-    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=False))) is False
-    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=None))) is False
+def test_battito_fresco_basta_anche_con_giro_lungo():
+    # 16/11 (fondamenta della velocità): prima serviva anche l'ultimo giro recente; con un giro lungo il sito ripartiva
+    # e si contendeva il lucchetto con il worker. Il giro bloccato lo chiude il Guardiano.
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=False))) is True
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=None))) is True
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=False, giro_ok=True))) is False
 
 
 def test_guardiano_chiude_il_giro_bloccato():

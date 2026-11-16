@@ -1804,7 +1804,9 @@ def _calcola_elenco() -> None:
     from . import scheda_tecnica                # 12/11: allestimento e cambio nella riga dei dati dell'elenco
     scheda_tecnica.arricchisci_elenco(out)      # prima della copia salvata, così anche l'elenco riletto all'avvio li ha
     with _elenco_agg_lock:
+        prima_ids = {it.get("id") for it in (_elenco.get("items") or [])}
         _elenco.update(t=time.time(), items=out, opens=opens, pronto=True, fonte="calcolato", imp_v=imp_v, copia_t=None)
+    _ritardo_sul_sito(prima_ids, out, t0, _elenco.get("motivo"))      # 16/11: misura annuncio → sito
     _es.salva_elenco(out, opens)                  # 12/11: copia per il prossimo avvio (sito mai vuoto)
     try:      # 31/10: storico delle auto mostrate, per la sezione "Già vendute" (prezzo vero dell'annuncio)
         from . import vendute
@@ -1875,12 +1877,20 @@ def _log_controllo_finale(items: list[dict]) -> None:
             "cat": pv.get("categoria"), "top": bool(pv.get("top"))}, ensure_ascii=False))
 
 
-def _aggiorna_elenco(attendi: bool) -> None:
+def _aggiorna_elenco(attendi: bool, motivo: str | None = None) -> None:
+    """Ricalcolo dell'elenco (fuori dalle richieste, salvo il primissimo avvio senza copia salvata).
+    16/11: una richiesta con `motivo` (auto pubblicate dal worker o dal giro "nuovi", verifica...) arrivata mentre un
+    calcolo è già in corso NON si perde più: il calcolo in corso ha letto il database prima della pubblicazione, quindi
+    appena finisce ne parte un altro (uno solo, anche se le richieste sono tante). Le richieste delle pagine (motivo
+    None) restano come prima: servono l'elenco che c'è."""
     with _elenco_lock:
         if _elenco["busy"]:
             partito = False
+            if motivo:
+                _elenco["ancora"] = motivo
         else:
             _elenco["busy"] = partito = True
+            _elenco["motivo"] = motivo
     if not partito:
         if attendi:                       # primo avvio: aspetta chi sta già calcolando
             while _elenco["busy"] and not _elenco["items"]:
@@ -1888,16 +1898,54 @@ def _aggiorna_elenco(attendi: bool) -> None:
         return
 
     def go():
-        try:
-            _calcola_elenco()
-        except Exception as e:
-            logging.getLogger("scovo").warning("elenco non aggiornato: %s", str(e)[:200])
-        finally:
-            _elenco["busy"] = False
+        while True:
+            try:
+                _calcola_elenco()
+            except Exception as e:
+                logging.getLogger("scovo").warning("elenco non aggiornato: %s", str(e)[:200])
+            with _elenco_lock:
+                ancora = _elenco.pop("ancora", None)
+                if not ancora:
+                    _elenco["busy"] = False
+                    return
+                _elenco["motivo"] = ancora
+            logging.getLogger("scovo").warning("ELENCO_DI_NUOVO richiesta arrivata durante il calcolo (%s): ricalcolo "
+                                               "subito", ancora)
     if attendi:
         go()
     else:
         threading.Thread(target=go, daemon=True, name="elenco").start()
+
+
+def _nuove_dal_worker(visto: list, quando, pubblicate: int) -> bool:
+    """16/11: il worker ha chiuso un giro nuovo (ultimo_at diverso dall'ultimo visto) con auto pubblicate? Al primo
+    controllo dopo l'avvio si ricorda solo il giro (l'elenco appena calcolato le ha già)."""
+    prima = visto[0]
+    visto[0] = quando
+    return prima is not None and quando != prima and bool(pubblicate)
+
+
+def _ritardo_sul_sito(prima: set, out: list[dict], t0: float, motivo: str | None) -> None:
+    """16/11: misura nei log del ritardo vero fino al sito. Le auto entrate in questo elenco e passate dalla coda del
+    tempo reale (tr_coda) ricevono sito_at; riga SITO_RITARDO con mediana e 95° percentile (minuti) da quando
+    l'annuncio è uscito sul portale, da quando l'abbiamo letto e da quando il worker l'ha pubblicata. Mai un errore."""
+    lg = logging.getLogger("scovo")
+    try:
+        nuove = [it["id"] for it in out if it.get("id") not in prima]
+        if not nuove or not prima:
+            lg.warning("ELENCO_AGGIORNATO in %.1fs motivo=%s nuove=%d", time.time() - t0, motivo, len(nuove))
+            return
+        from ..pipeline import tempo_reale as _tr
+        with connect() as conn:
+            if not _tr.coda_attiva(conn):
+                riassunto = {}
+            else:
+                riassunto = _tr.segna_sul_sito(conn, nuove)
+        lg.warning("ELENCO_AGGIORNATO in %.1fs motivo=%s nuove=%d", time.time() - t0, motivo, len(nuove))
+        if riassunto:
+            lg.warning("SITO_RITARDO %s", json.dumps(dict(riassunto, motivo=motivo, calcolo_s=round(time.time() - t0, 1))))
+    except Exception as e:
+        lg.warning("SITO_RITARDO non misurato: %s", str(e)[:200])
 
 
 def _filtra_impostazioni() -> None:
@@ -3369,16 +3417,17 @@ def _tempo_reale():
             t0 = time.time()
             # 12/11 (buchi della raccolta): con il worker separato attivo (pipeline/tempo_reale_worker.py) il giro lo fa
             # lui; qui solo l'elenco aggiornato quando pubblica. TR_WORKER=0: il sito gira sempre.
+            # 16/11: "attivo" = battito fresco (non più anche la durata dell'ultimo giro); il controllo ogni
+            # TR_SITO_CONTROLLO_S secondi (20, prima 60): l'auto pubblicata dal worker entra prima nell'elenco.
             try:
                 from ..pipeline import tempo_reale_worker as trw
                 with connect() as _cw:
                     if trw.worker_attivo(_cw):
                         quando, pubblicate = trw.ultimo_giro(_cw)
-                        if quando != visto_worker[0] and pubblicate and visto_worker[0] is not None:
+                        if _nuove_dal_worker(visto_worker, quando, pubblicate):
                             _elenco["t"] = 0.0
-                            _aggiorna_elenco(attendi=False)
-                        visto_worker[0] = quando
-                        time.sleep(60)
+                            _aggiorna_elenco(attendi=False, motivo="worker")
+                        time.sleep(max(5.0, float(os.environ.get("TR_SITO_CONTROLLO_S", "20"))))
                         continue
             except Exception as e:
                 lg.warning("TR worker non controllato (giro nel sito): %s", str(e)[:200])
@@ -3393,11 +3442,14 @@ def _tempo_reale():
                     _calcolo["completo"] = False
                 if st is not None and completo:
                     ultimo_completo = t0
+                if st is None:
+                    # 16/11: prima nessuna traccia; il dettaglio (quante volte) è nella riga TR LUCCHETTO
+                    lg.warning("TR NUOVI (sito) saltato: lucchetto 'nuovi' occupato (worker o altra copia del sito)")
                 if st is not None:
                     if st.get("pubblicate"):
                         _telefoni_scelte()
                         _elenco["t"] = 0.0
-                        _aggiorna_elenco(attendi=False)
+                        _aggiorna_elenco(attendi=False, motivo="nuovi")
                     lg.warning("TR NUOVI in %.0fs: %s", time.time() - t0, dict(st))
             except Exception as e:
                 lg.warning("TR nuovi non riuscito: %s", str(e)[:300])

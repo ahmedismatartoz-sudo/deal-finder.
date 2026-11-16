@@ -13,6 +13,11 @@ Il worker scrive un battito ogni 60 s nella tabella tempo_reale (riga 'worker_nu
 (default), salta il suo giro "nuovi" finché il battito ha meno di TR_WORKER_FRESCO_MIN minuti (5): se il worker si
 ferma, il sito riprende da solo al giro dopo. TR_WORKER=0: il sito gira sempre (il lucchetto evita comunque il doppio
 lavoro); TR_WORKER=1: il sito non fa mai il giro "nuovi". Nessuna variabile nuova obbligatoria.
+
+16/11 (fondamenta della velocità, FOND_VELOCITA.md): il sito si fa da parte con il solo battito fresco (non più anche
+"ultimo giro recente": un giro lungo faceva ripartire il giro del sito in concorrenza sullo stesso lucchetto; un giro
+bloccato lo chiude il Guardiano); il filo della lettura completa ha il suo Guardiano e fa anche la ripresa AutoScout24
+dopo un 429; al SIGTERM il processo chiude entro TR_ARRESTO_MAX_S secondi (25).
 """
 from __future__ import annotations
 
@@ -38,7 +43,8 @@ def battito(conn) -> None:
 
 
 def worker_attivo(conn=None) -> bool:
-    """Per il sito: il giro "nuovi" lo fa il worker? (vedi TR_WORKER in cima al file). In dubbio: no (il sito gira)."""
+    """Per il sito: il giro "nuovi" lo fa il worker? (vedi TR_WORKER in cima al file). In dubbio: no (il sito gira).
+    16/11: basta il battito fresco, qualunque sia la durata dell'ultimo giro (vedi in cima)."""
     modo = (os.environ.get("TR_WORKER") or "auto").strip().lower()
     if modo == "0":
         return False
@@ -53,13 +59,12 @@ def worker_attivo(conn=None) -> bool:
             from ..db import connect
             with connect() as c:
                 return worker_attivo(c)
-        # 12/11 revisione: il battito (thread a parte) da solo non basta: un worker col giro bloccato batte lo stesso.
-        # Vivo = battito fresco E ultimo giro "nuovi" finito da meno di 3 × TR_NUOVI_MIN minuti.
-        giro_min = 3 * float(os.environ.get("TR_NUOVI_MIN") or 5)
-        r = conn.execute("SELECT (SELECT ultimo_at > now() - make_interval(mins => %s) FROM tempo_reale "
-                         "WHERE giro='worker_nuovi') AS fresco, (SELECT ultimo_at > now() - make_interval(mins => %s) "
-                         "FROM tempo_reale WHERE giro='nuovi') AS giro_ok", (int(fresco), int(giro_min))).fetchone()
-        return bool(r and r["fresco"] and r["giro_ok"])
+        # 16/11: prima serviva anche "ultimo giro nuovi da meno di 3 × TR_NUOVI_MIN minuti": con un giro lungo (lettura
+        # completa, 429) il sito ripartiva e i due si contendevano il lucchetto. Il giro bloccato lo chiude il
+        # Guardiano del worker (TR_WORKER_GIRO_MAX_MIN), che ferma anche il battito (il processo esce).
+        r = conn.execute("SELECT (SELECT ultimo_at > now() - make_interval(secs => %s) FROM tempo_reale "
+                         "WHERE giro='worker_nuovi') AS fresco", (int(fresco * 60),)).fetchone()
+        return bool(r and r["fresco"])
     except Exception:
         try:
             conn.rollback()
@@ -90,13 +95,53 @@ def ultimo_giro(conn) -> tuple:
     return r["ultimo_at"], int((st or {}).get("pubblicate") or 0)
 
 
+ARRESTO_MAX_S = 25
+
+
 class _Fine:
-    def __init__(self):
+    """SIGTERM: si accende l'evento di fine del worker e FERMA del tempo reale (i giri si fermano alla fase dopo, le
+    attese si interrompono). Se dopo TR_ARRESTO_MAX_S secondi (25) il processo è ancora vivo esce comunque: Render
+    concede 30 s prima del SIGKILL; quello che è già salvato resta nella coda (tr_coda) per il processo dopo."""
+
+    def __init__(self, esci=None, tr=None):
         self.ev = threading.Event()
+        self.esci = esci or (lambda: os._exit(0))
+        self._tr = tr
+        self.t_richiesta = None
 
     def __call__(self, *_a):
-        log.warning("TR WORKER: richiesta di arresto, chiudo dopo il giro in corso")
+        if self.ev.is_set():
+            return
+        self.t_richiesta = time.time()
+        log.warning("TR WORKER: richiesta di arresto, chiudo entro %s secondi", self.massimo())
         self.ev.set()
+        try:
+            tr = self._tr
+            if tr is None:
+                from . import tempo_reale as tr
+            tr.FERMA.set()
+        except Exception:
+            pass
+        self._timer = threading.Timer(self.massimo(), self._scaduto)
+        self._timer.daemon = True
+        self._timer.start()
+
+    def annulla(self) -> None:
+        """Arresto finito in tempo: niente uscita forzata."""
+        t = getattr(self, "_timer", None)
+        if t is not None:
+            t.cancel()
+
+    @staticmethod
+    def massimo() -> float:
+        try:
+            return float(os.environ.get("TR_ARRESTO_MAX_S") or ARRESTO_MAX_S)
+        except ValueError:
+            return ARRESTO_MAX_S
+
+    def _scaduto(self) -> None:
+        log.error("TR WORKER: arresto non finito in %s secondi, esco subito (la coda resta nel database)", self.massimo())
+        self.esci()
 
 
 def _battiti(fine: _Fine) -> None:
@@ -118,26 +163,40 @@ class Guardiano:
     sito non potrebbe riprendere. Se un giro dura più di TR_WORKER_GIRO_MAX_MIN minuti (45) il processo si chiude:
     la connessione si chiude, Postgres libera il lucchetto, Render riavvia il worker."""
 
-    def __init__(self, esci=None):
+    def __init__(self, esci=None, variabile: str = "TR_WORKER_GIRO_MAX_MIN", massimo_min: float = GIRO_MAX_MIN,
+                 nome: str = "giro"):
         self.inizio = None
         self.esci = esci or (lambda: os._exit(3))
+        self.variabile, self.massimo_min, self.nome = variabile, massimo_min, nome
+
+    def limite_min(self) -> float:
+        try:
+            return float(os.environ.get(self.variabile) or self.massimo_min)
+        except ValueError:
+            return self.massimo_min
 
     def scaduto(self, ora: float | None = None) -> bool:
-        lim = float(os.environ.get("TR_WORKER_GIRO_MAX_MIN") or GIRO_MAX_MIN) * 60
+        lim = self.limite_min() * 60
         return self.inizio is not None and (ora if ora is not None else time.time()) - self.inizio > lim
 
     def controlla(self, ora: float | None = None) -> bool:
         if self.scaduto(ora):
-            log.error("TR WORKER: giro bloccato da oltre %s minuti, chiudo il processo (lucchetto liberato)",
-                      os.environ.get("TR_WORKER_GIRO_MAX_MIN") or GIRO_MAX_MIN)
+            log.error("TR WORKER: %s bloccato da oltre %s minuti, chiudo il processo (lucchetto liberato)",
+                      self.nome, self.limite_min())
             self.esci()
             return True
         return False
 
-    def gira(self, fine) -> None:
+    def gira(self, fine, altri=()) -> None:
+        """Sorveglia questo giro e gli `altri` guardiani (16/11: anche la lettura completa)."""
         while not fine.ev.is_set():
-            self.controlla()
+            for g in (self, *altri):
+                if g.controlla():
+                    break
             fine.ev.wait(30)
+
+
+COMPLETO_MAX_MIN = 120     # 16/11: la lettura completa (~15 minuti) bloccata oltre 2 ore chiude il processo
 
 
 def un_giro(completo: bool, tr=None) -> dict | None:
@@ -152,25 +211,40 @@ def un_giro(completo: bool, tr=None) -> dict | None:
     return st
 
 
-def _completo_a_parte(fine) -> None:
+def _completo_a_parte(fine, guardiano: Guardiano | None = None, tr=None, adesso=time.time) -> None:
     """16/11 sera: la rilettura COMPLETA (15 minuti, 7.000 annunci quasi tutti già noti) gira in un filo suo, ogni
-    TR_COMPLETO_VELOCE_MIN minuti (180), con un lucchetto suo: il giro veloce non si ferma più ad aspettarla."""
-    from . import tempo_reale as tr
+    TR_COMPLETO_VELOCE_MIN minuti (180), con un lucchetto suo: il giro veloce non si ferma più ad aspettarla.
+    16/11 (fondamenta): sorvegliata da un Guardiano (TR_COMPLETO_GIRO_MAX_MIN, 120) e ogni TR_RIPRESA_CONTROLLO_MIN
+    minuti (5) riprende la lettura completa AutoScout24 interrotta da un 429 (prima la faceva il giro veloce)."""
+    if tr is None:
+        from . import tempo_reale as tr
     from ..memoria import rilascia
+    guardiano = guardiano or Guardiano()
     fine.ev.wait(float(os.environ.get("TR_COMPLETO_PRIMO_MIN", "20")) * 60)
+    ultimo = None
     while not fine.ev.is_set():
-        t0 = time.time()
+        t0 = adesso()
+        dovuto = ultimo is None or t0 - ultimo >= float(os.environ.get("TR_COMPLETO_VELOCE_MIN", "180")) * 60
+        guardiano.inizio = time.time()
         try:
-            st = tr.con_lucchetto("completo", tr.giro_nuovi, True)
-            if st is not None:
-                log.warning("TR COMPLETO (a parte) in %.0fs: %s", time.time() - t0, dict(st))
+            if dovuto:
+                st = tr.con_lucchetto("completo", tr.giro_nuovi, True)
+                ultimo = t0
+                if st is not None:
+                    log.warning("TR COMPLETO (a parte) in %.0fs: %s", adesso() - t0, dict(st))
+            else:
+                st = tr.con_lucchetto("completo", tr.giro_ripresa_as)
+                if st is not None:
+                    log.warning("TR RIPRESA AUTOSCOUT (a parte) in %.0fs: %s", adesso() - t0, dict(st))
         except Exception as e:
             log.warning("TR COMPLETO non riuscito: %s", str(e)[:300])
+        finally:
+            guardiano.inizio = None
         rilascia("tempo reale completo")
-        fine.ev.wait(float(os.environ.get("TR_COMPLETO_VELOCE_MIN", "180")) * 60)
+        fine.ev.wait(float(os.environ.get("TR_RIPRESA_CONTROLLO_MIN", "5")) * 60)
 
 
-def main(giri: int | None = None, dormi=None) -> None:
+def main(giri: int | None = None, dormi=None):
     """Giro veloce ogni TR_VELOCE_S secondi (90): solo il nuovo, dal più recente, fino alla prima pagina già vista.
     La rilettura completa gira a parte (_completo_a_parte)."""
     if not os.environ.get("DATABASE_URL"):
@@ -184,13 +258,15 @@ def main(giri: int | None = None, dormi=None) -> None:
     fine = _Fine()
     try:
         signal.signal(signal.SIGTERM, fine)
+        signal.signal(signal.SIGINT, fine)
     except Exception:
         pass
     threading.Thread(target=_battiti, args=(fine,), daemon=True, name="tr-battito").start()
     guardiano = Guardiano()
-    threading.Thread(target=guardiano.gira, args=(fine,), daemon=True, name="tr-guardiano").start()
+    g_completo = Guardiano(variabile="TR_COMPLETO_GIRO_MAX_MIN", massimo_min=COMPLETO_MAX_MIN, nome="lettura completa")
+    threading.Thread(target=guardiano.gira, args=(fine, (g_completo,)), daemon=True, name="tr-guardiano").start()
     if giri is None and os.environ.get("TR_COMPLETO", "1") == "1":
-        threading.Thread(target=_completo_a_parte, args=(fine,), daemon=True, name="tr-completo").start()
+        threading.Thread(target=_completo_a_parte, args=(fine, g_completo), daemon=True, name="tr-completo").start()
     from ..memoria import rilascia
     n = 0
     while not fine.ev.is_set() and (giri is None or n < giri):
@@ -205,8 +281,14 @@ def main(giri: int | None = None, dormi=None) -> None:
             log.warning("TR WORKER giro non riuscito: %s", str(e)[:300])
         guardiano.inizio = None
         rilascia("tempo reale worker")
+        if fine.ev.is_set():
+            break
         attesa = max(20.0, float(os.environ.get("TR_VELOCE_S", "90")) - (time.time() - t0))
         (dormi or fine.ev.wait)(attesa)
+    if fine.ev.is_set():
+        log.warning("TR WORKER: arrestato in %.1fs dalla richiesta", time.time() - (fine.t_richiesta or time.time()))
+        fine.annulla()
+    return fine
 
 
 if __name__ == "__main__":

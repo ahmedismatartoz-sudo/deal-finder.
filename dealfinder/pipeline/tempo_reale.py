@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -32,6 +33,102 @@ REGIONI = {
 }
 _codici_regione: dict[str, int] = {}
 LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104, "completo": 734105}
+
+
+# ------------------------------------------------------------------ fondamenta della velocità (16/11, FOND_VELOCITA.md)
+
+# Arresto pulito: il worker accende FERMA al SIGTERM; i giri lo guardano tra una fase e l'altra e le attese (pause tra
+# le richieste, riprove dopo un 429) si interrompono subito. Nel sito non si accende mai.
+FERMA = threading.Event()
+
+
+def fermato() -> bool:
+    return FERMA.is_set()
+
+
+def _dormi(secondi: float) -> None:
+    """Pausa che si interrompe all'arresto (FERMA)."""
+    if secondi and secondi > 0:
+        FERMA.wait(secondi)
+
+
+class Limitatore:
+    """UN SOLO ritmo di richieste verso AutoScout24 per tutto il processo: il giro veloce e la lettura completa (due
+    fili del worker) prima leggevano in parallelo, ognuno con la sua pausa, e raddoppiavano il ritmo (429).
+    Tra due richieste passano almeno TR_AS_INTERVALLO_S secondi (default = TR_AS_PAUSA_S, 1,5: il ritmo di prima)."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._prossima = 0.0
+
+    def intervallo(self) -> float:
+        try:
+            return max(0.0, float(os.environ.get("TR_AS_INTERVALLO_S") or os.environ.get("TR_AS_PAUSA_S") or 1.5))
+        except ValueError:
+            return 1.5
+
+    def attendi(self) -> float:
+        """Prenota il prossimo turno e aspetta che arrivi. Ritorna i secondi attesi."""
+        with self._lock:
+            ora = time.monotonic()
+            turno = max(ora, self._prossima)
+            self._prossima = turno + self.intervallo()
+        attesa = turno - ora
+        if attesa > 0:
+            _dormi(attesa)
+        return attesa
+
+
+LIMITE_AS = Limitatore()
+
+
+class ClienteLimitato:
+    """Client AutoScout24 che passa dal limitatore unico prima di ogni richiesta (get/head); il resto come httpx."""
+
+    def __init__(self, client, limitatore: Limitatore | None = None):
+        self._c, self._lim = client, limitatore or LIMITE_AS
+
+    def get(self, *a, **k):
+        self._lim.attendi()
+        return self._c.get(*a, **k)
+
+    def head(self, *a, **k):
+        self._lim.attendi()
+        return self._c.head(*a, **k)
+
+    def __getattr__(self, nome):
+        return getattr(self._c, nome)
+
+
+def _client_as_limitato():
+    return ClienteLimitato(_client_as())
+
+
+# Annunci GIÀ TRATTATI in questo processo ma che non finiscono nel database (fuori zona, dati illeggibili): senza
+# ricordarli la pagina che li contiene non risulterebbe mai "tutta nota" e ogni giro rileggerebbe tutte le pagine.
+# 16/11: un annuncio in zona si segna SOLO DOPO il salvataggio (_segna_visti): se il giro cade prima, al giro dopo si
+# rilegge (prima si segnava prima di salvarlo e, se il giro falliva, restava perso fino alla lettura completa).
+_VISTI: dict = {"autoscout24": set(), "subito": set()}
+_VISTI_MAX = 60000
+
+
+def _visti(fonte: str) -> set:
+    s = _VISTI.setdefault(fonte, set())
+    if len(s) > _VISTI_MAX:
+        s.clear()
+    return s
+
+
+def _segna_visti(letti: list) -> int:
+    """Dopo _salva: segna come visti gli annunci trattati davvero (salvati o scartati per sempre), non quelli finiti
+    in errore di salvataggio (si rileggono al giro dopo)."""
+    n = 0
+    for l in letti:
+        ev = getattr(l, "_tr_ev", None)
+        if ev and ev != "errore" and getattr(l, "source", None) in _VISTI:
+            _visti(l.source).add(str(l.source_id))
+            n += 1
+    return n
 
 
 # ------------------------------------------------------------------ telefono
@@ -854,27 +951,37 @@ _SUB_REGIONI_NOTE = {"piemonte": 2, "liguria": 3}    # codici usati anche dal gi
 _sub_leggero = {"fermo_fino": 0.0}
 
 
-def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: float | None = None, pausa=(1.2, 2.5)) -> list:
+def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: float | None = None, pausa=(1.2, 2.5),
+                          stats: Counter | None = None) -> list:
+    """16/11 (fondamenta della velocità): è anche la lettura del GIRO VELOCE con TR_SUBITO=1 (prima _subito_nuovi
+    rileggeva ogni volta la finestra "dall'ultimo giro meno 10 minuti": ~8.000 annunci invariati al giorno).
+    Un annuncio è "noto" se è nel database con lo STESSO prezzo (un ribasso torna da valutare) oppure se in questo
+    processo è già stato trattato e scartato (fuori zona, _VISTI). Ci si ferma alla prima pagina tutta nota."""
     import random
     out: list = []
+    st = stats if stats is not None else Counter()
     if time.time() < _sub_leggero["fermo_fino"]:
+        st["subito_fermo_429"] += 1
         return out
     try:
         from ..collectors.subito import API_HEADERS, API_SEARCH, REGION_CODES, SubitoCollector, parse_item
         col = col or SubitoCollector(proxy=os.environ.get("SCRAPER_PROXY") or None)
         fine = time.time() + (secondi or SUB_LEGGERO_SECONDI)
+        visti = _visti("subito")
         for reg, provs in REGIONI.items():
             code = REGION_CODES.get(reg) or _codici_regione.get(reg) or _SUB_REGIONI_NOTE.get(reg)
             if not code:
                 continue
             voluti = set(provs)
             for page in range(pagine or SUB_LEGGERO_PAGINE):
-                if time.time() > fine:
+                if time.time() > fine or fermato():
+                    st["subito_fermato_tempo"] += 1
                     return out
                 r = col.client.get(API_SEARCH, headers=API_HEADERS, params={"c": 2, "r": code, "t": "s", "lim": 100,
                                                                             "start": page * 100, "sort": "datedesc"})
+                st["subito_pagine"] += 1
                 if pausa:
-                    time.sleep(random.uniform(*pausa))
+                    _dormi(random.uniform(*pausa))
                 if r.status_code in (403, 429):
                     _sub_leggero["fermo_fino"] = time.time() + SUB_LEGGERO_PAUSA_MIN * 60
                     log.warning("TR subito leggero: HTTP %s, fermo per %d minuti", r.status_code, SUB_LEGGERO_PAUSA_MIN)
@@ -888,13 +995,26 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
                 ids = [str(a.get("urn") or a.get("id")) for a in ads if isinstance(a, dict) and (a.get("urn") or a.get("id"))]
                 if not ids:
                     break
-                noti = {x["source_id"] for x in conn.execute(
-                    "SELECT source_id FROM listings WHERE source='subito' AND source_id = ANY(%s)", (ids,)).fetchall()}
+                prezzi = {str(x["source_id"]): x.get("price_eur") for x in conn.execute(
+                    "SELECT source_id, price_eur FROM listings WHERE source='subito' AND source_id = ANY(%s)",
+                    (ids,)).fetchall()}
+                note = 0
                 for a in ads:
                     l = parse_item(a) if isinstance(a, dict) else None
-                    if l and l.source_id not in noti and (not l.province or l.province.upper() in voluti):
-                        out.append(l)
-                if len(noti) >= len(ids) or len(ads) < 100:
+                    if l is None:
+                        note += 1                      # illeggibile: non si salverebbe comunque
+                        continue
+                    sid = str(l.source_id)
+                    if (sid in prezzi and (prezzi[sid] in (None, l.price_eur) or not l.price_eur)) or sid in visti:
+                        note += 1
+                        continue
+                    if l.province and l.province.upper() not in voluti:
+                        visti.add(sid)                 # fuori dalle province: mai nel database, si ricorda qui
+                        note += 1
+                        continue
+                    out.append(l)
+                st["subito_noti"] += note
+                if note >= len(ads) or len(ads) < 100:
                     break                              # pagina tutta già vista: i successivi sono più vecchi
     except Exception as e:
         try:
@@ -909,8 +1029,8 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
 # quindi la regola "fermati alla prima pagina tutta già nota" non scattava mai: ogni giro leggeva tutte le 30 pagine
 # e apriva la pagina di dettaglio di centinaia di annunci fuori zona (giri da 15 minuti, 476 fuori zona su 495).
 # Ora: gli id già visti (anche fuori zona) si ricordano, il fuori zona si scarta PRIMA del dettaglio, raggio 150 km.
-_AS_VISTI: set = set()
-_AS_VISTI_MAX = 60000
+_AS_VISTI: set = _VISTI["autoscout24"]        # 16/11: stesso insieme di _VISTI (si segna dopo il salvataggio)
+_AS_VISTI_MAX = _VISTI_MAX
 
 
 def _as_zona() -> set:
@@ -926,17 +1046,18 @@ def _autoscout_nuovi(conn) -> list:
     """Annunci nuovi entro TR_RAGGIO_AS km da Milano, dal più recente: ci si ferma alla prima pagina tutta già vista."""
     from ..collectors.autoscout import BASE, parse_item
     from ..collectors.base import next_data
-    client = _client_as()
+    client = _client_as_limitato()                 # 16/11: ritmo unico con la lettura completa (Limitatore)
     zona = _as_zona()
-    if len(_AS_VISTI) > _AS_VISTI_MAX:
-        _AS_VISTI.clear()
+    visti = _visti("autoscout24")
     out = []
     for page in range(1, int(os.environ.get("TR_AS_PAGINE_VELOCE", "10")) + 1):
+        if fermato():
+            break
         url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
                f"&zipr={_raggio_as()}&adage=1&pricefrom=300&priceto=150000"
                f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
         from . import as_riprova                   # 12/11 (§3.4): riprova con attesa crescente su 429/5xx/rete
-        r = as_riprova.get(client, url, "TR autoscout ricerca")
+        r = as_riprova.get(client, url, "TR autoscout ricerca", dormi=_dormi)
         if r is None:
             break
         if r.status_code != 200:
@@ -946,23 +1067,26 @@ def _autoscout_nuovi(conn) -> list:
         if not items:
             break
         ids = [str(it.get("id")) for it in items if isinstance(it, dict)]
-        noti = {x["source_id"] for x in conn.execute(
+        noti = {str(x["source_id"]) for x in conn.execute(
             "SELECT source_id FROM listings WHERE source='autoscout24' AND source_id = ANY(%s)", (ids,)).fetchall()}
-        gia = noti | (set(ids) & _AS_VISTI)
+        gia = noti | (set(ids) & visti)
+        nuovi_pagina = set()
         for it in items:
             l = parse_item(it)
-            if not l or l.source_id in gia:
+            if not l:
+                visti.add(str(it.get("id")))       # illeggibile: non si salverebbe comunque
                 continue
-            _AS_VISTI.add(l.source_id)
+            if str(l.source_id) in gia or str(l.source_id) in nuovi_pagina:
+                continue
+            nuovi_pagina.add(str(l.source_id))
             if l.province and l.province.upper() not in zona:
-                continue                           # fuori zona: niente pagina di dettaglio
+                visti.add(str(l.source_id))        # fuori zona: mai nel database, niente pagina di dettaglio
+                continue
             if _solo_privati():
                 l.seller_type = "privato"
-            out.append(l)
-        _AS_VISTI.update(ids)
+            out.append(l)                          # in zona: "visto" solo dopo il salvataggio (_segna_visti)
         if len(gia) >= len(ids):           # pagina tutta già vista: i successivi sono più vecchi
             break
-        time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     return _as_completa(client, out)
 
 
@@ -979,7 +1103,12 @@ def _ct() -> str:
 def _as_completa(client, out: list) -> list:
     """Pagina dell'annuncio: dati completi e numero di telefono."""
     from ..collectors.autoscout import parse_item
-    for l in out:
+    limitato = isinstance(client, ClienteLimitato)
+    for i, l in enumerate(out):
+        if fermato():
+            # arresto: quelli senza dettaglio non si salvano e non si segnano visti: li rilegge il processo dopo
+            log.warning("TR autoscout: arresto, %d annunci lasciati al prossimo avvio", len(out) - i)
+            return out[:i]
         st, det = _as_dettaglio(client, l.url)
         if st == "attivo" and det:
             full = parse_item(det)
@@ -988,7 +1117,8 @@ def _as_completa(client, out: list) -> list:
                 full.photos = full.photos or l.photos
                 l.__dict__.update({k: v for k, v in full.__dict__.items() if v not in (None, "", [])})
             l.raw = {"_telefono": telefono_autoscout(det)}
-        time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
+        if not limitato:                          # col client limitato la pausa la fa il Limitatore
+            time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     return out
 
 
@@ -1005,7 +1135,7 @@ def _autoscout_tutti(conn) -> list:
     from ..zone import MILANO
     zona = set(MILANO)
     from . import as_riprova
-    client = _client_as()
+    client = _client_as_limitato()                 # 16/11: ritmo unico con il giro veloce (Limitatore)
     visti, out, pagine, fuori = set(), [], 0, 0
     # 12/11 (§3.4): si parte dalla fascia (e pagina) dove la lettura precedente si era fermata per un 429
     ripresa = as_riprova.leggi_ripresa(conn) if as_riprova.attivo() else None
@@ -1018,9 +1148,10 @@ def _autoscout_tutti(conn) -> list:
             url = (f"{BASE}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include{_ct()}&zip=20121"
                    f"&zipr={_raggio_as()}&adage=1&pricefrom={lo}&priceto={hi}"
                    f"&fregfrom={os.environ.get('ANNO_MINIMO', '2007')}&sort=age&desc=1&page={page}")
-            r = as_riprova.get(client, url, f"TR completo autoscout fascia {lo}-{hi} pagina {page}")
+            r = None if fermato() else as_riprova.get(client, url, f"TR completo autoscout fascia {lo}-{hi} pagina {page}",
+                                                       dormi=_dormi)
             if r is None:
-                if as_riprova.attivo():
+                if as_riprova.attivo() or fermato():
                     as_riprova.salva_ripresa(conn, idx, page)     # il prossimo giro riparte da qui
                     interrotta = True
                 break
@@ -1048,7 +1179,6 @@ def _autoscout_tutti(conn) -> list:
                 out.append(l)
             if len(items) < 20:
                 break
-            time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     if not interrotta and ripresa:
         as_riprova.togli_ripresa(conn)
     log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona%s%s", pagine, len(out), fuori,
@@ -1057,8 +1187,71 @@ def _autoscout_tutti(conn) -> list:
     return _as_completa(client, out)
 
 
-def _salva(conn, listings: list, stats: Counter) -> list[int]:
-    """Salva gli annunci letti; ritorna gli id da valutare (privati nuovi o con prezzo cambiato, nelle regole)."""
+def _gia_salvati(conn, listings: list) -> dict:
+    """16/11: {(fonte, id annuncio): riga} degli annunci già nel database (una query per fonte, non una per annuncio)."""
+    out: dict = {}
+    per_fonte: dict = {}
+    for l in listings:
+        if getattr(l, "source", None) in ("subito", "autoscout24") and getattr(l, "source_id", None):
+            per_fonte.setdefault(l.source, set()).add(str(l.source_id))
+    try:
+        for fonte, sids in per_fonte.items():
+            for r in conn.execute("SELECT id, source_id, price_eur, status FROM listings WHERE source=%s "
+                                  "AND source_id = ANY(%s)", (fonte, sorted(sids))).fetchall():
+                if r.get("id") is not None:
+                    out[(fonte, str(r["source_id"]))] = r
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.info("TR annunci già salvati non letti (si salva come prima): %s", str(e)[:120])
+        return {}
+    return out
+
+
+def _invariati_veloci() -> bool:
+    return os.environ.get("TR_INVARIATI_VELOCE", "1") != "0"
+
+
+def _scrivi_invariati(conn, ids: list, tel_si: list, stats: Counter) -> None:
+    """16/11: annunci già salvati, attivi e con lo stesso prezzo: UNA scrittura a blocchi (visto/controllato adesso,
+    più il "sì" del telefono di Subito) invece di 6 istruzioni e un commit per annuncio."""
+    if not ids:
+        return
+    from ..db import segna_invariati
+    try:
+        segna_invariati(conn, ids, tel_si)
+        conn.commit()
+        stats["invariati_a_blocchi"] += len(ids)
+    except Exception as e:
+        conn.rollback()
+        stats["errore_invariati"] += 1
+        log.warning("TR invariati non segnati (%d): %s", len(ids), str(e)[:150])
+    ids.clear()
+    tel_si.clear()
+
+
+def _annuncio_at(l) -> datetime | None:
+    """Ora di pubblicazione sul portale (Subito: data con cui ordina i risultati, ora italiana), in UTC. None se manca."""
+    if getattr(l, "source", None) != "subito" or not isinstance(getattr(l, "raw", None), dict):
+        return None
+    try:
+        from ..collectors.subito import SubitoCollector
+        from zoneinfo import ZoneInfo
+        d = SubitoCollector._data_annuncio(l.raw)
+        if not d:
+            return None
+        return datetime.strptime(d, "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Europe/Rome")).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _salva(conn, listings: list, stats: Counter, coda: bool = False) -> list[int]:
+    """Salva gli annunci letti; ritorna gli id da valutare (privati nuovi o con prezzo cambiato, nelle regole).
+    16/11: ogni annuncio riceve l'esito in l._tr_ev ('nuovo'|'prezzo'|'riapparso'|'invariato'|'scartato'|'errore');
+    gli invariati si scrivono a blocchi (TR_INVARIATI_VELOCE); con coda=True gli id da valutare entrano nella coda
+    persistente (tabella tr_coda) NELLA STESSA transazione dell'annuncio: un riavvio non li perde."""
     from ..core.normalize import normalize_fields
     from ..db import upsert_listing_con_scheda as upsert_listing      # 12/11: anche la scheda tecnica (dati_auto)
     from ..zone import MILANO, TORINO
@@ -1066,7 +1259,11 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
     da_valutare = []
     zona = set(MILANO) | set(TORINO)
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
+    prima = _gia_salvati(conn, listings) if _invariati_veloci() else {}
+    invariati: list = []
+    tel_si: list = []
     for l in listings:
+        l._tr_ev = "scartato"
         tel = (l.raw or {}).get("_telefono") if l.source == "autoscout24" else None
         tel_sub = telefono_subito(l.raw) if l.source == "subito" else False
         if l.source == "subito" and _diag_sub["n"] < 12 and isinstance(l.raw, dict):
@@ -1115,14 +1312,29 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
         if l.province and not l.region:
             from ..core.normalize import PROVINCE_REGION
             l.region = PROVINCE_REGION.get(l.province.upper())
+        p = prima.get((l.source, str(l.source_id)))
+        if p is not None and p.get("status") == "attivo" and p.get("price_eur") == l.price_eur \
+                and not (l.source == "autoscout24" and tel is not None):
+            # 16/11: già salvato, attivo, stesso prezzo: niente upsert completo, solo "visto" a blocchi
+            invariati.append(p["id"])
+            if l.source == "subito" and (tel_sub or ha_numero_testo(l.title, l.description)):
+                tel_si.append(p["id"])
+            l._tr_ev = "invariato"
+            stats["salvati"] += 1
+            stats[f"{l.source}:invariato"] += 1
+            if len(invariati) >= 500:
+                _scrivi_invariati(conn, invariati, tel_si, stats)
+            continue
         try:
             lid, ev = upsert_listing(conn, l)
         except Exception as e:
             conn.rollback()
+            l._tr_ev = "errore"
             stats["scartati_dati"] += 1
             stats["scarto:non_salvato"] += 1
             log.info("TR annuncio %s non salvato: %s", l.url, str(e)[:100])
             continue
+        l._tr_ev = ev
         stats["salvati"] += 1
         if l.source == "autoscout24":
             salva_telefono(conn, lid, tel, controllato=tel is not None)        # dalla pagina dell'annuncio
@@ -1137,14 +1349,19 @@ def _salva(conn, listings: list, stats: Counter) -> list[int]:
             stats["autoscout24:doppione"] += 1
             conn.commit()
             continue
+        valutare = ev in ("nuovo", "prezzo", "riapparso") and (l.seller_type == "privato" or not _solo_privati()) \
+            and (l.year or 0) >= anno_min and not (l.mileage_km and l.mileage_km > km_max) and (l.price_eur or 0) >= 300
+        if valutare and coda:
+            _coda_metti(conn, lid, l, ev, stats)
         conn.commit()
-        if ev in ("nuovo", "prezzo", "riapparso") and (l.seller_type == "privato" or not _solo_privati()) \
-                and (l.year or 0) >= anno_min and not (l.mileage_km and l.mileage_km > km_max) and (l.price_eur or 0) >= 300:
+        if valutare:
             da_valutare.append(lid)
+    _scrivi_invariati(conn, invariati, tel_si, stats)
     return da_valutare
 
 
-def valuta_e_pubblica(conn, ids: list[int], stats: Counter, fonte: str = "tempo-reale") -> None:
+def valuta_e_pubblica(conn, ids: list[int], stats: Counter, fonte: str = "tempo-reale",
+                      pubblicate: list | None = None) -> None:
     """Valuta gli annunci (pricing/valutazione.valuta_e_scrivi: la stessa funzione del cron, stessi ingressi, stessa
     guardia sulle scritture) e mette sul sito quelle in categoria da sito con il numero del venditore.
     Qui resta solo la scelta di cosa PUBBLICARE: il numero (telefono unico, valutazione.telefono) deve esserci,
@@ -1188,6 +1405,8 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter, fonte: str = "tempo-
                          "WHERE id=%s", ("opportunita" if conf == "affidabile" else "da_verificare", lid))
             conn.commit()
             stats["pubblicate"] += 1
+            if pubblicate is not None:
+                pubblicate.append(lid)            # 16/11: per la misura del ritardo (tr_coda.pubblicato_at)
         except Exception as e:
             try:
                 conn.rollback()
@@ -1219,10 +1438,234 @@ def _lettore_nuovi(conn, ids: list[int], stats: Counter) -> None:
         log.warning("TR lettore nuovi: %s", str(e)[:200])
 
 
+# ------------------------------------------------------------------ coda persistente (16/11, migrazione 058)
+
+CODA_TENTATIVI = 5          # dopo 5 valutazioni non finite l'annuncio esce dalla coda (lo riprende il cron)
+CODA_RIPRESA_MIN = 5        # un annuncio "preso" da un giro che non ha finito torna disponibile dopo 5 minuti
+CODA_MAX = 300              # annunci rimasti in coda ripresi per giro
+_coda_pulita = {"t": 0.0}
+
+
+def _intenv(nome: str, default: int) -> int:
+    try:
+        return int(os.environ.get(nome) or default)
+    except ValueError:
+        return default
+
+
+def coda_attiva(conn) -> bool:
+    """La coda c'è (migrazione 058 applicata) e non è spenta (TR_CODA=0)? Se no tutto come prima (id in memoria)."""
+    if os.environ.get("TR_CODA", "1") == "0":
+        return False
+    try:
+        r = conn.execute("SELECT to_regclass('tr_coda') IS NOT NULL AS ok").fetchone()
+        return bool(r and r.get("ok"))
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+
+def _coda_metti(conn, lid: int, l, ev: str, stats: Counter) -> None:
+    """In coda nella transazione dell'annuncio (punto di ripristino: un errore qui non perde l'annuncio). Un annuncio
+    già valutato che torna (ribasso, riapparso) si rimette in coda; uno ancora in attesa resta com'è."""
+    from contextlib import nullcontext
+    try:
+        tx = conn.transaction() if hasattr(conn, "transaction") else nullcontext()
+        with tx:
+            conn.execute(
+                "INSERT INTO tr_coda (listing_id, fonte, evento, annuncio_at, letto_at, preso_at, tentativi) "
+                "VALUES (%s, %s, %s, %s, now(), now(), 1) "
+                "ON CONFLICT (listing_id) DO UPDATE SET evento=EXCLUDED.evento, annuncio_at=EXCLUDED.annuncio_at, "
+                "letto_at=now(), preso_at=now(), tentativi=1, valutato_at=NULL, esito=NULL, pubblicato_at=NULL, "
+                "sito_at=NULL WHERE tr_coda.valutato_at IS NOT NULL",
+                (lid, l.source, ev, _annuncio_at(l)))
+        stats["coda:messi"] += 1
+    except Exception as e:
+        stats["coda:errore"] += 1
+        log.warning("TR coda: annuncio %s non messo in coda: %s", lid, str(e)[:150])
+
+
+def _coda_prendi(conn, escludi: list, stats: Counter) -> list[int]:
+    """Annunci rimasti in coda (giro caduto, riavvio, arresto): si prendono (preso_at) per non valutarli in due."""
+    try:
+        righe = conn.execute(
+            "UPDATE tr_coda SET preso_at = now(), tentativi = tentativi + 1 WHERE listing_id IN ("
+            " SELECT listing_id FROM tr_coda WHERE valutato_at IS NULL AND tentativi < %s"
+            " AND (preso_at IS NULL OR preso_at < now() - make_interval(mins => %s))"
+            " AND NOT (listing_id = ANY(%s)) ORDER BY letto_at LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING listing_id",
+            (_intenv("TR_CODA_TENTATIVI", CODA_TENTATIVI), _intenv("TR_CODA_RIPRESA_MIN", CODA_RIPRESA_MIN),
+             [int(i) for i in escludi], _intenv("TR_CODA_MAX", CODA_MAX))).fetchall()
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        stats["coda:errore"] += 1
+        log.warning("TR coda non letta: %s", str(e)[:150])
+        return []
+    ids = [int(r["listing_id"]) for r in righe]
+    if ids:
+        stats["coda:ripresi"] += len(ids)
+        log.warning("TR CODA: ripresi %d annunci rimasti da valutare (riavvio o giro interrotto)", len(ids))
+    return ids
+
+
+def _percentile(valori: list, q: float):
+    v = sorted(x for x in valori if x is not None)
+    if not v:
+        return None
+    return v[min(len(v) - 1, int(round(q * (len(v) - 1))))]
+
+
+def _coda_fatti(conn, ids: list, pubblicate: list, stats: Counter) -> None:
+    """Valutati: si chiude la riga e si misura il ritardo vero (pubblicato sul portale → letto → valutato → sul sito
+    dell'annuncio); una riga TR_RITARDO per ogni auto pubblicata, riassunto nei contatori del giro."""
+    if not ids:
+        return
+    try:
+        righe = conn.execute(
+            "UPDATE tr_coda SET valutato_at = now(), esito = CASE WHEN listing_id = ANY(%s) THEN 'pubblicata' "
+            "ELSE 'valutata' END, pubblicato_at = CASE WHEN listing_id = ANY(%s) THEN now() END "
+            "WHERE listing_id = ANY(%s) AND valutato_at IS NULL "
+            "RETURNING listing_id, fonte, annuncio_at, letto_at, valutato_at, pubblicato_at",
+            (list(pubblicate), list(pubblicate), [int(i) for i in ids])).fetchall()
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        stats["coda:errore"] += 1
+        log.warning("TR coda non chiusa: %s", str(e)[:150])
+        return
+    stats["coda:valutati"] += len(righe)
+
+    def sec(a, b):
+        return (b - a).total_seconds() if a is not None and b is not None else None
+    val = [sec(r["letto_at"], r["valutato_at"]) for r in righe]
+    da_annuncio = [sec(r["annuncio_at"], r["pubblicato_at"]) for r in righe if r.get("pubblicato_at")]
+    if _percentile(val, .95) is not None:
+        stats["ritardo_letto_valutato_p95_s"] = int(_percentile(val, .95))
+    if _percentile(da_annuncio, .95) is not None:
+        stats["ritardo_annuncio_pubblicata_p95_min"] = round(_percentile(da_annuncio, .95) / 60, 1)
+    for r in righe:
+        if r.get("pubblicato_at"):
+            log.warning("TR_RITARDO %s", json.dumps({
+                "id": r["listing_id"], "fonte": r["fonte"],
+                "annuncio_letto_min": None if sec(r["annuncio_at"], r["letto_at"]) is None
+                else round(sec(r["annuncio_at"], r["letto_at"]) / 60, 1),
+                "letto_valutato_s": None if sec(r["letto_at"], r["valutato_at"]) is None
+                else int(sec(r["letto_at"], r["valutato_at"])),
+                "annuncio_pubblicata_min": None if sec(r["annuncio_at"], r["pubblicato_at"]) is None
+                else round(sec(r["annuncio_at"], r["pubblicato_at"]) / 60, 1)}))
+    _coda_pulisci(conn)
+
+
+def _coda_pulisci(conn) -> None:
+    """Una volta all'ora: via le righe chiuse da più di 7 giorni e quelle abbandonate (troppi tentativi)."""
+    if time.time() - _coda_pulita["t"] < 3600:
+        return
+    _coda_pulita["t"] = time.time()
+    try:
+        n = conn.execute("UPDATE tr_coda SET valutato_at = now(), esito = 'abbandonata' WHERE valutato_at IS NULL "
+                         "AND tentativi >= %s AND preso_at < now() - make_interval(mins => %s)",
+                         (_intenv("TR_CODA_TENTATIVI", CODA_TENTATIVI), _intenv("TR_CODA_RIPRESA_MIN", CODA_RIPRESA_MIN))
+                         ).rowcount
+        conn.execute("DELETE FROM tr_coda WHERE valutato_at < now() - interval '7 days'")
+        conn.commit()
+        if n:
+            log.warning("TR CODA: %d annunci abbandonati dopo troppi tentativi (li valuterà il cron)", n)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.info("TR coda non pulita: %s", str(e)[:150])
+
+
+def segna_sul_sito(conn, ids) -> dict:
+    """Per il sito (dopo il calcolo dell'elenco): le auto della coda comparse sull'elenco. Scrive sito_at e ritorna
+    il riassunto del ritardo vero annuncio→sito (minuti) per la riga SITO_RITARDO dei log. Mai un errore."""
+    ids = [int(i) for i in ids or []]
+    if not ids:
+        return {}
+    try:
+        righe = conn.execute(
+            "UPDATE tr_coda SET sito_at = now() WHERE listing_id = ANY(%s) AND sito_at IS NULL AND valutato_at IS NOT NULL "
+            "RETURNING listing_id, annuncio_at, letto_at, pubblicato_at, sito_at", (ids,)).fetchall()
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.info("TR coda sito_at non scritto: %s", str(e)[:150])
+        return {}
+    if not righe:
+        return {}
+
+    def m(a, b):
+        return (b - a).total_seconds() / 60 if a is not None and b is not None else None
+    da_annuncio = [m(r["annuncio_at"], r["sito_at"]) for r in righe]
+    da_letto = [m(r["letto_at"], r["sito_at"]) for r in righe]
+    da_pubbl = [m(r["pubblicato_at"], r["sito_at"]) for r in righe]
+    out = {"auto": len(righe)}
+    for nome, v in (("annuncio_sito", da_annuncio), ("letto_sito", da_letto), ("pubblicata_sito", da_pubbl)):
+        if _percentile(v, .5) is not None:
+            out[nome + "_p50_min"] = round(_percentile(v, .5), 1)
+            out[nome + "_p95_min"] = round(_percentile(v, .95), 1)
+    return out
+
+
+# ------------------------------------------------------------------ giro nuovi
+
+_avvio = {"primo": True}
+
+
+def _valuta(conn, ids: list, stats: Counter, coda: bool) -> None:
+    """Lettore AI + valutazione + pubblicazione. Con la coda: anche gli annunci rimasti da giri caduti o riavvii, e
+    all'arresto non si valuta (restano in coda e li prende il processo dopo)."""
+    tutti = list(dict.fromkeys(int(i) for i in ids))
+    if coda:
+        tutti += _coda_prendi(conn, tutti, stats)
+    if not tutti:
+        return
+    if coda and fermato():
+        stats["coda:lasciati_arresto"] += len(tutti)
+        return
+    _lettore_nuovi(conn, tutti, stats)
+    pubblicate: list = []
+    valuta_e_pubblica(conn, tutti, stats, pubblicate=pubblicate)
+    if coda:
+        _coda_fatti(conn, tutti, pubblicate, stats)
+
+
+def _subito_veloce(conn, stats: Counter) -> list:
+    """Giro veloce Subito: le pagine dal più recente fino alla prima tutta nota. Al primo giro dopo l'avvio si legge
+    di più (TR_RECUPERO_PAGINE per regione, TR_RECUPERO_SECONDI): è il giro di recupero di quello uscito da fermi."""
+    if _avvio["primo"]:
+        pag = _intenv("TR_RECUPERO_PAGINE", 15)
+        sec = _intenv("TR_RECUPERO_SECONDI", 240)
+        stats["recupero_avvio"] = 1
+    else:
+        pag = _intenv("TR_SUBITO_PAGINE_VELOCE", 5)
+        sec = _intenv("TR_SUBITO_SECONDI_VELOCE", 60)
+    return _subito_nuovi_leggero(conn, pagine=pag, secondi=sec, stats=stats)
+
+
 def giro_nuovi(conn, completo: bool = False) -> Counter:
-    """completo=False: solo il nuovo dall'ultimo giro (ogni 5 minuti).
-    completo=True: rilettura di TUTTI gli annunci delle ultime TR_COMPLETO_ORE ore (ogni ora), cosi' non se ne perde nessuno."""
+    """completo=False: solo il nuovo, dal più recente, fino alla prima pagina già vista (giro veloce).
+    completo=True: rilettura di TUTTI gli annunci delle ultime TR_COMPLETO_ORE ore, cosi' non se ne perde nessuno.
+    16/11: gli annunci da valutare passano dalla coda persistente (tr_coda) se c'è; tra una fase e l'altra si guarda
+    l'arresto (FERMA): quello che è già salvato resta in coda per il processo dopo."""
     stats: Counter = Counter()
+    t_giro = time.time()
+    coda = coda_attiva(conn)
+    stats["coda"] = int(coda)
     row = conn.execute("SELECT ultimo_at FROM tempo_reale WHERE giro='nuovi'").fetchone()
     inizio = datetime.now(timezone.utc)
     dal_dt = (row["ultimo_at"] if row and row["ultimo_at"] else inizio - timedelta(minutes=int(os.environ.get("TR_PRIMO_GIRO_MIN", "60"))))
@@ -1237,6 +1680,9 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         if os.environ.get("TR_AUTOSCOUT", "1") == "1":
             pezzi.append(("autoscout", None))
         for fonte, reg in pezzi:
+            if fermato():
+                stats["fermato_arresto"] = 1
+                break
             try:
                 letti = (_subito_nuovi(_ora_it(dal_dt), int(os.environ.get("TR_COMPLETO_SUB_PAGINE", "150")), reg)
                          if fonte == "subito" else _autoscout_tutti(conn))
@@ -1245,40 +1691,66 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
                 continue
             stats["letti"] += len(letti)
             stats[f"letti_{fonte}"] += len(letti)
-            ids = _salva(conn, letti, stats)
+            ids = _salva(conn, letti, stats, coda=coda)
+            _segna_visti(letti)
             del letti
-            _lettore_nuovi(conn, ids, stats)
-            valuta_e_pubblica(conn, ids, stats)
+            _valuta(conn, ids, stats, coda)
             conn.commit()
             gc.collect()
     else:
         letti = []
-        if os.environ.get("TR_SUBITO", "1") == "1":
-            letti += _subito_nuovi(_ora_it(dal_dt))
+        t0 = time.time()
+        if os.environ.get("TR_SUBITO", "1") == "1" and os.environ.get("TR_SUBITO_VELOCE", "1") == "0":
+            letti += _subito_nuovi(_ora_it(dal_dt))            # come prima del 16/11 (rilegge la finestra)
             _diagnostica_pagina_subito([l for l in letti if l.source == "subito"][:3])
         elif SUB_LEGGERO:
-            # 3/11: con la lettura Subito completa spenta (TR_SUBITO) gli annunci nuovi di Subito arrivavano solo col
-            # giro della zona (ogni 3 ore): ora le prime pagine dal più recente, ci si ferma alla prima pagina già nota
-            letti += _subito_nuovi_leggero(conn)
+            # 16/11: anche con TR_SUBITO=1 il giro veloce legge solo le pagine nuove (prima la finestra intera)
+            letti += _subito_veloce(conn, stats)
             stats["letti_subito_leggero"] = len(letti)
-        if os.environ.get("TR_AUTOSCOUT", "1") == "1":
+        stats["tempo_subito_s"] = round(time.time() - t0, 1)
+        if os.environ.get("TR_AUTOSCOUT", "1") == "1" and not fermato():
+            t0 = time.time()
             try:
+                # 16/11: la ripresa dopo un 429 (_autoscout_tutti) non gira più qui: la fa il filo della lettura
+                # completa del worker (giro_ripresa_as), così il giro veloce resta sotto i 2 minuti
                 letti += _autoscout_nuovi(conn)
-                # 12/11 (§3.4): lettura completa interrotta da un 429: si riprende al primo giro utile, non dopo un'ora
-                from . import as_riprova
-                if as_riprova.attivo() and not as_riprova.fermo() and as_riprova.leggi_ripresa(conn):
-                    stats["as_ripresa"] = 1
-                    letti += _autoscout_tutti(conn)
             except Exception as e:
                 log.warning("TR autoscout: %s", str(e)[:200])
+            stats["tempo_autoscout_s"] = round(time.time() - t0, 1)
         stats["letti"] = len(letti)
-        _ritardo_subito(letti, stats)
-        ids = _salva(conn, letti, stats)
-        _lettore_nuovi(conn, ids, stats)
-        valuta_e_pubblica(conn, ids, stats)
+        t0 = time.time()
+        ids = _salva(conn, letti, stats, coda=coda)
+        _segna_visti(letti)
+        _ritardo_subito(letti, stats)                       # 16/11: solo sugli annunci NUOVI (dopo il salvataggio)
+        stats["tempo_salva_s"] = round(time.time() - t0, 1)
+        t0 = time.time()
+        _valuta(conn, ids, stats, coda)
+        stats["tempo_valuta_s"] = round(time.time() - t0, 1)
+        _avvio["primo"] = False
+    stats["tempo_giro_s"] = round(time.time() - t_giro, 1)
+    if fermato():
+        stats["fermato_arresto"] = 1
     conn.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES (%s, %s, %s) ON CONFLICT (giro) DO UPDATE "
                  "SET ultimo_at=EXCLUDED.ultimo_at, stats=EXCLUDED.stats",
                  ("completo" if completo else "nuovi", inizio, json.dumps(dict(stats))))
+    conn.commit()
+    return stats
+
+
+def giro_ripresa_as(conn) -> Counter | None:
+    """16/11: lettura completa AutoScout24 interrotta da un 429 (punto di ripresa in tempo_reale 'as_ripresa'):
+    la riprende il filo della lettura completa del worker, non più il giro veloce. None se non c'è niente da riprendere."""
+    from . import as_riprova
+    if not (as_riprova.attivo() and not as_riprova.fermo() and as_riprova.leggi_ripresa(conn)):
+        return None
+    stats: Counter = Counter({"as_ripresa": 1})
+    coda = coda_attiva(conn)
+    letti = _autoscout_tutti(conn)
+    stats["letti"] = len(letti)
+    ids = _salva(conn, letti, stats, coda=coda)
+    _segna_visti(letti)
+    del letti
+    _valuta(conn, ids, stats, coda)
     conn.commit()
     return stats
 
@@ -1298,12 +1770,16 @@ def ritardo_minuti(data_annuncio: str | None, ora_it: str) -> int | None:
 
 def _ritardo_subito(letti: list, stats: Counter) -> None:
     """5/11 (cliente: "ho paura che non raccogliamo subito gli annunci appena scesi"): quanti minuti dopo la
-    pubblicazione su Subito leggiamo gli annunci NUOVI (mediana e peggiore del giro), nei contatori di TR NUOVI."""
+    pubblicazione su Subito leggiamo gli annunci NUOVI (mediana e peggiore del giro), nei contatori di TR NUOVI.
+    16/11: solo gli annunci davvero nuovi (l._tr_ev == 'nuovo', dopo _salva): prima contavano anche i già visti
+    riletti dalla finestra, e la "peggiore" era sempre la sovrapposizione di 10 minuti. Se l'esito manca
+    (annunci non passati da _salva) si contano tutti come prima."""
     try:
         from ..collectors.subito import SubitoCollector
         ora = _ora_it(datetime.now(timezone.utc))
         rit = sorted(m for m in (ritardo_minuti(SubitoCollector._data_annuncio(l.raw), ora)
-                                 for l in letti if l.source == "subito" and isinstance(l.raw, dict)) if m is not None)
+                                 for l in letti if l.source == "subito" and isinstance(l.raw, dict)
+                                 and getattr(l, "_tr_ev", "nuovo") == "nuovo") if m is not None)
         if rit:
             stats["ritardo_subito_mediana_min"] = rit[len(rit) // 2]
             stats["ritardo_subito_max_min"] = rit[-1]
@@ -1312,11 +1788,18 @@ def _ritardo_subito(letti: list, stats: Counter) -> None:
         log.info("ritardo subito non calcolato: %s", str(e)[:100])
 
 
+_lucchetto_occupato: Counter = Counter()
+
+
 def con_lucchetto(nome: str, fn, *a):
-    """Un solo processo alla volta per giro (durante un aggiornamento del sito girano due copie per qualche minuto)."""
+    """Un solo processo alla volta per giro (durante un aggiornamento del sito girano due copie per qualche minuto).
+    16/11: se il lucchetto è occupato lo si scrive nei log (TR LUCCHETTO), prima il giro saltava in silenzio."""
     from ..db import connect
     with connect() as conn:
         if not conn.execute("SELECT pg_try_advisory_lock(%s) AS ok", (LOCK[nome],)).fetchone()["ok"]:
+            _lucchetto_occupato[nome] += 1
+            log.warning("TR LUCCHETTO %s occupato da un altro processo o filo: giro saltato (%d volte da avvio)",
+                        nome, _lucchetto_occupato[nome])
             return None
         try:
             return fn(conn, *a)
@@ -1327,6 +1810,7 @@ def con_lucchetto(nome: str, fn, *a):
                 conn.commit()
             except Exception:
                 pass
+
 
 
 def giro_telefoni_subito(conn) -> dict:

@@ -12,7 +12,7 @@ def test_fuori_zona_senza_dettaglio_e_stop_al_giro_dopo(monkeypatch):
     pagine = {1: [{"id": "a1", "pv": "MI"}, {"id": "a2", "pv": "RM"}], 2: [{"id": "a3", "pv": "FI"}]}
     lette = []
 
-    def get(client, url, nome):
+    def get(client, url, nome, **k):
         p = int(url.rsplit("page=", 1)[1])
         lette.append(p)
         return SimpleNamespace(status_code=200, text=str(p))
@@ -26,8 +26,13 @@ def test_fuori_zona_senza_dettaglio_e_stop_al_giro_dopo(monkeypatch):
     monkeypatch.setattr(T, "_as_completa", lambda c, out: out)
     monkeypatch.setattr(T.time, "sleep", lambda s: None)
     T._AS_VISTI.clear()
+    monkeypatch.setenv("TR_AS_INTERVALLO_S", "0")
     out = T._autoscout_nuovi(Conn())
     assert [l.source_id for l in out] == ["a1"]          # RM e FI fuori zona: niente dettaglio
+    for l in out:                                         # 16/11: "visto" solo dopo il salvataggio (_salva + _segna_visti)
+        l.source = "autoscout24"
+        l._tr_ev = "nuovo"
+    T._segna_visti(out)
     lette.clear()
     assert T._autoscout_nuovi(Conn()) == []              # giro dopo: tutto già visto
     assert lette == [1]                                   # si ferma alla prima pagina

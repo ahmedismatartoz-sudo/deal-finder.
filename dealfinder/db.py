@@ -461,6 +461,24 @@ def upsert_listing_con_scheda(conn, listing: Listing) -> tuple[int, str]:
         _dati_auto_locale.on = prima
 
 
+def segna_invariati(conn, ids: list, telefono_si: list | None = None) -> int:
+    """16/11 (fondamenta della velocità): annunci già salvati, ATTIVI e con lo STESSO prezzo riletti dal tempo reale:
+    invece di upsert_listing (6 istruzioni e un commit per annuncio) si segna solo "visto/controllato adesso" a blocchi.
+    È quello che upsert_listing farebbe di essenziale per un annuncio invariato (last_seen_at; status resta 'attivo';
+    nessun evento di prezzo). `telefono_si`: id con il "sì" del numero (solo sì/no, mai il numero), come salva_telefono.
+    Il commit lo fa chi chiama. Ritorna le righe aggiornate."""
+    ids = sorted({int(i) for i in ids or []})
+    if not ids:
+        return 0
+    n = conn.execute("UPDATE listings SET last_seen_at = now(), last_checked_at = now() WHERE id = ANY(%s) "
+                     "AND status = 'attivo'", (ids,)).rowcount
+    tel = sorted({int(i) for i in telefono_si or []})
+    if tel:
+        conn.execute("UPDATE listings SET telefono_ok = true, telefono_at = now() WHERE id = ANY(%s) "
+                     "AND telefono_ok IS NOT TRUE", (tel,))
+    return n or 0
+
+
 def _dati_auto_ricerca(listing: Listing) -> dict:
     """12/11: parte della scheda tecnica letta dalla ricerca, senza i dati che hanno già una colonna. DATI_AUTO_RICERCA=0
     la spegne (default acceso). Mai un errore verso il salvataggio dell'annuncio."""
