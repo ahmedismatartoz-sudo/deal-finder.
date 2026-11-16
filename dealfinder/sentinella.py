@@ -382,13 +382,13 @@ def c_cron(conn, ctx: dict, attese: dict | None = None) -> dict:
     bloccati = [b for b in _righe(
         conn, "/*S:cron_in_corso*/ SELECT job, count(*) AS n, max(extract(epoch FROM now() - started_at)) / 3600.0 AS ore "
               "FROM job_runs WHERE finished_at IS NULL AND NOT COALESCE(stats ? 'battito', false) "
-              "AND started_at < now() - make_interval(hours => %s) AND started_at > now() - interval '7 days' "
+              "AND started_at < now() - (%s::float * interval '1 hour') AND started_at > now() - interval '7 days' "
               "GROUP BY job LIMIT 60", (min([IN_CORSO_ORE] + list(IN_CORSO_ORE_LAVORO.values())),))
         if float(b["ore"]) > in_corso_limite(b["job"])]
     # 16/11: righe in corso con il battito fermo (il processo che le teneva vive è morto)
     fermi = _righe(conn, "/*S:cron_battito*/ SELECT job, count(*) AS n, max(extract(epoch FROM now() - "
                          "(stats->>'battito')::timestamptz)) / 60.0 AS minuti FROM job_runs WHERE finished_at IS NULL "
-                         "AND stats ? 'battito' AND (stats->>'battito')::timestamptz < now() - make_interval(mins => %s) "
+                         "AND stats ? 'battito' AND (stats->>'battito')::timestamptz < now() - (%s::float * interval '1 minute') "
                          "AND started_at > now() - interval '7 days' GROUP BY job LIMIT 30", (BATTITO_FERMO_MIN,))
     lunghi = _righe(conn, "/*S:cron_giri*/ SELECT count(*) AS n, count(*) FILTER (WHERE extract(epoch FROM finished_at - "
                           "started_at) / 60.0 > %s) AS lunghi, max(extract(epoch FROM finished_at - started_at)) / 60.0 "

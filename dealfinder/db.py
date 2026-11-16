@@ -273,8 +273,8 @@ UPDATE job_runs
        stats = COALESCE(stats, '{}'::jsonb) || jsonb_build_object('interrotto', true, 'motivo', %s::text)
  WHERE finished_at IS NULL
    AND (CASE WHEN stats ? 'battito'
-             THEN (stats->>'battito')::timestamptz < now() - make_interval(mins => %s)
-             ELSE started_at < now() - make_interval(hours => %s) END)
+             THEN (stats->>'battito')::timestamptz < now() - (%s::float * interval '1 minute')
+             ELSE started_at < now() - (%s::float * interval '1 hour') END)
    AND (%s::text IS NULL OR job = %s::text OR job LIKE %s::text)
    AND NOT (id = ANY(%s::bigint[]))
 RETURNING id, job"""
