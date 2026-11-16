@@ -154,25 +154,67 @@ def segna(v: str, stato: str, nota: str = "", connetti=None) -> None:
         c.commit()
 
 
-def esegui_coda(lunghi: bool | None, budget_min: float = 60.0, chi: str = "cron", connetti=None, esegui_fn=None) -> dict:
-    """Esegue le voci in coda. Nel cron, una voce a cui manca una variabile passa al sito ('web'). Si ferma (le altre
-    tornano 'in_coda') quando il tempo `budget_min` è finito."""
+DURATE_MIN = {"perche_fuori:": 60, "prova_cieca:": 60}     # minuti previsti (senza storia); brevi 5
+
+
+def durata_prevista(v: str, env: dict | None = None) -> float:
+    """Minuti previsti per la voce: raccolta60 dura quanto dice R60_ORE (R60_ORE_TEL per 'tel...'), più 15 minuti di
+    consegna; le altre lunghe DURATE_MIN (o LAVORO_MIN_<PREFISSO>); le brevi 5."""
+    env = os.environ if env is None else env
+    p = _prefisso(v)
+    if not p:
+        return 5.0
+    nome = "LAVORO_MIN_" + p.rstrip(":").upper()
+    if env.get(nome):
+        try:
+            return float(env[nome])
+        except ValueError:
+            pass
+    if p == "raccolta60:":
+        tel = v.split(":", 1)[1].startswith("tel")
+        try:
+            ore = float(env.get("R60_ORE_TEL" if tel else "R60_ORE") or (1.4 if tel else 2.6))
+        except ValueError:
+            ore = 1.4 if tel else 2.6
+        return ore * 60 + 15
+    return float(DURATE_MIN.get(p, 60 if SPOSTABILI[p][0] else 5))
+
+
+def esegui_in_processo(v: str, timeout_s: float) -> None:
+    """La voce in un processo Python NUOVO (memoria pulita: niente accumulo con zona e Torino nel cron mercato), con un
+    tempo massimo. Superato il tempo il processo si ferma (TimeoutError): la voce lunga NON risulta fatta (riga con il
+    battito fermo, chiusa come interrotta) e si riprende."""
+    import subprocess
+    import sys
+    try:
+        subprocess.run([sys.executable, "-m", "dealfinder.pipeline.coda_lavori", v], timeout=max(60.0, timeout_s),
+                       check=False)
+    except subprocess.TimeoutExpired as e:
+        raise TimeoutError(f"oltre {int(timeout_s // 60)} minuti") from e
+
+
+def esegui_coda(lunghi: bool | None, budget_min: float = 60.0, chi: str = "cron", connetti=None, esegui_fn=None,
+                separato: bool = False) -> dict:
+    """Esegue le voci in coda. Una voce parte solo se la sua durata prevista (durata_prevista) sta nel tempo che resta di
+    `budget_min`; altrimenti torna 'in_coda' per il giro dopo. Nel cron, una voce a cui manca una variabile passa al
+    sito ('web'). separato=True: ogni voce in un processo nuovo con tempo massimo (vedi esegui_in_processo)."""
     if chi == "cron" and os.environ.get("LAVORI_CRON", "1") == "0":
         return {"spento": True}
     t0 = time.time()
-    fatto = esegui_fn or esegui
     esito: dict = {}
     try:
         vals = prendi(chi, lunghi, connetti)
     except Exception as e:
         log.warning("LAVORI coda non letta: %s", type(e).__name__)
         return {"errore": type(e).__name__}
-    for i, v in enumerate(vals):
-        if (time.time() - t0) / 60 >= budget_min:
-            for w in vals[i:]:
-                segna(w, "in_coda", "tempo finito", connetti)
-            esito["rimandati"] = len(vals) - i
-            break
+    for v in vals:
+        resto = budget_min - (time.time() - t0) / 60
+        prevista = durata_prevista(v)
+        if prevista > resto:
+            segna(v, "in_coda", f"non ci sta: prevista {prevista:.0f} min, restano {max(resto, 0):.0f}", connetti)
+            esito[v[:60]] = "rimandato"
+            esito["rimandati"] = esito.get("rimandati", 0) + 1
+            continue
         manca = mancano(v) if chi == "cron" else []
         if manca:
             segna(v, "web", "mancano nel cron: " + ",".join(manca), connetti)
@@ -180,9 +222,17 @@ def esegui_coda(lunghi: bool | None, budget_min: float = 60.0, chi: str = "cron"
             esito[v[:60]] = "web"
             continue
         try:
-            fatto(v)
+            if esegui_fn is not None:
+                esegui_fn(v)
+            elif separato:
+                esegui_in_processo(v, resto * 60)
+            else:
+                esegui(v)
             segna(v, "fatto", chi, connetti)
             esito[v[:60]] = "fatto"
+        except TimeoutError as e:
+            segna(v, "in_coda", "interrotto: " + str(e)[:200], connetti)     # si riprende (non è fatta)
+            esito[v[:60]] = "interrotto"
         except Exception as e:
             segna(v, "errore", type(e).__name__ + ": " + str(e)[:200], connetti)
             esito[v[:60]] = "errore"
@@ -192,35 +242,45 @@ def esegui_coda(lunghi: bool | None, budget_min: float = 60.0, chi: str = "cron"
     return esito
 
 
+def _lungo(chiave: str, nome_log: str, fn) -> None:
+    """Voce lunga (16/11, correzione del giudice): segnata "fatta" SOLO a lavoro finito (ciclo.inizia, riga con il
+    battito e lucchetto). Prima _una_volta la segnava fatta alla partenza: un processo ucciso a metà (limite di tempo,
+    memoria, deploy) la perdeva per sempre. Stessa chiave di prima: una voce già fatta (riga ok) non si rifà; una
+    interrotta si riprende al giro dopo (al massimo 3 tentativi). Gli INVII (Brevo) restano con _una_volta apposta:
+    meglio un invio perso che una email mandata due volte."""
+    from .ciclo import inizia
+    lav = inizia(chiave)
+    if not lav:
+        lg.warning("%s %s già fatto (o in corso in un altro processo)", nome_log, chiave[:60])
+        return
+    try:
+        fn()
+    except Exception as e:
+        lav.fallito(e)
+        lg.warning("%s non riuscito: %s", nome_log, str(e)[:300])
+        return
+    lav.fatto()
+
+
 def esegui(v: str) -> None:
     """Una voce spostabile: il codice che prima era in web/app.py (brevo_liste), invariato, senza le attese di avvio.
     Ogni ramo ha la sua chiave _una_volta (una voce già fatta non si rifà) e non solleva eccezioni."""
     from ..db import connect
     if v.startswith("perche_fuori:"):     # 16/11 (cliente): quali regole tengono fuori auto buone (solo log, niente AI)
-        try:
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(v):
-                lg.warning("PERCHE_FUORI %s già fatta (togli il valore da BREVO_IMPORT_LISTE)", v)
-                return
+        def _perche_fuori():
             from ..pricing import perche_fuori as _pf
             _pf.lavoro(v)
-        except Exception as e:
-            lg.warning("PERCHE_FUORI non riuscita: %s", str(e)[:300])
+        _lungo(v, "PERCHE_FUORI", _perche_fuori)
         return
     if v.startswith("prova_cieca:"):      # 12/11 (cliente): prova alla cieca M / perizia AI / Autohero (solo log)
-        try:
+        def _prova_cieca():
             from ..ai import prova_cieca as _pc
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(v):
-                lg.warning("PROVA_CIECA %s già fatta (togli il valore da BREVO_IMPORT_LISTE)", v)
-                return
             parti = v.split(":")
             with connect() as conn:
                 _pc.esegui(conn, n=min(int(parti[1] or 30), 200),
                            giorni=min(int(parti[2]), 90) if len(parti) > 2 and parti[2] else 30,
                            ai=not (len(parti) > 3 and parti[3] == "solo_calcolo"))   # 12/11 sera margini fase 2
-        except Exception as e:
-            lg.warning("PROVA_CIECA non riuscita: %s", str(e)[:300])
+        _lungo(v, "PROVA_CIECA", _prova_cieca)
         return
     if v.startswith("mix:"):              # 5/11 (cliente): nuove + richiamo del 3/11 fino a 1.200, invio subito
         try:
@@ -282,15 +342,10 @@ def esegui(v: str) -> None:
             lg.warning("GIRO_LOTTO non riuscito: %s", type(e).__name__)
         return
     if v.startswith("raccolta60:"):        # 16/11 sera (cliente): TUTTI i commercianti entro 60 km, AS24 + Subito
-        try:
+        def _r60():
             from ..pipeline import raccolta60 as R60
-            from ..pipeline.ciclo import _una_volta
-            if not _una_volta(f"raccolta60:{v[:60]}"):
-                lg.warning("R60 %s già fatto", v[:60])
-                return
             R60.lavoro(re.sub(r"[^A-Za-z0-9-]", "", v.split(":", 1)[1])[:20] or "1611")
-        except Exception as e:
-            lg.warning("R60 non riuscito: %s", str(e)[:300])
+        _lungo(f"raccolta60:{v[:60]}", "R60", _r60)
         return
     if v.startswith(("fuori84:", "liberoms:", "mattina:")):  # 16/11 (cliente): nuovi dal database, mai chi era nella lista 84
         try:
@@ -411,3 +466,11 @@ def esegui(v: str) -> None:
             lg.warning("BREVO_RIMETTI non riuscito: %s", str(e)[:300])
         return
     lg.warning("LAVORI %s: voce non conosciuta", v[:60])
+
+
+if __name__ == "__main__":
+    # processo separato per una voce (esegui_in_processo): python -m dealfinder.pipeline.coda_lavori "<voce>"
+    import sys
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    if len(sys.argv) > 1 and os.environ.get("DATABASE_URL"):
+        esegui(sys.argv[1])

@@ -240,20 +240,28 @@ def test_giro_ogni_tre_ore_solo_incrementale(monkeypatch):
 
 
 def test_notte_zona_completa_quando_c_e_tempo(monkeypatch):
-    ore = {"zona_cron:completo": 23.0}
+    # turno:zona_completo = INIZIO dell'ultima zona completa; zona_cron:completo = FINE (scritta a lettura finita)
+    ore = {"turno:zona_completo": 24.0, "zona_cron:completo": 19.0}
     monkeypatch.setattr(turni, "ore_dall_ultimo", lambda job, connetti=None, prefisso=False: ore.get(job))
     monkeypatch.setattr(turni, "stima", lambda nome, default_min=None, connetti=None: 285.0)
-    monkeypatch.setattr(ciclo, "_due", lambda job, h: False)
+    monkeypatch.setattr(ciclo, "_due", lambda job, h: True)              # anche nelle notti di mercato_nord
     t0 = time.time() - 3.5 * 3600                     # cron mercato partito alle 01:13, raccolta finita alle 04:43
+    assert collect.ore_dal_completo("zona_cron") == 24.0
+    assert collect.zona_notte_ok(t0)                  # prima: 19 ore dalla FINE < 20 -> saltata una notte su due
+    ore.pop("turno:zona_completo")                    # solo la fine registrata (19 ore): dovuta lo stesso (soglia 14)
     assert collect.zona_notte_ok(t0)
-    assert not collect.zona_notte_ok(time.time() - 6 * 3600)              # non finirebbe entro 10 ore: no
-    ore["zona_cron:completo"] = 5.0
-    assert not collect.zona_notte_ok(t0)                                    # già fatta oggi
-    ore["zona_cron:completo"] = 23.0
-    monkeypatch.setattr(ciclo, "_due", lambda job, h: True)                 # stanotte tocca a mercato_nord
+    ore.update({"turno:zona_completo": 24.0, "zona_cron:completo": 6.0})   # ripiego del giro finito 6 ore fa: no
+    assert collect.ore_dal_completo("zona_cron") == 6.0 and not collect.zona_notte_ok(t0)
+    ore.update({"turno:zona_completo": 10.0, "zona_cron:completo": 5.0})   # già fatta stanotte
     assert not collect.zona_notte_ok(t0)
-    ore["zona_cron:completo"] = 40.0                                        # ma mai oltre 36 ore senza zona completa
-    assert collect.zona_notte_ok(t0)
+    ore.update({"turno:zona_completo": 24.0, "zona_cron:completo": 19.0})
+    assert not collect.zona_notte_ok(time.time() - 6 * 3600)              # non finirebbe entro 10 ore: no
+    with env(NOTTE_CEDE_A_NORD="1"):                                       # vecchio comportamento, a richiesta
+        assert not collect.zona_notte_ok(t0)
+    # ogni notte alla stessa ora: la zona completa c'è ogni 24 ore (mai una notte sì e una no)
+    for _ in range(5):
+        assert collect.zona_notte_ok(t0)
+        ore.update({"turno:zona_completo": 24.0, "zona_cron:completo": 19.0})
 
 
 def test_configurazione_copiata_senza_segreti():
@@ -261,13 +269,69 @@ def test_configurazione_copiata_senza_segreti():
             "TORINO_MAX": "45000", "ANTHROPIC_API_KEY": "sk-x", "DATABASE_URL": "postgres://u:p@h/d",
             "BRIGHTDATA_API_KEY": "b", "SCRAPER_PROXY": "http://p", "SECRET_KEY": "s", "PLATE_SALT": "x",
             "ADMIN_PASSWORD": "pw", "RENDER_GIT_COMMIT": "abc", "PATH": "/bin", "COLLECT_PRIMA": "leadsp:3",
-            "CRON_T0": "1", "BREVO_IMPORT_LISTE": "x", "GOOGLE_CLIENT_SECRET": "g", "PYTHON_VERSION": "3.12"}
+            "CRON_T0": "1", "BREVO_IMPORT_LISTE": "x", "GOOGLE_CLIENT_SECRET": "g", "PYTHON_VERSION": "3.12",
+            # regole vere che il filtro di prima scartava per "KEY"/"SALT" nel nome
+            "PROBLEM_KEYWORDS": "motore,cambio", "BENZ_SALTA_AUTOSCOUT": "0", "FILTRA_SALTA_MODELLO": "1",
+            "LOMBARDIA_SALTA_SUBITO": "1", "ANALISI_ATTIVA": "1",
+            # valori da segreto sotto nomi innocui: mai nel database
+            "AVVISI_A": "mario.rossi@example.com", "NOTIFICA": "https://hooks.slack.com/services/T0/B0/x",
+            "SORGENTE": "https://utente:pw@host/x", "CHIAVE_STRANA": "xkeysib-abcdef0123", "ALTRO_TOKEN": "t",
+            "STRIPE_WEBHOOK_SECRET": "whsec_x", "LUNGO": "A" * 48}
     out = turni.variabili_da_copiare(env_)
     assert out == {"ZONA_CRON": "1", "ZC_SOGLIA": "0.92", "SOGLIE_PV": "7000:1500", "POLICY_COSTO_FISSO": "200",
-                   "TORINO_MAX": "45000"}
-    dove = {"ZC_SOGLIA": "0.9"}
-    assert turni.applica_config(out, dove) == sorted(["POLICY_COSTO_FISSO", "SOGLIE_PV", "TORINO_MAX", "ZONA_CRON", "ZC_SOGLIA"])
-    assert dove["ZC_SOGLIA"] == "0.92"
+                   "TORINO_MAX": "45000", "PROBLEM_KEYWORDS": "motore,cambio", "BENZ_SALTA_AUTOSCOUT": "0",
+                   "FILTRA_SALTA_MODELLO": "1", "LOMBARDIA_SALTA_SUBITO": "1", "ANALISI_ATTIVA": "1"}
+
+
+def test_ambiente_notte_uguale_al_cron_opportunita_e_poi_di_nuovo_mercato():
+    opp = {"ZONA_CRON": "1", "ZC_SOGLIA": "0.92", "SOGLIE_PV": "7000:1500", "PROBLEM_KEYWORDS": "motore",
+           "ANTHROPIC_API_KEY": "sk-opp", "RENDER_SERVICE_NAME": "dealfinder-opportunita"}
+    merc = {"SOGLIE_PV": "9000:2000", "POLICY_SOLO_MERCATO": "1", "MERCATO_NORD": "1", "ANTHROPIC_API_KEY": "sk-merc",
+            "DATABASE_URL": "postgres://x", "PATH": "/bin", "CRON_T0": "123", "RENDER_SERVICE_NAME": "dealfinder-mercato"}
+    cfg = turni.variabili_da_copiare(opp)
+    notte = turni.ambiente_notte(merc, cfg)
+    # regole: SOLO quelle dell'opportunità (le variabili che ha solo il mercato si tolgono); segreti del mercato
+    assert notte["SOGLIE_PV"] == "7000:1500" and notte["PROBLEM_KEYWORDS"] == "motore"
+    assert "POLICY_SOLO_MERCATO" not in notte and "MERCATO_NORD" not in notte
+    assert notte["ANTHROPIC_API_KEY"] == "sk-merc" and notte["DATABASE_URL"] == "postgres://x" and notte["CRON_T0"] == "123"
+    assert "sk-merc" not in notte["MERCATO_ENV_PRIMA"] and "postgres" not in notte["MERCATO_ENV_PRIMA"]
+    # stessa impronta delle regole dell'opportunità (le variabili di controllo MERCATO_* non contano)
+    notte["MERCATO_NOTTE_FASE"] = "1"
+    assert turni.impronta_regole(notte) == turni.impronta_regole(opp) != turni.impronta_regole(merc)
+    dopo = turni.ambiente_mercato(notte)
+    for k in ("SOGLIE_PV", "POLICY_SOLO_MERCATO", "MERCATO_NORD", "ANTHROPIC_API_KEY", "DATABASE_URL"):
+        assert dopo[k] == merc[k], k
+    assert "ZONA_CRON" not in dopo and "MERCATO_ENV_PRIMA" not in dopo
+    assert turni.impronta_regole(dopo) == turni.impronta_regole(merc)
+
+
+def test_fotografia_solo_dal_servizio_opportunita():
+    ok = {"RENDER_SERVICE_NAME": "dealfinder-opportunita"}
+    assert turni.fotografia_ammessa("opportunita", ok)
+    assert not turni.fotografia_ammessa("opportunita", {"RENDER_SERVICE_NAME": "dealfinder-mercato"})
+    assert not turni.fotografia_ammessa("opportunita", {})
+    assert not turni.fotografia_ammessa("mercato", ok)
+    for k in ("COLLECT_SOLO_PRIMA", "TORINO_ORA", "NOVARA_ORA"):
+        assert not turni.fotografia_ammessa("opportunita", dict(ok, **{k: "1"})), k
+
+
+def test_modo_notte_impronta_diversa_salta_la_zona(monkeypatch):
+    chiamate = []
+    monkeypatch.setattr(collect, "giro_zona", lambda completo=None: chiamate.append(completo) or True)
+    monkeypatch.setattr(turni.Giro, "apri", lambda self: self)
+    monkeypatch.setattr(turni.Giro, "_scrivi", lambda self, extra: None)
+    import dealfinder.pipeline.coda_lavori as _cl
+    monkeypatch.setattr(_cl, "esegui_coda", lambda **kw: {})
+    prima = dict(os.environ)
+    try:
+        os.environ.update({"NOTTE_CONFIG": "1", "NOTTE_IMPRONTA_ATTESA": "000000000000",
+                           "MERCATO_ENV_PRIMA": json.dumps({"SOGLIE_PV": "1"})})
+        es = collect.modo_notte(time.time())
+        assert es["zona"] == "impronta_diversa" and chiamate == []
+        assert os.environ.get("SOGLIE_PV") == "1" and "MERCATO_ENV_PRIMA" not in os.environ   # di nuovo il mercato
+    finally:
+        os.environ.clear()
+        os.environ.update(prima)
 
 
 def test_pg_configurazione_e_giro_con_avanzamento():
@@ -278,8 +342,10 @@ def test_pg_configurazione_e_giro_con_avanzamento():
     c.execute("CREATE TABLE tempo_reale (giro TEXT PRIMARY KEY, ultimo_at TIMESTAMPTZ, stats JSONB)")
     with env(ZC_SOGLIA="0.92", ANTHROPIC_API_KEY="sk-segreta"):
         assert turni.salva_config(connetti=_connetti(c)) > 0
-    cfg = turni.carica_config(connetti=_connetti(c))
-    assert cfg["ZC_SOGLIA"] == "0.92" and "ANTHROPIC_API_KEY" not in cfg
+    cfg, impronta = turni.carica_config(connetti=_connetti(c))
+    assert cfg["ZC_SOGLIA"] == "0.92" and "ANTHROPIC_API_KEY" not in cfg and len(impronta) == 12
+    c.execute("UPDATE tempo_reale SET stats = '{\"ZC_SOGLIA\": \"1\"}'")              # formato di prima: niente
+    assert turni.carica_config(connetti=_connetti(c)) is None
     assert "sk-segreta" not in json.dumps(c.execute("SELECT stats FROM tempo_reale").fetchall())
     with env(BATTITO="0"):
         g = turni.Giro("opportunita", t0=time.time() - 600, ore=2.75, connetti=_connetti(c)).apri()
@@ -413,7 +479,7 @@ def test_voci_spostabili_e_chiavi_di_sempre():
     assert CL.mancano("prova_cieca:30:30:solo_calcolo", {}) == [] and CL.mancano("raccolta60:x", {}) == []
     # stesse chiavi _una_volta di prima: una voce già fatta dal sito (es. stasera raccolta60:tel1611) non si rifà
     src = inspect.getsource(CL.esegui)
-    for chiave in ('_una_volta(f"raccolta60:{v[:60]}")', '_una_volta(v)', '_una_volta(f"brevo_mix:{v}")',
+    for chiave in ('_lungo(f"raccolta60:{v[:60]}"', '_lungo(v, "PERCHE_FUORI"', '_lungo(v, "PROVA_CIECA"', '_una_volta(f"brevo_mix:{v}")',
                    '_una_volta(f"fuori84:{v[:60]}")', '_una_volta(f"fermi:{v[:80]}")', '_una_volta(f"giro_lotto:{v[11:91]}")',
                    '_una_volta("utenti:" + v.split(":", 1)[1])', '_una_volta(f"brevo_rimetti:{v}")'):
         assert chiave in src, chiave
@@ -423,12 +489,53 @@ def test_voci_spostabili_e_chiavi_di_sempre():
 
 
 def test_raccolta60_gia_fatta_non_si_rifa(monkeypatch):
-    fatti = []
-    monkeypatch.setattr(ciclo, "_una_volta", lambda k: fatti.append(k) and False)
+    """Stasera raccolta60:tel1611 è già segnata dal sito con _una_volta (riga ok): ciclo.inizia la trova fatta."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from test_lavori import FintoDB
+    db = FintoDB()
+    db.righe.append({"id": 1, "job": "raccolta60:raccolta60:tel1611", "ok": True, "finito": True, "stats": {}})
+    vero = ciclo.inizia
+    monkeypatch.setattr(ciclo, "inizia", lambda job, tentativi_max=3, connetti=None: vero(job, tentativi_max, db.connetti))
     import dealfinder.pipeline.raccolta60 as R60
     monkeypatch.setattr(R60, "lavoro", lambda e: (_ for _ in ()).throw(AssertionError("non deve ripartire")))
-    CL.esegui("raccolta60:tel1611")
-    assert fatti == ["raccolta60:raccolta60:tel1611"]
+    with env(BATTITO="0"):
+        CL.esegui("raccolta60:tel1611")
+    assert len(db.righe) == 1
+
+
+def test_voce_lunga_fatta_solo_alla_fine(monkeypatch):
+    """Correzione del giudice: un processo ucciso a metà non lascia la voce "fatta"; un errore la lascia da rifare."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from test_lavori import FintoDB
+    db = FintoDB()
+    vero = ciclo.inizia
+    monkeypatch.setattr(ciclo, "inizia", lambda job, tentativi_max=3, connetti=None: vero(job, tentativi_max, db.connetti))
+    import dealfinder.pipeline.raccolta60 as R60
+
+    def ucciso(e):
+        raise SystemExit("ucciso dal limite di tempo")
+    monkeypatch.setattr(R60, "lavoro", ucciso)
+    with env(BATTITO="0"):
+        try:
+            CL.esegui("raccolta60:x1")
+        except SystemExit:
+            pass
+        assert db.righe[0]["ok"] is None and db.righe[0]["finito"] is None       # iniziata, NON fatta
+        for k in list(db.lucchetti):                                             # il processo è morto
+            del db.lucchetti[k]
+        fatti = []
+        monkeypatch.setattr(R60, "lavoro", lambda e: fatti.append(e))
+        CL.esegui("raccolta60:x1")                                              # il giro dopo la rifà
+        assert fatti == ["x1"] and db.righe[-1]["ok"] is True
+        CL.esegui("raccolta60:x1")
+        assert fatti == ["x1"]
+
+
+def test_durata_prevista_e_tempo_che_resta():
+    assert CL.durata_prevista("raccolta60:tel1611", {}) == 1.4 * 60 + 15
+    assert CL.durata_prevista("raccolta60:1611", {"R60_ORE": "2"}) == 135
+    assert CL.durata_prevista("perche_fuori:a", {"LAVORO_MIN_PERCHE_FUORI": "20"}) == 20
+    assert CL.durata_prevista("mix:1", {}) == 5
 
 
 def test_pg_coda_lavori_cron_e_ripiego_nel_sito():
@@ -445,17 +552,19 @@ def test_pg_coda_lavori_cron_e_ripiego_nel_sito():
     with env(BREVO_API_KEY=None, LAVORI_CRON=None):
         es = CL.esegui_coda(False, connetti=cn, esegui_fn=fatti.append)
     assert fatti == ["utenti:0811"] and es == {"mix:1200": "web", "utenti:0811": "fatto"}
-    # la notte: le lunghe
-    CL.esegui_coda(True, connetti=cn, esegui_fn=fatti.append)
+    # la notte: le lunghe, solo se la durata prevista (R60_ORE_TEL 1,4 h + 15 min) ci sta nel tempo che resta
+    es = CL.esegui_coda(True, budget_min=60, connetti=cn, esegui_fn=fatti.append)
+    assert es["rimandati"] == 1 and fatti[-1] == "utenti:0811"
+    CL.esegui_coda(True, budget_min=200, connetti=cn, esegui_fn=fatti.append)
     assert fatti[-1] == "raccolta60:tel1611"
     st = {r["valore"]: r["stato"] for r in c.execute("SELECT valore, stato FROM coda_lavori").fetchall()}
     assert st == {"raccolta60:tel1611": "fatto", "mix:1200": "web", "utenti:0811": "fatto"}
     # il sito fa solo quelle passate a lui (e le vecchie non prese)
     CL.metti("perche_fuori:b", connetti=cn)
-    CL.esegui_coda(None, chi="web", connetti=cn, esegui_fn=fatti.append)
+    CL.esegui_coda(None, budget_min=600, chi="web", connetti=cn, esegui_fn=fatti.append)
     assert fatti[-1] == "mix:1200" and "perche_fuori:b" not in fatti
     c.execute("UPDATE coda_lavori SET creato_at = now() - interval '31 hours' WHERE valore = 'perche_fuori:b'")
-    CL.esegui_coda(None, chi="web", connetti=cn, esegui_fn=fatti.append)
+    CL.esegui_coda(None, budget_min=600, chi="web", connetti=cn, esegui_fn=fatti.append)
     assert fatti[-1] == "perche_fuori:b"
     # tempo finito: le altre tornano in coda
     CL.metti("perche_fuori:c", connetti=cn)
@@ -490,3 +599,31 @@ def test_render_filtri_di_build_e_facebook_senza_deploy_automatico():
                     assert not [f for f in files if f.endswith(".py")], rad
     wk = yaml.safe_load(open(os.path.join(QUI, "render-worker.yaml")))["services"][0]
     assert wk["buildFilter"]["ignoredPaths"] and wk["autoDeploy"] is True
+
+
+def test_pg_ai_prezzi_contato_nel_giro(monkeypatch):
+    """ai_prezzi dentro il tetto del giro: tempo massimo = fine del tetto, durata nella riga giro:opportunita."""
+    c = pg_vero.nuovo_db("fond_aiprezzi")
+    if c is None:
+        return
+    c.execute(JOB_RUNS)
+    gid = c.execute("INSERT INTO job_runs (job, started_at, stats) VALUES ('giro:opportunita', now() - interval "
+                    "'100 minutes', '{\"fasi\": {\"zona\": 3000}}') RETURNING id").fetchone()["id"]
+    import subprocess
+    visti = {}
+    vero_run = subprocess.run
+
+    def finto_run(cmd, *a, timeout=None, **kw):
+        if "dealfinder.pricing.ai_prezzi" not in cmd:
+            return vero_run(cmd, *a, timeout=timeout, **kw)            # psql del Postgres di prova
+        visti["timeout"] = timeout
+        raise subprocess.TimeoutExpired(cmd, timeout)
+    monkeypatch.setattr(subprocess, "run", finto_run)
+    with env(BATTITO="0"):
+        es = turni._ai_prezzi_con_scadenza(gid, time.time() + 65 * 60, connetti=_connetti(c))
+    assert es == {"fermato": "fine del tetto del giro"} and 64 * 60 < visti["timeout"] <= 65 * 60
+    r = c.execute("SELECT finished_at, ok, stats FROM job_runs WHERE id = %s", (gid,)).fetchone()
+    assert r["finished_at"] and r["ok"] is True and r["stats"]["fasi"]["zona"] == 3000
+    assert "ai_prezzi" in r["stats"]["fasi"] and r["stats"]["minuti"] >= 100
+    t = c.execute("SELECT ok FROM job_runs WHERE job = 'turno:ai_prezzi'").fetchone()
+    assert t["ok"] is False

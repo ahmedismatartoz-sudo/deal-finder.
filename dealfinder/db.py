@@ -251,7 +251,13 @@ def _avvia_filo_battiti() -> None:
             if not ids:
                 continue
             try:
-                with connect() as c:
+                # connessione propria con tempo massimo: un database lento non blocca il filo (né lo fa sembrare morto
+                # per ore: al massimo salta un battito)
+                import psycopg
+                from psycopg.rows import dict_row
+                with psycopg.connect(settings.database_url, row_factory=dict_row,
+                                     connect_timeout=int(os.environ.get("BATTITO_CONNECT_S") or 10)) as c:
+                    c.execute("SET statement_timeout = '30s'")
                     battito_ora(c, ids)
             except Exception as e:                  # un battito perso non ferma nulla: il prossimo riprova
                 print("BATTITO non scritto:", type(e).__name__, flush=True)

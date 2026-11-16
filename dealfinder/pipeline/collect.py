@@ -1495,8 +1495,32 @@ def _lavori_in_fila(_t0_loop: float) -> None:
             log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
 
 
-NOTTE_FINE_ORE = 10.0      # ore dall'avvio del cron mercato entro cui il passo notturno deve finire (poi ai_prezzi)
+NOTTE_FINE_ORE = 10.0      # ore dall'avvio del cron mercato entro cui la zona completa deve finire (poi ai_prezzi)
+NOTTE_ZONA_ORE = 14        # zona completa dovuta se l'ultima è INIZIATA da oltre 14 ore: ogni notte, mai oltre 24 ore
+RENDER_ORE_MAX = 11.5      # margine dentro le 12 ore dei cron di Render: oltre non parte nessun lavoro
 STIMA_ZONA_COMPLETA_MIN = 285
+_TURNO_COMPLETO = {"zona_cron": "turno:zona_completo", "torino_cron": "turno:torino_completo"}
+
+
+def ore_dal_completo(nome: str) -> float | None:
+    """Ore dall'INIZIO dell'ultima lettura completa di `nome` ('zona_cron', 'torino_cron').
+    Correzione del giudice (16/11): '<nome>:completo' si scrive a FINE lettura (zona ~09:45 UTC), quindi la notte dopo
+    (~04:50) risultavano ~19 ore < 20 e la zona completa saltava una notte su due (~43 ore). Ora conta l'inizio del
+    turno notturno ('turno:zona_completo'); se dopo c'è stato un completo più recente (ripiego del giro ogni 3 ore,
+    fine registrata oltre 8 ore dopo l'inizio del turno) conta quello."""
+    from . import turni
+    h_inizio = turni.ore_dall_ultimo(_TURNO_COMPLETO[nome])
+    h_fine = turni.ore_dall_ultimo(nome + ":completo")
+    if h_inizio is None:
+        return h_fine
+    if h_fine is not None and h_fine < h_inizio - 8:
+        return h_fine
+    return h_inizio
+
+
+def _completo_dovuto_oggi(nome: str) -> bool:
+    h = ore_dal_completo(nome)
+    return h is None or h >= float(os.environ.get("NOTTE_ZONA_ORE") or NOTTE_ZONA_ORE)
 
 
 def notte_dovuta(t0: float, ora: float | None = None) -> bool:
@@ -1516,80 +1540,102 @@ def notte_dovuta(t0: float, ora: float | None = None) -> bool:
 
 
 def zona_notte_ok(t0: float, ora: float | None = None) -> bool:
-    """Il passo notturno fa stanotte la zona completa? Sì se la zona completa è dovuta (oltre 20 ore),
-    c'è tempo per finirla entro NOTTE_FINE_ORE dall'avvio del cron e stanotte non tocca a mercato_nord (settimanale,
-    che però non tiene ferma la zona completa per più di 36 ore)."""
+    """Il passo notturno fa stanotte la zona completa? Sì se è dovuta (ultima iniziata da oltre NOTTE_ZONA_ORE ore) e
+    c'è tempo per finirla entro NOTTE_FINE_ORE dall'avvio del cron. Non cede più il posto a mercato_nord (che riprende
+    da dove era arrivato, anche in più notti): così la zona completa c'è almeno una volta ogni 24 ore.
+    NOTTE_CEDE_A_NORD=1 torna a cedere (al massimo 36 ore senza zona completa)."""
     import time as _t
     from . import turni
     if os.environ.get("NOTTE", "1") == "0" or not turni.giro_leggero():
         return False
-    h = turni.ore_dall_ultimo("zona_cron:completo")
-    if h is not None and h < float(os.environ.get("NOTTE_ZONA_ORE") or 20):
+    if not _completo_dovuto_oggi("zona_cron"):
         return False
-    try:
-        from .ciclo import _due
-        nord = os.environ.get("MERCATO_NORD", "1") == "1" and _due("collect:mercato_nord", 24 * 6)
-    except Exception:
-        nord = False
-    if nord and h is not None and h < 36:
-        log.warning("NOTTE: stanotte tocca a mercato_nord, zona completa domani (ultima %.0f ore fa)", h)
-        return False
+    h = ore_dal_completo("zona_cron")
+    if os.environ.get("NOTTE_CEDE_A_NORD") == "1":
+        try:
+            from .ciclo import _due
+            nord = os.environ.get("MERCATO_NORD", "1") == "1" and _due("collect:mercato_nord", 24 * 6)
+        except Exception:
+            nord = False
+        if nord and h is not None and h < 36:
+            log.warning("NOTTE: stanotte tocca a mercato_nord, zona completa domani (ultima %.0f ore fa)", h)
+            return False
     passate = ((ora if ora is not None else _t.time()) - t0) / 3600
     stima = turni.stima("zona_completo", STIMA_ZONA_COMPLETA_MIN) / 60
     if passate + stima > float(os.environ.get("NOTTE_FINE_ORE") or NOTTE_FINE_ORE):
-        log.warning("NOTTE: zona completa non parte, già %.1f ore dall'avvio + stima %.1f ore", passate, stima)
+        log.warning("NOTTE: zona completa non parte, già %.1f ore dall'avvio + stima %.1f ore (ripiego: il giro ogni "
+                    "3 ore la fa da sé dopo %s ore senza)", passate, stima, os.environ.get("COMPLETO_MAX_ORE") or turni.COMPLETO_MAX_ORE)
         return False
     return True
 
 
+def avvia_notte(t0: float) -> None:
+    """Dal cron mercato: passo notturno in un processo NUOVO (os.execve) il cui ambiente è già quello giusto PRIMA di
+    ogni import: variabili copiabili del cron opportunità (fotografia), senza quelle che ha solo il mercato, segreti e
+    variabili di processo del mercato. Senza fotografia: ambiente del mercato e solo i lavori in coda. Non ritorna."""
+    from . import turni
+    info = turni.carica_config() if zona_notte_ok(t0) else None
+    if info:
+        env = turni.ambiente_notte(dict(os.environ), info[0])
+        env["NOTTE_CONFIG"], env["NOTTE_IMPRONTA_ATTESA"] = "1", info[1]
+    else:
+        env = dict(os.environ)
+        env["MERCATO_ENV_PRIMA"] = json.dumps(turni.variabili_da_copiare(os.environ))
+    env["MERCATO_NOTTE_FASE"] = "1"
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execve(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"], env)
+
+
 def modo_notte(t0: float) -> dict:
-    """Passo notturno (processo nuovo del cron mercato): con la configurazione del cron opportunità, giro COMPLETO della
-    zona e, se resta tempo, Torino completo; poi i lavori una tantum lunghi in coda. Lucchetti condivisi con il giro ogni
-    3 ore. L'ambiente torna com'era alla fine (mercato_nord e ai_prezzi girano con il loro)."""
+    """Passo notturno (processo nuovo del cron mercato, ambiente dato da avvia_notte): giro COMPLETO della zona e, se
+    resta tempo, Torino completo, solo se l'impronta delle regole è UGUALE a quella del cron opportunità; poi si torna
+    all'ambiente del mercato e i lavori una tantum lunghi partono ognuno in un processo nuovo, solo se la loro durata
+    prevista sta nel tempo (sempre dentro le 12 ore di Render)."""
     import time as _t
     from . import turni
     esito: dict = {}
-    originale = dict(os.environ)
     giro = turni.Giro("notte", t0, ore=float(os.environ.get("NOTTE_FINE_ORE") or NOTTE_FINE_ORE)).apri()
     try:
-        cfg = turni.carica_config()
-        if not zona_notte_ok(t0):
-            esito["zona"] = "non_dovuta"
-        elif not cfg or cfg.get("ZONA_CRON") != "1":
-            log.warning("NOTTE: configurazione del cron opportunità assente, vecchia o senza ZONA_CRON: niente zona completa")
-            esito["zona"] = "senza_config"
+        attesa = os.environ.get("NOTTE_IMPRONTA_ATTESA")
+        if os.environ.get("NOTTE_CONFIG") != "1":
+            log.warning("NOTTE: niente zona completa (non dovuta, o fotografia del cron opportunità assente/vecchia)")
+            esito["zona"] = "non_dovuta_o_senza_config"
         else:
-            cambiate = turni.applica_config(cfg)
-            log.warning("NOTTE: configurazione del cron opportunità applicata (%d variabili cambiate)", len(cambiate))
-            with turni.lucchetto("zona_cron:lettura", attesa_s=int(os.environ.get("NOTTE_ATTESA_S") or 2700)) as preso:
-                if preso:
-                    giro.fase("zona_completa")
-                    esito["zona"] = turni.esegui("zona_completo", lambda: {"letta": giro_zona(True)})
-                else:
-                    esito["zona"] = "occupata"
-            if os.environ.get("TORINO_GIRO", "1") == "1" and _completo_dovuto_oggi("torino_cron") \
-                    and giro.tempo_per("torino_completo", turni.stima("torino_completo")):
-                giro.fase("torino_completo")
-                esito["torino"] = turni.esegui("torino_completo", lambda: (
-                    torino_del_giro(None, completo=True, solo_subito=torino_dopo_zona()), {"fatto": True})[1])
+            qui = turni.impronta_regole()
+            if not attesa or qui != attesa:
+                log.warning("NOTTE: impronta delle regole DIVERSA dal cron opportunità (attesa %s, qui %s): zona completa "
+                            "e Torino completo saltati (servizi su versioni diverse? si riprova la notte dopo; dopo %s "
+                            "ore senza completo lo fa il giro ogni 3 ore)", attesa, qui,
+                            os.environ.get("COMPLETO_MAX_ORE") or turni.COMPLETO_MAX_ORE)
+                esito["zona"] = "impronta_diversa"
+            else:
+                with turni.lucchetto("zona_cron:lettura", attesa_s=int(os.environ.get("NOTTE_ATTESA_S") or 2700)) as preso:
+                    if preso:
+                        giro.fase("zona_completa")
+                        esito["zona"] = turni.esegui("zona_completo", lambda: {"letta": giro_zona(True)})
+                    else:
+                        esito["zona"] = "occupata"
+                if os.environ.get("TORINO_GIRO", "1") == "1" and _completo_dovuto_oggi("torino_cron") \
+                        and giro.tempo_per("torino_completo", turni.stima("torino_completo")):
+                    giro.fase("torino_completo")
+                    esito["torino"] = turni.esegui("torino_completo", lambda: (
+                        torino_del_giro(None, completo=True, solo_subito=torino_dopo_zona()), {"fatto": True})[1])
+        turni.applica_ambiente(turni.ambiente_mercato(dict(os.environ)))    # da qui l'ambiente del mercato
         try:
             from . import coda_lavori
             giro.fase("lavori_lunghi")
-            esito["lavori"] = coda_lavori.esegui_coda(lunghi=True, budget_min=max(0.0, giro.resto_min() - 20))
+            resto = min(giro.resto_min() + 60,            # i lavori possono andare oltre le 10 ore della zona...
+                        float(os.environ.get("RENDER_ORE_MAX") or RENDER_ORE_MAX) * 60 - giro.passate_min())  # ...non le 12
+            esito["lavori"] = coda_lavori.esegui_coda(lunghi=True, budget_min=max(0.0, resto), separato=True)
         except Exception as e:
             log.warning("NOTTE lavori in coda non fatti: %s", str(e)[:200])
     finally:
-        os.environ.clear()
-        os.environ.update(originale)
+        if "MERCATO_ENV_PRIMA" in os.environ:
+            turni.applica_ambiente(turni.ambiente_mercato(dict(os.environ)))
         giro.chiudi(True, **{k: str(v)[:200] for k, v in esito.items()})
     log.warning("NOTTE fatta in %.0f min: %s", (_t.time() - t0) / 60, json.dumps(esito, default=str)[:500])
     return esito
-
-
-def _completo_dovuto_oggi(nome: str) -> bool:
-    from . import turni
-    h = turni.ore_dall_ultimo(nome + ":completo")
-    return h is None or h >= float(os.environ.get("NOTTE_ZONA_ORE") or 20)
 
 
 def torino_dopo_zona() -> bool:
@@ -1695,13 +1741,8 @@ if __name__ == "__main__":
         sys.exit(0)
     # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
     mode = os.environ.get("COLLECT_MODO") or mode
-    try:                                             # 3/11 sentinella: impronta delle regole + controlli, una volta per giro
-        from .. import sentinella as _sent           # (solo lettura, mai eccezioni; salta se fatti < 30 min fa)
-        _sent.salva_impronta("cron:" + mode)
-        _sent.esegui("cron:" + mode)
-    except Exception:
-        pass
-    # 16/11 (fond-server): righe "in corso" con il battito fermo (processi morti) chiuse come interrotte
+    # 16/11 (fond-server): righe "in corso" con il battito fermo (processi morti) chiuse come interrotte (prima della sentinella:
+    # così non le conta come allarmi)
     try:
         from ..db import chiudi_interrotti as _ci, connect as _cn0
         with _cn0() as _c0:
@@ -1711,11 +1752,19 @@ if __name__ == "__main__":
                         ", ".join(sorted({r["job"] for r in _chiuse}))[:400])
     except Exception as e:
         log.warning("INTERROTTI non controllati: %s", str(e)[:200])
+    try:                                             # 3/11 sentinella: impronta delle regole + controlli, una volta per giro
+        from .. import sentinella as _sent           # (solo lettura, mai eccezioni; salta se fatti < 30 min fa)
+        _sent.salva_impronta("cron:" + mode)
+        _sent.esegui("cron:" + mode)
+    except Exception:
+        pass
     _giro = None
     if mode == "opportunita":
         from . import turni as _turni
-        # fotografia della configurazione PRIMA di ogni cambio dell'ambiente: la usa il passo notturno del cron mercato
-        _turni.salva_config()
+        # fotografia della configurazione PRIMA di ogni cambio dell'ambiente: la usa il passo notturno del cron mercato.
+        # Solo dal servizio dealfinder-opportunita, mai con COLLECT_SOLO_PRIMA / TORINO_ORA / NOVARA_ORA.
+        if _turni.fotografia_ammessa(mode):
+            _turni.salva_config()
         if _turni.giro_leggero():
             _giro = _turni.inizia_giro("opportunita", float(os.environ["CRON_T0"]))
             try:                                     # lavori una tantum brevi passati dal sito al cron (coda_lavori.py)
@@ -2256,10 +2305,7 @@ if __name__ == "__main__":
         # nuovo: la memoria dell'addestramento si libera tutta. Da lì poi mercato_nord (se dovuto) e il modello AI.
         try:
             if notte_dovuta(float(os.environ["CRON_T0"])):
-                os.environ["MERCATO_NOTTE_FASE"] = "1"
-                sys.stdout.flush()
-                sys.stderr.flush()
-                os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"])
+                avvia_notte(float(os.environ["CRON_T0"]))
         except Exception as e:
             log.warning("NOTTE non avviata: %s", str(e)[:300])
         # una volta a settimana: prezzi di mercato da tutto il Nord (AutoScout24) per il modello AI e i confronti
@@ -2285,8 +2331,13 @@ if __name__ == "__main__":
             _giro.fase("schede_pagine")
         _schede_pagine(_t0_loop, _giro)
     if mode in ("opportunita", "mercato") and tempo_ok("ai_prezzi", 10.5, _t0_loop) \
-            and (_giro is None or _giro.tempo_per("ai_prezzi", float(os.environ.get("AI_PREZZI_STIMA_MIN") or 30))):
+            and (_giro is None or _giro.tempo_per("ai_prezzi", _turni.stima("ai_prezzi", float(
+                os.environ.get("AI_PREZZI_STIMA_MIN") or 30)))):
         if _giro is not None:
+            try:                           # 16/11: dentro il tetto del giro, con un tempo massimo (non ritorna)
+                _turni.ai_prezzi_nel_giro(_giro)
+            except Exception as e:
+                log.warning("GIRO ai_prezzi nel giro non avviato: %s", str(e)[:200])
             _giro.chiudi(True)
         _ai_prezzi()                       # ultimo passo: sostituisce il processo (memoria pulita)
     if _giro is not None:

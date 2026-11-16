@@ -22,7 +22,7 @@ Ora (`pipeline/turni.py`, `pipeline/collect.py`):
 | Ricalcolo (voce `ricalcolo…` di COLLECT_PRIMA) | 1 volta al giorno (conta anche quello del cron mercato); subito dopo ≥ 1.000 confronti nuovi | cron opportunità |
 | Altre voci di COLLECT_PRIMA | con la loro cadenza (`@ore`), a turno | cron opportunità |
 | Torino completo | 1 volta al giorno, a turno (o nella notte se resta tempo) | opportunità / notte |
-| **Zona completa** | 1 volta per notte (non nelle notti di mercato_nord, mai oltre 36 ore) | cron mercato, passo notturno |
+| **Zona completa** | ogni notte (dovuta se l'ultima è **iniziata** da oltre 14 ore: almeno una volta ogni 24 ore, anche nelle notti di mercato_nord) | cron mercato, passo notturno |
 | Lavori una tantum lunghi (raccolta60, perche_fuori, prova_cieca) | notte | cron mercato, passo notturno |
 
 - **Tetto del giro**: `GIRO_ORE_MAX` = 2 h 45 min dall'avvio (riserva 15 min per la fine). Un lavoro a turno parte solo
@@ -35,17 +35,38 @@ Ora (`pipeline/turni.py`, `pipeline/collect.py`):
   un giro ancora in lettura.
 - **Avanzamento durante il giro**: riga `giro:opportunita` in job_runs aperta all'avvio, con il battito, la fase in
   corso, i secondi di ogni fase e i lavori rimandati; chiusa a fine giro (anche da `sys.exit`, prima di `ai_prezzi`).
-- **Stessa configurazione nella notte**: a ogni giro il cron opportunità salva una fotografia delle sue variabili non
-  segrete (`tempo_reale`, riga `config:opportunita`; mai chiavi, password, URL, proxy, variabili di processo). Il
-  passo notturno del cron mercato la applica solo per sé (poi l'ambiente torna com'era): stesse funzioni, stesse
-  variabili, stesso risultato per la stessa auto.
-- **Ripiego**: se non c'è un giro completo della zona (o di Torino) da oltre 48 ore (`COMPLETO_MAX_ORE`), il giro ogni 3
-  ore torna a decidere da sé come prima (completo ogni ZC_COMPLETO_ORE).
+- **Stessa configurazione nella notte**: all'avvio (prima di ogni cambio dell'ambiente) il cron opportunità salva una
+  fotografia delle sue variabili non segrete + l'**impronta delle regole** (`regole_log.impronta`) nella tabella
+  `tempo_reale`, riga `config:opportunita`. Solo dal servizio `dealfinder-opportunita` (`RENDER_SERVICE_NAME`), mai con
+  COLLECT_SOLO_PRIMA, TORINO_ORA o NOVARA_ORA. Segreti esclusi con un **elenco esplicito** di nomi
+  (`turni.SEGRETI_NOMI`) + desinenze inequivocabili (`_API_KEY`, `_TOKEN`, `_SECRET`, `_PASSWORD`…) + controllo sul
+  **valore** (URL con credenziali, chiavi note, JWT, webhook, email, stringhe lunghe da token). Le regole con "KEY" o
+  "SALT" nel nome (PROBLEM_KEYWORDS, BENZ_SALTA_AUTOSCOUT, FILTRA_SALTA_MODELLO, LOMBARDIA_SALTA_SUBITO) ora si copiano.
+- Il cron mercato avvia il passo notturno con `os.execve` e un ambiente già pronto **prima di ogni import**: le
+  variabili copiabili del cron opportunità, **senza** quelle non segrete che ha solo il mercato, più segreti e variabili
+  di processo del mercato. Nel processo notturno l'impronta delle regole si ricalcola: se è **diversa** da quella della
+  fotografia (es. servizi su versioni diverse) zona e Torino completi si saltano con il log `NOTTE: impronta delle
+  regole DIVERSA…`. Poi si torna all'ambiente del mercato (per lavori in coda, mercato_nord, modello AI).
+- **Ripiego**: se non c'è un giro completo della zona (o di Torino) finito da oltre 30 ore (`COMPLETO_MAX_ORE`), il giro
+  ogni 3 ore torna a decidere da sé come prima (completo ogni ZC_COMPLETO_ORE).
+- **Modello AI dei prezzi nel tetto**: l'ultimo passo del giro (`ai_prezzi`) parte solo se la sua stima ci sta e gira
+  con un tempo massimo = fine del tetto; la sua durata entra nella riga `giro:opportunita` (`turni.ai_prezzi_nel_giro`).
 - **Interruttori** (default nel codice, nessuno da impostare): `GIRO_LEGGERO=0` torna al giro di prima (tutto in fila,
   solo i vecchi limiti di tempo); `GIRO_ORE_MAX`, `GIRO_RISERVA_MIN`, `CE_TURNO_ORE`, `RICALCOLO_ORE_MIN`,
   `TORINO_COMPLETO_TURNO_ORE`, `NOTTE=0` (niente passo notturno), `NOTTE_FINE_ORE` (10), `NOTTE_ZONA_ORE` (20).
 - Rivalutazione solo delle righe cambiate: già nel codice dal 15/11 (`UTIL_INVARIATE_ORE`, `RIC_INVARIATE_ORE`, lettura
   incrementale con "già visto e invariato"); qui non è toccata (pricing/valutazione sono di un altro gruppo).
+
+### Cambi di cadenza (rispetto a prima)
+
+| Lavoro | Prima | Ora |
+|---|---|---|
+| Zona completa | ogni ZC_COMPLETO_ORE (12) ore, dentro il giro | 1 volta al giorno, di notte (cron mercato) |
+| Torino completo | ogni TORINO_COMPLETO_ORE (12) ore | ~1 volta ogni 24 ore (turno o notte) |
+| Confronti extra | a ogni giro (le città a turno) | 1 volta al giorno (subito se una città è in ritardo) |
+| Ricalcolo | `ricalcolo@6`: ogni 6 ore | 1 volta al giorno (o subito dopo ≥ 1.000 confronti nuovi) |
+| Supercar | a ogni giro (riga mai scritta) | raccolta 1 volta al giorno + una valutazione |
+| Giri delle 06:07 e 09:07 UTC | zona letta | **senza zona** se la notte la sta ancora leggendo (lucchetto) |
 
 ### Orari (UTC; Roma = UTC+1)
 
@@ -82,7 +103,14 @@ Ora (`pipeline/turni.py`, `pipeline/collect.py`):
 
 - Le voci **lunghe** di `BREVO_IMPORT_LISTE` (raccolta60, perche_fuori, prova_cieca) il sito non le esegue più: le
   scrive nella tabella `coda_lavori` (creata dal codice, una riga per voce: un riavvio non la duplica). Le fa il passo
-  notturno del cron mercato. Le voci **brevi** (chiamate Brevo) restano nel sito per non ritardare gli invii; con
+  notturno del cron mercato, **ognuna in un processo nuovo** (memoria pulita, niente accumulo con zona e Torino) con un
+  tempo massimo, e solo se la sua **durata prevista** (raccolta60: R60_ORE / R60_ORE_TEL + 15 min; altre
+  `LAVORO_MIN_<PREFISSO>`, default 60) sta nel tempo che resta, sempre entro 11,5 ore dall'avvio (12 di Render).
+  Altrimenti resta in coda per la notte dopo.
+- Le voci lunghe sono segnate **fatte solo a lavoro finito** (`ciclo.inizia`: riga con battito e lucchetto; stessa
+  chiave di prima). Un processo ucciso a metà non la lascia "fatta": la riga ferma si chiude come interrotta e la voce
+  si riprende (al massimo 3 tentativi). Gli **invii** Brevo restano con `_una_volta` (segnati prima di partire) apposta:
+  meglio un invio perso che una email mandata due volte. Le voci **brevi** (chiamate Brevo) restano nel sito per non ritardare gli invii; con
   `LAVORI_NEL_CRON=tutti` (sul sito) vanno anche loro al cron (giro opportunità, fino a 3 ore dopo). `LAVORI_NEL_CRON=0`
   torna a prima. Le voci che leggono l'elenco del sito in memoria (su_misura, nuovi_sm, rinvio_sm, su_misura2, zona,
   wa30, "1") restano nel sito.
@@ -124,9 +152,15 @@ in N min`, `NOTTE fatta in N min`, `INTERROTTI chiusi N lavori`, `LAVORI (cron, 
 
 ## Rischi noti
 
+- `RENDER_SERVICE_NAME` deve valere `dealfinder-opportunita` sul cron opportunità (Render lo imposta da sé). Se su quel
+  servizio fosse impostato COLLECT_SOLO_PRIMA=1 la fotografia non si salva mai: la notte salta la zona completa e la fa
+  il giro ogni 3 ore dopo 30 ore (giro lungo).
 - Il primo giorno le stime sono quelle nel codice: un lavoro può essere rimandato finché non ha una durata registrata
   (si sblocca con la regola del "ritardo oltre un giorno").
 - La zona completa ora è nel cron mercato: se la fotografia della configurazione manca (cron opportunità mai partito
-  col codice nuovo) la notte la salta; dopo 48 ore senza completo il giro ogni 3 ore torna a farla da sé.
-- Nelle notti di mercato_nord la zona completa si salta (al massimo 36 ore senza).
+  col codice nuovo) la notte la salta; dopo 30 ore senza completo il giro ogni 3 ore torna a farla da sé.
+- Nelle notti di mercato_nord la zona completa va per prima: mercato_nord ha meno tempo e riprende la notte dopo (è
+  fatto per finire in più notti).
+- Fuori dalla notte, `chiudi_interrotti` gira all'avvio di ogni cron PRIMA della sentinella; il filo dei battiti usa
+  connessioni con `connect_timeout` 10 s e `statement_timeout` 30 s.
 - Il deploy del sito interrompe un lavoro in corso nel sito (come sempre): aspettare la fine di `raccolta60:tel1611`.

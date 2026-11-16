@@ -34,7 +34,7 @@ log = logging.getLogger("turni")
 
 GIRO_ORE_MAX = 2.75            # tetto del giro ogni 3 ore (prima della partenza del giro dopo, con margine)
 RISERVA_MIN = 15               # minuti tenuti per la fine del giro (analisi, scheda tecnica, registrazione)
-COMPLETO_MAX_ORE = 48          # senza giro completo da tante ore (notte non riuscita) il giro lo fa da sé, come prima
+COMPLETO_MAX_ORE = 30          # senza giro completo da tante ore (notte non riuscita) il giro lo fa da sé, come prima
 NOTTE_ORE_MAX = 6.0            # tempo massimo del passo notturno nel cron mercato (zona completa + Torino completo)
 
 # Stime iniziali in minuti (dai log del 13-16/11), usate finché job_runs non ha almeno un giro riuscito del turno
@@ -327,46 +327,101 @@ def inizia_giro(nome: str, t0: float | None = None) -> Giro:
 # ------------------------------------------------------------------ fotografia della configurazione del cron opportunità
 
 CHIAVE_CONFIG = "config:opportunita"
-# mai nel database: segreti e variabili del singolo processo
-_SEGRETI = re.compile(r"(KEY|SECRET|TOKEN|PASSWORD|PASSWD|PASS$|CREDENZ|CREDENTIAL|PRIVATE|SALT|COOKIE|AUTH|_URL$|URL$|"
-                      r"PROXY|DSN|USERNAME|_USER$|SID$)", re.I)
+SERVIZIO_FOTOGRAFIA = "dealfinder-opportunita"
+
+# Segreti: elenco ESPLICITO dei nomi (tutti quelli letti nel codice e in render.yaml) + poche desinenze inequivocabili.
+# Prima un filtro a parole ("KEY", "SALT", "PASS" ovunque nel nome) escludeva anche regole vere (PROBLEM_KEYWORDS,
+# BENZ_SALTA_AUTOSCOUT, FILTRA_SALTA_MODELLO, LOMBARDIA_SALTA_SUBITO): la notte girava con regole diverse.
+SEGRETI_NOMI = frozenset("""
+    ADMIN_EMAIL ADMIN_PASSWORD ANTHROPIC_API_KEY APIFY_TOKEN APIFY_TOKENS APPLE_CLIENT_ID APPLE_KEY_ID APPLE_PRIVATE_KEY
+    APPLE_TEAM_ID APPUNTAMENTI_EMAIL BDKEY BRAVE_API_KEY BREVO_API_KEY BRIGHTDATA_API_KEY BRIGHTDATA_NUOVA
+    BRIGHTDATA_SEARCHES BRIGHTDATA_UNLOCKER_ZONE CARTESIA_API_KEY COMMERCIANTI_KEY DATABASE_URL ELEVENLABS_API_KEY
+    ESPORTA_EMAIL GEMINI_API_KEY GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET META_PROVIDER_TOKEN OPENAI_API_KEY
+    OPENAPI_PLATE_URL OPENAPI_TOKEN OUTSCRAPER_KEY PLATE_LOOKUP_KEY PLATE_LOOKUP_URL PLATE_SALT REGCHECK_PASSWORD
+    REGCHECK_URL REGCHECK_USERNAME SCRAPER_PROXY SECRET_KEY SENTRY_DSN STRIPE_PUBLISHABLE_KEY STRIPE_SECRET_KEY
+    STRIPE_WEBHOOK_SECRET TYPESAFE_API_KEY TYPESAFE_URL HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY
+""".split())
+_SEGRETO_DESINENZA = re.compile(r"(_API_KEY|_SECRET_KEY|_PRIVATE_KEY|_SECRET|_TOKEN|_TOKENS|_PASSWORD|_PASSWD|_DSN|"
+                                r"_WEBHOOK|_WEBHOOK_URL|_USERNAME|_CREDENTIALS?|_COOKIE)$")
+# Valore che sembra un segreto anche sotto un nome innocuo: mai nel database
+_SEGRETO_VALORE = re.compile(r"://[^/\s]*@"                                   # URL con utente/password
+                             r"|^(sk|pk|rk|whsec|xkeysib|xsmtpsib|ghp|gho|glpat|AKIA)[-_]?[A-Za-z0-9]"  # chiavi note
+                             r"|^ey[A-Za-z0-9_-]{20,}\."                       # JWT
+                             r"|hook"                                           # webhook (Slack, Discord, Zapier...)
+                             r"|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"  # email
+                             r"|^[A-Za-z0-9+/_=-]{40,}$", re.I)                 # stringa lunga senza spazi (token)
 _DI_PROCESSO = {"PATH", "HOME", "PWD", "OLDPWD", "HOSTNAME", "SHLVL", "_", "PORT", "LANG", "TERM", "USER", "SHELL",
-                "COLLECT_MODO", "COLLECT_PRIMA", "COLLECT_SOLO_PRIMA", "CRON_T0", "MERCATO_NORD_FASE", "TORINO_ORA",
+                "COLLECT_MODO", "COLLECT_PRIMA", "COLLECT_SOLO_PRIMA", "CRON_T0", "MERCATO_NORD_FASE",
+                "MERCATO_NOTTE_FASE", "MERCATO_ENV_PRIMA", "NOTTE_IMPRONTA_ATTESA", "NOTTE_CONFIG", "TORINO_ORA",
                 "NOVARA_ORA", "RICALCOLO_SUBITO", "PASSI_JOB", "COLLECT_JOB", "AUTOSCOUT_CAP", "AUTOSCOUT_RAGGIO",
-                "ANALISI_ATTIVA", "BREVO_IMPORT_LISTE"}
-_PREFISSI_PROCESSO = ("RENDER", "PYTHON", "LC_", "BENZ_INCR", "BENZ_INCREMENTALE", "GIT_", "IS_PULL", "UV_", "PIP_",
-                      "VIRTUAL_ENV", "XDG_", "SSL_", "REQUESTS_", "CURL_", "NODE_", "KUBERNETES", "OTEL_")
+                "BREVO_IMPORT_LISTE", "FOTOGRAFIA_SERVIZIO"}
+_PREFISSI_PROCESSO = ("RENDER", "PYTHON", "LC_", "BENZ_INCR", "GIT_", "IS_PULL", "UV_", "PIP_", "VIRTUAL_ENV", "XDG_",
+                      "SSL_", "REQUESTS_", "CURL_", "NODE_", "KUBERNETES", "OTEL_", "GUNICORN", "UVICORN")
+
+
+def segreto(nome: str, valore=None) -> bool:
+    """Il nome o il valore sono di un segreto (o di un dato personale: email)."""
+    if nome in SEGRETI_NOMI or _SEGRETO_DESINENZA.search(nome):
+        return True
+    return valore is not None and bool(_SEGRETO_VALORE.search(str(valore).strip()))
+
+
+def di_processo(nome: str) -> bool:
+    return nome in _DI_PROCESSO or nome.startswith(_PREFISSI_PROCESSO)
+
+
+def copiabile(nome: str, valore) -> bool:
+    """Variabile che si copia dalla configurazione del cron opportunità alla notte (regole e impostazioni dei giri)."""
+    if valore is None or di_processo(nome) or segreto(nome, valore):
+        return False
+    return bool(re.fullmatch(r"[A-Z][A-Z0-9_]{0,80}", nome)) and len(str(valore)) <= 2000
 
 
 def variabili_da_copiare(env: dict) -> dict:
     """Le variabili del cron opportunità che decidono COSA leggere e COME valutare (ZC_*, TORINO_*, POLICY_*, SOGLIE_PV,
-    ...): tutte tranne i segreti e quelle del singolo processo. Mai valori più lunghi di 2.000 caratteri."""
-    out = {}
-    for k, v in env.items():
-        if k in _DI_PROCESSO or k.startswith(_PREFISSI_PROCESSO) or _SEGRETI.search(k):
-            continue
-        if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,80}", k) or v is None or len(str(v)) > 2000:
-            continue
-        out[k] = str(v)
-    return out
+    PROBLEM_KEYWORDS, ...): tutte tranne i segreti (nome nell'elenco o valore da segreto) e quelle del processo."""
+    return {k: str(v) for k, v in env.items() if copiabile(k, v)}
 
 
-def salva_config(processo: str = "opportunita", connetti=None) -> int:
-    """Fotografia delle variabili del cron opportunità (tabella tempo_reale, riga 'config:opportunita')."""
-    dati = variabili_da_copiare(dict(os.environ))
+def impronta_regole(env=None) -> str | None:
+    """Impronta delle regole (regole_log.impronta: variabili di regola + policy risolta) di questo ambiente, senza le
+    variabili di processo (MERCATO_NOTTE_FASE, MERCATO_ENV_PRIMA... cominciano per MERCATO_, prefisso di regola)."""
+    env = dict(os.environ if env is None else env)
+    try:
+        from .. import regole_log
+        return regole_log.impronta({k: v for k, v in env.items() if not di_processo(k)})[0]
+    except Exception:
+        return None
+
+
+def fotografia_ammessa(mode: str, env=None) -> bool:
+    """La fotografia si salva SOLO dal servizio dealfinder-opportunita, nel giro normale: mai con COLLECT_SOLO_PRIMA,
+    TORINO_ORA o NOVARA_ORA (giri lanciati a mano o con un altro lavoro)."""
+    env = os.environ if env is None else env
+    servizio = env.get("RENDER_SERVICE_NAME") or env.get("FOTOGRAFIA_SERVIZIO") or ""
+    return (mode == "opportunita" and servizio == SERVIZIO_FOTOGRAFIA and env.get("COLLECT_SOLO_PRIMA") != "1"
+            and env.get("TORINO_ORA") != "1" and env.get("NOVARA_ORA") != "1")
+
+
+def salva_config(processo: str = "opportunita", connetti=None, env=None) -> int:
+    """Fotografia delle variabili del cron opportunità + impronta delle regole (tabella tempo_reale, riga
+    'config:opportunita'). Da chiamare all'avvio, prima di ogni cambio dell'ambiente."""
+    env = dict(os.environ if env is None else env)
+    dati = {"env": variabili_da_copiare(env), "impronta": impronta_regole(env), "versione": 2}
     try:
         with (connetti or _connetti)() as c:
             c.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES (%s, now(), %s) ON CONFLICT (giro) DO "
                       "UPDATE SET ultimo_at=now(), stats=EXCLUDED.stats", (CHIAVE_CONFIG, json.dumps(dati)))
             c.commit()
-        return len(dati)
+        return len(dati["env"])
     except Exception as e:
         log.warning("CONFIG %s non salvata: %s", processo, type(e).__name__)
         return -1
 
 
-def carica_config(connetti=None, ore_max: float = 72) -> dict | None:
-    """Fotografia salvata dal cron opportunità (al massimo di `ore_max` ore fa); None se assente o vecchia."""
+def carica_config(connetti=None, ore_max: float = 72) -> tuple[dict, str] | None:
+    """(variabili, impronta) salvate dal cron opportunità al massimo `ore_max` ore fa; None se assente, vecchia o del
+    formato di prima (senza impronta)."""
     try:
         with (connetti or _connetti)() as c:
             r = c.execute("SELECT stats, extract(epoch FROM now() - ultimo_at) / 3600.0 AS h FROM tempo_reale "
@@ -375,15 +430,99 @@ def carica_config(connetti=None, ore_max: float = 72) -> dict | None:
             return None
         s = r["stats"]
         s = json.loads(s) if isinstance(s, str) else dict(s or {})
-        return variabili_da_copiare(s)          # difesa: anche in lettura mai segreti né variabili di processo
+        if not isinstance(s.get("env"), dict) or not s.get("impronta"):
+            return None
+        return variabili_da_copiare(s["env"]), str(s["impronta"])   # difesa: anche in lettura mai segreti
     except Exception as e:
         log.warning("CONFIG non letta: %s", type(e).__name__)
         return None
 
 
-def applica_config(cfg: dict, env: dict | None = None) -> list[str]:
-    """Mette nell'ambiente di questo processo la configurazione del cron opportunità; ritorna le chiavi cambiate."""
-    env = os.environ if env is None else env
-    cambiate = [k for k, v in cfg.items() if env.get(k) != v]
-    env.update(cfg)
-    return sorted(cambiate)
+def ambiente_notte(env_mercato: dict, cfg: dict) -> dict:
+    """Ambiente del processo notturno, dato PRIMA dell'avvio (execve, quindi prima di ogni import): segreti e variabili
+    di processo del cron mercato + TUTTE e sole le variabili copiabili del cron opportunità (quelle che ha solo il
+    mercato si tolgono). In MERCATO_ENV_PRIMA le variabili copiabili del mercato, per tornare al suo ambiente dopo."""
+    out = {k: v for k, v in env_mercato.items() if not copiabile(k, v)}
+    out.update(cfg)
+    out["MERCATO_ENV_PRIMA"] = json.dumps(variabili_da_copiare(env_mercato))
+    return out
+
+
+def ambiente_mercato(env_notte: dict) -> dict:
+    """L'ambiente del cron mercato di nuovo (per mercato_nord, il modello AI e i lavori in coda)."""
+    try:
+        prima = json.loads(env_notte.get("MERCATO_ENV_PRIMA") or "{}")
+    except ValueError:
+        prima = {}
+    out = {k: v for k, v in env_notte.items() if not copiabile(k, v) and k not in ("MERCATO_ENV_PRIMA",
+                                                                                     "NOTTE_IMPRONTA_ATTESA")}
+    out.update(variabili_da_copiare(prima))
+    return out
+
+
+def applica_ambiente(nuovo: dict) -> None:
+    os.environ.clear()
+    os.environ.update(nuovo)
+
+
+# ------------------------------------------------------------------ modello AI dei prezzi dentro il tetto del giro
+
+def ai_prezzi_nel_giro(giro: Giro) -> None:
+    """Ultimo passo del giro opportunità (correzione del giudice: ai_prezzi contato nel tetto). Il processo della
+    raccolta è SOSTITUITO (os.execv, memoria pulita come prima) da un piccolo processo che lancia il modello AI dei
+    prezzi con un tempo massimo = fine del tetto del giro e poi chiude la riga giro:opportunita con la sua durata.
+    Non ritorna se riesce."""
+    import sys
+    if os.environ.get("AI_PREZZI", "1") != "1" or giro.id is None:
+        return
+    from ..db import smetti
+    giro.fase("ai_prezzi")
+    smetti(giro.id)
+    scadenza = giro.t0 + giro.ore * 3600
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.turni", "ai_prezzi", str(giro.id),
+                              str(scadenza)])
+
+
+def _ai_prezzi_con_scadenza(giro_id: int, scadenza: float, connetti=None) -> dict:
+    import subprocess
+    import sys
+    from ..db import batti, smetti
+    cn = connetti or _connetti
+    batti(giro_id)
+    t0 = time.time()
+    esito: dict = {}
+    try:
+        rc = subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"],
+                            timeout=max(60.0, scadenza - time.time())).returncode
+        esito = {"codice_uscita": rc}
+    except subprocess.TimeoutExpired:
+        esito = {"fermato": "fine del tetto del giro"}
+        log.warning("GIRO ai_prezzi fermato alla fine del tetto del giro")
+    except Exception as e:
+        esito = {"errore": type(e).__name__}
+    secondi = round(time.time() - t0)
+    smetti(giro_id)
+    try:
+        with cn() as c:
+            c.execute("INSERT INTO job_runs (job, started_at, finished_at, ok, stats) VALUES ('turno:ai_prezzi', "
+                      "now() - make_interval(secs => %s), now(), %s, %s)",
+                      (secondi, "errore" not in esito and "fermato" not in esito, json.dumps(esito)))
+            c.execute("UPDATE job_runs SET finished_at = now(), ok = true, stats = COALESCE(stats, '{}'::jsonb) || "
+                      "jsonb_build_object('fase', NULL::text, 'ai_prezzi', %s::jsonb, 'minuti', round((extract(epoch FROM "
+                      "now() - started_at) / 60.0)::numeric, 1)) || jsonb_build_object('fasi', COALESCE(stats->'fasi', "
+                      "'{}'::jsonb) || jsonb_build_object('ai_prezzi', %s::int)) WHERE id = %s",
+                      (json.dumps(esito), secondi, giro_id))
+            c.commit()
+    except Exception as e:
+        log.warning("GIRO riga non chiusa dopo ai_prezzi: %s", type(e).__name__)
+    log.warning("GIRO ai_prezzi in %d min: %s", secondi // 60, esito)
+    return esito
+
+
+if __name__ == "__main__":
+    import sys
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    if len(sys.argv) >= 4 and sys.argv[1] == "ai_prezzi":
+        _ai_prezzi_con_scadenza(int(sys.argv[2]), float(sys.argv[3]))
