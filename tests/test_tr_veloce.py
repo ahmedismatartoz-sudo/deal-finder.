@@ -26,6 +26,7 @@ def test_fuori_zona_senza_dettaglio_e_stop_al_giro_dopo(monkeypatch):
     monkeypatch.setattr(T, "_as_completa", lambda c, out: out)
     monkeypatch.setattr(T.time, "sleep", lambda s: None)
     T._AS_VISTI.clear()
+    T.FERMA.clear()                                       # nessun arresto lasciato da altri test
     monkeypatch.setenv("TR_AS_INTERVALLO_S", "0")
     out = T._autoscout_nuovi(Conn())
     assert [l.source_id for l in out] == ["a1"]          # RM e FI fuori zona: niente dettaglio

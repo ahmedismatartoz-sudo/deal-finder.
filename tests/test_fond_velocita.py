@@ -1,6 +1,8 @@
 """16/11 fondamenta della velocità (FOND_VELOCITA.md): un test per ciascun punto, con connessioni e HTTP finti."""
 from __future__ import annotations
 
+import contextlib
+import functools
 import logging
 import os
 import signal
@@ -18,19 +20,48 @@ from dealfinder.pipeline import tempo_reale_worker as W
 from tests.test_copertura_scraper import _Hades, _ad, _sub
 
 
-@pytest.fixture(autouse=True)
-def _pulito(monkeypatch):
-    """Ogni test parte senza arresto, senza annunci "visti" e senza attese vere tra le richieste."""
+def _azzera() -> None:
+    """Stato del tempo reale come a un avvio: senza arresto, senza annunci "visti", senza pause dopo un 429."""
     T.FERMA.clear()
     for s in T._VISTI.values():
         s.clear()
     T._sub_leggero["fermo_fino"] = 0.0
     T._avvio["primo"] = False
-    monkeypatch.setenv("TR_AS_INTERVALLO_S", "0")
-    yield
-    T.FERMA.clear()
-    for s in T._VISTI.values():
-        s.clear()
+
+
+def _isolato(fn):
+    """16/11: ogni test parte e finisce con lo stato del tempo reale azzerato e con l'elenco del sito com'era (le
+    attese tra le richieste AutoScout24 si tolgono nei test che leggono, con monkeypatch.setenv). Decoratore (non fixture) perché run_tests.py non ha le fixture di pytest: la firma
+    resta quella del test (functools.wraps), così `monkeypatch` arriva sia da pytest sia da run_tests.py."""
+    @functools.wraps(fn)
+    def avvolto(*a, **k):
+        import copy
+        from dealfinder.web import app
+        elenco = copy.copy(app._elenco)
+        _azzera()
+        try:
+            return fn(*a, **k)
+        finally:
+            _azzera()
+            app._elenco.clear()
+            app._elenco.update(elenco)
+    return avvolto
+
+
+@contextlib.contextmanager
+def _registra(nome: str):
+    """Righe di log WARNING del logger `nome` (run_tests.py non ha la fixture dei log di pytest)."""
+    righe: list = []
+
+    class H(logging.Handler):
+        def emit(self, record):
+            righe.append(record.getMessage())
+    lg, h = logging.getLogger(nome), H(logging.WARNING)
+    lg.addHandler(h)
+    try:
+        yield righe
+    finally:
+        lg.removeHandler(h)
 
 
 class Cur:
@@ -203,6 +234,7 @@ def _as_finto(monkeypatch, pagine):
 
 
 def test_2_autoscout_visto_solo_dopo_il_salvataggio(monkeypatch):
+    monkeypatch.setenv("TR_AS_INTERVALLO_S", "0")
     lette = _as_finto(monkeypatch, {1: [{"id": "a1", "pv": "MI"}, {"id": "a2", "pv": "RM"}], 2: [{"id": "a3", "pv": "MI"}]})
     out = T._autoscout_nuovi(DB())
     assert [l.source_id for l in out] == ["a1", "a3"]
@@ -297,7 +329,7 @@ def test_2_completo_sorvegliato_e_fa_la_ripresa():
 
 # ------------------------------------------------------------------ 3. il sito si fa da parte, log col lucchetto occupato
 
-def test_3_lucchetto_occupato_si_scrive_nei_log(monkeypatch, caplog):
+def test_3_lucchetto_occupato_si_scrive_nei_log(monkeypatch):
     from dealfinder import db
 
     class Occ(DB):
@@ -308,9 +340,9 @@ def test_3_lucchetto_occupato_si_scrive_nei_log(monkeypatch, caplog):
 
     import contextlib
     monkeypatch.setattr(db, "connect", lambda: contextlib.nullcontext(Occ()))
-    with caplog.at_level(logging.WARNING, logger="tempo_reale"):
+    with _registra("tempo_reale") as righe:
         assert T.con_lucchetto("nuovi", lambda c: 1) is None
-    assert any("TR LUCCHETTO nuovi occupato" in r.getMessage() for r in caplog.records)
+    assert any("TR LUCCHETTO nuovi occupato" in m for m in righe)
 
 
 def test_3_sito_aggiorna_l_elenco_solo_per_un_giro_nuovo_del_worker():
@@ -480,7 +512,7 @@ def test_7_richiesta_durante_il_calcolo_rifa_il_calcolo(monkeypatch):
     assert calcoli == [1, 1] and not app._elenco["busy"]
 
 
-def test_7_misura_del_ritardo_sul_sito(monkeypatch, caplog):
+def test_7_misura_del_ritardo_sul_sito(monkeypatch):
     from dealfinder.web import app
     db = DB()
     ora = datetime.now(timezone.utc)
@@ -489,9 +521,8 @@ def test_7_misura_del_ritardo_sul_sito(monkeypatch, caplog):
                       esito="pubblicata", pubblicato_at=ora - timedelta(minutes=2), sito_at=None)
     import contextlib
     monkeypatch.setattr(app, "connect", lambda: contextlib.nullcontext(db))
-    with caplog.at_level(logging.WARNING, logger="scovo"):
+    with _registra("scovo") as righe:
         app._ritardo_sul_sito({1, 2}, [{"id": 1}, {"id": 5}], time.time() - 40, "worker")
-    righe = [r.getMessage() for r in caplog.records]
     assert any(m.startswith("ELENCO_AGGIORNATO") and "nuove=1" in m for m in righe)
     rit = [m for m in righe if m.startswith("SITO_RITARDO")]
     assert rit and '"annuncio_sito_p95_min": 8.0' in rit[0] and db.coda[5]["sito_at"] is not None
@@ -512,7 +543,7 @@ def test_8_ritardo_subito_solo_sugli_annunci_nuovi():
     assert st["ritardo_subito_max_min"] <= 6 and st["subito_entro_15_min"] == 2
 
 
-def test_8_catena_annuncio_letto_valutato_pubblicato(monkeypatch, caplog):
+def test_8_catena_annuncio_letto_valutato_pubblicato(monkeypatch):
     db = DB()
     ann = datetime.now(timezone.utc) - timedelta(minutes=4)
     for lid in (1, 2):
@@ -520,11 +551,11 @@ def test_8_catena_annuncio_letto_valutato_pubblicato(monkeypatch, caplog):
                             letto_at=datetime.now(timezone.utc) - timedelta(seconds=30), preso_at=None, tentativi=1,
                             valutato_at=None, esito=None, pubblicato_at=None, sito_at=None)
     st = Counter()
-    with caplog.at_level(logging.WARNING, logger="tempo_reale"):
+    with _registra("tempo_reale") as tutte:
         T._coda_fatti(db, [1, 2], [2], st)
     assert st["coda:valutati"] == 2 and 25 <= st["ritardo_letto_valutato_p95_s"] <= 40
     assert 3.5 <= st["ritardo_annuncio_pubblicata_p95_min"] <= 4.5
-    righe = [r.getMessage() for r in caplog.records if r.getMessage().startswith("TR_RITARDO")]
+    righe = [m for m in tutte if m.startswith("TR_RITARDO")]
     assert len(righe) == 1 and '"id": 2' in righe[0] and "annuncio_letto_min" in righe[0]
 
 
@@ -550,3 +581,9 @@ def test_impronta_delle_regole_invariata():
                               "TR_ARRESTO_MAX_S", "TR_COMPLETO_GIRO_MAX_MIN", "TR_RIPRESA_CONTROLLO_MIN",
                               "TR_SITO_CONTROLLO_S", "TR_WORKER_GIRO_OK_MIN")}
     assert rl.impronta(nuove)[0] == "6d5b70387e73"
+
+
+# 16/11: ogni test isolato (vedi _isolato), con pytest e con run_tests.py
+for _n, _f in list(globals().items()):
+    if _n.startswith("test_") and callable(_f):
+        globals()[_n] = _isolato(_f)
