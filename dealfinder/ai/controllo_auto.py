@@ -645,7 +645,7 @@ def per_giro() -> int:
 
 def budget_usd() -> float:
     """Budget proprio, SEPARATO da AI_BUDGET_GIORNO (client.TASK_BUDGET_SEPARATO): dollari veri al giorno."""
-    return float(_env("CONTROLLO_BUDGET_USD", "12"))  # 14/11 sera cliente: Claude a 12 $ al giorno
+    return float(_env("CONTROLLO_BUDGET_USD", "1.3"))  # 16/11 sera cliente: tetto 100 €/mese per TUTTA l'AI
 
 
 def parametri_diesel() -> dict:
@@ -677,6 +677,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         stop = {"saltato": "pausa per credito/limite AI", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}
     elif tetto <= 0:
         stop = {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
+    elif AI.mese_finito(conn):
+        stop = {"saltato": "tetto mensile AI raggiunto (100 €/mese)"}
     elif usd_oggi >= budget:
         stop = {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
     elif usd_oggi >= dosato:

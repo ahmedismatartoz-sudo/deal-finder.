@@ -55,13 +55,48 @@ def spesa_oggi(conn) -> float:
 
 
 def budget_giorno() -> float:
-    return float(os.environ.get("AI_BUDGET_GIORNO", "5"))
+    return float(os.environ.get("AI_BUDGET_GIORNO", "2"))
+
+
+def budget_mese() -> float:
+    """16/11 sera (cliente: "non posso spendere più di 100 € al mese di AI"): tetto MENSILE su TUTTA la spesa AI
+    (tutti i lavori, compresi quelli con budget separato), in dollari. 100 € ≈ 105 $ con margine."""
+    return float(os.environ.get("AI_BUDGET_MESE_USD", "105"))
+
+
+def spesa_mese(conn) -> float:
+    """Dollari spesi nel mese in corso (ora italiana), TUTTI i lavori AI."""
+    rows = conn.execute("SELECT model, sum(input_tokens) AS i, sum(output_tokens) AS o, sum(web_searches) AS w "
+                        "FROM ai_usage WHERE at > date_trunc('month', now() AT TIME ZONE 'Europe/Rome') AT TIME ZONE 'Europe/Rome' "
+                        "GROUP BY model").fetchall()
+    return round(sum(costo(r["model"], int(r["i"] or 0), int(r["o"] or 0), int(r["w"] or 0)) for r in rows), 4)
+
+
+def mese_finito(conn) -> bool:
+    """True se la spesa AI del mese ha raggiunto il tetto mensile: TUTTA l'AI si ferma fino al mese dopo."""
+    try:
+        spesa = spesa_mese(conn)
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+    if spesa >= budget_mese():
+        if _BUDGET_LOG.get("mese") != spesa // 5:
+            _BUDGET_LOG["mese"] = spesa // 5
+            log.warning("BUDGET_MESE_FINITO: spesi %.2f $ su %.2f $ nel mese: AI ferma fino al primo del mese",
+                        spesa, budget_mese())
+        return True
+    return False
 
 
 _BUDGET_LOG = {"giorno": None}
 
 
 def budget_finito(conn) -> bool:
+    if mese_finito(conn):
+        return True
     try:
         spesa = spesa_oggi(conn)
     except Exception:

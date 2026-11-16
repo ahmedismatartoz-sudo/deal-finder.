@@ -477,7 +477,7 @@ def ask_simple(conn, user: dict, text: str, gate, log_use, prima: str = "") -> d
 
 def answer(conn, user: dict, messages: list[dict], gate, log_use) -> dict:
     from ..ai import client as ai
-    if os.environ.get("ANTHROPIC_API_KEY") and ai.provider() == "anthropic":
+    if os.environ.get("ANTHROPIC_API_KEY") and ai.provider() == "anthropic" and not ai.mese_finito(conn):
         try:
             return ask_ai(conn, user, messages, gate, log_use)
         except Exception as e:

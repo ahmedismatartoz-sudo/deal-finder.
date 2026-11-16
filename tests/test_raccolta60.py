@@ -81,3 +81,22 @@ def test_osm_saloni_legge_nome_sito_email():
     out = R.osm_saloni(c)
     assert [o["nome"] for o in out] == ["Auto Bianchi", "Verdi Car"]
     assert out[0]["sito"] == "https://www.autobianchi.it" and out[1]["email"] == "info@verdicar.it"
+
+
+def test_tetto_mensile_ai_ferma_tutto():
+    from dealfinder.ai import client as AI
+
+    class Conn:
+        def __init__(self, i): self.i = i
+        def execute(self, *a, **k):
+            from types import SimpleNamespace as NS
+            return NS(fetchall=lambda: [{"model": AI.MODEL_FAST, "i": self.i, "o": 0, "w": 0}])
+        def rollback(self): pass
+    import os
+    os.environ["AI_BUDGET_MESE_USD"] = "1"
+    try:
+        assert AI.mese_finito(Conn(10**9)) is True          # spesa enorme: fermo
+        assert AI.mese_finito(Conn(0)) is False
+        assert AI.budget_finito(Conn(10**9)) is True
+    finally:
+        os.environ.pop("AI_BUDGET_MESE_USD")
