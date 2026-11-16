@@ -171,11 +171,13 @@ def durata_prevista(v: str, env: dict | None = None) -> float:
         except ValueError:
             pass
     if p == "raccolta60:":
-        tel = v.split(":", 1)[1].startswith("tel")
+        et = v.split(":", 1)[1]
+        chiave, base = (("R60_ORE_TEL", 1.4) if et.startswith("tel") else ("R60_ORE_EMAIL", 2.0) if et.startswith("email")
+                        else ("R60_ORE", 2.6))
         try:
-            ore = float(env.get("R60_ORE_TEL" if tel else "R60_ORE") or (1.4 if tel else 2.6))
+            ore = float(env.get(chiave) or base)
         except ValueError:
-            ore = 1.4 if tel else 2.6
+            ore = base
         return ore * 60 + 15
     return float(DURATE_MIN.get(p, 60 if SPOSTABILI[p][0] else 5))
 

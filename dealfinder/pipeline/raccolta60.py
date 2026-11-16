@@ -486,9 +486,116 @@ def lavoro_telefoni(etichetta: str) -> dict:
     return esito
 
 
+PAGINE_EMAIL = ["", "contatti", "contatti/", "contattaci", "contatti.html", "contact", "contacts", "chi-siamo",
+                 "chi-siamo/", "azienda", "dove-siamo", "privacy", "privacy-policy", "note-legali", "informativa-privacy",
+                 "cookie-policy", "termini-e-condizioni"]
+
+
+def _link_salone_as(html: str) -> str | None:
+    """Dalla pagina di un annuncio AutoScout24 il link alla pagina del salone (/concessionari/<slug>)."""
+    for s in re.findall(r'(?:https://www\.autoscout24\.it)?/concessionari/([a-z0-9][a-z0-9-]+)/?["?#]', html or ""):
+        if s not in NON_SALONE:
+            return f"{BASE_AS}/concessionari/{s}"
+    return None
+
+
+def cerca_email_salone(c, r: dict, pausa_as: float = 1.0) -> dict:
+    """Email di un salone senza email: pagina del salone su AutoScout24 (dal link dell'annuncio) e pagine del sito.
+    Ritorna {"email": [...], "sito": ..., "fonte_email": ...}. Funzione senza stato (c = client httpx)."""
+    out = {"email": [], "sito": r.get("sito"), "fonte_email": None}
+    link = r.get("link_autoscout") or ""
+    if not out["sito"] and "autoscout24" in link:
+        pagine = [link] if "/concessionari/" in link else []
+        try:
+            if not pagine:
+                x = c.get(link)
+                time.sleep(pausa_as)
+                sal = _link_salone_as(x.text if x.status_code == 200 else "")
+                pagine = [sal, sal + "/chi-siamo"] if sal else []
+            for u in pagine:
+                x = c.get(u)
+                time.sleep(pausa_as)
+                if x.status_code != 200:
+                    continue
+                d = _pulisci(dati_pagina(x.text))
+                if d["email"]:
+                    out.update(email=d["email"], fonte_email="autoscout24")
+                    return out
+                out["sito"] = out["sito"] or d["sito"]
+        except Exception:
+            pass
+    sito = out["sito"] or ""
+    if sito.startswith("http") and not any(x in sito for x in ("autoscout24", "subito.it", "facebook.", "instagram.")):
+        from .lead_email import _email
+        for p in PAGINE_EMAIL:
+            try:
+                x = c.get(sito.rstrip("/") + "/" + p)
+            except Exception:
+                continue
+            if x.status_code == 200:
+                trovate = [e for e in _email(x.text) if "subito" not in e and "autoscout" not in e]
+                if trovate:
+                    out.update(email=trovate[:3], fonte_email="sito")
+                    return out
+    return out
+
+
+def lavoro_email(etichetta: str) -> dict:
+    """16/11 sera (cliente: "dobbiamo raccogliere molte più email"): per ogni salone della raccolta R60 senza email,
+    la pagina del salone su AutoScout24 (dal link dell'annuncio) e il sito (home, contatti, chi siamo, privacy, note
+    legali...). Consegna: righe R60E (solo i saloni con email nuova) + copie nei modelli Brevo non attivi."""
+    import httpx
+    from concurrent.futures import ThreadPoolExecutor
+    from ..db import connect
+    from ..marketing.consegne import consegna, righe
+    fine = time.time() + float(os.environ.get("R60_ORE_EMAIL", "2")) * 3600
+    with connect() as conn:
+        tutte = righe(conn, "R60", 20000)
+    visti, cand = set(), []
+    for r in reversed(tutte):                   # le più recenti prima, un salone una volta
+        k = (nn(r.get("nome")), (r.get("comune") or "").lower(), r.get("cellulari") or "")
+        if k in visti:
+            continue
+        visti.add(k)
+        if not r.get("email") and (r.get("sito") or "autoscout24" in (r.get("link_autoscout") or "")):
+            cand.append(r)
+    log.warning("R60E parte: %d saloni senza email da cercare (su %d righe R60)", len(cand), len(tutte))
+    trovati: list[dict] = []
+    st = {"provati": 0, "trovati": 0, "da_autoscout": 0, "da_sito": 0}
+
+    def uno(r):
+        if time.time() > fine:
+            return None
+        with httpx.Client(timeout=12, follow_redirects=True,
+                          headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0 Safari/537.36"}) as c:
+            return r, cerca_email_salone(c, r)
+
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("R60E_PARALLELI", "3"))) as ex:
+        for i, res in enumerate(ex.map(uno, cand), 1):
+            if not res:
+                continue
+            r, d = res
+            st["provati"] += 1
+            if d["email"]:
+                st["trovati"] += 1
+                st["da_" + d["fonte_email"]] += 1
+                trovati.append({**{k: r.get(k) for k in ("nome", "comune", "prov", "km", "cellulari", "link_autoscout")},
+                                "email": " ".join(d["email"][:3]), "sito": d["sito"], "fonte_email": d["fonte_email"]})
+            if i % 100 == 0:
+                log.warning("R60E avanzamento: %d/%d provati, %d email trovate", i, len(cand), st["trovati"])
+    for r in trovati:
+        consegna("R60E", r)
+    copie = _brevo_copie(trovati, etichetta) if trovati else 0
+    esito = {"candidati": len(cand), **st, "modelli_brevo": copie}
+    log.warning("R60E_FINE %s", json.dumps(esito, ensure_ascii=False))
+    return esito
+
+
 def lavoro(etichetta: str) -> dict:
     if etichetta.startswith("tel"):
         return lavoro_telefoni(etichetta)
+    if etichetta.startswith("email"):
+        return lavoro_email(etichetta)
     from ..marketing.consegne import consegna
     ore = float(os.environ.get("R60_ORE", "2.6"))
     R = Raccolta(time.time() + ore * 3600)

@@ -56,3 +56,17 @@ def test_annunci_autoscout_danno_salone_con_telefono():
 def test_pulisci_toglie_email_e_siti_di_subito():
     d = R._pulisci({"email": ["privacy@subito.it", "info@autorossi.it"], "sito": "https://www.subito.it/x", "cell": [], "fissi": []})
     assert d["email"] == ["info@autorossi.it"] and d["sito"] is None
+
+
+def test_email_dal_salone_autoscout_e_dal_sito():
+    from types import SimpleNamespace as NS
+    pagine = {
+        "https://www.autoscout24.it/annunci/x-1": '<a href="/concessionari/auto-rossi">salone</a>',
+        "https://www.autoscout24.it/concessionari/auto-rossi": '<a href="https://www.autorossi.it/">sito</a>',
+        "https://www.autoscout24.it/concessionari/auto-rossi/chi-siamo": "niente",
+        "https://www.autorossi.it/contatti": '<a href="mailto:info@autorossi.it">scrivici</a>',
+    }
+    c = NS(get=lambda u: NS(status_code=200 if u in pagine else 404, text=pagine.get(u, "")))
+    d = R.cerca_email_salone(c, {"link_autoscout": "https://www.autoscout24.it/annunci/x-1"}, pausa_as=0)
+    assert d["email"] == ["info@autorossi.it"] and d["fonte_email"] == "sito"
+    assert R._link_salone_as('<a href="/concessionari/regioni/lombardia/">') is None
