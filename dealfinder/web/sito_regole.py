@@ -35,6 +35,9 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    SITO_FUNNEL "perizia_ombra" con sarebbero_caro / sarebbero_attesa / sarebbero_prudenti
                    (l'auto non passa pulita se l'AI è ferma o il budget è finito)
   tetto_commercianti  al massimo 40 commercianti lontani, i migliori per margine (DOPO zona e margine)
+  tetto_commercianti_totale  (16/11) al massimo 60 commercianti IN TUTTO (lontani, fascia richiesta, diesel in più),
+                   dopo diesel_extra, i migliori per margine come il tetto dei 40 (SITO_COMMERCIANTI_TOTALE, 0 = spento);
+                   motivo "oltre_60_commercianti". I privati non si toccano.
   diesel_extra     (13/11 sera, cliente: "fai entrare più diesel ma solamente macchine per bene, altre 70") al massimo
                    DIESEL_EXTRA (70; 0 = spento) auto DIESEL di commercianti nelle 12 province entro 100 km da Milano
                    (niente Torino, Ravenna, Roma), a qualsiasi prezzo, che oggi restano fuori per
@@ -176,6 +179,9 @@ class Regole:
     km_max: int = 150000
     fb_sito: bool = False             # FB_SITO: come in produzione oggi (0 = Facebook fuori)
     commercianti_max: int = 40
+    # 16/11 (cliente: "sul sito non più di 60 auto di commercianti IN TUTTO"): tetto TOTALE su tutti i commercianti
+    # (lontani, fascia richiesta, diesel in più), dopo i tetti di ogni tipo; i 40 lontani restano dentro. 0 = nessun tetto
+    commercianti_totale: int = 60
     # 5/11 notte (cliente: "metti tutti quelli fuori zona, i 100 più vicini"): fascia richiesta anche fuori dalle
     # province della zona (Roma mai), al massimo fascia_fuori_max auto, le più vicine a Milano
     fascia_fuori_max: int = 100
@@ -253,7 +259,8 @@ class Regole:
                    perizia_ombra=e("PERIZIA_AI", "log").strip().lower() == "log",
                    versione_tecnica=e("VERSIONE_TECNICA", "1") == "1", sconto_ai=e("SCONTO_ALTO_AI", "1") == "1",
                    ripiego=e("RIPIEGO_PRUDENTE", "1") == "1",
-                   diesel_extra=max(0, int(e("DIESEL_EXTRA", "70") or 0)))
+                   diesel_extra=max(0, int(e("DIESEL_EXTRA", "70") or 0)),
+                   commercianti_totale=max(0, int(e("SITO_COMMERCIANTI_TOTALE", "60") or 0)))
 
     def impronta(self) -> str:
         import dataclasses
@@ -876,6 +883,21 @@ def tetto_commercianti(items: list[dict], g: Regole) -> tuple[list[dict], set]:
     return [it for it in items if it.get("id") not in via], via
 
 
+def e_commerciante(it) -> bool:
+    """Auto di commerciante sul sito (tipo del passo venditore: comm_lontano, comm_fascia, comm_diesel)."""
+    return str(it.get("_tipo") or "").startswith("comm_")
+
+
+def tetto_commercianti_totale(items: list[dict], g: Regole) -> tuple[list[dict], set]:
+    """16/11: al massimo g.commercianti_totale commercianti in tutto. Si tengono i migliori con lo stesso criterio del
+    tetto dei 40 lontani (margine in euro, a parità l'id più basso); i privati non si toccano. 0 = nessun tetto."""
+    if g.commercianti_totale <= 0:
+        return items, set()
+    comm = sorted((it for it in items if e_commerciante(it)), key=lambda it: (-int(margine(it) or 0), it.get("id") or 0))
+    via = {it["id"] for it in comm[g.commercianti_totale:]}
+    return [it for it in items if it.get("id") not in via], via
+
+
 @dataclass
 class Funnel:
     passi: list = field(default_factory=list)
@@ -958,6 +980,12 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         items, via = tetto_diesel_extra(items, g)
         fun.passo("diesel_extra", prima, items, {"oltre_%d_o_con_avviso" % g.diesel_extra: len(via)} if via else None)
         fun.tolti["diesel_extra"] = sorted(via)
+    if g.commercianti_totale > 0:                  # 16/11: tetto TOTALE dei commercianti, dopo i tetti di ogni tipo
+        prima = items
+        items, via = tetto_commercianti_totale(items, g)
+        fun.passo("tetto_commercianti_totale", prima, items,
+                  {"oltre_%d_commercianti" % g.commercianti_totale: len(via)} if via else None)
+        fun.tolti["tetto_commercianti_totale"] = sorted(via)
     # controllo finale: nessuna auto sotto il minimo (non deve mai scattare)
     sotto = [it["id"] for it in items if r_margine_minimo(it, g)]
     if sotto:
@@ -979,6 +1007,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "fascia_finale": sum(1 for it in items if fascia(it)),
                                                   "commercianti_lontani": sum(1 for it in items if it.get("_tipo") == "comm_lontano"),
                                                   "commercianti_fascia": sum(1 for it in items if it.get("_tipo") == "comm_fascia"),
+                                                  "commercianti_totale": sum(1 for it in items if e_commerciante(it)),
                                                   "avvisi": sum(1 for it in items if it.get("avviso_verifica")),
                                                   "avvisi_perizia": sum(1 for it in items if it.get("perizia_verifica")),
                                                   **({"perizia_ombra": ombra} if ombra else {}),

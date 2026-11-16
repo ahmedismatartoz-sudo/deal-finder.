@@ -2130,7 +2130,8 @@ def admin_sito_funnel(request: Request):
         g["passi"].append({"passo": r["passo"], "entrate": r["entrate"], "uscite": r["uscite"]})
     from . import sito_regole as SR
     ordine = {n: i for i, (n, _) in enumerate(SR.REGOLE)} | {"margine_sito": 50, "truffa": 51, "margine_minimo": 52,
-                                                               "tetto_commercianti": 53}
+                                                               "tetto_commercianti": 53, "tetto_fuori_zona": 54,
+                                                               "diesel_extra": 55, "tetto_commercianti_totale": 56}
     for g in per.values():
         g["passi"].sort(key=lambda x: (ordine.get(x["passo"].split(".")[0], 99), "." in x["passo"], x["passo"]))
     return jsonify({"giorni": list(per.values())})

@@ -199,10 +199,14 @@ def test_dati_al_telefono_e_sentinella():
     riga = S._riga_istantanea(dict(out[0], diesel_extra=True), scovo.soglia)
     assert riga[9] == "diesel_extra" and riga[5] is True
     base = {"prezzo": 8000, "margine": 3000, "soglia": 1800, "commerciante": True, "sezione": "affari"}
+    # 16/11: i diesel in più fuori dai 40 lontani, ma dentro il tetto TOTALE di 60 commercianti
     sito = [dict(base, listing_id=i) for i in range(40)] + [dict(base, listing_id=100 + i, sezione="diesel_extra")
-                                                            for i in range(30)]
+                                                            for i in range(20)]
     r = S.c_tetto_commercianti(None, {"istantanea": sito, "istantanea_ore": 0.5})
-    assert r["ok"] and r["numeri"]["commercianti"] == 40
+    assert r["ok"] and r["numeri"]["commercianti"] == 40 and r["numeri"]["commercianti_totale"] == 60
+    r = S.c_tetto_commercianti(None, {"istantanea": sito + [dict(base, listing_id=998, sezione="diesel_extra")],
+                                      "istantanea_ore": 0.5})
+    assert not r["ok"] and {a["chiave"] for a in r["allarmi"]} == {"tetto_commercianti:totale"}
     r = S.c_tetto_commercianti(None, {"istantanea": sito + [dict(base, listing_id=999)], "istantanea_ore": 0.5})
     assert not r["ok"]
     # il controllo sotto soglia guarda anche la sezione dei diesel in più

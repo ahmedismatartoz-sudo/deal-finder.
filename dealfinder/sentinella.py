@@ -59,6 +59,7 @@ CALO_SITO_MAX = 0.20                # calo delle auto sul sito rispetto a ieri a
 CALO_SITO_MIN_IERI = 20             # sotto queste auto ieri il confronto non ha senso
 ISTANTANEA_VECCHIA_ORE = 3
 COMMERCIANTI_TETTO = 40
+COMMERCIANTI_TOTALE = 60            # 16/11: tetto totale dei commercianti (sito_regole.Regole.commercianti_totale)
 KM_SITO_DEFAULT = 150000
 VALUTAZIONI_ORE = 48
 VALUTAZIONI_VECCHIE_MAX = 0.25
@@ -307,11 +308,22 @@ def c_tetto_commercianti(conn, ctx: dict) -> dict:
     # 13/11 sera: i diesel in più (DIESEL_EXTRA) hanno il loro tetto separato, fuori dai 40
     n = sum(1 for r in sito if r.get("commerciante") and not str(r.get("sezione") or "").startswith("fascia")
             and r.get("sezione") != "diesel_extra")
+    # 16/11 (cliente): al massimo 60 commercianti IN TUTTO (lontani, fascia richiesta, diesel in più)
+    tot = sum(1 for r in sito if r.get("commerciante"))
+    try:
+        from .web.sito_regole import Regole
+        tetto_tot = Regole.da_env().commercianti_totale
+    except Exception:
+        tetto_tot = COMMERCIANTI_TOTALE
     al = []
     if n > COMMERCIANTI_TETTO:
-        al.append(_allarme("tetto_commercianti", f"{n} auto di commercianti sul sito: il tetto è {COMMERCIANTI_TETTO}",
-                           n=n))
-    return _esito("tetto_commercianti", {"commercianti": n, "tetto": COMMERCIANTI_TETTO}, al)
+        al.append(_allarme("tetto_commercianti", f"{n} auto di commercianti lontani sul sito: il tetto è "
+                                                 f"{COMMERCIANTI_TETTO}", n=n))
+    if tetto_tot > 0 and tot > tetto_tot:
+        al.append(_allarme("tetto_commercianti:totale", f"{tot} auto di commercianti sul sito in tutto: il tetto è "
+                                                        f"{tetto_tot}", n=tot))
+    return _esito("tetto_commercianti", {"commercianti": n, "tetto": COMMERCIANTI_TETTO, "commercianti_totale": tot,
+                                         "tetto_totale": tetto_tot}, al)
 
 
 def c_impronte(conn, ctx: dict) -> dict:
