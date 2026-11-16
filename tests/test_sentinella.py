@@ -160,7 +160,7 @@ def test_impronta_prezzi_solo_regole_di_prezzo():
 def test_cron_vecchio_fallito_bloccato():
     c = Finta({"cron_ultimi": [{"job": "a", "ore": 3.0}, {"job": "b", "ore": 40.0}],
                "cron_falliti": [{"job": "a", "n": 3}, {"job": "x", "n": 1}],
-               "cron_in_corso": [{"job": "c", "n": 1, "ore": 9.5}]})
+               "cron_in_corso": [{"job": "c", "n": 1, "ore": 12.5}, {"job": "d", "n": 1, "ore": 9.5}]})
     r = S.c_cron(c, {}, attese={"a": 8, "b": 30, "nuovo": 5})
     assert _chiavi(r) == {"cron_vecchio:b", "cron_vecchio:nuovo", "cron_fallito:a", "cron_in_corso:c"}
     assert r["numeri"]["ore_dall_ultimo"] == {"a": 3.0, "b": 40.0, "nuovo": None}
@@ -243,8 +243,8 @@ class Allarmi(Finta):
         super().__init__({"allarme_ultimo": self._ultimo, "coda": self._coda, "coda_conta": self._conta})
 
     def _ultimo(self, p):
-        chiave, dal = p
-        r = [a for a in self.righe if a["chiave"] == chiave and a["creato_at"] > dal]
+        chiave, dal, ricorda = p             # 16/11: visto di recente (allarme continuo) e creato da meno di un giorno
+        r = [a for a in self.righe if a["chiave"] == chiave and a["visto_at"] > dal and a["creato_at"] > ricorda]
         return [{"id": r[-1]["id"]}] if r else []
 
     def _coda(self, p):
@@ -256,9 +256,11 @@ class Allarmi(Finta):
     def execute(self, sql, p=None):
         if "/*S:allarme_nuovo*/" in sql:
             self.righe.append({"id": len(self.righe) + 1, "chiave": p[0], "testo": p[2], "creato_at": p[4],
-                               "inviato_at": None, "tentativi": 0, "volte": 1})
+                               "visto_at": p[5], "inviato_at": None, "tentativi": 0, "volte": 1})
         elif "/*S:allarme_visto*/" in sql:
-            next(a for a in self.righe if a["id"] == p[1])["volte"] += 1
+            r = next(a for a in self.righe if a["id"] == p[1])
+            r["volte"] += 1
+            r["visto_at"] = p[0]
         elif "/*S:coda_inviati*/" in sql:
             for a in self.righe:
                 if a["id"] in p[1]:
@@ -274,15 +276,23 @@ def _t(ora_utc, giorno=4):
     return datetime(2026, 11, giorno, ora_utc, 0, tzinfo=UTC)     # novembre: Roma = UTC+1
 
 
-def test_dedupe_sei_ore():
+def test_dedupe_ricordato_nel_database():
+    """16/11 (fond-server): un allarme sempre presente non torna "nuovo" ogni 6 ore (né dopo un riavvio: la memoria è
+    nel database); torna nuovo se sparisce per oltre 6 ore, o come promemoria dopo 24 ore di fila."""
     c = Allarmi()
     a = [{"chiave": "sito_calo", "testo": "calo", "controllo": "sito_conteggio"}]
     nuovi, rip = S.registra_allarmi(c, a, _t(9))
     assert len(nuovi) == 1 and rip == 0
     nuovi, rip = S.registra_allarmi(c, a, _t(14))                 # 5 ore dopo: stesso allarme, non nuovo
     assert nuovi == [] and rip == 1 and c.righe[0]["volte"] == 2
-    nuovi, rip = S.registra_allarmi(c, a, _t(16))                 # 7 ore dopo il primo: di nuovo
+    nuovi, rip = S.registra_allarmi(c, a, _t(16))                 # 7 ore dopo il primo, ma visto 2 ore fa: continuo
+    assert nuovi == [] and rip == 1 and len(c.righe) == 1
+    nuovi, rip = S.registra_allarmi(c, a, _t(23))                 # assente dalle 16 alle 23 (> 6 ore): di nuovo
     assert len(nuovi) == 1 and len(c.righe) == 2
+    for ora in range(1, 23, 3):                                   # presente di fila per un giorno: un solo promemoria
+        S.registra_allarmi(c, a, _t(ora, giorno=5))
+    nuovi, _ = S.registra_allarmi(c, a, _t(23, giorno=5))
+    assert len(nuovi) == 1 and len(c.righe) == 3
 
 
 def test_ora_di_roma_e_finestra_email():

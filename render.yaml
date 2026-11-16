@@ -43,6 +43,12 @@ services:
     startCommand: python -m dealfinder.init_db && uvicorn dealfinder.web.app:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
 
     healthCheckPath: /health
+    # 16/11 (fond-server): deploy solo se cambia il codice che serve al sito (niente deploy per test e documenti)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
@@ -91,6 +97,17 @@ services:
     schedule: "7 */3 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.collect opportunita
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono ai cron: un cambio lì non li rideploya
+    # (web/app.py sì: pipeline/esporta.py e bande.py ne leggono LIST_SQL)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
@@ -105,6 +122,19 @@ services:
     schedule: "37 6,16 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.collect facebook
+    # 16/11: Facebook è spento (regola del cliente): nessun deploy automatico a ogni push
+    autoDeploy: false
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono ai cron: un cambio lì non li rideploya
+    # (web/app.py sì: pipeline/esporta.py e bande.py ne leggono LIST_SQL)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
@@ -121,6 +151,19 @@ services:
     schedule: "47 6,16 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.init_db && python -m dealfinder.pipeline.collect facebook --senza-analisi
+    # 16/11: Facebook è spento (regola del cliente): nessun deploy automatico a ogni push
+    autoDeploy: false
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono ai cron: un cambio lì non li rideploya
+    # (web/app.py sì: pipeline/esporta.py e bande.py ne leggono LIST_SQL)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
@@ -139,6 +182,17 @@ services:
     schedule: "13 1 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.collect mercato
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono ai cron: un cambio lì non li rideploya
+    # (web/app.py sì: pipeline/esporta.py e bande.py ne leggono LIST_SQL)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
@@ -153,6 +207,17 @@ services:
     schedule: "41 5 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.recheck
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono ai cron: un cambio lì non li rideploya
+    # (web/app.py sì: pipeline/esporta.py e bande.py ne leggono LIST_SQL)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL
@@ -167,6 +232,17 @@ services:
     schedule: "29 4 * * 1"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pricing.backtest
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono ai cron: un cambio lì non li rideploya
+    # (web/app.py sì: pipeline/esporta.py e bande.py ne leggono LIST_SQL)
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     envVars:
       - fromGroup: dealfinder-secrets
       - key: DATABASE_URL

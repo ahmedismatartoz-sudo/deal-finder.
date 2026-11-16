@@ -54,8 +54,10 @@ def avvia() -> str | None:
         _srv["dir"] = None
         return None
     _srv["dir"] = d
-    atexit.register(lambda: subprocess.run(_come_postgres([pg_ctl, "-D", os.path.join(d, "dati"), "-m", "immediate", "stop"]),
-                                           capture_output=True))
+    def _ferma():
+        subprocess.run(_come_postgres([pg_ctl, "-D", os.path.join(d, "dati"), "-m", "immediate", "stop"]), capture_output=True)
+        shutil.rmtree(d, ignore_errors=True)       # 16/11: le cartelle lasciate in /tmp (~90 MB l'una) riempivano il disco
+    atexit.register(_ferma)
     return d
 
 

@@ -52,9 +52,16 @@ log = logging.getLogger("sentinella")
 ATTESE_ORE = {                      # lavoro -> ore massime dall'ultimo giro riuscito
     "collect:opportunita": 8,       # cron ogni 3 ore
     "collect:mercato": 30,          # cron ogni notte
+    "giro:opportunita": 7,          # 16/11: giro ogni 3 ore con la riga giro:opportunita (pipeline/turni.py)
 }
 FALLIMENTI_MIN = 2                  # fallimenti dello stesso lavoro nelle 24 ore per dare l'allarme
-IN_CORSO_ORE = 8                    # righe job_runs aperte da più di tante ore = processo morto o bloccato
+IN_CORSO_ORE = 12                   # righe job_runs aperte (senza battito) da più di tante ore = processo morto o bloccato
+# 16/11 (fond-server): allineato alle durate reali. 12 = limite dei cron di Render (il cron mercato arriva a ~11 ore);
+# i lavori che devono essere corti hanno il loro limite. Con il battito (db.log_job) conta soprattutto il battito fermo.
+IN_CORSO_ORE_LAVORO = {"giro:opportunita": 3.5, "zona_cron": 4, "collect:opportunita": 3.5}
+BATTITO_FERMO_MIN = 30              # riga in corso con il battito fermo da tanti minuti = processo morto
+GIRO_MAX_MIN = 180                  # un giro del cron opportunità oltre 3 ore = allarme
+RICORDA_ORE = 24                    # un allarme sempre presente si riscrive come nuovo (email) al massimo una volta al giorno
 CALO_SITO_MAX = 0.20                # calo delle auto sul sito rispetto a ieri alla stessa ora
 CALO_SITO_MIN_IERI = 20             # sotto queste auto ieri il confronto non ha senso
 ISTANTANEA_VECCHIA_ORE = 3
@@ -221,7 +228,7 @@ def c_sotto_soglia(conn, ctx: dict) -> dict:
     soglia = _soglia_locale()
     sotto, senza, diverse, controllate = [], 0, 0, 0
     for r in sito:
-        if r.get("sezione") not in ("affari", "inc", "diesel_extra"):   # economiche e supercar: soglie loro (T2)
+        if sezione_base(r.get("sezione")) not in ("affari", "inc", "diesel_extra"):   # economiche e supercar: soglie loro (T2)
             continue
         controllate += 1
         if r.get("margine") is None:
@@ -372,10 +379,21 @@ def c_cron(conn, ctx: dict, attese: dict | None = None) -> dict:
               "FROM job_runs WHERE job = ANY(%s) AND ok AND finished_at IS NOT NULL GROUP BY job", (list(attese),))}
     falliti = _righe(conn, "/*S:cron_falliti*/ SELECT job, count(*) AS n FROM job_runs WHERE ok = false "
                            "AND started_at > now() - interval '24 hours' GROUP BY job ORDER BY count(*) DESC LIMIT 30")
-    bloccati = _righe(conn, "/*S:cron_in_corso*/ SELECT job, count(*) AS n, "
-                            "max(extract(epoch FROM now() - started_at)) / 3600.0 AS ore FROM job_runs "
-                            "WHERE finished_at IS NULL AND started_at < now() - make_interval(hours => %s) "
-                            "AND started_at > now() - interval '48 hours' GROUP BY job LIMIT 30", (IN_CORSO_ORE,))
+    bloccati = [b for b in _righe(
+        conn, "/*S:cron_in_corso*/ SELECT job, count(*) AS n, max(extract(epoch FROM now() - started_at)) / 3600.0 AS ore "
+              "FROM job_runs WHERE finished_at IS NULL AND NOT COALESCE(stats ? 'battito', false) "
+              "AND started_at < now() - make_interval(hours => %s) AND started_at > now() - interval '7 days' "
+              "GROUP BY job LIMIT 60", (min([IN_CORSO_ORE] + list(IN_CORSO_ORE_LAVORO.values())),))
+        if float(b["ore"]) > in_corso_limite(b["job"])]
+    # 16/11: righe in corso con il battito fermo (il processo che le teneva vive è morto)
+    fermi = _righe(conn, "/*S:cron_battito*/ SELECT job, count(*) AS n, max(extract(epoch FROM now() - "
+                         "(stats->>'battito')::timestamptz)) / 60.0 AS minuti FROM job_runs WHERE finished_at IS NULL "
+                         "AND stats ? 'battito' AND (stats->>'battito')::timestamptz < now() - make_interval(mins => %s) "
+                         "AND started_at > now() - interval '7 days' GROUP BY job LIMIT 30", (BATTITO_FERMO_MIN,))
+    lunghi = _righe(conn, "/*S:cron_giri*/ SELECT count(*) AS n, count(*) FILTER (WHERE extract(epoch FROM finished_at - "
+                          "started_at) / 60.0 > %s) AS lunghi, max(extract(epoch FROM finished_at - started_at)) / 60.0 "
+                          "AS max_min FROM job_runs WHERE job = 'giro:opportunita' AND finished_at IS NOT NULL "
+                          "AND started_at > now() - interval '24 hours'", (GIRO_MAX_MIN,))
     al, eta = [], {}
     for job, ore_max in attese.items():
         ore = (ultimi.get(job) or {}).get("ore")
@@ -393,8 +411,27 @@ def c_cron(conn, ctx: dict, attese: dict | None = None) -> dict:
         al.append(_allarme(f"cron_in_corso:{b['job']}", f"Lavoro '{b['job']}' risulta in corso da "
                                                         f"{float(b['ore']):.1f} ore ({b['n']} righe aperte): processo morto o bloccato",
                            job=b["job"], n=int(b["n"])))
+    for f in fermi:
+        al.append(_allarme(f"cron_battito:{f['job']}", f"Lavoro '{f['job']}': battito fermo da {float(f['minuti']):.0f} "
+                                                       f"minuti ({f['n']} righe in corso): processo morto, la riga si chiude "
+                                                       "come interrotta al prossimo avvio di un cron", job=f["job"], n=int(f["n"])))
+    g = (lunghi or [{}])[0]
+    if int(g.get("lunghi") or 0):
+        al.append(_allarme("cron_giro_lungo", f"{int(g['lunghi'])} giri del cron opportunità su {int(g.get('n') or 0)} "
+                                              f"nelle ultime 24 ore oltre {GIRO_MAX_MIN} minuti (il più lungo "
+                                              f"{float(g.get('max_min') or 0):.0f} min)", n=int(g["lunghi"])))
     return _esito("cron", {"ore_dall_ultimo": eta, "falliti_24h": {f["job"]: int(f["n"]) for f in falliti},
-                           "in_corso_oltre": {b["job"]: int(b["n"]) for b in bloccati}}, al)
+                           "in_corso_oltre": {b["job"]: int(b["n"]) for b in bloccati},
+                           "battito_fermo": {f["job"]: int(f["n"]) for f in fermi},
+                           "giri_24h": int(g.get("n") or 0), "giri_lunghi_24h": int(g.get("lunghi") or 0)}, al)
+
+
+def in_corso_limite(job: str) -> float:
+    """Ore oltre cui una riga in corso SENZA battito è sospetta: per prefisso (IN_CORSO_ORE_LAVORO), altrimenti 12."""
+    for pref, ore in sorted(IN_CORSO_ORE_LAVORO.items(), key=lambda x: -len(x[0])):
+        if job == pref or job.startswith(pref + ":"):
+            return float(ore)
+    return float(IN_CORSO_ORE)
 
 
 def c_valutazioni(conn, ctx: dict) -> dict:
@@ -610,12 +647,16 @@ def salva_stato(conn, ctx: dict, risultati: list[dict], processo: str, adesso: d
 
 
 def registra_allarmi(conn, allarmi: list[dict], adesso: datetime) -> tuple[list[dict], int]:
-    """Dedupe: lo stesso allarme (chiave) al massimo una volta ogni DEDUPE_ORE. Ritorna (nuovi, ripetuti)."""
+    """Dedupe ricordato nel database (16/11, fond-server): un allarme è NUOVO solo se la stessa chiave non era già
+    presente di recente (visto_at negli ultimi DEDUPE_ORE: allarme continuo, anche dopo un riavvio del sito o dei cron)
+    oppure se è presente di fila da più di RICORDA_ORE (promemoria una volta al giorno). Prima contava creato_at: un
+    allarme fisso tornava "nuovo" (e in email) ogni 6 ore. Ritorna (nuovi, ripetuti)."""
     nuovi, ripetuti = [], 0
     dal = adesso - timedelta(hours=DEDUPE_ORE)
+    ricorda = adesso - timedelta(hours=RICORDA_ORE)
     for a in allarmi:
-        r = _una(conn, "/*S:allarme_ultimo*/ SELECT id FROM sentinella_allarmi WHERE chiave = %s AND creato_at > %s "
-                       "ORDER BY creato_at DESC LIMIT 1", (a["chiave"], dal))
+        r = _una(conn, "/*S:allarme_ultimo*/ SELECT id FROM sentinella_allarmi WHERE chiave = %s AND visto_at > %s "
+                       "AND creato_at > %s ORDER BY creato_at DESC LIMIT 1", (a["chiave"], dal, ricorda))
         if r:
             conn.execute("/*S:allarme_visto*/ UPDATE sentinella_allarmi SET visto_at = %s, volte = volte + 1 WHERE id = %s",
                          (adesso, r["id"]))
@@ -784,12 +825,36 @@ def _riga_istantanea(it: dict, soglia) -> tuple | None:
            "supercar" if it.get("supercar") else "eco" if it.get("economica") else
            "inc" if it.get("incidentata") else "trattare" if it.get("trattare") else "affari")   # 6/11: "Da trattare"
                                                                                                  # è sotto soglia per scelta
+    # 16/11 (fond-server): commercianti della fascia richiesta (senza tetto): sezione "fascia" ("fascia:inc",
+    # "fascia:trattare" per le altre sezioni). Prima "fascia" non si scriveva mai e il controllo 4 contava anche loro
+    # nei 40 "lontani" (allarme falso: 60 su 40). sezione_base() ridà la sezione di prima per gli altri controlli.
+    if sez in ("affari", "inc", "trattare") and bool(it.get("commerciante") or it.get("commerciante_top")) and _fascia(it):
+        sez = "fascia" if sez == "affari" else "fascia:" + sez
     km = it.get("km")
     km = int(km) if isinstance(km, (int, float)) else None
     return (lid, prezzo, marg, s, str(it.get("fonte") or "")[:40] or None,
             bool(it.get("commerciante") or it.get("commerciante_top")), m.group(1).upper() if m else None,
             (str(it.get("area")) if it.get("area") else None), km, sez,
             (str(pv.get("categoria")) if pv.get("categoria") else None))
+
+
+def sezione_base(sez) -> str | None:
+    """'fascia' -> 'affari', 'fascia:inc' -> 'inc'; le altre come sono."""
+    if sez is None:
+        return None
+    sez = str(sez)
+    if sez == "fascia":
+        return "affari"
+    return sez.split(":", 1)[1] if sez.startswith("fascia:") else sez
+
+
+def _fascia(it: dict) -> bool:
+    """Stessa regola del sito (sito_regole.fascia -> policy_v2.benzina_richiesta), letta, mai cambiata."""
+    try:
+        from .web.sito_regole import fascia
+        return bool(fascia(it))
+    except Exception:
+        return False
 
 
 def salva_istantanea(items: list, connetti=None) -> int:

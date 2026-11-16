@@ -21,6 +21,16 @@ services:
     plan: starter
     branch: main
     autoDeploy: true
+    # 16/11 (fond-server): grafica e pagine statiche del sito non servono al tempo reale: niente deploy per loro
+    buildFilter:
+      ignoredPaths:
+        - "tests/**"
+        - "**/*.md"
+        - "scripts/**"
+        - "dealfinder/web/static/**"
+        - "landing/**"
+        - "presentazione/**"
+        - "demo-*/**"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m dealfinder.pipeline.tempo_reale_worker
     envVars:

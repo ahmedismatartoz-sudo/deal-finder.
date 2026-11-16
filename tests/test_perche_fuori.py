@@ -198,10 +198,12 @@ def test_esegui_finta_sola_lettura_e_log_anonimo():
 
 
 def test_aggancio_una_tantum_in_app():
-    src = open(os.path.join(QUI, "dealfinder", "web", "app.py")).read()
+    # 16/11 (fond-server): il ramo è passato da web/app.py a pipeline/coda_lavori.py (lo esegue il cron)
+    src = open(os.path.join(QUI, "dealfinder", "pipeline", "coda_lavori.py")).read()
     i = src.index('v.startswith("perche_fuori:")')
     blocco = src[i:i + 700]
-    assert "_una_volta(v)" in blocco and "_pf.lavoro(v)" in blocco
+    # 16/11: segnata fatta solo a fine lavoro (_lungo -> ciclo.inizia), stessa chiave v
+    assert '_lungo(v, "PERCHE_FUORI"' in blocco and "_pf.lavoro(v)" in blocco
     pf = open(os.path.join(QUI, "dealfinder", "pricing", "perche_fuori.py")).read()
     assert "READ ONLY" in pf and "from ..ai import client" not in pf and "from ..ai import giudice" not in pf
 

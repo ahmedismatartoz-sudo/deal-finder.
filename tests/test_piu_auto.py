@@ -699,7 +699,7 @@ def test_autohero_anche_con_zona_cron():
     import inspect
     from dealfinder.pipeline import collect
     src = inspect.getsource(collect)
-    i = src.index('log.warning("ZONA_CRON non riuscita')
+    i = src.index('torino_del_giro(_giro, solo_subito=_zona_letta)')   # 16/11: dopo la zona (blocco ora in giro_zona)
     assert "_autohero_giornaliero(Counter())" in src[i:i + 400]
 
 

@@ -1097,9 +1097,12 @@ def tempo_schede_pagine(t0: float, ora: float | None = None) -> float:
     return max(0.0, min(1200.0, resto)) if resto >= 60 else 0.0
 
 
-def _schede_pagine(t0: float) -> None:
-    """Scheda tecnica (pagina dell'annuncio) delle auto sul sito e candidate; SCHEDA_PAGINE=0 la spegne."""
+def _schede_pagine(t0: float, giro=None) -> None:
+    """Scheda tecnica (pagina dell'annuncio) delle auto sul sito e candidate; SCHEDA_PAGINE=0 la spegne.
+    16/11: col giro corto mai oltre il tetto del giro (meno 5 minuti)."""
     secondi = tempo_schede_pagine(t0)
+    if giro is not None:
+        secondi = min(secondi, max(0.0, (giro.resto_min() - 5) * 60))
     if secondi <= 0:
         return
     from . import schede_auto
@@ -1121,6 +1124,573 @@ def _ai_prezzi():
         log.warning("AI_PREZZI non avviato: %s", str(e)[:300])
 
 
+def giro_zona(completo: bool | None = None) -> bool:
+    """Giro della zona (raccolta + scelta sulla base di tutte le auto + valutazione e pubblicazione), estratto dal blocco
+    del cron opportunità il 16/11 (fond-server) senza cambiare nulla dentro. completo=None: come prima (completo ogni
+    ZC_COMPLETO_ORE ore); False: solo lettura incrementale (giro ogni 3 ore); True: giro completo (passo notturno).
+    Ritorna True se la lettura è finita senza blocchi (per il giro di Torino dopo la zona)."""
+    _zona_letta = False
+    try:
+        from .ciclo import _due
+        if _due("zona_cron", int(os.environ.get("ZC_ORE", "3"))):
+            for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"), "BENZ_CAP_EXTRA": os.environ.get("ZC_CAP_EXTRA", "25121:90"),
+                         "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "70000"),   # 31/10: anche 50-70k (prima nessuno le guardava)
+                         "BENZ_PROVINCE": ",".join(province_zona()),   # 15/11: sempre anche quelle del sito
+                         "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": os.environ.get("ZC_RACCOLTA_TUTTI", "1"), "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
+                         "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
+                         "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
+                         "BENZ_PARALLELI": os.environ.get("ZC_PARALLELI", "3"), "BENZ_SOLO_VALUTA": os.environ.get("ZC_SOLO_VALUTA", "0"),
+                         "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"), "BENZ_TEL_PARALLELI": os.environ.get("ZC_TEL_PARALLELI", "3"),
+                         "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
+                os.environ[k] = v
+            if os.environ.get("ZONA_TORINO", "1") == "1":
+                # 9/11 (cliente: presentazione a Torino): nel giro della zona anche Torino e dintorni, con una
+                # ricerca AutoScout24 in più centrata su Torino (Milano + 130 km arriva appena a Torino)
+                from ..zone import TORINO
+                pv = [p for p in os.environ["BENZ_PROVINCE"].split(",") if p.strip()]
+                os.environ["BENZ_PROVINCE"] = ",".join(pv + [p for p in TORINO if p not in pv])
+                extra = os.environ.get("BENZ_CAP_EXTRA", "")
+                if "10121:" not in extra:
+                    os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:100")) if x)
+            from . import benzina_mi as B
+            from . import incrementale as INC                 # 12/11: giro completo solo ogni ZC_COMPLETO_ORE ore
+            _completo = INC.completo_dovuto("zona_cron") if completo is None else bool(completo)
+            os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
+            os.environ["BENZ_INCR_NOME"] = "zona_cron"
+            try:
+                esito = B.giro()
+            finally:
+                os.environ.pop("BENZ_INCREMENTALE", None)
+                os.environ.pop("BENZ_INCR_NOME", None)
+            # 15/11: lettura finita senza blocchi (letture con errori: il giro di Torino rilegge da sé)
+            _zona_letta = not esito.get("lettura_errori") and bool(esito.get("letti_subito") or esito.get("letti_autoscout"))
+            if _completo:
+                INC.segna_completo("zona_cron", esito)
+            log.warning("ZONA_CRON fatta (%s): %s", "completa" if _completo else "incrementale",
+                        {k: v for k, v in esito.items() if isinstance(v, int)})
+            lavori_zona(esito)
+            return _zona_letta
+    except Exception as e:
+        log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
+    return _zona_letta
+
+
+def esegui_voce(voce: str, _t0_loop: float) -> dict | None:
+    """Una voce di COLLECT_PRIMA (lead, ricalcolo, benzina, ...): stesso codice di prima, estratto il 16/11 (fond-server)
+    per poterla fare a turno. Ritorna l'esito, None se la voce non è conosciuta."""
+    import time
+    from ..db import connect
+    if voce.startswith("lusso60"):                                 # 20/10: auto 60-200k di continuo
+        from . import lusso as L
+        os.environ.setdefault("LUSSO_LOG", "0")
+        anno = os.environ.get("ANNO_MINIMO")
+        os.environ["ANNO_MINIMO"] = os.environ.get("LUSSO_ANNO_MIN", "1990")     # anche auto d'epoca e youngtimer
+        try:
+            esito = {"tenute": L.raccolta_60k()}
+        finally:
+            if anno is None:
+                os.environ.pop("ANNO_MINIMO", None)
+            else:
+                os.environ["ANNO_MINIMO"] = anno
+    elif voce.startswith("privlusso"):                             # 20/10: privati 60-200k contro la base prezzi
+        from . import privati_lusso as P
+        esito = P.giro()
+    elif voce.startswith("leadsub"):                               # 21/10: alta gamma da Subito
+        from . import lusso as L
+        esito = {"trovati": L.lead_subito_alta()}
+    elif voce.startswith("leadsp"):
+        from . import lusso as L
+        esito = {"trovati": L.lead_sportive()}
+    elif voce.startswith("leadtutti"):                             # 23/10: tutti i commercianti con cellulare (riprende)
+        from . import lead_tutti as LT
+        os.environ.setdefault("LEADT_GIRO", voce.split(":")[1].split("@")[0] if ":" in voce else "1")
+        esito = LT.giro()
+    elif voce.startswith("leadeexp"):                              # 27/10: consegna email commercianti (una volta)
+        from . import lead_email as LE
+        esito = {"esportati": LE.esporta()}
+    elif voce.startswith("leademail"):                             # 27/10: email aziendali dei commercianti
+        from . import lead_email as LE
+        esito = LE.giro()
+    elif voce.startswith("leadmaps"):                              # 26/10 notte: commercianti da Google Maps via Apify
+        from . import lead_maps as LM
+        esito = LM.giro()
+    elif voce.startswith("simulamargini"):                         # 12/11: vecchio contro nuovo, solo log
+        from ..pricing import simula                               # "simulamargini:1500" = quante valutazioni
+        q = voce.split(":")[1].split("@")[0] if ":" in voce else ""
+        with connect() as conn:
+            esito = simula.esegui(conn, quante=int(q) if q.isdigit() else 1500)
+            conn.rollback()
+        esito = {k: esito.get(k) for k in ("auto", "sul_sito", "sopra_soglia_solo_grazie_ai_commercianti")}
+    elif voce.startswith("provacorrezione"):                       # 4/11: prova correzione anno/km sulle vendute
+        from ..pricing import prova_correzione
+        with connect() as conn:
+            r = prova_correzione.esegui(conn)
+        esito = {"usate": r.get("usate"), "decisione": r.get("decisione")}
+    elif voce.startswith("ricalcolo"):                             # 24/10 sera: ricalcolo policy qui, non sul sito (512 MB)
+        from ..pricing import ricalcolo
+        with connect() as conn:
+            pol = ricalcolo.esegui(conn)
+        with connect() as conn:
+            ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
+        try:
+            from . import tempo_reale as tr
+            tr.con_lucchetto("telefoni", tr.controlla_telefoni)
+        except Exception as e:
+            log.warning("RICALCOLO telefoni non riuscito: %s", str(e)[:200])
+        esito = {k: v for k, v in (pol or {}).items() if isinstance(v, (int, float, str))} or {"fatto": True}
+    elif voce.startswith("benzloop"):                              # 21/10 sera: raccolta benzina senza fermarsi
+        import subprocess
+        from . import benzina_mi as B
+        fine_loop = _t0_loop + int(os.environ.get("BENZ_LOOP_MIN", "165")) * 60
+        giri, esito = 0, {}
+        while time.time() < fine_loop - 20 * 60:
+            giri += 1
+            esito[f"giro{giri}"] = {k: v for k, v in B.giro().items()
+                                    if k in ("letti_subito", "letti_autoscout", "candidate", "pubblicate")}
+            if time.time() < fine_loop - 10 * 60:          # modello riaddestrato sui nuovi annunci
+                sys.stdout.flush()
+                subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"], timeout=1800)
+            log.warning("BENZ_LOOP giro %d fatto: %s", giri, esito[f"giro{giri}"])
+    elif voce.startswith("benzval"):                               # 21/10: rivaluta la base benzina col modello nuovo
+        from . import benzina_mi as B
+        vecchi = {k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_MAX", "BENZ_SOGLIA")}
+        os.environ["BENZ_SOLO_VALUTA"] = "1"
+        os.environ["BENZ_MAX"] = os.environ.get("BENZ_VAL_MAX", "15000")
+        os.environ["BENZ_SOGLIA"] = os.environ.get("BENZ_VAL_SOGLIA", "0.95")
+        try:
+            esito = B.giro()
+        finally:
+            for k, v in vecchi.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+    elif voce.startswith("benzina_mi"):
+        from . import benzina_mi as B
+        esito = B.giro()
+    elif voce.startswith("aiprezzi"):                              # 21/10: modello AI prezzi su tutta la base letta
+        import subprocess                                          # processo a parte: memoria pulita a fine giro
+        sys.stdout.flush()
+        rc = subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"],
+                            timeout=int(os.environ.get("AI_PREZZI_TIMEOUT", "5400"))).returncode
+        esito = {"codice_uscita": rc}
+    else:
+        return None
+    return esito
+
+
+def fase_confronti(_t0_loop: float, sempre: bool = False) -> dict:
+    """Confronti extra (annunci fuori zona solo come confronti di prezzo): stesso codice di prima, estratto il 16/11.
+    sempre=True: senza il controllo CE_ORE_GIRO (lo decide il turno)."""
+    from .ciclo import _due
+    _ce: dict = {}
+    if sempre or _due("confronti_extra:v3", int(os.environ.get("CE_ORE_GIRO", "0"))):   # 1/11: a ogni giro, le città a turno
+        from ..db import connect as _cn, log_job as _lj
+        from . import confronti_extra as CE
+        with _cn() as _c:
+            _fin = _lj(_c, "confronti_extra")
+            _ce = CE.giro()
+            _fin(True, _ce)
+        # 1/11 (cliente: "appena entrano le auto nuove della Lombardia sfruttale per fare più confronti"):
+        # se sono entrati tanti confronti nuovi o con prezzo cambiato, il ricalcolo dei prezzi parte in questo giro
+        _nuovi = sum(v for k, v in (_ce or {}).items() if isinstance(v, int) and (k.endswith(":nuovo") or k.endswith(":prezzo")))
+        if _nuovi >= int(os.environ.get("CE_RICALCOLA_DA", "1000")) and tempo_ok("ricalcolo", 4, _t0_loop):
+            os.environ["RICALCOLO_SUBITO"] = "1"
+            log.warning("CONFRONTI_EXTRA %d confronti nuovi: ricalcolo dei prezzi in questo giro", _nuovi)
+    return dict(_ce or {})
+
+
+def supercar_raccolta() -> dict:
+    from . import supercar_eu as SE
+    return SE.raccolta()
+
+
+def supercar_valuta() -> dict:
+    from . import supercar_eu as SE
+    return SE.valuta()
+
+
+# ------------------------------------------------------------------ 16/11 (fond-server): giro corto e lavori a turno
+# Vedi pipeline/turni.py e FOND_SERVER.md. GIRO_LEGGERO=0 torna al giro di prima (tutto in fila).
+
+def _completo_scaduto(nome: str) -> bool:
+    """Nessun giro completo di `nome` ('zona_cron', 'torino_cron') da più di COMPLETO_MAX_ORE ore: il passo notturno non
+    sta riuscendo, quindi il giro ogni 3 ore torna a decidere da sé (completo ogni ZC_COMPLETO_ORE, come prima)."""
+    from . import turni
+    h = turni.ore_dall_ultimo(nome + ":completo")
+    lim = float(os.environ.get("COMPLETO_MAX_ORE") or turni.COMPLETO_MAX_ORE)
+    return h is None or h > lim
+
+
+def zona_del_giro(giro=None) -> bool:
+    """Giro della zona nel cron ogni 3 ore: solo lettura INCREMENTALE (il completo lo fa il passo notturno), con il
+    lucchetto 'zona_cron:lettura' (se la notte sta leggendo tutta la zona, questo giro la salta: i nuovi arrivano anche
+    dal tempo reale)."""
+    from . import turni
+    if not turni.giro_leggero():
+        return giro_zona()
+    completo = None if _completo_scaduto("zona_cron") else False
+    if completo is None:
+        log.warning("GIRO zona: nessun giro completo da oltre %s ore, lo decide il giro (come prima)",
+                    os.environ.get("COMPLETO_MAX_ORE") or turni.COMPLETO_MAX_ORE)
+    with turni.lucchetto("zona_cron:lettura") as preso:
+        if not preso:
+            log.warning("GIRO zona saltata: la lettura della zona è in corso in un altro processo (notte)")
+            return False
+        if giro is not None:
+            giro.fase("zona")
+        return giro_zona(completo)
+
+
+def torino_del_giro(giro=None, **kw) -> None:
+    """Giro di Torino nel cron ogni 3 ore: incrementale (il completo va a turno), lucchetto 'torino_cron:lettura'."""
+    from . import turni
+    if not turni.giro_leggero() or kw.get("torino_ora"):
+        return giro_torino(**kw)
+    kw.setdefault("completo", None if _completo_scaduto("torino_cron") else False)
+    with turni.lucchetto("torino_cron:lettura") as preso:
+        if not preso:
+            log.warning("GIRO Torino saltato: lettura di Torino in corso in un altro processo")
+            return None
+        if giro is not None:
+            giro.fase("torino")
+        return giro_torino(**kw)
+
+
+def _voce_e_registra(voce: str, _t0_loop: float) -> dict:
+    """Voce di COLLECT_PRIMA + la sua riga di sempre (job = voce, letta da _due), come prima."""
+    from ..db import connect, log_job
+    if voce.startswith("ricalcolo"):
+        os.environ.pop("RICALCOLO_SUBITO", None)
+    esito = esegui_voce(voce, _t0_loop)
+    if esito is None:
+        return {"sconosciuta": True}
+    with connect() as conn:
+        log_job(conn, voce)(True, esito)
+    log.warning("PRIMA %s fatto: %s", voce, esito)
+    return esito if isinstance(esito, dict) else {"esito": str(esito)[:200]}
+
+
+def voci_prima() -> list[str]:
+    return [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]
+
+
+def ore_voce(voce: str) -> int:
+    return int(voce.split("@")[1]) if "@" in voce and voce.split("@")[1].isdigit() else 10000
+
+
+def turni_dovuti(_t0_loop: float, fatti: set | None = None) -> list:
+    """I lavori pesanti dovuti ADESSO, con la stima e il ritardo (pipeline/turni.py sceglie quale far partire)."""
+    from . import turni
+    from .turni import Turno
+    fatti = fatti or set()
+    out: list = []
+
+    def metti(nome, ritardo, fn, priorita=0):
+        if nome in fatti or ritardo is None:
+            return
+        out.append(Turno(nome, turni.stima(nome), float(ritardo), fn, priorita))
+
+    if os.environ.get("CONFRONTI_EXTRA") == "1":
+        rit = turni.ritardo("turno:confronti_extra", float(os.environ.get("CE_TURNO_ORE") or 24))
+        try:
+            from . import confronti_extra as CE
+            if rit is None and CE.in_ritardo():          # una città oltre la sua freschezza: subito
+                rit = 0.0
+        except Exception:
+            pass
+        metti("confronti_extra", rit, lambda: fase_confronti(_t0_loop, sempre=True))
+    if os.environ.get("SUPERCAR_EU_CRON") == "1":
+        ore_sc = float(os.environ.get("SUPERCAR_EU_ORE") or 24)
+        metti("supercar_raccolta", turni.ritardo("turno:supercar_raccolta", ore_sc), supercar_raccolta)
+        h_r = turni.ore_dall_ultimo("turno:supercar_raccolta")
+        h_v = turni.ore_dall_ultimo("turno:supercar_valuta")
+        if "supercar_raccolta" in fatti or (h_r is not None and (h_v is None or h_r < h_v)):
+            metti("supercar_valuta", 0.0, supercar_valuta)          # una sola valutazione dopo ogni raccolta
+        else:
+            metti("supercar_valuta", turni.ritardo("turno:supercar_valuta", ore_sc), supercar_valuta)
+    for voce in voci_prima():
+        nome = "prima:" + voce
+        if voce.startswith("ricalcolo"):
+            # 16/11: il ricalcolo una volta al giorno (lo fa anche il cron mercato): conta qualsiasi ricalcolo riuscito
+            subito = os.environ.get("RICALCOLO_SUBITO") == "1"
+            ore = max(ore_voce(voce), float(os.environ.get("RICALCOLO_ORE_MIN") or 24))
+            h = turni.ore_dall_ultimo("ricalcolo", prefisso=True)
+            rit = 0.0 if subito else (1000.0 if h is None else (h - ore if h >= ore else None))
+            metti(nome, rit, (lambda v=voce: _voce_e_registra(v, _t0_loop)), priorita=1)
+        else:
+            metti(nome, turni.ritardo(voce, ore_voce(voce)), (lambda v=voce: _voce_e_registra(v, _t0_loop)))
+    if os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1" and turni.giro_leggero():
+        # Torino completo (50-72 min) a turno nei giri, una volta al giorno (prima ogni TORINO_COMPLETO_ORE ore)
+        ore_tc = float(os.environ.get("TORINO_COMPLETO_TURNO_ORE") or 24)
+        h = turni.ore_dall_ultimo("torino_cron:completo")
+        rit = 1000.0 if h is None else (h - ore_tc if h >= ore_tc else None)
+
+        def _torino_completo():
+            torino_del_giro(None, completo=True, solo_subito=torino_dopo_zona())
+            return {"fatto": True}
+        metti("torino_completo", rit, _torino_completo)
+    return out
+
+
+AFFAMATO_ORE = 24          # un lavoro in ritardo di oltre un giorno parte anche se la stima supera di poco il tempo
+
+
+def lavori_a_turno(giro, _t0_loop: float, mode: str) -> None:
+    """Lavori pesanti: a turno nel tempo che resta al giro (GIRO_LEGGERO=1), oppure in fila come prima."""
+    from . import turni
+    if giro is None or not turni.giro_leggero() or mode != "opportunita":
+        return _lavori_in_fila(_t0_loop)
+    fatti: set = set()
+    riserva = float(os.environ.get("GIRO_RISERVA_MIN") or turni.RISERVA_MIN)
+    while True:
+        cand = turni_dovuti(_t0_loop, fatti)
+        if not cand:
+            break
+        resto = giro.resto_min() - riserva
+        t = turni.scegli(cand, resto)
+        if t is None:
+            primo = turni.ordina(cand)[0]
+            if primo.ritardo_ore >= AFFAMATO_ORE and primo.stima_min * 0.85 <= resto:
+                t = primo
+            else:
+                for c in cand:
+                    if c.nome not in giro.rimandati:
+                        giro.rimandati.append(c.nome)
+                log.warning("GIRO lavori rimandati al prossimo giro (restano %.0f min): %s", resto,
+                            ", ".join(f"{c.nome} ~{c.stima_min:.0f} min" for c in turni.ordina(cand)))
+                break
+        giro.fase("turno:" + t.nome)
+        turni.esegui(t.nome, t.fn)
+        fatti.add(t.nome)
+    giro.fase("dopo_turni")
+
+
+def _lavori_in_fila(_t0_loop: float) -> None:
+    """Il giro di prima (GIRO_LEGGERO=0): confronti, COLLECT_PRIMA (ricalcolo per primo), supercar, in fila."""
+    if os.environ.get("CONFRONTI_EXTRA") == "1" and tempo_ok("confronti", ore_confronti(), _t0_loop):
+        try:
+            fase_confronti(_t0_loop)
+        except Exception as e:
+            log.warning("CONFRONTI_EXTRA non riuscito: %s", str(e)[:300])
+    from .ciclo import _due
+    for voce in sorted(voci_prima(), key=lambda v: 0 if v.startswith("ricalcolo") else 1):
+        try:
+            if not _due(voce, ore_voce(voce)) and not (voce.startswith("ricalcolo") and os.environ.get("RICALCOLO_SUBITO") == "1"):
+                continue
+            if not tempo_ok("ricalcolo" if voce.startswith("ricalcolo") else "prima", 5 if voce.startswith("ricalcolo") else 8, _t0_loop):
+                continue
+            _voce_e_registra(voce, _t0_loop)
+        except Exception as e:
+            log.warning("PRIMA %s non riuscito: %s", voce, str(e)[:300])
+    if os.environ.get("SUPERCAR_EU_CRON") == "1" and tempo_ok("supercar", 7, _t0_loop):
+        try:
+            if _due("supercar_eu", int(os.environ.get("SUPERCAR_EU_ORE", "24"))):
+                from ..db import connect as _cn, log_job as _lj
+                with _cn() as _c:
+                    fin = _lj(_c, "supercar_eu")     # 16/11: prima mai scritta, quindi supercar a OGNI giro
+                    st = {"raccolta": supercar_raccolta(), "valuta": supercar_valuta()}
+                    fin(True, {k: len(v) if isinstance(v, dict) else v for k, v in st.items()})
+        except Exception as e:
+            log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
+
+
+NOTTE_FINE_ORE = 10.0      # ore dall'avvio del cron mercato entro cui la zona completa deve finire (poi ai_prezzi)
+NOTTE_ZONA_ORE = 14        # zona completa dovuta se l'ultima è INIZIATA da oltre 14 ore: ogni notte, mai oltre 24 ore
+RENDER_ORE_MAX = 11.5      # margine dentro le 12 ore dei cron di Render: oltre non parte nessun lavoro
+STIMA_ZONA_COMPLETA_MIN = 285
+_TURNO_COMPLETO = {"zona_cron": "turno:zona_completo", "torino_cron": "turno:torino_completo"}
+
+
+def ore_dal_completo(nome: str) -> float | None:
+    """Ore dall'INIZIO dell'ultima lettura completa di `nome` ('zona_cron', 'torino_cron').
+    Correzione del giudice (16/11): '<nome>:completo' si scrive a FINE lettura (zona ~09:45 UTC), quindi la notte dopo
+    (~04:50) risultavano ~19 ore < 20 e la zona completa saltava una notte su due (~43 ore). Ora conta l'inizio del
+    turno notturno ('turno:zona_completo'); se dopo c'è stato un completo più recente (ripiego del giro ogni 3 ore,
+    fine registrata oltre 8 ore dopo l'inizio del turno) conta quello."""
+    from . import turni
+    h_inizio = turni.ore_dall_ultimo(_TURNO_COMPLETO[nome])
+    h_fine = turni.ore_dall_ultimo(nome + ":completo")
+    if h_inizio is None:
+        return h_fine
+    if h_fine is not None and h_fine < h_inizio - 8:
+        return h_fine
+    return h_inizio
+
+
+def _completo_dovuto_oggi(nome: str) -> bool:
+    h = ore_dal_completo(nome)
+    return h is None or h >= float(os.environ.get("NOTTE_ZONA_ORE") or NOTTE_ZONA_ORE)
+
+
+def notte_dovuta(t0: float, ora: float | None = None) -> bool:
+    """Il cron mercato fa il passo notturno? Sì se tocca alla zona completa o se ci sono lavori lunghi in coda."""
+    if os.environ.get("NOTTE", "1") == "0":
+        return False
+    if zona_notte_ok(t0, ora):
+        return True
+    try:
+        from . import coda_lavori
+        with coda_lavori._connetti() as c:
+            coda_lavori.assicura(c)
+            r = c.execute("SELECT count(*) AS n FROM coda_lavori WHERE stato = 'in_coda' AND lungo").fetchone()
+        return bool(r and int(r["n"]))
+    except Exception:
+        return False
+
+
+def zona_notte_ok(t0: float, ora: float | None = None) -> bool:
+    """Il passo notturno fa stanotte la zona completa? Sì se è dovuta (ultima iniziata da oltre NOTTE_ZONA_ORE ore) e
+    c'è tempo per finirla entro NOTTE_FINE_ORE dall'avvio del cron. Non cede più il posto a mercato_nord (che riprende
+    da dove era arrivato, anche in più notti): così la zona completa c'è almeno una volta ogni 24 ore.
+    NOTTE_CEDE_A_NORD=1 torna a cedere (al massimo 36 ore senza zona completa)."""
+    import time as _t
+    from . import turni
+    if os.environ.get("NOTTE", "1") == "0" or not turni.giro_leggero():
+        return False
+    if not _completo_dovuto_oggi("zona_cron"):
+        return False
+    h = ore_dal_completo("zona_cron")
+    if os.environ.get("NOTTE_CEDE_A_NORD") == "1":
+        try:
+            from .ciclo import _due
+            nord = os.environ.get("MERCATO_NORD", "1") == "1" and _due("collect:mercato_nord", 24 * 6)
+        except Exception:
+            nord = False
+        if nord and h is not None and h < 36:
+            log.warning("NOTTE: stanotte tocca a mercato_nord, zona completa domani (ultima %.0f ore fa)", h)
+            return False
+    passate = ((ora if ora is not None else _t.time()) - t0) / 3600
+    stima = turni.stima("zona_completo", STIMA_ZONA_COMPLETA_MIN) / 60
+    if passate + stima > float(os.environ.get("NOTTE_FINE_ORE") or NOTTE_FINE_ORE):
+        log.warning("NOTTE: zona completa non parte, già %.1f ore dall'avvio + stima %.1f ore (ripiego: il giro ogni "
+                    "3 ore la fa da sé dopo %s ore senza)", passate, stima, os.environ.get("COMPLETO_MAX_ORE") or turni.COMPLETO_MAX_ORE)
+        return False
+    return True
+
+
+def avvia_notte(t0: float) -> None:
+    """Dal cron mercato: passo notturno in un processo NUOVO (os.execve) il cui ambiente è già quello giusto PRIMA di
+    ogni import: variabili copiabili del cron opportunità (fotografia), senza quelle che ha solo il mercato, segreti e
+    variabili di processo del mercato. Senza fotografia: ambiente del mercato e solo i lavori in coda. Non ritorna."""
+    from . import turni
+    info = turni.carica_config() if zona_notte_ok(t0) else None
+    if info:
+        env = turni.ambiente_notte(dict(os.environ), info[0])
+        env["NOTTE_CONFIG"], env["NOTTE_IMPRONTA_ATTESA"] = "1", info[1]
+    else:
+        env = dict(os.environ)
+        env["MERCATO_ENV_PRIMA"] = json.dumps(turni.variabili_da_copiare(os.environ))
+    env["MERCATO_NOTTE_FASE"] = "1"
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execve(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"], env)
+
+
+def lavori_in_coda_lunghi() -> int:
+    try:
+        from . import coda_lavori
+        with coda_lavori._connetti() as c:
+            coda_lavori.assicura(c)
+            r = c.execute("SELECT count(*) AS n FROM coda_lavori WHERE lungo AND stato IN ('in_coda', 'errore')").fetchone()
+        return int(r["n"]) if r else 0
+    except Exception:
+        return 0
+
+
+def avvia_lavori_notte() -> None:
+    """Dal processo notturno, finita la zona: i lavori lunghi in coda in un processo NUOVO (os.execve, ambiente del
+    mercato), così in nessun momento convivono due processi pesanti (cron a 512 MB). Non ritorna se ci sono lavori."""
+    if not lavori_in_coda_lunghi():
+        return
+    env = dict(os.environ)
+    env["MERCATO_LAVORI_FASE"] = "1"
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execve(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"], env)
+
+
+def fase_lavori_notte(t0: float) -> dict:
+    """Processo pulito e leggero: esegue i lavori lunghi in coda, ognuno in un suo processo (uno alla volta), solo se la
+    durata prevista sta nel tempo, sempre entro RENDER_ORE_MAX (11,5) ore dall'avvio del cron."""
+    import time as _t
+    from . import coda_lavori, turni
+    giro = turni.Giro("notte_lavori", t0, ore=float(os.environ.get("RENDER_ORE_MAX") or RENDER_ORE_MAX)).apri()
+    esito: dict = {}
+    try:
+        giro.fase("lavori_lunghi")
+        resto = min(float(os.environ.get("NOTTE_FINE_ORE") or NOTTE_FINE_ORE) * 60 + 60 - giro.passate_min(),
+                    giro.resto_min())
+        esito = coda_lavori.esegui_coda(lunghi=True, budget_min=max(0.0, resto), separato=True)
+    except Exception as e:
+        log.warning("NOTTE lavori in coda non fatti: %s", str(e)[:200])
+    finally:
+        giro.chiudi(True, lavori=json.dumps(esito, default=str)[:300])
+    log.warning("NOTTE lavori fatti in %.0f min dall'avvio del cron: %s", (_t.time() - t0) / 60,
+                json.dumps(esito, default=str)[:400])
+    return esito
+
+
+def dopo_notte() -> None:
+    """Fine del cron mercato dopo la notte: mercato_nord se dovuto (processo pulito) oppure il modello AI dei prezzi."""
+    try:
+        from .ciclo import _due as _due_job
+        if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6) \
+                and os.environ.get("NORD_PROCESSO", "1") == "1":
+            os.environ["MERCATO_NORD_FASE"] = "1"
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os.execv(sys.executable, [sys.executable, "-m", "dealfinder.pipeline.collect", "mercato"])
+    except Exception as e:
+        log.warning("MERCATO_NORD dopo la notte non avviato: %s", str(e)[:300])
+    if tempo_ok("ai_prezzi", 10.5, float(os.environ["CRON_T0"])):
+        _ai_prezzi()
+
+
+def modo_notte(t0: float) -> dict:
+    """Passo notturno (processo nuovo del cron mercato, ambiente dato da avvia_notte): giro COMPLETO della zona e, se
+    resta tempo, Torino completo, solo se l'impronta delle regole è UGUALE a quella del cron opportunità; poi si torna
+    all'ambiente del mercato e i lavori una tantum lunghi partono ognuno in un processo nuovo, solo se la loro durata
+    prevista sta nel tempo (sempre dentro le 12 ore di Render)."""
+    import time as _t
+    from . import turni
+    esito: dict = {}
+    giro = turni.Giro("notte", t0, ore=float(os.environ.get("NOTTE_FINE_ORE") or NOTTE_FINE_ORE)).apri()
+    try:
+        attesa = os.environ.get("NOTTE_IMPRONTA_ATTESA")
+        if os.environ.get("NOTTE_CONFIG") != "1":
+            log.warning("NOTTE: niente zona completa (non dovuta, o fotografia del cron opportunità assente/vecchia)")
+            esito["zona"] = "non_dovuta_o_senza_config"
+        else:
+            qui = turni.impronta_regole()
+            if not attesa or qui != attesa:
+                log.warning("NOTTE: impronta delle regole DIVERSA dal cron opportunità (attesa %s, qui %s): zona completa "
+                            "e Torino completo saltati (servizi su versioni diverse? si riprova la notte dopo; dopo %s "
+                            "ore senza completo lo fa il giro ogni 3 ore)", attesa, qui,
+                            os.environ.get("COMPLETO_MAX_ORE") or turni.COMPLETO_MAX_ORE)
+                esito["zona"] = "impronta_diversa"
+            else:
+                with turni.lucchetto("zona_cron:lettura", attesa_s=int(os.environ.get("NOTTE_ATTESA_S") or 2700)) as preso:
+                    if preso:
+                        giro.fase("zona_completa")
+                        esito["zona"] = turni.esegui("zona_completo", lambda: {"letta": giro_zona(True)})
+                    else:
+                        esito["zona"] = "occupata"
+                if os.environ.get("TORINO_GIRO", "1") == "1" and _completo_dovuto_oggi("torino_cron") \
+                        and giro.tempo_per("torino_completo", turni.stima("torino_completo")):
+                    giro.fase("torino_completo")
+                    esito["torino"] = turni.esegui("torino_completo", lambda: (
+                        torino_del_giro(None, completo=True, solo_subito=torino_dopo_zona()), {"fatto": True})[1])
+        # i lavori in coda NON partono da qui: questo processo ha appena fatto ore di zona completa e non restituisce
+        # la memoria (correzione del giudice). Li fa un processo pulito (fase_lavori_notte, avviato con os.execve).
+    finally:
+        if "MERCATO_ENV_PRIMA" in os.environ:
+            turni.applica_ambiente(turni.ambiente_mercato(dict(os.environ)))
+        giro.chiudi(True, **{k: str(v)[:200] for k, v in esito.items()})
+    log.warning("NOTTE fatta in %.0f min: %s", (_t.time() - t0) / 60, json.dumps(esito, default=str)[:500])
+    return esito
+
+
 def torino_dopo_zona() -> bool:
     """15/11 (punto 5, letture doppie): con ZONA_CRON=1 e ZONA_TORINO=1 il giro della zona legge già AutoScout24 intorno
     a Torino (10121:100, da 1.000 a 70.000 €, focus), cioè tutto l'AutoScout24 del giro di Torino (4.000-45.000 €).
@@ -1131,12 +1701,14 @@ def torino_dopo_zona() -> bool:
             and os.environ.get("ZONA_TORINO", "1") == "1" and os.environ.get("ZC_SOLO_VALUTA", "0") != "1")
 
 
-def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_subito: bool = False) -> None:
+def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_subito: bool = False,
+                completo: bool | None = None) -> None:
     """Giro di Torino (9/11; NOVARA_ORA 11/11): stessa raccolta + valutazione + pubblicazione del giro della zona,
-    centrato su Torino. solo_subito=True (15/11): niente AutoScout24 (già letto dalla zona), Subito sì (torino_dopo_zona)."""
+    centrato su Torino. solo_subito=True (15/11): niente AutoScout24 (già letto dalla zona), Subito sì (torino_dopo_zona).
+    completo (16/11, fond-server): None come prima; False solo incrementale (giro ogni 3 ore); True completo (notte)."""
     try:
         from .ciclo import _due
-        if torino_ora or _due("torino_cron", int(os.environ.get("TORINO_ORE", "6"))):
+        if torino_ora or completo or _due("torino_cron", int(os.environ.get("TORINO_ORE", "6"))):
             from ..zone import TORINO
             vecchie = {k: os.environ.get(k) for k in list(os.environ) if k.startswith("BENZ_")}
             prov = TORINO + [p for p in os.environ.get("TORINO_PROVINCE_EXTRA", "AL,NO").split(",") if p.strip()]
@@ -1155,7 +1727,8 @@ def giro_torino(torino_ora: bool = False, novara_ora: bool = False, solo_subito:
                          "BENZ_TEL_PARALLELI": "3", "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
                 os.environ[k] = v
             from . import incrementale as INC                 # 12/11: giro completo solo ogni TORINO_COMPLETO_ORE ore
-            _completo = torino_ora or INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
+            _completo = torino_ora or (INC.completo_dovuto("torino_cron", var_ore="TORINO_COMPLETO_ORE")
+                                       if completo is None else bool(completo))
             os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
             os.environ["BENZ_INCR_NOME"] = "novara_ora" if novara_ora else "torino_cron"
             try:
@@ -1195,18 +1768,70 @@ if __name__ == "__main__":
         if tempo_ok("ai_prezzi", 10.5, float(os.environ["CRON_T0"])):
             _ai_prezzi()
         sys.exit(0)
+    if os.environ.pop("MERCATO_NOTTE_FASE", None) == "1":
+        # 16/11 (fond-server): passo notturno del cron mercato in un processo pulito (zona completa, Torino completo,
+        # lavori lunghi in coda), poi mercato_nord se dovuto (altro processo pulito) oppure il modello AI dei prezzi
+        try:
+            modo_notte(float(os.environ["CRON_T0"]))
+        except Exception as e:
+            log.warning("NOTTE non riuscita: %s", str(e)[:300])
+        try:
+            avvia_lavori_notte()              # lavori lunghi in coda: processo pulito (non ritorna se ce ne sono)
+        except Exception as e:
+            log.warning("NOTTE lavori in coda non avviati: %s", str(e)[:300])
+        dopo_notte()
+        sys.exit(0)
+    if os.environ.pop("MERCATO_LAVORI_FASE", None) == "1":
+        # 16/11 (correzione del giudice): lavori lunghi in coda in un processo pulito, poi la fine del cron mercato
+        try:
+            fase_lavori_notte(float(os.environ["CRON_T0"]))
+        except Exception as e:
+            log.warning("NOTTE lavori non riusciti: %s", str(e)[:300])
+        dopo_notte()
+        sys.exit(0)
     # 1/11 (regola del cliente: niente raccolta da Facebook): i giri Facebook non partono più, salvo FACEBOOK_ATTIVO=1
     if mode in ("facebook", "fb_backfill", "fb_importa") and os.environ.get("FACEBOOK_ATTIVO") != "1":
         log.warning("Facebook spento (regola del cliente): niente raccolta")
         sys.exit(0)
     # COLLECT_MODO (da Render) cambia il lavoro di un servizio senza toccare il comando di avvio
     mode = os.environ.get("COLLECT_MODO") or mode
+    # 16/11 (fond-server): righe "in corso" con il battito fermo (processi morti) chiuse come interrotte (prima della sentinella:
+    # così non le conta come allarmi)
+    try:
+        from ..db import chiudi_interrotti as _ci, connect as _cn0
+        with _cn0() as _c0:
+            _chiuse = _ci(_c0)
+        if _chiuse:
+            log.warning("INTERROTTI chiusi %d lavori con il battito fermo: %s", len(_chiuse),
+                        ", ".join(sorted({r["job"] for r in _chiuse}))[:400])
+    except Exception as e:
+        log.warning("INTERROTTI non controllati: %s", str(e)[:200])
     try:                                             # 3/11 sentinella: impronta delle regole + controlli, una volta per giro
         from .. import sentinella as _sent           # (solo lettura, mai eccezioni; salta se fatti < 30 min fa)
         _sent.salva_impronta("cron:" + mode)
         _sent.esegui("cron:" + mode)
     except Exception:
         pass
+    _giro = None
+    if mode == "opportunita":
+        from . import turni as _turni
+        # fotografia della configurazione PRIMA di ogni cambio dell'ambiente: la usa il passo notturno del cron mercato.
+        # Solo dal servizio dealfinder-opportunita, mai con COLLECT_SOLO_PRIMA / TORINO_ORA / NOVARA_ORA.
+        _serv = os.environ.get("RENDER_SERVICE_NAME") or "(assente)"
+        if _turni.fotografia_ammessa(mode):
+            log.warning("FOTOGRAFIA servizio %s: salvo la configurazione per il passo notturno (%d variabili)",
+                        _serv, _turni.salva_config())
+        else:
+            log.warning("FOTOGRAFIA servizio %s: configurazione NON salvata (solo da %s, mai con COLLECT_SOLO_PRIMA, "
+                        "TORINO_ORA, NOVARA_ORA)", _serv, _turni.SERVIZIO_FOTOGRAFIA)
+        if _turni.giro_leggero():
+            _giro = _turni.inizia_giro("opportunita", float(os.environ["CRON_T0"]))
+            try:                                     # lavori una tantum brevi passati dal sito al cron (coda_lavori.py)
+                from . import coda_lavori as _cl
+                _giro.fase("lavori_in_coda")
+                _cl.esegui_coda(lunghi=False, budget_min=min(30.0, _giro.resto_min() - 60))
+            except Exception as e:
+                log.warning("LAVORI in coda non fatti: %s", str(e)[:200])
     # COLLECT_PRIMA (da Render), es. "leadsp:3,benzina_mi:5": giri pesanti una tantum fatti qui, in un processo
     # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
     import time
@@ -1227,7 +1852,7 @@ if __name__ == "__main__":
     _torino_dopo = not _torino_ora and torino_dopo_zona()
     _zona_letta = False
     if _torino_ora or (os.environ.get("ZONA_CRON") == "1" and os.environ.get("TORINO_GIRO", "1") == "1" and not _torino_dopo):
-        giro_torino(_torino_ora, _novara_ora)
+        torino_del_giro(_giro, torino_ora=_torino_ora, novara_ora=_novara_ora)
         if _torino_ora:
             log.warning("TORINO_ORA: giro di Torino finito, il cron si ferma qui")
             sys.exit(0)
@@ -1235,196 +1860,16 @@ if __name__ == "__main__":
     # degli annunci nuovi della zona + scelta sulla base di TUTTE le auto del database + valutazione e pubblicazione,
     # qui nel cron (prima girava sul sito e lo mandava in crash per memoria). Impostazioni ZC_* (fascia media e bassa).
     if os.environ.get("ZONA_CRON") == "1":
-        try:
-            from .ciclo import _due
-            if _due("zona_cron", int(os.environ.get("ZC_ORE", "3"))):
-                for k, v in {"BENZ_CAP": os.environ.get("ZC_CAP", "20121"), "BENZ_RAGGIO": os.environ.get("ZC_RAGGIO", "130"), "BENZ_CAP_EXTRA": os.environ.get("ZC_CAP_EXTRA", "25121:90"),
-                             "BENZ_MIN": os.environ.get("ZC_MIN", "1000"), "BENZ_PMAX": os.environ.get("ZC_MAX", "70000"),   # 31/10: anche 50-70k (prima nessuno le guardava)
-                             "BENZ_PROVINCE": ",".join(province_zona()),   # 15/11: sempre anche quelle del sito
-                             "BENZ_SOLO_PRIVATI": "1", "BENZ_RACCOLTA_TUTTI": os.environ.get("ZC_RACCOLTA_TUTTI", "1"), "BENZ_SUB_PROFONDA": os.environ.get("ZC_SUB_PROFONDA", "0"), "BENZ_SUB_PASSO": os.environ.get("ZC_SUB_PASSO", "1000"), "BENZ_SUB_PAG_FASCIA": os.environ.get("ZC_SUB_PAG_FASCIA", "10"), "BENZ_TUTTI_CARB": "1",
-                             "BENZ_DAL": os.environ.get("ZC_DAL", "2026-10-01 00:00"), "BENZ_SUB_PAGINE": os.environ.get("ZC_SUB_PAGINE", "200"),
-                             "BENZ_MAX": os.environ.get("ZC_CANDIDATE", "2500"), "BENZ_SOGLIA": os.environ.get("ZC_SOGLIA", "0.92"),
-                             "BENZ_PARALLELI": os.environ.get("ZC_PARALLELI", "3"), "BENZ_SOLO_VALUTA": os.environ.get("ZC_SOLO_VALUTA", "0"),
-                             "BENZ_VAL_PEZZO": os.environ.get("ZC_VAL_PEZZO", "80"), "BENZ_TEL_PARALLELI": os.environ.get("ZC_TEL_PARALLELI", "3"),
-                             "BENZ_G_MAX": os.environ.get("ZC_G_MAX", "400000")}.items():
-                    os.environ[k] = v
-                if os.environ.get("ZONA_TORINO", "1") == "1":
-                    # 9/11 (cliente: presentazione a Torino): nel giro della zona anche Torino e dintorni, con una
-                    # ricerca AutoScout24 in più centrata su Torino (Milano + 130 km arriva appena a Torino)
-                    from ..zone import TORINO
-                    pv = [p for p in os.environ["BENZ_PROVINCE"].split(",") if p.strip()]
-                    os.environ["BENZ_PROVINCE"] = ",".join(pv + [p for p in TORINO if p not in pv])
-                    extra = os.environ.get("BENZ_CAP_EXTRA", "")
-                    if "10121:" not in extra:
-                        os.environ["BENZ_CAP_EXTRA"] = ",".join(x for x in (extra, os.environ.get("ZC_TORINO_CAP", "10121:100")) if x)
-                from . import benzina_mi as B
-                from . import incrementale as INC                 # 12/11: giro completo solo ogni ZC_COMPLETO_ORE ore
-                _completo = INC.completo_dovuto("zona_cron")
-                os.environ["BENZ_INCREMENTALE"] = "0" if _completo else "1"
-                os.environ["BENZ_INCR_NOME"] = "zona_cron"
-                try:
-                    esito = B.giro()
-                finally:
-                    os.environ.pop("BENZ_INCREMENTALE", None)
-                    os.environ.pop("BENZ_INCR_NOME", None)
-                # 15/11: lettura finita senza blocchi (letture con errori: il giro di Torino rilegge da sé)
-                _zona_letta = not esito.get("lettura_errori") and bool(esito.get("letti_subito") or esito.get("letti_autoscout"))
-                if _completo:
-                    INC.segna_completo("zona_cron", esito)
-                log.warning("ZONA_CRON fatta (%s): %s", "completa" if _completo else "incrementale",
-                            {k: v for k, v in esito.items() if isinstance(v, int)})
-                lavori_zona(esito)
-        except Exception as e:
-            log.warning("ZONA_CRON non riuscita: %s", str(e)[:300])
+        _zona_letta = zona_del_giro(_giro)
         if _torino_dopo and os.environ.get("TORINO_GIRO", "1") == "1":
-            giro_torino(solo_subito=_zona_letta)
+            torino_del_giro(_giro, solo_subito=_zona_letta)
+        if _giro is not None:
+            _giro.fase("lavori_cron")
         lavori_cron()
         if mode == "opportunita":
             # 13/11: con ZONA_CRON il cron non arriva a run(): Autohero non girava mai. Una volta al giorno.
             _autohero_giornaliero(Counter())
-    # 29/10 (cliente: "far lavorare meglio gli scraper"): annunci fuori zona SOLO come confronti di prezzo (vedi confronti_extra.py)
-    if os.environ.get("CONFRONTI_EXTRA") == "1" and tempo_ok("confronti", ore_confronti(), _t0_loop):
-        try:
-            from .ciclo import _due
-            if _due("confronti_extra:v3", int(os.environ.get("CE_ORE_GIRO", "0"))):   # 1/11: a ogni giro, le città a turno
-                from ..db import connect as _cn, log_job as _lj
-                from . import confronti_extra as CE
-                with _cn() as _c:
-                    _fin = _lj(_c, "confronti_extra")
-                    _ce = CE.giro()
-                    _fin(True, _ce)
-                # 1/11 (cliente: "appena entrano le auto nuove della Lombardia sfruttale per fare più confronti"):
-                # se sono entrati tanti confronti nuovi o con prezzo cambiato, il ricalcolo dei prezzi parte in questo giro
-                _nuovi = sum(v for k, v in (_ce or {}).items() if isinstance(v, int) and (k.endswith(":nuovo") or k.endswith(":prezzo")))
-                if _nuovi >= int(os.environ.get("CE_RICALCOLA_DA", "1000")) and tempo_ok("ricalcolo", 4, _t0_loop):
-                    os.environ["RICALCOLO_SUBITO"] = "1"
-                    log.warning("CONFRONTI_EXTRA %d confronti nuovi: ricalcolo dei prezzi in questo giro", _nuovi)
-        except Exception as e:
-            log.warning("CONFRONTI_EXTRA non riuscito: %s", str(e)[:300])
-    # 6/11: il ricalcolo dei prezzi per primo (prima veniva quasi sempre rimandato: supercar e lead finivano il tempo)
-    _voci = [v.strip() for v in (os.environ.get("COLLECT_PRIMA") or "").split(",") if v.strip()]
-    for voce in sorted(_voci, key=lambda v: 0 if v.startswith("ricalcolo") else 1):
-        try:
-            from .ciclo import _due
-            from ..db import connect, log_job
-            ore = int(voce.split("@")[1]) if "@" in voce else 10000      # "nome@2": si ripete ogni 2 ore (a ogni giro)
-            if not _due(voce, ore) and not (voce.startswith("ricalcolo") and os.environ.pop("RICALCOLO_SUBITO", None) == "1"):
-                continue
-            if not tempo_ok("ricalcolo" if voce.startswith("ricalcolo") else "prima", 5 if voce.startswith("ricalcolo") else 8, _t0_loop):
-                continue
-            if voce.startswith("lusso60"):                                 # 20/10: auto 60-200k di continuo
-                from . import lusso as L
-                os.environ.setdefault("LUSSO_LOG", "0")
-                anno = os.environ.get("ANNO_MINIMO")
-                os.environ["ANNO_MINIMO"] = os.environ.get("LUSSO_ANNO_MIN", "1990")     # anche auto d'epoca e youngtimer
-                try:
-                    esito = {"tenute": L.raccolta_60k()}
-                finally:
-                    if anno is None:
-                        os.environ.pop("ANNO_MINIMO", None)
-                    else:
-                        os.environ["ANNO_MINIMO"] = anno
-            elif voce.startswith("privlusso"):                             # 20/10: privati 60-200k contro la base prezzi
-                from . import privati_lusso as P
-                esito = P.giro()
-            elif voce.startswith("leadsub"):                               # 21/10: alta gamma da Subito
-                from . import lusso as L
-                esito = {"trovati": L.lead_subito_alta()}
-            elif voce.startswith("leadsp"):
-                from . import lusso as L
-                esito = {"trovati": L.lead_sportive()}
-            elif voce.startswith("leadtutti"):                             # 23/10: tutti i commercianti con cellulare (riprende)
-                from . import lead_tutti as LT
-                os.environ.setdefault("LEADT_GIRO", voce.split(":")[1].split("@")[0] if ":" in voce else "1")
-                esito = LT.giro()
-            elif voce.startswith("leadeexp"):                              # 27/10: consegna email commercianti (una volta)
-                from . import lead_email as LE
-                esito = {"esportati": LE.esporta()}
-            elif voce.startswith("leademail"):                             # 27/10: email aziendali dei commercianti
-                from . import lead_email as LE
-                esito = LE.giro()
-            elif voce.startswith("leadmaps"):                              # 26/10 notte: commercianti da Google Maps via Apify
-                from . import lead_maps as LM
-                esito = LM.giro()
-            elif voce.startswith("simulamargini"):                         # 12/11: vecchio contro nuovo, solo log
-                from ..pricing import simula                               # "simulamargini:1500" = quante valutazioni
-                q = voce.split(":")[1].split("@")[0] if ":" in voce else ""
-                with connect() as conn:
-                    esito = simula.esegui(conn, quante=int(q) if q.isdigit() else 1500)
-                    conn.rollback()
-                esito = {k: esito.get(k) for k in ("auto", "sul_sito", "sopra_soglia_solo_grazie_ai_commercianti")}
-            elif voce.startswith("provacorrezione"):                       # 4/11: prova correzione anno/km sulle vendute
-                from ..pricing import prova_correzione
-                with connect() as conn:
-                    r = prova_correzione.esegui(conn)
-                esito = {"usate": r.get("usate"), "decisione": r.get("decisione")}
-            elif voce.startswith("ricalcolo"):                             # 24/10 sera: ricalcolo policy qui, non sul sito (512 MB)
-                from ..pricing import ricalcolo
-                with connect() as conn:
-                    pol = ricalcolo.esegui(conn)
-                with connect() as conn:
-                    ricalcolo.utilitarie(conn, pubblica=os.environ.get("UTIL_PUBBLICA", "1") == "1")
-                try:
-                    from . import tempo_reale as tr
-                    tr.con_lucchetto("telefoni", tr.controlla_telefoni)
-                except Exception as e:
-                    log.warning("RICALCOLO telefoni non riuscito: %s", str(e)[:200])
-                esito = {k: v for k, v in (pol or {}).items() if isinstance(v, (int, float, str))} or {"fatto": True}
-            elif voce.startswith("benzloop"):                              # 21/10 sera: raccolta benzina senza fermarsi
-                import subprocess
-                from . import benzina_mi as B
-                fine_loop = _t0_loop + int(os.environ.get("BENZ_LOOP_MIN", "165")) * 60
-                giri, esito = 0, {}
-                while time.time() < fine_loop - 20 * 60:
-                    giri += 1
-                    esito[f"giro{giri}"] = {k: v for k, v in B.giro().items()
-                                            if k in ("letti_subito", "letti_autoscout", "candidate", "pubblicate")}
-                    if time.time() < fine_loop - 10 * 60:          # modello riaddestrato sui nuovi annunci
-                        sys.stdout.flush()
-                        subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"], timeout=1800)
-                    log.warning("BENZ_LOOP giro %d fatto: %s", giri, esito[f"giro{giri}"])
-            elif voce.startswith("benzval"):                               # 21/10: rivaluta la base benzina col modello nuovo
-                from . import benzina_mi as B
-                vecchi = {k: os.environ.get(k) for k in ("BENZ_SOLO_VALUTA", "BENZ_MAX", "BENZ_SOGLIA")}
-                os.environ["BENZ_SOLO_VALUTA"] = "1"
-                os.environ["BENZ_MAX"] = os.environ.get("BENZ_VAL_MAX", "15000")
-                os.environ["BENZ_SOGLIA"] = os.environ.get("BENZ_VAL_SOGLIA", "0.95")
-                try:
-                    esito = B.giro()
-                finally:
-                    for k, v in vecchi.items():
-                        if v is None:
-                            os.environ.pop(k, None)
-                        else:
-                            os.environ[k] = v
-            elif voce.startswith("benzina_mi"):
-                from . import benzina_mi as B
-                esito = B.giro()
-            elif voce.startswith("aiprezzi"):                              # 21/10: modello AI prezzi su tutta la base letta
-                import subprocess                                          # processo a parte: memoria pulita a fine giro
-                sys.stdout.flush()
-                rc = subprocess.run([sys.executable, "-m", "dealfinder.pricing.ai_prezzi"],
-                                    timeout=int(os.environ.get("AI_PREZZI_TIMEOUT", "5400"))).returncode
-                esito = {"codice_uscita": rc}
-            else:
-                continue
-            with connect() as conn:
-                fin = log_job(conn, voce)
-                fin(True, esito)
-            log.warning("PRIMA %s fatto: %s", voce, esito)
-        except Exception as e:
-            log.warning("PRIMA %s non riuscito: %s", voce, str(e)[:300])
-    # 29/10 (6/11: dopo il ricalcolo e i lead): dopo la zona (le auto medie e basse prima) e una volta al giorno.
-    # 28/10 sera: supercar da 70.000 € in tutta Europa anche qui (processo separato dal sito, 512 MB); riprende le fasce già fatte
-    if os.environ.get("SUPERCAR_EU_CRON") == "1" and tempo_ok("supercar", 7, _t0_loop):
-        try:
-            from .ciclo import _due
-            if _due("supercar_eu", int(os.environ.get("SUPERCAR_EU_ORE", "24"))):
-                from . import supercar_eu as SE
-                SE.raccolta()
-                SE.valuta()
-        except Exception as e:
-            log.warning("SUPERCAR nel cron non riuscito: %s", str(e)[:300])
+    lavori_a_turno(_giro, _t0_loop, mode)
     if os.environ.get("COLLECT_SOLO_PRIMA") == "1":           # 21/10 sera: solo i giri di COLLECT_PRIMA (benzina senza sosta)
         try:                                                  # 6/11: il giro è riuscito anche così (la sentinella lo
             from ..db import connect as _cn                   # aspetta come collect:<modo>, prima allarme falso fisso)
@@ -1435,6 +1880,8 @@ if __name__ == "__main__":
         except Exception as e:
             log.warning("COLLECT_SOLO_PRIMA registro non riuscito: %s", str(e)[:200])
         log.warning("COLLECT_SOLO_PRIMA: fine giro")
+        if _giro is not None:
+            _giro.chiudi(True)
         sys.exit(0)
     if mode == "sito":
         # Accelerazione: mette subito sul sito le auto già controllate a mano, poi prepara la selezione
@@ -1905,12 +2352,21 @@ if __name__ == "__main__":
         ciclo_run()
         _ai_prezzi()
         sys.exit(0)
-    if tempo_ok("raccolta", 10, _t0_loop):
+    if tempo_ok("raccolta", 10, _t0_loop) and (_giro is None or _giro.tempo_per("raccolta", 30)):
+        if _giro is not None:
+            _giro.fase("raccolta")
         run(mode)
     if mode == "mercato" and tempo_ok("modello", 10, _t0_loop):
         # dopo la raccolta notturna: riaddestra il modello se ha più di 7 giorni
         from ..pricing.train import run as train_run
         train_run()
+        # 16/11 (fond-server): passo notturno (zona completa con la configurazione del cron opportunità) in un processo
+        # nuovo: la memoria dell'addestramento si libera tutta. Da lì poi mercato_nord (se dovuto) e il modello AI.
+        try:
+            if notte_dovuta(float(os.environ["CRON_T0"])):
+                avvia_notte(float(os.environ["CRON_T0"]))
+        except Exception as e:
+            log.warning("NOTTE non avviata: %s", str(e)[:300])
         # una volta a settimana: prezzi di mercato da tutto il Nord (AutoScout24) per il modello AI e i confronti
         from .ciclo import _due as _due_job
         if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6):
@@ -1924,10 +2380,24 @@ if __name__ == "__main__":
             fase_mercato_nord()
     # L'analisi parte se non è esclusa dal comando, oppure se ANALISI_ATTIVA=1 (impostabile da Render)
     analisi = "--senza-analisi" not in sys.argv or os.environ.get("ANALISI_ATTIVA") == "1"
-    if mode in ("opportunita", "facebook") and analisi:
+    if mode in ("opportunita", "facebook") and analisi and (_giro is None or _giro.tempo_per("analisi", 10)):
+        if _giro is not None:
+            _giro.fase("analisi")
         from .process import run as process_run
         process_run("tutto")
     if mode == "opportunita":
-        _schede_pagine(_t0_loop)
-    if mode in ("opportunita", "mercato") and tempo_ok("ai_prezzi", 10.5, _t0_loop):
+        if _giro is not None:
+            _giro.fase("schede_pagine")
+        _schede_pagine(_t0_loop, _giro)
+    if mode in ("opportunita", "mercato") and tempo_ok("ai_prezzi", 10.5, _t0_loop) \
+            and (_giro is None or _giro.tempo_per("ai_prezzi", _turni.stima("ai_prezzi", float(
+                os.environ.get("AI_PREZZI_STIMA_MIN") or 30)))):
+        if _giro is not None:
+            try:                           # 16/11: dentro il tetto del giro, con un tempo massimo (non ritorna)
+                _turni.ai_prezzi_nel_giro(_giro)
+            except Exception as e:
+                log.warning("GIRO ai_prezzi nel giro non avviato: %s", str(e)[:200])
+            _giro.chiudi(True)
         _ai_prezzi()                       # ultimo passo: sostituisce il processo (memoria pulita)
+    if _giro is not None:
+        _giro.chiudi(True)

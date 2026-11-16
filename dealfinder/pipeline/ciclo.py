@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from contextlib import contextmanager
 
 from ..db import connect
@@ -76,6 +77,8 @@ class LavoroUnaVolta:
             self._rilascia()
 
     def _rilascia(self) -> None:
+        from ..db import smetti
+        smetti(self.id)                    # 16/11: niente più battito per questa riga
         try:
             self.conn.execute("SELECT pg_advisory_unlock(hashtext(%s))", (self.job,))
             self.conn.commit()
@@ -106,6 +109,33 @@ class LavoroUnaVolta:
         self._chiudi(False, {"errore": (type(errore).__name__ + ": " + str(errore)[:200]) if errore else "errore"})
 
 
+_DATA_FINALE = re.compile(r":(?:\d{6,14}|\d{4}-\d{2}-\d{2})$")
+
+
+def radice(job: str) -> str:
+    """Nome del lavoro senza la data/ora finale: 'valore_reale_notte:20261116' -> 'valore_reale_notte'."""
+    return _DATA_FINALE.sub("", job)
+
+
+def _chiudi_fratelli(conn, job: str) -> list:
+    r = radice(job)
+    if r == job:
+        return []
+    try:
+        from ..db import chiudi_interrotti
+        chiuse = chiudi_interrotti(conn, prefisso=r)
+        if chiuse:
+            log.warning("LAVORO %s: chiuse come interrotte %d righe ferme di %s", job, len(chiuse), r)
+        return chiuse
+    except Exception as e:                   # mai bloccare il lavoro per questo
+        try:
+            getattr(conn, "rollback", lambda: None)()
+        except Exception:
+            pass
+        log.debug("LAVORO %s: fratelli non controllati: %s", job, str(e)[:120])
+        return []
+
+
 def inizia(job: str, tentativi_max: int = 3, connetti=None) -> LavoroUnaVolta | None:
     """Prende il lavoro una tantum `job`. None se è già fatto, se un altro processo lo sta facendo o se ha già
     fallito `tentativi_max` volte; altrimenti il lavoro, da chiudere con .fatto() o .fallito()."""
@@ -127,11 +157,17 @@ def inizia(job: str, tentativi_max: int = 3, connetti=None) -> LavoroUnaVolta | 
             lav._rilascia()
             log.warning("LAVORO %s: %d tentativi non riusciti, non riprovo da solo", job, n)
             return None
+        # 16/11 (fond-server): righe aperte dei lavori "fratelli" (stesso nome senza la data finale, es.
+        # valore_reale_notte:20261115 per valore_reale_notte:20261116) con il battito fermo: interrotte. Solo quelle
+        # ferme: un fratello vivo (battito recente) lo sta facendo un altro processo e non si tocca.
+        _chiudi_fratelli(conn, job)
         # righe aperte da un processo morto (il lucchetto è nostro, quindi nessuno le sta facendo): interrotte
         conn.execute("UPDATE job_runs SET finished_at=now(), ok=false, stats='{\"interrotto\": true}' "
                      "WHERE job=%s AND finished_at IS NULL", (job,))
         lav.id = conn.execute("INSERT INTO job_runs (job) VALUES (%s) RETURNING id", (job,)).fetchone()["id"]
         conn.commit()
+        from ..db import batti
+        batti(lav.id)                      # 16/11: battito finché il lavoro è aperto
         if n:
             log.warning("LAVORO %s: riprendo dopo %d tentativi non finiti", job, n)
         return lav
