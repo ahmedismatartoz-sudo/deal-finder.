@@ -391,7 +391,8 @@ def esegui(conn, n: int | None = None, minuti: float | None = None, seme: int | 
     n = campione_n() if n is None else max(1, min(int(n), N_MAX))
     scadenza = t0 + minuti * 60
     rg, g = RG.regole(), SR.Regole.da_env()
-    out: dict = {"n_richiesto": int(n), "minuti_max": minuti, "giudice_ai": "spento", "stima_rapida": "nessuna"}
+    out: dict = {"n_richiesto": int(n), "minuti_max": minuti, "giudice_ai": "spento", "stima_rapida": "nessuna",
+                 "limite": "senza giudice AI: le buone sono un tetto massimo (stima per eccesso)"}
     try:
         totali, da_valutare = conta(conn, g)
     except Exception as e:
