@@ -965,8 +965,18 @@ def _ciclo_web(ogni_min: int, passo_s: int, attesa_s: int) -> None:
                 salva_impronta("web")               # rinfrescata ogni ora: il controllo 5 guarda gli ultimi 3 giorni
                 esegui("web")
                 ultimo = time.monotonic()
+                try:                                # 16/11 fondamenta: canarino una volta all'ora (non solleva)
+                    from . import canarino
+                    canarino.da_sito()
+                except Exception as e:
+                    log.warning("CANARINO non eseguito: %s", type(e).__name__)
             else:
                 solo_coda()
+            try:                                    # riepilogo del giorno: al più una email al giorno, dopo le 8
+                from . import riepilogo_giorno
+                riepilogo_giorno.esegui()
+            except Exception as e:
+                log.warning("RIEPILOGO non eseguito: %s", type(e).__name__)
         except Exception as e:
             log.warning("SENTINELLA thread: %s", type(e).__name__)
         time.sleep(passo_s)
