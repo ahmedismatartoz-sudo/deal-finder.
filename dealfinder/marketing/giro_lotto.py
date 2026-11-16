@@ -337,7 +337,7 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
     solo_base = set(liste_base)
     da_togliere = sorted({(x.get("email") or "").lower() for x in nella_base
                           if (x.get("email") or "").lower() in ricevuti and not invii.contatto_bloccato(x)
-                          and set(x.get("listIds") or []) <= solo_base
+                          and x.get("listIds") and set(x.get("listIds")) <= solo_base
                           and not (set(x.get("listIds") or []) & attesa)})
     tolti = errori = 0
     for e in da_togliere:
