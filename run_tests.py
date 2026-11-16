@@ -7,6 +7,11 @@
                                       moduli principali, poi i test nei due modi. Codice di uscita != 0 se qualcosa
                                       fallisce
     python run_tests.py -k testo      solo i test il cui nome (modulo o funzione) contiene "testo"
+    python run_tests.py --impronta    impronta delle regole di business calcolata con i SOLI default del codice
+                                      (nessuna variabile d'ambiente), confrontata con regole_impronta.json.
+                                      Diversa = codice di uscita 1 con l'elenco dei valori cambiati
+    python run_tests.py --impronta-aggiorna   riscrive regole_impronta.json (da committare con un messaggio che
+                                      comincia con "REGOLE:", vedi REGOLE_DEPLOY.md e .github/workflows/controllo.yml)
 
 Isolamento (3/11, fase 1): prima di ogni test si fotografano os.environ e le variabili di modulo che contano per le
 regole (scovo.SOGLIE, policy_v2.TARATURA, ...). Dopo il test si ripristinano; se il test le ha lasciate cambiate
@@ -233,9 +238,100 @@ def esegui(produzione: bool = False, filtro: str | None = None) -> int:
     return 1 if falliti else 0
 
 
+# ------------------------------------------------------------------------------------------------ impronta delle regole
+# 16/11 (fondamenta, prevenzione): le regole di business (soglie, margini, tetti, zona, km, telefono, trattativa) si
+# fotografano con i default del codice in UN file versionato. Cambiarle per sbaglio fa fallire il controllo; cambiarle
+# apposta richiede di aggiornare il file con un commit esplicito "REGOLE: ...".
+IMPRONTA_FILE = os.path.join(QUI, "regole_impronta.json")
+# variabili d'ambiente lasciate al processo che calcola l'impronta (tutte le altre via: valgono i default del codice)
+_ENV_TECNICHE = ("PATH", "PYTHONPATH", "HOME", "LANG", "LC_ALL", "SYSTEMROOT", "TMPDIR")
+
+_CODICE_IMPRONTA = r"""
+import dataclasses, hashlib, json
+from dealfinder import regole as RG
+from dealfinder.pricing import policy_v2 as PV
+from dealfinder.web import scovo, sito_regole as SR
+r = RG.regole(environ={})
+dati = {
+    "regole": RG.come_dict(r),
+    "regole_versione": RG.VERSIONE,
+    "regole_impronta": RG.impronta(r, environ={}),
+    "scovo": {"POLICY_SITO": scovo.POLICY_SITO, "CATEGORIE_SITO": sorted(scovo.CATEGORIE_SITO),
+              "SOGLIE_PV": scovo.SOGLIE_PV, "SOGLIE": scovo.SOGLIE, "MARGINE_MINIMO": scovo.MARGINE_MINIMO,
+              "ANNO_MINIMO": scovo.ANNO_MINIMO, "KM_MASSIMO": scovo.KM_MASSIMO, "COSTI_FISSI": scovo.COSTI_FISSI,
+              "SCONTO_DEFAULT": scovo.SCONTO_DEFAULT, "MIN_MOSTRATO": scovo.MIN_MOSTRATO},
+    "sito_regole": dataclasses.asdict(SR.Regole.da_env()),
+    "zona": {"PROVINCE_100KM": sorted(SR.PROVINCE_100KM), "RAVENNA": sorted(SR.RAVENNA), "ROMA": sorted(SR.ROMA),
+             "TORINO": sorted(SR.TORINO)},
+    "trattativa": PV.TRATTA_MAX,
+}
+dati = json.loads(json.dumps(dati, sort_keys=True, default=str))
+canon = json.dumps(dati, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+print(json.dumps({"impronta": hashlib.sha256(canon.encode()).hexdigest()[:12], "dati": dati}, ensure_ascii=False))
+"""
+
+
+def calcola_impronta() -> dict:
+    """{"impronta": sha256 a 12 cifre, "dati": valori} con i soli default del codice (processo a parte, ambiente
+    pulito: le variabili lette all'import dei moduli valgono il loro default)."""
+    import json
+    env = {k: os.environ[k] for k in _ENV_TECNICHE if k in os.environ}
+    out = subprocess.run([sys.executable, "-c", _CODICE_IMPRONTA], cwd=QUI, env=env, capture_output=True, text=True,
+                         timeout=300)
+    if out.returncode:
+        raise RuntimeError("impronta non calcolata:\n" + out.stderr[-3000:])
+    return json.loads(out.stdout.strip().splitlines()[-1])
+
+
+def _piatto(d, prefisso="") -> dict:
+    if isinstance(d, dict):
+        out = {}
+        for k, v in d.items():
+            out.update(_piatto(v, f"{prefisso}.{k}" if prefisso else str(k)))
+        return out
+    return {prefisso: d}
+
+
+def differenze_impronta(attesa: dict, ora: dict) -> list[str]:
+    a, b = _piatto(attesa.get("dati") or {}), _piatto(ora.get("dati") or {})
+    return [f"{k}: {a.get(k, '<assente>')!r} -> {b.get(k, '<assente>')!r}" for k in sorted(set(a) | set(b))
+            if a.get(k, "<assente>") != b.get(k, "<assente>")]
+
+
+def controlla_impronta(aggiorna: bool = False) -> int:
+    import json
+    ora = calcola_impronta()
+    if aggiorna:
+        with open(IMPRONTA_FILE, "w", encoding="utf-8") as f:
+            json.dump(ora, f, ensure_ascii=False, indent=1, sort_keys=True)
+            f.write("\n")
+        print(f"IMPRONTA scritta: {ora['impronta']} in {os.path.basename(IMPRONTA_FILE)} "
+              "(committare con un messaggio che comincia con \"REGOLE:\")")
+        return 0
+    try:
+        with open(IMPRONTA_FILE, encoding="utf-8") as f:
+            attesa = json.load(f)
+    except FileNotFoundError:
+        print(f"IMPRONTA NO: manca {os.path.basename(IMPRONTA_FILE)} (python run_tests.py --impronta-aggiorna)")
+        return 1
+    if attesa.get("impronta") == ora["impronta"]:
+        print(f"IMPRONTA OK {ora['impronta']} (regole di business uguali al riferimento)")
+        return 0
+    print(f"IMPRONTA NO: {attesa.get('impronta')} nel riferimento, {ora['impronta']} dal codice. Valori cambiati:")
+    for riga in differenze_impronta(attesa, ora)[:200]:
+        print("  ", riga)
+    print("Se il cambio è voluto (deciso dal cliente): python run_tests.py --impronta-aggiorna e commit "
+          "con messaggio \"REGOLE: <cosa e perché>\". Altrimenti è un cambio di regola involontario: va tolto.")
+    return 1
+
+
 def deploy() -> int:
     """Controllo prima della messa online: si ferma al primo passo che fallisce."""
     py = sys.executable
+    print("== 0/4 impronta delle regole di business", flush=True)
+    if controlla_impronta():
+        print("DEPLOY NO: regole di business diverse dal riferimento regole_impronta.json")
+        return 1
     print("== 1/4 compileall dealfinder", flush=True)
     if subprocess.call([py, "-m", "compileall", "-q", os.path.join(QUI, "dealfinder")], cwd=QUI):
         print("DEPLOY NO: errori di sintassi")
@@ -266,5 +362,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if "--deploy" in args:
         sys.exit(deploy())
+    if "--impronta" in args or "--impronta-aggiorna" in args:
+        sys.exit(controlla_impronta(aggiorna="--impronta-aggiorna" in args))
     filtro = args[args.index("-k") + 1] if "-k" in args and args.index("-k") + 1 < len(args) else None
     sys.exit(esegui(produzione="--produzione" in args, filtro=filtro))

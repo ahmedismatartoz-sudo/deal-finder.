@@ -1,0 +1,61 @@
+# Controllo automatico a ogni push e pull request (16/11, fondamenta: i test esistevano ma nessuno li imponeva).
+# 1) impronta delle regole di business uguale a regole_impronta.json, e ogni commit che cambia quel file deve avere
+#    un messaggio che comincia con "REGOLE:" (cambio di regola voluto e dichiarato);
+# 2) python run_tests.py --deploy: compileall, import dei moduli principali, test con i default del codice e con le
+#    regole di produzione (gli stessi passi di prima_del_deploy.sh).
+# Nessun segreto, nessun database, nessun deploy: solo lettura del codice.
+name: controllo
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: controllo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  controllo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # serve la storia per controllare i messaggi dei commit "REGOLE:"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"    # come PYTHON_VERSION su Render (3.12.7)
+          cache: pip
+
+      - name: Dipendenze
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Impronta delle regole di business
+        run: python run_tests.py --impronta
+
+      - name: Cambi delle regole solo con commit "REGOLE:"
+        env:
+          PRIMA_PUSH: ${{ github.event.before }}
+          BASE_PR: ${{ github.event.pull_request.base.sha }}
+        run: |
+          base="${BASE_PR:-$PRIMA_PUSH}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+          fi
+          if [ -z "$base" ]; then echo "Nessuna base da confrontare: controllo saltato"; exit 0; fi
+          senza=$(git log --format='%h %s' "$base..HEAD" -- regole_impronta.json | grep -v -E '^[0-9a-f]+ REGOLE:' || true)
+          if [ -n "$senza" ]; then
+            echo "Questi commit cambiano regole_impronta.json senza dichiararlo (il messaggio deve cominciare con 'REGOLE:'):"
+            echo "$senza"
+            exit 1
+          fi
+          echo "OK: nessun cambio di regole non dichiarato"
+
+      - name: Test (default del codice e regole di produzione)
+        run: python run_tests.py --deploy
