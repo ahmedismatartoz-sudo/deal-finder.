@@ -51,3 +51,8 @@ def test_annunci_autoscout_danno_salone_con_telefono():
     s = r.saloni["as:77"]
     assert s["cell"] == ["3471234567"] and s["prov"] == "MI" and s["comune"] == "Milano"
     assert s["link_autoscout"].endswith("/annunci/x-1")
+
+
+def test_pulisci_toglie_email_e_siti_di_subito():
+    d = R._pulisci({"email": ["privacy@subito.it", "info@autorossi.it"], "sito": "https://www.subito.it/x", "cell": [], "fissi": []})
+    assert d["email"] == ["info@autorossi.it"] and d["sito"] is None

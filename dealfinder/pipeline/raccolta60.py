@@ -286,6 +286,8 @@ class Raccolta:
         from .lead import CI_SUBITO, TEL
         from .lead_comuni import cell_validi
         sub = SubitoCollector()
+        sub.min_delay_s = float(os.environ.get("R60_SUB_PAUSA_MIN", "1.2"))
+        sub.max_delay_s = float(os.environ.get("R60_SUB_PAUSA_MAX", "2.4"))
         http = Counter()
         prov_zona = sorted({pv for _, pv, _ in self.zona.values()} & set(CI_SUBITO))
         for prov in prov_zona:
@@ -318,7 +320,7 @@ class Raccolta:
                         if not sid:
                             continue
                         cell = cell_validi(TEL.findall(f"{it.get('subject') or ''}\n{it.get('body') or ''}"))
-                        link = adv.get("shop_url") or adv.get("url")
+                        link = adv.get("shop_url") or adv.get("url") or (it.get("urls") or {}).get("default")
                         self.metti(f"subito:{sid}", {"nome": nome[:150], "comune": (z[0] if z else citta) or None,
                                                      "prov": z[1] if z else prov, "km": z[2] if z else None,
                                                      "cell": cell, "fonti": {"subito"},
@@ -402,7 +404,91 @@ def _brevo_copie(righe: list[dict], etichetta: str) -> int:
     return n
 
 
+def _pulisci(d: dict) -> dict:
+    d["email"] = [e for e in d.get("email") or [] if "subito" not in e and "adevinta" not in e]
+    if d.get("sito") and any(x in d["sito"] for x in ("subito.it", "adevinta", "google.", "facebook.", "apple.com")):
+        d["sito"] = None
+    return d
+
+
+def _negozio_subito(c, url: str) -> dict:
+    """Pagina annuncio o negozio Subito (o sito del salone): telefoni, email, sito. Dalla pagina annuncio si segue
+    anche il link alla pagina negozio (impresapiu.subito.it/shops/...), dove spesso ci sono sito e telefono."""
+    vuoto = {"cell": [], "fissi": [], "email": [], "sito": None}
+    try:
+        r = c.get(url)
+        if r.status_code != 200:
+            return vuoto
+        d = _pulisci(dati_pagina(r.text))
+        m = re.search(r'https://impresapiu\.subito\.it/shops/[A-Za-z0-9_-]+', r.text)
+        if m and "impresapiu" not in url:
+            r2 = c.get(m.group(0))
+            if r2.status_code == 200:
+                d2 = _pulisci(dati_pagina(r2.text))
+                for f in ("cell", "fissi", "email"):
+                    d[f] += [x for x in d2[f] if x not in d[f]]
+                d["sito"] = d["sito"] or d2["sito"]
+        return d
+    except Exception:
+        return vuoto
+
+
+def lavoro_telefoni(etichetta: str) -> dict:
+    """16/11 sera (cliente: "cerca il telefono di ognuno"): i negozi Subito della zona senza numero nel testo degli
+    annunci. Si rilegge Subito (pausa più corta), poi per ogni negozio senza contatti la pagina negozio e il sito
+    (home, contatti...): cellulari, fissi, email. Consegna: TUTTI i negozi Subito (con fonte e link), il confronto
+    con il file già consegnato si fa fuori."""
+    import httpx
+    from ..marketing.consegne import consegna
+    ore = float(os.environ.get("R60_ORE_TEL", "1.4"))
+    R = Raccolta(time.time() + ore * 3600)
+    log.warning("R60T parte: Subito + pagine negozio + siti, fino a %.1f ore", ore)
+    R.subito()
+    senza = [k for k, g in R.saloni.items() if not (g.get("cell") or g.get("fissi") or g.get("email"))]
+    log.warning("R60T Subito fatto: %d negozi, %d senza contatti", len(R.saloni), len(senza))
+    cerca_sito: list = []
+    with httpx.Client(timeout=12, follow_redirects=True,
+                      headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0 Safari/537.36"}) as c:
+        for i, k in enumerate(senza):
+            g = R.saloni[k]
+            if g.get("link_subito"):
+                d = _negozio_subito(c, g["link_subito"])
+                R.metti(k, {"cell": d["cell"], "fissi": d["fissi"], "email": d["email"], "sito": d["sito"]})
+                time.sleep(float(os.environ.get("R60_PAUSA_NEG", "0.8")))
+            if R.saloni[k].get("sito") and not (R.saloni[k].get("cell") or R.saloni[k].get("fissi")):
+                cerca_sito.append(k)
+            if (i + 1) % 200 == 0:
+                log.warning("R60T pagine negozio: %d/%d", i + 1, len(senza))
+        for k in cerca_sito:
+            sito = R.saloni[k].get("sito") or ""
+            if not sito.startswith("http") or "subito.it" in sito:
+                continue
+            for p in ("", "contatti", "contatti/", "contattaci", "chi-siamo", "dove-siamo"):
+                d = _negozio_subito(c, sito.rstrip("/") + "/" + p)
+                R.metti(k, {"cell": d["cell"], "fissi": d["fissi"], "email": d["email"]})
+                if d["cell"] or d["fissi"]:
+                    break
+    righe = []
+    for k, g in R.saloni.items():
+        righe.append({"nome": g.get("nome"), "comune": g.get("comune"), "prov": g.get("prov"), "km": g.get("km"),
+                      "cellulari": " ".join((g.get("cell") or [])[:4]), "fissi": " ".join((g.get("fissi") or [])[:3]),
+                      "email": " ".join((g.get("email") or [])[:3]), "sito": g.get("sito"), "fonti": "subito",
+                      "link_autoscout": None, "link_subito": g.get("link_subito"),
+                      "era_senza": k in senza})
+    for r in righe:
+        consegna("R60T", r)
+    copie = _brevo_copie(righe, etichetta)
+    trovati = sum(1 for r in righe if r["era_senza"] and (r["cellulari"] or r["fissi"] or r["email"]))
+    esito = {"negozi": len(righe), "senza_prima": len(senza), "trovati_dopo": trovati,
+             "con_cell_dopo": sum(1 for r in righe if r["era_senza"] and r["cellulari"]), "siti_provati": len(cerca_sito),
+             "modelli_brevo": copie, "http_subito": R.st.get("http_subito")}
+    log.warning("R60T_FINE %s", json.dumps(esito, ensure_ascii=False))
+    return esito
+
+
 def lavoro(etichetta: str) -> dict:
+    if etichetta.startswith("tel"):
+        return lavoro_telefoni(etichetta)
     from ..marketing.consegne import consegna
     ore = float(os.environ.get("R60_ORE", "2.6"))
     R = Raccolta(time.time() + ore * 3600)
