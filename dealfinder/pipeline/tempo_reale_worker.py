@@ -14,10 +14,10 @@ Il worker scrive un battito ogni 60 s nella tabella tempo_reale (riga 'worker_nu
 ferma, il sito riprende da solo al giro dopo. TR_WORKER=0: il sito gira sempre (il lucchetto evita comunque il doppio
 lavoro); TR_WORKER=1: il sito non fa mai il giro "nuovi". Nessuna variabile nuova obbligatoria.
 
-16/11 (fondamenta della velocità, FOND_VELOCITA.md): il sito si fa da parte con il solo battito fresco (non più anche
-"ultimo giro recente": un giro lungo faceva ripartire il giro del sito in concorrenza sullo stesso lucchetto; un giro
-bloccato lo chiude il Guardiano); il filo della lettura completa ha il suo Guardiano e fa anche la ripresa AutoScout24
-dopo un 429; al SIGTERM il processo chiude entro TR_ARRESTO_MAX_S secondi (25).
+16/11 (fondamenta della velocità, FOND_VELOCITA.md): il sito si fa da parte con battito fresco E ultimo giro "nuovi"
+da meno di TR_WORKER_GIRO_OK_MIN minuti (10); il Guardiano del giro veloce chiude un giro bloccato dopo 12 minuti; il
+filo della lettura completa ha il suo Guardiano (120) e fa anche la ripresa AutoScout24 dopo un 429; al SIGTERM il
+processo chiude entro TR_ARRESTO_MAX_S secondi (25).
 """
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ log = logging.getLogger("tempo_reale")
 
 FRESCO_MIN = 5
 BATTITO_S = 60
+GIRO_OK_MIN = 10           # 16/11 revisione: ultimo giro "nuovi" partito da meno di 10 minuti
 
 
 def battito(conn) -> None:
@@ -44,7 +45,7 @@ def battito(conn) -> None:
 
 def worker_attivo(conn=None) -> bool:
     """Per il sito: il giro "nuovi" lo fa il worker? (vedi TR_WORKER in cima al file). In dubbio: no (il sito gira).
-    16/11: basta il battito fresco, qualunque sia la durata dell'ultimo giro (vedi in cima)."""
+    Serve il battito fresco E un giro "nuovi" recente (vedi sotto)."""
     modo = (os.environ.get("TR_WORKER") or "auto").strip().lower()
     if modo == "0":
         return False
@@ -59,12 +60,18 @@ def worker_attivo(conn=None) -> bool:
             from ..db import connect
             with connect() as c:
                 return worker_attivo(c)
-        # 16/11: prima serviva anche "ultimo giro nuovi da meno di 3 × TR_NUOVI_MIN minuti": con un giro lungo (lettura
-        # completa, 429) il sito ripartiva e i due si contendevano il lucchetto. Il giro bloccato lo chiude il
-        # Guardiano del worker (TR_WORKER_GIRO_MAX_MIN), che ferma anche il battito (il processo esce).
+        # Vivo = battito fresco E ultimo giro "nuovi" partito da meno di TR_WORKER_GIRO_OK_MIN minuti (10): il battito
+        # gira in un filo a parte e da solo non vede un giro bloccato. 16/11 revisione: ora è sicuro anche con i giri
+        # lunghi, perché la lettura completa scrive la sua riga ('completo') e la ripresa dopo un 429 non è più nel
+        # giro veloce (che resta sotto i 2 minuti); il Guardiano chiude un giro veloce bloccato dopo 12 minuti.
+        try:
+            giro_min = float(os.environ.get("TR_WORKER_GIRO_OK_MIN") or GIRO_OK_MIN)
+        except ValueError:
+            giro_min = GIRO_OK_MIN
         r = conn.execute("SELECT (SELECT ultimo_at > now() - make_interval(secs => %s) FROM tempo_reale "
-                         "WHERE giro='worker_nuovi') AS fresco", (int(fresco * 60),)).fetchone()
-        return bool(r and r["fresco"])
+                         "WHERE giro='worker_nuovi') AS fresco, (SELECT ultimo_at > now() - make_interval(secs => %s) "
+                         "FROM tempo_reale WHERE giro='nuovi') AS giro_ok", (int(fresco * 60), int(giro_min * 60))).fetchone()
+        return bool(r and r["fresco"] and r["giro_ok"])
     except Exception:
         try:
             conn.rollback()
@@ -155,7 +162,7 @@ def _battiti(fine: _Fine) -> None:
         fine.ev.wait(BATTITO_S)
 
 
-GIRO_MAX_MIN = 45
+GIRO_MAX_MIN = 12          # 16/11 revisione: il giro veloce dura < 2 minuti (prima 45); il completo ha il suo limite
 
 
 class Guardiano:

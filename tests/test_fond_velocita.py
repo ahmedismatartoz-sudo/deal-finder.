@@ -84,6 +84,11 @@ class DB:
                                       preso_at=ora, tentativi=1, valutato_at=None, esito=None, pubblicato_at=None,
                                       sito_at=None)
             return Cur()
+        if sql.startswith("UPDATE tr_coda SET preso_at = NULL"):
+            for i in p[0]:
+                if i in self.coda and self.coda[i]["valutato_at"] is None:
+                    self.coda[i]["preso_at"] = None
+            return Cur()
         if sql.startswith("UPDATE tr_coda SET preso_at"):
             tmax, rip, escludi, lim = p
             presi = []
@@ -156,6 +161,10 @@ def test_1_subito_veloce_si_ferma_alla_pagina_nota_e_vede_i_ribassi():
     cl.calls.clear()
     assert T._subito_nuovi_leggero(db, col=_sub(cl), pausa=None) == []
     assert len([p for p in cl.calls if p.get("r") == 4]) == 1
+    # riapparso: nel database ma non attivo -> non è "noto", torna entro un giro
+    db.annunci[("subito", "id:ad:600010:list:1")]["status"] = "scomparso"
+    T._VISTI["subito"].discard("id:ad:600010:list:1")   # il finto Subito dà gli stessi annunci anche alle altre regioni
+    assert [l.source_id for l in T._subito_nuovi_leggero(db, col=_sub(cl), pausa=None)] == ["id:ad:600010:list:1"]
 
 
 def test_1_giro_veloce_non_usa_piu_la_finestra(monkeypatch):
@@ -405,6 +414,7 @@ def test_6_arresto_tra_le_fasi_e_attese_interrotte(monkeypatch):
     monkeypatch.setattr(T, "valuta_e_pubblica", lambda *a, **k: pytest.fail("all'arresto non si valuta"))
     st = T.giro_nuovi(db)
     assert letti == ["subito"] and st["fermato_arresto"] == 1 and st["coda:lasciati_arresto"] == 1
+    assert db.coda[7]["preso_at"] is None and db.coda[7]["valutato_at"] is None   # rilasciato per il processo dopo
     out = [SimpleNamespace(url="u1"), SimpleNamespace(url="u2")]
     assert T._as_completa(None, out) == []                         # dettagli non letti: niente salvato a metà
 
@@ -538,5 +548,5 @@ def test_impronta_delle_regole_invariata():
                               "TR_SUBITO_SECONDI_VELOCE", "TR_RECUPERO_PAGINE", "TR_RECUPERO_SECONDI", "TR_CODA",
                               "TR_CODA_TENTATIVI", "TR_CODA_RIPRESA_MIN", "TR_CODA_MAX", "TR_INVARIATI_VELOCE",
                               "TR_ARRESTO_MAX_S", "TR_COMPLETO_GIRO_MAX_MIN", "TR_RIPRESA_CONTROLLO_MIN",
-                              "TR_SITO_CONTROLLO_S")}
+                              "TR_SITO_CONTROLLO_S", "TR_WORKER_GIRO_OK_MIN")}
     assert rl.impronta(nuove)[0] == "6d5b70387e73"

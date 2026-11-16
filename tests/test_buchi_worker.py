@@ -100,12 +100,10 @@ def test_senza_database_esce_subito():
     assert _con_env("DATABASE_URL", None, lambda: W.main(giri=1)) is None
 
 
-def test_battito_fresco_basta_anche_con_giro_lungo():
-    # 16/11 (fondamenta della velocità): prima serviva anche l'ultimo giro recente; con un giro lungo il sito ripartiva
-    # e si contendeva il lucchetto con il worker. Il giro bloccato lo chiude il Guardiano.
-    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=False))) is True
-    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=None))) is True
-    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=False, giro_ok=True))) is False
+def test_battito_senza_giro_recente_non_basta():
+    # 16/11 revisione: il battito gira in un filo a parte; con il giro fermo serve anche l'ultimo giro recente
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=False))) is False
+    assert _con_env("TR_WORKER", None, lambda: W.worker_attivo(Conn(fresco=True, giro_ok=None))) is False
 
 
 def test_guardiano_chiude_il_giro_bloccato():
@@ -113,5 +111,5 @@ def test_guardiano_chiude_il_giro_bloccato():
     g = W.Guardiano(esci=lambda: uscite.append(1))
     assert not g.controlla(ora=1000.0)                       # nessun giro in corso
     g.inizio = 1000.0
-    assert not g.controlla(ora=1000.0 + 44 * 60)
-    assert g.controlla(ora=1000.0 + 46 * 60) and uscite == [1]
+    assert not g.controlla(ora=1000.0 + 11 * 60)
+    assert g.controlla(ora=1000.0 + 13 * 60) and uscite == [1]          # 16/11 revisione: 12 minuti (prima 45)

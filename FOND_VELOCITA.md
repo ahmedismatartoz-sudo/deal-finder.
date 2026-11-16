@@ -16,7 +16,7 @@ entrano nell'impronta.
 | 2b | Il filo della lettura completa non era sorvegliato | Ha un suo Guardiano (`TR_COMPLETO_GIRO_MAX_MIN`, 120): oltre il limite il processo esce e Render lo riavvia | `tempo_reale_worker.main`, `Guardiano` |
 | 2c | La ripresa dopo un 429 (`_autoscout_tutti`) girava dentro il giro veloce | La fa il filo della lettura completa, controllando ogni `TR_RIPRESA_CONTROLLO_MIN` minuti | `giro_ripresa_as`, `_completo_a_parte` |
 | 2d | Due fili leggevano AutoScout24 in parallelo, ognuno con la sua pausa | Un **limitatore unico** per processo: tra due richieste almeno `TR_AS_INTERVALLO_S` secondi (default = `TR_AS_PAUSA_S`, 1,5: il ritmo di prima) | `Limitatore`, `ClienteLimitato` |
-| 3 | Il sito rifaceva il giro "nuovi" se l'ultimo giro del worker era "vecchio", contendendosi il lucchetto; lucchetto occupato senza log | Il sito si fa da parte con il solo **battito fresco**; riga `TR LUCCHETTO <nome> occupato` (e `TR NUOVI (sito) saltato`) quando il lucchetto è preso | `worker_attivo`, `con_lucchetto`, `app._tempo_reale` |
+| 3 | Il sito rifaceva il giro "nuovi" accanto al worker (stesso lucchetto); lucchetto occupato senza log | Il sito si fa da parte con battito fresco **e** ultimo giro "nuovi" da meno di `TR_WORKER_GIRO_OK_MIN` (10) minuti: ora è sicuro perché il completo scrive la sua riga e la ripresa 429 è fuori dal giro veloce. Il Guardiano del giro veloce scende a **12 minuti** (prima 45). Riga `TR LUCCHETTO <nome> occupato` (e `TR NUOVI (sito) saltato`) quando il lucchetto è preso | `worker_attivo`, `Guardiano`, `con_lucchetto`, `app._tempo_reale` |
 | 4 | Gli id da valutare stavano solo in memoria | **Coda persistente** `tr_coda` (migrazione `058_coda_tempo_reale.sql`): l'annuncio entra in coda nella stessa transazione in cui si salva; il giro dopo (anche in un altro processo) riprende quelli non valutati. Primo giro dopo l'avvio = giro di recupero (più pagine) | `_coda_metti`, `_coda_prendi`, `_coda_fatti`, `_valuta` |
 | 5 | Per ogni annuncio invariato 6 istruzioni e un commit | Annunci già salvati, attivi e con lo stesso prezzo: **una** `UPDATE ... last_seen_at, last_checked_at` a blocchi (più il "sì" del telefono di Subito, solo sì/no) | `db.segna_invariati`, `tempo_reale._salva` |
 | 6 | Al SIGTERM il worker finiva il giro (anche minuti) | L'arresto accende `tempo_reale.FERMA`: i giri si fermano alla fase dopo, le pause e le riprove dopo un 429 si interrompono; dopo `TR_ARRESTO_MAX_S` (25) uscita forzata. Quello già salvato resta in coda | `_Fine`, `fermato()`, `_dormi` |
@@ -43,7 +43,11 @@ regola di business. Si è scelto di non perdere mai un ricalcolo e di accorciare
 | `TR_ARRESTO_MAX_S` | `25` | secondi dopo il SIGTERM prima dell'uscita forzata |
 | `TR_SITO_CONTROLLO_S` | `20` | ogni quanto il sito guarda se il worker ha pubblicato |
 
-Cambiamento di comportamento senza variabile: `worker_attivo` usa solo il battito (non più "ultimo giro recente").
+| `TR_WORKER_GIRO_OK_MIN` | `10` | il sito si fa da parte solo se l'ultimo giro "nuovi" del worker è partito da meno di così |
+
+Cambiamenti senza variabile nuova: il Guardiano del giro veloce ora scatta dopo 12 minuti (`TR_WORKER_GIRO_MAX_MIN`
+esistente, prima 45); all'arresto gli annunci presi e non valutati tornano liberi in coda (`preso_at` NULL); nel giro
+veloce Subito un annuncio è "noto" solo se è ATTIVO nel database (un riapparso torna entro un giro).
 Per tornare al sito che gira sempre resta `TR_WORKER=0`.
 
 ## Migrazione
@@ -75,6 +79,9 @@ La applica il sito all'avvio come le altre. Finché manca, worker e sito lavoran
 
 ## Test
 
-`tests/test_fond_velocita.py` (un test o più per ogni punto, connessioni e HTTP finti) e i test esistenti aggiornati
+`tests/test_fond_velocita.py` (un test o più per ogni punto, connessioni e HTTP finti),
+`tests/test_fond_velocita_pg.py` (Postgres vero con tutte le migrazioni: ciclo della coda `_coda_metti` →
+giro caduto → `_coda_prendi` con `SKIP LOCKED` davanti a un blocco di un'altra sessione → `_coda_fatti`, più
+`segna_sul_sito`, rilascio, pulizia e `segna_invariati`) e i test esistenti aggiornati
 dove il comportamento è cambiato di proposito (`test_tr_veloce.py`: visto dopo il salvataggio;
-`test_buchi_worker.py`: basta il battito).
+`test_buchi_worker.py`: Guardiano a 12 minuti).

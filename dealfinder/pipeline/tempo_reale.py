@@ -995,9 +995,10 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
                 ids = [str(a.get("urn") or a.get("id")) for a in ads if isinstance(a, dict) and (a.get("urn") or a.get("id"))]
                 if not ids:
                     break
+                # 16/11 revisione: "noto" solo se ATTIVO (un annuncio riapparso torna entro un giro)
                 prezzi = {str(x["source_id"]): x.get("price_eur") for x in conn.execute(
-                    "SELECT source_id, price_eur FROM listings WHERE source='subito' AND source_id = ANY(%s)",
-                    (ids,)).fetchall()}
+                    "SELECT source_id, price_eur, status FROM listings WHERE source='subito' AND source_id = ANY(%s)",
+                    (ids,)).fetchall() if (x.get("status") or "attivo") == "attivo"}
                 note = 0
                 for a in ads:
                     l = parse_item(a) if isinstance(a, dict) else None
@@ -1495,7 +1496,7 @@ def _coda_prendi(conn, escludi: list, stats: Counter) -> list[int]:
             "UPDATE tr_coda SET preso_at = now(), tentativi = tentativi + 1 WHERE listing_id IN ("
             " SELECT listing_id FROM tr_coda WHERE valutato_at IS NULL AND tentativi < %s"
             " AND (preso_at IS NULL OR preso_at < now() - make_interval(mins => %s))"
-            " AND NOT (listing_id = ANY(%s)) ORDER BY letto_at LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING listing_id",
+            " AND NOT (listing_id = ANY(%s::bigint[])) ORDER BY letto_at LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING listing_id",
             (_intenv("TR_CODA_TENTATIVI", CODA_TENTATIVI), _intenv("TR_CODA_RIPRESA_MIN", CODA_RIPRESA_MIN),
              [int(i) for i in escludi], _intenv("TR_CODA_MAX", CODA_MAX))).fetchall()
         conn.commit()
@@ -1514,6 +1515,20 @@ def _coda_prendi(conn, escludi: list, stats: Counter) -> list[int]:
     return ids
 
 
+def _coda_rilascia(conn, ids: list) -> None:
+    """Arresto: gli annunci presi e non valutati tornano liberi (preso_at NULL)."""
+    try:
+        conn.execute("UPDATE tr_coda SET preso_at = NULL WHERE listing_id = ANY(%s::bigint[]) AND valutato_at IS NULL",
+                     ([int(i) for i in ids],))
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.info("TR coda non rilasciata: %s", str(e)[:150])
+
+
 def _percentile(valori: list, q: float):
     v = sorted(x for x in valori if x is not None)
     if not v:
@@ -1528,9 +1543,9 @@ def _coda_fatti(conn, ids: list, pubblicate: list, stats: Counter) -> None:
         return
     try:
         righe = conn.execute(
-            "UPDATE tr_coda SET valutato_at = now(), esito = CASE WHEN listing_id = ANY(%s) THEN 'pubblicata' "
-            "ELSE 'valutata' END, pubblicato_at = CASE WHEN listing_id = ANY(%s) THEN now() END "
-            "WHERE listing_id = ANY(%s) AND valutato_at IS NULL "
+            "UPDATE tr_coda SET valutato_at = now(), esito = CASE WHEN listing_id = ANY(%s::bigint[]) THEN 'pubblicata' "
+            "ELSE 'valutata' END, pubblicato_at = CASE WHEN listing_id = ANY(%s::bigint[]) THEN now() END "
+            "WHERE listing_id = ANY(%s::bigint[]) AND valutato_at IS NULL "
             "RETURNING listing_id, fonte, annuncio_at, letto_at, valutato_at, pubblicato_at",
             (list(pubblicate), list(pubblicate), [int(i) for i in ids])).fetchall()
         conn.commit()
@@ -1595,7 +1610,7 @@ def segna_sul_sito(conn, ids) -> dict:
         return {}
     try:
         righe = conn.execute(
-            "UPDATE tr_coda SET sito_at = now() WHERE listing_id = ANY(%s) AND sito_at IS NULL AND valutato_at IS NOT NULL "
+            "UPDATE tr_coda SET sito_at = now() WHERE listing_id = ANY(%s::bigint[]) AND sito_at IS NULL AND valutato_at IS NOT NULL "
             "RETURNING listing_id, annuncio_at, letto_at, pubblicato_at, sito_at", (ids,)).fetchall()
         conn.commit()
     except Exception as e:
@@ -1636,6 +1651,7 @@ def _valuta(conn, ids: list, stats: Counter, coda: bool) -> None:
         return
     if coda and fermato():
         stats["coda:lasciati_arresto"] += len(tutti)
+        _coda_rilascia(conn, tutti)          # 16/11 revisione: il processo dopo li riprende subito, non dopo 5 minuti
         return
     _lettore_nuovi(conn, tutti, stats)
     pubblicate: list = []

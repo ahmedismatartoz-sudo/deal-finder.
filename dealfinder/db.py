@@ -470,11 +470,11 @@ def segna_invariati(conn, ids: list, telefono_si: list | None = None) -> int:
     ids = sorted({int(i) for i in ids or []})
     if not ids:
         return 0
-    n = conn.execute("UPDATE listings SET last_seen_at = now(), last_checked_at = now() WHERE id = ANY(%s) "
+    n = conn.execute("UPDATE listings SET last_seen_at = now(), last_checked_at = now() WHERE id = ANY(%s::bigint[]) "
                      "AND status = 'attivo'", (ids,)).rowcount
     tel = sorted({int(i) for i in telefono_si or []})
     if tel:
-        conn.execute("UPDATE listings SET telefono_ok = true, telefono_at = now() WHERE id = ANY(%s) "
+        conn.execute("UPDATE listings SET telefono_ok = true, telefono_at = now() WHERE id = ANY(%s::bigint[]) "
                      "AND telefono_ok IS NOT TRUE", (tel,))
     return n or 0
 
