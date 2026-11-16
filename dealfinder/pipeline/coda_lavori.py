@@ -31,6 +31,7 @@ SPOSTABILI: dict = {
     "perche_fuori:": (True, ()),
     "prova_cieca:": (True, ("ANTHROPIC_API_KEY",)),
     "raccolta60:": (True, ()),
+    "censimento:": (False, ()),         # 16/11 sera: sola lettura, niente AI; SOLO nel sito (SOLO_SITO), subito
     "mix:": (False, BREVO),
     "togli_lista:": (False, BREVO),
     "giro_lotto:": (False, BREVO),
@@ -46,6 +47,9 @@ SPOSTABILI: dict = {
     "rimetti:": (False, BREVO),
     "utenti:": (False, ()),             # solo una lettura del database
 }
+# 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
+# il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
+SOLO_SITO = ("censimento:",)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -77,7 +81,7 @@ def modo() -> str:
 
 def spostabile(v: str) -> bool:
     """La voce va al cron? Le lunghe sempre (salvo LAVORI_NEL_CRON=0), le brevi solo con LAVORI_NEL_CRON=tutti."""
-    if not v or _prefisso(v) is None:
+    if not v or _prefisso(v) is None or v.startswith(SOLO_SITO):
         return False
     m = modo()
     return m == "tutti" or (m == "lunghi" and lungo(v))
@@ -276,6 +280,18 @@ def esegui(v: str) -> bool | None:
             from ..pricing import perche_fuori as _pf
             _pf.lavoro(v)
         return _lungo(v, "PERCHE_FUORI", _perche_fuori)
+    if v.startswith("censimento:"):       # 16/11 sera (cliente): quante auto buone di privati non valutiamo mai (solo
+        # log, sola lettura, niente AI). Nel sito (SOLO_SITO), una volta per etichetta: censimento:<etichetta>
+        try:
+            from . import censimento as _ce
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta(f"censimento:{v[11:71]}"):
+                lg.warning("CENSIMENTO %s già fatto (togli il valore da BREVO_IMPORT_LISTE)", v[:60])
+                return
+            _ce.lavoro(v)
+        except Exception as e:
+            lg.warning("CENSIMENTO non riuscito: %s", str(e)[:300])
+        return
     if v.startswith("prova_cieca:"):      # 12/11 (cliente): prova alla cieca M / perizia AI / Autohero (solo log)
         def _prova_cieca():
             from ..ai import prova_cieca as _pc
