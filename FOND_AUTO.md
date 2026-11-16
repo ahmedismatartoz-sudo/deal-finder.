@@ -27,7 +27,7 @@ attivi del passo; poi anche l'M di un passo già accettato): si tiene sempre il 
 non si usa. Prova del giudice (Jimny a 3.500 €, 1 attivo a 4.400 €, 8 sparite a 6.000 €): prima M 5.985 e
 "opportunità", ora passo rifiutato e auto ancora "dati insufficienti" (test). Le sparite contano con l'ultimo prezzo
 chiesto e passano dalla stessa prudenza dei prezzi chiesti: correzione anno/km solo verso il basso, nucleo dei
-dispersi, mediana mai sopra quella di tutte le gemelle, e il fattore misurato chiesto → venduto applicato a M
+dispersi, mediana mai sopra quella di tutte le gemelle; la prudenza sui prezzi chiesti delle sparite è data dal tetto: M non supera mai la mediana dei confronti attivi trovati prima della cascata
 (`M_fonte="annunci"`). Nessuna correzione per area (non ce n'è una misurata nel codice).
 
 **Nessuna protezione aggirata**: la cascata non parte per le auto ferme con un M già stimato (prezzo sotto il 55% o
