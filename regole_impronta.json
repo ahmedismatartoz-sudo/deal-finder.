@@ -1,4 +1,53 @@
 {
+ "ammessi_produzione": {
+  "regole_impronta": "c1380592c34a",
+  "scovo.MARGINE_MINIMO": 800,
+  "scovo.SOGLIE": [
+   [
+    1500,
+    800
+   ],
+   [
+    5000,
+    1200
+   ],
+   [
+    1000000000,
+    1600
+   ]
+  ],
+  "scovo.SOGLIE_PV": [
+   [
+    7000,
+    1500
+   ],
+   [
+    10000,
+    1800
+   ],
+   [
+    15000,
+    2500
+   ],
+   [
+    20000,
+    3200
+   ],
+   [
+    30000,
+    4000
+   ],
+   [
+    1000000000,
+    5000
+   ],
+   [
+    1000000000,
+    5000
+   ]
+  ],
+  "sito_regole.jev_conf_scarta": 0.85
+ },
  "dati": {
   "regole": {
    "ai": {
@@ -419,5 +468,6 @@
    ]
   }
  },
- "impronta": "e89916132c7b"
+ "impronta": "e89916132c7b",
+ "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'."
 }
