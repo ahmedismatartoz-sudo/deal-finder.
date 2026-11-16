@@ -67,16 +67,39 @@ def _regole(cfg) -> RG.Regole:
     return getattr(cfg, "regole", None) or RG.regole()
 
 
+def attesa_senza_ai() -> bool:
+    """Senza chiave AI una valutazione da giudicare resta in attesa (vedi _giudice_ai)."""
+    x = os.environ.get("GIUDICE_SENZA_AI_ATTESA")
+    if x is not None and x.strip() != "":
+        return x.strip() != "0"
+    return bool(os.environ.get("RENDER"))
+
+
 def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg, solo_archivio: bool = False) -> dict:
     """28/10: l'AI toglie i confronti che non sono davvero la stessa auto, poi si rifà il calcolo (interruttore
     POLICY_GIUDICE_AI, regole.giudice_ai). Solo per le auto che andrebbero sul sito: le altre non costano niente."""
     if not _regole(cfg).giudice_ai or v.get("categoria") not in ("opportunita", "candidato") or not v.get("confronti"):
         return v
     from ..ai import giudice
-    g = giudice.giudica(conn, t, v["confronti"], solo_archivio=solo_archivio)
+    from ..ai import client as _AI
+    # 16/11: senza chiave AI vale comunque un giudizio GIÀ DATO e archiviato (stessi confronti, stesso prezzo)
+    senza_ai = not solo_archivio and not _AI.available()
+    g = giudice.giudica(conn, t, v["confronti"], solo_archivio=solo_archivio or senza_ai)
     if not g:
-        from ..ai import client as AI
-        if solo_archivio or not AI.available():
+        if solo_archivio:
+            return v
+        if senza_ai:
+            # 16/11: processo SENZA chiave AI (es. il worker del tempo reale con il solo DATABASE_URL). Prima la
+            # valutazione usciva con tutti i confronti non controllati e poteva andare sul sito; ora resta "in attesa"
+            # (giudice_mancante) come quando il budget è finito: valutazione.py tiene la riga precedente se l'auto e le
+            # regole sono le stesse, altrimenti scrive l'attesa e la riprendono riprova_giudice o il ricalcolo del cron
+            # (che hanno la chiave). GIUDICE_SENZA_AI_ATTESA: "1" acceso, "0" comportamento di prima; se non impostata
+            # vale acceso sui servizi Render (variabile RENDER) e spento in locale e nei test senza AI.
+            if not attesa_senza_ai():
+                return v
+            v = dict(v, categoria="dati_insufficienti", giudice_mancante=True, giudice_senza_ai=True)
+            v["motivi"] = list(v.get("motivi") or []) + ["confronti non ancora controllati dal giudice AI (AI non "
+                                                         "configurata in questo processo): in attesa"]
             return v
         # 13/11 (giudice N3): il giudice AI non ha potuto controllare i confronti (budget comune finito, errore,
         # risposta illeggibile). Mai una valutazione con tutti i confronti non controllati (margine gonfiato): resta
@@ -91,7 +114,7 @@ def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg, solo_arch
         return v
     via = set(g["via"])
     v2 = P.valuta(t, [m for m in lista if m.get("id") not in via], soglia, cfg)
-    for k in ("fuori_zona",):
+    for k in ("fuori_zona", "fonte_confronti", "cascata"):      # 16/11: anche la traccia della cascata
         if v.get(k):
             v2[k] = v[k]
     v2["ai_confronti"] = {"tolti": len(via), "motivi": {str(k): m for k, m in list(g["via"].items())[:15]},
@@ -106,6 +129,180 @@ def _giudice_ai(conn, t: dict, v: dict, lista: list, soglia: int, cfg, solo_arch
 
 
 def _valuta_base(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
+    """Zona di casa → ripiego Nord → tutta Italia (fascia alta), come prima; poi, SOLO se i confronti non arrivano al
+    minimo che il sito chiede, la cascata del 16/11 (_cascata: auto sparite di recente, altre regioni). Le auto che
+    arrivano già al minimo hanno esattamente la valutazione di prima."""
+    v, lista = _valuta_zona(conn, t, mercato, soglia, cfg, cache)
+    if not serve_cascata(v, t, cfg):
+        return v, lista
+    return _cascata(conn, t, v, lista, soglia, cfg, cache)
+
+
+# ------------------------------------------------------------------ cascata dei confronti (16/11)
+# Cliente (16/11): "non voglio cambiare nessuna regola, trova nuovi modi per far entrare più auto; se non ci sono
+# abbastanza confronti vai a vedere le auto vendute, se non ci sono neanche lì guarda le auto di altre città".
+# Le regole NON cambiano (stesse soglie, stesso minimo di confronti del sito, stessa policy, stessi livelli anno/km
+# di policy_v2.seleziona): si allarga solo la RICERCA dei dati, in quest'ordine, fermandosi appena si arriva al minimo:
+#   1. "vendute": le stesse auto SPARITE dagli annunci negli ultimi CASCATA_VENDUTE_GIORNI giorni (45), stessa zona
+#      dei confronti già usati più il Nord (ultimo prezzo chiesto, mai un prezzo inventato);
+#   2. "nord":    gli annunci attivi del resto del Nord (se non c'erano già) più le sparite;
+#   3. "italia":  gli annunci attivi di tutta Italia della base prezzi (tutti i prezzi) più le sparite.
+# Nessuna correzione per area (nel codice non ce n'è una misurata): il cliente ha osservato che scendendo verso sud
+# i prezzi calano, quindi i confronti lontani tendono ad ABBASSARE il mercato. "Non gonfiare i prezzi": un passo
+# della cascata che porta il mercato M SOPRA quello già stimato con i confronti di prima non si usa (resta il più
+# prudente). Ogni valutazione passata dalla cascata lo dichiara (fonte_confronti, ipotesi, campo "cascata").
+CASCATA_VENDUTE_GIORNI = 45
+CASCATA_ITALIA_MAX = 4000            # righe al massimo per gruppo (memoria: 512 MB su Render)
+_SPARITE_SQL = _COLONNE_MERCATO + (
+    "WHERE status='scomparso' AND disappeared_at > now() - make_interval(days => %s) "
+    "AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "
+    "AND split_part(COALESCE(stage_reason, ''), ' |', 1) NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti') "
+    "AND ({home}) ORDER BY disappeared_at DESC LIMIT 3000")
+_ITALIA_TUTTI_SQL = (_COLONNE_MERCATO + "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s "
+                     "AND price_eur IS NOT NULL ORDER BY last_seen_at DESC LIMIT " + str(CASCATA_ITALIA_MAX))
+
+
+def cascata_attiva() -> bool:
+    """Interruttore CASCATA_CONFRONTI (default acceso; "0" = comportamento di prima, senza cascata)."""
+    return os.environ.get("CASCATA_CONFRONTI", "1").strip() != "0"
+
+
+def _giorni_vendute() -> int:
+    try:
+        return max(1, int(os.environ.get("CASCATA_VENDUTE_GIORNI") or CASCATA_VENDUTE_GIORNI))
+    except ValueError:
+        return CASCATA_VENDUTE_GIORNI
+
+
+def n_gate(v: dict) -> int:
+    """Confronti che contano per il minimo del sito (n_gate di policy_v2.valuta; n se manca)."""
+    return int(v.get("n_gate") if v.get("n_gate") is not None else (v.get("n") or 0))
+
+
+def serve_cascata(v: dict, t: dict, cfg) -> bool:
+    """La cascata serve solo alle auto rimaste "dati_insufficienti" con confronti SOTTO il minimo del sito (cfg.serve:
+    8 sotto 10.000 €, 5 sopra) e con i dati per cercarne altri. Le altre auto restano identiche: per un'auto già
+    valutata (opportunità, candidato, non conveniente) la cascata potrebbe solo abbassare il mercato (mai alzarlo),
+    quindi non aggiungerebbe nessuna auto al sito."""
+    if not cascata_attiva() or not (t.get("make") and t.get("model") and t.get("fuel") and t.get("price_eur")):
+        return False
+    if v.get("categoria") != "dati_insufficienti":
+        return False
+    if set(t.get("price_flags") or []) & set(P.FLAG_ESCLUSI):
+        return False                                     # prezzo dell'annuncio non affidabile: più confronti non servono
+    if v.get("mancanti") and any(m in v["mancanti"] for m in ("anno", "km", "alimentazione", "prezzo")) \
+            or any(str(m).startswith("dati dell'auto incompleti") or str(m).startswith("km (scritto")
+                   for m in (v.get("motivi") or [])[:1]):
+        return False                                     # dati dell'auto mancanti: più confronti non servono
+    return n_gate(v) < cfg.serve(t.get("price_eur"))
+
+
+def _righe(conn, sql: str, args) -> list[dict]:
+    return [dict(m, vehicle_identity=_j(m.get("vehicle_identity"))) for m in conn.execute(sql, args).fetchall()]
+
+
+def _sparite(conn, key: tuple, giorni: int) -> list[dict]:
+    """Auto uguali sparite di recente (zona di casa + Nord), segnate per policy_v2.pulisci. Lo stage_reason si riporta
+    alla prima parte (verify.mark aggiunge " | scomparso ...") così i doppioni e le truffe restano esclusi."""
+    from ..store import HOME_REGION_SQL
+    righe = _righe(conn, _SPARITE_SQL.format(home=f"{NORD_SQL} OR {HOME_REGION_SQL}"), (giorni,) + tuple(key))
+    return [dict(m, fonte_confronto="venduta",
+                 stage_reason=(str(m.get("stage_reason") or "").split(" |")[0].strip() or None)) for m in righe]
+
+
+def _dati_cascata(conn, cache: dict, key: tuple, quale: str, giorni: int) -> list[dict]:
+    """Righe della cascata per gruppo, in cache (un gruppo alla volta, come il ripiego Nord)."""
+    ck = ("CASCATA", quale) + tuple(key)
+    if ck not in cache:
+        if quale == "vendute":
+            cache[ck] = _sparite(conn, key, giorni)
+        elif quale == "nord":
+            cache[ck] = cache[key] if key in cache else _righe(conn, MARKET_SQL.format(home=NORD_SQL), key)
+        else:
+            cache[ck] = _righe(conn, _ITALIA_TUTTI_SQL, key)
+    return cache[ck]
+
+
+def _unisci(*liste) -> list[dict]:
+    """Attivi prima delle sparite (pulisci tiene il primo di due doppioni), senza ripetere lo stesso annuncio."""
+    visti, out = set(), []
+    for lista in liste:
+        for m in lista:
+            i = m.get("id")
+            if i is not None and i in visti:
+                continue
+            visti.add(i)
+            out.append(m)
+    attivi = [m for m in out if m.get("fonte_confronto") != "venduta"]
+    return attivi + [m for m in out if m.get("fonte_confronto") == "venduta"]
+
+
+def _cascata(conn, t: dict, v: dict, lista: list, soglia: int, cfg, cache: dict):
+    key = (t["make"], t["model"], t["fuel"])
+    serve = cfg.serve(t.get("price_eur"))
+    giorni = _giorni_vendute()
+    M0 = v.get("M")
+    gia_nord = bool(v.get("fuori_zona"))
+    traccia = []
+    migliore, lista_m, fonte_m = v, lista, None
+    try:
+        vendute = _dati_cascata(conn, cache, key, "vendute", giorni)
+        passi = [("vendute", lambda: _unisci(lista, vendute))]
+        if not gia_nord:
+            passi.append(("nord+vendute", lambda: _unisci(_dati_cascata(conn, cache, key, "nord", giorni), vendute)))
+        passi.append(("italia+vendute", lambda: _unisci(_dati_cascata(conn, cache, key, "italia", giorni), vendute)))
+        for nome, crea in passi:
+            m = crea()
+            if len(m) <= len(lista_m) and nome != "vendute":
+                traccia.append({"passo": nome, "esito": "nessun dato in più"})
+                continue
+            v2 = P.valuta(t, m, soglia, cfg)
+            n2 = n_gate(v2)
+            if n2 <= n_gate(migliore):
+                traccia.append({"passo": nome, "n": n2, "esito": "non più confronti"})
+                continue
+            rif = migliore.get("M")
+            if rif is not None and v2.get("M") is not None and v2["M"] > rif:
+                # non gonfiare i prezzi: con più dati il mercato salirebbe; si tiene la stima più prudente
+                traccia.append({"passo": nome, "n": n2, "M": v2["M"], "M_prima": rif, "esito": "M più alto: non usato"})
+                continue
+            traccia.append({"passo": nome, "n": n2, "esito": "usato"})
+            migliore, lista_m, fonte_m = v2, m, nome
+            if n2 >= serve:
+                break
+    except Exception as e:                       # la cascata non deve mai far perdere la valutazione di prima
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("CASCATA %s non riuscita: %s", t.get("id"), str(e)[:200])
+        traccia.append({"errore": type(e).__name__})
+        fonte_m = None
+    if fonte_m is None:
+        out = dict(v)
+        out["cascata"] = {"passi": traccia, "usata": None, "serve": serve}
+        return out, lista
+    migliore = dict(migliore)
+    n_v = sum(1 for c in (migliore.get("confronti") or []) if c.get("venduta"))
+    migliore["fonte_confronti"] = fonte_m
+    migliore["cascata"] = {"passi": traccia, "usata": fonte_m, "serve": serve, "n_prima": n_gate(v),
+                           "venduta_nel_campione": n_v, "giorni_vendute": giorni}
+    if fonte_m != "vendute" or v.get("fuori_zona"):
+        migliore["fuori_zona"] = True
+    testo = {"vendute": f"confronti entro la zona non sufficienti: aggiunte le auto uguali sparite dagli annunci negli "
+                        f"ultimi {giorni} giorni (ultimo prezzo chiesto)",
+             "nord+vendute": "confronti non sufficienti: aggiunti gli annunci uguali del resto del Nord Italia e le auto "
+                             f"uguali sparite negli ultimi {giorni} giorni (prezzi chiesti)",
+             "italia+vendute": "confronti non sufficienti: aggiunti gli annunci uguali di tutta Italia della base prezzi "
+                               f"e le auto uguali sparite negli ultimi {giorni} giorni (prezzi chiesti)"}[fonte_m]
+    migliore.setdefault("ipotesi", []).append(testo + "; mercato mai sopra la stima con meno confronti")
+    log.info("CASCATA %s %s: n %s→%s, M %s→%s, %s→%s", t.get("id"), fonte_m, n_gate(v), n_gate(migliore), M0,
+             migliore.get("M"), v.get("categoria"), migliore.get("categoria"))
+    return migliore, lista_m
+
+
+def _valuta_zona(conn, t: dict, mercato: list, soglia: int, cfg, cache: dict):
+    """Zona di casa, ripiego Nord (meno di n_preferito confronti) e tutta Italia per la fascia alta: invariato."""
     z = _regole(cfg).zona
     v = P.valuta(t, mercato, soglia, cfg)
     lista = mercato
@@ -244,6 +441,18 @@ def esegui(conn, limite: int | None = None) -> dict:
              "secondi": round(time.time() - t0, 1), **_riepilogo(es, extra),
              "contatori": dict(es.stats), "impronta_regole": RG.impronta()}
     log.warning("POLICY_RIEPILOGO %s", json.dumps(stats, ensure_ascii=False))
+    # 16/11 (fond-auto): giro di recupero delle auto rimaste con pochi confronti o in attesa del giudice, con la
+    # cascata dei confronti; limitato (RECUPERO_PER_GIRO) e con il tetto del giudice del cron. Spento: RECUPERO_CONFRONTI=0
+    try:
+        from . import recupero
+        if recupero.attivo():
+            stats["recupero"] = recupero.recupera(conn)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("RECUPERO_CONFRONTI non riuscito: %s", str(e)[:200])
     return stats
 
 

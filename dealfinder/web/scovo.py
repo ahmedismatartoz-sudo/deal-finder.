@@ -45,12 +45,21 @@ MARGINE_MINIMO = SOGLIE[0][1]
 # Margini minimi (regole del cliente, 17/10): margine = rivendita prudente − prezzo, mai sotto 1.500 €.
 # Prezzo d'acquisto fino a 7.000 € → 1.500 (dal 2/11 sera; prima 5.000); 7.000–10.000 → 2.200; 10.000–15.000 → 3.200; 15.000–20.000 → 4.000;
 # 20.000–30.000 → 5.000; oltre → 6.000. Variabile SOGLIE_PV "5000:1500,10000:2200,..." per cambiarle.
-def _soglie_pv():
-    raw = os.environ.get("SOGLIE_PV")
+def _soglie_pv(raw: str | None = None):
+    raw = os.environ.get("SOGLIE_PV") if raw is None else raw
     if raw:
         try:
-            return [(int(a), int(b)) for a, b in (x.split(":") for x in raw.split(","))] + [(10**9, int(raw.split(",")[-1].split(":")[1]))]
-        except ValueError:
+            fasce = [(int(a), int(b)) for a, b in (x.split(":") for x in raw.split(",") if x.strip())]
+            # 16/11 (bug dell'impronta): la fascia "oltre" (10**9) si aggiunge SOLO se la variabile non la contiene già.
+            # Su Render SOGLIE_PV finisce con "1000000000:5000": prima la tabella del sito aveva l'ultima fascia due
+            # volte, l'impronta delle regole (regole.impronta, che include SOGLIE_PV) era diversa da quella del cron
+            # col default e la guardia delle scritture vedeva "regole_cambiate". Le soglie effettive non cambiano:
+            # soglia() prende la prima fascia che vale, e la copia in più non era mai raggiungibile.
+            if fasce and fasce[-1][0] < 10**9:
+                fasce.append((10**9, fasce[-1][1]))
+            if fasce:
+                return fasce
+        except (ValueError, IndexError):
             pass
     # 2/11 sera (cliente: "abbassiamo fino ai 7k, va bene solo 1.500 € di margine"): 1.500 € fino a 7.000 €
     # 3/11 10:25 (cliente: "più basse, circa −20%", presentazione): 1.800 / 2.500 / 3.200 / 4.000 / 5.000
@@ -58,6 +67,86 @@ def _soglie_pv():
 
 
 SOGLIE_PV = _soglie_pv()
+
+
+# 16/11 (fond-auto): la stessa auto pubblicata su Subito E su AutoScout24 compariva due volte sul sito (9 coppie su 323
+# privati il 16/11): pipeline/collect.doppione_altro_sito scatta solo sugli AutoScout24 NUOVI. Non è una regola nuova:
+# nell'elenco già calcolato (dopo tutte le regole del sito, prima dei tetti) si tiene UNA sola auto per coppia.
+# Stessa auto = siti diversi, stessa marca e modello, stesso anno, km entro ±3%, prezzo entro ±7%, stessa regione.
+# Si tiene quella con il numero, poi con più foto, poi col margine più alto, poi l'annuncio più vecchio (id più basso).
+# Interruttore SITO_DOPPIONI ("0" = spento, come prima).
+DOPPIONI_KM = .03
+DOPPIONI_PREZZO = .07
+
+
+def _regione_auto(it: dict) -> str | None:
+    from ..core.normalize import PROVINCE_REGION
+    p = ((it.get("_r") or {}).get("provincia") or "")
+    if not p:
+        m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
+        p = m.group(1) if m else ""
+    p = p.upper()
+    return PROVINCE_REGION.get(p) or (p or None)
+
+
+def _vicini(a, b, tol: float) -> bool:
+    try:
+        a, b = float(a), float(b)
+    except (TypeError, ValueError):
+        return False
+    return abs(a - b) <= tol * max(a, b, 1.0)
+
+
+def stessa_auto_due_siti(a: dict, b: dict) -> bool:
+    if not a.get("fonte") or not b.get("fonte") or a.get("fonte") == b.get("fonte"):
+        return False
+    if a.get("supercar") or b.get("supercar"):
+        return False
+    if str(a.get("marca") or "").lower() != str(b.get("marca") or "").lower() or not a.get("marca"):
+        return False
+    if str(a.get("modello") or "").lower() != str(b.get("modello") or "").lower() or not a.get("modello"):
+        return False
+    if not a.get("anno") or a.get("anno") != b.get("anno"):
+        return False
+    if a.get("km") is None or b.get("km") is None or not _vicini(a["km"], b["km"], DOPPIONI_KM):
+        return False
+    pa = a.get("prezzo_annuncio") or a.get("prezzo")
+    pb = b.get("prezzo_annuncio") or b.get("prezzo")
+    if not pa or not pb or not _vicini(pa, pb, DOPPIONI_PREZZO):
+        return False
+    ra, rb = _regione_auto(a), _regione_auto(b)
+    return bool(ra and rb and ra == rb)
+
+
+def _preferenza(it: dict) -> tuple:
+    marg = (it.get("pv") or {}).get("margine") if isinstance(it.get("pv"), dict) else None
+    return (0 if (it.get("_r") or {}).get("tel") else 1, -int(it.get("n_foto") or 0), -int(marg or 0),
+            it.get("id") if isinstance(it.get("id"), int) else 10**12)
+
+
+def togli_doppioni(items: list[dict]) -> tuple[list[dict], dict]:
+    """(elenco senza doppioni Subito/AutoScout24, {id tolto: id tenuto}). L'ordine dell'elenco non cambia."""
+    if os.environ.get("SITO_DOPPIONI", "1").strip() == "0":
+        return items, {}
+    gruppi: dict = {}
+    for it in items:
+        k = (str(it.get("marca") or "").lower(), str(it.get("modello") or "").lower(), it.get("anno"))
+        gruppi.setdefault(k, []).append(it)
+    via: dict = {}
+    for gr in gruppi.values():
+        if len(gr) < 2:
+            continue
+        for it in sorted(gr, key=_preferenza):             # i preferiti per primi: tolgono i loro doppioni
+            if it.get("id") in via:
+                continue
+            for altro in gr:
+                if altro is it or altro.get("id") in via or altro.get("id") == it.get("id"):
+                    continue
+                if stessa_auto_due_siti(it, altro) and _preferenza(it) < _preferenza(altro):
+                    via[altro.get("id")] = it.get("id")
+    if not via:
+        return items, {}
+    return [it for it in items if it.get("id") not in via], via
 
 
 def soglia(prezzo: int) -> int:

@@ -485,6 +485,15 @@ def _stessa_auto(a, b) -> bool:
             and _norm_gear(a.get("gearbox")) == _norm_gear(b.get("gearbox")))
 
 
+def _ripubblicata(a, b) -> bool:
+    """16/11 (cascata): un'auto sparita e una già contata con gli stessi dati (anche sullo STESSO portale: annuncio
+    tolto e rimesso) si contano una volta sola. Vale solo per i confronti "venduta" della cascata."""
+    if a.get("year") != b.get("year") or a.get("mileage_km") is None or b.get("mileage_km") is None:
+        return False
+    return bool(abs(a["mileage_km"] - b["mileage_km"]) <= 1500 and a.get("price_eur") and b.get("price_eur")
+                and abs(a["price_eur"] - b["price_eur"]) <= max(200, .07 * b["price_eur"]))
+
+
 def km_come_anno(x: dict) -> bool:
     """Facebook: spesso nel campo km finisce l'anno (2017 km per un'auto del 2017). È un dato sbagliato, non km bassi."""
     km, anno = x.get("mileage_km"), x.get("year")
@@ -528,19 +537,24 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
             via(c, {"doppione": "doppione su un altro portale", "truffa": "annuncio sospetto",
                     "prezzo_finto": "prezzo finto"}[c["stage_reason"]])
             continue
-        if c.get("status") != "attivo":
+        # 16/11 (cascata dei confronti, ricalcolo._cascata): un'auto SPARITA di recente entra tra i confronti solo se la
+        # cascata l'ha segnata (fonte_confronto="venduta": stessa zona, finestra di giorni già controllata nella query).
+        # Le righe del mercato normale non hanno mai il segno: per loro tutto resta come prima.
+        venduta = c.get("fonte_confronto") == "venduta"
+        if c.get("status") != "attivo" and not venduta:
             # 4/11: le auto vendute entrano nel valore reale (prezzo di vendita), non tra le gemelle (prezzi chiesti)
             via(c, "annuncio non più online")
             continue
-        giorni = [g for g in (_days(c.get("last_checked_at"), now), _days(c.get("last_seen_at"), now)) if g is not None]
-        vis = min(giorni) if giorni else None          # ultima verifica = la più recente tra controllo e lettura
-        if vis is None or vis > cfg.freschezza_giorni:
-            via(c, f"non ricontrollato negli ultimi {cfg.freschezza_giorni} giorni")
-            continue
+        if not venduta:
+            giorni = [g for g in (_days(c.get("last_checked_at"), now), _days(c.get("last_seen_at"), now)) if g is not None]
+            vis = min(giorni) if giorni else None      # ultima verifica = la più recente tra controllo e lettura
+            if vis is None or vis > cfg.freschezza_giorni:
+                via(c, f"non ricontrollato negli ultimi {cfg.freschezza_giorni} giorni")
+                continue
         if (c.get("damage_class") or "sconosciuto") in DANNEGGIATE or c.get("problem_search"):
             via(c, "auto danneggiata o con problemi (non prova il valore da sana)")
             continue
-        dup = next((k for k in tenuti if _stessa_auto(c, k)), None)
+        dup = next((k for k in tenuti if _stessa_auto(c, k) or (venduta and _ripubblicata(c, k))), None)
         if dup:
             via(c, "doppione (stessa auto già contata)")
             continue
@@ -797,7 +811,9 @@ def _comp_json(c, now):
             "anno": c.get("year"), "km": c.get("mileage_km"), "cambio": c.get("gearbox"), "kw": c.get("power_kw"),
             "versione": (c.get("version_raw") or "")[:40] or None, "venditore": c.get("seller_type"),
             "pubblicato": str(c.get("first_seen_at"))[:10] if c.get("first_seen_at") else None,
-            "verificato": str(max((d for d in (c.get("last_checked_at"), c.get("last_seen_at")) if d), default=""))[:10] or None}
+            "verificato": str(max((d for d in (c.get("last_checked_at"), c.get("last_seen_at")) if d), default=""))[:10] or None,
+            **({"venduta": True, "sparita": str(c.get("disappeared_at") or "")[:10] or None}
+               if c.get("fonte_confronto") == "venduta" else {})}
 
 
 def _errore_gemelle(prezzi: list, reg: dict | None, metodo: str, sigma_v: float, errore_min: float,
@@ -1226,7 +1242,7 @@ def riassunto(v: dict) -> dict:
             "totale_costi", "campione", "policy", "metodo", "M_fonte", "prudente_pochi", "pochi_confronti", "vr_accordo",
             "vr_poche_gemelle", "policy_rev", "regole", "R_da", "vr_solo_modello", "serve_controllo_ai",
             "costo_difetti_incluso", "motivo_esclusione", "fonte_valutazione", "da_trattare", "netto",
-            "giorni_vendita_commercianti", "n_dati_rivendita", "dispersione", "R_commercianti")
+            "giorni_vendita_commercianti", "n_dati_rivendita", "dispersione", "R_commercianti", "fonte_confronti")
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

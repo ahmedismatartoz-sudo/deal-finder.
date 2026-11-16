@@ -960,6 +960,13 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
             except Exception as e:
                 log.warning("TRATTA_DIAG non riuscita: %s", str(e)[:200])
         items = _applica(items, nome, f, g, fun)
+    # 16/11 (fond-auto): stessa auto su Subito e AutoScout24 → una sola (scovo.togli_doppioni); prima dei tetti,
+    # così un doppione non occupa un posto. Non è una regola: si tolgono duplicati.
+    from . import scovo as _scovo
+    prima = items
+    items, doppi = _scovo.togli_doppioni(items)
+    fun.passo("doppioni", prima, items, {"stessa_auto_altro_sito": len(doppi)} if doppi else None)
+    fun.tolti["doppioni"] = sorted(doppi, key=lambda x: (str(type(x)), x))
     prima = items
     items, via = tetto_commercianti(items, g)
     ripresi = riprendi_diesel(prima, via, g)

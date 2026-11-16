@@ -1,5 +1,15 @@
 # Solo il servizio separato "tempo reale" (lettura continua dei nuovi annunci).
-# Le chiavi arrivano dal cron dealfinder-opportunita: nessun segreto qui.
+# 16/11 (ramo fond-auto, punto 3): il worker valuta e pubblica con la STESSA configurazione del sito. Prima riceveva
+# solo DATABASE_URL: niente chiave AI (le valutazioni uscivano senza il controllo del giudice), lettore spento,
+# TR_SUBITO_SENZA_NUMERO mancante (il sito ce l'ha a 1), SOGLIE_PV e interruttori diversi → CONFIG_IMPRONTA diversa.
+# Ogni variabile qui sotto è un RIFERIMENTO a quella del servizio web "scovo" (fromService): nessun valore e nessun
+# segreto in questo file; se si cambia una variabile sul sito, il worker la riprende al deploy successivo.
+# Elenco ricavato dalla riga CONFIG_IMPRONTA del sito del 16/11 (variabili impostate, non "<default>"), più la chiave
+# AI e il sale delle targhe (stessi hash delle targhe del sito). NON si passano le variabili della sola raccolta a
+# pagamento (BRIGHTDATA_*, SCRAPER_PROXY): il worker legge come prima, nessuna spesa nuova di proxy.
+# Unica eccezione voluta: TR_SUBITO (sul sito "0") NON si copia: è la lettura COMPLETA di Subito, che oggi fa solo il
+# worker (default "1"); copiarla toglierebbe annunci invece di aggiungerne. Decide il cliente (vedi FOND_AUTO.md).
+# Da applicare con un sync del Blueprint (a mano, dopo la revisione): questo ramo non fa deploy.
 services:
   - type: worker
     name: scovo-tempo-reale
@@ -13,3 +23,261 @@ services:
     envVars:
       - key: DATABASE_URL
         fromService: { type: cron, name: dealfinder-opportunita, envVarKey: DATABASE_URL }
+      # segreti: solo riferimenti, mai valori
+      - key: ANTHROPIC_API_KEY
+        fromService: { type: web, name: scovo, envVarKey: ANTHROPIC_API_KEY }
+      - key: PLATE_SALT
+        fromService: { type: web, name: scovo, envVarKey: PLATE_SALT }
+      # regole, interruttori e soglie del sito (CONFIG_IMPRONTA del web, 16/11)
+      - key: AI_BUDGET_GIORNO
+        fromService: { type: web, name: scovo, envVarKey: AI_BUDGET_GIORNO }
+      - key: ALTA_MARGINE_COMM
+        fromService: { type: web, name: scovo, envVarKey: ALTA_MARGINE_COMM }
+      - key: ALTA_MARGINE_MIN
+        fromService: { type: web, name: scovo, envVarKey: ALTA_MARGINE_MIN }
+      - key: AUTO_MIN_N
+        fromService: { type: web, name: scovo, envVarKey: AUTO_MIN_N }
+      - key: AUTO_TESTO_RESTANTI
+        fromService: { type: web, name: scovo, envVarKey: AUTO_TESTO_RESTANTI }
+      - key: AUTO_TETTO_CONTATTI
+        fromService: { type: web, name: scovo, envVarKey: AUTO_TETTO_CONTATTI }
+      - key: BENZ_AS24_MAX
+        fromService: { type: web, name: scovo, envVarKey: BENZ_AS24_MAX }
+      - key: BENZ_AS24_TOP
+        fromService: { type: web, name: scovo, envVarKey: BENZ_AS24_TOP }
+      - key: BENZ_CAMBI_MAX
+        fromService: { type: web, name: scovo, envVarKey: BENZ_CAMBI_MAX }
+      - key: BENZ_CAMBI_PREZZO
+        fromService: { type: web, name: scovo, envVarKey: BENZ_CAMBI_PREZZO }
+      - key: BENZ_GIRO
+        fromService: { type: web, name: scovo, envVarKey: BENZ_GIRO }
+      - key: CALIBRA_ATTESA
+        fromService: { type: web, name: scovo, envVarKey: CALIBRA_ATTESA }
+      - key: CALIBRA_MAX
+        fromService: { type: web, name: scovo, envVarKey: CALIBRA_MAX }
+      - key: COMMERCIANTI_BREVO
+        fromService: { type: web, name: scovo, envVarKey: COMMERCIANTI_BREVO }
+      - key: DANNI_AI
+        fromService: { type: web, name: scovo, envVarKey: DANNI_AI }
+      - key: DIESEL_MAX
+        fromService: { type: web, name: scovo, envVarKey: DIESEL_MAX }
+      - key: ECONOMICHE_ANNO
+        fromService: { type: web, name: scovo, envVarKey: ECONOMICHE_ANNO }
+      - key: ECONOMICHE_LIBERO
+        fromService: { type: web, name: scovo, envVarKey: ECONOMICHE_LIBERO }
+      - key: ECONOMICHE_MAX
+        fromService: { type: web, name: scovo, envVarKey: ECONOMICHE_MAX }
+      - key: ECONOMICHE_MAX_PREZZO
+        fromService: { type: web, name: scovo, envVarKey: ECONOMICHE_MAX_PREZZO }
+      - key: ECONOMICHE_OBIETTIVO
+        fromService: { type: web, name: scovo, envVarKey: ECONOMICHE_OBIETTIVO }
+      - key: ECONOMICHE_QUANTE
+        fromService: { type: web, name: scovo, envVarKey: ECONOMICHE_QUANTE }
+      - key: ECO_TELEFONO
+        fromService: { type: web, name: scovo, envVarKey: ECO_TELEFONO }
+      - key: ESAME_VENDUTI_GIORNI
+        fromService: { type: web, name: scovo, envVarKey: ESAME_VENDUTI_GIORNI }
+      - key: FILTRA_INC_TESTO
+        fromService: { type: web, name: scovo, envVarKey: FILTRA_INC_TESTO }
+      - key: FILTRA_TEL
+        fromService: { type: web, name: scovo, envVarKey: FILTRA_TEL }
+      - key: FRESCHEZZA_ORE
+        fromService: { type: web, name: scovo, envVarKey: FRESCHEZZA_ORE }
+      - key: FULL_CONCESSIONARI
+        fromService: { type: web, name: scovo, envVarKey: FULL_CONCESSIONARI }
+      - key: INC_MILANO
+        fromService: { type: web, name: scovo, envVarKey: INC_MILANO }
+      - key: JEV_CONF_SCARTA
+        fromService: { type: web, name: scovo, envVarKey: JEV_CONF_SCARTA }
+      - key: JEV_DURANTE_CALCOLO
+        fromService: { type: web, name: scovo, envVarKey: JEV_DURANTE_CALCOLO }
+      - key: JEV_LOTTO_PICCOLO
+        fromService: { type: web, name: scovo, envVarKey: JEV_LOTTO_PICCOLO }
+      - key: JEV_MIN
+        fromService: { type: web, name: scovo, envVarKey: JEV_MIN }
+      - key: JEV_MODO
+        fromService: { type: web, name: scovo, envVarKey: JEV_MODO }
+      - key: LEADE_SUBITO
+        fromService: { type: web, name: scovo, envVarKey: LEADE_SUBITO }
+      - key: LETTORE
+        fromService: { type: web, name: scovo, envVarKey: LETTORE }
+      - key: MAPS_CITTA_MARCHE
+        fromService: { type: web, name: scovo, envVarKey: MAPS_CITTA_MARCHE }
+      - key: MAPS_COMUNI_EXTRA
+        fromService: { type: web, name: scovo, envVarKey: MAPS_COMUNI_EXTRA }
+      - key: MAPS_MARCHE
+        fromService: { type: web, name: scovo, envVarKey: MAPS_MARCHE }
+      - key: MAPS_PAROLE
+        fromService: { type: web, name: scovo, envVarKey: MAPS_PAROLE }
+      - key: MARGINE_FINO_1500
+        fromService: { type: web, name: scovo, envVarKey: MARGINE_FINO_1500 }
+      - key: MARGINE_FINO_5000
+        fromService: { type: web, name: scovo, envVarKey: MARGINE_FINO_5000 }
+      - key: MARGINE_MIN_SITO
+        fromService: { type: web, name: scovo, envVarKey: MARGINE_MIN_SITO }
+      - key: MARGINE_OLTRE_5000
+        fromService: { type: web, name: scovo, envVarKey: MARGINE_OLTRE_5000 }
+      - key: MARGINE_RECENTI_MIN
+        fromService: { type: web, name: scovo, envVarKey: MARGINE_RECENTI_MIN }
+      - key: META_SENZA_NUMERO
+        fromService: { type: web, name: scovo, envVarKey: META_SENZA_NUMERO }
+      - key: POLICY_ADATTIVA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_ADATTIVA }
+      - key: POLICY_AI
+        fromService: { type: web, name: scovo, envVarKey: POLICY_AI }
+      - key: POLICY_AMPLIA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_AMPLIA }
+      - key: POLICY_AMPLIA_DA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_AMPLIA_DA }
+      - key: POLICY_ANNI_TOL
+        fromService: { type: web, name: scovo, envVarKey: POLICY_ANNI_TOL }
+      - key: POLICY_ANNI_TOL_2
+        fromService: { type: web, name: scovo, envVarKey: POLICY_ANNI_TOL_2 }
+      - key: POLICY_COMMERCIANTI_MIN
+        fromService: { type: web, name: scovo, envVarKey: POLICY_COMMERCIANTI_MIN }
+      - key: POLICY_COMMERCIANTI_SCONTO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_COMMERCIANTI_SCONTO }
+      - key: POLICY_CORREZIONE
+        fromService: { type: web, name: scovo, envVarKey: POLICY_CORREZIONE }
+      - key: POLICY_CORREZIONE_MODELLO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_CORREZIONE_MODELLO }
+      - key: POLICY_COSTO_ALTO_DA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_COSTO_ALTO_DA }
+      - key: POLICY_COSTO_FISSO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_COSTO_FISSO }
+      - key: POLICY_COSTO_FISSO_ALTO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_COSTO_FISSO_ALTO }
+      - key: POLICY_FASCE
+        fromService: { type: web, name: scovo, envVarKey: POLICY_FASCE }
+      - key: POLICY_GIUDICE_AI
+        fromService: { type: web, name: scovo, envVarKey: POLICY_GIUDICE_AI }
+      - key: POLICY_ITALIA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_ITALIA }
+      - key: POLICY_ITALIA_DA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_ITALIA_DA }
+      - key: POLICY_ITALIA_PMIN
+        fromService: { type: web, name: scovo, envVarKey: POLICY_ITALIA_PMIN }
+      - key: POLICY_KM_TOL
+        fromService: { type: web, name: scovo, envVarKey: POLICY_KM_TOL }
+      - key: POLICY_KM_TOL_2
+        fromService: { type: web, name: scovo, envVarKey: POLICY_KM_TOL_2 }
+      - key: POLICY_N_MINIMO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_N_MINIMO }
+      - key: POLICY_N_PREFERITO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_N_PREFERITO }
+      - key: POLICY_PASSAGGIO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_PASSAGGIO }
+      - key: POLICY_POTENZA_TOL
+        fromService: { type: web, name: scovo, envVarKey: POLICY_POTENZA_TOL }
+      - key: POLICY_PULIZIA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_PULIZIA }
+      - key: POLICY_Q_VELOCE
+        fromService: { type: web, name: scovo, envVarKey: POLICY_Q_VELOCE }
+      - key: POLICY_REG
+        fromService: { type: web, name: scovo, envVarKey: POLICY_REG }
+      - key: POLICY_RICALCOLO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_RICALCOLO }
+      - key: POLICY_RIVENDITA_COMMERCIANTI
+        fromService: { type: web, name: scovo, envVarKey: POLICY_RIVENDITA_COMMERCIANTI }
+      - key: POLICY_R_BASSI
+        fromService: { type: web, name: scovo, envVarKey: POLICY_R_BASSI }
+      - key: POLICY_SOSPETTO_BASSE_CONFRONTI
+        fromService: { type: web, name: scovo, envVarKey: POLICY_SOSPETTO_BASSE_CONFRONTI }
+      - key: POLICY_SVALUTAZIONE_10KM
+        fromService: { type: web, name: scovo, envVarKey: POLICY_SVALUTAZIONE_10KM }
+      - key: POLICY_SVALUTAZIONE_ANNO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_SVALUTAZIONE_ANNO }
+      - key: POLICY_TARATURA
+        fromService: { type: web, name: scovo, envVarKey: POLICY_TARATURA }
+      - key: POLICY_TRAZIONE
+        fromService: { type: web, name: scovo, envVarKey: POLICY_TRAZIONE }
+      - key: POLICY_USA_L
+        fromService: { type: web, name: scovo, envVarKey: POLICY_USA_L }
+      - key: POLICY_VELOCE_MAX
+        fromService: { type: web, name: scovo, envVarKey: POLICY_VELOCE_MAX }
+      - key: POLICY_VELOCE_MAX_INCERTO
+        fromService: { type: web, name: scovo, envVarKey: POLICY_VELOCE_MAX_INCERTO }
+      - key: POLICY_VENDITA_VELOCE
+        fromService: { type: web, name: scovo, envVarKey: POLICY_VENDITA_VELOCE }
+      - key: POLICY_VENDUTE_GIORNI
+        fromService: { type: web, name: scovo, envVarKey: POLICY_VENDUTE_GIORNI }
+      - key: RIVENDITA_MARCA
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_MARCA }
+      - key: RIVENDITA_SCONTO
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_SCONTO }
+      - key: RIVENDITA_SOPRA
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_SOPRA }
+      - key: RIVENDITA_SOPRA_PCT
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_SOPRA_PCT }
+      - key: RIVENDITA_SOPRA_TIENI
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_SOPRA_TIENI }
+      - key: RIVENDITA_SOTTO
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_SOTTO }
+      - key: RIVENDITA_SOTTO_PCT
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_SOTTO_PCT }
+      - key: RIVENDITA_VECCHIE
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_VECCHIE }
+      - key: RIVENDITA_VECCHIE_ANNI
+        fromService: { type: web, name: scovo, envVarKey: RIVENDITA_VECCHIE_ANNI }
+      - key: RZ_FOCUS
+        fromService: { type: web, name: scovo, envVarKey: RZ_FOCUS }
+      - key: RZ_SOLO_INSUFF
+        fromService: { type: web, name: scovo, envVarKey: RZ_SOLO_INSUFF }
+      - key: RZ_SOLO_NUOVE
+        fromService: { type: web, name: scovo, envVarKey: RZ_SOLO_NUOVE }
+      - key: RZ_SOLO_VALUTA
+        fromService: { type: web, name: scovo, envVarKey: RZ_SOLO_VALUTA }
+      - key: RZ_TUTTI_CARB
+        fromService: { type: web, name: scovo, envVarKey: RZ_TUTTI_CARB }
+      - key: SC_CONTROLLO
+        fromService: { type: web, name: scovo, envVarKey: SC_CONTROLLO }
+      - key: SENZA_NUMERO_CONFRONTI
+        fromService: { type: web, name: scovo, envVarKey: SENZA_NUMERO_CONFRONTI }
+      - key: SENZA_NUMERO_EXTRA
+        fromService: { type: web, name: scovo, envVarKey: SENZA_NUMERO_EXTRA }
+      - key: SENZA_NUMERO_EXTRA_CONFRONTI
+        fromService: { type: web, name: scovo, envVarKey: SENZA_NUMERO_EXTRA_CONFRONTI }
+      - key: SENZA_NUMERO_EXTRA_FATTORE
+        fromService: { type: web, name: scovo, envVarKey: SENZA_NUMERO_EXTRA_FATTORE }
+      - key: SENZA_NUMERO_EXTRA_MARGINE
+        fromService: { type: web, name: scovo, envVarKey: SENZA_NUMERO_EXTRA_MARGINE }
+      - key: SITO_APERTO
+        fromService: { type: web, name: scovo, envVarKey: SITO_APERTO }
+      - key: SITO_MARGINE_MIN_SOTTO
+        fromService: { type: web, name: scovo, envVarKey: SITO_MARGINE_MIN_SOTTO }
+      - key: SITO_PREZZO_LIMITE
+        fromService: { type: web, name: scovo, envVarKey: SITO_PREZZO_LIMITE }
+      - key: SITO_TETTO_PCT
+        fromService: { type: web, name: scovo, envVarKey: SITO_TETTO_PCT }
+      - key: SOGLIE_PV
+        fromService: { type: web, name: scovo, envVarKey: SOGLIE_PV }
+      - key: SUPERCAR_ATTESA
+        fromService: { type: web, name: scovo, envVarKey: SUPERCAR_ATTESA }
+      - key: SUPERCAR_COSTI_ESTERO
+        fromService: { type: web, name: scovo, envVarKey: SUPERCAR_COSTI_ESTERO }
+      - key: SUPERCAR_EU
+        fromService: { type: web, name: scovo, envVarKey: SUPERCAR_EU }
+      - key: SUPERCAR_MARGINE_MIN
+        fromService: { type: web, name: scovo, envVarKey: SUPERCAR_MARGINE_MIN }
+      - key: SUPERCAR_MIN
+        fromService: { type: web, name: scovo, envVarKey: SUPERCAR_MIN }
+      - key: SUPERCAR_PARALLELI
+        fromService: { type: web, name: scovo, envVarKey: SUPERCAR_PARALLELI }
+      - key: TELEFONO_OBBLIGATORIO
+        fromService: { type: web, name: scovo, envVarKey: TELEFONO_OBBLIGATORIO }
+      - key: TOGLI_SENZA_TELEFONO
+        fromService: { type: web, name: scovo, envVarKey: TOGLI_SENZA_TELEFONO }
+      - key: TR_LUSSO_SENZA_NUMERO
+        fromService: { type: web, name: scovo, envVarKey: TR_LUSSO_SENZA_NUMERO }
+      - key: TR_SOLO_PRIVATI
+        fromService: { type: web, name: scovo, envVarKey: TR_SOLO_PRIVATI }
+      - key: TR_SUBITO_SENZA_NUMERO
+        fromService: { type: web, name: scovo, envVarKey: TR_SUBITO_SENZA_NUMERO }
+      - key: UTIL_SENZA_NUMERO_CONFRONTI
+        fromService: { type: web, name: scovo, envVarKey: UTIL_SENZA_NUMERO_CONFRONTI }
+      - key: UTIL_SIM
+        fromService: { type: web, name: scovo, envVarKey: UTIL_SIM }
+      - key: ZONA_SITO
+        fromService: { type: web, name: scovo, envVarKey: ZONA_SITO }
+      - key: ZONE_ATTIVE
+        fromService: { type: web, name: scovo, envVarKey: ZONE_ATTIVE }
