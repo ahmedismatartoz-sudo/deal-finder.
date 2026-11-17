@@ -241,3 +241,52 @@ def test_diagnosi_riassunto():
     assert "dodge/altro-modello/benzina" in d["modelli_rari"]
     # il recupero riprende anche le auto ferme per dati incompleti che ora nell'annuncio ci sono
     assert "dati dell''auto incompleti" in DA_RECUPERARE_SQL and "abs(l.mileage_km - l.year) <= 3" in DA_RECUPERARE_SQL
+
+
+def test_modello_dal_titolo_non_rifa_le_unioni_vietate():
+    """17/11 (giudice): dal titolo non più "la prima parola": il modello di più parole resta intero (stessa
+    normalizzazione dei modelli normali), o None se non si capisce dove finisce."""
+    casi = {
+        ("opel", "Opel Mokka X 1.6 CDTI"): "mokka-x", ("opel", "Opel Grandland X 1.5 diesel"): "grandland-x",
+        ("suzuki", "Suzuki SX4 S-Cross 1.6"): "sx4-s-cross", ("fiat", "Fiat Punto Evo 1.3 Multijet"): "punto-evo",
+        ("abarth", "Abarth 595 Competizione 1.4 T-Jet"): "595-competizione",
+        ("toyota", "Toyota Yaris Cross Hybrid"): "yaris-cross", ("volkswagen", "Volkswagen Golf Plus 1.4"): "golf-plus",
+        ("opel", "Opel Zafira Tourer 1.6"): "zafira-tourer", ("toyota", "Toyota Aygo X 1.0"): "aygo-x",
+        ("fiat", "Fiat 500 X 1.3"): "500x", ("fiat", "Fiat Grande Punto 1.2"): "grande-punto",
+        ("kia", "Kia Pro Cee'd 1.6 CRDi"): "pro-cee-d", ("bmw", "BMW Serie 3 320d"): "serie-3",
+        ("mercedes-benz", "Mercedes Classe A 180 d"): "classe-a", ("mazda", "Mazda 3 2.0 Skyactiv-G"): "3",
+        ("fiat", "Fiat Nuova Panda 1.2"): "panda", ("fiat", "Fiat Punto"): "punto",
+        ("ds-automobiles", "DS 7 Crossback BlueHDi 130"): "ds7",
+        # non si capisce dove finisce il modello: None (l'auto resta "altro-modello", come prima)
+        ("opel", "Opel Mokka X"): None, ("fiat", "Fiat Grande Panda"): None, ("fiat", "Fiat Punto bellissima"): None,
+        ("dodge", "Dodge 2.0 CRD"): None,
+    }
+    for (mk, tit), atteso in casi.items():
+        assert N.modello_dal_titolo(mk, "altro-modello", tit) == atteso, (tit, N.modello_dal_titolo(mk, "altro-modello", tit))
+    # mai il nome corto di un modello diverso
+    vietati = {"mokka", "grandland", "sx4", "punto", "595", "yaris", "golf", "zafira", "aygo", "500", "grande", "pro"}
+    for (mk, tit), atteso in casi.items():
+        if atteso != "punto" or tit != "Fiat Punto":
+            assert N.modello_dal_titolo(mk, "altro-modello", tit) not in vietati - ({"500"} if mk == "abarth" else set())
+
+
+def test_km_vuoti_solo_percorrenza_chiara():
+    """17/11 (giudice): anche i km mancanti si riempiono solo col filtro prudente (notte-06 non entra)."""
+    campi = {"fuel": "benzina", "year": 2017, "mileage_km": None}
+    for t in ("tagliando ogni 15.000 km", "distribuzione fatta a 90.000 km", "percorre 1.000 km al mese",
+              "garanzia 10.000 km"):
+        assert "mileage_km" not in completa(campi, "Fiat Panda", t), t
+    assert completa(campi, "Fiat Panda", "km 85.000")["mileage_km"] == 85000
+    assert km_percorsi_chiari("km 1.000 al mese") is None and km_percorsi_chiari("km 1.500 mensili") is None
+    # minimo plausibile al posto dei km uguali all'anno
+    assert km_dal_testo_prudente(2017, 2017, 4000) is None and km_dal_testo_prudente(2017, 2017, 5000) == 5000
+
+
+def test_recupero_non_riprende_km_della_vecchia_lettura():
+    from dealfinder.pricing.recupero import km_affidabili, DA_RECUPERARE_SQL
+    r = {"incompleti": True, "mileage_km": 15000, "title": "Fiat Panda", "descr": "tagliando ogni 15000 km"}
+    assert not km_affidabili(r)                                   # km presi da "ogni 15.000 km": non si riprende
+    assert km_affidabili(dict(r, mileage_km=85000, descr="km 85.000"))       # percorrenza chiara: sì
+    assert km_affidabili(dict(r, mileage_km=85000, descr="ottime condizioni"))  # km della fonte: sì
+    assert km_affidabili({"listing_id": 1})                       # altri motivi di recupero: come prima
+    assert "km_testo_prudente" in DA_RECUPERARE_SQL

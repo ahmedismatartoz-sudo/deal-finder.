@@ -50,7 +50,8 @@ TABELLA_SQL = ("CREATE TABLE IF NOT EXISTS recupero_provato (listing_id BIGINT P
 
 # Ultima valutazione dell'auto (versione di policy in uso), solo privati online, non ripresa nelle ultime ORE ore.
 DA_RECUPERARE_SQL = """
-SELECT v.listing_id
+SELECT v.listing_id, (v.categoria = 'dati_insufficienti' AND v.dati->'motivi'->>0 LIKE 'dati dell''auto incompleti%%')
+       AS incompleti, l.mileage_km, l.title, left(l.description, 4000) AS descr, l.version_raw
   FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
   LEFT JOIN recupero_provato rp ON rp.listing_id = v.listing_id
  WHERE v.policy_version = %(pv)s AND l.status = 'attivo'
@@ -64,7 +65,11 @@ SELECT v.listing_id
         -- 17/11: dati dell'auto mancanti o sbagliati (km = anno) ma ORA completi nell'annuncio (dal testo, rilettura)
         OR (v.categoria = 'dati_insufficienti' AND v.dati->'motivi'->>0 LIKE 'dati dell''auto incompleti%%'
             AND l.year IS NOT NULL AND l.mileage_km IS NOT NULL AND l.fuel IS NOT NULL AND l.price_eur IS NOT NULL
-            AND NOT (l.mileage_km BETWEEN 1990 AND 2035 AND abs(l.mileage_km - l.year) <= 3)))
+            AND NOT (l.mileage_km BETWEEN 1990 AND 2035 AND abs(l.mileage_km - l.year) <= 3)
+            -- km riempiti dal testo con la vecchia lettura (poteva prendere "tagliando ogni 15.000 km"): non si
+            -- riprendono; solo quelli letti col filtro prudente (segno km_testo_prudente) o dati dalla fonte
+            AND NOT (COALESCE(l.field_origin->>'mileage_km', '') = 'dal_testo'
+                     AND NOT (COALESCE(l.field_origin, '{}'::jsonb) ? 'km_testo_prudente'))))
  ORDER BY v.computed_at ASC
  LIMIT %(lim)s"""
 
@@ -95,6 +100,21 @@ def _rollback(conn) -> None:
         pass
 
 
+def km_affidabili(r) -> bool:
+    """17/11 (giudice): un'auto ferma per dati incompleti si riprende solo se i km non sembrano letti dalla vecchia
+    chilometri() (che prendeva "tagliando ogni 15.000 km" -> 15.000): se la vecchia lettura del testo dà proprio i km
+    salvati e la lettura prudente no, i km vengono quasi certamente da lì -> non si riprende (in dubbio no)."""
+    try:
+        if not r.get("incompleti"):
+            return True
+        from ..core.dal_testo import chilometri, km_percorsi_chiari
+        testo = f"{r.get('version_raw') or ''}\n{r.get('title') or ''}\n{r.get('descr') or ''}"
+        km = r.get("mileage_km")
+        return not (km is not None and chilometri(testo) == km and km_percorsi_chiari(testo) != km)
+    except Exception:
+        return False
+
+
 def da_recuperare(conn, limite: int | None = None) -> list:
     lim = _int("RECUPERO_PER_GIRO", PER_GIRO) if limite is None else limite
     if lim <= 0:
@@ -103,7 +123,7 @@ def da_recuperare(conn, limite: int | None = None) -> list:
         conn.execute(TABELLA_SQL)
         return [r["listing_id"] for r in conn.execute(
             DA_RECUPERARE_SQL, {"pv": P.POLICY_VERSION, "giorni": _int("RECUPERO_GIORNI", GIORNI),
-                                "ore": _int("RECUPERO_ORE", ORE), "lim": lim}).fetchall()]
+                                "ore": _int("RECUPERO_ORE", ORE), "lim": lim}).fetchall() if km_affidabili(r)]
     except Exception as e:
         _rollback(conn)
         log.warning("RECUPERO_CONFRONTI auto non lette: %s", str(e)[:200])

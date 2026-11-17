@@ -20,8 +20,11 @@ def test_anno_e_km():
 
 
 def test_completa_solo_campi_vuoti():
-    out = completa({"fuel": "benzina", "year": None, "mileage_km": None}, "Panda", "diesel anno 2011 140.000 km")
+    out = completa({"fuel": "benzina", "year": None, "mileage_km": None}, "Panda", "diesel anno 2011 140.000 km percorsi")
     assert out == {"year": 2011, "mileage_km": 140000}
+    # 17/11 (giudice): "NNN km" senza parola di percorrenza può essere un intervallo o un lavoro: non si usa più
+    out = completa({"fuel": "benzina", "year": None, "mileage_km": None}, "Panda", "diesel anno 2011 140.000 km")
+    assert out == {"year": 2011}
 
 
 def test_sigle_motore_1_11():

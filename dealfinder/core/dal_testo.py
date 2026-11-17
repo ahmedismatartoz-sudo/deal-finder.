@@ -123,9 +123,15 @@ _KM_CONTESTO_NO = re.compile(
     r"tagliand|distribuzion|garanzi|revision|frizion|gomm|pneumatic|cinghi|\bolio\b|\bogni\b|annu[aie]|all'\s*anno|"
     r"\bmedia\b|prossim|entro|mancano|sostituit|cambiat|rifatt|eseguit|manutenzion|service|autonomia|\bfa\b|"
     r"\bdal(?:l')?\s*(?:ultimo|tagliando|cambio)|batteri|turbin|freni|dischi|pastiglie|kit\b|motore\s+nuovo|"
-    r"\bmotore\s+(?:con|a|da)\b|ricondizion|rigenerat", re.I)
+    r"\bmotore\s+(?:con|a|da)\b|ricondizion|rigenerat|al\s+mese|mensil|settiman|al\s+giorno", re.I)
 # "a 90.000 km", "ai 90.000", "dopo 90.000": un evento a un certo km, non la percorrenza di oggi
 _KM_A_PRIMA = re.compile(r"\b(?:a|ai|al|agli|dopo|verso|circa\s+a|fino\s+a|fino\s+ai|da|di)\s*(?:km\s*)?$", re.I)
+
+
+KM_MINIMO_AL_POSTO_ANNO = 5000
+# segno in field_origin: km riempiti dal testo col filtro prudente (i 'dal_testo' senza segno vengono dalla vecchia
+# chilometri() e il recupero non li riprende)
+SEGNO_KM_PRUDENTI = "km_testo_prudente"
 
 
 def km_percorsi_chiari(testo: str) -> int | None:
@@ -155,7 +161,8 @@ def km_dal_testo_prudente(km_dichiarati, anno_auto, km_testo) -> int | None:
     if not km_testo or km_come_anno(km_testo, anno_auto):
         return None
     if km_come_anno(km_dichiarati, anno_auto):
-        return km_testo
+        # minimo plausibile: "5.000 km" al posto dell'anno è più spesso un intervallo che la percorrenza
+        return km_testo if int(km_testo) >= KM_MINIMO_AL_POSTO_ANNO else None
     try:
         return km_testo if km_dichiarati is not None and int(km_testo) >= int(km_dichiarati) else None
     except (TypeError, ValueError):
@@ -192,7 +199,9 @@ def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
             out["year"] = a
     anno_auto = campi.get("year") or out.get("year")
     if campi.get("mileage_km") in (None, ""):
-        k = chilometri(testo)
+        # 17/11 (giudice): anche per i km vuoti solo la percorrenza chiara (chilometri() prendeva "tagliando ogni
+        # 15.000 km" -> 15.000, "distribuzione fatta a 90.000 km" -> 90.000: margine gonfiato)
+        k = km_percorsi_chiari(testo)
         if k and not km_come_anno(k, anno_auto):
             out["mileage_km"] = k
     elif KM_ANNO_DAL_TESTO and km_come_anno(campi.get("mileage_km"), anno_auto):
@@ -246,6 +255,8 @@ def completa_db(conn, limite: int = 20000) -> dict:
                 conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(orig), r["id"]))
                 continue
             orig.update({k: "dal_testo" for k in nuovi})
+            if "mileage_km" in nuovi:
+                orig[SEGNO_KM_PRUDENTI] = 1            # km letti col filtro prudente (vedi recupero)
             sets = ", ".join(f"{k}=%({k})s" for k in nuovi)
             conn.execute(f"UPDATE listings SET {sets}, field_origin=%(fo)s WHERE id=%(id)s",
                          {**nuovi, "fo": json.dumps(orig), "id": r["id"]})

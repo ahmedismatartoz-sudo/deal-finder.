@@ -341,22 +341,63 @@ MODELLI_GENERICI = {"altro", "altro-modello", "altri-modelli", "altri", "other",
                     "modello-non-in-elenco", "non-in-elenco", "n-d", "nd"}
 
 
+# Parole che dopo il nome del modello indicano il motore (o l'anno): lì il modello è finito.
+_RE_DATO_MOTORE = re.compile(
+    r"\d(?:[.,]\d)?[a-z]*|\d{2,4}[a-z]{0,2}|(?:19[89]|20[0-3])\d|cv|kw|tdi|tsi|tfsi|fsi|hdi|bluehdi|e-?hdi|cdi|"
+    r"crd|crdi|jtd|jtdm|mjt|multi-?jet|ecotec|cdti|tce|dci|puretech|vti|thp|t-?jet|fire|mpi|gdi|t-?gdi|tdci|"
+    r"ecoboost|d-?4d|vvt-?i|skyactiv\S*|gpl|metano|diesel|benzina|ibrida|hybrid|e-?hybrid|phev|mhev|elettrica|ev|"
+    r"turbo|bifuel|bi-?fuel|cng|lpg|t?jet", re.I)
+
+
+def _modello_titolo(make: str, testo: str) -> str | None:
+    """Modello dal testo (titolo/versione) SOLO se finisce chiaramente: dopo le sue 1-3 parole viene un dato del motore
+    o l'anno (o, per una parola sola, il testo finisce lì). Il nome di più parole passa per canon_model (stessi
+    _SINONIMI dei modelli normali): "Mokka X 1.6" -> "mokka-x", mai "mokka"; "Yaris Cross Hybrid" -> "yaris-cross"."""
+    from .vehicles import _ALIASES, MAKES, NUMERIC_MODELS, TWO_WORD_PREFIX
+    t = re.sub(r"\s+", " ", testo.lower()).strip()
+    for alias in _ALIASES:
+        m = re.search(r"(?:^|\s)" + re.escape(alias) + r"(?:\s|$)", t)
+        if not m:
+            continue
+        if canon_make(slug(MAKES[alias])) != make:
+            return None                                       # il testo dice un'altra marca: non si tocca
+        parole = [w.strip(",;:()!\"'") for w in t[m.end():].split()]
+        parole = [w for w in parole if w]
+        if not parole:
+            return None
+        if _RE_DATO_MOTORE.fullmatch(parole[0]) and parole[0] not in NUMERIC_MODELS.get(MAKES[alias], ()):
+            return None                                       # "Dodge 2.0 CRD": la cilindrata non è un modello
+        # "Serie 3", "Classe A", "Range Rover", "Grand C4": il nome ha almeno due parole
+        for k in ((2, 3) if parole[0] in TWO_WORD_PREFIX else (1, 2, 3)):
+            if len(parole) < k:
+                return None
+            dopo = parole[k] if len(parole) > k else None
+            if dopo is None and k > 1:
+                return None                                   # "Fiat Punto bellissima": non si sa dove finisce
+            if dopo is not None and not _RE_DATO_MOTORE.fullmatch(dopo):
+                continue
+            cand = slug(" ".join(parole[:k]))
+            if not cand:
+                return None
+            if make == "ds-automobiles" and cand[0].isdigit():
+                cand = "ds-" + cand                           # "DS 7 Crossback" -> "ds-7-crossback" -> "ds7"
+            return canon_model(make, cand)
+        return None
+    return None
+
+
 def modello_dal_titolo(make: str | None, model: str | None, *testi: str | None) -> str | None:
     """Modello canonico per un annuncio con modello generico ("altro-modello"), dal titolo o dalla versione.
-    Ritorna None se il modello non è generico o se il testo non lo dice chiaramente (stessa marca)."""
+    Ritorna None se il modello non è generico o se il testo non lo dice chiaramente (stessa marca).
+    17/11 (giudice): non più "la prima parola" ("Mokka X" -> "mokka" rifaceva le unioni vietate), vedi _modello_titolo."""
     if not make or (model or "") not in MODELLI_GENERICI:
         return None
-    from .vehicles import make_model_from_title
     for t in testi:
         if not t:
             continue
-        mk, md = make_model_from_title(t)
-        if mk and md and canon_make(slug(mk)) == make:
-            if make == "ds-automobiles" and md.isdigit():
-                md = "ds" + md                                  # "DS 7 Crossback" -> "ds7"
-            nuovo = canon_model(make, md)
-            if nuovo and nuovo not in MODELLI_GENERICI:
-                return nuovo
+        nuovo = _modello_titolo(make, t)
+        if nuovo and nuovo not in MODELLI_GENERICI:
+            return nuovo
     return None
 
 
