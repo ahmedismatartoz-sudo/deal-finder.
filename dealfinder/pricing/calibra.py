@@ -12,6 +12,22 @@ Non cambia niente nel database: scrive solo CALIBRA_* nei log.
 17/11 notte (cliente: "margini molto precisi"): campione casuale della popolazione del sito (non più le prime vendute in
 ordine alfabetico di marca), M misurato solo quando viene dai prezzi chiesti, misura del valore reale su prezzo / V
 salvato (fasce_vr, prima quasi vuota) e diagnosi per età, carburante e fonte. Vedi VENDUTE_SQL e VENDUTE_VR_SQL.
+
+17/11 notte, correzioni del giudice ("non gonfiare i prezzi", margini precisi): il risultato si SALVA (e quindi cambia
+i fattori del sito) solo se è solido, e i fattori si muovono con il freno (vedi fasce_prudenti):
+  - una fascia con meno di calibrazione.n_min auto nel campione nuovo EREDITA la misura salvata prima (mai la riserva
+    di regole.py, che sopra 20.000 € è 1,0 e alzerebbe M); senza misura prima: il minore tra riserva e ultimo valore
+    noto nelle misure più vecchie;
+  - per giro un fattore si muove al massimo di FRENO_PASSO (0,05) dal valore in vigore; uno scostamento oltre il −10%
+    vale solo con almeno FRENO_N_FORTE (40) auto, altrimenti si usa il limite superiore dell'intervallo di confidenza al
+    95% della mediana (stima prudente verso 1), mai sopra il valore in vigore;
+  - meno di CALIBRA_MIN_VALUTATE (150) auto valutate, troppi errori, stato precedente illeggibile o misura precedente
+    di meno di CALIBRA_MIN_ORE (20) ore fa (riavvii ripetuti = un giro solo): NON si salva nulla, restano i fattori
+    in vigore.
+DISTORSIONE DICHIARATA: le "vendute" sono le sparite entro CALIBRA_GIORNI_VENDITA (7) giorni, cioè soprattutto le auto
+messe a prezzo basso (quelle a prezzo pieno restano online di più): prezzo/M misurato così tende a essere PIÙ BASSO del
+vero rapporto venduto/M. È una distorsione verso la prudenza (M più basso, margini più bassi, nessun prezzo gonfiato),
+ma può togliere auto buone dal sito: per questo i fattori scendono con il freno e non in un colpo solo.
 """
 from __future__ import annotations
 
@@ -92,6 +108,12 @@ def parametri_campione(rg=None) -> dict:
             "km_max": int(a.km_max), "anno_min": int(a.anno_min)}
 
 
+# 17/11 notte (giudice): freno dei fattori, vedi fasce_prudenti
+FRENO_PASSO = .05          # di quanto può muoversi un fattore in un giro, al massimo
+FRENO_SCOSTAMENTO = .10    # scostamento oltre il quale (prezzo/M sotto 0,90) servono FRENO_N_FORTE auto
+FRENO_N_FORTE = 40
+
+
 def _vuota():
     return {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0}
 
@@ -113,7 +135,7 @@ def riassumi(dati: dict, ordine: list) -> dict:
         out[f] = {"n": d["n"], "prezzo_su_M": round(median(d["rapp_M"]), 3),
                   "errore_R_pct": round(median(d["err_R"]), 1),
                   "copertura_R": round(d["coperte"] / d["n"], 2),
-                  "q": quantili(d["rapp_M"])}
+                  "q": quantili(d["rapp_M"]), "ic95": _ic(d["rapp_M"])}
     return out
 
 
@@ -150,6 +172,100 @@ def misura_vr(conn, par: dict, zona: str) -> tuple[dict, dict]:
         if fg["applica"]:
             applicate[f] = d
     return applicate, tutte
+
+
+def _ic(valori: list) -> list | None:
+    from .precisione import ic_mediana
+    ic = ic_mediana(valori)
+    return [round(ic[0], 3), round(ic[1], 3)] if ic else None
+
+
+def stato_precedente(conn, k: int = 30) -> list[dict]:
+    """Ultime k misure salvate, dalla più recente: [{"at", "dati"}]. Tabella assente = []; un errore di lettura si
+    propaga (chi chiama non salva: senza lo stato di prima non si può garantire che nessun fattore salga)."""
+    r = conn.execute("SELECT to_regclass('calibrazione') AS t").fetchone()
+    if not r or not r["t"]:
+        return []
+    out = []
+    for x in conn.execute("SELECT at, dati FROM calibrazione ORDER BY at DESC LIMIT %s", (k,)).fetchall():
+        d = x["dati"]
+        d = json.loads(d) if isinstance(d, str) else (d or {})
+        out.append({"at": x["at"], "dati": d if isinstance(d, dict) else {}})
+    return out
+
+
+def _in_vigore(dati: dict, rg) -> dict:
+    """{fascia: fattore, "vr:"+fascia: fattore} che il sito applica OGGI con questa misura (regole invariate)."""
+    from .. import regole as RG
+    fat = RG.fattori_calibrazione((dati or {}).get("fasce") or {}, rg, misurate_vr=(dati or {}).get("fasce_vr") or {},
+                                  per_M=(dati or {}).get("fasce_su") == "M")
+    return {str(n): float(x) for _, n, x in fat if not str(n).startswith("_")}
+
+
+def _valida(f, n_min: int) -> bool:
+    return isinstance(f, dict) and (f.get("n") or 0) >= n_min and f.get("prezzo_su_M") is not None
+
+
+def fasce_prudenti(nuove: dict, precedenti: list, rg=None, vr: bool = False) -> dict:
+    """Fasce da salvare (quelle che il sito applica tramite regole.fattori_calibrazione, invariata), dal campione nuovo
+    con le regole del giudice del 17/11 notte. nuove = riassumi(...) (o fasce_vr applicabili); precedenti =
+    stato_precedente(...) (dati delle misure salvate, dalla più recente). vr=True: voci del valore reale ("fasce_vr",
+    nessuna riserva: senza misura il fattore è 1,0).
+      - n < n_min: si EREDITA la fascia della misura in vigore ("ereditata": "precedente"); se non c'era, il minore tra
+        riserva e ultimo valore noto nelle misure più vecchie ("ereditata": "ultimo_noto"), oppure niente (= riserva).
+        Così una fascia senza auto a sufficienza non alza MAI il fattore.
+      - n >= n_min: misura nuova m (mediana di prezzo/M); se m è sotto 1 − FRENO_SCOSTAMENTO con meno di FRENO_N_FORTE
+        auto, al suo posto il limite superiore dell'IC 95% della mediana, mai sopra il fattore in vigore; poi il
+        fattore si muove al massimo di FRENO_PASSO dal valore in vigore (in giù e, per prudenza, anche in su).
+    Ogni fascia salvata dichiara misurato, fattore_precedente e frenata."""
+    from .. import regole as RG
+    rg = rg or RG.regole()
+    cal = rg.calibrazione
+    chiave = "fasce_vr" if vr else "fasce"
+    pref = "vr:" if vr else ""
+    ultimo = (precedenti[0]["dati"] if precedenti else {}) or {}
+    vigore = _in_vigore(ultimo, rg)
+    riserva = {} if vr else dict(cal.riserva)
+    out = {}
+    for _, nome in cal.fasce:
+        d = (nuove or {}).get(nome)
+        n = (d or {}).get("n") or 0
+        f_att = vigore.get(pref + nome, 1.0)
+        if n < cal.n_min:
+            prima = (ultimo.get(chiave) or {}).get(nome)
+            if _valida(prima, cal.n_min):
+                out[nome] = dict(prima, ereditata="precedente", n_nuovo=n,
+                                 misura_nuova=(d or {}).get("prezzo_su_M"))
+                continue
+            vecchia = next(((p["dati"].get(chiave) or {}).get(nome) for p in precedenti[1:]
+                            if _valida((p["dati"].get(chiave) or {}).get(nome), cal.n_min)), None)
+            r = riserva.get(nome, 1.0)
+            if vecchia is not None:
+                u = max(cal.minimo, min(cal.massimo, float(vecchia["prezzo_su_M"])))
+                if u < r:
+                    out[nome] = {"n": vecchia["n"], "prezzo_su_M": round(u, 3), "ereditata": "ultimo_noto",
+                                 "n_nuovo": n, "misura_nuova": (d or {}).get("prezzo_su_M")}
+            continue
+        m = float(d["prezzo_su_M"])
+        f, frenata = m, []
+        if m < 1 - FRENO_SCOSTAMENTO and n < FRENO_N_FORTE:
+            ic = d.get("ic95")
+            alto = float(ic[1]) if ic else 1.0
+            f = min(max(m, alto), f_att)
+            frenata.append(f"scostamento oltre -{int(FRENO_SCOSTAMENTO * 100)}% su {n} < {FRENO_N_FORTE} auto: "
+                           f"limite alto IC95 {alto:.3f}, mai sopra {f_att:.3f}")
+        if f < f_att - FRENO_PASSO:
+            f = f_att - FRENO_PASSO
+            frenata.append(f"passo massimo -{FRENO_PASSO} da {f_att:.3f}")
+        elif f > f_att + FRENO_PASSO:
+            f = f_att + FRENO_PASSO
+            frenata.append(f"passo massimo +{FRENO_PASSO} da {f_att:.3f}")
+        q = d.get("q")
+        if q and f < m:           # forbice (_q:): frenata in su, i quantili scendono con il fattore (mai sopra la misura)
+            q = [round(x * f / m, 3) for x in q]
+        out[nome] = dict(d, prezzo_su_M=round(f, 3), misurato=round(m, 3), fattore_precedente=round(f_att, 3),
+                         frenata=frenata or None, q=q)
+    return out
 
 
 def quantili(valori: list) -> list | None:
@@ -202,6 +318,17 @@ def misura_tassi(conn) -> dict:
     return {"marche": marche, "tutti": tassi_da_somme(*tot)}
 
 
+def _ore_da(at) -> float:
+    """Ore passate da `at` (timestamp della riga di calibrazione); sconosciuto = infinito (non blocca)."""
+    from datetime import datetime, timezone
+    try:
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - at).total_seconds() / 3600
+    except Exception:
+        return float("inf")
+
+
 def misura(conn) -> dict:
     from . import policy_v2 as P
     from .ricalcolo import MARKET_SQL, TARGET_COLS, _j, _rischio, _valuta_base
@@ -228,7 +355,7 @@ def misura(conn) -> dict:
     except Exception:
         fattori, priori = None, None
     mercato, chiave, cache = [], None, {}
-    tot = 0
+    tot, errori = 0, 0
     for r in rows:
         key = (r["make"], r["model"], r["fuel"])
         if key != chiave:
@@ -245,6 +372,7 @@ def misura(conn) -> dict:
         try:
             v, _ = _valuta_base(conn, t, confronti, scovo.soglia(int(prezzo)), cfg, cache)
         except Exception as e:
+            errori += 1
             log.warning("CALIBRA errore %s: %s", r["id"], str(e)[:120])
             continue
         M, R = v.get("M"), v.get("R_finale") or v.get("R")
@@ -272,8 +400,20 @@ def misura(conn) -> dict:
     # 4/11: con quale correzione anno/km è stata misurata (il fattore cambia se cambia la regola: va rimisurato)
     rg = cfg.regole
     ordine = [n for _, n in FASCE]
-    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": riassumi(per, ordine), "fasce_su": "M",
-           "fasce_vr": fasce_vr, "fasce_prezzo": riassumi(per_prezzo, ordine),
+    # 17/11 notte (giudice): lo stato in vigore serve per il freno e l'eredità; se non si legge, non si salva
+    precedenti, motivo_non_salva = [], None
+    try:
+        precedenti = stato_precedente(conn)
+    except Exception as e:
+        conn.rollback()
+        motivo_non_salva = f"stato precedente non letto: {str(e)[:100]}"
+    misurate = riassumi(per, ordine)
+    out = {"vendute_lette": len(rows), "valutate": tot, "errori": errori,
+           "fasce": fasce_prudenti(misurate, precedenti, rg), "fasce_su": "M",
+           "fasce_vr": fasce_prudenti(fasce_vr, precedenti, rg, vr=True), "fasce_misurate": misurate,
+           "fasce_prezzo": riassumi(per_prezzo, ordine),
+           "freno": {"passo": FRENO_PASSO, "scostamento": FRENO_SCOSTAMENTO, "n_forte": FRENO_N_FORTE,
+                     "distorsione": "sparite entro %d giorni: prezzo/M verso il basso (prudente)" % par["gg"]},
            "diagnosi": {"valore_reale": fasce_vr_tutte, "eta": riassumi(per_eta, ["0-3", "4-8", "9-12", "13+"]),
                         "carburante": riassumi(per_carb, sorted(per_carb)),
                         "fonte": riassumi(per_fonte, sorted(per_fonte))},
@@ -290,6 +430,9 @@ def misura(conn) -> dict:
     except Exception as e:
         conn.rollback()
         log.warning("CALIBRA tassi non misurati: %s", str(e)[:150])
+    if not out.get("tassi") and precedenti and precedenti[0]["dati"].get("tassi"):
+        out["tassi"] = precedenti[0]["dati"]["tassi"]          # misura mancata: restano quelli in vigore
+        out["tassi_ereditati"] = True
     try:
         from . import dotazioni as DT
         d = DT.misura(conn)
@@ -298,7 +441,24 @@ def misura(conn) -> dict:
     except Exception as e:
         conn.rollback()
         log.warning("CALIBRA dotazioni non misurate: %s", str(e)[:150])
-    log.warning("CALIBRA_RISULTATO %s", json.dumps(out, ensure_ascii=False))
+    if not out.get("dotazioni") and precedenti and precedenti[0]["dati"].get("dotazioni"):
+        out["dotazioni"] = precedenti[0]["dati"]["dotazioni"]
+    # 17/11 notte (giudice): si salva SOLO una misura solida; altrimenti restano i fattori in vigore
+    min_val = int(os.environ.get("CALIBRA_MIN_VALUTATE", "150"))
+    min_ore = float(os.environ.get("CALIBRA_MIN_ORE", "20"))
+    if motivo_non_salva is None and tot < min_val:
+        motivo_non_salva = f"auto valutate {tot} < {min_val}"
+    if motivo_non_salva is None and errori > .10 * max(1, len(rows)):
+        motivo_non_salva = f"errori {errori} su {len(rows)} vendute"
+    if motivo_non_salva is None and min_ore > 0 and precedenti and _ore_da(precedenti[0]["at"]) < min_ore:
+        motivo_non_salva = f"misura precedente di meno di {min_ore:g} ore fa (riavvio: un giro solo)"
+    out["salvata"] = motivo_non_salva is None
+    if motivo_non_salva:
+        out["non_salvata"] = motivo_non_salva
+    log.warning("CALIBRA_RISULTATO %s", json.dumps(out, ensure_ascii=False, default=str))
+    if motivo_non_salva:
+        log.warning("CALIBRA_NON_SALVATA %s: fattori in vigore invariati", motivo_non_salva)
+        return out
     try:      # 28/10 sera: il sito corregge il mercato con questi valori (vedi app._mercato_calibrato)
         conn.execute("CREATE TABLE IF NOT EXISTS calibrazione (at TIMESTAMPTZ PRIMARY KEY DEFAULT now(), dati JSONB)")
         conn.execute("INSERT INTO calibrazione (dati) VALUES (%s)", (json.dumps(out),))

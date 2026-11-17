@@ -46,6 +46,26 @@ def p_segni(sopra: int, sotto: int) -> float:
     return min(1.0, 2 * coda)
 
 
+def ic_mediana(valori: list, livello: float = .95) -> tuple | None:
+    """Intervallo di confidenza della mediana senza ipotesi sulla forma degli errori (statistiche d'ordine con la
+    binomiale p=0,5): (basso, alto). Con poche auto l'intervallo è largo: chi deve essere prudente usa `alto` (la stima
+    più vicina a 1 per un rapporto vero/stima sotto 1). None senza valori."""
+    xs = sorted(float(x) for x in valori if x is not None)
+    n = len(xs)
+    if n == 0:
+        return None
+    coda, cum, k = (1 - livello) / 2, 0.0, 0
+    for i in range(n + 1):                 # k = quante statistiche d'ordine si scartano per lato
+        p = math.comb(n, i) / 2 ** n
+        if cum + p > coda:
+            break
+        cum += p
+        k = i + 1
+    if k == 0 or k > n // 2:
+        return xs[0], xs[-1]
+    return xs[k - 1], xs[n - k]
+
+
 def fattore_gruppo(coppie: list[tuple], n_min: int = 20, p_max: float = .05, minimo: float = .80) -> dict:
     """Fattore vero/stima di un gruppo e se va applicato. coppie (stima, vero)."""
     ok = [(float(s), float(v)) for s, v in coppie if s and v]
