@@ -1444,11 +1444,8 @@ def _dump_candidati(pool: list[dict], sul_sito: set | None = None) -> None:
     lg.warning("DUMP_CANDIDATI_FINE %d", len(righe))
 
 
-# Segni da rivenditore nel testo di un annuncio "privato" (stessa regola di prima, ora in Python sul testo letto una volta)
-_SEGNI_COMMERCIANTE = re.compile(
-    r"(?i)(\bs\.?\s?r\.?\s?l\.?s?\b|\bs\.?p\.?a\.?\b|concessionaria\s+(ufficiale|autorizzata)|la\s+nostra\s+concessionaria|"
-    r"autosalone|siamo\s+(un\s+)?rivenditor|rivenditore\s+autorizzato|garanzia\s+(di\s+)?12\s+mesi|iva\s+esposta|"
-    r"esposta\s+iva|iva\s+deducibile|finanziamenti\s+in\s+sede|nostro\s+(parco|salone))")
+# Segni da rivenditore nel testo di un annuncio "privato": 17/11 in sito_regole.segni_commerciante (stessa espressione,
+# senza i luoghi di acquisto/tagliando scritti dai privati)
 # il testo di RE_PROMO_COMMERCIANTE è scritto per Postgres (\m \M = inizio/fine parola)
 _PROMO_RE = re.compile(RE_PROMO_COMMERCIANTE.replace(r"\m", r"\b").replace(r"\M", r"\b"), re.I)
 _SOLO_FIN_RE = re.compile(scovo.FIN_SOLO_RE, re.I)
@@ -1484,7 +1481,7 @@ def _dal_testo(t: str, nomi, nomi_comm=None) -> dict:
     from . import sito_regole as SR
     return {"tel_testo": bool(scovo.RE_MOBILE.search(t) or scovo.RE_LANDLINE.search(t)),
             "tel_estero": SR.tel_estero(t), "testo_truffa": SR.testo_truffa(t),
-            "segni_commerciante": bool(_SEGNI_COMMERCIANTE.search(t)), "promo_testo": bool(_PROMO_RE.search(t)),
+            "segni_commerciante": SR.segni_commerciante(t), "promo_testo": SR.promo_testo(t, _PROMO_RE),
             "solo_fin": bool(_SOLO_FIN_RE.search(t)), "loconte_testo": bool(nomi and nomi.search(t)),
             "loconte_comm_testo": bool(nomi_comm and nomi_comm.search(t))}
 

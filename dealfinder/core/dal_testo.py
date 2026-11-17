@@ -79,9 +79,37 @@ def _km(num: str, mila: str | None) -> int | None:
     return n if 100 <= n <= 600000 else None
 
 
+# 17/11 (notte-06): km che NON sono la percorrenza dell'auto ("tagliando fatto a 90.000 km", "distribuzione cambiata a
+# 120 mila km", "tagliandi ogni 15.000 km", "percorrenza annua 10.000 km", "gomme con 5.000 km", "garanzia 10.000 km",
+# "10.000 km fa"): letti come km dell'auto davano km sbagliati (margine gonfiato o "km non credibili" dell'AI).
+# Si ignorano; se resta un solo valore vale quello, altrimenti il campo resta vuoto come prima.
+_KM_NON_AUTO_PRIMA = re.compile(
+    # lavori fatti A un certo km ("tagliando fatto a 90.000 km", "distribuzione cambiata ai 120 mila"): serve la
+    # preposizione ("tagliandata 128.000 km" e "tagliandata con 128.000 km" sono i km dell'auto)
+    r"(?:\b(?:tagliand\w*|distribuzion\w*|cinghi\w*|frizion\w*|olio|filtri|freni|dischi|pastiglie|batteria|kit|turbin\w*|"
+    r"sostituit\w*|cambiat\w*|rifatt\w*|eseguit\w*|fatt[oaie]|revisionat\w*|manutenzion\w*|service)"
+    r"(?:\s+[\w'’/]+){0,3}?\s+(?:a|ai|al|agli|dopo|verso|intorno\s+ai|circa\s+a|fino\s+a|fino\s+ai)"
+    # gomme/pneumatici con pochi km
+    r"|\b(?:gomme|pneumatic\w*)(?:\s+[\w'’/]+){0,2}?\s+(?:con|da|di|a)"
+    # intervalli, medie, scadenze, garanzia
+    r"|\b(?:ogni|annu[ae]|annui|media|percorre|prossim[oa]|entro|mancano|garanzia(?:\s+(?:di|per|fino\s+a))?))"
+    r"\s*(?:km\s*)?$", re.I)
+_KM_NON_AUTO_DOPO = re.compile(r"^\s*(?:km|chilometri|kilometri)?\s*(?:annu\w*|all'\s*anno|l'\s*anno|al\s+mese|fa\b|"
+                               r"di\s+garanzia|in\s+garanzia|dall'ultimo|dal\s+tagliando|dal\s+cambio|dalla\s+sostituzione|"
+                               r"di\s+autonomia|autonomia)", re.I)
+
+
+def _km_dell_auto(testo: str, m: re.Match) -> bool:
+    prima = testo[max(0, m.start() - 45):m.start()]
+    tagli = [x.end() for x in re.finditer(r"[.,;:!?\n()]|\s-\s", prima)]
+    if tagli:
+        prima = prima[tagli[-1]:]
+    return not (_KM_NON_AUTO_PRIMA.search(prima) or _KM_NON_AUTO_DOPO.match(testo[m.end():m.end() + 30]))
+
+
 def chilometri(testo: str) -> int | None:
-    valori = {v for m in RE_KM.finditer(testo) if (v := _km(m.group(1), m.group(2)))}
-    valori |= {v for m in RE_KM_DOPO.finditer(testo) if (v := _km(m.group(1), m.group(2)))}
+    valori = {v for m in RE_KM.finditer(testo) if _km_dell_auto(testo, m) and (v := _km(m.group(1), m.group(2)))}
+    valori |= {v for m in RE_KM_DOPO.finditer(testo) if _km_dell_auto(testo, m) and (v := _km(m.group(1), m.group(2)))}
     valori = {v for v in valori if v >= 1000}               # "a 2 km dalla stazione" non sono km dell'auto
     return valori.pop() if len(valori) == 1 else None
 
@@ -147,6 +175,43 @@ def completa_db(conn, limite: int = 20000) -> dict:
             for k in nuovi:
                 st[k] += 1
             st["aggiornati"] += 1
+        conn.commit()
+        del rows
+    st.update(rileggi_km_db(conn, tetto))
+    return st
+
+
+def rileggi_km_db(conn, limite: int = 60000) -> dict:
+    """17/11 (notte-06): i km già presi dal testo (field_origin mileage_km = 'dal_testo') si rileggono UNA volta con le
+    regole nuove (km dei lavori/tagliandi/intervalli ignorati). Valore diverso: si scrive quello nuovo; nessun valore
+    certo: il campo torna vuoto (più prudente di un km sbagliato). Segno 'km_riletto_v3' per non rifarlo."""
+    import json
+    st = {"km_riletti": 0, "km_corretti": 0, "km_tolti": 0}
+    ultimo = 0
+    while st["km_riletti"] < limite:
+        rows = conn.execute(
+            """SELECT id, title, description, version_raw, mileage_km, field_origin FROM listings
+               WHERE status='attivo' AND field_origin->>'mileage_km' = 'dal_testo'
+                 AND NOT (field_origin ? 'km_riletto_v3') AND id > %s
+               ORDER BY id LIMIT 3000""", (ultimo,)).fetchall()
+        if not rows:
+            break
+        ultimo = rows[-1]["id"]
+        st["km_riletti"] += len(rows)
+        for r in rows:
+            testo = f"{r.get('version_raw') or ''}\n{r.get('title') or ''}\n{r.get('description') or ''}"
+            k = chilometri(testo)
+            orig = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
+            orig["km_riletto_v3"] = 1
+            if k == r.get("mileage_km"):
+                conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(orig), r["id"]))
+                continue
+            if k is None:
+                orig.pop("mileage_km", None)
+                st["km_tolti"] += 1
+            else:
+                st["km_corretti"] += 1
+            conn.execute("UPDATE listings SET mileage_km=%s, field_origin=%s WHERE id=%s", (k, json.dumps(orig), r["id"]))
         conn.commit()
         del rows
     return st

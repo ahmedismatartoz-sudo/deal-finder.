@@ -159,18 +159,130 @@ TRUFFA_RE = re.compile(
     r"(estero|germania|spagna|francia|inghilterra|regno\s+unito|scozia|irlanda|olanda|belgio|romania|polonia|svizzera)"
     r"|(mi\s+trovo|vivo|lavoro|sono|risiedo)\s+(all'?\s*estero|in\s+(germania|spagna|francia|inghilterra|regno\s+unito|"
     r"scozia|irlanda|olanda|belgio|romania|polonia))"
-    r"|militare\s+(in\s+)?(missione|trasferit)|trasferit\w+\s+(all'?\s*estero|per\s+lavoro)")
+    r"|militare\s+(in\s+)?(missione|trasferit)"
+    # 17/11 (notte-06): "trasferito per lavoro" da solo è il motivo di vendita più comune dei privati onesti (anche
+    # in un'altra città italiana): conta solo se il trasferimento è all'estero o in uno dei paesi della lista
+    r"|trasferit\w+\s+(per\s+lavoro\s+)?(all'?\s*estero|fuori\s+(dall'?\s*)?italia|in\s+(germania|spagna|francia|"
+    r"inghilterra|regno\s+unito|scozia|irlanda|olanda|belgio|romania|polonia|svizzera))")
 # numero estero scritto nel testo (prefisso internazionale diverso da +39): si guarda SOLO in memoria, mai salvato
 TEL_ESTERO_RE = re.compile(r"(?<![\w+])(?:\+|00)(?!39)([1-9]\d{0,2})[\s.\-/]?\(?\d{2,4}\)?[\s.\-/]?\d{3,4}[\s.\-/]?\d{2,4}(?!\d)")
 DANNI_DICHIARATI = {"leggero", "medio", "grave", "alto_rischio"}
 
+# 17/11 (notte-06, falsi positivi del testo): molti privati onesti scrivono proprio il contrario della truffa
+# ("no spedizioni", "non chiedo caparra prima di vedere l'auto", "nessun anticipo", "astenersi trasportatori").
+# Una parola di negazione SUBITO prima (al massimo 2 parole in mezzo, stessa frase: virgola e punto la chiudono)
+# oppure "esclusa/non possibile" subito dopo annullano QUEL pezzo di testo; gli altri pezzi contano come prima
+# ("nessuna caparra, pagamento anticipato con bonifico" resta truffa). Esclusi i falsi "non": "non appena",
+# "non solo", "nessun problema", "non c'è problema" (che dicono sì, non no). "senza" solo attaccato ("senza caparra").
+# in mezzo solo parole "di servizio" (verbi come effettuo/accetto/chiedo, articoli, preposizioni, chi deve astenersi):
+# "non visionabile, spedizione..." o "non posso fartela vedere spedizione..." NON sono negazioni della spedizione
+_NEG_MEZZO = (r"(?:si|ci|mi|ne|vi|effettu\w*|facc\w*|fa|fanno|accett\w*|chied\w*|richied\w*|vogli\w*|serv\w*|è|e'|sono|"
+              r"previst\w*|possibil\w*|necessari\w*|alcun\w*|nessun\w*|un|una|uno|la|le|il|lo|i|gli|di|a|ad|al|alle|ai|"
+              r"per|interess\w*|prend\w*|consider\w*|rispond\w*|esegu\w*|do|diamo|lasci\w*|preved\w*|vuol\w*|pag\w*|"
+              r"ammess\w*|ammett\w*|permess\w*|e|ed|o|od|commercianti|perditempo|curiosi|truffatori|intermediari|"
+              r"rivenditori|agenzie|mai|assolutamente)")
+_NEG_PRIMA = re.compile(
+    r"(?i)(?:\b(?:non(?!\s+(?:appena|solo|soltanto)\b)|niente|nessun[oa]?(?!\s+problem)|alcun[oa]?|astenersi|evitare|"
+    r"esclus[aoie]|vietat[aoie])(?:[ \t]+" + _NEG_MEZZO + r"){0,4}"
+    r"|\bno(?:[ \t]+(?:a|ad|al|alle|ai))?|\bsenza)[ \t]*(?:l'|l’|un'|dell')?$")
+_NEG_DOPO = re.compile(
+    r"(?i)^[ \t]*[:=\-]?[ \t]*(?:no\b|esclus\w*|vietat\w*|non\s+(?:richiest\w*|necessari\w*|previst\w*|accettat\w*|"
+    r"effettuat\w*|possibil\w*|disponibil\w*|ammess\w*|si\s+fa\w*|si\s+effettua\w*))")
+_FINE_FRASE = re.compile(r"[.,;:!?\n()\[\]]")
+
+
+def _negato(testo: str, ini: int, fin: int) -> bool:
+    """Il pezzo testo[ini:fin] è negato dalle parole intorno (stessa frase)."""
+    prima = testo[max(0, ini - 60):ini]
+    tagli = [m.end() for m in _FINE_FRASE.finditer(prima)]
+    if tagli:
+        prima = prima[tagli[-1]:]
+    return bool(_NEG_PRIMA.search(prima) or _NEG_DOPO.match(testo[fin:fin + 40]))
+
+
+def _trova_non_negato(rx: re.Pattern, testo: str) -> bool:
+    """Un pezzo negato non nasconde i pezzi che si sovrappongono ("Nessuna caparra, pagamento anticipato"): si
+    ricerca dal carattere dopo il suo inizio, non dalla sua fine."""
+    pos = 0
+    while (m := rx.search(testo, pos)) is not None:
+        if not _negato(testo, m.start(), m.end()):
+            return True
+        pos = m.start() + 1
+    return False
+
 
 def testo_truffa(testo: str | None) -> bool:
-    return bool(TRUFFA_RE.search(testo or ""))
+    return _trova_non_negato(TRUFFA_RE, testo or "")
+
+
+# 17/11 (notte-06): codici di annuncio/telaio che iniziano con 00 ("Rif. 0012345678", "cod. 00471234") non sono numeri
+# di telefono esteri
+_NON_TEL_PRIMA = re.compile(r"(?i)\b(?:rif|riferimento|cod|codice|id|telaio|vin|ordine|n[°º.]|nr|annuncio|matricola)\b\W{0,3}$")
 
 
 def tel_estero(testo: str | None) -> bool:
-    return bool(TEL_ESTERO_RE.search(testo or ""))
+    t = testo or ""
+    return any(not _NON_TEL_PRIMA.search(t[max(0, m.start() - 20):m.start()]) for m in TEL_ESTERO_RE.finditer(t))
+
+
+# ------------------------------------------------------------------ venditore letto dal testo
+# Segni da rivenditore nel testo di un annuncio "privato" (prima in web/app.py, stessa espressione).
+SEGNI_COMMERCIANTE_RE = re.compile(
+    r"(?i)(\bs\.?\s?r\.?\s?l\.?s?\b|\bs\.?p\.?a\.?\b|concessionaria\s+(ufficiale|autorizzata)|la\s+nostra\s+concessionaria|"
+    r"autosalone|siamo\s+(un\s+)?rivenditor|rivenditore\s+autorizzato|garanzia\s+(di\s+)?12\s+mesi|iva\s+esposta|"
+    r"esposta\s+iva|iva\s+deducibile|finanziamenti\s+in\s+sede|nostro\s+(parco|salone))")
+# 17/11 (notte-06): un privato scrive DOVE ha comprato o fatto i tagliandi ("tagliandi sempre in concessionaria
+# ufficiale", "acquistata nuova presso Autotorino S.p.A.", "revisione fatta da Rossi srl", "comprata in autosalone"):
+# non è un segno da rivenditore. Valgono solo i segni che descrivono CHI VENDE; garanzia 12 mesi, IVA esposta,
+# "siamo", "nostro" restano sempre segni.
+_SEGNO_LUOGO = re.compile(r"(?i)^(\bs\.?\s?r\.?\s?l|\bs\.?p\.?a|concessionaria\s+(ufficiale|autorizzata)|autosalone)")
+_LUOGO_PRIMA = re.compile(
+    r"(?i)\b(?:in|presso|c/o|dalla|dal|da|alla|della|dell'|nella|tramite|tagliand\w*|manutenzion\w*|revision\w*|"
+    r"acquistat\w*|comprat\w*|pres[ao]|fattur\w*|service|assistenza|officina|riparat\w*|sostituit\w*|eseguit\w*|"
+    r"fatt[aoie]|controllat\w*|certificat\w*|documentat\w*|tenut[ao]|seguit[ao]|provenien\w*)\b"
+    r"(?:[ \t]+[\w'’&.\-]+){0,4}[ \t]*$")
+
+
+def segni_commerciante(testo: str | None) -> bool:
+    t = testo or ""
+    for m in SEGNI_COMMERCIANTE_RE.finditer(t):
+        if _SEGNO_LUOGO.match(m.group(0)):
+            prima = t[max(0, m.start() - 70):m.start()]
+            tagli = [x.end() for x in _FINE_FRASE.finditer(prima)]
+            if tagli:
+                prima = prima[tagli[-1]:]
+            if _LUOGO_PRIMA.search(prima):
+                continue                      # dove l'auto è stata comprata o curata, non chi la vende
+        return True
+    return False
+
+
+# 17/11 (notte-06): promo dei commercianti (espressione RE_PROMO_COMMERCIANTE di web/app.py). Falsi positivi tolti:
+# "revisione promossa" (promoss-), "a partire da lunedì" (senza cifra), "prezzo con passaggio incluso / con garanzia /
+# con IVA esposta / con tagliando" (il prezzo comprende di più, non è condizionato), "prezzo NON vincolato al
+# finanziamento". Tutto il resto resta promo come prima.
+_PROMO_INNOCUO = (
+    (re.compile(r"(?i)^promo"), re.compile(r"(?i)^promoss")),
+    (re.compile(r"(?i)^a\s+partire\s+da$"), re.compile(r"(?i)^a\s+partire\s+da(?!\s*(?:€|euro|eur\b|soli\b|solo\b)?\s*\d)")),
+    (re.compile(r"(?i)^prezzo\s+con\s$"), re.compile(
+        r"(?i)^prezzo\s+con\s+(?:il\s+|i\s+|l'|la\s+|le\s+|gli\s+)?(?:(?:passaggio|voltura|trapasso)[\w\s'’]{0,25}?"
+        r"(?:inclus|compres)|garanzi|iva\s+(?:esposta|inclusa|compresa)|tagliand|revision|gomme|pneumatic|"
+        r"cerchi|accessori|optional|kit\b|treno\s+di\s+gomme|bollo\s+pagat)")),
+)
+
+
+def promo_testo(testo: str | None, rx: re.Pattern) -> bool:
+    """rx: l'espressione promo dei commercianti (web/app._PROMO_RE). Vero se c'è almeno un pezzo promo che non sia uno
+    dei falsi positivi noti né negato ("non vincolato al finanziamento")."""
+    t = testo or ""
+    for m in rx.finditer(t):
+        pezzo, dopo = m.group(0), t[m.start():m.start() + 80]
+        if any(chi.search(pezzo) and inn.search(dopo) for chi, inn in _PROMO_INNOCUO):
+            continue
+        if re.match(r"(?i)(vincolat|valid|previo|solo|in\s+caso|permuta|prezzo|rat[ae]|anticipo)", pezzo) and _negato(t, m.start(), m.end()):
+            continue
+        return True
+    return False
 
 
 @dataclass(frozen=True)
