@@ -99,18 +99,30 @@ _KM_NON_AUTO_DOPO = re.compile(r"^\s*(?:km|chilometri|kilometri)?\s*(?:annu\w*|a
                                r"di\s+autonomia|autonomia)", re.I)
 
 
-def _km_dell_auto(testo: str, m: re.Match) -> bool:
-    prima = testo[max(0, m.start() - 45):m.start()]
+def _km_dell_auto(testo: str, m) -> bool:
+    """Vero se il numero di km in testo[ini:fin] è la percorrenza dell'auto e non un km di lavori, intervalli, garanzia,
+    gomme ("tagliando ogni 15.000 km", "distribuzione a 120.000 km", "garanzia 10.000 km", "5.000 km fa").
+    Riusabile: m è un re.Match oppure una coppia (ini, fin) di posizioni nel testo."""
+    ini, fin = (m.start(), m.end()) if hasattr(m, "start") else m
+    prima = testo[max(0, ini - 45):ini]
     tagli = [x.end() for x in re.finditer(r"[.,;:!?\n()]|\s-\s", prima)]
     if tagli:
         prima = prima[tagli[-1]:]
-    return not (_KM_NON_AUTO_PRIMA.search(prima) or _KM_NON_AUTO_DOPO.match(testo[m.end():m.end() + 30]))
+    return not (_KM_NON_AUTO_PRIMA.search(prima) or _KM_NON_AUTO_DOPO.match(testo[fin:fin + 30]))
+
+
+def _tutti_km(testo: str, filtra: bool = True) -> set[int]:
+    """Tutti i valori di km scritti nel testo (≥ 1.000); con filtra=True solo quelli dell'auto (_km_dell_auto)."""
+    valori = set()
+    for rx in (RE_KM, RE_KM_DOPO):
+        for m in rx.finditer(testo):
+            if (not filtra or _km_dell_auto(testo, m)) and (v := _km(m.group(1), m.group(2))):
+                valori.add(v)
+    return {v for v in valori if v >= 1000}               # "a 2 km dalla stazione" non sono km dell'auto
 
 
 def chilometri(testo: str) -> int | None:
-    valori = {v for m in RE_KM.finditer(testo) if _km_dell_auto(testo, m) and (v := _km(m.group(1), m.group(2)))}
-    valori |= {v for m in RE_KM_DOPO.finditer(testo) if _km_dell_auto(testo, m) and (v := _km(m.group(1), m.group(2)))}
-    valori = {v for v in valori if v >= 1000}               # "a 2 km dalla stazione" non sono km dell'auto
+    valori = _tutti_km(testo)
     return valori.pop() if len(valori) == 1 else None
 
 
@@ -169,6 +181,10 @@ def completa_db(conn, limite: int = 20000) -> dict:
                 conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(orig), r["id"]))
                 continue
             orig.update({k: "dal_testo" for k in nuovi})
+            if "mileage_km" in nuovi:
+                # 17/11 (giudice): si ricorda il valore scritto, così la rilettura sa se lo scraper l'ha poi cambiato
+                # (upsert_listing riscrive mileage_km ma non field_origin)
+                orig["mileage_km_testo"] = nuovi["mileage_km"]
             sets = ", ".join(f"{k}=%({k})s" for k in nuovi)
             conn.execute(f"UPDATE listings SET {sets}, field_origin=%(fo)s WHERE id=%(id)s",
                          {**nuovi, "fo": json.dumps(orig), "id": r["id"]})
@@ -182,17 +198,28 @@ def completa_db(conn, limite: int = 20000) -> dict:
 
 
 def rileggi_km_db(conn, limite: int = 60000) -> dict:
-    """17/11 (notte-06): i km già presi dal testo (field_origin mileage_km = 'dal_testo') si rileggono UNA volta con le
-    regole nuove (km dei lavori/tagliandi/intervalli ignorati). Valore diverso: si scrive quello nuovo; nessun valore
-    certo: il campo torna vuoto (più prudente di un km sbagliato). Segno 'km_riletto_v3' per non rifarlo."""
+    """17/11 (notte-06): i km presi dal testo (field_origin mileage_km = 'dal_testo') si rileggono UNA volta con le
+    regole nuove (km dei lavori/tagliandi/intervalli ignorati); si rileggono anche gli annunci già letti dal testo con
+    km vuoti (prima due valori in conflitto, ora magari uno solo). Segno 'km_riletto_v3' per non rifarlo.
+    Regole (17/11, giudice: margini mai gonfiati, in dubbio il valore più prudente):
+      - si riscrive SOLO se mileage_km è ancora il valore preso dal testo: field_origin.mileage_km_testo se salvato,
+        altrimenti (righe vecchie) il valore deve comparire tra i km scritti nel testo; se lo scraper l'ha cambiato
+        (upsert_listing non tocca field_origin) il km resta e non è più 'dal_testo';
+      - un solo km dell'auto: si scrive quello;
+      - più km dell'auto in conflitto: il km presente non si svuota mai, si tiene il più ALTO (meno margine);
+      - nessun km dell'auto e il valore presente è un km di lavori/intervalli: il campo torna vuoto;
+      - km vuoto: si riempie solo con un valore unico (come completa).
+    L'UPDATE controlla che mileage_km non sia cambiato nel frattempo."""
     import json
-    st = {"km_riletti": 0, "km_corretti": 0, "km_tolti": 0}
+    st = {"km_riletti": 0, "km_corretti": 0, "km_tolti": 0, "km_riempiti": 0, "km_dello_scraper": 0}
     ultimo = 0
     while st["km_riletti"] < limite:
         rows = conn.execute(
             """SELECT id, title, description, version_raw, mileage_km, field_origin FROM listings
-               WHERE status='attivo' AND field_origin->>'mileage_km' = 'dal_testo'
-                 AND NOT (field_origin ? 'km_riletto_v3') AND id > %s
+               WHERE status='attivo' AND NOT (field_origin ? 'km_riletto_v3')
+                 AND (field_origin->>'mileage_km' = 'dal_testo'
+                      OR (mileage_km IS NULL AND field_origin ? 'testo_letto_v2'))
+                 AND id > %s
                ORDER BY id LIMIT 3000""", (ultimo,)).fetchall()
         if not rows:
             break
@@ -200,18 +227,44 @@ def rileggi_km_db(conn, limite: int = 60000) -> dict:
         st["km_riletti"] += len(rows)
         for r in rows:
             testo = f"{r.get('version_raw') or ''}\n{r.get('title') or ''}\n{r.get('description') or ''}"
-            k = chilometri(testo)
             orig = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
             orig["km_riletto_v3"] = 1
-            if k == r.get("mileage_km"):
-                conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(orig), r["id"]))
+            ora = r.get("mileage_km")
+            valori = _tutti_km(testo)
+            nuovo = ora
+            if ora is None:
+                if len(valori) == 1:
+                    nuovo = next(iter(valori))
+                    st["km_riempiti"] += 1
+            elif orig.get("mileage_km") != "dal_testo":
+                pass                                            # (non dovrebbe capitare: km non dal testo, non si tocca)
+            elif (orig.get("mileage_km_testo") is not None and orig["mileage_km_testo"] != ora) or \
+                    (orig.get("mileage_km_testo") is None and ora not in _tutti_km(testo, filtra=False)):
+                orig.pop("mileage_km", None)                    # km scritto dallo scraper dopo: resta com'è
+                orig.pop("mileage_km_testo", None)
+                st["km_dello_scraper"] += 1
+            elif len(valori) == 1:
+                nuovo = next(iter(valori))
+            elif len(valori) > 1:
+                nuovo = max(valori)                             # in dubbio il più alto: mai un margine gonfiato
+            else:
+                nuovo = None                                    # era un km di lavori/intervalli, nessun km dell'auto
+            if nuovo == ora:
+                conn.execute("UPDATE listings SET field_origin=%(fo)s WHERE id=%(id)s",
+                             {"fo": json.dumps(orig), "id": r["id"]})
                 continue
-            if k is None:
+            if nuovo is None:
                 orig.pop("mileage_km", None)
+                orig.pop("mileage_km_testo", None)
                 st["km_tolti"] += 1
             else:
-                st["km_corretti"] += 1
-            conn.execute("UPDATE listings SET mileage_km=%s, field_origin=%s WHERE id=%s", (k, json.dumps(orig), r["id"]))
+                orig["mileage_km"] = "dal_testo"
+                orig["mileage_km_testo"] = nuovo
+                if ora is not None:
+                    st["km_corretti"] += 1
+            conn.execute("UPDATE listings SET mileage_km=%(km)s, field_origin=%(fo)s "
+                         "WHERE id=%(id)s AND mileage_km IS NOT DISTINCT FROM %(ora)s",
+                         {"km": nuovo, "fo": json.dumps(orig), "id": r["id"], "ora": ora})
         conn.commit()
         del rows
     return st

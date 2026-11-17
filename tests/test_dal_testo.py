@@ -94,8 +94,74 @@ def test_rileggi_km_gia_presi_dal_testo():
     ]
     c = _ConnFinta(righe)
     st = rileggi_km_db(c)
-    assert st == {"km_riletti": 3, "km_corretti": 1, "km_tolti": 1}
-    per_id = {a[-1]: a for _, a in c.scritti}
-    assert per_id[1][0] is None and "mileage_km" not in json.loads(per_id[1][1])      # km incerto: campo vuoto
-    assert per_id[2][0] == 120000 and json.loads(per_id[2][1])["km_riletto_v3"] == 1
-    assert len(per_id[3]) == 2 and json.loads(per_id[3][0])["km_riletto_v3"] == 1     # uguale: solo il segno
+    assert st["km_riletti"] == 3 and st["km_corretti"] == 1 and st["km_tolti"] == 1
+    per_id = {a["id"]: a for _, a in c.scritti}
+    assert per_id[1]["km"] is None and "mileage_km" not in json.loads(per_id[1]["fo"])   # km dei lavori: campo vuoto
+    assert per_id[2]["km"] == 120000 and json.loads(per_id[2]["fo"])["km_riletto_v3"] == 1
+    assert json.loads(per_id[2]["fo"])["mileage_km_testo"] == 120000 and per_id[2]["ora"] == 90000
+    assert "km" not in per_id[3] and json.loads(per_id[3]["fo"])["km_riletto_v3"] == 1      # uguale: solo il segno
+
+
+def test_rileggi_km_non_tocca_i_km_dello_scraper_e_non_svuota_i_conflitti():
+    """17/11 (giudice): upsert_listing riscrive mileage_km senza togliere field_origin 'dal_testo': il km dello
+    scraper non si riscrive mai; un conflitto non svuota mai un km presente (si tiene il più alto)."""
+    import json
+    from dealfinder.core.dal_testo import rileggi_km_db
+    righe = [
+        # valore salvato al primo riempimento diverso da quello di ora: l'ha scritto lo scraper
+        {"id": 1, "title": "Golf", "description": "tagliando fatto a 90.000 km", "version_raw": None,
+         "mileage_km": 135000, "field_origin": {"mileage_km": "dal_testo", "mileage_km_testo": 90000}},
+        # riga vecchia senza valore salvato: 135.000 non è scritto nel testo, quindi è dello scraper
+        {"id": 2, "title": "Golf", "description": "tagliando fatto a 90.000 km", "version_raw": None,
+         "mileage_km": 135000, "field_origin": {"mileage_km": "dal_testo"}},
+        # conflitto tra due km dell'auto: non si svuota, si tiene il più alto
+        {"id": 3, "title": "Punto", "description": "km 98.000. Percorsi 110.000 km", "version_raw": None,
+         "mileage_km": 98000, "field_origin": {"mileage_km": "dal_testo"}},
+        # conflitto e già il più alto: non cambia
+        {"id": 4, "title": "Punto", "description": "km 98.000. Percorsi 110.000 km", "version_raw": None,
+         "mileage_km": 110000, "field_origin": {"mileage_km": "dal_testo", "mileage_km_testo": 110000}},
+        # km vuoto (prima conflitto, ora un solo km dell'auto): si riempie
+        {"id": 5, "title": "Polo", "description": "130.000 km, distribuzione a 90.000 km", "version_raw": None,
+         "mileage_km": None, "field_origin": {"testo_letto_v2": 1}},
+        # km vuoto e conflitto vero: resta vuoto
+        {"id": 6, "title": "Polo", "description": "km 98.000. Percorsi 110.000 km", "version_raw": None,
+         "mileage_km": None, "field_origin": {"testo_letto_v2": 1}},
+    ]
+    c = _ConnFinta(righe)
+    st = rileggi_km_db(c)
+    per_id = {a["id"]: a for _, a in c.scritti}
+    assert "km" not in per_id[1] and "mileage_km" not in json.loads(per_id[1]["fo"])
+    assert "km" not in per_id[2] and "mileage_km" not in json.loads(per_id[2]["fo"])
+    assert per_id[3]["km"] == 110000 and per_id[3]["ora"] == 98000
+    assert "km" not in per_id[4]
+    assert per_id[5]["km"] == 130000 and json.loads(per_id[5]["fo"]) == {
+        "testo_letto_v2": 1, "km_riletto_v3": 1, "mileage_km": "dal_testo", "mileage_km_testo": 130000}
+    assert "km" not in per_id[6] and json.loads(per_id[6]["fo"])["km_riletto_v3"] == 1
+    assert st["km_dello_scraper"] == 2 and st["km_riempiti"] == 1 and st["km_tolti"] == 0 and st["km_corretti"] == 1
+    assert all("IS NOT DISTINCT FROM" in sql for sql, a in c.scritti if "km" in a)   # niente gara con lo scraper
+
+
+def test_completa_db_salva_il_km_scritto():
+    import json
+    from dealfinder.core import dal_testo
+    righe = [{"id": 7, "title": "Golf", "description": "ha 128.000 km certificati", "version_raw": None, "fuel": "diesel",
+              "year": 2015, "mileage_km": None, "gearbox": "manuale", "power_kw": 85, "field_origin": None}]
+    c = _ConnFinta(righe)
+    dal_testo.completa_db(c)
+    sql, args = c.scritti[0]
+    fo = json.loads(args["fo"])
+    assert args["mileage_km"] == 128000 and fo["mileage_km"] == "dal_testo" and fo["mileage_km_testo"] == 128000
+
+
+def test_km_dell_auto_riusabile_con_posizioni():
+    from dealfinder.core.dal_testo import _km_dell_auto
+    for t, km in [("tagliando ogni 15.000 km", "15.000 km"), ("distribuzione a 120.000 km", "120.000 km"),
+                  ("garanzia 10.000 km", "10.000 km"), ("garanzia fino a 100.000 km", "100.000 km"),
+                  ("olio cambiato 2.000 km fa", "2.000 km"), ("prossimo tagliando a 150.000 km", "150.000 km"),
+                  ("frizione nuova a 100.000 km", "100.000 km")]:
+        i = t.index(km)
+        assert not _km_dell_auto(t, (i, i + len(km))), t
+    for t, km in [("Golf 128.000 km reali", "128.000 km"), ("tagliandata con 98.000 km", "98.000 km"),
+                  ("km 120.000, tagliando ogni 15.000 km", "km 120.000")]:
+        i = t.index(km)
+        assert _km_dell_auto(t, (i, i + len(km))), t

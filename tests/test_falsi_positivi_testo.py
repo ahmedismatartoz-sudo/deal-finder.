@@ -38,6 +38,14 @@ TRUFFE = [
     "Mi trovo in Spagna per lavoro",
     "militare in missione, l'auto è in deposito",
     "senza problemi spedisco ovunque",
+    # 17/11 (giudice): chi deve astenersi e i participi non negano il pezzo truffa che segue
+    "astenersi curiosi pagamento anticipato",
+    "non perditempo spedisco",
+    "astenersi commercianti spedisco ovunque",
+    "non sono commercianti caparra anticipata",
+    "caparra non necessaria spedisco io",
+    # la negazione dopo vale solo a fine frase
+    "trasporto con corriere esclusa visione",
 ]
 
 
@@ -76,6 +84,15 @@ def test_segni_commerciante_luoghi_di_acquisto_e_tagliando():
         "Visita il nostro salone a Lodi",
         "La nostra concessionaria offre",
         "tagliandi in concessionaria ufficiale; garanzia di 12 mesi",   # un segno vero basta
+        # 17/11 (giudice): la sola preposizione non basta, "nostro" resta sempre segno
+        "Venduta da Autosalone Rossi",
+        "presso il nostro autosalone",
+        "visibile presso autosalone Bianchi",
+        "disponibile in autosalone a Milano",
+        "si trova presso Rossi srl",
+        "Vendita da parte di autosalone",
+        "tagliandi presso il nostro autosalone",
+        "auto tagliandata, venduta da Rossi srl",
     ]
     for t in privati:
         assert not SR.segni_commerciante(t), t

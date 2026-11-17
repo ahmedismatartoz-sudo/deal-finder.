@@ -174,20 +174,35 @@ DANNI_DICHIARATI = {"leggero", "medio", "grave", "alto_rischio"}
 # oppure "esclusa/non possibile" subito dopo annullano QUEL pezzo di testo; gli altri pezzi contano come prima
 # ("nessuna caparra, pagamento anticipato con bonifico" resta truffa). Esclusi i falsi "non": "non appena",
 # "non solo", "nessun problema", "non c'è problema" (che dicono sì, non no). "senza" solo attaccato ("senza caparra").
-# in mezzo solo parole "di servizio" (verbi come effettuo/accetto/chiedo, articoli, preposizioni, chi deve astenersi):
-# "non visionabile, spedizione..." o "non posso fartela vedere spedizione..." NON sono negazioni della spedizione
+# in mezzo solo parole "di servizio" (verbi come effettuo/accetto/chiedo, articoli, preposizioni):
+# "non visionabile, spedizione..." o "non posso fartela vedere spedizione..." NON sono negazioni della spedizione.
+# 17/11 (giudice): niente participi in mezzo ("caparra non necessaria spedisco io" NON nega la spedizione) e chi deve
+# astenersi (perditempo, curiosi, commercianti...) vale in mezzo SOLO se il pezzo trovato è a sua volta un "chi"
+# ("astenersi commercianti e trasportatori"); "astenersi curiosi pagamento anticipato", "non perditempo spedisco",
+# "non sono commercianti caparra anticipata" restano truffa. In dubbio si scarta (regola anti-truffa del cliente).
 _NEG_MEZZO = (r"(?:si|ci|mi|ne|vi|effettu\w*|facc\w*|fa|fanno|accett\w*|chied\w*|richied\w*|vogli\w*|serv\w*|è|e'|sono|"
-              r"previst\w*|possibil\w*|necessari\w*|alcun\w*|nessun\w*|un|una|uno|la|le|il|lo|i|gli|di|a|ad|al|alle|ai|"
+              r"alcun\w*|nessun\w*|un|una|uno|la|le|il|lo|i|gli|di|a|ad|al|alle|ai|"
               r"per|interess\w*|prend\w*|consider\w*|rispond\w*|esegu\w*|do|diamo|lasci\w*|preved\w*|vuol\w*|pag\w*|"
-              r"ammess\w*|ammett\w*|permess\w*|e|ed|o|od|commercianti|perditempo|curiosi|truffatori|intermediari|"
-              r"rivenditori|agenzie|mai|assolutamente)")
-_NEG_PRIMA = re.compile(
-    r"(?i)(?:\b(?:non(?!\s+(?:appena|solo|soltanto)\b)|niente|nessun[oa]?(?!\s+problem)|alcun[oa]?|astenersi|evitare|"
-    r"esclus[aoie]|vietat[aoie])(?:[ \t]+" + _NEG_MEZZO + r"){0,4}"
-    r"|\bno(?:[ \t]+(?:a|ad|al|alle|ai))?|\bsenza)[ \t]*(?:l'|l’|un'|dell')?$")
+              r"ammett\w*|e|ed|o|od|mai|assolutamente)")
+_NEG_CHI = r"(?:commercianti|perditempo|curiosi|truffatori|intermediari|rivenditori|agenzie|né|ne')"
+_PEZZO_CHI = re.compile(r"(?i)^(?:trasportator|corrier)")
+
+
+def _neg_prima(mezzo: str) -> re.Pattern:
+    return re.compile(
+        r"(?i)(?:\b(?:non(?!\s+(?:appena|solo|soltanto)\b)|niente|nessun[oa]?(?!\s+problem)|alcun[oa]?|astenersi|evitare|"
+        r"esclus[aoie]|vietat[aoie])(?:[ \t]+" + mezzo + r"){0,4}"
+        r"|\bno(?:[ \t]+(?:a|ad|al|alle|ai))?|\bsenza)[ \t]*(?:l'|l’|un'|dell')?$")
+
+
+_NEG_PRIMA = _neg_prima(_NEG_MEZZO)
+_NEG_PRIMA_CHI = _neg_prima(r"(?:" + _NEG_MEZZO + "|" + _NEG_CHI + ")")
+# 17/11 (giudice): la negazione DOPO vale solo se subito dopo finisce la frase ("spedizioni escluse, ..." sì;
+# "trasporto con corriere esclusa visione" no: è esclusa la visione, non il corriere)
 _NEG_DOPO = re.compile(
     r"(?i)^[ \t]*[:=\-]?[ \t]*(?:no\b|esclus\w*|vietat\w*|non\s+(?:richiest\w*|necessari\w*|previst\w*|accettat\w*|"
-    r"effettuat\w*|possibil\w*|disponibil\w*|ammess\w*|si\s+fa\w*|si\s+effettua\w*))")
+    r"effettuat\w*|possibil\w*|disponibil\w*|ammess\w*|si\s+fa\w*|si\s+effettua\w*))"
+    r"[ \t]*(?:[.,;:!?\n()\[\]]|$)")
 _FINE_FRASE = re.compile(r"[.,;:!?\n()\[\]]")
 
 
@@ -197,7 +212,8 @@ def _negato(testo: str, ini: int, fin: int) -> bool:
     tagli = [m.end() for m in _FINE_FRASE.finditer(prima)]
     if tagli:
         prima = prima[tagli[-1]:]
-    return bool(_NEG_PRIMA.search(prima) or _NEG_DOPO.match(testo[fin:fin + 40]))
+    rx = _NEG_PRIMA_CHI if _PEZZO_CHI.match(testo[ini:fin]) else _NEG_PRIMA
+    return bool(rx.search(prima) or _NEG_DOPO.match(testo[fin:fin + 40]))
 
 
 def _trova_non_negato(rx: re.Pattern, testo: str) -> bool:
@@ -235,12 +251,15 @@ SEGNI_COMMERCIANTE_RE = re.compile(
 # ufficiale", "acquistata nuova presso Autotorino S.p.A.", "revisione fatta da Rossi srl", "comprata in autosalone"):
 # non è un segno da rivenditore. Valgono solo i segni che descrivono CHI VENDE; garanzia 12 mesi, IVA esposta,
 # "siamo", "nostro" restano sempre segni.
+# 17/11 (giudice): il segno si toglie SOLO se nella frase, prima del segno, c'è un verbo di acquisto/manutenzione
+# (tagliandi, acquistata, comprata, revisione, manutenzione, fatture); la sola preposizione non basta ("Venduta da
+# Autosalone Rossi", "visibile presso autosalone Bianchi", "si trova presso Rossi srl" restano commercianti), e
+# "nostro/nostra", "noi" o una parola di vendita nella frase lo tengono sempre. In dubbio commerciante.
 _SEGNO_LUOGO = re.compile(r"(?i)^(\bs\.?\s?r\.?\s?l|\bs\.?p\.?a|concessionaria\s+(ufficiale|autorizzata)|autosalone)")
 _LUOGO_PRIMA = re.compile(
-    r"(?i)\b(?:in|presso|c/o|dalla|dal|da|alla|della|dell'|nella|tramite|tagliand\w*|manutenzion\w*|revision\w*|"
-    r"acquistat\w*|comprat\w*|pres[ao]|fattur\w*|service|assistenza|officina|riparat\w*|sostituit\w*|eseguit\w*|"
-    r"fatt[aoie]|controllat\w*|certificat\w*|documentat\w*|tenut[ao]|seguit[ao]|provenien\w*)\b"
-    r"(?:[ \t]+[\w'’&.\-]+){0,4}[ \t]*$")
+    r"(?i)\b(?:tagliand\w*|acquistat\w*|comprat\w*|revision\w*|manutenzion\w*|fattur\w*)"
+    r"(?:[ \t]+[\w'’&.\-]+){0,5}[ \t]*$")
+_LUOGO_MAI = re.compile(r"(?i)\b(?:nostr\w*|noi|vend\w*|propon\w*|offr\w*)\b")
 
 
 def segni_commerciante(testo: str | None) -> bool:
@@ -251,7 +270,7 @@ def segni_commerciante(testo: str | None) -> bool:
             tagli = [x.end() for x in _FINE_FRASE.finditer(prima)]
             if tagli:
                 prima = prima[tagli[-1]:]
-            if _LUOGO_PRIMA.search(prima):
+            if _LUOGO_PRIMA.search(prima) and not _LUOGO_MAI.search(prima):
                 continue                      # dove l'auto è stata comprata o curata, non chi la vende
         return True
     return False
