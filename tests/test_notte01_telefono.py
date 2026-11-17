@@ -15,13 +15,20 @@ G = SR.Regole()
 
 
 # ------------------------------------------------------------------ 1. numero nel testo
-SI = ["cell. 333 - 1234567", "tel 333 / 123 45 67", "cell.3331234567", "whatsapp3331234567", "tel: 3331 234567",
-      "cell 3O8 1234567", "3 3 3 1 2 3 4 5 6 7", "3.3.3.1.2.3.4.5.6.7", "(333) 1234567", "(+39 333) 123 4567",
+SI = ["cell. 333 - 1234567", "tel 333 / 123 4567", "cell.3331234567", "whatsapp3331234567", "tel: 3331 234567",
+      "cell 3O8 1234567", "cell 3 3 3 1 2 3 4 5 6 7", "tel 3.3.3.1.2.3.4.5.6.7", "(333) 1234567", "(+39 333) 123 4567",
       "per info chiamare al 333  1234567", "cell 333 1234567 anno 2015"]
 NO = ["BMW 320d 2015 150.000 km", "numero telaio WVWZZZ1KZ6W000001", "km 35000 anno 2012",
       "prezzo 3.500 euro trattabili, 150.000 km", "numero proprietari 1, 3 porte, 120 000 km", "tagliandi 2019 2020 2021",
       "cell 3 porte 2015 130000 km", "tel 333 12", "chiamare 0039 333", "numerosi optional 333 444 5555 6666",
-      "motore 3.0 V6 2.993 cc 333 cv", "Tel. 02 1234 5678 9999 ore ufficio", "", None]
+      "motore 3.0 V6 2.993 cc 333 cv", "Tel. 02 1234 5678 9999 ore ufficio", "", None,
+      # 17/11 (giudice): prezzi, km e date dopo una parola del telefono → "no" (telefono obbligatorio: in dubbio no)
+      "tel 3.500 - 120.000 km", "cell. 3.500-130.000", "tel 3500 - 150000 km", "whatsapp 3.200 - 98.000 km",
+      "chiamare 3.000.000.000", "numero 31 - 12 - 2019 - 33", "chiamare 3 / 10 / 2019 / 333",
+      "per info tel. o whatsapp. Prezzo 3.500 - 120.000 km", "tel 333 1234 5 67",
+      # cifre staccate: solo 10 cifre, prefisso 3[1-9]x, vicino a una parola del telefono
+      "codice 3 2 1 4 5 6 7 8 9", "km 3 1 5 0 0 0 0 0 0", "3 3 3 1 2 3 4 5 6 7", "tel 3 0 3 1 2 3 4 5 6 7",
+      "tel 3 1 5 0 0 0 0 0 0 0 km"]
 
 
 def test_numero_esteso_forme_nuove_e_niente_falsi():
@@ -31,6 +38,38 @@ def test_numero_esteso_forme_nuove_e_niente_falsi():
         assert not numero_esteso(t), t
     # le forme nuove non le riconosceva il sito (prima del 17/11 queste auto risultavano "senza numero")
     assert not any(scovo.RE_MOBILE.search(t) for t in SI[:11])
+
+
+# forme di sempre e forme nuove: tutte quelle che contano per telefono_ok
+TUTTE = SI + ["Panda 333 1234567", "tel 02 12345678", "cell +39 333 1234567", "chiamare 0039 333 123 4567",
+              "telefono 393331234567", "tel 333 123456 7", "WhatsApp: 3 3 3-1 2 3-4 5 6 7 ore pasti",
+              "Golf 2015 120.000 km. Cell. 333 - 1234567 oppure (333) 7654321, tel 3.3.3.7.6.5.4.3.2.1"]
+
+
+def test_hide_phones_nasconde_ogni_forma_che_conta_per_il_telefono():
+    """Ogni testo che numero_nel_testo accetta, dopo hide_phones non ha più nessun numero riconoscibile né le cifre
+    del numero in chiaro (prima le forme nuove contavano per telefono_ok ma si vedevano sul sito)."""
+    import re
+    for t in TUTTE:
+        assert numero_nel_testo(None, t), t
+        h = scovo.hide_phones(t)
+        assert "[numero col bottone]" in h and not numero_nel_testo(None, h), (t, h)
+        cifre = re.sub(r"\D", "", h)
+        for num in ("3331234567", "3081234567", "7654321", "12345678", "3337654321"):
+            assert num not in cifre, (t, h)
+    # il resto del testo resta
+    assert scovo.hide_phones("Golf 2015 120.000 km, cell. 333 - 1234567") == "Golf 2015 120.000 km, cell. [numero col bottone]"
+    # sui testi "senza numero nuovo" le forme nuove non nascondono niente in più delle espressioni di sempre
+    for t in [x for x in NO if x]:
+        vecchio = scovo.RE_LANDLINE.sub(lambda m: m.group(0).replace(m.group(1), "[numero col bottone]"),
+                                        scovo.RE_MOBILE.sub("[numero col bottone]", t))
+        assert scovo.hide_phones(t) == vecchio, t
+
+
+def test_find_phone_legge_anche_le_forme_nuove():
+    for t in SI:
+        assert scovo.find_phone(t) in ("+393331234567", "+393081234567"), t
+    assert scovo.find_phone("tel 3500 - 150000 km") is None and scovo.find_phone("codice 3 2 1 4 5 6 7 8 9") is None
 
 
 def test_ha_numero_testo_usa_anche_le_forme_nuove():
@@ -85,9 +124,10 @@ class ConnTel:
             self.select.append(("conti", p))
             return _Ris([{"source": "subito", "status": "attivo", "telefono_ok": None, "prio": True, "recente": False,
                           "n": 3}])
-        if s.startswith("SELECT id, title, description"):
+        if s.startswith("SELECT l.id, l.price_eur, l.title, l.description"):
             self.select.append(("testi", p))
-            return _Ris([t for t in self.testi if t["id"] in p[0]])
+            prezzi = dict(zip(p[0], p[1]))           # come il JOIN: solo mai lette (-1) o col prezzo cambiato
+            return _Ris([t for t in self.testi if t["id"] in prezzi and t.get("price_eur", 0) != prezzi[t["id"]]])
         if s.startswith("SELECT"):
             self.select.append(("auto", p))
             return _Ris(self.righe)
@@ -118,7 +158,7 @@ def test_telefoni_candidate_numero_nel_testo_e_prioritarie_prima():
     finally:
         TN.PRIORITARI = frozenset()
         tr._TESTO_FATTI.clear()
-    assert st["testo:si"] == 1 and st["testo_letti"] == 3
+    assert st["testo:si"] == 1 and st["testo_letti"] == 2          # la 12 non è più attiva: niente testo
     assert [p for q, p in c.scritte if q.startswith("UPDATE listings SET telefono_ok=true")] == [(10,)]
     assert [k for k, _ in c.select] == ["conti", "testi", "auto"]
     testi_p = dict(c.select)["testi"][0]
@@ -126,7 +166,20 @@ def test_telefoni_candidate_numero_nel_testo_e_prioritarie_prima():
     auto_p = dict(c.select)["auto"]
     # TEL_SUBITO_API spento: niente ricerca Subito, ma l'ordine delle prioritarie vale lo stesso (prima del 17/11 no)
     assert auto_p[2] == [] and auto_p[3] == [11] and auto_p[6] == [11] and auto_p[4] == 6 and auto_p[5] == 12
-    assert "testi" not in dict(c2.select)
+    # secondo giro: le già lette tornano dal database solo se il prezzo è cambiato
+    assert "testi" in dict(c2.select) and not any(q.startswith("UPDATE") for q, _ in c2.scritte)
+    testi[1]["price_eur"] = 5000                             # prezzo cambiato: la Polo si rilegge
+    testi[1]["description"] = "ora anche tel 333 - 1234567"
+    tr._TESTO_FATTI.update({10: 0, 11: 0, 12: -2})
+    _azzera_tel()
+    try:
+        with env(TR_PAUSA_S="0", TEL_SUBITO_API=None, TEL_CAND_SUBITO=None):
+            c3 = ConnTel(testi, [])
+            st3 = tr.telefoni_candidate(c3, [10, 11, 12])
+    finally:
+        tr._TESTO_FATTI.clear()
+    assert st3["testo:si"] == 1 and st3["testo_letti"] == 1
+    assert [p for q, p in c3.scritte if q.startswith("UPDATE listings SET telefono_ok=true")] == [(11,)]
 
 
 def test_telefoni_candidate_testo_spento():

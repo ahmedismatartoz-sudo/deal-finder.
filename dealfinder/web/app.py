@@ -1786,7 +1786,7 @@ def _calcola_elenco() -> None:
     _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
     try:      # 13/11 (piu-auto): le tolte solo per il numero con margine già sopra il minimo, prima delle altre
         from ..pipeline import telefono_nascosto as _tn
-        _tn.segna_prioritari(items, fun.tolti.get("telefono", []), fonte)
+        _tn.segna_prioritari(items, fun.tolti.get("telefono", []), fonte, g=_g)     # stesse regole dell'elenco
     except Exception as e:
         logging.getLogger("scovo").warning("TEL_NASCOSTO prioritari non segnati: %s", str(e)[:200])
     _coda_perizia(items, out)

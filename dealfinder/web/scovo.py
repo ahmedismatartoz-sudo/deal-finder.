@@ -529,12 +529,35 @@ def find_phone(text: str | None) -> str | None:
         digits = re.sub(r"\D", "", m.group(1))
         digits = digits[2:] if digits.startswith("39") and len(digits) > 10 else digits
         return "+39" + digits
+    # 17/11 (notte-01): anche le forme che valgono come "numero nel testo" per telefono_ok (pipeline/telefono_testo:
+    # separatori strani, cifre staccate, prefisso tra parentesi), così il bottone mostra il numero dopo l'apertura
+    from ..pipeline.telefono_testo import cifre_numero, trova_numeri
+    for a, b in trova_numeri(text):
+        c = cifre_numero(text[a:b])
+        if c:
+            return "+39" + c
     return None
 
 
+_NASCOSTO = "[numero col bottone]"
+
+
 def hide_phones(text: str) -> str:
-    text = RE_MOBILE.sub("[numero col bottone]", text)
-    return RE_LANDLINE.sub(lambda m: m.group(0).replace(m.group(1), "[numero col bottone]"), text)
+    """Nasconde OGNI forma di numero che vale come "numero nel testo" (telefono_testo.numero_nel_testo): forme di sempre
+    (RE_MOBILE, RE_LANDLINE) e, dal 17/11, quelle nuove di telefono_testo (stesse espressioni), altrimenti il numero si
+    vedrebbe in chiaro sul sito prima dell'apertura. Si ripete finché non resta nessun numero riconoscibile."""
+    from ..pipeline.telefono_testo import trova_numeri
+    if not text:
+        return text
+    for _ in range(4):
+        prima = text
+        for a, b in reversed(trova_numeri(text)):
+            text = text[:a] + (" " if text[a:a + 1].isspace() else "") + _NASCOSTO + text[b:]
+        text = RE_MOBILE.sub(_NASCOSTO, text)
+        text = RE_LANDLINE.sub(lambda m: m.group(0).replace(m.group(1), _NASCOSTO), text)
+        if text == prima:
+            break
+    return text
 
 
 def clean_desc(text: str | None, limit: int = 700) -> str:

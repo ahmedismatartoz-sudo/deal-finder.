@@ -533,7 +533,16 @@ def controlla_telefoni(conn, limite: int | None = None) -> Counter:
                 # 17/11 (notte-01): come telefoni_candidate dal 13/11: annuncio tolto (404, rimando alla ricerca, "non
                 # più disponibile") segnato sparito; prima restava "attivo" con telefono NULL e si riapriva ogni giorno
                 from .verify import _mark
-                _mark(conn, r["id"], "scomparso", r.get("price_eur"), motivo=motivo)
+                try:
+                    _mark(conn, r["id"], "scomparso", r.get("price_eur"), motivo=motivo)
+                except Exception as e:        # un errore su un'auto non ferma il giro (le altre si salvano)
+                    log.warning("controlla_telefoni: auto sparita non segnata: %s", str(e)[:150])
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    stats["scomparso_errore"] += 1
+                    continue
                 stats["scomparso"] += 1
                 continue
             conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, r["id"]))
@@ -812,39 +821,49 @@ def rilettura_subito(minuti: float | None = None) -> dict:
         passi._cache = None
 
 
-_TESTO_FATTI: set = set()        # 17/11: auto tolte al passo telefono di cui si è già letto il testo (in questo processo)
+_TESTO_FATTI: dict = {}          # 17/11: auto tolte al passo telefono di cui si è già letto il testo: id → prezzo letto
+                                 # (chiave id+prezzo: se il venditore cambia il prezzo, spesso cambia anche il testo)
 _TOLTI_DIAG = {"t": 0.0}
 
 
 def _tel_dal_testo(conn, ids: list, ordine: list, stats: Counter) -> int:
     """17/11 (notte-01): per le auto tolte SOLO al passo telefono (Subito e AutoScout24) si rilegge il TESTO con le forme
     nuove del numero (telefono_testo.numero_esteso): niente rete, niente proxy. Se il numero c'è, telefono_ok=true
-    (la stessa regola di sempre: numero nel testo = numero). Ogni auto una volta per processo; prima le prioritarie.
-    Al massimo TEL_TESTO_MAX (3000) testi per giro. Nei log solo i conti, mai il numero."""
+    (la stessa regola di sempre: numero nel testo = numero). Ogni auto una volta per processo e per prezzo (se il
+    prezzo cambia il testo si rilegge); prima le mai lette, tra queste le prioritarie. Al massimo TEL_TESTO_MAX (3000)
+    auto per giro; per quelle già lette il database rende il testo solo se il prezzo è cambiato.
+    Nei log solo i conti, mai il numero."""
     from .telefono_testo import numero_esteso
     if os.environ.get("TEL_TESTO", "1") != "1":
         return 0
     if len(_TESTO_FATTI) > 100_000:
         _TESTO_FATTI.clear()
     prima = set(ordine)
-    da_fare = sorted((i for i in ids if i not in _TESTO_FATTI), key=lambda i: (i not in prima, i))
+    da_fare = sorted(ids, key=lambda i: (i in _TESTO_FATTI, i not in prima, i))
     da_fare = da_fare[:int(os.environ.get("TEL_TESTO_MAX", "3000"))]
     if not da_fare:
         return 0
-    n = 0
+    n = letti = 0
     try:
         for k in range(0, len(da_fare), 500):
             pezzo = da_fare[k:k + 500]
+            prezzi = [_TESTO_FATTI.get(i, -1) for i in pezzo]          # -1: mai letta
             righe = conn.execute(
-                "SELECT id, title, description FROM listings WHERE id = ANY(%s) AND status='attivo' "
-                "AND source IN ('subito', 'autoscout24') AND telefono_ok IS NOT TRUE", (pezzo,)).fetchall()
+                "SELECT l.id, l.price_eur, l.title, l.description FROM listings l "
+                "JOIN unnest(%s::bigint[], %s::bigint[]) AS v(id, p) ON v.id = l.id "
+                "WHERE COALESCE(l.price_eur, 0)::bigint <> v.p AND l.status='attivo' "
+                "AND l.source IN ('subito', 'autoscout24') AND l.telefono_ok IS NOT TRUE",
+                (pezzo, prezzi)).fetchall()
             for r in righe:
                 if not isinstance(r, dict) or "id" not in r:
                     continue
+                letti += 1
+                _TESTO_FATTI[r["id"]] = int(r.get("price_eur") or 0)
                 if numero_esteso(f"{r.get('title') or ''} {r.get('description') or ''}"):
                     salva_telefono(conn, r["id"], True)
                     n += 1
-            _TESTO_FATTI.update(pezzo)
+            for i in pezzo:                       # non più attive o già col numero: non si rileggono
+                _TESTO_FATTI.setdefault(i, -2)
         conn.commit()
     except Exception as e:
         try:
@@ -853,7 +872,7 @@ def _tel_dal_testo(conn, ids: list, ordine: list, stats: Counter) -> int:
             pass
         log.warning("TEL_TESTO non riuscito: %s", str(e)[:150])
         return n
-    stats["testo_letti"] += len(da_fare)
+    stats["testo_letti"] += letti
     if n:
         stats["testo:si"] += n          # finisce in ":si": l'elenco del sito si rifà subito (app.telefoni_candidate)
     return n
