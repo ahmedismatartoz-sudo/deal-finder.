@@ -177,3 +177,69 @@ def test_commercianti_top_motivo_e_tetto():
     lontani = [comm(1000 + k, APP.motivo_commercianti_top("opportunita")) for k in range(70)]
     out, _ = SR.elenco_sito(lontani, SR.Regole(commercianti_max=1000), scrivi_log=False)
     assert 0 < len(out) <= 60 and sum(1 for it in out if SR.e_commerciante(it)) <= 60
+
+
+# ------------------------------------------------------------------ 2a revisione del giudice
+def test_riassunto_salva_il_prezzo_d_acquisto():
+    from dealfinder.pricing import policy_v2 as P
+    assert P.riassunto({"categoria": "opportunita", "acquisto": 7000, "margine": 2000})["acquisto"] == 7000
+
+
+def test_prezzo_diverso_da_quello_valutato_postgres_vero():
+    """Con riassunto->'acquisto' vale il confronto diretto (niente corsa tra transazioni sugli eventi)."""
+    from tests import pg_vero
+    from dealfinder.web import scovo
+    c = pg_vero.nuovo_db("notte09_acquisto")
+    if c is None:
+        return
+    pg_vero.psql(c.d, c.db, _SCHEMA)
+    _auto(c, 1, 8000, [("apparso", 7000, "3 hours")])          # evento 'prezzo' perso nella corsa: lo dice 'acquisto'
+    _auto(c, 2, 8000, [("apparso", 7000, "3 hours"), ("prezzo", 8000, "1 hour")])   # valutata già a 8.000
+    _auto(c, 3, 7000, [("apparso", 7000, "3 hours")])
+    _auto(c, 4, 8000, [("apparso", 7000, "3 hours"), ("prezzo", 8000, "1 hour")])   # 'acquisto' illeggibile: eventi
+    for i, acq in ((1, '7000'), (2, '8000'), (3, '7000.0'), (4, '"abc"')):
+        c.execute("UPDATE valutazioni_policy SET riassunto = riassunto || jsonb_build_object('acquisto', %s::jsonb) "
+                  "WHERE listing_id = %s", (acq, i))
+    righe = {r["id"]: r["prezzo_dopo_valutazione"] for r in c.execute(scovo.LIST_SQL, {"me": 0}).fetchall()}
+    assert righe == {1: True, 2: False, 3: False, 4: True}
+
+
+def test_eco_sql_prezzo_dopo_valutazione_postgres_vero():
+    from tests import pg_vero
+    from dealfinder.web import scovo
+    c = pg_vero.nuovo_db("notte09_eco")
+    if c is None:
+        return
+    pg_vero.psql(c.d, c.db, _SCHEMA + """
+        ALTER TABLE listings ADD COLUMN model_p50 int, ADD COLUMN seller_type text;""")
+    for i in (1, 2, 3, 4):
+        c.execute("INSERT INTO listings (id, source, stage, stage_reason, status, price_eur, year, province, "
+                  "last_checked_at, last_seen_at) VALUES (%s, 'subito', 'nuovo', %s, 'attivo', 900, 2015, 'MI', now(), now())",
+                  (i, "truffa | scomparso (404)" if i == 4 else None))
+    # 1: nessuna valutazione (LEFT JOIN vuota) → falso; 2: valutata a 800, oggi 900 → vero; 3: valutata a 900 → falso
+    c.execute("INSERT INTO valutazioni_policy (listing_id, riassunto) VALUES (2, '{\"acquisto\": 800}'), "
+              "(3, '{\"acquisto\": 900}')")
+    c.execute("INSERT INTO price_events (listing_id, event, price_eur, at) VALUES (1, 'prezzo', 900, now())")
+    righe = {r["id"]: r["prezzo_dopo_valutazione"] for r in c.execute(scovo.ECO_SQL, scovo.eco_params(0)).fetchall()}
+    assert righe == {1: False, 2: True, 3: False}             # 4: "truffa | scomparso" resta fuori (motivo base)
+
+
+def test_eco_e_supercar():
+    from dealfinder.web import app as APP
+    from dealfinder.web import scovo
+    from dealfinder.web import sito_regole as SR
+    r = dict(_riga(1, None, price_eur=900, pv={"categoria": "opportunita", "M": 2500, "R": 2400, "R_finale": 2400,
+                                              "margine": 900, "n": 10}), model_p50=None, prezzo_dopo_valutazione=True)
+    it = scovo.item_eco(r)
+    assert it["prezzo_dopo_valutazione"] is True
+    assert SR.r_valutata(it, SR.Regole()) == "prezzo_cambiato_da_rivalutare"
+    assert scovo.item_eco(dict(r, prezzo_dopo_valutazione=None))["prezzo_dopo_valutazione"] is False
+    sc = APP._supercar_item(dict(r, price_eur=150000), {"m": 200000, "paese": "DE", "n": 8, "costi": 3000},
+                            {"R": 190000, "margine": 30000}, {}, lusso=False)
+    assert sc["prezzo_dopo_valutazione"] is False and SR.r_valutata(sc, SR.Regole()) is None
+
+
+def test_ricalcolo_motivo_base():
+    from dealfinder.pricing import ricalcolo
+    assert "btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) NOT IN ('doppione','truffa'" in ricalcolo.UTIL_SQL
+    assert "COALESCE(l.stage_reason, '') NOT IN" not in ricalcolo.UTIL_SQL

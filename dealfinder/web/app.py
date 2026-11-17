@@ -1274,7 +1274,10 @@ def _supercar_item(r, v: dict, corr: dict, controllo: dict, lusso: bool) -> dict
     if not it:
         return None
     c = controllo.get(r["id"])
+    # 17/11 (notte-09): il margine delle supercar si rifà col prezzo di oggi (SV.filtra): il controllo
+    # "prezzo cambiato dopo la valutazione" della testa di ECO_SQL non vale qui
     it.update(economica=False, verificare=True, mercato=int(v["m"]), top=True, supercar=True, lusso=lusso,
+              prezzo_dopo_valutazione=False,
               zona=" · ".join(x for x in (r.get("city"), v["paese"]) if x),
               pv={"categoria": "opportunita", "etichetta": "Opportunità Supercar Europa", "M": int(v["m"]),
                   "R": int(corr["R"]), "R_finale": int(corr["R"]), "margine": int(corr["margine"]), "n": int(v["n"]),

@@ -404,6 +404,11 @@ def motivo_stadio_sql(col: str = "l.stage_reason") -> str:
     return f"btrim(split_part(COALESCE({col}, ''), '|', 1))"
 
 
+# 17/11 (notte-09, giudice, 2a revisione): se la valutazione ha salvato il prezzo d'acquisto (riassunto->'acquisto',
+# policy_v2.riassunto da oggi) vale solo il confronto diretto: prezzo di oggi diverso da quello valutato = da
+# rivalutare (niente corsa tra transazioni: price_events.at è il now() dell'INIZIO della transazione del collettore).
+# Le righe salvate prima, senza 'acquisto', usano gli eventi come sotto (segnarle tutte svuoterebbe il sito fino al
+# ricalcolo). Senza nessuna valutazione (ECO_SQL con LEFT JOIN vuota): falso.
 # 17/11 (notte-09, giudice): prezzo cambiato DOPO la valutazione usata dal sito. upsert_listing (db.py) rimette
 # status='attivo' e il prezzo nuovo senza toccare lo stadio: un'auto riapparsa (o col prezzo cambiato) resta
 # 'approfondito' col margine pv.margine calcolato sul prezzo VECCHIO (gonfiato se il prezzo è salito). Vero se c'è un
@@ -414,13 +419,17 @@ def motivo_stadio_sql(col: str = "l.stage_reason") -> str:
 # della valutazione: vero (prudente). LIST_SQL NON filtra (il ricalcolo sceglie da LIST_SQL le auto da rivalutare e
 # senza_invariate non salta mai un'auto con un 'prezzo' dopo la valutazione): l'auto esce dal sito alla regola
 # "valutata" come prezzo_cambiato_da_rivalutare finché il ricalcolo non la rivaluta col prezzo nuovo.
-PREZZO_DOPO_VALUTAZIONE_SQL = """(SELECT EXISTS (SELECT 1 FROM price_events pe WHERE pe.listing_id=l.id
+PREZZO_DOPO_VALUTAZIONE_SQL = """(SELECT CASE WHEN w.acq IS NOT NULL THEN l.price_eur IS DISTINCT FROM w.acq ELSE
+            COALESCE(EXISTS (SELECT 1 FROM price_events pe WHERE pe.listing_id=l.id
                          AND pe.event='prezzo' AND pe.at > w.at)
             AND l.price_eur IS DISTINCT FROM (SELECT pe.price_eur FROM price_events pe WHERE pe.listing_id=l.id
                          AND pe.event IN ('apparso','prezzo','riapparso','scomparso') AND pe.at <= w.at
-                         AND pe.price_eur IS NOT NULL ORDER BY pe.at DESC, pe.id DESC LIMIT 1)
-        FROM (SELECT COALESCE((SELECT max(vp.computed_at) FROM valutazioni_policy vp WHERE vp.listing_id=l.id),
-                              v.created_at) AS at) w)"""
+                         AND pe.price_eur IS NOT NULL ORDER BY pe.at DESC, pe.id DESC LIMIT 1), false) END
+        FROM (SELECT COALESCE(x.at, v.created_at) AS at, x.acq FROM (SELECT 1) d
+              LEFT JOIN LATERAL (SELECT vp.computed_at AS at,
+                       CASE WHEN (vp.riassunto->>'acquisto') ~ '^[0-9]+([.][0-9]+)?$'
+                            THEN (vp.riassunto->>'acquisto')::numeric END AS acq
+                     FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) x ON true) w)"""
 
 
 LIST_SQL = """
@@ -455,14 +464,15 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id=l.id) AS top,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
-       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
+       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos,
+       """ + PREZZO_DOPO_VALUTAZIONE_SQL + """ AS prezzo_dopo_valutazione
 FROM listings l
 LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.status='attivo' AND l.price_eur BETWEEN 300 AND %(eco_max)s AND l.year >= %(eco_anno)s
   AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
   AND l.province = ANY(%(eco_prov)s)
   AND l.last_seen_at > now() - interval '5 days'
-  AND COALESCE(l.stage_reason, '') NOT IN ('doppione', 'truffa', 'dati_incoerenti', 'prezzo_finto')
+  AND """ + motivo_stadio_sql("l.stage_reason") + """ NOT IN ('doppione', 'truffa', 'dati_incoerenti', 'prezzo_finto')
 """
 
 
@@ -500,6 +510,7 @@ def item_eco(r: dict) -> dict | None:
         "rip_lo": int(lo if lo is not None else (hi or 0)), "rip_hi": int(hi or 0),
         "danno": r.get("damage_class") or "sconosciuto",
         "verificare": True, "incidentata": False, "economica": True, "pv": _pv(r),
+        "prezzo_dopo_valutazione": bool(r.get("prezzo_dopo_valutazione")),   # 17/11: esce alla regola "valutata"
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),
