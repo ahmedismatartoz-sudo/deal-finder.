@@ -26,7 +26,9 @@ def test_motivo_stadio_senza_note():
     assert scovo.motivo_stadio("opportunita | scomparso (404)") == "opportunita"
     assert scovo.motivo_stadio("incidentata | venduto sito") == "incidentata"
     assert scovo.motivo_stadio(None) == "" and scovo.motivo_stadio(" | scomparso") == ""
-    assert "split_part(l.stage_reason, ' | ', 1) IN ('opportunita','affidabile','da_verificare','incidentata')" in scovo.LIST_SQL
+    assert scovo.motivo_stadio("opportunita|scomparso") == "opportunita"          # anche senza spazi intorno a "|"
+    assert ("btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita','affidabile','da_verificare',"
+            "'incidentata')") in scovo.LIST_SQL
     assert set(scovo.MOTIVI_ELENCO) == {"opportunita", "affidabile", "da_verificare", "incidentata"}
 
 
@@ -60,6 +62,8 @@ def test_list_sql_postgres_vero():
         CREATE TABLE top_auto (listing_id int);
         CREATE TABLE listing_opens (listing_id int, dealer_id int);
         CREATE TABLE listing_photos (listing_id int);
+        CREATE TABLE price_events (id bigserial PRIMARY KEY, listing_id int, event text, price_eur int,
+          at timestamptz NOT NULL DEFAULT now());
     """)
     casi = [(1, "opportunita", "attivo", "1 hour"), (2, "opportunita | scomparso (404)", "attivo", "1 hour"),
             (3, "affidabile", "attivo", "1 hour"), (4, "incidentata | venduto sito", "attivo", "1 hour"),

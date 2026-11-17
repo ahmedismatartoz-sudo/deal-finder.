@@ -138,7 +138,7 @@ JOIN LATERAL (SELECT dati, categoria, computed_at FROM valutazioni_policy v WHER
 LEFT JOIN valore_reale vr ON vr.listing_id = l.id
 LEFT JOIN ripiego_prudente rp ON rp.listing_id = l.id AND rp.prezzo = l.price_eur AND rp.valutazione_at >= vp.computed_at
 WHERE l.stage = 'approfondito' AND l.status = 'attivo' AND l.price_eur IS NOT NULL
-  AND l.stage_reason IN ('opportunita', 'da_verificare', 'incidentata') AND rp.listing_id IS NULL
+  AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita', 'da_verificare', 'incidentata') AND rp.listing_id IS NULL
   AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - interval '5 days'
 LIMIT %(lim)s"""
 

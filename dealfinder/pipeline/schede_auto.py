@@ -55,7 +55,7 @@ WITH cand AS (
                          WHERE f.bloccato_il > now() - make_interval(hours => %(ore_blocco)s))
     AND (l.source <> 'subito' OR (%(subito)s AND COALESCE(l.dati_auto->'ricerca', '{}'::jsonb) = '{}'::jsonb))
     AND (s.listing_id IS NOT NULL
-         OR (l.stage = 'approfondito' AND l.stage_reason IN ('opportunita', 'da_verificare', 'incidentata')
+         OR (l.stage = 'approfondito' AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita', 'da_verificare', 'incidentata')
              AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - make_interval(days => %(giorni_cand)s)))
     AND (l.dati_auto IS NULL OR l.dati_auto->>'letto_il' IS NULL
          OR (l.dati_auto->>'letto_il')::timestamptz < now() - make_interval(days => %(rileggi)s))

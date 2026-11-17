@@ -393,8 +393,34 @@ MOTIVI_ELENCO = ("opportunita", "affidabile", "da_verificare", "incidentata")
 
 
 def motivo_stadio(stage_reason) -> str:
-    """'opportunita | scomparso (404)' -> 'opportunita' (come ricalcolo: le note dopo ' |' non sono il motivo)."""
-    return str(stage_reason or "").split(" |")[0].strip()
+    """'opportunita | scomparso (404)' -> 'opportunita': le note dopo '|' non sono il motivo. Si taglia al PRIMO '|'
+    (con o senza spazi intorno) e si tolgono gli spazi: stessa lettura di motivo_stadio_sql (LIST_SQL)."""
+    return str(stage_reason or "").split("|")[0].strip()
+
+
+def motivo_stadio_sql(col: str = "l.stage_reason") -> str:
+    """Lo stesso taglio di motivo_stadio in SQL: btrim(split_part(col, '|', 1)). Da usare in OGNI confronto esatto
+    sul motivo dello stadio (IN (...), = '...'), anche nelle query dei moduli che verranno."""
+    return f"btrim(split_part(COALESCE({col}, ''), '|', 1))"
+
+
+# 17/11 (notte-09, giudice): prezzo cambiato DOPO la valutazione usata dal sito. upsert_listing (db.py) rimette
+# status='attivo' e il prezzo nuovo senza toccare lo stadio: un'auto riapparsa (o col prezzo cambiato) resta
+# 'approfondito' col margine pv.margine calcolato sul prezzo VECCHIO (gonfiato se il prezzo è salito). Vero se c'è un
+# evento 'prezzo' dopo l'ultima valutazione (valutazioni_policy.computed_at; senza, valuations.created_at) E il prezzo
+# di oggi è diverso da quello che l'auto aveva quando è stata valutata (ultimo evento con prezzo fino a quel momento;
+# 'ripubblicato' no: porta il prezzo dell'annuncio nuovo). Una 'riapparso' allo stesso prezzo non cambia il margine (se
+# il prezzo cambia, upsert_listing scrive anche 'prezzo'); un prezzo tornato com'era nemmeno. Senza storico prima
+# della valutazione: vero (prudente). LIST_SQL NON filtra (il ricalcolo sceglie da LIST_SQL le auto da rivalutare e
+# senza_invariate non salta mai un'auto con un 'prezzo' dopo la valutazione): l'auto esce dal sito alla regola
+# "valutata" come prezzo_cambiato_da_rivalutare finché il ricalcolo non la rivaluta col prezzo nuovo.
+PREZZO_DOPO_VALUTAZIONE_SQL = """(SELECT EXISTS (SELECT 1 FROM price_events pe WHERE pe.listing_id=l.id
+                         AND pe.event='prezzo' AND pe.at > w.at)
+            AND l.price_eur IS DISTINCT FROM (SELECT pe.price_eur FROM price_events pe WHERE pe.listing_id=l.id
+                         AND pe.event IN ('apparso','prezzo','riapparso','scomparso') AND pe.at <= w.at
+                         AND pe.price_eur IS NOT NULL ORDER BY pe.at DESC, pe.id DESC LIMIT 1)
+        FROM (SELECT COALESCE((SELECT max(vp.computed_at) FROM valutazioni_policy vp WHERE vp.listing_id=l.id),
+                              v.created_at) AS at) w)"""
 
 
 LIST_SQL = """
@@ -406,11 +432,12 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id=l.id) AS top,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
-       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
+       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos,
+       """ + PREZZO_DOPO_VALUTAZIONE_SQL + """ AS prezzo_dopo_valutazione
 FROM listings l
 JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.stage='approfondito' AND l.status='attivo'
-  AND split_part(l.stage_reason, ' | ', 1) IN ('opportunita','affidabile','da_verificare','incidentata')
+  AND """ + motivo_stadio_sql("l.stage_reason") + """ IN ('opportunita','affidabile','da_verificare','incidentata')
   AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - interval '""" + str(int(os.environ.get("FRESCHEZZA_ORE", "48"))) + """ hours'
 """
 
@@ -657,6 +684,8 @@ def item(r: dict) -> dict | None:
         "danno": r.get("damage_class") or "sconosciuto",
         "verificare": motivo_stadio(r.get("stage_reason")) == "da_verificare",
         "incidentata": motivo_stadio(r.get("stage_reason")) == "incidentata",
+        # 17/11 (giudice): prezzo cambiato dopo la valutazione → esce alla regola "valutata" (sito_regole.r_valutata)
+        "prezzo_dopo_valutazione": bool(r.get("prezzo_dopo_valutazione")),
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),

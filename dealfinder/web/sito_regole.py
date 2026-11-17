@@ -299,6 +299,10 @@ def r_valutata(it, g: Regole):
     pv = it.get("pv")
     if not isinstance(pv, dict):
         return "senza_valutazione"
+    # 17/11 (notte-09, giudice): prezzo cambiato dopo la valutazione (scovo.PREZZO_DOPO_VALUTAZIONE_SQL): il margine
+    # salvato è del prezzo vecchio. Fuori finché il ricalcolo non la rivaluta (nessuna regola cambia: è un dato vecchio)
+    if it.get("prezzo_dopo_valutazione"):
+        return "prezzo_cambiato_da_rivalutare"
     if pv.get("categoria") == "dati_insufficienti":
         rip = _r(it).get("ripiego")
         if not (g.ripiego and isinstance(rip, dict) and rip.get("margine") is not None and rip.get("M")):
@@ -918,7 +922,7 @@ class Funnel:
 
 # 17/11 (notte-09): motivi da scrivere sempre nel SITO_FUNNEL (auto della zona perse per un dato mancante, non per una
 # regola): senza provincia ricavabile si esce al passo zona come "provincia_sconosciuta"
-MOTIVI_SEMPRE = ("provincia_sconosciuta",)
+MOTIVI_SEMPRE = ("provincia_sconosciuta", "prezzo_cambiato_da_rivalutare")
 
 
 def _applica(items, nome, f, g, fun: Funnel):

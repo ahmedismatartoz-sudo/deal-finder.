@@ -2141,7 +2141,7 @@ if __name__ == "__main__":
         with connect() as conn:
             rows = conn.execute("""SELECT id, source, url, price_eur FROM listings
                                    WHERE status='attivo' AND source IN ('subito','autoscout24')
-                                     AND stage='approfondito' AND stage_reason IN ('opportunita','da_verificare','incidentata')
+                                     AND stage='approfondito' AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata')
                                    ORDER BY id""").fetchall()
             log.info("PULIZIA da verificare: %d", len(rows))
             for k in range(0, len(rows), 200):

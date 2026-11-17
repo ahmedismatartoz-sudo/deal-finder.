@@ -522,7 +522,7 @@ def alarms(conn) -> list[str]:
     for f in fails:
         out.append(f"Lavoro '{f['job']}' fallito {f['n']} volte nelle ultime 24 ore")
     affari_n = conn.execute("SELECT count(*) AS n FROM listings WHERE stage='approfondito' AND status='attivo' "
-                            "AND stage_reason IN ('opportunita','da_verificare','incidentata') "
+                            "AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata') "
                             "AND last_checked_at > now() - interval '48 hours'").fetchone()["n"]
     if affari_n < 10:
         out.append(f"Solo {affari_n} auto visibili ai commercianti: controlla verifica e analisi")
@@ -1664,6 +1664,13 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
         logging.getLogger("scovo").warning("ELENCO_TAGLIATO elenco fermo al tetto ELENCO_LIMITE=%d (id più basso "
                                            "letto %s): le auto più vecchie restano fuori", limite, ultimo)
     return items, opens, pv_at, con_pv
+
+
+def motivo_commercianti_top(cat) -> str:
+    """17/11 (notte-09): motivo dello stadio scritto dal giro COMMERCIANTI_TOP per un'auto pubblicata: la categoria
+    ('opportunita', altrimenti 'da_verificare') come nel tempo reale, mai la fiducia ('affidabile'). Il tetto dei
+    commercianti (40 lontani / 60 in tutto, sito_regole) vale come per tutte le altre."""
+    return "opportunita" if cat == "opportunita" else "da_verificare"
 
 
 def _carica_candidati() -> tuple[list[dict], dict, dict]:
@@ -4740,11 +4747,11 @@ def _tempo_reale():
                     SELECT count(*) AS tot,
                       count(*) FILTER (WHERE u.cat IN ('opportunita','candidato')) AS buone,
                       count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.stage='approfondito') AS buone_approf,
-                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.stage_reason IN ('opportunita','da_verificare','incidentata')) AS buone_reason,
+                      count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata')) AS buone_reason,
                       count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.last_checked_at > now() - interval '48 hours') AS buone_fresche,
                       count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.last_seen_at > now() - interval '48 hours') AS buone_viste48,
                       count(*) FILTER (WHERE u.cat IN ('opportunita','candidato') AND l.stage='approfondito'
-                                         AND l.stage_reason IN ('opportunita','da_verificare','incidentata')
+                                         AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata')
                                          AND l.last_checked_at > now() - interval '48 hours') AS buone_in_lista
                     FROM listings l JOIN ult u ON u.listing_id = l.id
                     WHERE l.status='attivo' AND COALESCE(l.seller_type,'privato') <> 'commerciante' AND l.province = ANY(%(p)s)""",
@@ -6643,8 +6650,7 @@ def _tempo_reale():
                                 # 17/11 (notte-09): il motivo è la categoria ('opportunita'/'da_verificare') come nel tempo
                                 # reale; prima si scriveva la fiducia ('affidabile'), che LIST_SQL non leggeva
                                 conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), "
-                                             "last_checked_at=now() WHERE id=%s",
-                                             ("opportunita" if conf == "affidabile" else "da_verificare", lid))
+                                             "last_checked_at=now() WHERE id=%s", (motivo_commercianti_top(cat), lid))
                                 conn.commit()
                                 st["pubblicate"] += 1
                             except Exception as e:
