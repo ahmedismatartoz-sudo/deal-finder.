@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://prototipo-sc-car-center.onrender.com/sitemap.xml

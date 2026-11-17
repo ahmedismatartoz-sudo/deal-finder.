@@ -3,9 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow">
 <title>S&amp;C Car Center snc — Auto usate e officina a Casorate Primo</title>
-<meta name="description" content="S. & C. Car Center snc: auto usate e officina meccanica interna a Casorate Primo (PV). Prototipo, non pubblicato.">
+<meta name="description" content="S. & C. Car Center snc: auto usate e officina meccanica interna a Casorate Primo (PV).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@500;600;700&family=Saira:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -18,7 +17,7 @@
   --fh:'Saira Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;
   --fb:'Saira',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --fm:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  --gut:48px; --banner:34px;
+  --gut:48px; --banner:0px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--bg);color:var(--txt);scroll-behavior:smooth;-webkit-text-size-adjust:100%}
@@ -35,6 +34,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #fb2d{display:none}
 #intro{position:fixed;inset:0;z-index:40;pointer-events:none;transition:opacity .7s ease}
 #intro.off{opacity:0}
+#intro.sd{transition:none}
+#introsp{height:500vh;pointer-events:none}
+html.nosp #introsp{display:none}
+#hint{position:absolute;left:50%;bottom:calc(5.5vh + 22px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;font:500 10.5px/1 var(--fm);letter-spacing:.24em;text-transform:uppercase;color:rgba(220,235,255,.85)}
+#hint i{display:block;width:18px;height:28px;border:1px solid rgba(160,200,255,.6);border-radius:10px;position:relative}
+#hint i:after{content:"";position:absolute;left:50%;top:6px;width:2px;height:6px;margin-left:-1px;border-radius:1px;background:var(--cyan);animation:hintm 1.6s ease-in-out infinite}
+@keyframes hintm{0%{transform:translateY(0);opacity:1}70%{transform:translateY(9px);opacity:0}100%{opacity:0}}
+.sec:before{transform:translate3d(0,var(--py,0px),0);will-change:transform}
 #intro .lb{position:absolute;left:0;right:0;height:5.5vh;background:#000}
 #intro .lb.t{top:0}#intro .lb.b{bottom:0}
 .hud{position:absolute;font:500 11px/1.4 var(--fm);letter-spacing:.14em;text-transform:uppercase;color:rgba(200,220,250,.75)}
@@ -183,9 +190,6 @@ h2{font:700 clamp(36px,3.6vw,52px)/.95 var(--fh);text-transform:uppercase;margin
 footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:500 10px/1.6 var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--mut2)}
 #s3{padding-bottom:calc(var(--banner) + 18px)}
 
-/* banner */
-#banner{position:fixed;left:0;right:0;bottom:0;z-index:100;background:var(--yel);color:#141000;font:500 12px/1.3 var(--fb);padding:9px 16px;text-align:center;min-height:var(--banner);display:flex;align-items:center;justify-content:center}
-#banner b{font-weight:700}
 
 /* reveal */
 .rv{opacity:0;transform:translateY(18px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
@@ -206,8 +210,7 @@ html.ready .rv.d1{transition-delay:.1s}html.ready .rv.d2{transition-delay:.2s}ht
   .sec{min-height:0}
 }
 @media (max-width:760px){
-  :root{--gut:18px;--banner:46px}
-  #banner{font-size:11px;padding:7px 12px}
+  :root{--gut:18px;--banner:0px}
   nav.top{padding:14px var(--gut)}
   nav.top .logo img{height:34px}
   .nav-r .btn{display:none}
@@ -244,9 +247,10 @@ html.ready .rv.d1{transition-delay:.1s}html.ready .rv.d2{transition-delay:.2s}ht
   .rpm{bottom:calc(5.5vh + 28px);right:auto;left:var(--gut);text-align:left}
   .rpm .bar{justify-content:flex-start}
   #skip{padding:10px 12px}
+  #hint{left:auto;right:var(--gut);transform:none;bottom:calc(5.5vh + 30px)}
   .hud.tl{max-width:55%}
 }
-@media (prefers-reduced-motion:reduce){.rv{transition:none}}
+@media (prefers-reduced-motion:reduce){.rv{transition:none}#hint i:after{animation:none}}
 </style>
 </head>
 <body>
@@ -263,7 +267,9 @@ html.ready .rv.d1{transition-delay:.1s}html.ready .rv.d2{transition-delay:.2s}ht
   <div class="phase"><div class="n" id="phN">01 / 04</div><div class="t" id="phT">Avviamento</div><div class="s" id="phS">Accensione dei sistemi.</div></div>
   <div class="rpm"><span class="v" id="rpmV">0</span><span class="u">RPM</span><div class="bar" id="rpmB"></div></div>
   <div class="prog"><i id="progI"></i></div>
+  <div id="hint" aria-hidden="true">Scorri<i></i></div>
 </div>
+<div id="introsp" aria-hidden="true"></div>
 
 <main id="site">
   <section id="hero">
@@ -404,7 +410,6 @@ html.ready .rv.d1{transition-delay:.1s}html.ready .rv.d2{transition-delay:.2s}ht
   </section>
 </main>
 
-<div id="banner" role="note"><span><b>ANTEPRIMA</b> – sito di prova realizzato per S&amp;C Car Center snc, non ancora pubblicato. Testi, orari e contatti da confermare.</span></div>
 
 <script>
 (function(){
@@ -417,7 +422,8 @@ var HERO_ONLY=Q.has('hero');
 var INTRO=9.4;
 var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 var isMobile=Math.min(innerWidth,innerHeight)<700||/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-root.classList.add('intro');
+var SD=!(reduce||Q.has('frame')||Q.has('hero'));
+if(!SD){root.classList.add('intro','nosp');}
 
 /* ---------------- HUD ---------------- */
 var rpmB=document.getElementById('rpmB');
@@ -444,8 +450,10 @@ function endIntro(){
   setTimeout(function(){var el=document.getElementById('intro');if(el)el.style.display='none';},800);
   if(onIntroEnd)onIntroEnd();
 }
-document.getElementById('skip').addEventListener('click',endIntro);
-addEventListener('keydown',function(e){if(e.key==='Escape'&&!introDone)endIntro();});
+var skipTo=null;
+function skip(){if(skipTo)skipTo();else endIntro();}
+document.getElementById('skip').addEventListener('click',skip);
+addEventListener('keydown',function(e){if(e.key==='Escape'&&!introDone)skip();});
 
 /* ================= WEBGL ================= */
 var canvas=document.getElementById('gl');
@@ -970,7 +978,21 @@ var fastAdj=0,lastDt=0,t0=null,mode=HERO_ONLY?'hero':'intro',hs0=0,lastF=perform
 onIntroEnd=function(){if(mode==='intro'){var tt=FREEZE!=null?FREEZE:(performance.now()-t0)/1000;heroBaseTh=thetaI(Math.min(tt,INTRO));mode='hero';hs0=performance.now();loopKick();}};
 if(HERO_ONLY){endIntro();}
 if(reduce&&FREEZE==null&&!HERO_ONLY){setTimeout(endIntro,600);}
-addEventListener('scroll',function(){var v=scrollY<innerHeight*1.05;if(v&&!heroVisible){heroVisible=true;loopKick();}heroVisible=v;},{passive:true});
+/* ---- scroll-driven intro ---- */
+var sp=document.getElementById('introsp'),introEl=document.getElementById('intro'),hintEl=document.getElementById('hint'),heroEl=document.getElementById('hero');
+var T0=1.15,tCur=-1,idleTh=0,spMax=1,lastW=innerWidth,lastH=innerHeight;
+function measure(){spMax=Math.max(1,sp.offsetHeight-innerHeight);}
+function sizeSp(force){if(!SD)return;if(force||innerWidth!==lastW||Math.abs(innerHeight-lastH)>160){lastW=innerWidth;lastH=innerHeight;sp.style.height=Math.round(innerHeight*5)+'px';}measure();}
+sizeSp(true);addEventListener('resize',function(){sizeSp(false);loopKick();});
+function introTarget(now){var p=clamp(scrollY/spMax,0,1);var auto=Math.min(T0,(now-t0)/1000);return p>0?T0+p*(INTRO-T0):auto;}
+function introVis(on,t){
+  if(on){introDone=false;introEl.style.display='';introEl.classList.add('sd');introEl.classList.remove('off');
+    var o=1-sstep(8.9,9.35,t);introEl.style.opacity=o;introEl.style.visibility=o<.01?'hidden':'visible';hintEl.style.opacity=1-sstep(T0,T0+.6,t);}
+  else{introEl.style.opacity=0;introEl.style.visibility='hidden';}
+}
+if(SD){introEl.classList.add('sd');
+  skipTo=function(){measure();var y=sp.offsetHeight;tCur=INTRO;window.scrollTo({top:y,left:0,behavior:'instant'});loopKick();};}
+addEventListener('scroll',function(){var v=heroEl.getBoundingClientRect().bottom>-20;if(SD||(v&&!heroVisible))loopKick();heroVisible=v;},{passive:true});
 document.addEventListener('visibilitychange',function(){if(!document.hidden)loopKick();});
 var rafOn=false;function loopKick(){if(!rafOn){rafOn=true;requestAnimationFrame(frame);}}
 
@@ -1015,7 +1037,15 @@ function render(S_){
 function frame(now){rafOn=false;
   if(t0===null){t0=now;lastF=now;}
   var dt=now-lastF;lastF=now;lastDt=dt;
-  if(mode==='intro'){var t=FREEZE!=null?FREEZE:(now-t0)/1000;if(t>=INTRO&&FREEZE==null){endIntro();}
+  if(SD){var tt=introTarget(now);var dts=Math.min(.1,Math.max(0,dt/1000));
+    if(tCur<0||(now-t0)<1200&&scrollY<=0)tCur=tt;else{tCur+=(tt-tCur)*(1-Math.exp(-dts/.11));if(Math.abs(tt-tCur)<.002)tCur=tt;}
+    if(mode==='intro'&&tCur>=INTRO-.003){introVis(false);introDone=true;root.classList.add('ready');heroBaseTh=thetaI(INTRO)+idleTh;mode='hero';hs0=now;}
+    else if(mode==='hero'&&tt<INTRO-.01){mode='intro';}
+    if(mode==='intro'){var ti=Math.min(tCur,INTRO);idleTh+=dts*TAU*.5*(1-sstep(4.2,5.2,ti));var S1=introState(ti);S1.th+=idleTh;S1.T=ti;render(S1);setHud(ti,S1.rpm);introVis(true,ti);
+      updLabels(clamp((ti-4.65)/.35,0,1)*(1-clamp((ti-5.75)/.3,0,1)));loopKick();}
+    else{if(document.hidden||!heroVisible)return;var h=(now-hs0)/1000;var S3=heroState(h);S3.T=h;render(S3);loopKick();}
+  }
+  else if(mode==='intro'){var t=FREEZE!=null?FREEZE:(now-t0)/1000;if(t>=INTRO&&FREEZE==null){endIntro();}
     var S_=introState(t);S_.T=t;render(S_);setHud(t,S_.rpm);updLabels(clamp((t-4.65)/.35,0,1)*(1-clamp((t-5.75)/.3,0,1)));
     if(!introDone&&(FREEZE==null||++frozenN<3))loopKick();}
   else{ if(document.hidden||!heroVisible)return;var h=(now-hs0)/1000;var S2=heroState(h);S2.T=h;render(S2);loopKick();}
@@ -1030,6 +1060,7 @@ window.__sc={get t(){return t0===null?-1:(performance.now()-t0)/1000;},get low()
 
 /* ================= 2D FALLBACK ================= */
 function fallback2D(){
+  SD=false;skipTo=null;root.classList.add('intro','nosp');scrollTo(0,0);var ie=document.getElementById('intro');ie.classList.remove('sd');ie.style.opacity='';ie.style.visibility='';
   canvas.style.display='none';var c=document.getElementById('fb2d');c.style.display='block';var x=c.getContext('2d');var img=new Image();img.src=LOGO_SRC;var st=performance.now();
   function gear(cx,cy,r,n,a){x.beginPath();for(var i=0;i<n*4;i++){var ang=a+i/(n*4)*Math.PI*2,rr=(i%4<2)?r+r*.12:r;x.lineTo(cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr);}x.closePath();x.stroke();x.beginPath();x.arc(cx,cy,r*.35,0,7);x.stroke();}
   function f(now){var t=(now-st)/1000;var w=c.width=innerWidth,h=c.height=innerHeight;x.fillStyle='#03050a';x.fillRect(0,0,w,h);
@@ -1041,6 +1072,33 @@ function fallback2D(){
     if(t<6&&!introDone)requestAnimationFrame(f);else{endIntro();x.clearRect(0,0,w,h);var g2=x.createRadialGradient(w*.7,h*.4,0,w*.7,h*.4,w*.6);g2.addColorStop(0,'rgba(31,111,209,.35)');g2.addColorStop(1,'rgba(3,5,10,1)');x.fillStyle=g2;x.fillRect(0,0,w,h);}}
   requestAnimationFrame(f);
 }
+})();
+</script>
+<script>
+/* scroll-linked reveals + light parallax */
+(function(){
+'use strict';
+if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+var SEL='.shead>*, .car, .revs>div, #officina .sn, #officina h2, #officina .intro-t, .svc>div, .ofnote, #contatti .sn, #contatti h2, .ct>div, .hours, .map, .ctas2, footer';
+var els=[].slice.call(document.querySelectorAll(SEL)).map(function(el){
+  var sib=el.parentNode?[].indexOf.call(el.parentNode.children,el):0;
+  var grid=/\b(car|svc|revs|ct)\b/.test(el.parentNode.className||'')||el.classList.contains('car');
+  return{el:el,lag:grid?(sib%4)*.07:0,last:-1};});
+var secs=[].slice.call(document.querySelectorAll('.sec'));
+var hero=document.getElementById('hero'),hc=hero&&hero.querySelector('.hero-c'),hs=hero&&hero.querySelector('.specs');
+var ticking=false;
+function upd(){ticking=false;var vh=innerHeight,i,r,v=[];
+  for(i=0;i<els.length;i++){r=els[i].el.getBoundingClientRect();v.push(r.top);}
+  var sv=secs.map(function(sc){return sc.getBoundingClientRect().top;});
+  var ht=hero?hero.getBoundingClientRect().top:0;
+  for(i=0;i<els.length;i++){var E=els[i];var p=(vh*.98-v[i])/(vh*.32)-E.lag*3;p=p<0?0:p>1?1:p;p=Math.round(p*100)/100;
+    if(p!==E.last){E.last=p;var e=1-Math.pow(1-p,3);E.el.style.opacity=e;E.el.style.translate=p>=1?'':'0 '+((1-e)*42).toFixed(1)+'px';}}
+  for(i=0;i<secs.length;i++)secs[i].style.setProperty('--py',(sv[i]*-.12).toFixed(1)+'px');
+  if(hc){var y,o;if(ht>0){y=ht*.35;o=1-Math.min(1,ht/vh)*.95;}else{y=-ht*.28;o=1+ht/(vh*.8);}o=o<0?0:o>1?1:o;
+    hc.style.translate='0 '+y.toFixed(1)+'px';hc.style.opacity=o.toFixed(3);if(hs){hs.style.translate='0 '+(ht<0?-ht*.12:0).toFixed(1)+'px';}}
+}
+function req(){if(!ticking){ticking=true;requestAnimationFrame(upd);}}
+addEventListener('scroll',req,{passive:true});addEventListener('resize',req);addEventListener('load',req);req();
 })();
 </script>
 </body>
