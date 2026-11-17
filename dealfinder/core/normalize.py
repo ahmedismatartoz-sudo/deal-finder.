@@ -317,25 +317,21 @@ def _canon_generico(m: str) -> str:
 
 
 # 17/11 notte (dati_insufficienti: 1.781 auto della zona senza confronti): lo STESSO modello chiamato in modo diverso
-# dalle due fonti (visto nei log WA30_AUTO: "Grandland X" / "Grandland", "3" / "Mazda3", "DS 7 Crossback" / "DS7").
+# dalle due fonti (visto nei log WA30_AUTO: "Crossland X" / "Crossland", "3" / "Mazda3", "DS 7 Crossback" / "DS7").
 # I confronti si cercano per marca+modello+alimentazione esatti: con due nomi l'auto vedeva solo metà del mercato.
-# Solo sinonimi veri (stessa auto, stessa generazione o cambio di nome a metà vita); anno, km, potenza e carrozzeria
-# continuano a dividere i confronti come prima. NON si uniscono modelli diversi (DS3 / DS3 Crossback, 500 / 500C,
-# Aygo / Aygo X, Zafira / Zafira Tourer, Qashqai / Qashqai+2).
+# Solo lo stesso modello scritto in modo diverso; anno, km, potenza e carrozzeria continuano a dividere i confronti.
+# 17/11 (giudice, "non gonfiare i prezzi"): NON si uniscono generazioni o allestimenti diversi, anche se il nome
+# somiglia: Mokka X / Mokka (2020, altra auto), Grandland X / Grandland (2024), DS 4 Crossback / DS 4 (2021),
+# SX4 S-Cross / S-Cross (2022), Abarth 500 / 595 e 595 Competizione/Pista/Esseesse/Yamaha (allestimenti con prezzi
+# diversi), 500C / 595C, Grande Punto / Punto Evo / Punto, Cee'd / Ceed (2018). Restano divisi anche DS3 / DS3
+# Crossback, 500 / 500C, Aygo / Aygo X, Zafira / Zafira Tourer, Qashqai / Qashqai+2.
 _SINONIMI = {
-    "opel": {"grandland-x": "grandland", "crossland-x": "crossland", "mokka-x": "mokka"},
-    "ds-automobiles": {"ds-7-crossback": "ds7", "ds7-crossback": "ds7", "ds-3-crossback": "ds3-crossback",
-                       "ds-4-crossback": "ds4"},
-    "fiat": {"new-panda": "panda", "nuova-panda": "panda", "pandina": "panda", "grande-punto": "punto",
-             "punto-evo": "punto", "nuova-tipo": "tipo"},
-    # Abarth 500 (fino al 2016) e 595 sono la stessa auto (stessa scocca, stesso 1.4 T-Jet): il nome dipende
-    # dall'anno e dall'allestimento, la potenza separa 135/145/160/180 CV. La 500C/595C (cabrio) resta a parte.
-    "abarth": {"500": "595", "595-turismo": "595", "595-competizione": "595", "595-pista": "595",
-               "595-esseesse": "595", "595-yamaha": "595", "595-monster-energy-yamaha": "595", "500c": "595c",
-               "595-c": "595c", "500-c": "595c"},
+    "opel": {"crossland-x": "crossland"},
+    "ds-automobiles": {"ds-7-crossback": "ds7", "ds7-crossback": "ds7", "ds-3-crossback": "ds3-crossback"},
+    "fiat": {"new-panda": "panda", "nuova-panda": "panda", "pandina": "panda", "nuova-tipo": "tipo"},
+    "abarth": {"595-c": "595c"},
     "citroen": {"c4-spacetourer": "c4-picasso", "grand-c4-spacetourer": "grand-c4-picasso",
                 "c4-grand-spacetourer": "grand-c4-picasso", "c4-grand-picasso": "grand-c4-picasso"},
-    "suzuki": {"sx4-s-cross": "s-cross", "sx4-scross": "s-cross"},
 }
 
 # Modello non scelto dal venditore ("Altro modello", "Altro"): con questo nome si confrontavano tra loro auto diverse
@@ -433,13 +429,11 @@ def canon_model(make: str | None, model: str | None) -> str | None:
         if r:
             m = r.group(1) + (r.group(2) or "")
     elif make == "lexus":
-        # "ux-200", "ux200", "nx-300h", "rx-450h" (AutoScout) = "ux", "nx", "rx" (Subito): la potenza distingue il motore
-        r = re.fullmatch(r"(ct|is|nx|rx|ux|es|gs|ls|rc|lc|lbx)-?\d{3}[a-z+]*(-.*)?", m)
+        # "ux-200", "ux-250h", "ct-200h" (AutoScout) = "ux", "ct" (Subito): un solo motore per generazione.
+        # 17/11 (giudice): NON nx/rx/is/es...: NX 300h e NX 350h, RX 450h e RX 500h sono generazioni o motori diversi.
+        r = re.fullmatch(r"(ct|ux|lbx)-?\d{3}[a-z+]*(-.*)?", m)
         if r:
             return r.group(1)
-    elif make == "kia":
-        m = re.sub(r"(^|-)cee-d(?=$|-)", r"\1ceed", m)        # "Cee'd" -> "cee-d" = "Ceed"
-        m = re.sub(r"(^|-)pro-?cee-?d(?=$|-)", r"\1proceed", m)
     r = _RE_CARROZZERIA.fullmatch(m)
     if r:
         m = r.group(1)
