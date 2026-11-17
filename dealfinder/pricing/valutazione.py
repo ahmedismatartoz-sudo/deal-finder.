@@ -74,6 +74,7 @@ class Esito:
     salvata: dict = field(default_factory=dict)          # id → categoria della riga ora nel database
     scritte: set = field(default_factory=set)            # id riscritti davvero in questo giro (15/11, giudice A2)
     telefono: dict = field(default_factory=dict)         # id → True / False / None
+    perche: dict = field(default_factory=dict)           # id → motivo della guardia (17/11: per la promozione)
 
     def sul_sito(self, lid) -> bool:
         from ..web import scovo
@@ -302,10 +303,13 @@ def _ordina(conn, ids: list) -> list:
 
 
 def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tieni=None, blocco: int = 300,
-                    soglia_fn=None) -> Esito:
+                    soglia_fn=None, pubblica: bool | None = None) -> Esito:
     """Valuta e salva le auto `ids` (unico punto d'ingresso). fonte: 'cron', 'cron-utilitarie', 'web-nuovi',
     'commercianti', ... (solo informazione, nella riga). extra: {id: {chiave: valore}} aggiunto alla valutazione
     (es. sezione). tieni(v) -> bool: valutazioni da restituire complete (le altre in forma compatta).
+    pubblica: True = alla fine promuove sul sito le auto buone (promuovi); None = solo per le fonti di
+    FONTI_CHE_PUBBLICANO (riprova del giudice, recupero dei confronti: prima scrivevano "opportunita"/"candidato" ma
+    l'auto restava fuori dal sito, stage 'nuovo'); False = mai (chi pubblica da sé: tempo reale, utilitarie, ...).
     Il conn deve avere righe come dict. Ogni auto è una transazione: un errore non ferma le altre."""
     from ..store import HOME_REGION_SQL
     from ..web import scovo
@@ -386,10 +390,18 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     v.update(extra[lid])
                 imp_a = impronta_auto(t)
                 giu = giudicata(v) and rg.scrittura.giudice_vince
-                ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r, now, ore, giu)
+                # 17/11: l'ora di ADESSO per ogni auto (un giro lungo dura più di un'ora: con l'ora d'inizio la riga
+                # salvata risultava meno "vecchia" di quanto la vede la condizione SQL, che usa now() alla scrittura)
+                ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r,
+                                           datetime.now(timezone.utc), ore, giu)
                 if tieni_precedente(v, prima.get(lid), perche):
                     ok, perche = False, "giudice_mancante"      # 13/11 (N3): resta la valutazione precedente
                 es.stats[f"scrittura:{perche}"] += 1
+                es.perche[lid] = perche
+                if perche == "meno_confronti" and v.get("categoria") in scovo.CATEGORIE_SITO \
+                        and (prima.get(lid) or {}).get("categoria") not in scovo.CATEGORIE_SITO:
+                    # 17/11: quante buone nuove restano fuori per la guardia (resta la salvata, più prudente)
+                    es.stats["scrittura:meno_confronti_buona_non_scritta"] += 1
                 if ok:
                     pr = v.pop("prima", None)
                     scritta = _scrivi(conn, lid, v, pr, imp_a, imp_r, fonte, ore, giu)
@@ -417,11 +429,120 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     log.warning("VALUTAZIONE %s non riuscita (%s): %s", lid, fonte, str(e)[:200])
     if vecchi_vr:
         es.stats["valore_reale_vecchio"] = vecchi_vr
+    if pubblica or (pubblica is None and fonte in FONTI_CHE_PUBBLICANO):
+        promuovi(conn, es, fonte, es.stats)
     rif = sum(v for k, v in es.stats.items() if k in ("scrittura:meno_confronti", "scrittura:rifiutata_dal_database",
                                                        "scrittura:giudicata_protetta"))
     log.warning("VALUTAZIONE fonte=%s auto=%d rifiutate=%d %s", fonte, len(ordine), rif,
                 json.dumps(dict(es.stats), ensure_ascii=False))
     return es
+
+
+# ---------------------------------------------------------------- promozione sul sito (17/11)
+# Prima la scelta di cosa mettere sul sito era solo in tempo_reale.valuta_e_pubblica (e copie in ricalcolo/app.py), con
+# tre buchi: (1) la riprova del giudice e il recupero dei confronti scrivevano "opportunita"/"candidato" ma l'auto
+# restava con stage 'nuovo' (fuori dal sito finché un altro giro non la riprendeva, se la riprendeva); (2) una
+# valutazione nuova buona rifiutata dalla guardia con la salvata buona di ALTRA categoria (candidato ↔ opportunita)
+# non si pubblicava; (3) la valutazione precedente tenuta perché il giudice non ha risposto (tieni_precedente: "resta la
+# valutazione precedente") valeva per le auto già sul sito ma non per le altre. In più la pubblicazione rimetteva sul
+# sito annunci scartati per sempre (doppione, truffa, prezzo finto, dati incoerenti, analisi manuale).
+FONTI_CHE_PUBBLICANO = ("riprova-giudice", "cron-recupero")
+SCARTI_FISSI = ("doppione", "truffa", "prezzo_finto", "dati_incoerenti")     # = censimento.SCARTI_PRIMA, ricalcolo.UTIL_SQL
+
+PROMUOVI_SQL = """UPDATE listings SET stage = 'approfondito', stage_reason = %s,
+       deep_at = CASE WHEN stage = 'approfondito' THEN COALESCE(deep_at, now()) ELSE now() END, last_checked_at = now()
+ WHERE id = %s
+   AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> ALL(%s)
+   AND COALESCE(stage_reason, '') NOT LIKE 'analisi_manuale%%'
+   AND NOT (stage = 'approfondito' AND stage_reason = 'incidentata')
+ RETURNING id"""
+
+VALUATIONS_SQL = """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
+     n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
+   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)"""
+
+
+def da_promuovere(es: Esito, lid) -> str | None:
+    """Quale valutazione mettere sul sito: "nuova" (scritta adesso), "salvata" (quella nel database, buona, tenuta
+    dalla guardia) o None. La riga salvata decide (è quella che il sito legge); se la nuova è stata rifiutata e NON è
+    buona (es. meno confronti e margine sotto soglia) non si pubblica: in dubbio la più prudente."""
+    from ..web import scovo
+    cat = es.salvata.get(lid)
+    if cat not in scovo.CATEGORIE_SITO:
+        return None
+    if lid in es.scritte:
+        return "nuova"
+    v = es.valutazioni.get(lid) or {}
+    if v.get("categoria") in scovo.CATEGORIE_SITO:
+        return "salvata"                       # rifiutata dalla guardia, ma buona anche la nuova
+    if es.perche.get(lid) == "giudice_mancante":
+        return "salvata"                       # la nuova aspetta il giudice: vale la precedente (tieni_precedente)
+    return None
+
+
+def _salvata_completa(conn, lid) -> dict | None:
+    r = conn.execute("SELECT categoria, dati FROM valutazioni_policy WHERE listing_id = %s AND policy_version = %s",
+                     (lid, P.POLICY_VERSION)).fetchone()
+    if not r:
+        return None
+    d = _j(r.get("dati")) or {}
+    return dict(d, categoria=r.get("categoria") or d.get("categoria"))
+
+
+def promuovi(conn, es: Esito, fonte: str, stats: Counter, pubblicate: list | None = None) -> int:
+    """Mette sul sito (stage 'approfondito', stage_reason opportunita/da_verificare, riga in `valuations`) le auto di
+    `es` buone secondo la riga salvata, con il numero del venditore (valutazione.telefono), salvo le eccezioni
+    dichiarate (TR_SUBITO_SENZA_NUMERO: Subito non ancora controllato; TR_LUSSO_SENZA_NUMERO: da TR_SENZA_NUMERO_DA €).
+    Non tocca gli annunci scartati per sempre (SCARTI_FISSI, analisi manuale) né le incidentate già sul sito.
+    Ritorna quante auto ha pubblicato."""
+    import os
+    lusso_da = int(os.environ.get("TR_SENZA_NUMERO_DA", "60000"))
+    n = 0
+    for lid in list(es.salvata):
+        quale = da_promuovere(es, lid)
+        if quale is None:
+            continue
+        nuova = es.valutazioni.get(lid) or {}
+        try:
+            v = nuova if quale == "nuova" else _salvata_completa(conn, lid)
+            if not v or v.get("categoria") != es.salvata.get(lid):
+                continue                          # riga cambiata nel frattempo da un altro processo
+            tel = es.telefono.get(lid)
+            if tel is not True:
+                fonte_l = (conn.execute("SELECT source FROM listings WHERE id=%s", (lid,)).fetchone() or {}).get("source")
+                ok = (tel is None and fonte_l == "subito" and os.environ.get("TR_SUBITO_SENZA_NUMERO", "0") == "1") or (
+                    os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1" and (v.get("acquisto") or 0) >= lusso_da)
+                if not ok:
+                    stats["valuta:senza_numero"] += 1
+                    continue
+            # opportunità piena solo se lo dicono la riga salvata e (se c'è) la nuova: in dubbio "da verificare"
+            piena = v["categoria"] == "opportunita" and nuova.get("categoria") in ("opportunita", None, "dati_insufficienti")
+            conf = "affidabile" if piena else "da_verificare"
+            fatto = conn.execute(PROMUOVI_SQL, ("opportunita" if piena else "da_verificare", lid,
+                                                list(SCARTI_FISSI))).fetchone()
+            if not fatto:
+                conn.rollback()
+                stats["pubblica:scarto_fisso_o_incidentata"] += 1
+                continue
+            conn.execute(VALUATIONS_SQL, (lid, P.POLICY_VERSION + "+" + fonte, v.get("M"), v.get("M"), v.get("R_finale"),
+                                          v.get("n"), json.dumps(v.get("confronti") or [], default=str)[:200000], conf,
+                                          (v.get("motivi") or [])[:5]))
+            conn.commit()
+            n += 1
+            stats["pubblicate"] += 1
+            if quale == "salvata":
+                stats["pubblica:dalla_salvata"] += 1
+            if pubblicate is not None:
+                pubblicate.append(lid)            # 16/11: per la misura del ritardo (tr_coda.pubblicato_at)
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            stats["valuta:errore"] += 1
+            if stats["valuta:errore"] <= 5:
+                log.warning("PUBBLICA %s non riuscita (%s): %s", lid, fonte, str(e)[:200])
+    return n
 
 
 def esce_dall_attesa(es: "Esito", lid) -> bool:

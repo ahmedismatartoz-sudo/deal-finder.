@@ -1364,16 +1364,16 @@ def _salva(conn, listings: list, stats: Counter, coda: bool = False) -> list[int
 def valuta_e_pubblica(conn, ids: list[int], stats: Counter, fonte: str = "tempo-reale",
                       pubblicate: list | None = None) -> None:
     """Valuta gli annunci (pricing/valutazione.valuta_e_scrivi: la stessa funzione del cron, stessi ingressi, stessa
-    guardia sulle scritture) e mette sul sito quelle in categoria da sito con il numero del venditore.
-    Qui resta solo la scelta di cosa PUBBLICARE: il numero (telefono unico, valutazione.telefono) deve esserci,
-    salvo le eccezioni dichiarate (TR_SUBITO_SENZA_NUMERO: Subito non ancora controllato; TR_LUSSO_SENZA_NUMERO:
-    auto da TR_SENZA_NUMERO_DA € in su)."""
-    from ..pricing import policy_v2 as P
-    from ..pricing.valutazione import valuta_e_scrivi
-    from ..web import scovo
+    guardia sulle scritture) e mette sul sito quelle buone con il numero del venditore (valutazione.promuovi, la
+    stessa promozione della riprova del giudice e del recupero dei confronti; eccezioni dichiarate:
+    TR_SUBITO_SENZA_NUMERO, TR_LUSSO_SENZA_NUMERO).
+    17/11: prima si pubblicava solo se la valutazione NUOVA aveva la stessa categoria della salvata: una nuova buona
+    rifiutata dalla guardia con la salvata buona di altra categoria, o la precedente buona tenuta in attesa del giudice,
+    restavano fuori; e un annuncio scartato per sempre (doppione, truffa, analisi manuale) tornava sul sito."""
+    from ..pricing.valutazione import promuovi, valuta_e_scrivi
     if not ids:
         return
-    es = valuta_e_scrivi(conn, list(ids), fonte)
+    es = valuta_e_scrivi(conn, list(ids), fonte, pubblica=False)
     for k, n in es.stats.items():
         if k.startswith(("categoria:", "esclusa:")):
             stats["valuta:" + k.split(":", 1)[1]] += n
@@ -1381,41 +1381,7 @@ def valuta_e_pubblica(conn, ids: list[int], stats: Counter, fonte: str = "tempo-
             stats["valuta:errore"] += n
         elif k.startswith("scrittura:"):
             stats["valuta:" + k] += n
-    lusso_da = int(os.environ.get("TR_SENZA_NUMERO_DA", "60000"))
-    for lid, cat in es.salvata.items():
-        v = es.valutazioni.get(lid) or {}
-        if cat not in scovo.CATEGORIE_SITO or v.get("categoria") != cat:
-            continue                                  # non da sito, o riga tenuta (più confronti) diversa da questa
-        tel = es.telefono.get(lid)
-        if tel is not True:
-            fonte_l = (conn.execute("SELECT source FROM listings WHERE id=%s", (lid,)).fetchone() or {}).get("source")
-            ok = (tel is None and fonte_l == "subito" and os.environ.get("TR_SUBITO_SENZA_NUMERO", "0") == "1") or (
-                os.environ.get("TR_LUSSO_SENZA_NUMERO") == "1" and (v.get("acquisto") or 0) >= lusso_da)
-            if not ok:
-                stats["valuta:senza_numero"] += 1
-                continue
-        try:
-            conf = "affidabile" if cat == "opportunita" else "da_verificare"
-            conn.execute(
-                """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
-                     n_comparables, comparables_used, confidence, confidence_reasons, parts_cost_low, parts_cost_high)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
-                (lid, P.POLICY_VERSION + "+" + fonte, v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
-                 json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
-            conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), last_checked_at=now() "
-                         "WHERE id=%s", ("opportunita" if conf == "affidabile" else "da_verificare", lid))
-            conn.commit()
-            stats["pubblicate"] += 1
-            if pubblicate is not None:
-                pubblicate.append(lid)            # 16/11: per la misura del ritardo (tr_coda.pubblicato_at)
-        except Exception as e:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-            stats["valuta:errore"] += 1
-            if stats["valuta:errore"] <= 5:
-                log.warning("TR pubblica %s non riuscita: %s", lid, str(e)[:200])
+    promuovi(conn, es, fonte, stats, pubblicate)
 
 
 def _lettore_nuovi(conn, ids: list[int], stats: Counter) -> None:
