@@ -75,6 +75,7 @@ class Esito:
     scritte: set = field(default_factory=set)            # id riscritti davvero in questo giro (15/11, giudice A2)
     telefono: dict = field(default_factory=dict)         # id → True / False / None
     perche: dict = field(default_factory=dict)           # id → motivo della guardia (17/11: per la promozione)
+    vecchie: set = field(default_factory=set)            # id con la riga salvata più vecchia di ore_validita (17/11)
 
     def sul_sito(self, lid) -> bool:
         from ..web import scovo
@@ -394,6 +395,11 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 # salvata risultava meno "vecchia" di quanto la vede la condizione SQL, che usa now() alla scrittura)
                 ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r,
                                            datetime.now(timezone.utc), ore, giu)
+                if perche == "vecchia":
+                    # 17/11 (giudice): il motivo ORIGINALE si salva prima di "giudice_mancante": una riga salvata più
+                    # vecchia di ore_validita resta nel database (tieni_precedente) ma NON si pubblica (margine su un
+                    # mercato vecchio)
+                    es.vecchie.add(lid)
                 if tieni_precedente(v, prima.get(lid), perche):
                     ok, perche = False, "giudice_mancante"      # 13/11 (N3): resta la valutazione precedente
                 es.stats[f"scrittura:{perche}"] += 1
@@ -449,12 +455,19 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
 FONTI_CHE_PUBBLICANO = ("riprova-giudice", "cron-recupero")
 SCARTI_FISSI = ("doppione", "truffa", "prezzo_finto", "dati_incoerenti")     # = censimento.SCARTI_PRIMA, ricalcolo.UTIL_SQL
 
+# 17/11 (giudice): mai gli annunci "solo confronto" (stage 'mercato' di collect: mercato_nord "mai proposta",
+# fuori_regole fuori km/anno) né quelli col solo prezzo del finanziamento. Le 'mercato' del modello dei prezzi
+# (modello_prezzi: solo una stima veloce scartata) restano promuovibili come prima del 17/11 (tempo reale): la
+# valutazione completa vale più della stima. Il motivo si confronta con la prima parte (verify.mark aggiunge " | ...").
+NON_PROPOSTE = ("mercato_nord", "fuori_regole")
 PROMUOVI_SQL = """UPDATE listings SET stage = 'approfondito', stage_reason = %s,
        deep_at = CASE WHEN stage = 'approfondito' THEN COALESCE(deep_at, now()) ELSE now() END, last_checked_at = now()
  WHERE id = %s
    AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> ALL(%s)
    AND COALESCE(stage_reason, '') NOT LIKE 'analisi_manuale%%'
-   AND NOT (stage = 'approfondito' AND stage_reason = 'incidentata')
+   AND NOT (stage = 'approfondito' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) = 'incidentata')
+   AND NOT (stage = 'mercato' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) = ANY(%s))
+   AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'
  RETURNING id"""
 
 VALUATIONS_SQL = """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
@@ -472,6 +485,8 @@ def da_promuovere(es: Esito, lid) -> str | None:
         return None
     if lid in es.scritte:
         return "nuova"
+    if lid in es.vecchie:
+        return None                            # 17/11: salvata più vecchia di ore_validita: non si pubblica
     v = es.valutazioni.get(lid) or {}
     if v.get("categoria") in scovo.CATEGORIE_SITO:
         return "salvata"                       # rifiutata dalla guardia, ma buona anche la nuova
@@ -481,9 +496,12 @@ def da_promuovere(es: Esito, lid) -> str | None:
 
 
 def _salvata_completa(conn, lid) -> dict | None:
-    r = conn.execute("SELECT categoria, dati FROM valutazioni_policy WHERE listing_id = %s AND policy_version = %s",
-                     (lid, P.POLICY_VERSION)).fetchone()
-    if not r:
+    """La riga salvata, solo se più giovane di ore_validita (17/11: una riga vecchia non si pubblica, anche se la
+    guardia l'ha tenuta perché il giudice non ha risposto)."""
+    r = conn.execute("SELECT categoria, dati, now() - computed_at < make_interval(hours => %s) AS fresca "
+                     "FROM valutazioni_policy WHERE listing_id = %s AND policy_version = %s",
+                     (int(RG.regole().scrittura.ore_validita), lid, P.POLICY_VERSION)).fetchone()
+    if not r or not r.get("fresca"):
         return None
     d = _j(r.get("dati")) or {}
     return dict(d, categoria=r.get("categoria") or d.get("categoria"))
@@ -506,7 +524,9 @@ def promuovi(conn, es: Esito, fonte: str, stats: Counter, pubblicate: list | Non
         try:
             v = nuova if quale == "nuova" else _salvata_completa(conn, lid)
             if not v or v.get("categoria") != es.salvata.get(lid):
-                continue                          # riga cambiata nel frattempo da un altro processo
+                if quale == "salvata" and not v:
+                    stats["pubblica:salvata_vecchia_o_assente"] += 1
+                continue                          # riga cambiata nel frattempo da un altro processo (o vecchia)
             tel = es.telefono.get(lid)
             if tel is not True:
                 fonte_l = (conn.execute("SELECT source FROM listings WHERE id=%s", (lid,)).fetchone() or {}).get("source")
@@ -519,7 +539,7 @@ def promuovi(conn, es: Esito, fonte: str, stats: Counter, pubblicate: list | Non
             piena = v["categoria"] == "opportunita" and nuova.get("categoria") in ("opportunita", None, "dati_insufficienti")
             conf = "affidabile" if piena else "da_verificare"
             fatto = conn.execute(PROMUOVI_SQL, ("opportunita" if piena else "da_verificare", lid,
-                                                list(SCARTI_FISSI))).fetchone()
+                                                list(SCARTI_FISSI), list(NON_PROPOSTE))).fetchone()
             if not fatto:
                 conn.rollback()
                 stats["pubblica:scarto_fisso_o_incidentata"] += 1

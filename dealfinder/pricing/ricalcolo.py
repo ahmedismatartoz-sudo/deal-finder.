@@ -600,10 +600,17 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             # 17/11: prima "AND stage <> 'approfondito'": un'auto approfondita con un motivo che il sito non mostra
             # (es. 'scartata' o 'non_valutabile' del vecchio approfondimento) e oggi buona restava fuori PER SEMPRE
             # (il giro della zona salta le approfondite, il ricalcolo legge solo quelle già sul sito). Ora si lasciano
-            # stare solo quelle già sul sito (opportunita, da_verificare, incidentata).
+            # stare solo quelle già sul sito (opportunita, da_verificare, incidentata, affidabile), confrontando la
+            # PRIMA parte del motivo (verify.mark aggiunge " | scomparso ...": "incidentata | scomparso" non deve
+            # diventare opportunita).
             r_up = conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
                                 "last_checked_at=now() WHERE id=%s AND NOT (stage = 'approfondito' AND "
-                                "COALESCE(stage_reason, '') IN ('opportunita', 'da_verificare', 'incidentata'))",
+                                "btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) IN "
+                                "('opportunita', 'da_verificare', 'incidentata', 'affidabile')) "
+                                # come valutazione.PROMUOVI_SQL: mai i "solo confronto" né il solo finanziamento
+                                "AND NOT (stage = 'mercato' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) "
+                                "IN ('mercato_nord', 'fuori_regole')) "
+                                "AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'",
                                 ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid))
             n += 1
             promosse += int(getattr(r_up, "rowcount", 0) or 0)

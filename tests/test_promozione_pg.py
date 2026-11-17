@@ -314,3 +314,109 @@ def test_confronti_extra_cambio_di_prezzo_toglie_dal_sito_finche_non_si_rivaluta
     assert CE.rimetti_in_valutazione(c, sul, "prezzo") == 1
     assert _stato(c, sul) == {"stage": "nuovo", "stage_reason": "opportunita"} and sul not in _sul_sito(c)
     assert CE.rimetti_in_valutazione(c, conf, "prezzo") == 0 and _stato(c, conf)["stage"] == "mercato"
+
+
+# ------------------------------------------------------------------ 17/11 (giudice): salvata vecchia, solo confronto
+
+def test_giudice_mancante_con_salvata_vecchia_non_si_pubblica():
+    c = _pg()
+    if c is None:
+        return
+    vecchia, giovane = _auto(c), _auto(c)
+    buone = {i: _v("opportunita", n=10) for i in (vecchia, giovane)}
+    _con_finta(buone, lambda: V.valuta_e_scrivi(c, [vecchia, giovane], "cron", pubblica=False))
+    c.execute("UPDATE valutazioni_policy SET computed_at = now() - interval '40 hours' WHERE listing_id=%s", (vecchia,))
+    c.execute("UPDATE valutazioni_policy SET computed_at = now() - interval '10 hours' WHERE listing_id=%s", (giovane,))
+    c.commit()
+    attesa = {i: dict(_v("dati_insufficienti", n=0), giudice_mancante=True) for i in (vecchia, giovane)}
+    es = _con_finta(attesa, lambda: V.valuta_e_scrivi(c, [vecchia, giovane], "riprova-giudice"))
+    # la riga salvata resta (tieni_precedente) in tutti e due i casi ...
+    assert es.perche[vecchia] == es.perche[giovane] == "giudice_mancante"
+    assert es.salvata[vecchia] == es.salvata[giovane] == "opportunita"
+    assert vecchia in es.vecchie and giovane not in es.vecchie
+    # ... ma si pubblica solo quella più giovane di ore_validita (36 h): niente margine su un mercato vecchio
+    assert V.da_promuovere(es, vecchia) is None and V.da_promuovere(es, giovane) == "salvata"
+    assert _stato(c, vecchia)["stage"] == "nuovo" and not _valuations(c, vecchia)
+    assert _stato(c, giovane)["stage"] == "approfondito" and es.stats["pubblicate"] == 1
+    assert vecchia not in _sul_sito(c)
+
+
+def test_salvata_vecchia_non_si_pubblica_neanche_se_l_esito_non_lo_sa():
+    # seconda difesa: anche un Esito senza "vecchie" (es. riga invecchiata nel frattempo) non pubblica una riga vecchia
+    c = _pg()
+    if c is None:
+        return
+    lid = _auto(c)
+    _salva(c, lid, _v("opportunita"), ore_fa=40)
+    es = _esito(lid, "opportunita", dict(_v("dati_insufficienti"), giudice_mancante=True), scritta=False,
+                perche="giudice_mancante")
+    st = Counter()
+    assert V.promuovi(c, es, "prova", st) == 0 and st["pubblica:salvata_vecchia_o_assente"] == 1
+    assert _stato(c, lid)["stage"] == "nuovo"
+    _salva(c, lid, _v("opportunita"), ore_fa=10)
+    assert V.promuovi(c, es, "prova", Counter()) == 1
+
+
+def test_non_promuove_solo_confronto_ne_solo_finanziamento():
+    c = _pg()
+    if c is None:
+        return
+    nord = _auto(c, stage="mercato", reason="mercato_nord")
+    fuori = _auto(c, stage="mercato", reason="fuori_regole")
+    fin = _auto(c, stage="scartato", reason="solo_finanziamento")
+    mod = _auto(c, stage="mercato", reason="modello_prezzi")       # stima veloce: la valutazione completa vale di più
+    inc = _auto(c, stage="approfondito", reason="incidentata | scomparso")
+    ids = [nord, fuori, fin, mod, inc]
+    for i in ids:
+        _salva(c, i, _v("opportunita"))
+    st = Counter()
+    assert V.promuovi(c, _unisci(*[_esito(i, "opportunita", _v("opportunita")) for i in ids]), "prova", st) == 1
+    assert _stato(c, nord) == {"stage": "mercato", "stage_reason": "mercato_nord"}
+    assert _stato(c, fuori)["stage"] == "mercato" and _stato(c, fin)["stage_reason"] == "solo_finanziamento"
+    assert _stato(c, inc)["stage_reason"] == "incidentata | scomparso"
+    assert _stato(c, mod) == {"stage": "approfondito", "stage_reason": "opportunita"}
+    assert st["pubblica:scarto_fisso_o_incidentata"] == 4
+
+
+def test_recupero_non_prende_solo_confronto():
+    from dealfinder.pricing import recupero as RC
+    c = _pg()
+    if c is None:
+        return
+    nord = _auto(c, stage="mercato", reason="mercato_nord")
+    fin = _auto(c, stage="scartato", reason="solo_finanziamento")
+    ok = _auto(c)
+    for i in (nord, fin, ok):
+        _salva(c, i, dict(_v("dati_insufficienti", n=0), giudice_mancante=True))
+    c.execute("DROP TABLE IF EXISTS recupero_provato")
+    assert RC.da_recuperare(c, 10) == [ok]
+
+
+def test_utilitarie_confronta_la_prima_parte_del_motivo():
+    from dealfinder.pricing import ricalcolo as R
+    c = _pg()
+    if c is None:
+        return
+    inc = _auto(c, stage="approfondito", reason="incidentata | scomparso il 16/11")
+    aff = _auto(c, stage="approfondito", reason="affidabile")
+    nord = _auto(c, stage="mercato", reason="mercato_nord")
+    fin = _auto(c, stage="scartato", reason="solo_finanziamento")
+    esiti = {i: _v("opportunita") for i in (inc, aff, nord, fin)}
+    prima = (R.senza_invariate, R.UTIL_SQL)
+    try:
+        R.senza_invariate = lambda conn, ids, var="": (list(ids), 0)
+        R.UTIL_SQL = "SELECT id FROM listings WHERE %(lo)s > 0 AND %(hi)s > 0 AND %(anno)s > 0 AND %(km)s > 0 " \
+                     "AND province = ANY(%(prov)s) ORDER BY id"
+        import dealfinder.core.dal_testo as DT
+        salva_dt = DT.completa_db
+        DT.completa_db = lambda conn: {}
+        try:
+            out = _con_finta(esiti, lambda: R._utilitarie(c, pubblica=True))
+        finally:
+            DT.completa_db = salva_dt
+    finally:
+        R.senza_invariate, R.UTIL_SQL = prima
+    assert _stato(c, inc)["stage_reason"] == "incidentata | scomparso il 16/11"
+    assert _stato(c, aff)["stage_reason"] == "affidabile"
+    assert _stato(c, nord)["stage"] == "mercato" and _stato(c, fin)["stage"] == "scartato"
+    assert out["promosse"] == 0
