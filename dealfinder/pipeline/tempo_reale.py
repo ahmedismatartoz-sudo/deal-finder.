@@ -466,17 +466,100 @@ def _client_fb():
 
 def _controlla_annuncio(r, cas, csb, cfb=None, lenient: bool = True):
     """Una pagina riaperta: (riga, stato, motivo). Stesso criterio per la verifica delle auto del sito e per il
-    rinfresco delle auto fuori per freschezza (giro_rinfresca, con lenient=False: serve la prova che è viva)."""
+    rinfresco delle auto fuori per freschezza (giro_rinfresca, con lenient=False: serve la prova che è viva).
+    17/11 (giudice): con lenient=False si confronta anche il PREZZO della pagina con price_eur salvato: prezzo diverso
+    = motivo 'prezzo_cambiato:<nuovo>', prezzo non leggibile = 'errore' (non si rinfresca un'auto con un prezzo vecchio:
+    un rialzo arriverebbe sul sito con il margine gonfiato). AutoScout24: pagina con i dati ma con la scritta
+    "non è più disponibile" (o simili) = 'errore'."""
     time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
     if r["source"] == "autoscout24":
-        st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
-        return r, st, motivo
+        if lenient:
+            st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
+            return r, st, motivo
+        reg = _Registra(cas)
+        st, det, motivo = _as_esito(reg, r["url"])
+        if st != "attivo":
+            return r, st, motivo
+        low = _testo_chiaro(getattr(reg.ultima, "text", "") or "")
+        if any(k in low for k in _AS_TOLTO):
+            return r, "errore", "scritta_rimozione"
+        return r, st, _confronta_prezzo(r, _prezzo_as(det))
     if r["source"] == "facebook":
         return r, (_fb_stato(cfb, r["url"]) if cfb is not None else "errore"), None
     # 3/11 (studio 4 §4.4): per togliere un'auto Subito serve la stessa prova del controllo in blocco (prima
     # bastava la frase "non è più disponibile" in un punto qualsiasi della pagina, anche negli annunci simili)
-    st, motivo = subito_esito_con_prova(csb, r["url"], lenient=lenient)
-    return r, st, motivo
+    if lenient:
+        st, motivo = subito_esito_con_prova(csb, r["url"], lenient=True)
+        return r, st, motivo
+    reg = _Registra(csb)
+    st, motivo = subito_esito_con_prova(reg, r["url"], lenient=False)
+    if st != "attivo":
+        return r, st, motivo
+    m = _RE_ID_SUBITO.search(r["url"] or "")
+    return r, st, _confronta_prezzo(r, prezzo_subito_pagina(getattr(reg.ultima, "text", "") or "", m.group(1) if m else None))
+
+
+_AS_TOLTO = ("non è più disponibile", "annuncio non disponibile", "annuncio scaduto", "annuncio rimosso",
+             "veicolo non è più disponibile", "is no longer available")
+
+
+class _Registra:
+    """Client che ricorda l'ultima risposta (per leggere il prezzo dalla stessa pagina, senza una seconda richiesta)."""
+    def __init__(self, client):
+        self.client, self.ultima = client, None
+
+    def get(self, url, *a, **k):
+        self.ultima = self.client.get(url, *a, **k)
+        return self.ultima
+
+
+def _confronta_prezzo(r, prezzo) -> str | None:
+    """None se il prezzo della pagina è quello salvato; 'prezzo_cambiato:<nuovo>' se è diverso; 'prezzo_illeggibile'."""
+    if not prezzo:
+        return "prezzo_illeggibile"
+    if r.get("price_eur") is not None and int(prezzo) == int(r["price_eur"]):
+        return None
+    return f"prezzo_cambiato:{int(prezzo)}"
+
+
+def _prezzo_as(det) -> int | None:
+    """Prezzo dalla pagina AutoScout24 (listingDetails), come collectors.autoscout.parse_item."""
+    if not isinstance(det, dict):
+        return None
+    from ..collectors.autoscout import _num
+    trk, price = det.get("tracking") or {}, det.get("price") or {}
+    try:
+        return _num(trk.get("price")) or _num(price.get("priceFormatted") if isinstance(price, dict) else price)
+    except Exception:
+        return None
+
+
+_RE_PREZZO_SUB = re.compile(r'\\*"uri\\*"\s*:\s*\\*"/price\\*"\s*,\s*\\*"values\\*"\s*:\s*\[\s*\{\s*\\*"key\\*"\s*:\s*\\*"(\d{2,7})\\*"')
+
+
+def prezzo_subito_pagina(text: str, numero: str | None) -> int | None:
+    """Prezzo dell'annuncio Subito dalla pagina: dai dati __NEXT_DATA__ (feature /price) o, nelle pagine App Router,
+    dalla feature /price vicina all'urn di QUESTO annuncio (entro FINESTRA_URN). Più prezzi diversi o nessuno = None."""
+    from ..collectors.base import find_key, next_data
+    try:
+        data = next_data(text)
+    except Exception:
+        data = None
+    item = find_key(data, "ad", "item") if isinstance(data, dict) else None
+    if isinstance(item, dict):
+        for f in item.get("features") or []:
+            if isinstance(f, dict) and f.get("uri") == "/price":
+                try:
+                    return int(str(((f.get("values") or [{}])[0] or {}).get("key")))
+                except (TypeError, ValueError):
+                    return None
+    if not numero or not text:
+        return None
+    trovati = set()
+    for mu in re.finditer(r"(?:ad:%s:|list:%s(?!\d))" % (re.escape(numero), re.escape(numero)), text):
+        pezzo = text[max(0, mu.start() - FINESTRA_URN):mu.end() + FINESTRA_URN]
+        trovati.update(int(x) for x in _RE_PREZZO_SUB.findall(pezzo))
+    return trovati.pop() if len(trovati) == 1 else None
 
 
 def giro_verifica(conn, ids: list[int]) -> Counter:
@@ -526,6 +609,7 @@ FRESCHEZZA_ORE = int(os.environ.get("FRESCHEZZA_ORE", "48"))     # la stessa di 
 _rinfresco_tentati: dict[int, float] = {}       # id -> ultimo tentativo senza esito (errore): si riprova più tardi
 _rinfresco_tot: Counter = Counter()             # totali da avvio (riga FRESCHEZZA dei log)
 _freschezza_contata = {"t": 0.0, "ultimo": None}
+_rinfresco_pausa = {"fino": 0.0}
 
 # stessa base di scovo.LIST_SQL, senza la condizione di freschezza
 _BASE_FRESCHEZZA = ("l.stage='approfondito' AND l.status='attivo' "
@@ -566,11 +650,11 @@ WITH base AS (
 SELECT (SELECT count(*) FROM base WHERE ore < %(fresc)s) AS fresche,
        count(*) FILTER (WHERE ore < %(fresc)s) AS in_scadenza,
        count(*) FILTER (WHERE ore >= %(fresc)s) AS fuori_freschezza,
-       count(*) FILTER (WHERE ore >= %(fresc)s AND ore < 7 * 24) AS fuori_entro_7g,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND ore < %(fino)s) AS fuori_entro_finestra,
        count(*) FILTER (WHERE ore < %(fresc)s AND (categoria = ANY(%(cat)s) OR top)) AS buone_in_scadenza,
        count(*) FILTER (WHERE ore >= %(fresc)s AND (categoria = ANY(%(cat)s) OR top)) AS buone_fuori,
-       count(*) FILTER (WHERE ore >= %(fresc)s AND ore < 7 * 24 AND (categoria = ANY(%(cat)s) OR top)
-                        AND prov = ANY(%(zona)s) AND telefono_ok IS NOT FALSE) AS buone_fuori_7g_zona,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND ore < %(fino)s AND (categoria = ANY(%(cat)s) OR top)
+                        AND prov = ANY(%(zona)s) AND telefono_ok IS NOT FALSE) AS buone_fuori_finestra_zona,
        count(*) FILTER (WHERE ore >= %(fresc)s AND categoria = 'opportunita') AS opportunita_fuori,
        count(*) FILTER (WHERE ore >= %(fresc)s AND categoria = 'candidato') AS candidato_fuori
 FROM vecchie
@@ -604,7 +688,7 @@ def conta_freschezza(conn) -> dict:
     Finestra: ultimi 30 giorni. Mai un errore (dict vuoto)."""
     p = _rinfresco_param()
     try:
-        r = conn.execute(FRESCHEZZA_SQL, {"giorni": 30, "dopo": p["dopo"], "fresc": p["fresc"],
+        r = conn.execute(FRESCHEZZA_SQL, {"giorni": 30, "dopo": p["dopo"], "fresc": p["fresc"], "fino": p["fino"],
                                           "cat": _categorie_sito(), "zona": sorted(_zona())}).fetchone()
         return {k: int(v or 0) for k, v in dict(r or {}).items()}
     except Exception as e:
@@ -619,7 +703,7 @@ def conta_freschezza(conn) -> dict:
 def ordina_rinfresco(righe: list[dict], sul_sito: set, zona: set, adesso: float | None = None,
                      tentati: dict | None = None, riprova_s: float = 7200, fresc: float = 48) -> list[dict]:
     """Ordine di priorità (solo dati, testabile): 1) auto che erano sul sito di recente, 2) buone (categoria del sito
-    o top) della zona con il numero, 3) altre buone; le altre auto non si riaprono. Dentro ogni gruppo prima quelle
+    o top) della zona, 3) altre buone; le altre auto e le buone senza numero (telefono_ok false) non si riaprono. Dentro ogni gruppo prima quelle
     ANCORA fresche più vicine alla scadenza (restano sul sito senza buchi), poi le scadute più recenti (le più
     probabilmente vive); a parità il margine più alto. Escluse quelle già tentate senza esito da meno di riprova_s."""
     cat = set(_categorie_sito())
@@ -633,7 +717,9 @@ def ordina_rinfresco(righe: list[dict], sul_sito: set, zona: set, adesso: float 
         recente = int(r["id"]) in sul_sito
         if not (buona or recente):
             continue
-        gruppo = 0 if recente else (1 if (r.get("prov") in zona and r.get("telefono_ok") is not False) else 2)
+        if not recente and r.get("telefono_ok") is False:
+            continue                            # senza numero non va sul sito (telefono obbligatorio)
+        gruppo = 0 if recente else (1 if r.get("prov") in zona else 2)
         ore = float(r.get("ore") or 0)
         scaduta = ore >= fresc
         out.append(((gruppo, scaduta, ore if scaduta else -ore, -(r.get("margine") or 0)), r))
@@ -661,6 +747,10 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
                                                   "rinfresco_da_avvio": dict(_rinfresco_tot)}, ensure_ascii=False))
     if p["max"] <= 0:
         return stats
+    if time.time() < _rinfresco_pausa["fino"]:
+        stats["in_pausa"] = 1                  # troppi errori di fila nell'ultimo giro (blocco 403/429?)
+        stats["_tornati"] = []             # type: ignore[assignment]
+        return stats
     righe = conn.execute(RINFRESCO_SQL, {"dopo": p["dopo"], "fino": p["fino"],
                                          "quante": int(os.environ.get("RINFRESCA_POOL", "5000"))}).fetchall()
     adesso = time.time()
@@ -676,15 +766,44 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
     cas = _client_as() if any(r["source"] == "autoscout24" for r in scelte) else None
     csb = _client_subito() if any(r["source"] == "subito" for r in scelte) else None
     tornati, spariti = [], []
+    sul_sito = {int(i) for i in sul_sito or ()}
+    stop_n = int(os.environ.get("RINFRESCA_STOP_ERRORI", "8"))
+    di_fila = {"n": 0}
+
+    def uno(r):
+        if di_fila["n"] >= stop_n:
+            return r, "saltato", None           # giro fermato: il sito risponde solo errori
+        out = _controlla_annuncio(r, cas, csb, None, lenient=False)
+        di_fila["n"] = di_fila["n"] + 1 if out[1] == "errore" else 0
+        return out
+
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
-        for r, st, motivo in ex.map(lambda r: _controlla_annuncio(r, cas, csb, None, lenient=False), scelte):
+        for r, st, motivo in ex.map(uno, scelte):
             scaduta = float(r.get("ore") or 0) >= p["fresc"]
+            if st == "attivo" and motivo == "prezzo_illeggibile":
+                st = "errore"                   # senza il prezzo non si rinfresca (margine non verificabile)
+                stats["prezzo_illeggibile"] += 1
             stats[f"{r['source']}:{st}"] += 1
             stats[f"{'scadute' if scaduta else 'in_scadenza'}:{st}"] += 1
+            if st == "saltato":
+                continue
             if st not in ("attivo", "scomparso"):
                 _rinfresco_tentati[int(r["id"])] = time.time()
                 continue
-            _mark(conn, r["id"], st, r.get("price_eur"), motivo=motivo, sito=False)
+            if st == "attivo" and (motivo or "").startswith("prezzo_cambiato:"):
+                # annuncio vivo ma con un altro prezzo: NON si rinfresca (M/R e margine sono del prezzo vecchio);
+                # come nella raccolta: prezzo nuovo, evento 'prezzo' e stage 'nuovo' = rivalutazione
+                nuovo = int(motivo.split(":", 1)[1])
+                conn.execute("UPDATE listings SET price_eur=%s, stage='nuovo' WHERE id=%s", (nuovo, r["id"]))
+                conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)",
+                             (r["id"], nuovo))
+                conn.commit()
+                stats["prezzo_cambiato"] += 1
+                continue
+            era_sul_sito = int(r["id"]) in sul_sito
+            _mark(conn, r["id"], st, r.get("price_eur"), motivo=motivo, sito=(st == "scomparso" and era_sul_sito))
+            if st == "scomparso" and era_sul_sito and motivo != "scaduto":
+                registra_sparita(conn, r["id"])     # come nella verifica: era sul sito negli ultimi 7 giorni
             if st == "attivo":
                 if scaduta:
                     tornati.append(r["id"])         # era fuori dal sito solo per la freschezza
@@ -693,6 +812,11 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
             else:
                 spariti.append(r["id"])
     conn.commit()
+    if di_fila["n"] >= stop_n:
+        _rinfresco_pausa["fino"] = time.time() + float(os.environ.get("RINFRESCA_PAUSA_MIN", "30")) * 60
+        stats["fermato_errori"] = 1
+        log.warning("TR RINFRESCO %d errori di fila (blocco?): pausa di %s minuti", di_fila["n"],
+                    os.environ.get("RINFRESCA_PAUSA_MIN", "30"))
     for k, v in stats.items():
         if k != "candidate":
             _rinfresco_tot[k] += v
@@ -1048,9 +1172,13 @@ def telefoni_candidate(conn, ids) -> Counter:
                     conn.commit()
                     continue
                 # 17/11 (freschezza): pagina con i dati dell'annuncio = prova che è vivo, come nella verifica
-                from .verify import _mark
-                _mark(conn, r["id"], "attivo", r.get("price_eur"))
-                stats["autoscout24:rinfrescata"] += 1
+                # (giudice 17/11) solo se il prezzo della pagina è quello salvato: un prezzo diverso lo rivaluta la raccolta
+                if _confronta_prezzo(r, _prezzo_as(det)) is None:
+                    from .verify import _mark
+                    _mark(conn, r["id"], "attivo", r.get("price_eur"))
+                    stats["autoscout24:rinfrescata"] += 1
+                else:
+                    stats["autoscout24:non_rinfrescata_prezzo"] += 1
                 tel = telefono_autoscout(det)
             elif r["id"] in prio_set and os.environ.get("TEL_CAND_SUBITO", "0") != "1":
                 if TN.puo_cercare():

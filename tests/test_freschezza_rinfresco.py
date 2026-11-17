@@ -46,17 +46,17 @@ def test_ordine_prima_sul_sito_poi_buone_della_zona_vicine_alla_scadenza():
         _riga(4, 60),                                        # buona, zona, già scaduta da 12 ore
         _riga(5, 100),                                       # buona, zona, scaduta da più tempo
         _riga(6, 45, prov="RE"),                             # buona fuori zona
-        _riga(7, 45, tel=False),                             # buona senza numero
+        _riga(7, 45, tel=False),                             # buona senza numero: non si riapre (telefono obbligatorio)
         _riga(8, 90, cat="non_conveniente"),                 # sul sito di recente (passa davanti a tutte)
         _riga(9, 41, cat="non_conveniente", top=True),       # tra le top: buona
         _riga(10, 47, margine=5000),                         # come la 2 ma margine più alto
     ]
     ord_ = [r["id"] for r in tr.ordina_rinfresco(righe, sul_sito={8}, zona={"MI"}, adesso=1e9, tentati={}, fresc=48)]
-    assert 1 not in ord_
+    assert 1 not in ord_ and 7 not in ord_
     assert ord_[0] == 8
     # fresche prima (dalla più vicina alla scadenza), a parità di ore il margine più alto, poi le scadute più recenti
     assert ord_[1:7] == [10, 2, 9, 3, 4, 5]
-    assert set(ord_[7:]) == {6, 7}
+    assert ord_[7:] == [6]
 
 
 def test_tentate_da_poco_senza_esito_si_saltano():
@@ -96,6 +96,9 @@ def _giro(righe, esiti, sul_sito=()):
     v_mark, v_ctrl, v_as, v_sb = V._mark, tr._controlla_annuncio, tr._client_as, tr._client_subito
     v_t = dict(tr._freschezza_contata)
     tr._rinfresco_tentati.clear()
+    tr._rinfresco_pausa["fino"] = 0.0
+    v_reg = tr.registra_sparita
+    misure = []
     try:
         V._mark = lambda conn, lid, st, price=None, motivo=None, sito=False: segnati.append((lid, st, motivo, sito))
 
@@ -105,16 +108,20 @@ def _giro(righe, esiti, sul_sito=()):
         tr._controlla_annuncio = ctrl
         tr._client_as = tr._client_subito = lambda: object()
         tr._freschezza_contata["t"] = 1e18           # niente conteggio in questo test
-        st = tr.giro_rinfresca(_Conn(righe), sul_sito)
+        tr.registra_sparita = lambda conn, lid: misure.append(lid)
+        conn = _Conn(righe)
+        st = tr.giro_rinfresca(conn, sul_sito)
     finally:
         V._mark, tr._controlla_annuncio, tr._client_as, tr._client_subito = v_mark, v_ctrl, v_as, v_sb
         tr._freschezza_contata.update(v_t)
+        tr.registra_sparita = v_reg
+    _giro.conn, _giro.misure = conn, misure
     return st, segnati, lenient
 
 
 def test_giro_rinfresca_tiene_fresche_riporta_e_toglie_solo_con_prova():
     righe = [_riga(1, 40), _riga(2, 60, source="autoscout24"), _riga(3, 45), _riga(4, 50), _riga(5, 47, cat="non_conveniente")]
-    esiti = {1: ("attivo", "pagina_app"), 2: ("attivo", None), 3: ("scomparso", "404"), 4: ("errore", None)}
+    esiti = {1: ("attivo", None), 2: ("attivo", None), 3: ("scomparso", "404"), 4: ("errore", None)}
     st, segnati, lenient = _giro(righe, esiti)
     assert st["scelte"] == 4 and st["candidate"] == 5                     # la 5 (non buona, mai sul sito) no
     assert st["_tornati"] == [2] and st["tenute_fresche"] == 1 and st["_spariti"] == [3]
@@ -219,7 +226,7 @@ def test_telefoni_candidate_autoscout_letta_vale_prova_di_vita():
     try:
         os.environ["TR_PAUSA_S"] = "0"
         V._mark = lambda conn, lid, st, price=None, motivo=None, sito=False: segnati.append((lid, st))
-        tr._as_esito = lambda c, u: ("attivo", {"seller": {}}, None)
+        tr._as_esito = lambda c, u: ("attivo", {"seller": {}, "tracking": {"price": "5000"}}, None)
         tr._client_as = lambda: object()
         st = tr.telefoni_candidate(Conn([]), [7])
     finally:
@@ -229,6 +236,21 @@ def test_telefoni_candidate_autoscout_letta_vale_prova_di_vita():
         else:
             os.environ["TR_PAUSA_S"] = v[3]
     assert segnati == [(7, "attivo")] and st["autoscout24:rinfrescata"] == 1
+    # prezzo della pagina diverso da quello salvato: niente rinfresco (lo rivaluta la raccolta)
+    segnati.clear()
+    try:
+        os.environ["TR_PAUSA_S"] = "0"
+        V._mark = lambda conn, lid, st, price=None, motivo=None, sito=False: segnati.append((lid, st))
+        tr._as_esito = lambda c, u: ("attivo", {"seller": {}, "tracking": {"price": "5900"}}, None)
+        tr._client_as = lambda: object()
+        st = tr.telefoni_candidate(Conn([]), [7])
+    finally:
+        V._mark, tr._as_esito, tr._client_as = v[:3]
+        if v[3] is None:
+            os.environ.pop("TR_PAUSA_S", None)
+        else:
+            os.environ["TR_PAUSA_S"] = v[3]
+    assert segnati == [] and st["autoscout24:non_rinfrescata_prezzo"] == 1
 
 
 # ------------------------------------------------------------------ query vere su un Postgres temporaneo (se c'è)
@@ -264,6 +286,100 @@ def test_query_vere_rinfresco_e_conteggi():
     assert ord_[:3] == [2, 3, 6] and ord_[-1] == 8 and 5 not in ord_
     k = tr.conta_freschezza(c)
     assert k["fresche"] == 2 and k["in_scadenza"] == 1          # fresche: 1, 2 (attive, < 48 h); in scadenza: 2
-    assert k["fuori_freschezza"] == 5 and k["fuori_entro_7g"] == 4
-    assert k["buone_in_scadenza"] == 1 and k["buone_fuori"] == 4 and k["buone_fuori_7g_zona"] == 2   # 3 e 6 (8 fuori zona)
+    assert k["fuori_freschezza"] == 5 and k["fuori_entro_finestra"] == 4
+    assert k["buone_in_scadenza"] == 1 and k["buone_fuori"] == 4 and k["buone_fuori_finestra_zona"] == 2   # 3 e 6 (8 fuori zona)
     assert k["opportunita_fuori"] == 2 and k["candidato_fuori"] == 1
+
+
+# ------------------------------------------------------------------ correzioni del giudice (17/11)
+def test_prezzo_cambiato_non_rinfresca_e_manda_in_rivalutazione():
+    righe = [_riga(1, 60), _riga(2, 60), _riga(3, 40)]
+    esiti = {1: ("attivo", "prezzo_cambiato:6500"), 2: ("attivo", "prezzo_illeggibile"), 3: ("attivo", None)}
+    st, segnati, _ = _giro(righe, esiti)
+    assert [s[0] for s in segnati] == [3]                 # solo quella con il prezzo uguale
+    assert st["prezzo_cambiato"] == 1 and st["prezzo_illeggibile"] == 1 and st["_tornati"] == []
+    sql = [(q, p) for q, p in _giro.conn.sql if "stage='nuovo'" in q or "price_events" in q]
+    assert sql == [("UPDATE listings SET price_eur=%s, stage='nuovo' WHERE id=%s", (6500, 1)),
+                   ("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)", (1, 6500))]
+    assert 2 in tr._rinfresco_tentati                      # illeggibile = errore: riprova più tardi
+    tr._rinfresco_tentati.clear()
+
+
+def test_sparita_che_era_sul_sito_conta_come_del_sito():
+    righe = [_riga(1, 60), _riga(2, 60)]
+    st, segnati, _ = _giro(righe, {1: ("scomparso", "404"), 2: ("scomparso", "404")}, sul_sito={1})
+    assert sorted((s[0], s[3]) for s in segnati) == [(1, True), (2, False)] and _giro.misure == [1]
+
+
+def test_tanti_errori_di_fila_fermano_il_giro_e_mettono_in_pausa():
+    righe = [_riga(i, 40 + i / 100) for i in range(1, 30)]
+    vecchio = os.environ.get("TR_PARALLELI")
+    try:
+        os.environ["TR_PARALLELI"] = "1"
+        st, segnati, lenient = _giro(righe, {i: ("errore", None) for i in range(1, 30)})
+        assert st["fermato_errori"] == 1 and len(lenient) == 8 and st["subito:saltato"] == 21
+        assert tr._rinfresco_pausa["fino"] > 0
+    finally:
+        tr._rinfresco_tentati.clear()
+        if vecchio is None:
+            os.environ.pop("TR_PARALLELI", None)
+        else:
+            os.environ["TR_PARALLELI"] = vecchio
+    v = tr._freschezza_contata["t"]
+    try:                                                  # nel giro dopo (pausa attiva) non si apre niente
+        tr._freschezza_contata["t"] = 1e18
+        st = tr.giro_rinfresca(_Conn(righe), ())
+    finally:
+        tr._freschezza_contata["t"] = v
+        tr._rinfresco_pausa["fino"] = 0.0
+    assert st["in_pausa"] == 1 and st["_tornati"] == []
+
+
+APP = ('<script>self.__next_f.push([1,"{\\"ad\\":{\\"urn\\":\\"id:ad:612345678:list:1\\",\\"subject\\":\\"Fiat Panda\\",'
+       '\\"features\\":[{\\"uri\\":\\"/price\\",\\"values\\":[{\\"key\\":\\"5000\\",\\"value\\":\\"5.000 €\\"}]}]}}"])</script>')
+
+
+def _senza_pausa(fn):
+    v = os.environ.get("TR_PAUSA_S")
+    os.environ["TR_PAUSA_S"] = "0"
+    try:
+        return fn()
+    finally:
+        if v is None:
+            os.environ.pop("TR_PAUSA_S", None)
+        else:
+            os.environ["TR_PAUSA_S"] = v
+
+
+def test_subito_rinfresca_solo_con_lo_stesso_prezzo_nella_pagina():
+    assert tr.prezzo_subito_pagina(APP, "612345678") == 5000
+    r = {"id": 1, "source": "subito", "url": URL_SB, "price_eur": 5000}
+    ctrl = lambda r, testo, len_=False: _senza_pausa(lambda: tr._controlla_annuncio(r, None, _Cl(_R(200, testo)), None, lenient=len_))
+    assert ctrl(r, APP)[1:] == ("attivo", None)
+    r2 = dict(r, price_eur=4500)                          # rialzo: nella pagina 5.000, salvato 4.500
+    assert ctrl(r2, APP)[1:] == ("attivo", "prezzo_cambiato:5000")
+    # prezzo non leggibile (il titolo e un "price" restano, la pagina vale "attiva"): non si rinfresca
+    senza = APP.replace('{\\"uri\\":\\"/price\\",\\"values\\":[{\\"key\\":\\"5000\\",', '{\\"price\\":{\\"x\\":\\"y\\",')
+    assert tr.prezzo_subito_pagina(senza, "612345678") is None
+    assert ctrl(r, senza)[1:] == ("attivo", "prezzo_illeggibile")   # giro_rinfresca lo tratta come errore
+    # due prezzi diversi vicino all'urn: non si sceglie
+    due = APP.replace('}]}]}}', '}]},{\\"uri\\":\\"/price\\",\\"values\\":[{\\"key\\":\\"9000\\"}]}]}}')
+    assert tr.prezzo_subito_pagina(due, "612345678") is None
+    # la verifica delle auto del sito (lenient) non guarda il prezzo
+    assert ctrl(r2, APP, True)[1:] == ("attivo", "pagina_app")
+
+
+def test_autoscout_senza_prova_o_con_altro_prezzo_non_rinfresca():
+    import json as _j
+    det = {"tracking": {"price": "5000"}, "seller": {}}
+    pagina = ('<script id="__NEXT_DATA__" type="application/json">'
+              + _j.dumps({"props": {"pageProps": {"listingDetails": det}}}) + '</script>')
+    r = {"id": 2, "source": "autoscout24", "url": URL_AS, "price_eur": 5000}
+    ctrl = lambda r, testo, len_=False: _senza_pausa(
+        lambda: tr._controlla_annuncio(r, _Cl(_R(200, testo, url=URL_AS)), None, None, lenient=len_))
+    assert ctrl(r, pagina)[1:] == ("attivo", None)
+    tolto = pagina + "<div>Questo veicolo non è più disponibile</div>"
+    assert ctrl(r, tolto)[1:] == ("errore", "scritta_rimozione")
+    assert ctrl(dict(r, price_eur=4000), pagina)[1:] == ("attivo", "prezzo_cambiato:5000")
+    assert ctrl(r, pagina.replace('"5000"', '""'))[1:] == ("attivo", "prezzo_illeggibile")
+    assert ctrl(r, tolto, True)[1] == "attivo"            # verifica delle auto del sito: come prima
