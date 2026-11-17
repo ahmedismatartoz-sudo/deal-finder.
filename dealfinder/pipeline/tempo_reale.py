@@ -476,13 +476,9 @@ def _controlla_annuncio(r, cas, csb, cfb=None, lenient: bool = True):
         if lenient:
             st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
             return r, st, motivo
-        reg = _Registra(cas)
-        st, det, motivo = _as_esito(reg, r["url"])
+        st, det, motivo = _as_vivo_con_prova(cas, r["url"])
         if st != "attivo":
             return r, st, motivo
-        low = _testo_chiaro(getattr(reg.ultima, "text", "") or "")
-        if any(k in low for k in _AS_TOLTO):
-            return r, "errore", "scritta_rimozione"
         return r, st, _confronta_prezzo(r, _prezzo_as(det))
     if r["source"] == "facebook":
         return r, (_fb_stato(cfb, r["url"]) if cfb is not None else "errore"), None
@@ -494,13 +490,15 @@ def _controlla_annuncio(r, cas, csb, cfb=None, lenient: bool = True):
     reg = _Registra(csb)
     st, motivo = subito_esito_con_prova(reg, r["url"], lenient=False)
     if st != "attivo":
-        return r, st, motivo
+        return r, st, (motivo or _motivo_blocco(reg)) if st == "errore" else motivo
     m = _RE_ID_SUBITO.search(r["url"] or "")
-    return r, st, _confronta_prezzo(r, prezzo_subito_pagina(getattr(reg.ultima, "text", "") or "", m.group(1) if m else None))
+    return r, st, _confronta_prezzo(r, prezzo_subito_pagina(getattr(reg.ultima, "text", "") or "",
+                                                            m.group(1) if m else None, salvato=r.get("price_eur")))
 
 
 _AS_TOLTO = ("non è più disponibile", "annuncio non disponibile", "annuncio scaduto", "annuncio rimosso",
              "veicolo non è più disponibile", "is no longer available")
+_RE_NEXT_DATA = re.compile(r'<script[^>]*id=["\']__NEXT_DATA__["\'][^>]*>.*?</script>', re.S | re.I)
 
 
 class _Registra:
@@ -509,17 +507,66 @@ class _Registra:
         self.client, self.ultima = client, None
 
     def get(self, url, *a, **k):
+        self.ultima = None
         self.ultima = self.client.get(url, *a, **k)
         return self.ultima
 
 
+def _motivo_blocco(reg) -> str | None:
+    """17/11 (giudice): 'blocco:<codice>' se l'errore è un blocco vero (403, 429 o eccezione, cioè nessuna risposta);
+    None per gli altri errori (pagina non riconosciuta, scritta di rimozione...). Solo i blocchi fermano il rinfresco."""
+    risposta = getattr(reg, "ultima", None)
+    if risposta is None:
+        return "blocco:eccezione"
+    code = getattr(risposta, "status_code", None)
+    return f"blocco:{code}" if code in (403, 429) else None
+
+
+def _as_vivo_con_prova(cas, url: str) -> tuple[str, dict | None, str | None]:
+    """AutoScout24 con la prova che l'annuncio è vivo (rinfresco e telefoni_candidate, 17/11 giudice): la pagina deve
+    avere listingDetails E nessuna scritta di rimozione FUORI da __NEXT_DATA__ (nei dati JSON ci sono anche testi di
+    servizio: lì una frase non è una prova). Scritta trovata = ('errore', det, 'scritta_rimozione'): nessuna modifica.
+    Errore di rete, 403 o 429 = motivo 'blocco:...'."""
+    reg = _Registra(cas)
+    st, det, motivo = _as_esito(reg, url)
+    if st == "errore":
+        return st, det, motivo or _motivo_blocco(reg)
+    if st != "attivo":
+        return st, det, motivo
+    low = _testo_chiaro(_RE_NEXT_DATA.sub(" ", getattr(reg.ultima, "text", "") or ""))
+    if any(k in low for k in _AS_TOLTO):
+        return "errore", det, "scritta_rimozione"
+    return st, det, motivo
+
+
+VARIAZIONE_MAX = 0.40       # oltre il 40% di differenza dal prezzo salvato la lettura non è creduta (prudenza)
+
+
+def _variazione_plausibile(prezzo, salvato) -> bool:
+    if not prezzo or not salvato:
+        return True
+    return abs(int(prezzo) - int(salvato)) <= VARIAZIONE_MAX * int(salvato)
+
+
 def _confronta_prezzo(r, prezzo) -> str | None:
-    """None se il prezzo della pagina è quello salvato; 'prezzo_cambiato:<nuovo>' se è diverso; 'prezzo_illeggibile'."""
+    """None se il prezzo della pagina è quello salvato; 'prezzo_cambiato:<nuovo>' se è diverso; 'prezzo_illeggibile'
+    anche se la differenza supera VARIAZIONE_MAX (una lettura sbagliata scriverebbe un prezzo falso: con un prezzo più
+    basso il margine verrebbe gonfiato)."""
     if not prezzo:
         return "prezzo_illeggibile"
     if r.get("price_eur") is not None and int(prezzo) == int(r["price_eur"]):
         return None
+    if not _variazione_plausibile(prezzo, r.get("price_eur")):
+        return "prezzo_illeggibile"
     return f"prezzo_cambiato:{int(prezzo)}"
+
+
+def segna_prezzo_cambiato(conn, lid: int, nuovo: int) -> None:
+    """Annuncio vivo con un altro prezzo: come nella raccolta, prezzo nuovo, evento 'prezzo' e stage 'nuovo' (la
+    valutazione si rifà col prezzo nuovo; M/R e margine del prezzo vecchio non restano sul sito)."""
+    conn.execute("UPDATE listings SET price_eur=%s, stage='nuovo' WHERE id=%s", (int(nuovo), lid))
+    conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)", (lid, int(nuovo)))
+    conn.commit()
 
 
 def _prezzo_as(det) -> int | None:
@@ -534,32 +581,100 @@ def _prezzo_as(det) -> int | None:
         return None
 
 
-_RE_PREZZO_SUB = re.compile(r'\\*"uri\\*"\s*:\s*\\*"/price\\*"\s*,\s*\\*"values\\*"\s*:\s*\[\s*\{\s*\\*"key\\*"\s*:\s*\\*"(\d{2,7})\\*"')
+# 17/11 (giudice): la feature /price in qualsiasi ordine delle chiavi: {"uri":"/price", ...altre..., "values":[...]},
+# {"values":[...], "uri":"/price"} oppure "/price":{...}; anche con le virgolette escapate (\") e "\/price".
+_RE_PRICE_URI = re.compile(r'\\*"uri\\*"\s*:\s*\\*"\\*/price\\*"')
+_RE_PRICE_CHIAVE = re.compile(r'\\*"\\*/price\\*"\s*:\s*\{')
+_RE_PRICE_KEY = re.compile(r'\\*"key\\*"\s*:\s*\\*"(\d{2,7})\\*"')
+_RE_ALTRO_URN = re.compile(r"ad:(\d{5,}):")
 
 
-def prezzo_subito_pagina(text: str, numero: str | None) -> int | None:
-    """Prezzo dell'annuncio Subito dalla pagina: dai dati __NEXT_DATA__ (feature /price) o, nelle pagine App Router,
-    dalla feature /price vicina all'urn di QUESTO annuncio (entro FINESTRA_URN). Più prezzi diversi o nessuno = None."""
+def _oggetto_intorno(text: str, pos: int, lim: int = 3000) -> str:
+    """L'oggetto JSON { ... } che contiene la posizione pos (parentesi contate, al massimo lim caratteri per parte)."""
+    a, prof = None, 0
+    for i in range(pos - 1, max(-1, pos - 1 - lim), -1):
+        ch = text[i]
+        if ch == "}":
+            prof += 1
+        elif ch == "{":
+            if prof == 0:
+                a = i
+                break
+            prof -= 1
+    if a is None:
+        return ""
+    prof = 0
+    for j in range(a, min(len(text), a + 2 * lim)):
+        ch = text[j]
+        if ch == "{":
+            prof += 1
+        elif ch == "}":
+            prof -= 1
+            if prof == 0:
+                return text[a:j + 1]
+    return ""
+
+
+def _prezzo_feature(text: str, inizio: int, fine: int) -> tuple[int, int | None] | None:
+    """La prima feature /price che comincia in [inizio, fine): (posizione, prezzo o None se non leggibile)."""
+    cand = []
+    m1 = _RE_PRICE_URI.search(text, inizio, fine)
+    if m1:
+        cand.append((m1.start(), _oggetto_intorno(text, m1.start())))
+    m2 = _RE_PRICE_CHIAVE.search(text, inizio, fine)
+    if m2:
+        cand.append((m2.start(), _oggetto_intorno(text, m2.end())))
+    if not cand:
+        return None
+    pos, ogg = min(cand, key=lambda x: x[0])
+    chiavi = {int(x) for x in _RE_PRICE_KEY.findall(ogg)}
+    return pos, (chiavi.pop() if len(chiavi) == 1 else None)
+
+
+def prezzo_subito_pagina(text: str, numero: str | None, salvato: int | None = None) -> int | None:
+    """Prezzo dell'annuncio Subito dalla pagina. __NEXT_DATA__: la feature /price dell'item, solo se l'urn dell'item è
+    quello di QUESTO annuncio. Pagine App Router: per ogni urn dell'annuncio la feature /price più VICINA DOPO l'urn
+    (entro FINESTRA_URN), purché in mezzo non ci sia l'urn di un'altra auto. Più prezzi diversi, nessuno, o (con
+    salvato) una differenza oltre VARIAZIONE_MAX dal prezzo salvato = None (lettura non creduta: si resta prudenti)."""
     from ..collectors.base import find_key, next_data
+
+    def plausibile(p):
+        return p if (p and _variazione_plausibile(p, salvato)) else None
+    if not text:
+        return None
     try:
         data = next_data(text)
     except Exception:
         data = None
     item = find_key(data, "ad", "item") if isinstance(data, dict) else None
-    if isinstance(item, dict):
-        for f in item.get("features") or []:
-            if isinstance(f, dict) and f.get("uri") == "/price":
-                try:
-                    return int(str(((f.get("values") or [{}])[0] or {}).get("key")))
-                except (TypeError, ValueError):
-                    return None
-    if not numero or not text:
+    if isinstance(item, dict) and numero:
+        urn = str(item.get("urn") or "")
+        if re.search(r"(?:ad:%s:|list:%s(?!\d))" % (re.escape(numero), re.escape(numero)), urn):
+            feats = item.get("features") or []
+            coppie = feats.items() if isinstance(feats, dict) else ((None, f) for f in feats)
+            for chiave, f in coppie:                     # lista di feature o dizionario {"/price": {...}}
+                if isinstance(f, dict) and (f.get("uri") == "/price" or chiave == "/price"):
+                    vals = f.get("values") or [f]
+                    try:
+                        return plausibile(int(str((vals[0] or {}).get("key"))))
+                    except (TypeError, ValueError, AttributeError, IndexError):
+                        return None
+    if not numero:
         return None
     trovati = set()
     for mu in re.finditer(r"(?:ad:%s:|list:%s(?!\d))" % (re.escape(numero), re.escape(numero)), text):
-        pezzo = text[max(0, mu.start() - FINESTRA_URN):mu.end() + FINESTRA_URN]
-        trovati.update(int(x) for x in _RE_PREZZO_SUB.findall(pezzo))
-    return trovati.pop() if len(trovati) == 1 else None
+        fine = min(len(text), mu.end() + FINESTRA_URN)
+        pf = _prezzo_feature(text, mu.end(), fine)
+        if pf is None:
+            continue
+        pos, prezzo = pf
+        altri = [x for x in _RE_ALTRO_URN.findall(text, mu.end(), pos) if x != numero]
+        if altri:
+            continue                        # la /price più vicina è di un'altra auto
+        if prezzo is None:
+            return None                     # feature /price non leggibile: non si indovina
+        trovati.add(prezzo)
+    return plausibile(trovati.pop()) if len(trovati) == 1 else None
 
 
 def giro_verifica(conn, ids: list[int]) -> Counter:
@@ -611,25 +726,42 @@ _rinfresco_tot: Counter = Counter()             # totali da avvio (riga FRESCHEZ
 _freschezza_contata = {"t": 0.0, "ultimo": None}
 _rinfresco_pausa = {"fino": 0.0}
 
+def motivo_stadio_sql(col: str = "l.stage_reason") -> str:
+    """Il motivo dello stadio tagliato al primo '|' (es. 'opportunita | scomparso (404)' -> 'opportunita'), come
+    scovo.motivo_stadio_sql di notte-09 (stesso nome e stesso testo: al merge si usa quello di scovo)."""
+    return f"btrim(split_part(COALESCE({col}, ''), '|', 1))"
+
+
 # stessa base di scovo.LIST_SQL, senza la condizione di freschezza
-_BASE_FRESCHEZZA = ("l.stage='approfondito' AND l.status='attivo' "
-                    "AND l.stage_reason IN ('opportunita','da_verificare','incidentata')")
+_BASE_FRESCHEZZA = ("l.stage='approfondito' AND l.status='attivo' AND " + motivo_stadio_sql("l.stage_reason")
+                    + " IN ('opportunita','affidabile','da_verificare','incidentata')")
+
+# 17/11 (giudice): prezzo cambiato (o annuncio riapparso) DOPO l'ultima valutazione: M/R e margine sono del prezzo
+# vecchio, quindi niente rinfresco finché la valutazione non si rifà. Ultima valutazione = valutazioni_policy.computed_at,
+# senza = valuations.created_at (alias v: l'ultima valuations dell'auto). Più prudente di scovo.PREZZO_DOPO_VALUTAZIONE_SQL
+# di notte-09 (lì serve anche il prezzo diverso da quello valutato): qui basta l'evento, e vale anche 'riapparso'.
+PREZZO_DOPO_VALUTAZIONE_SQL = """EXISTS (SELECT 1 FROM price_events pe WHERE pe.listing_id=l.id
+         AND pe.event IN ('prezzo','riapparso')
+         AND pe.at > COALESCE((SELECT max(vp.computed_at) FROM valutazioni_policy vp WHERE vp.listing_id=l.id),
+                              v.created_at))"""
 
 RINFRESCO_SQL = """
 WITH vecchie AS (
   SELECT l.id, l.source, l.url, l.price_eur, l.telefono_ok, upper(coalesce(l.province, '')) AS prov,
          EXTRACT(EPOCH FROM now() - GREATEST(l.last_checked_at, l.last_seen_at)) / 3600.0 AS ore
   FROM listings l
+  JOIN LATERAL (SELECT created_at FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
   WHERE """ + _BASE_FRESCHEZZA + """ AND l.source IN ('subito','autoscout24')
     AND GREATEST(l.last_checked_at, l.last_seen_at) < now() - %(dopo)s * interval '1 hour'
     AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - %(fino)s * interval '1 hour'
+    AND NOT """ + PREZZO_DOPO_VALUTAZIONE_SQL + """
   ORDER BY GREATEST(l.last_checked_at, l.last_seen_at) DESC
   LIMIT %(quante)s
 )
-SELECT v.id, v.source, v.url, v.price_eur, v.telefono_ok, v.prov, v.ore, c.categoria, c.margine,
-       EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id = v.id) AS top
-FROM vecchie v
-LEFT JOIN LATERAL (SELECT vp.categoria, vp.margine FROM valutazioni_policy vp WHERE vp.listing_id = v.id
+SELECT vc.id, vc.source, vc.url, vc.price_eur, vc.telefono_ok, vc.prov, vc.ore, c.categoria, c.margine,
+       EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id = vc.id) AS top
+FROM vecchie vc
+LEFT JOIN LATERAL (SELECT vp.categoria, vp.margine FROM valutazioni_policy vp WHERE vp.listing_id = vc.id
                    ORDER BY vp.computed_at DESC LIMIT 1) c ON true
 """
 
@@ -765,7 +897,7 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
         return stats
     cas = _client_as() if any(r["source"] == "autoscout24" for r in scelte) else None
     csb = _client_subito() if any(r["source"] == "subito" for r in scelte) else None
-    tornati, spariti = [], []
+    tornati, spariti, cambiati = [], [], []
     sul_sito = {int(i) for i in sul_sito or ()}
     stop_n = int(os.environ.get("RINFRESCA_STOP_ERRORI", "8"))
     di_fila = {"n": 0}
@@ -774,7 +906,10 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
         if di_fila["n"] >= stop_n:
             return r, "saltato", None           # giro fermato: il sito risponde solo errori
         out = _controlla_annuncio(r, cas, csb, None, lenient=False)
-        di_fila["n"] = di_fila["n"] + 1 if out[1] == "errore" else 0
+        # 17/11 (giudice): contano solo i blocchi veri (403, 429, eccezioni), non la scritta di rimozione o una
+        # pagina non riconosciuta
+        bloccato = out[1] == "errore" and str(out[2] or "").startswith("blocco")
+        di_fila["n"] = di_fila["n"] + 1 if bloccato else 0
         return out
 
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
@@ -793,12 +928,9 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
             if st == "attivo" and (motivo or "").startswith("prezzo_cambiato:"):
                 # annuncio vivo ma con un altro prezzo: NON si rinfresca (M/R e margine sono del prezzo vecchio);
                 # come nella raccolta: prezzo nuovo, evento 'prezzo' e stage 'nuovo' = rivalutazione
-                nuovo = int(motivo.split(":", 1)[1])
-                conn.execute("UPDATE listings SET price_eur=%s, stage='nuovo' WHERE id=%s", (nuovo, r["id"]))
-                conn.execute("INSERT INTO price_events (listing_id, event, price_eur) VALUES (%s,'prezzo',%s)",
-                             (r["id"], nuovo))
-                conn.commit()
+                segna_prezzo_cambiato(conn, r["id"], int(motivo.split(":", 1)[1]))
                 stats["prezzo_cambiato"] += 1
+                cambiati.append(r["id"])            # se è sull'elenco esce subito (non aspetta il ricalcolo)
                 continue
             era_sul_sito = int(r["id"]) in sul_sito
             _mark(conn, r["id"], st, r.get("price_eur"), motivo=motivo, sito=(st == "scomparso" and era_sul_sito))
@@ -822,6 +954,7 @@ def giro_rinfresca(conn, sul_sito=()) -> Counter:
             _rinfresco_tot[k] += v
     stats["_tornati"] = tornati            # type: ignore[assignment]
     stats["_spariti"] = spariti            # type: ignore[assignment]
+    stats["_prezzo_cambiato"] = cambiati   # type: ignore[assignment]
     return stats
 
 
@@ -1143,10 +1276,13 @@ def telefoni_candidate(conn, ids) -> Counter:
     if prio:
         TN.leggi_conto(conn)
     rows = conn.execute(
-        "SELECT id, source, source_id, url, make, model, price_eur, province FROM listings WHERE id = ANY(%s) "
-        "AND status='attivo' AND (source = 'autoscout24' OR (source = 'subito' AND (%s OR id = ANY(%s)))) "
-        "AND telefono_ok IS NOT TRUE AND (telefono_at IS NULL OR telefono_at < now() - make_interval(hours => %s)) "
-        "ORDER BY (id = ANY(%s)) DESC, telefono_at NULLS FIRST LIMIT %s",
+        "SELECT l.id, l.source, l.source_id, l.url, l.make, l.model, l.price_eur, l.province, "
+        + PREZZO_DOPO_VALUTAZIONE_SQL + " AS prezzo_dopo_valutazione FROM listings l "
+        "LEFT JOIN LATERAL (SELECT created_at FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v "
+        "ON true WHERE l.id = ANY(%s) "
+        "AND l.status='attivo' AND (l.source = 'autoscout24' OR (l.source = 'subito' AND (%s OR l.id = ANY(%s)))) "
+        "AND l.telefono_ok IS NOT TRUE AND (l.telefono_at IS NULL OR l.telefono_at < now() - make_interval(hours => %s)) "
+        "ORDER BY (l.id = ANY(%s)) DESC, l.telefono_at NULLS FIRST LIMIT %s",
         (ids, os.environ.get("TEL_CAND_SUBITO", "0") == "1",       # Subito: la pagina pubblica dice sempre showPhone=false
          prio, int(os.environ.get("TEL_CAND_ORE", "12")), prio, int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
     if not rows:
@@ -1159,7 +1295,17 @@ def telefoni_candidate(conn, ids) -> Counter:
         tel = None
         try:
             if r["source"] == "autoscout24":
-                st, det, motivo = _as_esito(cas, r["url"])
+                # 17/11 (giudice): lo stesso controllo del rinfresco (_controlla_annuncio): listingDetails E nessuna
+                # scritta di rimozione fuori da __NEXT_DATA__
+                st, det, motivo = _as_vivo_con_prova(cas, r["url"])
+                if st == "errore" and motivo == "scritta_rimozione":
+                    # dati e scritta insieme: nessuna decisione (né rinfresco né numero), si riprova tra ~2 ore
+                    stats["autoscout24:scritta_rimozione"] += 1
+                    rip = max(0, int(os.environ.get("TEL_CAND_ORE", "12")) - int(os.environ.get("TEL_CAND_RIPROVA_ORE", "2")))
+                    conn.execute("UPDATE listings SET telefono_at=now() - make_interval(hours => %s) WHERE id=%s",
+                                 (rip, r["id"]))
+                    conn.commit()
+                    continue
                 if st == "errore":
                     stats["errore"] += 1
                     continue
@@ -1173,10 +1319,18 @@ def telefoni_candidate(conn, ids) -> Counter:
                     continue
                 # 17/11 (freschezza): pagina con i dati dell'annuncio = prova che è vivo, come nella verifica
                 # (giudice 17/11) solo se il prezzo della pagina è quello salvato: un prezzo diverso lo rivaluta la raccolta
-                if _confronta_prezzo(r, _prezzo_as(det)) is None:
+                # (giudice 17/11 bis) né se il prezzo è cambiato (o l'annuncio è riapparso) dopo l'ultima valutazione
+                esito_prezzo = _confronta_prezzo(r, _prezzo_as(det))
+                if r.get("prezzo_dopo_valutazione"):
+                    stats["autoscout24:non_rinfrescata_da_rivalutare"] += 1
+                elif esito_prezzo is None:
                     from .verify import _mark
                     _mark(conn, r["id"], "attivo", r.get("price_eur"))
                     stats["autoscout24:rinfrescata"] += 1
+                elif esito_prezzo.startswith("prezzo_cambiato:"):
+                    # come giro_rinfresca: prezzo nuovo, evento 'prezzo', stage 'nuovo' (si rivaluta)
+                    segna_prezzo_cambiato(conn, r["id"], int(esito_prezzo.split(":", 1)[1]))
+                    stats["autoscout24:prezzo_cambiato"] += 1
                 else:
                     stats["autoscout24:non_rinfrescata_prezzo"] += 1
                 tel = telefono_autoscout(det)

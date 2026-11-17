@@ -3408,7 +3408,9 @@ def _tempo_reale():
                     rf = None
                     lg.warning("TR RINFRESCO non riuscito: %s", str(e)[:300])
                 if rf:
+                    # tolte subito dall'elenco anche le auto col prezzo cambiato (margine del prezzo vecchio)
                     tornati, via = rf.pop("_tornati", []) or [], set(rf.pop("_spariti", []) or [])
+                    via |= set(rf.pop("_prezzo_cambiato", []) or [])
                     if via:
                         _elenco["items"] = [it for it in _elenco["items"] if it["id"] not in via]
                     lg.warning("TR RINFRESCO tornate %d, tolte %d: %s", len(tornati), len(via), dict(rf))
