@@ -1534,7 +1534,7 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
         stats["testi_letti"] = len(senza_testo)
         for k in range(0, len(ids), 2000):
             for r in conn.execute(
-                    "SELECT id, seller_type, telefono_ok, price_flags, province, city, stage, stage_reason, damage_class "
+                    "SELECT id, seller_type, telefono_ok, price_flags, province, city, stage, stage_reason, damage_class, power_kw "
                     "FROM listings WHERE id = ANY(%s)", (ids[k:k + 2000],)).fetchall():
                 tx = _testo_da_bit(_testo_cache.get(_testo_chiave(r["id"], prezzi.get(r["id"]))))
                 flags = set(r.get("price_flags") or [])
@@ -1545,8 +1545,10 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
                     "promo": bool(tx.get("promo_testo") or flags & set(_FLAG_PROMO)), "solo_fin": bool(tx.get("solo_fin")),
                     "provincia": SR.provincia_di(r.get("province"), r.get("city")),
                     "scarto_cliente": r["id"] in scarti or r.get("stage") == "scartato",
-                    "da_verificare": r.get("stage_reason") == "da_verificare",
+                    # 17/11 (notte-09): motivo senza le note dopo " | " (scovo.motivo_stadio, come LIST_SQL)
+                    "da_verificare": scovo.motivo_stadio(r.get("stage_reason")) == "da_verificare",
                     "danno_dichiarato": (r.get("damage_class") or "") in SR.DANNI_DICHIARATI,
+                    "kw": r.get("power_kw"),          # 17/11: per i doppioni Subito/AutoScout24 (potenza ±5%)
                 }
                 if tx.get("loconte_testo") or (tx.get("loconte_comm_testo") and r.get("seller_type") == "commerciante"):
                     loconte.add(r["id"])
@@ -6638,8 +6640,11 @@ def _tempo_reale():
                                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0)""",
                                     (lid, _P.POLICY_VERSION + "+commercianti-top", v.get("M"), v.get("M"), v.get("R_finale"),
                                      v.get("n"), json.dumps(v.get("confronti") or [])[:200000], conf, (v.get("motivi") or [])[:5]))
+                                # 17/11 (notte-09): il motivo è la categoria ('opportunita'/'da_verificare') come nel tempo
+                                # reale; prima si scriveva la fiducia ('affidabile'), che LIST_SQL non leggeva
                                 conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=now(), "
-                                             "last_checked_at=now() WHERE id=%s", (conf, lid))
+                                             "last_checked_at=now() WHERE id=%s",
+                                             ("opportunita" if conf == "affidabile" else "da_verificare", lid))
                                 conn.commit()
                                 st["pubblicate"] += 1
                             except Exception as e:
