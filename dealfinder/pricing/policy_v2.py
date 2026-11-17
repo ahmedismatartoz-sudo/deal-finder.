@@ -210,7 +210,7 @@ def _testo(x: dict) -> str:
     return f"{x.get('version_raw') or ''} {x.get('title') or ''}"
 
 
-@functools.lru_cache(maxsize=100000)
+@functools.lru_cache(maxsize=20000)          # 17/11 (giudice): ~20.000 testi bastano, meno memoria sul worker
 def _scheda_testo(make, model, testo):
     from . import versione_tecnica as VT
     kw = VT.kw_da_testo(testo)
@@ -367,19 +367,27 @@ def prezzo_corretto(c: dict, t: dict, ya: float, ka: float, corr=None) -> float:
 
 _CARROZZERIE = [("commerciale", r"\bvan\b|\bcargo\b|furgon|autocarro|\bn1\b"),   # 6/11: Doblò Cargo, Panda Van
                 ("sw", r"sports? ?tourer|station ?wagon|sportswagon|\bsw\b|touring|avant|variant|wagon|kombi|estate|shooting ?brake"),
-                ("monovolume", r"active ?tourer|gran ?tourer|\btourer\b|sports ?van|golf ?plus"),   # 17/11: Golf Sportsvan/Plus
-                # 17/11: station wagon rialzate (A4/A6 allroad, Classe E All-Terrain, Volvo Cross Country) valgono più delle
-                # sw e delle berline: classe a sé (prima "allroad" non era riconosciuto e passava come berlina)
-                ("rialzata", r"allroad|all[\s-]?terrain|cross ?country"),
+                ("monovolume", r"active ?tourer|gran ?tourer|\btourer\b"),
                 ("grancoupe", r"gran ?coup[eé]"),
                 ("cabrio", r"cabrio|cabriolet|roadster|spider|spyder|convertible"),
                 ("coupe", r"coup[eé]")]
 
+# 17/11 (notte, poi giudice): carrozzerie NUOVE (Golf Sportsvan/Sports Van/Plus monovolume, station wagon "rialzate"
+# allroad/All-Terrain/Cross Country). SPENTE di default: con le colonne complete cambiavano le gemelle di 170 auto su
+# 300 rispetto a c9f2436 e per 17 alzavano M (una berlina rialzata o una Sportsvan non è sempre più economica/cara in
+# modo prevedibile, e la classe nuova toglie anche gemelle giuste). Si accendono solo insieme a GEMELLI_SCHEDA e dopo
+# una verifica sul mercato vero (tests/test_gemelli_versione.py: le prove le accendono a mano).
+CARROZZERIE_NUOVE = False
+_CARROZZERIE_NUOVE = [("rialzata", r"allroad|all[\s-]?terrain|cross ?country"),        # prima di "sw": A6 Avant allroad
+                      ("monovolume", r"sports? ?van|golf ?plus")]                       # prima di "commerciale" (\bvan\b)
+_RX_CARROZZERIE = [(n, re.compile(rx)) for n, rx in _CARROZZERIE]
+_RX_CARROZZERIE_NUOVE = [(n, re.compile(rx)) for n, rx in _CARROZZERIE_NUOVE] + _RX_CARROZZERIE
+
 
 def carrozzeria(c: dict) -> str | None:
     txt = f"{c.get('version_raw') or ''} {c.get('title') or ''}".lower()
-    for nome, rx in _CARROZZERIE:
-        if re.search(rx, txt):
+    for nome, rx in (_RX_CARROZZERIE_NUOVE if CARROZZERIE_NUOVE and GEMELLI_SCHEDA else _RX_CARROZZERIE):
+        if rx.search(txt):
             return nome
     return None
 
