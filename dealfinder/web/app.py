@@ -3568,6 +3568,15 @@ def _tempo_reale():
         # Un tentativo conta solo se il giudice non era bloccato (budget finito, illeggibile in attesa, AI spenta:
         # giudice.BLOCCATO); _visti si azzera ogni RIPROVA_GIUDICE_AZZERA_ORE (12) ore
         from ..ai import giudice as _GI
+
+        def _ids_in_cima() -> list:
+            # 17/11 cliente: le auto messe in cima dal pannello (es. Fiat 500 rossa) si ricontrollano per prime
+            try:
+                from . import impostazioni as _IMP
+                return [int(e.get("id") or e.get("listing_id")) for e in (_IMP.in_cima() or [])
+                        if e.get("id") or e.get("listing_id")]
+            except Exception:
+                return []
         _visti: set = set()
         _tentativi: dict = {}
         _max_tent = int(os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3"))
@@ -3613,9 +3622,10 @@ def _tempo_reale():
                                           OR (v.categoria = 'dati_insufficienti' AND v.computed_at >= %s::timestamptz
                                               AND v.computed_at < %s::timestamptz))
                                      AND NOT (v.listing_id = ANY(%s))
-                                   ORDER BY v.computed_at LIMIT %s""",
+                                   ORDER BY (v.listing_id = ANY(%s)) DESC, v.computed_at LIMIT %s""",
                                 (_PV.POLICY_VERSION, os.environ.get("RIPROVA_DI_DA", "2026-11-13T10:00:00Z"),
                                  os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"), list(_visti),
+                                 _ids_in_cima(),
                                  int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")))).fetchall()]
                             st = _Cr()
                             for k in range(0, len(ids), 20):
