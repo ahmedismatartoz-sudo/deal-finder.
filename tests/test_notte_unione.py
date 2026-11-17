@@ -28,3 +28,18 @@ def test_motivo_stadio_senza_spazio():
     from dealfinder.web import scovo
     assert scovo.motivo_stadio("truffa|scomparso") == "truffa"
     assert scovo.motivo_stadio("opportunita | scomparso (404)") == "opportunita"
+
+
+def test_due_prezzo_dopo_valutazione_non_collidono():
+    """notte-02 (rinfresco, più severa: basta un evento) e notte-09 (sito) hanno nomi diversi."""
+    from dealfinder.pipeline import tempo_reale as tr
+    from dealfinder.web import scovo
+    assert not hasattr(tr, "PREZZO_DOPO_VALUTAZIONE_SQL")
+    assert tr.PREZZO_DOPO_VALUTAZIONE_RINFRESCO_SQL != scovo.PREZZO_DOPO_VALUTAZIONE_SQL
+    assert "'riapparso'" in tr.PREZZO_DOPO_VALUTAZIONE_RINFRESCO_SQL
+    assert tr.PREZZO_DOPO_VALUTAZIONE_RINFRESCO_SQL in tr.RINFRESCO_SQL
+    assert tr.PREZZO_DOPO_VALUTAZIONE_RINFRESCO_SQL not in scovo.LIST_SQL
+    assert scovo.PREZZO_DOPO_VALUTAZIONE_SQL in scovo.LIST_SQL
+    # stessa base dell'elenco del sito
+    assert tr.motivo_stadio_sql is scovo.motivo_stadio_sql
+    assert tr._BASE_FRESCHEZZA in scovo.LIST_SQL.replace("\n  AND ", " AND ").replace("WHERE ", "")

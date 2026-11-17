@@ -3274,6 +3274,7 @@ def _azzera_no_subito():
 
 
 _misure = {"t": 0.0}
+_sul_sito_recenti: dict = {}      # 17/11: id delle auto viste sull'elenco negli ultimi 7 giorni -> ultima volta
 
 
 def _telefoni_scelte():
@@ -3406,6 +3407,28 @@ def _tempo_reale():
             try:
                 ids = [it["id"] for it in _elenco["items"] if it.get("fonte") in ("Subito", "AutoScout24", "Facebook Marketplace")]
                 st = tr.con_lucchetto("verifica", tr.giro_verifica, ids)
+                # 17/11 (freschezza): poi poche pagine tra le auto buone che stanno per uscire (o sono uscite) dal sito
+                # solo perché nessuno le ha ricontrollate: prima quelle che erano sul sito di recente
+                adesso = time.time()
+                for i in ids:
+                    _sul_sito_recenti[i] = adesso
+                for i in [i for i, t in _sul_sito_recenti.items() if adesso - t > 7 * 86400]:
+                    _sul_sito_recenti.pop(i, None)
+                try:
+                    rf = tr.con_lucchetto("rinfresca", tr.giro_rinfresca, list(_sul_sito_recenti))
+                except Exception as e:
+                    rf = None
+                    lg.warning("TR RINFRESCO non riuscito: %s", str(e)[:300])
+                if rf:
+                    # tolte subito dall'elenco anche le auto col prezzo cambiato (margine del prezzo vecchio)
+                    tornati, via = rf.pop("_tornati", []) or [], set(rf.pop("_spariti", []) or [])
+                    via |= set(rf.pop("_prezzo_cambiato", []) or [])
+                    if via:
+                        _elenco["items"] = [it for it in _elenco["items"] if it["id"] not in via]
+                    lg.warning("TR RINFRESCO tornate %d, tolte %d: %s", len(tornati), len(via), dict(rf))
+                    if tornati and st is None:      # la verifica non è girata qui: l'elenco si ricalcola lo stesso
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False, motivo="rinfresco")
                 if st is not None:
                     spariti = set(st.pop("_spariti", []) or [])
                     if spariti:                    # tolte subito dall'elenco, senza aspettare il ricalcolo
