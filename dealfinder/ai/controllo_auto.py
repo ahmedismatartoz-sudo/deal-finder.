@@ -417,7 +417,7 @@ _CAND_FINE = """
   JOIN LATERAL (SELECT margine, dati FROM valutazioni_policy v WHERE v.listing_id = l.id
                 ORDER BY v.computed_at DESC LIMIT 1) v ON true
   WHERE %(dz_attivo)s AND l.status = 'attivo' AND l.seller_type = 'commerciante' AND l.fuel ILIKE 'diesel%%'
-    AND l.stage = 'approfondito' AND l.stage_reason IN ('opportunita', 'da_verificare')
+    AND l.stage = 'approfondito' AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita', 'da_verificare')
     AND upper(l.province) = ANY(%(dz_prov)s) AND l.year >= %(dz_anno)s AND l.mileage_km <= %(dz_km)s
     AND COALESCE(l.damage_declared, false) = false
     AND v.margine >= COALESCE(NULLIF(v.dati->>'soglia', '')::int, 1500)
@@ -442,7 +442,7 @@ WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS
        AND """ + _TENTATIVI_FOTO + """ < """ + str(MAX_TENTATIVI_FOTO) + """)
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz))
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur AND l.price_eur < %(sa_supercar)s
-       AND l.stage_reason IS DISTINCT FROM 'incidentata'
+       AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) <> 'incidentata'
        AND NULLIF(vp.riassunto->>'M', '')::numeric - l.price_eur > %(sa_min)s
        AND COALESCE(d.truffa, 0) >= %(sa_pulita)s)
 ORDER BY (d.listing_id IS NULL) DESC
@@ -482,7 +482,8 @@ def sconto_fermo(r: dict) -> bool:
     from ..web.sito_regole import Regole
     if r.get("d_fonte") == "claude" or r.get("d_prezzo") is None:
         return False
-    if r.get("stage_reason") == "incidentata" or float(r.get("price_eur") or 0) >= SA_SUPERCAR:
+    from ..web.scovo import motivo_stadio     # 17/11 (notte-09): "incidentata | scomparso" resta incidentata
+    if motivo_stadio(r.get("stage_reason")) == "incidentata" or float(r.get("price_eur") or 0) >= SA_SUPERCAR:
         return False                              # come il sito: incidentate e supercar non hanno il limite dello sconto
     if r.get("price_eur") is not None and int(r["d_prezzo"]) != int(r["price_eur"]):
         return False

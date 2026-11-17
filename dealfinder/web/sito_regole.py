@@ -127,11 +127,15 @@ def _comuni() -> dict:
                 out[_norm_citta(v.get("comune") or k)] = str(v.get("pv") or "").upper()
         except Exception:
             pass
-        try:
-            for c, p in json.loads((base / "comuni_sesto.json").read_text()):
-                out.setdefault(_norm_citta(c), str(p).upper())
-        except Exception:
-            pass
+        # 17/11 (notte-09): anche l'elenco completo dei comuni delle province dei lead (data/comuni_zona_lead.json, già
+        # usato da pipeline/lead_comuni): +212 comuni (BG 92, VA 34, CO 31...) che senza sigla nell'annuncio finivano
+        # in "provincia_sconosciuta" al passo zona. Solo dati: le province della zona non cambiano.
+        for nome in ("comuni_sesto.json", "comuni_zona_lead.json"):
+            try:
+                for c, p in json.loads((base / nome).read_text()):
+                    out.setdefault(_norm_citta(c), str(p).upper())
+            except Exception:
+                pass
         for k, v in _CAPOLUOGHI.items():
             out[_norm_citta(k)] = v
         _COMUNI = out
@@ -295,6 +299,10 @@ def r_valutata(it, g: Regole):
     pv = it.get("pv")
     if not isinstance(pv, dict):
         return "senza_valutazione"
+    # 17/11 (notte-09, giudice): prezzo cambiato dopo la valutazione (scovo.PREZZO_DOPO_VALUTAZIONE_SQL): il margine
+    # salvato è del prezzo vecchio. Fuori finché il ricalcolo non la rivaluta (nessuna regola cambia: è un dato vecchio)
+    if it.get("prezzo_dopo_valutazione"):
+        return "prezzo_cambiato_da_rivalutare"
     if pv.get("categoria") == "dati_insufficienti":
         rip = _r(it).get("ripiego")
         if not (g.ripiego and isinstance(rip, dict) and rip.get("margine") is not None and rip.get("M")):
@@ -912,6 +920,11 @@ class Funnel:
                            **({"motivi": motivi} if motivi else {})})
 
 
+# 17/11 (notte-09): motivi da scrivere sempre nel SITO_FUNNEL (auto della zona perse per un dato mancante, non per una
+# regola): senza provincia ricavabile si esce al passo zona come "provincia_sconosciuta"
+MOTIVI_SEMPRE = ("provincia_sconosciuta", "prezzo_cambiato_da_rivalutare")
+
+
 def _applica(items, nome, f, g, fun: Funnel):
     from collections import Counter
     dentro, motivi, tolti = [], Counter(), []
@@ -922,7 +935,11 @@ def _applica(items, nome, f, g, fun: Funnel):
             tolti.append(it.get("id"))
         else:
             dentro.append(it)
-    fun.passo(nome, items, dentro, dict(motivi.most_common(12)))
+    tieni = dict(motivi.most_common(12))
+    for m in MOTIVI_SEMPRE:                 # 17/11: si vedono anche quando non sono tra i 12 più frequenti
+        if motivi.get(m):
+            tieni[m] = motivi[m]
+    fun.passo(nome, items, dentro, tieni)
     fun.tolti[nome] = tolti
     return dentro
 

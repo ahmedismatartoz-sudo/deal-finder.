@@ -156,7 +156,7 @@ CASCATA_ITALIA_MAX = 4000            # righe al massimo per gruppo (memoria: 512
 _SPARITE_SQL = _COLONNE_MERCATO + (
     "WHERE status='scomparso' AND disappeared_at > now() - make_interval(days => %s) "
     "AND make=%s AND model=%s AND fuel=%s AND price_eur IS NOT NULL "
-    "AND split_part(COALESCE(stage_reason, ''), ' |', 1) NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti') "
+    "AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti') "
     "AND ({home}) ORDER BY disappeared_at DESC LIMIT 3000")
 _ITALIA_TUTTI_SQL = (_COLONNE_MERCATO + "WHERE " + _STATO_SQL + " AND make=%s AND model=%s AND fuel=%s "
                      "AND price_eur IS NOT NULL ORDER BY last_seen_at DESC LIMIT " + str(CASCATA_ITALIA_MAX))
@@ -220,7 +220,7 @@ def _sparite(conn, key: tuple, giorni: int) -> list[dict]:
     from ..store import HOME_REGION_SQL
     righe = _righe(conn, _SPARITE_SQL.format(home=f"{NORD_SQL} OR {HOME_REGION_SQL}"), (giorni,) + tuple(key))
     return [dict(m, fonte_confronto="venduta",
-                 stage_reason=(str(m.get("stage_reason") or "").split(" |")[0].strip() or None)) for m in righe]
+                 stage_reason=(str(m.get("stage_reason") or "").split("|")[0].strip() or None)) for m in righe]
 
 
 def _dati_cascata(conn, cache: dict, key: tuple, quale: str, giorni: int) -> list[dict]:
@@ -505,7 +505,8 @@ UTIL_SQL = ("SELECT l.id FROM listings l "
             "AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s AND l.province = ANY(%(prov)s) "
             "AND l.last_seen_at > now() - interval '14 days' AND l.source IN ('subito','autoscout24','facebook') "
             "AND COALESCE(l.damage_class, 'sconosciuto') IN ('nessuno','sconosciuto') AND NOT COALESCE(l.problem_search, false) "
-            "AND COALESCE(l.stage_reason, '') NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti') "
+            # 17/11 (notte-09): motivo base (= scovo.motivo_stadio_sql): "truffa | scomparso" resta fuori
+            "AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) NOT IN ('doppione','truffa','prezzo_finto','dati_incoerenti') "
             "AND COALESCE(l.stage_reason, '') NOT LIKE 'analisi_manuale%%'")      # scartate a mano: mai ripubblicate
 
 _UTIL_LOCK = __import__("threading").Lock()

@@ -1242,7 +1242,8 @@ def riassunto(v: dict) -> dict:
             "totale_costi", "campione", "policy", "metodo", "M_fonte", "prudente_pochi", "pochi_confronti", "vr_accordo",
             "vr_poche_gemelle", "policy_rev", "regole", "R_da", "vr_solo_modello", "serve_controllo_ai",
             "costo_difetti_incluso", "motivo_esclusione", "fonte_valutazione", "da_trattare", "netto",
-            "giorni_vendita_commercianti", "n_dati_rivendita", "dispersione", "R_commercianti", "fonte_confronti")
+            "giorni_vendita_commercianti", "n_dati_rivendita", "dispersione", "R_commercianti", "fonte_confronti",
+            "acquisto")     # 17/11 (notte-09): prezzo usato dalla valutazione (scovo.PREZZO_DOPO_VALUTAZIONE_SQL)
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

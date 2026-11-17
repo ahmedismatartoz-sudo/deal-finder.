@@ -75,7 +75,8 @@ SOGLIE_PV = _soglie_pv()
 # nell'elenco già calcolato (dopo tutte le regole del sito, prima dei tetti) si tiene UNA sola auto per coppia.
 # Stessa auto = siti diversi, stessa marca e modello, stesso anno, km entro ±3%, prezzo entro ±7%, stessa provincia,
 # stessa alimentazione e cambio (se noti da tutte e due le parti), potenza entro ±5% (se nota).
-# Si tiene quella con il numero, poi con più foto, poi col margine più alto, poi l'annuncio più vecchio (id più basso).
+# Si tiene quella con il numero, poi quella del privato (17/11), poi con più foto, poi col margine più alto, poi l'annuncio
+# più vecchio (id più basso).
 # Interruttore SITO_DOPPIONI ("0" = spento, come prima).
 DOPPIONI_KM = .03
 DOPPIONI_PREZZO = .07
@@ -123,17 +124,29 @@ def stessa_auto_due_siti(a: dict, b: dict) -> bool:
         return False
     if not (_uguali_se_noti(a.get("carb"), b.get("carb")) and _uguali_se_noti(a.get("cambio"), b.get("cambio"))):
         return False
-    ka, kb = a.get("kw") or a.get("potenza"), b.get("kw") or b.get("potenza")
+    # 17/11 (notte-09): la scheda dell'elenco non ha la potenza: si legge da _r["kw"] (caricamento, web/app._arricchisci).
+    # Prima il controllo della potenza non scattava mai e due auto diverse (stesso modello, motori diversi) potevano
+    # risultare "la stessa auto"
+    ka = a.get("kw") or a.get("potenza") or (a.get("_r") or {}).get("kw")
+    kb = b.get("kw") or b.get("potenza") or (b.get("_r") or {}).get("kw")
     if ka and kb and not _vicini(ka, kb, .05):
         return False
     pa_, pb_ = _provincia_auto(a), _provincia_auto(b)
     return bool(pa_ and pb_ and pa_ == pb_)
 
 
+def _di_commerciante(it: dict) -> bool:
+    return bool(str(it.get("_tipo") or "").startswith("comm_") or it.get("commerciante")
+                or (it.get("_r") or {}).get("seller_type") == "commerciante")
+
+
 def _preferenza(it: dict) -> tuple:
     marg = (it.get("pv") or {}).get("margine") if isinstance(it.get("pv"), dict) else None
-    return (0 if (it.get("_r") or {}).get("tel") else 1, -int(it.get("n_foto") or 0), -int(marg or 0),
-            it.get("id") if isinstance(it.get("id"), int) else 10**12)
+    # 17/11 (notte-09): a parità di numero si tiene il PRIVATO. Prima poteva restare la copia del commerciante, che poi
+    # il tetto dei commercianti (40 lontani / 60 in tutto) toglieva: l'auto spariva dal sito anche se la copia del
+    # privato (i privati non hanno tetto) sarebbe rimasta.
+    return (0 if (it.get("_r") or {}).get("tel") else 1, 1 if _di_commerciante(it) else 0, -int(it.get("n_foto") or 0),
+            -int(marg or 0), it.get("id") if isinstance(it.get("id"), int) else 10**12)
 
 
 def togli_doppioni(items: list[dict]) -> tuple[list[dict], dict]:
@@ -367,6 +380,58 @@ def copri_fasce(items: list[dict], riserva: list[dict]) -> list[dict]:
     return extra
 
 
+# 17/11 (notte-09, imbuto del sito): il motivo dello stadio si legge SENZA le note aggiunte dopo " | ".
+# - pipeline/verify.mark aggiunge " | scomparso (404)" (o "venduto sito") quando un annuncio sparisce; se poi riappare
+#   con un upsert che non lo rimette in 'nuovo' (pipeline/confronti_extra salva solo il confronto) torna 'attivo' ma
+#   con stage_reason "opportunita | scomparso": prima non era più nell'elenco e nemmeno il ricalcolo (che rilegge
+#   LIST_SQL) né le utilitarie (solo stage <> 'approfondito') lo rimettevano mai a posto;
+# - il giro COMMERCIANTI_TOP (web/app.py) scriveva stage_reason='affidabile' (la fiducia della valutazione al posto
+#   del motivo) per le auto "opportunita": mai nell'elenco. Da oggi scrive 'opportunita'; le righe già salvate
+#   valgono come 'opportunita'.
+# Le regole del sito non cambiano: queste auto passano da tutte le regole come le altre.
+MOTIVI_ELENCO = ("opportunita", "affidabile", "da_verificare", "incidentata")
+
+
+def motivo_stadio(stage_reason) -> str:
+    """'opportunita | scomparso (404)' -> 'opportunita': le note dopo '|' non sono il motivo. Si taglia al PRIMO '|'
+    (con o senza spazi intorno) e si tolgono gli spazi: stessa lettura di motivo_stadio_sql (LIST_SQL)."""
+    return str(stage_reason or "").split("|")[0].strip()
+
+
+def motivo_stadio_sql(col: str = "l.stage_reason") -> str:
+    """Lo stesso taglio di motivo_stadio in SQL: btrim(split_part(col, '|', 1)). Da usare in OGNI confronto esatto
+    sul motivo dello stadio (IN (...), = '...'), anche nelle query dei moduli che verranno."""
+    return f"btrim(split_part(COALESCE({col}, ''), '|', 1))"
+
+
+# 17/11 (notte-09, giudice, 2a revisione): se la valutazione ha salvato il prezzo d'acquisto (riassunto->'acquisto',
+# policy_v2.riassunto da oggi) vale solo il confronto diretto: prezzo di oggi diverso da quello valutato = da
+# rivalutare (niente corsa tra transazioni: price_events.at è il now() dell'INIZIO della transazione del collettore).
+# Le righe salvate prima, senza 'acquisto', usano gli eventi come sotto (segnarle tutte svuoterebbe il sito fino al
+# ricalcolo). Senza nessuna valutazione (ECO_SQL con LEFT JOIN vuota): falso.
+# 17/11 (notte-09, giudice): prezzo cambiato DOPO la valutazione usata dal sito. upsert_listing (db.py) rimette
+# status='attivo' e il prezzo nuovo senza toccare lo stadio: un'auto riapparsa (o col prezzo cambiato) resta
+# 'approfondito' col margine pv.margine calcolato sul prezzo VECCHIO (gonfiato se il prezzo è salito). Vero se c'è un
+# evento 'prezzo' dopo l'ultima valutazione (valutazioni_policy.computed_at; senza, valuations.created_at) E il prezzo
+# di oggi è diverso da quello che l'auto aveva quando è stata valutata (ultimo evento con prezzo fino a quel momento;
+# 'ripubblicato' no: porta il prezzo dell'annuncio nuovo). Una 'riapparso' allo stesso prezzo non cambia il margine (se
+# il prezzo cambia, upsert_listing scrive anche 'prezzo'); un prezzo tornato com'era nemmeno. Senza storico prima
+# della valutazione: vero (prudente). LIST_SQL NON filtra (il ricalcolo sceglie da LIST_SQL le auto da rivalutare e
+# senza_invariate non salta mai un'auto con un 'prezzo' dopo la valutazione): l'auto esce dal sito alla regola
+# "valutata" come prezzo_cambiato_da_rivalutare finché il ricalcolo non la rivaluta col prezzo nuovo.
+PREZZO_DOPO_VALUTAZIONE_SQL = """(SELECT CASE WHEN w.acq IS NOT NULL THEN l.price_eur IS DISTINCT FROM w.acq ELSE
+            COALESCE(EXISTS (SELECT 1 FROM price_events pe WHERE pe.listing_id=l.id
+                         AND pe.event='prezzo' AND pe.at > w.at)
+            AND l.price_eur IS DISTINCT FROM (SELECT pe.price_eur FROM price_events pe WHERE pe.listing_id=l.id
+                         AND pe.event IN ('apparso','prezzo','riapparso','scomparso') AND pe.at <= w.at
+                         AND pe.price_eur IS NOT NULL ORDER BY pe.at DESC, pe.id DESC LIMIT 1), false) END
+        FROM (SELECT COALESCE(x.at, v.created_at) AS at, x.acq FROM (SELECT 1) d
+              LEFT JOIN LATERAL (SELECT vp.computed_at AS at,
+                       CASE WHEN (vp.riassunto->>'acquisto') ~ '^[0-9]+([.][0-9]+)?$'
+                            THEN (vp.riassunto->>'acquisto')::numeric END AS acq
+                     FROM valutazioni_policy vp WHERE vp.listing_id=l.id ORDER BY vp.computed_at DESC LIMIT 1) x ON true) w)"""
+
+
 LIST_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
        l.power_kw, l.city, l.province, l.price_eur, l.damage_class, l.stage_reason, l.first_seen_at, l.deep_at,
@@ -376,11 +441,12 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id=l.id) AS top,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
-       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
+       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos,
+       """ + PREZZO_DOPO_VALUTAZIONE_SQL + """ AS prezzo_dopo_valutazione
 FROM listings l
 JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.stage='approfondito' AND l.status='attivo'
-  AND l.stage_reason IN ('opportunita','da_verificare','incidentata')
+  AND """ + motivo_stadio_sql("l.stage_reason") + """ IN ('opportunita','affidabile','da_verificare','incidentata')
   AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - interval '""" + str(int(os.environ.get("FRESCHEZZA_ORE", "48"))) + """ hours'
 """
 
@@ -398,14 +464,15 @@ SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l
        EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id=l.id) AS top,
        (SELECT count(*) FROM listing_opens o WHERE o.listing_id=l.id) AS opens,
        EXISTS (SELECT 1 FROM listing_opens o WHERE o.listing_id=l.id AND o.dealer_id=%(me)s) AS opened_by_me,
-       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos
+       (SELECT count(*) FROM listing_photos p WHERE p.listing_id=l.id) AS n_photos,
+       """ + PREZZO_DOPO_VALUTAZIONE_SQL + """ AS prezzo_dopo_valutazione
 FROM listings l
 LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
 WHERE l.status='attivo' AND l.price_eur BETWEEN 300 AND %(eco_max)s AND l.year >= %(eco_anno)s
   AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
   AND l.province = ANY(%(eco_prov)s)
   AND l.last_seen_at > now() - interval '5 days'
-  AND COALESCE(l.stage_reason, '') NOT IN ('doppione', 'truffa', 'dati_incoerenti', 'prezzo_finto')
+  AND """ + motivo_stadio_sql("l.stage_reason") + """ NOT IN ('doppione', 'truffa', 'dati_incoerenti', 'prezzo_finto')
 """
 
 
@@ -443,6 +510,7 @@ def item_eco(r: dict) -> dict | None:
         "rip_lo": int(lo if lo is not None else (hi or 0)), "rip_hi": int(hi or 0),
         "danno": r.get("damage_class") or "sconosciuto",
         "verificare": True, "incidentata": False, "economica": True, "pv": _pv(r),
+        "prezzo_dopo_valutazione": bool(r.get("prezzo_dopo_valutazione")),   # 17/11: esce alla regola "valutata"
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),
@@ -625,8 +693,10 @@ def item(r: dict) -> dict | None:
         "mercato": int(round(float(mercato))),
         "rip_lo": lo, "rip_hi": int(hi),
         "danno": r.get("damage_class") or "sconosciuto",
-        "verificare": r.get("stage_reason") == "da_verificare",
-        "incidentata": r.get("stage_reason") == "incidentata",
+        "verificare": motivo_stadio(r.get("stage_reason")) == "da_verificare",
+        "incidentata": motivo_stadio(r.get("stage_reason")) == "incidentata",
+        # 17/11 (giudice): prezzo cambiato dopo la valutazione → esce alla regola "valutata" (sito_regole.r_valutata)
+        "prezzo_dopo_valutazione": bool(r.get("prezzo_dopo_valutazione")),
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
         "n_foto": min(n_ph, foto.MAX_PER_AUTO),
