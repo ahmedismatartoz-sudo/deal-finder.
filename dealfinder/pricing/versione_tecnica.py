@@ -150,6 +150,91 @@ def verdetto(auto: dict, confronti: list[dict] | None) -> str | None:
     return "uguale" if sum(ver) / len(ver) >= QUOTA_UGUALI - 1e-9 else "diversa"
 
 
+# ------------------------------------------------------------------ scheda tecnica per la scelta delle gemelle
+# 17/11 (notte, precisione di M): policy_v2.seleziona confrontava le auto con le sole colonne power_kw e gearbox. Quando
+# una delle due manca (Subito, annunci scritti a mano) un'auto base passava come gemella di una versione top e
+# viceversa (Golf 1.6 TDI con Golf GTD, Audi A3 con S3/RS3, Classe A 180 con A 45 AMG, cambio manuale con DSG). Qui si
+# leggono dal testo GIÀ salvato (version_raw/titolo) le stesse informazioni: kW/CV scritti, cilindrata, cambio
+# automatico e la "variante sportiva" (sigla che cambia motore e prezzo dentro lo stesso modello). Funzioni pure.
+
+_RE_AUTOMATICO = re.compile(
+    r"(?i)(?<![\w-])(?:automatic[oa]?|automatik|aut\.|autom\.|cambio\s+automatico|dsg\d?|s[\s-]?tronic|stronic|"
+    r"tiptronic|steptronic|multitronic|powershift|x?tronic|e-?cvt|cvt|pdk|dct\d?|\d?dct|edc\d*|eat\s?\d|"
+    r"\d?g[\s-]?tronic|\d{1,2}g[\s-]?dct|speedshift|selespeed|dualogic|easytronic|sensodrive|geartronic|sportronic|"
+    r"m-?mt|mmt|amt|dkg|at\s?[6-9]|[6-9]\s?at|at)(?![\w-])")
+_RE_MANUALE = re.compile(r"(?i)(?<![\w-])(?:manuale|cambio\s+manuale|[56]\s?marce)(?![\w-])")
+
+
+def cambio_da_testo(testo: str | None) -> str | None:
+    """'automatico' (anche robotizzato: DSG, S tronic, Dualogic, M-MT…) | 'manuale' | None se il testo non lo dice
+    o dice entrambe le cose."""
+    t = str(testo or "")
+    a, m = bool(_RE_AUTOMATICO.search(t)), bool(_RE_MANUALE.search(t))
+    return "automatico" if a and not m else "manuale" if m and not a else None
+
+
+# Varianti sportive per marca: (regex, sigla). Per queste marche un annuncio senza sigla è la versione "normale".
+_NUM_AMG = r"(?<![\d.,])(35|43|45|53|55|63|65)(?![\d.,])(?!\s*(?:kw|cv|hp|ps|mila|k\b))"
+_VARIANTI: dict[str, list[tuple[str, str]]] = {
+    "volkswagen": [(r"\bgti\b", "gti"), (r"\bgtd\b", "gtd"), (r"\bgte\b", "gte"),
+                   (r"\br32\b|(?<![\w-])r(?![\w-])(?![\s-]*(?:line|design|dynamic))", "r")],
+    "audi": [(r"\brs\s?[1-7]\b|\brs\s?q\s?[38]\b|\brs\s?e-?tron\b|\btt\s?rs\b|\brs\b(?![\s-]*line)", "rs"),
+             (r"\bs[1-8]\b|\bsq[2-8]\b|\btts\b", "s")],
+    "bmw": [(r"\bm[2-8]\b|\bx[3-6]\s?m\b(?![\s-]*sport)", "m"), (r"\bm\d{2,3}[id]?\b", "m_performance")],
+    "skoda": [(r"\bv?rs\b(?![\s-]*line)", "rs")],
+    "ford": [(r"\bst\b(?![\s-]*line)", "st"), (r"\brs\b(?![\s-]*line)", "rs"), (r"\braptor\b", "raptor")],
+    "renault": [(r"(?<![\w.])r\.?s\.?(?![\w.])(?![\s.-]*line)|\btrophy\b", "rs")],
+    "peugeot": [(r"\bgti\b", "gti")],
+    "honda": [(r"\btype[\s-]?r\b", "type_r")],
+    "hyundai": [(r"(?<![\w-])n(?![\w-])(?![\s-]*line)", "n")],
+    "toyota": [(r"\bgr\b(?![\s-]*sport)|\bgr(?:yaris|86|supra)\b", "gr")],
+    "opel": [(r"\bopc\b", "opc")],
+    "alfa-romeo": [(r"\bquadrifoglio\b|\bqv\b", "qv")],
+    "fiat": [(r"\babarth\b", "abarth")],
+    "subaru": [(r"\bsti\b", "sti")],
+    "seat": [(r"\bcupra\b", "cupra")],
+    "porsche": [(r"\bgt[234]\s?rs\b", "gt_rs"), (r"\bgt[234]\b", "gt"), (r"\bturbo\s?s\b", "turbo_s"),
+                (r"\bturbo\b", "turbo"), (r"\bgts\b", "gts")],
+    "mini": [(r"\b(?:john\s+cooper\s+works|jcw)\b(?![\s-]*(?:trim|kit|pack|package|allestimento|style))", "jcw")],
+}
+_RX_VARIANTI = {k: [(re.compile(rx, re.I), s) for rx, s in v] for k, v in _VARIANTI.items()}
+_RE_BMW_NORMALE = re.compile(r"(?i)\b(?:[1-8]\d{2}|[sx]?drive\s?\d{2})[ide]\b")
+_RE_AMG = re.compile(r"(?i)\bamg\b(?![\s-]*line)")
+_RE_NUM_AMG = re.compile(_NUM_AMG, re.I)
+
+
+def _marca_norm(make) -> str:
+    try:
+        from .allestimento import _marca
+        return _marca(make)
+    except Exception:
+        return str(make or "").strip().lower().replace(" ", "-")
+
+
+def variante_sportiva(make, model, testo) -> str | None:
+    """Sigla della variante sportiva ('gti', 'rs', 's', 'm', 'amg45'…), 'normale' per le marche note senza sigla,
+    None per le marche senza elenco (non si può dire). Prima vale la sigla più "alta" dell'elenco della marca."""
+    marca = _marca_norm(make)
+    t = _pulisci(f"{model or ''} {testo or ''}")
+    if marca in ("mercedes", "mercedes-benz", "mercedes-amg"):
+        if _RE_AMG.search(t) or "mercedes-amg" in str(make or "").lower():
+            m = _RE_NUM_AMG.search(t)
+            if m:
+                return "amg" + m.group(1)
+        return "normale"
+    voci = _RX_VARIANTI.get(marca)
+    if voci is None:
+        return None
+    for rx, sigla in voci:
+        if rx.search(t):
+            if sigla == "m" and _RE_BMW_NORMALE.search(t):
+                continue                       # "X3 M … xDrive20i": il motore scritto è quello normale
+            if sigla == "jcw" and (litri_da_testo(t) or 2.0) < 1.9:
+                continue                       # "1.5 C JCW": allestimento JCW su un motore normale
+            return sigla
+    return "normale"
+
+
 VERSIONE_SQL = """
 SELECT l.id, l.power_kw, l.fuel, l.year, l.version_raw, l.title,
        COALESCE(l.dati_auto->'pagina'->>'cilindrata', l.dati_auto->'ricerca'->>'cilindrata') AS cilindrata_testo,

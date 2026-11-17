@@ -199,6 +199,67 @@ def _norm_gear(g):
     return "automatico" if g.startswith(("auto", "semi", "sequ", "dsg", "cvt")) else "manuale" if g.startswith("man") else g
 
 
+# 17/11 (notte, "M più preciso"): scheda tecnica letta anche dal testo GIÀ salvato (version_raw/titolo) quando la
+# colonna manca, con le funzioni pure di pricing/versione_tecnica.py. Le colonne valgono sempre per prime: per due auto
+# con power_kw e gearbox scritti nelle colonne la scelta delle gemelle è identica a prima.
+# GEMELLI_SCHEDA=False = regola di prima (prove/simulazioni); non è una soglia.
+GEMELLI_SCHEDA = True
+
+
+def _testo(x: dict) -> str:
+    return f"{x.get('version_raw') or ''} {x.get('title') or ''}"
+
+
+@functools.lru_cache(maxsize=100000)
+def _scheda_testo(make, model, testo):
+    from . import versione_tecnica as VT
+    kw = VT.kw_da_testo(testo)
+    if kw is not None and not 25 <= kw <= 600:
+        kw = None
+    return {"kw": kw, "litri": VT.litri_da_testo(testo), "cambio": VT.cambio_da_testo(testo),
+            "variante": VT.variante_sportiva(make, model, testo)}
+
+
+def _scheda(x: dict) -> dict:
+    return _scheda_testo(x.get("make"), x.get("model"), _testo(x))
+
+
+def _kw(x: dict):
+    """kW della colonna, altrimenti quelli scritti nella versione ("150 CV", "110 kW"), altrimenti None."""
+    if x.get("power_kw"):
+        return x["power_kw"]
+    return _scheda(x)["kw"] if GEMELLI_SCHEDA else None
+
+
+def _cambio(x: dict):
+    """Cambio della colonna (normalizzato), altrimenti quello scritto nella versione (DSG, S tronic, automatico…)."""
+    g = _norm_gear(x.get("gearbox"))
+    if g or not GEMELLI_SCHEDA:
+        return g
+    return _scheda(x)["cambio"]
+
+
+def versioni_diverse(t: dict, c: dict, tol: float) -> str | None:
+    """17/11: motivo per cui due auto dello stesso modello hanno un motore/versione diversi secondo la scheda letta dal
+    testo, oppure None. Si usa SOLO quando la potenza non è verificabile da entrambe le parti (con i kW di tutte e due
+    decide la potenza, come prima):
+      - variante sportiva diversa (GTI/GTD/R, S/RS, M/M340i, AMG 45/63, ST/RS, GT3/Turbo…) contro la versione normale;
+      - cilindrata scritta diversa di oltre 0,15 litri (1.6 TDI contro 2.0 TDI)."""
+    if not GEMELLI_SCHEDA:
+        return None
+    tp, cp = _kw(t), _kw(c)
+    if tp and cp:
+        return None
+    st, sc = _scheda(t), _scheda(c)
+    vt, vc = st["variante"], sc["variante"]
+    if vt and vc and vt != vc:
+        return "versione sportiva diversa (" + (vt if vt != "normale" else vc).upper() + " con versione normale)" \
+            if "normale" in (vt, vc) else "versione sportiva diversa"
+    if st["litri"] and sc["litri"] and abs(st["litri"] - sc["litri"]) > 0.15 + 1e-9:
+        return "motorizzazione diversa (cilindrata)"
+    return None
+
+
 def _gen(x):
     vi = x.get("vehicle_identity") or {}
     if isinstance(vi, str):
@@ -306,7 +367,10 @@ def prezzo_corretto(c: dict, t: dict, ya: float, ka: float, corr=None) -> float:
 
 _CARROZZERIE = [("commerciale", r"\bvan\b|\bcargo\b|furgon|autocarro|\bn1\b"),   # 6/11: Doblò Cargo, Panda Van
                 ("sw", r"sports? ?tourer|station ?wagon|sportswagon|\bsw\b|touring|avant|variant|wagon|kombi|estate|shooting ?brake"),
-                ("monovolume", r"active ?tourer|gran ?tourer|\btourer\b"),
+                ("monovolume", r"active ?tourer|gran ?tourer|\btourer\b|sports ?van|golf ?plus"),   # 17/11: Golf Sportsvan/Plus
+                # 17/11: station wagon rialzate (A4/A6 allroad, Classe E All-Terrain, Volvo Cross Country) valgono più delle
+                # sw e delle berline: classe a sé (prima "allroad" non era riconosciuto e passava come berlina)
+                ("rialzata", r"allroad|all[\s-]?terrain|cross ?country"),
                 ("grancoupe", r"gran ?coup[eé]"),
                 ("cabrio", r"cabrio|cabriolet|roadster|spider|spyder|convertible"),
                 ("coupe", r"coup[eé]")]
@@ -361,7 +425,8 @@ def regressione(t: dict, puliti: list[dict], cfg: PolicyConfig) -> dict | None:
     import numpy as np
     if not (t.get("year") and t.get("mileage_km") is not None):
         return None
-    tg, bt, tp = _norm_gear(t.get("gearbox")), carrozzeria(t), t.get("power_kw")
+    tg, bt, tp = _cambio(t), carrozzeria(t), t.get("power_kw")
+    tpf = _kw(t)                                    # 17/11: per il filtro anche i kW scritti nel testo
     gt = _gen(t)
     g = []
     for c in puliti:
@@ -371,13 +436,16 @@ def regressione(t: dict, puliti: list[dict], cfg: PolicyConfig) -> dict | None:
             continue
         if abs(int(c["year"]) - int(t["year"])) > cfg.reg_anni:
             continue
-        cg = _norm_gear(c.get("gearbox"))
+        cg = _cambio(c)
         if tg and cg and tg != cg:
             continue
         bc = carrozzeria(c)
         if bc != bt and not ({bc, bt} <= {None, "sw"}):
             continue
-        if tp and c.get("power_kw") and abs(c["power_kw"] - tp) > tp * cfg.reg_potenza:
+        cpf = _kw(c)
+        if tpf and cpf and abs(cpf - tpf) > tpf * cfg.reg_potenza:
+            continue
+        if versioni_diverse(t, c, cfg.reg_potenza):
             continue
         gc = _gen(c)
         if gt and gc and gt != gc:
@@ -448,13 +516,18 @@ def _equivalente(t, c, cfg, livello):
         if bool(t4.search(f"{t.get('version_raw') or ''} {t.get('title') or ''}")) != \
                 bool(t4.search(f"{c.get('version_raw') or ''} {c.get('title') or ''}")):
             return "trazione diversa"
-    tg, cg = _norm_gear(t.get("gearbox")), _norm_gear(c.get("gearbox"))
+    tg, cg = _cambio(t), _cambio(c)
     if tg and cg and tg != cg:
         return "cambio diverso"
-    if livello == 1 and tg and not cg:
+    if livello == 1 and _norm_gear(t.get("gearbox")) and not cg:
         return "cambio non indicato"
-    tp, cp = t.get("power_kw"), c.get("power_kw")
-    if not tp and cfg.motore_senza_kw:
+    tp, cp = _kw(t), _kw(c)
+    vd = versioni_diverse(t, c, cfg.potenza_tol)
+    if vd:
+        return vd
+    # 17/11: senza kW nella colonna vale la regola della cilindrata come prima, salvo quando i kW (anche scritti nel
+    # testo) sono noti da entrambe le parti: allora decide la potenza qui sotto
+    if not t.get("power_kw") and not (tp and cp) and cfg.motore_senza_kw:
         # 25/10 (cliente: "stesso motore"): se l'annuncio non dice i kW, il motore si riconosce dalla cilindrata
         # scritta (1.2, 2.0…); senza né kW né cilindrata non si può dire che le auto siano uguali
         import re as _re
@@ -467,7 +540,7 @@ def _equivalente(t, c, cfg, livello):
             return "motorizzazione diversa (cilindrata)"
     if tp and cp and abs(cp - tp) > tp * cfg.potenza_tol:
         return "motorizzazione diversa (potenza)"
-    if livello == 1 and tp and not cp:
+    if livello == 1 and t.get("power_kw") and not cp:
         return "potenza non indicata"
     return None
 
