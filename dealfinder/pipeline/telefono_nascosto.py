@@ -18,7 +18,16 @@ Prudenza:
     trattare"): PRIORITARI, ricalcolati a ogni giro dell'elenco del sito;
   - tetto giornaliero TEL_API_MAX_GIORNO ricerche (300), una ogni TEL_API_PAUSA_S secondi (2);
   - su 403/429 dell'interfaccia: stop e pausa di TEL_API_PAUSA_BLOCCO_S secondi (3.600).
-Interruttore: TEL_SUBITO_API=1 (default) | 0.
+Interruttore: TEL_SUBITO_API=0 (default dal 14/11) | 1.
+
+17/11 (notte-01): perché il 13/11 il recupero dava 0 "sì" (300 ricerche, ~150 annunci trovati, tutti "no"). Non è un
+errore di lettura: è il campo stesso. L'auto arriva tolta al passo telefono proprio PERCHÉ nella ricerca il suo
+advertiser.phone mancava (il "sì" della ricerca lo segnano già la lettura degli annunci, _salva/segna_invariati, e
+il giro giornaliero giro_telefoni_subito); ricercarla rilegge lo stesso campo e dà lo stesso "manca". Nei log del
+13/11 gli annunci trovati hanno il venditore con soli company/name/type/user_id (nessun campo del telefono). Il
+giro giornaliero conta ~79% "0" e ~21% senza campo (TR TELEFONI SUBITO 10-16/11: 30.500 / 8.000 su 38.700): sono i
+venditori che hanno scelto di non mostrare il numero. Quindi resta spento; per Subito resta il controllo del testo
+delle auto tolte (tempo_reale.telefoni_candidate, con le espressioni di sempre del sito).
 """
 from __future__ import annotations
 
@@ -44,28 +53,77 @@ def attivo() -> bool:
     return os.environ.get("TEL_SUBITO_API", "0") == "1"
 
 
-def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None) -> int:
-    """Auto tolte al passo telefono con margine già sopra il minimo (o "Da trattare" entro lo sconto massimo)."""
+# 17/11 (notte-01): esiti "in attesa" dei controlli dopo il telefono: non scartano per sempre (deciderà l'AI o il
+# giro dopo), quindi per la PRIORITÀ del controllo del numero l'auto resta tra quelle che potrebbero andare sul sito
+_IN_ATTESA = {"supercar_senza_controllo_ai", "jev_non_letto", "margine_alto_senza_jev", "aspetta_controllo_ai",
+              "sconto_alto_da_controllare"}
+
+
+def _margine_ok(it: dict, g) -> bool:
+    """Margine già sopra il minimo, o "Da trattare" entro lo sconto massimo (criterio del 13/11, invariato)."""
     from ..web import scovo
+    from ..web import sito_regole as SR
+    m, p = SR.margine(it), int(it.get("prezzo") or 0)
+    if m is None or m <= 0 or p <= 0:
+        return False
+    if m >= scovo.soglia(p):
+        return True
+    tetto = next(x for fino, x in g.tratta_max if p < fino)
+    return any(m + sc >= scovo.soglia(p - sc) for sc in range(50, tetto + 1, 50))
+
+
+def passerebbe_col_numero(it: dict, g) -> bool:
+    """17/11 (notte-01): l'auto, tolta SOLO al passo telefono, passerebbe le altre regole del sito per auto (Roma, zona,
+    venditore, prezzo intero, Jev, correzioni del margine, anti-truffa, margine minimo) se il numero ci fosse?
+    Si lavora su una COPIA (le regole scrivono avvisi nell'auto) e le regole sono quelle del sito, non cambiate: serve
+    solo a decidere quali auto controllare PRIMA. I tetti (commercianti, fuori zona, diesel) non si simulano: dipendono
+    dalle altre auto; gli esiti "in attesa" (_IN_ATTESA) non escludono."""
+    from ..web import sito_regole as SR
+    c = dict(it, _r=dict(it.get("_r") or {}, tel=True))
+    if isinstance(c.get("pv"), dict):
+        c["pv"] = dict(c["pv"])
+    dopo = False
+    for nome, f in SR.REGOLE:
+        if nome == "telefono":
+            dopo = True
+            continue
+        if dopo:
+            m = f(c, g)
+            if m and m not in _IN_ATTESA:
+                return False
+    try:
+        SR.t_margine_sito(c, g)                 # correzioni del margine del sito (solo in giù), come nell'elenco
+    except Exception:
+        pass
+    m = SR.r_truffa(c, g)
+    if m and m not in _IN_ATTESA:
+        return False
+    return _margine_ok(c, g)
+
+
+def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None, g=None) -> int:
+    """Auto tolte al passo telefono che col numero passerebbero le altre regole del sito (passerebbe_col_numero):
+    margine già sopra il minimo (o "Da trattare" entro lo sconto massimo), in zona, mai Roma, venditore ammesso,
+    senza scarti Jev/anti-truffa definitivi. 17/11: prima si guardavano solo zona e margine (373 prioritarie, ma
+    molte sarebbero uscite dopo per venditore, Jev o truffa)."""
     from ..web import sito_regole as SR
     global PRIORITARI
     tolti = set(tolti or [])
-    g = SR.Regole()
+    if g is None:
+        try:
+            g = SR.Regole.da_env()
+        except Exception:
+            g = SR.Regole()
     out = set()
     for it in items:
         if it.get("id") not in tolti or (fonte and fonte.get(it["id"]) not in ("Subito", "AutoScout24")):
             continue
-        # 13/11 (giudice M3): solo auto che col numero potrebbero andare sul sito: in zona (o fascia fuori zona), mai Roma
-        if SR.r_no_roma(it, g) or SR.r_zona(dict(it), g):
-            continue
-        m, p = SR.margine(it), int(it.get("prezzo") or 0)
-        if m is None or m <= 0 or p <= 0:
-            continue
-        if m >= scovo.soglia(p):
-            out.add(it["id"])
-            continue
-        tetto = next(x for fino, x in g.tratta_max if p < fino)
-        if any(m + sc >= scovo.soglia(p - sc) for sc in range(50, tetto + 1, 50)):
+        try:
+            ok = passerebbe_col_numero(it, g)
+        except Exception:
+            # una regola che non sa leggere l'auto: criterio del 13/11 (zona e margine), mai Roma
+            ok = not (SR.r_no_roma(it, g) or SR.r_zona(dict(it), g)) and _margine_ok(it, g)
+        if ok:
             out.add(it["id"])
     PRIORITARI = frozenset(out)
     return len(out)

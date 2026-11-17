@@ -963,7 +963,7 @@ def controlla_telefoni(conn, limite: int | None = None) -> Counter:
     stats: Counter = Counter()
     lim = limite or int(os.environ.get("TR_AS_TELEFONO_MAX", "400"))
     rows = conn.execute(
-        "SELECT id, url FROM listings WHERE source='autoscout24' AND status='attivo' AND stage='approfondito' "
+        "SELECT id, url, price_eur FROM listings WHERE source='autoscout24' AND status='attivo' AND stage='approfondito' "
         "AND telefono_ok IS NULL AND (telefono_at IS NULL OR telefono_at < now() - interval '1 day') "
         "ORDER BY telefono_at NULLS FIRST, deep_at DESC NULLS LAST LIMIT %s", (lim,)).fetchall()
     if not rows:
@@ -972,13 +972,29 @@ def controlla_telefoni(conn, limite: int | None = None) -> Counter:
 
     def check(r):
         time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
-        st, det = _as_dettaglio(cas, r["url"])
-        return r, st, telefono_autoscout(det) if st == "attivo" else None
+        st, det, motivo = _as_esito(cas, r["url"])
+        return r, st, motivo, telefono_autoscout(det) if st == "attivo" else None
 
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
-        for r, st, tel in ex.map(check, rows):
+        for r, st, motivo, tel in ex.map(check, rows):
             if st == "errore":
                 stats["errore"] += 1
+                continue
+            if st == "scomparso":
+                # 17/11 (notte-01): come telefoni_candidate dal 13/11: annuncio tolto (404, rimando alla ricerca, "non
+                # più disponibile") segnato sparito; prima restava "attivo" con telefono NULL e si riapriva ogni giorno
+                from .verify import _mark
+                try:
+                    _mark(conn, r["id"], "scomparso", r.get("price_eur"), motivo=motivo)
+                except Exception as e:        # un errore su un'auto non ferma il giro (le altre si salvano)
+                    log.warning("controlla_telefoni: auto sparita non segnata: %s", str(e)[:150])
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    stats["scomparso_errore"] += 1
+                    continue
+                stats["scomparso"] += 1
                 continue
             conn.execute("UPDATE listings SET telefono_ok=%s, telefono_at=now() WHERE id=%s", (tel, r["id"]))
             stats[f"telefono_{'si' if tel else ('no' if tel is False else 'non_leggibile')}"] += 1
@@ -1256,6 +1272,93 @@ def rilettura_subito(minuti: float | None = None) -> dict:
         passi._cache = None
 
 
+_TESTO_FATTI: dict = {}          # 17/11: auto tolte al passo telefono di cui si è già letto il testo: id → prezzo letto
+                                 # (chiave id+prezzo: se il venditore cambia il prezzo, spesso cambia anche il testo)
+_TOLTI_DIAG = {"t": 0.0}
+
+
+def _tel_dal_testo(conn, ids: list, ordine: list, stats: Counter) -> int:
+    """17/11 (notte-01): per le auto tolte SOLO al passo telefono (Subito e AutoScout24) si rilegge il TESTO con le forme
+    del sito (ha_numero_testo: RE_MOBILE / RE_LANDLINE, le stesse di sempre; le forme nuove del 17/11 sono state
+    tolte: falsi "sì"): niente rete, niente proxy. Se il numero c'è, telefono_ok=true
+    (la stessa regola di sempre: numero nel testo = numero). Ogni auto una volta per processo e per prezzo (se il
+    prezzo cambia il testo si rilegge); prima le mai lette, tra queste le prioritarie. Al massimo TEL_TESTO_MAX (3000)
+    auto per giro; per quelle già lette il database rende il testo solo se il prezzo è cambiato.
+    Nei log solo i conti, mai il numero."""
+    if os.environ.get("TEL_TESTO", "1") != "1":
+        return 0
+    if len(_TESTO_FATTI) > 100_000:
+        _TESTO_FATTI.clear()
+    prima = set(ordine)
+    da_fare = sorted(ids, key=lambda i: (i in _TESTO_FATTI, i not in prima, i))
+    da_fare = da_fare[:int(os.environ.get("TEL_TESTO_MAX", "3000"))]
+    if not da_fare:
+        return 0
+    n = letti = 0
+    try:
+        for k in range(0, len(da_fare), 500):
+            pezzo = da_fare[k:k + 500]
+            prezzi = [_TESTO_FATTI.get(i, -1) for i in pezzo]          # -1: mai letta
+            righe = conn.execute(
+                "SELECT l.id, l.price_eur, l.title, l.description FROM listings l "
+                "JOIN unnest(%s::bigint[], %s::bigint[]) AS v(id, p) ON v.id = l.id "
+                "WHERE COALESCE(l.price_eur, 0)::bigint <> v.p AND l.status='attivo' "
+                "AND l.source IN ('subito', 'autoscout24') AND l.telefono_ok IS NOT TRUE",
+                (pezzo, prezzi)).fetchall()
+            for r in righe:
+                if not isinstance(r, dict) or "id" not in r:
+                    continue
+                letti += 1
+                _TESTO_FATTI[r["id"]] = int(r.get("price_eur") or 0)
+                if ha_numero_testo(r.get("title"), r.get("description")):
+                    salva_telefono(conn, r["id"], True)
+                    n += 1
+            for i in pezzo:                       # non più attive o già col numero: non si rileggono
+                _TESTO_FATTI.setdefault(i, -2)
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("TEL_TESTO non riuscito: %s", str(e)[:150])
+        return n
+    stats["testo_letti"] += letti
+    if n:
+        stats["testo:si"] += n          # finisce in ":si": l'elenco del sito si rifà subito (app.telefoni_candidate)
+    return n
+
+
+def _tel_tolti_diag(conn, ids: list, ordine: list) -> None:
+    """17/11 (notte-01): una riga ogni TEL_TOLTI_MIN minuti (60) con le auto tolte al passo telefono divise per fonte,
+    stato del telefono (si/no/da_sapere) e se sono prioritarie. Solo conti: serve a sapere quante se ne possono
+    recuperare (Subito "da_sapere" = nella ricerca manca advertiser.phone: il venditore non mostra il numero)."""
+    if time.time() - _TOLTI_DIAG["t"] < float(os.environ.get("TEL_TOLTI_MIN", "60")) * 60:
+        return
+    _TOLTI_DIAG["t"] = time.time()
+    try:
+        righe = conn.execute(
+            "SELECT source, status, telefono_ok, (id = ANY(%s)) AS prio, (telefono_at > now() - interval '12 hours') "
+            "AS recente, count(*) AS n FROM listings WHERE id = ANY(%s) GROUP BY 1, 2, 3, 4, 5", (ordine, ids)).fetchall()
+        c: Counter = Counter()
+        for r in righe:
+            if not isinstance(r, dict) or "n" not in r:
+                continue
+            tel = {True: "si", False: "no"}.get(r.get("telefono_ok"), "da_sapere")
+            chiave = f"{r.get('source')}:{r.get('status')}:{tel}" + (":prio" if r.get("prio") else "")
+            c[chiave] += int(r["n"] or 0)
+            if r.get("recente"):
+                c[chiave + ":controllata_12h"] += int(r["n"] or 0)
+        conn.commit()
+        log.warning("TEL_TOLTI %s", json.dumps({"tolti": len(ids), "prioritari": len(ordine), **dict(sorted(c.items()))}))
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("TEL_TOLTI non riuscito: %s", str(e)[:150])
+
+
 def telefoni_candidate(conn, ids) -> Counter:
     """25/10 (cliente: "ci servono più auto, trova un'altra soluzione"): le auto che sarebbero sul sito ma sono state
     tolte solo perché il numero non è mai stato controllato (AutoScout24 fuori dagli "approfonditi", Subito vecchi
@@ -1269,21 +1372,31 @@ def telefoni_candidate(conn, ids) -> Counter:
     # 13/11 (piu-auto): Subito anche dall'interfaccia di ricerca (telefono_nascosto), solo per le auto PRIORITARIE
     # (margine già sopra il minimo); prima le prioritarie, poi le altre
     tutti = set(ids)
-    prio_set = TN.PRIORITARI if TN.attivo() else frozenset()      # una fotografia per tutto il giro
+    # 17/11 (notte-01): le PRIORITARIE (col numero passerebbero il sito: TN.segna_prioritari) vanno per prime SEMPRE;
+    # prima l'ordine valeva solo con TEL_SUBITO_API=1 (spento dal 14/11) e AutoScout24 andava in ordine di data
+    tutte_prio = TN.PRIORITARI                                    # una fotografia per tutto il giro
+    ordine = sorted(i for i in tutte_prio if i in tutti)
+    prio_set = tutte_prio if TN.attivo() else frozenset()         # ricerca Subito (telefono_nascosto) solo se accesa
     prio = sorted(i for i in prio_set if i in tutti)
     TN.inizio_giro()
     if prio:
         TN.leggi_conto(conn)
+    _tel_tolti_diag(conn, ids, ordine)
+    _tel_dal_testo(conn, ids, ordine, stats)
     rows = conn.execute(
+        # (unione notte-02 + notte-01): colonna prezzo_dopo_valutazione del rinfresco (notte-02) e ordine/intervallo
+        # delle prioritarie (notte-01)
         "SELECT l.id, l.source, l.source_id, l.url, l.make, l.model, l.price_eur, l.province, "
         + PREZZO_DOPO_VALUTAZIONE_RINFRESCO_SQL + " AS prezzo_dopo_valutazione FROM listings l "
         "LEFT JOIN LATERAL (SELECT created_at FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v "
         "ON true WHERE l.id = ANY(%s) "
         "AND l.status='attivo' AND (l.source = 'autoscout24' OR (l.source = 'subito' AND (%s OR l.id = ANY(%s)))) "
-        "AND l.telefono_ok IS NOT TRUE AND (l.telefono_at IS NULL OR l.telefono_at < now() - make_interval(hours => %s)) "
+        "AND l.telefono_ok IS NOT TRUE AND (l.telefono_at IS NULL OR l.telefono_at < now() - make_interval(hours => "
+        "CASE WHEN l.id = ANY(%s) THEN %s ELSE %s END)) "
         "ORDER BY (l.id = ANY(%s)) DESC, l.telefono_at NULLS FIRST LIMIT %s",
         (ids, os.environ.get("TEL_CAND_SUBITO", "0") == "1",       # Subito: la pagina pubblica dice sempre showPhone=false
-         prio, int(os.environ.get("TEL_CAND_ORE", "12")), prio, int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
+         prio, ordine, int(os.environ.get("TEL_CAND_PRIO_ORE", "6")), int(os.environ.get("TEL_CAND_ORE", "12")),
+         ordine, int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
     if not rows:
         return stats
     cas = _client_as() if any(r["source"] == "autoscout24" for r in rows) else None
@@ -1900,8 +2013,20 @@ def _salva(conn, listings: list, stats: Counter, coda: bool = False) -> list[int
                 return out
             ph = adv.get("phone") if isinstance(adv, dict) else None
             forma = re.sub(r"[A-Za-z]", "a", re.sub(r"\d", "9", ph))[:40] if isinstance(ph, str) else type(ph).__name__
-            log.warning("TR subito telefono: forma=%r lunghezza=%s cifre=%s", forma, len(ph) if isinstance(ph, str) else None,
-                        len(re.sub(r"\D", "", ph)) if isinstance(ph, str) else None)
+            # 17/11 (notte-01): anche i NOMI dei campi dell'annuncio che parlano di contatto (prima _chiavi_tel si
+            # calcolava ma non si scriveva) e le voci delle caratteristiche (features) che ne parlano: c'è un'altra
+            # indicazione "numero disponibile" oltre ad advertiser.phone? Mai valori, solo nomi e pieno/vuoto
+            try:
+                fs = l.raw.get("features") or []
+                feat = sorted({str(f.get("uri") or "")[:40] for f in (fs if isinstance(fs, list) else [])
+                               if isinstance(f, dict) and re.search(r"(?i)phone|tel|contatt|chiam|call|whats",
+                                                                     str(f.get("uri") or ""))})
+                campi = _chiavi_tel(l.raw)[:20]
+            except Exception:
+                feat, campi = [], []
+            log.warning("TR subito telefono: forma=%r lunghezza=%s cifre=%s campi=%s caratteristiche=%s", forma,
+                        len(ph) if isinstance(ph, str) else None,
+                        len(re.sub(r"\D", "", ph)) if isinstance(ph, str) else None, campi, feat[:10])
         from ..core.dal_testo import completa
         # 2/11 sera: anche cambio e potenza dal testo (senza kW/cambio l'auto non trova confronti -> dati insufficienti)
         for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km, "gearbox": l.gearbox,
