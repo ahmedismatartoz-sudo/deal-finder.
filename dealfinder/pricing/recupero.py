@@ -7,7 +7,9 @@ cascata dei confronti di ricalcolo._cascata e con la stessa guardia sulle scritt
 la cui ultima valutazione è:
   - "in attesa del giudice" (giudice_mancante: budget AI finito, AI ferma o processo senza chiave AI);
   - "dati_insufficienti" perché il mercato non si è potuto stimare: pochi confronti ("solo N confronti validi") o
-    confronti troppo dispersi, e non ancora passata dalla cascata.
+    confronti troppo dispersi, e non ancora passata dalla cascata;
+  - 17/11: "dati_insufficienti" per dati dell'auto incompleti (anno, km, alimentazione, km scritti come l'anno) che
+    nell'annuncio ORA ci sono (letti dal testo da core/dal_testo.completa_db): senza questo restavano ferme.
 Le auto ferme per una protezione (prezzo sotto il 55% del mercato, danni, costi, prezzo non affidabile) e quelle già
 valutate non si riprendono: la cascata per loro non parte (ricalcolo.serve_cascata).
 
@@ -48,7 +50,8 @@ TABELLA_SQL = ("CREATE TABLE IF NOT EXISTS recupero_provato (listing_id BIGINT P
 
 # Ultima valutazione dell'auto (versione di policy in uso), solo privati online, non ripresa nelle ultime ORE ore.
 DA_RECUPERARE_SQL = """
-SELECT v.listing_id
+SELECT v.listing_id, (v.categoria = 'dati_insufficienti' AND v.dati->'motivi'->>0 LIKE 'dati dell''auto incompleti%%')
+       AS incompleti, l.mileage_km, l.title, left(l.description, 4000) AS descr, l.version_raw
   FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
   LEFT JOIN recupero_provato rp ON rp.listing_id = v.listing_id
  WHERE v.policy_version = %(pv)s AND l.status = 'attivo'
@@ -62,7 +65,15 @@ SELECT v.listing_id
    AND (   (v.dati->>'giudice_mancante') = 'true'
         OR (NOT (v.dati ? 'cascata') AND v.categoria = 'dati_insufficienti'
             AND (v.dati->'motivi'->>0 LIKE 'solo %%confronti validi%%'
-                 OR v.dati->'motivi'->>0 LIKE 'confronti troppo dispersi%%')))
+                 OR v.dati->'motivi'->>0 LIKE 'confronti troppo dispersi%%'))
+        -- 17/11: dati dell'auto mancanti o sbagliati (km = anno) ma ORA completi nell'annuncio (dal testo, rilettura)
+        OR (v.categoria = 'dati_insufficienti' AND v.dati->'motivi'->>0 LIKE 'dati dell''auto incompleti%%'
+            AND l.year IS NOT NULL AND l.mileage_km IS NOT NULL AND l.fuel IS NOT NULL AND l.price_eur IS NOT NULL
+            AND NOT (l.mileage_km BETWEEN 1990 AND 2035 AND abs(l.mileage_km - l.year) <= 3)
+            -- km riempiti dal testo con la vecchia lettura (poteva prendere "tagliando ogni 15.000 km"): non si
+            -- riprendono; solo quelli letti col filtro prudente (segno km_testo_prudente) o dati dalla fonte
+            AND NOT (COALESCE(l.field_origin->>'mileage_km', '') = 'dal_testo'
+                     AND NOT (COALESCE(l.field_origin, '{}'::jsonb) ? 'km_testo_prudente'))))
  ORDER BY v.computed_at ASC
  LIMIT %(lim)s"""
 
@@ -93,6 +104,21 @@ def _rollback(conn) -> None:
         pass
 
 
+def km_affidabili(r) -> bool:
+    """17/11 (giudice): un'auto ferma per dati incompleti si riprende solo se i km non sembrano letti dalla vecchia
+    chilometri() (che prendeva "tagliando ogni 15.000 km" -> 15.000): se la vecchia lettura del testo dà proprio i km
+    salvati e la lettura prudente no, i km vengono quasi certamente da lì -> non si riprende (in dubbio no)."""
+    try:
+        if not r.get("incompleti"):
+            return True
+        from ..core.dal_testo import chilometri, km_percorsi_chiari
+        testo = f"{r.get('version_raw') or ''}\n{r.get('title') or ''}\n{r.get('descr') or ''}"
+        km = r.get("mileage_km")
+        return not (km is not None and chilometri(testo) == km and km_percorsi_chiari(testo) != km)
+    except Exception:
+        return False
+
+
 def da_recuperare(conn, limite: int | None = None) -> list:
     lim = _int("RECUPERO_PER_GIRO", PER_GIRO) if limite is None else limite
     if lim <= 0:
@@ -101,7 +127,7 @@ def da_recuperare(conn, limite: int | None = None) -> list:
         conn.execute(TABELLA_SQL)
         return [r["listing_id"] for r in conn.execute(
             DA_RECUPERARE_SQL, {"pv": P.POLICY_VERSION, "giorni": _int("RECUPERO_GIORNI", GIORNI),
-                                "ore": _int("RECUPERO_ORE", ORE), "lim": lim}).fetchall()]
+                                "ore": _int("RECUPERO_ORE", ORE), "lim": lim}).fetchall() if km_affidabili(r)]
     except Exception as e:
         _rollback(conn)
         log.warning("RECUPERO_CONFRONTI auto non lette: %s", str(e)[:200])
@@ -149,10 +175,97 @@ def recupera(conn, limite: int | None = None) -> dict:
             pass
 
 
+# ------------------------------------------------------------------ diagnosi (17/11 notte, sola lettura)
+# Perché le auto di privati online restano in dati_insufficienti: primo motivo, confronti trovati, motivi di esclusione
+# dei confronti (anno, km, cambio, potenza...), dati mancanti dell'auto, modello generico e QUANTI annunci attivi ha il
+# suo gruppo marca/modello/alimentazione in tutta la base (0-1 = modello raro o nome diverso tra le fonti). Solo numeri
+# e marca/modello: niente id, URL, venditori. Riga di log RECUPERO_DIAGNOSI; spenta con RECUPERO_DIAGNOSI=0.
+DIAGNOSI_SQL = """
+WITH t AS (
+  SELECT l.make, l.model, l.fuel, l.year, l.mileage_km, l.gearbox, l.power_kw, v.dati
+    FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
+   WHERE v.policy_version = %(pv)s AND l.status = 'attivo' AND v.categoria = 'dati_insufficienti'
+     AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
+     AND v.computed_at > now() - make_interval(days => %(giorni)s)),
+g AS (
+  SELECT l.make, l.model, l.fuel, count(*) AS n
+    FROM listings l JOIN (SELECT DISTINCT make, model, fuel FROM t) k
+      ON l.make = k.make AND l.model = k.model AND l.fuel = k.fuel
+   WHERE l.status = 'attivo' AND l.price_eur IS NOT NULL
+   GROUP BY 1, 2, 3)
+SELECT t.make, t.model, t.fuel, t.year, t.mileage_km, t.gearbox, t.power_kw,
+       t.dati->'motivi'->>0 AS motivo, (t.dati->>'n') AS n, t.dati->'non_equivalenti' AS non_eq,
+       (t.dati ? 'cascata') AS cascata, COALESCE(g.n, 0) AS gruppo
+  FROM t LEFT JOIN g ON g.make = t.make AND g.model = t.model AND g.fuel = t.fuel"""
+
+
+def _motivo_corto(m: str | None) -> str:
+    import re
+    return re.sub(r"\d[\d.,]*", "N", (m or "nessun motivo"))[:70]
+
+
+def riassumi_diagnosi(righe: list[dict]) -> dict:
+    """Conteggi della diagnosi (separata dalla query per i test)."""
+    from ..core import normalize as N
+    from ..core.dal_testo import km_come_anno
+    mot, neq, mancano, gruppo, nconf, modelli = Counter(), Counter(), Counter(), Counter(), Counter(), Counter()
+    cascata = 0
+    for r in righe:
+        mot[_motivo_corto(r.get("motivo"))] += 1
+        cascata += int(bool(r.get("cascata")))
+        for k, nome in (("year", "anno"), ("mileage_km", "km"), ("fuel", "alimentazione"), ("gearbox", "cambio"),
+                        ("power_kw", "potenza")):
+            if r.get(k) in (None, ""):
+                mancano[nome] += 1
+        if km_come_anno(r.get("mileage_km"), r.get("year")):
+            mancano["km_uguali_anno"] += 1
+        if (r.get("model") or "") in N.MODELLI_GENERICI:
+            mancano["modello_generico"] += 1
+        g = int(r.get("gruppo") or 0)
+        gruppo["0-1" if g <= 1 else "2-4" if g <= 4 else "5-19" if g <= 19 else "20-99" if g <= 99 else "100+"] += 1
+        try:
+            n = int(r.get("n") or 0)
+        except (TypeError, ValueError):
+            n = 0
+        nconf[str(n) if n < 4 else "4+"] += 1
+        ne = r.get("non_eq")
+        if isinstance(ne, str):
+            try:
+                ne = json.loads(ne)
+            except ValueError:
+                ne = None
+        for k, c in (ne or {}).items() if isinstance(ne, dict) else ():
+            try:
+                neq[_motivo_corto(k)] += int(c)
+            except (TypeError, ValueError):
+                pass
+        if g <= 4:
+            modelli[f"{r.get('make')}/{r.get('model')}/{r.get('fuel')}"] += 1
+    return {"auto": len(righe), "motivi": dict(mot.most_common(12)), "confronti_trovati": dict(nconf),
+            "gruppo_attivi": dict(gruppo), "dati_mancanti": dict(mancano), "gia_in_cascata": cascata,
+            "confronti_esclusi_per": dict(neq.most_common(15)), "modelli_rari": dict(modelli.most_common(40))}
+
+
+def diagnosi(conn) -> dict | None:
+    if os.environ.get("RECUPERO_DIAGNOSI", "1").strip() == "0":
+        return None
+    try:
+        righe = [dict(r) for r in conn.execute(DIAGNOSI_SQL, {"pv": P.POLICY_VERSION,
+                                                               "giorni": _int("RECUPERO_GIORNI", GIORNI)}).fetchall()]
+        out = riassumi_diagnosi(righe)
+        log.warning("RECUPERO_DIAGNOSI %s", json.dumps(out, ensure_ascii=False))
+        return out
+    except Exception as e:
+        _rollback(conn)
+        log.warning("RECUPERO_DIAGNOSI non riuscita: %s", str(e)[:200])
+        return None
+
+
 def _recupera(conn, limite: int | None) -> dict:
     from ..ai import giudice as GI
     from .valutazione import valuta_e_scrivi
     t0 = time.time()
+    diagnosi(conn)                  # 17/11: misura del perché (sola lettura), prima del giro
     ids = da_recuperare(conn, limite)
     if not ids:
         log.warning("RECUPERO_CONFRONTI %s", json.dumps({"auto": 0}))

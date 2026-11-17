@@ -202,6 +202,8 @@ def rinormalizza_righe(righe: list[dict], con_tipo: bool = False) -> list[dict]:
         nuovo = {}
         mk = N.canon_make(N.slug(r.get("make"))) if r.get("make") else r.get("make")
         md = N.canon_model(mk, N.slug(r.get("model"))) if r.get("model") else r.get("model")
+        # 17/11 (notte-04): "Altro modello" letto dal titolo anche nello storico (stessa regola della raccolta)
+        md = N.modello_dal_titolo(mk, md, r.get("title"), r.get("version_raw")) or md
         testo = f"{r.get('version_raw') or ''} {r.get('title') or ''}"
         fu = N.norm_fuel(r.get("fuel")) if r.get("fuel") else r.get("fuel")
         if fu in ("benzina", "diesel") and N._RE_IBRIDA_TESTO.search(testo):

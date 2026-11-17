@@ -194,6 +194,9 @@ def problem_hint(listing: Listing) -> list[str]:
 def normalize_fields(listing: Listing) -> Listing:
     listing.make = canon_make(slug(listing.make))
     listing.model = canon_model(listing.make, slug(listing.model))
+    if listing.model in MODELLI_GENERICI:                   # 17/11: "Altro modello" -> modello scritto nel titolo
+        listing.model = modello_dal_titolo(listing.make, listing.model, listing.title, listing.version_raw) \
+            or listing.model
     if listing.fuel:
         testo_motore = f"{listing.version_raw or ''} {listing.title or ''}"
         listing.fuel_tipo = fuel_tipo(listing.fuel, testo_motore)
@@ -291,7 +294,7 @@ def canon_make(make: str | None) -> str | None:
 
 # 3/11 (studio 4, P9): versione delle regole di normalizzazione. Il lavoro `rinormalizza` (cron) riapplica le regole
 # allo storico una volta per versione: va aumentata a ogni cambio di canon_model / norm_fuel / norm_gearbox.
-NORM_VERSIONE = 2
+NORM_VERSIONE = 3      # 17/11 notte: sinonimi tra AutoScout e Subito (Mazda3/3, Grandland X, DS 7 Crossback...)
 
 # suffissi di CARROZZERIA (non di modello): "a3-sportback" e "a3" sono la stessa auto, la carrozzeria la danno
 # versione e titolo. Non si tolgono suffissi che fanno un modello diverso (golf-plus, yaris-cross, golf-sportsvan).
@@ -311,6 +314,91 @@ def _canon_generico(m: str) -> str:
     if r:
         return r.group(1) + r.group(2)
     return m
+
+
+# 17/11 notte (dati_insufficienti: 1.781 auto della zona senza confronti): lo STESSO modello chiamato in modo diverso
+# dalle due fonti (visto nei log WA30_AUTO: "Crossland X" / "Crossland", "3" / "Mazda3", "DS 7 Crossback" / "DS7").
+# I confronti si cercano per marca+modello+alimentazione esatti: con due nomi l'auto vedeva solo metà del mercato.
+# Solo lo stesso modello scritto in modo diverso; anno, km, potenza e carrozzeria continuano a dividere i confronti.
+# 17/11 (giudice, "non gonfiare i prezzi"): NON si uniscono generazioni o allestimenti diversi, anche se il nome
+# somiglia: Mokka X / Mokka (2020, altra auto), Grandland X / Grandland (2024), DS 4 Crossback / DS 4 (2021),
+# SX4 S-Cross / S-Cross (2022), Abarth 500 / 595 e 595 Competizione/Pista/Esseesse/Yamaha (allestimenti con prezzi
+# diversi), 500C / 595C, Grande Punto / Punto Evo / Punto, Cee'd / Ceed (2018). Restano divisi anche DS3 / DS3
+# Crossback, 500 / 500C, Aygo / Aygo X, Zafira / Zafira Tourer, Qashqai / Qashqai+2.
+_SINONIMI = {
+    "opel": {"crossland-x": "crossland"},
+    "ds-automobiles": {"ds-7-crossback": "ds7", "ds7-crossback": "ds7", "ds-3-crossback": "ds3-crossback"},
+    "fiat": {"new-panda": "panda", "nuova-panda": "panda", "pandina": "panda", "nuova-tipo": "tipo"},
+    "abarth": {"595-c": "595c"},
+    "citroen": {"c4-spacetourer": "c4-picasso", "grand-c4-spacetourer": "grand-c4-picasso",
+                "c4-grand-spacetourer": "grand-c4-picasso", "c4-grand-picasso": "grand-c4-picasso"},
+}
+
+# Modello non scelto dal venditore ("Altro modello", "Altro"): con questo nome si confrontavano tra loro auto diverse
+# della stessa marca. Si legge il modello dal titolo (vehicles.make_model_from_title) solo se il titolo dice la
+# STESSA marca; altrimenti il nome resta com'era.
+MODELLI_GENERICI = {"altro", "altro-modello", "altri-modelli", "altri", "other", "others", "altro-modello-non-in-elenco",
+                    "modello-non-in-elenco", "non-in-elenco", "n-d", "nd"}
+
+
+# Parole che dopo il nome del modello indicano il motore (o l'anno): lì il modello è finito.
+_RE_DATO_MOTORE = re.compile(
+    r"\d(?:[.,]\d)?[a-z]*|\d{2,4}[a-z]{0,2}|(?:19[89]|20[0-3])\d|cv|kw|tdi|tsi|tfsi|fsi|hdi|bluehdi|e-?hdi|cdi|"
+    r"crd|crdi|jtd|jtdm|mjt|multi-?jet|ecotec|cdti|tce|dci|puretech|vti|thp|t-?jet|fire|mpi|gdi|t-?gdi|tdci|"
+    r"ecoboost|d-?4d|vvt-?i|skyactiv\S*|gpl|metano|diesel|benzina|ibrida|hybrid|e-?hybrid|phev|mhev|elettrica|ev|"
+    r"turbo|bifuel|bi-?fuel|cng|lpg|t?jet", re.I)
+
+
+def _modello_titolo(make: str, testo: str) -> str | None:
+    """Modello dal testo (titolo/versione) SOLO se finisce chiaramente: dopo le sue 1-3 parole viene un dato del motore
+    o l'anno (o, per una parola sola, il testo finisce lì). Il nome di più parole passa per canon_model (stessi
+    _SINONIMI dei modelli normali): "Mokka X 1.6" -> "mokka-x", mai "mokka"; "Yaris Cross Hybrid" -> "yaris-cross"."""
+    from .vehicles import _ALIASES, MAKES, NUMERIC_MODELS, TWO_WORD_PREFIX
+    t = re.sub(r"\s+", " ", testo.lower()).strip()
+    for alias in _ALIASES:
+        m = re.search(r"(?:^|\s)" + re.escape(alias) + r"(?:\s|$)", t)
+        if not m:
+            continue
+        if canon_make(slug(MAKES[alias])) != make:
+            return None                                       # il testo dice un'altra marca: non si tocca
+        parole = [w.strip(",;:()!\"'") for w in t[m.end():].split()]
+        parole = [w for w in parole if w]
+        if not parole:
+            return None
+        if _RE_DATO_MOTORE.fullmatch(parole[0]) and parole[0] not in NUMERIC_MODELS.get(MAKES[alias], ()):
+            return None                                       # "Dodge 2.0 CRD": la cilindrata non è un modello
+        # "Serie 3", "Classe A", "Range Rover", "Grand C4": il nome ha almeno due parole
+        for k in ((2, 3) if parole[0] in TWO_WORD_PREFIX else (1, 2, 3)):
+            if len(parole) < k:
+                return None
+            dopo = parole[k] if len(parole) > k else None
+            if dopo is None and k > 1:
+                return None                                   # "Fiat Punto bellissima": non si sa dove finisce
+            if dopo is not None and not _RE_DATO_MOTORE.fullmatch(dopo):
+                continue
+            cand = slug(" ".join(parole[:k]))
+            if not cand:
+                return None
+            if make == "ds-automobiles" and cand[0].isdigit():
+                cand = "ds-" + cand                           # "DS 7 Crossback" -> "ds-7-crossback" -> "ds7"
+            return canon_model(make, cand)
+        return None
+    return None
+
+
+def modello_dal_titolo(make: str | None, model: str | None, *testi: str | None) -> str | None:
+    """Modello canonico per un annuncio con modello generico ("altro-modello"), dal titolo o dalla versione.
+    Ritorna None se il modello non è generico o se il testo non lo dice chiaramente (stessa marca).
+    17/11 (giudice): non più "la prima parola" ("Mokka X" -> "mokka" rifaceva le unioni vietate), vedi _modello_titolo."""
+    if not make or (model or "") not in MODELLI_GENERICI:
+        return None
+    for t in testi:
+        if not t:
+            continue
+        nuovo = _modello_titolo(make, t)
+        if nuovo and nuovo not in MODELLI_GENERICI:
+            return nuovo
+    return None
 
 
 def canon_model(make: str | None, model: str | None) -> str | None:
@@ -374,6 +462,19 @@ def canon_model(make: str | None, model: str | None) -> str | None:
             return "passat"
         if m in ("polo-gti",):
             return "polo"
+    s = _SINONIMI.get(make, {}).get(m)
+    if s:
+        return s
+    if make == "mazda":
+        r = re.fullmatch(r"mazda-?([2356])(-.*)?", m)         # "mazda3" (Subito) = "3" (AutoScout)
+        if r:
+            m = r.group(1) + (r.group(2) or "")
+    elif make == "lexus":
+        # "ux-200", "ux-250h", "ct-200h" (AutoScout) = "ux", "ct" (Subito): un solo motore per generazione.
+        # 17/11 (giudice): NON nx/rx/is/es...: NX 300h e NX 350h, RX 450h e RX 500h sono generazioni o motori diversi.
+        r = re.fullmatch(r"(ct|ux|lbx)-?\d{3}[a-z+]*(-.*)?", m)
+        if r:
+            return r.group(1)
     r = _RE_CARROZZERIA.fullmatch(m)
     if r:
         m = r.group(1)

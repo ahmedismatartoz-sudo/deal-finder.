@@ -439,6 +439,16 @@ def assicura_indice_veicolo() -> str:
         return "errore: " + str(e)[:120]
 
 
+# 17/11 (notte-04, giudice): un nuovo passaggio che riporta i km UGUALI ALL'ANNO (dato sbagliato del portale) non
+# cancella i km buoni già salvati (dalla fonte o dal testo): si tengono quelli. Negli altri casi come prima.
+KM_TENERE_SQL = ("(CASE WHEN %(mileage_km)s::int BETWEEN 1990 AND 2035 "
+                 "AND abs(%(mileage_km)s::int - COALESCE(%(year)s::int, listings.year)) <= 3 "
+                 "AND listings.mileage_km IS NOT NULL "
+                 "AND NOT (listings.mileage_km BETWEEN 1990 AND 2035 "
+                 "AND abs(listings.mileage_km - COALESCE(%(year)s::int, listings.year)) <= 3) "
+                 "THEN listings.mileage_km ELSE COALESCE(%(mileage_km)s, listings.mileage_km) END)")
+
+
 def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
     """Salva o aggiorna un annuncio. Ritorna (id, evento): nuovo | prezzo | invariato | riapparso."""
     prev = conn.execute("SELECT id, price_eur, status FROM listings WHERE source=%s AND source_id=%s",
@@ -491,7 +501,7 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         "version_raw": f"COALESCE({_ai}->>'version_raw', %(version_raw)s, listings.version_raw)",
         "fuel": "COALESCE(%(fuel)s, listings.fuel)",
         "year": "COALESCE(%(year)s, listings.year)",
-        "mileage_km": "COALESCE(%(mileage_km)s, listings.mileage_km)",
+        "mileage_km": KM_TENERE_SQL,
         "damage_declared": f"COALESCE(({_ai}->>'damage_declared')::boolean, %(damage_declared)s)",
         "price_flags": f"(CASE WHEN {_ai} ? 'price_flags' THEN ARRAY(SELECT DISTINCT unnest(%(price_flags)s::text[] || ARRAY['leasing_o_rata'])) ELSE %(price_flags)s END)",
         # 12/11: la ricerca riscrive solo la sua parte ("ricerca"); quello letto dalla pagina dell'annuncio resta
