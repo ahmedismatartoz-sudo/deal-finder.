@@ -3600,6 +3600,7 @@ def _tempo_reale():
         from ..ai import client as _AI
         from ..pricing import policy_v2 as _PV
         from ..pricing.valutazione import valuta_e_scrivi as _ves, esce_dall_attesa as _esce
+        from ..pricing import valutazione as _VAL
         from collections import Counter as _Cr
         _diag = {"fatto": False}
         # 15/11 (giudice A2): in _visti solo le auto davvero riscritte e uscite dall'attesa (valutazione.esce_dall_attesa)
@@ -3608,11 +3609,20 @@ def _tempo_reale():
         # Un tentativo conta solo se il giudice non era bloccato (budget finito, illeggibile in attesa, AI spenta:
         # giudice.BLOCCATO); _visti si azzera ogni RIPROVA_GIUDICE_AZZERA_ORE (12) ore
         from ..ai import giudice as _GI
+
+        def _ids_in_cima() -> list:
+            # 17/11 cliente: le auto messe in cima dal pannello (es. Fiat 500 rossa) si ricontrollano per prime
+            try:
+                from . import impostazioni as _IMP
+                return [int(e.get("id") or e.get("listing_id")) for e in (_IMP.in_cima() or [])
+                        if e.get("id") or e.get("listing_id")]
+            except Exception:
+                return []
         _visti: set = set()
         _tentativi: dict = {}
         _max_tent = int(os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3"))
         _azzera = {"t": time.time()}
-        time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "420")))
+        time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "90")))
         while True:
             attesa = float(os.environ.get("RIPROVA_GIUDICE_MIN", "15")) * 60
             if time.time() - _azzera["t"] >= float(os.environ.get("RIPROVA_GIUDICE_AZZERA_ORE", "12")) * 3600:
@@ -3657,18 +3667,28 @@ def _tempo_reale():
                                           OR (v.categoria = 'dati_insufficienti' AND v.computed_at >= %s::timestamptz
                                               AND v.computed_at < %s::timestamptz))
                                      AND NOT (v.listing_id = ANY(%s))
-                                   ORDER BY v.computed_at LIMIT %s""",
+                                   ORDER BY (v.listing_id = ANY(%s)) DESC, v.computed_at LIMIT %s""",
                                 (_PV.POLICY_VERSION, os.environ.get("RIPROVA_DI_DA", "2026-11-13T10:00:00Z"),
                                  os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"), list(_visti),
-                                 int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
+                                 _ids_in_cima(),
+                                 int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")))).fetchall()]
                             st = _Cr()
-                            for k in range(0, len(ids), 20):
-                                _t0 = time.time()
-                                es = _ves(conn, ids[k:k + 20], "riprova-giudice")
-                                conn.commit()
+                            conn.commit()        # 17/11: la connessione del giro resta ferma mentre lavorano i thread
+                            # 17/11 (riprova veloce): RIPROVA_PARALLELI (4) lavoratori, ognuno con la sua connessione
+                            # (connect()), budget controllato prima di ogni blocco di 10; i blocchi partono in ordine
+                            # (prima le auto in cima). Il conteggio di tentativi e _visti resta qui, in un solo thread.
+                            _par = _VAL.RIPROVA_PARALLELI if _AI.provider() == "anthropic" else 1   # Gemini: ritmo
+                            if _par > 1:
+                                _AI.client()     # client Anthropic creato una volta sola, prima dei thread
+                            for pezzo, _t0, es, _err in _VAL.rivaluta_in_parallelo(
+                                    ids, "riprova-giudice", connect, _AI.budget_finito, paralleli=_par, blocco=10, ves=_ves):
+                                if es is None:
+                                    if _err is not None:
+                                        st["blocchi_non_riusciti"] += 1
+                                    continue
                                 for chiave, n in es.stats.items():
                                     st[chiave] += n
-                                for lid in ids[k:k + 20]:
+                                for lid in pezzo:
                                     if not _esce(es, lid) and _GI.esito(lid, _t0) in _GI.BLOCCATO:
                                         st["tentativo_non_contato"] += 1     # giudice bloccato: si riprova
                                         continue
@@ -3677,14 +3697,12 @@ def _tempo_reale():
                                         _visti.add(lid)
                                         st["uscite_dall_attesa" if _esce(es, lid) else "lasciate_dopo_tentativi"] += 1
                                         _tentativi.pop(lid, None)
-                                if _AI.budget_finito(conn):
-                                    break
                             if ids:
                                 lg.warning("RIPROVA_GIUDICE %s", json.dumps({"auto": len(ids), **dict(st)}))
                                 _elenco["t"] = 0.0
                                 _aggiorna_elenco(attendi=False)
-                                if len(ids) >= int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")):
-                                    attesa = 120
+                                if len(ids) >= int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")):
+                                    attesa = 15     # 17/11: recupero veloce delle auto messe in attesa dal cron senza AI
             except Exception as e:
                 lg.warning("RIPROVA_GIUDICE non riuscito: %s", str(e)[:300])
             time.sleep(attesa)

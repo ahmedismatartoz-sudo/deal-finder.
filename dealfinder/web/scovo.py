@@ -245,6 +245,8 @@ def in_cima(it: dict) -> dict:
     for k, e in enumerate(IN_CIMA if voci is None else voci):
         vero = int(it.get("prezzo_annuncio") or it.get("prezzo") or 0)
         if impostazioni.corrisponde(e, it):
+            if e.get("visto_dal"):      # 17/11 cliente: data da cui l'auto risulta in vendita (es. Fiat 500 rossa)
+                it = dict(it, visto_dal=e["visto_dal"], nuova=e["visto_dal"])
             mostra = e.get("mostra")
             if not mostra or int(mostra) > vero:      # mai un prezzo più alto dell'annuncio: solo in cima
                 return dict(it, vetrina=-100 + k)
