@@ -8,6 +8,10 @@ e si misura, per fascia di prezzo:
   - copertura: quota di auto vendute con prezzo >= R (R prudente "giusto" se vicino all'80%);
   - errore di R in %: (R - prezzo) / prezzo, mediana.
 Non cambia niente nel database: scrive solo CALIBRA_* nei log.
+
+17/11 notte (cliente: "margini molto precisi"): campione casuale della popolazione del sito (non più le prime vendute in
+ordine alfabetico di marca), M misurato solo quando viene dai prezzi chiesti, misura del valore reale su prezzo / V
+salvato (fasce_vr, prima quasi vuota) e diagnosi per età, carburante e fonte. Vedi VENDUTE_SQL e VENDUTE_VR_SQL.
 """
 from __future__ import annotations
 
@@ -27,19 +31,125 @@ def _fascia(p: float) -> str:
     return next(n for lim, n in FASCE if p < lim)
 
 
+# 17/11 notte (cliente: "margini molto precisi"): il campione era "ORDER BY marca LIMIT CALIBRA_MAX" (in produzione
+# 600): le PRIME 600 vendute in ordine alfabetico di marca (abarth, alfa, audi, bmw, ... mai fiat, volkswagen, renault,
+# toyota), ogni volta le stesse, e con auto che il sito non valuta mai (prima del 2007, oltre 150.000 km, vendute da
+# commercianti, che chiedono di più dei privati e alzano il rapporto prezzo/M). Ora: campione CASUALE (md5 dell'id,
+# stabile tra un giro e l'altro) della popolazione del sito (anno >= ammissione.anno_min, km <= ammissione.km_max,
+# privati); l'ordine per marca/modello resta solo per rileggere il mercato una volta per gruppo.
 VENDUTE_SQL = """
-SELECT {cols}, l.title, l.description, l.telefono_ok
-FROM listings l
+WITH c AS (
+  SELECT l.id FROM listings l
+  WHERE l.status = 'scomparso'
+    AND l.disappeared_at > now() - make_interval(days => %(dal)s)
+    AND l.disappeared_at - l.first_seen_at <= make_interval(days => %(gg)s)
+    AND l.price_eur BETWEEN 1000 AND 400000
+    AND l.mileage_km BETWEEN 0 AND %(km_max)s
+    AND l.year >= %(anno_min)s
+    AND l.seller_type = 'privato'
+    AND coalesce(l.damage_class, '') NOT IN ('grave', 'alto_rischio', 'medio')
+    AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
+    AND {zona}
+  ORDER BY md5(l.id::text)
+  LIMIT %(lim)s)
+SELECT {cols}, l.title, l.description, l.telefono_ok, l.first_seen_at, l.disappeared_at
+FROM c JOIN listings l ON l.id = c.id
+ORDER BY l.make, l.model, l.fuel"""
+
+# 17/11 notte: misura chiesto → venduto del VALORE REALE (voci "vr:" di regole.fattori_calibrazione). Prima si contava
+# solo un'auto venduta che, rivalutata, avesse metodo "valore_reale" puro (in produzione 9 auto in tutto, nessuna fascia
+# con le 20 necessarie): il valore reale, metodo principale del sito (2/3 delle auto pubblicate), non veniva MAI
+# corretto, mentre la prova del valore reale (VALORE_REALE PROVA del 16/11, 2.338 auto vendute di privati) lo misura
+# in media il 7% SOPRA il prezzo finale. Ora: prezzo finale / V salvato quando l'auto era ancora online (tabella
+# valore_reale, scritta solo per annunci attivi: nessun dato dal futuro), stesse vendute e stessa popolazione della
+# misura sui prezzi chiesti, per fascia di V. Il fattore si applica a V sia con l'accordo sia nel combinato
+# (policy_v2, regole.calibra_vendita) ed è sempre tra calibrazione.minimo e 1,0: può solo abbassare.
+VENDUTE_VR_SQL = """
+SELECT l.price_eur, v.v, v.p25, l.year, l.fuel, l.source
+FROM listings l JOIN valore_reale v ON v.listing_id = l.id
 WHERE l.status = 'scomparso'
   AND l.disappeared_at > now() - make_interval(days => %(dal)s)
   AND l.disappeared_at - l.first_seen_at <= make_interval(days => %(gg)s)
+  AND v.computed_at <= l.disappeared_at
   AND l.price_eur BETWEEN 1000 AND 400000
-  AND coalesce(l.mileage_km, 0) <= 200000
+  AND l.mileage_km BETWEEN 0 AND %(km_max)s
+  AND l.year >= %(anno_min)s
+  AND l.seller_type = 'privato'
   AND coalesce(l.damage_class, '') NOT IN ('grave', 'alto_rischio', 'medio')
-  AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
+  AND v.v > 0
   AND {zona}
-ORDER BY l.make, l.model, l.fuel
+ORDER BY md5(l.id::text)
 LIMIT %(lim)s"""
+
+
+def parametri_campione(rg=None) -> dict:
+    """Parametri della popolazione misurata: quella che il sito valuta (regole.ammissione, NON cambiate qui)."""
+    from .. import regole as RG
+    a = (rg or RG.regole()).ammissione
+    return {"dal": int(os.environ.get("CALIBRA_DAL_GIORNI", "60")),
+            "gg": int(os.environ.get("CALIBRA_GIORNI_VENDITA", "7")),
+            "lim": int(os.environ.get("CALIBRA_MAX", "3000")),
+            "km_max": int(a.km_max), "anno_min": int(a.anno_min)}
+
+
+def _vuota():
+    return {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0}
+
+
+def aggiungi(d: dict, prezzo: float, M: float, R: float) -> None:
+    d["n"] += 1
+    d["rapp_M"].append(prezzo / M)
+    d["err_R"].append((R - prezzo) / prezzo * 100)
+    d["coperte"] += 1 if prezzo >= R else 0
+
+
+def riassumi(dati: dict, ordine: list) -> dict:
+    """{fascia: {n, prezzo_su_M (mediana), errore_R_pct, copertura_R, q}} nell'ordine dato."""
+    out = {}
+    for f in ordine:
+        d = dati.get(f)
+        if not d or not d["n"]:
+            continue
+        out[f] = {"n": d["n"], "prezzo_su_M": round(median(d["rapp_M"]), 3),
+                  "errore_R_pct": round(median(d["err_R"]), 1),
+                  "copertura_R": round(d["coperte"] / d["n"], 2),
+                  "q": quantili(d["rapp_M"])}
+    return out
+
+
+def fascia_eta(anno, ora: int | None = None) -> str:
+    from datetime import datetime
+    e = (ora or datetime.now().year) - int(anno or 0)
+    return "0-3" if e <= 3 else "4-8" if e <= 8 else "9-12" if e <= 12 else "13+"
+
+
+def misura_vr(conn, par: dict, zona: str) -> tuple[dict, dict]:
+    """(fasce_vr, tutte): prezzo finale / V (valore reale salvato quando l'auto era online), per fascia di V, sulle
+    vendute della popolazione del sito. Lim proprio (CALIBRA_MAX_VR, la lettura è leggera: niente rivalutazione).
+    In fasce_vr (quelle che il sito applica) vanno SOLO le fasce con uno scostamento dimostrato verso il basso
+    (precisione.fattore_gruppo: almeno calibrazione.n_min auto, test dei segni p < 0,05, V sopra il prezzo finale):
+    senza prova il valore reale, che è già un prezzo di vendita, non si tocca. `tutte` = la misura completa (diagnosi)."""
+    from .. import regole as RG
+    from .precisione import fattore_gruppo
+    cal = RG.regole().calibrazione
+    righe = conn.execute(VENDUTE_VR_SQL.format(zona=zona),
+                         dict(par, lim=int(os.environ.get("CALIBRA_MAX_VR", "5000")))).fetchall()
+    per = defaultdict(_vuota)
+    coppie = defaultdict(list)
+    for r in righe:
+        V, prezzo = float(r["v"] or 0), float(r["price_eur"] or 0)
+        if V <= 0 or prezzo <= 0:
+            continue
+        aggiungi(per[_fascia(V)], prezzo, V, V)        # rivendita del sito con il valore reale = V (prima dei costi)
+        coppie[_fascia(V)].append((V, prezzo))
+    tutte = riassumi(per, [n for _, n in FASCE])
+    applicate = {}
+    for f, d in tutte.items():
+        fg = fattore_gruppo(coppie[f], n_min=cal.n_min, minimo=cal.minimo)
+        d["prova"] = {k: fg.get(k) for k in ("p", "stime_sopra", "stime_sotto", "applica", "motivo")}
+        if fg["applica"]:
+            applicate[f] = d
+    return applicate, tutte
 
 
 def quantili(valori: list) -> list | None:
@@ -100,24 +210,23 @@ def misura(conn) -> dict:
 
     cols = TARGET_COLS
     zona = HOME_REGION_SQL
-    rows = conn.execute(VENDUTE_SQL.format(cols=cols, zona=zona),
-                        {"dal": int(os.environ.get("CALIBRA_DAL_GIORNI", "60")),
-                         "gg": int(os.environ.get("CALIBRA_GIORNI_VENDITA", "7")),
-                         "lim": int(os.environ.get("CALIBRA_MAX", "3000"))}).fetchall()
+    par = parametri_campione()
+    rows = conn.execute(VENDUTE_SQL.format(cols=cols, zona=zona), par).fetchall()
     cfg = P.PolicyConfig.from_env()
     # 12/11 (rapporto 2 E2/E4): fasce di M (come nell'applicazione, regole.fattore_per) e non di prezzo: scegliere la
-    # fascia sul prezzo (la variabile misurata) esagera la sovrastima. In più la stessa misura quando M viene dal
-    # valore reale (fasce_vr): senza misura il valore reale non si corregge.
-    per = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
-    per_vr = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
-    per_prezzo = defaultdict(lambda: {"n": 0, "rapp_M": [], "err_R": [], "coperte": 0})
+    # fascia sul prezzo (la variabile misurata) esagera la sovrastima.
+    per = defaultdict(_vuota)
+    per_prezzo = defaultdict(_vuota)
+    # 17/11 notte: le stesse misure per età, carburante e fonte (solo da leggere, non usate dai fattori): dicono dove M
+    # sbaglia ancora prima di decidere una correzione
+    per_eta, per_carb, per_fonte = defaultdict(_vuota), defaultdict(_vuota), defaultdict(_vuota)
     try:
         from .valutazione import ingressi
-        _ing = ingressi(conn, [r["id"] for r in rows], solo=("vr", "calibra")) if rows else {}
-        vrs, fattori = _ing.get("vr") or {}, _ing.get("fattori_calibra")
+        _ing = ingressi(conn, [], solo=("calibra",))
+        fattori = _ing.get("fattori_calibra")
         priori = _ing.get("tassi_misurati")            # 12/11 sera: la misura parte con il pooling se i tassi ci sono
     except Exception:
-        vrs, fattori, priori = {}, None, None
+        fattori, priori = None, None
     mercato, chiave, cache = [], None, {}
     tot = 0
     for r in rows:
@@ -139,46 +248,41 @@ def misura(conn) -> dict:
             log.warning("CALIBRA errore %s: %s", r["id"], str(e)[:120])
             continue
         M, R = v.get("M"), v.get("R_finale") or v.get("R")
-        if not M or not R or (v.get("n") or 0) < cfg.n_minimo:
+        # solo M dai prezzi CHIESTI: è l'unico a cui si applicano questi fattori (regole.da_calibrare)
+        if not M or not R or (v.get("n") or 0) < cfg.n_minimo or v.get("M_fonte") not in (None, "annunci"):
             continue
-        for d in (per[_fascia(M)], per_prezzo[_fascia(prezzo)]):
-            d["n"] += 1
-            d["rapp_M"].append(prezzo / M)
-            d["err_R"].append((R - prezzo) / prezzo * 100)
-            d["coperte"] += 1 if prezzo >= R else 0
+        for d in (per[_fascia(M)], per_prezzo[_fascia(prezzo)], per_eta[fascia_eta(r.get("year"))],
+                  per_carb[str(r.get("fuel") or "?")], per_fonte[str(r.get("source") or "?")]):
+            aggiungi(d, prezzo, M, R)
         tot += 1
-        if r["id"] in vrs:
-            try:
-                v2, _ = _valuta_base(conn, dict(t, vr=vrs[r["id"]]), confronti, scovo.soglia(int(prezzo)), cfg, cache)
-            except Exception:
-                continue
-            # solo M dal valore reale puro: nel "combinato" le gemelle sono già portate al venduto (niente fattore)
-            if v2.get("M") and v2.get("M_fonte") == "vendite" and v2.get("metodo") in ("valore_reale",
-                                                                                        "valore_reale_modello"):
-                d = per_vr[_fascia(v2["M"])]
-                d["n"] += 1
-                d["rapp_M"].append(prezzo / v2["M"])
-                R2 = v2.get("R_finale") or v2.get("R") or v2["M"]
-                d["err_R"].append((R2 - prezzo) / prezzo * 100)
-                d["coperte"] += 1 if prezzo >= R2 else 0
+    try:
+        fasce_vr, fasce_vr_tutte = misura_vr(conn, par, zona)
+        # 17/11 notte: la misura del valore reale si APPLICA (voci "vr:" del sito) solo con CALIBRA_VR_APPLICA=1.
+        # Motivo: le "vendute" qui sono le sparite entro 7 giorni, cioè soprattutto le auto messe a prezzo basso, e il
+        # rapporto prezzo/V esce più basso del vero (la prova alla cieca del 15/11, sparite entro 30 giorni a caso, non
+        # trova scostamenti dimostrati tra 5.000 e 35.000 €); intanto V riguarda 2/3 delle auto del sito e con margini
+        # vicini alla soglia un -3% su V ne toglierebbe ~56 su 196 (DUMP_CANDIDATI del 17/11). Senza l'interruttore
+        # la misura resta in diagnosi.valore_reale e il sito resta com'era (nessuna fascia vr misurata su 20 auto).
+        if os.environ.get("CALIBRA_VR_APPLICA") != "1":
+            fasce_vr = {}
+    except Exception as e:
+        conn.rollback()
+        fasce_vr, fasce_vr_tutte = {}, {}
+        log.warning("CALIBRA valore reale non misurato: %s", str(e)[:150])
     # 4/11: con quale correzione anno/km è stata misurata (il fattore cambia se cambia la regola: va rimisurato)
     rg = cfg.regole
-    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": {}, "fasce_su": "M", "fasce_vr": {},
-           "fasce_prezzo": {}, "correzione_due_sensi": bool(cfg.due_sensi),
+    ordine = [n for _, n in FASCE]
+    out = {"vendute_lette": len(rows), "valutate": tot, "fasce": riassumi(per, ordine), "fasce_su": "M",
+           "fasce_vr": fasce_vr, "fasce_prezzo": riassumi(per_prezzo, ordine),
+           "diagnosi": {"valore_reale": fasce_vr_tutte, "eta": riassumi(per_eta, ["0-3", "4-8", "9-12", "13+"]),
+                        "carburante": riassumi(per_carb, sorted(per_carb)),
+                        "fonte": riassumi(per_fonte, sorted(per_fonte))},
+           "campione": {"tipo": "casuale_popolazione_sito", "anno_min": par["anno_min"], "km_max": par["km_max"],
+                        "venditore": "privato", "giorni_vendita": par["gg"], "dal_giorni": par["dal"]},
+           "correzione_due_sensi": bool(cfg.due_sensi),
            # 12/11 sera (controllo del giudice M2): con quali regole è stata misurata (regole.calibrazione_vecchia)
            "tassi_pooling": bool(rg.correzione.pooling and priori),
            "correzione_due_sensi_alto": bool(rg.correzione.due_sensi_alto)}
-    for chiave, dati in (("fasce", per), ("fasce_vr", per_vr), ("fasce_prezzo", per_prezzo)):
-        for lim, f in FASCE:
-            d = dati.get(f)
-            if not d or not d["n"]:
-                continue
-            out[chiave][f] = {"n": d["n"],
-                              "prezzo_su_M": round(median(d["rapp_M"]), 3),
-                              "errore_R_pct": round(median(d["err_R"]), 1),
-                              "copertura_R": round(d["coperte"] / d["n"], 2),
-                              # 12/11 sera (margini fase 2 punto 5): quantili di prezzo/M per la forbice della rivendita
-                              "q": quantili(d["rapp_M"])}
     # 12/11 sera (punti 3 e 4): tassi anno/km per marca e di tutti (pooling), premi di 4x4 e optional. Calcolati nel
     # database (somme per gruppo), mai le righe in memoria; un errore non ferma la misura principale.
     try:
