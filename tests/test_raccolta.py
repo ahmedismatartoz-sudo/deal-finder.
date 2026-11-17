@@ -459,7 +459,8 @@ def test_rinormalizza_storico_idempotente_e_riprende():
     assert (r[3]["model"], r[3]["fuel"], r[3]["fuel_tipo"]) == ("500x", "ibrida", "mild")
     assert r[4]["price_flags"] == [] and r[4]["model"] == "ds3"
     assert "fuel_tipo" not in r[5] and st["cambiate"] == 4 and st["lette"] == 5
-    assert conn.cursore["rinormalizza:v2"] == 5 and conn.commits >= 3          # un commit per pezzo
+    from dealfinder.core.normalize import NORM_VERSIONE        # 17/11: la versione sale a ogni cambio di regole
+    assert conn.cursore[f"rinormalizza:v{NORM_VERSIONE}"] == 5 and conn.commits >= 3          # un commit per pezzo
     # di nuovo: riprende dal cursore (niente da leggere); da capo: niente da cambiare
     n = conn.scritture
     assert rinormalizza(conn, pezzo=2).get("lette", 0) == 0

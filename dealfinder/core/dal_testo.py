@@ -23,11 +23,14 @@ _FUEL_PAROLE = [
                # 1/11: altre sigle benzina (EcoTSI, FireFly, TwinAir, VTEC, Skyactiv-G, Kompressor, BMW 118i/320i)
                r"ecotsi|firefly|twin-?air|\bi-?vtec\b|\bvtec\b|skyactiv-?g|kompressor|\b[1-8]\d{2}\s?i\b(?!['’])|\b[sx]drive\s?\d{2}i\b|\bturbo\s?benzina\b"),
 ]
-RE_ANNO = re.compile(r"(?:anno|immatricolat[ao]|immatricolazione|del|dal|registrazione|prima\s+immatricolazione)\s*:?\s*"
+# 17/11: anche "immatricolata nel 2015", "anno di immatricolazione 2015", "immatricolazione: marzo 2015"
+_MESI = r"(?:gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)"
+RE_ANNO = re.compile(r"(?:anno(?:\s+di\s+immatricolazione)?|immatricolat[ao]|immatricolazione|del|dal|registrazione|"
+                     r"prima\s+immatricolazione)\s*:?\s*(?:(?:nel|nell'|a|ad|il|in)\s*)?(?:" + _MESI + r"\s+(?:del\s+)?)?"
                      r"(?:(?:0?[1-9]|1[0-2])\s*[/.-]\s*)?((?:19[89]|20[0-3])\d)\b", re.I)
 RE_MESE_ANNO = re.compile(r"\b(?:0?[1-9]|1[0-2])\s*/\s*((?:19[89]|20[0-3])\d)\b")
 RE_KM = re.compile(r"(?<![\d.,])(\d{1,3}(?:[.\s]\d{3})+|\d{2,6})\s*(mila|k)?\s*(?:km|chilometri|kilometri)\b", re.I)
-RE_KM_DOPO = re.compile(r"\b(?:km|chilometri|kilometri|percorrenza)\s*(?:percorsi|reali|certificati|totali)?\s*:?\s*"
+RE_KM_DOPO = re.compile(r"\b(?:km|chilometri|kilometri|percorrenza|chilometraggio|kilometraggio)\s*(?:percorsi|reali|certificati|totali)?\s*:?\s*"
                         r"(\d{1,3}(?:[.\s]\d{3})+|\d{2,6})\s*(mila|k)?\b", re.I)
 
 
@@ -86,8 +89,19 @@ def chilometri(testo: str) -> int | None:
     return valori.pop() if len(valori) == 1 else None
 
 
+def km_come_anno(km, anno_auto) -> bool:
+    """Km uguali (±3) all'anno dell'auto ("2017" km per un'auto del 2017): il portale ha messo l'anno nel campo dei km.
+    Stessa regola di policy_v2.km_come_anno, che manda l'auto in dati_insufficienti."""
+    try:
+        return km is not None and anno_auto is not None and 1990 <= int(km) <= 2035 and abs(int(km) - int(anno_auto)) <= 3
+    except (TypeError, ValueError):
+        return False
+
+
 def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
-    """Ritorna SOLO i campi mancanti trovati nel testo: {"fuel": ..., "year": ..., "mileage_km": ...}."""
+    """Ritorna SOLO i campi mancanti trovati nel testo: {"fuel": ..., "year": ..., "mileage_km": ...}.
+    17/11: i km "uguali all'anno" (dato sbagliato del portale) contano come mancanti: si sostituiscono SOLO con km
+    scritti chiaramente nel testo (un solo valore, non a sua volta uguale all'anno); altrimenti restano come sono."""
     testo = f"{campi.get('version_raw') or ''}\n{titolo or ''}\n{descrizione or ''}"     # 1/11: anche la versione
     out = {}
     if not campi.get("fuel"):
@@ -98,9 +112,10 @@ def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
         a = anno(testo)
         if a:
             out["year"] = a
-    if campi.get("mileage_km") in (None, ""):
+    km_sbagliati = km_come_anno(campi.get("mileage_km"), campi.get("year") or out.get("year"))
+    if campi.get("mileage_km") in (None, "") or km_sbagliati:
         k = chilometri(testo)
-        if k:
+        if k and not km_come_anno(k, campi.get("year") or out.get("year")):
             out["mileage_km"] = k
     if "gearbox" in campi and not campi.get("gearbox"):
         g = cambio(testo)
@@ -116,7 +131,9 @@ def completa(campi: dict, titolo: str | None, descrizione: str | None) -> dict:
 def completa_db(conn, limite: int = 20000) -> dict:
     """Riempie nel database i campi mancanti degli annunci attivi (segnati in field_origin come 'dal_testo').
     1/11: anche commercianti e annunci fuori zona (servono come confronti: senza alimentazione un annuncio non entra
-    mai nel mercato), a pezzi da 3.000 per la memoria; si legge anche la versione dell'annuncio."""
+    mai nel mercato), a pezzi da 3.000 per la memoria; si legge anche la versione dell'annuncio.
+    17/11: anche gli annunci con i km uguali all'anno (dato sbagliato del portale: l'auto va in dati_insufficienti e
+    come confronto viene scartata), una volta sola (segno 'km_anno_letto'); si corregge solo con km chiari nel testo."""
     import json
     import os
     tetto = int(os.environ.get("DAL_TESTO_MAX", "60000"))
@@ -125,8 +142,11 @@ def completa_db(conn, limite: int = 20000) -> dict:
     while st["letti"] < tetto:
         rows = conn.execute(
             """SELECT id, title, description, version_raw, fuel, year, mileage_km, gearbox, power_kw, field_origin FROM listings
-               WHERE status='attivo' AND (fuel IS NULL OR year IS NULL OR mileage_km IS NULL OR gearbox IS NULL OR power_kw IS NULL)
-                 AND NOT (coalesce(field_origin, '{}'::jsonb) ? 'testo_letto_v2')
+               WHERE status='attivo'
+                 AND (((fuel IS NULL OR year IS NULL OR mileage_km IS NULL OR gearbox IS NULL OR power_kw IS NULL)
+                       AND NOT (coalesce(field_origin, '{}'::jsonb) ? 'testo_letto_v2'))
+                      OR (mileage_km BETWEEN 1990 AND 2035 AND year IS NOT NULL AND abs(mileage_km - year) <= 3
+                          AND NOT (coalesce(field_origin, '{}'::jsonb) ? 'km_anno_letto')))
                  AND (description IS NOT NULL OR title IS NOT NULL OR version_raw IS NOT NULL) AND id > %s
                ORDER BY id LIMIT 3000""", (ultimo,)).fetchall()
         if not rows:
@@ -137,6 +157,8 @@ def completa_db(conn, limite: int = 20000) -> dict:
             nuovi = completa(r, r["title"], r["description"])
             orig = r["field_origin"] if isinstance(r["field_origin"], dict) else json.loads(r["field_origin"] or "{}")
             orig["testo_letto_v2"] = 1                 # già letto: al giro dopo si passa agli annunci successivi
+            if km_come_anno(r["mileage_km"], r["year"]):
+                orig["km_anno_letto"] = 1              # 17/11: km uguali all'anno, riletti una volta sola
             if not nuovi:
                 conn.execute("UPDATE listings SET field_origin=%s WHERE id=%s", (json.dumps(orig), r["id"]))
                 continue

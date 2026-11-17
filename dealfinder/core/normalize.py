@@ -194,6 +194,9 @@ def problem_hint(listing: Listing) -> list[str]:
 def normalize_fields(listing: Listing) -> Listing:
     listing.make = canon_make(slug(listing.make))
     listing.model = canon_model(listing.make, slug(listing.model))
+    if listing.model in MODELLI_GENERICI:                   # 17/11: "Altro modello" -> modello scritto nel titolo
+        listing.model = modello_dal_titolo(listing.make, listing.model, listing.title, listing.version_raw) \
+            or listing.model
     if listing.fuel:
         testo_motore = f"{listing.version_raw or ''} {listing.title or ''}"
         listing.fuel_tipo = fuel_tipo(listing.fuel, testo_motore)
@@ -291,7 +294,7 @@ def canon_make(make: str | None) -> str | None:
 
 # 3/11 (studio 4, P9): versione delle regole di normalizzazione. Il lavoro `rinormalizza` (cron) riapplica le regole
 # allo storico una volta per versione: va aumentata a ogni cambio di canon_model / norm_fuel / norm_gearbox.
-NORM_VERSIONE = 2
+NORM_VERSIONE = 3      # 17/11 notte: sinonimi tra AutoScout e Subito (Mazda3/3, Grandland X, DS 7 Crossback...)
 
 # suffissi di CARROZZERIA (non di modello): "a3-sportback" e "a3" sono la stessa auto, la carrozzeria la danno
 # versione e titolo. Non si tolgono suffissi che fanno un modello diverso (golf-plus, yaris-cross, golf-sportsvan).
@@ -311,6 +314,54 @@ def _canon_generico(m: str) -> str:
     if r:
         return r.group(1) + r.group(2)
     return m
+
+
+# 17/11 notte (dati_insufficienti: 1.781 auto della zona senza confronti): lo STESSO modello chiamato in modo diverso
+# dalle due fonti (visto nei log WA30_AUTO: "Grandland X" / "Grandland", "3" / "Mazda3", "DS 7 Crossback" / "DS7").
+# I confronti si cercano per marca+modello+alimentazione esatti: con due nomi l'auto vedeva solo metà del mercato.
+# Solo sinonimi veri (stessa auto, stessa generazione o cambio di nome a metà vita); anno, km, potenza e carrozzeria
+# continuano a dividere i confronti come prima. NON si uniscono modelli diversi (DS3 / DS3 Crossback, 500 / 500C,
+# Aygo / Aygo X, Zafira / Zafira Tourer, Qashqai / Qashqai+2).
+_SINONIMI = {
+    "opel": {"grandland-x": "grandland", "crossland-x": "crossland", "mokka-x": "mokka"},
+    "ds-automobiles": {"ds-7-crossback": "ds7", "ds7-crossback": "ds7", "ds-3-crossback": "ds3-crossback",
+                       "ds-4-crossback": "ds4"},
+    "fiat": {"new-panda": "panda", "nuova-panda": "panda", "pandina": "panda", "grande-punto": "punto",
+             "punto-evo": "punto", "nuova-tipo": "tipo"},
+    # Abarth 500 (fino al 2016) e 595 sono la stessa auto (stessa scocca, stesso 1.4 T-Jet): il nome dipende
+    # dall'anno e dall'allestimento, la potenza separa 135/145/160/180 CV. La 500C/595C (cabrio) resta a parte.
+    "abarth": {"500": "595", "595-turismo": "595", "595-competizione": "595", "595-pista": "595",
+               "595-esseesse": "595", "595-yamaha": "595", "595-monster-energy-yamaha": "595", "500c": "595c",
+               "595-c": "595c", "500-c": "595c"},
+    "citroen": {"c4-spacetourer": "c4-picasso", "grand-c4-spacetourer": "grand-c4-picasso",
+                "c4-grand-spacetourer": "grand-c4-picasso", "c4-grand-picasso": "grand-c4-picasso"},
+    "suzuki": {"sx4-s-cross": "s-cross", "sx4-scross": "s-cross"},
+}
+
+# Modello non scelto dal venditore ("Altro modello", "Altro"): con questo nome si confrontavano tra loro auto diverse
+# della stessa marca. Si legge il modello dal titolo (vehicles.make_model_from_title) solo se il titolo dice la
+# STESSA marca; altrimenti il nome resta com'era.
+MODELLI_GENERICI = {"altro", "altro-modello", "altri-modelli", "altri", "other", "others", "altro-modello-non-in-elenco",
+                    "modello-non-in-elenco", "non-in-elenco", "n-d", "nd"}
+
+
+def modello_dal_titolo(make: str | None, model: str | None, *testi: str | None) -> str | None:
+    """Modello canonico per un annuncio con modello generico ("altro-modello"), dal titolo o dalla versione.
+    Ritorna None se il modello non è generico o se il testo non lo dice chiaramente (stessa marca)."""
+    if not make or (model or "") not in MODELLI_GENERICI:
+        return None
+    from .vehicles import make_model_from_title
+    for t in testi:
+        if not t:
+            continue
+        mk, md = make_model_from_title(t)
+        if mk and md and canon_make(slug(mk)) == make:
+            if make == "ds-automobiles" and md.isdigit():
+                md = "ds" + md                                  # "DS 7 Crossback" -> "ds7"
+            nuovo = canon_model(make, md)
+            if nuovo and nuovo not in MODELLI_GENERICI:
+                return nuovo
+    return None
 
 
 def canon_model(make: str | None, model: str | None) -> str | None:
@@ -374,6 +425,21 @@ def canon_model(make: str | None, model: str | None) -> str | None:
             return "passat"
         if m in ("polo-gti",):
             return "polo"
+    s = _SINONIMI.get(make, {}).get(m)
+    if s:
+        return s
+    if make == "mazda":
+        r = re.fullmatch(r"mazda-?([2356])(-.*)?", m)         # "mazda3" (Subito) = "3" (AutoScout)
+        if r:
+            m = r.group(1) + (r.group(2) or "")
+    elif make == "lexus":
+        # "ux-200", "ux200", "nx-300h", "rx-450h" (AutoScout) = "ux", "nx", "rx" (Subito): la potenza distingue il motore
+        r = re.fullmatch(r"(ct|is|nx|rx|ux|es|gs|ls|rc|lc|lbx)-?\d{3}[a-z+]*(-.*)?", m)
+        if r:
+            return r.group(1)
+    elif make == "kia":
+        m = re.sub(r"(^|-)cee-d(?=$|-)", r"\1ceed", m)        # "Cee'd" -> "cee-d" = "Ceed"
+        m = re.sub(r"(^|-)pro-?cee-?d(?=$|-)", r"\1proceed", m)
     r = _RE_CARROZZERIA.fullmatch(m)
     if r:
         m = r.group(1)
