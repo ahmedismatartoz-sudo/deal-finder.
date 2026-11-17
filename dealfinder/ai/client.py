@@ -69,8 +69,12 @@ def budget_mese() -> float:
     try:
         from datetime import datetime
         from zoneinfo import ZoneInfo
+        # 17/11 14:08 (cliente: "metti molto più crediti, ho 100 $ gratuiti, sfruttali"): l'account Anthropic non ha
+        # metodo di pagamento né crediti comprati, solo il credito promozionale (92,65 $ al 17/11, scade l'11/12): la
+        # spesa vera non può superarlo. Il conteggio interno (prezzi di listino) risulta molto più alto di quello della
+        # console, quindi il tetto interno di novembre si alza a 500 $ per non fermare l'AI senza motivo.
         if datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m") == "2026-11":
-            return 245.0
+            return 500.0
     except Exception:
         pass
     return 125.0
