@@ -645,7 +645,7 @@ def per_giro() -> int:
 
 def budget_usd() -> float:
     """Budget proprio, SEPARATO da AI_BUDGET_GIORNO (client.TASK_BUDGET_SEPARATO): dollari veri al giorno."""
-    return float(_env("CONTROLLO_BUDGET_USD", "1.3"))  # 16/11 sera cliente: tetto 100 €/mese per TUTTA l'AI
+    return float(_env("CONTROLLO_BUDGET_USD", "1.5"))  # 16/11 sera cliente: tetto 100 €/mese per TUTTA l'AI
 
 
 def parametri_diesel() -> dict:

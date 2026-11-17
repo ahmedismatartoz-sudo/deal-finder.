@@ -55,13 +55,25 @@ def spesa_oggi(conn) -> float:
 
 
 def budget_giorno() -> float:
-    return float(os.environ.get("AI_BUDGET_GIORNO", "2"))
+    return float(os.environ.get("AI_BUDGET_GIORNO", "2.5"))
 
 
 def budget_mese() -> float:
     """16/11 sera (cliente: "non posso spendere più di 100 € al mese di AI"): tetto MENSILE su TUTTA la spesa AI
     (tutti i lavori, compresi quelli con budget separato), in dollari. 100 € ≈ 105 $ con margine."""
-    return float(os.environ.get("AI_BUDGET_MESE_USD", "105"))
+    if os.environ.get("AI_BUDGET_MESE_USD"):
+        return float(os.environ["AI_BUDGET_MESE_USD"])
+    # 17/11 notte (cliente: "fai quello che devi fare, anche alzare il costo AI, basta arrivare a 600-700 auto"): a
+    # novembre 2026 erano già spesi 188,97 $ prima del tetto; fino a fine mese circa 4 $ al giorno in più (≈ 55 $).
+    # Da dicembre il tetto torna a 125 $ al mese (≈ 115 €).
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        if datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m") == "2026-11":
+            return 245.0
+    except Exception:
+        pass
+    return 125.0
 
 
 def spesa_mese(conn) -> float:

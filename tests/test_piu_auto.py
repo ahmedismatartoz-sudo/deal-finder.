@@ -133,7 +133,7 @@ def test_prezzi_veri_e_budget_separato():
     c = C()
     assert AI.spesa_oggi(c) == 0 and "task <> ALL" in c.sql and p_ok(c.p)
     with env(CONTROLLO_BUDGET_USD=None):
-        assert CA.budget_usd() == 1.3  # 16/11 sera: tetto AI 100 €/mese in tutto
+        assert CA.budget_usd() == 1.5  # 16/11 sera: tetto AI 100 €/mese in tutto
 
 
 def p_ok(p):
