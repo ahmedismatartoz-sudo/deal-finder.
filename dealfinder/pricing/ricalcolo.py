@@ -604,15 +604,18 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
             # stare solo quelle già sul sito (opportunita, da_verificare, incidentata, affidabile), confrontando la
             # PRIMA parte del motivo (verify.mark aggiunge " | scomparso ...": "incidentata | scomparso" non deve
             # diventare opportunita).
+            # (unione notte-09 + notte-10): motivo con scovo.motivo_stadio_sql (taglio al primo '|'), motivi già sul
+            # sito = scovo.MOTIVI_ELENCO, "solo confronto" = valutazione.NON_PROPOSTE
+            from . import valutazione as _VAL
+            _mot = scovo.motivo_stadio_sql("stage_reason")
             r_up = conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
                                 "last_checked_at=now() WHERE id=%s AND NOT (stage = 'approfondito' AND "
-                                "btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) IN "
-                                "('opportunita', 'da_verificare', 'incidentata', 'affidabile')) "
+                                + _mot + " = ANY(%s)) "
                                 # come valutazione.PROMUOVI_SQL: mai i "solo confronto" né il solo finanziamento
-                                "AND NOT (stage = 'mercato' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) "
-                                "IN ('mercato_nord', 'fuori_regole')) "
-                                "AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'",
-                                ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid))
+                                "AND NOT (stage = 'mercato' AND " + _mot + " = ANY(%s)) "
+                                "AND " + _mot + " <> 'solo_finanziamento'",
+                                ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid,
+                                 list(scovo.MOTIVI_ELENCO), list(_VAL.NON_PROPOSTE)))
             n += 1
             promosse += int(getattr(r_up, "rowcount", 0) or 0)
         conn.commit()

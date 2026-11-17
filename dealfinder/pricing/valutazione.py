@@ -460,14 +460,18 @@ SCARTI_FISSI = ("doppione", "truffa", "prezzo_finto", "dati_incoerenti")     # =
 # (modello_prezzi: solo una stima veloce scartata) restano promuovibili come prima del 17/11 (tempo reale): la
 # valutazione completa vale più della stima. Il motivo si confronta con la prima parte (verify.mark aggiunge " | ...").
 NON_PROPOSTE = ("mercato_nord", "fuori_regole")
+# 17/11 (unione notte-09 + notte-10): il motivo si taglia al PRIMO '|' come scovo.motivo_stadio_sql("stage_reason")
+# (prima qui ' |': "truffa|x" senza spazio non risultava uno scarto fisso). Testo copiato per non importare il sito
+# all'avvio del modulo; tests/test_notte_unione.py controlla che resti identico.
+_MOTIVO_SQL = "btrim(split_part(COALESCE(stage_reason, ''), '|', 1))"
 PROMUOVI_SQL = """UPDATE listings SET stage = 'approfondito', stage_reason = %s,
        deep_at = CASE WHEN stage = 'approfondito' THEN COALESCE(deep_at, now()) ELSE now() END, last_checked_at = now()
  WHERE id = %s
-   AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> ALL(%s)
+   AND """ + _MOTIVO_SQL + """ <> ALL(%s)
    AND COALESCE(stage_reason, '') NOT LIKE 'analisi_manuale%%'
-   AND NOT (stage = 'approfondito' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) = 'incidentata')
-   AND NOT (stage = 'mercato' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) = ANY(%s))
-   AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'
+   AND NOT (stage = 'approfondito' AND """ + _MOTIVO_SQL + """ = 'incidentata')
+   AND NOT (stage = 'mercato' AND """ + _MOTIVO_SQL + """ = ANY(%s))
+   AND """ + _MOTIVO_SQL + """ <> 'solo_finanziamento'
  RETURNING id"""
 
 VALUATIONS_SQL = """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,

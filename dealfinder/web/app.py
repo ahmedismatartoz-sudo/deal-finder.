@@ -3622,9 +3622,9 @@ def _tempo_reale():
                                 """SELECT v.listing_id FROM valutazioni_policy v JOIN listings l ON l.id = v.listing_id
                                    WHERE v.policy_version = %s AND l.status = 'attivo'
                                      -- 17/11: mai i "solo confronto" né il solo finanziamento (non si pubblicano)
-                                     AND NOT (l.stage = 'mercato' AND btrim(split_part(COALESCE(l.stage_reason, ''), ' |', 1))
+                                     AND NOT (l.stage = 'mercato' AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1))
                                               IN ('mercato_nord', 'fuori_regole'))
-                                     AND btrim(split_part(COALESCE(l.stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'
+                                     AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) <> 'solo_finanziamento'
                                      AND ((v.dati->>'giudice_mancante') = 'true'
                                           OR (v.categoria = 'dati_insufficienti' AND v.computed_at >= %s::timestamptz
                                               AND v.computed_at < %s::timestamptz))
