@@ -1247,3 +1247,27 @@ def test_riprova_giudice_usa_i_lavoratori_in_parallelo():
     assert "_VAL.rivaluta_in_parallelo(" in blocco and "_VAL.RIPROVA_PARALLELI" in blocco
     assert "connect, _AI.budget_finito" in blocco and "_ves(conn," not in blocco   # nessuna connessione condivisa
     assert "RIPROVA_PARALLELI\"" not in blocco                                     # nessuna variabile d'ambiente nuova
+
+
+def test_riprova_giudice_riprende_le_dati_insufficienti_del_cron_di_stanotte():
+    # 17/11 (riprova-notte): le "dati insufficienti" scritte dal cron nella finestra della notte (regole cambiate,
+    # giudice fermo) si rivalutano una volta con la stessa valuta_e_scrivi; prima le auto in attesa del giudice
+    import inspect
+    from dealfinder.web import app
+    src = inspect.getsource(app)
+    i = src.index("def riprova_giudice")
+    blocco = src[i:src.index("def perizia_ai", i)]
+    assert "LIKE 'cron%%'" in blocco
+    assert "RIPROVA_NOTTE_DA\", \"2026-11-17T01:00:00Z\"" in blocco and "RIPROVA_NOTTE_A\", \"2026-11-17T10:00:00Z\"" in blocco
+    assert "((v.dati->>'giudice_mancante') = 'true') DESC NULLS LAST" in blocco
+    assert "_VAL.rivaluta_in_parallelo(" in blocco and "ves=_ves" in blocco     # stessa strada, regole identiche
+    # i segnaposto della query e i parametri passati sono lo stesso numero
+    q0 = blocco.index("conn.execute(\n                                \"\"\"SELECT v.listing_id")
+    q1 = blocco.index("\"\"\",", q0 + 40)
+    sql = blocco[q0:q1].replace("%%", "")
+    p1 = blocco.index("LIMIT\", \"200\"))))", q1) if "LIMIT\", \"200\"))))" in blocco else blocco.index(".fetchall()]", q1)
+    parametri = blocco[q1:p1]
+    assert sql.count("%s") == 8
+    for nome in ("_PV.POLICY_VERSION", "RIPROVA_DI_DA", "RIPROVA_DI_A", "RIPROVA_NOTTE_DA", "RIPROVA_NOTTE_A",
+                 "list(_visti)", "_ids_in_cima()", "RIPROVA_GIUDICE_LOTTO"):
+        assert nome in parametri

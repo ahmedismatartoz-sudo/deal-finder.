@@ -3665,11 +3665,21 @@ def _tempo_reale():
                                      AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) <> 'solo_finanziamento'
                                      AND ((v.dati->>'giudice_mancante') = 'true'
                                           OR (v.categoria = 'dati_insufficienti' AND v.computed_at >= %s::timestamptz
-                                              AND v.computed_at < %s::timestamptz))
+                                              AND v.computed_at < %s::timestamptz)
+                                          -- 17/11 (riprova-notte): le "dati insufficienti" scritte stanotte dal cron
+                                          -- (regole cambiate, giudice fermo): una volta sola, stessa valuta_e_scrivi;
+                                          -- riscritta, la riga esce dalla finestra
+                                          OR (v.categoria = 'dati_insufficienti'
+                                              AND COALESCE(v.fonte, v.dati->>'fonte_valutazione', '') LIKE 'cron%%'
+                                              AND v.computed_at >= %s::timestamptz AND v.computed_at < %s::timestamptz))
                                      AND NOT (v.listing_id = ANY(%s))
-                                   ORDER BY (v.listing_id = ANY(%s)) DESC, v.computed_at LIMIT %s""",
+                                   ORDER BY (v.listing_id = ANY(%s)) DESC,
+                                            ((v.dati->>'giudice_mancante') = 'true') DESC NULLS LAST, v.computed_at
+                                   LIMIT %s""",
                                 (_PV.POLICY_VERSION, os.environ.get("RIPROVA_DI_DA", "2026-11-13T10:00:00Z"),
-                                 os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"), list(_visti),
+                                 os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"),
+                                 os.environ.get("RIPROVA_NOTTE_DA", "2026-11-17T01:00:00Z"),
+                                 os.environ.get("RIPROVA_NOTTE_A", "2026-11-17T10:00:00Z"), list(_visti),
                                  _ids_in_cima(),
                                  int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")))).fetchall()]
                             st = _Cr()
