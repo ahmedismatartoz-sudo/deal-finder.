@@ -1141,15 +1141,28 @@ def _ct() -> str:
 
 
 def _as_completa(client, out: list) -> list:
-    """Pagina dell'annuncio: dati completi e numero di telefono."""
+    """Pagina dell'annuncio: dati completi e numero di telefono.
+    17/11 (giudice): se la pagina dell'annuncio dice che non c'è più (404, rimando alla ricerca, "rimosso"), l'annuncio
+    NON si salva: la ricerca di AutoScout24 mostra per ore anche annunci già tolti (indice in ritardo) e, siccome uno
+    'scomparso' non è "noto" (_as_noti), prima tornava 'attivo' con evento 'riapparso' a ogni giro (fino a 24 ore) e
+    l'evento 'riapparso' lo toglieva per sempre dai venduti usati per i prezzi (valore_reale, rivendita). Si segna
+    visto in questo processo (niente dettaglio a ogni giro veloce); lo stato nel database resta com'è."""
     from ..collectors.autoscout import parse_item
     limitato = isinstance(client, ClienteLimitato)
+    tenuti, tolti = [], 0
     for i, l in enumerate(out):
         if fermato():
             # arresto: quelli senza dettaglio non si salvano e non si segnano visti: li rilegge il processo dopo
             log.warning("TR autoscout: arresto, %d annunci lasciati al prossimo avvio", len(out) - i)
-            return out[:i]
+            break
         st, det = _as_dettaglio(client, l.url)
+        if st == "scomparso":
+            tolti += 1
+            _visti("autoscout24").add(str(l.source_id))
+            if not limitato:
+                time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
+            continue
+        tenuti.append(l)
         if st == "attivo" and det:
             full = parse_item(det)
             if full:
@@ -1159,7 +1172,9 @@ def _as_completa(client, out: list) -> list:
             l.raw = {"_telefono": telefono_autoscout(det)}
         if not limitato:                          # col client limitato la pausa la fa il Limitatore
             time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
-    return out
+    if tolti:
+        log.info("TR autoscout: %d annunci ancora in ricerca ma tolti (pagina dell'annuncio assente): non salvati", tolti)
+    return tenuti
 
 
 # fasce di prezzo per la lettura completa: AutoScout mostra al massimo 20 pagine (400 annunci) per ricerca
@@ -1167,6 +1182,12 @@ def _as_completa(client, out: list) -> list:
 FASCE_AS = [(300, 2000), (2000, 3500), (3500, 5000), (5000, 7000), (7000, 9500), (9500, 13000),
             (13000, 18000), (18000, 26000), (26000, 150000)]
 AS_PAGINE_MAX = 20                                  # AutoScout24 non mostra oltre la 20ª pagina (400 annunci)
+
+
+def _as_pagine_vecchio() -> int:
+    """17/11 (giudice): tetto di pagine lette "dal più vecchio" (desc=0) per lettura completa, in tutto (non per
+    fascia), per non raddoppiare il carico su AutoScout24. TR_AS_PAGINE_VECCHIO, predefinito 10."""
+    return max(0, _intenv("TR_AS_PAGINE_VECCHIO", 10))
 
 
 def _fasce_as() -> list:
@@ -1204,6 +1225,8 @@ def _autoscout_tutti(conn) -> list:
     interrotta = False
 
     banda: set = set()                             # tutti gli id della fascia letti dal più recente
+    prima_pagina: list = []                        # id della 1ª pagina dal più recente (controllo che desc=0 funzioni)
+    vecchio = {"pagine": 0, "tetto": _as_pagine_vecchio(), "al_tetto": [], "ignorato": []}
 
     def leggi(idx, lo, hi, page, desc) -> str:
         """Una pagina: 'ok' (pagina piena, si continua), 'fine' (ultima pagina della ricerca, o dal più vecchio si è
@@ -1228,9 +1251,18 @@ def _autoscout_tutti(conn) -> list:
         if not items:
             return "fine"
         ids = [str(it.get("id")) for it in items]
+        if not desc and page == 1 and prima_pagina and ids == prima_pagina:
+            # 17/11 (giudice): la 1ª pagina "dal più vecchio" è uguale a quella dal più recente: AutoScout24 ignora
+            # desc=0, rileggere non serve (e i più vecchi della fascia restano persi): lo si scrive nei log
+            vecchio["ignorato"].append(f"{lo}-{hi}")
+            log.warning("TR completo autoscout fascia %s-%s: desc=0 sembra ignorato (1ª pagina uguale all'ordine "
+                        "normale), rilettura dal più vecchio saltata", lo, hi)
+            return "fine"
         if not desc and set(ids) <= banda:
             return "fine"                  # dal più vecchio si è arrivati al punto già letto: niente buco
         if desc:
+            if page == 1:
+                prima_pagina[:] = ids
             banda.update(ids)
         noti = _as_noti(conn, ids)
         for it in items:
@@ -1251,6 +1283,7 @@ def _autoscout_tutti(conn) -> list:
         if interrotta:
             break
         banda.clear()
+        prima_pagina.clear()
         esito = "fine"
         for page in range(p0, AS_PAGINE_MAX + 1):
             esito = leggi(idx, lo, hi, page, 1)
@@ -1265,18 +1298,28 @@ def _autoscout_tutti(conn) -> list:
         piene.append(f"{lo}-{hi}")
         esito2 = "fine"
         for page in range(1, AS_PAGINE_MAX + 1):
+            if vecchio["pagine"] >= vecchio["tetto"]:
+                esito2 = "tetto"           # tetto di pagine dal più vecchio per questo giro (TR_AS_PAGINE_VECCHIO)
+                vecchio["al_tetto"].append(f"{lo}-{hi}")
+                break
+            vecchio["pagine"] += 1
             esito2 = leggi(idx, lo, hi, page, 0)
             if esito2 != "ok":
                 break
         if esito2 == "interrotta":
+            log.warning("TR completo autoscout fascia %s-%s: rilettura dal più vecchio interrotta alla pagina %d "
+                        "(429/arresto), si riprende al giro dopo", lo, hi, page)
             interrotta = True
             break
         if esito2 == "ok":
             piene_anche_dal_vecchio.append(f"{lo}-{hi}")
     if not interrotta and ripresa:
         as_riprova.togli_ripresa(conn)
-    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona%s%s%s%s", pagine, len(out), fuori,
+    log.warning("TR completo autoscout: %d pagine lette, %d nuovi in zona, %d fuori zona%s%s%s%s%s%s", pagine, len(out), fuori,
                 f", fasce piene (rilette dal più vecchio) {piene}" if piene else "",
+                f", tetto {vecchio['tetto']} pagine dal più vecchio raggiunto (non rilette {vecchio['al_tetto']})"
+                if vecchio["al_tetto"] else "",
+                f", desc=0 ignorato {vecchio['ignorato']}" if vecchio["ignorato"] else "",
                 f", ANCORA PIENE oltre 800 annunci {piene_anche_dal_vecchio}" if piene_anche_dal_vecchio else "",
                 f", ripresa dalla fascia {fasce[ripresa['fascia']]}" if ripresa and 0 <= int(ripresa.get('fascia', -1)) < len(fasce) else "",
                 ", interrotta (si riprende al giro dopo)" if interrotta else "")

@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any, Iterator
+from collections import Counter
 
 
 from ..core import dati_auto
@@ -472,6 +473,20 @@ class SubitoCollector(Collector):
                     log.info("subito: codice provincia %s non visto negli annunci, uso quello noto %s", sn, note[sn])
         return keys
 
+    def _controlla_codice(self, region, key, sn: str, pagina: list) -> None:
+        """17/11 (giudice): se il codice provincia (anche quello noto di PROVINCE_KEYS_NOTE) restituisce annunci di
+        un'ALTRA provincia lo si scrive nei log, una volta per codice (gli annunci fuori provincia si scartano già)."""
+        fatti = self.__dict__.setdefault("_codici_controllati", set())
+        if (region, key) in fatti:
+            return
+        fatti.add((region, key))
+        altre = Counter((l.province or "").upper() for l in pagina
+                        if l.province and l.province.upper() != str(sn).upper())
+        if altre:
+            log.warning("subito: il codice provincia %s=%s (regione %s) restituisce annunci di altre province %s "
+                        "(%d su %d nella 1ª pagina)", sn, key, region, dict(altre.most_common(3)),
+                        sum(altre.values()), len(pagina))
+
     def _trova_regione(self, wanted: set, lim: int) -> int | None:
         """Codice regione di Subito non noto (es. Lazio): si prova 1..21 e si tiene quello con annunci delle province volute."""
         for reg in range(1, 22):
@@ -554,6 +569,8 @@ class SubitoCollector(Collector):
                     continue          # il filtro per provincia non ha funzionato: si scarta qui
                 tot["tenuti"] += 1
                 yield listing
+            if page == 0 and pagina:
+                self._controlla_codice(region, key, sn, pagina)
             if len(ads) < lim:
                 return
             if stop is not None and stop.pagina(pagina):
