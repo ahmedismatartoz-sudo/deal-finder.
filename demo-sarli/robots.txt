@@ -1,2 +1,8 @@
+# PROTOTIPO: sito non indicizzabile.
+# In produzione sostituire con:
+#   User-agent: *
+#   Allow: /
+#   Sitemap: <dominio>/sitemap.xml
+# e togliere i meta robots noindex dalle pagine.
 User-agent: *
 Disallow: /
