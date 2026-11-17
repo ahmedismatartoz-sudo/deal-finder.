@@ -1652,9 +1652,22 @@ def _as_noti(conn, ids: list) -> set:
     (prima restava fuori per sempre, sia nel giro veloce sia nella lettura completa)."""
     if not ids:
         return set()
-    return {str(x["source_id"]) for x in conn.execute(
+    righe = conn.execute(
         "SELECT source_id, status FROM listings WHERE source='autoscout24' AND source_id = ANY(%s)", (ids,)).fetchall()
-        if (x.get("status") or "attivo") == "attivo"}
+    # 17/11 (unione, giudice): si ricorda chi è 'scomparso' nel database (lo legge _as_completa: per lui serve la prova
+    # di vita prima di salvarlo); chi risulta attivo esce dall'elenco
+    if len(_AS_SCOMPARSI_DB) > _VISTI_MAX:
+        _AS_SCOMPARSI_DB.clear()
+    for x in righe:
+        if (x.get("status") or "attivo") == "scomparso":
+            _AS_SCOMPARSI_DB.add(str(x["source_id"]))
+        else:
+            _AS_SCOMPARSI_DB.discard(str(x["source_id"]))
+    return {str(x["source_id"]) for x in righe if (x.get("status") or "attivo") == "attivo"}
+
+
+# 17/11 (unione, giudice): id AutoScout24 'scomparso' nel database visti da _as_noti in questo processo
+_AS_SCOMPARSI_DB: set = set()
 
 
 _as_veloce_diag: Counter = Counter()
@@ -1743,19 +1756,33 @@ def _as_completa(client, out: list) -> list:
     visto in questo processo (niente dettaglio a ogni giro veloce); lo stato nel database resta com'è."""
     from ..collectors.autoscout import parse_item
     limitato = isinstance(client, ClienteLimitato)
-    tenuti, tolti = [], 0
+    tenuti, tolti, dubbi = [], 0, 0
     for i, l in enumerate(out):
         if fermato():
             # arresto: quelli senza dettaglio non si salvano e non si segnano visti: li rilegge il processo dopo
             log.warning("TR autoscout: arresto, %d annunci lasciati al prossimo avvio", len(out) - i)
             break
-        st, det = _as_dettaglio(client, l.url)
+        gia_scomparso = str(l.source_id) in _AS_SCOMPARSI_DB
+        if gia_scomparso:
+            # 17/11 (unione, giudice): già 'scomparso' nel database: si salva (e torna 'riapparso') solo con la PROVA di
+            # vita (_as_vivo_con_prova). Errore (429/403/rete/pagina non riconosciuta/scritta di rimozione) = fuori
+            # da out, non segnato visto: lo stato resta 'scomparso' e si riprova a un giro dopo.
+            st, det, _mot = _as_vivo_con_prova(client, l.url)
+        else:
+            st, det = _as_dettaglio(client, l.url)
         if st == "scomparso":
             tolti += 1
             _visti("autoscout24").add(str(l.source_id))
             if not limitato:
                 time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
             continue
+        if gia_scomparso and st != "attivo":
+            dubbi += 1
+            if not limitato:
+                time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
+            continue
+        if gia_scomparso:
+            _AS_SCOMPARSI_DB.discard(str(l.source_id))     # salvato di nuovo: da qui è attivo
         tenuti.append(l)
         if st == "attivo" and det:
             full = parse_item(det)
@@ -1768,6 +1795,8 @@ def _as_completa(client, out: list) -> list:
             time.sleep(float(os.environ.get("TR_AS_PAUSA_S", "1.5")))
     if tolti:
         log.info("TR autoscout: %d annunci ancora in ricerca ma tolti (pagina dell'annuncio assente): non salvati", tolti)
+    if dubbi:
+        log.info("TR autoscout: %d annunci 'scomparso' nel database senza prova di vita (errore): non salvati", dubbi)
     return tenuti
 
 

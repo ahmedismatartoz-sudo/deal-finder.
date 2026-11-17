@@ -146,13 +146,13 @@ def segna_viste_di_recente(conn) -> dict:
     """Auto approvate e viste dalla raccolta nelle ultime 48 ore: valgono come verificate (sono ancora online).
     Serve a mostrarle subito, senza aspettare il controllo una per una del ciclo."""
     conn.execute("SET LOCAL lock_timeout = '10s'")
-    n = conn.execute("""UPDATE listings SET last_checked_at=now()
-                        WHERE status='attivo' AND stage='approfondito' AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata')
+    n = conn.execute(f"""UPDATE listings SET last_checked_at=now()
+                        WHERE status='attivo' AND stage='approfondito' AND {scovo.motivo_elenco_sql('stage_reason')}
                           AND last_seen_at > now() - make_interval(hours => %s)
                           AND (last_checked_at IS NULL OR last_checked_at < now() - interval '12 hours')""",
                      (int(os.environ.get("FRESCHEZZA_ORE", "48")),)).rowcount
-    rows = conn.execute("""SELECT source, count(*) AS n FROM listings
-                           WHERE status='attivo' AND stage='approfondito' AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata')
+    rows = conn.execute(f"""SELECT source, count(*) AS n FROM listings
+                           WHERE status='attivo' AND stage='approfondito' AND {scovo.motivo_elenco_sql('stage_reason')}
                              AND last_checked_at > now() - interval '48 hours' GROUP BY source""").fetchall()
     conn.commit()
     out = {"aggiornate": n, **{r["source"]: r["n"] for r in rows}}

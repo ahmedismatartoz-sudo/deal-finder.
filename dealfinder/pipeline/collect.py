@@ -2139,11 +2139,12 @@ if __name__ == "__main__":
         # verifica TUTTE le auto del sito (Subito e AutoScout24): quelle che non esistono più si tolgono subito
         from .verify import verify_rows
         from collections import Counter as _C
+        from ..web.scovo import motivo_elenco_sql as _mel   # tutti i motivi dell'elenco, anche 'affidabile'
         tot = _C()
         with connect() as conn:
-            rows = conn.execute("""SELECT id, source, url, price_eur FROM listings
+            rows = conn.execute(f"""SELECT id, source, url, price_eur FROM listings
                                    WHERE status='attivo' AND source IN ('subito','autoscout24')
-                                     AND stage='approfondito' AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata')
+                                     AND stage='approfondito' AND {_mel('stage_reason')}
                                    ORDER BY id""").fetchall()
             log.info("PULIZIA da verificare: %d", len(rows))
             for k in range(0, len(rows), 200):

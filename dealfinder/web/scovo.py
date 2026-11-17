@@ -404,6 +404,12 @@ def motivo_stadio_sql(col: str = "l.stage_reason") -> str:
     return f"btrim(split_part(COALESCE({col}, ''), '|', 1))"
 
 
+def motivo_elenco_sql(col: str = "l.stage_reason") -> str:
+    """17/11 (unione, giudice): "il motivo è uno di quelli dell'elenco" in SQL, con il taglio di motivo_stadio_sql e
+    TUTTI i MOTIVI_ELENCO (anche 'affidabile'). Da usare al posto delle liste scritte a mano nelle query."""
+    return motivo_stadio_sql(col) + " IN (" + ",".join(f"'{m}'" for m in MOTIVI_ELENCO) + ")"
+
+
 # 17/11 (notte-09, giudice, 2a revisione): se la valutazione ha salvato il prezzo d'acquisto (riassunto->'acquisto',
 # policy_v2.riassunto da oggi) vale solo il confronto diretto: prezzo di oggi diverso da quello valutato = da
 # rivalutare (niente corsa tra transazioni: price_events.at è il now() dell'INIZIO della transazione del collettore).

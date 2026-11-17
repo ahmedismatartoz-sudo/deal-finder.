@@ -73,7 +73,8 @@ def pulisci(r: dict) -> bool:
         return False
     if set(r.get("price_flags") or []) & _FLAG_NO:
         return False
-    if r.get("stage_reason") in ("doppione", "truffa", "prezzo_finto"):
+    # 17/11 (unione, giudice): motivo base (scovo.motivo_stadio), così anche "truffa | nota" resta fuori
+    if str(r.get("stage_reason") or "").split("|")[0].strip() in ("doppione", "truffa", "prezzo_finto"):
         return False
     if r.get("year") and r.get("mileage_km") is not None and int(r["mileage_km"]) == int(r["year"]):
         return False

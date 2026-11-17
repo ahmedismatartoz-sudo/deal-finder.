@@ -28,6 +28,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 from ..core import dati_auto
+from ..web.scovo import motivo_elenco_sql
 
 log = logging.getLogger("schede_auto")
 
@@ -45,6 +46,7 @@ ORE_BLOCCO = 6           # dopo un blocco (403/429 di fila) la fonte si lascia s
 # Le fonti si ALTERNANO (ROW_NUMBER per fonte): Subito non può riempire tutto il giro e lasciare fuori AutoScout24.
 # Subito solo se la ricerca non ha già dato la scheda (la ricerca di Subito ha quasi tutto; la pagina da Render è spesso
 # bloccata). Dentro ogni fonte: prima le auto sul sito, poi le candidate più recenti.
+# 17/11 (unione): motivi dell'elenco da scovo (anche 'affidabile'), non più scritti a mano
 DA_LEGGERE_SQL = """
 WITH cand AS (
   SELECT l.id, l.source, l.url, l.deep_at, (s.listing_id IS NOT NULL) AS sul_sito
@@ -55,7 +57,7 @@ WITH cand AS (
                          WHERE f.bloccato_il > now() - make_interval(hours => %(ore_blocco)s))
     AND (l.source <> 'subito' OR (%(subito)s AND COALESCE(l.dati_auto->'ricerca', '{}'::jsonb) = '{}'::jsonb))
     AND (s.listing_id IS NOT NULL
-         OR (l.stage = 'approfondito' AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) IN ('opportunita', 'da_verificare', 'incidentata')
+         OR (l.stage = 'approfondito' AND """ + motivo_elenco_sql("l.stage_reason") + """
              AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - make_interval(days => %(giorni_cand)s)))
     AND (l.dati_auto IS NULL OR l.dati_auto->>'letto_il' IS NULL
          OR (l.dati_auto->>'letto_il')::timestamptz < now() - make_interval(days => %(rileggi)s))

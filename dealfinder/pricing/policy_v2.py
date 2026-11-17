@@ -533,9 +533,12 @@ def pulisci(t: dict, mercato: list[dict], cfg: PolicyConfig, now=None) -> tuple[
         if c.get("price_eur") < cfg.prezzo_min:
             via(c, f"prezzo simbolico (< {cfg.prezzo_min} €)")
             continue
-        if c.get("stage_reason") in ("doppione", "truffa", "prezzo_finto"):
+        # 17/11 (unione, giudice): motivo base, lo stesso taglio di scovo.motivo_stadio (qui scritto per non importare
+        # scovo, che importa questo modulo): anche "truffa | nota" resta fuori dai confronti
+        _mot = str(c.get("stage_reason") or "").split("|")[0].strip()
+        if _mot in ("doppione", "truffa", "prezzo_finto"):
             via(c, {"doppione": "doppione su un altro portale", "truffa": "annuncio sospetto",
-                    "prezzo_finto": "prezzo finto"}[c["stage_reason"]])
+                    "prezzo_finto": "prezzo finto"}[_mot])
             continue
         # 16/11 (cascata dei confronti, ricalcolo._cascata): un'auto SPARITA di recente entra tra i confronti solo se la
         # cascata l'ha segnata (fonte_confronto="venduta": stessa zona, finestra di giorni già controllata nella query).

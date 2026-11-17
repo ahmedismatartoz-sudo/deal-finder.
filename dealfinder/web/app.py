@@ -522,7 +522,7 @@ def alarms(conn) -> list[str]:
     for f in fails:
         out.append(f"Lavoro '{f['job']}' fallito {f['n']} volte nelle ultime 24 ore")
     affari_n = conn.execute("SELECT count(*) AS n FROM listings WHERE stage='approfondito' AND status='attivo' "
-                            "AND btrim(split_part(COALESCE(stage_reason, ''), '|', 1)) IN ('opportunita','da_verificare','incidentata') "
+                            "AND " + scovo.motivo_elenco_sql("stage_reason") + " "
                             "AND last_checked_at > now() - interval '48 hours'").fetchone()["n"]
     if affari_n < 10:
         out.append(f"Solo {affari_n} auto visibili ai commercianti: controlla verifica e analisi")
