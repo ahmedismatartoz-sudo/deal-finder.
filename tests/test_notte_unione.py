@@ -43,3 +43,20 @@ def test_due_prezzo_dopo_valutazione_non_collidono():
     # stessa base dell'elenco del sito
     assert tr.motivo_stadio_sql is scovo.motivo_stadio_sql
     assert tr._BASE_FRESCHEZZA in scovo.LIST_SQL.replace("\n  AND ", " AND ").replace("WHERE ", "")
+
+
+def test_serve_conferma_incidentata_con_note():
+    """(notte-03 + notte-09) "incidentata | scomparso" resta incidentata anche in serve_conferma, come in sconto_fermo."""
+    from dealfinder.ai import controllo_auto as CA
+    base = {"m": 20000, "price_eur": 8000}
+    assert CA.serve_conferma(dict(base, stage_reason="incidentata | scomparso (404)")) is False
+    assert CA.serve_conferma(dict(base, stage_reason="incidentata")) is False
+    assert CA.serve_conferma(dict(base, stage_reason="opportunita | scomparso")) == CA.sconto_alto(20000, 8000)
+    assert CA.serve_conferma({"_sito": True, "stage_reason": "incidentata"}) is True
+
+
+def test_telefono_identico_a_main():
+    """notte-01: nessuna forma nuova di numero (hide_phones, find_phone, ha_numero_testo come il 16/11)."""
+    from dealfinder.web import scovo
+    assert scovo.find_phone("chiamare 333 1234567") is not None
+    assert "333 1234567" not in scovo.hide_phones("chiamare 333 1234567")

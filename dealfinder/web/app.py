@@ -1802,6 +1802,11 @@ def _calcola_elenco() -> None:
     except Exception as e:
         logging.getLogger("scovo").warning("TEL_NASCOSTO prioritari non segnati: %s", str(e)[:200])
     _coda_perizia(items, out)
+    try:      # 17/11 (notte-03): il budget del controllo AI prima alle auto ferme solo per lo sconto alto
+        from ..ai import controllo_auto as _ca
+        _ca.coda_dal_sito(items, out, fun, g=_g)
+    except Exception as e:
+        logging.getLogger("scovo").warning("CONTROLLO coda non aggiornata: %s", str(e)[:200])
     diesel_extra = {it["id"] for it in out if it.get("diesel_extra")}
     for it in out:
         it.pop("_r", None)

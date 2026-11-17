@@ -820,7 +820,10 @@ def test_decisione_scaduta_non_si_riusa_e_va_coi_rinnovi():
     assert not CA.riusabile(5000, "i", 5200, "i", vecchia)                # riuso escluso comunque
     a = {"id": 1, "title": "Panda", "description": "ok", "price_eur": 5200, "foto": [], "confronti": []}
     cand = [{"id": 1, "price_eur": 5200, "telefono_ok": True, "cat": "opportunita", "margine": 3000, "m": 8000,
-             "d_prezzo": 5200, "d_fonte": "claude", "d_impronta": CA.impronta(a, []), "d_at": vecchia}]
+             "d_prezzo": 5200, "d_fonte": "claude", "d_at": vecchia,
+             # 17/11 (notte-03): con lo stesso contenuto il rinnovo non si paga (test_controllo_coda_sito); qui il
+             # contenuto è cambiato, quindi il rinnovo si paga come prima
+             "d_impronta": "contenuto_di_prima"}]
     chiamate = []
 
     def chiama(testo, foto):
