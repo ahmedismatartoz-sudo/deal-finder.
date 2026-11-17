@@ -40,6 +40,17 @@ CAP_ITALIA = ",".join([
 CAP_COPERTE = "10121,28100,15121"
 
 
+def rimetti_in_valutazione(conn, lid, ev: str) -> int:
+    """17/11: un'auto già sul sito (stage 'approfondito') il cui prezzo è cambiato (o che è riapparsa) letta da questo
+    giro non resta col margine calcolato al prezzo vecchio: torna "nuovo" (come in collect e tempo_reale, motivo
+    invariato) e la rivaluta il giro dei cambi di prezzo (price_events). Le auto di solo confronto restano come sono.
+    Ritorna 1 se l'auto è stata tolta dal sito in attesa della nuova valutazione."""
+    if ev not in ("prezzo", "riapparso"):
+        return 0
+    r = conn.execute("UPDATE listings SET stage='nuovo' WHERE id=%s AND stage='approfondito'", (lid,))
+    return int(getattr(r, "rowcount", 0) or 0)
+
+
 def coperte_dalla_zona() -> set:
     if os.environ.get("ZONA_CRON") != "1" or os.environ.get("ZONA_TORINO", "1") == "0":
         return set()
@@ -168,7 +179,8 @@ def giro() -> dict:
                     # 3/11: punto di ripristino per annuncio: un errore perde solo quell'annuncio (prima il rollback
                     # buttava anche quelli letti dall'ultimo commit, fino a 199)
                     with conn.transaction():
-                        _, ev = upsert_listing(conn, l)
+                        lid_ce, ev = upsert_listing(conn, l)
+                        st["sul_sito_prezzo_cambiato"] += rimetti_in_valutazione(conn, lid_ce, ev)
                     st[f"{cap}:{ev}"] += 1
                     st["salvati"] += 1
                     n += 1

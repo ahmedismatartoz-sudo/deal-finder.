@@ -584,7 +584,7 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
            "pubblicabili_per_fascia": dict(per_fascia), "secondi": round(time.time() - t0)}
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
     if pubblica:
-        n = 0
+        n = promosse = 0
         conn.execute("DELETE FROM top_auto")
         ordine = sorted(pass_, key=lambda x: -x[1]["margine"] / scovo.soglia(int(x[1]["acquisto"])))
         for pos, (lid, v) in enumerate(ordine):
@@ -598,10 +598,24 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
                        VALUES (%s,%s,%s,%s,%s,%s,'[]',%s,0,0)""",
                     (lid, P.POLICY_VERSION + "+utilitarie", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
                      "affidabile" if v["categoria"] == "opportunita" else "da_verificare"))
-            conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
-                         "last_checked_at=now() WHERE id=%s AND stage <> 'approfondito'",
-                         ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid))
+            # 17/11: prima "AND stage <> 'approfondito'": un'auto approfondita con un motivo che il sito non mostra
+            # (es. 'scartata' o 'non_valutabile' del vecchio approfondimento) e oggi buona restava fuori PER SEMPRE
+            # (il giro della zona salta le approfondite, il ricalcolo legge solo quelle già sul sito). Ora si lasciano
+            # stare solo quelle già sul sito (opportunita, da_verificare, incidentata, affidabile), confrontando la
+            # PRIMA parte del motivo (verify.mark aggiunge " | scomparso ...": "incidentata | scomparso" non deve
+            # diventare opportunita).
+            r_up = conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
+                                "last_checked_at=now() WHERE id=%s AND NOT (stage = 'approfondito' AND "
+                                "btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) IN "
+                                "('opportunita', 'da_verificare', 'incidentata', 'affidabile')) "
+                                # come valutazione.PROMUOVI_SQL: mai i "solo confronto" né il solo finanziamento
+                                "AND NOT (stage = 'mercato' AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) "
+                                "IN ('mercato_nord', 'fuori_regole')) "
+                                "AND btrim(split_part(COALESCE(stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'",
+                                ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid))
             n += 1
+            promosse += int(getattr(r_up, "rowcount", 0) or 0)
         conn.commit()
-        log.warning("UTILITARIE_PUBBLICATE %d", n)
+        log.warning("UTILITARIE_PUBBLICATE %d (promosse ora %d)", n, promosse)
+        out["promosse"] = promosse
     return out

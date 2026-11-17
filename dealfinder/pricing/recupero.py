@@ -53,6 +53,10 @@ SELECT v.listing_id
   LEFT JOIN recupero_provato rp ON rp.listing_id = v.listing_id
  WHERE v.policy_version = %(pv)s AND l.status = 'attivo'
    AND COALESCE(l.seller_type, 'privato') <> 'commerciante'
+   -- 17/11 (giudice): mai i "solo confronto" (mercato_nord, fuori_regole) né il solo finanziamento: non si
+   -- pubblicano (valutazione.PROMUOVI_SQL), quindi niente chiamate al giudice per loro
+   AND NOT (l.stage = 'mercato' AND btrim(split_part(COALESCE(l.stage_reason, ''), ' |', 1)) IN ('mercato_nord', 'fuori_regole'))
+   AND btrim(split_part(COALESCE(l.stage_reason, ''), ' |', 1)) <> 'solo_finanziamento'
    AND v.computed_at > now() - make_interval(days => %(giorni)s)
    AND (rp.provato_at IS NULL OR rp.provato_at < now() - make_interval(hours => %(ore)s))
    AND (   (v.dati->>'giudice_mancante') = 'true'

@@ -51,6 +51,8 @@ WHERE t.status='attivo' AND upper(t.province) = ANY(%(prov)s)
   AND (t.mileage_km IS NOT NULL OR NOT %(km_obblig)s) AND t.fuel IS NOT NULL   -- 12/11: scarti sicuri prima del LIMIT
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
+  AND COALESCE(t.stage_reason, '') NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti')  -- 17/11
+  AND COALESCE(t.stage_reason, '') NOT LIKE 'analisi_manuale%%'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s
   AND (NOT %(solo_nuove)s OR NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
                                           AND vp.computed_at > now() - interval '3 days'))   -- 2/11: solo mai valutate di recente
@@ -88,6 +90,8 @@ WHERE t.status='attivo' AND t.seller_type = 'commerciante' AND upper(t.province)
   AND (lower(coalesce(t.fuel, '')) ~ %(carb_re)s OR (lower(coalesce(t.fuel, '')) LIKE '%%diesel%%' AND t.year >= %(diesel_dal)s))
   AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
   AND t.stage IS DISTINCT FROM 'approfondito'
+  AND COALESCE(t.stage_reason, '') NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti')  -- 17/11
+  AND COALESCE(t.stage_reason, '') NOT LIKE 'analisi_manuale%%'
   AND g.n >= 5 AND t.price_eur < g.med * %(soglia)s AND t.price_eur >= g.med * %(esca)s
   AND NOT (coalesce(t.price_flags, '{{}}'::text[]) && %(flag)s::text[])
   AND NOT ((coalesce(t.title,'') || ' ' || coalesce(t.description,'')) ~* %(nomi)s)
@@ -522,6 +526,8 @@ def giro() -> dict:
                          AND (%(tutti_carb)s OR t.fuel ILIKE 'benzina%%')
                          AND coalesce(t.damage_class,'') NOT IN ('grave','alto_rischio','medio')
                          AND t.stage IS DISTINCT FROM 'approfondito'
+                         AND COALESCE(t.stage_reason, '') NOT IN ('doppione', 'truffa', 'prezzo_finto', 'dati_incoerenti')  -- 17/11
+                         AND COALESCE(t.stage_reason, '') NOT LIKE 'analisi_manuale%%'
                          AND NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = t.id
                                          AND vp.computed_at > t.last_seen_at - interval '3 days')
                        ORDER BY t.first_seen_at DESC
