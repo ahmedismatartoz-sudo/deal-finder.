@@ -26,9 +26,8 @@ advertiser.phone mancava (il "sì" della ricerca lo segnano già la lettura degl
 il giro giornaliero giro_telefoni_subito); ricercarla rilegge lo stesso campo e dà lo stesso "manca". Nei log del
 13/11 gli annunci trovati hanno il venditore con soli company/name/type/user_id (nessun campo del telefono). Il
 giro giornaliero conta ~79% "0" e ~21% senza campo (TR TELEFONI SUBITO 10-16/11: 30.500 / 8.000 su 38.700): sono i
-venditori che hanno scelto di non mostrare il numero. Quindi resta spento; per Subito il recupero vero è il numero
-scritto nel testo in forme non riconosciute prima (telefono_testo) e il controllo del testo delle auto tolte
-(tempo_reale.telefoni_candidate).
+venditori che hanno scelto di non mostrare il numero. Quindi resta spento; per Subito resta il controllo del testo
+delle auto tolte (tempo_reale.telefoni_candidate, con le espressioni di sempre del sito).
 """
 from __future__ import annotations
 

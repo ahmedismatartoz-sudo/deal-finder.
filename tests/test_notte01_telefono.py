@@ -1,11 +1,11 @@
-"""Notte 16→17/11 (notte-01): dato del telefono. Numero nel testo in forme nuove, priorità alle auto che col numero
+"""Notte 16→17/11 (notte-01): dato del telefono. Numero nel testo con le espressioni di sempre (forme nuove tolte), priorità alle auto che col numero
 passerebbero il sito, annunci AutoScout24 spariti nel controllo dei telefoni, conti delle auto tolte. Niente rete né
 database (connessioni finte); nei test solo numeri finti."""
+import re
 from collections import Counter
 
 from dealfinder.pipeline import telefono_nascosto as TN
 from dealfinder.pipeline import tempo_reale as tr
-from dealfinder.pipeline.telefono_testo import numero_esteso, numero_nel_testo
 from dealfinder.web import scovo
 from dealfinder.web import sito_regole as SR
 
@@ -14,69 +14,190 @@ from tests.test_piu_auto import _Ris, _azzera_tel, auto, env
 G = SR.Regole()
 
 
-# ------------------------------------------------------------------ 1. numero nel testo
-SI = ["cell. 333 - 1234567", "tel 333 / 123 4567", "cell.3331234567", "whatsapp3331234567", "tel: 3331 234567",
-      "cell 3O8 1234567", "cell 3 3 3 1 2 3 4 5 6 7", "tel 3.3.3.1.2.3.4.5.6.7", "(333) 1234567", "(+39 333) 123 4567",
-      "per info chiamare al 333  1234567", "cell 333 1234567 anno 2015"]
-NO = ["BMW 320d 2015 150.000 km", "numero telaio WVWZZZ1KZ6W000001", "km 35000 anno 2012",
-      "prezzo 3.500 euro trattabili, 150.000 km", "numero proprietari 1, 3 porte, 120 000 km", "tagliandi 2019 2020 2021",
-      "cell 3 porte 2015 130000 km", "tel 333 12", "chiamare 0039 333", "numerosi optional 333 444 5555 6666",
-      "motore 3.0 V6 2.993 cc 333 cv", "Tel. 02 1234 5678 9999 ore ufficio", "", None,
-      # 17/11 (giudice): prezzi, km e date dopo una parola del telefono → "no" (telefono obbligatorio: in dubbio no)
-      "tel 3.500 - 120.000 km", "cell. 3.500-130.000", "tel 3500 - 150000 km", "whatsapp 3.200 - 98.000 km",
-      "chiamare 3.000.000.000", "numero 31 - 12 - 2019 - 33", "chiamare 3 / 10 / 2019 / 333",
-      "per info tel. o whatsapp. Prezzo 3.500 - 120.000 km", "tel 333 1234 5 67",
-      # cifre staccate: solo 10 cifre, prefisso 3[1-9]x, vicino a una parola del telefono
-      "codice 3 2 1 4 5 6 7 8 9", "km 3 1 5 0 0 0 0 0 0", "3 3 3 1 2 3 4 5 6 7", "tel 3 0 3 1 2 3 4 5 6 7",
-      "tel 3 1 5 0 0 0 0 0 0 0 km"]
+# ------------------------------------------------------------------ 1. numero nel testo: espressioni di sempre
+# 17/11: le forme nuove (telefono_testo) sono state TOLTE (falsi "sì" su prezzi/km/date e numeri visibili sul sito):
+# ha_numero_testo, hide_phones e find_phone devono dare esattamente lo stesso risultato di c9f2436 (copiato qui).
+_REF_SEP = r"[\s.\-/]?"
+_REF_MOBILE = re.compile(r"(?<![\w.,])(?:\+|00)?(?:39[\s.\-]?)?(3\d{2}" + _REF_SEP + r"(?:\d{3}" + _REF_SEP + r"\d{3,4}|\d{4}"
+                         + _REF_SEP + r"\d{3}|\d{3}" + _REF_SEP + r"\d{2}" + _REF_SEP + r"\d{2}|\d{2}" + _REF_SEP + r"\d{2}"
+                         + _REF_SEP + r"\d{2,3}))(?![\d.,]*\d)")
+_REF_LANDLINE = re.compile(r"(?i)(?:tel(?:efono|efonare)?|cell(?:ulare)?|chiama(?:re|temi)?|numero|whats\s?app|wa)\W{0,6}"
+                           r"((?:\+39[\s.\-]?)?0\d{1,3}[\s.\-/]?\d{5,8})(?!\d)")
 
 
-def test_numero_esteso_forme_nuove_e_niente_falsi():
-    for t in SI:
-        assert numero_esteso(t), t
-    for t in NO:
-        assert not numero_esteso(t), t
-    # le forme nuove non le riconosceva il sito (prima del 17/11 queste auto risultavano "senza numero")
-    assert not any(scovo.RE_MOBILE.search(t) for t in SI[:11])
+def _ref_ha_numero(title, desc):
+    t = f"{title or ''} {desc or ''}"
+    return bool(_REF_MOBILE.search(t) or _REF_LANDLINE.search(t))
 
 
-# forme di sempre e forme nuove: tutte quelle che contano per telefono_ok
-TUTTE = SI + ["Panda 333 1234567", "tel 02 12345678", "cell +39 333 1234567", "chiamare 0039 333 123 4567",
-              "telefono 393331234567", "tel 333 123456 7", "WhatsApp: 3 3 3-1 2 3-4 5 6 7 ore pasti",
-              "Golf 2015 120.000 km. Cell. 333 - 1234567 oppure (333) 7654321, tel 3.3.3.7.6.5.4.3.2.1"]
+def _ref_hide(text):
+    text = _REF_MOBILE.sub("[numero col bottone]", text)
+    return _REF_LANDLINE.sub(lambda m: m.group(0).replace(m.group(1), "[numero col bottone]"), text)
 
 
-def test_hide_phones_nasconde_ogni_forma_che_conta_per_il_telefono():
-    """Ogni testo che numero_nel_testo accetta, dopo hide_phones non ha più nessun numero riconoscibile né le cifre
-    del numero in chiaro (prima le forme nuove contavano per telefono_ok ma si vedevano sul sito)."""
-    import re
-    for t in TUTTE:
-        assert numero_nel_testo(None, t), t
-        h = scovo.hide_phones(t)
-        assert "[numero col bottone]" in h and not numero_nel_testo(None, h), (t, h)
-        cifre = re.sub(r"\D", "", h)
-        for num in ("3331234567", "3081234567", "7654321", "12345678", "3337654321"):
-            assert num not in cifre, (t, h)
-    # il resto del testo resta
-    assert scovo.hide_phones("Golf 2015 120.000 km, cell. 333 - 1234567") == "Golf 2015 120.000 km, cell. [numero col bottone]"
-    # sui testi "senza numero nuovo" le forme nuove non nascondono niente in più delle espressioni di sempre
-    for t in [x for x in NO if x]:
-        vecchio = scovo.RE_LANDLINE.sub(lambda m: m.group(0).replace(m.group(1), "[numero col bottone]"),
-                                        scovo.RE_MOBILE.sub("[numero col bottone]", t))
-        assert scovo.hide_phones(t) == vecchio, t
+# testi del giudice (attacco.py, attacco2.py: numeri finti) e forme nuove tolte
+TESTI_GIUDICE = ['Vendo Golf 7 1.6 TDI, 120.000 km, anno 2017, prezzo 9.500 euro. Per info tel. o whatsapp, no perditempo.',
+ 'Fiat Panda 1.2, 3 porte, 85.000 km. Contattare per appuntamento. Prezzo 3.500 € trattabili.',
+ 'Tel. o whatsapp: 3.500 euro trattabili, 150.000 km',
+ 'tel 3500 - 150000 km',
+ 'Per info tel. o whatsapp, codice annuncio 3345678901',
+ 'Contattare citando il rif. 3145678902 grazie',
+ 'numero 31 - 12 - 2019 revisione fatta',
+ 'Chiamare dal 31.12.2026, consegna immediata',
+ 'Numero telaio: ZFA31200000123456, targa EX333AB',
+ 'Numero di telaio WVWZZZ1KZ3W123456. Cilindrata 1598 cc, 77 kW / 105 CV.',
+ 'Numero proprietari: 1. Chilometri 33.000. Tagliandi certificati.',
+ 'Numero porte 3 . 120.000 km . 2018',
+ 'Optional: 1) clima 2) navigatore 3) cerchi 17 4) sensori 5) cruise. Chiamare per info.',
+ 'Chiamare per: 3) cerchi in lega 4) gomme nuove 5) tagliando fatto',
+ 'Whatsapp 320 000 km, motore rifatto',
+ 'tel 330 400 500 euro trattabili',
+ 'Prezzo trattabile, tel 300 400 500',
+ 'cell 349 2019 120',
+ 'Telefonare 3450 1600 20',
+ 'contattare 3290 - 3390 - 25',
+ 'P.IVA 03123456789, tel. o whatsapp in orari ufficio',
+ 'Bonifico su IBAN IT60X0542811101000000123456, contattare per accordi',
+ 'contattare per IBAN IT32O0306909606100000012345',
+ 'Via Roma numero 31 - 20121 Milano, tel. ore pasti',
+ 'numero 312 - 20121 Milano',
+ 'numero civico 3, CAP 20123 Milano',
+ 'Tel. 3 mesi di garanzia, 12.000 km, 2021',
+ 'Telefono: 3 proprietari, 210.000 km',
+ 'sms 3x per info, 1.6 benzina 2015',
+ 'chiamare dopo le 19. 330 cv, 2020',
+ 'tel 335 12 2019',
+ 'Cell 340 1234 2019',
+ 'cell 340 1234 56 cv',
+ 'tel 3/12/2019 tagliando',
+ 'chiamare: 312.450 km reali',
+ 'tel. 312.450 / 3.200 euro',
+ 'Cell. 3 400 euro',
+ 'tel 3 4 0 0 0 0 0 0 0 0 km',
+ 'numero 3 2 1 4 5 6 7 8 9',
+ 'codice 3 2 1 4 5 6 7 8 9 0',
+ 'Optional numerati: 3 4 5 6 7 8 9 1 2 3',
+ 'numero optional: 3 4 5 6 7 8 9 1 2 3',
+ 'tel 3400 o 3500 euro',
+ 'tel 345 o 346 o 347',
+ 'Whatsapp 3 3 4 euro',
+ 'Cilindrata 3.000 cc, 340 cv, tel. o whatsapp 2019 immatricolata',
+ 'Targa: EX 333 AB, numero chiavi 2, tel solo interessati',
+ 'Revisione 03/2026, bollo pagato, chiamare 3 volte se non rispondo',
+ 'Km 31.500, anno 2019, potenza 110 kW (150 CV), numero 5 posti',
+ 'Contattare 333 euro di accessori inclusi',
+ 'Prezzo 33.900 €. Tel per info. Anno 2022, km 33.000',
+ 'tel 333.900 €',
+ 'Telefono 3.390.000 lire (prezzo storico)',
+ 'tel. 31.12.2026 scadenza garanzia',
+ 'Cellulare: 3 anni di garanzia. Prezzo 3.290, km 31.000',
+ 'whatsapp: 34.500 km, 2020',
+ 'Numero motore 3ZZ1234567 originale',
+ 'numero motore 3341234567X',
+ 'numero di serie 3341234567',
+ 'chiamatemi per il codice sconto 3312 3456 78',
+ "Tel. 0039 per l'estero, prezzo 3.450",
+ 'Tel 3401 - 2019 - 120 cv',
+ 'telefono 3 4 5 euro di bollo',
+ 'contattatemi al numero in descrizione: 3 porte, 1.2, 69 cv',
+ 'Riferimento interno numero 3215478963',
+ 'cell 3 1 2 0 0 0 0 0 0 0',
+ 'tel 349 / 12 / 2019',
+ 'tel 3333 / 2018 / 12',
+ 'numero 3 5 0 0 euro',
+ 'Chiamare: 34.000 km, 3.300 euro',
+ 'WhatsApp 3200 km 2019 3500 euro',
+ 'tel 33 12 345 678',
+ 'tel 333 1500 km',
+ 'Cell 333 12 34 cv',
+ 'cell. 333 - 1234567',
+ 'tel 333 / 123 45 67',
+ 'whatsapp3331234567',
+ 'tel: 3331 234567',
+ 'cell 3O8 1234567',
+ 'cell 3 3 3 1 2 3 4 5 6 7',
+ 'tel 3.3.3.1.2.3.4.5.6.7',
+ '(333) 1234567',
+ '(+39 333) 123 4567',
+ '+39 333.123.45.67',
+ 'Chiamatemi al 333.1234567 o whatsapp',
+ 'WhatsApp: +39 345 678 9012',
+ 'tel.: 0039 333 1234567',
+ 'cell 33312 34567',
+ 'tel 333 - 123 - 4567',
+ 'tel 3-4-5-6-7-8-9-0-1-2',
+ 'numero 3 4 7 1 2 3 4 5 6 7',
+ 'chiama 347 1234567 oppure 06 1234567',
+ 'tel 333 - 1234567, ripeto 333 - 1234567',
+ 'cell 3 3 3 1 2 3 4 5 6 7 ripeto: 3 3 3 1 2 3 4 5 6 7',
+ 'Golf ok, whatsapp\n333 - 1234567',
+ 'tel 333 / 1234567 ore pasti, anno 2019',
+ 'Cell.3O8.12.34.567',
+ 'tel 3 4 7 - 1 2 3 - 4 5 6 7',
+ 'tel 333 123456 7',
+ 'TEL 3401234567 dopo le 18',
+ 'cell: +393401234567',
+ 'contattare (340) 123.4567 Marco',
+ 'sms 340 / 12 34 567',
+ 'tel. 340-1234567 / 340 - 7654321',
+ 'telefono 3 4 0. 1 2 3 4 5 6 7',
+ 'cell 34O 12345 67',
+ 'chiamare 3401 23 4567',
+ 'whats app 3 4 0 1 2 3 4 5 6 7',
+ 'tel 3 4 0 1 2 3 4 5 6 7 oppure 3 4 0 7 6 5 4 3 2 1',
+ 'Cell 333-12-34-567',
+ 'cell 333 12 34 567',
+ 'BMW Serie 3 (318) 150.000 km, 2012',
+ 'Peugeot 308 (T9) 1.6 HDi, (308) 120 000 km',
+ 'Ferrari (360) 450 000 euro',
+ 'Fiat 500 (312) 1.2 Lounge 69 cv',
+ 'Alfa 147 (937) 1.9 jtd',
+ 'Mazda (323) 150 2019',
+ 'tel 3450 1600 20',
+ 'chiamare 3290 1450 35 cerchi',
+ 'whatsapp 3120 4500 90',
+ 'Telefono 3150 2300 12 rate',
+ 'tel 334 5 2019 1',
+ 'numero rate 36 da 250, anticipo 3 1 2 3 4 5 6 7 8 9',
+ 'numero optional 3 5 6 7 8 9 1 2 3 4',
+ 'Telefonare. Pneumatici: 3 4 5 6 7 8 9 0 1 2 mm',
+ 'cell. 3450 120 000',
+ 'tel 3450 120 00',
+ 'tel 3999 1500 50 euro',
+ 'contattare 3 4 5 6 - 7 8 9 0 - 1 2',
+ 'tel 3450.1990.25 trattabili',
+ 'Chiamare 3150 2019 1',
+ 'Numero 3500 1200 75',
+ 'cell 3O 1500 km',
+ 'tel 3.4.5.6.7.8.9.0.1.2 euro',
+ 'tel 3 4 5 6 7 8 9 0 1 2 cv',
+ 'tel 3333 4444 55 kw',
+ 'cell 349 1234 5 6 7',
+ 'tel. 345 678 90 €',
+ 'Whatsapp 31 dicembre, 3200 euro, 120000 km',
+ 'tel 3 - 2 - 1 - 4 - 5 - 6 - 7 - 8 - 9 - 0',
+ 'numero 3 2 1 4 5 6 7 8 9 0 telaio',
+ 'cell 333 / 1234567. Chi chiama al 333 / 1234567 dopo le 20 non rispondo',
+ 'Vendo. Whatsapp\n\n\n333 - 1234567',
+ 'whatsapp: (o sms)................. 333 - 1234567']
+TESTI = TESTI_GIUDICE + [
+    "cell. 333 - 1234567", "tel 333 / 123 4567", "cell.3331234567", "whatsapp3331234567", "tel: 3331 234567",
+    "cell 3O8 1234567", "cell 3 3 3 1 2 3 4 5 6 7", "(333) 1234567", "(+39 333) 123 4567", "Panda 333 1234567",
+    "tel 02 12345678", "tel 3.500 - 120.000 km", "tel 3500 - 150000 km", "(318) 150.000 km", "numero optional 3 4 5 6 7 8 9 1 2 3"]
 
 
-def test_find_phone_legge_anche_le_forme_nuove():
-    for t in SI:
-        assert scovo.find_phone(t) in ("+393331234567", "+393081234567"), t
-    assert scovo.find_phone("tel 3500 - 150000 km") is None and scovo.find_phone("codice 3 2 1 4 5 6 7 8 9") is None
-
-
-def test_ha_numero_testo_usa_anche_le_forme_nuove():
-    assert tr.ha_numero_testo("Fiat Panda", "ottima, cell. 333 - 1234567")
-    assert tr.ha_numero_testo("Panda 333 1234567", None)                       # forme di sempre
-    assert not tr.ha_numero_testo("Panda 1.2", "tagliandata, 120.000 km")
-    assert numero_nel_testo(None, "tel 02 12345678")                             # fisso con la parola: come prima
+def test_numero_e_mascheramento_come_c9f2436():
+    import importlib.util
+    assert importlib.util.find_spec("dealfinder.pipeline.telefono_testo") is None      # forme nuove tolte
+    for t in TESTI:
+        assert tr.ha_numero_testo(None, t) == _ref_ha_numero(None, t), t
+        assert tr.ha_numero_testo(t, None) == _ref_ha_numero(t, None), t
+        assert scovo.hide_phones(t) == _ref_hide(t), t
+        m = _REF_MOBILE.search(t)
+        assert bool(scovo.find_phone(t)) == bool(m or _REF_LANDLINE.search(t)), t
+    assert scovo.RE_MOBILE.pattern == _REF_MOBILE.pattern and scovo.RE_LANDLINE.pattern == _REF_LANDLINE.pattern
+    assert not tr.ha_numero_testo("Fiat Panda", "ottima, cell. 333 - 1234567")         # forma nuova: di nuovo "no"
+    assert tr.ha_numero_testo("Panda 333 1234567", None)
 
 
 # ------------------------------------------------------------------ 2. prioritarie: passerebbero il sito col numero
@@ -142,7 +263,7 @@ class ConnTel:
 
 
 def test_telefoni_candidate_numero_nel_testo_e_prioritarie_prima():
-    testi = [{"id": 10, "title": "Golf", "description": "cell. 333 - 1234567"},
+    testi = [{"id": 10, "title": "Golf", "description": "cell. 333 1234567"},
              {"id": 11, "title": "Polo", "description": "solo messaggi"}]
     tr._TESTO_FATTI.clear()
     tr._TOLTI_DIAG["t"] = 0.0
@@ -169,7 +290,7 @@ def test_telefoni_candidate_numero_nel_testo_e_prioritarie_prima():
     # secondo giro: le già lette tornano dal database solo se il prezzo è cambiato
     assert "testi" in dict(c2.select) and not any(q.startswith("UPDATE") for q, _ in c2.scritte)
     testi[1]["price_eur"] = 5000                             # prezzo cambiato: la Polo si rilegge
-    testi[1]["description"] = "ora anche tel 333 - 1234567"
+    testi[1]["description"] = "ora anche tel 333 1234567"
     tr._TESTO_FATTI.update({10: 0, 11: 0, 12: -2})
     _azzera_tel()
     try:
@@ -185,7 +306,7 @@ def test_telefoni_candidate_numero_nel_testo_e_prioritarie_prima():
 def test_telefoni_candidate_testo_spento():
     tr._TESTO_FATTI.clear()
     with env(TR_PAUSA_S="0", TEL_TESTO="0"):
-        c = ConnTel([{"id": 10, "title": "", "description": "cell. 333 - 1234567"}], [])
+        c = ConnTel([{"id": 10, "title": "", "description": "cell. 333 1234567"}], [])
         st = tr.telefoni_candidate(c, [10])
     assert "testi" not in dict(c.select) and not st.get("testo:si")
 
@@ -225,7 +346,7 @@ def test_controlla_telefoni_segna_spariti():
 
 
 # ------------------------------------------------------------------ 5. giro giornaliero di Subito: anche il testo
-def test_giro_telefoni_subito_conta_e_segna_il_testo():
+def test_giro_telefoni_subito_come_prima():
     from dealfinder.collectors import subito as S
 
     class Col:
@@ -235,7 +356,7 @@ def test_giro_telefoni_subito_conta_e_segna_il_testo():
         def get(self, url, headers=None, params=None):
             ads = [] if params["start"] else [
                 {"urn": "a1", "advertiser": {"phone": "0"}, "subject": "Panda", "body": ""},
-                {"urn": "a2", "advertiser": {}, "subject": "Golf", "body": "cell. 333 - 1234567"},
+                {"urn": "a2", "advertiser": {}, "subject": "Golf", "body": "cell. 333 1234567"},
                 {"urn": "a3", "advertiser": {}, "subject": "Polo", "body": "solo messaggi"}]
             return type("R", (), {"status_code": 200, "json": lambda self: {"ads": ads}})()
 
@@ -260,5 +381,6 @@ def test_giro_telefoni_subito_conta_e_segna_il_testo():
             st = tr.giro_telefoni_subito(c)
     finally:
         S.SubitoCollector, tr.REGIONI = salva
-    assert c.p == [(["a1", "a2"],)]
-    assert st["con_numero"] == 2 and st["senza_numero"] == 1 and st["numero_nel_testo&indicatore=nessuno"] == 1
+    # come c9f2436: il "sì" del giro giornaliero è solo l'indicatore di Subito (il testo lo legge il sito)
+    assert c.p == [(["a1"],)]
+    assert st["con_numero"] == 1 and st["senza_numero"] == 2 and not st.get("numero_nel_testo&indicatore=nessuno")

@@ -194,10 +194,9 @@ def salva_telefono(conn, lid: int, tel: bool | None, controllato: bool = False) 
 
 
 def ha_numero_testo(title: str | None, desc: str | None) -> bool:
-    """Numero scritto nel titolo o nella descrizione (solo sì/no). 17/11 (notte-01): anche le forme che le espressioni
-    del sito non riconoscono (separatori doppi, cifre staccate, prefisso tra parentesi: pipeline/telefono_testo)."""
-    from .telefono_testo import numero_nel_testo
-    return numero_nel_testo(title, desc)
+    from ..web.scovo import RE_LANDLINE, RE_MOBILE
+    t = f"{title or ''} {desc or ''}"
+    return bool(RE_MOBILE.search(t) or RE_LANDLINE.search(t))
 
 
 _diag = {"n": 0}
@@ -828,12 +827,12 @@ _TOLTI_DIAG = {"t": 0.0}
 
 def _tel_dal_testo(conn, ids: list, ordine: list, stats: Counter) -> int:
     """17/11 (notte-01): per le auto tolte SOLO al passo telefono (Subito e AutoScout24) si rilegge il TESTO con le forme
-    nuove del numero (telefono_testo.numero_esteso): niente rete, niente proxy. Se il numero c'è, telefono_ok=true
+    del sito (ha_numero_testo: RE_MOBILE / RE_LANDLINE, le stesse di sempre; le forme nuove del 17/11 sono state
+    tolte: falsi "sì"): niente rete, niente proxy. Se il numero c'è, telefono_ok=true
     (la stessa regola di sempre: numero nel testo = numero). Ogni auto una volta per processo e per prezzo (se il
     prezzo cambia il testo si rilegge); prima le mai lette, tra queste le prioritarie. Al massimo TEL_TESTO_MAX (3000)
     auto per giro; per quelle già lette il database rende il testo solo se il prezzo è cambiato.
     Nei log solo i conti, mai il numero."""
-    from .telefono_testo import numero_esteso
     if os.environ.get("TEL_TESTO", "1") != "1":
         return 0
     if len(_TESTO_FATTI) > 100_000:
@@ -859,7 +858,7 @@ def _tel_dal_testo(conn, ids: list, ordine: list, stats: Counter) -> int:
                     continue
                 letti += 1
                 _TESTO_FATTI[r["id"]] = int(r.get("price_eur") or 0)
-                if numero_esteso(f"{r.get('title') or ''} {r.get('description') or ''}"):
+                if ha_numero_testo(r.get("title"), r.get("description")):
                     salva_telefono(conn, r["id"], True)
                     n += 1
             for i in pezzo:                       # non più attive o già col numero: non si rileggono
@@ -1981,14 +1980,10 @@ def giro_telefoni_subito(conn) -> dict:
             for a in ads:                               # distribuzione dell'indicatore (valore di 1 carattere, non è un numero)
                 v = ((a.get("advertiser") or {}).get("phone"))
                 st[f"indicatore={v if isinstance(v, str) and len(v) <= 2 else type(v).__name__}"] += 1
-                if ha_numero_testo(a.get("subject"), a.get("body")):
-                    # 17/11 (notte-01): contati anche senza indicatore (sono quelli che il testo recupera)
-                    st[f"numero_nel_testo&indicatore={v if isinstance(v, str) and len(v) <= 2 else ('nessuno' if v is None else '?')}"] += 1
-            # 17/11 (notte-01): "sì" anche col numero scritto nel testo (stessa regola del sito, forme di telefono_testo)
-            si = [str(a.get("urn")) for a in ads if a.get("urn") and (telefono_subito(a)
-                                                                       or ha_numero_testo(a.get("subject"), a.get("body")))]
-            gia_si = set(si)
-            no = [str(a.get("urn")) for a in ads if a.get("urn") and str(a.get("urn")) not in gia_si]
+                if v is not None and ha_numero_testo(a.get("subject"), a.get("body")):
+                    st[f"numero_nel_testo&indicatore={v if isinstance(v, str) and len(v) <= 2 else '?'}"] += 1
+            si = [str(a.get("urn")) for a in ads if a.get("urn") and telefono_subito(a)]
+            no = [str(a.get("urn")) for a in ads if a.get("urn") and not telefono_subito(a)]
             st["letti"] += len(ads)
             st["con_numero"] += len(si)
             st["senza_numero"] += len(no)
