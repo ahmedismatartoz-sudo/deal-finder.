@@ -3572,7 +3572,7 @@ def _tempo_reale():
         _tentativi: dict = {}
         _max_tent = int(os.environ.get("RIPROVA_GIUDICE_TENTATIVI", "3"))
         _azzera = {"t": time.time()}
-        time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "420")))
+        time.sleep(int(os.environ.get("RIPROVA_GIUDICE_RITARDO_S", "90")))
         while True:
             attesa = float(os.environ.get("RIPROVA_GIUDICE_MIN", "15")) * 60
             if time.time() - _azzera["t"] >= float(os.environ.get("RIPROVA_GIUDICE_AZZERA_ORE", "12")) * 3600:
@@ -3616,7 +3616,7 @@ def _tempo_reale():
                                    ORDER BY v.computed_at LIMIT %s""",
                                 (_PV.POLICY_VERSION, os.environ.get("RIPROVA_DI_DA", "2026-11-13T10:00:00Z"),
                                  os.environ.get("RIPROVA_DI_A", "2026-11-14T00:00:00Z"), list(_visti),
-                                 int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")))).fetchall()]
+                                 int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")))).fetchall()]
                             st = _Cr()
                             for k in range(0, len(ids), 20):
                                 _t0 = time.time()
@@ -3639,8 +3639,8 @@ def _tempo_reale():
                                 lg.warning("RIPROVA_GIUDICE %s", json.dumps({"auto": len(ids), **dict(st)}))
                                 _elenco["t"] = 0.0
                                 _aggiorna_elenco(attendi=False)
-                                if len(ids) >= int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "60")):
-                                    attesa = 120
+                                if len(ids) >= int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")):
+                                    attesa = 15     # 17/11: recupero veloce delle auto messe in attesa dal cron senza AI
             except Exception as e:
                 lg.warning("RIPROVA_GIUDICE non riuscito: %s", str(e)[:300])
             time.sleep(attesa)
