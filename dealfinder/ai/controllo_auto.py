@@ -147,14 +147,14 @@ def _t(s, n: int) -> str:
 
 
 def testo_max() -> int:
-    """17/11 (notte-03): caratteri del testo dell'annuncio mandati all'AI (prima 1.800). Le frasi che contano (guasti,
-    "per ricambi", caparra, estero) stanno quasi sempre all'inizio; la coda è di solito l'elenco degli optional."""
-    return max(300, int(_env("CONTROLLO_TESTO_MAX", "1400")))
+    """Caratteri del testo dell'annuncio mandati all'AI. 17/11 (giudice): resta 1.800 come prima: un guasto o un
+    "per ricambi" scritto in fondo non deve sparire per risparmiare pochi token (precisione prima del costo)."""
+    return max(300, int(_env("CONTROLLO_TESTO_MAX", "1800")))
 
 
 def confronti_max() -> int:
-    """17/11 (notte-03): righe di confronto mandate (prima 10): per dire se è la stessa versione tecnica ne bastano 6."""
-    return max(1, int(_env("CONTROLLO_CONFRONTI_MAX", "6")))
+    """Righe di confronto mandate. 17/11 (giudice): restano 10 come prima (versione_ok decide jev e margine)."""
+    return max(1, int(_env("CONTROLLO_CONFRONTI_MAX", "10")))
 
 
 def testo_richiesta(r: dict, confronti: list[dict] | None = None, perizia: dict | None = None,
@@ -359,7 +359,8 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
         foto = blocchi_foto(fonti_foto, m, http=http) if m != "0" else []
         if m != "0" and not foto:
             continue                              # nessuna foto scaricabile in questo modo: si passa al prossimo
-        testo = testo_richiesta(r, confronti, perizia, foto=len(foto))
+        n_mandate = len(foto)                     # 17/11 (giudice): foto davvero mandate (doppie tolte)
+        testo = testo_richiesta(r, confronti, perizia, foto=n_mandate)
         try:
             dati, tin, tout, modello = chiama(testo, foto)
         except Exception as e:
@@ -379,7 +380,7 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
             x = valida(dati, con_foto=m != "0", con_confronti=bool(confronti))
         except ControlloNonValido as e:
             return {"x": None, "errore": e, "token": token, "foto": 0}
-        x["_foto"] = 0 if m == "0" else min(len(fonti_foto), n_foto())
+        x["_foto"] = 0 if m == "0" else n_mandate
         x["_modello"] = modello
         return {"x": x, "errore": None, "token": token, "foto": x["_foto"]}
     if serve_foto and ultimo is None:
@@ -851,6 +852,11 @@ def rinnovo_inutile(r: dict, a: dict) -> bool:
     if r.get("price_eur") is None or r.get("d_prezzo") is None or int(r["d_prezzo"]) != int(r["price_eur"]):
         return False
     if r.get("d_incompleta") or senza_foto_da_rifare(r) or r.get("_sito"):
+        return False
+    # 17/11 (giudice): mai gratis una decisione presa senza foto viste (anche dopo MAX_TENTATIVI_FOTO: il rinnovo è
+    # proprio l'occasione di rivederla con le foto) né un'auto con sconto alto che il sito ammette solo con la conferma
+    # dell'AI: l'impronta non copre confronti né perizia, che in 14 giorni cambiano
+    if r.get("d_senza_foto") or serve_conferma(r):
         return False
     return scaduta(r.get("d_at"))
 

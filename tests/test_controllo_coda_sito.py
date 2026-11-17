@@ -255,6 +255,53 @@ def test_rinnovo_con_lo_stesso_contenuto_non_si_paga():
     assert "_verificata_at" in CA.CAND_SQL and "_verificata_at" in CA.CAND_SQL_SITO
 
 
+def test_rinnovo_pagato_se_senza_foto_viste_o_sconto_alto():
+    # 17/11 (giudice): gratis solo il rinnovo di una decisione con le foto viste e senza conferma del sito in gioco
+    _pulisci()
+    vecchia = datetime.now(timezone.utc) - timedelta(days=CA.valida_giorni() + 1)
+    a = scheda(1)
+    imp = CA.impronta(a, list(a["foto"]))
+    a = dict(a, _imp=imp)
+    base = riga(1, d_prezzo=5000, d_fonte="claude", d_impronta=imp, d_at=vecchia)
+    with env(CONTROLLO_FOTO_MODO="base64"):
+        assert CA.rinnovo_inutile(base, a)
+        # (a) senza foto viste, anche dopo i tentativi massimi (non più "da rifare" ma comunque da pagare)
+        r = dict(base, d_senza_foto=True, d_tentativi_foto=CA.MAX_TENTATIVI_FOTO)
+        assert not CA.senza_foto_da_rifare(r) and not CA.rinnovo_inutile(r, a)
+        # (b) sconto alto confermato sul sito: l'impronta non copre confronti né perizia
+        r = dict(base, price_eur=8000, d_prezzo=8000, m=13000)
+        assert CA.serve_conferma(r) and not CA.rinnovo_inutile(r, a)
+    # nel giro: la scaduta con sconto alto si ripaga (una chiamata, con le foto)
+    chiamate = []
+
+    def chiama(testo, foto):
+        chiamate.append(len(foto))
+        return dict(OK), 900, 60, "claude-haiku-5-5"
+    cand = [dict(base, price_eur=8000, d_prezzo=8000, m=13000, margine=3500)]
+    conn = Conn(cand, [dict(scheda(1, price_eur=8000))])
+    prima = AI.image_url_block
+    AI.image_url_block = lambda src: {"type": "image", "source": {"type": "url", "url": src}}
+    try:
+        with env(CONTROLLO_FOTO_MODO="url"):
+            res = CA.giro(conn, chiama=chiama)
+    finally:
+        AI.image_url_block = prima
+    assert res.get("rinnovi_inutili_evitati", 0) == 0 and chiamate and chiamate[0] > 0
+
+
+def test_foto_contate_senza_doppie():
+    # 17/11 (giudice): _foto = foto davvero mandate (la stessa due volte conta una)
+    prima = AI.image_url_block
+    AI.image_url_block = lambda src: {"type": "image", "source": {"type": "url", "url": src}}
+    try:
+        with env(CONTROLLO_FOTO_MODO="url", CONTROLLO_FOTO="3"):
+            r = CA.controlla({"id": 1}, ["https://x/a.jpg", "https://x/a.jpg", "https://x/b.jpg"],
+                             chiama=lambda t, f: (dict(OK), 900, 60, "claude-haiku-5-5"))
+    finally:
+        AI.image_url_block = prima
+    assert r["x"]["_foto"] == 2 and r["foto"] == 2
+
+
 def test_sconto_alto_mai_pagato_senza_foto():
     _pulisci()
     cand = [riga(1, price_eur=8000, m=13000), riga(2, price_eur=8000, m=13000)]
@@ -300,13 +347,16 @@ def test_chiamate_fallite_non_si_ripagano_dopo_un_riavvio():
     _pulisci()
 
 
-def test_testo_piu_corto_e_risposta_illeggibile_nel_log():
+def test_testo_e_confronti_come_prima_e_risposta_illeggibile_nel_log():
+    # 17/11 (giudice): i default restano 1.800 caratteri e 10 confronti (precisione); più corti solo con la variabile
     a = {"description": "x" * 5000, "title": "t"}
-    t = CA.testo_richiesta(a, [{"versione": f"v{i}"} for i in range(10)])
-    assert "x" * 1400 in t and "x" * 1401 not in t and "6. versione v5" in t and "7. versione" not in t
-    with env(CONTROLLO_TESTO_MAX="1800", CONTROLLO_CONFRONTI_MAX="10"):
+    with env(CONTROLLO_TESTO_MAX=None, CONTROLLO_CONFRONTI_MAX=None):
+        assert CA.testo_max() == 1800 and CA.confronti_max() == 10
+        t = CA.testo_richiesta(a, [{"versione": f"v{i}"} for i in range(12)])
+        assert "x" * 1800 in t and "x" * 1801 not in t and "10. versione v9" in t and "11. versione" not in t
+    with env(CONTROLLO_TESTO_MAX="1400", CONTROLLO_CONFRONTI_MAX="6"):
         t = CA.testo_richiesta(a, [{"versione": f"v{i}"} for i in range(10)])
-        assert "x" * 1800 in t and "10. versione v9" in t
+        assert "x" * 1400 in t and "x" * 1401 not in t and "6. versione v5" in t and "7. versione" not in t
 
     def chiama(testo, foto):
         return CA.ControlloNonValido("nessun JSON nella risposta [end_turn] 'Non posso'"), 900, 20, "claude-haiku-5-5"
@@ -377,3 +427,37 @@ def test_pg_coda_sito_e_verificata():
         INSERT INTO ai_usage (task, model, input_tokens, output_tokens, web_searches, listing_id, at)
           VALUES ('controllo_auto_rinnovo', 'h', 1, 1, 0, 4, now() - interval '7 hours');""")
     assert CA.fallite_da_db(c) == {1}
+
+
+def test_aggancio_nell_elenco_un_errore_non_blocca_il_sito(monkeypatch):
+    # 17/11 (giudice): web/app._calcola_elenco chiama coda_dal_sito con le regole del giro (calibrazione compresa),
+    # prima che si tolgano _r e _tipo; se il controllo si rompe l'elenco si calcola e si pubblica lo stesso
+    import types
+    from dealfinder.pipeline import telefono_nascosto as TN
+    from dealfinder.web import app, impostazioni, elenco_salvato, scheda_tecnica, vendute
+    items = [auto(1), auto(2)]
+    fun = types.SimpleNamespace(tolti={"telefono": [], "truffa": [2]})
+    visti = {}
+
+    def coda(items_, out_, fun_, g=None):
+        visti.update(n=len(items_), r=all("_r" in it for it in out_), g=g, fun=fun_)
+        raise RuntimeError("rotto")
+    monkeypatch.setattr(app, "_carica_candidati", lambda: (items, {}, {}))
+    monkeypatch.setattr(app, "_fattori_calibra", lambda: [])
+    monkeypatch.setattr(SR, "elenco_sito", lambda it, g=None, caricamento=None: ([dict(items[0])], fun))
+    monkeypatch.setattr(TN, "segna_prioritari", lambda *a, **k: None)
+    monkeypatch.setattr(app, "_coda_perizia", lambda *a, **k: None)
+    monkeypatch.setattr(CA, "coda_dal_sito", coda)
+    monkeypatch.setattr(impostazioni, "versione", lambda: 0)
+    monkeypatch.setattr(impostazioni, "togli_scartate", lambda out: out)
+    monkeypatch.setattr(scheda_tecnica, "arricchisci_elenco", lambda out: None)
+    monkeypatch.setattr(app, "_ritardo_sul_sito", lambda *a, **k: None)
+    monkeypatch.setattr(elenco_salvato, "salva_elenco", lambda *a, **k: None)
+    monkeypatch.setattr(vendute, "salva_sito", lambda out: (_ for _ in ()).throw(RuntimeError("niente db")))
+    monkeypatch.setattr(app, "_sentinella", lambda *a, **k: None)
+    monkeypatch.setattr(app, "_salva_funnel_giorno", lambda f: None)
+    monkeypatch.setattr(app, "_log_controllo_finale", lambda out: None)
+    monkeypatch.setattr(app, "_elenco", {})          # l'elenco vero del modulo resta com'era
+    app._calcola_elenco()
+    assert visti["n"] == 2 and visti["r"] and visti["fun"] is fun and isinstance(visti["g"], SR.Regole)
+    assert [it["id"] for it in app._elenco["items"]] == [1] and "_r" not in app._elenco["items"][0]
