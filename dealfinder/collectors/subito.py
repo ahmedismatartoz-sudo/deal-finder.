@@ -52,6 +52,15 @@ REGION_CODES = {"lombardia": 4, "emilia-romagna": int(__import__("os").environ.g
                 # 3/11: codici già usati dal giro della zona (benzina_mi) e dal tempo reale (_SUB_REGIONI_NOTE)
                 "piemonte": int(__import__("os").environ.get("SUBITO_CODICE_PIEMONTE", "2")),
                 "liguria": int(__import__("os").environ.get("SUBITO_CODICE_LIGURIA", "3"))}
+# 17/11: codici interni delle province (geo.city.key) visti nei log della raccolta profonda (15-16/11), per regione:
+# ripiego quando una provincia non compare nelle prime pagine (_province_keys)
+PROVINCE_KEYS_NOTE = {
+    4: {"BG": "1", "BS": "2", "CO": "3", "CR": "4", "LC": "5", "LO": "6", "MN": "7", "MI": "8", "MB": "9", "PV": "10",
+        "SO": "11", "VA": "12"},                                                       # Lombardia
+    2: {"AL": "1", "AT": "2", "BI": "3", "CN": "4", "NO": "5", "TO": "6", "VB": "7", "VC": "8"},   # Piemonte
+    8: {"MO": "4", "PR": "5", "PC": "6", "RE": "8"},                                    # Emilia-Romagna
+    3: {"GE": "1", "SP": "3", "SV": "4"},                                               # Liguria
+}
 PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG", "brescia": "BS",
                   "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",
                   "cremona": "CR", "mantova": "MN", "sondrio": "SO",
@@ -438,7 +447,10 @@ class SubitoCollector(Collector):
             log.info("subito parole '%s': %d annunci nuovi in tutta Italia", kw, n_kw)
 
     def _province_keys(self, region: int, wanted: set, lim: int) -> dict:
-        """Codice interno di Subito per ogni provincia (es. Milano = 8), letto dagli annunci."""
+        """Codice interno di Subito per ogni provincia (es. Milano = 8), letto dagli annunci.
+        17/11 (copertura): una provincia piccola che non compare nelle prime 10 pagine (es. VB il 16/11 alle 19:08)
+        veniva SALTATA dalla lettura profonda; ora si usa il codice già visto nei log (PROVINCE_KEYS_NOTE, codici in
+        ordine alfabetico dentro la regione) per le province mancanti della regione."""
         keys: dict = {}
         for page in range(10):
             r = self._api({"c": 2, "r": region, "t": "s", "lim": lim, "start": page * lim, "sort": "datedesc"})
@@ -452,6 +464,12 @@ class SubitoCollector(Collector):
                     keys[sn] = key
             if wanted <= set(keys):
                 break
+        note = PROVINCE_KEYS_NOTE.get(int(region)) if str(region).isdigit() else None
+        if note and keys:                  # solo se la regione risponde (con un codice regione sbagliato: niente)
+            for sn in sorted(wanted - set(keys)):
+                if sn in note:
+                    keys[sn] = note[sn]
+                    log.info("subito: codice provincia %s non visto negli annunci, uso quello noto %s", sn, note[sn])
         return keys
 
     def _trova_regione(self, wanted: set, lim: int) -> int | None:
