@@ -16,6 +16,7 @@ prova_cieca: quelle che gonfiano il sito); 'tutti' anche le brevi (chiamate Brev
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -46,10 +47,11 @@ SPOSTABILI: dict = {
     "aperture:": (False, BREVO),
     "rimetti:": (False, BREVO),
     "utenti:": (False, ()),             # solo una lettura del database
+    "giro1711:": (False, BREVO),        # 17/11 sera (cliente): due liste + due campagne, subito nel sito
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("censimento:",)
+SOLO_SITO = ("censimento:", "giro1711:")
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -347,6 +349,17 @@ def esegui(v: str) -> bool | None:
                                                        "rimasti": rl.get("uniqueSubscribers")}))
         except Exception as e:
             lg.warning("TOGLI_LISTA non riuscito: %s", str(e)[:300])
+        return
+    if v.startswith("giro1711:"):         # 17/11 sera (cliente: "caricali tu tramite API"); la chiave mai nei log
+        try:
+            from ..marketing import giro_1711 as G
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta("giro1711:" + hashlib.sha256(v.encode()).hexdigest()[:16]):
+                lg.warning("GIRO1711 già fatto")
+                return
+            lg.warning("GIRO1711 %s", json.dumps(G.lavoro(v.split(":", 1)[1].strip())))
+        except Exception as e:
+            lg.warning("GIRO1711 non riuscito: %s", type(e).__name__)
         return
     if v.startswith("giro_lotto:"):       # 16/11 (cliente): chi ha ricevuto la base esce da Brevo, entrano gli altri
         # (il resto: chi non l'ha ricevuta) dell'archivio con la stessa email programmata (marketing/giro_lotto.py)
