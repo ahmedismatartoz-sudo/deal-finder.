@@ -214,12 +214,16 @@ def test_fascia_sotto_n_min_eredita_e_non_alza_mai():
     # senza misura prima: il minore tra riserva e ultimo valore noto (righe più vecchie)
     vecchia = _stato({">60k": {"n": 25, "prezzo_su_M": .91}, "<5k": {"n": 25, "prezzo_su_M": .99}})
     out2 = CB.fasce_prudenti({}, [_stato({}), vecchia])
-    assert out2[">60k"]["prezzo_su_M"] == .91 and out2[">60k"]["ereditata"] == "ultimo_noto"
+    # ultimo noto 0,91 ma al massimo 0,05 sotto il fattore in vigore (1,0) per giro
+    assert out2[">60k"]["prezzo_su_M"] == .95 and out2[">60k"]["ereditata"] == "ultimo_noto"
     assert "<5k" not in out2                                  # riserva .87 < .99: resta la riserva
     f2 = CB._in_vigore({"fasce": out2, "fasce_su": "M"}, RG.regole())
     assert f2["<5k"] == .87 and f2["20-35k"] == 1.0           # nessuna misura mai: la riserva (come oggi)
-    # niente stato: identico a oggi
-    assert CB.fasce_prudenti({}, []) == {}
+    # niente stato (riserva, applicata con il tetto per fascia): ogni fascia al minimo con le vicine, nessuna sale
+    vuota = CB.fasce_prudenti({}, [])
+    assert vuota["5-10k"]["prezzo_su_M"] == .87 and vuota["20-35k"]["prezzo_su_M"] == .97
+    assert "<5k" not in vuota and ">60k" not in vuota
+    assert _nessuna_salita({}, {"fasce": vuota, "fasce_su": "M"})
 
 
 def test_freno_fattore_che_scende():
@@ -240,10 +244,14 @@ def test_freno_fattore_che_scende():
     assert CB.fasce_prudenti({"<5k": d4}, [prima])["<5k"]["prezzo_su_M"] == .90
     d5 = {"n": 45, "prezzo_su_M": .93, "ic95": [.90, .96]}
     assert CB.fasce_prudenti({"<5k": d5}, [prima])["<5k"]["prezzo_su_M"] == .93     # entro il passo: la misura
-    # anche in su al massimo 0,05 per giro
+    # nessuna salita automatica: una misura più alta (anche su 80 auto) resta al valore in vigore
     d6 = {"n": 80, "prezzo_su_M": 1.0, "ic95": [.98, 1.02], "q": [.8, .9, 1.0, 1.1, 1.2]}
     o6 = CB.fasce_prudenti({"5-10k": d6}, [prima])["5-10k"]
-    assert o6["prezzo_su_M"] == .97 and o6["q"][2] == .97
+    assert o6["prezzo_su_M"] == .92 and o6["q"][2] == .92
+    # m=0,89 su 45 auto con fattore in vigore 0,82: non sale a 0,89 (e nemmeno con l'IC)
+    p82 = _stato({"<5k": {"n": 30, "prezzo_su_M": .82}})
+    assert CB.fasce_prudenti({"<5k": {"n": 45, "prezzo_su_M": .89, "ic95": [.85, .93]}}, [p82])["<5k"]["prezzo_su_M"] == .82
+    assert CB.fasce_prudenti({"<5k": {"n": 24, "prezzo_su_M": .85, "ic95": [.80, .90]}}, [p82])["<5k"]["prezzo_su_M"] == .82
 
 
 class ConnStato(Conn):
@@ -322,3 +330,68 @@ def test_campione_vuoto_o_errore_non_cambia_nulla():
     conn = ConnStato(stato=[recente], mercato=m1, vendute=v1)
     out = CB.misura(conn)
     assert not out["salvata"] and not conn.salvati and "ore" in out["non_salvata"]
+
+
+def _nessuna_salita(prima, dopo):
+    rg = RG.regole()
+
+    def fat(x):
+        return RG.fattori_calibrazione(x.get("fasce") or {}, rg, misurate_vr=x.get("fasce_vr") or {},
+                                       per_M=x.get("fasce_su") == "M")
+    a, b = fat(prima), fat(dopo)
+    return all(RG.fattore_per(M, b, rg, vr=vr) <= RG.fattore_per(M, a, rg, vr=vr) + 1e-9
+               for vr in (False, True) for M in CB.griglia_M())
+
+
+def _fasc(v, n=100):
+    return {k: {"n": n, "prezzo_su_M": x, "q": None} for k, x in v.items()}
+
+
+def test_nessuna_salita_stato_per_M_per_prezzo_e_tabella_vuota():
+    alte = _fasc({"<5k": .99, "5-10k": .99, "10-20k": .99, "20-35k": .99, "35-60k": .99, ">60k": .99}, n=100)
+    casi = [
+        {"fasce": _fasc({"<5k": .85, "5-10k": .88, "10-20k": .92, "20-35k": .95}), "fasce_su": "M"},     # per M
+        {"fasce": _fasc({"<5k": .87, "5-10k": .915, "10-20k": .97})},                                    # per prezzo
+        {},                                                                                              # vuota
+        {"fasce": _fasc({"<5k": .87, "5-10k": .915, "10-20k": .97}), "fasce_vr": _fasc({"5-10k": .9})},  # con vr
+    ]
+    for oggi in casi:
+        pr = [{"at": None, "dati": oggi}] if oggi else []
+        for nuove in (alte, _fasc({"<5k": .87, "5-10k": .915, "10-20k": .97}, n=5), {},
+                      _fasc({"<5k": .75, "10-20k": 1.0, ">60k": .85}, n=60)):
+            dopo = {"fasce": CB.fasce_prudenti(nuove, pr), "fasce_su": "M",
+                    "fasce_vr": CB.fasce_prudenti({}, pr, vr=True)}
+            assert _nessuna_salita(oggi, dopo), (oggi, nuove)
+            assert CB.guardiano_nessuna_salita(oggi, dopo) is None
+    # stato per prezzo: M=9.500 non passa più da 0,915 a 0,938
+    oggi = casi[1]
+    dopo = {"fasce": CB.fasce_prudenti(_fasc({"<5k": .87}, n=5), [{"at": None, "dati": oggi}]), "fasce_su": "M"}
+    fa = RG.fattori_calibrazione(oggi["fasce"])
+    fb = RG.fattori_calibrazione(dopo["fasce"], per_M=True)
+    assert RG.fattore_per(9500, fb) <= RG.fattore_per(9500, fa) + 1e-9
+    # il guardiano vede una salita costruita a mano (anche sul valore reale)
+    assert CB.guardiano_nessuna_salita(casi[0], {"fasce": _fasc({"<5k": .99}), "fasce_su": "M"})
+    assert CB.guardiano_nessuna_salita({"fasce_vr": _fasc({"5-10k": .9}), "fasce_su": "M"},
+                                       {"fasce_vr": {}, "fasce_su": "M"}).startswith("vr")
+
+
+def test_misura_bloccata_dal_guardiano_e_ora_illeggibile():
+    import pytest
+    m1, v1 = _gruppo("fiat", "panda", "benzina", 7000, 160, 1)
+    prima = _stato({"5-10k": {"n": 40, "prezzo_su_M": .95}})
+    conn = ConnStato(stato=[dict(prima, at="non è una data")], mercato=m1, vendute=v1)
+    out = CB.misura(conn)
+    assert not out["salvata"] and not conn.salvati and "ora" in out["non_salvata"]
+    orig = CB.fasce_prudenti
+    CB.fasce_prudenti = lambda nuove, prec, rg=None, vr=False: ({} if vr else {"5-10k": {"n": 200, "prezzo_su_M": 1.0}})
+    try:
+        conn = ConnStato(stato=[prima], mercato=m1, vendute=v1)
+        out = CB.misura(conn)
+    finally:
+        CB.fasce_prudenti = orig
+    assert not out["salvata"] and not conn.salvati and "salirebbe" in out["non_salvata"]
+    # tassi: restano quelli in vigore
+    conn = ConnStato(stato=[_stato({"5-10k": {"n": 40, "prezzo_su_M": .95}}, tassi={"tutti": {"anno": .05}})],
+                     mercato=m1, vendute=v1)
+    out = CB.misura(conn)
+    assert out["tassi"] == {"tutti": {"anno": .05}} and out["tassi_ereditati"]

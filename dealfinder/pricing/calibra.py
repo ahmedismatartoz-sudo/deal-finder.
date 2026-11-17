@@ -18,7 +18,10 @@ i fattori del sito) solo se è solido, e i fattori si muovono con il freno (vedi
   - una fascia con meno di calibrazione.n_min auto nel campione nuovo EREDITA la misura salvata prima (mai la riserva
     di regole.py, che sopra 20.000 € è 1,0 e alzerebbe M); senza misura prima: il minore tra riserva e ultimo valore
     noto nelle misure più vecchie;
-  - per giro un fattore si muove al massimo di FRENO_PASSO (0,05) dal valore in vigore; uno scostamento oltre il −10%
+  - NESSUNA SALITA AUTOMATICA: un fattore non sale mai sopra quello in vigore (con stato per fascia di prezzo o
+    riserva: il minimo tra la fascia e le vicine) e un guardiano finale (guardiano_nessuna_salita, CALIBRA_BLOCCATA)
+    non salva se un qualsiasi M tra 500 e 200.000 € avrebbe un fattore più alto; i tassi anno/km restano quelli in vigore;
+  - per giro un fattore scende al massimo di FRENO_PASSO (0,05) dal valore in vigore; uno scostamento oltre il −10%
     vale solo con almeno FRENO_N_FORTE (40) auto, altrimenti si usa il limite superiore dell'intervallo di confidenza al
     95% della mediana (stima prudente verso 1), mai sopra il valore in vigore;
   - meno di CALIBRA_MIN_VALUTATE (150) auto valutate, troppi errori, stato precedente illeggibile o misura precedente
@@ -211,13 +214,18 @@ def fasce_prudenti(nuove: dict, precedenti: list, rg=None, vr: bool = False) -> 
     con le regole del giudice del 17/11 notte. nuove = riassumi(...) (o fasce_vr applicabili); precedenti =
     stato_precedente(...) (dati delle misure salvate, dalla più recente). vr=True: voci del valore reale ("fasce_vr",
     nessuna riserva: senza misura il fattore è 1,0).
+    NESSUNA SALITA AUTOMATICA: ogni fascia salvata è al massimo il suo TETTO = fattore in vigore della fascia; se lo
+    stato in vigore NON è per M (misura per fascia di prezzo, o nessuna misura = riserva) il tetto è il minimo tra la
+    fascia e le due vicine, perché la misura nuova ("fasce_su": "M") toglie il tetto per fascia di regole.fattore_per e
+    l'interpolazione tra i centri altrimenti alzerebbe M vicino ai confini (es. M=9.500: 0,915 → 0,938).
       - n < n_min: si EREDITA la fascia della misura in vigore ("ereditata": "precedente"); se non c'era, il minore tra
-        riserva e ultimo valore noto nelle misure più vecchie ("ereditata": "ultimo_noto"), oppure niente (= riserva).
-        Così una fascia senza auto a sufficienza non alza MAI il fattore.
+        riserva e ultimo valore noto nelle misure più vecchie, sceso al massimo di FRENO_PASSO ("ultimo_noto");
+        altrimenti il tetto ("tetto_vicine", solo se sotto la riserva).
       - n >= n_min: misura nuova m (mediana di prezzo/M); se m è sotto 1 − FRENO_SCOSTAMENTO con meno di FRENO_N_FORTE
-        auto, al suo posto il limite superiore dell'IC 95% della mediana, mai sopra il fattore in vigore; poi il
-        fattore si muove al massimo di FRENO_PASSO dal valore in vigore (in giù e, per prudenza, anche in su).
-    Ogni fascia salvata dichiara misurato, fattore_precedente e frenata."""
+        auto, al suo posto il limite superiore dell'IC 95% della mediana; poi al massimo FRENO_PASSO sotto il valore in
+        vigore e mai sopra il tetto.
+    Ogni fascia salvata dichiara misurato, fattore_precedente, tetto e frenata. misura() ricontrolla comunque tutto
+    (guardiano_nessuna_salita) prima di salvare."""
     from .. import regole as RG
     rg = rg or RG.regole()
     cal = rg.calibrazione
@@ -226,46 +234,81 @@ def fasce_prudenti(nuove: dict, precedenti: list, rg=None, vr: bool = False) -> 
     ultimo = (precedenti[0]["dati"] if precedenti else {}) or {}
     vigore = _in_vigore(ultimo, rg)
     riserva = {} if vr else dict(cal.riserva)
+    nomi = [n for _, n in cal.fasce]
+    per_M = ultimo.get("fasce_su") == "M"
+    tetto = {}
+    for i, nome in enumerate(nomi):
+        vicine = nomi[max(0, i - 1):i + 2] if (not vr and not per_M) else [nome]
+        tetto[nome] = min(vigore.get(pref + x, 1.0) for x in vicine)
     out = {}
-    for _, nome in cal.fasce:
+    for nome in nomi:
         d = (nuove or {}).get(nome)
         n = (d or {}).get("n") or 0
-        f_att = vigore.get(pref + nome, 1.0)
+        f_att, t = vigore.get(pref + nome, 1.0), tetto[nome]
+        base = {"fattore_precedente": round(f_att, 3), "tetto": round(t, 3)}
         if n < cal.n_min:
+            extra = dict(base, n_nuovo=n, misura_nuova=(d or {}).get("prezzo_su_M"))
             prima = (ultimo.get(chiave) or {}).get(nome)
             if _valida(prima, cal.n_min):
-                out[nome] = dict(prima, ereditata="precedente", n_nuovo=n,
-                                 misura_nuova=(d or {}).get("prezzo_su_M"))
+                v = min(max(cal.minimo, min(cal.massimo, float(prima["prezzo_su_M"]))), t)
+                out[nome] = dict(prima, ereditata="precedente", prezzo_su_M=round(v, 3), **extra)
                 continue
             vecchia = next(((p["dati"].get(chiave) or {}).get(nome) for p in precedenti[1:]
                             if _valida((p["dati"].get(chiave) or {}).get(nome), cal.n_min)), None)
             r = riserva.get(nome, 1.0)
-            if vecchia is not None:
-                u = max(cal.minimo, min(cal.massimo, float(vecchia["prezzo_su_M"])))
-                if u < r:
-                    out[nome] = {"n": vecchia["n"], "prezzo_su_M": round(u, 3), "ereditata": "ultimo_noto",
-                                 "n_nuovo": n, "misura_nuova": (d or {}).get("prezzo_su_M")}
+            if vecchia is not None and float(vecchia["prezzo_su_M"]) < r:
+                u = max(cal.minimo, float(vecchia["prezzo_su_M"]), f_att - FRENO_PASSO)
+                out[nome] = dict({"n": vecchia["n"], "prezzo_su_M": round(min(u, t), 3), "ereditata": "ultimo_noto"},
+                                 **extra)
+            elif t < r - 1e-12:
+                out[nome] = dict({"n": cal.n_min, "prezzo_su_M": round(t, 3), "ereditata": "tetto_vicine"}, **extra)
             continue
         m = float(d["prezzo_su_M"])
         f, frenata = m, []
         if m < 1 - FRENO_SCOSTAMENTO and n < FRENO_N_FORTE:
             ic = d.get("ic95")
             alto = float(ic[1]) if ic else 1.0
-            f = min(max(m, alto), f_att)
+            f = max(m, alto)
             frenata.append(f"scostamento oltre -{int(FRENO_SCOSTAMENTO * 100)}% su {n} < {FRENO_N_FORTE} auto: "
-                           f"limite alto IC95 {alto:.3f}, mai sopra {f_att:.3f}")
+                           f"limite alto IC95 {alto:.3f}")
         if f < f_att - FRENO_PASSO:
             f = f_att - FRENO_PASSO
             frenata.append(f"passo massimo -{FRENO_PASSO} da {f_att:.3f}")
-        elif f > f_att + FRENO_PASSO:
-            f = f_att + FRENO_PASSO
-            frenata.append(f"passo massimo +{FRENO_PASSO} da {f_att:.3f}")
+        if f > t:                 # nessuna salita automatica
+            f = t
+            frenata.append(f"mai sopra il tetto in vigore {t:.3f}")
         q = d.get("q")
-        if q and f < m:           # forbice (_q:): frenata in su, i quantili scendono con il fattore (mai sopra la misura)
+        if q and f < m:           # forbice (_q:): i quantili scendono con il fattore (mai sopra la misura)
             q = [round(x * f / m, 3) for x in q]
-        out[nome] = dict(d, prezzo_su_M=round(f, 3), misurato=round(m, 3), fattore_precedente=round(f_att, 3),
-                         frenata=frenata or None, q=q)
+        out[nome] = dict(d, prezzo_su_M=round(f, 3), misurato=round(m, 3), frenata=frenata or None, q=q, **base)
     return out
+
+
+def griglia_M(da: float = 500, a: float = 200000, passo: float = .01) -> list:
+    out, M = [], float(da)
+    while M <= a:
+        out.append(M)
+        M *= 1 + passo
+    return out
+
+
+def guardiano_nessuna_salita(prima: dict, dopo: dict, rg=None) -> str | None:
+    """Confronta regole.fattore_per (normale e valore reale) con lo stato in vigore e con quello da salvare, su M da
+    500 a 200.000 € a passo 1%: None se nessun fattore sale, altrimenti il primo punto che sale (non si salva)."""
+    from .. import regole as RG
+    rg = rg or RG.regole()
+
+    def fat(x):
+        x = x or {}
+        return RG.fattori_calibrazione(x.get("fasce") or {}, rg, misurate_vr=x.get("fasce_vr") or {},
+                                       per_M=x.get("fasce_su") == "M")
+    a, b = fat(prima), fat(dopo)
+    for vr in (False, True):
+        for M in griglia_M():
+            fa, fb = RG.fattore_per(M, a, rg, vr=vr), RG.fattore_per(M, b, rg, vr=vr)
+            if fb > fa + 1e-9:
+                return f"{'vr ' if vr else ''}M={M:.0f}: {fa:.4f} -> {fb:.4f}"
+    return None
 
 
 def quantili(valori: list) -> list | None:
@@ -318,15 +361,17 @@ def misura_tassi(conn) -> dict:
     return {"marche": marche, "tutti": tassi_da_somme(*tot)}
 
 
-def _ore_da(at) -> float:
-    """Ore passate da `at` (timestamp della riga di calibrazione); sconosciuto = infinito (non blocca)."""
+def _ore_da(at) -> float | None:
+    """Ore passate da `at` (timestamp della riga di calibrazione); None se non si legge (chi chiama NON salva)."""
     from datetime import datetime, timezone
     try:
+        if isinstance(at, str):
+            at = datetime.fromisoformat(at)
         if at.tzinfo is None:
             at = at.replace(tzinfo=timezone.utc)
         return (datetime.now(timezone.utc) - at).total_seconds() / 3600
     except Exception:
-        return float("inf")
+        return None
 
 
 def misura(conn) -> dict:
@@ -425,14 +470,21 @@ def misura(conn) -> dict:
            "correzione_due_sensi_alto": bool(rg.correzione.due_sensi_alto)}
     # 12/11 sera (punti 3 e 4): tassi anno/km per marca e di tutti (pooling), premi di 4x4 e optional. Calcolati nel
     # database (somme per gruppo), mai le righe in memoria; un errore non ferma la misura principale.
+    # 17/11 notte (giudice): i tassi anno/km cambiano M (pooling) e il guardiano non li vede: restano quelli in vigore
+    # finché il cliente non decide; la misura nuova va solo in diagnosi. Senza tassi in vigore si salvano i nuovi solo
+    # se il pooling è spento (nessun effetto sul sito).
     try:
-        out["tassi"] = misura_tassi(conn)
+        nuovi_tassi = misura_tassi(conn)
+        out["diagnosi"]["tassi_nuovi"] = nuovi_tassi
     except Exception as e:
         conn.rollback()
+        nuovi_tassi = None
         log.warning("CALIBRA tassi non misurati: %s", str(e)[:150])
-    if not out.get("tassi") and precedenti and precedenti[0]["dati"].get("tassi"):
-        out["tassi"] = precedenti[0]["dati"]["tassi"]          # misura mancata: restano quelli in vigore
+    if precedenti and precedenti[0]["dati"].get("tassi"):
+        out["tassi"] = precedenti[0]["dati"]["tassi"]
         out["tassi_ereditati"] = True
+    elif nuovi_tassi and not rg.correzione.pooling:
+        out["tassi"] = nuovi_tassi
     try:
         from . import dotazioni as DT
         d = DT.misura(conn)
@@ -450,8 +502,17 @@ def misura(conn) -> dict:
         motivo_non_salva = f"auto valutate {tot} < {min_val}"
     if motivo_non_salva is None and errori > .10 * max(1, len(rows)):
         motivo_non_salva = f"errori {errori} su {len(rows)} vendute"
-    if motivo_non_salva is None and min_ore > 0 and precedenti and _ore_da(precedenti[0]["at"]) < min_ore:
-        motivo_non_salva = f"misura precedente di meno di {min_ore:g} ore fa (riavvio: un giro solo)"
+    if motivo_non_salva is None and min_ore > 0 and precedenti:
+        ore = _ore_da(precedenti[0]["at"])
+        if ore is None:
+            motivo_non_salva = "ora della misura precedente non leggibile"
+        elif ore < min_ore:
+            motivo_non_salva = f"misura precedente di meno di {min_ore:g} ore fa (riavvio: un giro solo)"
+    if motivo_non_salva is None:          # guardiano finale: nessun fattore del sito può salire
+        sale = guardiano_nessuna_salita(precedenti[0]["dati"] if precedenti else {}, out, rg)
+        if sale:
+            motivo_non_salva = f"un fattore salirebbe ({sale})"
+            log.warning("CALIBRA_BLOCCATA %s: non salvata", sale)
     out["salvata"] = motivo_non_salva is None
     if motivo_non_salva:
         out["non_salvata"] = motivo_non_salva
