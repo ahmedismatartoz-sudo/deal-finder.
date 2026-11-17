@@ -102,6 +102,10 @@ class ControlloNonValido(ValueError):
     pass
 
 
+class FotoNonScaricabili(ControlloNonValido):
+    """17/11: nessuna foto mandabile per un'auto che senza foto viste non può entrare: niente chiamata, niente spesa."""
+
+
 # ------------------------------------------------------------------ interruttori
 def _env(nome: str, default: str) -> str:
     return os.environ.get(nome, default)
@@ -142,9 +146,20 @@ def _t(s, n: int) -> str:
     return re.sub(r"\s+", " ", str(s or "")).strip()[:n]
 
 
+def testo_max() -> int:
+    """17/11 (notte-03): caratteri del testo dell'annuncio mandati all'AI (prima 1.800). Le frasi che contano (guasti,
+    "per ricambi", caparra, estero) stanno quasi sempre all'inizio; la coda è di solito l'elenco degli optional."""
+    return max(300, int(_env("CONTROLLO_TESTO_MAX", "1400")))
+
+
+def confronti_max() -> int:
+    """17/11 (notte-03): righe di confronto mandate (prima 10): per dire se è la stessa versione tecnica ne bastano 6."""
+    return max(1, int(_env("CONTROLLO_CONFRONTI_MAX", "6")))
+
+
 def testo_richiesta(r: dict, confronti: list[dict] | None = None, perizia: dict | None = None,
                     foto: int = 0) -> str:
-    descr = _t(_senza_dati_personali(str(r.get("description") or "")[:6000]), 1800)
+    descr = _t(_senza_dati_personali(str(r.get("description") or "")[:6000]), testo_max())
     titolo = _t(_senza_dati_personali(str(r.get("title") or "")), 160)
     righe = [
         "ANNUNCIO",
@@ -159,7 +174,7 @@ def testo_richiesta(r: dict, confronti: list[dict] | None = None, perizia: dict 
         f"testo: {descr or '-'}",
         "",
     ]
-    conf = [c for c in (confronti or []) if isinstance(c, dict)][:10]
+    conf = [c for c in (confronti or []) if isinstance(c, dict)][:confronti_max()]
     if conf:
         righe.append(f"VERSIONI DELLE AUTO USATE PER IL CONFRONTO ({len(conf)}, senza prezzi)")
         for i, c in enumerate(conf, 1):
@@ -294,7 +309,8 @@ def blocchi_foto(fonti: list[str], modo: str | None = None, http=None) -> list[d
     out = []
     if modo == "0":
         return out
-    for src in fonti[:n_foto()]:
+    uniche = list(dict.fromkeys(f for f in (fonti or []) if f))      # 17/11: la stessa foto due volte non si paga
+    for src in uniche[:n_foto()]:
         b = AI.image_url_block(src) if modo == "url" else AI.image_block(src, http=http, side=int(_env("CONTROLLO_FOTO_LATO", "512")))
         if b:
             out.append(b)
@@ -312,19 +328,29 @@ def _chiama_claude(testo: str, foto: list[dict]):
     try:
         dati = AI.extract_json(text)
     except Exception as e:
-        dati = e                                   # pagata comunque: chi chiama registra i token e scarta la risposta
+        # pagata comunque: chi chiama registra i token e scarta la risposta. 17/11: l'inizio del testo nel log (senza
+        # numeri né email) per capire perché non è JSON (rifiuto, testo libero, troncata)
+        dati = ControlloNonValido(f"{e} [{getattr(resp, 'stop_reason', '')}] {_t(_senza_dati_personali(text), 70)!r}")
     return dati, int(u.input_tokens or 0), int(u.output_tokens or 0), AI.MODEL_FAST
 
 
 def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chiama=None, http=None,
-              paga=None) -> dict:
+              paga=None, serve_foto: bool = False) -> dict:
     """Un controllo con ripieghi sulle foto. Ritorna {"x": risposta validata | None, "errore": eccezione | None,
     "token": [(in, out, modello), ...], "foto": n}. `paga(token_in, token_out, modello)` si chiama SUBITO dopo ogni
-    chiamata riuscita (registrazione e commit della spesa, anche se poi la risposta non è valida)."""
+    chiamata riuscita (registrazione e commit della spesa, anche se poi la risposta non è valida).
+    17/11 (notte-03) serve_foto: auto con sconto alto, che il sito ammette solo con le foto viste dall'AI
+    (sito_regole.sconto_confermato_ai): mai la chiamata senza foto (pagata e inutile); se le foto in base64 non si
+    scaricano si prova a mandare gli indirizzi; se non va nessun modo: FotoNonScaricabili, nessuna spesa."""
     chiama = chiama or _chiama_claude
     token: list = []
     modi = [modo_foto()] if fonti_foto and n_foto() else ["0"]
-    if modi[0] == "url":
+    if serve_foto:
+        if modi[0] == "0":
+            return {"x": None, "errore": FotoNonScaricabili("sconto alto senza foto: nessuna chiamata"),
+                    "token": token, "foto": 0}
+        modi += ["base64" if modi[0] == "url" else "url"]
+    elif modi[0] == "url":
         modi += ["base64", "0"]
     elif modi[0] == "base64":
         modi += ["0"]
@@ -347,7 +373,7 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
         if paga is not None:
             paga(tin, tout, modello)
         if isinstance(dati, Exception):
-            return {"x": None, "errore": ControlloNonValido(f"risposta non leggibile: {str(dati)[:80]}"),
+            return {"x": None, "errore": ControlloNonValido(f"risposta non leggibile: {str(dati)[:170]}"),
                     "token": token, "foto": 0}
         try:
             x = valida(dati, con_foto=m != "0", con_confronti=bool(confronti))
@@ -356,6 +382,9 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
         x["_foto"] = 0 if m == "0" else min(len(fonti_foto), n_foto())
         x["_modello"] = modello
         return {"x": x, "errore": None, "token": token, "foto": x["_foto"]}
+    if serve_foto and ultimo is None:
+        return {"x": None, "errore": FotoNonScaricabili("foto non scaricabili: nessuna chiamata"), "token": token,
+                "foto": 0}
     return {"x": None, "errore": ultimo or ControlloNonValido("nessun modo di mandare la richiesta"), "token": token,
             "foto": 0}
 
@@ -423,7 +452,7 @@ _CAND_FINE = """
     AND v.margine >= COALESCE(NULLIF(v.dati->>'soglia', '')::int, 1500)
 )
 SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
-       NULLIF(vp.riassunto->>'M', '')::numeric AS m, d.prezzo AS d_prezzo, d.impronta AS d_impronta,
+       NULLIF(vp.riassunto->>'M', '')::numeric AS m, NULLIF(vp.dati->>'soglia', '')::int AS soglia, d.prezzo AS d_prezzo, d.impronta AS d_impronta,
        d.fonte AS d_fonte, d.computed_at AS d_at, (d.listing_id IS NOT NULL AND d.risposta->'guasto' IS NULL) AS d_incompleta,
        (c.id IN (SELECT id FROM dz)) AS dz,
        d.truffa AS d_truffa, l.stage_reason AS stage_reason,
@@ -432,12 +461,14 @@ SELECT l.id, l.price_eur, l.telefono_ok, vp.categoria AS cat, vp.margine,
        """ + _SENZA_FOTO + """ AS d_senza_foto, """ + _TENTATIVI_FOTO + """ AS d_tentativi_foto
 FROM (SELECT id FROM cand UNION SELECT id FROM dz) c
 JOIN listings l ON l.id = c.id AND l.status = 'attivo' AND l.price_eur IS NOT NULL
-JOIN LATERAL (SELECT categoria, margine, riassunto FROM valutazioni_policy v WHERE v.listing_id = l.id
+JOIN LATERAL (SELECT categoria, margine, riassunto, dati FROM valutazioni_policy v WHERE v.listing_id = l.id
               ORDER BY v.computed_at DESC LIMIT 1) vp ON true
 LEFT JOIN decisione_ai d ON d.listing_id = l.id
 WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS NULL
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.computed_at < now() - interval '7 days')
-   OR (d.fonte = 'claude' AND d.computed_at < now() - make_interval(days => %(validi)s))
+   OR (d.fonte = 'claude' AND d.computed_at < now() - make_interval(days => %(validi)s)
+       AND COALESCE(NULLIF(d.risposta->>'_verificata_at', '')::timestamptz, d.computed_at)
+           < now() - make_interval(days => %(validi)s))
    OR (""" + _SENZA_FOTO + """ AND d.computed_at < now() - interval '""" + str(ORE_RIPROVA_FOTO) + """ hours'
        AND """ + _TENTATIVI_FOTO + """ < """ + str(MAX_TENTATIVI_FOTO) + """)
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz))
@@ -449,6 +480,14 @@ ORDER BY (d.listing_id IS NULL) DESC
 LIMIT 3000"""
 CAND_SQL = _CAND_INIZIO + _CAND_FINE
 CAND_SQL_RIPIEGO = _CAND_INIZIO + _CAND_RIPIEGO + _CAND_FINE
+# 17/11 (notte-03): le auto che il sito ha appena tolto SOLO per lo sconto alto non controllato e che passerebbero
+# tutti gli altri passi (coda_dal_sito): stesse colonne e stesso filtro "serve una chiamata" di CAND_SQL (nessuna
+# decisione, prezzo cambiato, Jev con truffa da ai_pulita, scaduta, senza foto...). Una decisione Claude già presa
+# allo stesso prezzo con le foto viste NON torna in coda: richiedere la stessa domanda finché non passa la soglia
+# sarebbe cambiare la regola
+CAND_SQL_SITO = """
+WITH cand AS (
+  SELECT unnest(%(sito_ids)s::bigint[]) AS id""" + _CAND_FINE
 
 AUTO_SQL = """
 SELECT l.id, l.source, l.title, l.description, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel,
@@ -510,10 +549,15 @@ def classe(r: dict) -> int:
 
 
 def ordina(righe: list[dict]) -> list[dict]:
-    """Prima le auto nuove, poi quelle col prezzo cambiato, poi le altre; in ogni gruppo prima lo sconto alto (fuori dal
-    sito finché l'AI non le conferma) e il margine più alto rispetto al prezzo."""
-    return sorted(righe, key=lambda r: (classe(r), not sconto_alto(r.get("m"), r.get("price_eur")),
-                                        r.get("cat") == "dati_insufficienti",
+    """17/11 (notte-03): prima le auto della coda del sito (tolte solo per lo sconto alto non controllato, passerebbero
+    tutto il resto: coda_dal_sito), nell'ordine del sito. Poi come prima: auto nuove, prezzo cambiato, le altre; in
+    ogni gruppo prima lo sconto alto (fuori dal sito finché l'AI non le conferma), poi quelle che con i loro dati
+    arrivano al margine minimo col numero letto (entra_stimata: le altre il sito le toglierebbe comunque), poi il
+    margine più alto rispetto al prezzo."""
+    pos = {i: k for k, i in enumerate(CODA_SITO.get("entra") or [])}
+    return sorted(righe, key=lambda r: (not r.get("_sito"), pos.get(r.get("id"), 0) if r.get("_sito") else 0,
+                                        classe(r), not sconto_alto(r.get("m"), r.get("price_eur")),
+                                        not entra_stimata(r), r.get("cat") == "dati_insufficienti",
                                         -((r.get("margine") or 0) / max(r.get("price_eur") or 1, 1))))
 
 
@@ -658,6 +702,179 @@ def parametri_diesel() -> dict:
             "sa_min": min(e for _f, e in g.sconto_euro), "sa_pulita": g.ai_pulita, "sa_supercar": SA_SUPERCAR}
 
 
+# ------------------------------------------------------------------ 17/11 (notte-03): coda dal sito e misura
+# Passi del sito che NON leggono la decisione del controllo (decisione_ai): un'auto tolta lì non entra nemmeno con il
+# controllo perfetto, quindi finché resta tolta niente chiamate pagate (il riuso gratuito sì). Restano fuori da
+# questo elenco: "valutata" (le dati_insufficienti rientrano con la targa letta dal controllo), "prezzo_intero" (legge
+# la rata dell'AI), "jev", "truffa", "perizia" (con una decisione AI valida non si aspetta la perizia) e i passi dei
+# diesel in più (contano gli avvisi). Il passo "venditore" legge l'AI solo per i diesel in più: quelli (dz) restano.
+PASSI_SENZA_AI = ("no_loconte", "scarti_cliente", "anno", "km", "telefono", "no_roma", "zona", "venditore",
+                  "margine_minimo", "doppioni", "tetto_commercianti", "tetto_commercianti_totale")
+CODA_SITO: dict = {"t": 0.0, "entra": [], "fuori": set(), "sul_sito": set(), "motivi": {}}
+MISURA: dict = {"giorno": None, "usd": 0.0, "usd_sito": 0.0, "pagate": {}, "entrate": set(), "entrate_sito": set()}
+QUOTA_ANTICIPO = 0.5     # le auto della coda del sito possono anticipare fino a metà del budget del giorno sul dosato
+
+
+def _giorno_roma() -> str:
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Europe/Rome")).date().isoformat()
+    except Exception:
+        return time.strftime("%Y-%m-%d")
+
+
+def _misura_oggi() -> dict:
+    g = _giorno_roma()
+    if MISURA["giorno"] != g:
+        MISURA.update(giorno=g, usd=0.0, usd_sito=0.0, pagate={}, entrate=set(), entrate_sito=set())
+    return MISURA
+
+
+def _non_entrerebbe(it: dict, g, comm: list, lont: list) -> str | None:
+    """Auto tolta solo per lo sconto alto da controllare: perché resterebbe fuori anche con la conferma dell'AI
+    (None = entrerebbe). Stesse funzioni del sito, su una copia dell'auto: perizia "caro"/"da verificare" (la conferma
+    è impossibile), margine minimo, e i tetti dei commercianti già pieni (entrerebbe solo al posto di un'altra)."""
+    from ..web import sito_regole as SR
+    if (SR._r(it).get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
+        return "perizia"
+    x = dict(it, pv=dict(it["pv"]) if isinstance(it.get("pv"), dict) else it.get("pv"))
+    x.pop("trattare", None)
+    if SR.r_margine_minimo(x, g):
+        return "margine_minimo"
+    if SR.e_commerciante(x) and not x.get("diesel_extra"):
+        if g.commercianti_totale > 0 and len(comm) >= g.commercianti_totale:
+            return "tetto_commercianti"
+        if x.get("_tipo") == "comm_lontano" and len(lont) >= g.commercianti_max:
+            return "tetto_commercianti"
+    return None
+
+
+def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
+    """Da chiamare subito dopo sito_regole.elenco_sito (web/app._calcola_elenco, accanto a _coda_perizia, PRIMA che
+    alle auto del sito si tolgano _r e _tipo). Prepara per il giro:
+      - entra: le auto tolte SOLO per "sconto_alto_da_controllare" che passerebbero tutti gli altri passi (le migliori
+        per margine/soglia prima): il budget va prima a loro;
+      - fuori: le auto tolte a un passo che il controllo non può cambiare (PASSI_SENZA_AI): nessuna chiamata pagata;
+      - sul_sito: per misurare le auto ENTRATE dopo un controllo pagato (auto entrate per dollaro).
+    Solo id in memoria (stesso processo del giro), nessuna regola cambiata."""
+    from ..web import scovo
+    from ..web import sito_regole as SR
+    g = g or SR.Regole.da_env()
+    tolti = set((fun.tolti or {}).get("truffa") or [])
+    comm = sorted(int(SR.margine(it) or 0) for it in out if SR.e_commerciante(it))
+    lont = sorted(int(SR.margine(it) or 0) for it in out if it.get("_tipo") == "comm_lontano")
+    entra, motivi = [], Counter()
+    for it in items:
+        if it.get("id") not in tolti:
+            continue
+        try:
+            if SR.esito_truffa(dict(it), g)[1] != "sconto_alto_da_controllare":
+                continue
+            m = _non_entrerebbe(it, g, comm, lont)
+        except Exception:
+            m = "errore"
+        if m:
+            motivi["non_entrerebbe:" + m] += 1
+            continue
+        entra.append(it)
+    entra.sort(key=lambda it: (-(float(SR.margine(it) or 0) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))),
+                               it.get("id") or 0))
+    fuori: set = set()
+    for nome in PASSI_SENZA_AI:
+        fuori.update(i for i in ((fun.tolti or {}).get(nome) or []) if isinstance(i, int))
+    dentro = {it.get("id") for it in out}
+    mis = _misura_oggi()
+    for lid, info in mis["pagate"].items():
+        if lid in dentro and not info.get("era_dentro"):
+            mis["entrate"].add(lid)
+            if info.get("sito"):
+                mis["entrate_sito"].add(lid)
+    CODA_SITO.update(t=time.time(), entra=[it["id"] for it in entra], fuori=fuori, sul_sito=dentro,
+                     motivi=dict(motivi))
+    res = {"entra": len(entra), "fuori_per_altro": len(fuori), **dict(motivi),
+           "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),
+           "usd_oggi_processo": round(mis["usd"], 4), "usd_sito_oggi_processo": round(mis["usd_sito"], 4)}
+    if time.time() - CODA_SITO.get("log_t", 0) > 600:          # una riga ogni 10 minuti (l'elenco gira ogni 90 s)
+        CODA_SITO["log_t"] = time.time()
+        log.warning("CODA_CONTROLLO %s", json.dumps(res, ensure_ascii=False))
+    return res
+
+
+def coda_sito_fresca() -> dict | None:
+    """La coda del sito vale CONTROLLO_CODA_SITO_MIN minuti (30): senza elenco recente il giro fa come prima."""
+    if not CODA_SITO.get("t") or time.time() - CODA_SITO["t"] > 60 * float(_env("CONTROLLO_CODA_SITO_MIN", "30")):
+        return None
+    return CODA_SITO
+
+
+def entra_stimata(r: dict) -> bool:
+    """Senza la coda del sito: stima dai dati della candidata (margine almeno alla soglia del sito e numero letto)."""
+    if r.get("margine") is None or not r.get("telefono_ok"):
+        return False
+    return float(r["margine"]) >= float(r.get("soglia") or 1500)
+
+
+def confermabile(x: dict, g=None) -> bool:
+    """Con questa risposta l'auto con sconto alto passerebbe la conferma del sito (sito_regole.sconto_confermato_ai)
+    e il passo jev: stima delle auto che entreranno (la misura vera è in coda_dal_sito, al prossimo elenco)."""
+    from ..web import sito_regole as SR
+    g = g or SR.Regole.da_env()
+    j = {"fonte": "claude", "danni": x.get("danni_foto"), "stesso_prezzo": True, "truffa": x.get("truffa"),
+         "auto_vera": x.get("auto_vera"), "dati_coerenti": x.get("dati_coerenti"), "foto_internet": x.get("foto_internet"),
+         "decisione": x.get("decisione"), "confidenza": x.get("confidenza"), "guasto": x.get("guasto"),
+         "km_ok": x.get("km_credibili"), "versione_ok": x.get("versione_ok"), "rata": x.get("prezzo_rata")}
+    it = {"_r": {"jev": j}}
+    try:
+        return bool(SR.sconto_confermato_ai(it, g)) and SR.r_jev(it, g) is None and SR.r_prezzo_intero(it, g) is None
+    except Exception:
+        return False
+
+
+def serve_conferma(r: dict) -> bool:
+    """Auto che il sito ammette solo con la conferma dell'AI con le foto viste: coda del sito o sconto alto (come il sito:
+    niente supercar né incidentate)."""
+    if r.get("_sito"):
+        return True
+    if r.get("stage_reason") == "incidentata" or float(r.get("price_eur") or 0) >= SA_SUPERCAR:
+        return False
+    return sconto_alto(r.get("m"), r.get("price_eur"))
+
+
+def rinnovo_inutile(r: dict, a: dict) -> bool:
+    """Decisione Claude scaduta allo STESSO prezzo, con lo stesso contenuto (testo, dati, foto: impronta uguale),
+    foto viste e completa: la richiesta sarebbe identica, quindi anche la risposta. Non si paga: si segna verificata
+    (_verificata_at) e per valida_giorni() non torna in coda. Il riuso a un prezzo NUOVO resta vietato alle decisioni
+    scadute (riusabile guarda computed_at, che non cambia): giudice A6 intatto."""
+    if r.get("d_fonte") != "claude" or not r.get("d_impronta") or r.get("d_impronta") != a.get("_imp"):
+        return False
+    if r.get("price_eur") is None or r.get("d_prezzo") is None or int(r["d_prezzo"]) != int(r["price_eur"]):
+        return False
+    if r.get("d_incompleta") or senza_foto_da_rifare(r) or r.get("_sito"):
+        return False
+    return scaduta(r.get("d_at"))
+
+
+def fallite_da_db(conn) -> set:
+    """17/11 (notte-03): chiamate pagate nelle ultime 6 ore senza una decisione salvata dopo (risposta non valida,
+    errore nel salvataggio). Prima la lista era solo in memoria e a ogni riavvio del servizio le stesse auto si
+    ripagavano (16/11: 6-8 "non_valida" nel primo giro dopo ogni riavvio)."""
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT u.listing_id FROM ai_usage u LEFT JOIN decisione_ai d ON d.listing_id = u.listing_id "
+            "AND d.fonte = 'claude' AND d.computed_at >= u.at - interval '1 minute' "
+            "WHERE u.task = ANY(%s) AND u.at > now() - interval '6 hours' AND u.listing_id IS NOT NULL "
+            "AND d.listing_id IS NULL", ([TASK, TASK_RINNOVO],)).fetchall()
+        return {int(r["listing_id"]) for r in rows if r.get("listing_id") is not None}
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("CONTROLLO_AI fallite non lette: %s", str(e)[:120])
+        return set()
+
+
 def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     """Un giro sulle auto candidate non ancora controllate (stesso elenco di Jev). `chiama(testo, foto)` ->
     (json, token_in, token_out, modello) si sostituisce nei test."""
@@ -670,6 +887,11 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     tetto = int(_env("CONTROLLO_MAX_GIORNO", "3200")) - fatte_oggi
     budget = budget_usd()
     dosato = budget_dosato(budget)
+    sito = coda_sito_fresca()
+    # 17/11 (notte-03): le auto della coda del sito (entrerebbero con la conferma) possono anticipare sul dosato fino a
+    # QUOTA_ANTICIPO del budget del giorno: stessa spesa del giorno, prima alle auto che entrano davvero
+    anticipo = min(budget, dosato + QUOTA_ANTICIPO * budget) if sito and sito.get("entra") else dosato
+    solo_sito = False
     # 13/11 (giudice N13): pausa, tetto e budget fermano solo le chiamate PAGATE; il riuso gratuito (decisione riportata
     # al prezzo nuovo quando il contenuto è uguale) e gli scarti dal testo girano comunque
     stop = None
@@ -682,15 +904,64 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     elif usd_oggi >= budget:
         stop = {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
     elif usd_oggi >= dosato:
-        stop = {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi, "dosato": dosato}
+        if usd_oggi < anticipo:
+            solo_sito = True                       # dosato raggiunto: solo le auto della coda del sito
+        else:
+            stop = {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi,
+                    "dosato": dosato}
     sql = CAND_SQL_RIPIEGO if conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"] else CAND_SQL
-    righe = [dict(r) for r in conn.execute(sql, dict(parametri_diesel(), quota=float(_env("JEV_QUOTA_SOGLIA", "0.7")),
-                                                     validi=valida_giorni())).fetchall()]
+    par = dict(parametri_diesel(), quota=float(_env("JEV_QUOTA_SOGLIA", "0.7")), validi=valida_giorni())
+    righe = [dict(r) for r in conn.execute(sql, par).fetchall()]
+    st: Counter = Counter()
+    if sito and sito.get("entra"):
+        # 17/11 (notte-03): le auto che il sito ha tolto solo per lo sconto alto non controllato (e che passerebbero
+        # tutto il resto), anche se non sono tra le candidate di CAND_SQL (valutazione più vecchia di 12 ore)
+        per_id = {r["id"]: r for r in righe}
+        sito_ids = list(sito["entra"])[:1500]
+        try:
+            for r in conn.execute(CAND_SQL_SITO, dict(par, sito_ids=sito_ids)).fetchall():
+                r = dict(r)
+                per_id.setdefault(r["id"], r)["_sito"] = True
+        except Exception as e:
+            conn.rollback()
+            log.warning("CONTROLLO_AI coda del sito non letta: %s", str(e)[:160])
+        righe = list(per_id.values())
+        st["sito_entra"] = len(sito_ids)
+        st["sito_da_fare"] = sum(1 for r in righe if r.get("_sito"))
+        st["sito_gia_decise"] = st["sito_entra"] - st["sito_da_fare"]     # già decise da Claude: non si richiedono
     # le auto "troppo sotto prezzo" solo con il numero (come Jev); fallite o scartate dal testo aspettano
     ora = time.time()
-    righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok")) and not _da_saltare(r["id"], ora)]
+    pagate_fallite = fallite_da_db(conn)           # 17/11: anche dopo un riavvio (prima solo in memoria)
+    righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok") or r.get("_sito"))
+             and not _da_saltare(r["id"], ora)]
+    _n = len(righe)
+    righe = [r for r in righe if r["id"] not in pagate_fallite]
+    if _n - len(righe):
+        st["fallite_da_db"] = _n - len(righe)
     # 14/11 sera (giudice): entrate solo per lo sconto fermo ma senza il limite esatto della fascia: non si rinnovano prima
-    righe = [r for r in righe if not r.get("solo_sconto") or sconto_fermo(r)]
+    righe = [r for r in righe if not r.get("solo_sconto") or sconto_fermo(r) or r.get("_sito")]
+    if sito:
+        # 17/11 (notte-03): tolte dal sito a un passo che il controllo non cambia: nessuna chiamata pagata (resta il
+        # riuso gratuito al prezzo nuovo). Tornano in coda da sole al primo elenco in cui passano quel passo
+        def _solo_riuso(r):
+            return r.get("d_fonte") == "claude" and r.get("d_prezzo") is not None and r.get("price_eur") is not None \
+                and int(r["d_prezzo"]) != int(r["price_eur"])
+        tenute = []
+        for r in righe:
+            if r["id"] in sito["fuori"] and not r.get("dz") and not r.get("_sito"):
+                st["fuori_per_altro"] += 1
+                if not _solo_riuso(r):
+                    continue
+                r["_solo_riuso"] = True
+            tenute.append(r)
+        righe = tenute
+    if solo_sito:
+        righe = [r for r in righe if r.get("_sito") or r.get("_solo_riuso")
+                 or (r.get("d_fonte") == "claude" and r.get("d_prezzo") is not None and r.get("price_eur") is not None
+                     and int(r["d_prezzo"]) != int(r["price_eur"]))]
+        for r in righe:
+            if not r.get("_sito"):
+                r["_solo_riuso"] = True
     n_cand = len(righe)
     quante = 0 if stop else min(tetto, massimo or per_giro())
     if usd_rinnovi >= QUOTA_RINNOVI * budget:
@@ -708,7 +979,6 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         _tenute.append(r)
     righe = _tenute[:max(quante, per_giro()) * 2]       # qualcuna si riusa o si scarta senza chiamata
     leggere = {r["id"]: r for r in righe}
-    st: Counter = Counter()
     if _rimandate:
         st["senza_foto_rimandate"] += _rimandate
     if not righe:
@@ -731,6 +1001,21 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         if motivo:
             _SALTATE[a["id"]] = time.time()               # il sito la toglie comunque: nessuna spesa
             st["senza_chiamata:" + motivo] += 1
+            continue
+        if r.get("_solo_riuso"):
+            continue                                      # 17/11: fuori dal sito per altro (o dosato finito): niente spesa
+        if classe(r) == 3 and rinnovo_inutile(r, a):
+            # 17/11 (notte-03): stessa richiesta di 14 giorni fa → stessa risposta: si segna verificata, nessuna spesa
+            conn.execute("UPDATE decisione_ai SET risposta = risposta || jsonb_build_object('_verificata_at', now()::text) "
+                         "WHERE listing_id=%s AND fonte='claude'", (a["id"],))
+            st["rinnovi_inutili_evitati"] += 1
+            continue
+        a["_conferma"] = serve_conferma(r)
+        a["_sito"] = bool(r.get("_sito"))
+        if a["_conferma"] and int(a.get("n_foto") or 0) <= 0:
+            # 17/11: sconto alto senza foto: il sito la ammette solo con le foto viste, la chiamata non servirebbe
+            _SALTATE[a["id"]] = time.time()
+            st["senza_chiamata:sconto_alto_senza_foto"] += 1
             continue
         if len(da_fare) < quante:
             if senza_foto_da_rifare(r) and not (r.get("price_eur") is not None
@@ -758,16 +1043,28 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     blocco = max(1, int(_env("CONTROLLO_PARALLELI", "3")))
     lock = threading.Lock()                        # la connessione si usa da un thread alla volta
     token_tot = [0, 0]
-    spesa = {"usd": usd_oggi, "rinnovi": usd_rinnovi}
+    spesa = {"usd": usd_oggi, "rinnovi": usd_rinnovi, "sito": 0.0}
+    mis = _misura_oggi()
+    sul_sito = (sito or {}).get("sul_sito") or set()
+    from ..web import sito_regole as _SR
+    g_sito = _SR.Regole.da_env()
     nuove_targhe: list[int] = []
     fermo = False
 
-    def paga_per(lid, rinnovo=False):
+    def paga_per(lid, rinnovo=False, del_sito=False):
         def paga(tin, tout, modello):
             # 13/11 (giudice C2): la spesa si registra e si conferma SUBITO dopo la chiamata (anche se poi il giro cade)
             with lock:
+                c = AI.costo(modello, tin, tout)
                 if rinnovo:
-                    spesa["rinnovi"] += AI.costo(modello, tin, tout)
+                    spesa["rinnovi"] += c
+                # 17/11 (notte-03): misura delle auto entrate per dollaro (coda_dal_sito conta le entrate)
+                info = mis["pagate"].setdefault(lid, {"usd": 0.0, "sito": del_sito, "era_dentro": lid in sul_sito})
+                info["usd"] += c
+                mis["usd"] += c
+                if del_sito:
+                    mis["usd_sito"] += c
+                    spesa["sito"] += c
                 try:
                     _registra_spesa(conn, lid, [(tin, tout, modello)], TASK_RINNOVO if rinnovo else TASK)
                     conn.commit()
@@ -784,12 +1081,17 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             if isinstance(conf, str):
                 conf = json.loads(conf)
             return a, controlla(a, list(a.get("foto") or []), conf, perizie.get(a["id"]), chiama=chiama, http=http,
-                                paga=paga_per(a["id"], a.get("_classe") == 3))
+                                paga=paga_per(a["id"], a.get("_classe") == 3, a.get("_sito")),
+                                serve_foto=bool(a.get("_conferma")))
         except Exception as e:                     # un'auto rotta non ferma il blocco
             return a, {"x": None, "errore": e, "token": [], "foto": 0}
 
     def esito(a, res):
         e = res["errore"]
+        if isinstance(e, FotoNonScaricabili):
+            st["foto_non_scaricate_senza_spesa"] += 1      # 17/11: nessuna chiamata, si riprova tra 6 ore
+            _segna_fallita(a["id"])
+            return False
         if e is not None:
             st["errore" if not isinstance(e, ControlloNonValido) else "non_valida"] += 1
             tipo = _tipo_errore(e)
@@ -821,6 +1123,13 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             st["versioni_molto_diverse"] += 1
         if sconto_alto(leggere[a["id"]].get("m"), a["price_eur"]):
             st["sconto_alto"] += 1
+        if a.get("_conferma"):
+            ok = confermabile(x, g_sito)
+            st["conferma_fatte"] += 1
+            st["conferma_ok"] += 1 if ok else 0
+            if a.get("_sito"):
+                st["sito_fatte"] += 1
+                st["sito_confermabili"] += 1 if ok else 0
         if x.get("targa_visibile") is not None:
             et = ("foto_internet" if (x.get("foto_internet") or 0) >= .7 else
                   "visibile" if x["targa_visibile"] >= .7 else "coperta" if x["targa_visibile"] <= .3 else "incerta")
@@ -834,10 +1143,14 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     try:
         with ThreadPoolExecutor(max_workers=blocco) as ex:
             for k in range(0, len(da_fare), blocco):
-                if spesa["usd"] >= min(budget, dosato):
+                parte = da_fare[k:k + blocco]
+                # 17/11 (notte-03): le auto della coda del sito fino ad "anticipo", le altre fino al dosato
+                limite = anticipo if any(a.get("_sito") for a in parte) else min(budget, dosato)
+                if spesa["usd"] >= min(budget, limite):
                     st["budget_finito" if spesa["usd"] >= budget else "budget_dosato"] += 1
                     break
-                parte = da_fare[k:k + blocco]
+                if spesa["usd"] >= min(budget, dosato):
+                    parte = [a for a in parte if a.get("_sito")]
                 if spesa["rinnovi"] >= QUOTA_RINNOVI * budget:
                     st["rinnovi_rimandati"] += sum(1 for a in parte if a.get("_classe") == 3)
                     parte = [a for a in parte if a.get("_classe") != 3]
@@ -876,7 +1189,12 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
            "secondi": round(time.time() - t0), "token_in": token_tot[0], "token_out": token_tot[1],
            "costo_usd": round(usd, 4), "usd_auto": round(usd / max(1, st["fatte"] + st["non_valida"]), 5),
            "fatte_oggi": fatte_oggi + st["fatte"], "usd_oggi": round(spesa["usd"], 4), "budget_usd": budget,
-           "dosato_usd": dosato, "rinnovi_usd": round(spesa["rinnovi"], 4),
+           "dosato_usd": dosato, "rinnovi_usd": round(spesa["rinnovi"], 4), "sito_usd": round(spesa["sito"], 4),
+           # 17/11 (notte-03): auto ENTRATE sul sito dopo un controllo pagato oggi (misurate da coda_dal_sito al
+           # prossimo elenco) per dollaro speso oggi dal processo
+           "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),
+           "entrate_per_usd": round(len(mis["entrate"]) / mis["usd"], 1) if mis["usd"] else None,
+           "entrate_sito_per_usd": round(len(mis["entrate_sito"]) / mis["usd_sito"], 1) if mis["usd_sito"] else None,
            "foto": f"{n_foto()}x{_env('CONTROLLO_FOTO_LATO', '512')}px {modo_foto()}", **dict(st)}
     log.warning("JEV_GIRO %s", json.dumps(res, ensure_ascii=False))   # stesso nome di riga di Jev (sentinella, cruscotti)
     return res
