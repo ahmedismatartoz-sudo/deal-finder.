@@ -32,7 +32,8 @@ REGIONI = {
     "liguria": ["GE"],
 }
 _codici_regione: dict[str, int] = {}
-LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104, "completo": 734105}
+LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104, "completo": 734105,
+        "rinfresca": 734106}
 
 
 # ------------------------------------------------------------------ fondamenta della velocità (16/11, FOND_VELOCITA.md)
@@ -463,6 +464,21 @@ def _client_fb():
 
 # ------------------------------------------------------------------ agente 1: verifica
 
+def _controlla_annuncio(r, cas, csb, cfb=None, lenient: bool = True):
+    """Una pagina riaperta: (riga, stato, motivo). Stesso criterio per la verifica delle auto del sito e per il
+    rinfresco delle auto fuori per freschezza (giro_rinfresca, con lenient=False: serve la prova che è viva)."""
+    time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
+    if r["source"] == "autoscout24":
+        st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
+        return r, st, motivo
+    if r["source"] == "facebook":
+        return r, (_fb_stato(cfb, r["url"]) if cfb is not None else "errore"), None
+    # 3/11 (studio 4 §4.4): per togliere un'auto Subito serve la stessa prova del controllo in blocco (prima
+    # bastava la frase "non è più disponibile" in un punto qualsiasi della pagina, anche negli annunci simili)
+    st, motivo = subito_esito_con_prova(csb, r["url"], lenient=lenient)
+    return r, st, motivo
+
+
 def giro_verifica(conn, ids: list[int]) -> Counter:
     """AGENTE 1 (ogni 10 minuti): riapre SOLO gli annunci che sono sul sito e toglie quelli che non esistono più.
     Non controlla numeri di telefono (quello lo fa controlla_telefoni, una volta per auto, solo sulle auto scelte).
@@ -477,16 +493,7 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
     cas, csb, cfb = _client_as(), _client_subito(), _client_fb()
 
     def check(r):
-        time.sleep(float(os.environ.get("TR_PAUSA_S", "0.6")))
-        if r["source"] == "autoscout24":
-            st, _det, motivo = _as_esito(cas, r["url"])   # pagina intera: un annuncio tolto può rispondere 200
-            return r, st, motivo
-        if r["source"] == "facebook":
-            return r, _fb_stato(cfb, r["url"]), None
-        # 3/11 (studio 4 §4.4): per togliere un'auto Subito serve la stessa prova del controllo in blocco (prima
-        # bastava la frase "non è più disponibile" in un punto qualsiasi della pagina, anche negli annunci simili)
-        st, motivo = subito_esito_con_prova(csb, r["url"], lenient=True)
-        return r, st, motivo
+        return _controlla_annuncio(r, cas, csb, cfb, lenient=True)
 
     spariti = []
     with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
@@ -501,6 +508,195 @@ def giro_verifica(conn, ids: list[int]) -> Counter:
                 if motivo != "scaduto":           # annuncio scaduto: non è una vendita, niente misura
                     registra_sparita(conn, r["id"])
     conn.commit()
+    stats["_spariti"] = spariti            # type: ignore[assignment]
+    return stats
+
+
+# ------------------------------------------------------------------ agente 1 bis: rinfresco (17/11)
+# Il sito mostra solo le auto controllate nelle ultime FRESCHEZZA_ORE ore (scovo.LIST_SQL: GREATEST(last_checked_at,
+# last_seen_at)). La verifica qui sopra riapre SOLO le auto già nell'elenco: un'auto buona uscita dall'elenco per un
+# motivo passeggero (numero non ancora letto, tetto, ricalcolo, verifica in errore) o mai entrata, se le ricerche non
+# la rivedono più (Subito oltre le pagine lette, AutoScout fuori dai giri), "scade" dopo 48 ore anche se l'annuncio è
+# vivo e non torna più. Il rinfresco riapre poche pagine per giro, scelte tra le auto approfondite che sono o
+# sarebbero sul sito, PRIMA che scadano. La regola delle 48 ore non cambia: un'auto torna "fresca" solo con la prova
+# che l'annuncio è vivo (pagina con i dati dell'annuncio); senza prova (errore, pagina non riconosciuta) niente.
+# Le auto vendute escono con la stessa prova della verifica (404, rimando, "scaduto/rimosso").
+
+FRESCHEZZA_ORE = int(os.environ.get("FRESCHEZZA_ORE", "48"))     # la stessa di scovo.LIST_SQL: NON si cambia qui
+_rinfresco_tentati: dict[int, float] = {}       # id -> ultimo tentativo senza esito (errore): si riprova più tardi
+_rinfresco_tot: Counter = Counter()             # totali da avvio (riga FRESCHEZZA dei log)
+_freschezza_contata = {"t": 0.0, "ultimo": None}
+
+# stessa base di scovo.LIST_SQL, senza la condizione di freschezza
+_BASE_FRESCHEZZA = ("l.stage='approfondito' AND l.status='attivo' "
+                    "AND l.stage_reason IN ('opportunita','da_verificare','incidentata')")
+
+RINFRESCO_SQL = """
+WITH vecchie AS (
+  SELECT l.id, l.source, l.url, l.price_eur, l.telefono_ok, upper(coalesce(l.province, '')) AS prov,
+         EXTRACT(EPOCH FROM now() - GREATEST(l.last_checked_at, l.last_seen_at)) / 3600.0 AS ore
+  FROM listings l
+  WHERE """ + _BASE_FRESCHEZZA + """ AND l.source IN ('subito','autoscout24')
+    AND GREATEST(l.last_checked_at, l.last_seen_at) < now() - %(dopo)s * interval '1 hour'
+    AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - %(fino)s * interval '1 hour'
+  ORDER BY GREATEST(l.last_checked_at, l.last_seen_at) DESC
+  LIMIT %(quante)s
+)
+SELECT v.id, v.source, v.url, v.price_eur, v.telefono_ok, v.prov, v.ore, c.categoria, c.margine,
+       EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id = v.id) AS top
+FROM vecchie v
+LEFT JOIN LATERAL (SELECT vp.categoria, vp.margine FROM valutazioni_policy vp WHERE vp.listing_id = v.id
+                   ORDER BY vp.computed_at DESC LIMIT 1) c ON true
+"""
+
+FRESCHEZZA_SQL = """
+WITH base AS (
+  SELECT l.id, upper(coalesce(l.province, '')) AS prov, l.telefono_ok,
+         EXTRACT(EPOCH FROM now() - GREATEST(l.last_checked_at, l.last_seen_at)) / 3600.0 AS ore
+  FROM listings l
+  WHERE """ + _BASE_FRESCHEZZA + """
+    AND GREATEST(l.last_checked_at, l.last_seen_at) > now() - %(giorni)s * interval '1 day'
+), vecchie AS (
+  SELECT b.*, c.categoria, EXISTS (SELECT 1 FROM top_auto ta WHERE ta.listing_id = b.id) AS top
+  FROM base b
+  LEFT JOIN LATERAL (SELECT vp.categoria FROM valutazioni_policy vp WHERE vp.listing_id = b.id
+                     ORDER BY vp.computed_at DESC LIMIT 1) c ON true
+  WHERE b.ore >= %(dopo)s
+)
+SELECT (SELECT count(*) FROM base WHERE ore < %(fresc)s) AS fresche,
+       count(*) FILTER (WHERE ore < %(fresc)s) AS in_scadenza,
+       count(*) FILTER (WHERE ore >= %(fresc)s) AS fuori_freschezza,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND ore < 7 * 24) AS fuori_entro_7g,
+       count(*) FILTER (WHERE ore < %(fresc)s AND (categoria = ANY(%(cat)s) OR top)) AS buone_in_scadenza,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND (categoria = ANY(%(cat)s) OR top)) AS buone_fuori,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND ore < 7 * 24 AND (categoria = ANY(%(cat)s) OR top)
+                        AND prov = ANY(%(zona)s) AND telefono_ok IS NOT FALSE) AS buone_fuori_7g_zona,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND categoria = 'opportunita') AS opportunita_fuori,
+       count(*) FILTER (WHERE ore >= %(fresc)s AND categoria = 'candidato') AS candidato_fuori
+FROM vecchie
+"""
+
+
+def _rinfresco_param() -> dict:
+    anticipo = float(os.environ.get("RINFRESCA_ANTICIPO_ORE", "12"))
+    return {"fresc": FRESCHEZZA_ORE, "dopo": max(1.0, FRESCHEZZA_ORE - anticipo),
+            "fino": float(os.environ.get("RINFRESCA_FINO_GIORNI", "7")) * 24,
+            "max": int(os.environ.get("RINFRESCA_MAX", "40")),
+            "riprova_s": float(os.environ.get("RINFRESCA_RIPROVA_MIN", "120")) * 60}
+
+
+def _categorie_sito() -> list[str]:
+    return sorted(set(os.environ.get("POLICY_CATEGORIE_SITO", "opportunita,candidato").split(",")))
+
+
+def _zona() -> set:
+    """Province che passano il filtro zona del SITO (sito_regole.r_zona): Milano 100 km, Torino, Ravenna."""
+    try:
+        from ..web import sito_regole as SR
+        return set(SR.PROVINCE_100KM) | set(SR.RAVENNA) | set(SR.TORINO)
+    except Exception:
+        return set()
+
+
+def conta_freschezza(conn) -> dict:
+    """Quante auto approfondite (stage_reason opportunita/da_verificare/incidentata, attive) stanno per uscire o sono
+    già uscite dal sito SOLO per la freschezza. 'buone' = categoria del sito (opportunita/candidato) o tra le top.
+    Finestra: ultimi 30 giorni. Mai un errore (dict vuoto)."""
+    p = _rinfresco_param()
+    try:
+        r = conn.execute(FRESCHEZZA_SQL, {"giorni": 30, "dopo": p["dopo"], "fresc": p["fresc"],
+                                          "cat": _categorie_sito(), "zona": sorted(_zona())}).fetchone()
+        return {k: int(v or 0) for k, v in dict(r or {}).items()}
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.info("FRESCHEZZA non contata: %s", str(e)[:200])
+        return {}
+
+
+def ordina_rinfresco(righe: list[dict], sul_sito: set, zona: set, adesso: float | None = None,
+                     tentati: dict | None = None, riprova_s: float = 7200, fresc: float = 48) -> list[dict]:
+    """Ordine di priorità (solo dati, testabile): 1) auto che erano sul sito di recente, 2) buone (categoria del sito
+    o top) della zona con il numero, 3) altre buone; le altre auto non si riaprono. Dentro ogni gruppo prima quelle
+    ANCORA fresche più vicine alla scadenza (restano sul sito senza buchi), poi le scadute più recenti (le più
+    probabilmente vive); a parità il margine più alto. Escluse quelle già tentate senza esito da meno di riprova_s."""
+    cat = set(_categorie_sito())
+    adesso = time.time() if adesso is None else adesso
+    tentati = _rinfresco_tentati if tentati is None else tentati
+    out = []
+    for r in righe:
+        if adesso - tentati.get(int(r["id"]), -1e18) < riprova_s:
+            continue
+        buona = (r.get("categoria") in cat) or bool(r.get("top"))
+        recente = int(r["id"]) in sul_sito
+        if not (buona or recente):
+            continue
+        gruppo = 0 if recente else (1 if (r.get("prov") in zona and r.get("telefono_ok") is not False) else 2)
+        ore = float(r.get("ore") or 0)
+        scaduta = ore >= fresc
+        out.append(((gruppo, scaduta, ore if scaduta else -ore, -(r.get("margine") or 0)), r))
+    out.sort(key=lambda x: x[0])
+    return [r for _k, r in out]
+
+
+def giro_rinfresca(conn, sul_sito=()) -> Counter:
+    """Rinfresco mirato (dopo ogni verifica, stesso ritmo): riapre al massimo RINFRESCA_MAX (40) annunci tra le auto
+    approfondite controllate da più di FRESCHEZZA_ORE − RINFRESCA_ANTICIPO_ORE ore (36) e da meno di
+    RINFRESCA_FINO_GIORNI giorni (7), nell'ordine di ordina_rinfresco. 'attivo' con prova = last_checked_at adesso
+    (l'auto resta o torna sull'elenco al prossimo calcolo, dove passa TUTTE le regole del sito come sempre);
+    'scomparso' con prova = tolta come nella verifica; errore = nessuna modifica, si riprova tra 2 ore.
+    Subito con lenient=False: una pagina non riconosciuta NON rinfresca. Gli id tornati vivi in stats['_tornati'].
+    Ogni ora (RINFRESCA_CONTA_MIN) la riga FRESCHEZZA con i conteggi di conta_freschezza."""
+    from .verify import _mark
+    stats: Counter = Counter()
+    if os.environ.get("RINFRESCA", "1") != "1":
+        return stats
+    p = _rinfresco_param()
+    if time.time() - _freschezza_contata["t"] >= float(os.environ.get("RINFRESCA_CONTA_MIN", "60")) * 60:
+        _freschezza_contata.update(t=time.time(), ultimo=conta_freschezza(conn))
+        log.warning("FRESCHEZZA %s", json.dumps({"ore": FRESCHEZZA_ORE, "anticipo_da_ore": p["dopo"],
+                                                  "conteggi": _freschezza_contata["ultimo"],
+                                                  "rinfresco_da_avvio": dict(_rinfresco_tot)}, ensure_ascii=False))
+    if p["max"] <= 0:
+        return stats
+    righe = conn.execute(RINFRESCO_SQL, {"dopo": p["dopo"], "fino": p["fino"],
+                                         "quante": int(os.environ.get("RINFRESCA_POOL", "5000"))}).fetchall()
+    adesso = time.time()
+    for k in [k for k, t in _rinfresco_tentati.items() if adesso - t > p["riprova_s"]]:
+        _rinfresco_tentati.pop(k, None)                 # memoria piccola
+    scelte = ordina_rinfresco([dict(r) for r in righe], {int(i) for i in sul_sito or ()}, _zona(), adesso,
+                              riprova_s=p["riprova_s"], fresc=p["fresc"])[:p["max"]]
+    stats["candidate"] = len(righe)
+    stats["scelte"] = len(scelte)
+    if not scelte:
+        stats["_tornati"] = []             # type: ignore[assignment]
+        return stats
+    cas = _client_as() if any(r["source"] == "autoscout24" for r in scelte) else None
+    csb = _client_subito() if any(r["source"] == "subito" for r in scelte) else None
+    tornati, spariti = [], []
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("TR_PARALLELI", "4"))) as ex:
+        for r, st, motivo in ex.map(lambda r: _controlla_annuncio(r, cas, csb, None, lenient=False), scelte):
+            scaduta = float(r.get("ore") or 0) >= p["fresc"]
+            stats[f"{r['source']}:{st}"] += 1
+            stats[f"{'scadute' if scaduta else 'in_scadenza'}:{st}"] += 1
+            if st not in ("attivo", "scomparso"):
+                _rinfresco_tentati[int(r["id"])] = time.time()
+                continue
+            _mark(conn, r["id"], st, r.get("price_eur"), motivo=motivo, sito=False)
+            if st == "attivo":
+                if scaduta:
+                    tornati.append(r["id"])         # era fuori dal sito solo per la freschezza
+                else:
+                    stats["tenute_fresche"] += 1    # sarebbe uscita entro FRESCHEZZA_ORE − ore
+            else:
+                spariti.append(r["id"])
+    conn.commit()
+    for k, v in stats.items():
+        if k != "candidate":
+            _rinfresco_tot[k] += v
+    stats["_tornati"] = tornati            # type: ignore[assignment]
     stats["_spariti"] = spariti            # type: ignore[assignment]
     return stats
 
@@ -851,6 +1047,10 @@ def telefoni_candidate(conn, ids) -> Counter:
                     stats["autoscout24:scomparso"] += 1
                     conn.commit()
                     continue
+                # 17/11 (freschezza): pagina con i dati dell'annuncio = prova che è vivo, come nella verifica
+                from .verify import _mark
+                _mark(conn, r["id"], "attivo", r.get("price_eur"))
+                stats["autoscout24:rinfrescata"] += 1
                 tel = telefono_autoscout(det)
             elif r["id"] in prio_set and os.environ.get("TEL_CAND_SUBITO", "0") != "1":
                 if TN.puo_cercare():
