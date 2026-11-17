@@ -58,6 +58,8 @@ def _tabella(conn):
 # "attesa_illeggibile" (illeggibile da meno di 6 ore), "non_disponibile" (AI spenta), "errore". riprova_giudice conta
 # un tentativo solo se il giudice non era bloccato (BLOCCATO).
 _ESITI: dict = {}
+import threading as _threading
+_ESITI_LOCK = _threading.Lock()   # 17/11: la riprova gira con 4 thread
 BLOCCATO = ("budget", "attesa_illeggibile", "non_disponibile")
 
 
@@ -65,15 +67,17 @@ def _esito(lid, e: str) -> None:
     import time
     if lid is None:
         return
-    _ESITI[lid] = (time.time(), e)
-    if len(_ESITI) > 20000:
-        for k, _v in sorted(list(_ESITI.items()), key=lambda kv: kv[1][0])[:5000]:
-            _ESITI.pop(k, None)
+    with _ESITI_LOCK:
+        _ESITI[lid] = (time.time(), e)
+        if len(_ESITI) > 20000:
+            for k, _v in sorted(list(_ESITI.items()), key=lambda kv: kv[1][0])[:5000]:
+                _ESITI.pop(k, None)
 
 
 def esito(lid, dopo: float = 0.0) -> str | None:
     """Ultimo esito del giudice per l'auto lid, se successivo al tempo `dopo` (None: il giudice non è stato chiamato)."""
-    x = _ESITI.get(lid)
+    with _ESITI_LOCK:
+        x = _ESITI.get(lid)
     return x[1] if x and x[0] >= dopo else None
 
 
