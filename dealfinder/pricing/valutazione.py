@@ -424,6 +424,66 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     return es
 
 
+# 17/11 (riprova veloce): la riprova del giudice faceva ~460 auto/ora, ~12 s per auto quasi tutti in attesa della
+# risposta dell'AI (giudice) e delle letture del mercato: lavoro di rete, non di calcolo. Più lavoratori (thread) in
+# parallelo, ognuno con la SUA connessione al database; regole, margini e modello identici. Costante nel codice (il
+# servizio web ha già troppe variabili d'ambiente).
+RIPROVA_PARALLELI = 4
+
+
+def rivaluta_in_parallelo(ids: list, fonte: str, connetti, budget_finito, paralleli: int = RIPROVA_PARALLELI,
+                          blocco: int = 20, ves=None) -> list:
+    """Rivaluta `ids` a blocchi di `blocco` auto con `paralleli` lavoratori. Ogni blocco: connessione propria
+    (connetti(), un context manager come db.connect), controllo del budget PRIMA (se finito il blocco si salta e i
+    successivi non partono), valuta_e_scrivi, commit. I blocchi partono nell'ordine di `ids` (coda FIFO: le auto in
+    cima per prime). Nessuna connessione è condivisa tra thread.
+    Restituisce [(pezzo, t0, Esito | None, errore | None)] nell'ordine dei blocchi; Esito None = blocco saltato
+    (budget finito) o non riuscito (errore: si scrive nel log, i blocchi non ancora partiti non partono, le auto si
+    riprovano al giro dopo)."""
+    import threading
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    ves = ves or valuta_e_scrivi
+    pezzi = [list(ids[k:k + blocco]) for k in range(0, len(ids), blocco)]
+    if not pezzi:
+        return []
+    fermo = threading.Event()
+
+    def lavora(pezzo):
+        if fermo.is_set():
+            return None
+        with connetti() as c:
+            try:
+                finito = budget_finito(c)
+            finally:
+                c.commit()                      # niente transazione aperta durante la chiamata all'AI
+            if finito:
+                fermo.set()
+                return None
+            t0 = time.time()
+            try:
+                es = ves(c, pezzo, fonte)
+                c.commit()
+            except BaseException:
+                fermo.set()
+                raise
+            return t0, es
+
+    n = max(1, min(int(paralleli or 1), len(pezzi)))
+    out = []
+    with ThreadPoolExecutor(max_workers=n, thread_name_prefix="riprova-giudice") as ex:
+        futuri = [ex.submit(lavora, p) for p in pezzi]
+        for p, f in zip(pezzi, futuri):
+            try:
+                r = f.result()
+            except Exception as e:
+                log.warning("RIPROVA_GIUDICE blocco di %d auto non riuscito: %s", len(p), str(e)[:200])
+                out.append((p, 0.0, None, e))
+                continue
+            out.append((p, r[0], r[1], None) if r else (p, 0.0, None, None))
+    return out
+
+
 def esce_dall_attesa(es: "Esito", lid) -> bool:
     """15/11 (giudice A2, riprova del giudice): l'auto è stata davvero riscritta e NON è di nuovo "in attesa"
     (dati_insufficienti con giudice_mancante). Le altre si riprovano al giro dopo."""

@@ -1162,3 +1162,85 @@ def test_tetto_giudice_sulle_righe_in_attesa_nel_cron():
         c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE), salvate=dict(attesa))
         VAL.valuta_e_scrivi(c, [1], "web-nuovi")                            # fuori dal cron: nessun tetto
         assert len(c.scritte) == 1
+
+
+# ------------------------------------------------------------------ 17/11 riprova veloce: lavoratori in parallelo
+def test_riprova_in_parallelo_connessioni_proprie_ordine_e_budget():
+    import threading
+    from contextlib import contextmanager
+    from dealfinder.pricing import valutazione as VAL
+    assert VAL.RIPROVA_PARALLELI == 4
+    usate, partiti, lock = [], [], threading.Lock()
+
+    class C:
+        def commit(self):
+            pass
+
+    @contextmanager
+    def connetti():
+        c = C()
+        yield c
+
+    def ves(c, pezzo, fonte):
+        with lock:
+            usate.append((id(c), threading.get_ident()))
+            partiti.append(pezzo[0])
+        time.sleep(0.2)                       # come la risposta del giudice: attesa di rete
+        es = VAL.Esito()
+        es.stats["categoria:opportunita"] += len(pezzo)
+        return es
+
+    ids = list(range(100, 180))               # 8 blocchi da 10
+    t0 = time.time()
+    out = VAL.rivaluta_in_parallelo(ids, "riprova-giudice", connetti, lambda c: False, blocco=10, ves=ves)
+    dt = time.time() - t0
+    assert dt < 0.2 * 8 / 2, dt               # sequenziale 1,6 s; con 4 lavoratori ~0,4 s
+    assert [p for p, *_ in out] == [ids[k:k + 10] for k in range(0, 80, 10)]       # risultati nell'ordine dei blocchi
+    assert sum(es.stats["categoria:opportunita"] for _p, _t, es, _e in out) == 80
+    assert partiti[:4] == [100, 110, 120, 130] or sorted(partiti[:4]) == [100, 110, 120, 130]   # prima i primi blocchi
+    assert len({c for c, _t in usate}) >= 4 and len({t for _c, t in usate}) == 4    # una connessione per blocco/thread
+    # budget finito al terzo controllo: i blocchi successivi non partono
+    usate.clear()
+    n = {"k": 0}
+
+    def budget(c):
+        with lock:
+            n["k"] += 1
+            return n["k"] > 2
+    out = VAL.rivaluta_in_parallelo(ids, "riprova-giudice", connetti, budget, paralleli=1, blocco=10, ves=ves)
+    assert len(usate) == 2 and [es is None for _p, _t, es, _e in out] == [False, False] + [True] * 6
+    # errore in un blocco: si scrive, i blocchi non partiti si saltano, nessuna eccezione al giro
+    def rotto(c, pezzo, fonte):
+        raise RuntimeError("db giù")
+    out = VAL.rivaluta_in_parallelo(ids, "riprova-giudice", connetti, lambda c: False, paralleli=1, blocco=10, ves=rotto)
+    assert out[0][3] is not None and all(es is None for _p, _t, es, _e in out)
+
+
+def test_riprova_in_parallelo_con_la_valutazione_vera():
+    """valuta_e_scrivi vera in 4 thread, ognuno con il suo database finto: stessi esiti del giro in sequenza."""
+    from contextlib import contextmanager
+    from dealfinder.pricing import valutazione as VAL
+    from tests import test_prezzo_vero as TPV
+    conns = []
+
+    @contextmanager
+    def connetti():
+        c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE))
+        conns.append(c)
+        yield c
+    sequenza = VAL.valuta_e_scrivi(TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE)), [1], "riprova-giudice")
+    out = VAL.rivaluta_in_parallelo([1] * 8, "riprova-giudice", connetti, lambda c: False, blocco=1)
+    assert len(out) == 8 and all(es is not None and es.salvata == sequenza.salvata and es.stats == sequenza.stats
+                                 for _p, _t, es, _e in out)
+    assert len(conns) == 8 and all(len(c.scritte) == 1 for c in conns)
+
+
+def test_riprova_giudice_usa_i_lavoratori_in_parallelo():
+    import inspect
+    from dealfinder.web import app
+    src = inspect.getsource(app)
+    i = src.index("def riprova_giudice")
+    blocco = src[i:src.index("def perizia_ai", i)]
+    assert "_VAL.rivaluta_in_parallelo(" in blocco and "_VAL.RIPROVA_PARALLELI" in blocco
+    assert "connect, _AI.budget_finito" in blocco and "_ves(conn," not in blocco   # nessuna connessione condivisa
+    assert "RIPROVA_PARALLELI\"" not in blocco                                     # nessuna variabile d'ambiente nuova

@@ -3560,6 +3560,7 @@ def _tempo_reale():
         from ..ai import client as _AI
         from ..pricing import policy_v2 as _PV
         from ..pricing.valutazione import valuta_e_scrivi as _ves, esce_dall_attesa as _esce
+        from ..pricing import valutazione as _VAL
         from collections import Counter as _Cr
         _diag = {"fatto": False}
         # 15/11 (giudice A2): in _visti solo le auto davvero riscritte e uscite dall'attesa (valutazione.esce_dall_attesa)
@@ -3628,13 +3629,22 @@ def _tempo_reale():
                                  _ids_in_cima(),
                                  int(os.environ.get("RIPROVA_GIUDICE_LOTTO", "200")))).fetchall()]
                             st = _Cr()
-                            for k in range(0, len(ids), 20):
-                                _t0 = time.time()
-                                es = _ves(conn, ids[k:k + 20], "riprova-giudice")
-                                conn.commit()
+                            conn.commit()        # 17/11: la connessione del giro resta ferma mentre lavorano i thread
+                            # 17/11 (riprova veloce): RIPROVA_PARALLELI (4) lavoratori, ognuno con la sua connessione
+                            # (connect()), budget controllato prima di ogni blocco di 10; i blocchi partono in ordine
+                            # (prima le auto in cima). Il conteggio di tentativi e _visti resta qui, in un solo thread.
+                            _par = _VAL.RIPROVA_PARALLELI if _AI.provider() == "anthropic" else 1   # Gemini: ritmo
+                            if _par > 1:
+                                _AI.client()     # client Anthropic creato una volta sola, prima dei thread
+                            for pezzo, _t0, es, _err in _VAL.rivaluta_in_parallelo(
+                                    ids, "riprova-giudice", connect, _AI.budget_finito, paralleli=_par, blocco=10, ves=_ves):
+                                if es is None:
+                                    if _err is not None:
+                                        st["blocchi_non_riusciti"] += 1
+                                    continue
                                 for chiave, n in es.stats.items():
                                     st[chiave] += n
-                                for lid in ids[k:k + 20]:
+                                for lid in pezzo:
                                     if not _esce(es, lid) and _GI.esito(lid, _t0) in _GI.BLOCCATO:
                                         st["tentativo_non_contato"] += 1     # giudice bloccato: si riprova
                                         continue
@@ -3643,8 +3653,6 @@ def _tempo_reale():
                                         _visti.add(lid)
                                         st["uscite_dall_attesa" if _esce(es, lid) else "lasciate_dopo_tentativi"] += 1
                                         _tentativi.pop(lid, None)
-                                if _AI.budget_finito(conn):
-                                    break
                             if ids:
                                 lg.warning("RIPROVA_GIUDICE %s", json.dumps({"auto": len(ids), **dict(st)}))
                                 _elenco["t"] = 0.0
