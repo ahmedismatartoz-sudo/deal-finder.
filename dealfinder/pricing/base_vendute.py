@@ -43,13 +43,16 @@ SV_10KM = 0.0125
 TAGLIO = (0.65, 1.5)
 LIVELLI = ((1, 0.25), (2, 0.40))
 MINUTI_MAX = 45
+ATTIVI_GIORNI = 5          # come il sito (scovo: last_seen_at > now() - 5 giorni)
+PAUSA_S = 0.05             # dopo ogni gruppo: il calcolo gira nel processo del sito
 BAD_FLAGS = {"leasing_o_rata", "prezzo_civetta", "importazione", "importata", "dati_incoerenti", "prezzo_finanziamento"}
 BAD_STAGE = {"doppione", "truffa", "prezzo_finto", "dati_incoerenti"}
 
 POOL_SQL = """
 SELECT l.make, l.model, l.fuel, l.gearbox, l.power_kw, l.year, l.mileage_km, l.price_eur, l.price_flags,
        l.seller_type, l.status, l.province, l.telefono_ok, COALESCE(l.damage_class, 'sconosciuto') AS danno,
-       COALESCE(l.problem_search, false) AS problema, COALESCE(l.stage_reason, '') AS stage,
+       COALESCE(l.problem_search, false) AS problema, COALESCE(l.damage_declared, false) AS dichiarato,
+       btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) AS stage,
        EXTRACT(EPOCH FROM (now() - COALESCE(l.last_checked_at, l.last_seen_at))) / 86400 AS giorni_visto,
        EXTRACT(EPOCH FROM (now() - l.disappeared_at)) / 86400 AS giorni_sparita,
        EXTRACT(EPOCH FROM (COALESCE(l.disappeared_at, now()) - l.first_seen_at)) / 86400 AS giorni_online
@@ -57,11 +60,12 @@ FROM listings l
 WHERE l.province = ANY(%(prov)s) AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
   AND l.price_eur BETWEEN 500 AND 400000 AND l.year IS NOT NULL AND l.mileage_km IS NOT NULL
   AND (l.status = 'attivo' OR (l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days => %(vg)s)))
-ORDER BY l.make, l.model, l.fuel"""
+ORDER BY lower(l.make), lower(l.model), l.fuel"""
 
 
 def _pulita(r: dict) -> bool:
-    return (r["danno"] in ("nessuno", "sconosciuto") and not r["problema"] and r["stage"] not in BAD_STAGE
+    return (r["danno"] in ("nessuno", "sconosciuto") and not r["problema"] and not r["dichiarato"]
+            and r["stage"] not in BAD_STAGE
             and not r["stage"].startswith("analisi_manuale")
             and not (set(r["price_flags"] or ()) & BAD_FLAGS))
 
@@ -130,7 +134,8 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list) -> None:
             st["vendute_senza_stima"] += 1
     for t in righe:                                # 2. affari tra i privati attivi
         if (t["status"] != "attivo" or t["seller_type"] == "commerciante" or not _pulita(t)
-                or t["year"] < ANNO_MIN or t["mileage_km"] > KM_MAX or t["price_eur"] > 200000):
+                or t["year"] < ANNO_MIN or t["mileage_km"] > KM_MAX or t["price_eur"] > 200000
+                or (t["giorni_visto"] or 99) > ATTIVI_GIORNI):
             continue
         st["privati"] += 1
         d, nd = stima(D, t)
@@ -172,17 +177,18 @@ def lavoro(spec: str = "") -> dict:
     fermata = None
     with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
         conn.execute("SET TRANSACTION READ ONLY")
-        conn.execute("SET statement_timeout = 0")
+        conn.execute("SET LOCAL statement_timeout = '55min'")
         with conn.cursor(name="base_vendute") as cur:
             cur.itersize = 5000
             cur.execute(POOL_SQL, {"prov": sorted(PROVINCE_100KM), "vg": VENDUTE_GIORNI})
             chiave, righe = None, []
             for r in cur:
-                k = (r["make"], r["model"], r["fuel"])
+                k = (r["make"].lower(), r["model"].lower(), r["fuel"])
                 if k != chiave and righe:
                     _gruppo(righe, st, prec, esempi)
                     st["gruppi"] += 1
                     righe = []
+                    time.sleep(PAUSA_S)
                     if time.time() - t0 > MINUTI_MAX * 60:
                         fermata = "tempo"
                         break
@@ -197,4 +203,7 @@ def lavoro(spec: str = "") -> dict:
             "precisione_vendute_30g": {k: _err(v) for k, v in prec.items()},
             "riferimento_calcolo_attuale": {"errore_mediano_pct": 10.7, "errore_medio_pct": 17.2,
                                             "scostamento_medio_pct": 4.5, "entro_10pct_quota": 47.1},
+            "note": ["annunci senza provincia esclusi (come perche_fuori)",
+                     "stima commercianti un po' ottimista nella precisione: la stessa auto può essere ancora attiva "
+                     "da un commerciante su un altro portale"],
             "conteggi": dict(st), "esempi": esempi[:25]}
