@@ -1781,3 +1781,81 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
   main.list:has(> .card[data-v])>:not(.card){grid-column:1/-1}
 }
 @media (min-width:1000px) and (max-width:1199px){main.list:has(> .card[data-v]){grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ============ 18/11 sera, variante 5 "stile app premium" (app.js: carCard, dPrezzo, dSez, dMercato) ============
+   Cliente: "un'informazione all'inizio e il resto dentro; più dritto, in un piccolo posto sotto".
+   Card dell'elenco: foto, nome, prezzo, guadagno e UNA riga piccola di contesto. Niente riquadri, badge o tabelline:
+   la foto arrotondata e il testo appoggiato sul fondo, come nelle app di annunci migliori. Tutto il resto nella scheda. */
+.card.k5{background:none!important;box-shadow:none!important;border-radius:0;padding:0;overflow:visible;outline:0;gap:0}
+.card.k5 .photo{aspect-ratio:16/10;height:auto;border-radius:22px;overflow:hidden;background:var(--photo);box-shadow:0 0 0 .5px var(--k5-edge) inset}
+.card.k5 .photo img{border-radius:inherit}
+.card.k5{--k5-edge:rgba(0,0,0,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .card.k5{--k5-edge:rgba(255,255,255,.08)}}
+:root[data-theme="dark"] .card.k5{--k5-edge:rgba(255,255,255,.08)}
+.card.k5 .card-body.k5-b{padding:12px 4px 0;gap:10px;display:flex;flex-direction:column}
+.k5-id{display:flex;flex-direction:column;gap:2px;min-width:0}
+.k5-nome{font:600 19px/24px var(--disp);letter-spacing:-.35px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k5-ctx{font:400 14px/19px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.k5-sg{font-weight:600}
+.k5-sg::before{content:"·";margin:0 6px;color:var(--muted);font-weight:400}
+.k5-sg.warn{color:var(--warn)}
+.k5-sg.seen{color:var(--link)}
+.k5-soldi{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0}
+.k5-p,.k5-g{display:flex;flex-direction:column;min-width:0}
+.k5-g{align-items:flex-end;text-align:right}
+.k5-soldi b{font:600 21px/26px var(--disp);letter-spacing:-.4px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.k5-soldi .k5-p b{color:var(--ink)}
+.k5-soldi .k5-g b{color:var(--good);font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.k5-soldi span{font:400 12.5px/16px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+main.list:has(> .card.k5){gap:30px}
+main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
+.card.k5.card-hero .card-body.k5-b{padding:10px 2px 0}
+@media (hover:hover){.card.k5:hover{transform:none}.card.k5:hover .photo img{transform:scale(1.03)}}
+.card.k5:active{transform:scale(.985)}
+@media (max-width:359px){.k5-soldi b{font-size:18px;line-height:23px}.k5-nome{font-size:17px}}
+@media (min-width:1000px){main.list:has(> .card.k5){gap:34px 24px}}
+
+/* testata: un po' più d'aria e il riassunto più leggero */
+.minibar .mb-t{letter-spacing:-.3px}
+
+/* scheda dell'auto in sezioni chiare */
+.d-body.k5-d{gap:30px}
+.k5-dh{gap:8px}
+.k5-dh .d-name{display:flex;flex-direction:column;gap:2px}
+.k5-dh .nm-1{font:700 30px/35px var(--disp);letter-spacing:-.7px;white-space:normal}
+.k5-dh .nm-2{font:500 17px/22px var(--body);letter-spacing:-.2px;color:var(--muted);white-space:normal}
+.k5-sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.k5-h{margin:0 4px;font:700 22px/28px var(--disp);letter-spacing:-.45px;color:var(--ink)}
+.k5-sec .d-sec h2{font:600 17px/22px var(--body)}
+.k5-sec .ap .ap-head:first-child,.k5-sec .ap>.ap-title:first-child{margin-top:4px}
+.k5-sum{display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:var(--card);box-shadow:var(--sh-1)}
+.k5-sum-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.k5-sum .k5-p,.k5-sum .k5-g{display:flex;flex-direction:column;gap:2px;min-width:0}
+.k5-sum .k5-g{align-items:flex-end;text-align:right}
+.k5-sum span{font:500 13px/18px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.k5-sum b{font:700 30px/36px var(--disp);letter-spacing:-.8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.k5-sum .k5-p b{color:var(--ink)}
+.k5-sum .k5-g b{color:var(--good)}
+.k5-sum .netto-tag{display:block;margin-top:2px;font:600 13px/18px var(--body);color:var(--good);opacity:.85;text-shadow:none}
+.k5-tag{display:flex;align-items:center;gap:8px;margin:0;padding-top:14px;border-top:1px solid var(--line);font:500 15px/20px var(--body);color:var(--ink-2)}
+.k5-tag svg{flex:none;width:16px;height:16px;color:var(--good)}
+.k5-warn{margin:0;padding-top:14px;border-top:1px solid var(--line);font:600 14px/19px var(--body);color:var(--warn)}
+.k5-tag + .k5-warn{border-top:0;padding-top:0}
+.k5-none{margin:0 4px;font:400 15px/21px var(--body);color:var(--muted)}
+.k5-sec .ap-list .ap-row>b{color:var(--ink)}
+.k5-sec .ap-list .ap-row>b.warn{color:var(--warn)}
+.k5-sec .ap-list .ap-row>b.good{color:var(--good)}
+.k5-sec .ap-list .ap-row>b.info{color:var(--link)}
+.k5-sec .d-stats>div{border-radius:20px}
+.k5-sec .d-stats b{font:600 18px/22px var(--disp)}
+@media (max-width:359px){.k5-sum b{font-size:24px;line-height:30px}.k5-dh .nm-1{font-size:26px;line-height:31px}}
+@media (min-width:1000px){.d-body.k5-d{gap:36px}}
+.k5-conto{border-radius:20px;background:var(--card);box-shadow:var(--sh-1);overflow:hidden}
+.k5-conto>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:52px;padding:12px 18px}
+.k5-conto>summary::-webkit-details-marker{display:none}
+.k5-conto>summary span{font:600 16px/21px var(--body);color:var(--ink)}
+.k5-conto>summary small{flex:1;font:400 13px/18px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k5-conto>summary::after{content:"";flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform var(--t-mid,.25s) ease}
+.k5-conto[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.k5-conto>.box{border-radius:0;box-shadow:none;background:none;border-top:1px solid var(--line)}
+.k5-tag{color:var(--ink)}

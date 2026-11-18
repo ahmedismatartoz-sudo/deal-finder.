@@ -310,38 +310,33 @@ function nomeDue(c){
   const k = Math.min(w.length, nm + (conMod ? mw.length : 1));
   return `<span class="nm-1">${esc(w.slice(0, k).join(" "))}</span>${w.length > k ? `<span class="nm-2">${esc(w.slice(k).join(" "))}</span>` : ""}`;
 }
+function nomeCorto(c){
+  // solo marca e modello (la prima riga di nomeDue); la versione completa sta nella scheda
+  const w = String(c.nome || "").trim().split(/\s+/), nm = String(c.marca || "").trim().split(/\s+/).length || 1;
+  const mw = String(c.modello || "").trim().split(/\s+/).filter(Boolean), low = x => String(x).toLowerCase();
+  const conMod = mw.length > 1 && mw.length <= 3 && w.length > nm + mw.length && mw.every((x, j) => low(w[nm + j]) === low(x));
+  return w.slice(0, Math.min(w.length, nm + (conMod ? mw.length : 1))).join(" ");
+}
+function segnoCard(c){
+  // al massimo UN segnale sulla riga piccola, il più importante; il resto è nella scheda (sezioni Stato e Avvisi)
+  if (c.avviso_verifica) return {t: "Da verificare", cls: "warn"};
+  if (c.incidentata || c.rip_hi > 0) return {t: statoTxt(c), cls: "warn"};
+  if (c.aperta) return {t: "Già contattata", cls: "seen"};
+  return null;
+}
 function carCard(c, i, hero){
-  // 18/11 (cliente: "i nomi delle macchine sulle foto non mi piacciono, più pulito e organizzato"):
-  // foto pulita, senza niente sopra; sotto, nell'ordine: nome, dati, luogo e stato, avvisi, prezzo e guadagno, conti
-  const warnSt = c.incidentata || c.rip_hi > 0;
-  const stati = `<span class="c-st${warnSt ? " warn" : ""}">${statoTxt(c)}</span>${c.aperta ? `<span class="c-st seen">Già contattata</span>` : c.commerciante ? `<span class="c-st">Da commerciante</span>` : ""}${c.fuori_zona_km != null ? `<span class="c-st">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
-  const lbl = gainLbl(c);
-  const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
-  // riga dei dati (anno · km · carburante · cambio …) e luogo a parte, con l'icona della posizione
-  const parti = meta(c).split(" · ");
-  const conZona = !!c.zona && parti.length > 1 && parti[parti.length - 1] === String(c.zona);
-  const dati = conZona ? parti.slice(0, -1) : parti;
-  const luogo = conZona ? `<span class="c-loc">${ICON.pin}<span>${esc(c.zona)}</span></span>` : "";
-  const cella = (k, v, cls) => `<div><span class="lbl">${k}</span><span class="val ${cls || ""}">${v}</span></div>`;
-  const trio = c.economica ? cella("Mercato", c.mercato ? "~" + eur(c.mercato) : "da stimare") + cella("Rivendita", c.mercato ? eur(c.riv) : "—")
-    : cella("Riparazioni", ripTxt(c), c.rip_hi ? "small warn" : "") + cella("Rivendita", eur(c.riv)) + (c.mercato ? cella("Mercato", eur(c.mercato)) : "");
-  return `<button class="card${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}">
+  // 18/11 sera, variante 5 (cliente: "un'informazione all'inizio e il resto dentro, più dritto, in un piccolo posto sotto").
+  // Stile app premium: foto, nome, prezzo, guadagno + UNA riga piccola di contesto. Tutto il resto nella scheda dell'auto.
+  const zona = c.zona ? String(c.zona).replace(/\s*\([A-Z]{2}\)\s*$/, "") : "";
+  const ctx = [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", zona].filter(Boolean).join(" · ");
+  const sg = segnoCard(c);
+  return `<button class="card k5${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}">
       <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}</div>
-      <div class="card-body">
-        <div class="c-top">
-          <div class="name">${nomeDue(c)}</div>
-          <div class="c-dati">${esc(dati.join(" · "))}</div>
-          <div class="c-riga">${luogo}${stati}</div>
-        </div>
-        ${c.avviso_verifica ? `<div class="avviso-riga">⚠︎ Verificare prima di pagare</div>` : ""}
-        ${hero ? "" : `${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
-        ${tag ? `<span class="c-tag">${ICON.spark}${esc(tag)}</span>` : ""}`}
-        <div class="c-conti">
-          <div class="c-soldi">
-            <div class="c-prezzo"><span class="lbl">Prezzo</span><b>${eur(c.prezzo)}</b></div>
-            <div class="c-gain"><span class="lbl">${lbl}</span><b>${gainTxt(c)}</b>${nettoTag(c)}</div>
-          </div>
-          ${hero ? "" : `<div class="trio">${trio}</div>`}
+      <div class="card-body k5-b">
+        <div class="k5-id"><span class="k5-nome">${esc(nomeCorto(c))}</span><span class="k5-ctx">${esc(ctx)}${sg ? `<span class="k5-sg ${sg.cls}">${esc(sg.t)}</span>` : ""}</span></div>
+        <div class="k5-soldi">
+          <div class="k5-p"><b>${eur(c.prezzo)}</b><span>Prezzo</span></div>
+          <div class="k5-g"><b>${gainTxt(c)}</b><span>${gainLbl(c)}</span></div>
         </div>
       </div>
     </button>`;
@@ -645,6 +640,34 @@ function boxTrattativa(t, extra){
 }
 function c_prezzo(t){ const d = S.detail[S.sel]; return d && d.prezzo; }
 
+/* ---------- 18/11 variante 5: scheda auto in sezioni (Prezzo e guadagno, Auto, Stato, Mercato e riparazioni, Avvisi) ---------- */
+function dSez(titolo, corpo){ return `<section class="k5-sec" aria-label="${titolo}"><h2 class="k5-h">${titolo}</h2>${corpo}</section>`; }
+function dPrezzo(c, d){
+  // in alto: prezzo e guadagno grandi (gli stessi numeri della card), poi i conti completi già esistenti
+  const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
+  const sum = `<div class="k5-sum">
+      <div class="k5-sum-r"><div class="k5-p"><span>Prezzo</span><b>${eur(c.prezzo)}</b></div>
+        ${c.gain > -1e5 || c.pv ? `<div class="k5-g"><span>${gainLbl(c)}</span><b>${gainTxt(c)}</b>${nettoTag(c)}</div>` : ""}</div>
+      ${tag ? `<p class="k5-tag">${ICON.spark}<span>${esc(tag)}</span></p>` : ""}
+      ${c.avviso_verifica ? `<p class="k5-warn">⚠︎ Verificare prima di pagare · leggi gli avvisi in fondo</p>` : ""}
+    </div>`;
+  return dSez("Prezzo e guadagno", `${sum}
+    ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
+    ${vizCosti(c)}
+    ${dConto(c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c))}`);
+}
+function dConto(h){
+  // il conto voce per voce resta tutto, ma chiuso: si apre con un tocco (lo stato aperto/chiuso si ricorda per la sessione)
+  if (!h) return "";
+  return `<details class="k5-conto"${S.contoAperto ? " open" : ""}><summary><span>Il conto voce per voce</span><small>costi e margine</small></summary>${h}</details>`;
+}
+function dMercato(c){
+  // le stesse tre cifre che prima stavano in fondo alla card (Riparazioni, Rivendita, Mercato)
+  const r = c.economica ? apRiga("Mercato", c.mercato ? "~" + eur(c.mercato) : "da stimare") + apRiga("Rivendita", c.mercato ? eur(c.riv) : "—")
+    : (c.mercato ? apRiga("Mercato", eur(c.mercato)) : "") + apRiga("Rivendita", c.riv ? eur(c.riv) : "—") + apRiga("Riparazioni", ripTxt(c), c.rip_hi ? "warn" : "", c.rip_hi ? "solo pezzi" : "");
+  return `<div class="ap-list">${r}</div>`;
+}
+
 /* ---------- viste: scheda auto ---------- */
 const ESITI = [["contattato","Contattato"],["trattativa","In trattativa"],["comprata","Comprata"],["venduta","Rivenduta a … €"],["scartata","Non mi interessa"]];
 function viewDetail(){
@@ -667,7 +690,6 @@ function viewDetail(){
     <div class="gallery">
       <div class="slides" id="slides" aria-label="Foto">${photos.length ? photos.map((p, i) => `<div class="slide" data-act="foto-full" data-v="${i}" role="button" tabindex="0" aria-label="Apri la foto ${i + 1} di ${photos.length} a schermo intero">${CAR_SVG}${img(p, "Foto " + (i + 1) + " di " + photos.length, i === 0)}</div>`).join("") : `<div class="slide">${CAR_SVG}<span>Nessuna foto</span></div>`}</div>
       <button class="round left" data-act="back" aria-label="Torna all'elenco">${ICON.back}</button>
-      ${c.gain > -1e5 || c.pv ? `<span class="gain-pill g-pill"><b>${gainTxt(c)}</b><small>${gainLbl(c)}</small></span>` : ""}
       ${photos.length > 1 ? `<span class="g-count" id="gcount" aria-live="polite">1/${photos.length}</span>${photos.length <= 12 ? `<div class="dots" id="dots" aria-hidden="true">${photos.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}` : ""}
     </div>
     ${S.full != null && photos.length ? `<div class="lightbox" role="dialog" aria-modal="true" aria-label="Foto a schermo intero">
@@ -675,20 +697,22 @@ function viewDetail(){
       <div class="lb-slides" id="lbs">${photos.map((p, i) => `<div class="lb-s"><img src="${esc(p)}" alt="Foto ${i + 1} di ${photos.length}" decoding="async"></div>`).join("")}</div>
       ${photos.length > 1 && photos.length <= 12 ? `<div class="lb-dots" id="lbdots" aria-hidden="true">${photos.map((_, i) => `<i class="${i === S.full ? "on" : ""}"></i>`).join("")}</div>` : ""}
       ${photos.length > 1 ? `<div class="lb-thumbs" id="lbth">${photos.map((p, i) => `<button class="lb-t" data-act="foto-vai" data-v="${i}" aria-label="Foto ${i + 1}" aria-current="${i === S.full}"><img src="${esc(p)}" alt="" loading="lazy" decoding="async"></button>`).join("")}</div>` : ""}</div>` : ""}
-    <div class="d-body">
-      <div class="d-head"><h1 class="d-name">${esc(c.nome)}</h1><div class="d-loc">${ICON.pin}<span>${esc([c.carb, c.zona].filter(Boolean).join(" · "))}</span></div></div>
-      <div class="d-stats"><div><b>${eur(c.prezzo)}</b><span>Prezzo</span></div><div><b>${c.km ? num(c.km) : "—"}</b><span>Chilometri</span></div><div><b>${esc(String(c.anno || "—"))}</b><span>Anno</span></div></div>
-      ${c.trattare ? `<div class="note-box" role="note"><b>Da trattare.</b> Al prezzo chiesto (${eur(c.prezzo)}) il margine è sotto il minimo. Chiedi uno sconto di ${eur(c.trattare.sconto)} e offri ${eur(c.trattare.prezzo_obiettivo)}: a quel prezzo il guadagno stimato è di ${eur(c.trattare.margine)}.</div>` : ""}
-      ${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
-      ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}
-      ${schedaTecnica(c, d)}
-      ${vizCosti(c)}${d && !d.err ? vizStorico(c, d.trattativa) : ""}
-      ${c.pv ? boxPolicy(c, d && !d.err ? d.valutazione : null) : d && !d.err && d.trattativa && d.trattativa.parere && (d.trattativa.parere.blocchi || []).length ? "" : vizCosti(c) ? "" : boxV1(c)}
-      ${d && !d.err && d.perizia ? boxPerito(d.perizia, c) : ""}
-      ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
-      ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
-          : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}
-      ${d && d.controlli && d.controlli.length ? `<section class="d-sec"><h2>Da controllare</h2><ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
+    <div class="d-body k5-d">
+      <div class="d-head k5-dh"><h1 class="d-name">${nomeDue(c)}</h1><div class="d-loc">${ICON.pin}<span>${esc([c.anno, c.km ? num(c.km) + " km" : "", c.carb, c.zona].filter(Boolean).join(" · "))}</span></div></div>
+      ${dPrezzo(c, d)}
+      ${dSez("Auto", `<div class="d-stats"><div><b>${c.km ? num(c.km) : "—"}</b><span>Chilometri</span></div><div><b>${esc(String(c.anno || "—"))}</b><span>Anno</span></div><div><b>${esc(c.carb || "—")}</b><span>Carburante</span></div></div>
+        ${schedaTecnica(c, d)}
+        ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}`)}
+      ${dSez("Stato", `<div class="ap-list">${apRiga("Condizioni", statoTxt(c), c.incidentata || c.rip_hi > 0 ? "warn" : "")}${apRiga("Venditore", c.commerciante ? "Commerciante" : d && d.privato === false ? "Venditore" : "Privato")}${c.aperta ? apRiga("Contatto", "Già contattata", "info") : ""}${c.fuori_zona_km != null ? apRiga("Distanza", "Fuori zona · " + c.fuori_zona_km + " km") : ""}${apRiga("Annuncio", esc(c.fonte || "—"))}</div>
+        ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
+          : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}`)}
+      ${dSez("Mercato e riparazioni", `${dMercato(c)}
+        ${d && !d.err ? vizStorico(c, d.trattativa) : ""}
+        ${d && !d.err && d.trattativa ? boxTrattativa(d.trattativa, c.pv || vizCosti(c) ? "" : rigaChiesto(c)) : `<div class="tip"><span class="eur" aria-hidden="true">€</span><span><b>Tratta sempre:</b> più sconto, più guadagno.</span></div>`}
+        ${d && !d.err && d.perizia ? boxPerito(d.perizia, c) : ""}`)}
+      ${dSez("Avvisi", `${c.avviso_verifica ? `<div class="note-box bad" role="note"><b>Verificare prima di pagare.</b> Alcuni segnali dell'annuncio vanno controllati: guarda l'auto e i documenti dal vivo e non dare soldi prima di averla vista.</div>` : ""}
+        ${d && d.controlli && d.controlli.length ? `<ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+        ${!c.avviso_verifica && !(d && d.controlli && d.controlli.length) ? `<p class="k5-none">Nessun avviso particolare. Guarda comunque l'auto e i documenti dal vivo prima di pagare.</p>` : ""}`)}
       ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
       <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</p>
     </div>
@@ -727,6 +751,7 @@ function stRigaElenco(c){
   const a = t && !String(c.nome || "").toLowerCase().includes(String(t).toLowerCase()) ? t : null;
   return [c.cambio ? cap(String(c.cambio)) : null, a];
 }
+$app.addEventListener("toggle", e => { const t = e.target; if (t && t.classList && t.classList.contains("k5-conto")) S.contoAperto = t.open; }, true);
 $app.addEventListener("click", e => {
   const t = e.target.closest("[data-st]"); if (!t) return;
   if (t.dataset.st === "opt") { S.stAperti = S.stAperti || {}; const id = Number(t.dataset.v); S.stAperti[id] = !S.stAperti[id]; render({keep:true}); }
