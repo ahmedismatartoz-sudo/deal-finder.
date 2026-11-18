@@ -1795,17 +1795,19 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .card.k5 .card-body.k5-b{padding:12px 4px 0;gap:10px;display:flex;flex-direction:column}
 .k5-id{display:flex;flex-direction:column;gap:2px;min-width:0}
 .k5-nome{font:600 19px/24px var(--disp);letter-spacing:-.35px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k5-ctx{font:400 14px/19px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.k5-sg{font-weight:600}
+.k5-ctx{display:flex;min-width:0;font:400 14px/19px var(--body);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.k5-ct{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.k5-sg{flex:none;font-weight:600}
+.k5-avv{margin-top:4px;font:600 14px/19px var(--body);color:var(--warn)}
 .k5-sg::before{content:"·";margin:0 6px;color:var(--muted);font-weight:400}
 .k5-sg.warn{color:var(--warn)}
 .k5-sg.seen{color:var(--link)}
-.k5-soldi{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0}
+.k5-soldi{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:4px 12px;min-width:0}
 .k5-p,.k5-g{display:flex;flex-direction:column;min-width:0}
-.k5-g{align-items:flex-end;text-align:right}
+.k5-g{align-items:flex-end;text-align:right;margin-left:auto}
 .k5-soldi b{font:600 21px/26px var(--disp);letter-spacing:-.4px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .k5-soldi .k5-p b{color:var(--ink)}
-.k5-soldi .k5-g b{color:var(--good);font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.k5-soldi .k5-g b{color:var(--good);font-weight:700;max-width:100%}
 .k5-soldi span{font:400 12.5px/16px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 main.list:has(> .card.k5){gap:30px}
 main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
@@ -1813,7 +1815,7 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 @media (hover:hover){.card.k5:hover{transform:none}.card.k5:hover .photo img{transform:scale(1.03)}}
 .card.k5:active{transform:scale(.985)}
 @media (max-width:359px){.k5-soldi b{font-size:18px;line-height:23px}.k5-nome{font-size:17px}}
-@media (min-width:1000px){main.list:has(> .card.k5){gap:34px 24px}}
+@media (min-width:1000px){main.list:has(> .card.k5){gap:34px 24px}.card.k5{display:flex;flex-direction:column}.card.k5 .card-body.k5-b{flex:1}.card.k5 .k5-soldi{margin-top:auto}}
 
 /* testata: un po' più d'aria e il riassunto più leggero */
 .minibar .mb-t{letter-spacing:-.3px}
@@ -1829,9 +1831,9 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 .k5-sec .d-sec h2{font:600 17px/22px var(--body)}
 .k5-sec .ap .ap-head:first-child,.k5-sec .ap>.ap-title:first-child{margin-top:4px}
 .k5-sum{display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:var(--card);box-shadow:var(--sh-1)}
-.k5-sum-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.k5-sum-r{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 16px;align-items:flex-start}
 .k5-sum .k5-p,.k5-sum .k5-g{display:flex;flex-direction:column;gap:2px;min-width:0}
-.k5-sum .k5-g{align-items:flex-end;text-align:right}
+.k5-sum .k5-g{align-items:flex-end;text-align:right;margin-left:auto}
 .k5-sum span{font:500 13px/18px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .k5-sum b{font:700 30px/36px var(--disp);letter-spacing:-.8px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .k5-sum .k5-p b{color:var(--ink)}

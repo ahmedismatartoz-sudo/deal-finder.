@@ -318,8 +318,9 @@ function nomeCorto(c){
   return w.slice(0, Math.min(w.length, nm + (conMod ? mw.length : 1))).join(" ");
 }
 function segnoCard(c){
-  // al massimo UN segnale sulla riga piccola, il più importante; il resto è nella scheda (sezioni Stato e Avvisi)
-  if (c.avviso_verifica) return {t: "Da verificare", cls: "warn"};
+  // al massimo UN segnale sulla riga piccola, il più importante; il resto è nella scheda (sezioni Stato e Avvisi).
+  // L'avviso "Verificare prima di pagare" (regola di sicurezza) ha una riga sua sulla card: qui niente altro segnale.
+  if (c.avviso_verifica) return null;
   if (c.incidentata || c.rip_hi > 0) return {t: statoTxt(c), cls: "warn"};
   if (c.aperta) return {t: "Già contattata", cls: "seen"};
   return null;
@@ -330,10 +331,10 @@ function carCard(c, i, hero){
   const zona = c.zona ? String(c.zona).replace(/\s*\([A-Z]{2}\)\s*$/, "") : "";
   const ctx = [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", zona].filter(Boolean).join(" · ");
   const sg = segnoCard(c);
-  return `<button class="card k5${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}">
+  return `<button class="card k5${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}${c.avviso_verifica ? ", verificare prima di pagare" : ""}">
       <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}</div>
       <div class="card-body k5-b">
-        <div class="k5-id"><span class="k5-nome">${esc(nomeCorto(c))}</span><span class="k5-ctx">${esc(ctx)}${sg ? `<span class="k5-sg ${sg.cls}">${esc(sg.t)}</span>` : ""}</span></div>
+        <div class="k5-id"><span class="k5-nome">${esc(nomeCorto(c))}</span><span class="k5-ctx"><span class="k5-ct">${esc(ctx)}</span>${sg ? `<span class="k5-sg ${sg.cls}">${esc(sg.t)}</span>` : ""}</span>${c.avviso_verifica ? `<span class="k5-avv">⚠︎ Verificare prima di pagare</span>` : ""}</div>
         <div class="k5-soldi">
           <div class="k5-p"><b>${eur(c.prezzo)}</b><span>Prezzo</span></div>
           <div class="k5-g"><b>${gainTxt(c)}</b><span>${gainLbl(c)}</span></div>
@@ -647,7 +648,7 @@ function dPrezzo(c, d){
   const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
   const sum = `<div class="k5-sum">
       <div class="k5-sum-r"><div class="k5-p"><span>Prezzo</span><b>${eur(c.prezzo)}</b></div>
-        ${c.gain > -1e5 || c.pv ? `<div class="k5-g"><span>${gainLbl(c)}</span><b>${gainTxt(c)}</b>${nettoTag(c)}</div>` : ""}</div>
+        ${c.gain > -1e5 || c.pv || c.economica ? `<div class="k5-g"><span>${gainLbl(c)}</span><b>${gainTxt(c)}</b>${nettoTag(c)}</div>` : ""}</div>
       ${tag ? `<p class="k5-tag">${ICON.spark}<span>${esc(tag)}</span></p>` : ""}
       ${c.avviso_verifica ? `<p class="k5-warn">⚠︎ Verificare prima di pagare · leggi gli avvisi in fondo</p>` : ""}
     </div>`;
