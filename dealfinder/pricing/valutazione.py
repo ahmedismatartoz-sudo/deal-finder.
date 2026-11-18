@@ -51,7 +51,11 @@ UPSERT_SQL = """INSERT INTO valutazioni_policy (listing_id, policy_version, cate
           AND NOT (%s AND COALESCE((valutazioni_policy.dati->'ai_confronti'->>'tolti')::int, 0) > 0))
       OR %s
       OR (valutazioni_policy.dati->>'giudice_mancante') = 'true'
+      OR (COALESCE(valutazioni_policy.metodo, '') = 'base_vendute') <> (COALESCE(EXCLUDED.metodo, '') = 'base_vendute')
    RETURNING listing_id"""
+METODO_BASE = "base_vendute"          # = valore_base.METODO (scritto anche nella condizione SQL qui sopra)
+# 18/11: passaggio tra il calcolo di prima e valore_base (colonna metodo): si scrive sempre (deve_scrivere
+# "calcolo_cambiato"), anche nel ritorno indietro con VALORE_BASE=vecchio.
 # 15/11 (giudice A2): una riga "in attesa del giudice" (giudice_mancante) si sostituisce sempre: la guardia dei meno
 # confronti e la protezione delle giudicate valgono contro una valutazione vera, non contro un'attesa
 # 12/11 sera (controllo del giudice M5): penultimo parametro = proteggi (una riga giudicata dall'AI non si sostituisce
@@ -253,7 +257,8 @@ def tieni_precedente(v: dict, esistente: dict | None, perche: str) -> bool:
 
 
 def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regole: str, now=None,
-                  ore: int | None = None, giudicata_nuova: bool = False) -> tuple[bool, str]:
+                  ore: int | None = None, giudicata_nuova: bool = False,
+                  metodo_nuovo: str | None = None) -> tuple[bool, str]:
     """Stessa regola della condizione SQL di UPSERT_SQL (qui per i contatori e per i test).
     12/11 sera (regole.Scrittura.giudice_vince): una valutazione passata dal giudice AI con confronti tolti si scrive
     sempre (prima restava rifiutata fino a 36 ore perché il giudice riduce n)."""
@@ -263,6 +268,11 @@ def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regol
         return True, "auto_cambiata"
     if esistente.get("impronta_regole") != imp_regole:
         return True, "regole_cambiate"
+    if metodo_nuovo is not None and "metodo" in esistente \
+            and (str(esistente.get("metodo") or "") == METODO_BASE) != (str(metodo_nuovo) == METODO_BASE):
+        # 18/11: passaggio tra calcolo vecchio e valore_base (nei due sensi, anche VALORE_BASE=vecchio): il numero di
+        # confronti dei due calcoli non è confrontabile, la nuova si scrive sempre
+        return True, "calcolo_cambiato"
     if esistente.get("in_attesa"):
         return True, "in_attesa_giudice"                # 15/11 (giudice A2): la riga salvata aspetta il giudice
     vince = RG.regole().scrittura.giudice_vince
@@ -304,18 +314,23 @@ def _ordina(conn, ids: list) -> list:
 
 
 def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tieni=None, blocco: int = 300,
-                    soglia_fn=None, pubblica: bool | None = None) -> Esito:
+                    soglia_fn=None, pubblica: bool | None = None, pausa_gruppo: float = 0.0) -> Esito:
     """Valuta e salva le auto `ids` (unico punto d'ingresso). fonte: 'cron', 'cron-utilitarie', 'web-nuovi',
     'commercianti', ... (solo informazione, nella riga). extra: {id: {chiave: valore}} aggiunto alla valutazione
     (es. sezione). tieni(v) -> bool: valutazioni da restituire complete (le altre in forma compatta).
     pubblica: True = alla fine promuove sul sito le auto buone (promuovi); None = solo per le fonti di
     FONTI_CHE_PUBBLICANO (riprova del giudice, recupero dei confronti: prima scrivevano "opportunita"/"candidato" ma
     l'auto restava fuori dal sito, stage 'nuovo'); False = mai (chi pubblica da sé: tempo reale, utilitarie, ...).
-    Il conn deve avere righe come dict. Ogni auto è una transazione: un errore non ferma le altre."""
+    Il conn deve avere righe come dict. Ogni auto è una transazione: un errore non ferma le altre.
+    18/11 (cliente): il valore di mercato è quello di pricing/valore_base.py (auto vendute e commercianti, nessuna AI);
+    il calcolo di prima (policy_v2, ripiego, cascata, giudice AI) resta spento dietro VALORE_BASE=vecchio.
+    pausa_gruppo: secondi di pausa a ogni cambio di gruppo marca/modello/alimentazione (rivalutazione nel sito)."""
     from ..store import HOME_REGION_SQL
     from ..web import scovo
+    from . import valore_base as VB
     from .ricalcolo import MARKET_SQL, valuta_con_ripiego
     es = Esito()
+    nuovo = VB.attivo()
     if not ids:
         return es
     rg = RG.regole()
@@ -336,9 +351,11 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
         pezzo = ordine[k:k + blocco]
         righe = {r["id"]: r for r in conn.execute(f"SELECT {COLONNE} FROM listings l WHERE l.id = ANY(%s)",
                                                   (pezzo,)).fetchall()}
-        ing = ingressi(conn, pezzo)
+        # col valore nuovo servono solo i ricambi e i difetti letti dall'AI (prepara): niente valore reale, stima AI,
+        # calibrazione né dotazioni (letture risparmiate)
+        ing = ingressi(conn, pezzo, solo=("difetti", "parti") if nuovo else _TUTTI)
         prima = _salvate(conn, pezzo)
-        dot_auto = DT.carica_ids(conn, pezzo) if usa_dot else {}
+        dot_auto = DT.carica_ids(conn, pezzo) if usa_dot and not nuovo else {}
         for lid in pezzo:
             r = righe.get(lid)
             if r is None:
@@ -358,6 +375,18 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     es.salvata[lid] = (prima.get(lid) or {}).get("categoria")
                     conn.rollback()
                     continue
+                elif nuovo:
+                    # 18/11: valore dalle auto vendute e dai commercianti (pricing/valore_base.py); una lettura per gruppo
+                    key = (r["make"], r["model"], r["fuel"])
+                    if key != gruppo:
+                        if gruppo is not None and pausa_gruppo:
+                            __import__("time").sleep(pausa_gruppo)
+                        gruppo, cache = key, {}
+                        mercato = VB.carica(conn, *key)
+                    t["dichiarato"] = bool(r.get("damage_declared"))     # prepara azzera damage_declared in t
+                    v = VB.valuta(t, mercato, soglia_fn(int(r["price_eur"])), rg)
+                    es.stats[f"categoria:{v['categoria']}"] += 1
+                    es.stats["valore_base:" + str(v.get("fonte_base") or "nessuna_stima")] += 1
                 else:
                     key = (r["make"], r["model"], r["fuel"])
                     if key != gruppo:
@@ -394,7 +423,7 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 # 17/11: l'ora di ADESSO per ogni auto (un giro lungo dura più di un'ora: con l'ora d'inizio la riga
                 # salvata risultava meno "vecchia" di quanto la vede la condizione SQL, che usa now() alla scrittura)
                 ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r,
-                                           datetime.now(timezone.utc), ore, giu)
+                                           datetime.now(timezone.utc), ore, giu, metodo_nuovo=v.get("metodo"))
                 if perche == "vecchia":
                     # 17/11 (giudice): il motivo ORIGINALE si salva prima di "giudice_mancante": una riga salvata più
                     # vecchia di ore_validita resta nel database (tieni_precedente) ma NON si pubblica (margine su un
@@ -640,7 +669,7 @@ def esce_dall_attesa(es: "Esito", lid) -> bool:
 def _salvate(conn, ids: list) -> dict:
     """Righe già salvate (per la guardia): n, impronte, data, categoria, in attesa del giudice."""
     if _SCHEMA["nuovo"] is not False:
-        righe = _q(conn, "SELECT listing_id, n, impronta_auto, impronta_regole, computed_at, categoria, "
+        righe = _q(conn, "SELECT listing_id, n, impronta_auto, impronta_regole, computed_at, categoria, metodo, "
                          "COALESCE((dati->'ai_confronti'->>'tolti')::int, 0) AS tolti, "
                          "COALESCE((dati->>'giudice_mancante') = 'true', false) AS in_attesa "
                          "FROM valutazioni_policy WHERE listing_id = ANY(%s) AND policy_version = %s",

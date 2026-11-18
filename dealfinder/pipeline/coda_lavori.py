@@ -50,10 +50,11 @@ SPOSTABILI: dict = {
     "giro1711:": (False, BREVO),        # 17/11 sera (cliente): due liste + due campagne, subito nel sito
     "base_vendute:": (False, ()),       # 18/11 notte (cliente, OK): ricalcolo di prova su vendute e commercianti, sola lettura
     "conta_mercato:": (False, ()),      # 18/11 notte: quanti annunci hanno i siti contro quanti ne abbiamo (sola lettura)
+    "rivaluta_base:": (False, ()),      # 18/11 (cliente, OK): rivalutazione una tantum col valore da vendute e commercianti
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -355,6 +356,13 @@ def esegui(v: str) -> bool | None:
     if v.startswith("base_vendute:"):     # 18/11 notte (cliente: "rifare il calcolo su tutta la base: vendute e commercianti")
         from ..pricing import base_vendute as BV
         _lungo(v, "BASE_VENDUTE", lambda: lg.warning("BASE_VENDUTE %s", json.dumps(BV.lavoro(v), ensure_ascii=False, default=str)))
+        return
+    if v.startswith("rivaluta_base:"):    # 18/11 (cliente: "il sito usa SOLO il nuovo calcolo, per entrare e per uscire")
+        # rivaluta col valore da vendute e commercianti (pricing/valore_base.rivaluta) tutte le auto attive delle
+        # province del sito e quelle sul sito, scrive le valutazioni e pubblica le buone; le altre escono. Nel sito
+        # (SOLO_SITO), una volta per etichetta (rivaluta_base:ora); nel log solo conteggi
+        from ..pricing import valore_base as VB
+        _lungo(v, "RIVALUTA_BASE", lambda: VB.rivaluta(v))
         return
     if v.startswith("conta_mercato:"):    # 18/11 notte (cliente: "oltre 60.000 annunci nei 150 km")
         from . import conta_mercato as CM

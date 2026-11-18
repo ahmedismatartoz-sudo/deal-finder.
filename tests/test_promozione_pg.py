@@ -199,13 +199,22 @@ class _Finta:
 
 
 def _con_finta(esiti, fn):
+    # 18/11: il calcolo finto sostituisce valuta_con_ripiego, che dal 18/11 è il calcolo di prima (spento dietro
+    # VALORE_BASE=vecchio): qui si prova la guardia e la pubblicazione, uguali coi due calcoli. Il valore nuovo ha i
+    # suoi test su Postgres vero in tests/test_valore_base.py.
     from dealfinder.pricing import ricalcolo as R
     prima = R.valuta_con_ripiego
+    env = os.environ.get("VALORE_BASE")
     R.valuta_con_ripiego = _Finta(esiti)
+    os.environ["VALORE_BASE"] = "vecchio"
     try:
         return fn()
     finally:
         R.valuta_con_ripiego = prima
+        if env is None:
+            os.environ.pop("VALORE_BASE", None)
+        else:
+            os.environ["VALORE_BASE"] = env
 
 
 def test_riprova_del_giudice_e_recupero_pubblicano_il_cron_no():

@@ -26,8 +26,9 @@ def dati_caricamento(conn, items: list[dict], jev: dict, stats=None) -> tuple[di
         except Exception as e:
             conn.rollback()
             log.warning("VERSIONE_TECNICA non letta: %s", str(e)[:200])
+    # 18/11: le valutazioni del calcolo nuovo (metodo base_vendute) non usano il ripiego (sito_regole.r_valutata)
     ids_r = [it["id"] for it in items if isinstance(it.get("pv"), dict) and it["pv"].get("categoria") == "dati_insufficienti"
-             and isinstance(it.get("id"), int)]
+             and it["pv"].get("metodo") != "base_vendute" and isinstance(it.get("id"), int)]
     if ids_r and os.environ.get("RIPIEGO_PRUDENTE", "1") == "1":
         try:
             from ..pricing import ripiego_prudente as RP

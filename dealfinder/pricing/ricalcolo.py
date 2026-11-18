@@ -56,7 +56,10 @@ def valuta_con_ripiego(conn, t: dict, mercato: list, soglia: int, cfg, cache: di
     12/11 (rapporto 2 E6, "stessa auto giudicata più volte nello stesso secondo con risultati diversi"): erano le
     misure di pricing/esame.py, che rifacevano la valutazione per ogni variante di regole chiamando il giudice e
     scrivendo GIUDICE_AI come se fossero valutazioni vere (e pagando una chiamata AI per ogni variante, perché i
-    confronti di ogni variante sono diversi)."""
+    confronti di ogni variante sono diversi).
+    18/11 (cliente): calcolo DI PRIMA. Le valutazioni del sito (valutazione.valuta_e_scrivi) usano
+    pricing/valore_base.py e non passano più di qui né dal giudice AI, salvo VALORE_BASE=vecchio (ritorno indietro
+    in emergenza). Restano le misure che lo chiamano apposta (censimento, esame, calibra, simula, perche_fuori)."""
     v, lista = _valuta_base(conn, t, mercato, soglia, cfg, cache)
     if not giudice:
         return v

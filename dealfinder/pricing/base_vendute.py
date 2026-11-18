@@ -88,17 +88,26 @@ def _simile(c: dict, t: dict, anni: int, km: float) -> bool:
     return True
 
 
-def stima(base: list, t: dict, escludi=None) -> tuple[float | None, int]:
-    for anni, km in LIVELLI:
-        prezzi = [_adatta(c, t) for c in base if c is not escludi and _simile(c, t, anni, km)]
-        prezzi = [p for p in prezzi if p > 0]
-        if len(prezzi) < N_MIN:
+def stima_dettaglio(base: list, t: dict, escludi=None, n_min: int | None = None) -> dict | None:
+    """Come stima(), con i confronti tenuti: {"valore", "n", "livello" (1 o 2), "tenuti": [(confronto, prezzo
+    riportato all'auto)]} oppure None. n_min: confronti minimi (default N_MIN; il sito usa valore_base.N_MIN_SITO)."""
+    n_min = N_MIN if n_min is None else n_min
+    for livello, (anni, km) in enumerate(LIVELLI, start=1):
+        coppie = [(c, _adatta(c, t)) for c in base if c is not escludi and _simile(c, t, anni, km)]
+        coppie = [(c, p) for c, p in coppie if p > 0]
+        if len(coppie) < n_min:
             continue
-        m = statistics.median(prezzi)
-        tenuti = [p for p in prezzi if TAGLIO[0] * m <= p <= TAGLIO[1] * m]
-        if len(tenuti) >= N_MIN:
-            return statistics.median(tenuti), len(tenuti)
-    return None, 0
+        m = statistics.median(p for _, p in coppie)
+        tenuti = [(c, p) for c, p in coppie if TAGLIO[0] * m <= p <= TAGLIO[1] * m]
+        if len(tenuti) >= n_min:
+            return {"valore": statistics.median(p for _, p in tenuti), "n": len(tenuti), "livello": livello,
+                    "tenuti": tenuti}
+    return None
+
+
+def stima(base: list, t: dict, escludi=None, n_min: int | None = None) -> tuple[float | None, int]:
+    d = stima_dettaglio(base, t, escludi, n_min)
+    return (d["valore"], d["n"]) if d else (None, 0)
 
 
 def _err(lista: list) -> dict:

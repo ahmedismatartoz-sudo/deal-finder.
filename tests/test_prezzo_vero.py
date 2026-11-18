@@ -278,6 +278,12 @@ class ConnFinta:
             return Cur([dict(self.auto)])
         if "FROM listings WHERE status='attivo' AND make=%s" in s:
             return Cur([dict(m) for m in self.mercato])
+        if "FROM listings l WHERE l.make = ANY" in s:
+            # 18/11: base del valore nuovo (pricing/valore_base.GRUPPO_SQL): le stesse auto come annunci freschi di
+            # commercianti puliti
+            return Cur([dict(m, seller_type="commerciante", danno=m.get("damage_class") or "sconosciuto",
+                             problema=False, dichiarato=False, stage="", giorni_visto=1.0, giorni_sparita=None,
+                             giorni_online=30.0) for m in self.mercato])
         if s.startswith("SELECT source FROM listings"):
             return Cur([{"source": self.auto["source"]}])
         if "FROM listings" in s and "field_origin" in s:            # dal_testo: niente da completare

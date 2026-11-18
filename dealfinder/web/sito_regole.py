@@ -304,6 +304,10 @@ def r_valutata(it, g: Regole):
     if it.get("prezzo_dopo_valutazione"):
         return "prezzo_cambiato_da_rivalutare"
     if pv.get("categoria") == "dati_insufficienti":
+        if pv.get("metodo") == "base_vendute":
+            # 18/11 (cliente: "il sito usa SOLO il nuovo calcolo"): senza abbastanza vendute/commercianti l'auto resta
+            # fuori; la stima di ripiego (pricing/ripiego_prudente.py) è del calcolo di prima e non la fa rientrare
+            return "dati_insufficienti"
         rip = _r(it).get("ripiego")
         if not (g.ripiego and isinstance(rip, dict) and rip.get("margine") is not None and rip.get("M")):
             return "dati_insufficienti"
