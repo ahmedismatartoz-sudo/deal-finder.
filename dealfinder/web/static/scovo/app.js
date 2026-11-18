@@ -304,26 +304,46 @@ function gainLbl(c, scheda){ return c.trattare ? "se la tratti a " + eur(c.tratt
 function nomeDue(c){
   // marca e modello sulla prima riga, allestimento sulla seconda
   const w = String(c.nome || "").trim().split(/\s+/), nm = String(c.marca || "").trim().split(/\s+/).length || 1;
-  const k = Math.min(w.length, nm + 1);
+  // 18/11: se il nome comincia con marca e modello (es. "Mercedes-Benz Classe A"), la prima riga li tiene interi
+  const mw = String(c.modello || "").trim().split(/\s+/).filter(Boolean), low = x => String(x).toLowerCase();
+  const conMod = mw.length > 1 && mw.length <= 3 && w.length > nm + mw.length && mw.every((x, j) => low(w[nm + j]) === low(x));
+  const k = Math.min(w.length, nm + (conMod ? mw.length : 1));
   return `<span class="nm-1">${esc(w.slice(0, k).join(" "))}</span>${w.length > k ? `<span class="nm-2">${esc(w.slice(k).join(" "))}</span>` : ""}`;
 }
 function carCard(c, i, hero){
-  const badges = `<span class="badge">${statoTxt(c)}</span>${c.aperta ? `<span class="badge seen">Già contattata</span>` : c.commerciante ? `<span class="badge seen">Da commerciante</span>` : ""}${c.fuori_zona_km != null ? `<span class="badge seen">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
+  // 18/11 (cliente: "i nomi delle macchine sulle foto non mi piacciono, più pulito e organizzato"):
+  // foto pulita, senza niente sopra; sotto, nell'ordine: nome, dati, luogo e stato, avvisi, prezzo e guadagno, conti
+  const warnSt = c.incidentata || c.rip_hi > 0;
+  const stati = `<span class="c-st${warnSt ? " warn" : ""}">${statoTxt(c)}</span>${c.aperta ? `<span class="c-st seen">Già contattata</span>` : c.commerciante ? `<span class="c-st">Da commerciante</span>` : ""}${c.fuori_zona_km != null ? `<span class="c-st">Fuori zona · ${c.fuori_zona_km} km</span>` : ""}`;
   const lbl = gainLbl(c);
   const tag = c.pv ? (c.pv.sconto_pct != null && c.pv.margine == null ? "Sotto la media degli annunci" : c.pv.etichetta || "") : "";
-  // l'icona della posizione solo sulla zona (se manca la zona non finisce sull'allestimento o sul cambio)
-  const chips = `<div class="info-chips">${meta(c).split(" · ").map((x, k, a) => { const loc = !!c.zona && k === a.length - 1 && x === String(c.zona) && a.length > 3;
-    return `<span${loc ? ' class="loc"' : ""}>${loc ? ICON.pin : ""}${esc(x)}</span>`; }).join("")}</div>`;
+  // riga dei dati (anno · km · carburante · cambio …) e luogo a parte, con l'icona della posizione
+  const parti = meta(c).split(" · ");
+  const conZona = !!c.zona && parti.length > 1 && parti[parti.length - 1] === String(c.zona);
+  const dati = conZona ? parti.slice(0, -1) : parti;
+  const luogo = conZona ? `<span class="c-loc">${ICON.pin}<span>${esc(c.zona)}</span></span>` : "";
   const cella = (k, v, cls) => `<div><span class="lbl">${k}</span><span class="val ${cls || ""}">${v}</span></div>`;
   const trio = c.economica ? cella("Mercato", c.mercato ? "~" + eur(c.mercato) : "da stimare") + cella("Rivendita", c.mercato ? eur(c.riv) : "—")
     : cella("Riparazioni", ripTxt(c), c.rip_hi ? "small warn" : "") + cella("Rivendita", eur(c.riv)) + (c.mercato ? cella("Mercato", eur(c.mercato)) : "");
   return `<button class="card${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}">
-      <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}<span class="ph-shade" aria-hidden="true"></span>${badges}
-        <div class="ph-over"><div class="ph-t"><div class="name">${nomeDue(c)}</div><div class="ph-price">${eur(c.prezzo)}</div></div>
-          <span class="gain-pill"><small>${lbl}</small><b>${gainTxt(c)}</b>${nettoTag(c)}</span></div></div>
-      <div class="card-body">${c.avviso_verifica ? `<div class="avviso-riga">⚠︎ Verificare prima di pagare</div>` : ""}${chips}${hero ? "" : `<div class="trio">${trio}</div>
-        ${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
-        ${tag ? `<span class="c-tag">${ICON.spark}${esc(tag)}</span>` : ""}`}</div>
+      <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}</div>
+      <div class="card-body">
+        <div class="c-top">
+          <div class="name">${nomeDue(c)}</div>
+          <div class="c-dati">${esc(dati.join(" · "))}</div>
+          <div class="c-riga">${luogo}${stati}</div>
+        </div>
+        ${c.avviso_verifica ? `<div class="avviso-riga">⚠︎ Verificare prima di pagare</div>` : ""}
+        ${hero ? "" : `${c.trattare ? `<div class="tratta"><span>Chiedi <b>−${eur(c.trattare.sconto)}</b></span><span>offri <b>${eur(c.trattare.prezzo_obiettivo)}</b></span></div>` : ""}
+        ${tag ? `<span class="c-tag">${ICON.spark}${esc(tag)}</span>` : ""}`}
+        <div class="c-conti">
+          <div class="c-soldi">
+            <div class="c-prezzo"><span class="lbl">Prezzo</span><b>${eur(c.prezzo)}</b></div>
+            <div class="c-gain"><span class="lbl">${lbl}</span><b>${gainTxt(c)}</b>${nettoTag(c)}</div>
+          </div>
+          ${hero ? "" : `<div class="trio">${trio}</div>`}
+        </div>
+      </div>
     </button>`;
 }
 function riassunto(list){
