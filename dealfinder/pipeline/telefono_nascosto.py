@@ -28,6 +28,15 @@ il giro giornaliero giro_telefoni_subito); ricercarla rilegge lo stesso campo e 
 giro giornaliero conta ~79% "0" e ~21% senza campo (TR TELEFONI SUBITO 10-16/11: 30.500 / 8.000 su 38.700): sono i
 venditori che hanno scelto di non mostrare il numero. Quindi resta spento; per Subito resta il controllo del testo
 delle auto tolte (tempo_reale.telefoni_candidate, con le espressioni di sempre del sito).
+
+18/11 sera (cliente OK 21:01): come controllo_auto.coda_dal_sito per lo sconto alto. segna_prioritari riceve anche
+l'elenco del sito: ORDINE = prioritarie dalla migliore (margine/soglia), INUTILI = tolte al passo telefono che col
+numero resterebbero fuori lo stesso (altre regole, margine, tetto commercianti pieno di auto migliori). In
+telefoni_candidate le inutili non si aprono più (prima AutoScout24 le riapriva ogni 12 ore) e le prioritarie vanno
+in ORDINE. Il controllo del numero nel testo resta su tutte (gratis, solo database). Subito resta come deciso il 17/11:
+il "Mostra numero" c'è solo se il venditore mostra il numero, e la ricerca lo dice già (advertiser.phone); la pagina
+via Web Unlocker (1,5 $ ogni 1.000 risposte riuscite, listino Bright Data pay-as-you-go) NON si accende: il segno
+"phoneSkeleton" non è mai stato provato e un falso "sì" metterebbe sul sito un'auto senza numero (regola).
 """
 from __future__ import annotations
 
@@ -39,6 +48,14 @@ import time
 log = logging.getLogger("tempo_reale")
 
 PRIORITARI: frozenset = frozenset()      # sostituito tutto insieme (mai svuotato a metà mentre un altro thread legge)
+# 18/11 sera (cliente OK 21:01, "più auto senza toccare le regole"): come controllo_auto.coda_dal_sito per lo sconto
+# alto. ORDINE = le prioritarie dalla migliore (margine/soglia), INUTILI = tolte al passo telefono che resterebbero
+# fuori ANCHE col numero (altre regole del sito, margine, tetto dei commercianti già pieno di auto migliori): per
+# loro nessuna pagina aperta. Valgono solo se l'elenco è recente (FRESCHI_MIN): altrimenti si fa come prima.
+ORDINE: tuple = ()
+INUTILI: frozenset = frozenset()
+_STATO = {"t": 0.0, "log_t": 0.0}
+FRESCHI_MIN = 30
 _PAUSA = {"fino": 0.0}
 _CONTO = {"giorno": None, "n": 0}
 _DIAG = {"n": 0}
@@ -73,12 +90,17 @@ def _margine_ok(it: dict, g) -> bool:
 
 
 def passerebbe_col_numero(it: dict, g) -> bool:
+    return _col_numero(it, g)[0]
+
+
+def _col_numero(it: dict, g) -> tuple[bool, dict]:
     """17/11 (notte-01): l'auto, tolta SOLO al passo telefono, passerebbe le altre regole del sito per auto (Roma, zona,
     venditore, prezzo intero, Jev, correzioni del margine, anti-truffa, margine minimo) se il numero ci fosse?
     Si lavora su una COPIA (le regole scrivono avvisi nell'auto) e le regole sono quelle del sito, non cambiate: serve
     solo a decidere quali auto controllare PRIMA. I tetti (commercianti, fuori zona, diesel) non si simulano: dipendono
     dalle altre auto; gli esiti "in attesa" (_IN_ATTESA) non escludono."""
     from ..web import sito_regole as SR
+    # (18/11 sera: ritorna anche la copia, che ha il tipo del passo venditore per il controllo del tetto)
     c = dict(it, _r=dict(it.get("_r") or {}, tel=True))
     if isinstance(c.get("pv"), dict):
         c["pv"] = dict(c["pv"])
@@ -90,18 +112,35 @@ def passerebbe_col_numero(it: dict, g) -> bool:
         if dopo:
             m = f(c, g)
             if m and m not in _IN_ATTESA:
-                return False
+                return False, c
     try:
         SR.t_margine_sito(c, g)                 # correzioni del margine del sito (solo in giù), come nell'elenco
     except Exception:
         pass
     m = SR.r_truffa(c, g)
     if m and m not in _IN_ATTESA:
+        return False, c
+    return _margine_ok(c, g), c
+
+
+def _sotto_tetto(it: dict, g, comm: list, lont: list) -> bool:
+    """Commerciante che col numero resterebbe comunque fuori dal tetto dei commercianti (margine sotto il più basso di
+    quelli già tenuti: controllo_auto._sotto_al_tetto). I privati non hanno tetto."""
+    from ..web import sito_regole as SR
+    if not SR.e_commerciante(it) or it.get("diesel_extra"):
         return False
-    return _margine_ok(c, g)
+    from ..ai.controllo_auto import _sotto_al_tetto
+    return _sotto_al_tetto(it, g, comm, lont)
 
 
-def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None, g=None) -> int:
+def utili_e_ordine() -> tuple[tuple, frozenset] | None:
+    """(ORDINE, INUTILI) se l'elenco che li ha calcolati è recente, altrimenti None (si fa come prima)."""
+    if not _STATO["t"] or time.time() - _STATO["t"] > FRESCHI_MIN * 60:
+        return None
+    return ORDINE, INUTILI
+
+
+def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None, g=None, out: list | None = None) -> int:
     """Auto tolte al passo telefono che col numero passerebbero le altre regole del sito (passerebbe_col_numero):
     margine già sopra il minimo (o "Da trattare" entro lo sconto massimo), in zona, mai Roma, venditore ammesso,
     senza scarti Jev/anti-truffa definitivi. 17/11: prima si guardavano solo zona e margine (373 prioritarie, ma
@@ -114,19 +153,54 @@ def segna_prioritari(items: list[dict], tolti: list, fonte: dict | None = None, 
             g = SR.Regole.da_env()
         except Exception:
             g = SR.Regole()
-    out = set()
+    global ORDINE, INUTILI
+    from ..web import scovo
+    sito = out
+    comm = sorted(int(SR.margine(x) or 0) for x in (sito or []) if SR.e_commerciante(x))
+    lont = sorted(int(SR.margine(x) or 0) for x in (sito or []) if x.get("_tipo") == "comm_lontano")
+    prio, inutili, conti = [], set(), {"tolti_telefono": 0, "altra_fonte": 0, "prioritarie": 0, "inutili": 0,
+                                       "inutili_tetto_commercianti": 0, "errore_regole": 0}
     for it in items:
-        if it.get("id") not in tolti or (fonte and fonte.get(it["id"]) not in ("Subito", "AutoScout24")):
+        if it.get("id") not in tolti:
             continue
+        conti["tolti_telefono"] += 1
+        if fonte and fonte.get(it["id"]) not in ("Subito", "AutoScout24"):
+            conti["altra_fonte"] += 1
+            continue
+        errore, copia = False, it
         try:
-            ok = passerebbe_col_numero(it, g)
+            ok, copia = _col_numero(it, g)
         except Exception:
             # una regola che non sa leggere l'auto: criterio del 13/11 (zona e margine), mai Roma
+            errore = True
+            conti["errore_regole"] += 1
             ok = not (SR.r_no_roma(it, g) or SR.r_zona(dict(it), g)) and _margine_ok(it, g)
+        if ok and sito is not None:
+            try:
+                if _sotto_tetto(copia, g, comm, lont):
+                    ok = False
+                    conti["inutili_tetto_commercianti"] += 1
+            except Exception:
+                pass
         if ok:
-            out.add(it["id"])
-    PRIORITARI = frozenset(out)
-    return len(out)
+            p = int(it.get("prezzo") or 0)
+            try:
+                r = float(SR.margine(it) or 0) / max(1, scovo.soglia(p))
+            except Exception:
+                r = 0.0
+            prio.append((-r, it["id"]))
+        elif not errore and isinstance(it.get("id"), int):
+            inutili.add(it["id"])         # anche col numero resterebbe fuori: nessuna pagina (un errore non esclude)
+    prio.sort()
+    conti["prioritarie"], conti["inutili"] = len(prio), len(inutili)
+    PRIORITARI = frozenset(i for _r, i in prio)
+    ORDINE = tuple(i for _r, i in prio)
+    INUTILI = frozenset(inutili)
+    _STATO["t"] = time.time()
+    if time.time() - _STATO["log_t"] > 600:            # una riga ogni 10 minuti, solo conteggi
+        _STATO["log_t"] = time.time()
+        log.warning("TEL_PRIORITA %s", conti)
+    return len(prio)
 
 
 def _oggi() -> str:

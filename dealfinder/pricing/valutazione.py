@@ -409,6 +409,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     v = VB.valuta(t, basi[zona], soglia_fn(int(r["price_eur"])), rg, cfg)
                     es.stats[f"categoria:{v['categoria']}"] += 1
                     es.stats["valore_base:" + str(v.get("fonte_base") or "nessuna_stima")] += 1
+                    if v.get("motivo_dati"):         # 18/11 sera: perché resta senza stima (solo conti)
+                        es.stats["dati_insufficienti:" + v["motivo_dati"]] += 1
                 else:
                     key = (r["make"], r["model"], r["fuel"])
                     if key != gruppo:

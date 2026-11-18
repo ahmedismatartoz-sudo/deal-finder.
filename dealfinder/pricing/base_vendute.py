@@ -48,6 +48,8 @@ PAUSA_S = 0.05             # dopo ogni gruppo: il calcolo gira nel processo del 
 BAD_FLAGS = {"leasing_o_rata", "prezzo_civetta", "importazione", "importata", "dati_incoerenti", "prezzo_finanziamento"}
 BAD_STAGE = {"doppione", "truffa", "prezzo_finto", "dati_incoerenti"}
 
+N_MIN_SITO = 5             # = valore_base.N_MIN_SITO (qui senza importarlo: modulo di sola misura)
+
 POOL_SQL = """
 SELECT l.make, l.model, l.fuel, l.gearbox, l.power_kw, l.year, l.mileage_km, l.price_eur, l.price_flags,
        l.seller_type, l.status, l.province, l.telefono_ok, COALESCE(l.damage_class, 'sconosciuto') AS danno,
@@ -141,6 +143,19 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list) -> None:
             prec["combinata"].append((c, vero))
         else:
             st["vendute_senza_stima"] += 1
+        # 18/11 sera: la stessa misura con il minimo del SITO (valore_base.N_MIN_SITO = 5) e, a parte, le sole vendute
+        # che il sito oggi NON stima ma che con commercianti e vendute INSIEME (≥ 5) avrebbero una stima: l'eventuale
+        # allargamento "unendo le due basi" si decide solo se questo errore non è peggiore di quello del sito
+        ds, _ = stima(D, v, n_min=N_MIN_SITO)
+        ss, _ = stima(V, v, escludi=v, n_min=N_MIN_SITO)
+        if ds or ss:
+            prec["sito_n5"].append((ds or ss, vero))
+        else:
+            u, _ = stima(D + V, v, escludi=v, n_min=N_MIN_SITO)
+            if u:
+                prec["sito_n5_solo_unendo"].append((u, vero))
+            else:
+                st["vendute_sito_senza_stima"] += 1
     for t in righe:                                # 2. affari tra i privati attivi
         if (t["status"] != "attivo" or t["seller_type"] == "commerciante" or not _pulita(t)
                 or t["year"] < ANNO_MIN or t["mileage_km"] > KM_MAX or t["price_eur"] > 200000

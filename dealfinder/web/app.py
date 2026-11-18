@@ -1827,6 +1827,9 @@ def _sentinella(items: list[dict], diesel_extra: set | None = None) -> None:
         logging.getLogger("scovo").warning("SENTINELLA non riuscita: %s", str(e)[:200])
 
 
+_dati_insuff_log = {"t": 0.0}
+
+
 def _calcola_elenco() -> None:
     from . import sito_regole as SR
     t0 = time.time()
@@ -1848,9 +1851,19 @@ def _calcola_elenco() -> None:
     _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
     try:      # 13/11 (piu-auto): le tolte solo per il numero con margine già sopra il minimo, prima delle altre
         from ..pipeline import telefono_nascosto as _tn
-        _tn.segna_prioritari(items, fun.tolti.get("telefono", []), fonte, g=_g)     # stesse regole dell'elenco
+        # 18/11 sera: con l'elenco (out) anche il tetto dei commercianti, l'ordine per margine/soglia e le inutili
+        _tn.segna_prioritari(items, fun.tolti.get("telefono", []), fonte, g=_g, out=out)
     except Exception as e:
         logging.getLogger("scovo").warning("TEL_NASCOSTO prioritari non segnati: %s", str(e)[:200])
+    try:      # 18/11 sera: perché le auto escono al passo "valutata" come dati_insufficienti (solo conteggi)
+        if time.time() - _dati_insuff_log["t"] > 600:
+            from ..pricing import valore_base as _vb
+            _dati_insuff_log["t"] = time.time()
+            _c = _vb.conta_motivi(items, fun.tolti.get("valutata", []))
+            logging.getLogger("scovo").warning("DATI_INSUFF_MOTIVI %s", json.dumps(
+                {"totale": sum(_c.values()), **dict(_c.most_common())}, ensure_ascii=False))
+    except Exception as e:
+        logging.getLogger("scovo").warning("DATI_INSUFF_MOTIVI non contati: %s", str(e)[:200])
     _coda_perizia(items, out)
     try:      # 17/11 (notte-03): il budget del controllo AI prima alle auto ferme solo per lo sconto alto
         from ..ai import controllo_auto as _ca
@@ -4034,6 +4047,27 @@ def _tempo_reale():
 
     if os.environ.get("TEL_CANDIDATE", "1") == "1":
         threading.Thread(target=telefoni_candidate, daemon=True, name="tel_candidate").start()
+
+    def confronti_mirati():
+        """18/11 sera (pricing/confronti_mirati.py): riapre i commercianti vecchi che mancano alle auto rimaste
+        senza abbastanza confronti e le rivaluta (stesso metodo, stesse regole). Solo conteggi nel log."""
+        from ..pricing import confronti_mirati as cm
+        time.sleep(int(os.environ.get("CONFRONTI_MIRATI_RITARDO_S", "420")))
+        while True:
+            try:
+                with connect() as conn:
+                    st = cm.giro(conn)
+                cm.diagnostica(st)
+                if any(k.startswith("rivalutate_pubblicate") or k.startswith("rivalutate_categoria:opportunita")
+                       or k.startswith("rivalutate_categoria:candidato") for k in st):
+                    _elenco["t"] = 0.0
+                    _aggiorna_elenco(attendi=False)
+            except Exception as e:
+                lg.warning("CONFRONTI_MIRATI non riuscito: %s", str(e)[:300])
+            time.sleep(cm.GIRO_MIN * 60)
+
+    if os.environ.get("CONFRONTI_MIRATI", "1") != "0":
+        threading.Thread(target=confronti_mirati, daemon=True, name="confronti_mirati").start()
 
     def esame_software():
         """25/10: esame del calcolo sulle auto valutate a mano (pricing/esame.py), all'avvio e ogni ESAME_ORE ore."""

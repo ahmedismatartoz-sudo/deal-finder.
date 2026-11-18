@@ -50,6 +50,11 @@ N_MIN_SITO = 5
 METODO = "base_vendute"
 SOSPETTO_MARGINE = 0.55
 CONFRONTI_SCHEDA = 15          # confronti salvati nella valutazione (scheda dell'auto)
+# 18/11 sera (cliente: "più auto senza toccare le regole"): commercianti del gruppo NON ricontrollati negli ultimi
+# FRESCHI_GIORNI giorni (ma visti negli ultimi VECCHI_MAX_GIORNI): NON entrano MAI nella stima. Servono solo a dire
+# quali annunci riaprire (confronti_mirati): riaperto vivo = di nuovo "fresco" (base D), sparito = venduto (base V).
+VECCHI_MAX_GIORNI = 60
+RINFRESCABILI_MAX = 12         # annunci da riaprire salvati per auto (solo id interni)
 
 # Una query per gruppo marca/modello/alimentazione (indici su make, model, fuel): attivi e sparite di recente nelle
 # province del sito. Le varianti di maiuscole di marca e modello si passano come elenco (= ANY usa l'indice) e si
@@ -142,7 +147,10 @@ def carica(conn, make: str, model: str, fuel: str, zona: str = "milano") -> dict
     righe = conn.execute(GRUPPO_SQL, {"mk": _varianti(make), "md": _varianti(model), "fu": fuel,
                                       "prov": sorted(prov), "vg": BV.VENDUTE_GIORNI}).fetchall()
     mk, md = str(make or "").lower(), str(model or "").lower()
-    return dividi([norm(r) for r in righe if str(r["make"] or "").lower() == mk and str(r["model"] or "").lower() == md])
+    rr = [norm(r) for r in righe if str(r["make"] or "").lower() == mk and str(r["model"] or "").lower() == md]
+    base = dividi(rr)
+    base["Dv"] = vecchi_commercianti(rr)           # solo per sapere cosa riaprire: mai nella stima
+    return base
 
 
 def dividi(righe: list) -> dict:
@@ -152,6 +160,97 @@ def dividi(righe: list) -> dict:
          and (r.get("giorni_visto") if r.get("giorni_visto") is not None else 99) <= BV.FRESCHI_GIORNI]
     V = [r for r in pulite if r["status"] == "scomparso" and (r.get("giorni_online") or 0) >= BV.MIN_GIORNI_ONLINE]
     return {"D": D, "V": V}
+
+
+def vecchi_commercianti(righe: list) -> list:
+    """Commercianti puliti ATTIVI non ricontrollati negli ultimi FRESCHI_GIORNI giorni (ma negli ultimi
+    VECCHI_MAX_GIORNI): fuori dalla base D (regola del metodo, invariata). Righe già normalizzate (norm)."""
+    out = []
+    for r in righe:
+        gv = r.get("giorni_visto")
+        if (r.get("status") == "attivo" and r.get("seller_type") == "commerciante" and gv is not None
+                and BV.FRESCHI_GIORNI < gv <= VECCHI_MAX_GIORNI and BV._pulita(r)):
+            out.append(r)
+    return out
+
+
+def _simili(base: list, t: dict) -> list:
+    """Confronti del livello più largo del metodo (anno ±2, km ±40%, potenza e cambio) PRIMA del taglio della mediana:
+    solo per contare (diagnostica dei dati_insufficienti), mai per stimare."""
+    anni, km = BV.LIVELLI[-1]
+    return [(c, BV._adatta(c, t)) for c in base if BV._simile(c, t, anni, km)]
+
+
+# 18/11 sera: motivo di ogni dati_insufficienti (log DATI_INSUFF_MOTIVI del sito e stats di valuta_e_scrivi). Le
+# protezioni (anti-truffa, auto non pulita) restano tali: il conto serve a sapere quante auto si possono recuperare
+# SENZA toccarle (solo "pochi_confronti:*").
+MOTIVI_DATI = ("dati_auto_incompleti", "auto_non_pulita", "costi_non_stimabili", "antitruffa:margine_oltre_55",
+               "antitruffa:sotto_minimo_reale", "antitruffa:troppo_sotto_mercato", "pochi_confronti:modello_assente",
+               "pochi_confronti:nessuno_simile", "pochi_confronti:rinfrescabile", "pochi_confronti:solo_unendo",
+               "pochi_confronti:pochi_simili")
+
+
+def motivo_dati(pv) -> str | None:
+    """Motivo del dati_insufficienti di una valutazione salvata (riassunto del sito o dati completi). Le valutazioni
+    scritte prima del 18/11 sera non hanno motivo_dati: si ricava dai campi che hanno."""
+    if not isinstance(pv, dict) or pv.get("categoria") != "dati_insufficienti":
+        return None
+    if pv.get("motivo_dati"):
+        return str(pv["motivo_dati"])
+    if pv.get("metodo") != METODO:
+        return "calcolo_vecchio"
+    if pv.get("sospetto_truffa"):
+        return "antitruffa:margine_oltre_55"
+    if pv.get("non_pulita"):
+        return "auto_non_pulita"
+    if pv.get("M") is None:
+        return "pochi_confronti"           # (o dati dell'auto incompleti: il riassunto vecchio non li distingue)
+    return "antitruffa_o_costi"
+
+
+def conta_motivi(items: list, ids) -> Counter:
+    """Conti per motivo_dati delle auto `ids` (tolte dal sito al passo "valutata") tra `items` (elenco del sito)."""
+    ids = set(ids or ())
+    c: Counter = Counter()
+    for it in items:
+        if it.get("id") in ids:
+            m = motivo_dati(it.get("pv"))
+            if m:
+                c[m] += 1
+    return c
+
+
+def _insuff(out: dict, motivo: str, testo: str) -> dict:
+    out["categoria"] = "dati_insufficienti"
+    out["motivo_dati"] = motivo
+    out["motivi"].append(testo)
+    return out
+
+
+def _pochi(out: dict, tt: dict, D: list, V: list, Dv: list) -> dict:
+    """Nessuna stima (meno di N_MIN_SITO confronti in D e in V): perché, e quali commercianti vecchi riaprire.
+    Le stime restano quelle del metodo: qui solo conti e id da riaprire (confronti_mirati)."""
+    sD, sV, sDv = _simili(D, tt), _simili(V, tt), _simili(Dv, tt)
+    out.update(simili_D=len(sD), simili_V=len(sV), simili_vecchi=len(sDv), base_vecchi=len(Dv))
+    if not D and not V and not Dv:
+        sub = "modello_assente"
+    elif not sD and not sV and not sDv:
+        sub = "nessuno_simile"
+    elif sDv and (len(sD) + len(sDv) >= N_MIN_SITO or len(sV) + len(sDv) >= N_MIN_SITO):
+        # riaperti: vivi = commercianti freschi (D), spariti = vendute (V). Si salvano i più recenti (più probabilmente
+        # ancora online) e una stima SOLO per decidere l'ordine dei controlli (mai usata come valore dell'auto)
+        sub = "rinfrescabile"
+        vecchi = sorted(sDv, key=lambda cp: (cp[0].get("giorni_visto") or 99, cp[0].get("id") or 0))
+        prezzi = sorted(p for _c, p in sD + sDv + sV if p > 0)
+        out["rinfresco"] = {"ids": [c.get("id") for c, _p in vecchi[:RINFRESCABILI_MAX] if c.get("id") is not None],
+                            "stima_priorita": int(round(prezzi[len(prezzi) // 2])) if prezzi else None}
+    elif len(sD) + len(sV) >= N_MIN_SITO:
+        sub = "solo_unendo"             # commercianti e vendute insieme arriverebbero al minimo (NON usato: da misurare)
+    else:
+        sub = "pochi_simili"
+    return _insuff(out, "pochi_confronti:" + sub,
+                   f"meno di {N_MIN_SITO} auto uguali pulite tra i commercianti (annunci degli ultimi "
+                   f"{BV.FRESCHI_GIORNI} giorni) e tra le vendute degli ultimi {BV.VENDUTE_GIORNI} giorni")
 
 
 # ------------------------------------------------------------------ valutazione di un'auto
@@ -204,15 +303,12 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
         if t.get(k) in (None, ""):
             out["mancanti"].append(nome)
     if out["mancanti"]:
-        out["categoria"] = "dati_insufficienti"
-        out["motivi"].append("dati dell'auto incompleti: " + ", ".join(out["mancanti"]))
-        return out
+        return _insuff(out, "dati_auto_incompleti", "dati dell'auto incompleti: " + ", ".join(out["mancanti"]))
     sporca = pulita(t, cfg)
     if sporca:
-        out["categoria"] = "dati_insufficienti"
         out["non_pulita"] = sporca
-        out["motivi"].append(f"auto non confrontabile con auto pulite vendute o di commercianti ({sporca})")
-        return out
+        return _insuff(out, "auto_non_pulita",
+                       f"auto non confrontabile con auto pulite vendute o di commercianti ({sporca})")
     tt = norm(t)
     lid = t.get("id")
     D = [c for c in base.get("D") or [] if lid is None or c.get("id") != lid]
@@ -224,10 +320,8 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
                base_D=len(D), base_V=len(V))
     scelta, fonte = (d, "commercianti") if d else ((v, "vendute") if v else (None, None))
     if not scelta:
-        out["categoria"] = "dati_insufficienti"
-        out["motivi"].append(f"meno di {N_MIN_SITO} auto uguali pulite tra i commercianti (annunci degli ultimi "
-                             f"{BV.FRESCHI_GIORNI} giorni) e tra le vendute degli ultimi {BV.VENDUTE_GIORNI} giorni")
-        return out
+        Dv = [c for c in base.get("Dv") or [] if lid is None or c.get("id") != lid]
+        return _pochi(out, tt, D, V, Dv)
     R = int(round(scelta["valore"]))
     n = int(scelta["n"])
     out.update(M=R, R=R, R_finale=R, centrale_ridotto=R, riduzione=0.0, M_fonte=fonte, fonte_base=fonte,
@@ -259,9 +353,7 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
     out["R_finale"] = Rf
     cs = P.costi(t, Rf, cfg)
     if cs["blocco"]:
-        out["categoria"] = "dati_insufficienti"
-        out["motivi"].append(cs["blocco"])
-        return out
+        return _insuff(out, "costi_non_stimabili", cs["blocco"])
     voci = {k: x for k, x in cs["voci"].items() if k != "costi_commerciante"}
     ripristino = int(cs["ripristino"])
     out["costi"] = voci
@@ -284,27 +376,24 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
         pass
     # anti-truffa: margine oltre il 55% del valore = auto sospetta (dati sbagliati, rata, truffa): fuori
     if margine > SOSPETTO_MARGINE * R:
-        out["categoria"] = "dati_insufficienti"
         out["sospetto_truffa"] = True
-        out["motivi"].append(f"margine oltre il {int(SOSPETTO_MARGINE * 100)}% del valore: prezzo non credibile "
-                             "(dati sbagliati, rata o truffa)")
-        return out
+        return _insuff(out, "antitruffa:margine_oltre_55",
+                       f"margine oltre il {int(SOSPETTO_MARGINE * 100)}% del valore: prezzo non credibile "
+                       "(dati sbagliati, rata o truffa)")
     # gli stessi controlli di policy_v2 sul prezzo chiesto rispetto al mercato (M = R)
     limite = at.sotto_m
     if p <= at.basse_max and n >= at.basse_confronti:
         limite = min(limite, at.basse)
     if p < R * at.minimo_reale:
-        out["categoria"] = "dati_insufficienti"
-        out["motivi"].append(f"prezzo sotto il {int(at.minimo_reale * 100)}% del mercato: non è un prezzo vero")
-        return out
+        return _insuff(out, "antitruffa:sotto_minimo_reale",
+                       f"prezzo sotto il {int(at.minimo_reale * 100)}% del mercato: non è un prezzo vero")
     if p < R * limite and t.get("targa_e_telefono"):
         out["prezzo_molto_basso_ammesso"] = True
         out["ipotesi"].append("prezzo molto sotto il mercato: ammessa perché l'annuncio mostra il numero del venditore")
     elif p < R * limite:
-        out["categoria"] = "dati_insufficienti"
-        out["motivi"].append(f"prezzo oltre il {int(round((1 - limite) * 100))}% sotto il mercato: dati non "
-                             "affidabili (versione diversa, dati sbagliati o truffa)")
-        return out
+        return _insuff(out, "antitruffa:troppo_sotto_mercato",
+                       f"prezzo oltre il {int(round((1 - limite) * 100))}% sotto il mercato: dati non "
+                       "affidabili (versione diversa, dati sbagliati o truffa)")
     if margine < soglia:
         sc = P._sconto_da_trattare(t, p, margine, int(soglia))
         if sc:

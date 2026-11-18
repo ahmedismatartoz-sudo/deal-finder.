@@ -1376,6 +1376,15 @@ def telefoni_candidate(conn, ids) -> Counter:
     # prima l'ordine valeva solo con TEL_SUBITO_API=1 (spento dal 14/11) e AutoScout24 andava in ordine di data
     tutte_prio = TN.PRIORITARI                                    # una fotografia per tutto il giro
     ordine = sorted(i for i in tutte_prio if i in tutti)
+    # 18/11 sera (come controllo_auto.coda_dal_sito): con un elenco recente le prioritarie vanno dalla migliore
+    # (margine/soglia) e le auto che resterebbero fuori anche col numero non si aprono (nessuna pagina spesa)
+    uo = TN.utili_e_ordine()
+    inutili: frozenset = frozenset()
+    if uo is not None:
+        ordine = [i for i in uo[0] if i in tutti] + [i for i in ordine if i not in set(uo[0])]
+        inutili = uo[1]
+        if inutili:
+            stats["saltate_inutili"] = sum(1 for i in ids if i in inutili)
     prio_set = tutte_prio if TN.attivo() else frozenset()         # ricerca Subito (telefono_nascosto) solo se accesa
     prio = sorted(i for i in prio_set if i in tutti)
     TN.inizio_giro()
@@ -1393,8 +1402,8 @@ def telefoni_candidate(conn, ids) -> Counter:
         "AND l.status='attivo' AND (l.source = 'autoscout24' OR (l.source = 'subito' AND (%s OR l.id = ANY(%s)))) "
         "AND l.telefono_ok IS NOT TRUE AND (l.telefono_at IS NULL OR l.telefono_at < now() - make_interval(hours => "
         "CASE WHEN l.id = ANY(%s) THEN %s ELSE %s END)) "
-        "ORDER BY (l.id = ANY(%s)) DESC, l.telefono_at NULLS FIRST LIMIT %s",
-        (ids, os.environ.get("TEL_CAND_SUBITO", "0") == "1",       # Subito: la pagina pubblica dice sempre showPhone=false
+        "ORDER BY array_position(%s::bigint[], l.id) NULLS LAST, l.telefono_at NULLS FIRST LIMIT %s",
+        ([i for i in ids if i not in inutili], os.environ.get("TEL_CAND_SUBITO", "0") == "1",       # Subito: la pagina pubblica dice sempre showPhone=false
          prio, ordine, int(os.environ.get("TEL_CAND_PRIO_ORE", "6")), int(os.environ.get("TEL_CAND_ORE", "12")),
          ordine, int(os.environ.get("TEL_CAND_MAX", "150")))).fetchall()
     if not rows:
