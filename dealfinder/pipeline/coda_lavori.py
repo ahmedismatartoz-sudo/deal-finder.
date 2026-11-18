@@ -32,6 +32,7 @@ SPOSTABILI: dict = {
     "perche_fuori:": (True, ()),
     "prova_cieca:": (True, ("ANTHROPIC_API_KEY",)),
     "raccolta60:": (True, ()),
+    "raccolta_numeri:": (True, ()),     # 18/11 (cliente, OK): nuovi numeri di saloni (vetrine Subito + Pagine Gialle)
     "censimento:": (False, ()),         # 16/11 sera: sola lettura, niente AI; SOLO nel sito (SOLO_SITO), subito
     "mix:": (False, BREVO),
     "togli_lista:": (False, BREVO),
@@ -187,6 +188,12 @@ def durata_prevista(v: str, env: dict | None = None) -> float:
             ore = float(env.get(chiave) or base)
         except ValueError:
             ore = base
+        return ore * 60 + 15
+    if p == "raccolta_numeri:":           # tetto di tempo del giro (RNUM_ORE) più la consegna
+        try:
+            ore = float(env.get("RNUM_ORE") or 3)
+        except ValueError:
+            ore = 3.0
         return ore * 60 + 15
     return float(DURATE_MIN.get(p, 60 if SPOSTABILI[p][0] else 5))
 
@@ -395,6 +402,10 @@ def esegui(v: str) -> bool | None:
             from ..pipeline import raccolta60 as R60
             R60.lavoro(re.sub(r"[^A-Za-z0-9-]", "", v.split(":", 1)[1])[:20] or "1611")
         return _lungo(f"raccolta60:{v[:60]}", "R60", _r60)
+    if v.startswith("raccolta_numeri:"):   # 18/11 (cliente, OK): NUOVI numeri di autosaloni entro 60 km (vetrine Subito +
+        # Pagine Gialle). Fatta solo a lavoro finito; a tempo finito si rimanda e la notte dopo riprende dai passi fatti
+        from . import raccolta_numeri as RN
+        return RN.esegui_voce(v)
     if v.startswith(("fuori84:", "liberoms:", "mattina:")):  # 16/11 (cliente): nuovi dal database, mai chi era nella lista 84
         try:
             from ..marketing import su_misura as SM

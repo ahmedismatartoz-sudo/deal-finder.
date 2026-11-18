@@ -1,0 +1,8 @@
+{"ads": [
+ {"subject": "Fiat Panda 1.2", "geo": {"town": {"value": "Monza"}}, "advertiser": {"company": true, "type": 1, "shop_id": "98765", "shop_name": "Autosalone Brianza Motors", "user_id": "u1"}},
+ {"subject": "Fiat 500", "geo": {"town": {"value": "Monza"}}, "advertiser": {"company": true, "type": 1, "shop_id": "98765", "shop_name": "Autosalone Brianza Motors"}},
+ {"subject": "Golf privato", "geo": {"town": {"value": "Brugherio"}}, "advertiser": {"company": false, "type": 0, "user_id": "privato1", "name": "Mario"}},
+ {"subject": "Audi A3", "geo": {"town": {"value": "Seregno"}}, "advertiser": {"company": true, "type": 1, "user_id": "u3", "name": "Senza Vetrina Auto"}},
+ {"subject": "Yaris", "geo": {"town": {"value": "Mantova"}}, "advertiser": {"company": true, "type": 1, "shop_id": "55555", "shop_name": "Lontano Auto"}},
+ {"subject": "Clio", "geo": {"town": {"value": "Brugherio"}}, "advertiser": {"company": true, "type": "1", "shop_id": "11111", "shop_name": "Brugherio Car"}}
+]}
