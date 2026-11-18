@@ -48,11 +48,12 @@ SPOSTABILI: dict = {
     "rimetti:": (False, BREVO),
     "utenti:": (False, ()),             # solo una lettura del database
     "giro1711:": (False, BREVO),        # 17/11 sera (cliente): due liste + due campagne, subito nel sito
+    "base_vendute:": (False, ()),       # 18/11 notte (cliente, OK): ricalcolo di prova su vendute e commercianti, sola lettura
     "conta_mercato:": (False, ()),      # 18/11 notte: quanti annunci hanno i siti contro quanti ne abbiamo (sola lettura)
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -350,6 +351,10 @@ def esegui(v: str) -> bool | None:
                                                        "rimasti": rl.get("uniqueSubscribers")}))
         except Exception as e:
             lg.warning("TOGLI_LISTA non riuscito: %s", str(e)[:300])
+        return
+    if v.startswith("base_vendute:"):     # 18/11 notte (cliente: "rifare il calcolo su tutta la base: vendute e commercianti")
+        from ..pricing import base_vendute as BV
+        _lungo(v, "BASE_VENDUTE", lambda: lg.warning("BASE_VENDUTE %s", json.dumps(BV.lavoro(v), ensure_ascii=False, default=str)))
         return
     if v.startswith("conta_mercato:"):    # 18/11 notte (cliente: "oltre 60.000 annunci nei 150 km")
         from . import conta_mercato as CM
