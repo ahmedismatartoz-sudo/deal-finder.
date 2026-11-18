@@ -269,8 +269,7 @@ def run(what: str = "tutto") -> dict:
     with connect() as conn:
         finish = log_job(conn, f"process:{what}")
         try:
-            from ..ai.client import budget_giorno
-            log.info("SPESA_AI oggi %.2f $ su un tetto di %.2f $", spesa_oggi(conn), budget_giorno())
+            log.info("SPESA_AI oggi %.2f $ (nessun tetto di spesa dal 18/11)", spesa_oggi(conn))
             if what in ("tutto", "filtro"):
                 out["filtro"] = dict(screen(conn))
             if what in ("tutto", "approfondimento"):

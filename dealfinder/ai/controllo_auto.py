@@ -27,9 +27,9 @@ Differenze volute rispetto a Jev:
 Priorità: auto nuove, poi prezzo cambiato, poi le altre (sconto alto e margine alto prima); per ultimo il rinnovo
 delle decisioni scadute (le vecchie di Jev restano valide sul sito finché il prezzo non cambia).
 
-Spesa (prezzi veri, ai/client.PREZZI): budget PROPRIO CONTROLLO_BUDGET_USD (4 $ al giorno), SEPARATO dal tetto comune
-AI_BUDGET_GIORNO (perizia, lettore, difetti, giudice non si fermano per il controllo), più CONTROLLO_MAX_GIORNO
-chiamate (1.500). Ogni chiamata si registra in ai_usage e si conferma (commit) subito dopo; un'auto che fallisce non
+Spesa (prezzi veri, ai/client.PREZZI): dal 18/11 (cliente: "non voglio budget") NESSUN tetto di spesa né di chiamate
+al giorno; restano i limiti tecnici (CONTROLLO_PER_GIRO auto per giro, blocchi paralleli, pause). Ogni chiamata si
+registra in ai_usage e si conferma (commit) subito dopo; un'auto che fallisce non
 si richiama per 6 ore (niente ripagamenti). Costo misurato sulla richiesta tipo: ~2.400 token in entrata e ~180 in
 uscita = ~0,0033 $ per auto con Haiku (1/5 $ per milione). Errori di credito (402/400 credit balance) → pausa di
 un'ora; limite (429/529) → pausa di 5 minuti (stessa logica della perizia).
@@ -605,13 +605,12 @@ def ore_roma() -> float:
 
 
 def budget_dosato(budget: float, ore: float | None = None) -> float:
-    """13/11 (giudice N2): spesa ammessa fino a quest'ora: budget × (ore passate, ora di Roma, + 2) / 24. Così il
-    budget non finisce la mattina sull'arretrato e restano soldi per le auto nuove della sera."""
+    """13/11 (giudice N2): spesa ammessa fino a quest'ora: budget × (ore passate, ora di Roma, + 2) / 24. Dal 18/11 il
+    giro non la usa più (nessun budget, cliente); resta per i test e per chi volesse rileggerla."""
+    if budget == float("inf"):
+        return budget
     ore = ore_roma() if ore is None else ore
     return round(budget * min(24.0, ore + 2) / 24, 4)
-
-
-QUOTA_RINNOVI = 0.3            # i rinnovi delle decisioni scadute usano al massimo il 30% del budget del giorno
 
 
 def _perizie(conn, ids: list[int]) -> dict:
@@ -690,8 +689,10 @@ def per_giro() -> int:
 
 
 def budget_usd() -> float:
-    """Budget proprio, SEPARATO da AI_BUDGET_GIORNO (client.TASK_BUDGET_SEPARATO): dollari veri al giorno."""
-    return float(_env("CONTROLLO_BUDGET_USD", "1.5"))  # 16/11 sera cliente: tetto 100 €/mese per TUTTA l'AI
+    """18/11 18:31 (cliente: "togli qualsiasi tipo di budget al sistema"): nessun budget del controllo (prima
+    CONTROLLO_BUDGET_USD 1,5 $ al giorno, dosato sull'ora, quota dei rinnovi, CONTROLLO_MAX_GIORNO chiamate). Le
+    variabili d'ambiente rimaste non lo riaccendono. La spesa si registra sempre in ai_usage e nella riga JEV_GIRO."""
+    return float("inf")
 
 
 def parametri_diesel() -> dict:
@@ -712,9 +713,9 @@ def parametri_diesel() -> dict:
 # diesel in più (contano gli avvisi). Il passo "venditore" legge l'AI solo per i diesel in più: quelli (dz) restano.
 PASSI_SENZA_AI = ("no_loconte", "scarti_cliente", "anno", "km", "telefono", "no_roma", "zona", "venditore",
                   "margine_minimo", "doppioni", "tetto_commercianti", "tetto_commercianti_totale")
-CODA_SITO: dict = {"t": 0.0, "entra": [], "fuori": set(), "sul_sito": set(), "motivi": {}}
+CODA_SITO: dict = {"t": 0.0, "entra": [], "fuori": set(), "sul_sito": set(), "motivi": {}, "inutili": set()}
 MISURA: dict = {"giorno": None, "usd": 0.0, "usd_sito": 0.0, "pagate": {}, "entrate": set(), "entrate_sito": set()}
-QUOTA_ANTICIPO = 0.5     # le auto della coda del sito possono anticipare fino a metà del budget del giorno sul dosato
+QUOTA_ANTICIPO = 0.5     # (fino al 17/11: anticipo sul dosato per la coda del sito; dal 18/11 nessun budget, non usata)
 
 
 def _giorno_roma() -> str:
@@ -766,7 +767,7 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     tolti = set((fun.tolti or {}).get("truffa") or [])
     comm = sorted(int(SR.margine(it) or 0) for it in out if SR.e_commerciante(it))
     lont = sorted(int(SR.margine(it) or 0) for it in out if it.get("_tipo") == "comm_lontano")
-    entra, motivi = [], Counter()
+    entra, motivi, inutili, gia = [], Counter(), set(), set()
     for it in items:
         if it.get("id") not in tolti:
             continue
@@ -778,8 +779,13 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             m = "errore"
         if m:
             motivi["non_entrerebbe:" + m] += 1
+            if isinstance(it.get("id"), int):
+                inutili.add(it["id"])           # 18/11: anche confermate resterebbero fuori: nessuna chiamata pagata
             continue
         entra.append(it)
+        if gia_controllata(it):
+            motivi["entra_gia_controllate"] += 1   # 18/11: decisione Claude allo stesso prezzo con le foto: non si rifà
+            gia.add(it["id"])
     entra.sort(key=lambda it: (-(float(SR.margine(it) or 0) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))),
                                it.get("id") or 0))
     fuori: set = set()
@@ -793,7 +799,7 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             if info.get("sito"):
                 mis["entrate_sito"].add(lid)
     CODA_SITO.update(t=time.time(), entra=[it["id"] for it in entra], fuori=fuori, sul_sito=dentro,
-                     motivi=dict(motivi))
+                     motivi=dict(motivi), inutili=inutili, gia_controllate=gia)
     res = {"entra": len(entra), "fuori_per_altro": len(fuori), **dict(motivi),
            "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),
            "usd_oggi_processo": round(mis["usd"], 4), "usd_sito_oggi_processo": round(mis["usd_sito"], 4)}
@@ -801,6 +807,24 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
         CODA_SITO["log_t"] = time.time()
         log.warning("CODA_CONTROLLO %s", json.dumps(res, ensure_ascii=False))
     return res
+
+
+def sito_in_attesa() -> int:
+    """18/11: auto della coda del sito (fresca) mai offerte a un giro del controllo di questo processo: con almeno una
+    il giro successivo parte subito (web/app._attendi_giro_controllo). Le già controllate non contano."""
+    sito = coda_sito_fresca()
+    if not sito:
+        return 0
+    visti = CODA_SITO.get("visti_giro") or set()
+    gia = CODA_SITO.get("gia_controllate") or set()
+    return sum(1 for i in sito.get("entra") or [] if i not in visti and i not in gia)
+
+
+def gia_controllata(it: dict) -> bool:
+    """18/11: l'auto ha già una decisione Claude allo stesso prezzo con le foto viste che NON conferma lo sconto alto:
+    il controllo non si ripete (stessa domanda, stessa risposta: richiederla finché passa cambierebbe la regola)."""
+    j = (it.get("_r") or {}).get("jev") or {}
+    return j.get("fonte") == "claude" and j.get("stesso_prezzo") is not False and j.get("danni") is not None
 
 
 def coda_sito_fresca() -> dict | None:
@@ -892,31 +916,15 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     t0 = time.time()
     assicura_colonne(conn)
     fatte_oggi, usd_oggi, usd_rinnovi = spesa_oggi(conn)
-    tetto = int(_env("CONTROLLO_MAX_GIORNO", "3200")) - fatte_oggi
-    budget = budget_usd()
-    dosato = budget_dosato(budget)
     sito = coda_sito_fresca()
-    # 17/11 (notte-03): le auto della coda del sito (entrerebbero con la conferma) possono anticipare sul dosato fino a
-    # QUOTA_ANTICIPO del budget del giorno: stessa spesa del giorno, prima alle auto che entrano davvero
-    anticipo = min(budget, dosato + QUOTA_ANTICIPO * budget) if sito and sito.get("entra") else dosato
-    solo_sito = False
-    # 13/11 (giudice N13): pausa, tetto e budget fermano solo le chiamate PAGATE; il riuso gratuito (decisione riportata
-    # al prezzo nuovo quando il contenuto è uguale) e gli scarti dal testo girano comunque
+    # 18/11 (cliente: "non voglio budget"): nessun tetto di spesa né di chiamate al giorno. Restano i limiti tecnici:
+    # CONTROLLO_PER_GIRO auto per giro (40), blocchi di CONTROLLO_PARALLELI, pausa su credito finito/limite (402/429/529),
+    # niente richiamate di auto fallite per 6 ore e nessuna doppia chiamata sulla stessa auto allo stesso prezzo.
+    # Il riuso gratuito e gli scarti dal testo girano anche durante la pausa.
+    AI.registra_spesa_log(conn)
     stop = None
     if time.time() < _PAUSA["fino"]:
         stop = {"saltato": "pausa per credito/limite AI", "ripresa_tra_min": int((_PAUSA["fino"] - time.time()) / 60)}
-    elif tetto <= 0:
-        stop = {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": fatte_oggi}
-    elif AI.mese_finito(conn):
-        stop = {"saltato": "tetto mensile AI raggiunto (100 €/mese)"}
-    elif usd_oggi >= budget:
-        stop = {"saltato": "budget del controllo finito", "usd_oggi": usd_oggi}
-    elif usd_oggi >= dosato:
-        if usd_oggi < anticipo:
-            solo_sito = True                       # dosato raggiunto: solo le auto della coda del sito
-        else:
-            stop = {"saltato": "budget dosato: spesa già al livello di quest'ora", "usd_oggi": usd_oggi,
-                    "dosato": dosato}
     sql = CAND_SQL_RIPIEGO if conn.execute("SELECT to_regclass('ripiego_prudente') AS t").fetchone()["t"] else CAND_SQL
     par = dict(parametri_diesel(), quota=float(_env("JEV_QUOTA_SOGLIA", "0.7")), validi=valida_giorni())
     righe = [dict(r) for r in conn.execute(sql, par).fetchall()]
@@ -926,6 +934,9 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         # tutto il resto), anche se non sono tra le candidate di CAND_SQL (valutazione più vecchia di 12 ore)
         per_id = {r["id"]: r for r in righe}
         sito_ids = list(sito["entra"])[:1500]
+        CODA_SITO.setdefault("visti_giro", set()).update(sito_ids)      # 18/11: per sito_in_attesa
+        if len(CODA_SITO["visti_giro"]) > 20000:
+            CODA_SITO["visti_giro"] = set(sito_ids)
         try:
             for r in conn.execute(CAND_SQL_SITO, dict(par, sito_ids=sito_ids)).fetchall():
                 r = dict(r)
@@ -950,30 +961,25 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     righe = [r for r in righe if not r.get("solo_sconto") or sconto_fermo(r) or r.get("_sito")]
     if sito:
         # 17/11 (notte-03): tolte dal sito a un passo che il controllo non cambia: nessuna chiamata pagata (resta il
-        # riuso gratuito al prezzo nuovo). Tornano in coda da sole al primo elenco in cui passano quel passo
+        # riuso gratuito al prezzo nuovo). Tornano in coda da sole al primo elenco in cui passano quel passo.
+        # 18/11: lo stesso per le auto con sconto alto che anche confermate resterebbero fuori (tetto dei commercianti
+        # già pieno, perizia "caro"/"da verificare", margine sotto il minimo: CODA_SITO["inutili"], ~500 auto):
+        # nessuna chiamata pagata finché la situazione non cambia (i diesel in più, dz, restano in coda come prima)
         def _solo_riuso(r):
             return r.get("d_fonte") == "claude" and r.get("d_prezzo") is not None and r.get("price_eur") is not None \
                 and int(r["d_prezzo"]) != int(r["price_eur"])
+        inutili = sito.get("inutili") or set()
         tenute = []
         for r in righe:
-            if r["id"] in sito["fuori"] and not r.get("dz") and not r.get("_sito"):
-                st["fuori_per_altro"] += 1
+            if not r.get("dz") and not r.get("_sito") and (r["id"] in sito["fuori"] or r["id"] in inutili):
+                st["fuori_per_altro" if r["id"] in sito["fuori"] else "non_entrerebbe_saltate"] += 1
                 if not _solo_riuso(r):
                     continue
                 r["_solo_riuso"] = True
             tenute.append(r)
         righe = tenute
-    if solo_sito:
-        righe = [r for r in righe if r.get("_sito") or r.get("_solo_riuso")
-                 or (r.get("d_fonte") == "claude" and r.get("d_prezzo") is not None and r.get("price_eur") is not None
-                     and int(r["d_prezzo"]) != int(r["price_eur"]))]
-        for r in righe:
-            if not r.get("_sito"):
-                r["_solo_riuso"] = True
     n_cand = len(righe)
-    quante = 0 if stop else min(tetto, massimo or per_giro())
-    if usd_rinnovi >= QUOTA_RINNOVI * budget:
-        righe = [r for r in righe if classe(r) != 3]       # rinnovi finiti per oggi: solo nuove e prezzi cambiati
+    quante = 0 if stop else (massimo or per_giro())
     righe = ordina(righe)
     # 15/11 (giudice): le senza foto oltre la quota del giro escono PRIMA del taglio, così non tolgono il posto ai rinnovi
     _sf, _rimandate, _tenute = 0, 0, []
@@ -1151,17 +1157,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     try:
         with ThreadPoolExecutor(max_workers=blocco) as ex:
             for k in range(0, len(da_fare), blocco):
-                parte = da_fare[k:k + blocco]
-                # 17/11 (notte-03): le auto della coda del sito fino ad "anticipo", le altre fino al dosato
-                limite = anticipo if any(a.get("_sito") for a in parte) else min(budget, dosato)
-                if spesa["usd"] >= min(budget, limite):
-                    st["budget_finito" if spesa["usd"] >= budget else "budget_dosato"] += 1
-                    break
-                if spesa["usd"] >= min(budget, dosato):
-                    parte = [a for a in parte if a.get("_sito")]
-                if spesa["rinnovi"] >= QUOTA_RINNOVI * budget:
-                    st["rinnovi_rimandati"] += sum(1 for a in parte if a.get("_classe") == 3)
-                    parte = [a for a in parte if a.get("_classe") != 3]
+                parte = da_fare[k:k + blocco]          # 18/11: nessun budget, solo il limite per giro
                 for a, res in ex.map(uno, parte):
                     with lock:
                         try:
@@ -1196,8 +1192,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     res = {"fonte": "claude", "modello": AI.MODEL_FAST, "candidate": len(da_fare), "in_coda": n_cand,
            "secondi": round(time.time() - t0), "token_in": token_tot[0], "token_out": token_tot[1],
            "costo_usd": round(usd, 4), "usd_auto": round(usd / max(1, st["fatte"] + st["non_valida"]), 5),
-           "fatte_oggi": fatte_oggi + st["fatte"], "usd_oggi": round(spesa["usd"], 4), "budget_usd": budget,
-           "dosato_usd": dosato, "rinnovi_usd": round(spesa["rinnovi"], 4), "sito_usd": round(spesa["sito"], 4),
+           "fatte_oggi": fatte_oggi + st["fatte"], "usd_oggi": round(spesa["usd"], 4), "budget_usd": None,
+           "rinnovi_usd": round(spesa["rinnovi"], 4), "sito_usd": round(spesa["sito"], 4),
            # 17/11 (notte-03): auto ENTRATE sul sito dopo un controllo pagato oggi (misurate da coda_dal_sito al
            # prossimo elenco) per dollaro speso oggi dal processo
            "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),

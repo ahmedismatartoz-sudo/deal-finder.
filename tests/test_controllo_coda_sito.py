@@ -49,7 +49,8 @@ def _pulisci():
     CA._PAUSA["fino"] = 0.0
     CA._FALLITE.clear()
     CA._SALTATE.clear()
-    CA.CODA_SITO.update(t=0.0, entra=[], fuori=set(), sul_sito=set(), motivi={})
+    CA.CODA_SITO.update(t=0.0, entra=[], fuori=set(), sul_sito=set(), motivi={}, inutili=set(), gia_controllate=set())
+    CA.CODA_SITO.pop("visti_giro", None)
     CA.MISURA.update(giorno=None)
 
 
@@ -145,8 +146,25 @@ def test_coda_dal_sito_solo_le_auto_che_entrerebbero():
     assert res["non_entrerebbe:margine_minimo"] == 1 and res["non_entrerebbe:perizia"] == 1
     assert {5, 6} <= CA.CODA_SITO["fuori"] and 1 not in CA.CODA_SITO["fuori"] and CA.CODA_SITO["sul_sito"] == {4}
     assert CA.coda_sito_fresca() is not None
+    assert CA.CODA_SITO["inutili"] == {2, 3}                  # 18/11: anche confermate resterebbero fuori
+    assert "entra_gia_controllate" not in res
     CA.CODA_SITO["t"] = time.time() - 31 * 60                 # elenco vecchio: il giro fa come prima
     assert CA.coda_sito_fresca() is None
+    _pulisci()
+
+
+def test_coda_dal_sito_conta_le_gia_controllate():
+    # 18/11: decisione Claude allo stesso prezzo con le foto viste che non conferma (auto_vera bassa): l'auto resta
+    # nella coda "entra" (passerebbe tutto il resto) ma è segnata come già controllata (non si rifà, non sveglia il giro)
+    _pulisci()
+    j = {"fonte": "claude", "danni": .05, "foto_internet": .05, "truffa": .1, "auto_vera": .5, "dati_coerenti": 1,
+         "decisione": "tratta", "stesso_prezzo": True, "km_ok": 1, "guasto": 0}
+    items = [auto(1), auto(7, jev=j)]
+    out, fun = SR.elenco_sito([dict(it, _r=dict(it["_r"]), pv=dict(it["pv"])) for it in items], G, scrivi_log=False)
+    assert out == [] and set(fun.tolti["truffa"]) == {1, 7}
+    res = CA.coda_dal_sito(items, out, fun, G)
+    assert CA.CODA_SITO["entra"] in ([1, 7], [7, 1]) and res["entra_gia_controllate"] == 1
+    assert CA.CODA_SITO["gia_controllate"] == {7} and CA.sito_in_attesa() == 1
     _pulisci()
 
 
@@ -201,33 +219,45 @@ def test_giro_prima_la_coda_del_sito_e_niente_spesa_per_le_fuori():
     _pulisci()
 
 
-def test_coda_del_sito_anticipa_sul_dosato_senza_superare_il_budget():
+def test_nessun_budget_prima_la_coda_del_sito_e_niente_spesa_sulle_inutili():
+    # 18/11 18:31 (cliente: "togli qualsiasi tipo di budget"): nessun dosato né budget, anche con le variabili vecchie;
+    # la coda del sito va per prima; le auto che anche confermate resterebbero fuori (inutili) non si pagano
     _pulisci()
-    CA.CODA_SITO.update(t=time.time(), entra=[9], fuori=set(), sul_sito=set())
-    cand = [riga(1)]
+    CA.CODA_SITO.update(t=time.time(), entra=[9], fuori=set(), sul_sito=set(), inutili={2})
+    cand = [riga(1), riga(2)]
     sito = [riga(9, price_eur=8000, m=13000, margine=3500)]
-    schede = [scheda(1), scheda(9, price_eur=8000)]
+    schede = [scheda(1), scheda(2), scheda(9, price_eur=8000)]
     fatte = []
 
     def chiama(testo, foto):
         fatte.append("8000" in testo)
         return dict(OK), 800, 80, "claude-haiku-5-5"
     vecchia, prima = CA.ore_roma, AI.image_url_block
-    CA.ore_roma = lambda: 0.0                                  # dosato = 1,5 × 2/24 = 0,125 $
+    CA.ore_roma = lambda: 0.0
     AI.image_url_block = lambda src: {"type": "image", "source": {"type": "url", "url": src}}
     try:
-        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="url", CONTROLLO_BUDGET_USD="1.5"):
-            res = CA.giro(Conn(cand, schede, sito, spesa_usd=0.2), chiama=chiama)
-            assert fatte == [True] and res["sito_fatte"] == 1         # oltre il dosato: solo l'auto del sito
-            fatte.clear()
-            res = CA.giro(Conn(cand, schede, sito, spesa_usd=0.9), chiama=chiama)   # oltre 0,125 + 0,75
-            assert fatte == [] and "dosato" in res["saltato"]
-            fatte.clear()
-            CA.CODA_SITO.update(entra=[])                             # senza coda del sito: come prima
-            res = CA.giro(Conn(cand, schede, [], spesa_usd=0.2), chiama=chiama)
-            assert fatte == [] and "dosato" in res["saltato"]
+        with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="url", CONTROLLO_BUDGET_USD="1.5",
+                 CONTROLLO_MAX_GIORNO="1", AI_BUDGET_GIORNO="0.01", AI_BUDGET_MESE_USD="0.01"):
+            res = CA.giro(Conn(cand, schede, sito, spesa_usd=50.0), chiama=chiama)
+            assert "saltato" not in res and res["budget_usd"] is None
+            assert fatte == [True, False] and res["sito_fatte"] == 1          # prima il sito, poi l'auto 1
+            assert res["non_entrerebbe_saltate"] == 1                          # l'auto 2: nessuna chiamata
+            assert CA.budget_usd() == float("inf") and AI.budget_giorno() == float("inf")
+            assert AI.budget_mese() == float("inf")
     finally:
         CA.ore_roma, AI.image_url_block = vecchia, prima
+    _pulisci()
+
+
+def test_sito_in_attesa_sveglia_il_giro_una_volta():
+    _pulisci()
+    CA.CODA_SITO.update(t=time.time(), entra=[9, 10], fuori=set(), sul_sito=set(), gia_controllate={10})
+    CA.CODA_SITO.pop("visti_giro", None)
+    assert CA.sito_in_attesa() == 1                  # la 10 è già controllata: non sveglia
+    CA.CODA_SITO["visti_giro"] = {9}
+    assert CA.sito_in_attesa() == 0                  # già offerta a un giro: niente risvegli continui
+    CA.CODA_SITO.update(t=0.0)
+    assert CA.sito_in_attesa() == 0                  # coda vecchia: niente
     _pulisci()
 
 

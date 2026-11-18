@@ -54,30 +54,17 @@ def spesa_oggi(conn) -> float:
     return round(sum(costo(r["model"], int(r["i"] or 0), int(r["o"] or 0), int(r["w"] or 0)) for r in rows), 4)
 
 
+# 18/11 18:31 (cliente, decisione esplicita: "togli qualsiasi tipo di budget al sistema, non voglio budget"): nessun
+# tetto di SPESA AI, né giornaliero (AI_BUDGET_GIORNO) né mensile (budget_mese), e le variabili d'ambiente rimaste su
+# Render non li riaccendono. Restano i limiti TECNICI di ogni lavoro (auto per giro, pause su errori di credito/limite
+# 402/429/529, niente doppie chiamate sulla stessa auto allo stesso prezzo) e la spesa si continua a REGISTRARE
+# (ai_usage) e a scrivere nei log: SPESA_AI_GIORNO una riga all'ora con giorno e mese (prezzi di listino).
 def budget_giorno() -> float:
-    return float(os.environ.get("AI_BUDGET_GIORNO", "2.5"))
+    return float("inf")
 
 
 def budget_mese() -> float:
-    """16/11 sera (cliente: "non posso spendere più di 100 € al mese di AI"): tetto MENSILE su TUTTA la spesa AI
-    (tutti i lavori, compresi quelli con budget separato), in dollari. 100 € ≈ 105 $ con margine."""
-    if os.environ.get("AI_BUDGET_MESE_USD"):
-        return float(os.environ["AI_BUDGET_MESE_USD"])
-    # 17/11 notte (cliente: "fai quello che devi fare, anche alzare il costo AI, basta arrivare a 600-700 auto"): a
-    # novembre 2026 erano già spesi 188,97 $ prima del tetto; fino a fine mese circa 4 $ al giorno in più (≈ 55 $).
-    # Da dicembre il tetto torna a 125 $ al mese (≈ 115 €).
-    try:
-        from datetime import datetime
-        from zoneinfo import ZoneInfo
-        # 17/11 14:08 (cliente: "metti molto più crediti, ho 100 $ gratuiti, sfruttali"): l'account Anthropic non ha
-        # metodo di pagamento né crediti comprati, solo il credito promozionale (92,65 $ al 17/11, scade l'11/12): la
-        # spesa vera non può superarlo. Il conteggio interno (prezzi di listino) risulta molto più alto di quello della
-        # console, quindi il tetto interno di novembre si alza a 500 $ per non fermare l'AI senza motivo.
-        if datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m") == "2026-11":
-            return 500.0
-    except Exception:
-        pass
-    return 125.0
+    return float("inf")
 
 
 def spesa_mese(conn) -> float:
@@ -88,51 +75,43 @@ def spesa_mese(conn) -> float:
     return round(sum(costo(r["model"], int(r["i"] or 0), int(r["o"] or 0), int(r["w"] or 0)) for r in rows), 4)
 
 
-def mese_finito(conn) -> bool:
-    """True se la spesa AI del mese ha raggiunto il tetto mensile: TUTTA l'AI si ferma fino al mese dopo."""
+def spesa_tutta_oggi(conn) -> float:
+    """Dollari spesi oggi (ora italiana) da TUTTI i lavori AI (anche quelli che prima avevano un budget separato)."""
+    rows = conn.execute("SELECT model, sum(input_tokens) AS i, sum(output_tokens) AS o, sum(web_searches) AS w "
+                        "FROM ai_usage WHERE at > date_trunc('day', now() AT TIME ZONE 'Europe/Rome') AT TIME ZONE 'Europe/Rome' "
+                        "GROUP BY model").fetchall()
+    return round(sum(costo(r["model"], int(r["i"] or 0), int(r["o"] or 0), int(r["w"] or 0)) for r in rows), 4)
+
+
+_BUDGET_LOG = {"giorno": None, "t": 0.0}
+
+
+def registra_spesa_log(conn, ogni_s: float = 3600) -> None:
+    """Una riga SPESA_AI_GIORNO al massimo ogni ora per processo: quanto si è speso oggi e nel mese (nessun tetto)."""
+    import time as _t
+    if _t.time() - _BUDGET_LOG.get("t", 0.0) < ogni_s:
+        return
+    _BUDGET_LOG["t"] = _t.time()
     try:
-        spesa = spesa_mese(conn)
+        log.warning("SPESA_AI_GIORNO oggi %.2f $ (tutti i lavori), mese %.2f $: nessun tetto di spesa (cliente 18/11)",
+                    spesa_tutta_oggi(conn), spesa_mese(conn))
     except Exception:
         try:
             conn.rollback()
         except Exception:
             pass
-        return False
-    if spesa >= budget_mese():
-        if _BUDGET_LOG.get("mese") != spesa // 5:
-            _BUDGET_LOG["mese"] = spesa // 5
-            log.warning("BUDGET_MESE_FINITO: spesi %.2f $ su %.2f $ nel mese: AI ferma fino al primo del mese",
-                        spesa, budget_mese())
-        return True
+
+
+def mese_finito(conn) -> bool:
+    """Nessun tetto mensile (18/11): sempre False. Resta per chi la chiama; scrive la spesa nei log."""
+    registra_spesa_log(conn)
     return False
 
 
-_BUDGET_LOG = {"giorno": None}
-
-
 def budget_finito(conn) -> bool:
-    if mese_finito(conn):
-        return True
-    try:
-        spesa = spesa_oggi(conn)
-    except Exception:
-        return False
-    finito = spesa >= budget_giorno()
-    if finito:
-        try:
-            from datetime import datetime
-            from zoneinfo import ZoneInfo
-            ora = datetime.now(ZoneInfo("Europe/Rome"))
-        except Exception:
-            from datetime import datetime
-            ora = datetime.now()
-        if _BUDGET_LOG["giorno"] != ora.date():
-            # 13/11 (giudice N3): una riga al giorno, con l'ora: da qui giudice, difetti, lettore e perizia si fermano
-            # (il giudice e i difetti chiudono: l'auto resta fuori o con la valutazione precedente)
-            _BUDGET_LOG["giorno"] = ora.date()
-            log.warning("BUDGET_COMUNE_FINITO alle %s (ora di Roma): spesi %.2f $ su %.2f $", ora.strftime("%H:%M"),
-                        spesa, budget_giorno())
-    return finito
+    """Nessun tetto giornaliero (18/11): sempre False. Resta per chi la chiama; scrive la spesa nei log."""
+    registra_spesa_log(conn)
+    return False
 
 
 @dataclass

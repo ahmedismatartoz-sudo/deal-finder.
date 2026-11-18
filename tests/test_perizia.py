@@ -338,16 +338,9 @@ def _giro_coda_tetto_e_salvataggio():
     assert res["fatte"] == 2 and res["da_attesa"] == 2 and [x[0] for x in conn.salvate] == [11, 12]
     assert P.CODA["attesa"] == [13] and P.CODA["sito"] == [14]
     assert not any("listing_photos" in s for s in conn.sql)       # niente foto
-    # tetto del giorno raggiunto: nessuna chiamata
-    res = P.giro(ConnFinta(auto=[_per_giro(13)], fatte=400), chiama=lambda *a: 1 / 0)
-    assert res["saltato"] == "tetto giornaliero raggiunto"
-    # oltre il 60% del tetto le auto già sul sito aspettano: si fanno solo quelle in attesa
-    P.metti_in_coda([], [14])
-    res = P.giro(ConnFinta(auto=[_per_giro(14)], fatte=250), chiama=lambda *a: 1 / 0)
-    assert res["saltato"].startswith("quota")
-    P.metti_in_coda([13], [14])
-    conn = ConnFinta(auto=[_per_giro(13), _per_giro(14)], fatte=250)
-    assert P.giro(conn, chiama=lambda *a: (copy.deepcopy(BUONA), 1, 1))["fatte"] == 1 and conn.salvate[0][0] == 13
+    # 18/11 (cliente: "non voglio budget"): nessun tetto del giorno né quota per le auto sul sito
+    res = P.giro(ConnFinta(auto=[_per_giro(13), _per_giro(14)], fatte=400), chiama=lambda *a: (copy.deepcopy(BUONA), 1, 1))
+    assert "saltato" not in res and res["fatte"] == 2                # prima la 13 (in attesa), poi la 14 (sul sito)
     P.metti_in_coda([], [])
 
 

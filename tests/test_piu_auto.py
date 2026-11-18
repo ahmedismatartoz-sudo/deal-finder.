@@ -132,8 +132,8 @@ def test_prezzi_veri_e_budget_separato():
             return _Ris([])
     c = C()
     assert AI.spesa_oggi(c) == 0 and "task <> ALL" in c.sql and p_ok(c.p)
-    with env(CONTROLLO_BUDGET_USD=None):
-        assert CA.budget_usd() == 1.5  # 16/11 sera: tetto AI 100 €/mese in tutto
+    with env(CONTROLLO_BUDGET_USD="1.5"):
+        assert CA.budget_usd() == float("inf")  # 18/11 cliente: nessun budget, nemmeno con la variabile vecchia
 
 
 def p_ok(p):
@@ -577,6 +577,7 @@ def test_truffa_zero_non_diventa_uno():
 
 def test_budget_dosato_e_rinnovi():
     assert CA.budget_dosato(4.0, 0) == round(4 * 2 / 24, 4)
+    assert CA.budget_dosato(float("inf"), 0) == float("inf")
     assert CA.budget_dosato(4.0, 10) == 2.0 and CA.budget_dosato(4.0, 23.5) == 4.0
     CA._PAUSA["fino"] = 0.0
     CA._FALLITE.clear()
@@ -614,10 +615,9 @@ def test_budget_dosato_e_rinnovi():
             assert fatte == ["controllo_auto", "controllo_auto_rinnovo"]        # prima la nuova, poi il rinnovo
             fatte.clear()
             CA._FALLITE.clear()
-            res = CA.giro(Conn(1.3), chiama=chiama)                            # rinnovi già oltre il 30% di 4 $
-            assert fatte == ["controllo_auto"] and res["fatte"] == 1
-            CA.ore_roma = lambda: 0.0                                           # 4 × 2/24 = 0,33 $ già spesi
-            assert "dosato" in CA.giro(Conn(1.3), chiama=chiama)["saltato"]
+            CA.ore_roma = lambda: 0.0
+            res = CA.giro(Conn(1.3), chiama=chiama)            # 18/11: nessuna quota rinnovi né dosato
+            assert fatte == ["controllo_auto", "controllo_auto_rinnovo"] and res["fatte"] == 2
     finally:
         CA.ore_roma = vecchia
 
@@ -676,7 +676,7 @@ def test_senza_giudice_auto_cambiata_non_tiene_il_margine_vecchio():
     assert not VAL.tieni_precedente(dict(v, giudice_mancante=False), esistente, "dati_pari_o_piu")
 
 
-def test_riuso_gratis_anche_col_budget_finito():
+def test_riuso_gratis_anche_in_pausa():
     CA._PAUSA["fino"] = 0.0
     CA._FALLITE.clear()
     CA._SALTATE.clear()
@@ -686,11 +686,15 @@ def test_riuso_gratis_anche_col_budget_finito():
              "d_prezzo": 5000, "d_fonte": "claude", "d_impronta": imp}]
 
     def chiama(testo, foto):
-        raise AssertionError("nessuna chiamata pagata col budget finito")
+        raise AssertionError("nessuna chiamata pagata durante la pausa per credito/limite")
     conn = ConnFinta(cand, [a])
-    with env(CONTROLLO_BUDGET_USD="0", CONTROLLO_FOTO_MODO="0"):
-        res = CA.giro(conn, chiama=chiama)
-    assert res["saltato"].startswith("budget") and res["riusate"] == 1
+    CA._PAUSA["fino"] = __import__("time").time() + 600     # 18/11: nessun budget; resta la pausa tecnica
+    try:
+        with env(CONTROLLO_BUDGET_USD="0", CONTROLLO_FOTO_MODO="0"):
+            res = CA.giro(conn, chiama=chiama)
+    finally:
+        CA._PAUSA["fino"] = 0.0
+    assert res["saltato"].startswith("pausa") and res["riusate"] == 1
     assert any(q.startswith("UPDATE decisione_ai SET prezzo") and p == (5200, 1) for q, p in conn.scritte)
 
 
@@ -834,7 +838,7 @@ def test_decisione_scaduta_non_si_riusa_e_va_coi_rinnovi():
         res = CA.giro(conn, chiama=chiama)
     assert not res.get("riusate") and chiamate == [1] and res["fatte"] == 1
     assert any(q.startswith("INSERT INTO ai_usage") and p[0] == CA.TASK_RINNOVO for q, p in conn.scritte)
-    # quota dei rinnovi finita: la scaduta aspetta (niente riuso gratis di una decisione scaduta)
+    # 18/11: nessuna quota dei rinnovi: la scaduta si rifà (pagata, mai riusata gratis)
     chiamate.clear()
 
     class ConnRinnoviFiniti(ConnFinta):
@@ -847,10 +851,10 @@ def test_decisione_scaduta_non_si_riusa_e_va_coi_rinnovi():
     CA.ore_roma = lambda: 23.0                            # budget dosato = budget intero: conta solo la quota rinnovi
     try:
         with env(CONTROLLO_PARALLELI="1", CONTROLLO_FOTO_MODO="0", CONTROLLO_BUDGET_USD="1000"):
-            res = CA.giro(conn, chiama=chiama)            # 400 $ di rinnovi su 1.000: quota (30%) finita
+            res = CA.giro(conn, chiama=chiama)            # 400 $ di rinnovi: nessun tetto
     finally:
         CA.ore_roma = ore
-    assert "saltato" not in res and chiamate == [] and not res.get("riusate")
+    assert "saltato" not in res and chiamate == [1] and not res.get("riusate")
 
 
 def test_pg_coda_senza_foto_e_scadute():

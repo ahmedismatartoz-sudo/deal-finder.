@@ -1638,12 +1638,19 @@ def _coda_perizia(items: list[dict], out: list[dict]) -> None:
 def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
     """Righe dell'elenco (scovo.LIST_SQL) trasformate una alla volta in schede compatte."""
     items, opens, pv_at, con_pv = [], {}, {}, 0
-    # 13/11 (piu-auto): a pagine di ELENCO_PAGINA righe (2.000) per id decrescente, fino a ELENCO_LIMITE (12.000;
-    # prima 8.000 in una lettura sola). Misura: ~2,2 KB per scheda → +9 MB per 4.000 auto in più, mentre le righe
-    # grezze in memoria insieme scendono da 8.000 a 2.000. Se il tetto taglia, una riga ELENCO_TAGLIATO nei log.
-    limite = int(os.environ.get("ELENCO_LIMITE", "12000"))
+    # 13/11 (piu-auto): a pagine di ELENCO_PAGINA righe (2.000) per id decrescente, fino a ELENCO_LIMITE (prima 8.000
+    # in una lettura sola). Misura: ~2,2 KB per scheda, mentre le righe grezze in memoria insieme scendono a 2.000.
+    # 18/11 (cliente: "più auto, fallo bene"): il tetto di 12.000 tagliava auto attive, fresche e approfondite solo
+    # perché avevano l'id vecchio (log ELENCO_TAGLIATO, id più basso 417505). Ora 30.000 (in pratica tutte) e, al posto
+    # del tetto fisso, la memoria vera del processo: si smette di leggere se la memoria PREVISTA a fine calcolo (RSS di
+    # adesso + ELENCO_KB_DOPO KB per riga letta: i dati delle regole che _arricchisci aggiunge dopo, misurati ~1 KB)
+    # supera ELENCO_MEMORIA_MB (450 su 512). Nessuna regola cambia: si leggono solo più righe dello stesso LIST_SQL.
+    limite = int(os.environ.get("ELENCO_LIMITE", "30000"))
     pagina = max(200, int(os.environ.get("ELENCO_PAGINA", "2000")))
-    ultimo = None
+    tetto_mb = float(os.environ.get("ELENCO_MEMORIA_MB", "450"))
+    kb_dopo = float(os.environ.get("ELENCO_KB_DOPO", "1.5"))
+    ultimo, motivo, rss = None, None, 0.0
+    t0 = time.time()
     while stats["lista"] < limite:
         n_pag = 0
         for r in conn.execute(scovo.LIST_SQL + (" AND l.id < %(ultimo)s" if ultimo else "")
@@ -1662,11 +1669,51 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
             pv_at[it["id"]] = r.get("pv_at")
         if n_pag < min(pagina, limite - stats["lista"] + n_pag):
             break                                   # pagina incompleta: elenco finito
-    if stats["lista"] >= limite:
+        rss = _rss_mb()
+        if tetto_mb > 0 and rss and rss + stats["lista"] * kb_dopo / 1000 > tetto_mb:
+            motivo = "memoria"
+            break
+    if motivo is None and stats["lista"] >= limite:
+        motivo = "tetto"
+    stats["lista_s"] = round(time.time() - t0, 1)
+    stats["lista_rss_mb"] = round(rss or _rss_mb())
+    if motivo:
         stats["lista_tagliata"] = 1
-        logging.getLogger("scovo").warning("ELENCO_TAGLIATO elenco fermo al tetto ELENCO_LIMITE=%d (id più basso "
-                                           "letto %s): le auto più vecchie restano fuori", limite, ultimo)
+        stats["lista_tagliata_" + motivo] = 1
+        fuori = _righe_rimaste(conn, ultimo)
+        if fuori is not None:
+            stats["lista_rimaste_fuori"] = fuori
+        logging.getLogger("scovo").warning(
+            "ELENCO_TAGLIATO motivo=%s elenco fermo a %d righe (ELENCO_LIMITE=%d, memoria %.0f MB, tetto %.0f MB, id più "
+            "basso letto %s, rimaste fuori %s): le auto più vecchie restano fuori", motivo, stats["lista"], limite,
+            rss or _rss_mb(), tetto_mb, ultimo, "?" if fuori is None else fuori)
     return items, opens, pv_at, con_pv
+
+
+def _rss_mb() -> float:
+    from .. import memoria
+    return memoria.rss_mb()
+
+
+def _righe_rimaste(conn, ultimo) -> int | None:
+    """18/11: quante righe valide dell'elenco (stesse condizioni di LIST_SQL, senza le colonne pesanti) sono rimaste
+    sotto l'ultimo id letto. Solo quando il tetto taglia; None se il conteggio non riesce."""
+    if not ultimo:
+        return None
+    try:
+        dove = scovo.LIST_SQL.rsplit("\nWHERE ", 1)[1]
+        conn.execute("SET LOCAL statement_timeout = '20s'")
+        r = conn.execute("SELECT count(*) AS n FROM listings l WHERE EXISTS (SELECT 1 FROM valuations v "
+                         "WHERE v.listing_id = l.id) AND l.id < %(ultimo)s AND " + dove,
+                         {"ultimo": ultimo}).fetchone()
+        return int((r or {}).get("n") or 0)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        logging.getLogger("scovo").warning("ELENCO_TAGLIATO righe rimaste non contate: %s", str(e)[:160])
+        return None
 
 
 def motivo_commercianti_top(cat) -> str:
@@ -1848,7 +1895,12 @@ def _calcola_elenco() -> None:
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
         if it.get("id") in diesel_extra:
             c["diesel_extra"] += 1          # 13/11 sera: diesel per bene entrate con DIESEL_EXTRA
-    logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s", len(out), time.time() - t0, dict(sorted(c.items())))
+    # 18/11: anche quante righe dell'elenco (LIST_SQL) sono state lette, in quanto tempo, la memoria e se il tetto ha tagliato
+    logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s righe=%d lettura=%ss memoria=%sMB tagliato=%s",
+                                       len(out), time.time() - t0, dict(sorted(c.items())), int(stats.get("lista") or 0),
+                                       stats.get("lista_s"), stats.get("lista_rss_mb"),
+                                       "memoria" if stats.get("lista_tagliata_memoria") else
+                                       "tetto" if stats.get("lista_tagliata_tetto") else "no")
     del items, fun
     try:   # 11/11: quante auto per provincia (es. Novara)
         import collections as _co, re as _re
@@ -3554,6 +3606,22 @@ def _tempo_reale():
     threading.Thread(target=telefoni_subito, daemon=True, name="tr-telefoni").start()
     threading.Thread(target=nuovi, daemon=True, name="tr-nuovi").start()
 
+    def _attendi_giro_controllo(attesa: float) -> None:
+        """18/11: l'attesa fra due giri del controllo (JEV_MIN) si interrompe quando nella coda del sito compaiono auto
+        nuove (tolte solo per lo sconto alto e che passerebbero tutto il resto): il controllo parte entro ~1-2 minuti
+        invece di aspettare fino a un'ora. Mai due giri a meno di CONTROLLO_SITO_MIN_S secondi (120)."""
+        minimo = float(os.environ.get("CONTROLLO_SITO_MIN_S", "120"))
+        fine = time.time() + attesa
+        time.sleep(min(attesa, minimo))
+        while time.time() < fine:
+            try:
+                from ..ai import controllo_auto as _ca
+                if _ca.sito_in_attesa():
+                    return
+            except Exception:
+                pass
+            time.sleep(min(60.0, max(1.0, fine - time.time())))
+
     def ai_decisionale():
         """AI decisionale (TypeSafe Jev, pricing/jev.py): ogni JEV_MIN minuti sulle auto migliori non ancora decise.
         Parte solo con la chiave TYPESAFE_API_KEY; non gira mentre c'è il calcolo grande (memoria)."""
@@ -3578,6 +3646,11 @@ def _tempo_reale():
                                 res = jev.giro(conn, int(os.environ.get("JEV_LOTTO_PICCOLO", "60")) if piccolo else None)
                                 _memoria.rilascia("jev")
                                 lg.warning("JEV_RIEPILOGO 3 giorni: %s", jev.riepilogo(conn))
+                                if res.get("conferma_ok") and not res.get("pubblicate"):
+                                    # 18/11: un'auto con sconto alto appena confermata va sul sito subito (non al
+                                    # prossimo elenco programmato)
+                                    _elenco["t"] = 0.0
+                                    _aggiorna_elenco(attendi=False)
                                 if res.get("pubblicate"):
                                     _telefoni_scelte()
                                     _elenco["t"] = 0.0
@@ -3590,7 +3663,7 @@ def _tempo_reale():
                                 conn.commit()
             except Exception as e:
                 lg.warning("JEV non riuscito: %s", str(e)[:300])
-            time.sleep(attesa)
+            _attendi_giro_controllo(attesa)
     threading.Thread(target=ai_decisionale, daemon=True, name="ai-decisionale").start()
 
     def riprova_giudice():

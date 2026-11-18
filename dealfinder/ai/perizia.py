@@ -512,7 +512,7 @@ def fatte_oggi(conn) -> int:
 
 
 def giro(conn, chiama=None, massimo: int | None = None) -> dict:
-    """Un giro: al massimo PERIZIA_PER_GIRO auto dalla coda, rispettando PERIZIA_MAX_GIORNO e AI_BUDGET_GIORNO."""
+    """Un giro: al massimo PERIZIA_PER_GIRO auto dalla coda (nessun tetto di spesa dal 18/11)."""
     if not attiva():
         return {"spenta": "PERIZIA_AI=0"}
     if chiama is None and not AI.available():
@@ -525,18 +525,10 @@ def giro(conn, chiama=None, massimo: int | None = None) -> dict:
     _tabella(conn)
     conn.commit()
     oggi = fatte_oggi(conn)
-    massimo_giorno = int(os.environ.get("PERIZIA_MAX_GIORNO", "400"))
-    tetto = massimo_giorno - oggi
-    if tetto <= 0:
-        return {"saltato": "tetto giornaliero raggiunto", "fatte_oggi": oggi}
-    # le auto già sul sito (solo per il riquadro nella scheda) usano al massimo il 60% del tetto: il resto resta per
-    # quelle in attesa, che senza perizia non entrano
-    ids = CODA["attesa"] + (CODA["sito"] if oggi < float(os.environ.get("PERIZIA_QUOTA_SITO", "0.6")) * massimo_giorno else [])
-    if not ids:
-        return {"saltato": "quota per le auto già sul sito finita, nessuna in attesa", "fatte_oggi": oggi}
-    if AI.budget_finito(conn):
-        return {"saltato": "budget AI del giorno finito", "fatte_oggi": oggi}
-    per_giro = min(tetto, massimo or int(os.environ.get("PERIZIA_PER_GIRO", "15")))
+    # 18/11 (cliente: "non voglio budget"): niente tetto giornaliero PERIZIA_MAX_GIORNO né quota del 60% per le auto già
+    # sul sito: prima quelle in attesa (senza perizia non entrano), poi quelle sul sito. Resta il limite tecnico per giro.
+    ids = list(dict.fromkeys(CODA["attesa"] + CODA["sito"]))
+    per_giro = massimo or int(os.environ.get("PERIZIA_PER_GIRO", "15"))
     ora = time.time()
     ids = [i for i in ids if not (_FALLITE.get(i, (0, 0))[0] >= 2 and ora - _FALLITE[i][1] < 6 * 3600)]
     scelte = ids[:per_giro * 3]                    # qualcuna può essere già periziata o non più valida

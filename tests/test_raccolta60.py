@@ -83,7 +83,8 @@ def test_osm_saloni_legge_nome_sito_email():
     assert out[0]["sito"] == "https://www.autobianchi.it" and out[1]["email"] == "info@verdicar.it"
 
 
-def test_tetto_mensile_ai_ferma_tutto():
+def test_nessun_tetto_di_spesa_ai():
+    # 18/11 18:31 (cliente: "togli qualsiasi tipo di budget"): né mensile né giornaliero, anche con le variabili vecchie
     from dealfinder.ai import client as AI
 
     class Conn:
@@ -94,9 +95,11 @@ def test_tetto_mensile_ai_ferma_tutto():
         def rollback(self): pass
     import os
     os.environ["AI_BUDGET_MESE_USD"] = "1"
+    os.environ["AI_BUDGET_GIORNO"] = "1"
     try:
-        assert AI.mese_finito(Conn(10**9)) is True          # spesa enorme: fermo
-        assert AI.mese_finito(Conn(0)) is False
-        assert AI.budget_finito(Conn(10**9)) is True
+        assert AI.mese_finito(Conn(10**9)) is False          # spesa enorme: si va avanti (e si registra)
+        assert AI.budget_finito(Conn(10**9)) is False
+        assert AI.spesa_mese(Conn(10**9)) > 100 and AI.spesa_tutta_oggi(Conn(10**6)) > 0
     finally:
+        os.environ.pop("AI_BUDGET_GIORNO")
         os.environ.pop("AI_BUDGET_MESE_USD")
