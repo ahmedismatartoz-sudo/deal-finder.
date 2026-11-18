@@ -52,10 +52,11 @@ SPOSTABILI: dict = {
     "base_vendute:": (False, ()),       # 18/11 notte (cliente, OK): ricalcolo di prova su vendute e commercianti, sola lettura
     "conta_mercato:": (False, ()),      # 18/11 notte: quanti annunci hanno i siti contro quanti ne abbiamo (sola lettura)
     "rivaluta_base:": (False, ()),      # 18/11 (cliente, OK): rivalutazione una tantum col valore da vendute e commercianti
+    "ribassi_spenti:": (False, ()),     # 18/11 23:04 (cliente: "perché i ribassi sono ancora attivi? disattivalo")
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -364,6 +365,16 @@ def esegui(v: str) -> bool | None:
         from ..pricing import base_vendute as BV
         _lungo(v, "BASE_VENDUTE", lambda: lg.warning("BASE_VENDUTE %s", json.dumps(BV.lavoro(v), ensure_ascii=False, default=str)))
         return
+    if v.startswith("ribassi_spenti:"):   # 18/11 23:04 (cliente: "disattivalo"): spegne i ribassi del prezzo mostrato
+        # come la spunta "Ribassi accesi" del pannello (/gestione -> Sito): attivo=False, fasce tenute; nel sito subito
+        def _spegni():
+            from ..web import impostazioni as IMP
+            r = IMP.ribasso() or {}
+            v2 = {"attivo": False, "schema": r.get("schema") or "", "fino": None}
+            with connect() as conn:
+                IMP.scrivi(conn, "ribasso", v2, "claude")
+            lg.warning("RIBASSI_SPENTI prima=%s ora=%s", bool(r.get("attivo")), IMP.ribasso_acceso(v2))
+        return _lungo(v, "RIBASSI_SPENTI", _spegni)
     if v.startswith("rivaluta_base:"):    # 18/11 (cliente: "il sito usa SOLO il nuovo calcolo, per entrare e per uscire")
         # rivaluta col valore da vendute e commercianti (pricing/valore_base.rivaluta) tutte le auto attive delle
         # province del sito e quelle sul sito, scrive le valutazioni e pubblica le buone; le altre escono. Nel sito
