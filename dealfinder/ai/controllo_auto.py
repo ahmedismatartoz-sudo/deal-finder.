@@ -753,6 +753,21 @@ def _non_entrerebbe(it: dict, g, comm: list, lont: list) -> str | None:
     return None
 
 
+def _sotto_al_tetto(it: dict, g, comm: list, lont: list) -> bool:
+    """18/11 (giudice): True se, anche confermata, l'auto resterebbe fuori dal tetto dei commercianti perché il suo
+    margine è sotto il più basso di quelli già tenuti (comm/lont: margini in ordine crescente, come in coda_dal_sito).
+    A parità di margine decide l'id: per prudenza la si considera utile (False)."""
+    from ..web import sito_regole as SR
+    x = dict(it, pv=dict(it["pv"]) if isinstance(it.get("pv"), dict) else it.get("pv"))
+    x.pop("trattare", None)
+    mx = int(SR.margine(x) or 0)
+    if g.commercianti_totale > 0 and len(comm) >= g.commercianti_totale and comm and mx < comm[0]:
+        return True
+    if x.get("_tipo") == "comm_lontano" and len(lont) >= g.commercianti_max and lont and mx < lont[0]:
+        return True
+    return False
+
+
 def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     """Da chiamare subito dopo sito_regole.elenco_sito (web/app._calcola_elenco, accanto a _coda_perizia, PRIMA che
     alle auto del sito si tolgano _r e _tipo). Prepara per il giro:
@@ -779,8 +794,12 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             m = "errore"
         if m:
             motivi["non_entrerebbe:" + m] += 1
-            if isinstance(it.get("id"), int):
-                inutili.add(it["id"])           # 18/11: anche confermate resterebbero fuori: nessuna chiamata pagata
+            # 18/11: anche confermate resterebbero fuori: nessuna chiamata pagata. Il tetto dei commercianti tiene i
+            # MIGLIORI per margine: un'auto che con la conferma prenderebbe il posto di una più debole NON è inutile
+            # (resta fuori dalla priorità "entra" come prima, ma il giro normale la controlla). Un errore non la esclude.
+            if isinstance(it.get("id"), int) and (m in ("perizia", "margine_minimo") or (
+                    m == "tetto_commercianti" and _sotto_al_tetto(it, g, comm, lont))):
+                inutili.add(it["id"])
             continue
         entra.append(it)
         if gia_controllata(it):
@@ -934,9 +953,11 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         # tutto il resto), anche se non sono tra le candidate di CAND_SQL (valutazione più vecchia di 12 ore)
         per_id = {r["id"]: r for r in righe}
         sito_ids = list(sito["entra"])[:1500]
-        CODA_SITO.setdefault("visti_giro", set()).update(sito_ids)      # 18/11: per sito_in_attesa
+        # 18/11: per sito_in_attesa. Tutta la coda (non solo le prime 1.500 lette qui): altrimenti con più di 1.500
+        # auto in coda quelle oltre sveglierebbero il giro ogni 2 minuti per sempre
+        CODA_SITO.setdefault("visti_giro", set()).update(sito["entra"])
         if len(CODA_SITO["visti_giro"]) > 20000:
-            CODA_SITO["visti_giro"] = set(sito_ids)
+            CODA_SITO["visti_giro"] = set(sito["entra"])
         try:
             for r in conn.execute(CAND_SQL_SITO, dict(par, sito_ids=sito_ids)).fetchall():
                 r = dict(r)

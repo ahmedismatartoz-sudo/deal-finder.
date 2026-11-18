@@ -1649,6 +1649,9 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
     pagina = max(200, int(os.environ.get("ELENCO_PAGINA", "2000")))
     tetto_mb = float(os.environ.get("ELENCO_MEMORIA_MB", "450"))
     kb_dopo = float(os.environ.get("ELENCO_KB_DOPO", "1.5"))
+    # 18/11 (giudice): la memoria non taglia MAI sotto ELENCO_MINIMO righe (12.000, il tetto fisso di prima, con cui il
+    # sito stava a ~395 MB): un picco di memoria di un altro lavoro durante la lettura non deve svuotare mezzo sito
+    minimo = int(os.environ.get("ELENCO_MINIMO", "12000"))
     ultimo, motivo, rss = None, None, 0.0
     t0 = time.time()
     while stats["lista"] < limite:
@@ -1670,7 +1673,7 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
         if n_pag < min(pagina, limite - stats["lista"] + n_pag):
             break                                   # pagina incompleta: elenco finito
         rss = _rss_mb()
-        if tetto_mb > 0 and rss and rss + stats["lista"] * kb_dopo / 1000 > tetto_mb:
+        if tetto_mb > 0 and rss and stats["lista"] >= minimo and rss + stats["lista"] * kb_dopo / 1000 > tetto_mb:
             motivo = "memoria"
             break
     if motivo is None and stats["lista"] >= limite:

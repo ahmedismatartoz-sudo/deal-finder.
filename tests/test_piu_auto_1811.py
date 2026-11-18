@@ -115,7 +115,17 @@ def test_memoria_ferma_la_lettura_prima_del_tetto():
         # pagine da 2.000: dopo la 1ª 300 + 3 MB, dopo la 2ª 420 + 6 MB, dopo la 3ª 449 + 9 MB > 450: fermo a 6.000
         assert len(items) == 6000 and st["lista_tagliata_memoria"] == 1 and st["lista_rimaste_fuori"] == 14000
         assert any("ELENCO_TAGLIATO motivo=memoria" in r for r in h.righe)
-    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB=None, ELENCO_KB_DOPO=None)
+    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB=None, ELENCO_KB_DOPO=None, ELENCO_MINIMO="0")
+
+
+def test_memoria_non_taglia_sotto_il_minimo():
+    # 18/11 (giudice): memoria già alta dall'inizio (un altro lavoro): si leggono comunque le 12.000 righe di prima
+    def f(h):
+        app._rss_mb = lambda: 480.0
+        st = Counter()
+        items, *_ = app._leggi_elenco(Conn(20000), st)
+        assert len(items) == 12000 and st["lista_tagliata_memoria"] == 1 and st["lista_rimaste_fuori"] == 8000
+    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB=None, ELENCO_KB_DOPO=None, ELENCO_MINIMO=None)
 
 
 def test_memoria_non_leggibile_non_ferma():
@@ -141,3 +151,40 @@ def test_conteggio_rimaste_non_riuscito_non_rompe():
         assert len(items) == 500 and st["lista_tagliata"] == 1 and "lista_rimaste_fuori" not in st
         assert any("rimaste fuori ?" in r for r in h.righe)
     _con(f, ELENCO_LIMITE="500", ELENCO_PAGINA="200")
+
+
+def test_credito_finito_ferma_tutte_le_chiamate_ai():
+    # 18/11 (giudice): senza tetti di spesa, dopo un 402 nessun lavoro deve martellare: AI.crea rilancia lo stesso
+    # errore senza chiamare per AI_PAUSA_CREDITO_S secondi; un errore qualsiasi (500) non ferma niente
+    from dealfinder.ai import client as AI
+
+    class E402(Exception):
+        status_code = 402
+
+    class E500(Exception):
+        status_code = 500
+
+    chiamate = []
+    prima = AI._crea
+
+    def finta(**kw):
+        chiamate.append(kw)
+        raise (E402 if len(chiamate) == 2 else E500)("x")
+    try:
+        AI._crea = finta
+        AI._CREDITO.update(fino=0.0, errore=None)
+        for atteso in (E500, E402, E402, E402):
+            try:
+                AI.crea(model="m")
+            except atteso:
+                pass
+        assert len(chiamate) == 2                    # dopo il 402 nessuna chiamata vera
+        AI._CREDITO["fino"] = 0.0                    # pausa finita: si richiama
+        try:
+            AI.crea(model="m")
+        except E500:
+            pass
+        assert len(chiamate) == 3
+    finally:
+        AI._crea = prima
+        AI._CREDITO.update(fino=0.0, errore=None)

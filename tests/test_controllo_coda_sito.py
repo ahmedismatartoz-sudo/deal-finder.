@@ -187,6 +187,10 @@ def test_tetto_commercianti_pieno_non_conta_come_entrata():
     assert CA._non_entrerebbe(it, g, [3000, 4000], []) == "tetto_commercianti"     # entrerebbe al posto di un'altra
     assert CA._non_entrerebbe(it, g, [3000], []) is None
     assert CA._non_entrerebbe(dict(it, diesel_extra=True), g, [3000, 4000], []) is None   # tetto a parte
+    # 18/11 (giudice): il tetto tiene i migliori per margine: con margine 3.500 la confermata prenderebbe il posto di
+    # quella da 3.000 (va controllata, non è "inutile"); sotto il più basso resterebbe fuori comunque
+    assert not CA._sotto_al_tetto(it, g, [3000, 4000], [])
+    assert CA._sotto_al_tetto(auto(1, margine=2500, _tipo="comm_fascia", commerciante=True), g, [3000, 4000], [])
 
 
 def test_giro_prima_la_coda_del_sito_e_niente_spesa_per_le_fuori():
@@ -258,6 +262,15 @@ def test_sito_in_attesa_sveglia_il_giro_una_volta():
     assert CA.sito_in_attesa() == 0                  # già offerta a un giro: niente risvegli continui
     CA.CODA_SITO.update(t=0.0)
     assert CA.sito_in_attesa() == 0                  # coda vecchia: niente
+    _pulisci()
+
+
+def test_coda_oltre_1500_non_sveglia_per_sempre():
+    # 18/11 (giudice): il giro legge le prime 1.500 della coda, ma segna come viste tutte: niente risvegli ogni 2 minuti
+    _pulisci()
+    CA.CODA_SITO.update(t=time.time(), entra=list(range(1, 1601)), fuori=set(), sul_sito=set())
+    CA.giro(Conn([], []), chiama=lambda t, f: None)
+    assert CA.sito_in_attesa() == 0
     _pulisci()
 
 

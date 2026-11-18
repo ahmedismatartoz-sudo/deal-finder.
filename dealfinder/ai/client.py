@@ -142,10 +142,44 @@ def client():
     return _client
 
 
+_CREDITO = {"fino": 0.0, "errore": None}
+
+
+def _credito_finito(e) -> bool:
+    """402, o 400 con il messaggio sul credito (stessa lettura di perizia.tipo_errore, senza importarla)."""
+    st = next((x for x in (getattr(e, "status_code", None), getattr(getattr(e, "response", None), "status_code", None))
+               if isinstance(x, int)), None)
+    if st == 402:
+        return True
+    if st == 400:
+        body = getattr(e, "body", None)
+        err = body.get("error") if isinstance(body, dict) else None
+        msg = ((err.get("message") if isinstance(err, dict) else "") or "").lower()
+        return "credit balance" in msg or "billing" in msg
+    return False
+
+
 def crea(**kwargs):
     """28/10: i modelli nuovi "ragionano" prima di rispondere (blocchi thinking): per letture brevi è tempo e denaro
     sprecato e a volte finiscono i token prima della risposta. Si spegne (AI_THINKING=off); se il modello non
-    accetta l'opzione si richiama senza."""
+    accetta l'opzione si richiama senza.
+    18/11 (giudice, senza più tetti di spesa): dopo un errore di credito finito (402) TUTTE le chiamate del processo
+    (giudice, difetti, lettore, perizia, controllo...) si fermano per AI_PAUSA_CREDITO_S secondi (600): si rilancia lo
+    stesso errore senza chiamare, così ogni lavoro reagisce come a un 402 vero (le sue pause) e nessuno martella."""
+    import time as _t
+    if _t.time() < _CREDITO["fino"] and _CREDITO["errore"] is not None:
+        raise _CREDITO["errore"].with_traceback(None)
+    try:
+        return _crea(**kwargs)
+    except Exception as e:
+        if _credito_finito(e):
+            _CREDITO.update(fino=_t.time() + float(os.environ.get("AI_PAUSA_CREDITO_S", "600")), errore=e)
+            log.warning("AI_CREDITO_FINITO: tutte le chiamate AI ferme per %s s (%s)",
+                        os.environ.get("AI_PAUSA_CREDITO_S", "600"), str(e)[:160])
+        raise
+
+
+def _crea(**kwargs):
     if os.environ.get("AI_THINKING", "off") == "off" and "thinking" not in kwargs:
         try:
             return client().messages.create(thinking={"type": "disabled"}, **kwargs)
