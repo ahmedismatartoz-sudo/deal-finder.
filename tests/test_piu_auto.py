@@ -1036,7 +1036,9 @@ def test_pg_riga_in_attesa_sostituita_nel_database():
 
     def scrivi(lid, dati, n, tolti_protetti=True, giudicata=False):
         return c.execute(VAL.UPSERT_SQL, (lid, "v2", dati.get("categoria"), 1000, "{}", json.dumps(dati), None, n, "a", "r",
-                                          "prova", "mediana", 36, tolti_protetti, giudicata)).fetchall()
+                                          "prova", "mediana", 36, tolti_protetti, giudicata,
+                                          # 18/11: categorie del sito per l'uscita col calcolo nuovo (valore_base)
+                                          ["candidato", "opportunita"], ["candidato", "opportunita"])).fetchall()
     scrivi(1, {"categoria": "dati_insufficienti", "giudice_mancante": True}, 8)
     scrivi(2, {"categoria": "opportunita"}, 8)
     assert scrivi(1, {"categoria": "opportunita", "ai_confronti": {"tolti": 0}}, 6)          # meno confronti: scritta
@@ -1157,7 +1159,8 @@ def test_tetto_giudice_sulle_righe_in_attesa_nel_cron():
         assert VAL.tetto_attesa("riprova-giudice") is None and VAL.tetto_attesa("web-nuovi") is None
     attesa = {1: {"n": 8, "impronta_auto": "x", "impronta_regole": "y", "computed_at": datetime.now(timezone.utc),
                   "categoria": "dati_insufficienti", "in_attesa": True}}
-    with env(GIUDICE_ATTESA_PER_GIRO="0"):                                 # tetto già pieno: resta in attesa
+    # 18/11: il tetto riguarda il giudice AI, che c'è solo nel calcolo di prima (VALORE_BASE=vecchio)
+    with env(GIUDICE_ATTESA_PER_GIRO="0", VALORE_BASE="vecchio"):          # tetto già pieno: resta in attesa
         c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE), salvate=dict(attesa))
         es = VAL.valuta_e_scrivi(c, [1], "cron")
         assert c.scritte == [] and es.stats["attesa_rimandata_tetto_giudice"] == 1
@@ -1165,6 +1168,10 @@ def test_tetto_giudice_sulle_righe_in_attesa_nel_cron():
         c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE), salvate=dict(attesa))
         VAL.valuta_e_scrivi(c, [1], "web-nuovi")                            # fuori dal cron: nessun tetto
         assert len(c.scritte) == 1
+    with env(GIUDICE_ATTESA_PER_GIRO="0", VALORE_BASE=None):               # calcolo nuovo: nessun giudice, nessun tetto
+        c = TPV.ConnFinta(TPV.AUTO, TPV.gemelle(TPV.BASE), salvate=dict(attesa))
+        es = VAL.valuta_e_scrivi(c, [1], "cron")
+        assert len(c.scritte) == 1 and not es.stats["attesa_rimandata_tetto_giudice"]
 
 
 # ------------------------------------------------------------------ 17/11 riprova veloce: lavoratori in parallelo

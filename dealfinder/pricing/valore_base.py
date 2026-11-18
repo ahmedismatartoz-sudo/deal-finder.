@@ -7,14 +7,19 @@ Per ogni auto (valutazione.valuta_e_scrivi, unico punto che scrive valutazioni_p
 - base D = annunci ATTIVI di COMMERCIANTI ricontrollati negli ultimi base_vendute.FRESCHI_GIORNI giorni;
 - base V = auto VENDUTE (sparite negli ultimi VENDUTE_GIORNI giorni dopo almeno MIN_GIORNI_ONLINE giorni online,
   ultimo prezzo prima di sparire), di privati e commercianti;
-- solo auto pulite (base_vendute._pulita), stessa marca/modello/alimentazione, province del sito
-  (sito_regole.PROVINCE_100KM), confronti e correzioni di base_vendute.stima_dettaglio (anno ±1 / km ±25%, poi ±2 /
-  ±40%, potenza ±10% e stesso cambio se noti, prezzi riportati all'anno/km dell'auto, mediana dopo il taglio 0,65–1,5);
+- solo auto pulite (base_vendute._pulita), stessa marca/modello/alimentazione, stessa ZONA del sito dell'auto
+  (sito_regole: Milano = PROVINCE_100KM, Torino con Torino, Ravenna con Ravenna; le province lontane con Milano),
+  confronti e correzioni di base_vendute.stima_dettaglio (anno ±1 / km ±25%, poi ±2 / ±40%, potenza ±10% e stesso
+  cambio se noti, prezzi riportati all'anno/km dell'auto, mediana dopo il taglio 0,65–1,5);
 - R = stima D se ha almeno N_MIN_SITO confronti, altrimenti stima V con almeno N_MIN_SITO, altrimenti nessuna stima
   (categoria dati_insufficienti). M = R (nessuna correzione chiesto → venduto: `calibrato` = 1,0, il sito non la rifà).
-- margine = R − prezzo; categoria contro scovo.soglia(prezzo) (SOGLIE_PV invariate): opportunita se margine ≥ soglia,
-  altrimenti non_conveniente; "candidato" solo dove serviva già (sezione "Da trattare": stessa regola
-  policy_v2._sconto_da_trattare; prezzo molto basso ammesso col numero del venditore: stesso controllo anti-truffa).
+- margine = R − prezzo (cliente 18/11: i costi fissi del commerciante, fino a 200 € con policy_v2, NON si tolgono).
+  Incidentate e difetti come prima (policy_v2, 4/11): restano fuori solo i danni gravi/strutturali o senza stima dei
+  ricambi; le altre hanno R dalle auto pulite, meno lo storico del danno (0 di default) e il ripristino (ricambi,
+  manodopera sui ricambi, difetti letti dall'AI: policy_v2.costi), e al massimo "candidato" (sezione Incidentate).
+- categoria contro scovo.soglia(prezzo) (SOGLIE_PV invariate): opportunita se margine ≥ soglia, altrimenti
+  non_conveniente; "candidato" solo dove serviva già ("Da trattare": policy_v2._sconto_da_trattare; prezzo molto
+  basso ammesso col numero; danni/difetti da verificare).
 - anti-truffa: gli stessi controlli di policy_v2 sul prezzo rispetto al mercato (minimo reale, sotto_m / basse con
   l'eccezione del numero) e in più margine oltre SOSPETTO_MARGINE (55%) di R = auto sospetta, fuori (dati sbagliati o
   truffa, come nella prova base_vendute). Le regole del sito (truffa, foto, zona, telefono, tetti...) restano dopo.
@@ -22,9 +27,11 @@ Per ogni auto (valutazione.valuta_e_scrivi, unico punto che scrive valutazioni_p
 Il giudice AI dei confronti (ricalcolo._giudice_ai) qui NON serve: i confronti sono già filtrati per anno, km,
 potenza, cambio e stato pulito e la stima è una mediana tagliata; nessuna chiamata AI (credito risparmiato).
 
-Interruttore unico per tornare indietro in emergenza: VALORE_BASE=vecchio (variabile d'ambiente) rimette il calcolo di
-prima (policy_v2 + ripiego + cascata + giudice AI) in valuta_e_scrivi. Default (assente o qualunque altro valore) =
-questo calcolo. Il vecchio codice resta nel repository, spento.
+Interruttore unico per tornare indietro in emergenza: VALORE_BASE=vecchio rimette il calcolo di prima (policy_v2 +
+ripiego + cascata + giudice AI) in valuta_e_scrivi, l'esame ogni 3 ore, il valore reale notturno e ai_prezzi. Default
+(assente o qualunque altro valore) = questo calcolo. Va impostato SOLO nel gruppo di variabili dealfinder-secrets
+(uguale per sito, worker e cron: mai calcoli diversi tra processi). ATTENZIONE: il ritorno a "vecchio" fa ripassare
+dal giudice AI tutte le auto buone alla prima rivalutazione (picco di credito AI): controllare il budget prima.
 """
 from __future__ import annotations
 
@@ -105,11 +112,35 @@ def _varianti(s: str) -> list[str]:
     return sorted({s, s.lower(), s.upper(), s.title(), s.capitalize()})
 
 
-def carica(conn, make: str, model: str, fuel: str) -> dict:
-    """{"D": commercianti freschi puliti, "V": vendute pulite} del gruppo (una query, solo questo gruppo)."""
-    from ..web.sito_regole import PROVINCE_100KM
+def zone() -> dict:
+    """Zone del sito (sito_regole, le stesse di r_zona): ogni auto si confronta con le auto della SUA zona."""
+    from ..web import sito_regole as SR
+    out = {"milano": frozenset(SR.PROVINCE_100KM), "ravenna": frozenset(SR.RAVENNA)}
+    if SR.TORINO:
+        out["torino"] = frozenset(SR.TORINO)
+    return out
+
+
+def zona_di(provincia) -> str:
+    """Nome della zona della provincia: Torino con Torino, Ravenna con Ravenna; il resto (Milano e dintorni, province
+    lontane o mancanti) con le province di Milano, come la prova base_vendute."""
+    p = str(provincia or "").strip().upper()
+    for nome, prov in zone().items():
+        if nome != "milano" and p in prov:
+            return nome
+    return "milano"
+
+
+def province_sito() -> list:
+    """Tutte le province delle zone del sito."""
+    return sorted(set().union(*zone().values()))
+
+
+def carica(conn, make: str, model: str, fuel: str, zona: str = "milano") -> dict:
+    """{"D": commercianti freschi puliti, "V": vendute pulite} del gruppo nella zona (una query, solo questo gruppo)."""
+    prov = zone().get(zona) or zone()["milano"]
     righe = conn.execute(GRUPPO_SQL, {"mk": _varianti(make), "md": _varianti(model), "fu": fuel,
-                                      "prov": sorted(PROVINCE_100KM), "vg": BV.VENDUTE_GIORNI}).fetchall()
+                                      "prov": sorted(prov), "vg": BV.VENDUTE_GIORNI}).fetchall()
     mk, md = str(make or "").lower(), str(model or "").lower()
     return dividi([norm(r) for r in righe if str(r["make"] or "").lower() == mk and str(r["model"] or "").lower() == md])
 
@@ -125,19 +156,22 @@ def dividi(righe: list) -> dict:
 
 # ------------------------------------------------------------------ valutazione di un'auto
 
-def pulita(t: dict) -> str | None:
-    """Motivo per cui l'auto da valutare NON è confrontabile con auto pulite, oppure None.
-    `dichiarato`: danni dichiarati nell'annuncio (colonna damage_declared originale: valutazione.prepara la azzera)."""
-    r = {"danno": t.get("damage_class") or "sconosciuto", "problema": bool(t.get("problem_search")),
-         "dichiarato": bool(t.get("dichiarato")),
+def pulita(t: dict, cfg=None) -> str | None:
+    """Motivo per cui l'auto da valutare NON si può valutare con i confronti puliti, oppure None.
+    Come policy_v2 (4/11, sezione Incidentate): restano fuori solo i danni gravi/strutturali e quelli non ancora
+    stimati; un danno leggero/medio con i ricambi stimati e i difetti letti dall'AI non gravi (valutazione.prepara:
+    danni non letti o gravi sono già "esclusa") si valutano col valore delle auto pulite meno il ripristino (valuta).
+    Annunci col prezzo non affidabile o scartati (truffa, doppione, ...) restano fuori come nelle due basi."""
+    from . import policy_v2 as P
+    danno = t.get("damage_class") or "sconosciuto"
+    solo_sane = True if cfg is None else bool(cfg.solo_sane)
+    if solo_sane and (danno in ("grave", "alto_rischio") or t.get("rischio_strutturale")):
+        return "danno grave o strutturale"
+    if solo_sane and danno in P.DANNEGGIATE and t.get("parts_cost_high") is None:
+        return "danno senza stima dei ricambi"
+    r = {"danno": "nessuno", "problema": False, "dichiarato": False,
          "stage": str(t.get("stage_reason") or "").split("|", 1)[0].strip(),
          "price_flags": t.get("price_flags") or []}
-    if t.get("rischio_strutturale"):
-        return "danno strutturale o airbag"
-    if r["danno"] not in ("nessuno", "sconosciuto"):
-        return f"danno {r['danno']}"
-    if r["problema"] or r["dichiarato"]:
-        return "danni o problemi dichiarati nell'annuncio"
     if not BV._pulita(r):
         return "annuncio non pulito (prezzo non affidabile o scartato)"
     return None
@@ -152,13 +186,14 @@ def _confronto(c: dict, p: float, venduta: bool) -> dict:
             **({"venduta": True, "sparita": str(c.get("disappeared_at") or "")[:10] or None} if venduta else {})}
 
 
-def valuta(t: dict, base: dict, soglia: int, rg=None) -> dict:
+def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
     """Valutazione di `t` (riga di listings preparata da valutazione.prepara) con le basi del gruppo (carica/dividi).
     Stessa forma delle valutazioni di policy_v2 per i campi che il sito e le schede leggono (categoria, M, R,
     R_finale, margine, soglia, n, metodo, confronti, motivi, ipotesi, netto...)."""
     from .. import regole as RG
     from . import policy_v2 as P
     rg = rg or RG.regole()
+    cfg = cfg or P.PolicyConfig(rg)
     at = rg.antitruffa
     prezzo = _num(t.get("price_eur"))
     out = {"policy": P.POLICY_VERSION, "policy_rev": P.POLICY_REV, "regole": rg.versione, "id": t.get("id"),
@@ -172,7 +207,7 @@ def valuta(t: dict, base: dict, soglia: int, rg=None) -> dict:
         out["categoria"] = "dati_insufficienti"
         out["motivi"].append("dati dell'auto incompleti: " + ", ".join(out["mancanti"]))
         return out
-    sporca = pulita(t)
+    sporca = pulita(t, cfg)
     if sporca:
         out["categoria"] = "dati_insufficienti"
         out["non_pulita"] = sporca
@@ -212,12 +247,36 @@ def valuta(t: dict, base: dict, soglia: int, rg=None) -> dict:
                              f"vendute negli ultimi {BV.VENDUTE_GIORNI} giorni (ultimo prezzo)")
                           + f", anno ±{al[0]} e km ±{int(al[1] * 100)}%, prezzi riportati all'anno e ai km dell'auto")
     p = int(prezzo)
-    margine = R - p
+    # incidentate e difetti (come policy_v2, 4/11): valore delle auto pulite, meno lo storico del danno (0 di default)
+    # e il ripristino (ricambi stimati, manodopera sui ricambi, difetti letti dall'AI). I costi fissi del commerciante
+    # NON si tolgono (cliente 18/11: margine = valore − prezzo): totale_costi = solo il ripristino
+    danno = t.get("damage_class") or "sconosciuto"
+    Rf = R
+    if danno in P.DANNEGGIATE and cfg.perdita_storico_danno:
+        perdita = int(round(R * cfg.perdita_storico_danno, -1))
+        out["perdita_storico_danno"] = perdita
+        Rf = R - perdita
+    out["R_finale"] = Rf
+    cs = P.costi(t, Rf, cfg)
+    if cs["blocco"]:
+        out["categoria"] = "dati_insufficienti"
+        out["motivi"].append(cs["blocco"])
+        return out
+    voci = {k: x for k, x in cs["voci"].items() if k != "costi_commerciante"}
+    ripristino = int(cs["ripristino"])
+    out["costi"] = voci
+    out["totale_costi"] = ripristino
+    if voci.get("difetti"):
+        out["costo_difetti_incluso"] = True          # il sito non toglie di nuovo il costo dei difetti AI
+    if ripristino:
+        out["ipotesi"].append(f"ripristino stimato {ripristino} € (ricambi, manodopera, difetti) tolto dal margine")
+    da_verificare = bool(cs["danneggiata"] or voci.get("difetti") or cs["alto_rischio"])
+    margine = Rf - p - ripristino
     out["margine"] = int(margine)
-    out["sotto_R"] = p < R
+    out["sotto_R"] = p < Rf
     try:
         from . import netto as NT
-        nt = NT.calcola(R, p, 0)
+        nt = NT.calcola(Rf, p, ripristino)
         if nt:
             out["netto"] = nt["netto"]
             out["costi_netto"] = dict(nt["voci"], sconto_pct=nt["sconto_pct"], sconto_da=nt["sconto_da"])
@@ -256,9 +315,14 @@ def valuta(t: dict, base: dict, soglia: int, rg=None) -> dict:
         out["categoria"] = "non_conveniente"
         out["motivi"].append(f"margine {margine} € sotto la soglia di {soglia} €")
         return out
-    if out.get("prezzo_molto_basso_ammesso"):
+    if out.get("prezzo_molto_basso_ammesso") or da_verificare:
         out["categoria"] = "candidato"
-        out["motivi"].append("prezzo molto sotto il mercato (numero presente): controllare bene auto e documenti")
+        if out.get("prezzo_molto_basso_ammesso"):
+            out["motivi"].append("prezzo molto sotto il mercato (numero presente): controllare bene auto e documenti")
+        if cs["danneggiata"]:
+            out["motivi"].append("auto danneggiata: ripristino e manodopera da verificare")
+        if voci.get("difetti"):
+            out["motivi"].append("difetti scritti nell'annuncio: costo di riparazione stimato dall'AI, da verificare")
         return out
     out["categoria"] = "opportunita"
     out["motivi"].append(f"margine {margine} € ≥ soglia {soglia} € con {n} auto uguali "
@@ -307,7 +371,6 @@ def rivaluta(spec: str = "", connetti=None, ves=None) -> dict:
     che non sono più opportunità escono (il sito legge l'ultima valutazione). Solo conteggi nel log."""
     from .. import regole as RG
     from ..web import scovo
-    from ..web.sito_regole import PROVINCE_100KM
     from . import policy_v2 as P
     from .valutazione import valuta_e_scrivi
     if connetti is None:
@@ -320,7 +383,7 @@ def rivaluta(spec: str = "", connetti=None, ves=None) -> dict:
         return {"fermata": "valore_base_spento"}
     a = RG.regole().ammissione
     with connetti() as conn:
-        righe = conn.execute(IDS_SQL, {"prov": sorted(PROVINCE_100KM), "anno": int(a.anno_min),
+        righe = conn.execute(IDS_SQL, {"prov": province_sito(), "anno": int(a.anno_min),
                                        "km": int(a.km_max)}).fetchall()
         conn.commit()
     blocchi = _blocchi([dict(r) for r in righe])

@@ -321,7 +321,8 @@ def test_giudicata_si_scrive_sempre():
     assert VZ.deve_scrivere(gi, 30, "b", "r", ora) == (True, "auto_cambiata")
     assert VZ.deve_scrivere(dict(gi, computed_at=ora - timedelta(hours=40)), 30, "a", "r", ora) == (True, "vecchia")
     assert VZ.giudicata({"ai_confronti": {"tolti": 3}}) and not VZ.giudicata({"ai_confronti": {"tolti": 0}})
-    assert "OR %s" in VZ.UPSERT_SQL and VZ.UPSERT_SQL.count("%s") == 15 and "'tolti'" in VZ.UPSERT_SQL
+    # 18/11: 15 + 2 (categorie del sito per l'uscita col calcolo nuovo, valore_base)
+    assert "OR %s" in VZ.UPSERT_SQL and VZ.UPSERT_SQL.count("%s") == 17 and "'tolti'" in VZ.UPSERT_SQL
 
 
 # ------------------------------------------------------------------ statistiche della scheda

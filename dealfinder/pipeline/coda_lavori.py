@@ -362,8 +362,7 @@ def esegui(v: str) -> bool | None:
         # province del sito e quelle sul sito, scrive le valutazioni e pubblica le buone; le altre escono. Nel sito
         # (SOLO_SITO), una volta per etichetta (rivaluta_base:ora); nel log solo conteggi
         from ..pricing import valore_base as VB
-        _lungo(v, "RIVALUTA_BASE", lambda: VB.rivaluta(v))
-        return
+        return _lungo(v, "RIVALUTA_BASE", lambda: VB.rivaluta(v))
     if v.startswith("conta_mercato:"):    # 18/11 notte (cliente: "oltre 60.000 annunci nei 150 km")
         from . import conta_mercato as CM
         _lungo(v, "CONTA_MERCATO", lambda: lg.warning("CONTA_MERCATO %s", json.dumps(CM.lavoro(v), ensure_ascii=False)))

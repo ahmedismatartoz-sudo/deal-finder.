@@ -252,6 +252,12 @@ def allena_e_stima(conn) -> dict:
 
 
 def run() -> dict:
+    from . import valore_base as VB
+    if VB.attivo():
+        # 18/11: la stima AI dei prezzi chiesti serviva solo al calcolo di prima (policy_v2): col valore da vendute e
+        # commercianti non si riaddestra (CPU e memoria del cron risparmiate); VALORE_BASE=vecchio la riaccende
+        log.warning("AI_PREZZI spento: il valore del sito viene da vendute e commercianti (VALORE_BASE)")
+        return {"spento": "valore_base"}
     from ..db import connect, log_job
     with connect() as conn:
         fine = log_job(conn, "ai_prezzi")

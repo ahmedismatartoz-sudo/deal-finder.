@@ -3965,6 +3965,12 @@ def _tempo_reale():
         time.sleep(int(os.environ.get("ESAME_RITARDO_S", "300")))
         while True:
             try:
+                from ..pricing import valore_base as _VB
+                if _VB.attivo():
+                    # 18/11: l'esame misura il calcolo di prima (policy_v2 + giudice dall'archivio), che il sito non usa
+                    # più: spento finché VALORE_BASE non torna "vecchio" (memoria e letture risparmiate nel sito)
+                    time.sleep(float(os.environ.get("ESAME_ORE", "3")) * 3600)
+                    continue
                 with connect() as conn:
                     esame.esegui(conn)
                 with connect() as conn:
@@ -6154,7 +6160,10 @@ def _tempo_reale():
         while True:
             try:
                 from datetime import datetime as _dt, timezone as _tz
-                if _dt.now(_tz.utc).hour == int(os.environ.get("VR_ORA_UTC", "2")):
+                from ..pricing import valore_base as _VB
+                # 18/11: il valore del sito viene da vendute e commercianti (valore_base): il valore reale non serve
+                # più a nessuna valutazione del sito; calcolo notturno spento finché VALORE_BASE non torna "vecchio"
+                if not _VB.attivo() and _dt.now(_tz.utc).hour == int(os.environ.get("VR_ORA_UTC", "2")):
                     with connect() as conn:
                         ult = conn.execute("SELECT max(computed_at) AS t FROM valore_reale").fetchone()["t"] \
                             if conn.execute("SELECT to_regclass('valore_reale') AS t").fetchone()["t"] else None
@@ -6656,15 +6665,21 @@ def _tempo_reale():
                 from ..core.models import Listing as _Lst
                 from ..core.normalize import problem_hint as _ph
                 from ..pricing import policy_v2 as _P
+                from ..pricing import valore_base as _VB
                 from ..pricing import valore_reale as VR
                 from ..pricing.valutazione import valuta_e_scrivi
                 from ..zone import tutte
                 from ..pipeline.ciclo import _una_volta
                 escl = list(COMMERCIANTI_PROVINCE_ESCLUSE)
-                with connect() as conn:
-                    conn.execute("SET statement_timeout = '600s'")
-                    n_vr = conn.execute("""SELECT count(*) AS n FROM valore_reale v JOIN listings l ON l.id = v.listing_id
-                        WHERE l.seller_type = 'commerciante' AND v.computed_at > now() - interval '20 hours'""").fetchone()["n"]
+                # 18/11: col valore da vendute e commercianti (valore_base) il valore reale non serve: niente calcolo
+                # notturno qui e scelta larga (sotto); VALORE_BASE=vecchio rimette tutto com'era
+                nuovo_valore = _VB.attivo()
+                n_vr = 10**9
+                if not nuovo_valore:
+                    with connect() as conn:
+                        conn.execute("SET statement_timeout = '600s'")
+                        n_vr = conn.execute("""SELECT count(*) AS n FROM valore_reale v JOIN listings l ON l.id = v.listing_id
+                            WHERE l.seller_type = 'commerciante' AND v.computed_at > now() - interval '20 hours'""").fetchone()["n"]
                 # una volta per avvio del sito (un riavvio a metà calcolo lo rifà subito, non dopo un'ora)
                 # 3/11 11:50: il calcolo completo di giorno mandava il sito fuori memoria (512 MB): solo di notte (2-5 UTC)
                 if n_vr < 200 and 2 <= _dt.now(_tz.utc).hour < 5 and _una_volta("vr_commercianti:" + _AVVIO_COMM):
@@ -6672,9 +6687,22 @@ def _tempo_reale():
                         conn.execute("SET statement_timeout = '900s'")
                         L.warning("COMMERCIANTI_TOP valore reale (privati + commercianti lontani): %s", json.dumps(
                             VR.calcola_e_salva(conn, prov_zona=list(tutte()), commercianti_fuori=escl), default=str))
+                _sql_largo = """SELECT l.id FROM listings l
+                        LEFT JOIN valutazioni_policy u ON u.listing_id = l.id AND u.policy_version = %(pv)s
+                        WHERE l.status='attivo' AND l.seller_type='commerciante' AND upper(l.province) = ANY(%(zona)s)
+                          AND NOT (upper(l.province) = ANY(%(escl)s))
+                          AND l.price_eur BETWEEN 1000 AND 20000 AND COALESCE(l.mileage_km,0) <= 150000
+                          AND l.last_seen_at > now() - interval '4 days'
+                          AND NOT (coalesce(l.price_flags, '{}'::text[]) && %(flag)s::text[])
+                          AND NOT ((coalesce(l.title,'') || ' ' || coalesce(l.description,'')) ~* %(promo)s)
+                          AND NOT ((coalesce(l.title,'') || ' ' || coalesce(l.description,'')) ~* %(nomi)s)
+                          AND COALESCE(l.damage_declared, false) = false
+                          AND NOT COALESCE(u.impronta_regole = %(rev)s AND u.metodo = 'base_vendute'
+                                           AND u.computed_at > now() - interval '12 hours', false)
+                        ORDER BY l.last_seen_at DESC LIMIT 400"""
                 with connect() as conn:
                     conn.execute("SET statement_timeout = '600s'")
-                    ids = [r["id"] for r in conn.execute("""SELECT l.id FROM listings l JOIN valore_reale v ON v.listing_id = l.id
+                    ids = [r["id"] for r in conn.execute(_sql_largo if nuovo_valore else """SELECT l.id FROM listings l JOIN valore_reale v ON v.listing_id = l.id
                         LEFT JOIN valutazioni_policy u ON u.listing_id = l.id AND u.policy_version = %(pv)s
                         WHERE l.status='attivo' AND l.seller_type='commerciante' AND upper(l.province) = ANY(%(zona)s)
                           AND NOT (upper(l.province) = ANY(%(escl)s))

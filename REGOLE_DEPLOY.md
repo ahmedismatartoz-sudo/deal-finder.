@@ -77,6 +77,12 @@ In ordine di velocità:
    intatta. Mai `git push --force` su main.
 3. Interruttori già previsti nel codice (senza deploy di codice, cambiando una variabile su Render: va comunque
    deciso e scritto nel registro): `SENTINELLA=0`, `CANARINO=0`, `RIEPILOGO_GIORNO=0`, `TR_WORKER=0/1`, ...
+4. **Valore di mercato (18/11): `VALORE_BASE=vecchio`** rimette il calcolo di prima (policy_v2 + ripiego + cascata +
+   giudice AI dei confronti, esame ogni 3 ore, valore reale notturno, ai_prezzi) al posto di quello da auto vendute e
+   commercianti (`pricing/valore_base.py`, default). Si imposta **solo nel gruppo di variabili `dealfinder-secrets`**
+   (uguale per sito, worker e cron: mai due calcoli diversi tra processi), mai sul singolo servizio. **Attenzione:**
+   il ritorno a "vecchio" fa ripassare dal giudice AI tutte le auto buone alla prima rivalutazione: picco di credito
+   AI, controllare il budget prima. Le valutazioni si riscrivono da sole al cambio di calcolo (colonna `metodo`).
 
 **Attenzione: alcune regole di business si cambiano ANCORA con le variabili d'ambiente di Render.** Le regole di
 prezzo di `regole.py` leggono dall'ambiente solo gli interruttori di `regole.INTERRUTTORI`, ma:

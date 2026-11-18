@@ -93,13 +93,64 @@ def test_commercianti_vecchi_non_contano_e_vendute_troppo_brevi_neanche():
     assert base == {"D": [], "V": []}
 
 
-def test_auto_non_pulita_non_si_valuta():
+def test_auto_non_valutabile_resta_fuori():
+    """Come policy_v2 (sezione Incidentate): fuori solo danni gravi/strutturali, danni senza stima dei ricambi e
+    annunci col prezzo non affidabile o scartati."""
     base = VB.dividi(COMM)
-    for kw in ({"damage_class": "lieve"}, {"problem_search": True}, {"dichiarato": True},
-               {"rischio_strutturale": True}, {"stage_reason": "truffa | foto prese da internet"},
-               {"price_flags": ["leasing_o_rata"]}):
+    for kw in ({"damage_class": "grave", "parts_cost_high": 500}, {"damage_class": "alto_rischio", "parts_cost_high": 500},
+               {"rischio_strutturale": True}, {"damage_class": "leggero"}, {"damage_class": "medio"},
+               {"stage_reason": "truffa | foto prese da internet"}, {"price_flags": ["leasing_o_rata"]}):
         v = VB.valuta(_t(6000, **kw), base, scovo.soglia(6000))
         assert v["categoria"] == "dati_insufficienti" and v.get("non_pulita"), kw
+
+
+def test_incidentata_con_ricambi_valutata_col_nuovo_calcolo():
+    """Danno leggero con i ricambi stimati: R dai confronti puliti, margine = R − prezzo − ripristino, al massimo
+    candidato (sezione Incidentate come prima)."""
+    base = VB.dividi(COMM)
+    v = VB.valuta(_t(5000, damage_class="leggero", parts_cost_low=Decimal("600"), parts_cost_high=Decimal("800")),
+                  base, scovo.soglia(5000))
+    assert v["metodo"] == "base_vendute" and v["M"] == v["R_finale"] == 9250
+    assert v["costi"]["ricambi"]["euro"] == 800 and "costi_commerciante" not in v["costi"]
+    assert v["totale_costi"] == 800 and v["margine"] == 9250 - 5000 - 800
+    assert v["categoria"] == "candidato" and any("danneggiata" in m for m in v["motivi"])
+    # stesso danno con margine sotto soglia: non conveniente
+    v = VB.valuta(_t(8000, damage_class="medio", parts_cost_high=900), base, scovo.soglia(8000))
+    assert v["margine"] == 350 and v["categoria"] == "non_conveniente"
+
+
+def test_difetti_letti_dall_ai_tolti_una_volta():
+    base = VB.dividi(COMM)
+    v = VB.valuta(_t(5000, costo_difetti=400, difetti_motivo="frizione", problem_search=True), base, scovo.soglia(5000))
+    assert v["costo_difetti_incluso"] is True and v["totale_costi"] == 400 and v["margine"] == 9250 - 5000 - 400
+    assert v["categoria"] == "candidato"
+    # auto pulita: margine = R − prezzo, nessun costo fisso (cliente 18/11)
+    v = VB.valuta(_t(6000), base, scovo.soglia(6000))
+    assert v["totale_costi"] == 0 and v["margine"] == 9250 - 6000 and v["categoria"] == "opportunita"
+
+
+def test_zone_torino_con_torino():
+    from dealfinder.web import sito_regole as SR
+    assert VB.zona_di("MI") == "milano" and VB.zona_di(None) == "milano" and VB.zona_di("ra") == "ravenna"
+    if SR.TORINO:
+        assert VB.zona_di("TO") == "torino" and set(SR.TORINO) <= set(VB.province_sito())
+    assert set(SR.PROVINCE_100KM) | set(SR.RAVENNA) <= set(VB.province_sito())
+    assert not set(SR.ROMA) & set(VB.province_sito())
+
+    class C:
+        def __init__(self):
+            self.prov = None
+
+        def execute(self, sql, args):
+            self.prov = args["prov"]
+
+            class R:
+                def fetchall(s):
+                    return []
+            return R()
+    c = C()
+    VB.carica(c, "Fiat", "Panda", "benzina", zona="ravenna")
+    assert c.prov == sorted(SR.RAVENNA)
 
 
 def test_margine_sotto_soglia_non_conveniente():
@@ -286,17 +337,18 @@ _N = {"i": 0}
 
 
 def _ins(c, prezzo, sel="commerciante", status="attivo", stage="nuovo", reason=None, danno="nessuno", km=60000,
-         visto_giorni=1, sparita_giorni=None, online_giorni=20) -> int:
+         visto_giorni=1, sparita_giorni=None, online_giorni=20, modello="panda", prov="MI") -> int:
     _N["i"] += 1
     sid = f"vb{_N['i']}"
     return c.execute(
         "INSERT INTO listings (source, source_id, url, make, model, fuel, gearbox, power_kw, year, mileage_km, "
         "price_eur, province, region, seller_type, status, telefono_ok, stage, stage_reason, damage_class, "
-        "first_seen_at, last_seen_at, last_checked_at, disappeared_at) VALUES ('subito', %s, %s, 'fiat', 'panda', "
-        "'benzina', 'manuale', 51, 2018, %s, %s, 'MI', 'lombardia', %s, %s, true, %s, %s, %s, "
+        "first_seen_at, last_seen_at, last_checked_at, disappeared_at) VALUES ('subito', %s, %s, 'fiat', %s, "
+        "'benzina', 'manuale', 51, 2018, %s, %s, %s, 'lombardia', %s, %s, true, %s, %s, %s, "
         "now() - make_interval(days => %s), now() - make_interval(days => %s), now() - make_interval(days => %s), "
         "CASE WHEN %s::int IS NULL THEN NULL ELSE now() - make_interval(days => %s::int) END) RETURNING id",
-        (sid, "https://x/" + sid, km, prezzo, sel, status, stage, reason, danno, online_giorni + (sparita_giorni or 0),
+        (sid, "https://x/" + sid, modello, km, prezzo, prov, sel, status, stage, reason, danno,
+         online_giorni + (sparita_giorni or 0),
          visto_giorni, visto_giorni, sparita_giorni, sparita_giorni)).fetchone()["id"]
 
 
@@ -362,3 +414,81 @@ def test_postgres_rivaluta():
     assert out["conteggi"]["uscite_dal_sito"] == 1 and out["conteggi"]["blocchi"] == 1
     assert c.execute("SELECT categoria FROM valutazioni_policy WHERE listing_id=%s", (cara,)).fetchone()["categoria"] \
         == "non_conveniente"
+
+
+def test_guardia_uscita_dal_sito():
+    from datetime import datetime, timezone
+    ora = datetime.now(timezone.utc)
+    buona = {"n": 9, "impronta_auto": "a", "impronta_regole": "r", "computed_at": ora, "metodo": "base_vendute",
+             "categoria": "opportunita"}
+    assert VZ.deve_scrivere(buona, 5, "a", "r", ora, metodo_nuovo="base_vendute",
+                            categoria_nuova="non_conveniente") == (True, "uscita_dal_sito")
+    assert VZ.deve_scrivere(buona, 5, "a", "r", ora, metodo_nuovo="base_vendute",
+                            categoria_nuova="candidato") == (False, "meno_confronti")
+    assert VZ.deve_scrivere(dict(buona, metodo="mediana"), 5, "a", "r", ora, metodo_nuovo="mediana",
+                            categoria_nuova="non_conveniente") == (False, "meno_confronti")   # calcolo di prima: come prima
+
+
+def test_postgres_uscita_dal_sito_con_meno_confronti():
+    c = _pg()
+    if c is None:
+        return
+    lid = _ins(c, 6000, sel="privato")
+    assert VZ._scrivi(c, lid, {"categoria": "opportunita", "n": 9, "M": 9000, "margine": 3000,
+                               "metodo": "base_vendute"}, None, "a", "r", "test", 36)
+    assert not VZ._scrivi(c, lid, {"categoria": "candidato", "n": 5, "M": 8000, "margine": 2000,
+                                   "metodo": "base_vendute"}, None, "a", "r", "test", 36)   # resta buona: guardia
+    assert VZ._scrivi(c, lid, {"categoria": "non_conveniente", "n": 5, "M": 7000, "margine": 1000,
+                               "metodo": "base_vendute"}, None, "a", "r", "test", 36)   # non più buona: esce
+    assert c.execute("SELECT categoria FROM valutazioni_policy WHERE listing_id=%s", (lid,)).fetchone()["categoria"] \
+        == "non_conveniente"
+
+
+def test_postgres_errore_in_carica_non_lascia_la_base_del_gruppo_prima():
+    c = _pg()
+    if c is None:
+        return
+    for p in (9000, 9100, 9200, 9300, 9400, 9500):
+        _ins(c, p)                                             # base delle Panda
+    for p in (15000, 15100, 15200, 15300, 15400, 15500):
+        _ins(c, p, modello="tipo")                             # base delle Tipo
+    a = _ins(c, 6000, sel="privato")
+    b1 = _ins(c, 11000, sel="privato", modello="tipo")
+    b2 = _ins(c, 11000, sel="privato", modello="tipo")
+    vera, chiamate = VB.carica, []
+
+    def carica(conn, make, model, fuel, zona="milano"):
+        chiamate.append(model)
+        if model == "tipo" and chiamate.count("tipo") == 1:
+            raise RuntimeError("lettura non riuscita")
+        return vera(conn, make, model, fuel, zona=zona)
+    VB.carica = carica
+    try:
+        es = VZ.valuta_e_scrivi(c, [a, b1, b2], "test", pubblica=False)
+    finally:
+        VB.carica = vera
+    assert es.stats["errore"] == 1 and chiamate.count("tipo") == 2
+    m = {r["listing_id"]: r["dati"].get("M") for r in c.execute(
+        "SELECT listing_id, dati FROM valutazioni_policy").fetchall()}
+    assert m[a] == 9250 and m[b2] == 15250 and b1 not in m       # la seconda Tipo con la base delle Tipo
+
+
+def test_postgres_torino_con_torino():
+    from dealfinder.web import sito_regole as SR
+    c = _pg()
+    if c is None or not SR.TORINO:
+        return
+    for p in (9000, 9100, 9200, 9300, 9400, 9500):
+        _ins(c, p)                                             # Milano
+    for p in (7000, 7100, 7200, 7300, 7400, 7500):
+        _ins(c, p, prov="TO")                                  # Torino
+    mi, to = _ins(c, 5000, sel="privato"), _ins(c, 5000, sel="privato", prov="TO")
+    VZ.valuta_e_scrivi(c, [mi, to], "test", pubblica=False)
+    m = {r["listing_id"]: r["dati"].get("M") for r in c.execute(
+        "SELECT listing_id, dati FROM valutazioni_policy").fetchall()}
+    assert m[mi] == 9250 and m[to] == 7250
+
+
+def test_ai_prezzi_spento_col_calcolo_nuovo():
+    from dealfinder.pricing import ai_prezzi
+    assert VB.attivo() and ai_prezzi.run() == {"spento": "valore_base"}

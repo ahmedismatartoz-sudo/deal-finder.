@@ -255,6 +255,49 @@ def test_tempo_reale_pubblica_anche_la_buona_rifiutata_dalla_guardia():
     assert st["valuta:scrittura:auto_cambiata"] == 1 and not st["pubblicate"] and len(_valuations(c, lid)) == 1
 
 
+def _con_finta_nuovo(esiti, fn):
+    """18/11 (giudice): la stessa prova col calcolo NUOVO (VALORE_BASE default): si sostituisce valore_base.valuta
+    (e la lettura della base), la guardia e la pubblicazione sono quelle vere."""
+    from dealfinder.pricing import valore_base as VB
+    prima_v, prima_c = VB.valuta, VB.carica
+    env = os.environ.pop("VALORE_BASE", None)
+    VB.valuta = lambda t, base, soglia, rg=None, cfg=None: dict(esiti[t["id"]], acquisto=t["price_eur"],
+                                                                metodo="base_vendute")
+    VB.carica = lambda conn, make, model, fuel, zona="milano": {"D": [], "V": []}
+    try:
+        return fn()
+    finally:
+        VB.valuta, VB.carica = prima_v, prima_c
+        if env is not None:
+            os.environ["VALORE_BASE"] = env
+
+
+def test_calcolo_nuovo_pubblica_e_fa_uscire():
+    c = _pg()
+    if c is None:
+        return
+    r1, r2, cr = _auto(c), _auto(c), _auto(c)
+    esiti = {r1: _v("opportunita"), r2: _v("candidato"), cr: _v("opportunita")}
+    es1 = _con_finta_nuovo(esiti, lambda: V.valuta_e_scrivi(c, [r1], "riprova-giudice"))
+    es2 = _con_finta_nuovo(esiti, lambda: V.valuta_e_scrivi(c, [r2], "cron-recupero"))
+    es3 = _con_finta_nuovo(esiti, lambda: V.valuta_e_scrivi(c, [cr], "cron"))
+    assert es1.stats["pubblicate"] == 1 and es2.stats["pubblicate"] == 1 and not es3.stats["pubblicate"]
+    assert _stato(c, r1)["stage"] == "approfondito" and _stato(c, r2)["stage_reason"] == "da_verificare"
+    assert {r1, r2} <= _sul_sito(c)
+    # col calcolo nuovo un'auto non più buona esce anche con meno confronti, stessa auto e stesse regole
+    from dealfinder.pipeline import tempo_reale as T
+    _con_finta_nuovo({r1: _v("opportunita")}, lambda: V.valuta_e_scrivi(c, [r1], "cron"))  # impronta dopo la pubblicazione
+    es = _con_finta_nuovo({r1: _v("candidato", n=3)}, lambda: V.valuta_e_scrivi(c, [r1], "cron"))
+    assert es.stats["scrittura:meno_confronti"] == 1                  # ancora buona: resta la salvata (come prima)
+    es = _con_finta_nuovo({r1: _v("non_conveniente", n=3, margine=100)}, lambda: V.valuta_e_scrivi(c, [r1], "cron"))
+    assert es.stats["scrittura:uscita_dal_sito"] == 1 and es.salvata[r1] == "non_conveniente"
+    st = Counter()                                                    # e il tempo reale non la ripubblica
+    _con_finta_nuovo({r1: _v("non_conveniente", n=3, margine=100)}, lambda: T.valuta_e_pubblica(c, [r1], st))
+    assert not st["pubblicate"]
+    cat = c.execute("SELECT categoria FROM valutazioni_policy WHERE listing_id=%s", (r1,)).fetchone()["categoria"]
+    assert cat == "non_conveniente"
+
+
 def test_meno_confronti_buona_contata():
     c = _pg()
     if c is None:

@@ -52,10 +52,13 @@ UPSERT_SQL = """INSERT INTO valutazioni_policy (listing_id, policy_version, cate
       OR %s
       OR (valutazioni_policy.dati->>'giudice_mancante') = 'true'
       OR (COALESCE(valutazioni_policy.metodo, '') = 'base_vendute') <> (COALESCE(EXCLUDED.metodo, '') = 'base_vendute')
+      OR (COALESCE(EXCLUDED.metodo, '') = 'base_vendute' AND valutazioni_policy.categoria = ANY(%s)
+          AND NOT (EXCLUDED.categoria = ANY(%s)))
    RETURNING listing_id"""
 METODO_BASE = "base_vendute"          # = valore_base.METODO (scritto anche nella condizione SQL qui sopra)
 # 18/11: passaggio tra il calcolo di prima e valore_base (colonna metodo): si scrive sempre (deve_scrivere
-# "calcolo_cambiato"), anche nel ritorno indietro con VALORE_BASE=vecchio.
+# "calcolo_cambiato"), anche nel ritorno indietro con VALORE_BASE=vecchio. Col calcolo nuovo, una salvata buona
+# (CATEGORIE_SITO, ultimi due parametri) sostituita da una non buona si scrive sempre ("uscita_dal_sito").
 # 15/11 (giudice A2): una riga "in attesa del giudice" (giudice_mancante) si sostituisce sempre: la guardia dei meno
 # confronti e la protezione delle giudicate valgono contro una valutazione vera, non contro un'attesa
 # 12/11 sera (controllo del giudice M5): penultimo parametro = proteggi (una riga giudicata dall'AI non si sostituisce
@@ -256,9 +259,14 @@ def tieni_precedente(v: dict, esistente: dict | None, perche: str) -> bool:
     return bool(v.get("giudice_mancante") and esistente and perche in ("vecchia", "dati_pari_o_piu", "meno_confronti"))
 
 
+def _cat_sito() -> set:
+    from ..web import scovo
+    return set(scovo.CATEGORIE_SITO)
+
+
 def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regole: str, now=None,
                   ore: int | None = None, giudicata_nuova: bool = False,
-                  metodo_nuovo: str | None = None) -> tuple[bool, str]:
+                  metodo_nuovo: str | None = None, categoria_nuova: str | None = None) -> tuple[bool, str]:
     """Stessa regola della condizione SQL di UPSERT_SQL (qui per i contatori e per i test).
     12/11 sera (regole.Scrittura.giudice_vince): una valutazione passata dal giudice AI con confronti tolti si scrive
     sempre (prima restava rifiutata fino a 36 ore perché il giudice riduce n)."""
@@ -273,6 +281,10 @@ def deve_scrivere(esistente: dict | None, n_nuovo: int, imp_auto: str, imp_regol
         # 18/11: passaggio tra calcolo vecchio e valore_base (nei due sensi, anche VALORE_BASE=vecchio): il numero di
         # confronti dei due calcoli non è confrontabile, la nuova si scrive sempre
         return True, "calcolo_cambiato"
+    if metodo_nuovo == METODO_BASE and categoria_nuova is not None and esistente.get("categoria") in _cat_sito() \
+            and categoria_nuova not in _cat_sito():
+        # 18/11 (giudice): col calcolo nuovo un'auto che non è più buona esce subito, anche con meno confronti
+        return True, "uscita_dal_sito"
     if esistente.get("in_attesa"):
         return True, "in_attesa_giudice"                # 15/11 (giudice A2): la riga salvata aspetta il giudice
     vince = RG.regole().scrittura.giudice_vince
@@ -344,6 +356,7 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     from . import rivendita as RV
     usa_dot = bool(rg.trazione.attiva or rg.dotazioni.aggiusta)
     gruppo, mercato, cache, commercianti = None, [], {}, None
+    basi, n_gruppo = {}, 0
     vecchi_vr = 0
     tetto = tetto_attesa(fonte)
     from ..ai import giudice as GI
@@ -366,38 +379,49 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 es.telefono[lid] = t.get("telefono")
                 if motivo:
                     v = esclusa(t, motivo, rg)
+                    if nuovo:
+                        v["metodo"] = METODO_BASE      # scritta dal calcolo nuovo (guardia al cambio di calcolo)
                     es.stats[f"esclusa:{motivo}"] += 1
                     if motivo == "danni_da_leggere":
                         _in_coda_danni(conn, lid)
-                elif tetto is not None and (prima.get(lid) or {}).get("in_attesa") \
+                elif not nuovo and tetto is not None and (prima.get(lid) or {}).get("in_attesa") \
                         and es.stats["giudice_attesa_chiamate"] >= tetto:
                     es.stats["attesa_rimandata_tetto_giudice"] += 1   # resta in attesa: nessuna chiamata, nessuna scrittura
                     es.salvata[lid] = (prima.get(lid) or {}).get("categoria")
                     conn.rollback()
                     continue
                 elif nuovo:
-                    # 18/11: valore dalle auto vendute e dai commercianti (pricing/valore_base.py); una lettura per gruppo
+                    # 18/11: valore dalle auto vendute e dai commercianti (pricing/valore_base.py); una lettura per
+                    # gruppo e zona. Il gruppo si segna SOLO dopo una lettura riuscita: se VB.carica fallisce, l'auto
+                    # dopo la rilegge (prima restava la base del gruppo precedente)
                     key = (r["make"], r["model"], r["fuel"])
+                    zona = VB.zona_di(r.get("province"))
                     if key != gruppo:
                         if gruppo is not None and pausa_gruppo:
                             __import__("time").sleep(pausa_gruppo)
-                        gruppo, cache = key, {}
-                        mercato = VB.carica(conn, *key)
-                    t["dichiarato"] = bool(r.get("damage_declared"))     # prepara azzera damage_declared in t
-                    v = VB.valuta(t, mercato, soglia_fn(int(r["price_eur"])), rg)
+                        nuova_base = VB.carica(conn, *key, zona=zona)
+                        gruppo, basi, n_gruppo = key, {zona: nuova_base}, 0
+                    elif zona not in basi:
+                        basi[zona] = VB.carica(conn, *key, zona=zona)
+                    n_gruppo += 1
+                    if pausa_gruppo and n_gruppo % 20 == 0:
+                        __import__("time").sleep(0.01)           # gruppi grandi: il sito resta reattivo
+                    v = VB.valuta(t, basi[zona], soglia_fn(int(r["price_eur"])), rg, cfg)
                     es.stats[f"categoria:{v['categoria']}"] += 1
                     es.stats["valore_base:" + str(v.get("fonte_base") or "nessuna_stima")] += 1
                 else:
                     key = (r["make"], r["model"], r["fuel"])
                     if key != gruppo:
-                        gruppo, cache = key, {}
-                        mercato = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
+                        nuovo_m = [dict(m, vehicle_identity=_j(m.get("vehicle_identity")))
                                    for m in conn.execute(MARKET_SQL.format(home=HOME_REGION_SQL), key).fetchall()]
                         # 12/11: annunci di commercianti del gruppo (venduti e attivi) per la rivendita
-                        commercianti = RV.carica(conn, *key, HOME_REGION_SQL, rg) if rg.rivendita.attiva else None
+                        nuovi_c = RV.carica(conn, *key, HOME_REGION_SQL, rg) if rg.rivendita.attiva else None
                         # 12/11 sera (margini fase 2 punto 4): trazione e optional dalla scheda tecnica (dati_auto)
                         if usa_dot:
-                            mercato = DT.arricchisci(mercato, DT.carica_mercato(conn, mercato))
+                            nuovo_m = DT.arricchisci(nuovo_m, DT.carica_mercato(conn, nuovo_m))
+                        # 18/11 (giudice): il gruppo si segna solo a lettura riuscita (un errore non lascia i confronti
+                        # del gruppo precedente all'auto dopo)
+                        gruppo, cache, mercato, commercianti = key, {}, nuovo_m, nuovi_c
                     t["commercianti"] = commercianti
                     if usa_dot and lid in dot_auto:
                         t.update(dot_auto[lid])
@@ -423,7 +447,8 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                 # 17/11: l'ora di ADESSO per ogni auto (un giro lungo dura più di un'ora: con l'ora d'inizio la riga
                 # salvata risultava meno "vecchia" di quanto la vede la condizione SQL, che usa now() alla scrittura)
                 ok, perche = deve_scrivere(prima.get(lid), v.get("n") or 0, imp_a, imp_r,
-                                           datetime.now(timezone.utc), ore, giu, metodo_nuovo=v.get("metodo"))
+                                           datetime.now(timezone.utc), ore, giu, metodo_nuovo=v.get("metodo"),
+                                           categoria_nuova=v.get("categoria"))
                 if perche == "vecchia":
                     # 17/11 (giudice): il motivo ORIGINALE si salva prima di "giudice_mancante": una riga salvata più
                     # vecchia di ore_validita resta nel database (tieni_precedente) ma NON si pubblica (margine su un
@@ -690,7 +715,8 @@ def _scrivi(conn, lid, v: dict, pr, imp_a: str, imp_r: str, fonte: str, ore: int
         try:
             cur = conn.execute(UPSERT_SQL, (lid, P.POLICY_VERSION, v["categoria"], v.get("margine"), riass, dati, prj,
                                             int(v.get("n") or 0), imp_a, imp_r, fonte, v.get("metodo"), ore,
-                                            bool(RG.regole().scrittura.giudice_vince), bool(giudicata_nuova)))
+                                            bool(RG.regole().scrittura.giudice_vince), bool(giudicata_nuova),
+                                            sorted(_cat_sito()), sorted(_cat_sito())))
             _SCHEMA["nuovo"] = True
             return cur.fetchone() is not None if hasattr(cur, "fetchone") else True
         except Exception as e:
