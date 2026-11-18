@@ -59,6 +59,12 @@ NON_AUTO = re.compile(
     r"officin|meccanic|carrozz|noleggi|(^|[^a-z])rent([^a-z]|$)|rental|ricamb|(^|[^a-z])moto(\s|$|cicl|veicol|r\s?bike)|"
     r"scooter|camper|caravan|roulotte|demoli|rottam|autoscuol|scuola\s+guida|gommist|pneumatic|elettrauto|"
     r"autolavagg|soccorso|carro\s*attrezzi|revision[ei]", re.I)
+# 18/11 (giudice): fuori SEMPRE, anche se il nome dice "vendita" (non sono autosaloni)
+NON_AUTO_SEMPRE = re.compile(r"ricamb|camper|caravan|roulotte|demoli|rottam|autoscuol|scuola\s+guida", re.I)
+# ...le altre (officina, carrozzeria, noleggio, gommista, moto...) restano se il NOME dice anche che vendono auto:
+# "Autofficina e vendita auto", "Carrozzeria e auto usate" sono saloni piccoli; "Concessionaria Moto Guzzi" no
+VENDE_NOME = re.compile(r"vendita\s+(?:\w+\s+){0,2}auto|compravendita|autosalon|auto\s*usat|usato|"
+                        r"concessionari[ao]\s+(?:di\s+)?auto|commercio\s+(?:di\s+)?auto", re.I)
 VENDE_AUTO = re.compile(r"usat|commercio|concessionar|vendita|autosalon|rivendit|automobil|autoveicol", re.I)
 ESCLUSI_EXTRA = (r"gt[\s.-]*automobili", r"privacar", r"(^|[^a-z])vroom", r"cosval")
 
@@ -70,9 +76,12 @@ def _re_esclusi() -> re.Pattern:
 
 def vende_auto(nome: str | None, categorie: str | None = None) -> bool:
     """Un'attività che vende auto? Fuori officine, carrozzerie, noleggi, ricambi, moto, camper, demolitori,
-    autoscuole (dal nome o dalle categorie) e i commercianti esclusi sempre. Funzione pura."""
+    autoscuole (dal nome o dalle categorie) e i commercianti esclusi sempre. Un nome "misto" (officina, carrozzeria,
+    noleggio... E vendita auto / auto usate) resta; ricambi, camper, demolitori e autoscuole mai. Funzione pura."""
     n = (nome or "").strip()
-    if not n or _re_esclusi().search(n.lower()) or NON_AUTO.search(n):
+    if not n or _re_esclusi().search(n.lower()) or NON_AUTO_SEMPRE.search(n):
+        return False
+    if NON_AUTO.search(n) and not VENDE_NOME.search(n):
         return False
     if categorie and categorie.strip():
         cat = categorie.lower()
@@ -86,17 +95,33 @@ def vende_auto(nome: str | None, categorie: str | None = None) -> bool:
 
 
 # --- telefoni -----------------------------------------------------------------------------------------------------
-_ID_FISCALI = re.compile(r"(p\.?\s*iva|partita\s+iva|c\.?\s*f\.?(?=[\s:.])|cod(?:ice)?\.?\s*fisc\w*|vat|"
-                         r"r\.?\s*e\.?\s*a\.?(?=[\s:.])|n\.?\s*iscr\w*|cap(?:itale)?\.?\s*soc\w*)\s*[:.\-n°]*\s*(?:it)?\s*[\d .]{5,20}",
-                         re.I)
+_ID_FISCALI = re.compile(r"(?<![a-z])(p\.?\s*iva|p\.\s*i\.|partita\s+iva|iva|c\.?\s*f\.?(?=[\s:.])|cod(?:ice)?\.?\s*fisc\w*|vat|"
+                         r"r\.?\s*e\.?\s*a\.?(?=[\s:.])|n\.?\s*iscr\w*|cap(?:itale)?\.?\s*soc\w*)\s*[:.\-n°]*\s*(?:it)?\s*"
+                         r"\d[\d .]{4,19}", re.I)
+
+
+def _piva_valida(d: str) -> bool:
+    """11 cifre con la cifra di controllo della partita IVA (Luhn): un numero così senza etichetta è una P.IVA."""
+    if len(d) != 11 or not d.isdigit():
+        return False
+    s = 0
+    for i, c in enumerate(d[:10]):
+        x = int(c)
+        if i % 2:
+            x = x * 2 - 9 if x * 2 > 9 else x * 2
+        s += x
+    return (10 - s % 10) % 10 == int(d[10])
 
 
 def telefoni(testo: str) -> tuple[list, list]:
-    """(cellulari, fissi) da un testo, senza partite IVA / codici fiscali / REA. Funzione pura."""
+    """(cellulari, fissi) da un testo, senza partite IVA / codici fiscali / REA. Funzione pura.
+    18/11 (giudice): anche "P.I."/"IVA" come etichette, prefisso 0039 come +39, fissi di 11 cifre che sono una
+    partita IVA valida scartati."""
     from .lead import TEL
     from .lead_comuni import cell_validi, fissi
     t = _ID_FISCALI.sub(" ", testo or "")
-    return cell_validi(TEL.findall(t)), fissi(t)[:4]
+    t = re.sub(r"(?<![\d+])0039[\s.-]?(?=[03])", "+39 ", t)
+    return cell_validi(TEL.findall(t)), [f for f in fissi(t) if not _piva_valida(f)][:4]
 
 
 def _testo(html: str) -> str:
@@ -320,7 +345,9 @@ def pg_bloccata(status: int, html: str) -> bool:
     if status in (403, 429, 503):
         return True
     t = (html or "")[:5000].lower()
-    return status == 200 and ("captcha" in t or "access denied" in t or "are you a robot" in t)
+    if status != 200 or not ("captcha" in t or "access denied" in t or "are you a robot" in t):
+        return False
+    return not voci_paginegialle(html)       # "captcha" negli script di una pagina con risultati: non è un blocco
 
 
 # --- rete (sblocco come i collettori) ------------------------------------------------------------------------------
@@ -341,7 +368,9 @@ class Rete:
     def api(self, params: dict) -> list:
         r = self.sub._api(params)
         self.sub.pause()
-        return ((r.json() or {}).get("ads") or []) if r.status_code == 200 else []
+        if r.status_code != 200:
+            raise RuntimeError(f"HTTP {r.status_code}")      # chi chiama conta l'errore (elenco non completo)
+        return (r.json() or {}).get("ads") or []
 
     def pagina(self, url: str, sblocco: bool) -> tuple[int, str]:
         if sblocco and self.sblocco():
@@ -401,12 +430,19 @@ class Archivio:
             return [r for r in righe(c, TIPO_GREZZE, 100000) if r.get("etichetta") == self.etichetta]
 
     def finale(self, righe: list[dict]) -> None:
-        from ..marketing.consegne import consegna
-        for r in righe:
-            consegna(TIPO_FINALE, r)
+        """18/11 (giudice): righe RNUM di questa etichetta riscritte in UNA transazione (prima tolte le vecchie): un
+        lavoro ripreso dopo un errore a metà consegna non le raddoppia."""
+        from ..db import connect
+        with connect() as c:
+            c.execute("DELETE FROM lead_consegne WHERE tipo=%s AND dati->>'etichetta'=%s", (TIPO_FINALE, self.etichetta))
+            for r in righe:
+                c.execute("INSERT INTO lead_consegne (tipo, dati) VALUES (%s,%s)",
+                          (TIPO_FINALE, json.dumps(r, ensure_ascii=False, default=str)))
+            c.commit()
+        log.warning("RNUM consegna: %d righe %s nel database (non nei log)", len(righe), TIPO_FINALE)
 
     def noti(self) -> set:
-        """Numeri (ultime 9 cifre) già raccolti: righe R60/R60T e lead_tutti_dealer."""
+        """Numeri (normalizzati) già raccolti: righe R60/R60T, lead_tutti_dealer, lead_maps, commercianti_as24."""
         from ..db import connect
         out: set = set()
         with connect() as c:
@@ -414,23 +450,31 @@ class Archivio:
                 try:
                     for r in c.execute("SELECT dati FROM lead_consegne WHERE tipo=%s", (tipo,)).fetchall():
                         d = r["dati"] if isinstance(r["dati"], dict) else json.loads(r["dati"])
-                        out |= {_n9(x) for x in re.findall(r"\d{8,13}", f"{d.get('cellulari') or ''} {d.get('fissi') or ''}")}
+                        out |= {_n9(x) for x in re.findall(r"\+?\d{6,13}", f"{d.get('cellulari') or ''} {d.get('fissi') or ''}")}
                 except Exception:
                     c.rollback()
-            try:
-                for r in c.execute("SELECT cell FROM lead_tutti_dealer").fetchall():
-                    out |= {_n9(x) for x in (r["cell"] or [])}
-            except Exception:
-                c.rollback()
+            for sql, campo in (("SELECT cell AS t FROM lead_tutti_dealer", "t"),
+                               ("SELECT tel AS t FROM lead_maps WHERE coalesce(tel,'') <> ''", "t"),      # 18/11 giudice
+                               ("SELECT cellulari AS t FROM commercianti_as24", "t")):
+                try:
+                    for r in c.execute(sql).fetchall():
+                        v = r[campo]
+                        out |= {_n9(x) for x in (v if isinstance(v, list) else [v] if v else [])}
+                except Exception:
+                    c.rollback()
         out.discard(None)
         return out
 
 
 def _n9(t) -> str | None:
+    """Numero normalizzato per confronti e unione: solo cifre, senza 0039/+39 (18/11 giudice: intero, non più le
+    ultime 9 cifre, che facevano coincidere un cellulare 3xx e un fisso 0xx)."""
     d = re.sub(r"\D", "", str(t or ""))
-    if d.startswith("39") and len(d) > 10:
+    if d.startswith("0039"):
+        d = d[4:]
+    elif d.startswith("39") and len(d) > 10:
         d = d[2:]
-    return d[-9:] if len(d) >= 8 else None
+    return d if len(d) >= 6 else None
 
 
 def _h(s: str) -> str:
@@ -451,6 +495,38 @@ class Raccolta:
         self.http = {"subito": Counter(), "vetrine": Counter(), "paginegialle": Counter()}
         self.completa = {"subito": False, "paginegialle": False}
         self.pg_bloccata = False
+        # 18/11 (giudice): spesa dello sblocco = OGNI richiesta passata dal Web Unlocker (Pagine Gialle E vetrine
+        # Subito), sommata ai giri precedenti (passo "spesa"): RNUM_PG_MAX_RICHIESTE è il tetto di tutto il lavoro
+        sp = self.fatti.get("spesa")
+        self.spesa_prec = int(sp.get("n", 0)) if isinstance(sp, dict) else 0
+        self.spesa = 0
+        self.tetto = int(os.environ.get("RNUM_PG_MAX_RICHIESTE", "6000"))
+        self.tetto_avvisato = False
+
+    def sblocco_ok(self) -> bool:
+        with self.lock:
+            ok = self.spesa_prec + self.spesa < self.tetto
+        if not ok and not self.tetto_avvisato:
+            self.tetto_avvisato = True
+            log.warning("RNUM sblocco: tetto di %d richieste raggiunto (tutti i giri), niente più richieste a pagamento",
+                        self.tetto)
+        return ok
+
+    def segna_spesa(self) -> None:
+        with self.lock:
+            n = self.spesa_prec + self.spesa
+        self._segna("spesa", {"n": n})
+
+    def _pagina(self, url: str, sblocco: bool) -> tuple[int, str]:
+        """Una pagina; se passa dallo sblocco la richiesta si conta (anche se poi va male)."""
+        pagata = bool(sblocco and self.rete.sblocco())
+        if pagata:
+            with self.lock:
+                self.spesa += 1
+                salva = self.spesa % 50 == 0
+            if salva:
+                self.segna_spesa()
+        return self.rete.pagina(url, sblocco=sblocco)
 
     def tempo(self) -> bool:
         return time.time() < self.scadenza
@@ -499,6 +575,7 @@ class Raccolta:
         if not ci:
             return []
         negozi: dict = {}
+        errori = 0
         max_pag = int(os.environ.get("RNUM_SUBITO_PAGINE", "40"))
         for ps, pe in BANDE:
             vuote = 0
@@ -511,6 +588,7 @@ class Raccolta:
                     self.http["subito"]["ok"] += 1
                 except Exception:
                     self.http["subito"]["errore"] += 1
+                    errori += 1
                     ads = []
                 self.st["annunci_subito"] += len(ads)
                 nuovi = 0
@@ -522,11 +600,13 @@ class Raccolta:
                 if len(ads) < 100 or vuote >= int(os.environ.get("RNUM_PAGINE_VUOTE", "3")):
                     break
         lista = list(negozi.values())
-        self._segna(passo, lista)
+        if not errori:                       # con pagine non lette l'elenco si rifà al giro dopo (l'interfaccia è gratis)
+            self._segna(passo, lista)
         return lista
 
     def subito(self) -> None:
         bloccate = 0
+        dirette_ko = 0                       # vetrine bloccate senza sblocco di fila: dopo 5 si va diretti allo sblocco
         for prov, reg in PROVINCE_SUBITO:
             if not self.tempo():
                 return
@@ -538,11 +618,20 @@ class Raccolta:
                     continue
                 if not self.tempo():
                     return
+                if n["nome"] and not vende_auto(n["nome"]):     # escluso già dal nome: la vetrina non si legge (spesa)
+                    self.st["subito_esclusi"] += 1
+                    self._segna(passo)
+                    continue
                 url = VETRINA.format(quote(n["sid"]))
                 try:
-                    code, html = self.rete.pagina(url, sblocco=False)
-                    if code in (403, 429) and self.rete.sblocco():
-                        code, html = self.rete.pagina(url, sblocco=True)
+                    puo = self.rete.sblocco() and self.sblocco_ok()
+                    if dirette_ko >= 5 and puo:
+                        code, html = self._pagina(url, sblocco=True)
+                    else:
+                        code, html = self._pagina(url, sblocco=False)
+                        dirette_ko = dirette_ko + 1 if code in (403, 429) else 0
+                        if code in (403, 429) and puo:
+                            code, html = self._pagina(url, sblocco=True)
                 except Exception:
                     code, html = 0, ""
                 self.http["vetrine"][code] += 1
@@ -555,6 +644,8 @@ class Raccolta:
                     time.sleep(float(os.environ.get("RNUM_PAUSA_BLOCCO", "30")))
                     continue
                 bloccate = 0
+                if code >= 500:                  # errore del sito: la vetrina si riprova al giro dopo
+                    continue
                 if code == 200:
                     d = dati_vetrina(html)
                     d["nome"] = n["nome"] or d["nome"]          # il nome del negozio su Subito
@@ -580,7 +671,6 @@ class Raccolta:
         di_fila = 0
         max_bl = int(os.environ.get("RNUM_PG_BLOCCHI_MAX", "8"))
         max_pag = int(os.environ.get("RNUM_PG_PAGINE", "5"))
-        tetto = int(os.environ.get("RNUM_PG_MAX_RICHIESTE", "6000"))      # spesa dello sblocco
         for comune, prov, km in self._comuni_pg():
             for cat in PG_CATEGORIE:
                 passo = f"pg:{slug(cat)}:{slug(comune)}:{prov}"
@@ -591,13 +681,12 @@ class Raccolta:
                 for p in range(1, max_pag + 1):
                     if not self.tempo():
                         return
-                    if sum(self.http["paginegialle"].values()) >= tetto:
-                        log.warning("RNUM Pagine Gialle: tetto di %d richieste raggiunto, stop", tetto)
+                    if not self.sblocco_ok():    # tetto della spesa (tutte le richieste dello sblocco, tutti i giri)
                         self.completa["paginegialle"] = True
                         return
                     url = PG_URL.format(cat=quote(cat), dove=quote(f"{comune} ({prov})")) + (f"/p-{p}" if p > 1 else "")
                     try:
-                        code, html = self.rete.pagina(url, sblocco=True)
+                        code, html = self._pagina(url, sblocco=True)
                     except Exception:
                         code, html = 0, ""
                     self.http["paginegialle"][code] += 1
@@ -640,18 +729,30 @@ class Raccolta:
         self.completa["paginegialle"] = True
 
 
-def unisci_righe(grezze: list[dict], noti: set | None = None) -> list[dict]:
-    """Righe finali (una per salone): unite per telefono in comune o per nome normalizzato nella stessa provincia;
+def unisci_righe(grezze: list[dict], noti: set | None = None, etichetta: str | None = None) -> list[dict]:
+    """Righe finali (una per salone): unite per telefono in comune o per nome normalizzato nello stesso comune;
     esclusi di nuovo i nomi da non scrivere. nuovo = almeno un numero non già in `noti`. Funzione pura."""
     noti = noti or set()
+    # 18/11 (giudice): un numero che compare su 4 o più attività diverse non è di un salone (centralino della
+    # piattaforma, agenzia...): fuori, sennò unirebbe saloni diversi in uno solo
+    nomi_per_tel: dict = {}
+    for r in grezze:
+        for x in (r.get("cell") or []) + (r.get("fissi") or []):
+            nomi_per_tel.setdefault(_n9(x), set()).add(nn(r.get("nome")) or r.get("nome"))
+    comuni = {t for t, ns in nomi_per_tel.items() if t and len(ns) >= int(os.environ.get("RNUM_TEL_COMUNE", "4"))}
     gruppi: list[dict] = []
     per_tel: dict = {}
     per_nome: dict = {}
     for r in grezze:
         if not vende_auto(r.get("nome")):
             continue
-        tels = [_n9(x) for x in (r.get("cell") or []) + (r.get("fissi") or [])]
-        kn = (nn(r.get("nome")), (r.get("prov") or "").upper()) if nn(r.get("nome")) else None
+        r = {**r, "cell": [x for x in (r.get("cell") or []) if _n9(x) not in comuni],
+             "fissi": [x for x in (r.get("fissi") or []) if _n9(x) not in comuni]}
+        if not (r["cell"] or r["fissi"]):
+            continue
+        tels = [_n9(x) for x in r["cell"] + r["fissi"]]
+        n_nome = nn(r.get("nome"))
+        kn = (n_nome, (r.get("prov") or "").upper(), slug(r.get("comune") or "")) if len(n_nome) >= 4 else None
         g = next((per_tel[t] for t in tels if t in per_tel), None) or (per_nome.get(kn) if kn else None)
         if g is None:
             g = {"nome": r.get("nome"), "comune": r.get("comune"), "prov": r.get("prov"), "km": r.get("km"),
@@ -673,7 +774,7 @@ def unisci_righe(grezze: list[dict], noti: set | None = None) -> list[dict]:
     out = []
     for g in gruppi:
         tutti = [_n9(x) for x in g["cell"] + g["fissi"]]
-        out.append({"nome": g["nome"], "comune": g["comune"], "prov": g["prov"],
+        out.append({"etichetta": etichetta, "nome": g["nome"], "comune": g["comune"], "prov": g["prov"],
                     "km": round(g["km"], 1) if isinstance(g["km"], (int, float)) else None,
                     "cellulare": g["cell"][0] if g["cell"] else "", "altri_cellulari": " ".join(g["cell"][1:4]),
                     "fisso": g["fissi"][0] if g["fissi"] else "", "altri_fissi": " ".join(g["fissi"][1:4]),
@@ -690,6 +791,19 @@ def _brevo(righe: list[dict], etichetta: str) -> int:
     from .raccolta60 import _brevo_copie
     # stesso formato dei modelli R60 (non attivi, non mandano email), nome "R60 RNUM-<etichetta> dati k/n"
     return _brevo_copie(righe, f"RNUM-{etichetta}")
+
+
+def _brevo_una_volta(R, righe: list[dict], etichetta: str) -> int:
+    """Copie Brevo una volta sola (passo "brevo": un lavoro ripreso non le rifà) e mai causa di un lavoro fallito."""
+    if "brevo" in R.fatti:
+        return 0
+    try:
+        n = _brevo(righe, etichetta)
+    except Exception as e:
+        log.warning("RNUM copie Brevo non fatte: %s", type(e).__name__)
+        return 0
+    R._segna("brevo", {"n": n})
+    return n
 
 
 def lavoro(etichetta: str, archivio=None, rete=None, zona=None, ore: float | None = None) -> dict:
@@ -716,7 +830,11 @@ def lavoro(etichetta: str, archivio=None, rete=None, zona=None, ore: float | Non
         t.start()
     for t in fili:
         t.join()
-    esito = {"giro": giro, **{k: v for k, v in R.st.items()}, "http": {k: dict(v) for k, v in R.http.items()},
+    try:
+        R.segna_spesa()
+    except Exception:
+        pass
+    esito = {"spesa_sblocco": R.spesa, "spesa_sblocco_totale": R.spesa_prec + R.spesa, "giro": giro, **{k: v for k, v in R.st.items()}, "http": {k: dict(v) for k, v in R.http.items()},
              "fonti_complete": dict(R.completa), "pagine_gialle_bloccata": R.pg_bloccata}
     if not all(R.completa.values()) and giro < int(os.environ.get("RNUM_GIRI_MAX", "5")):
         esito["da_riprendere"] = True
@@ -727,12 +845,12 @@ def lavoro(etichetta: str, archivio=None, rete=None, zona=None, ore: float | Non
         noti = R.arch.noti()
     except Exception:
         noti = set()
-    righe = unisci_righe(grezze, noti)
+    righe = unisci_righe(grezze, noti, etichetta)
     R.arch.finale(righe)
     esito.update({"righe_grezze": len(grezze), "saloni": len(righe), "con_cellulare": sum(1 for r in righe if r["cellulare"]),
                   "con_fisso": sum(1 for r in righe if r["fisso"]), "nuovi": sum(1 for r in righe if r["nuovo"]),
                   "nuovi_con_cellulare": sum(1 for r in righe if r["nuovo"] and r["cellulare"]),
-                  "modelli_brevo": _brevo(righe, etichetta) if archivio is None else 0})
+                  "modelli_brevo": _brevo_una_volta(R, righe, etichetta) if archivio is None else 0})
     log.warning("RNUM_FINE %s", json.dumps(esito, ensure_ascii=False))
     return esito
 

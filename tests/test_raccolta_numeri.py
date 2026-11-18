@@ -95,13 +95,35 @@ def test_unione_e_nuovi():
         {"fonte": "paginegialle", "nome": "Loconte", "comune": "Meda", "prov": "MB", "km": 22.0,
          "cell": ["3331112222"], "fissi": [], "sito": None, "indirizzo": None, "link": None},
     ]
-    righe = RN.unisci_righe(grezze, noti={"362445566"})
+    righe = RN.unisci_righe(grezze, noti={"0362445566"}, etichetta="t")
     assert len(righe) == 2
     a, b = righe
     assert a["nome"] == "Brianza Motors" and a["cellulare"] == "3471234567" and a["fisso"] == "0392345678"
     assert a["fonte"] == "paginegialle+subito" and a["nuovo"] is True and a["sito"] == "https://b.it"
     assert b["nome"] == "Vecchio Salone" and b["nuovo"] is False          # numero già raccolto
-    assert set(a) >= {"nome", "comune", "km", "cellulare", "fisso", "fonte"}
+    assert set(a) >= {"nome", "comune", "km", "cellulare", "fisso", "fonte"} and a["etichetta"] == "t"
+
+
+def test_correzioni_giudice_telefoni_filtri_unione():
+    # P.I./IVA come etichette, 0039 come +39, fisso di 11 cifre che e' una partita IVA valida: fuori
+    c, f = RN.telefoni("P.I. 01234567890 - IVA 03312345678 - cell 0039 333 1234567 - tel 02 3456789 - 12345678903")
+    assert c == ["3331234567"] and f == ["023456789"]
+    assert RN._piva_valida("12345678903") and not RN._piva_valida("0331234567")
+    assert RN.vende_auto("Autofficina e vendita auto Rossi") and RN.vende_auto("Carrozzeria Bianchi auto usate")
+    assert not RN.vende_auto("Officina Meccanica Bianchi") and not RN.vende_auto("Ricambi e vendita auto")
+    assert not RN.vende_auto("Concessionaria Moto Guzzi") and not RN.vende_auto("Autodemolizioni e vendita auto")
+    # numero comune a 4+ attivita' (centralino): non unisce saloni diversi e non finisce nelle righe
+    g = [{"fonte": "subito", "nome": f"Salone {x}", "comune": "Monza", "prov": "MB", "km": 15.0,
+          "cell": [f"34712345{i}0"], "fissi": ["0299999999"]} for i, x in enumerate(("Alfa", "Beta", "Gamma", "Delta"))]
+    r = RN.unisci_righe(g)
+    assert len(r) == 4 and all(x["fisso"] == "" for x in r)
+    # cellulare e fisso con le stesse ultime 9 cifre: saloni diversi
+    r = RN.unisci_righe([{"nome": "Salone Uno", "comune": "Monza", "prov": "MB", "cell": ["3392345678"]},
+                         {"nome": "Salone Due", "comune": "Monza", "prov": "MB", "fissi": ["0392345678"]}])
+    assert len(r) == 2
+    # captcha negli script di una pagina con risultati: non e' un blocco
+    html = "<script>grecaptcha</script>" + _leggi("paginegialle.html")
+    assert not RN.pg_bloccata(200, html)
 
 
 def test_voce_nella_coda_lunga():
@@ -139,8 +161,9 @@ class _Archivio:
 
 
 class _Rete:
-    def __init__(self, pg="ok", lento=0.0):
-        self.pg, self.lento, self.chiamate = pg, lento, []
+    def __init__(self, pg="ok", lento=0.0, vetrine_403=False):
+        self.pg, self.lento, self.chiamate, self.vetrine_403 = pg, lento, [], vetrine_403
+        self.sbloccate = 0
 
     def sblocco(self):
         return True
@@ -153,7 +176,10 @@ class _Rete:
 
     def pagina(self, url, sblocco):
         self.chiamate.append(url)
+        self.sbloccate += bool(sblocco)
         time.sleep(self.lento)
+        if "impresapiu" in url and self.vetrine_403 and not sblocco:
+            return 403, ""
         if "impresapiu" in url:
             if url.endswith("98765"):
                 return 200, _leggi("vetrina_subito.html")
@@ -226,3 +252,26 @@ def test_voce_rimandata_a_tempo_finito(monkeypatch):
     assert CL.esegui("raccolta_numeri:1811") is False and stati == ["rimanda"]
     monkeypatch.setattr(RN, "lavoro", lambda et: {"saloni": 3})
     assert CL.esegui("raccolta_numeri:1811") is True and stati[-1] == "fatto"
+
+
+def test_tetto_spesa_conta_anche_le_vetrine_e_i_giri_prima(monkeypatch):
+    """RNUM_PG_MAX_RICHIESTE conta OGNI richiesta passata dallo sblocco (Pagine Gialle e vetrine Subito), anche quelle
+    dei giri prima (passo "spesa")."""
+    monkeypatch.setattr(RN, "PROVINCE_SUBITO", (("MB", 4),))
+    monkeypatch.setenv("RNUM_PAUSA_BLOCCO", "0")
+    monkeypatch.setenv("RNUM_PG_MAX_RICHIESTE", "5")
+    a = _Archivio()
+    rete = _Rete(vetrine_403=True)
+    e = RN.lavoro("t3", archivio=a, rete=rete, zona=ZONA, ore=0.05)
+    assert rete.sbloccate <= 5 and e["spesa_sblocco_totale"] == rete.sbloccate and a.p["spesa"]["n"] == rete.sbloccate
+    rete2 = _Rete(vetrine_403=True)
+    RN.lavoro("t3", archivio=a, rete=rete2, zona=ZONA, ore=0.05)
+    assert rete2.sbloccate == 0                                   # tetto gia' speso nel giro prima
+
+
+def test_elenco_subito_con_errori_non_segnato(monkeypatch):
+    class ReteKo(_Rete):
+        def api(self, params):
+            raise RuntimeError("HTTP 500")
+    R = RN.Raccolta("t4", time.time() + 30, archivio=_Archivio(), rete=ReteKo(), zona=ZONA)
+    assert R._elenco_provincia("MB", 4) == [] and "elenco:MB" not in R.fatti
