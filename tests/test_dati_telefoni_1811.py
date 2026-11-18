@@ -168,7 +168,7 @@ def test_giro_riapre_e_rivaluta(caplog=None):
     class Es:
         stats = Counter({"categoria:opportunita": 1, "pubblicate": 1})
 
-    def rivaluta(conn, ids, fonte, pubblica=None):
+    def rivaluta(conn, ids, fonte, pubblica=None, **k):
         rivalutati.append((list(ids), fonte, pubblica))
         return Es()
 
@@ -183,6 +183,37 @@ def test_giro_riapre_e_rivaluta(caplog=None):
     st2 = CM.giro(ConnCM(cand, conf), controlla=controlla, rivaluta=rivaluta)
     assert st2["scelte"] == 0 and len(rivalutati) == 1
     CM._PROVATE.clear()
+
+
+def test_giro_non_spezza_un_auto_e_scrittura_sicura():
+    """(giudice 18/11) un'auto i cui confronti non stanno nel resto delle pagine aspetta il giro dopo (non segnata
+    provata); un errore del database su una riga non ferma il giro e le pagine aperte si contano."""
+    sg = scovo.soglia(6000)
+    cand = [_cand(1, 6000, 6000 + 2 * sg, list(range(100, 100 + CM.PAGINE_GIRO - 2))),
+            _cand(2, 6000, 6000 + sg, [500, 501, 502])]
+    conf = [{"id": i, "source": "subito", "url": "u", "price_eur": 1} for i in list(range(100, 160)) + [500, 501, 502]]
+    visti = []
+    CM._PROVATE.clear()
+    CM._GIORNO.update(g=None, pagine=0)
+    CM.giro(ConnCM(cand, conf), controlla=lambda c, x, st: visti.append([r["id"] for r in x]) or {"aperte": len(x)},
+            rivaluta=lambda *a, **k: None)
+    assert 500 not in visti[0] and 1 in CM._PROVATE and 2 not in CM._PROVATE
+    CM._PROVATE.clear()
+    from dealfinder.pipeline import tempo_reale as tr
+    from dealfinder.pipeline import verify as vf
+    vecchi = (tr._controlla_annuncio, tr._client_subito, vf._mark)
+
+    def rotto(*a, **k):
+        raise RuntimeError("db giu")
+    try:
+        tr._controlla_annuncio = lambda r, *a, **k: (r, "attivo", None)
+        tr._client_subito = lambda: None
+        vf._mark = rotto
+        st = Counter()
+        es = CM._controlla(ConnCM([], []), [{"id": 7, "source": "subito", "url": "u", "price_eur": 1}] * 3, st)
+        assert es["aperte"] == 3 and st["errore_scrittura"] == 3 and es["cambiati"] == []
+    finally:
+        tr._controlla_annuncio, tr._client_subito, vf._mark = vecchi
 
 
 def test_giro_tetto_pagine_e_spento():

@@ -153,6 +153,8 @@ def giro(conn, controlla=None, rivaluta=None) -> Counter:
         if len(auto) >= AUTO_GIRO or len(da_aprire) >= resto:
             break
         nuovi = [i for i in r["_ids"] if i not in da_aprire]
+        if auto and len(da_aprire) + len(nuovi) > resto:
+            break                     # (giudice) non mezza auto: le altre al prossimo giro, non segnate come provate
         auto.append(r)
         da_aprire.extend(nuovi[:max(0, resto - len(da_aprire))])
     if not da_aprire:
@@ -189,7 +191,7 @@ def giro(conn, controlla=None, rivaluta=None) -> Counter:
         try:
             if rivaluta is None:
                 from .valutazione import valuta_e_scrivi as rivaluta
-            es = rivaluta(conn, ids_auto, "confronti-mirati", pubblica=True)
+            es = rivaluta(conn, ids_auto, "confronti-mirati", pubblica=True, pausa_gruppo=VB.PAUSA_GRUPPO_S)
             conn.commit()
             for k, n in (getattr(es, "stats", None) or {}).items():
                 if k.startswith(("categoria:", "dati_insufficienti:")) or k == "pubblicate":
@@ -226,17 +228,24 @@ def _controlla(conn, conf: list[dict], st: Counter) -> dict:
             if stato == "attivo" and motivo == "prezzo_illeggibile":
                 stato = "errore"
             st[f"{r['source']}:{stato}"] += 1
-            if stato == "attivo" and str(motivo or "").startswith("prezzo_cambiato:"):
-                # un confronto vive del prezzo di OGGI: prezzo nuovo (come la raccolta, variazione plausibile già
-                # controllata da _confronta_prezzo) e visto adesso
-                tr.segna_prezzo_cambiato(conn, r["id"], int(str(motivo).split(":", 1)[1]))
-                _mark(conn, r["id"], "attivo", None)
-                st["prezzo_cambiato"] += 1
-                cambiati.append(r["id"])
-                continue
-            if stato in ("attivo", "scomparso"):
-                _mark(conn, r["id"], stato, r.get("price_eur"), motivo=motivo)
-                cambiati.append(r["id"])
+            try:      # (giudice) un errore del database su una riga non ferma il giro né perde il conto delle pagine
+                if stato == "attivo" and str(motivo or "").startswith("prezzo_cambiato:"):
+                    # un confronto vive del prezzo di OGGI: prezzo nuovo (come la raccolta, variazione plausibile già
+                    # controllata da _confronta_prezzo) e visto adesso
+                    tr.segna_prezzo_cambiato(conn, r["id"], int(str(motivo).split(":", 1)[1]))
+                    _mark(conn, r["id"], "attivo", None)
+                    st["prezzo_cambiato"] += 1
+                    cambiati.append(r["id"])
+                    continue
+                if stato in ("attivo", "scomparso"):
+                    _mark(conn, r["id"], stato, r.get("price_eur"), motivo=motivo)
+                    cambiati.append(r["id"])
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                st["errore_scrittura"] += 1
     finally:
         for c in (cas, csb):
             try:

@@ -4054,17 +4054,35 @@ def _tempo_reale():
         from ..pricing import confronti_mirati as cm
         time.sleep(int(os.environ.get("CONFRONTI_MIRATI_RITARDO_S", "420")))
         while True:
+            attesa = cm.GIRO_MIN * 60
             try:
-                with connect() as conn:
-                    st = cm.giro(conn)
-                cm.diagnostica(st)
-                if any(k.startswith("rivalutate_pubblicate") or k.startswith("rivalutate_categoria:opportunita")
-                       or k.startswith("rivalutate_categoria:candidato") for k in st):
-                    _elenco["t"] = 0.0
-                    _aggiorna_elenco(attendi=False)
+                # (giudice 18/11) memoria: mai insieme al calcolo grande né con la memoria già alta (512 MB)
+                if _calcolo["in_corso"] or _rss_mb() > float(os.environ.get("CONFRONTI_MIRATI_MAX_MB", "400")):
+                    attesa = 300
+                else:
+                    with connect() as conn:
+                        # un solo processo alla volta (due istanze durante un deploy)
+                        if conn.execute("SELECT pg_try_advisory_lock(734131) AS ok").fetchone()["ok"]:
+                            try:
+                                st = cm.giro(conn)
+                            finally:
+                                try:
+                                    conn.rollback()
+                                    conn.execute("SELECT pg_advisory_unlock(734131)")
+                                    conn.commit()
+                                except Exception:
+                                    pass
+                        else:
+                            st = {"altro_processo": 1}
+                    cm.diagnostica(st)
+                    _memoria.rilascia("confronti_mirati")
+                    if any(k.startswith("rivalutate_pubblicate") or k.startswith("rivalutate_categoria:opportunita")
+                           or k.startswith("rivalutate_categoria:candidato") for k in st):
+                        _elenco["t"] = 0.0
+                        _aggiorna_elenco(attendi=False, motivo="confronti_mirati")
             except Exception as e:
                 lg.warning("CONFRONTI_MIRATI non riuscito: %s", str(e)[:300])
-            time.sleep(cm.GIRO_MIN * 60)
+            time.sleep(attesa)
 
     if os.environ.get("CONFRONTI_MIRATI", "1") != "0":
         threading.Thread(target=confronti_mirati, daemon=True, name="confronti_mirati").start()
