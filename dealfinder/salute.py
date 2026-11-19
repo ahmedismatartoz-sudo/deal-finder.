@@ -190,7 +190,11 @@ def motivi_anomali(conn, coda=None) -> list[dict]:
             pass
     c = (coda or stato_coda)() if callable(coda or stato_coda) else None
     if isinstance(c, dict):
-        mai, eta, usd = int(_f(c.get("mai_controllate"))), _f(c.get("eta_coda_min")), _f(c.get("usd_oggi"))
+        # 20/11 (unione #3/#4): stato_coda() di controllo_auto dà in_attesa (mai controllate meno le fallite in
+        # attesa delle 6 ore) ed eta_coda_s in secondi; eta_coda_min resta come ripiego per i test.
+        mai = int(_f(c.get("in_attesa", c.get("mai_controllate"))))
+        eta = _f(c["eta_coda_s"]) / 60.0 if c.get("eta_coda_s") is not None else _f(c.get("eta_coda_min"))
+        usd = _f(c.get("usd_oggi"))
         if mai > 0 and eta > CODA_FERMA_MIN:
             out.append({"passo": "controllo_fermo", "tipo": "coda", "mai_controllate": mai, "minuti": int(eta),
                         "testo": f"Salute: {mai} auto con sconto alto mai controllate, coda ferma da {int(eta)} "
