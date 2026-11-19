@@ -7,7 +7,7 @@
   bs.forEach(function(b){b.addEventListener('click',function(){set(b.getAttribute('data-menu')==='open')})});
   addEventListener('keydown',function(e){if(e.key==='Escape'&&m&&!m.hidden)set(false)});
   /* header in home */
-  if(d.body.classList.contains('home')){var f=function(){d.body.classList.toggle('scrolled',scrollY>40)};addEventListener('scroll',f,{passive:true});f()}
+  if(d.body.classList.contains('home')){var sh=d.getElementById('show'),f=function(){d.body.classList.toggle('scrolled',scrollY>40);if(sh)r.classList.toggle('past-show',sh.getBoundingClientRect().bottom<innerHeight*.6)};addEventListener('scroll',f,{passive:true});f()}
   /* comparse */
   var els=[].slice.call(d.querySelectorAll('.rv'));
   if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});els.forEach(function(e){io.observe(e)})}

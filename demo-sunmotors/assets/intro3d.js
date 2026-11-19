@@ -41,16 +41,16 @@ function curve(pts) { // interpolazione cubica monotona
 }
 
 /* ---------- forma: crossover-coupé premium generico (metri; muso verso +x) ---------- */
-const L2 = 2.40, W2 = .952, XF = 1.47, XR = -1.45, TR = .372, WZ = .838, ARCH = TR + .058;
-const yTop = curve([[2.40, .56], [2.385, .65], [2.34, .735], [2.25, .79], [2.12, .825], [1.8, .885], [1.3, .945], [1.02, .985], [.86, 1.05], [.6, 1.215], [.32, 1.39], [.05, 1.515], [-.25, 1.572], [-.6, 1.578], [-.95, 1.54], [-1.3, 1.45], [-1.62, 1.335], [-1.88, 1.245], [-2.08, 1.2], [-2.24, 1.185], [-2.34, 1.15], [-2.40, 1.04]]);
-const yBelt = curve([[2.40, .54], [2.34, .69], [2.25, .755], [2.12, .79], [1.8, .85], [1.3, .915], [1.0, .965], [.5, 1.0], [0, 1.02], [-.6, 1.045], [-1.2, 1.075], [-1.7, 1.105], [-2.05, 1.13], [-2.24, 1.13], [-2.34, 1.09], [-2.40, 1.0]]);
-const yBase = curve([[2.40, .36], [2.31, .25], [2.12, .21], [1.0, .195], [0, .19], [-1.0, .195], [-2.0, .22], [-2.24, .28], [-2.40, .40]]);
+const L2 = 2.40, W2 = .952, XF = 1.47, XR = -1.45, TR = .388, WZ = .838, ARCH = TR + .058;
+const yTop = curve([[2.40, .56], [2.385, .65], [2.34, .735], [2.25, .79], [2.12, .825], [1.8, .885], [1.3, .945], [1.02, .985], [.86, 1.05], [.6, 1.215], [.32, 1.39], [.05, 1.515], [-.25, 1.572], [-.6, 1.578], [-.95, 1.54], [-1.3, 1.45], [-1.62, 1.335], [-1.88, 1.245], [-2.08, 1.2], [-2.24, 1.165], [-2.34, 1.1], [-2.40, .95]]);
+const yBelt = curve([[2.40, .54], [2.34, .69], [2.25, .755], [2.12, .79], [1.8, .85], [1.3, .915], [1.0, .955], [.5, .975], [0, .99], [-.6, 1.01], [-1.2, 1.04], [-1.7, 1.075], [-2.05, 1.1], [-2.24, 1.1], [-2.34, 1.03], [-2.40, .9]]);
+const yBase = curve([[2.40, .36], [2.31, .25], [2.12, .21], [1.0, .195], [0, .19], [-1.0, .195], [-2.0, .23], [-2.24, .31], [-2.40, .46]]);
 function yBottom(x) {
   let y = yBase(x);
   for (const cx of [XF, XR]) { const dx = x - cx; if (Math.abs(dx) < ARCH) y = Math.max(y, TR + Math.sqrt(ARCH * ARCH - dx * dx) * .985); }
   return y;
 }
-function plan(x) { const u = Math.abs(x) / L2, p = x > 0 ? 4.6 : 5.6; return Math.pow(Math.max(0, 1 - Math.pow(u, p)), 1 / p); }
+function plan(x) { const u = Math.abs(x) / L2, p = x > 0 ? 3.6 : 3.4; return Math.pow(Math.max(0, 1 - Math.pow(u, p)), 1 / p); }
 const halfW = x => W2 * plan(x);
 const cabin = x => sstep(1.03, .70, x) * sstep(-2.12, -1.62, x);
 const haunch = x => .028 * Math.exp(-Math.pow((x - XF) / .55, 2)) + .036 * Math.exp(-Math.pow((x - XR) / .6, 2));
@@ -60,19 +60,19 @@ const NB = 6, NC = 5, NS = 14, NL = 5, NU = 30;
 function section(x) {
   const yb = yBottom(x), ys = yBelt(x), yt = Math.max(yTop(x), ys + .012);
   const w = halfW(x), cab = cabin(x), hn = haunch(x) * plan(x);
-  const a = Math.max(.02, Math.min(w - .012, w - .045 - cab * (w - .80)));
-  const pts = [], rb = Math.max(.005, Math.min(.085, (ys - yb) * .35, w * .45)), tuck = Math.min(.035, w * .1);
+  const a = Math.max(.02, Math.min(w - .012, w - .045 - cab * (w - .77)));
+  const pts = [], rb = Math.max(.005, Math.min(.085, (ys - yb) * .35, w * .45)), tuck = Math.min(.06, w * .12);
   for (let i = 0; i < NB; i++) pts.push([i / NB * (w - rb - tuck), yb, 0, 0]);
   for (let i = 0; i < NC; i++) { const t = i / NC * Math.PI / 2; pts.push([w - tuck - rb + Math.sin(t) * rb, yb + rb - Math.cos(t) * rb, 0, 1]); }
   const sideTop = ys - .055;
   let zt = w;
   for (let i = 0; i < NS; i++) {
     const t = i / (NS - 1), y = yb + rb + t * Math.max(0, sideTop - yb - rb);
-    const z = w - tuck * Math.pow(1 - t, 2) + .012 * Math.sin(Math.PI * t) + hn * sstep(.3, .9, t);
+    const z = w - tuck * Math.pow(1 - t, 2) + .026 * Math.sin(Math.PI * Math.pow(t, .8)) + hn * sstep(.3, .9, t);
     pts.push([z, y, 0, 1]); zt = z;
   }
   for (let i = 1; i <= NL; i++) { const e = i / NL * Math.PI / 2; pts.push([a + (zt - a) * Math.cos(e), sideTop + .055 * Math.sin(e), 0, 1]); }
-  const b = yt - ys, n = 2.5 + 6 * (1 - cab), tumble = .2 * cab;
+  const b = yt - ys, n = 2.5 + 6 * (1 - cab), tumble = .26 * cab;
   for (let i = 1; i <= NU; i++) {
     const th = i / NU * Math.PI / 2, c = Math.pow(Math.cos(th), 2 / n), s = Math.pow(Math.sin(th), 2 / n);
     pts.push([a * c * (1 - tumble * s), ys + b * s, s, 2]);
@@ -105,9 +105,9 @@ function classify(x, y, z, s, zone) {
   }
   // posteriore
   if (x < -2.15) {
-    if (y > 1.036 && y < 1.058 && az < .93) return 'tail';
-    if (y > 1.0 && y < 1.08 && x < -2.27) return 'piano';
-    if (y < .44) { if (x < -2.3 && az < .6 && Math.abs(((z * 9) % 1 + 1) % 1 - .5) < .07) return 'piano'; return 'trim'; }
+    if (y > .975 && y < .997 && az < .93) return 'tail';
+    if (y > .94 && y < 1.015 && x < -2.27) return 'piano';
+    if (y < .5) { if (x < -2.3 && az < .6 && Math.abs(((z * 9) % 1 + 1) % 1 - .5) < .07) return 'piano'; return 'trim'; }
   }
   // sottoporta e passaruota
   if (y < yb0 + .07 && x < 2.14 && x > -2.12) return 'trim';
@@ -154,7 +154,7 @@ function bodyMaps(TW, TH) {
 /* ---------- uniform condivisi (luce che scorre, fari, vernice) ---------- */
 const U = {
   uBarX: { value: 5 }, uGateH: { value: 2.7 }, uGateW: { value: 2.3 }, uBarW: { value: .1 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(1, .94, .86) },
-  uHead: { value: 0 }, uTail: { value: 0 }, uPaint: { value: new THREE.Color('#24272c') },
+  uHead: { value: 0 }, uTail: { value: 0 }, uPaint: { value: new THREE.Color('#8f9297') },
 };
 function hook(mat, paint) {
   if (paint) mat.defines = Object.assign(mat.defines || {}, { SUN_PAINT: '' });
@@ -231,28 +231,43 @@ function discTex() {
   for (let k = 0; k < 48; k++) { const a = k / 48 * Math.PI * 2, r = 74 + (k % 3) * 14; x.beginPath(); x.arc(128 + Math.cos(a) * r, 128 + Math.sin(a) * r, 3.4, 0, 7); x.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+
+function merge(geos) { // unisce geometrie estruse mantenendo i due gruppi (fronte/retro e fianchi)
+  const pos = [], nor = [], idxF = [], idxS = [];
+  let off = 0;
+  for (const g0 of geos) {
+    const g = g0.index ? g0.toNonIndexed() : g0, pa = g.attributes.position;
+    for (let i = 0; i < pa.count; i++) pos.push(pa.getX(i), pa.getY(i), pa.getZ(i));
+    for (const gr of g.groups) for (let i = gr.start; i < gr.start + gr.count; i++) (gr.materialIndex ? idxS : idxF).push(off + i);
+    off += pa.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setIndex(idxF.concat(idxS)); out.addGroup(0, idxF.length, 0); out.addGroup(idxF.length, idxS.length, 1);
+  return out;
+}
 function makeWheelParts(lite) {
-  const r0 = .268, w = .128, seg = lite ? 48 : 72;
+  const r0 = .29, w = .13, seg = lite ? 48 : 72;
   // pneumatico
   const tp = [new THREE.Vector2(r0 + .012, -w + .012)];
   for (let i = 0; i <= 10; i++) { const t = i / 10 * Math.PI / 2; tp.push(new THREE.Vector2(TR - .045 + Math.sin(t) * .045, -w + .045 - Math.cos(t) * .045)); }
   for (let i = 0; i <= 10; i++) { const t = i / 10 * Math.PI / 2; tp.push(new THREE.Vector2(TR - .045 + Math.cos(t) * .045, w - .045 + Math.sin(t) * .045)); }
   tp.push(new THREE.Vector2(r0 + .03, w - .004)); tp.push(new THREE.Vector2(r0 + .012, w - .02));
   const tyreG = new THREE.LatheGeometry(tp, seg); tyreG.rotateX(Math.PI / 2);
-  // faccia del cerchio: 10 razze a coppie, concava, due toni (fronte diamantato, fianchi canna di fucile)
-  const sh = new THREE.Shape(); sh.absarc(0, 0, r0 - .006, 0, Math.PI * 2, false);
-  for (let k = 0; k < 5; k++) {
-    const base = k / 5 * Math.PI * 2;
-    for (const [a0, a1, ri] of [[base + .19, base + Math.PI * 2 / 5 - .19, .085], [base - .055, base + .055, .13]]) {
-      const h = new THREE.Path(), ro = r0 - .03;
-      if (a1 - a0 < .2) { h.moveTo(Math.cos(a0) * ri, Math.sin(a0) * ri); h.absarc(0, 0, ro - .01, a0 + .02, a1 - .02, false); h.lineTo(Math.cos(a1) * ri, Math.sin(a1) * ri); h.absarc(0, 0, ri, a1, a0, true); }
-      else { h.moveTo(Math.cos(a0) * ri, Math.sin(a0) * ri); h.lineTo(Math.cos(a0 + .05) * ro, Math.sin(a0 + .05) * ro); h.absarc(0, 0, ro, a0 + .05, a1 - .05, false); h.lineTo(Math.cos(a1) * ri, Math.sin(a1) * ri); h.absarc(0, 0, ri, a1, a0, true); }
-      sh.holes.push(h);
-    }
-  }
-  const faceG = new THREE.ExtrudeGeometry(sh, { depth: .022, bevelEnabled: true, bevelThickness: .008, bevelSize: .006, bevelSegments: 2, curveSegments: lite ? 40 : 64 });
+  // cerchio: 5 doppie razze rastremate e concave, fronte diamantato e fianchi scuri
+  const sp = new THREE.Shape(), si = .045, so = r0 - .022;
+  sp.moveTo(si, -.024); sp.lineTo(so, -.015); sp.lineTo(so, .015); sp.lineTo(si, .024); sp.lineTo(si, -.024);
+  const one = new THREE.ExtrudeGeometry(sp, { depth: .026, bevelEnabled: true, bevelThickness: .006, bevelSize: .005, bevelSegments: 2, steps: 1 });
+  const parts = [];
+  for (let k = 0; k < 5; k++) for (const o of [-.13, .13]) { const g = one.clone(); g.rotateZ(k / 5 * Math.PI * 2 + o); parts.push(g); }
+  const hubS = new THREE.Shape(); hubS.absarc(0, 0, .06, 0, Math.PI * 2, false);
+  const hubG = new THREE.ExtrudeGeometry(hubS, { depth: .03, bevelEnabled: true, bevelThickness: .008, bevelSize: .008, bevelSegments: 2, curveSegments: 40 });
+  parts.push(hubG);
+  const ringS = new THREE.Shape(); ringS.absarc(0, 0, r0 - .002, 0, Math.PI * 2, false); const hole = new THREE.Path(); hole.absarc(0, 0, r0 - .03, 0, Math.PI * 2, true); ringS.holes.push(hole);
+  parts.push(new THREE.ExtrudeGeometry(ringS, { depth: .02, bevelEnabled: false, curveSegments: seg }));
+  const faceG = merge(parts);
   const p = faceG.attributes.position;
-  for (let i = 0; i < p.count; i++) { const r = Math.hypot(p.getX(i), p.getY(i)); p.setZ(i, p.getZ(i) + .05 * (1 - sstep(.05, r0 - .02, r))); }
+  for (let i = 0; i < p.count; i++) { const r = Math.hypot(p.getX(i), p.getY(i)); p.setZ(i, p.getZ(i) + .06 * (1 - sstep(.07, r0 - .03, r))); }
   faceG.computeVertexNormals();
   const lipG = new THREE.TorusGeometry(r0 - .004, .009, 10, seg);
   const barrelG = new THREE.CylinderGeometry(r0 - .004, r0 - .004, w * 2 - .03, seg, 1, true); barrelG.rotateX(Math.PI / 2);
@@ -269,7 +284,7 @@ function makeWheelParts(lite) {
 function makeWheel(P, M, front) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(P.tyreG, M.tyre));
-  const face = new THREE.Mesh(P.faceG, [M.face, M.spokeSide]); face.position.z = P.w - .088; g.add(face);
+  const face = new THREE.Mesh(P.faceG, [M.face, M.spokeSide]); face.position.z = P.w - .1; g.add(face);
   const lip = new THREE.Mesh(P.lipG, M.face); lip.position.z = P.w - .012; g.add(lip);
   g.add(new THREE.Mesh(P.barrelG, M.barrel));
   const disc = new THREE.Mesh(P.discG, M.disc); disc.position.z = P.w - .17; g.add(disc);
@@ -405,9 +420,9 @@ function poses(portrait) {
   return {
     i0: { az: 34, el: 3, d: 6.6, t: [.4, .62, 0], fov: 30, ox: 0, oy: 0 },
     i1: { az: 22, el: 4.5, d: 4.7, t: [1.45, .64, .1], fov: 30, ox: 0, oy: 0 },
-    hero: { az: 38, el: 7, fit: 3.4, t: [0, .78, 0], fov: 24, ox: -.2, oy: .07 },
+    hero: { az: 38, el: 7, fit: 3.15, t: [0, .78, 0], fov: 24, ox: -.2, oy: .07 },
     s1: { az: 64, el: 3, d: 3.0, t: [1.47, .42, .95], fov: 28, ox: -.17, oy: 0 },
-    s2: { az: 90, el: 2, fit: 2.75, t: [0, .76, 0], fov: 20, ox: 0, oy: .1 },
+    s2: { az: 90, el: 2, fit: 3.5, t: [0, .76, 0], fov: 20, ox: -.19, oy: .1 },
     s3: { az: 148, el: 7, fit: 2.75, t: [-.25, .8, 0], fov: 24, ox: .16, oy: .02 },
     s4: { az: 318, el: 17, fit: 2.85, t: [0, .62, 0], fov: 24, ox: -.15, oy: .02 },
   };
@@ -501,13 +516,14 @@ export function start(opts = {}) {
     composer.setPixelRatio(dpr); composer.setSize(W, H);
     camera.aspect = W / H; portrait = camera.aspect < .9; P = poses(portrait);
     motes.material.uniforms.uPR.value = dpr * H / 900;
+    if (floor) floor.getRenderTarget().setSize(Math.round(W * dpr * (lite ? .5 : .75)), Math.round(H * dpr * (lite ? .5 : .75)));
   }
   addEventListener('resize', resize, { passive: true }); resize();
 
   function fitD(p) {
     if (p.d) return p.d;
     const v = THREE.MathUtils.degToRad(p.fov) / 2, hz = Math.atan(Math.tan(v) * camera.aspect);
-    const az = THREE.MathUtils.degToRad(p.az), span = Math.abs(Math.cos(az)) * L2 + Math.abs(Math.sin(az)) * W2 * 1.05;
+    const az = THREE.MathUtils.degToRad(p.az), span = Math.abs(Math.sin(az)) * L2 + Math.abs(Math.cos(az)) * W2 * 1.05;
     return Math.max((span + 1.0) / Math.tan(hz) * (p.fit / 2.75), 1.1 / Math.tan(v) * 1.3);
   }
   function applyPose(p, extraAz = 0, extraEl = 0) {
@@ -615,7 +631,7 @@ export function start(opts = {}) {
       else U.uBarI.value = 0;
     }
     U.uHead.value = st.hd * 3.2; U.uTail.value = st.hd * 3;
-    envMats.forEach(m => { m.envMapIntensity = lerp(.035, 1, st.env); });
+    envMats.forEach(m => { m.envMapIntensity = lerp(.035, 1.25, st.env); });
     FU.uEnv.value = st.env; FU.uBarX.value = U.uBarX.value; FU.uBarI.value = U.uBarI.value; FU.uHead.value = st.hd; FU.uTail.value = st.hd; FU.uTime.value = time;
     const mu = motes.material.uniforms; mu.uTime.value = time; mu.uEnv.value = st.env; mu.uHead.value = st.hd;
     gate.position.x = U.uBarX.value; gateM.color.setScalar(2.6 * U.uBarI.value); gate.visible = T < T_END && U.uBarI.value > .01;
