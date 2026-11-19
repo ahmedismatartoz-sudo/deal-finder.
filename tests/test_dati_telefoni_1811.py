@@ -41,7 +41,7 @@ def test_commercianti_vecchi_mai_nella_stima():
     vecchi = [_vecchio(200 + i, 30000) for i in range(6)]       # prezzi lontanissimi: se contassero, R cambierebbe
     v0 = VB.valuta(_t(6000), _base(COMM), scovo.soglia(6000))
     v1 = VB.valuta(_t(6000), _base(COMM + vecchi), scovo.soglia(6000))
-    assert v0["R"] == v1["R"] == 8624 and v0["n"] == v1["n"] == 6      # 19/11: valore prudente (test_valore_base.RD) and v1["categoria"] == v0["categoria"]
+    assert v0["R"] == v1["R"] == 8593 and v0["n"] == v1["n"] == 6      # 19/11 pomeriggio: mediana-1911b (test_valore_base.RD) and v1["categoria"] == v0["categoria"]
     assert "rinfresco" not in v1 and "motivo_dati" not in v1
     # oltre VECCHI_MAX_GIORNI non sono nemmeno da riaprire; quelli freschi sono già nella base D
     assert VB.vecchi_commercianti([_vecchio(1, 9000, gv=VB.VECCHI_MAX_GIORNI + 1), COMM[0]]) == []
@@ -372,7 +372,7 @@ def test_postgres_confronti_mirati_strada_intera():
     CM._PROVATE.clear()
     assert sorted(aperti) == sorted(vecchi) and st["auto_da_rivalutare"] == 1, dict(st)
     r = c.execute("SELECT categoria, margine, dati FROM valutazioni_policy WHERE listing_id=%s", (buona,)).fetchone()
-    # stessa stima del metodo coi 6 commercianti ora freschi: 40° percentile 9.200 meno lo sconto di vetrina = 8.624,
-    # margine 2.624 (soglie invariate; 19/11 valore prudente)
-    assert r["categoria"] == "opportunita" and r["margine"] == 2624 and r["dati"]["n"] == 6
+    # stessa stima del metodo coi 6 commercianti ora freschi: mediana 9.250 meno lo sconto di vetrina della fascia
+    # (7,1%) = 8.593, margine 2.593 (soglie invariate; 19/11 pomeriggio regola mediana-1911b)
+    assert r["categoria"] == "opportunita" and r["margine"] == 2593 and r["dati"]["n"] == 6
     assert c.execute("SELECT stage FROM listings WHERE id=%s", (buona,)).fetchone()["stage"] == "approfondito"

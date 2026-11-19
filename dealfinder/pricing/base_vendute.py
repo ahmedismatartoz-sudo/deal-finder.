@@ -27,7 +27,9 @@ Lancio: BREVO_IMPORT_LISTE=base_vendute:ora (gira subito nel sito).
 (valore_base.stima_prudente, regole.ValoreBase) accanto al calcolo del 18/11 (mediane, "sito_n5"), sulle STESSE
 vendute, divisa per fascia di prezzo, età e venditore della venduta ("prudente|fascia:<5k", ...); il rapporto
 commercianti/vendute (D/V) dove ci sono entrambe e il rapporto 40° percentile/mediana, per fascia ed età; le auto
-buone tra i privati col valore prudente ("buone_prudente"). Lancio: base_vendute:<etichetta nuova>."""
+buone tra i privati col valore prudente ("buone_prudente"). Lancio: base_vendute:<etichetta nuova>.
+19/11 pomeriggio (regola mediana-1911b, base_vendute:1911b): anche per fascia della STIMA del 18/11
+("prudente|fascia_stima:...", la fascia che usa lo sconto) e per età × fascia della stima ("prudente|eta_fascia:...")."""
 from __future__ import annotations
 
 import logging
@@ -199,6 +201,10 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None =
         chiavi = ("fascia:" + fascia(vero), "eta:" + fascia_eta(v["year"]),
                   "venduta_da:" + ("commerciante" if v["seller_type"] == "commerciante" else "privato"))
         if ds or ss:
+            # 19/11 pomeriggio (1911b): anche per fascia della STIMA del 18/11 (come lo sconto per fascia, che conosce
+            # solo la stima: la fascia del prezzo vero esagera il gonfiamento delle economiche) e per età × fascia
+            chiavi = chiavi + ("fascia_stima:" + fascia(ds or ss),
+                               "eta_fascia:" + fascia_eta(v["year"]) + "|" + fascia(ds or ss))
             prec["sito_n5"].append((ds or ss, vero))
             if sp["valore"]:
                 prec["prima_su_stesse"].append((ds or ss, vero))
@@ -211,7 +217,7 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None =
                 for k in chiavi:
                     prec["prima_senza_prudente|" + k].append((ds or ss, vero))
             if ds and ss:
-                for k in chiavi[:2]:
+                for k in chiavi[:2] + chiavi[3:4]:
                     rapp["D/V|" + k].append(ds / ss)
             d5 = stima_dettaglio(D, v, n_min=N_MIN_SITO)
             if d5:

@@ -306,29 +306,38 @@ class ValoreBase:
     """19/11 (cliente: "gravissimo errore di gonfiamento: tante auto hanno un valore di mercato sovrastimato"; regola
     storica "non gonfiare i prezzi"). Valore del sito (pricing/valore_base.py) PRUDENTE: il prezzo chiesto in vetrina da
     un commerciante comprende trattativa, preparazione e garanzia e NON è il valore di un'auto da privato.
-    - stime al `percentile` (40°) dei confronti tenuti invece della mediana;
-    - commercianti (D) scontati: s = trattativa + costi_vetrina / D (+ extra_vecchie oltre `fragile_anni` anni),
-      cioè 3% + 300 € / D (+3% oltre 10 anni) tra 5% e 20%:
-      tra sconto_min e sconto_max (auto economiche: sconto più alto, i costi di vetrina pesano di più);
-    - R = min(vendute V, D scontata) quando ci sono entrambe; le vendute con almeno `n_tetto_V` confronti fanno solo
-      da TETTO (abbassano, mai alzano);
-    - livello 2 (anno ±2, km ±40%) solo con almeno `n_min_livello2` confronti; auto "fragili" (valore sotto
-      `fragile_valore` € o oltre `fragile_anni` anni) solo con almeno `n_min_fragile` confronti.
+    19/11 pomeriggio, regola "mediana-1911b" (la prudente-1911 delle 10:23 correggeva TROPPO: sito da ~620 a 187 auto,
+    misura BASE_VENDUTE delle 10:47 −6,7% in media, −9,2% oltre 20.000 €). Ricalibrata sulla misura per fascia:
+    - stime alla MEDIANA dei confronti tenuti (`percentile` 0,5, come il 18/11);
+    - sconto di vetrina per FASCIA del valore stimato, interpolato in modo continuo tra i punti di `sconti`
+      (valore €, sconto): s = 1 − 0,99 / (1 + scostamento del 18/11 nella fascia) → scostamento atteso ≈ −1%.
+      Misura del 18/11: <5k +28,2%, 5-10k +8,6%, 10-15k +3,9%, 15-20k +1,2%, >20k −1,5% → 23%, 8,5%, 4,5%, 2%, 0,5%
+      (oltre 20.000 € mezzo punto di riserva: le auto di 0-5 anni, quasi tutte lì, misurano +2,7%);
+      prima di 4.500 € e dopo 22.500 € costante; + `extra_vecchie` oltre `fragile_anni` anni; tra sconto_min e sconto_max;
+    - le vendute (V) sono già più basse dei commercianti (rapporto D/V della misura, `rapporto_dv` per fascia): se la
+      stima viene SOLO dalle vendute lo sconto è 1 − (1 − s)·D/V (mai negativo), così non si sconta due volte;
+    - R = min(V, D scontata) solo sotto `tetto_V_sotto` € (dove D/V = 1,078 lo giustifica; le vendute con almeno
+      `n_tetto_V` confronti fanno da tetto); sopra, R = D scontata (o V scontata se mancano i commercianti): il minimo di
+      due stime rumorose sposterebbe in basso tutte le fasce (bias misurato: −1/−2 punti);
+    - livello 2 (anno ±2, km ±40%) con almeno `n_min_livello2` (5) confronti come il 18/11; auto "fragili" (valore
+      sotto `fragile_valore` € o oltre `fragile_anni` anni) solo con almeno `n_min_fragile` (8) confronti a ogni livello;
+    - mai sopra il calcolo del 18/11 (mediana commercianti con ≥5 confronti, altrimenti mediana vendute).
     Solo valutazione: le soglie di margine (SOGLIE_PV) e le altre regole del sito non cambiano."""
-    percentile: float = 0.40
+    percentile: float = 0.50
     n_min: int = 5                     # = valore_base.N_MIN_SITO (livello 1)
-    n_min_livello2: int = 8
+    n_min_livello2: int = 5
     n_min_fragile: int = 8
     n_tetto_V: int = 3
-    # calibrati sulla misura BASE_VENDUTE del 18/11 (vendute degli ultimi 30 giorni, 21.402 con stima D): la stima dei
-    # commercianti sta in media +3,3% sopra l'ULTIMO prezzo chiesto delle vendute, che a sua volta è sopra il prezzo
-    # di chiusura (trattativa). Con 40° percentile (≈ −2,7%) e questo sconto (≈ 6% in media) lo scostamento atteso
-    # diventa negativo (≈ −5% sull'ultimo prezzo chiesto, ≈ 0 sul prezzo di chiusura). Da verificare con base_vendute.
-    trattativa: float = 0.03
-    costi_vetrina: int = 300           # preparazione + garanzia dentro il prezzo del commerciante (euro per auto)
-    extra_vecchie: float = 0.03
-    sconto_min: float = 0.05
-    sconto_max: float = 0.20
+    # (valore stimato €, sconto di vetrina): punti al centro delle fasce della misura BASE_VENDUTE del 19/11 10:47
+    sconti: tuple = ((4500, 0.23), (7500, 0.085), (12500, 0.045), (17500, 0.02), (22500, 0.005))
+    # (valore €, rapporto mediano commercianti/vendute della stessa misura)
+    rapporto_dv: tuple = ((4500, 1.078), (7500, 1.019), (12500, 1.016), (17500, 1.013), (22500, 1.0))
+    # oltre 10 anni: 0 (la misura per età, +7,2% sopra 10 anni, è già coperta dalle fasce: le auto vecchie sono quasi
+    # tutte economiche e il loro sconto medio di fascia è ~11% contro il 7,6% che serve; +4% darebbe ≈ −8%)
+    extra_vecchie: float = 0.0
+    sconto_min: float = 0.0
+    sconto_max: float = 0.25
+    tetto_V_sotto: int = 5000          # min(V, D scontata) solo con valore dei commercianti sotto questa cifra
     fragile_valore: int = 5000
     fragile_anni: int = 10
 
