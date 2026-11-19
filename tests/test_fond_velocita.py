@@ -573,17 +573,17 @@ def test_impronta_delle_regole_invariata():
     from dealfinder import regole as RG
     from dealfinder import regole_log as rl
     # 19/11 (REGOLE: valore prudente, regole.ValoreBase): le impronte cambiano SOLO per la sezione valore_base
-    # (prima 6d5b70387e73, 004240ac8a48, f23abb1d281a, bcce5b11d8f6 = prudente-1911; 8f63f899711c = mediana-1911b);
+    # (prima 6d5b70387e73, 004240ac8a48, f23abb1d281a, bcce5b11d8f6 = prudente-1911; 8f63f899711c = mediana-1911b; 2248a486eb6c = mediana-1911c);
     # soglie e altre regole invariate (run_tests.py --impronta)
-    assert rl.impronta({})[0] == "110277153e66"                      # 19/11 pomeriggio (prima 0ee03fb95b10)
-    assert rl.impronta({"RIVENDITA_VERA": "1", "SOGLIE_PV": "7000:1500", "TR_SUBITO": "1"})[0] == "c15425ee4458"
-    assert RG.impronta(RG.regole({})) == "8f63f899711c"
+    assert rl.impronta({})[0] == "d0178c9857e0"                      # 19/11 sera (prima 110277153e66, 0ee03fb95b10)
+    assert rl.impronta({"RIVENDITA_VERA": "1", "SOGLIE_PV": "7000:1500", "TR_SUBITO": "1"})[0] == "3e12dad18bc8"
+    assert RG.impronta(RG.regole({})) == "2248a486eb6c"
     nuove = {k: "1" for k in ("TR_AS_INTERVALLO_S", "TR_SUBITO_VELOCE", "TR_SUBITO_PAGINE_VELOCE",
                               "TR_SUBITO_SECONDI_VELOCE", "TR_RECUPERO_PAGINE", "TR_RECUPERO_SECONDI", "TR_CODA",
                               "TR_CODA_TENTATIVI", "TR_CODA_RIPRESA_MIN", "TR_CODA_MAX", "TR_INVARIATI_VELOCE",
                               "TR_ARRESTO_MAX_S", "TR_COMPLETO_GIRO_MAX_MIN", "TR_RIPRESA_CONTROLLO_MIN",
                               "TR_SITO_CONTROLLO_S", "TR_WORKER_GIRO_OK_MIN")}
-    assert rl.impronta(nuove)[0] == "110277153e66"
+    assert rl.impronta(nuove)[0] == "d0178c9857e0"
 
 
 # 16/11: ogni test isolato (vedi _isolato), con pytest e con run_tests.py

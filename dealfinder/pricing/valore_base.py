@@ -25,6 +25,9 @@ Per ogni auto (valutazione.valuta_e_scrivi, unico punto che scrive valutazioni_p
   * livello 2 (anno ±2, km ±40%) con almeno 5 confronti come il 18/11; auto economiche (valore sotto 5.000 €) o con
     più di 10 anni solo con almeno 8 confronti a ogni livello (le stime più deboli fanno solo da tetto);
   * mai sopra il calcolo del 18/11;
+- 19/11 sera, regola "mediana-1911c": stessi passi, `sconti` ricalibrati sulla misura per fascia della STIMA senza sconto
+  (base_vendute:1911b, "prima|fascia_stima"): 5% fino a 4.500 € (il min con le vendute abbassa già), 4,5% a 7.500,
+  4,4% a 12.500, 3,4% a 17.500, 3,2% da 22.500 € (dettagli in regole.ValoreBase); rilancio rivaluta_base:1911c;
   altrimenti nessuna stima (categoria dati_insufficienti). M = R (nessuna correzione chiesto → venduto: `calibrato` =
   1,0, il sito non la rifà).
 - margine = R − prezzo (cliente 18/11: i costi fissi del commerciante, fino a 200 € con policy_v2, NON si tolgono).
@@ -269,7 +272,7 @@ def _pochi(out: dict, tt: dict, D: list, V: list, Dv: list) -> dict:
 
 # ------------------------------------------------------------------ valore prudente (19/11)
 
-REGOLA = "mediana-1911b"
+REGOLA = "mediana-1911c"
 
 
 def eta_auto(anno, oggi=None) -> int:

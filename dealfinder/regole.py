@@ -322,14 +322,25 @@ class ValoreBase:
     - livello 2 (anno ±2, km ±40%) con almeno `n_min_livello2` (5) confronti come il 18/11; auto "fragili" (valore
       sotto `fragile_valore` € o oltre `fragile_anni` anni) solo con almeno `n_min_fragile` (8) confronti a ogni livello;
     - mai sopra il calcolo del 18/11 (mediana commercianti con ≥5 confronti, altrimenti mediana vendute).
+    19/11 sera, regola "mediana-1911c" (misura BASE_VENDUTE 1911b, vendute degli ultimi 30 giorni: totale −1,2% ma per
+    fascia della stima <5k −16,3%, 5-10k −7,6%, 10-15k −1,1%, 15-20k +0,2%, >20k +1,7%): `sconti` ricalibrati sulla
+    misura giusta, quella per fascia della STIMA del 18/11 SENZA sconto ("prima|fascia_stima": <5k +10,0%, 5-10k +4,1%,
+    10-15k +3,7%, 15-20k +2,4%, >20k +2,3%), s = 1 − 0,99/(1 + scostamento) → 10%, 4,9%, 4,5%, 3,3%, 3,2%, poi:
+      * sotto 5.000 € 5% e non 10%: lì il valore è min(V, D scontata) con D/V = 1,078 (le vendute sono già ~7% sotto i
+        commercianti) e le stime deboli fanno da tetto (8 confronti): con il 10% il minimo porterebbe la fascia a ≈ −5%;
+        5% è anche il minimo che tiene lo sconto non crescente col valore (atteso ≈ −1%/−3%);
+      * 5-10k e 10-15k insieme a ~4,4-4,5% (5-10k da sola vorrebbe ~4,2% per i tetti delle auto oltre 10 anni, sotto
+        il 4,5% della fascia dopo: sconto non crescente col valore, valore netto sempre crescente);
+      atteso per fascia della stima: <5k ≈ −1/−3%, 5-10k −1,3%, 10-15k −0,8%, 15-20k −1,2%, >20k −1,0%.
     Solo valutazione: le soglie di margine (SOGLIE_PV) e le altre regole del sito non cambiano."""
     percentile: float = 0.50
     n_min: int = 5                     # = valore_base.N_MIN_SITO (livello 1)
     n_min_livello2: int = 5
     n_min_fragile: int = 8
     n_tetto_V: int = 3
-    # (valore stimato €, sconto di vetrina): punti al centro delle fasce della misura BASE_VENDUTE del 19/11 10:47
-    sconti: tuple = ((4500, 0.23), (7500, 0.085), (12500, 0.045), (17500, 0.02), (22500, 0.005))
+    # (valore stimato €, sconto di vetrina): punti al centro delle fasce della misura BASE_VENDUTE 1911b (19/11 sera,
+    # regola mediana-1911c; prima, mediana-1911b: 23%, 8,5%, 4,5%, 2%, 0,5%). Sconto NON crescente col valore.
+    sconti: tuple = ((4500, 0.05), (7500, 0.045), (12500, 0.044), (17500, 0.034), (22500, 0.032))
     # (valore €, rapporto mediano commercianti/vendute della stessa misura)
     rapporto_dv: tuple = ((4500, 1.078), (7500, 1.019), (12500, 1.016), (17500, 1.013), (22500, 1.0))
     # oltre 10 anni: 0 (la misura per età, +7,2% sopra 10 anni, è già coperta dalle fasce: le auto vecchie sono quasi

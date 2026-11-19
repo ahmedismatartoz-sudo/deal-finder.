@@ -42,10 +42,11 @@ def _t(prezzo, **kw):
 
 COMM = [_c(i, p) for i, p in enumerate((9000, 9100, 9200, 9300, 9400, 9500), start=1)]
 VEND = [_c(100 + i, p, status="scomparso", sel="privato") for i, p in enumerate((8000, 8100, 8200, 8300, 8400))]
-# 19/11 pomeriggio (regola mediana-1911b, regole.ValoreBase): commercianti alla mediana (9.250) meno lo sconto di
-# vetrina della fascia (8,5% a 7.500 €, 4,5% a 12.500 €: 7,1% a 9.250 €) = 8.593; sole vendute: mediana 8.200 meno
-# 6,11% (sconto della fascia tolta la differenza commercianti/vendute) = 7.699 (prima del 18/11: 9.250 e 8.200)
-RD, RV = 8593, 7699
+# 19/11 sera (regola mediana-1911c, regole.ValoreBase): commercianti alla mediana (9.250) meno lo sconto di
+# vetrina della fascia (4,5% a 7.500 €, 4,4% a 12.500 €: 4,46% a 9.250 €) = 8.837; sole vendute: mediana 8.200 meno
+# 2,71% (sconto della fascia tolta la differenza commercianti/vendute) = 7.978 (prima del 18/11: 9.250 e 8.200;
+# mediana-1911b: 8.593 e 7.699)
+RD, RV = 8837, 7978
 
 
 # ------------------------------------------------------------------ calcolo
@@ -57,20 +58,20 @@ def test_commercianti_scontati_e_vendute_come_tetto():
     # 19/11 pomeriggio: sopra 5.000 € R = commercianti scontati (il minimo con le vendute solo per le economiche)
     assert v["fonte_base"] == "commercianti" and v["M"] == v["R"] == v["R_finale"] == RD
     assert v["n"] == 6 and v["stima_D"] == 9250 and v["stima_V"] == 8200 and v["n_V"] == 5 and v["n_D"] == 6
-    assert v["prudenza"]["D_netta"] == RD and v["prudenza"]["sconto_vetrina"] == 0.071
+    assert v["prudenza"]["D_netta"] == RD and v["prudenza"]["sconto_vetrina"] == 0.0446
     assert v["metodo"] == "base_vendute" and v["calibrato"] == 1.0 and v["totale_costi"] == 0
     assert v["margine"] == RD - 6000 and v["categoria"] == "opportunita"
     vb = v["valore_base"]
     assert {k: vb[k] for k in ("fonte", "R", "n", "stima_D", "n_D", "stima_V", "n_V", "stima_D_netta", "regola")} == \
         {"fonte": "commercianti", "R": RD, "n": 6, "stima_D": 9250, "n_D": 6, "stima_V": 8200, "n_V": 5,
-         "stima_D_netta": RD, "regola": "mediana-1911b"}
+         "stima_D_netta": RD, "regola": "mediana-1911c"}
     assert all(c["venditore"] == "commerciante" for c in v["confronti"])
-    # economiche (commercianti sotto 5.000 €): minimo tra vendute e commercianti scontati (D/V alto): 4.650 − 22,3%
+    # economiche (commercianti sotto 5.000 €): minimo tra vendute e commercianti scontati (D/V alto): 4.650 − 4,98%
     eco_D = [_c(i, p) for i, p in enumerate((4300, 4400, 4500, 4600, 4700, 4800, 4900, 5000), start=1)]
     eco_V = [_c(100 + i, p, status="scomparso", sel="privato")
              for i, p in enumerate((3000, 3050, 3100, 3150, 3200, 3250, 3300, 3350))]
     v = VB.valuta(_t(1500), VB.dividi(eco_D + eco_V), scovo.soglia(1500))
-    assert v["prudenza"]["D_netta"] == 3614 and v["R"] == 3175 and v["fonte_base"] == "vendute"
+    assert v["prudenza"]["D_netta"] == 4418 and v["R"] == 3175 and v["fonte_base"] == "vendute"
     assert all(c.get("venduta") for c in v["confronti"])
     # soli commercianti: prezzo di vetrina scontato
     v = VB.valuta(_t(6000), VB.dividi(COMM), scovo.soglia(6000))
@@ -134,8 +135,9 @@ def test_incidentata_con_ricambi_valutata_col_nuovo_calcolo():
     assert v["totale_costi"] == 800 and v["margine"] == RD - 5000 - 800
     assert v["categoria"] == "candidato" and any("danneggiata" in m for m in v["motivi"])
     # stesso danno con margine sotto soglia: non conveniente
-    v = VB.valuta(_t(7000, damage_class="medio", parts_cost_high=900), base, scovo.soglia(7000))
-    assert v["margine"] == RD - 7000 - 900 and v["categoria"] == "non_conveniente"
+    # (19/11 sera, mediana-1911c: a 7.000 € il margine 937 € sarebbe "da trattare" con 600 € di sconto: prezzo 7.300)
+    v = VB.valuta(_t(7300, damage_class="medio", parts_cost_high=900), base, scovo.soglia(7300))
+    assert v["margine"] == RD - 7300 - 900 and v["categoria"] == "non_conveniente"
 
 
 def test_difetti_letti_dall_ai_tolti_una_volta():
@@ -489,7 +491,7 @@ def test_postgres_errore_in_carica_non_lascia_la_base_del_gruppo_prima():
     assert es.stats["errore"] == 1 and chiamate.count("tipo") == 2
     m = {r["listing_id"]: r["dati"].get("M") for r in c.execute(
         "SELECT listing_id, dati FROM valutazioni_policy").fetchall()}
-    assert m[a] == RD and m[b2] == 14774 and b1 not in m      # Tipo: 15.250 − 3,12% (fascia 12.500-17.500)       # la seconda Tipo con la base delle Tipo
+    assert m[a] == RD and m[b2] == 14663 and b1 not in m      # Tipo: 15.250 − 3,85% (fascia 12.500-17.500)       # la seconda Tipo con la base delle Tipo
 
 
 def test_postgres_torino_con_torino():
@@ -505,7 +507,7 @@ def test_postgres_torino_con_torino():
     VZ.valuta_e_scrivi(c, [mi, to], "test", pubblica=False)
     m = {r["listing_id"]: r["dati"].get("M") for r in c.execute(
         "SELECT listing_id, dati FROM valutazioni_policy").fetchall()}
-    assert m[mi] == RD and m[to] == 6546                       # Torino: 7.250 − 9,71%
+    assert m[mi] == RD and m[to] == 6921                       # Torino: 7.250 − 4,54%
 
 
 def test_ai_prezzi_spento_col_calcolo_nuovo():

@@ -1,6 +1,6 @@
 {
  "ammessi_produzione": {
-  "regole_impronta": "8f63f899711c",
+  "regole_impronta": "2248a486eb6c",
   "scovo.MARGINE_MINIMO": 800,
   "scovo.SOGLIE": [
    [
@@ -270,23 +270,23 @@
     "sconti": [
      [
       4500,
-      0.23
+      0.05
      ],
      [
       7500,
-      0.085
-     ],
-     [
-      12500,
       0.045
      ],
      [
+      12500,
+      0.044
+     ],
+     [
       17500,
-      0.02
+      0.034
      ],
      [
       22500,
-      0.005
+      0.032
      ]
     ],
     "sconto_max": 0.25,
@@ -313,7 +313,7 @@
     "ripiego_nord": true
    }
   },
-  "regole_impronta": "8f63f899711c",
+  "regole_impronta": "2248a486eb6c",
   "regole_versione": "regole-2026-11-12a",
   "scovo": {
    "ANNO_MINIMO": 2007,
@@ -495,6 +495,6 @@
    ]
   }
  },
- "impronta": "c5061d6379c5",
- "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default. 19/11 pomeriggio: idem con la regola mediana-1911b (solo regole.ValoreBase)."
+ "impronta": "e9c08e5fde04",
+ "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default. 19/11 pomeriggio: idem con la regola mediana-1911b (solo regole.ValoreBase). 19/11 sera: idem con la regola mediana-1911c (solo regole.ValoreBase.sconti)."
 }
