@@ -48,6 +48,7 @@ SPOSTABILI: dict = {
     "aperture:": (False, BREVO),
     "rimetti:": (False, BREVO),
     "utenti:": (False, ()),             # solo una lettura del database
+    "clienti_tel:": (False, ()),        # 19/11 16:31 (cliente: "con numeri di telefono, fallo tu"): telefoni dei soli paganti
     "giro1711:": (False, BREVO),        # 17/11 sera (cliente): due liste + due campagne, subito nel sito
     "base_vendute:": (False, ()),       # 18/11 notte (cliente, OK): ricalcolo di prova su vendute e commercianti, sola lettura
     "conta_mercato:": (False, ()),      # 18/11 notte: quanti annunci hanno i siti contro quanti ne abbiamo (sola lettura)
@@ -57,7 +58,7 @@ SPOSTABILI: dict = {
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -504,6 +505,20 @@ def esegui(v: str) -> bool | None:
                 lg.warning("BREVO_APERTURE %s già fatto", v)
         except Exception as e:
             lg.warning("BREVO_APERTURE non riuscito: %s", str(e)[:300])
+        return
+    if v.startswith("clienti_tel:"):      # 19/11 16:31 (cliente): nome e telefono dei soli clienti paganti, una volta
+        try:
+            from ..pipeline.ciclo import _una_volta
+            if not _una_volta("clienti_tel:" + v.split(":", 1)[1]):
+                lg.warning("CLIENTI_TEL già fatto")
+                return
+            with connect() as conn:
+                righe = conn.execute("""SELECT d.id, d.name, d.company, d.phone FROM dealers d
+                    WHERE d.abbonamento_stato IN ('active','trialing') OR d.stripe_customer IS NOT NULL
+                    ORDER BY d.id""").fetchall()
+            lg.warning("CLIENTI_TEL %s", json.dumps([dict(r) for r in righe], ensure_ascii=False, default=str))
+        except Exception as e:
+            lg.warning("CLIENTI_TEL non riuscito: %s", str(e)[:300])
         return
     if v.startswith("utenti:"):           # 6/11 sera (cliente): quanto usano il sito i commercianti registrati (niente email nei log)
         try:
