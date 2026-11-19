@@ -114,6 +114,18 @@ def scala(valore_512: float, limite_mb: float | None = None) -> float:
     return valore_512 * max(1.0, lim / PREDEFINITO_MB)
 
 
+def alta(quota: float = 0.6, limite_mb: float | None = None, rss: float | None = None) -> bool:
+    """Memoria alta: RSS del processo oltre quota × limite del container (0,6 = 322 MB su 512 MiB, ~1.290 MB su
+    2 GB). La usano i lavori pesanti per rimandare (confronti mirati nel web, rivalutazioni della salute).
+    RSS non leggibile (0) = non alta. Mai un errore."""
+    try:
+        r = rss_mb() if rss is None else float(rss)
+        lim = limite_container()[0] if limite_mb is None else float(limite_mb)
+        return r > 0 and lim > 0 and r > float(quota) * lim
+    except Exception:
+        return False
+
+
 def limita_arene() -> bool:
     n = int(os.environ.get("MEMORIA_ARENE", "2") or 0)
     c = _c()
