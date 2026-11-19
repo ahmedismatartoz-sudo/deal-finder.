@@ -439,6 +439,12 @@ def _fai_azioni(connetti, giorno, giro: dict, ves=None) -> list[dict]:
 # ---------------------------------------------------------------------------------------------------------------
 # Il giro (una volta all'ora, dal thread della sentinella del sito)
 # ---------------------------------------------------------------------------------------------------------------
+def _limite(conn) -> None:
+    """Tempo massimo delle letture. SET LOCAL vale solo fino al commit/rollback: va ripetuto dopo ognuno (20/11:
+    prima c'era solo all'inizio e le letture dopo il primo commit restavano senza limite)."""
+    conn.execute("SET LOCAL statement_timeout = '%ds'" % TIMEOUT_S)
+
+
 def esegui(connetti=None, invia=None, adesso: datetime | None = None, coda=None, ves=None,
            sottofondo: bool | None = None) -> dict:
     """Un giro: storico, controllo, allarmi (registra_allarmi + invia_coda della sentinella) e, se serve e si può,
@@ -462,17 +468,21 @@ def esegui(connetti=None, invia=None, adesso: datetime | None = None, coda=None,
             from .db import connect as connetti
         oggi = _giorno(adesso)
         with connetti() as conn:
-            conn.execute("SET LOCAL statement_timeout = '%ds'" % TIMEOUT_S)
+            _limite(conn)
             S.assicura_tabelle(conn)
             assicura_tabella(conn)
+            _limite(conn)                  # le due sopra possono fare commit
             preso = conn.execute(PRENOTA_SQL, (oggi, adesso, adesso - timedelta(minutes=OGNI_MIN))).fetchone()
             conn.commit()
             if not preso:
                 return {"saltato": True}
+            _limite(conn)
             aggiorna_storico(conn, adesso)
             conn.commit()
+            _limite(conn)
             c = controlla(conn, adesso, coda)
             conn.rollback()
+            _limite(conn)
             riga.update(n=c["n"], mediana_7g=c["mediana_7g"], calo_pct=c["calo_pct"],
                         motivi_anomali=[m["passo"] for m in c["motivi"]])
             motivi = [{k: v for k, v in m.items() if k != "testo"} for m in c["motivi"]]
@@ -495,6 +505,7 @@ def esegui(connetti=None, invia=None, adesso: datetime | None = None, coda=None,
                         conn.execute("/*H:azioni_prenota*/ UPDATE salute_giorno SET azioni = azioni || %s::jsonb "
                                      "WHERE giorno = %s", (json.dumps([giro]), oggi))
             conn.commit()
+            _limite(conn)
             riga["email"] = S.invia_coda(conn, adesso, invia)
             conn.commit()
         if giro:

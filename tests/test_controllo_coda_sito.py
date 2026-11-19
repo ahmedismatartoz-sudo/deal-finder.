@@ -285,9 +285,12 @@ def test_rinnovo_con_lo_stesso_contenuto_non_si_paga():
     def chiama(testo, foto):
         raise AssertionError("rinnovo identico: nessuna chiamata")
     conn = Conn(cand, [a])
+    CA.CODA_SITO["da_fare_ids"] = {1, 2}
     with env(CONTROLLO_FOTO_MODO="0"):
         res = CA.giro(conn, chiama=chiama)
     assert res["rinnovi_inutili_evitati"] == 1
+    assert CA.CODA_SITO["da_fare_ids"] == {2}        # 20/11: controllata, non resta "mai controllata" per sempre
+    CA.CODA_SITO.pop("da_fare_ids", None)
     assert any("_verificata_at" in q and p == (1,) for q, p in conn.scritte)
     # ...ma non diventa riusabile a un prezzo nuovo (giudice A6) e la senza foto viste si rifà comunque
     assert not CA.riusabile(5000, imp, 5200, imp, vecchia)

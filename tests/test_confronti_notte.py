@@ -357,7 +357,8 @@ def test_salva_rispetta_comune_ok_e_scarti(monkeypatch):
 
 # ------------------------------------------------------------------ notte(): stop e conti
 
-def _notte(monkeypatch, auto, cerca_sub=None, cerca_as=None, conn=None, **kw):
+def _notte(monkeypatch, auto, cerca_sub=None, cerca_as=None, conn=None, _lento=None, **kw):
+    """`_lento` = (orologio finto [secondi], secondi per ogni rivalutazione)."""
     _acceso(monkeypatch)
     CM._tabella_fatta[0] = False
     conn = conn or Conn(auto)
@@ -371,6 +372,8 @@ def _notte(monkeypatch, auto, cerca_sub=None, cerca_as=None, conn=None, **kw):
     def rivaluta(c, righe, fonte, pubblica=None, pausa_gruppo=None):
         ids = [int(r["id"]) if isinstance(r, dict) else int(r) for r in righe]
         rivalutati.append((ids, fonte, pubblica))
+        if _lento:
+            _lento[0][0] += _lento[1]
         return Es(ids)
 
     def salva(c, trovati, g, prov, st):
@@ -644,3 +647,166 @@ def test_log_solo_conteggi(monkeypatch):
     # nell'esito e nel log solo numeri e nomi di contatori: nessun elenco di id o di annunci
     assert all(isinstance(v, (int, float, bool, dict)) for v in out.values())
     assert all(isinstance(x, int) for v in out.values() if isinstance(v, dict) for x in v.values())
+
+
+# ------------------------------------------------------------------ 20/11 (revisione B1): tempi nel cron mercato
+
+def _molti_gruppi(n=40):
+    sg = scovo.soglia(6000)
+    return [_auto(i, model="Modello%d" % i, stima=6000 + (n + 2 - i) * sg) for i in range(1, n + 1)]
+
+
+def test_partenza_a_8_ore_e_mezza_lascia_tempo_ad_ai_prezzi(monkeypatch):
+    """Partita a 8,5 ore dall'avvio del cron, con ricerche e rivalutazioni lente: la raccolta smette a 10 ore, tutto
+    si ferma alla scadenza dura (10,35) e tempo_ok("ai_prezzi", 10.5) è ancora vero."""
+    from dealfinder import memoria
+    from dealfinder.pipeline import collect as C
+    from dealfinder.pricing import valore_base as VB
+    t0 = 1_000_000.0
+    ora = [t0 + 8.5 * 3600]
+    monkeypatch.setenv("CRON_T0", str(t0))
+    monkeypatch.delenv("CRON_ORE_CONFRONTI_NOTTE", raising=False)
+    monkeypatch.delenv("CRON_ORE_AI_PREZZI", raising=False)
+    monkeypatch.setattr(memoria, "alta", lambda *a, **k: False)
+    monkeypatch.setattr(CM, "notte_attiva", lambda: True)
+    monkeypatch.setattr(VB, "_blocchi", lambda righe, *a: [[r] for r in righe])
+    esiti, passati = [], {}
+
+    def cerca_sub(g, n, st):
+        ora[0] += 7 * 60                                 # ogni gruppo: 7 minuti di ricerca
+        st["pagine"] += 1
+        return [g["ids"][0] + 9000]
+
+    def nel_cron(minuti_max=None, scadenza=None):
+        passati.update(minuti_max=minuti_max, scadenza=scadenza)
+        out, _c, rivalutati, _l = _notte(monkeypatch, _molti_gruppi(), cerca_sub=cerca_sub, minuti_max=minuti_max,
+                                         scadenza=scadenza, orologio=lambda: ora[0], _lento=(ora, 6 * 60))
+        esiti.append((out, rivalutati))
+        return out
+
+    monkeypatch.setattr(CM, "notte_nel_cron", nel_cron)
+    C.confronti_notte("nord", ora=lambda: ora[0])
+    out, rivalutati = esiti[0]
+    assert passati["minuti_max"] == 90 and passati["scadenza"] == t0 + C.CONFRONTI_NOTTE_SCADENZA_ORE * 3600
+    assert out["fermata_tempo"] == 1 and 0 < out["gruppi_cercati"] < 40
+    assert out["rivalutazione_fermata_tempo"] == 1 and out["rivalutazione_rimaste"] > 0
+    assert 0 < len(rivalutati) < out["gruppi_cercati"]
+    assert C.tempo_ok("ai_prezzi", 10.5, t0, ora=ora[0])            # il modello AI dei prezzi parte ancora
+    assert C.CONFRONTI_NOTTE_FINE_ORE == 10.0 and C.CONFRONTI_NOTTE_AVVIO_ORE == 9.25
+    assert C.CONFRONTI_NOTTE_SCADENZA_ORE < 10.5 and C.NORD_ORE_MAX == 9.5
+    # oltre 9,25 ore non parte nemmeno
+    esiti.clear()
+    ora[0] = t0 + 9.3 * 3600
+    C.confronti_notte("nord", ora=lambda: ora[0])
+    assert not esiti
+
+
+def test_rivalutazione_si_ferma_alla_scadenza(monkeypatch):
+    from dealfinder.pricing import valore_base as VB
+    monkeypatch.setattr(VB, "_blocchi", lambda righe, *a: [[r] for r in righe])
+    ora = [0.0]
+    out, conn, rivalutati, _l = _notte(
+        monkeypatch, _tre_gruppi(), orologio=lambda: ora[0], scadenza=25 * 60, _lento=(ora, 10 * 60),
+        cerca_sub=lambda g, n, st: [g["ids"][0] + 9000])
+    # 4 auto da rivalutare, 10 minuti l'una, scadenza a 25 minuti: tre fatte (0, 10, 20), la quarta la notte dopo
+    assert len(rivalutati) == 3 and out["rivalutazione_fermata_tempo"] == 1 and out["rivalutazione_rimaste"] == 1
+    assert out["rivalutate"] == 3 and "errore" not in out
+    assert any("pg_advisory_unlock" in s for s in conn.sql)
+    # scadenza già passata all'avvio: niente ricerca, niente riapertura, niente rivalutazione
+    ora[0] = 0.0
+    out, conn, rivalutati, _l = _notte(monkeypatch, _tre_gruppi(), orologio=lambda: ora[0], scadenza=-1,
+                                       cerca_sub=lambda g, n, st: [1])
+    assert out["fermata_tempo"] == 1 and out["gruppi_cercati"] == 0 and not rivalutati
+    assert out["riapertura_saltata_tempo"] == 1 and "rivalutazione_fermata_tempo" not in out
+
+
+def test_mercato_nord_prima_dei_confronti(monkeypatch):
+    from dealfinder.pipeline import collect as C
+    ordine = []
+    monkeypatch.setenv("CRON_T0", "0")
+    monkeypatch.setattr(C, "fase_mercato_nord", lambda: ordine.append("mercato_nord") or {})
+    monkeypatch.setattr(C, "confronti_notte", lambda fase, ora=None: ordine.append("confronti:" + fase))
+    monkeypatch.setattr(C, "tempo_ok", lambda fase, ore, t0, ora=None: ordine.append("tempo:" + fase) or True)
+    monkeypatch.setattr(C, "_ai_prezzi", lambda: ordine.append("ai_prezzi"))
+    C.fase_nord_processo()
+    assert ordine == ["mercato_nord", "confronti:nord", "tempo:ai_prezzi", "ai_prezzi"]
+    # mercato_nord che fallisce non ferma il resto
+    ordine.clear()
+    monkeypatch.setattr(C, "fase_mercato_nord", lambda: 1 / 0)
+    C.fase_nord_processo()
+    assert ordine == ["confronti:nord", "tempo:ai_prezzi", "ai_prezzi"]
+    # dopo la notte: con mercato_nord dovuto i confronti NON partono lì (li fa il processo "nord", dopo mercato_nord)
+    lanci = []
+    monkeypatch.setenv("NORD_PROCESSO", "1")
+    monkeypatch.setenv("MERCATO_NORD_FASE", "0")
+    monkeypatch.setattr(C.os, "execv", lambda *a: lanci.append(os.environ.get("MERCATO_NORD_FASE")))
+    monkeypatch.setattr(C, "nord_dovuto", lambda: True)
+    ordine.clear()
+    C.dopo_notte()
+    assert lanci == ["1"] and "confronti:dopo_notte" not in ordine
+    monkeypatch.setattr(C, "nord_dovuto", lambda: False)
+    ordine.clear()
+    lanci.clear()
+    C.dopo_notte()
+    assert not lanci and ordine == ["confronti:dopo_notte", "tempo:ai_prezzi", "ai_prezzi"]
+    # nel cron principale: stessa regola (testo del codice: il blocco __main__ non si può eseguire in un test)
+    src = open(C.__file__, encoding="utf-8").read()
+    principale = src[src.index('if __name__ == "__main__":'):]
+    assert "fase_nord_processo()" in principale and 'confronti_notte("nord")' not in principale
+    i = principale.index('confronti_notte("mercato")')
+    assert principale[:i].rstrip().endswith("if not _nord:")
+    assert principale.index("fase_mercato_nord()") < principale.index('confronti_notte("mercato_dopo_nord")')
+
+
+def test_nord_dovuto(monkeypatch):
+    from dealfinder.pipeline import ciclo
+    from dealfinder.pipeline import collect as C
+    monkeypatch.setenv("MERCATO_NORD", "1")
+    monkeypatch.setattr(ciclo, "_due", lambda job, ore: (job, ore) == ("collect:mercato_nord", 144))
+    assert C.nord_dovuto() is True
+    monkeypatch.setenv("MERCATO_NORD", "0")
+    assert C.nord_dovuto() is False
+    monkeypatch.setenv("MERCATO_NORD", "1")
+    monkeypatch.setattr(ciclo, "_due", lambda job, ore: 1 / 0)
+    assert C.nord_dovuto() is False                      # database giù: mai un errore
+
+
+def test_venti_salvataggi_falliti_di_fila_fermano_la_raccolta(monkeypatch):
+    from dealfinder import db, zone
+    from dealfinder.core import dal_testo, normalize
+    monkeypatch.setattr(dal_testo, "completa", lambda campi, titolo, testo: {})
+    monkeypatch.setattr(normalize, "normalize_fields", lambda l: None)
+    monkeypatch.setattr(zone, "comune_ok", lambda prov, citta: True)
+    provati = []
+
+    def upsert(conn, l):
+        provati.append(1)
+        if len(provati) == 3:
+            return 103, "nuovo"
+        raise RuntimeError("connessione caduta")
+
+    monkeypatch.setattr(db, "upsert_listing", upsert)
+    st = Counter()
+    ids = CM.salva(Conn(), [_ann() for _ in range(40)], G, {"MI"}, st)
+    # due falliti, uno salvato (il conto riparte), poi 20 di fila: ci si ferma lì
+    assert ids == {103} and len(provati) == 23 and st["scarto:non_salvato"] == 22
+    assert st["_non_salvati_di_fila"] == CM.SALVATAGGI_FALLITI_MAX == 20
+    # notte(): il gruppo dopo non si cerca, contatore fermata_salvataggi, niente chiavi interne nel log
+    visti = []
+
+    def salva_rotto(c, trovati, g, prov, st):
+        st["scarto:non_salvato"] += 20
+        st["_non_salvati_di_fila"] += 20
+        return set()
+
+    _acceso(monkeypatch)
+    CM._tabella_fatta[0] = False
+    try:
+        out = CM.notte(connetti=lambda: Conn(_tre_gruppi()), cerca_as=lambda g, n, st: [],
+                       cerca_sub=lambda g, n, st: visti.append(g["model"]) or [1], rivaluta=lambda *a, **k: None,
+                       riapri=lambda c: Counter(), salva_fn=salva_rotto)
+    finally:
+        _spegni_lettore()
+        CM._tabella_fatta[0] = False
+    assert visti == ["Punto"] and out["fermata_salvataggi"] == 1 and out["gruppi_cercati"] == 1
+    assert not [k for k in out if k.startswith("_")]

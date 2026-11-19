@@ -323,7 +323,7 @@ def motivi_zona(conn, a=None) -> dict:
             conn.rollback()
         except Exception:
             pass
-        log.warning("CONFRONTI_MIRATI motivi non letti: %s", str(e)[:150])
+        log.warning("CONFRONTI_MIRATI motivi non letti: %s", type(e).__name__)
         return {}
 
 
@@ -759,13 +759,20 @@ def salva(conn, annunci: list, g: dict, province: set, st: Counter) -> set:
             except Exception:
                 pass
             st["scarto:non_salvato"] += 1
+            st["_non_salvati_di_fila"] += 1
             if st["scarto:non_salvato"] <= 3:
                 log.warning("CONFRONTI_NOTTE annuncio non salvato: %s", type(e).__name__)
+            if st["_non_salvati_di_fila"] >= SALVATAGGI_FALLITI_MAX:
+                break                 # connessione caduta: inutile provare gli altri (notte() ferma la raccolta)
             continue
+        st["_non_salvati_di_fila"] = 0
         ids.add(lid)
         st[f"{l.source}:{event}"] += 1
         st["confronti_salvati"] += 1
     return ids
+
+
+SALVATAGGI_FALLITI_MAX = 20     # annunci non salvati DI FILA (anche tra gruppi diversi): connessione caduta, ci si ferma
 
 
 CHIAVI_LOG = ("gruppi", "gruppi_cercati", "pagine", "confronti_salvati", "rivalutate", "uscite_da_dati_insufficienti",
@@ -773,11 +780,13 @@ CHIAVI_LOG = ("gruppi", "gruppi_cercati", "pagine", "confronti_salvati", "rivalu
 
 
 def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=None, adesso=None, minuti_max=None,
-          orologio=None, salva_fn=None) -> dict:
+          orologio=None, salva_fn=None, scadenza=None) -> dict:
     """La raccolta notturna intera (vedi sopra). Mai un'eccezione verso fuori: riga di log CONFRONTI_MIRATI_NOTTE con i
     conteggi prima/dopo (auto in dati_insufficienti:pochi_confronti nella zona, uscite, nuove buone sul sito).
     Si ferma da sola: tempo (minuti, al massimo `minuti_max` se il cron ne ha meno), pagine, tutte le fonti bloccate
-    (403/429); quello che è già stato raccolto si rivaluta comunque."""
+    (403/429), 20 salvataggi falliti di fila (connessione caduta); quello che è già stato raccolto si rivaluta comunque.
+    `scadenza` (ora dell'orologio, dal cron) è DURA e vale per tutto: oltre non si cerca, non si riapre e la
+    rivalutazione esce (`rivalutazione_fermata_tempo`): le auto rimaste le riprende la notte dopo."""
     from .. import regole as RG
     from ..web import scovo
     from . import valore_base as VB
@@ -797,6 +806,9 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
         minuti = max(1, min(minuti, int(minuti_max)))
     pagine_max = limite_notte("pagine", NOTTE_PAGINE)
     sub = asc = None
+
+    def scaduta() -> bool:
+        return scadenza is not None and orologio() >= float(scadenza)
     try:
         with connetti() as conn:
             if not conn.execute("SELECT pg_try_advisory_lock(%s) AS ok", (LOCK,)).fetchone()["ok"]:
@@ -825,8 +837,11 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                 fonti = (("subito", cerca_sub), ("autoscout24", cerca_as))
                 cercati, nuovi_conf = [], set()
                 for g in gruppi:
-                    if orologio() - t0 > minuti * 60:
+                    if orologio() - t0 > minuti * 60 or scaduta():
                         st["fermata_tempo"] = 1
+                        break
+                    if st["_non_salvati_di_fila"] >= SALVATAGGI_FALLITI_MAX:
+                        st["fermata_salvataggi"] = 1      # connessione caduta: basta per stanotte
                         break
                     if st["pagine"] >= pagine_max:
                         st["fermata_pagine"] = 1
@@ -855,12 +870,19 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                         cercati.append(g)
                     else:
                         st["gruppi_non_letti"] += 1
+                if st["_non_salvati_di_fila"] >= SALVATAGGI_FALLITI_MAX:
+                    st["fermata_salvataggi"] = 1
+                st.pop("_non_salvati_di_fila", None)
                 st["gruppi_cercati"] = len(cercati)
                 st["gruppi_con_confronti"] = sum(1 for g in cercati if g.get("_salvati"))
                 st["confronti_nuovi_o_rinfrescati"] = len(nuovi_conf)
                 # riapertura dei commercianti vecchi (giro di sempre), con le pagine che restano alla notte
                 try:
-                    rg = (riapri or giro)(conn)          # rivaluta da solo le auto che aiuta (strada di sempre)
+                    if scaduta():
+                        st["riapertura_saltata_tempo"] = 1
+                        rg = {}
+                    else:
+                        rg = (riapri or giro)(conn)      # rivaluta da solo le auto che aiuta (strada di sempre)
                     for k, n in dict(rg).items():
                         if isinstance(n, int) and (k in ("candidate", "scelte", "confronti_da_aprire", "pagine",
                                                          "auto_da_rivalutare") or k.startswith("rivalutate_")):
@@ -878,7 +900,11 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                 if rivaluta is None and pezzi:
                     from .valutazione import valuta_e_scrivi as rivaluta
                 salvata: dict = {}
-                for pezzo in pezzi:
+                for n_pezzo, pezzo in enumerate(pezzi):
+                    if scaduta():                         # scadenza dura del cron: il resto la notte dopo
+                        st["rivalutazione_fermata_tempo"] = 1
+                        st["rivalutazione_rimaste"] = sum(len(p) for p in pezzi[n_pezzo:])
+                        break
                     try:
                         es = rivaluta(conn, pezzo, "confronti-notte", pubblica=True, pausa_gruppo=0)
                         conn.commit()
@@ -909,7 +935,7 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                 except Exception:
                     pass
     except Exception as e:
-        out = dict(out or {}, errore=type(e).__name__, **dict(st))
+        out = dict(out or {}, errore=type(e).__name__, **{k: v for k, v in st.items() if not k.startswith("_")})
     finally:
         for c in (getattr(sub, "client", None), getattr(asc, "_client", None)):
             try:
@@ -1008,7 +1034,7 @@ def richiedi_notte(conn, motivo: str) -> bool:
         return False
 
 
-def notte_nel_cron(minuti_max=None) -> dict | None:
+def notte_nel_cron(minuti_max=None, scadenza=None) -> dict | None:
     """Dal cron mercato (pipeline/collect.py): la raccolta della notte se dovuta, registrata in job_runs. Non solleva."""
     try:
         if not notte_dovuta():
@@ -1019,7 +1045,7 @@ def notte_nel_cron(minuti_max=None) -> dict | None:
             c.commit()
         esito: dict = {}
         try:
-            esito = notte(minuti_max=minuti_max)
+            esito = notte(minuti_max=minuti_max, scadenza=scadenza)
         finally:
             with connect() as c:
                 c.execute("UPDATE job_runs SET finished_at=now(), ok=%s, stats=%s WHERE id=%s",

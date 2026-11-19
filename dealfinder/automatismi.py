@@ -14,7 +14,8 @@ Mai un errore: database assente, chiave scritta male o valore illeggibile = defa
 Nomi degli interruttori: memoria_auto, confronti_notte, controllo_tutte, salute, salute_azioni.
 La chiave NON è tra impostazioni.CHIAVI: dal pannello non si scrive. Per spegnere (rollback senza deploy):
     INSERT INTO sito_impostazioni (chiave, valore) VALUES ('automatismi','{"confronti_notte": false}')
-    ON CONFLICT (chiave) DO UPDATE SET valore = EXCLUDED.valore
+    ON CONFLICT (chiave) DO UPDATE SET valore = sito_impostazioni.valore || EXCLUDED.valore
+(con || gli altri interruttori già scritti restano: si cambia solo quello indicato)
 """
 from __future__ import annotations
 

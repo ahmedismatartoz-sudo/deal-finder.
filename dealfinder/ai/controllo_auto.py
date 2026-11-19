@@ -1257,6 +1257,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             conn.execute("UPDATE decisione_ai SET risposta = risposta || jsonb_build_object('_verificata_at', now()::text) "
                          "WHERE listing_id=%s AND fonte='claude'", (a["id"],))
             st["rinnovi_inutili_evitati"] += 1
+            (CODA_SITO.get("da_fare_ids") or set()).discard(a["id"])     # controllata: non resta "mai controllata"
             continue
         a["_conferma"] = serve_conferma(r)
         a["_sito"] = bool(r.get("_sito"))
