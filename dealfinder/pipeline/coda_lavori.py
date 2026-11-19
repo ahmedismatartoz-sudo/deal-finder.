@@ -57,7 +57,7 @@ SPOSTABILI: dict = {
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
