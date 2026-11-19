@@ -137,6 +137,27 @@ In `dealfinder/sentinella.py`, funzione `_ciclo_web`, dentro il `try` del ciclo:
             riepilogo_giorno.esegui()
 ```
 
+Aggancio della **salute giornaliera** (19/11, `dealfinder/salute.py`, FATTO in questo ramo): nello stesso `try`,
+subito dopo il riepilogo, ogni 10 minuti (lavora una volta all'ora: la prenotazione è nella tabella `salute_giorno`,
+quindi vale anche con due processi del sito durante un deploy):
+
+```python
+            try:
+                from . import salute
+                salute.esegui()                   # non solleva mai; le azioni girano in un thread a parte
+            except Exception as e:
+                log.warning("SALUTE non eseguita: %s", type(e).__name__)
+```
+
+Cosa fa: confronta le auto sul sito con la mediana dei 7 giorni (calo oltre il 15% = allarme `salute:calo`), cerca
+i motivi anomali (imbuto, coda del controllo AI ferma da più di 2 ore, spesa del controllo sopra 5 $ = allarmi
+`salute:motivo:<passo>`) e fa SOLO tre azioni: ricalcolo dell'elenco, rivalutazione dei valori scaduti (massimo 600
+auto), richiesta di una notte di confronti mirati; un giro ogni 6 ore, al massimo 3 al giorno, lucchetto 734141.
+Gli avvisi passano da `sentinella.registra_allarmi` / `sentinella.invia_coda` (email solo 8-22 di Roma). Righe di
+log: `SALUTE {...}` e `SALUTE_AZIONE {...}`. Migrazione `064_salute.sql` (solo aggiunta; la tabella si crea anche al
+primo uso). Si spegne senza deploy con la chiave `automatismi` di `sito_impostazioni`: `{"salute": false}` (niente)
+oppure `{"salute_azioni": false}` (solo avvisi). Deploy: solo il servizio web.
+
 Entrambe le funzioni non sollevano mai eccezioni. Il riepilogo usa lo stesso canale delle email della sentinella
 (`sentinella._invia_brevo`, Brevo transazionale verso info@skovo.app).
 
