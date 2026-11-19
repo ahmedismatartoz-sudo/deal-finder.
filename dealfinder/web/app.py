@@ -3686,12 +3686,12 @@ def _tempo_reale():
                                     _telefoni_scelte()
                                     _elenco["t"] = 0.0
                                     _aggiorna_elenco(attendi=False)
-                                if res.get("candidate", 0) >= jev.per_giro():     # 13/11: CONTROLLO_PER_GIRO con Claude
-                                    attesa = 120               # ce ne sono ancora: giro successivo subito
-                                if res.get("sito_restanti") and not res.get("saltato"):
-                                    # 19/11 (cliente: tutte le auto con sconto alto controllate): la coda del sito
-                                    # non è finita, il giro dopo parte entro 2 minuti (non tra un'ora)
-                                    attesa = 120
+                                # 13/11: giro pieno (CONTROLLO_PER_GIRO con Claude) = giro successivo subito.
+                                # 19/11 (cliente: tutte le auto con sconto alto controllate): anche con la coda del
+                                # sito non finita il giro dopo parte entro 2 minuti (non tra un'ora); mai a vuoto
+                                # (pausa per credito, chiamate tutte fallite: controllo_auto.attesa_prossimo_giro)
+                                from ..ai import controllo_auto as _ca
+                                attesa = _ca.attesa_prossimo_giro(res, attesa, jev.per_giro())
                             finally:
                                 conn.rollback()
                                 conn.execute("SELECT pg_advisory_unlock(734105)")
