@@ -153,7 +153,7 @@ function bodyMaps(TW, TH) {
 
 /* ---------- uniform condivisi (luce che scorre, fari, vernice) ---------- */
 const U = {
-  uBarX: { value: 5 }, uGateH: { value: 2.7 }, uGateW: { value: 2.3 }, uBarW: { value: .1 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(1, .94, .86) },
+  uBarX: { value: 5 }, uGateH: { value: 2.7 }, uGateW: { value: 1.9 }, uBarW: { value: .1 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(1, .94, .86) },
   uHead: { value: 0 }, uTail: { value: 0 }, uPaint: { value: new THREE.Color('#8f9297') },
 };
 function hook(mat, paint) {
@@ -420,7 +420,7 @@ function poses(portrait) {
   return {
     i0: { az: 34, el: 3, d: 6.6, t: [.4, .62, 0], fov: 30, ox: 0, oy: 0 },
     i1: { az: 22, el: 4.5, d: 4.7, t: [1.45, .64, .1], fov: 30, ox: 0, oy: 0 },
-    hero: { az: 38, el: 7, fit: 3.15, t: [0, .78, 0], fov: 24, ox: -.2, oy: .07 },
+    hero: { az: 38, el: 7, fit: 3.15, t: [0, .78, 0], fov: 24, ox: -.16, oy: .07 },
     s1: { az: 64, el: 3, d: 3.0, t: [1.47, .42, .95], fov: 28, ox: -.17, oy: 0 },
     s2: { az: 90, el: 2, fit: 3.5, t: [0, .76, 0], fov: 20, ox: -.19, oy: .1 },
     s3: { az: 148, el: 7, fit: 2.75, t: [-.25, .8, 0], fov: 24, ox: .16, oy: .02 },
