@@ -1633,6 +1633,9 @@ def fase_lavori_notte(t0: float) -> dict:
     return esito
 
 
+CONFRONTI_NOTTE_FINE_ORE = 10.5      # ore dall'avvio del cron entro cui la raccolta dei confronti smette di cercare
+
+
 def confronti_notte(fase: str) -> None:
     """19/11 (cliente: "più auto senza sistemare a mano ogni giorno"): una volta per notte la raccolta dei confronti
     mirati per le auto dati_insufficienti:pochi_confronti della zona del sito, poi la loro rivalutazione
@@ -1644,13 +1647,16 @@ def confronti_notte(fase: str) -> None:
         from ..pricing import confronti_mirati as CM
         if not CM.notte_attiva():
             return
-        rss, lim = memoria.rss_mb(), memoria.limite_container()[0]
-        if rss and rss > 0.6 * lim:
-            log.warning("CONFRONTI_MIRATI_NOTTE rimandata (%s): memoria %.0f MB su %.0f", fase, rss, lim)
+        if memoria.alta(0.6):
+            log.warning("CONFRONTI_MIRATI_NOTTE rimandata (%s): memoria %.0f MB su %.0f", fase, memoria.rss_mb(),
+                        memoria.limite_container()[0])
             return
-        if not tempo_ok("confronti_notte", 9.5, float(os.environ.get("CRON_T0") or time.time())):
+        t0 = float(os.environ.get("CRON_T0") or time.time())
+        if not tempo_ok("confronti_notte", 9.5, t0):
             return
-        esito = CM.notte_nel_cron()
+        # il cron ha 12 ore: la raccolta si ferma in tempo per rivalutare e lasciare finire il resto del cron
+        resto_min = (CONFRONTI_NOTTE_FINE_ORE * 3600 - (time.time() - t0)) / 60
+        esito = CM.notte_nel_cron(minuti_max=max(10, int(resto_min)))
         if esito is not None:
             log.warning("CONFRONTI_MIRATI_NOTTE fatta (%s)", fase)
     except Exception as e:
