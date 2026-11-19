@@ -668,6 +668,7 @@ def _registra_spesa(conn, lid: int, token: list, task: str = TASK) -> None:
 _PAUSA = {"fino": 0.0}
 _FALLITE: dict = {}          # listing_id -> (tentativi, ultimo tempo): auto fallite (pagate o no) si saltano 6 ore
 _SALTATE: dict = {}          # listing_id -> tempo: il testo basta a scartarle (nessuna chiamata) per 24 ore
+_MOTIVO_SALTO: dict = {}     # 19/11: listing_id -> "senza_foto" | "testo" (solo per i conteggi di stato_coda)
 
 
 def _segna_fallita(lid: int) -> None:
@@ -682,6 +683,13 @@ def _da_saltare(lid: int, ora: float) -> bool:
     if lid in _FALLITE and ora - _FALLITE[lid][1] < 6 * 3600:
         return True                      # niente ripagamenti: un'auto fallita non si richiama per 6 ore
     return lid in _SALTATE and ora - _SALTATE[lid] < 24 * 3600
+
+
+def _salta(lid: int, motivo: str) -> None:
+    """Auto che non si chiama per 24 ore (il sito la toglie comunque o mancano le foto): esce dalla coda da fare."""
+    _SALTATE[lid] = time.time()
+    _MOTIVO_SALTO[lid] = motivo
+    (CODA_SITO.get("da_fare_ids") or set()).discard(lid)
 
 
 def per_giro() -> int:
@@ -769,9 +777,17 @@ def _sotto_al_tetto(it: dict, g, comm: list, lont: list) -> bool:
 
 
 def controlla_tutte() -> bool:
-    """19/11 (cliente: "tutte le auto con sconto alto controllate in automatico, senza budget"): CONTROLLO_TUTTE=0
-    torna a prima (solo le auto che entrerebbero senza toccare il tetto dei commercianti, 40 per giro)."""
-    return _env("CONTROLLO_TUTTE", "1") != "0"
+    """19/11 (cliente: "tutte le auto con sconto alto controllate in automatico, senza budget"). Interruttore senza
+    deploy: automatismi.attivo("controllo_tutte") (chiave 'automatismi' di sito_impostazioni). Spento (o
+    CONTROLLO_TUTTE=0 in locale) torna a prima: solo le auto che entrerebbero senza toccare il tetto dei
+    commercianti, 40 per giro. Non è un tetto di spesa: di spesa non ce ne sono."""
+    if _env("CONTROLLO_TUTTE", "1") == "0":
+        return False
+    try:
+        from .. import automatismi
+        return automatismi.attivo("controllo_tutte", True)
+    except Exception:
+        return True
 
 
 def priorita_sito(it: dict, SR=None, scovo=None) -> tuple:
@@ -788,12 +804,37 @@ def priorita_sito(it: dict, SR=None, scovo=None) -> tuple:
 
 def per_giro_sito(da_fare_sito: int) -> int:
     """19/11 (cliente): auto per giro quando la coda del sito (sconto alto da controllare) non è vuota: tutta la coda,
-    fino a CONTROLLO_SITO_MAX_GIRO (300) in un giro, oltre le CONTROLLO_PER_GIRO (40) normali. Limite TECNICO (tempo
-    di un giro e memoria delle foto), non di spesa: il giro dopo riparte entro 2 minuti finché la coda non è finita."""
+    fino a CONTROLLO_SITO_MAX_GIRO (120: un giro resta sotto ~5 minuti) in un giro, oltre le CONTROLLO_PER_GIRO (40)
+    normali. Limite TECNICO (tempo di un giro e memoria delle foto), non di spesa: il giro dopo riparte entro 2 minuti
+    finché la coda non è finita. Interruttore controllo_tutte spento = 40 per giro come prima."""
     base = per_giro()
     if not controlla_tutte() or da_fare_sito <= 0:
         return base
-    return max(base, min(base + da_fare_sito, int(_env("CONTROLLO_SITO_MAX_GIRO", "300"))))
+    try:
+        tetto = int(float(_env("CONTROLLO_SITO_MAX_GIRO", str(SITO_MAX_GIRO))))
+    except ValueError:
+        tetto = SITO_MAX_GIRO
+    return max(base, min(base + da_fare_sito, tetto))
+
+
+SITO_MAX_GIRO = 120
+
+
+def attesa_prossimo_giro(res: dict, attesa: float, per_giro_n: int | None = None, veloce: float = 120.0) -> float:
+    """Secondi fino al giro successivo (web/app.ai_decisionale). Come prima: giro pieno o coda del sito non finita =
+    giro dopo entro 2 minuti. 19/11 (convergenza): mai un ciclo a vuoto ogni 2 minuti. Con controllo_tutte acceso il
+    giro veloce parte solo se questo giro ha concluso almeno un controllo e non è scattata la pausa per credito/limite:
+    un giro in pausa, spento o in cui tutte le chiamate sono fallite aspetta l'attesa normale (le auto fallite si
+    riprovano dopo 6 ore, la pausa finisce da sola)."""
+    if not isinstance(res, dict) or res.get("saltato") or res.get("spenta"):
+        return attesa
+    n = per_giro() if per_giro_n is None else per_giro_n
+    if not (res.get("candidate", 0) >= n or res.get("sito_restanti")):
+        return attesa
+    if controlla_tutte() and res.get("fonte") == "claude" and (
+            not res.get("fatte") or any(str(k).startswith("pausa_") for k in res)):
+        return attesa
+    return veloce
 
 
 def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
@@ -812,6 +853,8 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     lont = sorted(int(SR.margine(it) or 0) for it in out if it.get("_tipo") == "comm_lontano")
     entra, motivi, inutili, gia = [], Counter(), set(), set()
     dopo: list = []          # 19/11: tetto dei commercianti pieno ma con margine da prendere il posto di una più debole
+    tutte_attivo = controlla_tutte()
+    sa_tutte, sa_gia, sa_fuori = set(), set(), {}     # 19/11: per stato_coda (solo id e conteggi)
     for it in items:
         if it.get("id") not in tolti:
             continue
@@ -821,7 +864,14 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             m = _non_entrerebbe(it, g, comm, lont)
         except Exception:
             m = "errore"
+        sa_tutte.add(it.get("id"))
+        try:
+            if gia_controllata(it):
+                sa_gia.add(it.get("id"))
+        except Exception:
+            pass
         if m:
+            sa_fuori[it.get("id")] = m
             motivi["non_entrerebbe:" + m] += 1
             # 18/11: anche confermate resterebbero fuori: nessuna chiamata pagata. Il tetto dei commercianti tiene i
             # MIGLIORI per margine: un'auto che con la conferma prenderebbe il posto di una più debole NON è inutile
@@ -829,10 +879,11 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             if isinstance(it.get("id"), int) and (m in ("perizia", "margine_minimo") or (
                     m == "tetto_commercianti" and _sotto_al_tetto(it, g, comm, lont))):
                 inutili.add(it["id"])
-            elif m == "tetto_commercianti" and isinstance(it.get("id"), int) and controlla_tutte():
+            elif m == "tetto_commercianti" and isinstance(it.get("id"), int) and tutte_attivo:
                 # 19/11 (cliente: "controlla TUTTE le auto con sconto alto"): confermata prenderebbe il posto di una
                 # più debole (il tetto tiene le migliori per margine): in coda anche lei, dopo le "entra"
                 dopo.append(it)
+                sa_fuori.pop(it.get("id"), None)
                 if gia_controllata(it):
                     gia.add(it["id"])
             continue
@@ -856,21 +907,134 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             if info.get("sito"):
                 mis["entrate_sito"].add(lid)
     CODA_SITO.update(t=time.time(), entra=[it["id"] for it in entra], fuori=fuori, sul_sito=dentro,
-                     motivi=dict(motivi), inutili=inutili, gia_controllate=gia)
+                     motivi=dict(motivi), inutili=inutili, gia_controllate=gia,
+                     sconto_alto=sa_tutte, sconto_alto_gia=sa_gia, sconto_alto_fuori=sa_fuori)
     res = {"entra": len(entra), "fuori_per_altro": len(fuori), **dict(motivi),
            "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),
            "usd_oggi_processo": round(mis["usd"], 4), "usd_sito_oggi_processo": round(mis["usd_sito"], 4)}
     if time.time() - CODA_SITO.get("log_t", 0) > 600:          # una riga ogni 10 minuti (l'elenco gira ogni 90 s)
         CODA_SITO["log_t"] = time.time()
-        log.warning("CODA_CONTROLLO %s", json.dumps(res, ensure_ascii=False))
+        try:
+            riga = {**res, **riga_coda()}
+        except Exception:                 # i conteggi in più non devono mai fermare l'elenco
+            riga = res
+        log.warning("CODA_CONTROLLO %s", json.dumps(riga, ensure_ascii=False))
+    else:
+        try:
+            _eta_coda(_conta_coda())
+        except Exception:
+            pass
     return res
+
+
+# ------------------------------------------------------------------ 19/11: stato della coda (riga CODA_CONTROLLO, salute)
+def _copia(v) -> set:
+    for _ in range(3):                    # un altro thread può cambiarlo mentre si copia: si riprova
+        try:
+            return set(v or ())
+        except RuntimeError:
+            continue
+    return set()
+
+
+def _conta_coda(ora: float | None = None) -> dict:
+    """Conteggi delle auto tolte dal sito SOLO per "sconto_alto_da_controllare" (ultimo elenco di questo processo):
+      totale_sconto_alto = gia_controllate_non_confermate + inutili:<motivo> + senza_foto + scartate_dal_testo
+                           + gia_decise + mai_controllate
+      - gia_controllate_non_confermate: decisione Claude allo stesso prezzo con le foto viste che non conferma
+        (gia_controllata): NON si richiedono, per questo il totale non va a zero;
+      - inutili:<motivo>: anche confermate resterebbero fuori (perizia, margine minimo, tetto dei commercianti);
+      - senza_foto / scartate_dal_testo: nessuna chiamata possibile o utile (saltate 24 ore);
+      - gia_decise: lette dall'ultimo giro e già con una decisione valida (aspettano il prossimo elenco, oppure sono
+        decisioni senza foto viste arrivate al massimo dei tentativi);
+      - mai_controllate: da chiamare. Di queste fallite_6h si riprovano dopo 6 ore; in_attesa = le altre.
+    L'obiettivo dell'automatismo è mai_controllate = 0."""
+    ora = time.time() if ora is None else ora
+    tutte = _copia(CODA_SITO.get("sconto_alto"))
+    gia = _copia(CODA_SITO.get("sconto_alto_gia")) & tutte
+    fuori = dict(CODA_SITO.get("sconto_alto_fuori") or {})
+    coda = [i for i in list(CODA_SITO.get("entra") or []) if i in tutte and i not in gia]
+    letti, da_fare = _copia(CODA_SITO.get("letti_ids")), _copia(CODA_SITO.get("da_fare_ids"))
+    fallite_db = _copia(CODA_SITO.get("fallite_db")) if ora - (CODA_SITO.get("giro_t") or 0) < 6 * 3600 else set()
+    n = Counter()
+    for i in coda:
+        if i in _SALTATE and ora - _SALTATE[i] < 24 * 3600:
+            n["senza_foto" if _MOTIVO_SALTO.get(i) == "senza_foto" else "scartate_dal_testo"] += 1
+        elif i in letti and i not in da_fare:
+            n["gia_decise"] += 1
+        else:
+            n["mai_controllate"] += 1
+            if i in fallite_db or (i in _FALLITE and ora - _FALLITE[i][1] < 6 * 3600):
+                n["fallite_6h"] += 1
+    out = {"totale_sconto_alto": len(tutte), "mai_controllate": n["mai_controllate"],
+           "gia_controllate_non_confermate": len(gia)}
+    for m, k in sorted(Counter(m for i, m in fuori.items() if i in tutte and i not in gia).items()):
+        out["inutili:" + str(m)] = k
+    out.update(senza_foto=n["senza_foto"], scartate_dal_testo=n["scartate_dal_testo"], gia_decise=n["gia_decise"],
+               fallite_6h=n["fallite_6h"], in_attesa=n["mai_controllate"] - n["fallite_6h"])
+    return out
+
+
+def _eta_coda(conti: dict, progresso: bool = False, ora: float | None = None) -> float:
+    """Da quanti secondi ci sono auto in attesa (in_attesa > 0) senza che un giro ne abbia conclusa una. 0 a coda vuota."""
+    ora = time.time() if ora is None else ora
+    if not conti.get("in_attesa"):
+        CODA_SITO["attesa_da"] = None
+        return 0.0
+    if progresso or not CODA_SITO.get("attesa_da"):
+        CODA_SITO["attesa_da"] = ora
+    return max(0.0, ora - CODA_SITO["attesa_da"])
+
+
+def riga_coda() -> dict:
+    """I numeri della riga CODA_CONTROLLO (solo conteggi, nessun dato delle auto)."""
+    c = _conta_coda()
+    c["eta_coda_s"] = int(_eta_coda(c))
+    return c
+
+
+def stato_coda() -> dict:
+    """19/11: stato della coda del controllo delle auto con sconto alto, per la salute giornaliera (dealfinder/salute.py)
+    e per la riga CODA_CONTROLLO. Solo memoria di questo processo (il web: stesso processo di elenco e giro), nessuna
+    lettura dal database, mai un errore. Chiavi:
+      totale_sconto_alto, mai_controllate, gia_controllate_non_confermate, inutili:<motivo> (una chiave per motivo),
+      senza_foto, scartate_dal_testo, gia_decise, fallite_6h, in_attesa      → vedi _conta_coda
+      eta_coda_s      secondi da cui in_attesa > 0 senza un controllo concluso (0 a coda vuota): "coda ferma"
+      usd_oggi        spesa di oggi del controllo (dall'ultimo giro: tabella ai_usage; prima di un giro: del processo)
+      eta_elenco_s    età dell'ultimo elenco che ha preparato la coda (None: mai), fresca: vale ancora per il giro
+      ultimo_giro_s   secondi dall'ultimo giro che ha letto la coda (None: mai)
+      in_pausa, pausa_s   pausa per credito finito/limite dell'AI
+      attivo          interruttore controllo_tutte
+    Il totale non va a zero (le già controllate e non confermate non si richiedono): l'obiettivo è mai_controllate = 0."""
+    ora = time.time()
+    out = {"totale_sconto_alto": 0, "mai_controllate": 0, "gia_controllate_non_confermate": 0, "senza_foto": 0,
+           "scartate_dal_testo": 0, "gia_decise": 0, "fallite_6h": 0, "in_attesa": 0, "eta_coda_s": 0, "usd_oggi": 0.0,
+           "eta_elenco_s": None, "fresca": False, "ultimo_giro_s": None, "in_pausa": False, "pausa_s": 0, "attivo": True}
+    try:
+        c = _conta_coda(ora)
+        out.update(c, eta_coda_s=int(_eta_coda(c, ora=ora)))
+        u = CODA_SITO.get("usd_oggi")
+        mis = _misura_oggi()
+        out["usd_oggi"] = round(max(float(u[1]) if u and u[0] == mis["giorno"] else 0.0, float(mis["usd"])), 4)
+        if CODA_SITO.get("t"):
+            out["eta_elenco_s"] = int(ora - CODA_SITO["t"])
+        out["fresca"] = coda_sito_fresca() is not None
+        if CODA_SITO.get("giro_t"):
+            out["ultimo_giro_s"] = int(ora - CODA_SITO["giro_t"])
+        out["pausa_s"] = int(max(0.0, _PAUSA["fino"] - ora))
+        out["in_pausa"] = out["pausa_s"] > 0
+        out["attivo"] = controlla_tutte()
+    except Exception as e:
+        out["errore"] = type(e).__name__
+    return out
 
 
 def sito_in_attesa() -> int:
     """18/11: auto della coda del sito (fresca) mai offerte a un giro del controllo di questo processo: con almeno una
-    il giro successivo parte subito (web/app._attendi_giro_controllo). Le già controllate non contano."""
+    il giro successivo parte subito (web/app._attendi_giro_controllo). Le già controllate non contano. 19/11: durante
+    la pausa per credito/limite dell'AI nessun risveglio (il giro salterebbe: si riparte da sole a pausa finita)."""
     sito = coda_sito_fresca()
-    if not sito:
+    if not sito or time.time() < _PAUSA["fino"]:
         return 0
     visti = CODA_SITO.get("visti_giro") or set()
     gia = CODA_SITO.get("gia_controllate") or set()
@@ -997,9 +1161,13 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         if len(CODA_SITO["visti_giro"]) > 20000:
             CODA_SITO["visti_giro"] = set(sito["entra"])
         try:
+            da_fare_ids = set()
             for r in conn.execute(CAND_SQL_SITO, dict(par, sito_ids=sito_ids)).fetchall():
                 r = dict(r)
                 per_id.setdefault(r["id"], r)["_sito"] = True
+                da_fare_ids.add(r["id"])
+            # 19/11 (stato_coda): lette da questo giro e, tra quelle, chi aspetta ancora una chiamata
+            CODA_SITO.update(letti_ids=set(sito_ids), da_fare_ids=da_fare_ids, giro_t=time.time())
         except Exception as e:
             conn.rollback()
             log.warning("CONTROLLO_AI coda del sito non letta: %s", str(e)[:160])
@@ -1010,6 +1178,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     # le auto "troppo sotto prezzo" solo con il numero (come Jev); fallite o scartate dal testo aspettano
     ora = time.time()
     pagate_fallite = fallite_da_db(conn)           # 17/11: anche dopo un riavvio (prima solo in memoria)
+    CODA_SITO["fallite_db"] = set(pagate_fallite)
+    CODA_SITO["usd_oggi"] = (_giorno_roma(), usd_oggi)
     righe = [r for r in righe if (r["cat"] != "dati_insufficienti" or r.get("telefono_ok") or r.get("_sito"))
              and not _da_saltare(r["id"], ora)]
     _n = len(righe)
@@ -1073,10 +1243,11 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             # stesso contenuto, solo il prezzo cambiato di poco: la decisione vale anche al prezzo nuovo
             conn.execute("UPDATE decisione_ai SET prezzo=%s WHERE listing_id=%s AND fonte='claude'", (a["price_eur"], a["id"]))
             st["riusate"] += 1
+            (CODA_SITO.get("da_fare_ids") or set()).discard(a["id"])
             continue
         motivo = scartata_dal_testo(a)
         if motivo:
-            _SALTATE[a["id"]] = time.time()               # il sito la toglie comunque: nessuna spesa
+            _salta(a["id"], "testo")                      # il sito la toglie comunque: nessuna spesa
             st["senza_chiamata:" + motivo] += 1
             continue
         if r.get("_solo_riuso"):
@@ -1091,7 +1262,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         a["_sito"] = bool(r.get("_sito"))
         if a["_conferma"] and int(a.get("n_foto") or 0) <= 0:
             # 17/11: sconto alto senza foto: il sito la ammette solo con le foto viste, la chiamata non servirebbe
-            _SALTATE[a["id"]] = time.time()
+            _salta(a["id"], "senza_foto")
             st["senza_chiamata:sconto_alto_senza_foto"] += 1
             continue
         if len(da_fare) < quante:
@@ -1112,6 +1283,9 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
     if len(_SALTATE) > 5000:
         for k in [k for k, t in _SALTATE.items() if time.time() - t > 24 * 3600]:
             _SALTATE.pop(k, None)
+    if len(_MOTIVO_SALTO) > len(_SALTATE):
+        for k in [k for k in list(_MOTIVO_SALTO) if k not in _SALTATE]:
+            _MOTIVO_SALTO.pop(k, None)
     conn.commit()
     if stop:
         return dict(stop, candidate=0, in_coda=n_cand, **dict(st))
@@ -1194,6 +1368,7 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
         if tent:
             st["senza_foto_viste"] += 1
         _FALLITE.pop(a["id"], None)
+        (CODA_SITO.get("da_fare_ids") or set()).discard(a["id"])
         st["fatte"] += 1
         st[f"decisione:{x['decisione']}"] += 1
         st["con_foto"] += 1 if x.get("_foto") else 0
@@ -1269,5 +1444,12 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
            "entrate_per_usd": round(len(mis["entrate"]) / mis["usd"], 1) if mis["usd"] else None,
            "entrate_sito_per_usd": round(len(mis["entrate_sito"]) / mis["usd_sito"], 1) if mis["usd_sito"] else None,
            "foto": f"{n_foto()}x{_env('CONTROLLO_FOTO_LATO', '512')}px {modo_foto()}", **dict(st)}
+    for k in ("sito_in_coda", "sito_fatte", "sito_confermabili", "sito_restanti"):
+        res.setdefault(k, 0)                       # 19/11: sempre nella riga (convergenza della coda del sito)
+    CODA_SITO["usd_oggi"] = (_giorno_roma(), res["usd_oggi"])
+    try:
+        _eta_coda(_conta_coda(), progresso=bool(st["sito_fatte"]))
+    except Exception:
+        pass
     log.warning("JEV_GIRO %s", json.dumps(res, ensure_ascii=False))   # stesso nome di riga di Jev (sentinella, cruscotti)
     return res
