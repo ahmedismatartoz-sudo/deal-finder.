@@ -1633,8 +1633,33 @@ def fase_lavori_notte(t0: float) -> dict:
     return esito
 
 
+def confronti_notte(fase: str) -> None:
+    """19/11 (cliente: "più auto senza sistemare a mano ogni giorno"): una volta per notte la raccolta dei confronti
+    mirati per le auto dati_insufficienti:pochi_confronti della zona del sito, poi la loro rivalutazione
+    (pricing/confronti_mirati.notte). Si prova da più punti del cron mercato (processo pulito): la riga job_runs
+    "confronti_mirati:notte" la fa partire una volta sola. Con la memoria già alta si salta (la riprende il punto dopo).
+    Non solleva mai."""
+    try:
+        from .. import memoria
+        from ..pricing import confronti_mirati as CM
+        if not CM.notte_attiva():
+            return
+        rss, lim = memoria.rss_mb(), memoria.limite_container()[0]
+        if rss and rss > 0.6 * lim:
+            log.warning("CONFRONTI_MIRATI_NOTTE rimandata (%s): memoria %.0f MB su %.0f", fase, rss, lim)
+            return
+        if not tempo_ok("confronti_notte", 9.5, float(os.environ.get("CRON_T0") or time.time())):
+            return
+        esito = CM.notte_nel_cron()
+        if esito is not None:
+            log.warning("CONFRONTI_MIRATI_NOTTE fatta (%s)", fase)
+    except Exception as e:
+        log.warning("CONFRONTI_MIRATI_NOTTE non avviata (%s): %s", fase, str(e)[:200])
+
+
 def dopo_notte() -> None:
     """Fine del cron mercato dopo la notte: mercato_nord se dovuto (processo pulito) oppure il modello AI dei prezzi."""
+    confronti_notte("dopo_notte")              # 19/11: confronti mirati della notte (una volta al giorno)
     try:
         from .ciclo import _due as _due_job
         if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6) \
@@ -1763,6 +1788,7 @@ if __name__ == "__main__":
     os.environ.setdefault("CRON_T0", str(time.time()))      # 12/11: avvio del cron, anche dopo os.execv
     if os.environ.pop("MERCATO_NORD_FASE", None) == "1":
         # 12/11: seconda parte del cron mercato, in un processo pulito: prezzi del Nord, poi il modello AI dei prezzi
+        confronti_notte("nord")                # 19/11: se non già fatta stanotte (processo pulito)
         try:
             fase_mercato_nord()
         except Exception as e:
@@ -2370,6 +2396,9 @@ if __name__ == "__main__":
                 avvia_notte(float(os.environ["CRON_T0"]))
         except Exception as e:
             log.warning("NOTTE non avviata: %s", str(e)[:300])
+        # 19/11: notte non dovuta (avvia_notte è tornata): confronti mirati qui, se la memoria dell'addestramento lo
+        # permette (altrimenti nel processo pulito di mercato_nord o la notte dopo)
+        confronti_notte("mercato")
         # una volta a settimana: prezzi di mercato da tutto il Nord (AutoScout24) per il modello AI e i confronti
         from .ciclo import _due as _due_job
         if os.environ.get("MERCATO_NORD", "1") == "1" and _due_job("collect:mercato_nord", 24 * 6):
