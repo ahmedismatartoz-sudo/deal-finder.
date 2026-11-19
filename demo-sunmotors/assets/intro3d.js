@@ -41,9 +41,9 @@ function curve(pts) { // interpolazione cubica monotona
 }
 
 /* ---------- forma: crossover-coupé premium generico (metri; muso verso +x) ---------- */
-const L2 = 2.40, W2 = .952, XF = 1.47, XR = -1.45, TR = .372, WZ = .838, ARCH = TR + .072;
-const yTop = curve([[2.40, .60], [2.385, .70], [2.33, .785], [2.2, .832], [1.8, .885], [1.3, .945], [1.02, .985], [.86, 1.05], [.6, 1.215], [.32, 1.39], [.05, 1.515], [-.25, 1.572], [-.6, 1.578], [-.95, 1.54], [-1.3, 1.45], [-1.62, 1.335], [-1.88, 1.245], [-2.08, 1.2], [-2.24, 1.185], [-2.34, 1.15], [-2.40, 1.04]]);
-const yBelt = curve([[2.40, .58], [2.33, .70], [2.2, .785], [1.8, .85], [1.3, .915], [1.0, .965], [.5, 1.0], [0, 1.02], [-.6, 1.045], [-1.2, 1.075], [-1.7, 1.105], [-2.05, 1.13], [-2.24, 1.13], [-2.34, 1.09], [-2.40, 1.0]]);
+const L2 = 2.40, W2 = .952, XF = 1.47, XR = -1.45, TR = .372, WZ = .838, ARCH = TR + .058;
+const yTop = curve([[2.40, .56], [2.385, .65], [2.34, .735], [2.25, .79], [2.12, .825], [1.8, .885], [1.3, .945], [1.02, .985], [.86, 1.05], [.6, 1.215], [.32, 1.39], [.05, 1.515], [-.25, 1.572], [-.6, 1.578], [-.95, 1.54], [-1.3, 1.45], [-1.62, 1.335], [-1.88, 1.245], [-2.08, 1.2], [-2.24, 1.185], [-2.34, 1.15], [-2.40, 1.04]]);
+const yBelt = curve([[2.40, .54], [2.34, .69], [2.25, .755], [2.12, .79], [1.8, .85], [1.3, .915], [1.0, .965], [.5, 1.0], [0, 1.02], [-.6, 1.045], [-1.2, 1.075], [-1.7, 1.105], [-2.05, 1.13], [-2.24, 1.13], [-2.34, 1.09], [-2.40, 1.0]]);
 const yBase = curve([[2.40, .36], [2.31, .25], [2.12, .21], [1.0, .195], [0, .19], [-1.0, .195], [-2.0, .22], [-2.24, .28], [-2.40, .40]]);
 function yBottom(x) {
   let y = yBase(x);
@@ -94,12 +94,12 @@ function classify(x, y, z, s, zone) {
   }
   // frontale
   if (x > 2.17) {
-    if (y > .772 && y < .792 && az < .9) return 'drl';
-    if (y > .655 && y < .766 && az > .45 && az < .9) {
-      if (y > .688 && y < .735) for (let k = 0; k < 3; k++) if (Math.abs(az - (.55 + k * .105)) < .03) return 'proj';
+    if (y > .698 && y < .716 && az < .9) return 'drl';
+    if (y > .59 && y < .69 && az > .45 && az < .9) {
+      if (y > .62 && y < .664) for (let k = 0; k < 3; k++) if (Math.abs(az - (.55 + k * .105)) < .03) return 'proj';
       return 'piano';
     }
-    if (x > 2.27 && y > .49 && y < .766) return ((y * 110) | 0) % 2 ? 'piano' : 'grille';
+    if (x > 2.27 && y > .47 && y < .69) return ((y * 110) | 0) % 2 ? 'piano' : 'grille';
     if (x > 2.22 && y > .27 && y < .45 && az < .74) { const gx = (z * 70 + ((y * 70) | 0) * .5) % 1; return Math.abs(gx) < .3 ? 'trim' : 'grille'; }
     if (y < .27) return 'trim';
   }
@@ -124,7 +124,7 @@ function classify(x, y, z, s, zone) {
   return 'paint';
 }
 // albedo (sRGB), [R=clearcoat, G=ruvidità, B=metallo], emissione
-const ALB = { paint: [255, 255, 255], glass: [5, 6, 7], piano: [7, 7, 8], chrome: [205, 207, 212], trim: [14, 14, 15], grille: [22, 22, 24], gap: [8, 8, 8], under: [6, 6, 6], drl: [240, 240, 240], proj: [30, 30, 32], tail: [60, 4, 2] };
+const ALB = { paint: [0, 0, 0], glass: [5, 6, 7], piano: [7, 7, 8], chrome: [205, 207, 212], trim: [14, 14, 15], grille: [22, 22, 24], gap: [8, 8, 8], under: [6, 6, 6], drl: [240, 240, 240], proj: [30, 30, 32], tail: [60, 4, 2] };
 const RMC = { paint: [255, 92, 166], glass: [255, 6, 0], piano: [255, 22, 0], chrome: [0, 40, 255], trim: [0, 150, 0], grille: [120, 80, 90], gap: [0, 210, 0], under: [0, 240, 0], drl: [255, 30, 0], proj: [255, 20, 0], tail: [255, 30, 0] };
 const EMI = { drl: [255, 246, 232], proj: [215, 228, 255], tail: [255, 14, 6] };
 
@@ -153,7 +153,7 @@ function bodyMaps(TW, TH) {
 
 /* ---------- uniform condivisi (luce che scorre, fari, vernice) ---------- */
 const U = {
-  uBarX: { value: 5 }, uBarY: { value: 3.3 }, uBarW: { value: .2 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(1, .94, .86) },
+  uBarX: { value: 5 }, uGateH: { value: 2.7 }, uGateW: { value: 2.3 }, uBarW: { value: .1 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(1, .94, .86) },
   uHead: { value: 0 }, uTail: { value: 0 }, uPaint: { value: new THREE.Color('#24272c') },
 };
 function hook(mat, paint) {
@@ -164,10 +164,10 @@ function hook(mat, paint) {
       .replace('#include <common>', '#include <common>\nvarying vec3 vSW;')
       .replace('#include <project_vertex>', '#include <project_vertex>\nvSW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vSW;\nuniform float uBarX, uBarY, uBarW, uBarI, uHead, uTail;\nuniform vec3 uBarC, uPaint;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vSW;\nuniform float uBarX, uGateH, uGateW, uBarW, uBarI, uHead, uTail;\nuniform vec3 uBarC, uPaint;')
       .replace('#include <map_fragment>', `#include <map_fragment>
 #ifdef SUN_PAINT
-{ vec3 rmT = texture2D(roughnessMap, vRoughnessMapUv).rgb; float pm = 1.0 - smoothstep(0.0, 0.06, abs(rmT.b - 0.651)); diffuseColor.rgb *= mix(vec3(1.0), uPaint, pm); }
+{ vec3 rmT = texture2D(roughnessMap, vRoughnessMapUv).rgb; float pm = 1.0 - smoothstep(0.0, 0.045, abs(rmT.b - 0.651)); diffuseColor.rgb += uPaint * pm; }
 #endif`)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= (vSW.x > 0.0 ? uHead : uTail);')
       .replace('#include <opaque_fragment>', `{
@@ -175,10 +175,14 @@ function hook(mat, paint) {
   vec3 Vw = normalize(cameraPosition - vSW);
   vec3 Rw = reflect(-Vw, Nw);
   float bar = 0.0;
-  if (Rw.y > 0.02 && uBarI > 0.001) {
-    vec3 H = vSW + Rw * ((uBarY - vSW.y) / Rw.y);
-    float dx = (H.x - uBarX) / uBarW;
-    bar = (smoothstep(1.0, 0.55, abs(dx)) + 0.16 * exp(-dx * dx * 0.06)) * (1.0 - smoothstep(2.0, 3.3, abs(H.z)));
+  float tt = abs(Rw.x) > 0.01 ? (uBarX - vSW.x) / Rw.x : -1.0;
+  if (uBarI > 0.001 && tt > 0.0) {
+    vec3 H = vSW + Rw * tt;
+    float az = abs(H.z);
+    float dT = abs(H.y - uGateH), dS = abs(az - uGateW);
+    float top = (smoothstep(uBarW, uBarW * .35, dT) + .14 * exp(-dT * dT * 6.0)) * (1.0 - smoothstep(uGateW - .05, uGateW + .25, az));
+    float side = (smoothstep(uBarW, uBarW * .35, dS) + .14 * exp(-dS * dS * 6.0)) * smoothstep(-.2, .1, H.y) * (1.0 - smoothstep(uGateH - .05, uGateH + .25, H.y));
+    bar = max(top, side);
   }
   #ifdef USE_CLEARCOAT
   float cc = material.clearcoat;
@@ -248,7 +252,7 @@ function makeWheelParts(lite) {
   }
   const faceG = new THREE.ExtrudeGeometry(sh, { depth: .022, bevelEnabled: true, bevelThickness: .008, bevelSize: .006, bevelSegments: 2, curveSegments: lite ? 40 : 64 });
   const p = faceG.attributes.position;
-  for (let i = 0; i < p.count; i++) { const r = Math.hypot(p.getX(i), p.getY(i)); p.setZ(i, p.getZ(i) + .055 * (1 - sstep(.05, r0 - .02, r))); }
+  for (let i = 0; i < p.count; i++) { const r = Math.hypot(p.getX(i), p.getY(i)); p.setZ(i, p.getZ(i) + .05 * (1 - sstep(.05, r0 - .02, r))); }
   faceG.computeVertexNormals();
   const lipG = new THREE.TorusGeometry(r0 - .004, .009, 10, seg);
   const barrelG = new THREE.CylinderGeometry(r0 - .004, r0 - .004, w * 2 - .03, seg, 1, true); barrelG.rotateX(Math.PI / 2);
@@ -265,8 +269,8 @@ function makeWheelParts(lite) {
 function makeWheel(P, M, front) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(P.tyreG, M.tyre));
-  const face = new THREE.Mesh(P.faceG, [M.face, M.spokeSide]); face.position.z = P.w - .095; g.add(face);
-  const lip = new THREE.Mesh(P.lipG, M.face); lip.position.z = P.w - .03; g.add(lip);
+  const face = new THREE.Mesh(P.faceG, [M.face, M.spokeSide]); face.position.z = P.w - .088; g.add(face);
+  const lip = new THREE.Mesh(P.lipG, M.face); lip.position.z = P.w - .012; g.add(lip);
   g.add(new THREE.Mesh(P.barrelG, M.barrel));
   const disc = new THREE.Mesh(P.discG, M.disc); disc.position.z = P.w - .17; g.add(disc);
   const cal = new THREE.Mesh(P.calG, M.caliper); cal.position.z = P.w - .17; cal.rotation.z = front ? .55 : 1.45; g.add(cal);
@@ -284,15 +288,16 @@ function studioEnv(renderer) {
     m.position.set(x, y, z); m.rotation.set(rx, ry, 0); s.add(m);
   };
   panel(9, 2.4, 0, 9, 0, Math.PI / 2, 0, 2.2);                   // soffitto
-  panel(14, .28, 0, 8.6, 2.4, Math.PI / 2, 0, 9);                // due tagli di luce sopra (riga sul cofano/tetto)
-  panel(14, .28, 0, 8.6, -2.4, Math.PI / 2, 0, 9);
+  panel(14, .28, 0, 8.6, 2.4, Math.PI / 2, 0, 5);                // due tagli di luce sopra (riga sul cofano/tetto)
+  panel(14, .28, 0, 8.6, -2.4, Math.PI / 2, 0, 5);
   panel(26, .32, 0, 2.6, 12, 0, Math.PI, 7, 0xfff3e2);           // linee lunghe sulle fiancate
   panel(26, .32, 0, 2.6, -12, 0, 0, 7, 0xfff3e2);
   panel(26, .22, 0, 1.15, 12, 0, Math.PI, 2.2);
   panel(26, .22, 0, 1.15, -12, 0, 0, 2.2);
+  panel(30, .5, 0, -.6, 9, Math.PI / 2.6, Math.PI, 2.6, 0xfff1e0); // linee basse: riflesso lungo sulle portiere
+  panel(30, .5, 0, -.6, -9, -Math.PI / 2.6, 0, 2.6, 0xfff1e0);
   panel(.5, 7, 14, 4, 0, 0, -Math.PI / 2, 3.4, 0xdfe8ff);       // davanti, fredda
-  panel(6, .6, -14, 1.6, 0, 0, Math.PI / 2, 4.5, 0xff8a2a);      // dietro, calda (il "sole" di Sunmotors)
-  panel(3, 3, -12, 6, 7, 0, Math.PI * .75, 1.4, 0xffb060);
+  panel(16, .35, -14, 1.9, 0, 0, Math.PI / 2, 2.4, 0xff8a2a);    // dietro, calda (il "sole" di Sunmotors)
   const pm = new THREE.PMREMGenerator(renderer);
   const tex = pm.fromScene(s, .015).texture; pm.dispose();
   return tex;
@@ -314,7 +319,7 @@ const FloorShader = {
       float r = length(p * vec2(.78, 1.0));
       float wet = smoothstep(.40, .56, fbm(p * .5 + 3.1));
       float grain = vn(p * 160.0) * .5 + vn(p * 41.0) * .5;
-      vec2 dist = (vec2(vn(p * 7.0 + uTime * .03), vn(p * 7.0 + 17.0)) - .5) * .02 * (1.0 - wet);
+      vec2 dist = (vec2(vn(p * 7.0 + uTime * .03), vn(p * 7.0 + 17.0)) - .5) * .008 * (1.0 - wet);
       vec4 uv = vUv; uv.xy += dist * uv.w;
       vec3 rf = texture2DProj(tDiffuse, uv).rgb;
       vec2 o = vec2(.007, 0.0) * uv.w * (1.0 - wet);
@@ -350,8 +355,8 @@ function dust(n) {
   for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - .5) * 11; pos[i * 3 + 1] = Math.random() * 3.4; pos[i * 3 + 2] = (Math.random() - .5) * 8; seed[i] = Math.random(); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
   const m = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uBarX: U.uBarX, uBarI: U.uBarI, uEnv: { value: 0 }, uHead: { value: 0 }, uPR: { value: 1 }, uSize: { value: 26 } },
-    vertexShader: `uniform float uTime, uBarX, uBarI, uEnv, uHead, uPR, uSize; attribute float aSeed; varying float vA;
+    uniforms: { uTime: { value: 0 }, uBarX: U.uBarX, uBarI: U.uBarI, uGateW: U.uGateW, uEnv: { value: 0 }, uHead: { value: 0 }, uPR: { value: 1 }, uSize: { value: 26 } },
+    vertexShader: `uniform float uTime, uBarX, uBarI, uGateW, uEnv, uHead, uPR, uSize; attribute float aSeed; varying float vA;
       void main(){
         vec3 p = position;
         p.x += sin(uTime * .07 + aSeed * 30.0) * .45;
@@ -359,7 +364,7 @@ function dust(n) {
         p.z += cos(uTime * .05 + aSeed * 20.0) * .45;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
-        float shaft = exp(-pow((p.x - uBarX) / .55, 2.0)) * uBarI * (.35 + .65 * p.y / 3.4) * (1.0 - smoothstep(2.0, 3.2, abs(p.z)));
+        float shaft = exp(-pow((p.x - uBarX) / .55, 2.0)) * uBarI * (.35 + .65 * p.y / 3.4) * (1.0 - smoothstep(uGateW - .2, uGateW + .3, abs(p.z)));
         float hx = p.x - 2.35;
         float cone = hx > 0.0 ? exp(-pow((abs(p.z) - .6 - hx * .12) / (.3 + hx * .2), 2.0)) * exp(-hx * .3) * exp(-pow((p.y - .65) / (.25 + hx * .14), 2.0)) : 0.0;
         vA = (.035 * uEnv + shaft * 1.4 + cone * uHead * 1.2) * (.35 + .65 * fract(aSeed * 7.31)) * smoothstep(.0, .3, p.y) * smoothstep(3.4, 2.9, p.y);
@@ -370,17 +375,6 @@ function dust(n) {
   });
   const pts = new THREE.Points(g, m); pts.frustumCulled = false; return pts;
 }
-function shaftMesh() {
-  const m = new THREE.ShaderMaterial({
-    uniforms: { uI: { value: 0 } },
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform float uI; varying vec2 vUv; void main(){ float a = pow(vUv.y, 1.6) * smoothstep(0.0, .3, vUv.x) * smoothstep(1.0, .7, vUv.x); gl_FragColor = vec4(vec3(1.0, .9, .78) * a * uI, 1.0); }',
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-  });
-  const g = new THREE.PlaneGeometry(6, 3.3); g.rotateY(Math.PI / 2); g.translate(0, 1.65, 0);
-  const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; return mesh;
-}
-
 /* ---------- finitura: vignetta, grana, aberrazione leggera, dissolvenza ---------- */
 const Finish = {
   uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 } },
@@ -400,8 +394,8 @@ const Finish = {
 // az: gradi attorno all'auto (0 = davanti, 90 = fianco destro); ox/oy: spostamento dell'inquadratura (frazione dello schermo)
 function poses(portrait) {
   if (portrait) return {
-    i0: { az: 24, el: 2.5, d: 3.5, t: [2.05, .6, .42], fov: 40, ox: 0, oy: 0 },
-    i1: { az: 14, el: 4, d: 4.0, t: [1.95, .64, .3], fov: 38, ox: 0, oy: 0 },
+    i0: { az: 30, el: 3, d: 9.5, t: [.5, .62, 0], fov: 40, ox: 0, oy: 0 },
+    i1: { az: 18, el: 4.5, d: 6.4, t: [1.4, .64, .1], fov: 38, ox: 0, oy: 0 },
     hero: { az: 30, el: 8, fit: 1.98, t: [0, .76, 0], fov: 30, ox: 0, oy: -.02 },
     s1: { az: 62, el: 4, d: 4.1, t: [1.45, .42, .95], fov: 36, ox: 0, oy: .16 },
     s2: { az: 76, el: 3, fit: 2.25, t: [0, .76, 0], fov: 30, ox: 0, oy: .17 },
@@ -409,9 +403,9 @@ function poses(portrait) {
     s4: { az: 318, el: 17, fit: 2.1, t: [0, .6, 0], fov: 30, ox: 0, oy: .17 },
   };
   return {
-    i0: { az: 30, el: 2.5, d: 3.1, t: [2.0, .62, .45], fov: 32, ox: 0, oy: 0 },
-    i1: { az: 18, el: 4.5, d: 3.6, t: [1.88, .66, .32], fov: 30, ox: 0, oy: 0 },
-    hero: { az: 38, el: 7, fit: 2.85, t: [0, .78, 0], fov: 24, ox: -.12, oy: .03 },
+    i0: { az: 34, el: 3, d: 6.6, t: [.4, .62, 0], fov: 30, ox: 0, oy: 0 },
+    i1: { az: 22, el: 4.5, d: 4.7, t: [1.45, .64, .1], fov: 30, ox: 0, oy: 0 },
+    hero: { az: 38, el: 7, fit: 3.4, t: [0, .78, 0], fov: 24, ox: -.2, oy: .07 },
     s1: { az: 64, el: 3, d: 3.0, t: [1.47, .42, .95], fov: 28, ox: -.17, oy: 0 },
     s2: { az: 90, el: 2, fit: 2.75, t: [0, .76, 0], fov: 20, ox: 0, oy: .1 },
     s3: { az: 148, el: 7, fit: 2.75, t: [-.25, .8, 0], fov: 24, ox: .16, oy: .02 },
@@ -443,7 +437,7 @@ export function start(opts = {}) {
   const body = buildBody(lite); car.add(body);
   const dark = hook(new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: .9, metalness: 0 }));
   const under = new THREE.Mesh(new THREE.BoxGeometry(4.3, .5, 1.62), dark); under.position.y = .45; car.add(under);
-  const linerG = new THREE.CylinderGeometry(ARCH - .01, ARCH - .01, .62, 32, 1, true, -Math.PI / 2, Math.PI); linerG.rotateX(Math.PI / 2);
+  const linerG = new THREE.CylinderGeometry(ARCH - .01, ARCH - .01, .62, 32, 1, true, Math.PI / 2, Math.PI); linerG.rotateX(Math.PI / 2);
   const linerM = new THREE.MeshBasicMaterial({ color: 0x020202, side: THREE.DoubleSide });
   const M = {
     tyre: hook(new THREE.MeshPhysicalMaterial({ color: 0x121213, roughness: .82, metalness: 0 })),
@@ -465,7 +459,7 @@ export function start(opts = {}) {
   const mirG = new THREE.SphereGeometry(1, 28, 16);
   for (const sg of [1, -1]) {
     const mx = .74, my = yBelt(mx) + .075;
-    const cap = new THREE.Mesh(mirG, paintMat); cap.scale.set(.085, .055, .12); cap.position.set(mx - .02, my, sg * (.80 + .13)); car.add(cap);
+    const cap = new THREE.Mesh(mirG, paintMat); cap.scale.set(.075, .048, .105); cap.position.set(mx - .02, my, sg * (.80 + .115)); car.add(cap);
     const baseM = new THREE.Mesh(mirG, piano); baseM.scale.set(.07, .03, .08); baseM.position.set(mx, my - .03, sg * (.80 + .05)); car.add(baseM);
   }
   const fin = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), piano); fin.scale.set(.11, .035, .03); fin.position.set(-1.4, yTop(-1.4) + .005, 0); car.add(fin);
@@ -480,19 +474,21 @@ export function start(opts = {}) {
   const FU = floor.material.uniforms;
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 2.7), new THREE.MeshBasicMaterial({ map: blobTex(), transparent: true, depthWrite: false, opacity: .92 }));
   blob.rotation.x = -Math.PI / 2; blob.position.y = .004; blob.renderOrder = 2; car.add(blob);
-  const barMesh = new THREE.Mesh(new THREE.BoxGeometry(.07, .035, 5.2), new THREE.MeshBasicMaterial({ color: 0xffffff })); scene.add(barMesh);
-  const shaft = shaftMesh(); scene.add(shaft);
+  const gateM = new THREE.MeshBasicMaterial({ color: 0xffffff }), gate = new THREE.Group();
+  { const gw = U.uGateW.value, gh = U.uGateH.value, t = .045;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(t, t, gw * 2 + t), gateM); top.position.y = gh; gate.add(top);
+    for (const sg of [1, -1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(t, gh, t), gateM); p.position.set(0, gh / 2, sg * gw); gate.add(p); } }
+  scene.add(gate);
   const motes = dust(lite ? 280 : 720); scene.add(motes);
 
   /* luci dirette (oltre allo studio HDR) */
-  const key = new THREE.DirectionalLight(0xfff0dc, 0); key.position.set(4, 8, 5); scene.add(key);
-  const rim = new THREE.DirectionalLight(0xff9a4a, 0); rim.position.set(-7, 2.4, -3); scene.add(rim);
+  // (niente luci dirette: sul trasparente lucidissimo farebbero punti caldi; basta lo studio HDR)
 
   /* post-produzione */
   const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: isGL2 ? (lite ? 2 : 4) : 0 });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .5, .55, .9);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .45, .38, 1.4);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const finish = new ShaderPass(Finish); composer.addPass(finish);
@@ -512,14 +508,14 @@ export function start(opts = {}) {
     if (p.d) return p.d;
     const v = THREE.MathUtils.degToRad(p.fov) / 2, hz = Math.atan(Math.tan(v) * camera.aspect);
     const az = THREE.MathUtils.degToRad(p.az), span = Math.abs(Math.cos(az)) * L2 + Math.abs(Math.sin(az)) * W2 * 1.05;
-    return Math.max((span + .15) / Math.tan(hz) * (p.fit / 2.75), 1.1 / Math.tan(v) * 1.25);
+    return Math.max((span + 1.0) / Math.tan(hz) * (p.fit / 2.75), 1.1 / Math.tan(v) * 1.3);
   }
   function applyPose(p, extraAz = 0, extraEl = 0) {
     const d = fitD(p), az = THREE.MathUtils.degToRad(p.az + extraAz), el = THREE.MathUtils.degToRad(clamp(p.el + extraEl, 1, 40));
     camera.fov = p.fov;
     camera.position.set(p.t[0] + d * Math.cos(el) * Math.cos(az), p.t[1] + d * Math.sin(el), p.t[2] + d * Math.cos(el) * Math.sin(az));
     camera.lookAt(p.t[0], p.t[1], p.t[2]);
-    camera.setViewOffset(W, H, -p.ox * W, -p.oy * H, W, H);
+    camera.setViewOffset(W, H, p.ox * W, p.oy * H, W, H);
     camera.updateProjectionMatrix();
   }
   const resolved = p => Object.assign({}, p, { d: fitD(p) });
@@ -544,7 +540,7 @@ export function start(opts = {}) {
     let hd = 0;
     if (t > 2.05) hd = t < 2.12 ? .8 : t < 2.2 ? .1 : t < 2.27 ? 1 : t < 2.33 ? .35 : Math.min(1, .5 + (t - 2.33) * 3);
     const env = eos(ramp(2.5, 4.6, t));
-    const bl = .45 + .9 * sstep(2.05, 2.35, t) * (1 - sstep(2.6, 3.8, t));
+    const bl = .4 + .12 * sstep(2.05, 2.35, t) * (1 - sstep(2.6, 3.8, t));
     return { hd, env, bl, fade: sstep(0, .5, t) };
   }
   function introPose(t) {
@@ -614,17 +610,15 @@ export function start(opts = {}) {
     // dopo l'intro: ogni tanto una passata di luce sulla carrozzeria
     if (T >= T_END) {
       glintT += dt;
-      const g = (glintT % 9) / 2.6;
+      const g = ((glintT + 6) % 9) / 2.6;
       if (g < 1) { U.uBarX.value = lerp(3.6, -3.8, eio(g)); U.uBarI.value = Math.sin(Math.PI * g) * .55; }
       else U.uBarI.value = 0;
     }
-    U.uHead.value = st.hd * 9; U.uTail.value = st.hd * 5;
+    U.uHead.value = st.hd * 3.2; U.uTail.value = st.hd * 3;
     envMats.forEach(m => { m.envMapIntensity = lerp(.035, 1, st.env); });
-    key.intensity = st.env * 1.1; rim.intensity = st.env * 1.6;
     FU.uEnv.value = st.env; FU.uBarX.value = U.uBarX.value; FU.uBarI.value = U.uBarI.value; FU.uHead.value = st.hd; FU.uTail.value = st.hd; FU.uTime.value = time;
     const mu = motes.material.uniforms; mu.uTime.value = time; mu.uEnv.value = st.env; mu.uHead.value = st.hd;
-    barMesh.position.set(U.uBarX.value, U.uBarY.value, 0); barMesh.material.color.setScalar(6 * U.uBarI.value); barMesh.visible = U.uBarI.value > .01;
-    shaft.position.x = U.uBarX.value; shaft.material.uniforms.uI.value = U.uBarI.value * .05; shaft.visible = barMesh.visible;
+    gate.position.x = U.uBarX.value; gateM.color.setScalar(2.6 * U.uBarI.value); gate.visible = T < T_END && U.uBarI.value > .01;
     bloom.strength = st.bl;
     finish.uniforms.uTime.value = time; finish.uniforms.uFade.value = st.fade;
 
