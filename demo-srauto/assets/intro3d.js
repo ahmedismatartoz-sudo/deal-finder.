@@ -1,4 +1,4 @@
-/* Sunmotors – intro cinematografica 3D e scrollytelling.
+/* Sunmotors – intro cinematografica 3D e scrollytelling, in studio chiaro bianco e blu.
    Auto disegnata via codice (generica, nessun marchio), vernice PBR con trasparente (clearcoat), studio HDR generato
    al volo (PMREM), pavimento bagnato riflettente, polvere nella luce, bloom, ACES, MSAA.
    three.js r160 da CDN con versione esatta (importmap nella home). */
@@ -124,7 +124,7 @@ function classify(x, y, z, s, zone) {
   return 'paint';
 }
 // albedo (sRGB), [R=clearcoat, G=ruvidità, B=metallo], emissione
-const ALB = { paint: [0, 0, 0], glass: [5, 6, 7], piano: [7, 7, 8], chrome: [205, 207, 212], trim: [14, 14, 15], grille: [22, 22, 24], gap: [8, 8, 8], under: [6, 6, 6], drl: [240, 240, 240], proj: [30, 30, 32], tail: [60, 4, 2] };
+const ALB = { paint: [0, 0, 0], glass: [6, 10, 22], piano: [7, 9, 16], chrome: [205, 207, 212], trim: [14, 14, 15], grille: [22, 22, 24], gap: [8, 8, 8], under: [6, 6, 6], drl: [240, 240, 240], proj: [30, 30, 32], tail: [60, 4, 2] };
 const RMC = { paint: [255, 92, 166], glass: [255, 6, 0], piano: [255, 22, 0], chrome: [0, 40, 255], trim: [0, 150, 0], grille: [120, 80, 90], gap: [0, 210, 0], under: [0, 240, 0], drl: [255, 30, 0], proj: [255, 20, 0], tail: [255, 30, 0] };
 const EMI = { drl: [255, 246, 232], proj: [215, 228, 255], tail: [255, 14, 6] };
 
@@ -153,8 +153,8 @@ function bodyMaps(TW, TH) {
 
 /* ---------- uniform condivisi (luce che scorre, fari, vernice) ---------- */
 const U = {
-  uBarX: { value: 5 }, uGateH: { value: 2.7 }, uGateW: { value: 1.9 }, uBarW: { value: .1 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(1, .94, .86) },
-  uHead: { value: 0 }, uTail: { value: 0 }, uPaint: { value: new THREE.Color('#8f9297') },
+  uBarX: { value: 5 }, uGateH: { value: 2.7 }, uGateW: { value: 1.9 }, uBarW: { value: .1 }, uBarI: { value: 0 }, uBarC: { value: new THREE.Color(.84, .92, 1) },
+  uHead: { value: 0 }, uTail: { value: 0 }, uPaint: { value: new THREE.Color('#1446a0') },
 };
 function hook(mat, paint) {
   if (paint) mat.defines = Object.assign(mat.defines || {}, { SUN_PAINT: '' });
@@ -297,22 +297,25 @@ function makeWheel(P, M, front) {
 /* ---------- studio HDR generato ---------- */
 function studioEnv(renderer) {
   const s = new THREE.Scene();
-  s.add(new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({ color: 0x050506, side: THREE.BackSide })));
+  // studio bianco: volta chiara fredda, pavimento grigio-azzurro (dà forma alle fiancate)
+  s.add(new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xdfe8f6).multiplyScalar(.42), side: THREE.BackSide })));
+  const flo = new THREE.Mesh(new THREE.CircleGeometry(39, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9fb3d1).multiplyScalar(.2) }));
+  flo.rotation.x = -Math.PI / 2; flo.position.y = -.4; s.add(flo);
   const panel = (w, h, x, y, z, rx, ry, k, tint) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(tint || 0xffffff).multiplyScalar(k), side: THREE.DoubleSide }));
     m.position.set(x, y, z); m.rotation.set(rx, ry, 0); s.add(m);
   };
-  panel(9, 2.4, 0, 9, 0, Math.PI / 2, 0, 2.2);                   // soffitto
-  panel(14, .28, 0, 8.6, 2.4, Math.PI / 2, 0, 5);                // due tagli di luce sopra (riga sul cofano/tetto)
+  panel(9, 2.4, 0, 9, 0, Math.PI / 2, 0, 2.6, 0xf4f8ff);          // soffitto
+  panel(14, .28, 0, 8.6, 2.4, Math.PI / 2, 0, 5);                 // due tagli di luce sopra (riga sul cofano/tetto)
   panel(14, .28, 0, 8.6, -2.4, Math.PI / 2, 0, 5);
-  panel(26, .32, 0, 2.6, 12, 0, Math.PI, 7, 0xfff3e2);           // linee lunghe sulle fiancate
-  panel(26, .32, 0, 2.6, -12, 0, 0, 7, 0xfff3e2);
+  panel(26, .32, 0, 2.6, 12, 0, Math.PI, 7, 0xeef4ff);            // linee lunghe sulle fiancate
+  panel(26, .32, 0, 2.6, -12, 0, 0, 7, 0xeef4ff);
   panel(26, .22, 0, 1.15, 12, 0, Math.PI, 2.2);
   panel(26, .22, 0, 1.15, -12, 0, 0, 2.2);
-  panel(30, .5, 0, -.6, 9, Math.PI / 2.6, Math.PI, 2.6, 0xfff1e0); // linee basse: riflesso lungo sulle portiere
-  panel(30, .5, 0, -.6, -9, -Math.PI / 2.6, 0, 2.6, 0xfff1e0);
-  panel(.5, 7, 14, 4, 0, 0, -Math.PI / 2, 3.4, 0xdfe8ff);       // davanti, fredda
-  panel(16, .35, -14, 1.9, 0, 0, Math.PI / 2, 2.4, 0xff8a2a);    // dietro, calda (il "sole" di Sunmotors)
+  panel(30, .5, 0, -.6, 9, Math.PI / 2.6, Math.PI, 2.6, 0xe6efff); // linee basse: riflesso lungo sulle portiere
+  panel(30, .5, 0, -.6, -9, -Math.PI / 2.6, 0, 2.6, 0xe6efff);
+  panel(.5, 7, 14, 4, 0, 0, -Math.PI / 2, 3.4, 0xdfe8ff);        // davanti, fredda
+  panel(16, .35, -14, 1.9, 0, 0, Math.PI / 2, 2.6, 0x3d7bff);     // dietro, accento blu Sunmotors
   const pm = new THREE.PMREMGenerator(renderer);
   const tex = pm.fromScene(s, .015).texture; pm.dispose();
   return tex;
@@ -321,11 +324,11 @@ function studioEnv(renderer) {
 /* ---------- pavimento bagnato ---------- */
 const FloorShader = {
   name: 'WetFloor',
-  uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uEnv: { value: 0 }, uBarX: { value: 5 }, uBarI: { value: 0 }, uHead: { value: 0 }, uTail: { value: 0 }, uTime: { value: 0 } },
+  uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uEnv: { value: 0 }, uBg: { value: new THREE.Color() }, uBarX: { value: 5 }, uBarI: { value: 0 }, uHead: { value: 0 }, uTail: { value: 0 }, uTime: { value: 0 } },
   vertexShader: `uniform mat4 textureMatrix; varying vec4 vUv; varying vec3 vWP;
     #include <common>
     void main(){ vUv = textureMatrix * vec4(position, 1.0); vWP = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform vec3 color; uniform sampler2D tDiffuse; uniform float uEnv, uBarX, uBarI, uHead, uTail, uTime; varying vec4 vUv; varying vec3 vWP;
+  fragmentShader: `uniform vec3 color, uBg; uniform sampler2D tDiffuse; uniform float uEnv, uBarX, uBarI, uHead, uTail, uTime; varying vec4 vUv; varying vec3 vWP;
     float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
     float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1,0)), f.x), mix(h21(i + vec2(0,1)), h21(i + vec2(1,1)), f.x), f.y); }
     float fbm(vec2 p){ float a = .5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * vn(p); p *= 2.03; a *= .5; } return s; }
@@ -347,10 +350,11 @@ const FloorShader = {
       float cone = hx > 0.0 ? exp(-pow((abs(vWP.z) - .6 - hx * .12) / (.22 + hx * .2), 2.0)) * exp(-hx * .32) * smoothstep(0.0, .5, hx) : 0.0;
       float tx = -vWP.x - 2.35;
       float tl = tx > 0.0 ? exp(-tx * 1.5) * exp(-vWP.z * vWP.z / 1.4) : 0.0;
-      vec3 asph = vec3(.034, .033, .034) * (.7 + .6 * grain) * (1.0 - .5 * wet);
-      vec3 li = vec3(1.0, .93, .86) * (uEnv * (.18 + 1.7 * pool) + uBarI * barL * 2.4) + vec3(1.0, .97, .92) * uHead * cone * 2.2 + vec3(1.0, .07, .03) * uTail * tl * .7;
-      float fade = 1.0 - smoothstep(4.0, 12.0, r);
-      vec3 col = (asph * li + rf * mix(.16, .8, wet) * color) * fade;
+      vec3 resin = vec3(.66, .72, .82) * (.94 + .12 * grain);              // resina chiara, appena azzurra
+      vec3 li = vec3(.93, .96, 1.0) * (uEnv * (.95 + .75 * pool) + .06 + uBarI * barL * 1.6) + vec3(.9, .95, 1.0) * uHead * cone * 1.4 + vec3(1.0, .1, .08) * uTail * tl * .35;
+      float refl = mix(.22, .5, wet);
+      float fade = 1.0 - smoothstep(3.5, 11.0, r);
+      vec3 col = mix(uBg, resin * li * (1.0 - refl) + rf * refl * color, fade);
       gl_FragColor = vec4(col, 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
@@ -385,7 +389,7 @@ function dust(n) {
         vA = (.035 * uEnv + shaft * 1.4 + cone * uHead * 1.2) * (.35 + .65 * fract(aSeed * 7.31)) * smoothstep(.0, .3, p.y) * smoothstep(3.4, 2.9, p.y);
         gl_PointSize = uSize * uPR * (.45 + aSeed) / max(.5, -mv.z);
       }`,
-    fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - .5); float a = smoothstep(.5, .0, d); a *= a; gl_FragColor = vec4(vec3(1.0, .9, .78) * vA * a * 2.6, 1.0); }`,
+    fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - .5); float a = smoothstep(.5, .0, d); a *= a; gl_FragColor = vec4(vec3(.8, .9, 1.0) * vA * a * 2.6, 1.0); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
   const pts = new THREE.Points(g, m); pts.frustumCulled = false; return pts;
@@ -399,9 +403,9 @@ const Finish = {
     void main(){
       vec2 c = vUv - .5; float r2 = dot(c, c); vec2 off = c * r2 * .01;
       vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
-      col *= 1.0 - .6 * smoothstep(.08, .55, r2 * 1.7);
-      col += (h(vUv * 917.0 + fract(uTime) * 61.0) - .5) * .028;
-      gl_FragColor = vec4(col * uFade, 1.0);
+      col *= 1.0 - .12 * smoothstep(.12, .6, r2 * 1.7);
+      col += (h(vUv * 917.0 + fract(uTime) * 61.0) - .5) * .02;
+      gl_FragColor = vec4(mix(vec3(.043, .18, .42), col, uFade), 1.0);
     }`
 };
 
@@ -420,7 +424,7 @@ function poses(portrait) {
   return {
     i0: { az: 34, el: 3, d: 6.6, t: [.4, .62, 0], fov: 30, ox: 0, oy: 0 },
     i1: { az: 22, el: 4.5, d: 4.7, t: [1.45, .64, .1], fov: 30, ox: 0, oy: 0 },
-    hero: { az: 38, el: 7, fit: 3.15, t: [0, .78, 0], fov: 24, ox: -.16, oy: .07 },
+    hero: { az: 38, el: 7, fit: 3.9, t: [0, .78, 0], fov: 24, ox: -.215, oy: .07 },
     s1: { az: 64, el: 3, d: 3.0, t: [1.47, .42, .95], fov: 28, ox: -.17, oy: 0 },
     s2: { az: 90, el: 2, fit: 3.5, t: [0, .76, 0], fov: 20, ox: -.19, oy: .1 },
     s3: { az: 148, el: 7, fit: 2.75, t: [-.25, .8, 0], fov: 24, ox: .16, oy: .02 },
@@ -443,7 +447,8 @@ export function start(opts = {}) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x040405);
+  const BG0 = new THREE.Color(0x0b2e6b).multiplyScalar(.85), BG1 = new THREE.Color(1.45, 1.55, 1.75); // blu notte -> studio bianco
+  scene.background = BG0.clone();
   scene.environment = studioEnv(renderer);
   const camera = new THREE.PerspectiveCamera(30, 1, .1, 80);
 
@@ -457,11 +462,11 @@ export function start(opts = {}) {
   const M = {
     tyre: hook(new THREE.MeshPhysicalMaterial({ color: 0x121213, roughness: .82, metalness: 0 })),
     face: hook(new THREE.MeshPhysicalMaterial({ color: 0xd9dbe0, roughness: .16, metalness: 1, clearcoat: .6, clearcoatRoughness: .05 })),
-    spokeSide: hook(new THREE.MeshPhysicalMaterial({ color: 0x1b1c1f, roughness: .3, metalness: .7, clearcoat: .8, clearcoatRoughness: .08 })),
+    spokeSide: hook(new THREE.MeshPhysicalMaterial({ color: 0x1b2638, roughness: .3, metalness: .7, clearcoat: .8, clearcoatRoughness: .08 })),
     barrel: hook(new THREE.MeshPhysicalMaterial({ color: 0x141416, roughness: .45, metalness: .6, side: THREE.DoubleSide })),
     disc: hook(new THREE.MeshPhysicalMaterial({ map: discTex(), roughness: .38, metalness: .9 })),
-    caliper: hook(new THREE.MeshPhysicalMaterial({ color: 0xff6a12, roughness: .32, metalness: .1, clearcoat: 1, clearcoatRoughness: .08 })),
-    cap: hook(new THREE.MeshPhysicalMaterial({ color: 0x0c0c0d, roughness: .2, metalness: .5, clearcoat: 1 })),
+    caliper: hook(new THREE.MeshPhysicalMaterial({ color: 0x1f5bd6, roughness: .32, metalness: .1, clearcoat: 1, clearcoatRoughness: .08 })),
+    cap: hook(new THREE.MeshPhysicalMaterial({ color: 0x1446a0, roughness: .2, metalness: .5, clearcoat: 1 })),
   };
   const WP = makeWheelParts(lite);
   for (const [x, sg] of [[XF, 1], [XF, -1], [XR, 1], [XR, -1]]) {
@@ -503,7 +508,7 @@ export function start(opts = {}) {
   const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: isGL2 ? (lite ? 2 : 4) : 0 });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .45, .38, 1.4);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .45, .38, 2.2);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const finish = new ShaderPass(Finish); composer.addPass(finish);
@@ -537,7 +542,7 @@ export function start(opts = {}) {
   const resolved = p => Object.assign({}, p, { d: fitD(p) });
 
   /* tempi dell'intro (secondi) */
-  const T_TITLE = 3.6, T_OPEN = 5.3, T_END = 6.2;
+  const T_TITLE = 4.5, T_OPEN = 5.4, T_END = 6.2;
   const url = new URLSearchParams(location.search);
   const freeze = url.has('t') ? parseFloat(url.get('t')) : null;
   let T = opts.skip ? T_END : 0, clockOn = false, phase = '';
@@ -631,8 +636,8 @@ export function start(opts = {}) {
       else U.uBarI.value = 0;
     }
     U.uHead.value = st.hd * 3.2; U.uTail.value = st.hd * 3;
-    envMats.forEach(m => { m.envMapIntensity = lerp(.035, 1.25, st.env); });
-    FU.uEnv.value = st.env; FU.uBarX.value = U.uBarX.value; FU.uBarI.value = U.uBarI.value; FU.uHead.value = st.hd; FU.uTail.value = st.hd; FU.uTime.value = time;
+    envMats.forEach(m => { m.envMapIntensity = lerp(.22, 1.25, st.env); });
+    scene.background.copy(BG0).lerp(BG1, st.env); FU.uBg.value.copy(scene.background); FU.uEnv.value = st.env; FU.uBarX.value = U.uBarX.value; FU.uBarI.value = U.uBarI.value; FU.uHead.value = st.hd; FU.uTail.value = st.hd; FU.uTime.value = time;
     const mu = motes.material.uniforms; mu.uTime.value = time; mu.uEnv.value = st.env; mu.uHead.value = st.hd;
     gate.position.x = U.uBarX.value; gateM.color.setScalar(2.6 * U.uBarI.value); gate.visible = T < T_END && U.uBarI.value > .01;
     bloom.strength = st.bl;
