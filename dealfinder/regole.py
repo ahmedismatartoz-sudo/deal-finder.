@@ -302,6 +302,38 @@ class Scrittura:
 
 
 @dataclass(frozen=True)
+class ValoreBase:
+    """19/11 (cliente: "gravissimo errore di gonfiamento: tante auto hanno un valore di mercato sovrastimato"; regola
+    storica "non gonfiare i prezzi"). Valore del sito (pricing/valore_base.py) PRUDENTE: il prezzo chiesto in vetrina da
+    un commerciante comprende trattativa, preparazione e garanzia e NON è il valore di un'auto da privato.
+    - stime al `percentile` (40°) dei confronti tenuti invece della mediana;
+    - commercianti (D) scontati: s = trattativa + costi_vetrina / D (+ extra_vecchie oltre `fragile_anni` anni),
+      cioè 3% + 300 € / D (+3% oltre 10 anni) tra 5% e 20%:
+      tra sconto_min e sconto_max (auto economiche: sconto più alto, i costi di vetrina pesano di più);
+    - R = min(vendute V, D scontata) quando ci sono entrambe; le vendute con almeno `n_tetto_V` confronti fanno solo
+      da TETTO (abbassano, mai alzano);
+    - livello 2 (anno ±2, km ±40%) solo con almeno `n_min_livello2` confronti; auto "fragili" (valore sotto
+      `fragile_valore` € o oltre `fragile_anni` anni) solo con almeno `n_min_fragile` confronti.
+    Solo valutazione: le soglie di margine (SOGLIE_PV) e le altre regole del sito non cambiano."""
+    percentile: float = 0.40
+    n_min: int = 5                     # = valore_base.N_MIN_SITO (livello 1)
+    n_min_livello2: int = 8
+    n_min_fragile: int = 8
+    n_tetto_V: int = 3
+    # calibrati sulla misura BASE_VENDUTE del 18/11 (vendute degli ultimi 30 giorni, 21.402 con stima D): la stima dei
+    # commercianti sta in media +3,3% sopra l'ULTIMO prezzo chiesto delle vendute, che a sua volta è sopra il prezzo
+    # di chiusura (trattativa). Con 40° percentile (≈ −2,7%) e questo sconto (≈ 6% in media) lo scostamento atteso
+    # diventa negativo (≈ −5% sull'ultimo prezzo chiesto, ≈ 0 sul prezzo di chiusura). Da verificare con base_vendute.
+    trattativa: float = 0.03
+    costi_vetrina: int = 300           # preparazione + garanzia dentro il prezzo del commerciante (euro per auto)
+    extra_vecchie: float = 0.03
+    sconto_min: float = 0.05
+    sconto_max: float = 0.20
+    fragile_valore: int = 5000
+    fragile_anni: int = 10
+
+
+@dataclass(frozen=True)
 class Regole:
     versione: str = VERSIONE
     confronti: Confronti = field(default_factory=Confronti)
@@ -320,6 +352,7 @@ class Regole:
     trazione: Trazione = field(default_factory=Trazione)
     dotazioni: Dotazioni = field(default_factory=Dotazioni)
     forbice: Forbice = field(default_factory=Forbice)
+    valore_base: ValoreBase = field(default_factory=ValoreBase)
     giudice_ai: bool = True            # l'AI toglie i confronti non uguali (6/11: default = produzione, così cron mercato,
                                        # cron opportunità e sito calcolano con le STESSE regole anche senza variabili)
     fascia_richiesta: bool = True

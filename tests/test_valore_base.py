@@ -42,27 +42,38 @@ def _t(prezzo, **kw):
 
 COMM = [_c(i, p) for i, p in enumerate((9000, 9100, 9200, 9300, 9400, 9500), start=1)]
 VEND = [_c(100 + i, p, status="scomparso", sel="privato") for i, p in enumerate((8000, 8100, 8200, 8300, 8400))]
+# 19/11 (valore prudente, regole.ValoreBase): commercianti al 40° percentile (9.200) meno lo sconto di vetrina
+# (3% + 300/9.200 = 6,26%) = 8.624; vendute al 40° percentile = 8.160 (prima: mediane 9.250 e 8.200)
+RD, RV = 8624, 8160
 
 
 # ------------------------------------------------------------------ calcolo
 
-def test_commercianti_prima_delle_vendute():
+def test_commercianti_scontati_e_vendute_come_tetto():
     base = VB.dividi(COMM + VEND)
     assert len(base["D"]) == 6 and len(base["V"]) == 5
     v = VB.valuta(_t(6000), base, scovo.soglia(6000))
-    assert v["fonte_base"] == "commercianti" and v["M"] == v["R"] == v["R_finale"] == 9250
-    assert v["n"] == 6 and v["stima_D"] == 9250 and v["stima_V"] == 8200 and v["n_V"] == 5
+    # 19/11: R = min(vendute, commercianti scontati) = vendute 8.160 (commercianti scontati 8.340)
+    assert v["fonte_base"] == "vendute" and v["M"] == v["R"] == v["R_finale"] == RV
+    assert v["n"] == 5 and v["stima_D"] == 9200 and v["stima_V"] == RV and v["n_V"] == 5 and v["n_D"] == 6
+    assert v["prudenza"]["D_netta"] == RD and v["prudenza"]["sconto_vetrina"] == 0.0626
     assert v["metodo"] == "base_vendute" and v["calibrato"] == 1.0 and v["totale_costi"] == 0
-    assert v["margine"] == 9250 - 6000 and v["categoria"] == "opportunita"
-    assert v["valore_base"] == {"fonte": "commercianti", "R": 9250, "n": 6, "stima_D": 9250, "n_D": 6,
-                                "stima_V": 8200, "n_V": 5}
+    assert v["margine"] == RV - 6000 and v["categoria"] == "opportunita"
+    vb = v["valore_base"]
+    assert {k: vb[k] for k in ("fonte", "R", "n", "stima_D", "n_D", "stima_V", "n_V", "stima_D_netta", "regola")} == \
+        {"fonte": "vendute", "R": RV, "n": 5, "stima_D": 9200, "n_D": 6, "stima_V": RV, "n_V": 5,
+         "stima_D_netta": RD, "regola": "prudente-1911"}
+    assert all(c.get("venduta") for c in v["confronti"])
+    # soli commercianti: prezzo di vetrina scontato
+    v = VB.valuta(_t(6000), VB.dividi(COMM), scovo.soglia(6000))
+    assert v["fonte_base"] == "commercianti" and v["M"] == RD and v["n"] == 6
     assert len(v["confronti"]) == 6 and all(c["venditore"] == "commerciante" for c in v["confronti"])
 
 
 def test_vendute_se_i_commercianti_sono_pochi():
     base = VB.dividi(COMM[:4] + VEND)                      # 4 commercianti: non bastano (N_MIN_SITO = 5)
     v = VB.valuta(_t(6000), base, scovo.soglia(6000))
-    assert v["fonte_base"] == "vendute" and v["M"] == 8200 and v["n"] == 5 and v["stima_D"] is None
+    assert v["fonte_base"] == "vendute" and v["M"] == RV and v["n"] == 5 and v["stima_D"] is None
     assert all(c.get("venduta") for c in v["confronti"])
     assert v["categoria"] == "opportunita"
 
@@ -83,7 +94,7 @@ def test_incidentata_e_truffa_escluse_dai_confronti():
     assert len(base["D"]) == 4                              # restano solo le 4 pulite: troppo poche
     assert VB.valuta(_t(6000), base, scovo.soglia(6000))["categoria"] == "dati_insufficienti"
     v = VB.valuta(_t(6000), VB.dividi(COMM + sporche), scovo.soglia(6000))
-    assert v["M"] == 9250 and v["n"] == 6                   # le sporche non spostano il valore
+    assert v["M"] == RD and v["n"] == 6                     # le sporche non spostano il valore
 
 
 def test_commercianti_vecchi_non_contano_e_vendute_troppo_brevi_neanche():
@@ -110,23 +121,23 @@ def test_incidentata_con_ricambi_valutata_col_nuovo_calcolo():
     base = VB.dividi(COMM)
     v = VB.valuta(_t(5000, damage_class="leggero", parts_cost_low=Decimal("600"), parts_cost_high=Decimal("800")),
                   base, scovo.soglia(5000))
-    assert v["metodo"] == "base_vendute" and v["M"] == v["R_finale"] == 9250
+    assert v["metodo"] == "base_vendute" and v["M"] == v["R_finale"] == RD
     assert v["costi"]["ricambi"]["euro"] == 800 and "costi_commerciante" not in v["costi"]
-    assert v["totale_costi"] == 800 and v["margine"] == 9250 - 5000 - 800
+    assert v["totale_costi"] == 800 and v["margine"] == RD - 5000 - 800
     assert v["categoria"] == "candidato" and any("danneggiata" in m for m in v["motivi"])
     # stesso danno con margine sotto soglia: non conveniente
-    v = VB.valuta(_t(8000, damage_class="medio", parts_cost_high=900), base, scovo.soglia(8000))
-    assert v["margine"] == 350 and v["categoria"] == "non_conveniente"
+    v = VB.valuta(_t(7000, damage_class="medio", parts_cost_high=900), base, scovo.soglia(7000))
+    assert v["margine"] == RD - 7000 - 900 and v["categoria"] == "non_conveniente"
 
 
 def test_difetti_letti_dall_ai_tolti_una_volta():
     base = VB.dividi(COMM)
     v = VB.valuta(_t(5000, costo_difetti=400, difetti_motivo="frizione", problem_search=True), base, scovo.soglia(5000))
-    assert v["costo_difetti_incluso"] is True and v["totale_costi"] == 400 and v["margine"] == 9250 - 5000 - 400
+    assert v["costo_difetti_incluso"] is True and v["totale_costi"] == 400 and v["margine"] == RD - 5000 - 400
     assert v["categoria"] == "candidato"
     # auto pulita: margine = R − prezzo, nessun costo fisso (cliente 18/11)
     v = VB.valuta(_t(6000), base, scovo.soglia(6000))
-    assert v["totale_costi"] == 0 and v["margine"] == 9250 - 6000 and v["categoria"] == "opportunita"
+    assert v["totale_costi"] == 0 and v["margine"] == RD - 6000 and v["categoria"] == "opportunita"
 
 
 def test_zone_torino_con_torino():
@@ -154,26 +165,26 @@ def test_zone_torino_con_torino():
 
 
 def test_margine_sotto_soglia_non_conveniente():
-    prezzo = 8500                                           # margine 750 < soglia 1.800
+    prezzo = 8000                                           # margine 624 < soglia 1.800
     v = VB.valuta(_t(prezzo), VB.dividi(COMM), scovo.soglia(prezzo))
-    assert v["margine"] == 750 and v["categoria"] == "non_conveniente"
+    assert v["margine"] == RD - 8000 and v["categoria"] == "non_conveniente"
     assert v["margine"] < scovo.soglia(prezzo)
 
 
 def test_margine_sopra_soglia_opportunita_e_soglia_invariata():
-    prezzo = 7400                                           # soglia(7.400) = 1.800; margine 1.850
-    assert scovo.soglia(prezzo) == 1800
+    prezzo = 6500                                           # soglia(6.500) = 1.500; margine 2.124
+    assert scovo.soglia(prezzo) == 1500 and scovo.soglia(7400) == 1800
     v = VB.valuta(_t(prezzo), VB.dividi(COMM), scovo.soglia(prezzo))
-    assert v["margine"] == 1850 and v["categoria"] == "opportunita" and v["soglia"] == 1800
+    assert v["margine"] == RD - 6500 and v["categoria"] == "opportunita" and v["soglia"] == 1500
 
 
 def test_margine_oltre_55_per_cento_sospetta():
-    v = VB.valuta(_t(4000), VB.dividi(COMM), scovo.soglia(4000))     # margine 5.250 > 55% di 9.250
+    v = VB.valuta(_t(3500), VB.dividi(COMM), scovo.soglia(3500))     # margine 5.124 > 55% di 8.624
     assert v["categoria"] == "dati_insufficienti" and v["sospetto_truffa"] is True
     # tra il 45% e il 55% sotto: il controllo di prima (sotto_m) vale ancora; col numero entra solo come candidato
-    v = VB.valuta(_t(4600), VB.dividi(COMM), scovo.soglia(4600))
+    v = VB.valuta(_t(4200), VB.dividi(COMM), scovo.soglia(4200))
     assert v["categoria"] == "candidato" and v["prezzo_molto_basso_ammesso"]
-    v = VB.valuta(_t(4600, targa_e_telefono=False), VB.dividi(COMM), scovo.soglia(4600))
+    v = VB.valuta(_t(4200, targa_e_telefono=False), VB.dividi(COMM), scovo.soglia(4200))
     assert v["categoria"] == "dati_insufficienti"
 
 
@@ -372,8 +383,8 @@ def test_postgres_valuta_scrive_pubblica_e_fa_uscire():
     righe = {r["listing_id"]: r for r in c.execute(
         "SELECT listing_id, categoria, margine, metodo, n, dati FROM valutazioni_policy").fetchall()}
     assert righe[buona]["categoria"] == "opportunita" and righe[buona]["metodo"] == "base_vendute"
-    assert righe[buona]["n"] == 6 and righe[buona]["dati"]["M"] == 9250 and righe[buona]["margine"] == 3250
-    assert righe[cara]["categoria"] == "non_conveniente" and righe[cara]["margine"] == 450
+    assert righe[buona]["n"] == 6 and righe[buona]["dati"]["M"] == RD and righe[buona]["margine"] == RD - 6000
+    assert righe[cara]["categoria"] == "non_conveniente" and righe[cara]["margine"] == RD - 8800
     st = c.execute("SELECT stage, stage_reason FROM listings WHERE id=%s", (buona,)).fetchone()
     assert st == {"stage": "approfondito", "stage_reason": "opportunita"}
     # il sito legge il riassunto dell'ultima valutazione: la cara non passa più (categoria fuori da CATEGORIE_SITO)
@@ -470,7 +481,7 @@ def test_postgres_errore_in_carica_non_lascia_la_base_del_gruppo_prima():
     assert es.stats["errore"] == 1 and chiamate.count("tipo") == 2
     m = {r["listing_id"]: r["dati"].get("M") for r in c.execute(
         "SELECT listing_id, dati FROM valutazioni_policy").fetchall()}
-    assert m[a] == 9250 and m[b2] == 15250 and b1 not in m       # la seconda Tipo con la base delle Tipo
+    assert m[a] == RD and m[b2] == 14440 and b1 not in m      # Tipo: 15.200 − 5% (sconto minimo)       # la seconda Tipo con la base delle Tipo
 
 
 def test_postgres_torino_con_torino():
@@ -486,7 +497,7 @@ def test_postgres_torino_con_torino():
     VZ.valuta_e_scrivi(c, [mi, to], "test", pubblica=False)
     m = {r["listing_id"]: r["dati"].get("M") for r in c.execute(
         "SELECT listing_id, dati FROM valutazioni_policy").fetchall()}
-    assert m[mi] == 9250 and m[to] == 7250
+    assert m[mi] == RD and m[to] == 6684                       # Torino: 7.200 − 7,17%
 
 
 def test_ai_prezzi_spento_col_calcolo_nuovo():

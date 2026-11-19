@@ -21,7 +21,13 @@ Due misure, scritte in UNA riga di log "BASE_VENDUTE {json}" (niente id, link, t
    +4,5%, 47% entro il 10%);
 2. AFFARI tra i privati attivi delle province del sito con anno >= ANNO_MIN e km <= KM_MAX: margine = stima − prezzo,
    buone = margine >= scovo.soglia(prezzo) (le stesse SOGLIE_PV), divise per provincia e per telefono.
-Lancio: BREVO_IMPORT_LISTE=base_vendute:ora (gira subito nel sito)."""
+Lancio: BREVO_IMPORT_LISTE=base_vendute:ora (gira subito nel sito).
+
+19/11 (cliente: "gravissimo errore di gonfiamento prezzi"): la stessa misura anche per il valore PRUDENTE del sito
+(valore_base.stima_prudente, regole.ValoreBase) accanto al calcolo del 18/11 (mediane, "sito_n5"), sulle STESSE
+vendute, divisa per fascia di prezzo, età e venditore della venduta ("prudente|fascia:<5k", ...); il rapporto
+commercianti/vendute (D/V) dove ci sono entrambe e il rapporto 40° percentile/mediana, per fascia ed età; le auto
+buone tra i privati col valore prudente ("buone_prudente"). Lancio: base_vendute:<etichetta nuova>."""
 from __future__ import annotations
 
 import logging
@@ -90,20 +96,37 @@ def _simile(c: dict, t: dict, anni: int, km: float) -> bool:
     return True
 
 
-def stima_dettaglio(base: list, t: dict, escludi=None, n_min: int | None = None) -> dict | None:
+def percentile(valori, q: float) -> float:
+    """Percentile q (0–1) con interpolazione lineare (q = 0,5 = mediana, come statistics.median)."""
+    v = sorted(valori)
+    if not v:
+        raise ValueError("nessun valore")
+    pos = (len(v) - 1) * min(1.0, max(0.0, float(q)))
+    lo = int(pos)
+    hi = min(lo + 1, len(v) - 1)
+    return v[lo] + (v[hi] - v[lo]) * (pos - lo)
+
+
+def stima_dettaglio(base: list, t: dict, escludi=None, n_min: int | None = None, q: float = 0.5,
+                    n_min_livelli: tuple | None = None) -> dict | None:
     """Come stima(), con i confronti tenuti: {"valore", "n", "livello" (1 o 2), "tenuti": [(confronto, prezzo
-    riportato all'auto)]} oppure None. n_min: confronti minimi (default N_MIN; il sito usa valore_base.N_MIN_SITO)."""
+    riportato all'auto)]} oppure None. n_min: confronti minimi (default N_MIN; il sito usa valore_base.N_MIN_SITO).
+    19/11: q = percentile dei tenuti (default 0,5 = mediana, la misura di prima); n_min_livelli = minimo per ogni
+    livello (il sito chiede più confronti al livello 2, più largo). Il taglio 0,65–1,5 resta sulla mediana."""
     n_min = N_MIN if n_min is None else n_min
     for livello, (anni, km) in enumerate(LIVELLI, start=1):
+        nm = max(n_min, n_min_livelli[livello - 1]) if n_min_livelli else n_min
         coppie = [(c, _adatta(c, t)) for c in base if c is not escludi and _simile(c, t, anni, km)]
         coppie = [(c, p) for c, p in coppie if p > 0]
-        if len(coppie) < n_min:
+        if len(coppie) < nm:
             continue
         m = statistics.median(p for _, p in coppie)
         tenuti = [(c, p) for c, p in coppie if TAGLIO[0] * m <= p <= TAGLIO[1] * m]
-        if len(tenuti) >= n_min:
-            return {"valore": statistics.median(p for _, p in tenuti), "n": len(tenuti), "livello": livello,
-                    "tenuti": tenuti}
+        if len(tenuti) >= nm:
+            prezzi = [p for _, p in tenuti]
+            valore = statistics.median(prezzi) if q == 0.5 else percentile(prezzi, q)
+            return {"valore": valore, "n": len(tenuti), "livello": livello, "tenuti": tenuti,
+                    "mediana": statistics.median(prezzi)}
     return None
 
 
@@ -122,8 +145,31 @@ def _err(lista: list) -> dict:
             "entro_10pct_quota": round(100 * sum(1 for p in pct if p <= 10) / len(pct), 1)}
 
 
-def _gruppo(righe: list, st: dict, prec: dict, esempi: list) -> None:
+def fascia(prezzo) -> str:
+    p = float(prezzo or 0)
+    return "<5k" if p < 5000 else "5-10k" if p < 10000 else "10-15k" if p < 15000 else "15-20k" if p < 20000 else ">20k"
+
+
+def fascia_eta(anno) -> str:
+    from .valore_base import eta_auto
+    e = eta_auto(anno)
+    return "0-5" if e <= 5 else "6-10" if e <= 10 else ">10"
+
+
+def _rapporti(r: dict) -> dict:
+    out = {}
+    for k, v in sorted(r.items()):
+        if v:
+            out[k] = {"n": len(v), "mediana": round(statistics.median(v), 3), "media": round(statistics.mean(v), 3)}
+    return out
+
+
+def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None = None) -> None:
+    from .. import regole as RG
     from ..web.scovo import soglia
+    from . import valore_base as VB
+    vb = RG.regole().valore_base
+    rapp = rapp if rapp is not None else defaultdict(list)
     pulite = [r for r in righe if _pulita(r)]
     D = [r for r in pulite if r["status"] == "attivo" and r["seller_type"] == "commerciante"
          and (r["giorni_visto"] or 99) <= FRESCHI_GIORNI]
@@ -148,8 +194,30 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list) -> None:
         # allargamento "unendo le due basi" si decide solo se questo errore non è peggiore di quello del sito
         ds, _ = stima(D, v, n_min=N_MIN_SITO)
         ss, _ = stima(V, v, escludi=v, n_min=N_MIN_SITO)
+        # 19/11: valore prudente sulle stesse vendute (prima/dopo per fascia, età e venditore della venduta)
+        sp = VB.stima_prudente(D, V, v, vb, escludi=v)
+        chiavi = ("fascia:" + fascia(vero), "eta:" + fascia_eta(v["year"]),
+                  "venduta_da:" + ("commerciante" if v["seller_type"] == "commerciante" else "privato"))
         if ds or ss:
             prec["sito_n5"].append((ds or ss, vero))
+            if sp["valore"]:
+                prec["prima_su_stesse"].append((ds or ss, vero))
+                prec["prudente"].append((sp["valore"], vero))
+                for k in chiavi:
+                    prec["prima|" + k].append((ds or ss, vero))
+                    prec["prudente|" + k].append((sp["valore"], vero))
+            else:
+                st["vendute_senza_stima_prudente"] += 1
+                for k in chiavi:
+                    prec["prima_senza_prudente|" + k].append((ds or ss, vero))
+            if ds and ss:
+                for k in chiavi[:2]:
+                    rapp["D/V|" + k].append(ds / ss)
+            d5 = stima_dettaglio(D, v, n_min=N_MIN_SITO)
+            if d5:
+                rapp["p40/mediana|" + chiavi[0]].append(percentile([p for _, p in d5["tenuti"]], .4) / d5["valore"])
+            if d5 and d5["livello"] == 2:
+                prec["prima_livello2"].append((ds or ss, vero))
         else:
             u, _ = stima(D + V, v, escludi=v, n_min=N_MIN_SITO)
             if u:
@@ -170,6 +238,12 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list) -> None:
             continue
         st["con_stima_D" if d else "con_stima_solo_V"] += 1
         prezzo = int(t["price_eur"])
+        sp = VB.stima_prudente(D, V, t, vb)
+        if sp["valore"]:
+            mp = sp["valore"] - prezzo
+            if mp >= soglia(prezzo) and mp <= 0.55 * sp["valore"]:
+                st["buone_prudente"] += 1
+                st["buone_prudente:" + fascia(prezzo)] += 1
         margine = r - prezzo
         sg = soglia(prezzo)
         if margine >= sg:
@@ -197,6 +271,7 @@ def lavoro(spec: str = "") -> dict:
     t0 = time.time()
     st: Counter = Counter()
     prec: dict = defaultdict(list)
+    rapp: dict = defaultdict(list)
     esempi: list = []
     fermata = None
     with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
@@ -209,7 +284,7 @@ def lavoro(spec: str = "") -> dict:
             for r in cur:
                 k = (r["make"].lower(), r["model"].lower(), r["fuel"])
                 if k != chiave and righe:
-                    _gruppo(righe, st, prec, esempi)
+                    _gruppo(righe, st, prec, esempi, rapp)
                     st["gruppi"] += 1
                     righe = []
                     time.sleep(PAUSA_S)
@@ -220,11 +295,12 @@ def lavoro(spec: str = "") -> dict:
                 st["righe"] += 1
                 righe.append(r)
             if righe and not fermata:
-                _gruppo(righe, st, prec, esempi)
+                _gruppo(righe, st, prec, esempi, rapp)
                 st["gruppi"] += 1
     esempi.sort(key=lambda e: -e["margine"])
     return {"fermata": fermata, "secondi": round(time.time() - t0), "province": sorted(PROVINCE_100KM),
-            "precisione_vendute_30g": {k: _err(v) for k, v in prec.items()},
+            "precisione_vendute_30g": {k: _err(v) for k, v in sorted(prec.items())},
+            "rapporti": _rapporti(rapp),
             "riferimento_calcolo_attuale": {"errore_mediano_pct": 10.7, "errore_medio_pct": 17.2,
                                             "scostamento_medio_pct": 4.5, "entro_10pct_quota": 47.1},
             "note": ["annunci senza provincia esclusi (come perche_fuori)",

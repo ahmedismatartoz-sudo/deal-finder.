@@ -1,6 +1,6 @@
 {
  "ammessi_produzione": {
-  "regole_impronta": "f23abb1d281a",
+  "regole_impronta": "bcce5b11d8f6",
   "scovo.MARGINE_MINIMO": 800,
   "scovo.SOGLIE": [
    [
@@ -236,6 +236,20 @@
     "attiva": false,
     "maggioranza": 0.5
    },
+   "valore_base": {
+    "costi_vetrina": 300,
+    "extra_vecchie": 0.03,
+    "fragile_anni": 10,
+    "fragile_valore": 5000,
+    "n_min": 5,
+    "n_min_fragile": 8,
+    "n_min_livello2": 8,
+    "n_tetto_V": 3,
+    "percentile": 0.4,
+    "sconto_max": 0.2,
+    "sconto_min": 0.05,
+    "trattativa": 0.03
+   },
    "valore_reale": {
     "accordo": 0.08,
     "attivo": true,
@@ -256,7 +270,7 @@
     "ripiego_nord": true
    }
   },
-  "regole_impronta": "f23abb1d281a",
+  "regole_impronta": "bcce5b11d8f6",
   "regole_versione": "regole-2026-11-12a",
   "scovo": {
    "ANNO_MINIMO": 2007,
@@ -438,6 +452,6 @@
    ]
   }
  },
- "impronta": "e89916132c7b",
- "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'."
+ "impronta": "2a5488df1a09",
+ "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default."
 }

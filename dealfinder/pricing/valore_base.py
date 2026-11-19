@@ -11,8 +11,17 @@ Per ogni auto (valutazione.valuta_e_scrivi, unico punto che scrive valutazioni_p
   (sito_regole: Milano = PROVINCE_100KM, Torino con Torino, Ravenna con Ravenna; le province lontane con Milano),
   confronti e correzioni di base_vendute.stima_dettaglio (anno ±1 / km ±25%, poi ±2 / ±40%, potenza ±10% e stesso
   cambio se noti, prezzi riportati all'anno/km dell'auto, mediana dopo il taglio 0,65–1,5);
-- R = stima D se ha almeno N_MIN_SITO confronti, altrimenti stima V con almeno N_MIN_SITO, altrimenti nessuna stima
-  (categoria dati_insufficienti). M = R (nessuna correzione chiesto → venduto: `calibrato` = 1,0, il sito non la rifà).
+- 19/11 (cliente: "gravissimo errore di gonfiamento prezzi: tante auto hanno un valore di mercato sovrastimato"),
+  valore PRUDENTE (stima_prudente, parametri in regole.ValoreBase, dentro l'impronta delle regole):
+  * stime D e V al 40° percentile dei confronti tenuti (prima: mediana);
+  * D scontata del prezzo "di vetrina": s = 3% trattativa + 300 € / D (preparazione e garanzia) + 3% oltre 10 anni,
+    tra 5% e 20% (un'auto da 3.000 € di 12 anni −16%, da 5.000 € −9%, da 10.000 € −6%, da 20.000 € −5%);
+  * R = min(V, D scontata) se ci sono entrambe; con sole D: D scontata; con sole V: V. Le vendute con almeno 3
+    confronti (meno del minimo) fanno solo da tetto;
+  * livello 2 (anno ±2, km ±40%) solo con almeno 8 confronti; auto economiche (valore sotto 5.000 €) o con più di 10
+    anni solo con almeno 8 confronti;
+  altrimenti nessuna stima (categoria dati_insufficienti). M = R (nessuna correzione chiesto → venduto: `calibrato` =
+  1,0, il sito non la rifà).
 - margine = R − prezzo (cliente 18/11: i costi fissi del commerciante, fino a 200 € con policy_v2, NON si tolgono).
   Incidentate e difetti come prima (policy_v2, 4/11): restano fuori solo i danni gravi/strutturali o senza stima dei
   ricambi; le altre hanno R dalle auto pulite, meno lo storico del danno (0 di default) e il ripristino (ricambi,
@@ -187,7 +196,7 @@ def _simili(base: list, t: dict) -> list:
 MOTIVI_DATI = ("dati_auto_incompleti", "auto_non_pulita", "costi_non_stimabili", "antitruffa:margine_oltre_55",
                "antitruffa:sotto_minimo_reale", "antitruffa:troppo_sotto_mercato", "pochi_confronti:modello_assente",
                "pochi_confronti:nessuno_simile", "pochi_confronti:rinfrescabile", "pochi_confronti:solo_unendo",
-               "pochi_confronti:pochi_simili")
+               "pochi_confronti:pochi_simili", "pochi_confronti:fragile")
 
 
 def motivo_dati(pv) -> str | None:
@@ -253,6 +262,81 @@ def _pochi(out: dict, tt: dict, D: list, V: list, Dv: list) -> dict:
                    f"{BV.FRESCHI_GIORNI} giorni) e tra le vendute degli ultimi {BV.VENDUTE_GIORNI} giorni")
 
 
+# ------------------------------------------------------------------ valore prudente (19/11)
+
+REGOLA = "prudente-1911"
+
+
+def eta_auto(anno, oggi=None) -> int:
+    """Anni dell'auto (anno corrente − anno di immatricolazione; 0 se l'anno manca)."""
+    import datetime as _dt
+    if not anno:
+        return 0
+    return max(0, int((oggi or _dt.date.today()).year) - int(anno))
+
+
+def sconto_vetrina(valore_D: float, eta: int, vb) -> float:
+    """Sconto dal prezzo chiesto da un commerciante al valore di un'auto da privato: trattativa + preparazione e
+    garanzia (costo fisso: pesa di più sulle auto economiche) + un extra per le auto con più di fragile_anni anni,
+    tra sconto_min e sconto_max."""
+    s = vb.trattativa + (vb.costi_vetrina / valore_D if valore_D > 0 else vb.sconto_max)
+    if eta > vb.fragile_anni:
+        s += vb.extra_vecchie
+    return round(min(vb.sconto_max, max(vb.sconto_min, s)), 4)
+
+
+def stima_prudente(D: list, V: list, t: dict, vb, escludi=None, oggi=None) -> dict:
+    """Valore prudente di `t` (riga normalizzata) dalle basi D (commercianti) e V (vendute), regole.ValoreBase.
+    {"valore", "fonte" ("commercianti"/"vendute"/None), "scelta" (stima_dettaglio dei confronti mostrati),
+     "stima_D", "n_D", "stima_V", "n_V", "prudenza": {...}, "fragile_poche"}. Nessuna stima: valore/scelta None."""
+    nl = (vb.n_min, vb.n_min_livello2)
+    q = vb.percentile
+    d = BV.stima_dettaglio(D, t, escludi, n_min=vb.n_min, q=q, n_min_livelli=nl)
+    v = BV.stima_dettaglio(V, t, escludi, n_min=vb.n_min, q=q, n_min_livelli=nl)
+    # stime più deboli (meno confronti del minimo): solo TETTI, abbassano e mai alzano. Vendute con almeno n_tetto_V
+    # confronti; commercianti del livello 2 con il minimo del livello 1 (la regola del 18/11: mai sopra quella)
+    tv = v or BV.stima_dettaglio(V, t, escludi, n_min=vb.n_tetto_V, q=q, n_min_livelli=(vb.n_tetto_V, vb.n_min))
+    td = d or BV.stima_dettaglio(D, t, escludi, n_min=vb.n_min, q=q)
+    eta = eta_auto(t.get("year"), oggi)
+    pr: dict = {"regola": REGOLA, "percentile": q, "eta": eta}
+    cand = []
+    if d:
+        sc = sconto_vetrina(d["valore"], eta, vb)
+        dn = d["valore"] * (1 - sc)
+        pr.update(D=int(round(d["valore"])), D_mediana=int(round(d["mediana"])), sconto_vetrina=sc,
+                  D_netta=int(round(dn)), livello_D=d["livello"])
+        cand.append((dn, "commercianti", d))
+    if v:
+        pr.update(V=int(round(v["valore"])), V_mediana=int(round(v["mediana"])), livello_V=v["livello"])
+        cand.append((v["valore"], "vendute", v))
+    out = {"valore": None, "fonte": None, "scelta": None, "prudenza": pr, "fragile_poche": False,
+           "stima_D": pr.get("D"), "n_D": d["n"] if d else 0, "stima_V": pr.get("V"), "n_V": v["n"] if v else 0}
+    if not cand:
+        return out
+    valore, fonte, scelta = min(cand, key=lambda x: x[0])
+    if not v and tv and tv["valore"] < valore:          # poche vendute: solo tetto, mai al rialzo
+        pr.update(tetto_V=int(round(tv["valore"])), n_tetto_V=tv["n"])
+        valore = tv["valore"]
+    elif v and len(cand) > 1 and fonte == "vendute":
+        pr.update(tetto_V=int(round(v["valore"])), n_tetto_V=v["n"])
+    if not d and td:
+        tdn = td["valore"] * (1 - sconto_vetrina(td["valore"], eta, vb))
+        if tdn < valore:                                 # pochi commercianti al livello 2: solo tetto
+            pr.update(tetto_D=int(round(tdn)), n_tetto_D=td["n"])
+            valore = tdn
+    fragile = valore < vb.fragile_valore or eta > vb.fragile_anni
+    pr["fragile"] = fragile
+    if fragile and max(c[2]["n"] for c in cand) < vb.n_min_fragile:
+        out["fragile_poche"] = True
+        return out
+    if fragile and scelta["n"] < vb.n_min_fragile:
+        # la fonte più bassa ha pochi confronti: si tiene l'altra, ma mai sopra il valore più basso trovato
+        alt = [c for c in cand if c[2]["n"] >= vb.n_min_fragile]
+        _v, fonte, scelta = alt[0]
+    out.update(valore=valore, fonte=fonte, scelta=scelta)
+    return out
+
+
 # ------------------------------------------------------------------ valutazione di un'auto
 
 def pulita(t: dict, cfg=None) -> str | None:
@@ -313,33 +397,52 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
     lid = t.get("id")
     D = [c for c in base.get("D") or [] if lid is None or c.get("id") != lid]
     V = [c for c in base.get("V") or [] if lid is None or c.get("id") != lid]
-    d = BV.stima_dettaglio(D, tt, n_min=N_MIN_SITO)
-    v = BV.stima_dettaglio(V, tt, n_min=N_MIN_SITO)
-    out.update(stima_D=int(round(d["valore"])) if d else None, n_D=d["n"] if d else 0,
-               stima_V=int(round(v["valore"])) if v else None, n_V=v["n"] if v else 0,
-               base_D=len(D), base_V=len(V))
-    scelta, fonte = (d, "commercianti") if d else ((v, "vendute") if v else (None, None))
+    vb = rg.valore_base
+    sp = stima_prudente(D, V, tt, vb)
+    out.update(stima_D=sp["stima_D"], n_D=sp["n_D"], stima_V=sp["stima_V"], n_V=sp["n_V"],
+               base_D=len(D), base_V=len(V), prudenza=sp["prudenza"])
+    scelta, fonte = sp["scelta"], sp["fonte"]
     if not scelta:
+        if sp.get("fragile_poche"):
+            return _insuff(out, "pochi_confronti:fragile",
+                           f"auto economica o con più di {vb.fragile_anni} anni: servono almeno {vb.n_min_fragile} "
+                           "auto uguali per un valore prudente")
         Dv = [c for c in base.get("Dv") or [] if lid is None or c.get("id") != lid]
         return _pochi(out, tt, D, V, Dv)
-    R = int(round(scelta["valore"]))
+    R = int(round(sp["valore"]))
     n = int(scelta["n"])
     out.update(M=R, R=R, R_finale=R, centrale_ridotto=R, riduzione=0.0, M_fonte=fonte, fonte_base=fonte,
                n=n, n_gate=n, n_gemelle=n, livello=scelta["livello"],
                campione="base preferita" if n >= 10 else "provvisoria (campione limitato)",
-               R_da=("prezzi dei commercianti (annunci attivi)" if fonte == "commercianti" else "prezzi delle auto vendute"),
-               fascia="valore = mediana dei " + ("commercianti" if fonte == "commercianti" else "venduti"),
+               R_da=("prezzi dei commercianti (annunci attivi) meno lo sconto di vetrina" if fonte == "commercianti"
+                     else "prezzi delle auto vendute"),
+               fascia=f"valore prudente = {int(round(vb.percentile * 100))}° percentile dei "
+                      + ("commercianti meno lo sconto di vetrina" if fonte == "commercianti" else "venduti")
+                      + (" (con tetto)" if sp["prudenza"].get("tetto_V") or sp["prudenza"].get("tetto_D") else ""),
                venditori=dict(Counter(c.get("seller_type") or "sconosciuto" for c, _ in scelta["tenuti"])),
                confronti=[_confronto(c, p, fonte == "vendute")
                           for c, p in sorted(scelta["tenuti"], key=lambda cp: abs(cp[1] - R))[:CONFRONTI_SCHEDA]],
                valore_base={"fonte": fonte, "R": R, "n": n, "stima_D": out["stima_D"], "n_D": out["n_D"],
-                            "stima_V": out["stima_V"], "n_V": out["n_V"]})
+                            "stima_V": out["stima_V"], "n_V": out["n_V"], "regola": REGOLA,
+                            "stima_D_netta": sp["prudenza"].get("D_netta"),
+                            "sconto_vetrina": sp["prudenza"].get("sconto_vetrina"),
+                            "tetto_V": sp["prudenza"].get("tetto_V")})
     al = BV.LIVELLI[scelta["livello"] - 1]
-    out["ipotesi"].append(f"valore {R} € = mediana di {n} auto uguali "
+    pr = sp["prudenza"]
+    out["ipotesi"].append(f"valore {R} € = {int(round(vb.percentile * 100))}° percentile (prudente, non la media) di "
+                          f"{n} auto uguali "
                           + ("in vendita da commercianti (annunci ricontrollati negli ultimi "
                              f"{BV.FRESCHI_GIORNI} giorni)" if fonte == "commercianti" else
                              f"vendute negli ultimi {BV.VENDUTE_GIORNI} giorni (ultimo prezzo)")
                           + f", anno ±{al[0]} e km ±{int(al[1] * 100)}%, prezzi riportati all'anno e ai km dell'auto")
+    if fonte == "commercianti":
+        out["ipotesi"].append(f"prezzo dei commercianti {pr['D']} € meno {int(round(pr['sconto_vetrina'] * 100))}% "
+                              "(trattativa, preparazione e garanzia comprese nel prezzo di vetrina)")
+    if pr.get("tetto_V"):
+        out["ipotesi"].append(f"valore limitato dalle auto vendute ({pr['tetto_V']} €, {pr['n_tetto_V']} confronti)")
+    if pr.get("tetto_D"):
+        out["ipotesi"].append(f"valore limitato dai commercianti meno simili ({pr['tetto_D']} € già scontati, "
+                              f"{pr['n_tetto_D']} confronti)")
     p = int(prezzo)
     # incidentate e difetti (come policy_v2, 4/11): valore delle auto pulite, meno lo storico del danno (0 di default)
     # e il ripristino (ricambi stimati, manodopera sui ricambi, difetti letti dall'AI). I costi fissi del commerciante
@@ -432,9 +535,10 @@ WHERE l.status = 'attivo' AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.f
   AND (l.stage = 'approfondito'
        OR (l.province = ANY(%(prov)s) AND l.last_seen_at > now() - interval '5 days'
            AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s))
-  -- ripresa dopo un'interruzione: le auto già valutate col calcolo nuovo nelle ultime ore non si rifanno
+  -- ripresa dopo un'interruzione: le auto già valutate col calcolo nuovo E con le regole di oggi (19/11: impronta delle
+  -- regole, che contiene regole.ValoreBase) nelle ultime ore non si rifanno; quelle valutate con le regole di prima sì
   AND NOT EXISTS (SELECT 1 FROM valutazioni_policy vp WHERE vp.listing_id = l.id AND vp.metodo = 'base_vendute'
-                  AND vp.computed_at > now() - interval '6 hours')
+                  AND vp.impronta_regole = %(imp)s AND vp.computed_at > now() - interval '6 hours')
 ORDER BY lower(l.make), lower(l.model), l.fuel, l.id"""
 
 
@@ -472,8 +576,9 @@ def rivaluta(spec: str = "", connetti=None, ves=None) -> dict:
         return {"fermata": "valore_base_spento"}
     a = RG.regole().ammissione
     with connetti() as conn:
+        from .valutazione import impronta_regole
         righe = conn.execute(IDS_SQL, {"prov": province_sito(), "anno": int(a.anno_min),
-                                       "km": int(a.km_max)}).fetchall()
+                                       "km": int(a.km_max), "imp": impronta_regole()}).fetchall()
         conn.commit()
     blocchi = _blocchi([dict(r) for r in righe])
     st["auto"] = len(righe)
