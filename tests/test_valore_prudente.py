@@ -204,3 +204,39 @@ def test_misura_sulle_vendute_prima_e_dopo():
     r = BV._rapporti(rapp)
     assert 1.08 < r["D/V|fascia:5-10k"]["mediana"] < 1.16 and any(k.startswith("p40/mediana|") for k in r)
     assert statistics.median(rapp["p40/mediana|fascia:5-10k"]) < 1
+
+
+def test_mai_sopra_anche_economiche_e_vecchie():
+    """Proprietà (giudice 19/11): come sopra su auto economiche/vecchie (fragili) e di ogni fascia: mai sopra il 18/11,
+    e la stima mostrata ha sempre ≥ 5 confronti, ≥ 8 al livello 2 e ≥ 8 se l'auto è fragile."""
+    vb = _vb()
+    rnd = random.Random(19112)
+    for prova in range(600):
+        base, yr = rnd.choice([1500, 3000, 4500, 6000, 9000, 20000]), rnd.choice([2008, 2012, 2015, 2019, 2022])
+        t = VB.norm(_t(1000, year=yr, km=60000))
+        def riga(i, venduta):
+            return _c(i, max(200, int(rnd.gauss(base * (.95 if venduta else 1), base * rnd.uniform(.05, .3)))),
+                      year=yr + rnd.randint(-2, 2), km=int(60000 * rnd.uniform(.5, 1.5)),
+                      status="scomparso" if venduta else "attivo", sel="privato" if venduta else "commerciante")
+        D = [riga(i, False) for i in range(rnd.randint(0, 15))]
+        V = [riga(100 + i, True) for i in range(rnd.randint(0, 15))]
+        prima = (BV.stima_dettaglio(D, t, n_min=5) or BV.stima_dettaglio(V, t, n_min=5) or {}).get("valore")
+        sp = VB.stima_prudente(D, V, t, vb)
+        if sp["valore"] is None:
+            continue
+        assert prima is not None and sp["valore"] <= prima + 1e-6, (prova, sp["valore"], prima)
+        assert sp["scelta"]["n"] >= 5
+        if sp["scelta"]["livello"] == 2 or sp["prudenza"].get("fragile"):
+            assert sp["scelta"]["n"] >= 8, (prova, sp["prudenza"])
+
+
+def test_economiche_mostrano_il_mercato_della_valutazione():
+    """Sezione "Sotto 1.000 €" (scovo.item_eco): il Mercato mostrato è M della valutazione (valore prudente), non la
+    mediana vecchia della tabella valuations; il tetto prezzo × 1,4 + 500 resta."""
+    r = dict(id=1, source="subito", make="fiat", model="panda", year=2012, mileage_km=150000, fuel="benzina",
+             price_eur=900, private_median=1700, parts_cost_low=0, parts_cost_high=0, n_photos=0,
+             pv='{"categoria": "opportunita", "M": 1400, "R": 1400, "margine": 500, "n": 9}')
+    if scovo.POLICY_SITO == "pv2":
+        assert scovo.item_eco(r)["mercato"] == 1400
+        assert scovo.item_eco(dict(r, pv='{"categoria": "opportunita", "M": 3000}'))["mercato"] == 1760
+    assert scovo.item_eco(dict(r, pv=None))["mercato"] == 1700

@@ -501,6 +501,11 @@ def item_eco(r: dict) -> dict | None:
         mercato = 0
     if mercato > price * 12:            # stima assurda (es. modello sbagliato): meglio non mostrarla
         mercato = 0
+    pv = _pv(r)
+    if pv and pv.get("M"):
+        # 19/11 (cliente: "Mercato gonfiato"): come item(), il Mercato mostrato è quello della valutazione (valore
+        # prudente di valore_base), non la mediana vecchia della tabella valuations
+        mercato = int(round(float(pv["M"])))
     # margini prudenti: il mercato di un'auto economica non si gonfia oltre prezzo × 1,4 + 500 €
     if mercato:
         mercato = min(mercato, int(round(price * float(os.environ.get("ECO_CAP_X", "1.4"))
@@ -517,7 +522,7 @@ def item_eco(r: dict) -> dict | None:
         "prezzo": int(price), "mercato": mercato,
         "rip_lo": int(lo if lo is not None else (hi or 0)), "rip_hi": int(hi or 0),
         "danno": r.get("damage_class") or "sconosciuto",
-        "verificare": True, "incidentata": False, "economica": True, "pv": _pv(r),
+        "verificare": True, "incidentata": False, "economica": True, "pv": pv,
         "prezzo_dopo_valutazione": bool(r.get("prezzo_dopo_valutazione")),   # 17/11: esce alla regola "valutata"
         "confronti": r.get("n_comparables"),
         "foto": foto.url_for(r["id"], 0) if n_ph else None,
