@@ -1635,6 +1635,9 @@ def _coda_perizia(items: list[dict], out: list[dict]) -> None:
         logging.getLogger("scovo").warning("PERIZIA coda non aggiornata: %s", str(e)[:200])
 
 
+_ELENCO_TETTO_LOG: dict = {}
+
+
 def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
     """Righe dell'elenco (scovo.LIST_SQL) trasformate una alla volta in schede compatte."""
     items, opens, pv_at, con_pv = [], {}, {}, 0
@@ -1645,9 +1648,22 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
     # del tetto fisso, la memoria vera del processo: si smette di leggere se la memoria PREVISTA a fine calcolo (RSS di
     # adesso + ELENCO_KB_DOPO KB per riga letta: i dati delle regole che _arricchisci aggiunge dopo, misurati ~1 KB)
     # supera ELENCO_MEMORIA_MB (450 su 512). Nessuna regola cambia: si leggono solo più righe dello stesso LIST_SQL.
-    limite = int(os.environ.get("ELENCO_LIMITE", "30000"))
+    # 19/11 (cliente: memoria automatica): il tetto si calcola dal limite vero del container (memoria.tetto_elenco:
+    # cgroup v2/v1, altrimenti 512 MB, all'85%); ELENCO_MEMORIA_MB resta un override. Anche il tetto di righe di
+    # default (30.000 pensato per 512 MB) cresce con la memoria; ELENCO_LIMITE resta un override.
+    from .. import memoria as _mem
+    _tetto = _mem.tetto_elenco()
+    limite = int(os.environ.get("ELENCO_LIMITE") or int(_mem.scala(30000, _tetto["limite_mb"])))
     pagina = max(200, int(os.environ.get("ELENCO_PAGINA", "2000")))
-    tetto_mb = float(os.environ.get("ELENCO_MEMORIA_MB", "450"))
+    tetto_mb = float(_tetto["tetto_mb"])
+    stats["lista_tetto_mb"] = round(tetto_mb)
+    stats["lista_limite_container_mb"] = round(_tetto["limite_mb"])
+    if _ELENCO_TETTO_LOG.get("ultimo") != (tetto_mb, limite):
+        _ELENCO_TETTO_LOG["ultimo"] = (tetto_mb, limite)
+        logging.getLogger("scovo").warning(
+            "ELENCO tetto memoria %.0f MB (fonte %s, limite container %.0f MB, quota %s), righe al massimo %d, minimo %s",
+            tetto_mb, _tetto["fonte"], _tetto["limite_mb"], _tetto["quota"], limite,
+            os.environ.get("ELENCO_MINIMO", "12000"))
     kb_dopo = float(os.environ.get("ELENCO_KB_DOPO", "1.5"))
     # 18/11 (giudice): la memoria non taglia MAI sotto ELENCO_MINIMO righe (12.000, il tetto fisso di prima, con cui il
     # sito stava a ~395 MB): un picco di memoria di un altro lavoro durante la lettura non deve svuotare mezzo sito
@@ -1912,9 +1928,12 @@ def _calcola_elenco() -> None:
         if it.get("id") in diesel_extra:
             c["diesel_extra"] += 1          # 13/11 sera: diesel per bene entrate con DIESEL_EXTRA
     # 18/11: anche quante righe dell'elenco (LIST_SQL) sono state lette, in quanto tempo, la memoria e se il tetto ha tagliato
-    logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s righe=%d lettura=%ss memoria=%sMB tagliato=%s",
+    # 19/11: con il tetto di memoria usato (calcolato dal limite del container, memoria.tetto_elenco)
+    logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s righe=%d lettura=%ss memoria=%sMB tetto=%sMB "
+                                       "container=%sMB tagliato=%s",
                                        len(out), time.time() - t0, dict(sorted(c.items())), int(stats.get("lista") or 0),
-                                       stats.get("lista_s"), stats.get("lista_rss_mb"),
+                                       stats.get("lista_s"), stats.get("lista_rss_mb"), stats.get("lista_tetto_mb"),
+                                       stats.get("lista_limite_container_mb"),
                                        "memoria" if stats.get("lista_tagliata_memoria") else
                                        "tetto" if stats.get("lista_tagliata_tetto") else "no")
     del items, fun
