@@ -977,6 +977,11 @@ def _ciclo_web(ogni_min: int, passo_s: int, attesa_s: int) -> None:
                 riepilogo_giorno.esegui()
             except Exception as e:
                 log.warning("RIEPILOGO non eseguito: %s", type(e).__name__)
+            try:                                    # 19/11 salute giornaliera: lavora una volta all'ora (non solleva)
+                from . import salute
+                salute.esegui()
+            except Exception as e:
+                log.warning("SALUTE non eseguita: %s", type(e).__name__)
         except Exception as e:
             log.warning("SENTINELLA thread: %s", type(e).__name__)
         time.sleep(passo_s)
