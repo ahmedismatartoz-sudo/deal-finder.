@@ -1633,7 +1633,7 @@ def fase_lavori_notte(t0: float) -> dict:
     return esito
 
 
-CONFRONTI_NOTTE_AVVIO_ORE = 9.25     # ore dall'avvio del cron: oltre non parte (la riprende la notte dopo)
+CONFRONTI_NOTTE_AVVIO_ORE = 9.75     # ore dall'avvio del cron: oltre non parte (la riprende la notte dopo). 20/11 revisione 2: sopra NORD_ORE_MAX (9,5) perché i confronti partono dopo mercato_nord
 CONFRONTI_NOTTE_FINE_ORE = 10.0      # ore dall'avvio del cron entro cui la raccolta dei confronti smette di cercare
 CONFRONTI_NOTTE_SCADENZA_ORE = 10.35  # scadenza DURA di tutto (raccolta, riapertura, rivalutazione): poi c'è ai_prezzi (10,5)
 

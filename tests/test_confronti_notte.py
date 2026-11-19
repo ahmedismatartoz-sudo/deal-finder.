@@ -692,11 +692,16 @@ def test_partenza_a_8_ore_e_mezza_lascia_tempo_ad_ai_prezzi(monkeypatch):
     assert out["rivalutazione_fermata_tempo"] == 1 and out["rivalutazione_rimaste"] > 0
     assert 0 < len(rivalutati) < out["gruppi_cercati"]
     assert C.tempo_ok("ai_prezzi", 10.5, t0, ora=ora[0])            # il modello AI dei prezzi parte ancora
-    assert C.CONFRONTI_NOTTE_FINE_ORE == 10.0 and C.CONFRONTI_NOTTE_AVVIO_ORE == 9.25
+    assert C.CONFRONTI_NOTTE_FINE_ORE == 10.0 and C.CONFRONTI_NOTTE_AVVIO_ORE == 9.75
     assert C.CONFRONTI_NOTTE_SCADENZA_ORE < 10.5 and C.NORD_ORE_MAX == 9.5
-    # oltre 9,25 ore non parte nemmeno
+    # dopo un mercato_nord fermato al suo limite (9,5 h) i confronti partono ancora, con ~27 minuti
+    esiti.clear(); passati.clear()
+    ora[0] = t0 + 9.55 * 3600
+    C.confronti_notte("nord", ora=lambda: ora[0])
+    assert esiti and 25 <= passati["minuti_max"] <= 28
+    # oltre 9,75 ore non parte nemmeno
     esiti.clear()
-    ora[0] = t0 + 9.3 * 3600
+    ora[0] = t0 + 9.8 * 3600
     C.confronti_notte("nord", ora=lambda: ora[0])
     assert not esiti
 
