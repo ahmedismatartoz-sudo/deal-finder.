@@ -265,6 +265,13 @@ def _pochi(out: dict, tt: dict, D: list, V: list, Dv: list) -> dict:
         sub = "solo_unendo"             # commercianti e vendute insieme arriverebbero al minimo (NON usato: da misurare)
     else:
         sub = "pochi_simili"
+    # 19/11 (cliente: confronti mirati ogni notte per TUTTE le pochi_confronti): mediana grezza dei pochi simili, SOLO
+    # per l'ordine della raccolta notturna (confronti_mirati.notte: prima chi ha più margine potenziale). Mai un valore
+    # dell'auto, mai sul sito, mai nel margine
+    if sub != "rinfrescabile":
+        prezzi = sorted(p for _c, p in sD + sDv + sV if p > 0)
+        if prezzi:
+            out["priorita_raccolta"] = {"stima_priorita": int(round(prezzi[len(prezzi) // 2])), "simili": len(prezzi)}
     return _insuff(out, "pochi_confronti:" + sub,
                    f"meno di {N_MIN_SITO} auto uguali pulite tra i commercianti (annunci degli ultimi "
                    f"{BV.FRESCHI_GIORNI} giorni) e tra le vendute degli ultimi {BV.VENDUTE_GIORNI} giorni")
@@ -480,6 +487,10 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
     scelta, fonte = sp["scelta"], sp["fonte"]
     if not scelta:
         if sp.get("fragile_poche"):
+            # 19/11: solo l'ordine della raccolta notturna dei confronti (confronti_mirati.notte), mai un valore
+            _pz = sorted(p for _c, p in _simili(D, tt) + _simili(V, tt) if p > 0)
+            if _pz:
+                out["priorita_raccolta"] = {"stima_priorita": int(round(_pz[len(_pz) // 2])), "simili": len(_pz)}
             return _insuff(out, "pochi_confronti:fragile",
                            f"auto economica o con più di {vb.fragile_anni} anni: servono almeno {vb.n_min_fragile} "
                            "auto uguali per un valore prudente")

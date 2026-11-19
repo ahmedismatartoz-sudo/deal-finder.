@@ -768,6 +768,34 @@ def _sotto_al_tetto(it: dict, g, comm: list, lont: list) -> bool:
     return False
 
 
+def controlla_tutte() -> bool:
+    """19/11 (cliente: "tutte le auto con sconto alto controllate in automatico, senza budget"): CONTROLLO_TUTTE=0
+    torna a prima (solo le auto che entrerebbero senza toccare il tetto dei commercianti, 40 per giro)."""
+    return _env("CONTROLLO_TUTTE", "1") != "0"
+
+
+def priorita_sito(it: dict, SR=None, scovo=None) -> tuple:
+    """19/11 (cliente): ordine della coda del sito. Prima le auto della zona di Milano (province entro 100 km,
+    sito_regole.PROVINCE_100KM), poi margine/soglia più alto, poi l'id. Solo l'ordine: nessuna regola cambia."""
+    if SR is None:
+        from ..web import sito_regole as SR
+    if scovo is None:
+        from ..web import scovo
+    p = str(SR._r(it).get("provincia") or "").upper()
+    rapporto = float(SR.margine(it) or 0) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))
+    return (0 if p in SR.PROVINCE_100KM else 1, -rapporto, it.get("id") or 0)
+
+
+def per_giro_sito(da_fare_sito: int) -> int:
+    """19/11 (cliente): auto per giro quando la coda del sito (sconto alto da controllare) non è vuota: tutta la coda,
+    fino a CONTROLLO_SITO_MAX_GIRO (300) in un giro, oltre le CONTROLLO_PER_GIRO (40) normali. Limite TECNICO (tempo
+    di un giro e memoria delle foto), non di spesa: il giro dopo riparte entro 2 minuti finché la coda non è finita."""
+    base = per_giro()
+    if not controlla_tutte() or da_fare_sito <= 0:
+        return base
+    return max(base, min(base + da_fare_sito, int(_env("CONTROLLO_SITO_MAX_GIRO", "300"))))
+
+
 def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     """Da chiamare subito dopo sito_regole.elenco_sito (web/app._calcola_elenco, accanto a _coda_perizia, PRIMA che
     alle auto del sito si tolgano _r e _tipo). Prepara per il giro:
@@ -783,6 +811,7 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     comm = sorted(int(SR.margine(it) or 0) for it in out if SR.e_commerciante(it))
     lont = sorted(int(SR.margine(it) or 0) for it in out if it.get("_tipo") == "comm_lontano")
     entra, motivi, inutili, gia = [], Counter(), set(), set()
+    dopo: list = []          # 19/11: tetto dei commercianti pieno ma con margine da prendere il posto di una più debole
     for it in items:
         if it.get("id") not in tolti:
             continue
@@ -800,13 +829,22 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             if isinstance(it.get("id"), int) and (m in ("perizia", "margine_minimo") or (
                     m == "tetto_commercianti" and _sotto_al_tetto(it, g, comm, lont))):
                 inutili.add(it["id"])
+            elif m == "tetto_commercianti" and isinstance(it.get("id"), int) and controlla_tutte():
+                # 19/11 (cliente: "controlla TUTTE le auto con sconto alto"): confermata prenderebbe il posto di una
+                # più debole (il tetto tiene le migliori per margine): in coda anche lei, dopo le "entra"
+                dopo.append(it)
+                if gia_controllata(it):
+                    gia.add(it["id"])
             continue
         entra.append(it)
         if gia_controllata(it):
             motivi["entra_gia_controllate"] += 1   # 18/11: decisione Claude allo stesso prezzo con le foto: non si rifà
             gia.add(it["id"])
-    entra.sort(key=lambda it: (-(float(SR.margine(it) or 0) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))),
-                               it.get("id") or 0))
+    entra.sort(key=lambda it: priorita_sito(it, SR, scovo))
+    dopo.sort(key=lambda it: priorita_sito(it, SR, scovo))
+    if dopo:
+        motivi["entra_dopo_tetto_commercianti"] = len(dopo)
+        entra = entra + dopo
     fuori: set = set()
     for nome in PASSI_SENZA_AI:
         fuori.update(i for i in ((fun.tolti or {}).get(nome) or []) if isinstance(i, int))
@@ -1000,7 +1038,8 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
             tenute.append(r)
         righe = tenute
     n_cand = len(righe)
-    quante = 0 if stop else (massimo or per_giro())
+    # 19/11 (cliente): con la coda del sito non vuota il giro prende tutta la coda (per_giro_sito), non solo 40 auto
+    quante = 0 if stop else (massimo or per_giro_sito(sum(1 for r in righe if r.get("_sito"))))
     righe = ordina(righe)
     # 15/11 (giudice): le senza foto oltre la quota del giro escono PRIMA del taglio, così non tolgono il posto ai rinnovi
     _sf, _rimandate, _tenute = 0, 0, []
@@ -1012,6 +1051,9 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
                 _rimandate += 1
                 continue
         _tenute.append(r)
+    sito_tot = sum(1 for r in _tenute if r.get("_sito"))
+    if sito_tot:
+        st["sito_in_coda"] = sito_tot
     righe = _tenute[:max(quante, per_giro()) * 2]       # qualcuna si riusa o si scarta senza chiamata
     leggere = {r["id"]: r for r in righe}
     if _rimandate:
@@ -1061,6 +1103,12 @@ def giro(conn, massimo: int | None = None, chiama=None) -> dict:
                 st["senza_foto_in_giro"] += 1
             a["_classe"] = classe(r)
             da_fare.append(a)
+        elif r.get("_sito"):
+            st["sito_restanti"] += 1                     # 19/11: al giro dopo (entro 2 minuti, web/app.py)
+    # 19/11: anche le auto della coda del sito rimaste oltre il taglio delle righe lette
+    st["sito_restanti"] += sum(1 for r in _tenute[len(righe):] if r.get("_sito"))
+    if not st["sito_restanti"]:
+        del st["sito_restanti"]
     if len(_SALTATE) > 5000:
         for k in [k for k, t in _SALTATE.items() if time.time() - t > 24 * 3600]:
             _SALTATE.pop(k, None)

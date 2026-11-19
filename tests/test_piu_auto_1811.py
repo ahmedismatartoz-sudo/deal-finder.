@@ -115,7 +115,8 @@ def test_memoria_ferma_la_lettura_prima_del_tetto():
         # pagine da 2.000: dopo la 1ª 300 + 3 MB, dopo la 2ª 420 + 6 MB, dopo la 3ª 449 + 9 MB > 450: fermo a 6.000
         assert len(items) == 6000 and st["lista_tagliata_memoria"] == 1 and st["lista_rimaste_fuori"] == 14000
         assert any("ELENCO_TAGLIATO motivo=memoria" in r for r in h.righe)
-    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB=None, ELENCO_KB_DOPO=None, ELENCO_MINIMO="0")
+    # 19/11: il tetto ora viene dal limite del container (memoria.tetto_elenco): qui il valore di prima come override
+    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB="450", ELENCO_KB_DOPO=None, ELENCO_MINIMO="0")
 
 
 def test_memoria_non_taglia_sotto_il_minimo():
@@ -125,7 +126,7 @@ def test_memoria_non_taglia_sotto_il_minimo():
         st = Counter()
         items, *_ = app._leggi_elenco(Conn(20000), st)
         assert len(items) == 12000 and st["lista_tagliata_memoria"] == 1 and st["lista_rimaste_fuori"] == 8000
-    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB=None, ELENCO_KB_DOPO=None, ELENCO_MINIMO=None)
+    _con(f, ELENCO_LIMITE=None, ELENCO_PAGINA=None, ELENCO_MEMORIA_MB="450", ELENCO_KB_DOPO=None, ELENCO_MINIMO=None)
 
 
 def test_memoria_non_leggibile_non_ferma():
