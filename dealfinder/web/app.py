@@ -4079,8 +4079,10 @@ def _tempo_reale():
         while True:
             attesa = cm.GIRO_MIN * 60
             try:
-                # (giudice 18/11) memoria: mai insieme al calcolo grande né con la memoria già alta (512 MB)
-                if _calcolo["in_corso"] or _rss_mb() > float(os.environ.get("CONFRONTI_MIRATI_MAX_MB", "400")):
+                # (giudice 18/11) memoria: mai insieme al calcolo grande né con la memoria già alta. 19/11: non più
+                # 400 MB fissi (pensati per 512 MB) ma il 60% del limite vero del container (memoria.alta); mai più
+                # stretto di prima (sotto i 400 MB si lavora comunque: su 512 MB il 60% sarebbe 322)
+                if _calcolo["in_corso"] or (_memoria.alta(0.6) and _memoria.rss_mb() > 400.0):
                     attesa = 300
                 else:
                     with connect() as conn:
