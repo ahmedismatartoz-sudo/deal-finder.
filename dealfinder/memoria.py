@@ -51,6 +51,9 @@ CGROUP_V2 = "/sys/fs/cgroup/memory.max"
 CGROUP_V1 = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
 PREDEFINITO_MB = 512 * 1024 * 1024 / 1e6      # 536,9 MB: piano starter di Render
 TETTO_QUOTA = 0.85
+ELENCO_MB_FISSO = 450.0                       # tetto dell'elenco di prima del 19/11 (interruttore memoria_auto spento)
+ELENCO_RIGHE_BASE = 30000                     # righe dell'elenco pensate per 512 MB
+ELENCO_RIGHE_MAX = 60000                      # mai più di così, anche con tanta memoria
 _SENZA_LIMITE = 1 << 60                       # cgroup v1 senza limite scrive un numero enorme (9223372036854771712)
 
 
@@ -91,7 +94,8 @@ def limite_container(v2: str = CGROUP_V2, v1: str = CGROUP_V1) -> tuple[float, s
 
 def tetto_elenco(v2: str = CGROUP_V2, v1: str = CGROUP_V1) -> dict:
     """Tetto di memoria per la lettura dell'elenco del sito: {"tetto_mb", "limite_mb", "fonte", "quota"}.
-    ELENCO_MEMORIA_MB (se presente) vince; ELENCO_MEMORIA_QUOTA cambia la quota (default 0,85)."""
+    ELENCO_MEMORIA_MB (se presente) vince; ELENCO_MEMORIA_QUOTA cambia la quota (default 0,85, tenuta tra 0,3 e
+    0,95). Interruttore memoria_auto spento (e nessun override): 450 MB fissi, fonte "spento"."""
     limite, fonte = limite_container(v2, v1)
     try:
         quota = float(os.environ.get("ELENCO_MEMORIA_QUOTA") or TETTO_QUOTA)
@@ -105,6 +109,8 @@ def tetto_elenco(v2: str = CGROUP_V2, v1: str = CGROUP_V1) -> dict:
                     "quota": None}
         except ValueError:
             pass
+    if not automatica():
+        return {"tetto_mb": ELENCO_MB_FISSO, "limite_mb": round(limite, 1), "fonte": "spento", "quota": None}
     return {"tetto_mb": round(limite * quota, 1), "limite_mb": round(limite, 1), "fonte": fonte, "quota": quota}
 
 
@@ -112,6 +118,29 @@ def scala(valore_512: float, limite_mb: float | None = None) -> float:
     """Un valore pensato per il container da 512 MB riportato al limite vero (mai sotto quello di partenza)."""
     lim = limite_mb if limite_mb is not None else limite_container()[0]
     return valore_512 * max(1.0, lim / PREDEFINITO_MB)
+
+
+def automatica() -> bool:
+    """Interruttore `memoria_auto` (automatismi.attivo, acceso di base; si spegne dal database senza deploy).
+    Spento = i numeri fissi di prima del 19/11: tetto dell'elenco 450 MB, 30.000 righe, soglie da 512 MB non scalate.
+    Mai un errore: se l'interruttore non si legge vale acceso."""
+    try:
+        from . import automatismi
+        return bool(automatismi.attivo("memoria_auto"))
+    except Exception:
+        return True
+
+
+def soglia(valore_512: float, limite_mb: float | None = None) -> float:
+    """Una soglia di memoria scritta per i 512 MB (es. 420, 470): scalata sul limite vero del container se
+    l'interruttore memoria_auto è acceso, altrimenti il valore di partenza."""
+    return scala(valore_512, limite_mb) if automatica() else float(valore_512)
+
+
+def righe_elenco(limite_mb: float | None = None) -> int:
+    """Tetto di righe di default dell'elenco del sito: 30.000 su 512 MB, cresce con la memoria ma mai oltre 60.000
+    (oltre, il limite è il tempo di lettura e di calcolo, non la memoria). Interruttore spento = 30.000."""
+    return int(min(ELENCO_RIGHE_MAX, soglia(ELENCO_RIGHE_BASE, limite_mb)))
 
 
 def alta(quota: float = 0.6, limite_mb: float | None = None, rss: float | None = None) -> bool:

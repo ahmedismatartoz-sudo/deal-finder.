@@ -1106,17 +1106,17 @@ _FLAG_PROMO = ["leasing_o_rata", "prezzo_civetta", "importazione", "dati_incoere
 
 
 def _rss_mb() -> float:
-    """Memoria usata da questo processo (MB). 3/11: il sito ha 512 MB e i lavori lunghi lo mandavano fuori memoria."""
-    try:
-        with open("/proc/self/statm") as f:
-            return int(f.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1e6
-    except Exception:
-        return 0.0
+    """Memoria usata da questo processo (MB): una sola definizione, quella di memoria.rss_mb."""
+    return _memoria.rss_mb()
 
 
-def _aspetta_memoria(L, nome: str, limite: float = 420.0) -> None:
-    """Prima di ogni blocco di un lavoro lungo: se la memoria è alta si libera e si aspetta (il sito viene prima)."""
+def _aspetta_memoria(L, nome: str, limite: float | None = None) -> None:
+    """Prima di ogni blocco di un lavoro lungo: se la memoria è alta si libera e si aspetta (il sito viene prima).
+    19/11: senza un limite esplicito la soglia è 420 MB su 512, scalata da sola sul limite vero del container
+    (memoria.soglia: 2 GB = 1.680 MB; interruttore memoria_auto spento = 420)."""
     import gc
+    if limite is None:
+        limite = _memoria.soglia(420.0)
     for tent in range(10):
         if _rss_mb() < limite:
             return
@@ -1650,10 +1650,11 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
     # supera ELENCO_MEMORIA_MB (450 su 512). Nessuna regola cambia: si leggono solo più righe dello stesso LIST_SQL.
     # 19/11 (cliente: memoria automatica): il tetto si calcola dal limite vero del container (memoria.tetto_elenco:
     # cgroup v2/v1, altrimenti 512 MB, all'85%); ELENCO_MEMORIA_MB resta un override. Anche il tetto di righe di
-    # default (30.000 pensato per 512 MB) cresce con la memoria; ELENCO_LIMITE resta un override.
+    # default (30.000 pensato per 512 MB) cresce con la memoria, al massimo 60.000 (memoria.righe_elenco);
+    # ELENCO_LIMITE resta un override. Interruttore memoria_auto spento (automatismi): 450 MB e 30.000 righe.
     from .. import memoria as _mem
     _tetto = _mem.tetto_elenco()
-    limite = int(os.environ.get("ELENCO_LIMITE") or int(_mem.scala(30000, _tetto["limite_mb"])))
+    limite = int(os.environ.get("ELENCO_LIMITE") or _mem.righe_elenco(_tetto["limite_mb"]))
     pagina = max(200, int(os.environ.get("ELENCO_PAGINA", "2000")))
     tetto_mb = float(_tetto["tetto_mb"])
     stats["lista_tetto_mb"] = round(tetto_mb)
@@ -1707,11 +1708,6 @@ def _leggi_elenco(conn, stats) -> tuple[list, dict, dict, int]:
             "basso letto %s, rimaste fuori %s): le auto più vecchie restano fuori", motivo, stats["lista"], limite,
             rss or _rss_mb(), tetto_mb, ultimo, "?" if fuori is None else fuori)
     return items, opens, pv_at, con_pv
-
-
-def _rss_mb() -> float:
-    from .. import memoria
-    return memoria.rss_mb()
 
 
 def _righe_rimaste(conn, ultimo) -> int | None:

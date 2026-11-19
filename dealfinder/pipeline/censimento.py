@@ -53,7 +53,7 @@ VECCHIA_GIORNI = 7                   # valutazione più vecchia di 7 giorni: nel
 PMIN, PMAX = 500, 200000             # prezzo valido (come perche_fuori); le fasce sotto dicono il resto
 FASCE_PREZZO = ((8000, "fino_8000"), (15000, "8001_15000"), (10**9, "oltre_15000"))   # BENZ_MAX/BENZ_PMAX del giro
 MAX_ESEMPI = 10
-MEMORIA_MAX_MB = 470
+MEMORIA_MAX_MB = 470        # pensati per 512 MB: esegui() li scala con memoria.soglia (memoria automatica, 19/11)
 SCARTI_PRIMA = ("doppione", "truffa", "prezzo_finto", "dati_incoerenti")   # stage_reason: mai sul sito
 CATEGORIE_BUONE = ("opportunita", "candidato")
 
@@ -382,12 +382,15 @@ def esempi(esiti: list, quanti: int = MAX_ESEMPI) -> list[dict]:
 
 
 def esegui(conn, n: int | None = None, minuti: float | None = None, seme: int | None = None,
-           memoria_mb: float = MEMORIA_MAX_MB, t0: float | None = None) -> dict:
+           memoria_mb: float | None = None, t0: float | None = None) -> dict:
     """Censimento completo (sola lettura, niente AI). Una riga di log CENSIMENTO; restituisce il riepilogo."""
     from .. import regole as RG
     from ..web import sito_regole as SR
     t0 = time.time() if t0 is None else t0
     minuti = minuti_massimi() if minuti is None else float(minuti)
+    if memoria_mb is None:      # 19/11: 470 MB su 512, scalati sul limite vero del container (memoria.soglia)
+        from .. import memoria as _MEM
+        memoria_mb = _MEM.soglia(MEMORIA_MAX_MB)
     n = campione_n() if n is None else max(1, min(int(n), N_MAX))
     scadenza = t0 + minuti * 60
     rg, g = RG.regole(), SR.Regole.da_env()

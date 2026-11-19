@@ -600,9 +600,11 @@ def esempi(righe: list, var, quanti: int = MAX_ESEMPI) -> list[dict]:
     return out
 
 
-def esegui(conn, n: int = 600, n_venduti: int = 300, giorni: int = 30, memoria_mb: float = MEMORIA_MAX_MB) -> dict:
+def esegui(conn, n: int = 600, n_venduti: int = 300, giorni: int = 30, memoria_mb: float | None = None) -> dict:
     """Diagnosi completa (sola lettura). Righe PERCHE_FUORI nel log; restituisce il riepilogo."""
     from .. import memoria as MEM
+    if memoria_mb is None:      # 19/11: 470 MB su 512, scalati sul limite vero del container (memoria.soglia)
+        memoria_mb = MEM.soglia(MEMORIA_MAX_MB)
     t0 = time.time()
     MEMORIA.clear()
     ERRORI.clear()
