@@ -1249,7 +1249,8 @@ def riassunto(v: dict) -> dict:
             "acquisto",     # 17/11 (notte-09): prezzo usato dalla valutazione (scovo.PREZZO_DOPO_VALUTAZIONE_SQL)
             # 18/11: valore dalle auto vendute e dai commercianti (pricing/valore_base.py)
             "fonte_base", "valore_base", "calibrato", "sospetto_truffa", "non_pulita",
-            "motivo_dati")      # 18/11 sera: motivo del dati_insufficienti (valore_base.motivo_dati, log del sito)
+            "motivo_dati",      # 18/11 sera: motivo del dati_insufficienti (valore_base.motivo_dati, log del sito)
+            "stima_ripiego")    # 20/11: stima di ripiego con confronti allargati (valore_base, sito_regole.r_valutata)
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):
         out["riserva"] = v["riserva"]["euro"]

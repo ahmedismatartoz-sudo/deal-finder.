@@ -303,6 +303,13 @@ def r_valutata(it, g: Regole):
     # salvato è del prezzo vecchio. Fuori finché il ricalcolo non la rivaluta (nessuna regola cambia: è un dato vecchio)
     if it.get("prezzo_dopo_valutazione"):
         return "prezzo_cambiato_da_rivalutare"
+    sr = pv.get("stima_ripiego")
+    if sr:
+        # 20/11: valutazione con la stima di ripiego (confronti allargati, pricing/valore_base): resta solo se il suo
+        # livello è acceso adesso (interruttori stima_ripiego*, letti una volta per giro in _r["ripiego_livelli"])
+        if (sr.get("livello") if isinstance(sr, dict) else None) not in (_r(it).get("ripiego_livelli") or ()):
+            return "dati_insufficienti"
+        it["stima_ripiego"] = True
     if pv.get("categoria") == "dati_insufficienti":
         if pv.get("metodo") == "base_vendute":
             # 18/11 (cliente: "il sito usa SOLO il nuovo calcolo"): senza abbastanza vendute/commercianti l'auto resta
@@ -879,6 +886,7 @@ def tetto_diesel_extra(items: list[dict], g: Regole) -> tuple[list[dict], set]:
         return (m is not None and p > 0 and m >= scovo.soglia(p) and not it.get("trattare")
                 and not it.get("avviso_verifica") and not it.get("perizia_verifica")
                 and not it.get("ripiego_prudente") and not it.get("sconto_confermato_ai")
+                and not it.get("stima_ripiego")
                 and not it.get("versione_solo_nome"))       # giudice M2
     extra = [it for it in items if it.get("_tipo") == "comm_diesel"]
     buone = sorted((it for it in extra if ok(it)),
@@ -964,6 +972,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         it.pop("sconto_confermato_ai", None)
         it.pop("versione_solo_nome", None)
         it.pop("ripiego_prudente", None)
+        it.pop("stima_ripiego", None)
         it.pop("diesel_extra", None)
         it.pop("_diesel_fuori", None)
     tutte = items
@@ -1026,8 +1035,9 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
             it["avviso_verifica"] = False
         if it.get("perizia_verifica"):
             it["avviso_verifica"] = True        # 12/11: stima del perito molto sotto R o perizia "da verificare"
-        if it.get("ripiego_prudente") or it.get("sconto_confermato_ai"):
-            it["avviso_verifica"] = True        # 13/11: stima di ripiego o sconto alto confermato dall'AI
+        if it.get("ripiego_prudente") or it.get("sconto_confermato_ai") or it.get("stima_ripiego"):
+            # 13/11: stima di ripiego o sconto alto confermato dall'AI; 20/11: anche la stima con confronti allargati
+            it["avviso_verifica"] = True
     fun.diesel_extra = {"n": g.diesel_extra, "candidate": sum(1 for it in tutte if it.get("_diesel_fuori")),
                         "entrate": sum(1 for it in items if it.get("diesel_extra"))}
     if scrivi_log:
@@ -1042,7 +1052,8 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "da_trattare": sum(1 for it in items if it.get("trattare")),
                                                   "piu_auto": {"sconto_alto_confermate": sum(1 for it in items if it.get("sconto_confermato_ai")),
                                                                "versione_solo_nome": sum(1 for it in items if it.get("versione_solo_nome")),
-                                                               "ripiego_prudente": sum(1 for it in items if it.get("ripiego_prudente"))},
+                                                               "ripiego_prudente": sum(1 for it in items if it.get("ripiego_prudente")),
+                                                               "stima_ripiego": sum(1 for it in items if it.get("stima_ripiego"))},
                                                   "diesel_extra": fun.diesel_extra,
                                                   "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},

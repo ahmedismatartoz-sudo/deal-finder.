@@ -97,6 +97,12 @@ def attivo() -> bool:
     return (os.environ.get("VALORE_BASE") or "nuovo").strip().lower() not in ("vecchio", "0", "old")
 
 
+def livelli_accesi() -> tuple:
+    """20/11: livelli della stima di ripiego accesi adesso (interruttori stima_ripiego / stima_ripiego_largo e fasce
+    attive). Per ora nessuno: il sito (sito_regole.r_valutata) tiene fuori ogni valutazione segnata stima_ripiego."""
+    return ()
+
+
 # ------------------------------------------------------------------ dati
 
 def _num(x):

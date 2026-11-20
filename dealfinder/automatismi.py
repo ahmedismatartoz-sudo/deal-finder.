@@ -11,7 +11,9 @@ Ordine di lettura, il primo che c'è vince:
   3. il default del codice.
 Mai un errore: database assente, chiave scritta male o valore illeggibile = default.
 
-Nomi degli interruttori: memoria_auto, confronti_notte, controllo_tutte, salute, salute_azioni.
+Nomi degli interruttori: memoria_auto, confronti_notte, controllo_tutte, salute, salute_azioni; dal 20/11 anche
+chat_subito (corsia delle auto di privati su Subito senza numero, contattabili con la chat; numero regolabile
+chat_subito_max), stima_ripiego e stima_ripiego_largo (stima di ripiego con confronti allargati, pricing/valore_base).
 La chiave NON è tra impostazioni.CHIAVI: dal pannello non si scrive. Per spegnere (rollback senza deploy):
     INSERT INTO sito_impostazioni (chiave, valore) VALUES ('automatismi','{"confronti_notte": false}')
     ON CONFLICT (chiave) DO UPDATE SET valore = sito_impostazioni.valore || EXCLUDED.valore
@@ -22,7 +24,8 @@ from __future__ import annotations
 import os
 
 CHIAVE = "automatismi"
-NOMI = ("memoria_auto", "confronti_notte", "controllo_tutte", "salute", "salute_azioni")
+NOMI = ("memoria_auto", "confronti_notte", "controllo_tutte", "salute", "salute_azioni",
+        "chat_subito", "stima_ripiego", "stima_ripiego_largo")
 PREFISSO_ENV = "AUTOMATISMO_"
 _SI = {"1", "true", "t", "si", "sì", "s", "on", "yes", "y", "acceso", "attivo"}
 _NO = {"0", "false", "f", "no", "n", "off", "spento", "fermo"}

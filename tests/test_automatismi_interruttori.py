@@ -50,7 +50,8 @@ def test_default_del_codice(monkeypatch):
 
 
 def test_nomi_previsti():
-    assert set(automatismi.NOMI) == {"memoria_auto", "confronti_notte", "controllo_tutte", "salute", "salute_azioni"}
+    assert set(automatismi.NOMI) == {"memoria_auto", "confronti_notte", "controllo_tutte", "salute", "salute_azioni",
+                                     "chat_subito", "stima_ripiego", "stima_ripiego_largo"}
 
 
 def test_database_spegne_e_regola(monkeypatch):

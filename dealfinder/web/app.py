@@ -1602,12 +1602,18 @@ def _arricchisci(items: list[dict], pv_at: dict, stats) -> None:
     stats["jev_decise"] = len(jev)
     stats["jev_errore"] = int(jev_errore)
     stats["perizie"] = len(perizie)
+    try:        # 20/11: livelli della stima di ripiego accesi, letti UNA volta per giro (sito_regole.r_valutata)
+        from ..pricing import valore_base as _VBR
+        ripiego_livelli = tuple(_VBR.livelli_accesi())
+    except Exception:
+        ripiego_livelli = ()
     for it in items:
         r = dict(dati.get(it["id"]) or {}, **(it.get("_r") or {}))
         r.update(loconte=it["id"] in loconte, jev=jev.get(it["id"]), jev_errore=jev_errore,
                  difetto=difetti.get(it["id"]), valutazione_nuova=_dopo(pv_at.get(it["id"]), COMMERCIANTI_VALUTATI_DAL),
                  perizia=perizie.get(it["id"]), perizia_errore=perizia_errore,
-                 versione_tecnica=versioni.get(it["id"]), ripiego=ripieghi.get(it["id"]))
+                 versione_tecnica=versioni.get(it["id"]), ripiego=ripieghi.get(it["id"]),
+                 ripiego_livelli=ripiego_livelli)
         if it.get("supercar"):
             r["seller_type"] = "privato"           # SITO_SQL e la query lusso prendono solo privati
         it["_r"] = r
