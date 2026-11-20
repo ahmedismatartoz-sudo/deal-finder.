@@ -1851,7 +1851,7 @@ _dati_insuff_log = {"t": 0.0}
 def _tetto_chat_subito(g) -> int:
     """20/11: tetto della corsia chat di Subito per questo elenco. Il numero della regola (sito_regole.Regole.chat_subito,
     70) si può solo spegnere o abbassare senza deploy: interruttore automatismi "chat_subito" (spento = 0, come prima)
-    e numero "chat_subito_max". Mai sopra il numero della regola; valore illeggibile o errore = quello della regola."""
+    e numero "chat_subito_max". Mai sopra il numero della regola; valore illeggibile = quello della regola; errore = 0 (corsia spenta)."""
     try:
         from .. import automatismi
         if not automatismi.attivo("chat_subito"):
