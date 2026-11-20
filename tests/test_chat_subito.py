@@ -519,3 +519,13 @@ def test_sconto_alto_senza_numero_resta_nei_numeri_da_leggere():
     items = copie([auto(1, M=12500, jev=None)])
     out, fun = SR.elenco_sito(items, SPENTA, scrivi_log=False)
     assert SR.senza_numero_da_leggere(items, out, fun) == list(fun.tolti.get("telefono", [])) == [1]
+
+
+def test_riga_difetti_ok_non_blocca_la_corsia():
+    """20/11 dopo il deploy: ai_difetti salva anche le risposte "OK" (costo 0): non sono un difetto."""
+    ok = auto(1, _r={"difetto": {"costo": 0, "grave": False, "motivo": None}})
+    assert ids([ok]) == [1]
+    con_costo = auto(2, _r={"difetto": {"costo": 800, "grave": False, "motivo": "frizione"}})
+    grave = auto(3, _r={"difetto": {"costo": 0, "grave": True, "motivo": "motore"}})
+    out, fun = elenco([con_costo, grave])
+    assert out == []

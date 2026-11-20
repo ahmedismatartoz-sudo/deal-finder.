@@ -528,7 +528,9 @@ def chat_per_bene(it, g: Regole) -> str | None:
     j = r.get("jev")
     if not j or r.get("jev_errore") or j.get("fonte") != "claude" or j.get("stesso_prezzo") is False:
         return "senza_controllo_ai"
-    if not _claude_pulito(it, g.chat_pulita, g.chat_auto_vera) or r.get("danno_dichiarato") or r.get("difetto"):
+    # 20/11: ai_difetti salva una riga anche quando l'AI risponde "OK" (costo 0, non grave): conta solo un difetto vero
+    d = r.get("difetto") or {}
+    if not _claude_pulito(it, g.chat_pulita, g.chat_auto_vera) or r.get("danno_dichiarato") or d.get("costo") or d.get("grave"):
         return "controllo_non_pulito"
     if (r.get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
         return "controllo_non_pulito"
