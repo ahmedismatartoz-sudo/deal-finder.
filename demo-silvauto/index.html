@@ -130,6 +130,11 @@ h1 span,.tag,.numeri b,.auto .prezzo{font-family:Orbitron}
 .avanz b{display:block;height:100%;background:var(--arancio);transform-origin:left;transform:scaleX(0);box-shadow:0 0 14px var(--arancio)}
 .numeri{position:relative;transform:none;left:auto;bottom:auto;margin:-60px auto 0;padding:0 16px;z-index:3}
 @media(max-width:820px){.cap,.cap.destra{left:16px;right:16px;text-align:left;bottom:10vh}.cap.primo{top:9vh}.cap p{font-size:16px}#viaggio{height:560vh}}
+
+#carica{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);font:600 12px Orbitron;letter-spacing:.4em;color:#c6f21a;transition:opacity .8s;animation:pulsa 1.2s infinite}
+#carica.via{opacity:0;animation:none}
+@keyframes pulsa{50%{opacity:.35}}
+.cap h1,.cap h2{text-shadow:0 4px 30px rgba(0,0,0,.8)}
 </style>
 </head>
 <body>
@@ -143,14 +148,14 @@ h1 span,.tag,.numeri b,.auto .prezzo{font-family:Orbitron}
 
 <div id="viaggio">
 <div class="pin">
-<canvas id="scena"></canvas>
+<canvas id="scena"></canvas><div id="carica">CARICAMENTO SALONE 3D</div>
 <div class="cap primo" data-a="0" data-b=".2">
 <span class="tag">Vendita auto multibrand · Caravaggio (BG)</span>
 <h1>Vendita auto multibrand, <span>permute veicoli.</span></h1>
 <p>Auto usate di tutte le marche a Caravaggio, tra Treviglio, Crema e Bergamo. Test drive su appuntamento.</p>
 <div class="cta"><a class="btn" href="#auto">Guarda le auto</a><a class="btn ghost" href="https://wa.me/393291222119">WhatsApp 329 12 22 119</a></div>
 </div>
-<div class="cap" data-a=".3" data-b=".52"><small>01</small><h2>Ogni auto,<br><span>pezzo per pezzo.</span></h2><p>Meccanica, carrozzeria e documenti controllati prima della consegna.</p></div>
+<div class="cap" data-a=".3" data-b=".52"><small>01</small><h2>Ogni dettaglio,<br><span>controllato.</span></h2><p>Meccanica, carrozzeria e documenti controllati prima della consegna.</p></div>
 <div class="cap destra" data-a=".57" data-b=".78"><small>02</small><h2>Permute<br><span>veicoli.</span></h2><p>Portaci la tua auto: la valutiamo e la scaliamo dal prezzo.</p></div>
 <div class="cap" data-a=".84" data-b="1.2"><small>03</small><h2>Test drive<br><span>su appuntamento.</span></h2><p>Scrivi a Samir su WhatsApp e trovi l'auto pronta.</p><div class="cta"><a class="btn" href="https://wa.me/393291222119">Prenota il test drive</a></div></div>
 <div class="scorri">SCORRI <i></i></div>
@@ -214,7 +219,7 @@ h1 span,.tag,.numeri b,.auto .prezzo{font-family:Orbitron}
 <details><summary>Avete auto per neopatentati?</summary><p>Sì, ad esempio Fiat 500 e Fiat Punto: chiamaci e ti diciamo quali sono adatte.</p></details>
 </section>
 
-<footer>© 2026 Atlas Automobili · Auto usate Caravaggio (BG) · Prototipo dimostrativo</footer>
+<footer>© 2026 Atlas Automobili · Auto usate Caravaggio (BG) · Prototipo dimostrativo<br><small>Modello 3D dimostrativo: Ferrari 458 Italia di vicent091036 (esempi three.js)</small></footer>
 <a class="wa" href="https://wa.me/393291222119" aria-label="WhatsApp Atlas Automobili"><svg width="28" height="28" viewBox="0 0 24 24" fill="#0b0d06"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.5 14.1c-.2.6-1.3 1.2-1.8 1.2s-1 .3-3.4-.7a11.7 11.7 0 0 1-4.6-4.1c-.4-.5-1-1.5-1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg></a>
 
 <script>
@@ -246,73 +251,102 @@ contaAuto();
 
 <script type="module">
 import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-const LIME=0xc6f21a;
-const cv=document.getElementById('scena'),box=document.getElementById('viaggio');
+import {Reflector} from 'three/addons/objects/Reflector.js';
+const LIME=0xc6f21a,MOB=innerWidth<820;
+const BASE='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/';
+const cv=document.getElementById('scena'),box=document.getElementById('viaggio'),car=document.getElementById('carica');
 const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});
-r.setPixelRatio(Math.min(devicePixelRatio,2));r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
-const s=new THREE.Scene();s.background=new THREE.Color(0x07080a);s.fog=new THREE.Fog(0x07080a,14,60);
-const pm=new THREE.PMREMGenerator(r);s.environment=pm.fromScene(new RoomEnvironment(),.04).texture;
-const cam=new THREE.PerspectiveCamera(35,1,.1,200);
-s.add(new THREE.HemisphereLight(0xe8ffb0,0x050505,.35));
-const spot=new THREE.SpotLight(0xffffff,220,40,.45,.7);spot.position.set(4,12,6);spot.castShadow=true;spot.shadow.mapSize.set(2048,2048);s.add(spot);
-const lv1=new THREE.PointLight(LIME,80,18),lv2=new THREE.PointLight(0xffffff,30,18);s.add(lv1,lv2);
-// pavimento lucido + griglia lime che scorre
-const pav=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x0b0c0f,roughness:.18,metalness:.85}));pav.rotation.x=-Math.PI/2;pav.receiveShadow=true;s.add(pav);
-const griglia=new THREE.GridHelper(200,100,LIME,0x1d2410);griglia.position.y=.002;griglia.material.transparent=true;griglia.material.opacity=.35;s.add(griglia);
-// strisce della strada (compaiono nella parte "in viaggio")
-const strisce=new THREE.Group();for(let i=0;i<40;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(.18,2.2),new THREE.MeshBasicMaterial({color:LIME,transparent:true,opacity:0}));m.rotation.x=-Math.PI/2;m.position.set(0,.01,-i*5);strisce.add(m)}
-s.add(strisce);
-// anelli lime sotto l'auto
-const anelli=[];for(let i=0;i<3;i++){const a=new THREE.Mesh(new THREE.TorusGeometry(3.4+i*.45,.02,10,180),new THREE.MeshBasicMaterial({color:LIME,transparent:true,opacity:.9-i*.25}));a.rotation.x=Math.PI/2;a.position.y=.03;s.add(a);anelli.push(a)}
-// logo ATLAS a strisce in 3D (testo su canvas, piano verticale)
-function logoTex(){const c=document.createElement('canvas');c.width=2048;c.height=512;const x=c.getContext('2d');
-  x.font='900 360px Orbitron, Arial Black, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#fff';x.fillText('ATLAS',1024,250);
-  x.globalCompositeOperation='destination-out';for(let y=0;y<512;y+=34)x.fillRect(0,y+24,2048,10);
-  x.globalCompositeOperation='source-over';x.font='400 70px Audiowide, sans-serif';x.fillStyle='#c6f21a';x.fillText('AUTOMOBILI',1024,470);
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
-const logo=new THREE.Mesh(new THREE.PlaneGeometry(12,3),new THREE.MeshBasicMaterial({map:logoTex(),transparent:true,depthWrite:false}));logo.position.set(0,3.2,-6);s.add(logo);
+r.setPixelRatio(Math.min(devicePixelRatio,MOB?1.5:2));r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=.95;
+const s=new THREE.Scene();s.background=new THREE.Color(0x060708);s.fog=new THREE.Fog(0x060708,16,48);
+const pm=new THREE.PMREMGenerator(r);s.environment=pm.fromScene(new RoomEnvironment(),.04).texture;s.environmentIntensity=.9;
+const cam=new THREE.PerspectiveCamera(MOB?50:34,1,.1,200);
+/* ================= SALONE ================= */
+// pavimento a specchio scuro
+if(!MOB){const rif=new Reflector(new THREE.PlaneGeometry(80,80),{textureWidth:innerWidth*.6,textureHeight:innerHeight*.6,color:0x8a8a8a});rif.rotation.x=-Math.PI/2;s.add(rif)}
+const pav=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x0c0d10,roughness:.35,metalness:.6,transparent:true,opacity:MOB?1:.86}));pav.rotation.x=-Math.PI/2;pav.position.y=.002;s.add(pav);
+// fughe delle piastrelle
+const fughe=new THREE.GridHelper(80,40,0x1a1c20,0x16181c);fughe.position.y=.004;s.add(fughe);
+// pedana girevole con bordo lime
+const pedana=new THREE.Group();s.add(pedana);
+pedana.add(new THREE.Mesh(new THREE.CylinderGeometry(3.6,3.7,.08,128),new THREE.MeshStandardMaterial({color:0x111216,roughness:.25,metalness:.9})));
+pedana.children[0].position.y=.04;
+const bordo=new THREE.Mesh(new THREE.TorusGeometry(3.66,.025,12,200),new THREE.MeshBasicMaterial({color:LIME}));bordo.rotation.x=Math.PI/2;bordo.position.y=.08;pedana.add(bordo);
+for(let i=0;i<48;i++){const l=new THREE.Mesh(new THREE.BoxGeometry(.25,.005,.02),new THREE.MeshBasicMaterial({color:0x2a2d33}));const a=i/48*Math.PI*2;l.position.set(Math.cos(a)*3.2,.081,Math.sin(a)*3.2);l.rotation.y=-a;pedana.add(l)}
+// soffitto: strisce di luce
+const strip=new THREE.MeshBasicMaterial({color:0xffffff});
+for(let i=-3;i<=3;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(18,.04,.16),strip);b.position.set(0,7,i*2.2);s.add(b)}
+const strip2=new THREE.MeshBasicMaterial({color:LIME});
+[-9,9].forEach(x=>{const b=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,18),strip2);b.position.set(x,7,0);s.add(b)});
+// parete di fondo con logo a strisce
+function logoTex(){const c=document.createElement('canvas');c.width=2048;c.height=640;const x=c.getContext('2d');
+  x.font='900 380px Orbitron, Arial Black, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#f2f2f2';x.fillText('ATLAS',1024,270);
+  x.globalCompositeOperation='destination-out';for(let y=0;y<640;y+=36)x.fillRect(0,y+26,2048,10);
+  x.globalCompositeOperation='source-over';x.font='400 84px Audiowide, sans-serif';x.fillStyle='#c6f21a';x.fillText('AUTOMOBILI',1024,540);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t}
+const parete=new THREE.Mesh(new THREE.PlaneGeometry(40,9),new THREE.MeshStandardMaterial({color:0x0e0f12,roughness:.9}));parete.position.set(0,4.5,-9);s.add(parete);
+const logo=new THREE.Mesh(new THREE.PlaneGeometry(11,3.45),new THREE.MeshBasicMaterial({map:logoTex(),transparent:true,depthWrite:false}));logo.position.set(0,3.6,-8.95);s.add(logo);
 document.fonts&&document.fonts.ready.then(()=>{logo.material.map=logoTex();logo.material.needsUpdate=true});
-// ---------- auto fatta di pezzi che si montano con lo scroll ----------
-const auto=new THREE.Group();s.add(auto);
-const vern=new THREE.MeshPhysicalMaterial({color:0x1d2026,metalness:.8,roughness:.2,clearcoat:1,clearcoatRoughness:.04});
-const vetro=new THREE.MeshPhysicalMaterial({color:0x050608,metalness:.3,roughness:.02,opacity:.92,transparent:true});
-const pezzi=[];
-function pezzo(mesh,dentro){mesh.castShadow=true;auto.add(mesh);const fine=mesh.position.clone(),rot=mesh.rotation.clone();
-  const dir=new THREE.Vector3((Math.random()-.5)*2,Math.random()*.9+.3,(Math.random()-.5)*2).normalize();
-  pezzi.push({m:mesh,fine,rot,via:fine.clone().add(dir.multiplyScalar(6+Math.random()*7)),gira:new THREE.Euler(Math.random()*6,Math.random()*6,Math.random()*6),rit:dentro||0})}
-const sh=new THREE.Shape();sh.moveTo(-2.2,.25);sh.lineTo(2.25,.25);sh.quadraticCurveTo(2.45,.3,2.45,.6);sh.quadraticCurveTo(2.4,.85,2.0,.9);sh.lineTo(1.1,.98);sh.quadraticCurveTo(.6,1.5,-.2,1.52);sh.lineTo(-1.2,1.5);sh.quadraticCurveTo(-1.85,1.45,-2.1,1.0);sh.quadraticCurveTo(-2.35,.9,-2.3,.5);sh.closePath();
-// scocca in 3 fette (sinistra, centro, destra) per l'effetto montaggio
-[[-.85,.55],[-.3,.6],[.3,.55]].forEach(([z,d])=>{const g=new THREE.ExtrudeGeometry(sh,{depth:d,bevelEnabled:true,bevelSize:.1,bevelThickness:.1,bevelSegments:5,curveSegments:24});const m=new THREE.Mesh(g,vern);m.position.z=z;pezzo(m)});
-const fs=new THREE.Shape();fs.moveTo(1.0,1.0);fs.quadraticCurveTo(.55,1.42,-.15,1.44);fs.lineTo(-1.15,1.42);fs.quadraticCurveTo(-1.7,1.38,-1.9,1.04);fs.closePath();
-const vt=new THREE.Mesh(new THREE.ExtrudeGeometry(fs,{depth:1.76,bevelEnabled:false}),vetro);vt.position.z=-.88;vt.position.y=.04;pezzo(vt,.1);
-const gomma=new THREE.MeshStandardMaterial({color:0x08080a,roughness:.85}),cerchio=new THREE.MeshStandardMaterial({color:0xcfd3da,metalness:1,roughness:.18});
-const ruote=[];
-[[1.45,.98],[1.45,-.98],[-1.45,.98],[-1.45,-.98]].forEach(([x,z])=>{const w=new THREE.Group();w.add(new THREE.Mesh(new THREE.TorusGeometry(.33,.14,20,48),gomma));
-  const c=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.16,32),cerchio);c.rotation.x=Math.PI/2;w.add(c);
-  const pinza=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.1),new THREE.MeshBasicMaterial({color:LIME}));pinza.position.set(.18,.12,z>0?-.06:.06);w.add(pinza);
-  for(let i=0;i<6;i++){const k=new THREE.Mesh(new THREE.BoxGeometry(.05,.52,.17),cerchio);k.rotation.z=i*Math.PI/3;w.add(k)}
-  w.position.set(x,.36,z);w.traverse(m=>m.castShadow=true);ruote.push(w);pezzo(w,.05)});
-const luce=new THREE.MeshBasicMaterial({color:0xf4ffe0}),stop=new THREE.MeshBasicMaterial({color:0xff2a10});
-[.55,-.55].forEach(z=>{const f=new THREE.Mesh(new THREE.BoxGeometry(.06,.08,.5),luce);f.position.set(2.53,.72,z);pezzo(f,.15);
-  const b=new THREE.Mesh(new THREE.BoxGeometry(.06,.08,.5),stop);b.position.set(-2.45,.86,z);pezzo(b,.15)});
-[1,-1].forEach(sd=>{const l=new THREE.Mesh(new THREE.BoxGeometry(3.8,.03,.02),new THREE.MeshBasicMaterial({color:LIME}));l.position.set(.1,.52,sd*1.0);pezzo(l,.2)});
-// polvere luminosa
-const N=900,pg=new THREE.BufferGeometry(),pp=new Float32Array(N*3);for(let i=0;i<N;i++)pp.set([(Math.random()-.5)*40,Math.random()*12,(Math.random()-.5)*40],i*3);
+const neon=new THREE.Mesh(new THREE.BoxGeometry(14,.04,.04),new THREE.MeshBasicMaterial({color:LIME}));neon.position.set(0,1.4,-8.9);s.add(neon);
+// pannelli verticali laterali e colonne
+for(const sx of [-1,1])for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.BoxGeometry(.5,7,.5),new THREE.MeshStandardMaterial({color:0x15161a,roughness:.5,metalness:.4}));c.position.set(sx*11,3.5,-7+i*5);s.add(c);
+  const l=new THREE.Mesh(new THREE.BoxGeometry(.03,6,.03),new THREE.MeshBasicMaterial({color:i%2?0xffffff:LIME}));l.position.set(sx*(11-.27),3.5,-7+i*5);s.add(l)}
+// luci
+s.add(new THREE.HemisphereLight(0xffffff,0x111111,.25));
+const key=new THREE.SpotLight(0xffffff,260,30,.55,.6);key.position.set(0,9,3);key.target.position.set(0,0,0);s.add(key,key.target);
+const rim=new THREE.PointLight(LIME,40,14);s.add(rim);
+// polvere nell'aria
+const N=1400,pg=new THREE.BufferGeometry(),pp=new Float32Array(N*3);for(let i=0;i<N;i++)pp.set([(Math.random()-.5)*24,Math.random()*7,(Math.random()-.5)*20],i*3);
 pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
-const polvere=new THREE.Points(pg,new THREE.PointsMaterial({color:LIME,size:.05,transparent:true,opacity:.6,blending:THREE.AdditiveBlending,depthWrite:false}));s.add(polvere);
-// scie luminose (fase "in viaggio")
-const M=500,lg=new THREE.BufferGeometry(),lp=new Float32Array(M*6);
-for(let i=0;i<M;i++){const x=(Math.random()<.5?-1:1)*(3+Math.random()*9),y=Math.random()*5,z=-Math.random()*120,l=2+Math.random()*5;lp.set([x,y,z,x,y,z-l],i*6)}
+const polvere=new THREE.Points(pg,new THREE.PointsMaterial({color:0xffffff,size:.02,transparent:true,opacity:.35,depthWrite:false}));s.add(polvere);
+// strada e scie per la parte "in viaggio"
+const strada=new THREE.Group();s.add(strada);
+for(let i=0;i<30;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(.15,2),new THREE.MeshBasicMaterial({color:LIME,transparent:true,opacity:0}));m.rotation.x=-Math.PI/2;m.position.set(0,.09,-30+i*2.6);strada.add(m)}
+const M=600,lg=new THREE.BufferGeometry(),lp=new Float32Array(M*6);
+for(let i=0;i<M;i++){const x=(Math.random()<.5?-1:1)*(3.5+Math.random()*7),y=.3+Math.random()*5,z=(Math.random()-.5)*80,l=1.5+Math.random()*4;lp.set([x,y,z,x,y,z+l],i*6)}
 lg.setAttribute('position',new THREE.BufferAttribute(lp,3));
-const scie=new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0xe6ff6b,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));s.add(scie);
-const comp=new EffectComposer(r);comp.addPass(new RenderPass(s,cam));const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),.9,.55,.15);comp.addPass(bloom);
-function dim(){const w=innerWidth,h=innerHeight;r.setSize(w,h,false);comp.setSize(w,h);cam.aspect=w/h;cam.fov=w<820?52:35;cam.updateProjectionMatrix()}
+const scie=new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0xe6ff6b,transparent:true,opacity:0}));s.add(scie);
+/* ================= AUTO ================= */
+const auto=new THREE.Group();s.add(auto);
+const pezzi=[],ruote=[];let pronta=false;
+const vern=new THREE.MeshPhysicalMaterial({color:0x2a2e35,metalness:1,roughness:.42,clearcoat:1,clearcoatRoughness:.03,sheen:.4,sheenColor:new THREE.Color(0x9fb0c8)});
+const cromo=new THREE.MeshStandardMaterial({color:0xffffff,metalness:1,roughness:.12});
+const vetro=new THREE.MeshPhysicalMaterial({color:0xffffff,metalness:.25,roughness:0,transmission:1,thickness:.1});
+const trim=new THREE.MeshStandardMaterial({color:0x0b0b0c,metalness:.6,roughness:.4});
+const dl=new DRACOLoader();dl.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+const ld=new GLTFLoader();ld.setDRACOLoader(dl);
+ld.load(BASE+'models/gltf/ferrari.glb',g=>{
+  const m=g.scene.children[0];
+  m.getObjectByName('body').material=vern;
+  ['rim_fl','rim_fr','rim_rr','rim_rl'].forEach(n=>m.getObjectByName(n).material=cromo);
+  m.getObjectByName('trim').material=trim;m.getObjectByName('glass').material=vetro;
+  ['wheel_fl','wheel_fr','wheel_rl','wheel_rr'].forEach(n=>ruote.push(m.getObjectByName(n)));
+  // ombra di contatto
+  new THREE.TextureLoader().load(BASE+'models/gltf/ferrari_ao.png',t=>{const o=new THREE.Mesh(new THREE.PlaneGeometry(.655*4,1.3*4),new THREE.MeshBasicMaterial({map:t,blending:THREE.MultiplyBlending,toneMapped:false,transparent:true}));
+    o.rotation.x=-Math.PI/2;o.renderOrder=2;m.add(o)});
+  m.scale.setScalar(1.15);m.position.y=.08;auto.add(m);
+  // pezzi che si montano: ogni figlio diretto del modello
+  const centro=new THREE.Vector3();
+  m.children.forEach(c=>{if(!c.isMesh&&!c.isGroup&&!c.isObject3D)return;const fine=c.position.clone(),rot=c.rotation.clone();
+    const b=new THREE.Box3().setFromObject(c),cc=b.getCenter(new THREE.Vector3());const dir=cc.sub(centro);dir.y=Math.abs(dir.y)+.6;dir.normalize();
+    pezzi.push({o:c,fine,rot,via:fine.clone().add(dir.multiplyScalar(2.2+Math.random()*2.5)),gira:new THREE.Euler((Math.random()-.5)*2,(Math.random()-.5)*3,(Math.random()-.5)*2),rit:Math.random()*.25})});
+  pronta=true;car.classList.add('via');
+},undefined,()=>{car.textContent='3D non disponibile';});
+// fari accesi nella parte "in viaggio"
+const faro1=new THREE.SpotLight(0xf4f8ff,0,22,.35,.5),faro2=faro1.clone();faro1.position.set(.6,.7,2.3);faro2.position.set(-.6,.7,2.3);
+[faro1,faro2].forEach(f=>{f.target.position.set(f.position.x,0,12);auto.add(f,f.target)});
+/* ================= POST ================= */
+const comp=new EffectComposer(r);comp.addPass(new RenderPass(s,cam));
+const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),.55,.4,.82);comp.addPass(bloom);comp.addPass(new OutputPass());
+function dim(){const w=innerWidth,h=innerHeight;r.setSize(w,h,false);comp.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
 addEventListener('resize',dim);dim();
-// ---------- regia: tutto dipende dalla posizione dello scroll ----------
+/* ================= REGIA SULLO SCROLL ================= */
 const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
 const L=(a,b,t)=>a+(b-a)*t;
 const caps=[...document.querySelectorAll('#viaggio .cap')],barra=document.getElementById('avanz');
@@ -321,36 +355,32 @@ function leggi(){const rc=box.getBoundingClientRect();p=Math.min(1,Math.max(0,-r
 addEventListener('scroll',leggi,{passive:true});leggi();
 let mx=0,my=0;addEventListener('pointermove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
 const ck=new THREE.Clock(),C=new THREE.Vector3(),T=new THREE.Vector3();
-(function loop(){const t=ck.getElapsedTime();pv+=(p-pv)*.08;const q=pv;
+(function loop(){const t=ck.getElapsedTime();pv+=(p-pv)*.075;const q=pv;
   barra.style.transform=`scaleX(${q})`;
-  caps.forEach(c=>{const a=+c.dataset.a,b=+c.dataset.b,v=ss(a-.04,a+.03,q)*(1-ss(b-.03,b+.04,q));c.style.opacity=v;c.style.transform=`translateY(${(1-v)*40}px)`});
-  // 1) 0→0.28: pezzi sparsi che si montano, logo che si allontana
-  const mont=ss(.02,.28,q);
-  pezzi.forEach(o=>{const k=ss(o.rit,1,mont);o.m.position.lerpVectors(o.via,o.fine,k);
-    o.m.rotation.set(L(o.gira.x,o.rot.x,k),L(o.gira.y,o.rot.y,k),L(o.gira.z,o.rot.z,k))});
-  logo.material.opacity=1-ss(.18,.32,q);logo.position.y=3.2+ss(.15,.35,q)*3;
-  // 2) 0.28→0.55: giro di camera intorno all'auto
-  const giro=ss(.28,.55,q);
-  // 3) 0.55→0.8: in viaggio
-  const via=ss(.55,.7,q)*(1-ss(.8,.88,q));
-  // 4) 0.8→1: vista dall'alto e parcheggio sugli anelli
-  const alto=ss(.8,1,q);
-  const ang=L(.6,.6+Math.PI*1.6,giro)+mx*.4;
-  const rad=L(L(11,8.5,mont),7.5,giro)+via*2;
-  C.set(Math.sin(ang)*rad*(1-alto*.7),L(L(4.5,2.2,mont),1.4,via)+alto*9-my*.6,Math.cos(ang)*rad*(1-alto*.7));
-  T.set(0,L(1.2,.7,giro),0);cam.position.copy(C);cam.lookAt(T);
-  cam.rotation.z+=via*Math.sin(t*1.3)*.04;
-  auto.position.y=Math.sin(t*1.6)*.03*(1-via)+via*Math.sin(t*20)*.012;
-  auto.rotation.y=via*.0+(1-giro)*0;
-  ruote.forEach(w=>w.rotation.z=-t*(1.5+via*28));
-  strisce.children.forEach(m=>{m.material.opacity=via;m.position.z=((m.position.z+via*1.6+200)%200)-100;m.position.x=0;});
-  strisce.rotation.y=Math.PI/2;
-  scie.material.opacity=via*.9;scie.position.x=0;scie.rotation.y=Math.PI/2;scie.position.z=0;
-  { const a=lg.attributes.position.array;for(let i=0;i<M;i++){const dz=via*2.2;a[i*6+2]+=dz;a[i*6+5]+=dz;if(a[i*6+2]>40){a[i*6+2]-=160;a[i*6+5]-=160}} lg.attributes.position.needsUpdate=true}
-  griglia.position.x=-(t*via*12)%2;
-  anelli.forEach((a,i)=>{a.material.opacity=(.9-i*.25)*(.35+.65*Math.max(1-via,alto));a.scale.setScalar(1+Math.sin(t*2+i)*.02+alto*.1)});
-  lv1.position.set(Math.cos(t*.8)*5,2.2,Math.sin(t*.8)*5);lv2.position.set(Math.cos(t*.8+Math.PI)*5,1.6,Math.sin(t*.8+Math.PI)*5);
-  polvere.rotation.y=t*.03;bloom.strength=.8+via*.9+alto*.3;
+  caps.forEach(c=>{const a=+c.dataset.a,b=+c.dataset.b,v=ss(a-.04,a+.03,q)*(1-ss(b-.03,b+.04,q));c.style.opacity=v;c.style.transform=`translateY(${(1-v)*40}px)`;c.style.pointerEvents=v>.5?'auto':'none'});
+  const mont=ss(.03,.3,q),giro=ss(.3,.56,q),via=ss(.56,.68,q)*(1-ss(.8,.88,q)),alto=ss(.82,1,q);
+  // 1) pezzi che volano al loro posto
+  pezzi.forEach(o=>{const k=ss(o.rit,1,mont);o.o.position.lerpVectors(o.via,o.fine,k);o.o.rotation.set(L(o.gira.x,o.rot.x,k),L(o.gira.y,o.rot.y,k),L(o.gira.z,o.rot.z,k))});
+  // pedana che gira lenta finché non si parte
+  const rotPed=t*.12*(1-via)+giro*Math.PI*.5;pedana.rotation.y=rotPed;auto.rotation.y=L(-.5+rotPed,0,via);
+  // 2) camera: avvicinamento, giro completo, bassa in viaggio, alta alla fine
+  const ang=L(L(-.9,-.6,mont),-.6+Math.PI*1.5,giro)+mx*.25;
+  const rad=L(L(12,8.2,mont),6.8,giro)+via*1.2-alto*2;
+  C.set(Math.sin(ang)*rad,L(L(3.2,1.5,mont),.9,via)+alto*7.5-my*.4,Math.cos(ang)*rad);
+  if(via>0){const vc=new THREE.Vector3(5.2,1.1,-5.5);C.lerp(vc,via)}
+  T.set(0,L(.9,.55,via),L(0,1.5,via));cam.position.copy(C);cam.lookAt(T);cam.rotation.z+=via*Math.sin(t*1.1)*.025;
+  // 3) in viaggio: ruote, strada, scie, fari, sobbalzi
+  ruote.forEach(w=>w.rotation.x=-t*(.6+via*30));
+  auto.position.y=via*Math.sin(t*24)*.006;
+  strada.children.forEach(m=>{m.material.opacity=via*.9;m.position.z-=via*.9;if(m.position.z<-30)m.position.z+=78});
+  scie.material.opacity=via*.8;{const a=lg.attributes.position.array;for(let i=0;i<M;i++){const dz=via*1.6;a[i*6+2]-=dz;a[i*6+5]-=dz;if(a[i*6+2]<-40){a[i*6+2]+=80;a[i*6+5]+=80}}lg.attributes.position.needsUpdate=true}
+  fughe.position.z=-((t*via*14)%2);
+  faro1.intensity=faro2.intensity=via*120;
+  // 4) finale dall'alto: luci della pedana più forti
+  bordo.material.color.setHex(LIME);bordo.scale.setScalar(1+alto*.02*Math.sin(t*3));
+  rim.position.set(Math.cos(t*.7)*5,1.4,Math.sin(t*.7)*5);
+  logo.material.opacity=.35+.65*(1-via);
+  polvere.rotation.y=t*.02;bloom.strength=.5+via*.5;
   comp.render();requestAnimationFrame(loop)})();
 </script>
 </body>
