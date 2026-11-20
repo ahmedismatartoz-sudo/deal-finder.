@@ -97,10 +97,6 @@ def attivo() -> bool:
     return (os.environ.get("VALORE_BASE") or "nuovo").strip().lower() not in ("vecchio", "0", "old")
 
 
-def livelli_accesi() -> tuple:
-    """20/11: livelli della stima di ripiego accesi adesso (interruttori stima_ripiego / stima_ripiego_largo e fasce
-    attive). Per ora nessuno: il sito (sito_regole.r_valutata) tiene fuori ogni valutazione segnata stima_ripiego."""
-    return ()
 
 
 # ------------------------------------------------------------------ dati
@@ -416,6 +412,136 @@ def stima_prudente(D: list, V: list, t: dict, vb, escludi=None, oggi=None) -> di
         valore = min(valore, a_val)
     out.update(valore=valore, fonte=fonte, scelta=scelta)
     return out
+
+
+# ------------------------------------------------------------------ stima di ripiego (20/11, B1: SOLO misura)
+# Proprietario 20/11 14:18: recuperare i "dati insufficienti" "in qualche modo", MA "non gonfiare i prezzi".
+# B1 = misura soltanto (base_vendute, log BASE_VENDUTE): valuta() NON chiama stima_ripiego e livelli_accesi() torna
+# sempre () finché regole.py non ha le fasce ammesse (B2, commit "REGOLE:"): nessuna valutazione cambia.
+# Solo le due basi del metodo (commercianti freschi e vendute, pulite): mai il vecchio ripiego_prudente.
+
+REGOLA_RIPIEGO = "ripiego-2011a"
+# prova -> livelli (anno ±, km ±) provati in ordine. "unione": i livelli di oggi con commercianti e vendute INSIEME
+# (copre pochi_confronti:solo_unendo e :fragile); "largo": anno ±3, km ±60% (parte di :pochi_simili); "largo4": anno
+# ±4, km ±80%, SOLO misurato (mai attivabile).
+RIPIEGO_PROVE = {"unione": BV.LIVELLI, "largo": ((3, 0.60),), "largo4": ((4, 0.80),)}
+RIPIEGO_ATTIVABILI = ("unione", "largo")
+RIPIEGO_PERCENTILE = 0.40      # default di regole.StimaRipiego (B2): percentile dei confronti tenuti
+RIPIEGO_N_MIN = {"unione": 5, "largo": 6, "largo4": 6}
+RIPIEGO_N_DEBOLE = 3           # stime di UNA sola base con almeno 3 confronti: solo tetti, mai al rialzo
+RIPIEGO_MARGINE_MAX = 0.40     # B2: margine oltre il 40% del valore di ripiego = dati_insufficienti
+RIPIEGO_EXTRA_MAX = 0.15       # sconto extra oltre il 15%: la coppia (livello, fascia) si scarta
+
+
+def _ripiego_vuoto() -> dict:
+    return {"valore": None, "livello": None, "n": 0, "quota_D": None, "grezzo": None, "mediana": None,
+            "sconto_base": None, "sconto_extra": 0.0, "fascia": None, "tenuti": [], "regola": REGOLA_RIPIEGO}
+
+
+def _ripiego_n_min(livello: str, rp=None) -> int:
+    if livello == "unione":
+        return int(getattr(rp, "n_min_unione", RIPIEGO_N_MIN["unione"]))
+    return int(getattr(rp, "n_min_largo", RIPIEGO_N_MIN.get(livello, 6)))
+
+
+def _ripiego_livelli(livello: str, rp=None) -> tuple:
+    if livello == "largo" and rp is not None:
+        return ((int(getattr(rp, "largo_anni", 3)), float(getattr(rp, "largo_km", 0.60))),)
+    return tuple(RIPIEGO_PROVE.get(livello) or ())
+
+
+def sconto_extra_ripiego(livello: str, fascia: str, rp=None) -> float:
+    """Sconto extra della coppia (livello, fascia) nelle fasce ammesse (regole.StimaRipiego.fasce, B2); 0 se la coppia
+    non c'è (B1: sempre 0, la misura è SENZA sconto extra)."""
+    for f in (getattr(rp, "fasce", None) or ()):
+        try:
+            if f[0] == livello and f[1] == fascia:
+                return min(RIPIEGO_EXTRA_MAX, max(0.0, float(f[2])))
+        except (IndexError, TypeError, ValueError):
+            continue
+    return 0.0
+
+
+def stima_ripiego(D: list, V: list, t: dict, vb, rp=None, escludi=None, oggi=None, solo=None) -> dict:
+    """Stima di RIPIEGO di `t` quando stima_prudente non dà valore (va chiamata solo in quel caso): commercianti (D) e
+    vendute (V) INSIEME, stessa marca/modello/alimentazione/zona (le basi del gruppo), potenza ±10% e stesso cambio se
+    noti (BV._simile), prezzi riportati all'anno e ai km dell'auto (BV._adatta), taglio 0,65–1,5 sulla mediana.
+    `solo` = prove da tentare in ordine (default RIPIEGO_ATTIVABILI: "unione", poi "largo"); vince la prima con
+    abbastanza confronti. `rp` = regole.StimaRipiego (B2; None = default di questo modulo, senza sconto extra).
+    Prudenze, tutte al ribasso:
+    - `grezzo` = 40° percentile dei confronti tenuti (mai sopra la loro mediana);
+    - sconto base = quota_D × sconto di vetrina + (1 − quota_D) × sconto delle vendute (regole.ValoreBase, quota_D =
+      parte dei confronti tenuti che sono commercianti);
+    - tetto: mai sopra le stime deboli di UNA sola base (almeno 3 confronti ai livelli di oggi, già scontate);
+    - sconto extra della coppia (livello, fascia), applicato per ultimo (la misura senza extra scala esattamente).
+    `fascia` = fascia di prezzo del valore grezzo (quella della misura "ripiego|<prova>|fascia_stima:" e delle coppie).
+    {"valore", "livello", "n", "quota_D", "grezzo", "mediana", "sconto_base", "sconto_extra", "fascia", "tenuti",
+    "anni", "km", "tetto"}; nessuna stima: valore None."""
+    import statistics
+    out = _ripiego_vuoto()
+    prove = tuple(RIPIEGO_ATTIVABILI if solo is None else ((solo,) if isinstance(solo, str) else solo))
+    q = float(getattr(rp, "percentile", RIPIEGO_PERCENTILE))
+    id_D = {id(c) for c in D}
+    base = [c for c in list(D) + list(V) if c is not escludi]
+    if not base:
+        return out
+    eta = eta_auto(t.get("year"), oggi)
+    for livello in prove:
+        nm = _ripiego_n_min(livello, rp)
+        for anni, km in _ripiego_livelli(livello, rp):
+            coppie = [(c, BV._adatta(c, t)) for c in base if BV._simile(c, t, anni, km)]
+            coppie = [(c, p) for c, p in coppie if p > 0]
+            if len(coppie) < nm:
+                continue
+            m = statistics.median(p for _, p in coppie)
+            tenuti = [(c, p) for c, p in coppie if BV.TAGLIO[0] * m <= p <= BV.TAGLIO[1] * m]
+            if len(tenuti) < nm:
+                continue
+            prezzi = [p for _, p in tenuti]
+            mediana = statistics.median(prezzi)
+            grezzo = min(BV.percentile(prezzi, q), mediana)
+            quota_D = sum(1 for c, _ in tenuti if id(c) in id_D) / len(tenuti)
+            sb = quota_D * sconto_vetrina(grezzo, eta, vb) + (1 - quota_D) * sconto_vendute(grezzo, eta, vb)
+            valore = grezzo * (1 - sb)
+            tetto = None
+            dd = BV.stima_dettaglio(D, t, escludi, n_min=RIPIEGO_N_DEBOLE)
+            vd = BV.stima_dettaglio(V, t, escludi, n_min=RIPIEGO_N_DEBOLE)
+            for x, netto in ((dd, sconto_vetrina), (vd, sconto_vendute)):
+                if x:
+                    nx = x["valore"] * (1 - netto(x["valore"], eta, vb))
+                    if nx < valore:
+                        valore = tetto = nx
+            fascia = BV.fascia(grezzo)
+            se = sconto_extra_ripiego(livello, fascia, rp)
+            valore = valore * (1 - se)
+            out.update(valore=valore, livello=livello, n=len(tenuti), quota_D=round(quota_D, 3), grezzo=grezzo,
+                       mediana=mediana, sconto_base=round(sb, 4), sconto_extra=se, fascia=fascia, tenuti=tenuti,
+                       anni=anni, km=km, tetto=int(round(tetto)) if tetto is not None else None)
+            return out
+    return out
+
+
+def livelli_accesi(rp=None) -> tuple:
+    """Livelli della stima di ripiego che il sito può usare ADESSO: () se nessuna fascia è ammessa (B1: sempre, le
+    fasce nascono in regole.StimaRipiego col commit B2) o se l'interruttore automatismi "stima_ripiego" è spento;
+    altrimenti i livelli presenti nelle fasce ammesse, senza "largo" se "stima_ripiego_largo" è spento. "largo4" mai.
+    Con le fasce vuote non legge nemmeno gli interruttori (nessuna lettura del database). Mai un errore: ()."""
+    try:
+        if rp is None:
+            from .. import regole as RG
+            rp = getattr(RG.regole(), "stima_ripiego", None)
+        presenti = {f[0] for f in (getattr(rp, "fasce", None) or ())}
+        livelli = [x for x in RIPIEGO_ATTIVABILI if x in presenti]
+        if not livelli:
+            return ()
+        from .. import automatismi
+        if not automatismi.attivo("stima_ripiego"):
+            return ()
+        if not automatismi.attivo("stima_ripiego_largo"):
+            livelli = [x for x in livelli if x != "largo"]
+        return tuple(livelli)
+    except Exception:
+        return ()
 
 
 def _quale(vb) -> str:
