@@ -1848,6 +1848,19 @@ def _sentinella(items: list[dict], diesel_extra: set | None = None) -> None:
 _dati_insuff_log = {"t": 0.0}
 
 
+def _tetto_chat_subito(g) -> int:
+    """20/11: tetto della corsia chat di Subito per questo elenco. Il numero della regola (sito_regole.Regole.chat_subito,
+    70) si può solo spegnere o abbassare senza deploy: interruttore automatismi "chat_subito" (spento = 0, come prima)
+    e numero "chat_subito_max". Mai sopra il numero della regola; valore illeggibile o errore = quello della regola."""
+    try:
+        from .. import automatismi
+        if not automatismi.attivo("chat_subito"):
+            return 0
+        return max(0, min(int(g.chat_subito), int(automatismi.numero("chat_subito_max", g.chat_subito))))
+    except Exception:
+        return int(g.chat_subito)
+
+
 def _calcola_elenco() -> None:
     from . import sito_regole as SR
     t0 = time.time()
@@ -1864,13 +1877,16 @@ def _calcola_elenco() -> None:
     except Exception as e:
         logging.getLogger("scovo").warning("CALIBRA non applicata: %s", str(e)[:200])
         _g = SR.Regole.da_env()
+    _g = _dc.replace(_g, chat_subito=_tetto_chat_subito(_g))
     out, fun = SR.elenco_sito(items, g=_g, caricamento=stats)
     # auto tolte solo perché il numero non è mai stato letto: le ricontrolla il lavoro telefoni_candidate
-    _tel_da_controllare.update(i for i in fun.tolti.get("telefono", []) if fonte.get(i) in ("AutoScout24", "Subito"))
+    # 20/11: anche le auto della corsia chat di Subito rimaste fuori dal loro tetto (col numero letto entrerebbero)
+    _senza_numero = list(fun.tolti.get("telefono", [])) + list(fun.tolti.get("chat_subito", []))
+    _tel_da_controllare.update(i for i in _senza_numero if fonte.get(i) in ("AutoScout24", "Subito"))
     try:      # 13/11 (piu-auto): le tolte solo per il numero con margine già sopra il minimo, prima delle altre
         from ..pipeline import telefono_nascosto as _tn
         # 18/11 sera: con l'elenco (out) anche il tetto dei commercianti, l'ordine per margine/soglia e le inutili
-        _tn.segna_prioritari(items, fun.tolti.get("telefono", []), fonte, g=_g, out=out)
+        _tn.segna_prioritari(items, _senza_numero, fonte, g=_g, out=out)
     except Exception as e:
         logging.getLogger("scovo").warning("TEL_NASCOSTO prioritari non segnati: %s", str(e)[:200])
     try:      # 18/11 sera: perché le auto escono al passo "valutata" come dati_insufficienti (solo conteggi)
@@ -1890,6 +1906,8 @@ def _calcola_elenco() -> None:
         logging.getLogger("scovo").warning("CONTROLLO coda non aggiornata: %s", str(e)[:200])
     diesel_extra = {it["id"] for it in out if it.get("diesel_extra")}
     for it in out:
+        it.pop("_chat", None)                 # 20/11: segni interni della corsia chat di Subito; "chat_subito" RESTA
+        it.pop("_chat_attesa", None)          # (serve alla scheda: bottone "Contatta con la chat di Subito")
         it.pop("_r", None)
         it.pop("_tipo", None)
         it.pop("_diesel_fuori", None)
@@ -1929,6 +1947,8 @@ def _calcola_elenco() -> None:
             c["fascia_richiesta" + (":commercianti" if it.get("commerciante") else ":privati")] += 1
         if it.get("id") in diesel_extra:
             c["diesel_extra"] += 1          # 13/11 sera: diesel per bene entrate con DIESEL_EXTRA
+        if it.get("chat_subito"):
+            c["chat_subito"] += 1           # 20/11: privati su Subito senza numero (corsia chat, tetto separato)
     # 18/11: anche quante righe dell'elenco (LIST_SQL) sono state lette, in quanto tempo, la memoria e se il tetto ha tagliato
     # 19/11: con il tetto di memoria usato (calcolato dal limite del container, memoria.tetto_elenco)
     logging.getLogger("scovo").warning("ELENCO %d auto in %.1fs %s righe=%d lettura=%ss memoria=%sMB tetto=%sMB "
@@ -2285,7 +2305,8 @@ def admin_sito_funnel(request: Request):
     from . import sito_regole as SR
     ordine = {n: i for i, (n, _) in enumerate(SR.REGOLE)} | {"margine_sito": 50, "truffa": 51, "margine_minimo": 52,
                                                                "tetto_commercianti": 53, "tetto_fuori_zona": 54,
-                                                               "diesel_extra": 55, "tetto_commercianti_totale": 56}
+                                                               "diesel_extra": 55, "chat_subito": 55.5,
+                                                               "tetto_commercianti_totale": 56}
     for g in per.values():
         g["passi"].sort(key=lambda x: (ordine.get(x["passo"].split(".")[0], 99), "." in x["passo"], x["passo"]))
     return jsonify({"giorni": list(per.values())})

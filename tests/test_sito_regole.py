@@ -196,11 +196,16 @@ def test_jev_toglie_solo_i_casi_chiari():
 
 
 def test_funnel_conta_e_righe_giorno():
-    out, fun = SR.elenco_sito([auto(1), auto(2, prov="RM"), auto(3, tel=False)], G, scrivi_log=False)
+    # 20/11: senza numero esce al passo telefono chi non è un privato su Subito in zona (qui AutoScout24); il privato su
+    # Subito va nella corsia chat (tests/test_chat_subito.py) e senza controllo Claude esce al passo chat_subito
+    out, fun = SR.elenco_sito([auto(1), auto(2, prov="RM"), auto(3, tel=False, fonte="AutoScout24"),
+                               auto(9, tel=False, fonte="Subito")], G, scrivi_log=False)
     passi = {p["passo"]: p for p in fun.passi}
     assert passi["telefono"]["uscite"] == 1 and passi["no_roma"]["uscite"] == 1 and len(out) == 1
+    assert fun.tolti["telefono"] == [3] and fun.tolti["chat_subito"] == [9]
+    assert passi["chat_subito"]["motivi"] == {"senza_controllo_ai": 1}
     righe = SR.righe_giorno(fun)
-    assert ("no_roma.roma", 2, 1) in righe and all(len(r) == 3 for r in righe)
+    assert ("no_roma.roma", 3, 1) in righe and all(len(r) == 3 for r in righe)
 
 
 def test_stessi_numeri_elenco_e_scheda():

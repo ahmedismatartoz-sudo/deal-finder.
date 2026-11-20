@@ -83,6 +83,14 @@ In ordine di velocità:
    (uguale per sito, worker e cron: mai due calcoli diversi tra processi), mai sul singolo servizio. **Attenzione:**
    il ritorno a "vecchio" fa ripassare dal giudice AI tutte le auto buone alla prima rivalutazione: picco di credito
    AI, controllare il budget prima. Le valutazioni si riscrivono da sole al cambio di calcolo (colonna `metodo`).
+5. **Corsia chat di Subito (20/11): si spegne senza deploy e senza variabili su Render**, entro un minuto, con
+   l'interruttore `chat_subito` di `dealfinder/automatismi.py` (chiave `automatismi` di `sito_impostazioni`):
+   `INSERT INTO sito_impostazioni (chiave, valore) VALUES ('automatismi','{"chat_subito": false}')
+   ON CONFLICT (chiave) DO UPDATE SET valore = sito_impostazioni.valore || EXCLUDED.valore;`
+   Spenta = tetto 0 = comportamento di prima (senza numero fuori al passo telefono, nessuna coda del controllo per
+   la corsia). Per abbassare il numero senza spegnere: `{"chat_subito_max": 30}` (mai sopra i 70 della regola
+   `sito_regole.Regole.chat_subito`, che si cambia solo con un commit `REGOLE:`). La regola effettiva controllata dal
+   canarino resta quella del codice (`Regole.da_env()` non legge gli interruttori).
 
 **Attenzione: alcune regole di business si cambiano ANCORA con le variabili d'ambiente di Render.** Le regole di
 prezzo di `regole.py` leggono dall'ambiente solo gli interruttori di `regole.INTERRUTTORI`, ma:

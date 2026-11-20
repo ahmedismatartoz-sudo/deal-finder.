@@ -323,6 +323,7 @@ function segnoCard(c){
   if (c.avviso_verifica) return null;
   if (c.incidentata || c.rip_hi > 0) return {t: statoTxt(c), cls: "warn"};
   if (c.aperta) return {t: "Già contattata", cls: "seen"};
+  if (c.chat_subito) return {t: "Chat Subito", cls: "chat"};   // 20/11: privato su Subito senza numero, si scrive in chat
   return null;
 }
 function carCard(c, i, hero){
@@ -685,6 +686,7 @@ function viewDetail(){
   const desc = d ? (d.descrizione || "") : "";
   const longDesc = desc.length > 260 && !S.descOpen;
   const contact = d && d.tel ? {icon: ICON.phone, label: "Chiama il venditore", note: "Il venditore ha scritto il numero nell'annuncio"}
+                             : c.chat_subito ? {icon: ICON.chat, label: "Contatta con la chat di Subito", note: "Il venditore non mostra il numero: si apre l'annuncio su Subito per scrivergli in chat"}
                              : {icon: ICON.chat, label: "Parla col venditore", note: `Si apre l'annuncio su ${esc(c.fonte || "Subito")} per scrivergli`};
   return `
   <div class="detail">
@@ -704,7 +706,7 @@ function viewDetail(){
       ${dSez("Auto", `<div class="d-stats"><div><b>${c.km ? num(c.km) : "—"}</b><span>Chilometri</span></div><div><b>${esc(String(c.anno || "—"))}</b><span>Anno</span></div><div><b>${esc(c.carb || "—")}</b><span>Carburante</span></div></div>
         ${schedaTecnica(c, d)}
         ${d ? (desc ? `<p class="desc" style="white-space:pre-line">${esc(longDesc ? desc.slice(0, 240).replace(/\s+\S*$/, "") + "…" : desc)}</p>${longDesc ? `<button class="more-desc" data-act="desc">Leggi tutto</button>` : ""}` : "") : `<div class="skel"><div class="bar"></div><div class="bar s"></div></div>`}`)}
-      ${dSez("Stato", `<div class="ap-list">${apRiga("Condizioni", statoTxt(c), c.incidentata || c.rip_hi > 0 ? "warn" : "")}${apRiga("Venditore", c.commerciante ? "Commerciante" : d && d.privato === false ? "Venditore" : "Privato")}${c.aperta ? apRiga("Contatto", "Già contattata", "info") : ""}${c.fuori_zona_km != null ? apRiga("Distanza", "Fuori zona · " + c.fuori_zona_km + " km") : ""}${apRiga("Annuncio", esc(c.fonte || "—"))}</div>
+      ${dSez("Stato", `<div class="ap-list">${apRiga("Condizioni", statoTxt(c), c.incidentata || c.rip_hi > 0 ? "warn" : "")}${apRiga("Venditore", c.commerciante ? "Commerciante" : d && d.privato === false ? "Venditore" : "Privato")}${c.aperta ? apRiga("Contatto", "Già contattata", "info") : c.chat_subito && !(d && d.tel) ? apRiga("Contatto", "Solo chat di Subito", "info") : ""}${c.fuori_zona_km != null ? apRiga("Distanza", "Fuori zona · " + c.fuori_zona_km + " km") : ""}${apRiga("Annuncio", esc(c.fonte || "—"))}</div>
         ${pezzi.length ? `<button class="parts-btn" data-act="parts"><span>Cosa comprare per sistemarla · ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}</span>${ICON.next}</button>`
           : c.rip_hi ? "" : `<div class="ok-box">Nessuna riparazione dichiarata nell'annuncio</div>`}`)}
       ${dSez("Mercato e riparazioni", `${dMercato(c)}
@@ -715,7 +717,7 @@ function viewDetail(){
         ${d && d.controlli && d.controlli.length ? `<ul class="checks">${d.controlli.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
         ${!c.avviso_verifica && !(d && d.controlli && d.controlli.length) ? `<p class="k5-none">Nessun avviso particolare. Guarda comunque l'auto e i documenti dal vivo prima di pagare.</p>` : ""}`)}
       ${c.aperta || perm("auto") ? `<section class="box fb" style="padding:14px 16px"><h2>Com'è andata?</h2><div class="wrap">${ESITI.map(([v,l]) => `<button class="pill" data-act="esito" data-v="${v}" aria-pressed="${S.esito && S.esito[c.id] === v}">${l}</button>`).join("")}</div><span class="hint">Ci aiuta a trovarti auto migliori.</span></section>` : ""}
-      <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</p>
+      <p class="hint dock-note">Annuncio di un ${c.commerciante ? "commerciante" : d && d.privato === false ? "venditore" : "privato"} su ${esc(c.fonte || "")} · ${esc(c.zona)}</p>${c.chat_subito && !(d && d.tel) ? `<p class="hint dock-note chat-note">${esc(contact.note)}</p>` : ""}
     </div>
     <div class="dock"><div class="dock-in"><div class="dock-row">
       ${d && !d.err && !d.tel ? `<a class="talk" id="talk" data-act="talk-link" href="/api/affari/${c.id}/vai"${MOBILE ? "" : ' target="_blank" rel="noopener"'}>${contact.icon}<span>${contact.label}</span></a>`

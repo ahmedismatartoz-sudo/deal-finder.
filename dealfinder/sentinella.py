@@ -67,6 +67,7 @@ CALO_SITO_MIN_IERI = 20             # sotto queste auto ieri il confronto non ha
 ISTANTANEA_VECCHIA_ORE = 3
 COMMERCIANTI_TETTO = 40
 COMMERCIANTI_TOTALE = 60            # 16/11: tetto totale dei commercianti (sito_regole.Regole.commercianti_totale)
+CHAT_SUBITO_TETTO = 70              # 20/11: corsia chat di Subito (sito_regole.Regole.chat_subito)
 KM_SITO_DEFAULT = 150000
 VALUTAZIONI_ORE = 48
 VALUTAZIONI_VECCHIE_MAX = 0.25
@@ -228,7 +229,7 @@ def c_sotto_soglia(conn, ctx: dict) -> dict:
     soglia = _soglia_locale()
     sotto, senza, diverse, controllate = [], 0, 0, 0
     for r in sito:
-        if sezione_base(r.get("sezione")) not in ("affari", "inc", "diesel_extra"):   # economiche e supercar: soglie loro (T2)
+        if sezione_base(r.get("sezione")) not in ("affari", "inc", "diesel_extra", "chat_subito"):   # economiche e supercar: soglie loro (T2)
             continue
         controllate += 1
         if r.get("margine") is None:
@@ -284,6 +285,16 @@ def c_regole_cliente(conn, ctx: dict) -> dict:
     mob, fisso = _regex_telefono()
     fb = {r["listing_id"] for r in sito if "facebook" in str(r.get("fonte") or "").lower()}   # chat di Marketplace
     fb |= {r["listing_id"] for r in sito if str(r.get("sezione") or "").startswith("super")}  # 12/11: supercar esenti dal telefono
+    # 20/11: corsia chat di Subito (privati su Subito senza numero, si contattano con la chat): esenti dal telefono,
+    # ma con il loro controllo (tetto, solo Subito, solo privati)
+    chat = [r for r in sito if r.get("sezione") == "chat_subito"]
+    fb |= {r["listing_id"] for r in chat}
+    try:
+        from .web.sito_regole import Regole
+        chat_tetto = int(Regole.da_env().chat_subito)
+    except Exception:
+        chat_tetto = CHAT_SUBITO_TETTO
+    chat_male = sorted(r["listing_id"] for r in chat if str(r.get("fonte") or "") != "Subito" or r.get("commerciante"))
     loconte, senza_tel = [], []
     ids = _ids(sito)
     if ids:
@@ -295,8 +306,17 @@ def c_regole_cliente(conn, ctx: dict) -> dict:
             if t["id"] not in fb and not t.get("telefono_ok") and not (mob.search(testo) or fisso.search(testo)):
                 senza_tel.append(t["id"])
     num = {"roma": len(roma), "loconte": len(loconte), "oltre_km": len(km), "km_max": km_max,
-           "senza_telefono": len(senza_tel)}
+           "senza_telefono": len(senza_tel), "chat_subito": len(chat), "chat_subito_tetto": chat_tetto}
     al = []
+    if len(chat) > chat_tetto or chat_male:
+        pezzi = []
+        if len(chat) > chat_tetto:
+            pezzi.append(f"{len(chat)} auto nella corsia chat di Subito: il tetto è {chat_tetto}")
+        if chat_male:
+            pezzi.append(f"{len(chat_male)} auto nella corsia chat non di Subito o di commercianti. Esempi: "
+                         + ", ".join(map(str, chat_male[:ESEMPI])))
+        al.append(_allarme("regole:chat_subito", "; ".join(pezzi), n=len(chat), tetto=chat_tetto,
+                           esempi=chat_male[:ESEMPI]))
     for chiave, lista, testo in (("regole:roma", roma, "auto di Roma sul sito"),
                                  ("regole:loconte", loconte, f"auto di {', '.join(nomi) or '-'} sul sito"),
                                  ("regole:km", km, f"auto oltre {km_max:,} km sul sito".replace(",", ".")),
@@ -822,6 +842,7 @@ def _riga_istantanea(it: dict, soglia) -> tuple | None:
             s = None
     m = re.search(r"\((\w\w)\)\s*$", str(it.get("zona") or ""))
     sez = ("diesel_extra" if it.get("diesel_extra") else       # 13/11 sera: tetto separato (DIESEL_EXTRA)
+           "chat_subito" if it.get("chat_subito") else         # 20/11: corsia chat di Subito (tetto separato)
            "supercar" if it.get("supercar") else "eco" if it.get("economica") else
            "inc" if it.get("incidentata") else "trattare" if it.get("trattare") else "affari")   # 6/11: "Da trattare"
                                                                                                  # è sotto soglia per scelta
@@ -839,11 +860,11 @@ def _riga_istantanea(it: dict, soglia) -> tuple | None:
 
 
 def sezione_base(sez) -> str | None:
-    """'fascia' -> 'affari', 'fascia:inc' -> 'inc'; le altre come sono."""
+    """'fascia' -> 'affari', 'fascia:inc' -> 'inc', 'chat_subito' -> 'affari' (20/11); le altre come sono."""
     if sez is None:
         return None
     sez = str(sez)
-    if sez == "fascia":
+    if sez in ("fascia", "chat_subito"):
         return "affari"
     return sez.split(":", 1)[1] if sez.startswith("fascia:") else sez
 

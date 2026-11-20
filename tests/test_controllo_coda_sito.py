@@ -137,16 +137,21 @@ def test_coda_dal_sito_solo_le_auto_che_entrerebbero():
              auto(3, _r={"perizia": {"giudizio": "caro"}}),   # perizia "caro": la conferma è impossibile
              auto(4, M=10000),                                # sconto 2.000: già sul sito senza AI
              auto(5, prov="RE"),                              # fuori zona: nessuna chiamata pagata
-             auto(6, tel=False)]                              # senza numero: idem
-    out, fun = SR.elenco_sito([dict(it, _r=dict(it["_r"]), pv=dict(it["pv"])) for it in items], G, scrivi_log=False)
+             auto(6, tel=False),                              # senza numero su Subito (20/11: corsia chat): con lo
+             #                                                  sconto alto avrebbe l'avviso, la corsia non la tiene
+             auto(7, tel=False, fonte="AutoScout24")]         # senza numero non su Subito: fuori al passo telefono
+    # (come nel sito: la coda legge le STESSE auto passate dalle regole, con i segni interni)
+    items = [dict(it, _r=dict(it["_r"]), pv=dict(it["pv"])) for it in items]
+    out, fun = SR.elenco_sito(items, G, scrivi_log=False)
     assert {it["id"] for it in out} == {4}
-    assert set(fun.tolti["truffa"]) == {1, 2, 3}
+    assert set(fun.tolti["truffa"]) == {1, 2, 3, 6} and fun.tolti["telefono"] == [7]
     res = CA.coda_dal_sito(items, out, fun, G)
     assert CA.CODA_SITO["entra"] == [1]
     assert res["non_entrerebbe:margine_minimo"] == 1 and res["non_entrerebbe:perizia"] == 1
-    assert {5, 6} <= CA.CODA_SITO["fuori"] and 1 not in CA.CODA_SITO["fuori"] and CA.CODA_SITO["sul_sito"] == {4}
+    assert res["non_entrerebbe:chat_subito"] == 1 and res["chat_in_coda"] == 0
+    assert {5, 7} <= CA.CODA_SITO["fuori"] and 1 not in CA.CODA_SITO["fuori"] and CA.CODA_SITO["sul_sito"] == {4}
     assert CA.coda_sito_fresca() is not None
-    assert CA.CODA_SITO["inutili"] == {2, 3}                  # 18/11: anche confermate resterebbero fuori
+    assert CA.CODA_SITO["inutili"] == {2, 3, 6}               # 18/11: anche confermate resterebbero fuori
     assert "entra_gia_controllate" not in res
     CA.CODA_SITO["t"] = time.time() - 31 * 60                 # elenco vecchio: il giro fa come prima
     assert CA.coda_sito_fresca() is None

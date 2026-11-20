@@ -376,6 +376,9 @@
    "alto_euro": 3000,
    "alto_pct": 1.0,
    "anno_min": 2007,
+   "chat_auto_vera": 0.7,
+   "chat_pulita": 0.3,
+   "chat_subito": 70,
    "commercianti_max": 40,
    "commercianti_totale": 60,
    "diesel_anno_min": 2015,
@@ -495,6 +498,6 @@
    ]
   }
  },
- "impronta": "e9c08e5fde04",
+ "impronta": "22e83dce3775",
  "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default. 19/11 pomeriggio: idem con la regola mediana-1911b (solo regole.ValoreBase). 19/11 sera: idem con la regola mediana-1911c (solo regole.ValoreBase.sconti)."
 }

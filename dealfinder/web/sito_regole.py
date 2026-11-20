@@ -49,6 +49,20 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
                    foto non da internet, km credibili), numero presente, nessun avviso, versione non "solo nome".
                    Le migliori per margine/soglia, tetto separato N. Coda del controllo Claude: ai/controllo_auto (dz).
                    Nel SITO_FUNNEL "diesel_extra": {n, candidate, entrate}
+  chat_subito      (20/11 14:18, proprietario: "i migliori 70 di Subito" senza numero, contattabili con la chat di
+                   Subito) al massimo chat_subito (70; 0 = spento) auto di PRIVATI su Subito SENZA numero, nella zona
+                   vera (12 province entro 100 km da Milano, Ravenna, Torino; mai Roma, mai la fascia fuori zona).
+                   Al passo telefono non escono (segno interno _chat) e passano tutte le altre regole come le auto col
+                   numero, anche i controlli dello sconto alto. Alla fine (dopo diesel_extra) restano solo: margine ≥
+                   soglia, nessun avviso (da trattare, truffa, perizia, stime di ripiego, sconto alto confermato,
+                   versione solo nome), controllo Claude pulito allo stesso prezzo (danni/truffa/guasto < 0,3,
+                   auto_vera ≥ 0,7, dati coerenti, foto viste e non da internet, km credibili), nessun danno/difetto,
+                   perizia non "caro"/"da verificare". Le migliori per margine/soglia. Supercar, economiche,
+                   incidentate, Facebook, AutoScout24 e commercianti: come prima. Tetto separato: i 40/60 dei
+                   commercianti non cambiano. Senza controllo Claude: in coda (ai/controllo_auto.coda_dal_sito).
+                   Interruttori senza deploy: automatismi chat_subito (spegne) e chat_subito_max (abbassa il numero).
+                   Nel SITO_FUNNEL "chat_subito": {n, candidate, per_bene, entrate, attesa_ai}; motivi del passo:
+                   oltre_70, senza_controllo_ai, controllo_non_pulito, con_avviso
 """
 from __future__ import annotations
 
@@ -248,6 +262,12 @@ class Regole:
     diesel_km_max: int = 150000
     diesel_pulita: float = 0.30       # danni nelle foto, truffa e guasto letti dall'AI sotto questo valore
     diesel_auto_vera: float = 0.7     # controllo Claude: annuncio vero e coerente almeno a questo valore
+    # 20/11 14:18 (proprietario: "i migliori 70 di Subito" senza numero, contattabili con la chat di Subito): corsia
+    # separata dentro i privati. Niente in da_env e nessuna variabile su Render: si spegne o si abbassa senza deploy con
+    # gli interruttori chat_subito / chat_subito_max (dealfinder/automatismi.py, letti in web/app._calcola_elenco)
+    chat_subito: int = 70             # 0 = spento (comportamento di prima: senza numero fuori)
+    chat_pulita: float = 0.30         # danni nelle foto, truffa e guasto letti dall'AI sotto questo valore
+    chat_auto_vera: float = 0.7       # controllo Claude: annuncio vero e coerente almeno a questo valore
 
     @classmethod
     def da_env(cls) -> "Regole":
@@ -354,7 +374,25 @@ def r_telefono(it, g):
         return None             # 4/11 pom.: super in tutta Europa, si contattano dall'annuncio
     if it.get("fonte") == "Facebook Marketplace":
         return None if g.fb_sito else "facebook_spento"
-    return None if _r(it).get("tel") else "senza_numero"
+    if _r(it).get("tel"):
+        return None
+    if g.chat_subito > 0 and chat_candidata(it, g):
+        it["_chat"] = True      # 20/11: corsia chat di Subito; decide alla fine tetto_chat_subito (le migliori N)
+        return None
+    return "senza_numero"
+
+
+def chat_candidata(it, g) -> bool:
+    """20/11 (corsia chat di Subito): auto di un PRIVATO su Subito senza numero, nella zona vera del sito (12 province
+    entro 100 km da Milano, zona di Ravenna, Torino: niente fascia fuori zona, mai Roma). Supercar, economiche e
+    incidentate hanno le loro regole e restano come prima. Facebook e AutoScout24 mai (non hanno questa chat)."""
+    r = _r(it)
+    if it.get("fonte") != "Subito" or r.get("seller_type") != "privato":
+        return False
+    if it.get("supercar") or it.get("economica") or it.get("incidentata"):
+        return False
+    p = r.get("provincia")
+    return p in PROVINCE_100KM or p in RAVENNA or p in TORINO
 
 
 def r_no_roma(it, g):
@@ -447,13 +485,25 @@ def diesel_per_bene(it, g: Regole) -> bool:
         return False
     if r.get("provincia") not in PROVINCE_100KM:      # Milano e dintorni: nessuna zona nuova
         return False
+    if not _claude_pulito(it, g.diesel_pulita, g.diesel_auto_vera):
+        return False
+    if (r.get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
+        return False
+    return True
+
+
+def _claude_pulito(it, pulita: float, vera: float) -> bool:
+    """Controllo Claude "pulito" (20/11: tolto com'era da diesel_per_bene, serve anche alla corsia chat di Subito):
+    decisione letta, non "scarta", annuncio vero (auto_vera ≥ vera), dati coerenti, foto viste e non da internet, km
+    credibili, danni/truffa/guasto sotto `pulita`."""
+    r = _r(it)
     j = r.get("jev")
     if not j or r.get("jev_errore") or j.get("decisione") == "scarta":
         return False
     # giudice M2: solo il controllo Claude (domanda non circolare, foto viste), annuncio vero e dati coerenti
     if j.get("fonte") != "claude":
         return False
-    if j.get("auto_vera") is None or float(j["auto_vera"]) < g.diesel_auto_vera:
+    if j.get("auto_vera") is None or float(j["auto_vera"]) < vera:
         return False
     if j.get("dati_coerenti") is None or float(j["dati_coerenti"]) < 0.5:
         return False
@@ -462,13 +512,27 @@ def diesel_per_bene(it, g: Regole) -> bool:
     if j.get("km_ok") is not None and float(j["km_ok"]) < 0.5:
         return False
     for k in ("danni", "truffa"):                   # foto viste e nessun segno: senza valore non si può confermare
-        if j.get(k) is None or float(j[k]) >= g.diesel_pulita:
+        if j.get(k) is None or float(j[k]) >= pulita:
             return False
-    if float(j.get("guasto") or 0) >= g.diesel_pulita:
-        return False
-    if (r.get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
+    if float(j.get("guasto") or 0) >= pulita:
         return False
     return True
+
+
+def chat_per_bene(it, g: Regole) -> str | None:
+    """Corsia chat di Subito: None se il controllo Claude c'è ed è pulito. "senza_controllo_ai": manca una decisione
+    Claude valida allo stesso prezzo (l'auto va in coda al controllo, ai/controllo_auto.coda_dal_sito);
+    "controllo_non_pulito": il controllo non è pulito, danno dichiarato, difetto letto dall'AI, perizia "caro" o
+    "da verificare"."""
+    r = _r(it)
+    j = r.get("jev")
+    if not j or r.get("jev_errore") or j.get("fonte") != "claude" or j.get("stesso_prezzo") is False:
+        return "senza_controllo_ai"
+    if not _claude_pulito(it, g.chat_pulita, g.chat_auto_vera) or r.get("danno_dichiarato") or r.get("difetto"):
+        return "controllo_non_pulito"
+    if (r.get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
+        return "controllo_non_pulito"
+    return None
 
 
 def r_venditore(it, g):
@@ -745,7 +809,9 @@ def esito_truffa(it, g: Regole) -> tuple[str, str]:
     if not con_numero:
         if p >= g.truffa_avviso - meno:
             return "fuori", "truffa_senza_numero"
-        return "tieni", ""
+        if not it.get("_chat"):
+            return "tieni", ""                      # supercar (e Facebook con FB_SITO): come prima
+        # 20/11 (corsia chat di Subito): un'auto normale senza numero prosegue nei controlli dello sconto alto
     if p >= g.truffa_fuori - meno:
         return "fuori", "truffa_probabile"
     controllo = sconto_da_controllare(it, g)
@@ -896,6 +962,46 @@ def tetto_diesel_extra(items: list[dict], g: Regole) -> tuple[list[dict], set]:
     return [it for it in items if it.get("id") not in via], via
 
 
+def tetto_chat_subito(items: list[dict], g: Regole) -> tuple[list[dict], set, dict]:
+    """20/11 (proprietario: "i migliori 70 di Subito" senza numero, con la chat di Subito): tetto separato dentro i
+    privati. Dopo tutte le regole restano solo le auto della corsia (_chat) con margine ≥ soglia, senza alcun avviso
+    ("Da trattare", truffa, perizia, stime di ripiego, sconto alto, versione solo nome) e con il controllo Claude
+    pulito (chat_per_bene); le migliori per margine/soglia fino a g.chat_subito. Ritorna (auto, id tolti, motivi).
+    Le auto senza avvisi a cui manca solo il controllo Claude si segnano _chat_attesa (coda del controllo). Chi ha un
+    avviso non entrerebbe nemmeno col controllo: si guarda prima, così non va in coda."""
+    from collections import Counter
+    motivi: Counter = Counter()
+
+    def senza_avvisi(it):
+        m, p = margine(it), int(it.get("prezzo") or 0)
+        return (m is not None and p > 0 and m >= scovo.soglia(p) and not it.get("trattare")
+                and not it.get("avviso_verifica") and not it.get("perizia_verifica")
+                and not it.get("ripiego_prudente") and not it.get("stima_ripiego")
+                and not it.get("sconto_confermato_ai") and not it.get("versione_solo_nome")
+                # sconto alto: col controllo Claude o esce o entra con l'avviso; mai nella corsia (né in coda per lei)
+                and not sconto_da_controllare(it, g))
+    chat = [it for it in items if it.get("_chat")]
+    buone = []
+    for it in chat:
+        m = "con_avviso" if not senza_avvisi(it) else chat_per_bene(it, g)
+        if m == "senza_controllo_ai" and not _r(it).get("jev_errore"):
+            it["_chat_attesa"] = True
+        if m:
+            motivi[m] += 1
+        else:
+            buone.append(it)
+    buone.sort(key=lambda it: (-(margine(it) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))), it.get("id") or 0))
+    tenute = buone[:max(0, g.chat_subito)]
+    if len(buone) > len(tenute):
+        motivi["oltre_%d" % g.chat_subito] = len(buone) - len(tenute)
+    ids = set()
+    for it in tenute:
+        it["chat_subito"] = True
+        ids.add(it["id"])
+    via = {it["id"] for it in chat if it["id"] not in ids}
+    return [it for it in items if it.get("id") not in via], via, dict(motivi, _per_bene=len(buone))
+
+
 def tetto_commercianti(items: list[dict], g: Regole) -> tuple[list[dict], set]:
     lontani = sorted((it for it in items if it.get("_tipo") == "comm_lontano"),
                      key=lambda it: (-int(margine(it) or 0), it.get("id") or 0))
@@ -923,6 +1029,7 @@ class Funnel:
     passi: list = field(default_factory=list)
     perizia_ombra: dict | None = None
     diesel_extra: dict = field(default_factory=dict)   # {n, candidate, entrate}
+    chat_subito: dict = field(default_factory=dict)    # 20/11: {n, candidate, per_bene, entrate, attesa_ai}
     tolti: dict = field(default_factory=dict)       # passo -> ids tolti
 
     def passo(self, nome, prima, dopo, motivi=None):
@@ -975,6 +1082,9 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         it.pop("stima_ripiego", None)
         it.pop("diesel_extra", None)
         it.pop("_diesel_fuori", None)
+        it.pop("_chat", None)
+        it.pop("_chat_attesa", None)
+        it.pop("chat_subito", None)
     tutte = items
     for nome, f in REGOLE:
         items = _applica(items, nome, f, g, fun)
@@ -1017,7 +1127,14 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         items, via = tetto_diesel_extra(items, g)
         fun.passo("diesel_extra", prima, items, {"oltre_%d_o_con_avviso" % g.diesel_extra: len(via)} if via else None)
         fun.tolti["diesel_extra"] = sorted(via)
-    if g.commercianti_totale > 0:                  # 16/11: tetto TOTALE dei commercianti, dopo i tetti di ogni tipo
+    chat_per_bene_n = 0
+    if g.chat_subito > 0:                          # 20/11: corsia chat di Subito, tetto separato dentro i privati
+        prima = items
+        items, via, mot = tetto_chat_subito(items, g)
+        chat_per_bene_n = mot.pop("_per_bene", 0)
+        fun.passo("chat_subito", prima, items, mot or None)
+        fun.tolti["chat_subito"] = sorted(via)
+    if g.commercianti_totale > 0:                 # 16/11: tetto TOTALE dei commercianti, dopo i tetti di ogni tipo
         prima = items
         items, via = tetto_commercianti_totale(items, g)
         fun.passo("tetto_commercianti_totale", prima, items,
@@ -1040,6 +1157,11 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
             it["avviso_verifica"] = True
     fun.diesel_extra = {"n": g.diesel_extra, "candidate": sum(1 for it in tutte if it.get("_diesel_fuori")),
                         "entrate": sum(1 for it in items if it.get("diesel_extra"))}
+    if g.chat_subito > 0:                          # spenta: nessuna chiave in più (SITO_FUNNEL come prima)
+        fun.chat_subito = {"n": g.chat_subito, "candidate": sum(1 for it in tutte if it.get("_chat")),
+                           "per_bene": chat_per_bene_n,
+                           "entrate": sum(1 for it in items if it.get("chat_subito")),
+                           "attesa_ai": sum(1 for it in tutte if it.get("_chat_attesa"))}
     if scrivi_log:
         log.warning("SITO_FUNNEL %s", json.dumps({"regole": g.impronta(), "finale": len(items),
                                                   "fascia_finale": sum(1 for it in items if fascia(it)),
@@ -1055,6 +1177,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                                "ripiego_prudente": sum(1 for it in items if it.get("ripiego_prudente")),
                                                                "stima_ripiego": sum(1 for it in items if it.get("stima_ripiego"))},
                                                   "diesel_extra": fun.diesel_extra,
+                                                  **({"chat_subito": fun.chat_subito} if fun.chat_subito else {}),
                                                   "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},
                                                   "passi": fun.passi}, ensure_ascii=False, default=str))

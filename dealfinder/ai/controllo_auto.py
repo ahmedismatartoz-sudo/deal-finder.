@@ -473,6 +473,7 @@ WHERE d.listing_id IS NULL OR d.prezzo <> l.price_eur OR d.risposta->'guasto' IS
    OR (""" + _SENZA_FOTO + """ AND d.computed_at < now() - interval '""" + str(ORE_RIPROVA_FOTO) + """ hours'
        AND """ + _TENTATIVI_FOTO + """ < """ + str(MAX_TENTATIVI_FOTO) + """)
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id IN (SELECT id FROM dz))
+   OR (COALESCE(d.fonte, 'jev') <> 'claude' AND c.id = ANY(%(chat_ids)s::bigint[]))
    OR (COALESCE(d.fonte, 'jev') <> 'claude' AND d.prezzo = l.price_eur AND l.price_eur < %(sa_supercar)s
        AND btrim(split_part(COALESCE(l.stage_reason, ''), '|', 1)) <> 'incidentata'
        AND NULLIF(vp.riassunto->>'M', '')::numeric - l.price_eur > %(sa_min)s
@@ -704,10 +705,16 @@ def budget_usd() -> float:
 
 
 def parametri_diesel() -> dict:
-    """Parametri della coda dei diesel in più (dz in CAND_SQL), dalle stesse regole del sito."""
+    """Parametri della coda dei diesel in più (dz in CAND_SQL), dalle stesse regole del sito.
+    20/11: anche chat_ids, le auto della corsia chat di Subito a cui manca solo il controllo Claude (dall'ultimo elenco
+    del sito, coda_dal_sito: per loro una decisione di Jev non basta). Senza coda fresca: lista vuota, come prima."""
     from ..web import sito_regole as SR
     g = SR.Regole.da_env()
-    return {"dz_attivo": g.diesel_extra > 0, "dz_prov": sorted(SR.PROVINCE_100KM), "dz_anno": g.diesel_anno_min,
+    try:
+        chat_ids = [int(i) for i in ((coda_sito_fresca() or {}).get("chat") or [])]
+    except Exception:
+        chat_ids = []
+    return {"chat_ids": chat_ids, "dz_attivo": g.diesel_extra > 0, "dz_prov": sorted(SR.PROVINCE_100KM), "dz_anno": g.diesel_anno_min,
             "dz_km": g.diesel_km_max,
             # 14/11 sera: sconto alto fermo con la sola decisione Jev (sconto_fermo); il limite esatto è in Python
             "sa_min": min(e for _f, e in g.sconto_euro), "sa_pulita": g.ai_pulita, "sa_supercar": SA_SUPERCAR}
@@ -749,6 +756,11 @@ def _non_entrerebbe(it: dict, g, comm: list, lont: list) -> str | None:
     from ..web import sito_regole as SR
     if (SR._r(it).get("perizia") or {}).get("giudizio") in ("caro", "da verificare"):
         return "perizia"
+    if it.get("_chat"):
+        # 20/11: corsia chat di Subito (senza numero): con lo sconto alto confermato avrebbe l'avviso "Verificare prima
+        # di pagare" e la corsia tiene solo auto senza avvisi: non entrerebbe, nessuna chiamata pagata (come prima,
+        # quando usciva al passo telefono)
+        return "chat_subito"
     x = dict(it, pv=dict(it["pv"]) if isinstance(it.get("pv"), dict) else it.get("pv"))
     x.pop("trattare", None)
     if SR.r_margine_minimo(x, g):
@@ -876,7 +888,7 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             # 18/11: anche confermate resterebbero fuori: nessuna chiamata pagata. Il tetto dei commercianti tiene i
             # MIGLIORI per margine: un'auto che con la conferma prenderebbe il posto di una più debole NON è inutile
             # (resta fuori dalla priorità "entra" come prima, ma il giro normale la controlla). Un errore non la esclude.
-            if isinstance(it.get("id"), int) and (m in ("perizia", "margine_minimo") or (
+            if isinstance(it.get("id"), int) and (m in ("perizia", "margine_minimo", "chat_subito") or (
                     m == "tetto_commercianti" and _sotto_al_tetto(it, g, comm, lont))):
                 inutili.add(it["id"])
             elif m == "tetto_commercianti" and isinstance(it.get("id"), int) and tutte_attivo:
@@ -896,6 +908,23 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     if dopo:
         motivi["entra_dopo_tetto_commercianti"] = len(dopo)
         entra = entra + dopo
+    # 20/11 (corsia chat di Subito): dopo le auto con sconto alto, le auto della corsia a cui manca solo il controllo
+    # Claude (_chat_attesa: senza avvisi, margine sopra il minimo), le migliori prima, al massimo 2 volte il tetto
+    chat: list = []
+    if getattr(g, "chat_subito", 0) > 0:
+        gia_in = {it.get("id") for it in entra}
+        for it in items:
+            if not it.get("_chat_attesa") or not isinstance(it.get("id"), int) or it["id"] in gia_in:
+                continue
+            try:
+                if gia_controllata(it):
+                    continue                       # decisione Claude allo stesso prezzo con le foto: non si rifà
+            except Exception:
+                continue
+            chat.append(it)
+        chat.sort(key=lambda it: priorita_sito(it, SR, scovo))
+        chat = chat[:2 * int(g.chat_subito)]
+        entra = entra + chat
     fuori: set = set()
     for nome in PASSI_SENZA_AI:
         fuori.update(i for i in ((fun.tolti or {}).get(nome) or []) if isinstance(i, int))
@@ -907,9 +936,10 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
             if info.get("sito"):
                 mis["entrate_sito"].add(lid)
     CODA_SITO.update(t=time.time(), entra=[it["id"] for it in entra], fuori=fuori, sul_sito=dentro,
-                     motivi=dict(motivi), inutili=inutili, gia_controllate=gia,
+                     motivi=dict(motivi), inutili=inutili, gia_controllate=gia, chat=[it["id"] for it in chat],
                      sconto_alto=sa_tutte, sconto_alto_gia=sa_gia, sconto_alto_fuori=sa_fuori)
     res = {"entra": len(entra), "fuori_per_altro": len(fuori), **dict(motivi),
+           **({"chat_in_coda": len(chat)} if getattr(g, "chat_subito", 0) > 0 else {}),
            "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),
            "usd_oggi_processo": round(mis["usd"], 4), "usd_sito_oggi_processo": round(mis["usd_sito"], 4)}
     if time.time() - CODA_SITO.get("log_t", 0) > 600:          # una riga ogni 10 minuti (l'elenco gira ogni 90 s)

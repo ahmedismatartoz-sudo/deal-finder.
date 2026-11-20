@@ -1802,6 +1802,8 @@ body.scrolled .minibar{transform:none;visibility:visible;transition:transform va
 .k5-sg::before{content:"·";margin:0 6px;color:var(--muted);font-weight:400}
 .k5-sg.warn{color:var(--warn)}
 .k5-sg.seen{color:var(--link)}
+.k5-sg.chat{color:var(--link)}
+.d-body .dock-note.chat-note{margin-top:4px;color:var(--link)}
 .k5-soldi{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:4px 12px;min-width:0}
 .k5-p,.k5-g{display:flex;flex-direction:column;min-width:0}
 .k5-g{align-items:flex-end;text-align:right;margin-left:auto}
