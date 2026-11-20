@@ -962,6 +962,21 @@ def tetto_diesel_extra(items: list[dict], g: Regole) -> tuple[list[dict], set]:
     return [it for it in items if it.get("id") not in via], via
 
 
+def senza_numero_da_leggere(items: list, out: list, fun) -> list:
+    """Id delle auto a cui manca solo il numero letto: tolte al passo telefono, tolte dal tetto della corsia chat e
+    (20/11, revisore 2) le auto della corsia tolte a un passo successivo (es. truffa con sconto alto da controllare),
+    che prima uscivano al passo telefono e finivano comunque nella lista dei numeri da leggere."""
+    dentro = {it.get("id") for it in out}
+    ids = list(fun.tolti.get("telefono", [])) + list(fun.tolti.get("chat_subito", []))
+    visti = set(ids)
+    for it in items:
+        i = it.get("id")
+        if it.get("_chat") and i not in dentro and i not in visti:
+            ids.append(i)
+            visti.add(i)
+    return ids
+
+
 def tetto_chat_subito(items: list[dict], g: Regole) -> tuple[list[dict], set, dict]:
     """20/11 (proprietario: "i migliori 70 di Subito" senza numero, con la chat di Subito): tetto separato dentro i
     privati. Dopo tutte le regole restano solo le auto della corsia (_chat) con margine ≥ soglia, senza alcun avviso

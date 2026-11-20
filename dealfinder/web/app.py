@@ -1858,7 +1858,7 @@ def _tetto_chat_subito(g) -> int:
             return 0
         return max(0, min(int(g.chat_subito), int(automatismi.numero("chat_subito_max", g.chat_subito))))
     except Exception:
-        return int(g.chat_subito)
+        return 0      # 20/11 revisore 1: su errore corsia spenta, non tetto pieno
 
 
 def _calcola_elenco() -> None:
@@ -1881,7 +1881,7 @@ def _calcola_elenco() -> None:
     out, fun = SR.elenco_sito(items, g=_g, caricamento=stats)
     # auto tolte solo perché il numero non è mai stato letto: le ricontrolla il lavoro telefoni_candidate
     # 20/11: anche le auto della corsia chat di Subito rimaste fuori dal loro tetto (col numero letto entrerebbero)
-    _senza_numero = list(fun.tolti.get("telefono", [])) + list(fun.tolti.get("chat_subito", []))
+    _senza_numero = SR.senza_numero_da_leggere(items, out, fun)
     _tel_da_controllare.update(i for i in _senza_numero if fonte.get(i) in ("AutoScout24", "Subito"))
     try:      # 13/11 (piu-auto): le tolte solo per il numero con margine già sopra il minimo, prima delle altre
         from ..pipeline import telefono_nascosto as _tn

@@ -505,3 +505,17 @@ def test_scheda_bottone_chat_e_link_invariato():
     assert 'apRiga("Contatto", "Solo chat di Subito", "info")' in js and '{t: "Chat Subito", cls: "chat"}' in js
     assert js.count("/api/affari/${c.id}/vai") == 1 and "Parla col venditore" in js      # il link resta /vai
     assert ".k5-sg.chat" in open(os.path.join(base, "app.css"), encoding="utf-8").read()
+
+
+def test_sconto_alto_senza_numero_resta_nei_numeri_da_leggere():
+    """Revisore 2 (20/11): un'auto della corsia tolta al passo truffa (sconto alto da controllare) deve restare nella
+    lista dei numeri da leggere, come prima della corsia."""
+    items = copie([auto(1, M=12500, jev=None), auto(2), auto(3, M=12500, jev=None, fonte="AutoScout24")])
+    out, fun = SR.elenco_sito(items, G, scrivi_log=False)
+    sn = SR.senza_numero_da_leggere(items, out, fun)
+    assert 1 in sn and 2 not in sn and len(sn) == len(set(sn))
+    assert 2 in {it["id"] for it in out}
+    # corsia spenta: stessa lista di prima (passo telefono)
+    items = copie([auto(1, M=12500, jev=None)])
+    out, fun = SR.elenco_sito(items, SPENTA, scrivi_log=False)
+    assert SR.senza_numero_da_leggere(items, out, fun) == list(fun.tolti.get("telefono", [])) == [1]
