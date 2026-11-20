@@ -29,10 +29,20 @@ vendute, divisa per fascia di prezzo, età e venditore della venduta ("prudente|
 commercianti/vendute (D/V) dove ci sono entrambe e il rapporto 40° percentile/mediana, per fascia ed età; le auto
 buone tra i privati col valore prudente ("buone_prudente"). Lancio: base_vendute:<etichetta nuova>.
 19/11 pomeriggio (regola mediana-1911b, base_vendute:1911b): anche per fascia della STIMA del 18/11
-("prudente|fascia_stima:...", la fascia che usa lo sconto) e per età × fascia della stima ("prudente|eta_fascia:...")."""
+("prudente|fascia_stima:...", la fascia che usa lo sconto) e per età × fascia della stima ("prudente|eta_fascia:...").
+20/11 (proprietario: recuperare i dati insufficienti "in qualche modo", MA "non gonfiare i prezzi"), B1 = SOLA MISURA
+della stima di ripiego (valore_base.stima_ripiego, prove di valore_base.RIPIEGO_PROVE: unione, largo, largo4):
+- sulle vendute che il valore prudente NON stima: "ripiego|<prova>", "ripiego|<prova>|fascia_stima:<fascia>" (fascia
+  del valore grezzo del ripiego, la stessa delle coppie livello/fascia da attivare), "ripiego|<prova>|eta:<fascia>",
+  SENZA sconto extra;
+- tra i privati attivi senza valore prudente: conteggi "ripiego_stimate:<prova>:<fascia>" e
+  "ripiego_buone:<prova>:<fascia>" (margine ≥ soglia e ≤ 40% del valore: quante entrerebbero).
+Finestra delle vendute misurate dall'etichetta: "...g60" = ultimi 60 giorni (default 30, massimo VENDUTE_GIORNI);
+nel risultato "finestra_giorni". Lancio: base_vendute:rip30 poi base_vendute:rip60g60."""
 from __future__ import annotations
 
 import logging
+import re
 import statistics
 import time
 from collections import Counter, defaultdict
@@ -166,7 +176,47 @@ def _rapporti(r: dict) -> dict:
     return out
 
 
-def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None = None) -> None:
+def finestra(spec: str = "") -> int:
+    """Giorni delle vendute misurate, dall'etichetta del lancio: "base_vendute:rip60g60" = 60; senza "g<numero>" in
+    fondo = PRECISIONE_GIORNI (30). Tra 1 e VENDUTE_GIORNI (le vendute più vecchie non sono nella base)."""
+    etichetta = str(spec or "").rsplit(":", 1)[-1].strip().lower()
+    m = re.search(r"(?:^|[\d_\-])g(\d{1,3})$", etichetta)
+    if not m:
+        return PRECISIONE_GIORNI
+    return max(1, min(VENDUTE_GIORNI, int(m.group(1))))
+
+
+def _ripiego_venduta(VB, D: list, V: list, v: dict, vb, vero: float, st: dict, prec: dict) -> None:
+    """20/11 (B1, sola misura): venduta SENZA valore prudente, stimata con ogni prova di ripiego (esclusa l'auto
+    stessa), senza sconto extra."""
+    st["ripiego_vendute_provate"] += 1
+    for prova in VB.RIPIEGO_PROVE:
+        rr = VB.stima_ripiego(D, V, v, vb, escludi=v, solo=(prova,))
+        if not rr["valore"]:
+            continue
+        coppia = (rr["valore"], vero)
+        prec["ripiego|" + prova].append(coppia)
+        prec["ripiego|" + prova + "|fascia_stima:" + rr["fascia"]].append(coppia)
+        prec["ripiego|" + prova + "|eta:" + fascia_eta(v["year"])].append(coppia)
+
+
+def _ripiego_privato(VB, D: list, V: list, t: dict, vb, prezzo: int, sg: int, st: dict) -> None:
+    """20/11 (B1, sola misura): privato attivo SENZA valore prudente; quante avrebbero una stima di ripiego e quante
+    sarebbero buone (margine ≥ soglia e non oltre RIPIEGO_MARGINE_MAX del valore), per prova e fascia della stima."""
+    st["privati_senza_stima_prudente"] += 1
+    for prova in VB.RIPIEGO_PROVE:
+        rr = VB.stima_ripiego(D, V, t, vb, solo=(prova,))
+        if not rr["valore"]:
+            continue
+        k = prova + ":" + rr["fascia"]
+        st["ripiego_stimate:" + k] += 1
+        m = rr["valore"] - prezzo
+        if sg <= m <= VB.RIPIEGO_MARGINE_MAX * rr["valore"]:
+            st["ripiego_buone:" + k] += 1
+
+
+def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None = None,
+            giorni: int = PRECISIONE_GIORNI) -> None:
     from .. import regole as RG
     from ..web.scovo import soglia
     from . import valore_base as VB
@@ -177,7 +227,7 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None =
          and (r["giorni_visto"] or 99) <= FRESCHI_GIORNI]
     V = [r for r in pulite if r["status"] == "scomparso" and (r["giorni_online"] or 0) >= MIN_GIORNI_ONLINE]
     for v in V:                                   # 1. precisione sulle vendute recenti
-        if (v["giorni_sparita"] or 99) > PRECISIONE_GIORNI or v["year"] < ANNO_MIN or v["mileage_km"] > KM_MAX:
+        if (v["giorni_sparita"] or 99) > giorni or v["year"] < ANNO_MIN or v["mileage_km"] > KM_MAX:
             continue
         vero = float(v["price_eur"])
         d, _ = stima(D, v)
@@ -198,6 +248,8 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None =
         ss, _ = stima(V, v, escludi=v, n_min=N_MIN_SITO)
         # 19/11: valore prudente sulle stesse vendute (prima/dopo per fascia, età e venditore della venduta)
         sp = VB.stima_prudente(D, V, v, vb, escludi=v)
+        if not sp["valore"]:
+            _ripiego_venduta(VB, D, V, v, vb, vero, st, prec)
         chiavi = ("fascia:" + fascia(vero), "eta:" + fascia_eta(v["year"]),
                   "venduta_da:" + ("commerciante" if v["seller_type"] == "commerciante" else "privato"))
         if ds or ss:
@@ -239,12 +291,14 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None =
         d, nd = stima(D, t)
         s, nv = stima(V, t)
         r = d or s
+        prezzo = int(t["price_eur"])
+        sp = VB.stima_prudente(D, V, t, vb)
+        if not sp["valore"]:
+            _ripiego_privato(VB, D, V, t, vb, prezzo, soglia(prezzo), st)
         if not r:
             st["senza_stima"] += 1
             continue
         st["con_stima_D" if d else "con_stima_solo_V"] += 1
-        prezzo = int(t["price_eur"])
-        sp = VB.stima_prudente(D, V, t, vb)
         if sp["valore"]:
             mp = sp["valore"] - prezzo
             if mp >= soglia(prezzo) and mp <= 0.55 * sp["valore"]:
@@ -269,12 +323,15 @@ def _gruppo(righe: list, st: dict, prec: dict, esempi: list, rapp: dict | None =
 
 
 def lavoro(spec: str = "") -> dict:
+    """spec = "base_vendute:<etichetta>": l'etichetta che finisce con g<numero> misura le vendute di quei giorni."""
     import psycopg
     from psycopg.rows import dict_row
 
     from ..config import settings
     from ..web.sito_regole import PROVINCE_100KM
+    from . import valore_base as VB
     t0 = time.time()
+    giorni = finestra(spec)
     st: Counter = Counter()
     prec: dict = defaultdict(list)
     rapp: dict = defaultdict(list)
@@ -290,7 +347,7 @@ def lavoro(spec: str = "") -> dict:
             for r in cur:
                 k = (r["make"].lower(), r["model"].lower(), r["fuel"])
                 if k != chiave and righe:
-                    _gruppo(righe, st, prec, esempi, rapp)
+                    _gruppo(righe, st, prec, esempi, rapp, giorni)
                     st["gruppi"] += 1
                     righe = []
                     time.sleep(PAUSA_S)
@@ -301,10 +358,12 @@ def lavoro(spec: str = "") -> dict:
                 st["righe"] += 1
                 righe.append(r)
             if righe and not fermata:
-                _gruppo(righe, st, prec, esempi, rapp)
+                _gruppo(righe, st, prec, esempi, rapp, giorni)
                 st["gruppi"] += 1
     esempi.sort(key=lambda e: -e["margine"])
     return {"fermata": fermata, "secondi": round(time.time() - t0), "province": sorted(PROVINCE_100KM),
+            "finestra_giorni": giorni, "regola_ripiego": VB.REGOLA_RIPIEGO,
+            # il nome della chiave resta quello di sempre: le vendute misurate sono quelle di "finestra_giorni"
             "precisione_vendute_30g": {k: _err(v) for k, v in sorted(prec.items())},
             "rapporti": _rapporti(rapp),
             "riferimento_calcolo_attuale": {"errore_mediano_pct": 10.7, "errore_medio_pct": 17.2,
