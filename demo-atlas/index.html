@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Atlas Automobili — Auto usate a Caravaggio (BG)</title>
+<meta name="description" content="Atlas Automobili, Caravaggio (BG): auto usate selezionate, diesel, benzina, GPL, metano e ibride. Via Zenale e Butinone 15.">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js"}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--blu:#0a3dff;--blu2:#0026a8;--notte:#06123a;--cielo:#eaf0ff;--testo:#0b1533;--grigio:#5b6685;--bianco:#fff;--bordo:#dbe3fb}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Manrope,system-ui,sans-serif;color:var(--testo);background:var(--bianco);overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.proto{background:var(--notte);color:#cfe0ff;font-size:12px;text-align:center;padding:6px 16px}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--bordo)}
+.nav{max-width:1180px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:20px;letter-spacing:.06em}
+.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blu),#5b8cff);display:grid;place-items:center;color:#fff;font-style:normal}
+.nav nav{display:flex;gap:26px;font-weight:600;font-size:14px}
+.nav nav a:hover{color:var(--blu)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--blu);color:#fff;padding:13px 22px;border-radius:999px;font-weight:700;font-size:15px;transition:.25s;border:0;cursor:pointer}
+.btn:hover{background:var(--blu2);transform:translateY(-2px);box-shadow:0 12px 30px rgba(10,61,255,.3)}
+.btn.ghost{background:#fff;color:var(--blu);border:2px solid var(--blu)}
+.hero{position:relative;height:calc(100vh - 90px);min-height:620px;background:radial-gradient(120% 90% at 70% 40%,#ffffff 0%,var(--cielo) 55%,#cfdcff 100%);overflow:hidden}
+#scena{position:absolute;inset:0;width:100%;height:100%}
+.hero .testo{position:relative;z-index:2;max-width:1180px;margin:auto;padding:12vh 20px 0;pointer-events:none}
+.hero .testo>*{pointer-events:auto}
+.tag{display:inline-block;background:#fff;border:1px solid var(--bordo);color:var(--blu);font-weight:700;font-size:13px;padding:7px 14px;border-radius:999px;margin-bottom:22px}
+h1{font-family:'Space Grotesk';font-size:clamp(40px,6.4vw,84px);line-height:.98;letter-spacing:-.03em;max-width:640px}
+h1 span{color:var(--blu)}
+.hero p{margin:22px 0 30px;font-size:18px;color:var(--grigio);max-width:470px;line-height:1.55}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.numeri{position:absolute;z-index:2;bottom:34px;left:50%;transform:translateX(-50%);display:flex;gap:14px;flex-wrap:wrap;justify-content:center;width:calc(100% - 32px);max-width:1140px}
+.numeri div{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1px solid var(--bordo);border-radius:18px;padding:14px 22px;min-width:160px}
+.numeri b{display:block;font-family:'Space Grotesk';font-size:28px;color:var(--blu)}
+.numeri small{color:var(--grigio);font-size:13px}
+section{max-width:1180px;margin:auto;padding:100px 20px}
+h2{font-family:'Space Grotesk';font-size:clamp(30px,4vw,48px);letter-spacing:-.02em;margin-bottom:14px}
+.sotto{color:var(--grigio);font-size:17px;max-width:620px;line-height:1.6;margin-bottom:44px}
+.filtri{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+.filtri button{border:1px solid var(--bordo);background:#fff;padding:9px 16px;border-radius:999px;font:600 14px Manrope;cursor:pointer;color:var(--testo)}
+.filtri button.on{background:var(--blu);color:#fff;border-color:var(--blu)}
+.griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.auto{border:1px solid var(--bordo);border-radius:22px;overflow:hidden;background:#fff;transition:.3s;opacity:0;transform:translateY(30px)}
+.auto.vis{opacity:1;transform:none}
+.auto:hover{transform:translateY(-6px);box-shadow:0 22px 50px rgba(6,18,58,.12)}
+.auto .img{height:150px;background:linear-gradient(135deg,#f3f6ff,#dfe7ff);display:grid;place-items:center;position:relative}
+.auto .img svg{width:76%}
+.auto .img em{position:absolute;top:12px;left:12px;background:#fff;color:var(--blu);font:700 12px Manrope;font-style:normal;padding:5px 10px;border-radius:999px}
+.auto .info{padding:18px 20px 20px}
+.auto h3{font-size:17px;margin-bottom:8px}
+.auto .dati{display:flex;gap:12px;color:var(--grigio);font-size:13px;margin-bottom:14px;flex-wrap:wrap}
+.auto .riga{display:flex;align-items:center;justify-content:space-between}
+.auto .prezzo{font-family:'Space Grotesk';font-size:24px;font-weight:700;color:var(--blu)}
+.auto .riga a{font-weight:700;font-size:14px;color:var(--blu)}
+.blu{background:var(--notte);color:#fff;border-radius:36px;margin:0 16px}
+.blu section{padding:90px 30px}
+.blu .sotto{color:#a9bbf0}
+.servizi{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.servizi div{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:26px}
+.servizi b{display:block;font-size:18px;margin:14px 0 8px}
+.servizi p{color:#a9bbf0;font-size:15px;line-height:1.55}
+.ico{width:46px;height:46px;border-radius:14px;background:var(--blu);display:grid;place-items:center;font-size:22px}
+.dove{display:grid;grid-template-columns:1.1fr 1fr;gap:30px;align-items:stretch}
+.dove .scheda{border:1px solid var(--bordo);border-radius:26px;padding:34px}
+.dove .scheda p{margin:10px 0;font-size:16px;line-height:1.6}
+.dove .scheda b{color:var(--blu)}
+.mappa{border-radius:26px;overflow:hidden;border:1px solid var(--bordo);min-height:340px}
+.mappa iframe{width:100%;height:100%;border:0;min-height:340px}
+footer{text-align:center;color:var(--grigio);font-size:13px;padding:40px 20px 60px}
+.wa{position:fixed;right:18px;bottom:18px;z-index:30;width:58px;height:58px;border-radius:50%;background:var(--blu);color:#fff;display:grid;place-items:center;font-size:26px;box-shadow:0 12px 30px rgba(10,61,255,.4)}
+@media(max-width:820px){.lx{display:none}.nav nav{display:none}.dove{grid-template-columns:1fr}.hero{min-height:680px}.hero .testo{padding-top:6vh}.numeri div{min-width:0;flex:1 1 40%;padding:10px 14px}.numeri b{font-size:22px}section{padding:70px 16px}}
+</style>
+</head>
+<body>
+<div class="proto">Prototipo di presentazione · non è il sito ufficiale di Atlas Automobili</div>
+<header><div class="nav">
+<a class="logo" href="#"><i>A</i>ATLAS<span class="lx" style="font-weight:500;color:var(--grigio)">&nbsp;AUTOMOBILI</span></a>
+<nav><a href="#auto">Auto in vendita</a><a href="#servizi">Servizi</a><a href="#dove">Dove siamo</a></nav>
+<a class="btn" href="tel:+393291222119">Chiama</a>
+</div></header>
+
+<div class="hero">
+<canvas id="scena"></canvas>
+<div class="testo">
+<span class="tag">Caravaggio (BG) · Auto usate selezionate</span>
+<h1>La tua prossima auto, <span>senza sorprese.</span></h1>
+<p>Auto usate controllate, prezzi chiari e una persona vera che ti segue dalla prova su strada al passaggio di proprietà.</p>
+<div class="cta"><a class="btn" href="#auto">Guarda le auto</a><a class="btn ghost" href="tel:+393291222119">329 122 2119</a></div>
+</div>
+<div class="numeri">
+<div><b data-n="12">0</b><small>auto disponibili</small></div>
+<div><b>da 3.190 €</b><small>prezzi a partire da</small></div>
+<div><b>6</b><small>alimentazioni diverse</small></div>
+<div><b>35 km</b><small>da Milano</small></div>
+</div>
+</div>
+
+<section id="auto">
+<h2>Auto in vendita</h2>
+<p class="sotto">Il parco auto aggiornato. Chiamaci per una prova o per una valutazione della tua usata in permuta.</p>
+<div class="filtri" id="filtri"></div>
+<div class="griglia" id="griglia"></div>
+</section>
+
+<div class="blu" id="servizi"><section>
+<h2>Perché sceglierci</h2>
+<p class="sotto">Una realtà di paese, con l'attenzione di chi conosce ogni auto che vende.</p>
+<div class="servizi">
+<div><span class="ico">✓</span><b>Auto controllate</b><p>Ogni auto viene verificata prima della consegna: meccanica, carrozzeria e documenti.</p></div>
+<div><span class="ico">⇄</span><b>Permuta</b><p>Valutiamo la tua auto usata e la scaliamo dal prezzo, in modo semplice e trasparente.</p></div>
+<div><span class="ico">€</span><b>Finanziamenti</b><p>Soluzioni di pagamento su misura per rendere l'acquisto più leggero.</p></div>
+<div><span class="ico">✎</span><b>Pratiche incluse</b><p>Passaggio di proprietà e documenti: ce ne occupiamo noi.</p></div>
+</div>
+</section></div>
+
+<section id="dove">
+<h2>Dove siamo</h2>
+<p class="sotto">Vieni a trovarci a Caravaggio: ti aspettiamo per vedere le auto dal vivo.</p>
+<div class="dove">
+<div class="scheda">
+<p><b>Atlas Automobili</b></p>
+<p>Via Bernardo Zenale e Bernardino Butinone, 15<br>24043 Caravaggio (BG)</p>
+<p>Telefono: <a href="tel:+393291222119"><b>329 122 2119</b></a></p>
+<p style="color:var(--grigio)">Su appuntamento: chiamaci prima di passare, così ti facciamo trovare l'auto pronta per la prova.</p>
+<div class="cta" style="margin-top:18px"><a class="btn" href="https://www.google.com/maps/search/?api=1&query=Via+Bernardo+Zenale+e+Bernardino+Butinone+15+Caravaggio" target="_blank" rel="noopener">Indicazioni</a><a class="btn ghost" href="tel:+393291222119">Chiama ora</a></div>
+</div>
+<div class="mappa"><iframe loading="lazy" title="Mappa" src="https://www.google.com/maps?q=Via+Bernardo+Zenale+e+Bernardino+Butinone+15,+24043+Caravaggio+BG&output=embed"></iframe></div>
+</div>
+</section>
+
+<footer>© 2026 Atlas Automobili · Caravaggio (BG) · Prototipo dimostrativo</footer>
+<a class="wa" href="tel:+393291222119" aria-label="Chiama">✆</a>
+
+<script>
+const AUTO=[
+["Peugeot 3008 Hybrid PHEV",2021,89000,15990,"Ibrida"],
+["Mercedes-Benz GLK 220 CDI",2009,190000,7990,"Diesel"],
+["Fiat 500 1.2 Lounge",2019,125000,7990,"Benzina"],
+["Fiat 500X 1.6 MultiJet",2016,140000,7790,"Diesel"],
+["Fiat 500 Lounge GPL",2017,160000,6490,"GPL"],
+["Audi A1 Sportback 1.6 TDI",2013,184000,5990,"Diesel"],
+["Fiat Fiorino",2017,125000,5490,"Diesel"],
+["Opel Zafira Tourer 1.6 Turbo",2013,185000,4990,"Metano"],
+["Fiat 500L 1.3 MultiJet",2014,175000,4490,"Diesel"],
+["Fiat Doblò",2013,297000,4490,"Diesel"],
+["Fiat Freemont",2011,421000,3690,"Diesel"],
+["Fiat Punto Evo 1.3 MultiJet",2010,165000,3190,"Diesel"]];
+const n=x=>x.toLocaleString('it-IT');
+const sagoma=c=>`<svg viewBox="0 0 200 80"><path d="M14 58c0-10 6-14 18-16l26-16c6-4 12-6 22-6h40c10 0 18 4 26 12l12 10c14 2 28 6 28 16v6H14z" fill="${c}"/><path d="M64 28l14-6h40c6 0 12 2 18 8l6 8H54z" fill="#fff" opacity=".75"/><circle cx="50" cy="64" r="13" fill="#0b1533"/><circle cx="50" cy="64" r="6" fill="#cfd8f5"/><circle cx="152" cy="64" r="13" fill="#0b1533"/><circle cx="152" cy="64" r="6" fill="#cfd8f5"/></svg>`;
+const col={Diesel:"#0a3dff",Benzina:"#3d6bff",GPL:"#1b2f7a",Metano:"#5b8cff",Ibrida:"#0026a8"};
+const g=document.getElementById('griglia'),f=document.getElementById('filtri');
+function mostra(t){g.innerHTML=AUTO.filter(a=>t==='Tutte'||a[4]===t).map(a=>`<article class="auto"><div class="img"><em>${a[4]}</em>${sagoma(col[a[4]])}</div><div class="info"><h3>${a[0]}</h3><div class="dati"><span>${a[1]}</span><span>${n(a[2])} km</span><span>${a[4]}</span></div><div class="riga"><span class="prezzo">${n(a[3])} €</span><a href="tel:+393291222119">Chiedi info →</a></div></div></article>`).join('');
+const o=new IntersectionObserver(es=>es.forEach((e,i)=>{if(e.isIntersecting){setTimeout(()=>e.target.classList.add('vis'),i*70);o.unobserve(e.target)}}),{threshold:.1});
+g.querySelectorAll('.auto').forEach(a=>o.observe(a));}
+['Tutte','Diesel','Benzina','GPL','Metano','Ibrida'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;if(!i)b.className='on';b.onclick=()=>{f.querySelectorAll('button').forEach(x=>x.className='');b.className='on';mostra(t)};f.appendChild(b)});
+mostra('Tutte');
+const c=document.querySelector('[data-n]');let k=0;const iv=setInterval(()=>{c.textContent=++k;if(k>=12)clearInterval(iv)},80);
+</script>
+<script type="module">
+import * as THREE from 'three';
+const cv=document.getElementById('scena');
+if(matchMedia('(prefers-reduced-motion: reduce)').matches) throw 0;
+const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+r.setPixelRatio(Math.min(devicePixelRatio,2));r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
+r.toneMapping=THREE.ACESFilmicToneMapping;r.outputColorSpace=THREE.SRGBColorSpace;
+const s=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(32,1,.1,100);
+s.add(new THREE.HemisphereLight(0xffffff,0x9fb4ff,1.3));
+const sole=new THREE.DirectionalLight(0xffffff,2.4);sole.position.set(5,9,6);sole.castShadow=true;sole.shadow.mapSize.set(2048,2048);sole.shadow.radius=6;
+Object.assign(sole.shadow.camera,{left:-6,right:6,top:6,bottom:-6});s.add(sole);
+const riv=new THREE.PointLight(0x5b8cff,30,20);riv.position.set(-4,2,-3);s.add(riv);
+// pedana
+const ped=new THREE.Mesh(new THREE.CylinderGeometry(3.4,3.5,.18,96),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35,metalness:.1}));
+ped.position.y=-.09;ped.receiveShadow=true;s.add(ped);
+const anello=new THREE.Mesh(new THREE.TorusGeometry(3.45,.03,16,160),new THREE.MeshBasicMaterial({color:0x0a3dff}));anello.rotation.x=Math.PI/2;s.add(anello);
+const ombra=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.ShadowMaterial({opacity:.12}));ombra.rotation.x=-Math.PI/2;ombra.position.y=-.18;ombra.receiveShadow=true;s.add(ombra);
+// auto stilizzata
+const auto=new THREE.Group();s.add(auto);
+const vern=new THREE.MeshPhysicalMaterial({color:0x0a3dff,metalness:.6,roughness:.22,clearcoat:1,clearcoatRoughness:.08});
+const vetro=new THREE.MeshPhysicalMaterial({color:0x0b1533,metalness:.2,roughness:.05,transmission:.1,opacity:.85,transparent:true});
+function corpo(){const sh=new THREE.Shape();sh.moveTo(-2.2,.25);sh.lineTo(2.25,.25);sh.quadraticCurveTo(2.45,.3,2.45,.6);sh.quadraticCurveTo(2.4,.85,2.0,.9);
+sh.lineTo(1.1,.98);sh.quadraticCurveTo(.6,1.5,-.2,1.52);sh.lineTo(-1.2,1.5);sh.quadraticCurveTo(-1.85,1.45,-2.1,1.0);sh.quadraticCurveTo(-2.35,.9,-2.3,.5);sh.closePath();
+const geo=new THREE.ExtrudeGeometry(sh,{depth:1.7,bevelEnabled:true,bevelSize:.12,bevelThickness:.14,bevelSegments:6,curveSegments:24});geo.translate(0,0,-.85);return geo}
+const b=new THREE.Mesh(corpo(),vern);b.castShadow=true;auto.add(b);
+const finSh=new THREE.Shape();finSh.moveTo(1.0,1.0);finSh.quadraticCurveTo(.55,1.42,-.15,1.44);finSh.lineTo(-1.15,1.42);finSh.quadraticCurveTo(-1.7,1.38,-1.9,1.04);finSh.closePath();
+const fin=new THREE.Mesh(new THREE.ExtrudeGeometry(finSh,{depth:1.78,bevelEnabled:false}),vetro);fin.position.z=-.89;fin.scale.set(1,1,1);auto.add(fin);
+const ruote=[];const gomma=new THREE.MeshStandardMaterial({color:0x11131a,roughness:.8});const cerchio=new THREE.MeshStandardMaterial({color:0xdfe6ff,metalness:.9,roughness:.25});
+[[1.45,.98],[1.45,-.98],[-1.45,.98],[-1.45,-.98]].forEach(([x,z])=>{const w=new THREE.Group();
+const t=new THREE.Mesh(new THREE.TorusGeometry(.33,.14,20,48),gomma);w.add(t);
+const c=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.16,32),cerchio);c.rotation.x=Math.PI/2;w.add(c);
+for(let i=0;i<5;i++){const raggio=new THREE.Mesh(new THREE.BoxGeometry(.06,.5,.18),cerchio);raggio.rotation.z=i*Math.PI*2/5;w.add(raggio)}
+w.position.set(x,.36,z);w.traverse(m=>m.castShadow=true);auto.add(w);ruote.push(w)});
+const fari=new THREE.MeshBasicMaterial({color:0xffffff});[[.55],[-.55]].forEach(([z])=>{const f=new THREE.Mesh(new THREE.BoxGeometry(.05,.1,.42),fari);f.position.set(2.5,.72,z);auto.add(f);
+const st=new THREE.Mesh(new THREE.BoxGeometry(.05,.08,.42),new THREE.MeshBasicMaterial({color:0xff2a3d}));st.position.set(-2.42,.86,z);auto.add(st)});
+// particelle
+const N=420,pg=new THREE.BufferGeometry(),pp=new Float32Array(N*3);for(let i=0;i<N;i++){const a=Math.random()*Math.PI*2,rr=4+Math.random()*7;pp[i*3]=Math.cos(a)*rr;pp[i*3+1]=Math.random()*5-.5;pp[i*3+2]=Math.sin(a)*rr}
+pg.setAttribute('position',new THREE.BufferAttribute(pp,3));const pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x0a3dff,size:.05,transparent:true,opacity:.55}));s.add(pts);
+let mx=0,my=0;addEventListener('pointermove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
+const T=new THREE.Vector3();function dim(){const w=cv.clientWidth,h=cv.clientHeight;r.setSize(w,h,false);cam.aspect=w/h;
+const mob=w<820;cam.position.set(mob?0:-1.2,mob?3.2:2.6,mob?11:9.5);T.set(mob?0:-2.4,mob?2.3:.6,0);cam.lookAt(T);
+auto.position.set(mob?0:2.2,0,mob?-0:0);ped.position.x=anello.position.x=auto.position.x;cam.updateProjectionMatrix()}
+addEventListener('resize',dim);dim();
+const ck=new THREE.Clock();let intro=0;
+(function loop(){const t=ck.getElapsedTime();intro=Math.min(1,t/2.2);const e=1-Math.pow(1-intro,3);
+auto.rotation.y=-.6+t*.25+mx*.6;auto.position.y=(1-e)*2.5+Math.sin(t*1.4)*.03;auto.scale.setScalar(.6+.4*e);
+ruote.forEach(w=>w.rotation.z=-t*2);pts.rotation.y=t*.03;anello.scale.setScalar(1+Math.sin(t*2)*.01);
+riv.position.x=Math.cos(t*.7)*5+auto.position.x;riv.position.z=Math.sin(t*.7)*5;
+cam.position.y+= ((innerWidth<820?3.2:2.6)-my*.8-cam.position.y)*.05;cam.lookAt(T);
+r.render(s,cam);requestAnimationFrame(loop)})();
+</script>
+</body>
+</html>
