@@ -174,8 +174,7 @@ def test_a_margine_sotto_la_soglia_non_conveniente_mai_opportunita(monkeypatch):
     base = _unione(17500)
     R = _valuta(_t(14000), base)["R"]
     v = _valuta(_t(R - 100, targa_e_telefono=False), base)
-    assert v["categoria"] in ("non_conveniente", "candidato") and v["margine"] == 100 < v["soglia"]
-    assert v["categoria"] != "candidato" or v.get("da_trattare")
+    assert v["categoria"] == "non_conveniente" and v["margine"] == 100 < v["soglia"] and "da_trattare" not in v
     assert v["serve_controllo_ai"] is True and v["stima_ripiego"]["livello"] == "unione"
     rnd = random.Random(22)
     for _ in range(200):
@@ -184,7 +183,37 @@ def test_a_margine_sotto_la_soglia_non_conveniente_mai_opportunita(monkeypatch):
         assert v["categoria"] != "opportunita"
         if "stima_ripiego" in v:
             assert v["categoria"] in ("candidato", "non_conveniente") and v["serve_controllo_ai"] is True
-            assert v["categoria"] == "non_conveniente" or v["margine"] >= v["soglia"] or v.get("da_trattare")
+            assert "da_trattare" not in v and (v["categoria"] == "candidato") == (v["margine"] >= v["soglia"])
+
+
+def test_a_mai_da_trattare_con_la_stima_di_ripiego(monkeypatch):
+    """22/11 (proprietario): un'auto col ripiego entra solo se il margine è GIÀ alla soglia; sotto la soglia resta
+    non_conveniente, mai "candidato" con lo sconto da chiedere, anche dove la regola "Da trattare" lo darebbe."""
+    _pulisci(monkeypatch)
+    chiamate = []
+    vero = P._sconto_da_trattare
+
+    def spia(t, p, margine, soglia):
+        chiamate.append(margine)
+        return max(100, int(soglia) - int(margine))        # la regola direbbe SEMPRE "da trattare"
+    monkeypatch.setattr(P, "_sconto_da_trattare", spia)
+    for base in (_unione(12500), _unione(17500), _unione(26000), _largo(13000), _largo(26000)):
+        R = _valuta(_t(10 ** 6), base)["R"]
+        for manca in (1, 200, 1000):
+            prezzo = R - scovo.soglia(R) + manca
+            while R - prezzo >= scovo.soglia(prezzo):
+                prezzo += 50
+            v = _valuta(_t(prezzo), base)
+            assert "stima_ripiego" in v and 0 < v["margine"] < v["soglia"]
+            assert v["categoria"] == "non_conveniente" and "da_trattare" not in v
+        ok = _valuta(_buona(base), base)
+        assert ok["categoria"] == "candidato" and ok["margine"] >= ok["soglia"] and "da_trattare" not in ok
+    assert chiamate == []                                  # col ripiego la regola non si guarda nemmeno
+    # le auto col valore prudente continuano a usarla come prima
+    D = [_c(i, 17000 + 100 * i) for i in range(1, 9)]
+    v = VB.valuta(_t(16000), {"D": D, "V": [], "Dv": []}, scovo.soglia(16000))
+    assert v["M_fonte"] == "commercianti" and v["categoria"] == "candidato" and v["da_trattare"]["sconto"] > 0
+    assert len(chiamate) == 1 and vero is not spia
 
 
 # ------------------------------------------------------------------ (b) fasce spente

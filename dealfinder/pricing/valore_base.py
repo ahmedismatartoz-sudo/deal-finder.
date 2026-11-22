@@ -842,7 +842,8 @@ def _valuta(t: dict, base: dict, soglia: int, rg, cfg, stato: dict) -> dict:
                        f"prezzo oltre il {int(round((1 - limite) * 100))}% sotto il mercato: dati non "
                        "affidabili (versione diversa, dati sbagliati o truffa)")
     if margine < soglia:
-        sc = P._sconto_da_trattare(t, p, margine, int(soglia))
+        # 22/11 (proprietario): con la stima di ripiego MAI "da trattare": entra solo se il margine è già alla soglia
+        sc = None if rr is not None else P._sconto_da_trattare(t, p, margine, int(soglia))
         if sc:
             out.update(categoria="candidato", da_trattare={"sconto": sc, "prezzo_obiettivo": p - sc})
             out["motivi"].append(f"margine {margine} € sotto la soglia di {soglia} €: arriva al minimo con {sc} € di "
