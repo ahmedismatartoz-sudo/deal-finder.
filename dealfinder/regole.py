@@ -354,6 +354,43 @@ class ValoreBase:
 
 
 @dataclass(frozen=True)
+class StimaRipiego:
+    """22/11 (decisione del proprietario; richiesta del 20/11 14:18: recuperare i "dati insufficienti" "in qualche
+    modo", MA "non gonfiare i prezzi"). Stima di RIPIEGO (pricing/valore_base.stima_ripiego, regola "ripiego-2011a")
+    per le auto che il valore prudente non stima: commercianti freschi e auto vendute INSIEME (solo le due basi del
+    metodo, mai il vecchio ripiego_prudente), stessa marca/modello/alimentazione/zona, potenza ±10% e stesso cambio.
+    - "unione": i livelli di oggi (anno ±1 / km ±25%, poi ±2 / ±40%) con almeno `n_min_unione` confronti;
+    - "largo": anno ±`largo_anni`, km ±`largo_km` con almeno `n_min_largo` confronti;
+    - valore = `percentile` (40°) dei confronti tenuti, meno lo sconto di vetrina/vendute di ValoreBase, mai sopra le
+      stime deboli di una sola base; lo sconto extra della coppia si applica per ultimo.
+    Vale SOLO nelle coppie (livello, fascia del valore grezzo, sconto extra) di `fasce`; fuori da lì l'auto resta
+    "dati insufficienti" come prima. Mai sotto 10.000 € (fasce "<5k" e "5-10k" spente), mai "largo" 10-15k, mai
+    "largo4" (solo misurato). Sconto extra 0 in tutte: la stima resta com'è, già 5-7% SOTTO il prezzo vero delle
+    vendute, e NON si corregge verso l'alto (lo scostamento è fuori dal criterio −3..0 del piano sul lato prudente: il
+    proprietario ha accettato di tenerlo prudente).
+    Sul sito: sempre con il controllo AI (serve_controllo_ai), categoria al massimo "candidato" (mai "opportunita"),
+    avviso di verifica; margine oltre `margine_max` del valore = resta "dati insufficienti". Soglie di margine
+    (SOGLIE_PV), zone, km, anno, antitruffa e tetti del sito non cambiano.
+    Spegnere senza deploy: interruttori automatismi "stima_ripiego" (tutto) e "stima_ripiego_largo" (solo "largo"),
+    letti da valore_base.livelli_accesi(): NON sono regole (qui dentro e nell'impronta non entrano)."""
+    percentile: float = 0.40
+    n_min_unione: int = 5
+    n_min_largo: int = 6
+    largo_anni: int = 3
+    largo_km: float = 0.60
+    margine_max: float = 0.40          # margine oltre il 40% del valore di ripiego: dati_insufficienti
+    # (livello, fascia del valore grezzo, sconto extra). Misura BASE_VENDUTE sulle vendute SENZA valore prudente,
+    # metodo senza sconto extra, finestre 30 / 60 giorni (errore mediano %, entro il 10% %, scostamento medio %):
+    fasce: tuple = (
+        ("unione", "10-15k", 0.0),     # err. 10,0 / 10,3   entro10 50,0 / 48,1   scost. −7,0 / −6,9
+        ("unione", "15-20k", 0.0),     # err.  8,2 /  8,0   entro10 58,8 / 60,2   scost. −6,2 / −5,7
+        ("unione", ">20k", 0.0),       # err.  7,1 /  7,2   entro10 65,8 / 65,6   scost. −4,6 / −4,6   (n 605 / 701)
+        ("largo", "15-20k", 0.0),      # err.  9,8 /  9,8   entro10 50,5 / 50,3   scost. −8,5 / −8,4
+        ("largo", ">20k", 0.0),        # err.  8,2 /  8,2   entro10 57,7 / 57,5   scost. −5,5 / −5,8
+    )
+
+
+@dataclass(frozen=True)
 class Regole:
     versione: str = VERSIONE
     confronti: Confronti = field(default_factory=Confronti)
@@ -373,6 +410,7 @@ class Regole:
     dotazioni: Dotazioni = field(default_factory=Dotazioni)
     forbice: Forbice = field(default_factory=Forbice)
     valore_base: ValoreBase = field(default_factory=ValoreBase)
+    stima_ripiego: StimaRipiego = field(default_factory=StimaRipiego)
     giudice_ai: bool = True            # l'AI toglie i confronti non uguali (6/11: default = produzione, così cron mercato,
                                        # cron opportunità e sito calcolano con le STESSE regole anche senza variabili)
     fascia_richiesta: bool = True

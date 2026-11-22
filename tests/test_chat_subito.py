@@ -81,7 +81,9 @@ def test_default_70_niente_variabili_e_impronta():
                                       "regole_impronta.json"), encoding="utf-8"))
     sr = rif["dati"]["sito_regole"]
     assert (sr["chat_subito"], sr["chat_pulita"], sr["chat_auto_vera"]) == (70, 0.3, 0.7)
-    assert rif["ammessi_produzione"]["regole_impronta"] == "2248a486eb6c"      # regole di prezzo non toccate
+    # regole di prezzo non toccate dalla corsia chat (2248a486eb6c il 20/11); dal 22/11 ea9ee6b0e14b per la sola
+    # sezione nuova regole.StimaRipiego (stima di ripiego accesa)
+    assert rif["ammessi_produzione"]["regole_impronta"] == "ea9ee6b0e14b"
 
 
 def test_spenta_e_come_prima():

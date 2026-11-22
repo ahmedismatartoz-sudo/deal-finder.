@@ -1,6 +1,6 @@
 {
  "ammessi_produzione": {
-  "regole_impronta": "2248a486eb6c",
+  "regole_impronta": "ea9ee6b0e14b",
   "scovo.MARGINE_MINIMO": 800,
   "scovo.SOGLIE": [
    [
@@ -232,6 +232,41 @@
     "giudice_vince": true,
     "ore_validita": 36
    },
+   "stima_ripiego": {
+    "fasce": [
+     [
+      "unione",
+      "10-15k",
+      0.0
+     ],
+     [
+      "unione",
+      "15-20k",
+      0.0
+     ],
+     [
+      "unione",
+      ">20k",
+      0.0
+     ],
+     [
+      "largo",
+      "15-20k",
+      0.0
+     ],
+     [
+      "largo",
+      ">20k",
+      0.0
+     ]
+    ],
+    "largo_anni": 3,
+    "largo_km": 0.6,
+    "margine_max": 0.4,
+    "n_min_largo": 6,
+    "n_min_unione": 5,
+    "percentile": 0.4
+   },
    "trazione": {
     "attiva": false,
     "maggioranza": 0.5
@@ -313,7 +348,7 @@
     "ripiego_nord": true
    }
   },
-  "regole_impronta": "2248a486eb6c",
+  "regole_impronta": "ea9ee6b0e14b",
   "regole_versione": "regole-2026-11-12a",
   "scovo": {
    "ANNO_MINIMO": 2007,
@@ -498,6 +533,6 @@
    ]
   }
  },
- "impronta": "22e83dce3775",
- "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default. 19/11 pomeriggio: idem con la regola mediana-1911b (solo regole.ValoreBase). 19/11 sera: idem con la regola mediana-1911c (solo regole.ValoreBase.sconti)."
+ "impronta": "e07c338a06b3",
+ "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default. 19/11 pomeriggio: idem con la regola mediana-1911b (solo regole.ValoreBase). 19/11 sera: idem con la regola mediana-1911c (solo regole.ValoreBase.sconti). 22/11: idem con la stima di ripiego accesa (regole.StimaRipiego, decisione del proprietario: solo unione 10-15k / 15-20k / >20k e largo 15-20k / >20k, sconto extra 0): ammessi_produzione.regole_impronta da 2248a486eb6c a ea9ee6b0e14b; gli interruttori automatismi stima_ripiego / stima_ripiego_largo non sono nell'impronta e nessuna variabile di Render cambia."
 }

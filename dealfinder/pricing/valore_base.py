@@ -30,6 +30,13 @@ Per ogni auto (valutazione.valuta_e_scrivi, unico punto che scrive valutazioni_p
   4,4% a 12.500, 3,4% a 17.500, 3,2% da 22.500 € (dettagli in regole.ValoreBase); rilancio rivaluta_base:1911c;
   altrimenti nessuna stima (categoria dati_insufficienti). M = R (nessuna correzione chiesto → venduto: `calibrato` =
   1,0, il sito non la rifà).
+- 22/11 (decisione del proprietario sulle misure del 20-22/11; "non gonfiare i prezzi"): le auto senza valore prudente
+  (pochi_confronti:*) possono avere la STIMA DI RIPIEGO (stima_ripiego: commercianti e vendute insieme, 40° percentile,
+  sconti, tetto delle stime deboli), SOLO nelle coppie livello/fascia di regole.StimaRipiego.fasce (unione 10-15k,
+  15-20k, >20k; largo 15-20k, >20k; sconto extra 0; mai sotto 10.000 €) e con gli interruttori automatismi
+  "stima_ripiego" / "stima_ripiego_largo" accesi. Marcate M_fonte "ripiego", sempre col controllo AI, al massimo
+  "candidato", margine non oltre il 40% del valore; rilancio rivaluta_base:rip2211. Tutte le altre valutazioni restano
+  identiche.
 - margine = R − prezzo (cliente 18/11: i costi fissi del commerciante, fino a 200 € con policy_v2, NON si tolgono).
   Incidentate e difetti come prima (policy_v2, 4/11): restano fuori solo i danni gravi/strutturali o senza stima dei
   ricambi; le altre hanno R dalle auto pulite, meno lo storico del danno (0 di default) e il ripristino (ricambi,
@@ -414,10 +421,12 @@ def stima_prudente(D: list, V: list, t: dict, vb, escludi=None, oggi=None) -> di
     return out
 
 
-# ------------------------------------------------------------------ stima di ripiego (20/11, B1: SOLO misura)
+# ------------------------------------------------------------------ stima di ripiego (20/11 misura, 22/11 attiva)
 # Proprietario 20/11 14:18: recuperare i "dati insufficienti" "in qualche modo", MA "non gonfiare i prezzi".
-# B1 = misura soltanto (base_vendute, log BASE_VENDUTE): valuta() NON chiama stima_ripiego e livelli_accesi() torna
-# sempre () finché regole.py non ha le fasce ammesse (B2, commit "REGOLE:"): nessuna valutazione cambia.
+# B1 (20/11) = misura soltanto (base_vendute, log BASE_VENDUTE). B2 (22/11, decisione del proprietario sulle misure):
+# valuta() usa stima_ripiego SOLO per le auto senza valore prudente e SOLO nelle coppie (livello, fascia) di
+# regole.StimaRipiego.fasce, con gli interruttori automatismi "stima_ripiego" / "stima_ripiego_largo" accesi
+# (livelli_accesi); sempre col controllo AI, al massimo "candidato". Ogni altra valutazione resta identica.
 # Solo le due basi del metodo (commercianti freschi e vendute, pulite): mai il vecchio ripiego_prudente.
 
 REGOLA_RIPIEGO = "ripiego-2011a"
@@ -522,8 +531,8 @@ def stima_ripiego(D: list, V: list, t: dict, vb, rp=None, escludi=None, oggi=Non
 
 
 def livelli_accesi(rp=None) -> tuple:
-    """Livelli della stima di ripiego che il sito può usare ADESSO: () se nessuna fascia è ammessa (B1: sempre, le
-    fasce nascono in regole.StimaRipiego col commit B2) o se l'interruttore automatismi "stima_ripiego" è spento;
+    """Livelli della stima di ripiego che il sito può usare ADESSO: () se nessuna fascia è ammessa (le fasce sono
+    in regole.StimaRipiego, dal 22/11) o se l'interruttore automatismi "stima_ripiego" è spento;
     altrimenti i livelli presenti nelle fasce ammesse, senza "largo" se "stima_ripiego_largo" è spento. "largo4" mai.
     Con le fasce vuote non legge nemmeno gli interruttori (nessuna lettura del database). Mai un errore: ()."""
     try:
@@ -584,52 +593,8 @@ def _confronto(c: dict, p: float, venduta: bool) -> dict:
             **({"venduta": True, "sparita": str(c.get("disappeared_at") or "")[:10] or None} if venduta else {})}
 
 
-def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
-    """Valutazione di `t` (riga di listings preparata da valutazione.prepara) con le basi del gruppo (carica/dividi).
-    Stessa forma delle valutazioni di policy_v2 per i campi che il sito e le schede leggono (categoria, M, R,
-    R_finale, margine, soglia, n, metodo, confronti, motivi, ipotesi, netto...)."""
-    from .. import regole as RG
-    from . import policy_v2 as P
-    rg = rg or RG.regole()
-    cfg = cfg or P.PolicyConfig(rg)
-    at = rg.antitruffa
-    prezzo = _num(t.get("price_eur"))
-    out = {"policy": P.POLICY_VERSION, "policy_rev": P.POLICY_REV, "regole": rg.versione, "id": t.get("id"),
-           "acquisto": int(prezzo) if prezzo else t.get("price_eur"), "soglia": int(soglia), "metodo": METODO,
-           "metodo_base": METODO, "calibrato": 1.0, "mancanti": [], "ipotesi": [], "motivi": [], "n": 0,
-           "totale_costi": 0, "costi": {}}
-    for k, nome in (("year", "anno"), ("mileage_km", "km"), ("price_eur", "prezzo")):
-        if t.get(k) in (None, ""):
-            out["mancanti"].append(nome)
-    if out["mancanti"]:
-        return _insuff(out, "dati_auto_incompleti", "dati dell'auto incompleti: " + ", ".join(out["mancanti"]))
-    sporca = pulita(t, cfg)
-    if sporca:
-        out["non_pulita"] = sporca
-        return _insuff(out, "auto_non_pulita",
-                       f"auto non confrontabile con auto pulite vendute o di commercianti ({sporca})")
-    tt = norm(t)
-    lid = t.get("id")
-    D = [c for c in base.get("D") or [] if lid is None or c.get("id") != lid]
-    V = [c for c in base.get("V") or [] if lid is None or c.get("id") != lid]
-    vb = rg.valore_base
-    sp = stima_prudente(D, V, tt, vb)
-    out.update(stima_D=sp["stima_D"], n_D=sp["n_D"], stima_V=sp["stima_V"], n_V=sp["n_V"],
-               base_D=len(D), base_V=len(V), prudenza=sp["prudenza"])
-    scelta, fonte = sp["scelta"], sp["fonte"]
-    if not scelta:
-        if sp.get("fragile_poche"):
-            # 19/11: solo l'ordine della raccolta notturna dei confronti (confronti_mirati.notte), mai un valore
-            _pz = sorted(p for _c, p in _simili(D, tt) + _simili(V, tt) if p > 0)
-            if _pz:
-                out["priorita_raccolta"] = {"stima_priorita": int(round(_pz[len(_pz) // 2])), "simili": len(_pz)}
-            return _insuff(out, "pochi_confronti:fragile",
-                           f"auto economica o con più di {vb.fragile_anni} anni: servono almeno {vb.n_min_fragile} "
-                           "auto uguali per un valore prudente")
-        Dv = [c for c in base.get("Dv") or [] if lid is None or c.get("id") != lid]
-        return _pochi(out, tt, D, V, Dv)
-    R = int(round(sp["valore"]))
-    n = int(scelta["n"])
+def _con_prudente(out: dict, sp: dict, scelta: dict, fonte: str, R: int, n: int, vb) -> None:
+    """Campi e testi della valutazione col valore PRUDENTE (regola mediana-1911c): invariati dal 19/11."""
     out.update(M=R, R=R, R_finale=R, centrale_ridotto=R, riduzione=0.0, M_fonte=fonte, fonte_base=fonte,
                n=n, n_gate=n, n_gemelle=n, livello=scelta["livello"],
                campione="base preferita" if n >= 10 else "provvisoria (campione limitato)",
@@ -667,6 +632,157 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
     if pr.get("tetto_D"):
         out["ipotesi"].append(f"valore limitato dai commercianti meno simili ({pr['tetto_D']} € già scontati, "
                               f"{pr['n_tetto_D']} confronti)")
+
+
+def _con_ripiego(out: dict, rr: dict, da: str | None, id_D: set) -> None:
+    """22/11: campi e testi della valutazione con la stima di RIPIEGO `rr` (stima_ripiego). `da` = motivo per cui il
+    valore prudente non c'era (pochi_confronti:*). Il metodo resta "base_vendute"."""
+    R = int(round(rr["valore"]))
+    n = int(rr["n"])
+    liv = rr["livello"]
+    out.update(M=R, R=R, R_finale=R, centrale_ridotto=R, riduzione=0.0, M_fonte="ripiego",
+               fonte_base="ripiego:" + liv, n=n, n_gate=n, n_gemelle=n, livello=_livello_numero(rr),
+               campione="ripiego (confronti allargati)", serve_controllo_ai=True,
+               R_da="stima di ripiego: commercianti e auto vendute insieme (confronti allargati), meno lo sconto",
+               fascia="stima di ripiego = valore basso di commercianti e venduti insieme, meno lo sconto"
+                      + (" (con tetto)" if rr.get("tetto") is not None else ""),
+               venditori=dict(Counter(c.get("seller_type") or "sconosciuto" for c, _ in rr["tenuti"])),
+               confronti=[_confronto(c, p, id(c) not in id_D)
+                          for c, p in sorted(rr["tenuti"], key=lambda cp: abs(cp[1] - R))[:CONFRONTI_SCHEDA]],
+               stima_ripiego={"livello": liv, "n": n, "fascia": rr["fascia"],
+                              "sconto_extra": rr["sconto_extra"], "da": da, "regola": REGOLA_RIPIEGO},
+               valore_base={"fonte": "ripiego", "R": R, "n": n, "stima_D": out.get("stima_D"), "n_D": out.get("n_D"),
+                            "stima_V": out.get("stima_V"), "n_V": out.get("n_V"), "regola": REGOLA_RIPIEGO,
+                            "livello": liv, "quota_D": rr["quota_D"], "grezzo": int(round(rr["grezzo"])),
+                            "mediana": int(round(rr["mediana"])), "sconto_base": rr["sconto_base"],
+                            "sconto_extra": rr["sconto_extra"], "tetto": rr.get("tetto")})
+    nD = sum(1 for c, _ in rr["tenuti"] if id(c) in id_D)
+    out["ipotesi"].append(f"valore {R} € = stima di ripiego: mancano abbastanza auto uguali per il valore prudente, "
+                          f"quindi {n} auto simili prese insieme ({nD} in vendita da commercianti, {n - nD} vendute "
+                          f"negli ultimi {BV.VENDUTE_GIORNI} giorni), anno ±{rr['anni']} e km "
+                          f"±{int(round(rr['km'] * 100))}%, prezzi riportati all'anno e ai km dell'auto")
+    out["ipotesi"].append(f"si prende un valore basso (sotto la mediana di {int(round(rr['mediana']))} €): "
+                          f"{int(round(rr['grezzo']))} € meno {_pct(rr['sconto_base'])} (sconto di vetrina e delle "
+                          "vendute, per fascia di prezzo)"
+                          + (f" e meno {_pct(rr['sconto_extra'])} di prudenza in più" if rr["sconto_extra"] else ""))
+    if rr.get("tetto") is not None:
+        out["ipotesi"].append(f"valore limitato dalla stima di una sola base (commercianti o vendute): "
+                              f"{rr['tetto']} € già scontati")
+
+
+def _senza_stima(out: dict, sp: dict, tt: dict, D: list, V: list, base: dict, lid, vb) -> dict:
+    """Il valore prudente non c'è: dati_insufficienti col suo motivo (pochi_confronti:*), come dal 18-19/11."""
+    if sp.get("fragile_poche"):
+        # 19/11: solo l'ordine della raccolta notturna dei confronti (confronti_mirati.notte), mai un valore
+        _pz = sorted(p for _c, p in _simili(D, tt) + _simili(V, tt) if p > 0)
+        if _pz:
+            out["priorita_raccolta"] = {"stima_priorita": int(round(_pz[len(_pz) // 2])), "simili": len(_pz)}
+        return _insuff(out, "pochi_confronti:fragile",
+                       f"auto economica o con più di {vb.fragile_anni} anni: servono almeno {vb.n_min_fragile} "
+                       "auto uguali per un valore prudente")
+    Dv = [c for c in base.get("Dv") or [] if lid is None or c.get("id") != lid]
+    return _pochi(out, tt, D, V, Dv)
+
+
+def ripiego_ammesso(D: list, V: list, tt: dict, vb, rp, livelli=None) -> dict | None:
+    """22/11: la stima di ripiego di `tt` (auto senza valore prudente) se si può usare ADESSO, altrimenti None.
+    Livelli accesi (livelli_accesi: fasce di regole.StimaRipiego e interruttori automatismi), nell'ordine "unione"
+    poi "largo": vale la prima prova con abbastanza confronti, e solo se la sua coppia (livello, fascia del valore
+    grezzo) è tra le fasce ammesse. Coppia spenta (sotto 10.000 €, "largo" 10-15k...) = None: non si prova altro."""
+    livelli = livelli_accesi(rp) if livelli is None else tuple(livelli)
+    if not livelli:
+        return None
+    rr = stima_ripiego(D, V, tt, vb, rp=rp, solo=livelli)
+    if rr.get("valore") is None or not rr["valore"] > 0:
+        return None
+    for f in (getattr(rp, "fasce", None) or ()):
+        if f[0] == rr["livello"] and f[1] == rr["fascia"]:
+            return rr
+    return None
+
+
+def _livello_numero(rr: dict) -> int:
+    """Numero del livello dei confronti di una stima di ripiego: 1 o 2 = i livelli di oggi (unione), 3 = largo."""
+    for i, (anni, km) in enumerate(BV.LIVELLI, start=1):
+        if rr.get("livello") == "unione" and (rr.get("anni"), rr.get("km")) == (anni, km):
+            return i
+    return len(BV.LIVELLI) + 1
+
+
+def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
+    """Valutazione di `t` (riga di listings preparata da valutazione.prepara) con le basi del gruppo (carica/dividi).
+    Stessa forma delle valutazioni di policy_v2 per i campi che il sito e le schede leggono (categoria, M, R,
+    R_finale, margine, soglia, n, metodo, confronti, motivi, ipotesi, netto...).
+    22/11: un'auto senza valore prudente può avere la stima di RIPIEGO (ripiego_ammesso). In quel caso: metodo
+    "base_vendute", M_fonte "ripiego", fonte_base "ripiego:<livello>", stima_ripiego {...}, serve_controllo_ai, e la
+    categoria non supera MAI "candidato". Se col ripiego l'auto finirebbe comunque "dati insufficienti" (margine
+    oltre regole.StimaRipiego.margine_max del valore, anti-truffa, costi non stimabili) torna ESATTAMENTE la
+    valutazione senza stima di prima (stesso motivo pochi_confronti:*), con in più `ripiego_scartato` (senza valori)."""
+    stato: dict = {}
+    out = _valuta(t, base, soglia, rg, cfg, stato)
+    rr = stato.get("ripiego")
+    if rr is None:
+        return out                         # valore prudente o nessuna stima: come prima, niente da toccare
+    if out.get("categoria") == "dati_insufficienti":
+        senza = stato["senza"]
+        senza["ripiego_scartato"] = {"livello": rr["livello"], "fascia": rr["fascia"],
+                                     "motivo": out.get("motivo_dati")}
+        return senza
+    out["serve_controllo_ai"] = True
+    if out.get("categoria") == "opportunita":
+        out["categoria"] = "candidato"     # mai "opportunita" con una stima di ripiego
+    out["motivi"].append("valore da una stima di ripiego (confronti allargati): al massimo candidato, da verificare "
+                         "con il controllo AI")
+    return out
+
+
+def _valuta(t: dict, base: dict, soglia: int, rg, cfg, stato: dict) -> dict:
+    import copy
+    from .. import regole as RG
+    from . import policy_v2 as P
+    rg = rg or RG.regole()
+    cfg = cfg or P.PolicyConfig(rg)
+    at = rg.antitruffa
+    prezzo = _num(t.get("price_eur"))
+    out = {"policy": P.POLICY_VERSION, "policy_rev": P.POLICY_REV, "regole": rg.versione, "id": t.get("id"),
+           "acquisto": int(prezzo) if prezzo else t.get("price_eur"), "soglia": int(soglia), "metodo": METODO,
+           "metodo_base": METODO, "calibrato": 1.0, "mancanti": [], "ipotesi": [], "motivi": [], "n": 0,
+           "totale_costi": 0, "costi": {}}
+    for k, nome in (("year", "anno"), ("mileage_km", "km"), ("price_eur", "prezzo")):
+        if t.get(k) in (None, ""):
+            out["mancanti"].append(nome)
+    if out["mancanti"]:
+        return _insuff(out, "dati_auto_incompleti", "dati dell'auto incompleti: " + ", ".join(out["mancanti"]))
+    sporca = pulita(t, cfg)
+    if sporca:
+        out["non_pulita"] = sporca
+        return _insuff(out, "auto_non_pulita",
+                       f"auto non confrontabile con auto pulite vendute o di commercianti ({sporca})")
+    tt = norm(t)
+    lid = t.get("id")
+    D = [c for c in base.get("D") or [] if lid is None or c.get("id") != lid]
+    V = [c for c in base.get("V") or [] if lid is None or c.get("id") != lid]
+    vb = rg.valore_base
+    sp = stima_prudente(D, V, tt, vb)
+    out.update(stima_D=sp["stima_D"], n_D=sp["n_D"], stima_V=sp["stima_V"], n_V=sp["n_V"],
+               base_D=len(D), base_V=len(V), prudenza=sp["prudenza"])
+    scelta, fonte = sp["scelta"], sp["fonte"]
+    rr = None
+    if not scelta:
+        rp = getattr(rg, "stima_ripiego", None)
+        rr = ripiego_ammesso(D, V, tt, vb, rp) if rp is not None else None
+        if rr is None:
+            return _senza_stima(out, sp, tt, D, V, base, lid, vb)
+        # 22/11: stima di ripiego. La valutazione senza stima (identica a prima) resta da parte: si ridà se col
+        # ripiego l'auto non arriva a una categoria (valuta)
+        stato["senza"] = _senza_stima(copy.deepcopy(out), sp, tt, D, V, base, lid, vb)
+        stato["ripiego"] = rr
+        _con_ripiego(out, rr, stato["senza"].get("motivo_dati"), set(map(id, D)))
+        R, n, fonte = out["R"], out["n"], "ripiego"
+    else:
+        R = int(round(sp["valore"]))
+        n = int(scelta["n"])
+        _con_prudente(out, sp, scelta, fonte, R, n, vb)
     p = int(prezzo)
     # incidentate e difetti (come policy_v2, 4/11): valore delle auto pulite, meno lo storico del danno (0 di default)
     # e il ripristino (ricambi stimati, manodopera sui ricambi, difetti letti dall'AI). I costi fissi del commerciante
@@ -701,6 +817,10 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
             out["costi_netto"] = dict(nt["voci"], sconto_pct=nt["sconto_pct"], sconto_da=nt["sconto_da"])
     except Exception:
         pass
+    if rr is not None and margine > float(getattr(rg.stima_ripiego, "margine_max", RIPIEGO_MARGINE_MAX)) * R:
+        # 22/11: con la stima di ripiego un margine così alto non è credibile: resta senza stima (valuta)
+        return _insuff(out, "ripiego:margine_oltre_max",
+                       "margine troppo alto per una stima di ripiego: resta senza stima")
     # anti-truffa: margine oltre il 55% del valore = auto sospetta (dati sbagliati, rata, truffa): fuori
     if margine > SOSPETTO_MARGINE * R:
         out["sospetto_truffa"] = True
@@ -741,8 +861,9 @@ def valuta(t: dict, base: dict, soglia: int, rg=None, cfg=None) -> dict:
             out["motivi"].append("difetti scritti nell'annuncio: costo di riparazione stimato dall'AI, da verificare")
         return out
     out["categoria"] = "opportunita"
-    out["motivi"].append(f"margine {margine} € ≥ soglia {soglia} € con {n} auto uguali "
-                         + ("di commercianti" if fonte == "commercianti" else "vendute"))
+    out["motivi"].append(f"margine {margine} € ≥ soglia {soglia} € con {n} auto "
+                         + ("simili tra commercianti e vendute (stima di ripiego)" if rr is not None else
+                            "uguali " + ("di commercianti" if fonte == "commercianti" else "vendute")))
     return out
 
 

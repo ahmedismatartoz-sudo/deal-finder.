@@ -45,8 +45,11 @@ def test_costanti_e_prove():
     assert VB.REGOLA_RIPIEGO == "ripiego-2011a"
     assert VB.RIPIEGO_PROVE == {"unione": BV.LIVELLI, "largo": ((3, 0.60),), "largo4": ((4, 0.80),)}
     assert VB.RIPIEGO_ATTIVABILI == ("unione", "largo") and VB.RIPIEGO_MARGINE_MAX == 0.40
-    # B1 non tocca le regole: nessun campo nuovo nell'impronta
-    assert "stima_ripiego" not in RG.come_dict()
+    # 22/11 (B2): le fasce ammesse sono in regole.StimaRipiego (dentro l'impronta), con gli stessi default di qui
+    rp = RG.regole().stima_ripiego
+    assert (rp.percentile, rp.n_min_unione, rp.n_min_largo, rp.largo_anni, rp.largo_km, rp.margine_max) == \
+           (VB.RIPIEGO_PERCENTILE, 5, 6, 3, 0.60, VB.RIPIEGO_MARGINE_MAX)
+    assert "stima_ripiego" in RG.come_dict()
 
 
 def test_unione_dove_il_prudente_non_stima():
@@ -151,14 +154,14 @@ def test_livelli_accesi_vuoto_senza_fasce(monkeypatch):
     for k in ("AUTOMATISMO_STIMA_RIPIEGO", "AUTOMATISMO_STIMA_RIPIEGO_LARGO"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setattr(automatismi, "valori", lambda: {})
-    assert VB.livelli_accesi() == ()                       # B1: le regole non hanno fasce → sempre ()
+    senza = SimpleNamespace(fasce=())                      # regole senza fasce (com'era B1) → sempre ()
+    assert VB.livelli_accesi(senza) == ()
     monkeypatch.setenv("AUTOMATISMO_STIMA_RIPIEGO", "1")
     monkeypatch.setenv("AUTOMATISMO_STIMA_RIPIEGO_LARGO", "1")
-    assert VB.livelli_accesi() == ()
-    assert VB.livelli_accesi(SimpleNamespace(fasce=())) == ()
+    assert VB.livelli_accesi(senza) == ()
     # con le fasce vuote gli interruttori non si leggono nemmeno (nessuna lettura del database)
     monkeypatch.setattr(automatismi, "attivo", lambda *a, **k: (_ for _ in ()).throw(AssertionError("letto")))
-    assert VB.livelli_accesi() == ()
+    assert VB.livelli_accesi(senza) == ()
 
 
 def test_livelli_accesi_con_fasce_e_interruttori(monkeypatch):
@@ -179,7 +182,8 @@ def test_livelli_accesi_con_fasce_e_interruttori(monkeypatch):
 
 
 def test_valuta_non_usa_il_ripiego():
-    """B1: la valutazione del sito resta dati_insufficienti (solo_unendo), senza alcun campo del ripiego."""
+    """Sotto 10.000 € (fascia spenta anche dopo il 22/11): la valutazione del sito resta dati_insufficienti
+    (solo_unendo), senza alcun campo del ripiego."""
     D, V = _basi()
     for c in D + V:
         c.update(source="subito", url="https://x/%d" % c["id"], version_raw=None, first_seen_at=None,
