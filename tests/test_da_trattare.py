@@ -82,3 +82,17 @@ def test_fascia_fuori_zona_le_100_piu_vicine():
     vi = a(5, "VI"); SR.r_zona(vi, g2)
     tenute, via = SR.tetto_fuori_zona([to, vi, mi], g2)
     assert via == {5} and [x["id"] for x in tenute] == [1, 3]
+
+
+def test_mai_da_trattare_con_la_stima_di_ripiego():
+    """22/11 (proprietario + revisore 1): un'auto valutata con la stima di ripiego non diventa mai "Da trattare"
+    sul sito (difetto letto dopo, top_auto): sotto soglia esce."""
+    g = SR.Regole()
+    sog = scovo.soglia(6000)
+    it = _auto(6000, sog - 300)
+    assert SR.sconto_trattativa(it, g) is not None
+    it["stima_ripiego"] = True
+    assert SR.sconto_trattativa(it, g) is None
+    assert SR.r_margine_minimo(it, g) == "sotto_soglia"
+    assert "trattare" not in it
+    assert SR.diagnosi_trattabili([it], g) == {}

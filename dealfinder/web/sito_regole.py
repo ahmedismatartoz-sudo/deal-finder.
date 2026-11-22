@@ -874,7 +874,7 @@ def diagnosi_trattabili(items: list[dict], g) -> dict:
     from collections import Counter
     c = Counter()
     for it in items:
-        if it.get("supercar") or it.get("economica") or it.get("incidentata") or not fascia(it):
+        if it.get("supercar") or it.get("economica") or it.get("incidentata") or it.get("stima_ripiego") or not fascia(it):
             continue
         m, p = margine(it), int(it.get("prezzo") or 0)
         if m is None or m <= 0 or p <= 0 or m >= scovo.soglia(p):
@@ -888,8 +888,9 @@ def diagnosi_trattabili(items: list[dict], g) -> dict:
 
 def sconto_trattativa(it, g) -> int | None:
     """Sconto da chiedere (a passi di 50 €) perché un'auto della fascia richiesta arrivi al margine minimo,
-    se non supera g.tratta_max; None se non serve o se è troppo."""
-    if it.get("supercar") or it.get("economica") or it.get("incidentata") or not fascia(it):
+    se non supera g.tratta_max; None se non serve o se è troppo.
+    22/11 (proprietario + revisore 1): mai con la stima di ripiego (it["stima_ripiego"], messo da r_valutata)."""
+    if it.get("supercar") or it.get("economica") or it.get("incidentata") or it.get("stima_ripiego") or not fascia(it):
         return None
     m, p = margine(it), int(it.get("prezzo") or 0)
     if m is None or m <= 0 or p <= 0 or not recente(it, g.tratta_giorni):
