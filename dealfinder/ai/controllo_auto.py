@@ -334,6 +334,20 @@ def _chiama_claude(testo: str, foto: list[dict]):
     return dati, int(u.input_tokens or 0), int(u.output_tokens or 0), AI.MODEL_FAST
 
 
+def errore_scarico_foto(e) -> bool:
+    """22/11: il 400 di Anthropic "Unable to download the file. Please verify the URL and try again." (una foto mandata
+    per indirizzo non è più scaricabile: annuncio tolto, foto scaduta). Si legge il messaggio dal corpo strutturato e
+    dal testo dell'eccezione; se lo stato HTTP si conosce deve essere 400."""
+    from . import perizia as PER
+    st = PER._status(e)
+    if st is not None and st != 400:
+        return False
+    body = getattr(e, "body", None)
+    err = body.get("error") if isinstance(body, dict) else None
+    msg = (err.get("message") if isinstance(err, dict) else "") or ""
+    return "unable to download the file" in f"{msg} {e}".lower()
+
+
 def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chiama=None, http=None,
               paga=None, serve_foto: bool = False) -> dict:
     """Un controllo con ripieghi sulle foto. Ritorna {"x": risposta validata | None, "errore": eccezione | None,
@@ -341,7 +355,11 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
     chiamata riuscita (registrazione e commit della spesa, anche se poi la risposta non è valida).
     17/11 (notte-03) serve_foto: auto con sconto alto, che il sito ammette solo con le foto viste dall'AI
     (sito_regole.sconto_confermato_ai): mai la chiamata senza foto (pagata e inutile); se le foto in base64 non si
-    scaricano si prova a mandare gli indirizzi; se non va nessun modo: FotoNonScaricabili, nessuna spesa."""
+    scaricano si prova a mandare gli indirizzi; se non va nessun modo: FotoNonScaricabili, nessuna spesa.
+    22/11 (ripiego foto): se Anthropic non riesce a scaricare una foto mandata per indirizzo (errore_scarico_foto) si
+    ripete UNA volta con le foto scaricate da noi (base64, saltando quelle che non si scaricano; la chiamata rifiutata
+    non si paga, quella ripetuta passa da `paga` come le altre). Se nemmeno noi ne scarichiamo una: con serve_foto è
+    FotoNonScaricabili (come senza foto, non l'errore 400), senza serve_foto la chiamata senza foto di sempre."""
     chiama = chiama or _chiama_claude
     token: list = []
     modi = [modo_foto()] if fonti_foto and n_foto() else ["0"]
@@ -355,8 +373,15 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
     elif modi[0] == "base64":
         modi += ["0"]
     ultimo = None
+    scarico = None                                # 22/11: il 400 "Unable to download the file" (foto per indirizzo)
+    b64_ok = None                                 # foto scaricate da noi (None = base64 non ancora provato)
+    provate = min(len(dict.fromkeys(f for f in (fonti_foto or []) if f)), n_foto())
     for m in modi:
         foto = blocchi_foto(fonti_foto, m, http=http) if m != "0" else []
+        if m == "base64":
+            b64_ok = len(foto)
+            if scarico is not None:
+                _log_ripiego(r, b64_ok, provate)
         if m != "0" and not foto:
             continue                              # nessuna foto scaricabile in questo modo: si passa al prossimo
         n_mandate = len(foto)                     # 17/11 (giudice): foto davvero mandate (doppie tolte)
@@ -366,6 +391,10 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
         except Exception as e:
             if foto and AI.errore_immagine(e) and not _tipo_errore(e):
                 ultimo = e
+                if m == "url" and errore_scarico_foto(e):
+                    scarico = e
+                    if b64_ok is not None:        # base64 già provato prima (nessuna foto scaricata da noi)
+                        _log_ripiego(r, b64_ok, provate)
                 continue                          # foto rifiutata: stesso controllo con le foto in un altro modo
             return {"x": None, "errore": e, "token": token, "foto": len(foto)}
         finally:
@@ -386,8 +415,17 @@ def controlla(r: dict, fonti_foto: list[str], confronti=None, perizia=None, chia
     if serve_foto and ultimo is None:
         return {"x": None, "errore": FotoNonScaricabili("foto non scaricabili: nessuna chiamata"), "token": token,
                 "foto": 0}
+    if serve_foto and scarico is not None and ultimo is scarico and not b64_ok:
+        # 22/11: né Anthropic né noi scarichiamo una foto: come "senza foto" (non confermata, si riprova tra 6 ore)
+        return {"x": None, "errore": FotoNonScaricabili("foto non scaricabili (né per indirizzo né da noi): nessuna "
+                                                        "chiamata pagata"), "token": token, "foto": 0}
     return {"x": None, "errore": ultimo or ControlloNonValido("nessun modo di mandare la richiesta"), "token": token,
             "foto": 0}
+
+
+def _log_ripiego(r: dict, ok: int, provate: int) -> None:
+    log.warning("CONTROLLO_AI %s ripiego_base64 foto_ok=%d foto_saltate=%d", (r or {}).get("id"), ok,
+                max(0, provate - ok))
 
 
 def _tipo_errore(e) -> str | None:
