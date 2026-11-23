@@ -1,6 +1,7 @@
 """4/11: ruolo dal database, IP vero, niente password nei log, chiave del CSV fuori dall'indirizzo, voce degli ospiti,
 PLATE_SALT di esempio rifiutato, abbonamento per assistente e servizi."""
 import asyncio
+import contextlib
 import logging
 
 from starlette.requests import Request
@@ -195,7 +196,12 @@ def test_voce_ospiti_limitata():
         usi["n"] = A.VOCE_OSPITI_GIORNO
         assert _errore(A._voce_gate, _req({"X-Forwarded-For": "93.184.216.51"}), ospite, "tts", "ciao") == 429
         # chi ha un account non ha questi limiti
+        # (23/11: chi ha un account deve poter vedere le auto, cioè avere l'abbonamento se gli serve)
+        P.set(A, "connect", lambda: contextlib.nullcontext())
+        P.set(A, "puo_vedere_auto", lambda conn, did: True)
         assert _errore(A._voce_gate, r, {"id": 3, "role": "commerciante"}, "tts", "x" * 600) is None
+        P.set(A, "puo_vedere_auto", lambda conn, did: False)
+        assert _errore(A._voce_gate, r, {"id": 3, "role": "commerciante"}, "tts", "ciao") == 402
     finally:
         A._voce_uso.clear()
         P.undo()

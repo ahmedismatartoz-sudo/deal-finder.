@@ -3,3 +3,6 @@
 -- (abbonamento.ha_colonna), quindi la registrazione funziona anche se questa migrazione viene rimandata.
 ALTER TABLE dealers ADD COLUMN IF NOT EXISTS citta TEXT;                 -- città o provincia scritta alla registrazione
 ALTER TABLE dealers ADD COLUMN IF NOT EXISTS consenso_at TIMESTAMPTZ;    -- quando ha accettato condizioni d'uso e privacy
+-- NULL = account di prima o creato da noi; false = registrato da solo con password, email mai verificata;
+-- true = ha dimostrato di avere l'indirizzo (primo accesso con Google/Apple). Vedi social.find_or_create.
+ALTER TABLE dealers ADD COLUMN IF NOT EXISTS email_verificata BOOLEAN;

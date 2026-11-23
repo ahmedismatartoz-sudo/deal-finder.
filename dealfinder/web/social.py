@@ -135,8 +135,21 @@ def find_or_create(conn, provider: str, info: dict, name_hint: str | None = None
     if not d:
         d = conn.execute("SELECT * FROM dealers WHERE email=%s", (info["email"],)).fetchone()
         if d:
-            conn.execute(f"UPDATE dealers SET {col}=%s WHERE id=%s", (info["sub"], d["id"]))
-            conn.commit()
+            # 23/11 (sicurezza): un account nato dalla registrazione con password NON ha l'email verificata: chiunque
+            # può aver registrato questo indirizzo con la propria password. Google/Apple invece la verificano: al primo
+            # collegamento vince chi dimostra di avere l'email -> password azzerata e sessioni aperte chiuse.
+            if d.get("password_hash") and _da_registrazione_non_verificata(d):
+                conn.execute(f"UPDATE dealers SET {col}=%s, password_hash=NULL WHERE id=%s", (info["sub"], d["id"]))
+                from . import abbonamento, sessions
+                if abbonamento.ha_colonna(conn, "dealers", "email_verificata"):
+                    conn.execute("UPDATE dealers SET email_verificata=true WHERE id=%s", (d["id"],))
+                sessions.revoke_all(conn, d["id"], "collegato_" + provider)      # fa anche il commit
+                import logging
+                logging.getLogger("dealfinder.web").warning("ACCESSO_SOCIAL password azzerata al collegamento id=%s", d["id"])
+                d = conn.execute("SELECT * FROM dealers WHERE id=%s", (d["id"],)).fetchone()
+            else:
+                conn.execute(f"UPDATE dealers SET {col}=%s WHERE id=%s", (info["sub"], d["id"]))
+                conn.commit()
     if d:
         if d["active"]:
             return d, "ok"
@@ -148,9 +161,20 @@ def find_or_create(conn, provider: str, info: dict, name_hint: str | None = None
                         f"Iscritto con {provider.capitalize()}")
 
 
+def _da_registrazione_non_verificata(d: dict) -> bool:
+    """Account creato da /api/auth/registrati e mai entrato con Google/Apple. Con la migrazione 065: colonna
+    email_verificata = false. Senza (migrazione rimandata): i segni che scrive solo crea_account con la password."""
+    if d.get("google_sub") or d.get("apple_sub") or d.get("role") == "admin":
+        return False
+    if "email_verificata" in d:
+        return d["email_verificata"] is False
+    return bool(d.get("richiede_abbonamento") and d.get("paga_carta"))
+
+
 def registrazione_attiva() -> bool:
-    """23/11: registrazione con email e password dal sito. Accesa di default; REGISTRAZIONE=0 la spegne."""
-    return os.environ.get("REGISTRAZIONE", "1").strip() != "0"
+    """23/11: registrazione con email e password dal sito. Accesa di default (REGISTRAZIONE=0 la spegne), ma SOLO con
+    ISCRIZIONE=pagamento: chi si registra da solo entra pagando, mai con l'iscrizione aperta o in approvazione."""
+    return os.environ.get("REGISTRAZIONE", "1").strip() != "0" and os.environ.get("ISCRIZIONE") == "pagamento"
 
 
 def crea_account(conn, name: str, email: str, extra: dict, fonte: str, nota: str,
@@ -167,14 +191,17 @@ def crea_account(conn, name: str, email: str, extra: dict, fonte: str, nota: str
         # iscrizione libera con abbonamento: l'account è attivo, le auto si vedono dopo il pagamento
         from ..zone import tutte
         cols.update(active=True, richiede_abbonamento=True, permessi=["auto"], provinces=tutte())
-        if extra.get("password_hash"):
-            # abbonamento.puo_vedere lascia entrare senza abbonamento gli account con password (creati da noi dal
-            # gestionale): chi si registra da solo con la password deve pagare con carta come chi entra con Google
-            cols["paga_carta"] = True
         esito = "ok"
     else:
         cols["active"] = signup_open()
         esito = "ok" if cols["active"] else "in_attesa"
+    if extra.get("password_hash"):
+        # abbonamento.puo_vedere lascia entrare senza abbonamento gli account con password (creati da noi dal
+        # gestionale): chi si registra da solo con la password deve SEMPRE pagare con carta, in qualunque modalità
+        cols["paga_carta"] = True
+        from . import abbonamento
+        if abbonamento.ha_colonna(conn, "dealers", "email_verificata"):
+            cols["email_verificata"] = False      # nessuno ha ancora dimostrato di avere questo indirizzo
     nomi = list(cols)
     d = conn.execute(
         f"INSERT INTO dealers ({', '.join(nomi)}) VALUES ({','.join(['%s'] * len(nomi))}) RETURNING *",

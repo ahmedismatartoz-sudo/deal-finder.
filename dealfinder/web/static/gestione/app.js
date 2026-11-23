@@ -365,7 +365,7 @@ async function viewAdmin() {
         ["id", "", (v, r) => r.dealer_id ? `<button class="btn primary" data-approve="${v}">Attiva</button>`
           : `<button class="btn" data-prefill="${esc(JSON.stringify({n: r.name, c: r.company, e: r.email, id: v}))}">Crea account</button>`]])}
       <h2>Commercianti</h2>
-      <div style="overflow-x:auto;margin:0 -16px;padding:0 16px">${table(d.items, [["name", "Nome"], ["phone", "Telefono"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
+      <div style="overflow-x:auto;margin:0 -16px;padding:0 16px">${table(d.items, [["name", "Nome"], ["company", "Salone"], ["citta", "Città"], ["phone", "Telefono"], ["email", "Email"], ["role", "Ruolo"], ["methods", "Entra con"], ["sessions", "Dispositivi"], ["opens", "Annunci aperti"], ["bought", "Comprate"],
         ["provinces", "Zona", (v, r) => r.role === "admin" ? "Tutte" : `<select data-zona="${r.id}">${[["milano", "Milano e dintorni"], ["ravenna", "Ravenna e dintorni"], ["tutte", "Tutte"]].map(([k, l]) =>
           `<option value="${k}" ${zonaDi(v) === k ? "selected" : ""}>${l}</option>`).join("")}</select>`],
         ["permessi", "Accesso a", (v, r) => r.role === "admin" ? "Tutto" : [["auto", "Auto"], ["incentivi", "Incentivi"], ["appuntamenti", "Appuntamenti (200 €)"]].map(([k, l]) =>

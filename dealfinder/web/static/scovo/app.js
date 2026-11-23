@@ -1303,6 +1303,8 @@ function applyRoute(){
     toast(r.esito === "ok" ? "Pagamento ricevuto: entra per vedere le auto" : "Pagamento annullato");
     render({top:true}); loadCars(true); return;
   }
+  // 23/11: registrazione spenta -> #/registrati porta all'accesso (anche dai link interni), senza restare nella cronologia
+  if (r.route === "registrati" && !S.token && !REG_ON()) { location.replace("#/entra"); S.route = "entra"; S.esitoAccesso = ""; render({top:true}); return; }
   if (r.route === "accesso") { history.replaceState(null, "", "#/entra"); S.route = "entra"; render({top:true}); redeemCode(r.code); return; }
   if (S.token && ["entra","prova","registrati","vetrina"].includes(r.route)) { go("affari", true); return; }
   if (r.route === "entra") { S.esitoAccesso = r.esito; if (r.esito) history.replaceState(null, "", "#/entra"); }
@@ -2416,7 +2418,7 @@ api("/api/auth/metodi").then(m => {
   // il modulo di registrazione non si ridisegna se è già stato cominciato (le password scritte non si perdono)
   if (!S.token && S.route === "registrati") {
     const rf = document.getElementById("reg-form");
-    if (!REG_ON()) go("entra", true);
+    if (!REG_ON()) { location.replace("#/entra"); S.route = "entra"; render({top:true}); }
     else if (!rf || ![...rf.querySelectorAll("input")].some(i => i.type === "checkbox" ? i.checked : i.value)) render({keep:true});
   }
   if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|trattare|incidentate|economiche|supercar|vendute)$/.test(h) ? h : "affari", true); }

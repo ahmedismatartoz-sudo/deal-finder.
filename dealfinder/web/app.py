@@ -229,6 +229,7 @@ REGISTRAZIONI_PROVE_ORA = 20     # richieste arrivate al database per IP in un'o
 _registrazioni_ip: dict[str, list[float]] = defaultdict(list)
 _EMAIL_RE = re.compile(r"^[a-z0-9._%+\-]+@[a-z0-9](?:[a-z0-9.\-]*[a-z0-9])?\.[a-z]{2,24}$")
 _MSG_GIA_REGISTRATA = "Questa email ha già un account: accedi"
+_MSG_GIA_IN_CORSO = "Questa email ha già una richiesta in corso: ti contattiamo noi"
 
 
 def _telefono_italiano(v: str) -> str | None:
@@ -293,12 +294,16 @@ def _valida_registrazione(data: dict) -> dict:
 
 
 def _crea_registrato(v: dict) -> tuple[dict | None, str]:
-    """(commerciante, esito): esito = ok | in_attesa | esiste. L'account nasce come quello di chi entra con Google
-    (social.crea_account), con in più password, salone, telefono e città."""
+    """(commerciante, esito): esito = ok | in_attesa | esiste | in_corso (email di un account non attivo o in attesa).
+    L'account nasce come quello di chi entra con Google (social.crea_account), con in più password, salone, telefono
+    e città."""
+    impronta = hash_password(v["password"])      # scrypt è lento: si calcola PRIMA di prendere una connessione
     with connect() as conn:
-        if conn.execute("SELECT 1 FROM dealers WHERE lower(email)=%s", (v["email"],)).fetchone():
-            return None, "esiste"
-        extra = {"password_hash": hash_password(v["password"]), "company": v["azienda"], "phone": v["telefono"]}
+        c = conn.execute("SELECT active FROM dealers WHERE lower(email)=%s ORDER BY active DESC LIMIT 1",
+                         (v["email"],)).fetchone()
+        if c:
+            return None, ("esiste" if c["active"] else "in_corso")
+        extra = {"password_hash": impronta, "company": v["azienda"], "phone": v["telefono"]}
         if abbonamento.ha_colonna(conn, "dealers", "citta"):          # migrazione 065 (se rimandata si entra lo stesso)
             extra["citta"] = v["citta"]
         if abbonamento.ha_colonna(conn, "dealers", "consenso_at"):
@@ -323,6 +328,7 @@ async def registrati(request: Request):
     """POST /api/auth/registrati: account nuovo con email e password, poi sessione aperta come dopo il login.
     Nei log solo l'id e l'email mascherata: mai password, telefono o altri dati."""
     if not social.registrazione_attiva():
+        # spenta (REGISTRAZIONE=0) oppure ISCRIZIONE diversa da "pagamento": nessun account con password senza pagamento
         err(403, "La registrazione dal sito non è attiva: entra con Google o chiedi di provare Scovo")
     data = await body(request)
     if not isinstance(data, dict):
@@ -341,13 +347,12 @@ async def registrati(request: Request):
         for k in [k for k, ts in _registrazioni_ip.items() if not ts or now - ts[-1] > 3600]:
             _registrazioni_ip.pop(k, None)
     u, esito = await run_in_threadpool(_crea_registrato, v)
-    if esito == "esiste":
-        err(409, _MSG_GIA_REGISTRATA)
+    if esito in ("esiste", "in_corso"):
+        err(409, _MSG_GIA_REGISTRATA if esito == "esiste" else _MSG_GIA_IN_CORSO)
     _registrazioni_ip[k_ok].append(now)
     log.warning("REGISTRAZIONE ok id=%s email=%s", u["id"], _maschera_email(v["email"]))
-    if esito == "in_attesa":
-        return jsonify({"in_attesa": True, "messaggio": "Registrazione ricevuta. Attiviamo il tuo account entro un "
-                        "giorno lavorativo: poi entri con la tua email e la password che hai scelto."}, 202)
+    if esito != "ok" or not u.get("active"):       # non succede con ISCRIZIONE=pagamento: mai una sessione a chi non è attivo
+        return jsonify({"in_attesa": True, "messaggio": "Registrazione ricevuta: ti contattiamo noi."}, 202)
     out = await run_in_threadpool(start_session, request, u, "password")
     # stessa regola dell'elenco auto (abbonamento.puo_vedere): il sito apre subito la scelta del piano
     paga = not abbonamento.puo_vedere({**u, "con_password": True})
@@ -665,8 +670,10 @@ def alarms(conn) -> list[str]:
 def admin_dealers(request: Request):
     current_user(request, admin=True)
     with connect() as conn:
+        # 23/11: città scritta alla registrazione (migrazione 065; senza la colonna l'elenco resta com'era)
+        citta = "d.citta" if abbonamento.ha_colonna(conn, "dealers", "citta") else "NULL::text"
         rows = conn.execute(
-            """SELECT d.id, d.name, d.email, d.company, d.phone, d.role, d.active, d.provinces, d.created_at, d.permessi, d.paga_carta, d.abbonamento_stato,
+            f"""SELECT d.id, d.name, d.email, d.company, d.phone, {citta} AS citta, d.role, d.active, d.provinces, d.created_at, d.permessi, d.paga_carta, d.abbonamento_stato,
                       (SELECT count(*) FROM listing_opens o WHERE o.dealer_id=d.id) AS opens,
                       (SELECT count(*) FROM dealer_feedback f WHERE f.dealer_id=d.id AND f.status='comprata') AS bought,
                       (SELECT count(*) FROM dealer_sessions s WHERE s.dealer_id=d.id AND s.revoked_at IS NULL) AS sessions,
@@ -1154,6 +1161,12 @@ def _voce_gate(request: Request, user: dict, kind: str, testo: str = "") -> None
     now = time.time()
     _voce_uso[k] = [t for t in _voce_uso[k] if now - t < 86400]
     lim = VOCE_LIMITE[kind] // (5 if ospite else 1)
+    if not ospite and user.get("role") != "admin":
+        # 23/11: la voce costa a ogni chiamata: per chi ha un account vale la stessa regola delle auto (abbonamento),
+        # altrimenti chi si registra e non paga la userebbe gratis
+        with connect() as conn:
+            if not puo_vedere_auto(conn, user["id"]):
+                err(402, "Per usare la voce serve l'abbonamento")
     if len(_voce_uso[k]) >= lim:
         err(429, "Hai usato molto la voce oggi: continuo a risponderti per iscritto")
     if ospite:
