@@ -2265,7 +2265,8 @@ def affare(request: Request):
             _con_perizia(conn, lid, it, d)
             return jsonify(d)
         from . import vetrina_supercar as _vs
-        in_vetrina = _vs.in_memoria(lid) and lid not in SOLO_ADMIN_IDS
+        in_vetrina = (user.get("role") != "ospite" and lid not in SOLO_ADMIN_IDS
+                      and _vs.in_memoria(lid) is not None)     # revisione: mai agli ospiti del sito aperto
         if not admin and not in_vetrina:
             err(404, "Questa auto non è più disponibile")
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
@@ -2297,15 +2298,21 @@ def affare(request: Request):
             pv = dict(d.get("pv") if isinstance(d.get("pv"), dict) else {})
             g, prezzo = int(v["guadagno"]), int(d.get("prezzo") or v.get("prezzo") or 0)
             pv.update(M=int(v["mercato"]), n=v.get("confronti"), margine=g)
-            if pv.get("R_finale") is None and pv.get("R") is None:
-                pv["R_finale"] = prezzo + g
+            # revisione: il conto deve tornare (rivendita − costi − prezzo = guadagno mostrato)
+            pv["R_finale"] = pv["R"] = prezzo + g + int(pv.get("totale_costi") or 0)
             d["pv"], d["mercato"] = pv, int(v["mercato"])
             d.pop("netto", None)
+            try:
+                scovo.stessi_numeri(d)          # valutazione allineata a mercato e guadagno mostrati
+            except Exception:
+                pass
     else:
         d["non_sul_sito"] = True                # solo amministratore: auto valutata ma tolta dalle regole del sito
     with connect() as conn:
         scheda_tecnica.aggiungi(conn, lid, d)
         _con_trattativa(conn, lid, d)
+        if in_vetrina:
+            _con_perizia(conn, lid, d, d)       # anche il parere del perito, come le altre auto
     return jsonify(d)
 
 
