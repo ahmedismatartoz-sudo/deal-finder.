@@ -92,7 +92,11 @@ export async function createStage(canvas,o){
   const lampL=new THREE.SpotLight(0xf4f8ff,0,22,.35,.5),lampR=lampL.clone();
   if(hero){lampL.position.set(.62,.7,2.3);lampR.position.set(-.62,.7,2.3);[lampL,lampR].forEach(f=>{f.target.position.set(f.position.x,0,12);car.add(f,f.target)})}
 
-  const src=await loadModel(o.onProgress);
+  let src;
+  try{src=await loadModel(o.onProgress)}
+  catch(e){ // modello non scaricato: libera il contesto WebGL, altrimenti ogni tentativo fallito ne lascia uno aperto
+    progL.delete(o.onProgress);try{pm.dispose();r.dispose();r.forceContextLoss()}catch(_){}
+    throw e}
   const m=src.clone();
   const set=(n,mat)=>{const x=m.getObjectByName(n);if(x)x.material=mat};
   set('body',paint);['rim_fl','rim_fr','rim_rr','rim_rl','trim'].forEach(n=>set(n,detail));set('glass',glass);
