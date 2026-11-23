@@ -2206,6 +2206,8 @@ def affare(request: Request):
             if it.get("supercar"):
                 extra["pv_dati"] = None          # le supercar hanno la valutazione dei confronti europei, non la policy
             d = scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(scovo.detail(dict(it), extra))))   # 10/11: anche dentro la scheda vale il prezzo ribassato
+            if admin:
+                _prova_admin(lid, d)
             scheda_tecnica.aggiungi(conn, lid, d)            # 12/11: scheda tecnica (allestimento, cambio, optional...)
             _con_trattativa(conn, lid, d)
             _con_perizia(conn, lid, it, d)
@@ -2226,6 +2228,26 @@ def affare(request: Request):
         scheda_tecnica.aggiungi(conn, lid, d)
         _con_trattativa(conn, lid, d)
     return jsonify(d)
+
+
+# 23/11 10:36 (proprietario, prova SOLO per sé da amministratore, "lo toglierò a fine giornata"): per queste auto
+# la scheda dell'AMMINISTRATORE mostra "in vendita da N giorni" al posto del dato vero. I commercianti vedono sempre il
+# dato vero. Vale solo fino alla data indicata (ora italiana), poi si spegne da sola.
+PROVA_ADMIN_GIORNI = {21604: 7}          # Fiat 500 1.0 Hybrid Cult 2021 rossa, Triuggio
+PROVA_ADMIN_FINO = "2026-11-23"
+
+
+def _prova_admin(lid: int, d: dict) -> None:
+    try:
+        from datetime import datetime, timedelta, timezone
+        from zoneinfo import ZoneInfo
+        if lid not in PROVA_ADMIN_GIORNI or datetime.now(ZoneInfo("Europe/Rome")).date().isoformat() > PROVA_ADMIN_FINO:
+            return
+        inizio = datetime.now(timezone.utc) - timedelta(days=PROVA_ADMIN_GIORNI[lid])
+        d["visto_dal"] = d["nuova"] = d["_prova_inizio"] = inizio
+        d["prova_admin"] = True
+    except Exception:
+        pass
 
 
 def _con_perizia(conn, lid: int, it: dict, d: dict) -> None:

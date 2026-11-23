@@ -875,6 +875,10 @@ def scheda(conn, lid: int, d: dict, soglia_fn, ora=None) -> dict | None:
     b = dict(b)
     st = storico([dict(r) for r in conn.execute(STORICO_SQL, {"id": lid}).fetchall()], lid)
     dop = [dict(r) for r in conn.execute(DOPPIONI_SQL, {"id": lid}).fetchall()]
+    prova = d.pop("_prova_inizio", None)          # 23/11: prova del proprietario, solo nella sua scheda (app._prova_admin)
+    if prova:
+        b["first_seen_at"] = prova
+        st = dict(st, inizio=prova)
     return calcola(b, st, dop, d, soglia_fn, ora=ora)
 
 
