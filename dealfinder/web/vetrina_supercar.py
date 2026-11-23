@@ -17,6 +17,7 @@ Nelle schede non c'è mai un numero di telefono (solo ha_telefono sì/no): il co
 """
 from __future__ import annotations
 
+import collections
 import json
 import logging
 import re
@@ -603,7 +604,45 @@ def _leggi_blocco(conn, ids: list, scarti) -> tuple[list[dict], dict]:
     buone = [it for it in items if e_opportunita(it)]
     if len(buone) < len(items):
         tolte = dict(tolte, non_opportunita=tolte.get("non_opportunita", 0) + len(items) - len(buone))
-    return buone, tolte
+    ok = []
+    for it in buone:
+        motivo = prezzo_sospetto(it)
+        if motivo:
+            tolte = dict(tolte, **{motivo: tolte.get(motivo, 0) + 1})
+            _sospette.append(dict(_riga_controllo(it), motivo=motivo))
+        else:
+            ok.append(it)
+    return ok, tolte
+
+
+_sospette: list = []
+
+
+def _riga_controllo(it: dict) -> dict:
+    """Per il log di controllo: solo dati dell'auto, niente venditore."""
+    m, p = it.get("mercato") or 0, it.get("prezzo") or 0
+    return {"id": it.get("id"), "auto": " ".join(str(x) for x in (it.get("marca"), it.get("modello"), it.get("versione") or "") if x)[:70],
+            "anno": it.get("anno"), "km": it.get("km"), "prezzo": p, "mercato": m, "guadagno": it.get("guadagno"),
+            "confronti": it.get("confronti"), "sconto_pct": round(100 * (m - p) / m, 1) if m else None}
+
+
+def prezzo_sospetto(it: dict) -> str | None:
+    """23/11 sera (cliente: "controlla se i prezzi delle sportive sono gonfiati"): gli STESSI controlli dello sconto
+    alto del sito (sito_regole.sconto_da_controllare: sconto in euro oltre il limite della fascia, senza la conferma
+    dell'AI non entra) più quelli di Supercar Europa: prezzo sotto il 70% del mercato o guadagno oltre il 25% del prezzo
+    = mercato probabilmente gonfiato (versione diversa, confronti sbagliati) o annuncio da verificare."""
+    m, p, g = float(it.get("mercato") or 0), float(it.get("prezzo") or 0), float(it.get("guadagno") or 0)
+    if not m or not p:
+        return None
+    if p < 0.70 * m:
+        return "troppo_sotto_il_mercato"
+    if g > 0.25 * p:
+        return "guadagno_irreale"
+    if not it.get("supercar"):
+        lim = next(e for fino, e in SR.Regole().sconto_euro if p < fino)
+        if (m - p) > lim:
+            return "sconto_alto_da_controllare"
+    return None
 
 
 def e_opportunita(it: dict) -> bool:
@@ -802,6 +841,7 @@ def _carica(connetti, scarti_ids=None) -> tuple[list[dict], int]:
     """Una lettura completa (chiamata con _cache_lock preso)."""
     if True:
         t0 = time.time()
+        _sospette.clear()
         try:
             scarti = frozenset(scarti_ids() if callable(scarti_ids) else (scarti_ids or ()))
             with connetti() as conn:
@@ -817,6 +857,17 @@ def _carica(connetti, scarti_ids=None) -> tuple[list[dict], int]:
         _cache.update(t=time.time(), items=items, totale=totale)
         # solo conteggi: nessun nome, telefono o indirizzo
         log.warning("VETRINA_SUPERCAR %s", json.dumps(numeri.pop("riepilogo", None) or riepilogo(items), ensure_ascii=False))
+        try:      # 23/11 sera: controllo dei prezzi gonfiati (auto tolte e le rimaste con lo sconto più alto)
+            rim = sorted((_riga_controllo(it) for it in items), key=lambda r: -(r["sconto_pct"] or 0))
+            sc = sorted(r["sconto_pct"] or 0 for r in rim)
+            log.warning("VETRINA_CONTROLLO %s", json.dumps({
+                "tolte": len(_sospette), "per_motivo": dict(collections.Counter(r["motivo"] for r in _sospette)),
+                "tolte_esempi": sorted(_sospette, key=lambda r: -(r["sconto_pct"] or 0))[:25],
+                "rimaste": len(rim), "sconto_mediano_pct": sc[len(sc) // 2] if sc else None,
+                "rimaste_sconto_piu_alto": rim[:25]}, ensure_ascii=False))
+        except Exception as e:
+            log.warning("VETRINA_CONTROLLO non scritto: %s", str(e)[:150])
+        _sospette.clear()
         log.warning("VETRINA_SUPERCAR_LETTURA %s", json.dumps(dict(numeri, mostrate=len(items),
                                                                    secondi=round(time.time() - t0, 1)), ensure_ascii=False))
         return _cache["items"], _cache["totale"]
