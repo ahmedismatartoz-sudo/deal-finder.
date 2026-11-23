@@ -2137,7 +2137,16 @@ def _carica_elenco_salvato() -> bool:
     return True
 
 
-def _elenco_per(dealer_id: int) -> list[dict]:
+# 23/11 10:51 (proprietario: "togli la Fiat 500 rossa, la devo vedere solo io da amministratore"): auto tolte ai
+# commercianti (elenco, scheda, email) e visibili solo all'amministratore.
+SOLO_ADMIN_IDS = {21604}                 # Fiat 500 1.0 Hybrid Cult 2021 rossa, Triuggio
+
+
+def _per_clienti(items: list) -> list:
+    return [it for it in items if it.get("id") not in SOLO_ADMIN_IDS]
+
+
+def _elenco_per(dealer_id: int, admin: bool = False) -> list[dict]:
     _filtra_impostazioni()
     eta = time.time() - _elenco["t"]
     if not _elenco["items"]:
@@ -2148,7 +2157,7 @@ def _elenco_per(dealer_id: int) -> list[dict]:
         mie = {r["listing_id"] for r in conn.execute(
             "SELECT DISTINCT listing_id FROM listing_opens WHERE dealer_id=%s", (dealer_id,)).fetchall()}
     out, mx = [], settings.max_dealer_opens
-    for it in _elenco["items"]:
+    for it in (_elenco["items"] if admin else _per_clienti(_elenco["items"])):
         aperta = it["id"] in mie
         if aperta or _elenco["opens"].get(it["id"], 0) < mx:
             out.append(dict(it, aperta=True) if aperta else it)
@@ -2168,7 +2177,7 @@ def api_vendute(request: Request):
 
 def affari(request: Request):
     user = viewer(request, "auto")
-    items = [dict(scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(it)))) for it in _elenco_per(user["id"])]
+    items = [dict(scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(it)))) for it in _elenco_per(user["id"], user.get("role") == "admin")]
     # vetrina: le auto scelte a mano (economiche, con tanto margine, quasi tutte sane), in testa all'elenco
     vet = _vetrina()
     per_id = {it["id"]: it for it in items}
@@ -2196,9 +2205,9 @@ def affare(request: Request):
     sito dà 404 (solo l'amministratore vede la scheda dal database, per controllo)."""
     user = viewer(request, "auto")
     lid = int(request.path_params["id"])
-    mie = _elenco_per(user["id"])
-    it = next((x for x in mie if x.get("id") == lid), None)
     admin = user.get("role") == "admin"
+    mie = _elenco_per(user["id"], admin)
+    it = next((x for x in mie if x.get("id") == lid), None)
     from . import scheda_tecnica                # 12/11: scheda tecnica dell'auto
     with connect() as conn:
         if it is not None:
@@ -5183,9 +5192,9 @@ def _tempo_reale():
                     return
                 with connect() as conn:
                     fine = log_job(conn, "campagna_1_11:invio")
-                    fine(True, C.esegui(lambda: list(_elenco["items"]), "invia"))
+                    fine(True, C.esegui(lambda: _per_clienti(_elenco["items"]), "invia"))
             else:
-                C.esegui(lambda: list(_elenco["items"]), "prova")
+                C.esegui(lambda: _per_clienti(_elenco["items"]), "prova")
         except Exception as e:
             L.warning("CAMPAGNA_1_11 non riuscita: %s", str(e)[:300])
     threading.Thread(target=campagna_1_11, daemon=True, name="campagna_1_11").start()
