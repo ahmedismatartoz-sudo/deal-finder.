@@ -853,3 +853,17 @@ def test_guadagno_come_gli_affari():
     assert VS.guadagno_supercar(r, 80000) == int(100000 * 0.92 * 0.95) - 80000
     assert VS.guadagno_supercar(dict(r, n=7), 80000) is None                                  # pochi confronti
     assert VS.guadagno_supercar(r, 60000) is None                                             # troppo bella
+
+
+def test_scheda_completa_per_le_auto_della_vetrina(monkeypatch):
+    """23/11 sera (cliente): dalla vetrina si apre la scheda di Scovo, non il portale; stessi mercato e guadagno."""
+    from dealfinder.web import app as A
+    assert "FROM listings l\nLEFT JOIN LATERAL" in A._VETRINA_DETAIL_SQL and A._VETRINA_DETAIL_SQL.rstrip().endswith("WHERE l.status='attivo'")
+    assert "stage='approfondito'" not in A._VETRINA_DETAIL_SQL
+    monkeypatch.setattr(VS, "_cache", {"t": 1e18, "items": [{"id": 77, "mercato": 80000, "guadagno": 5000, "prezzo": 70000}], "totale": 1})
+    assert VS.in_memoria(77)["guadagno"] == 5000 and VS.in_memoria(78) is None
+    import pathlib
+    js = (pathlib.Path(__file__).resolve().parents[1] / "dealfinder/web/static/scovo/app.js").read_text()
+    i = js.index("function sclCard")
+    corpo = js[i:js.index("\n}\n", i)]
+    assert 'data-act="open"' in corpo and "target=\"_blank\"" not in corpo

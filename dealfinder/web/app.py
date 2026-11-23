@@ -2237,6 +2237,12 @@ def affari(request: Request):
                     "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
 
 
+# 23/11 sera: scheda completa per le auto della vetrina sportive (stesse colonne di LIST_SQL, solo annuncio attivo)
+_VETRINA_DETAIL_SQL = scovo.LIST_SQL.split("FROM listings l")[0] + """FROM listings l
+LEFT JOIN LATERAL (SELECT * FROM valuations WHERE listing_id=l.id ORDER BY created_at DESC LIMIT 1) v ON true
+WHERE l.status='attivo'"""
+
+
 def affare(request: Request):
     """Scheda di un'auto: la STESSA auto dell'elenco del sito (stessi R, costi e margine). 4/11: un'auto che non è sul
     sito dà 404 (solo l'amministratore vede la scheda dal database, per controllo)."""
@@ -2258,9 +2264,21 @@ def affare(request: Request):
             _con_trattativa(conn, lid, d)
             _con_perizia(conn, lid, it, d)
             return jsonify(d)
-        if not admin:
+        from . import vetrina_supercar as _vs
+        in_vetrina = _vs.in_memoria(lid) and lid not in SOLO_ADMIN_IDS
+        if not admin and not in_vetrina:
             err(404, "Questa auto non è più disponibile")
         row = conn.execute(scovo.LIST_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
+        if not row and in_vetrina:
+            # auto della vetrina sportive: stessa scheda delle altre, anche se non è nella fase "approfondito"
+            row = conn.execute(_VETRINA_DETAIL_SQL + " AND l.id=%(id)s", {"me": user["id"], "id": lid}).fetchone()
+            if row is not None:
+                row = dict(row)
+                v = _vs.in_memoria(lid) or {}
+                if not (row.get("private_median") or row.get("resale_median_private") or row.get("resale_median")):
+                    row["private_median"] = v.get("mercato")       # il mercato della vetrina (stessa valutazione)
+                if row.get("parts_cost_high") is None and not row.get("damage_class"):
+                    row["parts_cost_low"] = row["parts_cost_high"] = 0
         eco = None
         if not row:
             eco = row = conn.execute(scovo.ECO_SQL + " AND l.id=%(id)s", dict(scovo.eco_params(user["id"]), id=lid)).fetchone()
@@ -2269,7 +2287,22 @@ def affare(request: Request):
     if not base:
         err(404, "Questa auto non è più disponibile")
     d = scovo.con_netto(scovo.detail(base, extra or {}))
-    d["non_sul_sito"] = True                    # solo amministratore: auto valutata ma tolta dalle regole del sito
+    if in_vetrina:
+        # 23/11 sera (cliente): le auto della vetrina sportive aprono la scheda completa come le altre (studio,
+        # comportamento del venditore, contatto). Mercato e guadagno restano quelli della vetrina (stessa valutazione).
+        v = _vs.in_memoria(lid) or {}
+        d["vetrina_sportive"] = True
+        if v.get("guadagno") is not None and v.get("mercato"):
+            # stessi numeri della scheda in vetrina: mercato e guadagno della stessa valutazione (come gli affari)
+            pv = dict(d.get("pv") if isinstance(d.get("pv"), dict) else {})
+            g, prezzo = int(v["guadagno"]), int(d.get("prezzo") or v.get("prezzo") or 0)
+            pv.update(M=int(v["mercato"]), n=v.get("confronti"), margine=g)
+            if pv.get("R_finale") is None and pv.get("R") is None:
+                pv["R_finale"] = prezzo + g
+            d["pv"], d["mercato"] = pv, int(v["mercato"])
+            d.pop("netto", None)
+    else:
+        d["non_sul_sito"] = True                # solo amministratore: auto valutata ma tolta dalle regole del sito
     with connect() as conn:
         scheda_tecnica.aggiungi(conn, lid, d)
         _con_trattativa(conn, lid, d)
@@ -2804,9 +2837,11 @@ def _apri_contatto(request: Request, user: dict | None) -> dict:
     # 3/11 23:45: contatto (url e numero) solo per le auto mostrate sul sito, non per qualsiasi annuncio del database
     if not (user and user.get("role") == "admin"):
         sul_sito = {it.get("id") for it in (_elenco.get("items") or [])}
-        if sul_sito and lid not in sul_sito:
+        from . import vetrina_supercar as _vs
+        in_vetrina = bool(user) and lid not in SOLO_ADMIN_IDS and _vs.in_memoria(lid) is not None
+        if sul_sito and lid not in sul_sito and not in_vetrina:
             err(404, "Questa auto non è più disponibile")
-        if not sul_sito and not _valutata_per_sito(lid):
+        if not sul_sito and not in_vetrina and not _valutata_per_sito(lid):
             # 4/11: subito dopo un riavvio l'elenco è vuoto: non si salta il controllo, si guarda il database
             err(404, "Questa auto non è più disponibile")
     with connect() as conn:

@@ -732,6 +732,19 @@ def svuota_cache() -> None:
     _errore[0] = 0.0
 
 
+def in_memoria(lid: int) -> dict | None:
+    """La scheda della vetrina di quell'auto, se è nell'elenco in memoria (per aprire la scheda completa)."""
+    items = _cache["items"]
+    if not items:
+        return None
+    if _indice.get("items") is not items:
+        _indice.update(items=items, per_id={it.get("id"): it for it in items})
+    return _indice["per_id"].get(lid)
+
+
+_indice: dict = {"items": None, "per_id": {}}
+
+
 def totale_in_memoria() -> int | None:
     """Quante auto ha la vetrina, se l'elenco è già in memoria (None = memoria vuota). Non legge il database."""
     return int(_cache["totale"] or 0) if _cache["items"] is not None else None

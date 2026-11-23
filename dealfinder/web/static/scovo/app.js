@@ -490,11 +490,10 @@ function sclCard(c, i){
         ${sclMercato(c)}
         ${riga ? `<div class="scl-r">${esc(riga)}</div>` : ""}
         <div class="scl-chi">${dove ? `<span>${esc(dove)}</span>` : ""}<span>${c.venditore === "commerciante" ? "Salone: " : "Venditore: "}${esc(chi)}</span>${giorni ? `<span>${giorni}</span>` : ""}</div>
-        ${c.url ? `<span class="btn scl-go">Vedi l'annuncio${c.fonte ? " su " + esc(c.fonte) : ""} ${ICON.next}</span>` : ""}
+        <span class="btn scl-go">Apri la scheda ${ICON.next}</span>
       </div>`;
-  return c.url && /^https?:\/\//i.test(c.url)
-    ? `<a class="card scl-card" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(titolo)}, ${eur(c.prezzo)}, apre l'annuncio originale">${dentro}</a>`
-    : `<div class="card scl-card">${dentro}</div>`;
+  // 23/11 sera (cliente): come le altre auto, la scheda completa di Scovo (studio, venditore, contatto), non il portale
+  return `<button class="card scl-card" data-act="open" data-v="${c.id}" aria-label="${esc(titolo)}, ${eur(c.prezzo)}, apri la scheda">${dentro}</button>`;
 }
 /* riquadro in cima agli affari: porta alla vetrina; il numero c'è solo se il server lo ha già in memoria */
 function sclBanner(){
