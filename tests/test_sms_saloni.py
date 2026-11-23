@@ -137,7 +137,7 @@ def _invia(db, brevo, n=5, giro="sms_saloni:t", **k):
 def test_testo_in_un_sms_gsm7_con_link_e_stop():
     t = SS.testo_sms("abc2345", ENV)
     assert SS.lunghezza_gsm7(t) is not None and SS.lunghezza_gsm7(t) <= 160, (len(t), t)
-    assert "https://scovo.onrender.com/mi/abc2345" in t and "STOP" in t
+    assert "https://scovo.onrender.com/mi/abc2345" in t and "Stop" in t
     assert t.startswith("Skovo: auto di privati sotto prezzo vicino a te, con margine già calcolato. Ti interessa? Tocca qui: ")
     # anche con il token più lungo ammesso
     assert SS.lunghezza_gsm7(SS.testo_sms("abcd2345", ENV)) <= 160
@@ -156,7 +156,7 @@ def test_testo_si_accorcia_con_indirizzo_lungo_e_tiene_link_e_stop():
     env = {"PUBLIC_URL": "https://www.un-indirizzo-parecchio-lungo.example.com/"}
     t = SS.testo_sms("abc2345", env)
     assert SS.lunghezza_gsm7(t) <= 160
-    assert "https://www.un-indirizzo-parecchio-lungo.example.com/mi/abc2345" in t and "STOP" in t
+    assert "https://www.un-indirizzo-parecchio-lungo.example.com/mi/abc2345" in t and "Stop" in t
     try:
         SS.testo_sms("abc2345", {"PUBLIC_URL": "https://" + "x" * 150 + ".example.com"})
         assert False, "doveva rifiutare"

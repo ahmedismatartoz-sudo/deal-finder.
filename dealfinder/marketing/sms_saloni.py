@@ -41,9 +41,9 @@ GSM7 = set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&
 GSM7_DOPPI = set("^{}\\[~]|€")           # ammessi ma contano 2
 
 TESTI = (
-    "Skovo: auto di privati sotto prezzo vicino a te, con margine già calcolato. Ti interessa? Tocca qui: {link} STOP per non ricevere",
-    "Skovo: auto di privati sotto prezzo vicino a te, margine già calcolato. Ti interessa? Tocca: {link} STOP per non ricevere",
-    "Skovo: auto di privati sotto prezzo vicino a te. Ti interessa? {link} STOP per non ricevere",
+    "Skovo: auto di privati sotto prezzo vicino a te, con margine già calcolato. Ti interessa? Tocca qui: {link} Stop: dal link",
+    "Skovo: auto di privati sotto prezzo vicino a te, margine già calcolato. Ti interessa? Tocca: {link} Stop: dal link",
+    "Skovo: auto di privati sotto prezzo vicino a te. Ti interessa? {link} Stop: dal link",
 )
 
 SQL_TABELLE = (
@@ -231,7 +231,10 @@ def invia(giro: str, conn, c, *, solo_primo: bool = False, env=None, adesso=None
         return fine("fuori_orario")
     assicura(conn)
     stop = {r["telefono"] for r in conn.execute("SELECT telefono FROM sms_stop").fetchall()}
-    dest, salti = prepara(leggi_lista(env), stop)
+    lista = leggi_lista(env)
+    if solo_primo:
+        lista = lista[:1]          # revisione: la prova va SOLO al primo della lista (il titolare), mai a un salone
+    dest, salti = prepara(lista, stop)
     st["saltati"] = sum(salti.values())
     log.warning("SMS_LISTA validi=%d non_validi=%d doppioni=%d stop=%d", len(dest), salti["non_validi"],
                 salti["doppioni"], salti["stop"])
@@ -256,7 +259,11 @@ def invia(giro: str, conn, c, *, solo_primo: bool = False, env=None, adesso=None
     tipo = "transactional" if (env.get("SMS_TIPO") or "").strip().lower().startswith("trans") else "marketing"
     costo = 1.0                                  # crediti dell'ultimo SMS (Brevo lo dice nella risposta)
     restano = crediti
-    gia = {r["telefono"] for r in conn.execute("SELECT telefono FROM sms_link WHERE giro = %s", (giro,)).fetchall()}
+    # revisione: mai un secondo SMS a chi l'ha già ricevuto in un altro giro sms_saloni degli ultimi 30 giorni
+    gia = {r["telefono"] for r in conn.execute(
+        "SELECT telefono FROM sms_link WHERE giro = %s" + ("" if solo_primo else
+        " OR (giro LIKE 'sms_saloni:%%' AND esito = 'ok' AND creato_at > now() - interval '30 days')"),
+        (giro,)).fetchall()}
     for i, d in enumerate(dest, 1):
         if d["tel"] in gia:                      # stesso giro, già provato (riavvio a metà): mai due volte
             st["saltati"] += 1
@@ -467,7 +474,7 @@ p strong{{color:var(--ink);white-space:nowrap}}
 .cta:focus-visible,.no:focus-visible{{outline:3px solid var(--ink);outline-offset:3px}}
 .nota{{font-size:14px;margin:14px 0 0}}
 form{{margin:18px 0 0}}
-.no{{background:none;border:0;padding:8px;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}}
+.no{{background:none;border:0;padding:14px 8px;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}}
 </style>
 </head>
 <body>
