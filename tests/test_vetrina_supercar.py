@@ -430,13 +430,14 @@ def test_riepilogo_per_il_log_senza_dati_personali():
     items, _ = _scegli(righe, saloni={2: "Autosalone Rossi", 4: "Autosalone Bianchi"})
     r = VS.riepilogo(items)
     assert r == {"totale": 4, "supercar": 3, "sportive": 1, "privati": 2, "commercianti": 2,
-                 "con_mercato": 0, "per_marca": {"Ferrari": 2, "Abarth": 1, "BMW": 1}}
+                 "con_mercato": 0, "con_guadagno": 0, "per_marca": {"Ferrari": 2, "Abarth": 1, "BMW": 1}}
     testo = json.dumps(r)
     assert "Autosalone" not in testo and TEL not in testo and "esempio.invalid" not in testo
 
 
 # 23/11 sera: "mercato" e "confronti" ora ci sono (solo da valutazioni salvate); margine e guadagno restano vietati
-VIETATE = ("margine", "pv", "gain", "guadagno", "affare", "stima", "netto", "sconto", "telefono", "tel",
+# 23/11 sera (cliente): "guadagno" ora c'è, ma solo quello salvato dalla valutazione (mai calcolato qui)
+VIETATE = ("margine", "pv", "gain", "affare", "stima", "netto", "sconto", "telefono", "tel",
            "phone", "description", "descrizione", "rip_lo", "rip_hi", "top", "trattare")
 
 
@@ -453,7 +454,7 @@ def test_scheda_senza_margine_e_senza_telefono():
         assert not set(it) & set(VIETATE), set(it) & set(VIETATE)
         assert set(it) == {"id", "marca", "modello", "versione", "nome", "anno", "km", "carb", "cambio", "prezzo", "citta",
                            "provincia", "supercar", "venditore", "salone", "ha_telefono", "giorni", "fonte", "foto", "n_foto", "url",
-                           "mercato", "confronti"}
+                           "mercato", "confronti", "guadagno"}
         assert it["mercato"] is None and it["confronti"] is None        # nessuna valutazione: mai un mercato inventato
         assert isinstance(it["ha_telefono"], bool)
     per = {it["id"]: it for it in items}
@@ -503,7 +504,7 @@ def test_mercato_nella_scheda_senza_margine():
     for it in items:
         assert not set(it) & set(VIETATE)
     testo = json.dumps(items, default=str).lower()
-    for parola in ("margine", "guadagno", "netto", "gain", "sconto"):
+    for parola in ("margine", "netto", "gain", "sconto"):
         assert parola not in testo
     r = VS.riepilogo(items)
     assert r["con_mercato"] == 2 and r["totale"] == 3
@@ -534,10 +535,10 @@ def test_mercato_letto_a_blocchi_con_tempo_massimo():
         def rollback(self):
             self.rollback_n += 1
     c = Conn()
-    assert VS._leggi_mercati(c, [1, 2, 3, 4, 5]) == {1: (50000, 9), 3: (300000, 6)}
+    assert VS._leggi_mercati(c, [1, 2, 3, 4, 5]) == {1: (50000, 9, None), 3: (300000, 6, None)}
     assert c.sql[0].startswith("SET LOCAL statement_timeout") and c.sql[2].startswith("SET LOCAL statement_timeout")
     c = Conn(rotta=True)                                # tabella mancante: resta supercar_eu, la vetrina non si ferma
-    assert VS._leggi_mercati(c, [1, 3]) == {1: (99999, 20), 3: (300000, 6)} and c.rollback_n == 1
+    assert VS._leggi_mercati(c, [1, 3]) == {1: (99999, 20, None), 3: (300000, 6, None)} and c.rollback_n == 1
     c = Conn()
     VS._leggi_blocco(c, [1], frozenset())
     assert any("valutazioni_policy" in q for q in c.sql) and any("supercar_eu" in q for q in c.sql)
@@ -643,7 +644,7 @@ def test_abbonato_vede_e_solo_admin_ids(monkeypatch):
     d = json.loads(A.api_vetrina_supercar(_Richiesta()).body)
     assert [it["id"] for it in d["items"]] == [3, 1] and d["totale"] == 2
     testo = json.dumps(d)
-    for parola in ("margine", "guadagno", "\"telefono\"", "\"tel\""):
+    for parola in ("margine", "\"telefono\"", "\"tel\""):
         assert parola not in testo, parola
     # l'amministratore la vede (anche senza abbonamento)
     A, _ = _prepara(monkeypatch, {"id": 1, "role": "admin"}, {}, schede)
@@ -732,8 +733,8 @@ def test_query_su_postgres_vero():
     conn.execute("CREATE TABLE commercianti_as24 (seller_id TEXT PRIMARY KEY, nome TEXT)")
     conn.execute("CREATE TABLE commercianti_as24_annunci (seller_id TEXT, listing_id TEXT)")
     conn.execute("CREATE TABLE decisione_ai (listing_id BIGINT, risposta JSONB)")
-    conn.execute("CREATE TABLE valutazioni_policy (listing_id BIGINT, computed_at TIMESTAMPTZ DEFAULT now(), riassunto JSONB, categoria TEXT)")
-    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now(), categoria TEXT DEFAULT 'opportunita')")
+    conn.execute("CREATE TABLE valutazioni_policy (listing_id BIGINT, computed_at TIMESTAMPTZ DEFAULT now(), riassunto JSONB, categoria TEXT, margine INTEGER)")
+    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now(), categoria TEXT DEFAULT 'opportunita', margine INTEGER)")
     conn.execute("""INSERT INTO valutazioni_policy (listing_id, computed_at, riassunto) VALUES
         (4, now() - interval '3 days', '{"M": 70000, "n": 9}'), (4, now() - interval '1 day', '{"M": 84500.4, "n": 7}'),
         (7, now(), '{"M": 26000, "n": 4}'), (16, now() - interval '9 days', '{"M": 25000, "n": 30}'),
@@ -741,15 +742,19 @@ def test_query_su_postgres_vero():
         (10, now(), '{"M": 150000, "n": 9}')""")
     # revisione: l'ultima valutazione di 10 è inaffidabile (dati_insufficienti) -> niente mercato, nemmeno quella prima
     conn.execute("UPDATE valutazioni_policy SET categoria = 'dati_insufficienti' WHERE listing_id = 10 AND riassunto->>'M' = '150000'")
+    conn.execute("UPDATE valutazioni_policy SET margine = 6100 WHERE listing_id = 4 AND riassunto->>'M' = '84500.4'")
+    conn.execute("UPDATE valutazioni_policy SET margine = 99999 WHERE listing_id = 4 AND riassunto->>'M' = '70000'")
     conn.execute("""INSERT INTO supercar_eu (listing_id, m, n, computed_at) VALUES (1, 225000, 6, now()),
         (4, 1, 99, now()), (6, 80000, 12, now() - interval '3 days')""")
+    conn.execute("UPDATE supercar_eu SET margine = 30000 WHERE listing_id = 1")
     conn.execute("INSERT INTO supercar_eu (listing_id, m, n, computed_at, categoria) VALUES (19, 60000, 8, now(), 'leasing')")
     # lead_tutti_dealer / lead_tutti_ann non ci sono: la lettura dei nomi non deve fermare la vetrina
     auto = [
-        (1, "ferrari", "488", "GTB", 210000, "MI", "Milano", "attivo", "privato"),
+        (1, "ferrari", "488", "GTB", 170000, "MI", "Milano", "attivo", "privato"),
+        (21, "ferrari", "f8", "Tributo", 200000, "MI", "Milano", "attivo", "privato"),         # oltre 180.000 €
         (2, "ferrari", "488", "GTB", 220000, "RM", "Roma", "attivo", "privato"),                # Roma
         (3, "bmw", "serie-3", "320d M Sport", 40000, "MI", "Milano", "attivo", "commerciante"),  # non sportiva
-        (4, "bmw", "m3", "Competition", 80000, "BG", "Bergamo", "attivo", "commerciante"),
+        (4, "bmw", "m3", "Competition", 80000, "BG", "Bergamo", "attivo", "privato"),
         (5, "porsche", "911", "Carrera", 95000, "MI", "Milano", "venduto", "privato"),          # non attiva
         (6, "Aston-Martin", "vantage", "V8", 70000, None, "Como", "attivo", "privato"),         # provincia dalla città
         (7, "audi", "rs3", "Sportback", 24000, "MI", "Milano", "attivo", "privato"),            # nessun prezzo minimo
@@ -779,18 +784,17 @@ def test_query_su_postgres_vero():
     conn.execute("INSERT INTO decisione_ai VALUES (9, '{\"prezzo_rata\": {\"noul\": 0.95}}')")
     items, numeri = VS.carica(conn)
     tolte = numeri["tolte"]
-    assert [it["id"] for it in items] == [1, 4, 6, 10, 19, 7, 16, 18, 14], ([it["id"] for it in items], numeri)
-    assert [it["supercar"] for it in items] == [True, True, True, False, True, False, False, True, False]
+    # 23/11 sera (cliente): solo privati e solo sotto i 180.000 € (fuori 21, i commercianti 8, 10, 16 e la 9 da 250.000)
+    assert [it["id"] for it in items] == [1, 4, 6, 19, 7, 18, 14], ([it["id"] for it in items], numeri)
+    assert all(it["venditore"] == "privato" and it["prezzo"] < 180000 for it in items)
     assert {it["id"]: it["provincia"] for it in items}[18] == "BS"
     per = {it["id"]: it for it in items}
-    assert per[4]["salone"] == "Autosalone Orobico" and per[4]["venditore"] == "commerciante"
     assert per[6]["provincia"] == "CO" and per[1]["n_foto"] == 2 and per[1]["foto"] and per[4]["foto"] is None
-    assert tolte["commerciante_escluso"] == 1 and tolte["prezzo_a_rata"] == 1
-    assert numeri["candidate"] == 11 and numeri["candidate_supercar"] == 7 and numeri["non_lette"] == 0
     assert VS.riepilogo(items)["per_marca"]["Ferrari"] == 1
-    # mercato: ultima valutazione del sito (id 4), supercar_eu (id 1); pochi confronti, vecchie o di ripiego: niente
-    assert {it["id"]: (it["mercato"], it["confronti"]) for it in items if it["mercato"]} == {4: (84500, 7), 1: (225000, 6)}
-    assert numeri["riepilogo"]["con_mercato"] == 2
+    # mercato e guadagno: solo dalla stessa valutazione salvata (id 4 dal sito, id 1 da supercar_eu)
+    assert {it["id"]: (it["mercato"], it["confronti"], it["guadagno"]) for it in items if it["mercato"]} == {
+        4: (84500, 7, 6100), 1: (225000, 6, 30000)}
+    assert numeri["riepilogo"]["con_mercato"] == 2 and numeri["riepilogo"]["con_guadagno"] == 2
 
 
 def test_caricamento_in_un_thread_a_parte(monkeypatch):

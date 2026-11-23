@@ -43,6 +43,7 @@ LIMITE = LIMITE_SUPERCAR + LIMITE_SPORTIVE
 LEGGI_X = 2                     # candidate lette per intero per gruppo: fino a LEGGI_X volte il tetto del gruppo
 BLOCCO = 500                    # annunci letti per intero (con la descrizione) per volta
 CACHE_SECONDI = 1800              # 23/11: la vetrina non sono affari; lettura lunga, non ogni 10 minuti
+PREZZO_MAX = 180000             # 23/11 sera (cliente): solo auto sotto i 180.000 € e solo di privati
 TEMPO_QUERY = "20s"             # come l'elenco del sito: meglio un errore che il sito fermo
 TEMPO_CANDIDATE = "180s"        # 23/11: la lettura delle candidate (una sola query) in produzione supera i 20 s; gira
                                 # in un thread a parte (_carica_sotto), mai dentro la richiesta di una pagina
@@ -340,7 +341,8 @@ def _sql_candidate() -> tuple[str, dict]:
     sempre = sorted({s for v in MARCHE_SEMPRE.values() for s in v})
     testo = ("regexp_replace(lower(COALESCE(l.model,'') || ' ' || COALESCE(l.version_raw,'') || ' ' || "
              "COALESCE(l.title,'')), '[^a-z0-9]', '', 'g')")
-    rami, par, intere, visti = [], {"lomb": sorted(LOMBARDIA), "min_vero": PREZZO_VERO_MIN}, set(sempre), set()
+    rami, par, intere, visti = [], {"lomb": sorted(LOMBARDIA), "min_vero": PREZZO_VERO_MIN,
+                                    "prezzo_max": PREZZO_MAX}, set(sempre), set()
     for chiave, (scritture, parole, _f) in ALTRE.items():
         if id(scritture) in visti:
             continue
@@ -355,6 +357,7 @@ def _sql_candidate() -> tuple[str, dict]:
     # (altrimenti si ricava dalla città in Python, con sito_regole.provincia_di, come fa il sito)
     sql = ("SELECT l.id, l.make, l.model, l.version_raw, l.title, l.price_eur, l.province, l.city, l.region "
            "FROM listings l WHERE l.status = 'attivo' AND l.price_eur >= %(min_vero)s "
+           "AND l.price_eur < %(prezzo_max)s AND l.seller_type = 'privato' "
            "AND (lower(l.make) = ANY(%(intere)s) OR " + " OR ".join(rami) + ") "
            "AND (l.province IS NULL OR btrim(l.province) !~ '^[A-Za-z]{2}$' OR upper(btrim(l.province)) = ANY(%(lomb)s))")
     return sql, par
@@ -384,13 +387,13 @@ MERCATO_GIORNI_EU = 2           # supercar_eu: come pipeline/supercar_eu.SITO_SQ
 MERCATO_SQL = (
     # revisione 23/11: vale solo l'ULTIMA valutazione e solo se il software non l'ha giudicata inaffidabile
     # (dati_insufficienti: prezzo troppo sotto la mediana, confronti dispersi...): filtro fuori dal DISTINCT ON
-    ("SELECT x.listing_id, x.m, x.n, x.ripiego, x.quando FROM (SELECT DISTINCT ON (vp.listing_id) vp.listing_id, "
+    ("SELECT x.listing_id, x.m, x.n, x.ripiego, x.g, x.quando FROM (SELECT DISTINCT ON (vp.listing_id) vp.listing_id, "
      "vp.riassunto->>'M' AS m, vp.riassunto->>'n' AS n, "
      "COALESCE(vp.riassunto->>'stima_ripiego', CASE WHEN vp.riassunto->>'M_fonte' = 'ripiego' THEN 'true' END) AS ripiego, "
-     "vp.categoria, vp.computed_at AS quando FROM valutazioni_policy vp "
+     "vp.categoria, vp.margine AS g, vp.computed_at AS quando FROM valutazioni_policy vp "
      "WHERE vp.listing_id = ANY(%s) ORDER BY vp.listing_id, vp.computed_at DESC) x "
      "WHERE x.categoria IS DISTINCT FROM 'dati_insufficienti'", MERCATO_GIORNI),
-    ("SELECT s.listing_id, s.m, s.n, NULL AS ripiego, s.computed_at AS quando FROM supercar_eu s "
+    ("SELECT s.listing_id, s.m, s.n, NULL AS ripiego, s.margine AS g, s.computed_at AS quando FROM supercar_eu s "
      "WHERE s.listing_id = ANY(%s) AND s.categoria IN ('opportunita', 'non_conveniente')", MERCATO_GIORNI_EU),
 )
 
@@ -498,6 +501,9 @@ def scheda(r: dict, nome_salone: str | None = None, ora: float | None = None, me
         # 23/11 sera: solo da una valutazione salvata (None = "Mercato: non stimato"); la differenza col prezzo la fa
         # la pagina, qui non c'è nessun margine
         "mercato": int(mercato[0]) if mercato else None, "confronti": int(mercato[1]) if mercato else None,
+        # 23/11 sera (cliente: "metti i guadagni, non a caso"): il margine salvato dalla stessa valutazione del
+        # mercato, mai calcolato qui; None = "Guadagno: non stimato"
+        "guadagno": (int(mercato[2]) if mercato and len(mercato) > 2 and mercato[2] is not None else None),
     }
 
 
@@ -563,7 +569,8 @@ def riepilogo(items: list[dict]) -> dict:
     sc = sum(1 for it in items if it.get("supercar"))
     comm = sum(1 for it in items if it.get("venditore") == "commerciante")
     return {"totale": len(items), "supercar": sc, "sportive": len(items) - sc, "privati": len(items) - comm,
-            "commercianti": comm, "con_mercato": sum(1 for it in items if it.get("mercato")), "per_marca": dict(sorted(per_marca.items(), key=lambda x: (-x[1], x[0])))}
+            "commercianti": comm, "con_mercato": sum(1 for it in items if it.get("mercato")),
+            "con_guadagno": sum(1 for it in items if it.get("guadagno") is not None), "per_marca": dict(sorted(per_marca.items(), key=lambda x: (-x[1], x[0])))}
 
 
 def _tempo_massimo(conn) -> None:
@@ -604,7 +611,12 @@ def _leggi_mercati(conn, ids: list) -> dict:
             for r in conn.execute(q, (ids,)).fetchall():
                 v = mercato_valido(r.get("m"), r.get("n"), r.get("quando"), ripiego=r.get("ripiego"), giorni=giorni)
                 if v and r["listing_id"] not in mercati:       # prima la valutazione del sito, poi supercar_eu
-                    mercati[r["listing_id"]] = v
+                    g = r.get("g")             # 23/11 sera (cliente): il guadagno GIÀ calcolato da quella valutazione
+                    try:
+                        g = int(round(float(g))) if g is not None else None
+                    except (TypeError, ValueError):
+                        g = None
+                    mercati[r["listing_id"]] = (v[0], v[1], g)
         except Exception as e:
             conn.rollback()
             log.warning("VETRINA_SUPERCAR mercato non letto: %s", str(e)[:150])

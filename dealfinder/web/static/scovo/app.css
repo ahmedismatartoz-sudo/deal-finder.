@@ -1888,6 +1888,9 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 .scl-d{font:700 16px/22px var(--body);color:var(--ink)}
 .scl-d.giu{color:var(--good)}
 .scl-d.su{color:var(--bad)}
+.scl-g{display:block;font:700 18px/24px var(--body);color:var(--ink);margin-bottom:2px}
+.scl-g.giu{color:var(--good)}
+.scl-g.su{color:var(--bad)}
 .scl-r{font:500 15px/21px var(--body);color:var(--ink);overflow-wrap:anywhere}
 .scl-chi{display:flex;flex-direction:column;gap:2px;font:400 14px/19px var(--body);color:var(--muted);overflow-wrap:anywhere}
 .scl-chi span:first-child{color:var(--ink);font-weight:500}

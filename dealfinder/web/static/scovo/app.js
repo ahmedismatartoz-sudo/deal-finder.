@@ -442,7 +442,7 @@ function viewVendute(){
    all'annuncio originale (nessun numero nel sito). Dati da /api/vetrina/supercar, separati dall'elenco degli affari. */
 const SCL_PASSO = 60;
 const SCL_PREZZI = [10000, 20000, 30000, 50000, 70000, 100000, 150000, 250000];
-const SCL_F0 = () => ({marca: "", vend: "", pmin: "", pmax: "", gruppo: "", sotto: false, ord: "prezzo"});
+const SCL_F0 = () => ({marca: "", vend: "", pmin: "", pmax: "", gruppo: "", sotto: false, cong: false, ord: "guadagno"});
 S.sclF = SCL_F0(); S.sclN = SCL_PASSO;
 async function loadScl(force){
   if (S.sclLoading || (!force && S.scl && !S.scl.errore && !S.scl.in_caricamento && Date.now() - S.scl._t < 5 * 60 * 1000)) return;
@@ -462,16 +462,20 @@ function sclFiltrate(senzaMarca){
   const f = S.sclF, l = (S.scl && S.scl.items) || [];
   const out = l.filter(c => (senzaMarca || !f.marca || c.marca === f.marca) && (!f.vend || c.venditore === f.vend)
     && (!f.gruppo || (f.gruppo === "supercar") === !!c.supercar) && (!f.sotto || (c.mercato && c.prezzo < c.mercato))
+    && (!f.cong || (c.guadagno != null && c.guadagno > 0))
     && (f.pmin === "" || c.prezzo >= Number(f.pmin)) && (f.pmax === "" || c.prezzo <= Number(f.pmax)));
-  if (f.ord !== "sconto") return out;                 // il server le manda già per prezzo
-  const q = c => c.mercato ? c.prezzo / c.mercato : Infinity;      // prima le più sotto il mercato; senza mercato in fondo
+  if (f.ord === "prezzo") return out;                 // il server le manda già per prezzo
+  // 23/11 sera (cliente): di base prima il guadagno più alto; senza guadagno stimato in fondo
+  const q = f.ord === "sconto" ? (c => c.mercato ? c.prezzo / c.mercato : Infinity) : (c => c.guadagno != null ? -c.guadagno : Infinity);
   return out.map((c, i) => [c, i]).sort((a, b) => (q(a[0]) - q(b[0])) || (a[1] - b[1])).map(x => x[0]);
 }
 function sclMercato(c){
-  if (!c.mercato) return `<div class="scl-m"><span class="scl-m1">Mercato: non stimato</span></div>`;
+  if (!c.mercato) return `<div class="scl-m"><span class="scl-g">Guadagno: non stimato</span><span class="scl-m1">Mercato: non stimato</span></div>`;
   const d = sclDiff(c), cf = c.confronti ? `<small>${num(c.confronti)} confronti</small>` : "";
   const diff = d < 0 ? `<span class="scl-d giu">−${eur(-d)} sotto il mercato</span>` : d > 0 ? `<span class="scl-d su">+${eur(d)} sopra il mercato</span>` : `<span class="scl-d">In linea con il mercato</span>`;
-  return `<div class="scl-m"><span class="scl-m1">Mercato: <b>${eur(c.mercato)}</b> ${cf}</span>${diff}</div>`;
+  const g = c.guadagno == null ? `<span class="scl-g">Guadagno: non stimato</span>`
+    : `<span class="scl-g ${c.guadagno > 0 ? "giu" : "su"}">Guadagno stimato: <b>${c.guadagno < 0 ? "−" : ""}${eur(Math.abs(c.guadagno))}</b></span>`;
+  return `<div class="scl-m">${g}<span class="scl-m1">Mercato: <b>${eur(c.mercato)}</b> ${cf}</span>${diff}</div>`;
 }
 function sclCard(c, i){
   const riga = [c.anno, c.km != null ? num(c.km) + " km" : "", c.carb, c.cambio].filter(Boolean).join(" · ");
@@ -496,14 +500,14 @@ function sclCard(c, i){
 function sclBanner(){
   if (!canBrowse() || !tabOk(SCL)) return "";
   const n = S.sclTot;
-  return `<button class="scl-banner" data-act="tab" data-v="${SCL}"><span class="scl-banner-ic" aria-hidden="true">🏎</span><span class="scl-banner-t"><b>Sportive e supercar in Lombardia${n ? `: ${num(n)} auto` : ""}</b><small>Privati e saloni, con il prezzo di mercato dove c'è</small></span><span class="scl-banner-go" aria-hidden="true">${ICON.next}</span></button>`;
+  return `<button class="scl-banner" data-act="tab" data-v="${SCL}"><span class="scl-banner-ic" aria-hidden="true">🏎</span><span class="scl-banner-t"><b>Sportive e supercar in Lombardia${n ? `: ${num(n)} auto` : ""}</b><small>Solo privati, sotto 180.000 €, con mercato e guadagno</small></span><span class="scl-banner-go" aria-hidden="true">${ICON.next}</span></button>`;
 }
 function viewScl(){
   const v = S.scl, f = S.sclF, tutte = (v && v.items) || [], l = sclFiltrate(), n = Math.min(l.length, S.sclN || SCL_PASSO);
   const perMarca = {}; sclFiltrate(true).forEach(c => perMarca[c.marca] = (perMarca[c.marca] || 0) + 1);
   if (f.marca && !perMarca[f.marca]) perMarca[f.marca] = 0;          // la marca scelta resta nella tendina anche a zero
   const marche = Object.keys(perMarca).sort((a, b) => a.localeCompare(b, "it"));
-  const attivi = !!(f.marca || f.vend || f.pmin !== "" || f.pmax !== "" || f.gruppo || f.sotto);
+  const attivi = !!(f.marca || f.vend || f.pmin !== "" || f.pmax !== "" || f.gruppo || f.sotto || f.cong);
   const prep = !!(v && v.in_caricamento);
   const sub = !v ? "Carico…" : prep ? "Sto preparando l'elenco…" : v.errore ? "Non riesco a caricare le auto" : attivi ? `${num(l.length)} di ${num(tutte.length)} auto` : `${num(tutte.length)} auto${v.totale > tutte.length ? " (le più care di " + num(v.totale) + ")" : ""}`;
   const chip = (act, val, cur, txt) => `<button class="chip" data-act="${act}" data-v="${val}" aria-pressed="${cur === val}">${txt}</button>`;
@@ -513,10 +517,10 @@ function viewScl(){
 </div>
     <div class="scl-f" role="group" aria-label="Filtri">
       ${chip("scl-gruppo", "supercar", f.gruppo, "Supercar")}${chip("scl-gruppo", "sportive", f.gruppo, "Sportive")}
+      <button class="chip" data-act="scl-cong" aria-pressed="${!!f.cong}">Con guadagno</button>
       <button class="chip" data-act="scl-sotto" aria-pressed="${!!f.sotto}">Sotto il mercato</button>
-      <label class="qsel ${f.ord === "sconto" ? "on" : ""}"><span class="sr">Ordina per</span><select id="scl-ord"><option value="prezzo" ${f.ord !== "sconto" ? "selected" : ""}>Ordina: prezzo</option><option value="sconto" ${f.ord === "sconto" ? "selected" : ""}>Ordina: sconto sul mercato</option></select></label>
+      <label class="qsel on"><span class="sr">Ordina per</span><select id="scl-ord"><option value="guadagno" ${!f.ord || f.ord === "guadagno" ? "selected" : ""}>Ordina: guadagno</option><option value="sconto" ${f.ord === "sconto" ? "selected" : ""}>Ordina: sconto sul mercato</option><option value="prezzo" ${f.ord === "prezzo" ? "selected" : ""}>Ordina: prezzo</option></select></label>
       <label class="qsel ${f.marca ? "on" : ""}"><span class="sr">Marca</span><select id="scl-marca">${opts(marche.map(m => [m, m + " (" + perMarca[m] + ")"]), f.marca, "Marca")}</select></label>
-      ${chip("scl-vend", "privato", f.vend, "Privati")}${chip("scl-vend", "commerciante", f.vend, "Commercianti")}
       <label class="qsel ${f.pmin !== "" ? "on" : ""}"><span class="sr">Prezzo minimo</span><select id="scl-pmin">${opts(SCL_PREZZI.map(x => [x, "Da " + num(x) + " €"]), f.pmin, "Prezzo da")}</select></label>
       <label class="qsel ${f.pmax !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="scl-pmax">${opts(SCL_PREZZI.map(x => [x, "Fino a " + num(x) + " €"]), f.pmax, "Prezzo fino a")}</select></label>
       ${attivi ? `<button class="chip clear" data-act="scl-reset">Azzera</button>` : ""}
@@ -527,7 +531,7 @@ function viewScl(){
     : `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${tutte.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>${tutte.length ? `<button class="btn" data-act="scl-reset">Togli i filtri</button>` : `<button class="btn" data-act="scl-reload">Aggiorna</button>`}</div>`;
   return header("Sportive e supercar in Lombardia", sub, right, "Scovo") + `${filtri}</header>
   <main class="list" aria-live="polite">
-    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio. Il prezzo è quello chiesto dal venditore. Il mercato c'è solo dove Scovo ha già una valutazione con almeno 5 auto di confronto; altrimenti trovi "non stimato".</span></div>
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Sportive e supercar di privati in Lombardia, sotto i 180.000 €. Mercato e guadagno sono quelli calcolati da Scovo con almeno 5 auto di confronto, come per gli affari; dove non c'è una valutazione affidabile trovi "non stimato".</span></div>
     ${l.length ? `<div class="scl-grid">${l.slice(0, n).map(sclCard).join("")}</div>${l.length > n ? `<button class="btn scl-piu" data-act="scl-piu">Mostra altre ${Math.min(SCL_PASSO, l.length - n)} (${num(l.length - n)} rimaste)</button>` : ""}` : vuoto}
   </main>`;
 }
@@ -2266,6 +2270,7 @@ $app.addEventListener("click", e => {
     case "scl-gruppo": S.sclF.gruppo = S.sclF.gruppo === v ? "" : v; S.sclN = SCL_PASSO; break;
     case "scl-vend": S.sclF.vend = S.sclF.vend === v ? "" : v; S.sclN = SCL_PASSO; break;
     case "scl-sotto": S.sclF.sotto = !S.sclF.sotto; S.sclN = SCL_PASSO; break;
+    case "scl-cong": S.sclF.cong = !S.sclF.cong; S.sclN = SCL_PASSO; break;
     case "scl-reset": S.sclF = Object.assign(SCL_F0(), {ord: S.sclF.ord}); S.sclN = SCL_PASSO; break;
     case "foto-full": S.full = Number(v) || 0; document.body.style.overflow = "hidden"; break;
     case "foto-chiudi": S.full = null; break;
