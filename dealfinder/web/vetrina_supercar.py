@@ -41,6 +41,8 @@ LEGGI_X = 2                     # candidate lette per intero per gruppo: fino a 
 BLOCCO = 500                    # annunci letti per intero (con la descrizione) per volta
 CACHE_SECONDI = 600
 TEMPO_QUERY = "20s"             # come l'elenco del sito: meglio un errore che il sito fermo
+TEMPO_CANDIDATE = "180s"        # 23/11: la lettura delle candidate (una sola query) in produzione supera i 20 s; gira
+                                # in un thread a parte (_carica_sotto), mai dentro la richiesta di una pagina
 ATTESA_LOCK = 25                # secondi: chi aspetta il caricamento di un altro non tiene occupato un thread per sempre
 PAUSA_DOPO_ERRORE = 60          # a memoria vuota e database fermo: non si riprova a ogni richiesta
 # Il testo LEASING_RE è scritto per gli annunci dei privati: contiene parole ("finanziamento", "anticipo") che i
@@ -549,7 +551,9 @@ def carica(conn, *, scarti=frozenset()) -> tuple[list[dict], dict]:
     in SQL), scelte in Python con e_sportiva e la provincia; 2) per gruppo (supercar / sportive) le più care lette per
     intero a blocchi, con descrizione, nome del salone e prezzo a rata, fino al tetto del gruppo."""
     sql, par = _sql_candidate()
-    _tempo_massimo(conn)
+    # 23/11 pom.: in produzione la lettura delle candidate supera i 20 s (annunci attivi di tutta Italia delle ~30
+    # marche) -> tempo più lungo solo per questa query, che ora gira in un thread a parte e non tiene ferma la pagina
+    conn.execute("SET LOCAL statement_timeout = '%s'" % TEMPO_CANDIDATE)
     gruppi = {True: [], False: []}
     for r in conn.execute(sql, par).fetchall():
         if provincia_vetrina(r.get("province"), r.get("city"), r.get("region"))[1] and e_sportiva(
@@ -590,22 +594,56 @@ def svuota_cache() -> None:
     _errore[0] = 0.0
 
 
+def da_ricaricare() -> bool:
+    """Memoria vuota o vecchia, e non subito dopo un errore."""
+    if _cache["items"] is not None and time.time() - _cache["t"] < CACHE_SECONDI:
+        return False
+    return not (_cache["items"] is None and time.time() - _errore[0] < PAUSA_DOPO_ERRORE)
+
+
+class InCaricamento(RuntimeError):
+    """La vetrina si sta preparando in un thread a parte: la pagina dice di riprovare tra poco."""
+
+
 def elenco(connetti, scarti_ids=None) -> tuple[list[dict], int]:
-    """(schede, quante sportive e supercar ci sono in tutto, anche oltre il tetto), dalla memoria se ha meno di
-    CACHE_SECONDI. Una lettura alla volta; se il database non risponde resta l'elenco di prima."""
+    """(schede, quante sportive e supercar ci sono in tutto, anche oltre il tetto), dalla memoria. 23/11 pom.: la
+    lettura gira SEMPRE in un thread a parte (in produzione dura più dei 20 s di una richiesta): se la memoria è
+    vecchia si risponde con l'elenco di prima e intanto si ricarica; se è vuota -> InCaricamento."""
     if _cache["items"] is not None and time.time() - _cache["t"] < CACHE_SECONDI:
         return _cache["items"], _cache["totale"]
-    if _cache["items"] is None and time.time() - _errore[0] < PAUSA_DOPO_ERRORE:
-        raise RuntimeError("vetrina non disponibile: si riprova tra poco")
-    if not _cache_lock.acquire(timeout=ATTESA_LOCK):
-        if _cache["items"] is not None:                 # un altro sta ricaricando: intanto l'elenco di prima
-            return _cache["items"], _cache["totale"]
-        raise RuntimeError("vetrina in caricamento")
+    if not (_cache["items"] is None and time.time() - _errore[0] < PAUSA_DOPO_ERRORE):
+        avvia(connetti, scarti_ids)
+    if _cache["items"] is not None:
+        return _cache["items"], _cache["totale"]
+    raise InCaricamento("vetrina in caricamento")
+
+
+def avvia(connetti, scarti_ids=None) -> bool:
+    """Fa partire il caricamento in un thread a parte, se non ne sta già girando uno. True se è partito."""
+    if not _cache_lock.acquire(blocking=False):
+        return False
     try:
-        if _cache["items"] is not None and time.time() - _cache["t"] < CACHE_SECONDI:
-            return _cache["items"], _cache["totale"]
-        if _cache["items"] is None and time.time() - _errore[0] < PAUSA_DOPO_ERRORE:
-            raise RuntimeError("vetrina non disponibile: si riprova tra poco")
+        threading.Thread(target=_carica_sotto, args=(connetti, scarti_ids), name="vetrina_supercar",
+                         daemon=True).start()
+        return True
+    except Exception:
+        _cache_lock.release()
+        raise
+
+
+def _carica_sotto(connetti, scarti_ids) -> None:
+    """Nel thread: il lock è già preso da avvia() e si rilascia qui."""
+    try:
+        _carica(connetti, scarti_ids)
+    except Exception:
+        pass                                            # già scritto nel log da _carica
+    finally:
+        _cache_lock.release()
+
+
+def _carica(connetti, scarti_ids=None) -> tuple[list[dict], int]:
+    """Una lettura completa (chiamata con _cache_lock preso)."""
+    if True:
         t0 = time.time()
         try:
             scarti = frozenset(scarti_ids() if callable(scarti_ids) else (scarti_ids or ()))
@@ -625,5 +663,3 @@ def elenco(connetti, scarti_ids=None) -> tuple[list[dict], int]:
         log.warning("VETRINA_SUPERCAR_LETTURA %s", json.dumps(dict(numeri, mostrate=len(items),
                                                                    secondi=round(time.time() - t0, 1)), ensure_ascii=False))
         return _cache["items"], _cache["totale"]
-    finally:
-        _cache_lock.release()

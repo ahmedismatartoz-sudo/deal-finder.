@@ -327,7 +327,7 @@ def test_tempo_massimo_e_pausa_dopo_errore(monkeypatch):
         def rollback(self):
             pass
     c = Conn()
-    assert VS.carica(c)[0] == [] and c.sql[0].startswith("SET LOCAL statement_timeout") and "20s" in c.sql[0]
+    assert VS.carica(c)[0] == [] and c.sql[0].startswith("SET LOCAL statement_timeout") and "180s" in c.sql[0]
     c = Conn()
     VS._leggi_blocco(c, [1], frozenset())
     assert c.sql[0].startswith("SET LOCAL statement_timeout")
@@ -343,12 +343,17 @@ def test_tempo_massimo_e_pausa_dopo_errore(monkeypatch):
     monkeypatch.setattr(VS, "carica", rotto)
     monkeypatch.setattr(VS, "_cache", {"t": 0.0, "items": None, "totale": 0})
     monkeypatch.setattr(VS, "_errore", [0.0])
+    import time as _t
     for _ in range(3):
         try:
             VS.elenco(connetti, None)
             raise AssertionError("doveva fallire")
-        except RuntimeError:
+        except VS.InCaricamento:
             pass
+        for _i in range(200):                       # 23/11: la lettura gira in un thread a parte
+            if not VS._cache_lock.locked():
+                break
+            _t.sleep(0.01)
     assert len(chiamate) == 1 and VS.PAUSA_DOPO_ERRORE == 60 and VS.ATTESA_LOCK == 25
     assert not VS._cache_lock.locked()
 
@@ -675,3 +680,43 @@ def test_query_su_postgres_vero():
     assert tolte["commerciante_escluso"] == 1 and tolte["prezzo_a_rata"] == 1
     assert numeri["candidate"] == 11 and numeri["candidate_supercar"] == 7 and numeri["non_lette"] == 0
     assert VS.riepilogo(items)["per_marca"]["Ferrari"] == 1
+
+
+def test_caricamento_in_un_thread_a_parte(monkeypatch):
+    """23/11 pom.: in produzione la lettura supera i 20 s di una richiesta. La pagina non aspetta: prima risposta
+    'in caricamento', poi l'elenco; a memoria vecchia si risponde con l'elenco di prima e intanto si ricarica."""
+    import threading as _th
+    import time as _t
+    via = _th.Event()
+
+    def lenta(conn, scarti=frozenset()):
+        via.wait(5)
+        return [{"id": 1, "marca": "Porsche", "supercar": True, "venditore": "privato"}], {}
+
+    @contextmanager
+    def connetti():
+        yield object()
+    monkeypatch.setattr(VS, "carica", lenta)
+    monkeypatch.setattr(VS, "_cache", {"t": 0.0, "items": None, "totale": 0})
+    monkeypatch.setattr(VS, "_errore", [0.0])
+    try:
+        VS.elenco(connetti, None)
+        raise AssertionError("doveva dire in caricamento")
+    except VS.InCaricamento:
+        pass
+    assert VS._cache_lock.locked() and not VS.avvia(connetti, None)      # un solo caricamento alla volta
+    via.set()
+    for _i in range(300):
+        if not VS._cache_lock.locked():
+            break
+        _t.sleep(0.01)
+    items, totale = VS.elenco(connetti, None)
+    assert [it["id"] for it in items] == [1] and totale == 1
+    VS._cache["t"] = 0.0                                  # memoria vecchia: elenco di prima, ricarica dietro
+    items, _ = VS.elenco(connetti, None)
+    assert [it["id"] for it in items] == [1]
+    for _i in range(300):
+        if not VS._cache_lock.locked():
+            break
+        _t.sleep(0.01)
+    assert not VS._cache_lock.locked() and not VS.da_ricaricare()

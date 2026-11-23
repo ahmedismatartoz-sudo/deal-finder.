@@ -1930,6 +1930,12 @@ def _calcola_elenco() -> None:
         threading.Thread(target=vendute.dati, daemon=True).start()    # la sezione è pronta al primo clic
     except Exception as e:
         logging.getLogger("scovo").warning("VENDUTE storico: %s", str(e)[:200])
+    try:      # 23/11: vetrina sportive e supercar pronta prima del primo clic (lettura lunga, in un thread a parte)
+        from . import vetrina_supercar as _vs
+        if _vs.da_ricaricare():
+            _vs.avvia(connect, _scarti_cliente_ids)
+    except Exception as e:
+        logging.getLogger("scovo").warning("VETRINA_SUPERCAR avvio: %s", str(e)[:200])
     _sentinella(out, diesel_extra)
     _salva_funnel_giorno(fun)
     if _pool_revisione is not None:
@@ -2184,6 +2190,9 @@ def api_vetrina_supercar(request: Request):
     from . import vetrina_supercar as _vs
     try:
         items, totale = _vs.elenco(connect, _scarti_cliente_ids)
+    except _vs.InCaricamento:
+        return jsonify({"items": [], "totale": 0, "in_caricamento": True,
+                        "errore": "Sto preparando l'elenco: riprova tra un minuto"})
     except Exception as e:
         logging.getLogger("scovo").warning("VETRINA_SUPERCAR errore: %s", str(e)[:300])
         return jsonify({"items": [], "totale": 0, "errore": "non disponibile"})
