@@ -513,9 +513,9 @@ function viewScl(){
 </div>
     <div class="scl-f" role="group" aria-label="Filtri">
       ${chip("scl-gruppo", "supercar", f.gruppo, "Supercar")}${chip("scl-gruppo", "sportive", f.gruppo, "Sportive")}
-      <label class="qsel ${f.marca ? "on" : ""}"><span class="sr">Marca</span><select id="scl-marca">${opts(marche.map(m => [m, m + " (" + perMarca[m] + ")"]), f.marca, "Marca")}</select></label>
       <button class="chip" data-act="scl-sotto" aria-pressed="${!!f.sotto}">Sotto il mercato</button>
       <label class="qsel ${f.ord === "sconto" ? "on" : ""}"><span class="sr">Ordina per</span><select id="scl-ord"><option value="prezzo" ${f.ord !== "sconto" ? "selected" : ""}>Ordina: prezzo</option><option value="sconto" ${f.ord === "sconto" ? "selected" : ""}>Ordina: sconto sul mercato</option></select></label>
+      <label class="qsel ${f.marca ? "on" : ""}"><span class="sr">Marca</span><select id="scl-marca">${opts(marche.map(m => [m, m + " (" + perMarca[m] + ")"]), f.marca, "Marca")}</select></label>
       ${chip("scl-vend", "privato", f.vend, "Privati")}${chip("scl-vend", "commerciante", f.vend, "Commercianti")}
       <label class="qsel ${f.pmin !== "" ? "on" : ""}"><span class="sr">Prezzo minimo</span><select id="scl-pmin">${opts(SCL_PREZZI.map(x => [x, "Da " + num(x) + " €"]), f.pmin, "Prezzo da")}</select></label>
       <label class="qsel ${f.pmax !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="scl-pmax">${opts(SCL_PREZZI.map(x => [x, "Fino a " + num(x) + " €"]), f.pmax, "Prezzo fino a")}</select></label>

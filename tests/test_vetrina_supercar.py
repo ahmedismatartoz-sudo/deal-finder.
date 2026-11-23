@@ -732,14 +732,18 @@ def test_query_su_postgres_vero():
     conn.execute("CREATE TABLE commercianti_as24 (seller_id TEXT PRIMARY KEY, nome TEXT)")
     conn.execute("CREATE TABLE commercianti_as24_annunci (seller_id TEXT, listing_id TEXT)")
     conn.execute("CREATE TABLE decisione_ai (listing_id BIGINT, risposta JSONB)")
-    conn.execute("CREATE TABLE valutazioni_policy (listing_id BIGINT, computed_at TIMESTAMPTZ DEFAULT now(), riassunto JSONB)")
-    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now())")
+    conn.execute("CREATE TABLE valutazioni_policy (listing_id BIGINT, computed_at TIMESTAMPTZ DEFAULT now(), riassunto JSONB, categoria TEXT)")
+    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now(), categoria TEXT DEFAULT 'opportunita')")
     conn.execute("""INSERT INTO valutazioni_policy (listing_id, computed_at, riassunto) VALUES
         (4, now() - interval '3 days', '{"M": 70000, "n": 9}'), (4, now() - interval '1 day', '{"M": 84500.4, "n": 7}'),
         (7, now(), '{"M": 26000, "n": 4}'), (16, now() - interval '9 days', '{"M": 25000, "n": 30}'),
-        (14, now(), '{"M": 13000, "n": 11, "stima_ripiego": true}'), (10, now(), '{"categoria": "dati_insufficienti"}')""")
+        (14, now(), '{"M": 13000, "n": 11, "stima_ripiego": true}'), (10, now() - interval '1 day', '{"M": 90000, "n": 12}'),
+        (10, now(), '{"M": 150000, "n": 9}')""")
+    # revisione: l'ultima valutazione di 10 è inaffidabile (dati_insufficienti) -> niente mercato, nemmeno quella prima
+    conn.execute("UPDATE valutazioni_policy SET categoria = 'dati_insufficienti' WHERE listing_id = 10 AND riassunto->>'M' = '150000'")
     conn.execute("""INSERT INTO supercar_eu (listing_id, m, n, computed_at) VALUES (1, 225000, 6, now()),
         (4, 1, 99, now()), (6, 80000, 12, now() - interval '3 days')""")
+    conn.execute("INSERT INTO supercar_eu (listing_id, m, n, computed_at, categoria) VALUES (19, 60000, 8, now(), 'leasing')")
     # lead_tutti_dealer / lead_tutti_ann non ci sono: la lettura dei nomi non deve fermare la vetrina
     auto = [
         (1, "ferrari", "488", "GTB", 210000, "MI", "Milano", "attivo", "privato"),

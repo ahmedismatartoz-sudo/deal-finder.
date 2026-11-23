@@ -382,11 +382,16 @@ MERCATO_N_MIN = 5               # sotto 5 confronti il mercato non si mostra
 MERCATO_GIORNI = 7              # valutazione più vecchia: non si mostra
 MERCATO_GIORNI_EU = 2           # supercar_eu: come pipeline/supercar_eu.SITO_SQL
 MERCATO_SQL = (
-    ("SELECT DISTINCT ON (vp.listing_id) vp.listing_id, vp.riassunto::jsonb->>'M' AS m, vp.riassunto::jsonb->>'n' AS n, "
-     "vp.riassunto::jsonb->>'stima_ripiego' AS ripiego, vp.computed_at AS quando FROM valutazioni_policy vp "
-     "WHERE vp.listing_id = ANY(%s) ORDER BY vp.listing_id, vp.computed_at DESC", MERCATO_GIORNI),
+    # revisione 23/11: vale solo l'ULTIMA valutazione e solo se il software non l'ha giudicata inaffidabile
+    # (dati_insufficienti: prezzo troppo sotto la mediana, confronti dispersi...): filtro fuori dal DISTINCT ON
+    ("SELECT x.listing_id, x.m, x.n, x.ripiego, x.quando FROM (SELECT DISTINCT ON (vp.listing_id) vp.listing_id, "
+     "vp.riassunto->>'M' AS m, vp.riassunto->>'n' AS n, "
+     "COALESCE(vp.riassunto->>'stima_ripiego', CASE WHEN vp.riassunto->>'M_fonte' = 'ripiego' THEN 'true' END) AS ripiego, "
+     "vp.categoria, vp.computed_at AS quando FROM valutazioni_policy vp "
+     "WHERE vp.listing_id = ANY(%s) ORDER BY vp.listing_id, vp.computed_at DESC) x "
+     "WHERE x.categoria IS DISTINCT FROM 'dati_insufficienti'", MERCATO_GIORNI),
     ("SELECT s.listing_id, s.m, s.n, NULL AS ripiego, s.computed_at AS quando FROM supercar_eu s "
-     "WHERE s.listing_id = ANY(%s)", MERCATO_GIORNI_EU),
+     "WHERE s.listing_id = ANY(%s) AND s.categoria IN ('opportunita', 'non_conveniente')", MERCATO_GIORNI_EU),
 )
 
 
