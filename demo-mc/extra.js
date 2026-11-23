@@ -35,7 +35,7 @@ function viewSaleCar(id){const c=carBy(id);if(!c)return view404();DT.hex=null;SD
      <div><h3 style="margin-bottom:14px">${T('Storico manutenzione','Service history')}</h3><div class="ph"><div><b>${T('Qui lo storico tagliandi','Service history goes here')}</b>${T('Mostrato solo quando disponibile e verificato','Shown only when available and verified')}</div></div></div></section></div>
    <aside class="buybox"><div><div style="font:600 12px/1 var(--sans);letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">${c.brand} · ${c.year} · ${num(c.km)} km</div><h1>${c.model}</h1></div>
     <div class="bigprice"><span class="num">${eur(c.sale)}</span>${demoTag()}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge plain">${paintName(c)}</span><span class="badge plain">${T(FUELS[c.fuel].it,FUELS[c.fuel].en)}</span><span class="badge plain">${c.cv} CV</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge plain">${paintName(c)}</span><span class="badge plain">${T(FUELS[c.fuel].it,FUELS[c.fuel].en)}</span><span class="badge plain">${c.cv} ${PW()}</span></div>
     <div class="card" id="saleFormBox">${saleForm(c)}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">${waBtn('btn-line btn-sm')}<a class="chip" href="#/auto/${c.id}">${T('Provala a noleggio','Try it as a rental')} →</a><button class="chip" data-act="cmp" data-id="${c.id}" aria-pressed="${CMP.includes(c.id)}">${T('Confronta','Compare')}</button></div>
    </aside></div></div></div>`}
@@ -79,7 +79,7 @@ const AGENTS=()=>[
  {id:'fleet',n:T('Flotta','Fleet'),d:T('Per il titolare: scadenze, utilizzo, manutenzioni.','For the owner: deadlines, utilisation, maintenance.'),s:[T('Scadenze','Deadlines'),T('Auto poco utilizzate','Under-used cars'),T('Redditività','Profitability')]},
  {id:'support',n:T('Supporto','Support'),d:T('Risponde alle domande frequenti e sullo stato delle prenotazioni.','Answers FAQs and booking-status questions.'),s:[T('Come funziona la cauzione?','How does the deposit work?'),T('Posso annullare?','Can I cancel?'),T('Orari e indirizzo','Hours and address')]}];
 let AG={tab:'concierge',logs:{},busy:false};
-const carLine=(c,sale)=>`<li><a href="#/${sale?'vendita':'auto'}/${c.id}">${carName(c)}</a> · ${sale?eur(c.sale)+' · '+c.year+' · '+num(c.km)+' km':eur(c.day)+'/'+T('giorno','day')+' · '+c.cv+' CV'}</li>`;
+const carLine=(c,sale)=>`<li><a href="#/${sale?'vendita':'auto'}/${c.id}">${carName(c)}</a> · ${sale?eur(c.sale)+' · '+c.year+' · '+num(c.km)+' km':eur(c.day)+'/'+T('giorno','day')+' · '+c.cv+' '+PW()}</li>`;
 const handoff=()=>T('Per questo ti passo a una persona: ','For this I\'ll hand you to a person: ')+`<a href="${BIZ.wa}" target="_blank" rel="noopener">WhatsApp ${BIZ.tel}</a>.`;
 function findCars(q){const s=q.toLowerCase();let l=CARS.slice();
   const m=CARS.filter(c=>s.includes(c.brand.toLowerCase())||c.model.toLowerCase().split(/[ /]/).some(w=>w.length>1&&s.includes(w)));if(m.length)l=m;
@@ -87,11 +87,11 @@ function findCars(q){const s=q.toLowerCase();let l=CARS.slice();
   return l}
 const budget=q=>{const m=q.replace(/[.\s](?=\d{3})/g,'').match(/(\d{2,7})\s*(k|mila)?/i);if(!m)return 0;return +m[1]*(m[2]?1000:1)};
 function agentReply(id,q){const s=q.toLowerCase(),fs=fleetState();
-  if(id==='concierge'){let l=findCars(q).filter(c=>fs[c.id]!=='maint');const b=budget(q);if(b)l=l.filter(c=>c.day<=b);
+  if(id==='concierge'){let l=findCars(q).filter(c=>fs[c.id]!=='maint');const b=budget(q);let near='';if(b){const pool=l;l=pool.filter(c=>c.day<=b).sort((x,y)=>y.day-x.day);if(l.length&&l.length<3){const up=pool.filter(c=>c.day>b).sort((x,y)=>x.day-y.day).slice(0,3-l.length);if(up.length)near=T('Poco sopra il tuo budget:','Slightly above your budget:')+`<ul>${up.map(c=>carLine(c)).join('')}</ul>`}}
     if(/potent|veloc|power|fast/.test(s))l=CARS.slice().sort((a,b)=>b.cv-a.cv).slice(0,2);if(/econom|meno car|cheap|least/.test(s))l=CARS.slice().sort((a,b)=>a.day-b.day).slice(0,2);
     if(!l.length)return T('Con questi criteri non ho auto in catalogo, e non ne invento. La tariffa più bassa è ','With these criteria I have no cars in the catalogue, and I won\'t make any up. The lowest rate is ')+eur(Math.min(...CARS.map(c=>c.day)))+T(' al giorno. Vuoi cambiare budget o categoria?',' per day. Want to change budget or category?');
     if(l.length===CARS.length&&!b)return T('Dimmi che tipo di auto cerchi (SUV, supercar, wagon, coupé), per quando e con che budget al giorno: ti propongo solo auto del catalogo.','Tell me the kind of car (SUV, supercar, estate, coupé), when and your daily budget: I only suggest cars from the catalogue.');
-    return T('Ecco cosa c\'è in catalogo (tariffe di esempio):','Here is what the catalogue has (sample rates):')+`<ul>${l.slice(0,4).map(c=>carLine(c)).join('')}</ul>`+T('Per prenotare apri la scheda e scegli le date: la disponibilità la verifica il calendario, non io.','To book, open the page and pick dates: availability is checked by the calendar, not by me.')}
+    return T('Ecco cosa c\'è in catalogo (tariffe di esempio):','Here is what the catalogue has (sample rates):')+`<ul>${l.slice(0,3).map(c=>carLine(c)).join('')}</ul>`+near+T('Per prenotare apri la scheda e scegli le date: la disponibilità la verifica il calendario, non io.','To book, open the page and pick dates: availability is checked by the calendar, not by me.')}
   if(id==='sales'){if(/permut|trade/.test(s))return T('Sì, MC valuta la permuta. Apri la scheda dell\'auto che ti interessa, scheda «Permuta», e indica modello, anno e km: la valutazione definitiva si fa vedendo l\'auto.','Yes, MC considers trade-ins. Open the car you like, "Trade-in" tab, and enter model, year and km: the final valuation is made on seeing the car.');
     if(/finanz|rata|rate|financ|instal/.test(s))return T('Posso mostrarti una rata indicativa nella scheda dell\'auto (scheda «Finanziamento»). Attenzione: è una richiesta, non un\'approvazione. L\'esito lo decide la finanziaria.','I can show an indicative instalment on the car page ("Finance" tab). Note: it is a request, not an approval. The lender decides.');
     if(/test|prova|drive/.test(s))return T('Il test drive si prenota dalla scheda dell\'auto, scheda «Test drive». È confermato solo dopo la risposta di MC.','Book a test drive from the car page, "Test drive" tab. It is confirmed only after MC replies.');
@@ -107,13 +107,13 @@ function agentReply(id,q){const s=q.toLowerCase(),fs=fleetState();
     if(/manut|mainten/.test(s)){const l=CARS.filter(c=>fs[c.id]==='maint');return l.length?T('In manutenzione: ','In maintenance: ')+l.map(c=>c.model).join(', ')+'.':T('Nessuna auto in manutenzione.','No car in maintenance.')}
     return T('Posso dirti scadenze, auto poco utilizzate, manutenzioni e redditività. Leggo i dati della flotta; non modifico prezzi né stati da solo.','I can report deadlines, under-used cars, maintenance and profitability. I read fleet data; I do not change prices or statuses by myself.')}
   /* support */
-  const code=(q.toUpperCase().match(/MC-[A-Z0-9]{3,6}/)||[])[0];
+  const code=(q.toUpperCase().match(/MC-[A-Z0-9]{3,6}(-\d{3})?/)||[])[0];
   if(code){const b=myBookings().find(x=>x.code===code);return b?T('Prenotazione ','Booking ')+code+': '+carName(carBy(b.car))+', '+fmtDs(fromIso(b.from))+' → '+fmtDs(fromIso(b.to))+'. '+T('Stato: ','Status: ')+b.st+'.':T('Non trovo ','I cannot find ')+code+T(' tra le prenotazioni che sei autorizzato a vedere.',' among the bookings you are allowed to see.')}
   if(/rimbors|incident|danno|reclam|multa|refund|accident|damage|complain|fine/.test(s))return handoff();
   if(/cauzion|deposit/.test(s))return FAQ()[1][1];if(/annull|cancel|disdir/.test(s))return FAQ()[2][1];if(/km|chilom|mileage/.test(s))return FAQ()[4][1];
   if(/orari|apert|indirizz|dove|hours|address|where/.test(s))return BIZ.addr+', '+BIZ.cap+'. '+T('Lunedì 9:00–18:00; gli altri giorni sono da confermare.','Monday 9:00–18:00; other days to be confirmed.')+' '+BIZ.tel;
   if(/document|patente|licen|età|eta |age/.test(s))return FAQ()[0][1];if(/consegn|aeroporto|domicilio|deliver|airport/.test(s))return FAQ()[3][1];
-  if(/stato|prenotaz|status|booking/.test(s))return T('Scrivimi il codice della prenotazione (per esempio MC-AB12C) e ti dico lo stato.','Send me the booking code (for example MC-AB12C) and I\'ll tell you the status.');
+  if(/stato|prenotaz|status|booking/.test(s))return T('Scrivimi il codice della prenotazione (per esempio MC-2611-047) e ti dico lo stato.','Send me the booking code (for example MC-2611-047) and I\'ll tell you the status.');
   return T('Posso rispondere su cauzione, cancellazione, chilometri, documenti, consegna, orari e stato della prenotazione. ','I can answer on deposit, cancellation, mileage, documents, delivery, hours and booking status. ')+handoff()}
 function agentRender(){const p=$('#agentPanel'),A=AGENTS(),a=A.find(x=>x.id===AG.tab),log=AG.logs[a.id]||(AG.logs[a.id]=[{b:1,t:a.d+' '+T('Come posso aiutarti?','How can I help?')}]);
   p.setAttribute('aria-label',T('Assistenti AI demo','Demo AI assistants'));
@@ -126,7 +126,7 @@ function agentRender(){const p=$('#agentPanel'),A=AGENTS(),a=A.find(x=>x.id===AG
   const l=$('#agLog');l.scrollTop=l.scrollHeight}
 function agentAsk(q){q=(q||'').trim();if(!q||AG.busy)return;const id=AG.tab;AG.logs[id].push({t:q});AG.busy=true;agentRender();
   setTimeout(()=>{AG.busy=false;let r;try{r=agentReply(id,q)}catch(e){r=T('Qualcosa non ha funzionato. ','Something went wrong. ')+handoff()}AG.logs[id].push({b:1,t:r});if(!$('#agentPanel').hidden)agentRender()},650)}
-ACT.agentToggle=()=>{const p=$('#agentPanel');p.hidden=!p.hidden;if(!p.hidden){agentRender();const i=$('input',p);i&&i.focus()}else $('#agentFab').focus()};
+ACT.agentToggle=()=>{const p=$('#agentPanel');p.hidden=!p.hidden;document.body.classList.toggle('ag-open',!p.hidden);if(!p.hidden){agentRender();const i=$('input',p);i&&i.focus()}else $('#agentFab').focus()};
 ACT.agentTab=el=>{AG.tab=el.dataset.t;agentRender()};
 ACT.agentAsk=el=>agentAsk(el.dataset.q);
 FORM.agent=f=>{agentAsk(f.q.value)};
@@ -245,7 +245,8 @@ function viewProject(){const done=store.get('check',{});
     T('Sito indicizzabile e sitemap inviata','Site indexable and sitemap submitted'),T('Titolare formato sulla dashboard','Owner trained on the dashboard')
    ].map((t,i)=>`<li><input type="checkbox" id="ck${i}" data-chg="check" data-i="${i}" ${done[i]?'checked':''}><label for="ck${i}">${t}</label></li>`).join('')}</ul>
    <div class="cta-band reveal" style="margin-top:36px"><p class="eyebrow">${T('Cosa ricevete alla fine','What you get at the end')}</p><h2>${T('Un prodotto vostro, non in affitto.','A product you own, not rent.')}</h2><p class="lead">${T('Codice, database, design system, documentazione, test automatici, guida all\'installazione e procedure: tutto consegnato e intestato a MC.','Code, database, design system, documentation, automated tests, installation guide and procedures: all delivered and in MC\'s name.')}</p>
-    <div class="cta"><a class="btn btn-primary" href="#/prenota/${CARS[0].id}">${T('Riprova la prenotazione','Try the booking again')} ${IC.arrow}</a><a class="btn btn-white" href="#/admin">${T('Apri la dashboard','Open the dashboard')}</a></div></div>`)}
+    <div class="cta"><a class="btn btn-primary" href="#/prenota/${CARS[0].id}">${T('Riprova la prenotazione','Try the booking again')} ${IC.arrow}</a><a class="btn btn-white" href="#/admin">${T('Apri la dashboard','Open the dashboard')}</a></div></div>
+   <div class="note" style="margin-top:22px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>${T('In questa demo i dati che inserisci restano solo nel tuo browser.','In this demo the data you enter stays only in your browser.')}</span><button class="btn btn-line btn-sm" data-act="wipe">${T('Cancella dati demo','Delete demo data')}</button></div>`)}
   </div></div>`}
 ACT.pjGo=el=>{const t=document.getElementById(el.dataset.id);if(t)scrollTo({top:t.getBoundingClientRect().top+scrollY-140,behavior:'smooth'})};
 CHG.check=el=>{const c=store.get('check',{});c[el.dataset.i]=el.checked;store.set('check',c)};

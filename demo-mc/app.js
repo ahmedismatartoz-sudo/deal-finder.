@@ -24,7 +24,7 @@ function route(){const R=parse(),a=R.parts[0]||'',b=R.parts[1],seq=++routeSeq;di
   else if(a==='account'){html=viewAccount(b)}
   else if(a==='progetto'){html=viewProject()}
   else{html=view404();name='404'}
-  document.body.className='r-'+name;
+  document.body.className='r-'+name+($('#agentPanel').hidden?'':' ag-open');
   renderShell('/'+a);
   const v=$('#view');v.innerHTML=html;v.style.animation='none';void v.offsetWidth;v.style.animation='';
   const titles={home:'MC Milano | '+T('Noleggio e vendita auto speciali','Special car rental and sales'),noleggio:T('Noleggio','Rental')+' | MC Milano',vendita:T('Vendita','Sales')+' | MC Milano',admin:'Dashboard | MC Milano',account:T('Area cliente','My account')+' | MC Milano',progetto:T('Il progetto','The project')+' | MC Milano',prenota:T('Prenotazione','Booking')+' | MC Milano'};
@@ -63,33 +63,40 @@ function heroScroll(){const h=$('#hero');if(!h)return;const p=heroProgress(),cop
   if(h.classList.contains('static'))return;
   const o=Math.max(0,1-p*3.2);copy.style.opacity=o;copy.style.transform=`translateY(${-p*60}px)`;copy.style.pointerEvents=o<.3?'none':'';
   if(meta)meta.style.opacity=o;
-  const k=Math.max(0,Math.min(1,(p-.3)/.15))*(1-Math.max(0,Math.min(1,(p-.82)/.12)));cap.style.opacity=k;cap.style.transform=`translateY(${(1-k)*30}px)`;
+  const k=Math.max(0,Math.min(1,(p-.28)/.12))*(1-Math.max(0,Math.min(1,(p-.9)/.1)));cap.style.opacity=k;cap.style.transform=`translateY(${(1-k)*30}px)`;
   if(bar)bar.style.transform=`scaleY(${p})`;
-  if(!h.classList.contains('live')){const cw=$('.hero-fb .carwrap'),mi=$('.hero-fb .mirror');if(cw&&(p>0||cw.dataset.m)){cw.dataset.m=1;const tx=`translateX(${p*-16}vw) scale(${1+p*.1})`;cw.style.animation=mi.style.animation='none';cw.style.transformOrigin='50% 92%';mi.style.transformOrigin='50% 8%';cw.style.transform=tx;mi.style.transform=tx+' scaleY(-1)'}}
+  if(!h.classList.contains('live')){const cw=$('.hero-fb .carwrap'),mi=$('.hero-fb .mirror');if(cw&&(p>0||cw.dataset.m)){cw.dataset.m=1;const tx=`scale(${1+p*.06})`;cw.style.animation=mi.style.animation='none';cw.style.transformOrigin='70% 92%';mi.style.transformOrigin='70% 8%';cw.style.transform=tx;mi.style.transform=tx+' scaleY(-1)'}}
 }
 function onScroll(){onScrollTop();heroScroll()}
 addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',heroScroll);
 function heroInit(){const h=$('#hero'),load=$('#heroLoad');if(!h)return;
-  const fail=()=>{MC3D.state='fallback';load&&load.classList.add('done');h.classList.add('nofx')};
+  const fail=()=>{MC3D.state='fallback';load&&load.classList.add('done');h.classList.add('nofx','static');['#heroCopy','#heroMeta'].forEach(q=>{const e=$(q);if(e){e.style.opacity='';e.style.transform='';e.style.pointerEvents=''}});const c=$('#heroCap');if(c)c.style.opacity=0};
   if(REDUCED){h.classList.add('static');load.classList.add('done');MC3D.state='reduced';return}
   if(!hasWebGL()){fail();return}
   const seq=routeSeq,bar=$('i',load);
-  withTimeout(loadScene().then(m=>m.createStage($('#heroCanvas'),{mode:'hero',mobile:isMobile(),accent:curAccent().c,paint:PAINTS[CARS[0].paint].hex,onProgress:p=>bar&&bar.style.setProperty('--p',p)})),30000)
+  const stageP=loadScene().then(m=>m.createStage($('#heroCanvas'),{mode:'hero',mobile:isMobile(),accent:curAccent().c,paint:PAINTS[CARS[0].paint].hex,onProgress:p=>bar&&bar.style.setProperty('--p',p)}));
+  withTimeout(stageP,30000)
    .then(st=>{if(seq!==routeSeq||!$('#hero')){st.dispose();return}MC3D.hero=st;MC3D.state='live';h.classList.add('live');load.classList.add('done');heroScroll()})
-   .catch(e=>{console.info('[MC] 3D non disponibile, resta il fallback:',e&&e.message||e);if(seq===routeSeq)fail()});
+   .catch(e=>{console.info('[MC] 3D non disponibile, resta il fallback:',e&&e.message||e);if(seq===routeSeq)fail();stageP.then(st=>{if(MC3D.hero!==st)st.dispose()}).catch(()=>{})});
   heroScroll();
 }
 window.addEventListener('mc:accent',e=>{['hero','viewer'].forEach(k=>MC3D[k]&&MC3D[k].setAccent(e.detail.c))});
 
 /* ---------- configuratore nella scheda ---------- */
 function viewerInit(c,seq){const box=$('#viewer');if(!box||!c)return;if(REDUCED||!hasWebGL())return;
-  withTimeout(loadScene().then(m=>m.createStage($('#viewerCanvas'),{mode:'viewer',mobile:isMobile(),accent:curAccent().c,paint:DT.hex||PAINTS[c.paint].hex})),30000)
+  const stageP=loadScene().then(m=>m.createStage($('#viewerCanvas'),{mode:'viewer',mobile:isMobile(),accent:curAccent().c,paint:DT.hex||PAINTS[c.paint].hex}));
+  withTimeout(stageP,30000)
    .then(st=>{if(seq!==routeSeq||!$('#viewer')){st.dispose();return}MC3D.viewer=st;box.classList.add('live');
      $('#viewerTag').textContent=T('3D · trascina per ruotare','3D · drag to rotate');
      const shots=st.snapshots(3),th=$$('#thumbs>*');shots.forEach((u,i)=>{if(th[i]&&u&&u.length>200){const d=document.createElement('div');d.innerHTML=`<img src="${u}" alt="${esc(carName(c))} – ${T('render 3D dimostrativo','demo 3D render')} ${i+1}" loading="lazy">`;d.style.padding='0';th[i].replaceWith(d)}})})
-   .catch(e=>{console.info('[MC] configuratore 3D non disponibile:',e&&e.message||e)});
+   .catch(e=>{console.info('[MC] configuratore 3D non disponibile:',e&&e.message||e);stageP.then(st=>{if(MC3D.viewer!==st)st.dispose()}).catch(()=>{})});
 }
 
+/* ---------- date: accanto al campo nativo, la data scritta all'italiana ---------- */
+const dfm=v=>{const d=fromIso(v);return d?new Intl.DateTimeFormat(loc(),{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}).format(d):''};
+function decorateDates(root){$$('input[type=date]',root||document).forEach(i=>{let n=i.nextElementSibling;if(!n||!n.classList.contains('dfmt')){n=document.createElement('small');n.className='dfmt';i.after(n)}n.textContent=dfm(i.value)})}
+new MutationObserver(()=>{clearTimeout(decorateDates.t);decorateDates.t=setTimeout(()=>decorateDates(),30)}).observe(document.getElementById('view'),{childList:true,subtree:true});
+document.addEventListener('change',e=>{if(e.target.type==='date')setTimeout(()=>decorateDates(),0)});
 /* ---------- avvio ---------- */
 applyAccent(store.get('accent','rosso'));
 route();

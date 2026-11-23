@@ -18,6 +18,7 @@ const loc=()=>LANG==='en'?'en-GB':'it-IT';
 const nf=o=>{try{return new Intl.NumberFormat(loc(),Object.assign({useGrouping:'always'},o))}catch(e){return new Intl.NumberFormat(loc(),o)}};
 const eur=n=>nf({style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n));
 const num=n=>nf({}).format(n);
+const PW=()=>T('CV','hp');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* ---------- date ---------- */
@@ -85,49 +86,58 @@ function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b
   if(f>0){r+=(255-r)*f;g+=(255-g)*f;b+=(255-b)*f}else{r*=1+f;g*=1+f;b*=1+f}
   return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('')}
 let SIL=0;
-function carSVG(car,o){o=o||{};const g=car.geo,G=350,hex=o.hex||PAINTS[car.paint].hex,id='s'+(++SIL),tz=!!o.teaser;
-  const by=G-g.cl,cy=G-g.r,ar=g.r+9,dx=Math.sqrt(ar*ar-(by-cy)*(by-cy));
-  const [cx_,cyy]=g.cowl,[rsx,ry]=g.rs,[rex,rey]=g.re,[dkx,dky]=g.deck;
-  const top=`C${g.x0+(cx_-g.x0)*.42} ${g.nose-24} ${cx_-46} ${cyy+8} ${cx_} ${cyy}`+
-   `C${cx_+(rsx-cx_)*.5} ${cyy-(cyy-ry)*.72} ${rsx-44} ${ry} ${rsx} ${ry}`+
-   `C${rsx+(rex-rsx)*.4} ${ry-4} ${rex-30} ${rey-3} ${rex} ${rey}`+
-   `C${rex+(dkx-rex)*.5} ${rey+10} ${dkx-34} ${dky-14} ${dkx} ${dky}`+
-   `L${g.x1-14} ${g.tail}`;
-  const body=`M${g.x0+22} ${by}L${g.x0+6} ${by-14}Q${g.x0-5} ${g.nose+20} ${g.x0+26} ${g.nose}`+top+
-   `Q${g.x1+5} ${g.tail+6} ${g.x1} ${g.tail+40}L${g.x1-6} ${by-26}Q${g.x1-9} ${by} ${g.x1-36} ${by}`+
+/* profili disegnati per modello: linea superiore (dal muso alla coda), vetrata, montanti, portiere */
+const SHAPE={
+ 'ferrari-296-gts':{nose:274,tail:192,ty:130,belt:197,top:'C150 252 222 214 296 205C336 200 366 200 394 196C432 168 462 139 500 132C530 128 556 130 576 138C618 152 658 178 704 185C760 185 832 183 882 187L905 192',
+   glass:'M412 196C442 172 470 147 502 143L556 145C572 152 588 170 598 187Z',pil:[],doors:[404,606],mir:[420,190],intake:1},
+ 'audi-rs-q8':{nose:194,tail:150,ty:38,belt:160,top:'C112 180 222 170 320 160C372 100 412 48 472 42C560 36 640 42 700 56C780 76 842 106 884 136L946 150',
+   glass:'M348 158C388 108 422 62 472 56C560 50 640 56 694 68C760 86 808 112 836 140L348 160Z',pil:[545,700],doors:[336,548,722],mir:[352,150]},
+ 'bmw-m4-competition':{nose:238,tail:182,ty:90,belt:190,top:'C150 218 262 204 364 190C412 140 452 100 506 94C570 90 630 94 680 106C730 124 770 152 808 172C850 174 890 176 926 182L926 182',
+   glass:'M390 188C426 146 460 110 506 106C568 102 625 106 668 118C708 132 740 152 768 172L390 190Z',pil:[552],doors:[380,556,720],mir:[396,182]},
+ 'audi-rs-q3-sportback':{nose:212,tail:166,ty:60,belt:172,top:'C160 196 262 184 342 172C386 118 422 74 470 66C540 60 610 66 660 80C730 100 792 128 840 152L899 166',
+   glass:'M368 170C402 124 432 86 472 80C540 74 606 80 652 92C710 108 760 132 792 156L368 172Z',pil:[540,668],doors:[356,542,700],mir:[372,162]},
+ 'audi-rs6-avant':{nose:226,tail:180,ty:80,belt:184,top:'C130 208 242 196 342 184C390 134 430 94 482 86C600 78 740 82 832 94L864 98C892 120 916 150 934 176L944 180',
+   glass:'M368 182C404 140 438 104 482 98C600 92 730 94 822 106C850 124 870 148 882 172L368 184Z',pil:[534,694,812],doors:[358,536,700],mir:[374,174]},
+ 'audi-rs3-sportback':{nose:226,tail:178,ty:84,belt:184,top:'C175 208 272 196 364 184C406 136 442 98 490 90C580 84 680 88 752 98L780 102C812 126 840 152 862 174L889 178',
+   glass:'M390 182C422 142 450 108 490 102C580 96 670 100 744 110C770 128 792 150 806 170L390 184Z',pil:[548,694],doors:[380,550,704],mir:[396,174]}
+};
+function carSVG(car,o){o=o||{};const g=car.geo,S=SHAPE[car.id],G=350,hex=o.hex||PAINTS[car.paint].hex,id='s'+(++SIL);
+  const by=G-g.cl,cy=G-g.r,ar=g.r+8,dx=Math.sqrt(ar*ar-(by-cy)*(by-cy)),sx=g.x0+26,ty=S.ty,R=g.r;
+  const body=`M${g.x0+24} ${by}L${g.x0+8} ${by-12}Q${g.x0-4} ${S.nose+22} ${sx} ${S.nose}${S.top}Q${g.x1+4} ${S.tail+6} ${g.x1} ${S.tail+36}L${g.x1-5} ${by-24}Q${g.x1-8} ${by} ${g.x1-34} ${by}`+
    `L${g.rw+dx} ${by}A${ar} ${ar} 0 1 0 ${g.rw-dx} ${by}L${g.fw+dx} ${by}A${ar} ${ar} 0 1 0 ${g.fw-dx} ${by}Z`;
-  const belt=cyy+(dky-cyy)*.12;
-  const glass=`M${cx_+28} ${cyy-3}C${cx_+(rsx-cx_)*.55} ${cyy-(cyy-ry)*.7} ${rsx-30} ${ry+13} ${rsx+4} ${ry+12}`+
-   `C${rsx+(rex-rsx)*.4} ${ry+8} ${rex-26} ${rey+9} ${rex-6} ${rey+12}`+
-   `C${rex+(dkx-rex)*.45} ${rey+20} ${dkx-52} ${dky-12} ${dkx-36} ${dky-1}L${cx_+28} ${belt}Z`;
-  const pil=rsx+(rex-rsx)*(car.body==='spider'?.75:.5)+(car.body==='wagon'?-70:car.body==='suv'?-20:10);
-  const vy=Math.min(ry,rey)-(tz?60:26),vh=G+24-vy;
-  const wheel=x=>{let sp='';for(let i=0;i<5;i++){const a=i*72-90,a1=(a-8)*Math.PI/180,a2=(a+8)*Math.PI/180,R=g.r*.64;
-      sp+=`<path d="M${x} ${cy}L${x+Math.cos(a1)*R} ${cy+Math.sin(a1)*R}M${x} ${cy}L${x+Math.cos(a2)*R} ${cy+Math.sin(a2)*R}"/>`}
-    return `<circle cx="${x}" cy="${cy}" r="${ar+1}" fill="#040405"/><circle cx="${x}" cy="${cy}" r="${g.r}" fill="#0c0c0e"/><circle cx="${x}" cy="${cy}" r="${g.r-2}" fill="none" stroke="#232428" stroke-width="2.5"/>
-    <circle cx="${x}" cy="${cy}" r="${g.r*.7}" fill="#131417" stroke="${tz?'#3a3c42':'#5a5d64'}" stroke-width="2"/>
-    <path d="M${x-g.r*.44} ${cy-g.r*.2}a${g.r*.5} ${g.r*.5} 0 0 1 ${g.r*.3} -${g.r*.26}" stroke="var(--accent)" stroke-width="${g.r*.13}" fill="none" stroke-linecap="round"/>
-    <g stroke="${tz?'#6c6f76':'#c9ccd2'}" stroke-width="${g.r*.07}" stroke-linecap="round">${sp}</g><circle cx="${x}" cy="${cy}" r="${g.r*.12}" fill="${tz?'#6c6f76':'#c9ccd2'}"/>`};
-  const defs=`<defs><linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1">${tz?`<stop offset="0" stop-color="${shade(hex,-.35)}"/><stop offset=".3" stop-color="${shade(hex,-.72)}"/><stop offset="1" stop-color="#050506"/>`:`<stop offset="0" stop-color="${shade(hex,.45)}"/><stop offset=".3" stop-color="${shade(hex,.12)}"/><stop offset=".6" stop-color="${hex}"/><stop offset="1" stop-color="${shade(hex,-.6)}"/>`}</linearGradient>
-  <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${tz?'#1a1e26':'#3a4250'}"/><stop offset=".5" stop-color="#0a0c10"/><stop offset="1" stop-color="${tz?'#0d0f14':'#1c2028'}"/></linearGradient>
-  <linearGradient id="${id}r" gradientUnits="userSpaceOnUse" x1="${g.x0}" y1="0" x2="${g.x1}" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".15"/><stop offset=".3" stop-color="#fff"/><stop offset=".72" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>
-  <radialGradient id="${id}s"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
-  <filter id="${id}f" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="7"/></filter></defs>`;
-  const topP=`M${g.x0+26} ${g.nose}${top}`;
-  return `<svg viewBox="0 ${vy} 1000 ${vh}" role="img" aria-label="${esc(o.label||carName(car))}" class="${o.cls||''}">${defs}
-  <ellipse cx="${(g.x0+g.x1)/2}" cy="${G+3}" rx="${(g.x1-g.x0)*.55}" ry="15" fill="url(#${id}s)"/>
+  const sh=Math.min(.8,(S.belt+24-ty)/(by-ty)),n=parseInt(hex.slice(1),16),lum=(.3*(n>>16)+.59*(n>>8&255)+.11*(n&255))/255,dk=lum<.16;
+  const stops=dk?[[0,shade(hex,.55)],[.2,shade(hex,.26)],[sh-.1,shade(hex,.08)],[sh,shade(hex,.34)],[sh+.035,shade(hex,-.25)],[.9,shade(hex,.1)],[1,shade(hex,-.6)]]
+               :[[0,shade(hex,.5)],[.2,shade(hex,.2)],[sh-.1,hex],[sh,shade(hex,.36)],[sh+.035,shade(hex,-.3)],[.9,shade(hex,-.12)],[1,shade(hex,-.6)]];
+  const wheel=x=>{let sp='';for(let i=0;i<5;i++)for(const d of[-9,9]){const a=(i*72-90+d)*Math.PI/180,b=(i*72-90+d*.35)*Math.PI/180;sp+=`<path d="M${(x+Math.cos(b)*R*.12).toFixed(1)} ${(cy+Math.sin(b)*R*.12).toFixed(1)}L${(x+Math.cos(a)*R*.7).toFixed(1)} ${(cy+Math.sin(a)*R*.7).toFixed(1)}"/>`}
+    return `<circle cx="${x}" cy="${cy}" r="${R}" fill="url(#${id}t)"/><circle cx="${x}" cy="${cy}" r="${R*.9}" fill="none" stroke="#1d1e21" stroke-width="1.5"/>
+    <circle cx="${x}" cy="${cy}" r="${R*.74}" fill="#101113"/><circle cx="${x}" cy="${cy}" r="${R*.5}" fill="#2b2c30" stroke="#3b3d42" stroke-width="1.5"/>
+    <path d="M${x-R*.5} ${cy-R*.12}A${R*.52} ${R*.52} 0 0 1 ${x-R*.2} ${cy-R*.48}" stroke="var(--accent)" stroke-width="${R*.15}" fill="none"/>
+    <g stroke="url(#${id}w)" stroke-width="${R*.075}" stroke-linecap="round">${sp}</g>
+    <circle cx="${x}" cy="${cy}" r="${R*.73}" fill="none" stroke="url(#${id}w)" stroke-width="${R*.07}"/><circle cx="${x}" cy="${cy}" r="${R*.13}" fill="#1a1b1e" stroke="#8d9097" stroke-width="2"/>`};
+  const vb=o.vb||[0,ty-24,1000,G+22-(ty-24)];
+  return `<svg viewBox="${vb.join(' ')}" role="img" aria-label="${esc(o.label||carName(car))}" class="${o.cls||''}" ${o.vb?'preserveAspectRatio="xMidYMid slice"':''}>
+  <defs><linearGradient id="${id}b" gradientUnits="userSpaceOnUse" x1="0" y1="${ty}" x2="0" y2="${by}">${stops.map(k=>`<stop offset="${k[0].toFixed(3)}" stop-color="${k[1]}"/>`).join('')}</linearGradient>
+  <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a6675"/><stop offset=".42" stop-color="#11151b"/><stop offset=".6" stop-color="#0a0c10"/><stop offset="1" stop-color="#2a323c"/></linearGradient>
+  <linearGradient id="${id}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3c6cc"/><stop offset="1" stop-color="#5d6067"/></linearGradient>
+  <radialGradient id="${id}t"><stop offset=".7" stop-color="#17171a"/><stop offset=".9" stop-color="#0d0d0f"/><stop offset="1" stop-color="#050506"/></radialGradient>
+  <radialGradient id="${id}s"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset=".6" stop-color="#000" stop-opacity=".5"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  <linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".3" stop-color="#fff" stop-opacity=".5"/><stop offset=".8" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+  <ellipse cx="${(g.x0+g.x1)/2}" cy="${G+2}" rx="${(g.x1-g.x0)*.54}" ry="13" fill="url(#${id}s)"/>
+  <circle cx="${g.fw}" cy="${cy}" r="${ar+2}" fill="#050506"/><circle cx="${g.rw}" cy="${cy}" r="${ar+2}" fill="#050506"/>
+  <path d="${body}" fill="url(#${id}b)"/>
+  <path d="M${sx+6} ${S.nose+3}${S.top}" fill="none" stroke="url(#${id}h)" stroke-width="1.6" opacity="${dk?.55:.7}"/>
+  <path d="${S.glass}" fill="url(#${id}g)"/>
+  ${S.pil.map(x=>`<path d="M${x-3} ${ty+16}L${x+3} ${S.belt+2}" stroke="#0b0c0e" stroke-width="7"/>`).join('')}
+  <path d="${S.doors.map(x=>`M${x} ${S.belt+10}C${x-4} ${S.belt+60} ${x-2} ${by-50} ${x+4} ${by-22}`).join('')}" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1.6"/>
+  ${S.doors.slice(1).map(x=>`<path d="M${x-52} ${S.belt+30}h30" stroke="${shade(hex,dk?.3:-.35)}" stroke-width="3.5" stroke-linecap="round"/>`).join('')}
+  <path d="M${S.mir[0]} ${S.mir[1]}l-26 3q-4 8 4 12l22 -2z" fill="${shade(hex,dk?.12:-.35)}"/>
+  ${S.intake?`<path d="M618 214L690 204Q684 240 672 262L634 266Q618 244 618 214Z" fill="#08080a"/><path d="M618 214L690 204" stroke="${shade(hex,.3)}" stroke-width="1.5"/>`:''}
+  <path d="M${g.x0+7} ${S.nose+36}L${g.x0+44} ${S.nose+30}L${g.x0+52} ${by-18}L${g.x0+12} ${by-13}Z" fill="#08080a"/>
+  <path d="M${g.x1-5} ${by-46}L${g.x1-44} ${by-40}L${g.x1-48} ${by-12}L${g.x1-9} ${by-18}Z" fill="#0a0a0c" opacity=".85"/>
+  <path d="M${g.x0+16} ${by-5}H${g.fw-dx-1}M${g.fw+dx+1} ${by-5}H${g.rw-dx-1}M${g.rw+dx+1} ${by-5}H${g.x1-26}" stroke="#09090b" stroke-width="10"/>
+  <path d="M${sx-14} ${S.nose+24}l62 -13l-6 9l-48 12z" fill="#eef4ff"/><path d="M${sx-14} ${S.nose+24}l62 -13" stroke="#fff" stroke-width="1.5"/>
+  <path d="M${g.x1-3} ${S.tail+15}l-58 -5l2 8l54 8z" fill="#d81420"/><path d="M${g.x1-3} ${S.tail+15}l-58 -5" stroke="#ff6a70" stroke-width="1.2"/>
   ${wheel(g.fw)}${wheel(g.rw)}
-  <path d="${body}" fill="url(#${id}b)" stroke="rgba(255,255,255,${tz?.06:.22})" stroke-width="1.5"/>
-  <path d="${glass}" fill="url(#${id}g)" stroke="rgba(255,255,255,${tz?.08:.16})" stroke-width="1.2"/>
-  <path d="M${pil} ${ry+12}L${pil+8} ${belt+(dky-cyy)*.3}" stroke="${shade(hex,tz?-.8:-.3)}" stroke-width="7"/>
-  <path d="M${g.x0+44} ${g.nose+15}C${g.x0+(cx_-g.x0)*.5} ${g.nose-3} ${cx_} ${belt+14} ${cx_+60} ${belt+12}L${dkx-10} ${dky+16}L${g.x1-24} ${g.tail+14}" fill="none" stroke="rgba(255,255,255,${tz?.16:.34})" stroke-width="2"/>
-  <path d="M${g.x0+10} ${by-10}l44 -2l14 -16l-52 4z" fill="rgba(0,0,0,.55)"/>
-  <path d="M${g.fw+dx+12} ${by-12}L${g.rw-dx-12} ${by-12}" stroke="rgba(0,0,0,.5)" stroke-width="10"/>
-  <path d="M${cx_+8} ${belt+8}L${cx_+2} ${by-30}M${pil+10} ${belt+16}L${pil+12} ${by-26}" stroke="rgba(0,0,0,.42)" stroke-width="1.6" fill="none"/>
-  <ellipse cx="${cx_+40}" cy="${belt-3}" rx="15" ry="6" fill="${shade(hex,tz?-.7:-.25)}"/>
-  ${tz?`<path d="${topP}" fill="none" stroke="url(#${id}r)" stroke-width="10" filter="url(#${id}f)" opacity=".75"/><path d="${topP}" fill="none" stroke="url(#${id}r)" stroke-width="2.2" stroke-linecap="round"/>`:''}
-  <path d="M${g.x0+13} ${g.nose+23}l54 -10l-11 13z" fill="#f4f7ff"/>${tz?`<path d="M${g.x0+13} ${g.nose+23}l54 -10l-11 13z" fill="#fff" filter="url(#${id}f)"/>`:''}
-  <path d="M${g.x1-5} ${g.tail+17}l-50 -3l6 11l42 4z" fill="#ff2a2a"/>${tz?`<path d="M${g.x1-5} ${g.tail+17}l-50 -3l6 11l42 4z" fill="#ff2a2a" filter="url(#${id}f)"/>`:''}
   </svg>`}
 
 /* ---------- regole di prezzo (reali, lato client) ---------- */
@@ -188,6 +198,8 @@ function overlaps(carId,from,to,skip){const a=fromIso(from),b=fromIso(to);if(!a|
 function isFree(car,from,to){if(fleetState()[car.id]==='maint')return false;if(!from||!to)return null;return !overlaps(car.id,from,to)}
 function nextFree(car){if(fleetState()[car.id]==='maint')return null;let d=TODAY;for(let i=0;i<40;i++){if(!overlaps(car.id,iso(d),iso(d)))return d;d=addD(d,1)}return null}
 
+function newCode(){const d=new Date();return 'MC-'+String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+'-'+String(47+myBookings().length).padStart(3,'0')}
+function wipeDemo(){Object.keys(mem).forEach(k=>delete mem[k]);try{Object.keys(localStorage).filter(k=>k.indexOf('mc_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}}
 /* ---------- preferiti, confronto ---------- */
 const favs=()=>store.get('favs',[]);
 const toggleFav=id=>{const f=favs(),i=f.indexOf(id);i<0?f.push(id):f.splice(i,1);store.set('favs',f);return i<0};

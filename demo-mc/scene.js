@@ -131,15 +131,15 @@ export async function createStage(canvas,o){
       qv+=(q-qv)*.08;const k=out3((t-.25)/3.4),portrait=cam.aspect<.8;
       strips.forEach((mm,i)=>{const on=ss(.15+i*.22,.5+i*.22,t),fl=on<1&&on>0?(.6+.4*Math.sin(t*60+i)):1;mm.color.setScalar(on*fl)});
       // l'auto entra dal buio, fari accesi, e si ferma al centro
-      const z=L(-24,0,k);car.position.z=z;wheels.forEach(w=>w.rotation.x=-(z/.38)-qv*2);
+      const z=L(-7,0,k);car.position.z=z;wheels.forEach(w=>w.rotation.x=-(z/.38)-qv*2);
       car.rotation.y=L(0,-.35,ss(.2,1,k));
       lampL.intensity=lampR.intensity=L(160,18,ss(.7,1,k));
       const a=.42+qv*Math.PI*1.8+mx*.22+Math.sin(t*.18)*.05;
-      const rad=(L(11,7.4,k)-Math.sin(qv*Math.PI)*.9+ss(.72,1,qv)*2.6)*(portrait?1.42:1);
+      const wide=!portrait&&!MOB,rad=(L(11.5,wide?9.6:7.4,k)-Math.sin(qv*Math.PI)*(wide?2.4:.9)+ss(.72,1,qv)*2.6)*(portrait?1.42:1);
       C.set(Math.sin(a)*rad,L(.75,1.2,k)+ss(.62,1,qv)*4.4-my*.35,Math.cos(a)*rad);
       T.set(0,portrait?-.55:.28,0);cam.position.copy(C);cam.lookAt(T);
       // su schermi larghi l'auto sta a destra del titolo; scorrendo torna al centro
-      if(!portrait&&!MOB){const w=canvas.clientWidth,h=canvas.clientHeight,off=-w*.15*(1-ss(.05,.35,qv));cam.setViewOffset(w,h,off,0,w,h)}
+      if(!portrait&&!MOB){const w=canvas.clientWidth,h=canvas.clientHeight,off=-w*.12*(1-ss(.05,.35,qv));cam.setViewOffset(w,h,off,0,w,h)}
       if(rim)rim.position.set(Math.cos(t*.6)*5,1.3,Math.sin(t*.6)*5);
       const d=s.getObjectByName('dust');if(d)d.rotation.y=t*.02;
       if(comp)comp.render();else r.render(s,cam);
