@@ -500,7 +500,7 @@ function sclCard(c, i){
 function sclBanner(){
   if (!canBrowse() || !tabOk(SCL)) return "";
   const n = S.sclTot;
-  return `<button class="scl-banner" data-act="tab" data-v="${SCL}"><span class="scl-banner-ic" aria-hidden="true">🏎</span><span class="scl-banner-t"><b>Sportive e supercar in Lombardia${n ? `: ${num(n)} auto` : ""}</b><small>Solo privati, sotto 180.000 €, con mercato e guadagno</small></span><span class="scl-banner-go" aria-hidden="true">${ICON.next}</span></button>`;
+  return `<button class="scl-banner" data-act="tab" data-v="${SCL}"><span class="scl-banner-ic" aria-hidden="true">🏎</span><span class="scl-banner-t"><b>Sportive e supercar in Lombardia${n ? `: ${num(n)} auto` : ""}</b><small>Solo opportunità di privati sotto i 180.000 €, con il guadagno</small></span><span class="scl-banner-go" aria-hidden="true">${ICON.next}</span></button>`;
 }
 function viewScl(){
   const v = S.scl, f = S.sclF, tutte = (v && v.items) || [], l = sclFiltrate(), n = Math.min(l.length, S.sclN || SCL_PASSO);
@@ -517,8 +517,6 @@ function viewScl(){
 </div>
     <div class="scl-f" role="group" aria-label="Filtri">
       ${chip("scl-gruppo", "supercar", f.gruppo, "Supercar")}${chip("scl-gruppo", "sportive", f.gruppo, "Sportive")}
-      <button class="chip" data-act="scl-cong" aria-pressed="${!!f.cong}">Con guadagno</button>
-      <button class="chip" data-act="scl-sotto" aria-pressed="${!!f.sotto}">Sotto il mercato</button>
       <label class="qsel on"><span class="sr">Ordina per</span><select id="scl-ord"><option value="guadagno" ${!f.ord || f.ord === "guadagno" ? "selected" : ""}>Ordina: guadagno</option><option value="sconto" ${f.ord === "sconto" ? "selected" : ""}>Ordina: sconto sul mercato</option><option value="prezzo" ${f.ord === "prezzo" ? "selected" : ""}>Ordina: prezzo</option></select></label>
       <label class="qsel ${f.marca ? "on" : ""}"><span class="sr">Marca</span><select id="scl-marca">${opts(marche.map(m => [m, m + " (" + perMarca[m] + ")"]), f.marca, "Marca")}</select></label>
       <label class="qsel ${f.pmin !== "" ? "on" : ""}"><span class="sr">Prezzo minimo</span><select id="scl-pmin">${opts(SCL_PREZZI.map(x => [x, "Da " + num(x) + " €"]), f.pmin, "Prezzo da")}</select></label>
@@ -531,7 +529,7 @@ function viewScl(){
     : `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${tutte.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>${tutte.length ? `<button class="btn" data-act="scl-reset">Togli i filtri</button>` : `<button class="btn" data-act="scl-reload">Aggiorna</button>`}</div>`;
   return header("Sportive e supercar in Lombardia", sub, right, "Scovo") + `${filtri}</header>
   <main class="list" aria-live="polite">
-    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Sportive e supercar di privati in Lombardia, sotto i 180.000 €. Mercato e guadagno sono quelli calcolati da Scovo con almeno 5 auto di confronto, come per gli affari; dove non c'è una valutazione affidabile trovi "non stimato".</span></div>
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Solo opportunità: sportive e supercar di privati in Lombardia, sotto i 180.000 €, con il prezzo sotto il mercato. Mercato e guadagno sono quelli calcolati da Scovo con almeno 5 auto di confronto, come per gli affari.</span></div>
     ${l.length ? `<div class="scl-grid">${l.slice(0, n).map(sclCard).join("")}</div>${l.length > n ? `<button class="btn scl-piu" data-act="scl-piu">Mostra altre ${Math.min(SCL_PASSO, l.length - n)} (${num(l.length - n)} rimaste)</button>` : ""}` : vuoto}
   </main>`;
 }

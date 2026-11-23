@@ -1933,6 +1933,7 @@ def _calcola_elenco() -> None:
     try:      # 23/11: vetrina sportive e supercar pronta prima del primo clic (lettura lunga, in un thread a parte)
         from . import vetrina_supercar as _vs
         if _vs.da_ricaricare():
+            _vs.FATTORI = _fattori_calibra
             _vs.avvia(connect, _scarti_cliente_ids)
     except Exception as e:
         logging.getLogger("scovo").warning("VETRINA_SUPERCAR avvio: %s", str(e)[:200])
@@ -2189,6 +2190,7 @@ def api_vetrina_supercar(request: Request):
     user = richiede(request, "auto")
     from . import vetrina_supercar as _vs
     try:
+        _vs.FATTORI = _fattori_calibra           # stesso guadagno degli affari (correzione chiesto -> venduto)
         items, totale = _vs.elenco(connect, _scarti_cliente_ids)
     except _vs.InCaricamento:
         # 23/11 sera: non è un errore; la pagina scrive "Sto preparando l'elenco…" e riprova da sola

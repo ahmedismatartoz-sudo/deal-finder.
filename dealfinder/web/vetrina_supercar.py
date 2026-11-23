@@ -40,7 +40,7 @@ SUPERCAR_DA = 70000             # "supercar" = marca di lusso oppure prezzo da 7
 LIMITE_SUPERCAR = 1000
 LIMITE_SPORTIVE = 2000
 LIMITE = LIMITE_SUPERCAR + LIMITE_SPORTIVE
-LEGGI_X = 2                     # candidate lette per intero per gruppo: fino a LEGGI_X volte il tetto del gruppo
+LEGGI_X = 50                    # candidate lette per intero per gruppo: fino a LEGGI_X volte il tetto del gruppo
 BLOCCO = 500                    # annunci letti per intero (con la descrizione) per volta
 CACHE_SECONDI = 1800              # 23/11: la vetrina non sono affari; lettura lunga, non ogni 10 minuti
 PREZZO_MAX = 180000             # 23/11 sera (cliente): solo auto sotto i 180.000 € e solo di privati
@@ -387,13 +387,14 @@ MERCATO_GIORNI_EU = 2           # supercar_eu: come pipeline/supercar_eu.SITO_SQ
 MERCATO_SQL = (
     # revisione 23/11: vale solo l'ULTIMA valutazione e solo se il software non l'ha giudicata inaffidabile
     # (dati_insufficienti: prezzo troppo sotto la mediana, confronti dispersi...): filtro fuori dal DISTINCT ON
-    ("SELECT x.listing_id, x.m, x.n, x.ripiego, x.g, x.quando FROM (SELECT DISTINCT ON (vp.listing_id) vp.listing_id, "
+    ("SELECT x.listing_id, x.m, x.n, x.ripiego, x.pv, x.quando, l.price_eur AS prezzo_ora FROM (SELECT DISTINCT ON (vp.listing_id) vp.listing_id, "
      "vp.riassunto->>'M' AS m, vp.riassunto->>'n' AS n, "
      "COALESCE(vp.riassunto->>'stima_ripiego', CASE WHEN vp.riassunto->>'M_fonte' = 'ripiego' THEN 'true' END) AS ripiego, "
-     "vp.categoria, vp.margine AS g, vp.computed_at AS quando FROM valutazioni_policy vp "
+     "vp.categoria, vp.riassunto AS pv, vp.computed_at AS quando FROM valutazioni_policy vp "
      "WHERE vp.listing_id = ANY(%s) ORDER BY vp.listing_id, vp.computed_at DESC) x "
-     "WHERE x.categoria IS DISTINCT FROM 'dati_insufficienti'", MERCATO_GIORNI),
-    ("SELECT s.listing_id, s.m, s.n, NULL AS ripiego, s.margine AS g, s.computed_at AS quando FROM supercar_eu s "
+     "JOIN listings l ON l.id = x.listing_id WHERE x.categoria IS DISTINCT FROM 'dati_insufficienti'", MERCATO_GIORNI),
+    ("SELECT s.listing_id, s.m, s.n, NULL AS ripiego, s.r, s.costi, s.computed_at AS quando, l.price_eur AS prezzo_ora "
+     "FROM supercar_eu s JOIN listings l ON l.id = s.listing_id "
      "WHERE s.listing_id = ANY(%s) AND s.categoria IN ('opportunita', 'non_conveniente')", MERCATO_GIORNI_EU),
 )
 
@@ -596,26 +597,83 @@ def _leggi_blocco(conn, ids: list, scarti) -> tuple[list[dict], dict]:
     except Exception as e:
         conn.rollback()
         log.warning("VETRINA_SUPERCAR prezzo a rata non letto: %s", str(e)[:150])
-    return scegli(righe, scarti=scarti, nomi_tutti=SR.nomi_esclusi_re(commercianti=True),
-                  nomi_sempre=SR.nomi_esclusi_re(commercianti=False), saloni=saloni, rate=rate,
-                  mercati=_leggi_mercati(conn, ids))
+    items, tolte = scegli(righe, scarti=scarti, nomi_tutti=SR.nomi_esclusi_re(commercianti=True),
+                          nomi_sempre=SR.nomi_esclusi_re(commercianti=False), saloni=saloni, rate=rate,
+                          mercati=_leggi_mercati(conn, ids))
+    buone = [it for it in items if e_opportunita(it)]
+    if len(buone) < len(items):
+        tolte = dict(tolte, non_opportunita=tolte.get("non_opportunita", 0) + len(items) - len(buone))
+    return buone, tolte
+
+
+def e_opportunita(it: dict) -> bool:
+    """23/11 sera (cliente: "lascia solo le opportunità, auto sotto prezzo, anche le supercar"): solo auto con un
+    mercato e un guadagno GIÀ salvati da una valutazione valida (mercato_valido), guadagno positivo e prezzo sotto il
+    mercato. Niente calcoli nuovi: senza valutazione l'auto non entra."""
+    m, g, p = it.get("mercato"), it.get("guadagno"), it.get("prezzo")
+    return bool(m and g is not None and g > 0 and p and p < m)
+
+
+FATTORI = None                  # app.py: _fattori_calibra (prezzo chiesto -> venduto, come il sito)
+
+
+def guadagno_sito(pv, prezzo_ora, fattori) -> int | None:
+    """Guadagno come negli affari (sito_regole.calibra_venduto): margine salvato dalla valutazione, meno la correzione
+    misurata prezzo chiesto -> venduto. None se il prezzo è cambiato dopo la valutazione (il sito la toglie:
+    prezzo_cambiato_da_rivalutare) o la valutazione è sospetta."""
+    try:
+        if isinstance(pv, str):
+            pv = json.loads(pv)
+        if not isinstance(pv, dict) or pv.get("margine") is None or pv.get("sospetto_truffa"):
+            return None
+        if pv.get("acquisto") is not None and int(float(pv["acquisto"])) != int(float(prezzo_ora or 0)):
+            return None
+        marg = int(round(float(pv["margine"])))
+        giu = 0
+        if pv.get("calibrato") is None and fattori:
+            from .. import regole as RG
+            pv2 = RG.calibra_vendita(pv, list(fattori))
+            R = float(pv.get("R_finale") or pv.get("R") or 0)
+            R2 = float(pv2.get("R_finale") or pv2.get("R") or R)
+            giu = int(round(R - R2)) if RG.regole().calibrazione.alza else int(round(max(0.0, R - R2)))
+        return marg - giu
+    except Exception:
+        return None
+
+
+def guadagno_supercar(r: dict, prezzo_ora) -> int | None:
+    """Guadagno come la sezione Supercar Europa (ai/supercar_vero.filtra): R = min(r, M × 0,92 × 0,95), sul prezzo di
+    oggi; None se pochi confronti (< 8), prezzo sotto il 70% del mercato (troppo bella) o margine oltre il 25% del
+    prezzo (irreale)."""
+    import os
+    try:
+        prezzo, M, n = int(prezzo_ora), int(r["m"]), int(r.get("n") or 0)
+        if n < int(os.environ.get("SC_NMIN", "8")) or prezzo < 0.70 * M or r.get("r") is None:
+            return None
+        R = min(int(r["r"]), int(M * float(os.environ.get("SC_FATTORE", "0.92")) * 0.95))
+        marg = R - prezzo - int(r.get("costi") or 0)
+        return None if marg > 0.25 * prezzo else marg
+    except Exception:
+        return None
 
 
 def _leggi_mercati(conn, ids: list) -> dict:
     """{id: (mercato, confronti)} dalle valutazioni salvate (MERCATO_SQL), solo quelle valide. Se una tabella manca o
     la lettura fallisce l'auto resta senza mercato ("non stimato"): la vetrina non si ferma."""
     mercati: dict = {}
+    try:
+        fattori = FATTORI() if callable(FATTORI) else (FATTORI or [])
+    except Exception:
+        fattori = []
     for q, giorni in MERCATO_SQL:
         try:
             _tempo_massimo(conn)                    # dopo un rollback il SET LOCAL di prima non vale più
             for r in conn.execute(q, (ids,)).fetchall():
                 v = mercato_valido(r.get("m"), r.get("n"), r.get("quando"), ripiego=r.get("ripiego"), giorni=giorni)
                 if v and r["listing_id"] not in mercati:       # prima la valutazione del sito, poi supercar_eu
-                    g = r.get("g")             # 23/11 sera (cliente): il guadagno GIÀ calcolato da quella valutazione
-                    try:
-                        g = int(round(float(g))) if g is not None else None
-                    except (TypeError, ValueError):
-                        g = None
+                    # 23/11 sera (cliente: "metti i guadagni, non a caso"): lo STESSO guadagno degli affari
+                    g = (guadagno_sito(r.get("pv"), r.get("prezzo_ora"), fattori) if "pv" in r
+                         else guadagno_supercar(r, r.get("prezzo_ora")))
                     mercati[r["listing_id"]] = (v[0], v[1], g)
         except Exception as e:
             conn.rollback()

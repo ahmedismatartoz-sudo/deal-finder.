@@ -734,7 +734,7 @@ def test_query_su_postgres_vero():
     conn.execute("CREATE TABLE commercianti_as24_annunci (seller_id TEXT, listing_id TEXT)")
     conn.execute("CREATE TABLE decisione_ai (listing_id BIGINT, risposta JSONB)")
     conn.execute("CREATE TABLE valutazioni_policy (listing_id BIGINT, computed_at TIMESTAMPTZ DEFAULT now(), riassunto JSONB, categoria TEXT, margine INTEGER)")
-    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now(), categoria TEXT DEFAULT 'opportunita', margine INTEGER)")
+    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now(), categoria TEXT DEFAULT 'opportunita', margine INTEGER, r INTEGER, costi INTEGER)")
     conn.execute("""INSERT INTO valutazioni_policy (listing_id, computed_at, riassunto) VALUES
         (4, now() - interval '3 days', '{"M": 70000, "n": 9}'), (4, now() - interval '1 day', '{"M": 84500.4, "n": 7}'),
         (7, now(), '{"M": 26000, "n": 4}'), (16, now() - interval '9 days', '{"M": 25000, "n": 30}'),
@@ -742,11 +742,13 @@ def test_query_su_postgres_vero():
         (10, now(), '{"M": 150000, "n": 9}')""")
     # revisione: l'ultima valutazione di 10 è inaffidabile (dati_insufficienti) -> niente mercato, nemmeno quella prima
     conn.execute("UPDATE valutazioni_policy SET categoria = 'dati_insufficienti' WHERE listing_id = 10 AND riassunto->>'M' = '150000'")
-    conn.execute("UPDATE valutazioni_policy SET margine = 6100 WHERE listing_id = 4 AND riassunto->>'M' = '84500.4'")
+    conn.execute("""UPDATE valutazioni_policy SET riassunto = riassunto || '{"margine": 6100, "acquisto": 80000}'::jsonb
+                    WHERE listing_id = 4 AND riassunto->>'M' = '84500.4'""")
     conn.execute("UPDATE valutazioni_policy SET margine = 99999 WHERE listing_id = 4 AND riassunto->>'M' = '70000'")
     conn.execute("""INSERT INTO supercar_eu (listing_id, m, n, computed_at) VALUES (1, 225000, 6, now()),
         (4, 1, 99, now()), (6, 80000, 12, now() - interval '3 days')""")
-    conn.execute("UPDATE supercar_eu SET margine = 30000 WHERE listing_id = 1")
+    # come Supercar Europa: R = min(r, M × 0,92 × 0,95) = 196.650, guadagno = 196.650 − 170.000 − 200 = 26.450
+    conn.execute("UPDATE supercar_eu SET margine = 99999, r = 200000, costi = 200, n = 9 WHERE listing_id = 1")
     conn.execute("INSERT INTO supercar_eu (listing_id, m, n, computed_at, categoria) VALUES (19, 60000, 8, now(), 'leasing')")
     # lead_tutti_dealer / lead_tutti_ann non ci sono: la lettura dei nomi non deve fermare la vetrina
     auto = [
@@ -785,16 +787,18 @@ def test_query_su_postgres_vero():
     items, numeri = VS.carica(conn)
     tolte = numeri["tolte"]
     # 23/11 sera (cliente): solo privati e solo sotto i 180.000 € (fuori 21, i commercianti 8, 10, 16 e la 9 da 250.000)
-    assert [it["id"] for it in items] == [1, 4, 6, 19, 7, 18, 14], ([it["id"] for it in items], numeri)
+    # 23/11 sera (cliente): solo opportunità = mercato e guadagno salvati, guadagno > 0, prezzo sotto il mercato
+    assert [it["id"] for it in items] == [1, 4], ([it["id"] for it in items], numeri)
     assert all(it["venditore"] == "privato" and it["prezzo"] < 180000 for it in items)
-    assert {it["id"]: it["provincia"] for it in items}[18] == "BS"
+    assert {it["id"]: (it["mercato"], it["confronti"], it["guadagno"]) for it in items} == {
+        4: (84500, 7, 6100), 1: (225000, 9, 26450)}
+    assert tolte["non_opportunita"] == 5 and numeri["riepilogo"]["con_guadagno"] == 2
     per = {it["id"]: it for it in items}
-    assert per[6]["provincia"] == "CO" and per[1]["n_foto"] == 2 and per[1]["foto"] and per[4]["foto"] is None
-    assert VS.riepilogo(items)["per_marca"]["Ferrari"] == 1
-    # mercato e guadagno: solo dalla stessa valutazione salvata (id 4 dal sito, id 1 da supercar_eu)
-    assert {it["id"]: (it["mercato"], it["confronti"], it["guadagno"]) for it in items if it["mercato"]} == {
-        4: (84500, 7, 6100), 1: (225000, 6, 30000)}
-    assert numeri["riepilogo"]["con_mercato"] == 2 and numeri["riepilogo"]["con_guadagno"] == 2
+    assert per[1]["n_foto"] == 2 and per[1]["foto"] and per[4]["foto"] is None
+    assert VS.e_opportunita({"mercato": 100, "guadagno": 5, "prezzo": 90})
+    assert not VS.e_opportunita({"mercato": 100, "guadagno": 5, "prezzo": 120})      # sopra il mercato
+    assert not VS.e_opportunita({"mercato": 100, "guadagno": -5, "prezzo": 90})
+    assert not VS.e_opportunita({"mercato": None, "guadagno": None, "prezzo": 90})
 
 
 def test_caricamento_in_un_thread_a_parte(monkeypatch):
@@ -835,3 +839,16 @@ def test_caricamento_in_un_thread_a_parte(monkeypatch):
             break
         _t.sleep(0.01)
     assert not VS._cache_lock.locked() and not VS.da_ricaricare()
+
+
+def test_guadagno_come_gli_affari():
+    """23/11 sera: il guadagno della vetrina è quello degli affari, mai il margine grezzo."""
+    assert VS.guadagno_sito({"margine": 5000, "acquisto": 20000}, 20000, None) == 5000
+    assert VS.guadagno_sito({"margine": 5000, "acquisto": 20000}, 21000, None) is None          # prezzo cambiato
+    assert VS.guadagno_sito({"margine": 5000, "sospetto_truffa": True}, 20000, None) is None
+    assert VS.guadagno_sito('{"margine": 4000}', 20000, None) == 4000
+    assert VS.guadagno_sito({}, 20000, None) is None
+    r = {"m": 100000, "r": 99000, "n": 8, "costi": 0}
+    assert VS.guadagno_supercar(r, 80000) == int(100000 * 0.92 * 0.95) - 80000
+    assert VS.guadagno_supercar(dict(r, n=7), 80000) is None                                  # pochi confronti
+    assert VS.guadagno_supercar(r, 60000) is None                                             # troppo bella
