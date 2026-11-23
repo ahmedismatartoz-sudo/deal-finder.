@@ -49,7 +49,7 @@ const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
               ["economiche","Sotto 3000",'<path d="M4 7h16v10H4z"/><circle cx="12" cy="12" r="2.5"/><path d="M7 10v4M17 10v4"/>'],
               ["vendute","Vendute",'<path d="M20 6 9 17l-5-5"/>'],
               ["supercar","Supercar",'<path d="M2 15l2-4c1-2 3-3 5-3h5c2 0 4 1 5.5 3L21 13c.6.2 1 .8 1 1.4V16a1 1 0 0 1-1 1h-1"/><path d="M4 17H3a1 1 0 0 1-1-1v-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/>'],
-              ["supercar-lombardia","Supercar Lombardia",'<path d="M3 16l1.5-4.5C5.2 9.6 6.9 8.5 8.8 8.5h4.6c1.8 0 3.5.8 4.7 2.2L20 13c.9.3 1.5 1.1 1.5 2v1"/><circle cx="7.5" cy="16.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/><path d="M9.5 16.5h5M12 3l.9 1.9 2.1.3-1.5 1.5.4 2.1L12 7.8l-1.9 1 .4-2.1L9 5.2l2.1-.3z"/>'],
+              ["supercar-lombardia","Sportive e supercar",'<path d="M3 16l1.5-4.5C5.2 9.6 6.9 8.5 8.8 8.5h4.6c1.8 0 3.5.8 4.7 2.2L20 13c.9.3 1.5 1.1 1.5 2v1"/><circle cx="7.5" cy="16.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/><path d="M9.5 16.5h5M12 3l.9 1.9 2.1.3-1.5 1.5.4 2.1L12 7.8l-1.9 1 .4-2.1L9 5.2l2.1-.3z"/>'],
               ["profilo","Profilo",'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']];
 const BANDS = [
   {id:"tutti", label:"Tutti i prezzi", min:null, max:null},
@@ -477,6 +477,7 @@ function sclCard(c, i){
 function viewScl(){
   const v = S.scl, f = S.sclF, tutte = (v && v.items) || [], l = sclFiltrate(), n = Math.min(l.length, S.sclN || SCL_PASSO);
   const perMarca = {}; sclFiltrate(true).forEach(c => perMarca[c.marca] = (perMarca[c.marca] || 0) + 1);
+  if (f.marca && !perMarca[f.marca]) perMarca[f.marca] = 0;          // la marca scelta resta nella tendina anche a zero
   const marche = Object.keys(perMarca).sort((a, b) => a.localeCompare(b, "it"));
   const attivi = !!(f.marca || f.vend || f.pmin !== "" || f.pmax !== "" || f.gruppo);
   const sub = !v ? "Carico…" : v.errore ? "Non riesco a caricare le auto" : attivi ? `${num(l.length)} di ${num(tutte.length)} auto` : `${num(tutte.length)} auto${v.totale > tutte.length ? " (le più care di " + num(v.totale) + ")" : ""}`;
@@ -498,7 +499,7 @@ function viewScl(){
     : `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${tutte.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>${tutte.length ? `<button class="btn" data-act="scl-reset">Togli i filtri</button>` : `<button class="btn" data-act="scl-reload">Aggiorna</button>`}</div>`;
   return header("Sportive e supercar in Lombardia", sub, right, "Scovo") + `${filtri}</header>
   <main class="list" aria-live="polite">
-    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio. Non sono affari valutati: il prezzo è quello del venditore.</span></div>
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio. Il prezzo è quello chiesto dal venditore, senza valutazione di Scovo.</span></div>
     ${l.length ? `<div class="scl-grid">${l.slice(0, n).map(sclCard).join("")}</div>${l.length > n ? `<button class="btn scl-piu" data-act="scl-piu">Mostra altre ${Math.min(SCL_PASSO, l.length - n)} (${num(l.length - n)} rimaste)</button>` : ""}` : vuoto}
   </main>`;
 }
@@ -2146,10 +2147,10 @@ async function portaleAbbonamento(){
   catch (e) { toast(e.message); }
 }
 function viewGuestLock(){
-  const t = ({vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
+  const t = ({vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo", "supercar-lombardia":"Sportive e supercar"})[S.route];
   return svcHead(t, "Serve un account") + `<main class="list"><div class="empty">
-    <strong style="font:700 21px var(--disp)">Entra per usare ${t === "Profilo" ? "il tuo profilo" : t}</strong>
-    <span class="meta">${t === "Vendi" ? "Dalla targa: auto esatta, prezzo giusto e annuncio pronto." : t === "Ricambi" ? "Dalla targa: i pezzi compatibili al prezzo più basso." : "Il tuo account, le auto che hai contattato e le impostazioni."}</span>
+    <strong style="font:700 21px var(--disp)">${S.route === "supercar-lombardia" ? "Entra per vedere sportive e supercar" : "Entra per usare " + (t === "Profilo" ? "il tuo profilo" : t)}</strong>
+    <span class="meta">${t === "Vendi" ? "Dalla targa: auto esatta, prezzo giusto e annuncio pronto." : t === "Ricambi" ? "Dalla targa: i pezzi compatibili al prezzo più basso." : S.route === "supercar-lombardia" ? "Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio." : "Il tuo account, le auto che hai contattato e le impostazioni."}</span>
     <a class="l-btn l-btn-blue" href="#/entra" style="width:100%">Entra</a><a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a></div></main>`;
 }
 async function talk(){

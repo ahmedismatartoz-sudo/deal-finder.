@@ -40,6 +40,9 @@ LIMITE = LIMITE_SUPERCAR + LIMITE_SPORTIVE
 LEGGI_X = 2                     # candidate lette per intero per gruppo: fino a LEGGI_X volte il tetto del gruppo
 BLOCCO = 500                    # annunci letti per intero (con la descrizione) per volta
 CACHE_SECONDI = 600
+TEMPO_QUERY = "20s"             # come l'elenco del sito: meglio un errore che il sito fermo
+ATTESA_LOCK = 25                # secondi: chi aspetta il caricamento di un altro non tiene occupato un thread per sempre
+PAUSA_DOPO_ERRORE = 60          # a memoria vuota e database fermo: non si riprova a ogni richiesta
 # Il testo LEASING_RE è scritto per gli annunci dei privati: contiene parole ("finanziamento", "anticipo") che i
 # commercianti scrivono in quasi ogni annuncio ("possibilità di finanziamento"). Per i commercianti LEASING_RE vale su
 # titolo e versione; nella descrizione vale il testo "solo con finanziamento/leasing" del sito (scovo.FIN_SOLO_RE).
@@ -50,6 +53,97 @@ MOTIVI_FUORI = frozenset({"doppione", "truffa", "prezzo_finto"})
 RATA_AI = SR.Regole.jev_rata    # stessa soglia della regola prezzo_a_rata del sito
 
 _SOLO_FIN_RE = re.compile(scovo.FIN_SOLO_RE, re.I)
+
+# 23/11 (revisione): sito_regole.provincia_di conosce i comuni attorno a Milano (BG, CO, LC, LO, MB, MI, PV, VA quasi
+# per intero). Solo per la VETRINA (le regole del sito non cambiano) si riconoscono anche la provincia scritta per
+# esteso ("Brescia", "Provincia di Mantova"), i comuni di Brescia, Mantova, Sondrio e Cremona che lì mancano e le
+# località turistiche, e la regione "Lombardia" quando l'annuncio la dice.
+PROVINCE_ESTESE = {"bergamo": "BG", "brescia": "BS", "como": "CO", "cremona": "CR", "lecco": "LC", "lodi": "LO",
+                   "mantova": "MN", "milano": "MI", "monza": "MB", "monzabrianza": "MB", "monzaebrianza": "MB",
+                   "monzaedellabrianza": "MB", "monzaedellabrianzamb": "MB", "pavia": "PV", "sondrio": "SO", "varese": "VA"}
+_COMUNI_IN_PIU_TESTO = {
+    "BS": """Brescia, Desenzano del Garda, Desenzano, Salò, Lumezzane, Darfo Boario Terme, Darfo, Boario Terme, Montichiari,
+        Rovato, Chiari, Palazzolo sull'Oglio, Palazzolo, Ghedi, Gussago, Concesio, Rezzato, Carpenedolo, Lonato del Garda,
+        Lonato, Sarezzo, Mazzano, Travagliato, Orzinuovi, Manerbio, Leno, Bagnolo Mella, Castenedolo, Ospitaletto,
+        Gardone Val Trompia, Villa Carcina, Iseo, Erbusco, Coccaglio, Cazzago San Martino, Castel Mella, Botticino, Nave,
+        Bedizzole, Calcinato, Castegnato, Roncadelle, Borgosatollo, Flero, Capriolo, Adro, Cologne, Castrezzato, Pontoglio,
+        Rudiano, Gavardo, Vobarno, Villanuova sul Clisi, Toscolano Maderno, Gardone Riviera, Sirmione, Limone sul Garda,
+        Limone, Manerba del Garda, Padenghe sul Garda, Moniga del Garda, Pozzolengo, Ponte di Legno, Edolo, Breno, Esine,
+        Pisogne, Marone, Sale Marasino, Corte Franca, Passirano, Paderno Franciacorta, Rodengo Saiano, Cellatica,
+        Collebeato, Bovezzo, Pontevico, Verolanuova, Quinzano d'Oglio, Gottolengo, Pralboino, Gambara, Isorella, Calvisano,
+        Montirone, Poncarale, San Zeno Naviglio, Torbole Casaglia, Lograto, Berlingo, Trenzano, Dello, Pavone del Mella,
+        Prevalle, Nuvolento, Nuvolera, Paitone, Roè Volciano, Sabbio Chiese, Odolo, Agnosine, Bienno, Pian Camuno, Artogne,
+        Piancogno, Capo di Ponte, Cividate Camuno, Malegno, Borno, Polaveno, Marcheno, Bovegno, Tremosine sul Garda,
+        Tremosine, Gargnano, Puegnago del Garda, Polpenazze del Garda, Soiano del Lago, San Felice del Benaco, Muscoline,
+        Urago d'Oglio, Roccafranca, Comezzano Cizzago, Castelcovati, Monticelli Brusati, Provaglio d'Iseo, Paratico,
+        Mairano, Azzano Mella, Capriano del Colle, Offlaga, Bassano Bresciano, Verolavecchia, Borgo San Giacomo,
+        Orzivecchi, Pompiano, Barbariga, Remedello, Visano, Acquafredda, Fiesse, Seniga, Milzano, Cigole, Maclodio,
+        Brandico, Corzano, Longhena, Villachiara, Temù, Vezza d'Oglio, Angolo Terme, Gianico, Ome, Monticelli d'Oglio""",
+    "MN": """Mantova, Castiglione delle Stiviere, Suzzara, Viadana, Porto Mantovano, Curtatone, Borgo Virgilio, Virgilio,
+        Castel Goffredo, Goito, Asola, San Giorgio Bigarello, San Giorgio di Mantova, Marmirolo, Roverbella, Gonzaga,
+        Pegognaga, Guidizzolo, Volta Mantovana, Castellucchio, Marcaria, Ostiglia, Poggio Rusco, Sermide e Felonica,
+        Sermide, Moglia, San Benedetto Po, Quistello, Bozzolo, Sabbioneta, Medole, Cavriana, Monzambano, Ponti sul Mincio,
+        Solferino, Castel d'Ario, Roncoferraro, Bagnolo San Vito, Rodigo, Gazoldo degli Ippoliti, Canneto sull'Oglio,
+        Casalmoro, Casaloldo, Ceresara, Piubega, Mariana Mantovana, Redondesco, Acquanegra sul Chiese, Gazzuolo,
+        Commessaggio, Dosolo, Pomponesco, Motteggiana, Borgo Mantovano, Revere, Sustinente, Serravalle a Po, Villimpenta,
+        San Giovanni del Dosso, Schivenoglia, Magnacavallo, Borgocarbonara, Castelbelforte, San Martino dall'Argine,
+        Rivarolo Mantovano""",
+    "SO": """Sondrio, Morbegno, Tirano, Chiavenna, Livigno, Bormio, Aprica, Madesimo, Chiesa in Valmalenco, Valdidentro,
+        Valdisotto, Valfurva, Santa Caterina Valfurva, Sondalo, Grosio, Grosotto, Teglio, Talamona, Cosio Valtellino,
+        Berbenno di Valtellina, Montagna in Valtellina, Albosaggia, Ponte in Valtellina, Chiuro, Tresivio, Poggiridenti,
+        Ardenno, Delebio, Dubino, Traona, Piantedo, Samolaco, Gordona, Prata Camportaccio, Piuro, Villa di Chiavenna,
+        Campodolcino, Novate Mezzola, Villa di Tirano, Bianzone, Mazzo di Valtellina, Tovo di Sant'Agata, Lovero, Sernio,
+        Caspoggio, Lanzada, Castione Andevenno, Caiolo, Cedrasco, Fusine, Colorina, Buglio in Monte, Civo, Cercino,
+        Mantello, Rogolo, Andalo Valtellino, Gerola Alta, Val Masino""",
+    "CR": """Cremona, Crema, Casalmaggiore, Castelleone, Soresina, Pandino, Rivolta d'Adda, Spino d'Adda, Offanengo, Soncino,
+        Pizzighettone, Vaiano Cremasco, Bagnolo Cremasco, Castelverde, Sospiro, Vescovato, Piadena Drizzona, Piadena,
+        Casalbuttano ed Uniti, Casalbuttano, Pescarolo ed Uniti, Sergnano, Romanengo, Montodine, Ripalta Cremasca, Dovera,
+        Agnadello, Palazzo Pignano, Trescore Cremasco, Capralba, Izano, Madignano, Persico Dosimo, Gadesco Pieve Delmona,
+        Malagnino, Bonemerse, Stagno Lombardo, Robecco d'Oglio, Ostiano, Gussola, Rivarolo del Re ed Uniti,
+        San Giovanni in Croce, Torre de' Picenardi, Isola Dovarese, Annicco, Paderno Ponchielli,
+        Grumello Cremonese ed Uniti, Sesto ed Uniti, Spinadesco, Crotta d'Adda, Formigara, San Bassano, Trigolo, Genivolta,
+        Casaletto Ceredano, Chieve, Monte Cremasco, Cremosano, Pianengo, Ricengo, Casale Cremasco Vidolasco, Vailate,
+        Torlino Vimercati, Pieranica, Quintano""",
+    "PV": "Pavia, Vigevano, Voghera, Mortara, Stradella, Broni, Casteggio, Garlasco, Mede, Varzi, Salice Terme",
+    "LO": "Lodi, Codogno, Casalpusterlengo, Sant'Angelo Lodigiano, Lodi Vecchio, Zelo Buon Persico",
+    "BG": "Bergamo, Treviglio, Seriate, Dalmine, Romano di Lombardia, Clusone, Lovere, Foppolo, Castione della Presolana",
+    "CO": "Como, Cantù, Mariano Comense, Erba, Menaggio, Bellagio, Cernobbio, Campione d'Italia",
+    "LC": "Lecco, Merate, Calolziocorte, Casatenovo, Valmadrera, Mandello del Lario, Colico, Varenna, Barzio",
+    "VA": "Varese, Busto Arsizio, Gallarate, Saronno, Luino, Tradate, Somma Lombardo, Laveno Mombello",
+    "MB": "Monza, Lissone, Seregno, Desio, Cesano Maderno, Limbiate, Brugherio, Vimercate, Giussano, Meda",
+    "MI": "Milano, Sesto San Giovanni, Cinisello Balsamo, Legnano, Rho, Cologno Monzese, Paderno Dugnano, Rozzano",
+}
+_comuni_in_piu: dict = {}
+
+
+def comuni_in_piu() -> dict:
+    if not _comuni_in_piu:
+        for sigla, testo in _COMUNI_IN_PIU_TESTO.items():
+            for nome in testo.split(","):
+                k = SR._norm_citta(nome.strip())
+                if k:
+                    _comuni_in_piu.setdefault(k, sigla)
+    return _comuni_in_piu
+
+
+def provincia_vetrina(provincia, citta, regione=None) -> tuple[str | None, bool]:
+    """(sigla della provincia o None, è in Lombardia?). Prima come il sito (sito_regole.provincia_di); poi la provincia
+    scritta per esteso, i comuni in più della vetrina e, se non basta, la regione dell'annuncio. Una provincia scritta
+    per esteso che non è lombarda ("Verona", "Roma") vale più del nome del comune (omonimi)."""
+    p = SR.provincia_di(provincia, citta)
+    if p:
+        return p, p in LOMBARDIA
+    scritta = re.sub(r"^provinciadi", "", _n(provincia))
+    if scritta:
+        p = PROVINCE_ESTESE.get(scritta) or PROVINCE_ESTESE.get(re.sub(r"(mb|[a-z]{2})$", "", scritta) if len(scritta) > 6 else "")
+        if p:
+            return p, True
+        if _n(regione) != "lombardia":
+            return None, False                      # provincia nota e non lombarda
+    p = comuni_in_piu().get(SR._norm_citta(citta))
+    if p:
+        return p, True
+    return None, _n(regione) == "lombardia"
 
 
 def _n(s) -> str:
@@ -63,7 +157,8 @@ _FINTI = re.compile(
     r"\bamg (line|pack\w*|paket|styling|sport\w*|look|style|exterieur|interieur|premium|advanced)\b"
     r"|\b(pacchetto|pack|paket|kit|look|cerchi|allestimento|linea|stile) (amg|m|jcw|abarth|gti|rs|st|cupra|n)\b"
     r"|\bm ?(sport\w*|performance|tech\w*|paket|pack\w*|aerodynam\w*)\b"
-    r"|\b(s|r|st|gt|n|rs|gr|sport|fr|x) ?line\b|\bgr ?sport\b|\bf ?sport\b|\bgt ?pack\b"
+    r"|\b(s|r|st|gt|n|rs|gr|sport|fr|x|opc) ?line\b|\bgr ?sport\b|\bf ?sport\b|\bgt ?pack\b"
+    r"|\b(rs|s) ?[1-8] (look|style|styling)\b"
     r"|\b(john cooper works|jcw) (kit|pack\w*|aero\w*|trim|styling|style|look|exterior|interior)\b")
 
 
@@ -73,6 +168,8 @@ def _testo(*parti) -> str:
     "GT Line", "N Line", "GR Sport", "F Sport")."""
     s = unicodedata.normalize("NFKD", " ".join(str(p or "") for p in parti)).encode("ascii", "ignore").decode().lower()
     s = re.sub(r"\br\.\s?s\.?", "rs ", s)
+    # "35.000 km" non è un A 35, "S&S" (start e stop) non è una Audi S: via le migliaia, i km e lo start&stop
+    s = re.sub(r"\d{1,3}(\.\d{3})+|\d[\d.]* ?km\b|\bs ?& ?s\b|\bstart ?(&|e|and)? ?stop\b", " ", s)
     s = " " + re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", s)).strip() + " "
     return " " + re.sub(r"\s+", " ", _FINTI.sub(" ", s)).strip() + " "
 
@@ -88,7 +185,7 @@ MARCHE_SEMPRE = {
     "mercedesmaybach": ("mercedes-maybach", "mercedes maybach"), "bmwalpina": ("bmw-alpina", "bmw alpina"),
 }
 
-_AMG_NUMERO = re.compile(r"(?<!\d)(32|35|36|43|45|53|55|63|65)(?!\d)|\bgt\b|\bsls\b|\bone\b")
+_AMG_NUMERO = re.compile(r"(?<![\d.])(32|35|36|43|45|53|55|63|65)(?![\d.])|\bgt\b|\bsls\b|\bone\b")
 
 
 def _c(espr: str):
@@ -98,23 +195,27 @@ def _c(espr: str):
 
 
 def _mercedes(t, mod):
-    if re.search(r"\b(maybach|sls|slk|slc)\b|\b(slk|slc) ?\d{2,3}\b|\bsl\b|\bsl ?\d{2,3}\b", t):
+    if re.search(r"\b(maybach|sls|slk|slc)\b|\b(slk|slc) ?\d{2,3}\b|\bsl\b|\bsl ?\d{2,3}\b|\bg ?(500|55|63|65)\b", t):
         return True
     # AMG vera: la sigla AMG con il numero di un modello AMG (A 35, A 45, C 43, C 63, E 53, G 63...) o AMG GT / SLS
     return bool(re.search(r"\bamg\b", t) and _AMG_NUMERO.search(t))
 
 
 _BMW = re.compile(r"\balpina\b|\bm ?[234568]\b|\bx ?[3456] ?m\b(?! ?\d)|\bxm\b|\bz ?4\b"
-                  r"|\bm ?(135|140|235|240|340|440|550) ?[id]?\b")
-_AUDI = re.compile(r"\br ?8\b|\brs ?[34567]\b|\brs ?q ?[38]\b|\brs e ?tron\b|\btt ?(s|rs)?\b|\bs ?[1345678]\b|\bsq ?[578]\b")
-_VW = re.compile(r"\bgolf\b.*\b(gti|gtd|gte|r|r32)\b|\b(gti|gtd|gte|r32)\b.*\bgolf\b|\bpolo\b.*\bgti\b|\bscirocco\b|\bup\b.*\bgti\b")
-_ALFA = re.compile(r"\b[48]c\b|\b(brera|spider|gtv)\b")
-_FORD = re.compile(r"\bfiesta\b.*\bst\b|\bfocus\b.*\b(st|rs)\b|\bpuma\b.*\bst\b")
+                  r"|\bm ?(135|140|235|240|340|440|550|760|850) ?(li|[id])?\b|\b(i|z) ?8\b"
+                  r"|\bx ?[34]\b.*\bm ?40 ?[id]\b|\bx ?2\b.*\bm ?35 ?i\b|\bi ?4\b.*\bm ?50\b|\bix\b.*\bm ?60\b"
+                  r"|\bz ?3 ?m\b|\bz ?3\b.*\bm\b|\bm (roadster|coupe)\b|\b1 ?m\b|\b1er m\b")
+_AUDI = re.compile(r"\br ?8\b|\brs ?[34567]\b|\brs ?q ?[38]\b|\brs e ?tron\b|\btt ?(s|rs)?\b|\bs ?[1345678]\b(?! ?(porte|p)\b)|\bsq ?[2578]\b|\be ?tron gt\b")
+_VW = re.compile(r"\bgolf\b.*\b(gti|gtd|gte|r|r32)\b|\b(gti|gtd|gte|r32)\b.*\bgolf\b|\bpolo\b.*\bgti\b|\bscirocco\b|\bup\b.*\bgti\b"
+                 r"|\b(t ?roc|tiguan|arteon)\b.*\br\b")
+_ALFA = re.compile(r"\b[48]c\b|\b(brera|spider|gtv|gtam?)\b")
+_FORD = re.compile(r"\bfiesta\b.*\bst(200)?\b|\bfocus\b.*\b(st|rs)\b|\bpuma\b.*\bst\b")
 _HYUNDAI = re.compile(r"\b(i ?20|i ?30|kona|veloster|ioniq ?5?)\b.*\bn\b|\b(i20|i30)n\b")
 
 
 def _alfa(t, mod):
-    return bool(_ALFA.search(t) or (re.search(r"\b(giulia|stelvio)\b", t) and re.search(r"\b(quadrifoglio|veloce)\b", t)))
+    return bool(_ALFA.search(t) or (re.search(r"\b(giulia|stelvio)\b", t) and re.search(r"\b(quadrifoglio|veloce)\b", t))
+                or (re.search(r"\b(giulietta|mito)\b", t) and re.search(r"\b(quadrifoglio|qv)\b", t)))
 
 
 def _ford(t, mod):
@@ -126,6 +227,17 @@ def _nissan(t, mod):
     return bool(re.search(r"\b3[57]0 ?z\b|\bgt ?r\b", t) or mod == "z")
 
 
+def _cupra(t, mod):
+    # tutte le VZ, tutte le Ateca; Leon e Formentor anche senza "VZ" se da 300 CV in su; Leon Cupra R
+    if re.search(r"\bvz\w{0,2}\b|\bateca\b|\bleon\b.*\bcupra ?r\b", t):
+        return True
+    if re.search(r"\b(leon|formentor)\b", t):
+        cv = [int(x) for x in re.findall(r"\b(\d{3}) ?(?:cv|ps|hp|ch)\b", t)]
+        kw = [int(x) for x in re.findall(r"\b(\d{3}) ?kw\b", t)]
+        return any(x >= 300 for x in cv) or any(x >= 221 for x in kw)
+    return False
+
+
 def _tutte(t, mod):
     return True
 
@@ -133,34 +245,42 @@ def _tutte(t, mod):
 # altre marche: (scritture della marca nel database, parole del controllo veloce in SQL o None = tutta la marca,
 # regola sul testo di modello e versione)
 ALTRE = {
-    "mercedes": (("mercedes", "mercedes-benz", "mercedes benz", "mercedesbenz"), ("amg", "maybach", "sl"), _mercedes),
+    "mercedes": (("mercedes", "mercedes-benz", "mercedes benz", "mercedesbenz"), ("amg", "maybach", "sl", "g500", "g55", "g63", "g65"), _mercedes),
     "mercedesamg": (("mercedes-amg", "mercedes amg"), None, _tutte),
     "bmw": (("bmw",), ("m2", "m3", "m4", "m5", "m6", "m8", "x3m", "x4m", "x5m", "x6m", "xm", "z4", "alpina",
-                       "m135", "m140", "m235", "m240", "m340", "m440", "m550"), lambda t, mod: bool(_BMW.search(t))),
-    "audi": (("audi",), ("r8", "rs", "tt", "s1", "s3", "s4", "s5", "s6", "s7", "s8", "sq5", "sq7", "sq8"),
+                       "m135", "m140", "m235", "m240", "m340", "m440", "m550", "m760", "m850", "i8", "z8",
+                       "m40", "m35", "m50", "m60", "z3", "1m", "mcoupe", "mroadster"), lambda t, mod: bool(_BMW.search(t))),
+    "audi": (("audi",), ("r8", "rs", "tt", "s1", "s3", "s4", "s5", "s6", "s7", "s8", "sq2", "sq5", "sq7", "sq8", "etrongt"),
              lambda t, mod: bool(_AUDI.search(t))),
-    "volkswagen": (("volkswagen", "vw"), ("golf", "gti", "scirocco"), lambda t, mod: bool(_VW.search(t))),
+    "volkswagen": (("volkswagen", "vw"), ("golf", "gti", "scirocco", "troc", "tiguan", "arteon"), lambda t, mod: bool(_VW.search(t))),
     "mini": (("mini",), ("coopers", "johncooperworks", "jcw"), _c(r"\bcooper s\b|\bjohn cooper works\b|\bjcw\b")),
     "abarth": (("abarth",), None, _tutte),
     "fiat": (("fiat",), ("124", "abarth"), _c(r"\b124\b.*\bspider\b|\bspider\b.*\b124\b|\babarth\b")),
     "alfaromeo": (("alfa-romeo", "alfa romeo", "alfaromeo", "alfa"),
-                  ("4c", "8c", "quadrifoglio", "veloce", "brera", "spider", "gtv"), _alfa),
+                  ("4c", "8c", "quadrifoglio", "veloce", "brera", "spider", "gtv", "gta", "qv"), _alfa),
     "hyundai": (("hyundai",), ("i20", "i30", "kona", "veloster", "ioniq"), lambda t, mod: bool(_HYUNDAI.search(t))),
     "ford": (("ford",), ("st", "rs", "mustang", "gt"), _ford),
-    "renault": (("renault",), ("rs", "trophy"), _c(r"\bclio\b.*\brs\b|\bmegane\b.*\b(rs|trophy)\b")),
+    "renault": (("renault",), ("rs", "trophy", "gt"), _c(r"\bclio\b.*\brs\b|\bmegane\b.*\b(rs|trophy|gt)\b")),
     "toyota": (("toyota",), ("86", "gr", "supra", "celica"),
-               _c(r"\bg[rt] ?86\b|\bsupra\b|\bcelica\b|\bgr ?yaris\b|\byaris\b.*\bgr\b")),
+               _c(r"\bg[rt] ?86\b|\bsupra\b|\bcelica\b|\bgr ?(yaris|corolla)\b|\b(yaris|corolla)\b.*\bgr\b|\bgrmn\b")),
     "mazda": (("mazda",), ("mx5", "rx8"), _c(r"\bmx ?5\b|\brx ?8\b")),
     "subaru": (("subaru",), ("brz", "wrx", "sti"), _c(r"\b(brz|wrx|sti)\b")),
     "peugeot": (("peugeot",), ("gti", "rcz"), _c(r"\b(208|308)\b.*\bgti\b|\brcz\b")),
-    "cupra": (("cupra",), ("vz", "leon"), _c(r"\bvz\w{0,2}\b|\bleon\b.*\bcupra ?r\b")),
-    "seat": (("seat",), ("cupra",), _c(r"\bleon\b.*\bcupra\b|\bcupra\b.*\bleon\b")),
-    "skoda": (("skoda", "škoda"), ("rs",), _c(r"\boctavia\b.*\bv?rs\b")),
+    "cupra": (("cupra",), ("vz", "leon", "ateca", "formentor"), _cupra),
+    "seat": (("seat",), ("cupra",), _c(r"\b(leon|ibiza|ateca)\b.*\bcupra\b|\bcupra\b.*\b(leon|ibiza|ateca)\b")),
+    "skoda": (("skoda", "škoda"), ("rs",), _c(r"\b(octavia|fabia|kodiaq|enyaq)\b.*\bv?rs\b")),
     "honda": (("honda",), ("nsx", "typer", "s2000"), _c(r"\bnsx\b|\bs ?2000\b|\bcivic\b.*\btype ?r\b")),
     "nissan": (("nissan",), ("350z", "370z", "gtr", "z"), _nissan),
-    "tesla": (("tesla",), ("plaid",), _c(r"\bmodel ?s\b.*\bplaid\b")),
+    "tesla": (("tesla",), ("plaid",), _c(r"\bmodel ?[sx]\b.*\bplaid\b")),
     "lexus": (("lexus",), ("rcf", "isf", "lc", "lfa"), _c(r"\b(rc|is) ?f\b|\blc( ?500h?)?\b|\blfa\b")),
-    "jaguar": (("jaguar",), ("ftype",), _c(r"\bf ?type\b")),
+    "jaguar": (("jaguar",), ("ftype", "xk", "svr"), _c(r"\bf ?type\b|\bxk ?(r|rs|8)?\b|\bf ?pace\b.*\bsvr\b")),
+    "landrover": (("land-rover", "land rover", "landrover"), ("svr",), _c(r"\bsvr\b")),
+    "jeep": (("jeep",), ("srt", "trackhawk"), _c(r"\bsrt\d?\b|\btrackhawk\b")),
+    "lancia": (("lancia",), ("integrale",), _c(r"\bdelta\b.*\bintegrale\b")),
+    "opel": (("opel",), ("opc", "vxr"), _c(r"\b(opc|vxr)\b")),
+    "kia": (("kia",), ("stinger", "ev6"), _c(r"\bstinger\b|\bev ?6\b.*\bgt\b")),
+    "mitsubishi": (("mitsubishi",), ("evo",), _c(r"\blancer\b.*\bevo\w*\b|\bevolution\b")),
+    "polestar": (("polestar",), None, lambda t, mod: mod == "1" or bool(re.search(r"\bpolestar 1\b|\bperformance\b", t))),
     "dodge": (("dodge",), ("srt", "hellcat", "viper"), _c(r"\b(challenger|charger)\b.*\b(srt\w*|hellcat)\b|\bviper\b")),
     "chevrolet": (("chevrolet",), ("corvette", "camaro"), _c(r"\b(corvette|camaro)\b")),
     "corvette": (("corvette",), None, _tutte),
@@ -228,7 +348,7 @@ def _sql_candidate() -> tuple[str, dict]:
     par["intere"] = sorted(intere)
     # lower(l.make) con status='attivo': indice listings_cmp_lower_idx. Provincia: la sigla dell'annuncio se c'è
     # (altrimenti si ricava dalla città in Python, con sito_regole.provincia_di, come fa il sito)
-    sql = ("SELECT l.id, l.make, l.model, l.version_raw, l.title, l.price_eur, l.province, l.city "
+    sql = ("SELECT l.id, l.make, l.model, l.version_raw, l.title, l.price_eur, l.province, l.city, l.region "
            "FROM listings l WHERE l.status = 'attivo' AND l.price_eur >= %(min_vero)s "
            "AND (lower(l.make) = ANY(%(intere)s) OR " + " OR ".join(rami) + ") "
            "AND (l.province IS NULL OR btrim(l.province) !~ '^[A-Za-z]{2}$' OR upper(btrim(l.province)) = ANY(%(lomb)s))")
@@ -237,7 +357,7 @@ def _sql_candidate() -> tuple[str, dict]:
 
 DETTAGLI_SQL = """
 SELECT l.id, l.source, l.url, l.title, l.make, l.model, l.version_raw, l.year, l.mileage_km, l.fuel, l.gearbox,
-       l.power_kw, l.city, l.province, l.price_eur, l.price_flags, l.seller_type, l.stage, l.stage_reason,
+       l.power_kw, l.city, l.province, l.region, l.price_eur, l.price_flags, l.seller_type, l.stage, l.stage_reason,
        l.first_seen_at, l.telefono_ok, left(l.description, 3000) AS description,
        (SELECT count(*) FROM listing_photos p WHERE p.listing_id = l.id) AS n_photos
 FROM listings l WHERE l.id = ANY(%s) AND l.status = 'attivo'"""
@@ -270,10 +390,10 @@ def motivo_fuori(r: dict, *, scarti=frozenset(), nomi=None, nomi_comm=None, nome
     prezzo = int(r.get("price_eur") or 0)
     if prezzo < PREZZO_VERO_MIN:
         return "senza_prezzo"
-    prov = SR.provincia_di(r.get("province"), r.get("city"))
-    if prov in SR.ROMA:
+    prov, lombarda = provincia_vetrina(r.get("province"), r.get("city"), r.get("region"))
+    if prov in SR.ROMA or _n(r.get("province")) in ("roma", "latina", "frosinone", "viterbo", "rieti"):
         return "roma"
-    if prov not in LOMBARDIA:
+    if not lombarda:
         return "fuori_lombardia"
     if not e_sportiva(r.get("make"), r.get("model"), versione_di(r), prezzo):
         return "non_sportiva"
@@ -301,6 +421,12 @@ def motivo_fuori(r: dict, *, scarti=frozenset(), nomi=None, nomi_comm=None, nome
     return None
 
 
+def _senza_numeri(testo) -> str:
+    """Testo senza numeri di telefono e senza il segnaposto "[numero col bottone]" (qui non c'è nessun bottone)."""
+    t = scovo.hide_phones(str(testo or "")).replace("[numero col bottone]", " ")
+    return re.sub(r"\s+", " ", t).strip(" -·,")
+
+
 def scheda(r: dict, nome_salone: str | None = None, ora: float | None = None) -> dict:
     """Scheda della vetrina: solo dati dell'annuncio. Niente margine, mercato o stima; mai un numero di telefono."""
     comm = r.get("seller_type") == "commerciante"
@@ -309,14 +435,15 @@ def scheda(r: dict, nome_salone: str | None = None, ora: float | None = None) ->
     return {
         "id": r["id"], "marca": scovo.make_name(r.get("make")) or "Altro",
         "modello": scovo.model_name(r.get("model")) or None,
-        "versione": scovo.hide_phones(scovo.version_short(r.get("version_raw"), r.get("model")))[:80] or None,
-        "nome": scovo.nome(r), "anno": r.get("year"), "km": r.get("mileage_km"),
+        "versione": _senza_numeri(scovo.version_short(r.get("version_raw"), r.get("model")))[:80] or None,
+        "nome": _senza_numeri(scovo.nome(r)) or "Auto", "anno": r.get("year"), "km": r.get("mileage_km"),
         "carb": scovo.FUEL_NAMES.get(r.get("fuel") or "", r.get("fuel")), "cambio": r.get("gearbox") or None,
         "prezzo": int(r["price_eur"]),
-        "citta": r.get("city") or None, "provincia": SR.provincia_di(r.get("province"), r.get("city")),
+        "citta": r.get("city") or None,
+        "provincia": provincia_vetrina(r.get("province"), r.get("city"), r.get("region"))[0],
         "supercar": e_supercar(r.get("make"), r.get("price_eur")),
         "venditore": "commerciante" if comm else "privato",
-        "salone": (scovo.hide_phones(str(nome_salone))[:60] if comm and nome_salone else None),
+        "salone": ((_senza_numeri(nome_salone)[:60] or None) if comm and nome_salone else None),
         "ha_telefono": bool(r.get("telefono_ok") or scovo.RE_MOBILE.search(testo) or scovo.RE_LANDLINE.search(testo)),
         "giorni": _giorni(r.get("first_seen_at"), ora or time.time()),
         "fonte": scovo.SOURCE_NAMES.get(r.get("source"), r.get("source")),
@@ -390,7 +517,13 @@ def riepilogo(items: list[dict]) -> dict:
             "commercianti": comm, "per_marca": dict(sorted(per_marca.items(), key=lambda x: (-x[1], x[0])))}
 
 
+def _tempo_massimo(conn) -> None:
+    """Tempo massimo per query. SET LOCAL: vale fino a commit/rollback, per questo si ripete a ogni blocco."""
+    conn.execute("SET LOCAL statement_timeout = '%s'" % TEMPO_QUERY)
+
+
 def _leggi_blocco(conn, ids: list, scarti) -> tuple[list[dict], dict]:
+    _tempo_massimo(conn)
     righe = [dict(r) for r in conn.execute(DETTAGLI_SQL, (ids,)).fetchall()]
     saloni, rate = {}, {}
     for q in NOMI_SQL:
@@ -416,9 +549,10 @@ def carica(conn, *, scarti=frozenset()) -> tuple[list[dict], dict]:
     in SQL), scelte in Python con e_sportiva e la provincia; 2) per gruppo (supercar / sportive) le più care lette per
     intero a blocchi, con descrizione, nome del salone e prezzo a rata, fino al tetto del gruppo."""
     sql, par = _sql_candidate()
+    _tempo_massimo(conn)
     gruppi = {True: [], False: []}
     for r in conn.execute(sql, par).fetchall():
-        if SR.provincia_di(r.get("province"), r.get("city")) in LOMBARDIA and e_sportiva(
+        if provincia_vetrina(r.get("province"), r.get("city"), r.get("region"))[1] and e_sportiva(
                 r.get("make"), r.get("model"), versione_di(r), r.get("price_eur")):
             gruppi[e_supercar(r.get("make"), r.get("price_eur"))].append((-int(r["price_eur"]), r["id"]))
     numeri = {"candidate": len(gruppi[True]) + len(gruppi[False]), "candidate_supercar": len(gruppi[True]),
@@ -447,11 +581,13 @@ def carica(conn, *, scarti=frozenset()) -> tuple[list[dict], dict]:
 
 
 _cache: dict = {"t": 0.0, "items": None, "totale": 0}
+_errore = [0.0]                 # quando è fallito l'ultimo caricamento a memoria vuota
 _cache_lock = threading.Lock()
 
 
 def svuota_cache() -> None:
     _cache.update(t=0.0, items=None, totale=0)
+    _errore[0] = 0.0
 
 
 def elenco(connetti, scarti_ids=None) -> tuple[list[dict], int]:
@@ -459,9 +595,17 @@ def elenco(connetti, scarti_ids=None) -> tuple[list[dict], int]:
     CACHE_SECONDI. Una lettura alla volta; se il database non risponde resta l'elenco di prima."""
     if _cache["items"] is not None and time.time() - _cache["t"] < CACHE_SECONDI:
         return _cache["items"], _cache["totale"]
-    with _cache_lock:
+    if _cache["items"] is None and time.time() - _errore[0] < PAUSA_DOPO_ERRORE:
+        raise RuntimeError("vetrina non disponibile: si riprova tra poco")
+    if not _cache_lock.acquire(timeout=ATTESA_LOCK):
+        if _cache["items"] is not None:                 # un altro sta ricaricando: intanto l'elenco di prima
+            return _cache["items"], _cache["totale"]
+        raise RuntimeError("vetrina in caricamento")
+    try:
         if _cache["items"] is not None and time.time() - _cache["t"] < CACHE_SECONDI:
             return _cache["items"], _cache["totale"]
+        if _cache["items"] is None and time.time() - _errore[0] < PAUSA_DOPO_ERRORE:
+            raise RuntimeError("vetrina non disponibile: si riprova tra poco")
         t0 = time.time()
         try:
             scarti = frozenset(scarti_ids() if callable(scarti_ids) else (scarti_ids or ()))
@@ -470,6 +614,7 @@ def elenco(connetti, scarti_ids=None) -> tuple[list[dict], int]:
         except Exception as e:
             log.warning("VETRINA_SUPERCAR non caricata: %s", str(e)[:200])
             if _cache["items"] is None:
+                _errore[0] = time.time()
                 raise
             _cache["t"] = time.time() - CACHE_SECONDI + 60        # si riprova tra un minuto
             return _cache["items"], _cache["totale"]
@@ -480,3 +625,5 @@ def elenco(connetti, scarti_ids=None) -> tuple[list[dict], int]:
         log.warning("VETRINA_SUPERCAR_LETTURA %s", json.dumps(dict(numeri, mostrate=len(items),
                                                                    secondi=round(time.time() - t0, 1)), ensure_ascii=False))
         return _cache["items"], _cache["totale"]
+    finally:
+        _cache_lock.release()

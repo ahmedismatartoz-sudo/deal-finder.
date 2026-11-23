@@ -98,23 +98,62 @@ SI += [
     ("lotus", "elise", "", 30000), ("alpine", "a110", "", 55000),
 ]
 
+# 23/11 (revisione): altre sportive chieste dal cliente ("tutte")
+SI += [
+    ("alfa-romeo", "giulia", "GTA", 180000), ("alfa-romeo", "giulia", "GTAm", 200000), ("alfa-romeo", "giulietta", "Quadrifoglio Verde", 16000),
+    ("alfa-romeo", "mito", "1.4 T 170 CV Quadrifoglio Verde", 9000), ("alfa-romeo", "giulietta", "1750 TBi QV", 15000),
+    ("bmw", "serie-8", "M850i xDrive", 80000), ("bmw", "serie-7", "M760Li", 90000), ("bmw", "i8", "", 75000), ("bmw", "z8", "", 200000),
+    ("bmw", "x3", "M40i", 60000), ("bmw", "x3", "xDrive M40d", 55000), ("bmw", "x4", "M40i", 58000), ("bmw", "x2", "M35i", 40000),
+    ("bmw", "i4", "M50", 60000), ("bmw", "ix", "M60", 110000), ("bmw", "z3", "M Roadster", 45000), ("bmw", "z3-m", "", 50000),
+    ("bmw", "serie-1", "1M Coupé", 70000), ("bmw", "1m", "", 70000),
+    ("audi", "e-tron-gt", "", 80000), ("audi", "e-tron", "GT quattro", 85000), ("audi", "sq2", "", 38000),
+    ("mercedes-benz", "classe-g", "G 500", 110000), ("mercedes-benz", "g-500", "", 95000), ("mercedes-benz", "classe-g", "G 63 AMG", 180000),
+    ("cupra", "ateca", "2.0 TSI 4Drive DSG", 33000), ("cupra", "born", "VZ", 42000), ("cupra", "formentor", "2.0 TSI 310 CV 4Drive DSG", 40000),
+    ("cupra", "leon", "2.0 TSI 300 CV DSG", 35000), ("cupra", "formentor", "2.0 TSI 228 kW", 41000),
+    ("volkswagen", "t-roc", "R 2.0 TSI 4Motion", 38000), ("volkswagen", "tiguan", "R", 50000), ("volkswagen", "arteon", "R Shooting Brake", 52000),
+    ("seat", "ibiza", "1.8 TSI Cupra", 12000), ("seat", "ateca", "Cupra 2.0 TSI", 30000), ("skoda", "fabia", "1.4 TSI RS", 9000),
+    ("skoda", "kodiaq", "RS 2.0 TDI", 38000), ("renault", "megane", "GT 1.6 TCe 205 CV", 17000), ("ford", "fiesta", "ST200", 16000),
+    ("toyota", "gr-corolla", "", 55000), ("toyota", "corolla", "GR Circuit", 56000), ("toyota", "yaris", "GRMN", 30000),
+    ("tesla", "model-x", "Plaid", 95000), ("jaguar", "xk", "4.2 V8", 25000), ("jaguar", "xkr", "", 35000), ("jaguar", "f-pace", "SVR 5.0 V8", 75000),
+    ("land-rover", "range-rover-sport", "5.0 V8 SVR", 80000), ("jeep", "grand-cherokee", "6.4 V8 SRT8", 45000),
+    ("jeep", "grand-cherokee", "Trackhawk", 110000), ("lancia", "delta", "HF Integrale Evoluzione", 90000), ("opel", "corsa", "OPC", 9000),
+    ("opel", "astra", "2.0 Turbo OPC", 16000), ("kia", "stinger", "2.2 CRDi", 28000), ("kia", "ev6", "GT AWD", 55000),
+    ("mitsubishi", "lancer", "Evolution X", 35000), ("mitsubishi", "lancer-evolution", "", 40000), ("polestar", "1", "", 120000),
+    ("polestar", "2", "Long Range Dual Motor Performance", 45000),
+]
+
 NO = [
+    # falsi positivi trovati in revisione
+    ("audi", "a3", "SPB 1.6 TDI S&S 5 porte", 14000), ("audi", "a4", "2.0 TDI S 5 porte", 15000), ("audi", "a1", "1.0 TFSI S 3 porte", 12000),
+    ("audi", "a3", "1.6 TDI Start&Stop S 3p", 11000), ("audi", "a4", "Avant 2.0 TDI S4 look", 18000), ("audi", "q2", "30 TDI", 25000),
+    ("mercedes-benz", "classe-a", "A 180 AMG 35.000 km", 28000), ("mercedes-benz", "classe-c", "C 220 AMG 63.000km", 30000),
+    ("mercedes-benz", "classe-g", "G 350 d", 90000), ("mercedes-benz", "glc", "300 de", 50000),
+    ("cupra", "formentor", "1.5 TSI 150 CV", 30000), ("cupra", "leon", "1.4 e-Hybrid 204 CV", 30000), ("cupra", "born", "58 kWh", 33000),
+    ("volkswagen", "tiguan", "2.0 TDI R-Line", 38000), ("volkswagen", "t-roc", "1.5 TSI R-Line", 30000), ("volkswagen", "arteon", "2.0 TDI Elegance", 35000),
+    ("bmw", "x5", "xDrive40i", 70000), ("bmw", "x2", "sDrive18d Msport", 30000), ("bmw", "z3", "1.9 Roadster", 12000), ("bmw", "i4", "eDrive40", 50000),
+    ("bmw", "serie-1", "116d 5p. Msport", 20000), ("alfa-romeo", "giulietta", "1.6 JTDm Sprint", 14000), ("alfa-romeo", "mito", "1.4 78 CV", 6000),
+    ("seat", "ibiza", "1.0 TSI FR", 14000), ("skoda", "fabia", "1.0 TSI Monte Carlo", 15000), ("skoda", "kodiaq", "2.0 TDI Sportline", 35000),
+    ("renault", "megane", "1.5 dCi GT Line", 14000), ("ford", "fiesta", "1.0 EcoBoost Titanium", 12000), ("toyota", "corolla", "1.8 Hybrid Style", 22000),
+    ("tesla", "model-x", "Long Range", 70000), ("jaguar", "xe", "2.0 D", 22000), ("jaguar", "f-pace", "2.0 D R-Sport", 35000),
+    ("land-rover", "range-rover-sport", "3.0 SDV6 HSE", 50000), ("jeep", "grand-cherokee", "3.0 V6 CRD Overland", 35000), ("jeep", "renegade", "", 18000),
+    ("lancia", "delta", "1.6 MJT", 6000), ("lancia", "ypsilon", "", 9000), ("opel", "corsa", "1.2 OPC Line", 14000), ("opel", "astra", "1.6 CDTI", 10000),
+    ("kia", "ev6", "GT Line", 45000), ("kia", "sportage", "GT Line", 30000), ("mitsubishi", "lancer", "1.5", 6000), ("polestar", "2", "Standard Range", 38000),
     # allestimenti solo estetici: non fanno una sportiva
     ("mercedes-benz", "classe-a", "A 180 d AMG Line Premium", 32000), ("mercedes-benz", "glc", "220 d 4Matic AMG Line", 55000),
     ("mercedes-benz", "classe-c", "C 220 d Pacchetto AMG", 40000), ("mercedes-benz", "classe-a", "A 250 AMG", 35000),
     ("mercedes-benz", "gle", "350 de 4Matic AMG Line Advanced Plus", 80000), ("mercedes-benz", "cls", "350 d", 30000),
     ("mercedes-benz", "gls", "400 d", 80000), ("mercedes-benz", "classe-a", "A 180 Sport", 20000),
     ("bmw", "serie-3", "320d M Sport", 38000), ("bmw", "serie-3", "320d Msport", 38000), ("bmw", "x5", "xDrive30d M Sport", 70000),
-    ("bmw", "x5", "X5 M Sport", 70000), ("bmw", "x5", "M50d", 65000), ("bmw", "x3", "M40i", 60000),
+    ("bmw", "x5", "X5 M Sport", 70000), ("bmw", "x5", "M50d", 65000), 
     ("bmw", "serie-1", "118d M Sport", 30000), ("bmw", "x5", "X5 M 50d", 60000), ("bmw", "serie-1", "118i Sport Line", 22000),
     ("audi", "a3", "35 TDI S tronic S line edition", 33000), ("audi", "a6", "40 TDI S line", 45000),
     ("audi", "q3", "35 TFSI S line", 36000), ("audi", "a3", "Sportback 1.6 TDI Sport", 15000), ("audi", "a5", "Sportback 40 TDI", 35000),
     ("audi", "a4", "Avant 2.0 TDI S-Line", 20000), ("audi", "q5", "2.0 TDI quattro S tronic", 30000),
     ("volkswagen", "golf", "2.0 TDI R-Line", 30000), ("volkswagen", "golf", "1.5 TSI R Line", 29000),
-    ("volkswagen", "tiguan", "R", 50000), ("volkswagen", "polo", "1.0 TSI R-Line", 18000), ("volkswagen", "golf", "1.6 TDI Sport", 15000),
+    ("volkswagen", "polo", "1.0 TSI R-Line", 18000), ("volkswagen", "golf", "1.6 TDI Sport", 15000),
     ("ford", "mustang-mach-e", "", 45000), ("ford", "mustang", "Mach-E AWD", 50000), ("ford", "fiesta", "1.0 EcoBoost ST-Line", 15000),
     ("ford", "focus", "1.5 EcoBlue ST-Line X", 22000), ("ford", "puma", "1.0 EcoBoost Hybrid ST-Line", 23000), ("ford", "kuga", "ST-Line", 30000),
-    ("alfa-romeo", "giulietta", "Quadrifoglio Verde", 26000), ("alfa-romeo", "giulia", "2.2 Turbodiesel Super", 25000),
+    ("alfa-romeo", "giulia", "2.2 Turbodiesel Super", 25000),
     ("alfa-romeo", "giulietta", "1.6 JTDm Veloce", 15000), ("alfa-romeo", "stelvio", "2.2 Sprint", 35000),
     ("honda", "civic", "1.5 Sport", 28000), ("toyota", "yaris", "1.5 Hybrid GR Sport", 22000), ("toyota", "c-hr", "GR Sport", 30000),
     ("toyota", "corolla", "GR Sport", 28000), ("seat", "ibiza", "FR", 15000), ("seat", "leon", "1.5 TSI FR", 20000),
@@ -129,7 +168,7 @@ NO = [
     ("skoda", "octavia", "2.0 TDI Style", 20000), ("skoda", "fabia", "Monte Carlo", 15000), ("mazda", "cx-5", "", 25000), ("mazda", "3", "Sport", 18000),
     ("subaru", "forester", "", 25000), ("tesla", "model-s", "Long Range", 60000), ("tesla", "model-3", "Performance", 45000),
     ("dodge", "ram", "", 60000), ("dodge", "challenger", "SXT", 35000), ("smart", "fortwo", "cabrio", 9000),
-    ("chevrolet", "spark", "", 5000), ("opel", "corsa", "OPC", 9000),
+    ("chevrolet", "spark", "", 5000), 
     # senza prezzo
     ("ferrari", "458", "", 0), ("ferrari", "458", "", None), ("porsche", "911", "", "trattativa"), ("abarth", "595", "", 0),
 ]
@@ -153,7 +192,7 @@ def test_allestimenti_esclusi():
     assert not VS.e_sportiva("volkswagen", "golf", "R-Line", 30000)
     assert not VS.e_sportiva("ford", "fiesta", "ST-Line", 15000)
     assert not VS.e_sportiva("hyundai", "i30", "N Line", 20000)
-    assert not VS.e_sportiva("kia", "stinger", "GT Line", 30000)
+    assert not VS.e_sportiva("kia", "sportage", "GT Line", 30000)
     assert not VS.e_sportiva("audi", "a3", "Sportback Sport", 20000)
     # ma la sportiva vera con l'allestimento scritto accanto resta
     assert VS.e_sportiva("bmw", "m4", "Competition M Sport seats", 90000)
@@ -231,6 +270,87 @@ def test_fuori_lombardia_e_roma():
     items, tolte = _scegli(righe)
     assert {it["id"] for it in items} == {1, 7}
     assert tolte["roma"] == 3 and tolte["fuori_lombardia"] == 4
+
+
+def test_province_riconoscimento_largo_solo_in_vetrina():
+    """Comuni lombardi che sito_regole.provincia_di non conosce, provincia scritta per esteso, regione."""
+    casi = {"Desenzano del Garda": "BS", "Salò": "BS", "Lumezzane": "BS", "Darfo Boario Terme": "BS", "Sirmione": "BS",
+            "Limone sul Garda": "BS", "Ponte di Legno": "BS", "Suzzara": "MN", "Castiglione delle Stiviere": "MN",
+            "Morbegno": "SO", "Livigno": "SO", "Bormio": "SO", "Aprica": "SO", "Madesimo": "SO",
+            "Chiesa in Valmalenco": "SO", "Casalmaggiore": "CR"}
+    for citta, sigla in casi.items():
+        assert VS.provincia_vetrina(None, citta) == (sigla, True), citta
+        assert VS.provincia_vetrina("", citta.upper()) == (sigla, True), citta
+    for scritta, sigla in (("Brescia", "BS"), ("Mantova", "MN"), ("SONDRIO", "SO"), ("Provincia di Cremona", "CR"),
+                           ("Monza e Brianza", "MB"), ("Monza e della Brianza", "MB"), ("Milano", "MI"), ("Bergamo", "BG"),
+                           ("Como", "CO"), ("Lecco", "LC"), ("Lodi", "LO"), ("Pavia", "PV"), ("Varese", "VA")):
+        assert VS.provincia_vetrina(scritta, "Paesino Sconosciuto") == (sigla, True), scritta
+    assert set(VS.PROVINCE_ESTESE.values()) == set(VS.LOMBARDIA)
+    assert set(VS.comuni_in_piu().values()) <= set(VS.LOMBARDIA) and len(VS.comuni_in_piu()) > 350
+    # la regione dell'annuncio basta, anche senza provincia
+    assert VS.provincia_vetrina(None, "Paesino Sconosciuto", "Lombardia") == (None, True)
+    assert VS.provincia_vetrina(None, "Paesino Sconosciuto", "Veneto") == (None, False)
+    # fuori: sigla o provincia non lombarda vincono sul nome del comune e sulla regione sbagliata
+    assert VS.provincia_vetrina("VR", "Sirmione") == ("VR", False)
+    assert VS.provincia_vetrina("Verona", "Sirmione") == (None, False)
+    assert VS.provincia_vetrina("Roma", "Roma") [1] is False and VS.provincia_vetrina("Torino", None) == (None, False)
+    assert VS.provincia_vetrina("RM", "Roma", "Lombardia") == ("RM", False)
+    # le regole del sito non cambiano: provincia_di continua a non conoscerli
+    assert SR.provincia_di(None, "Livigno") is None and SR.provincia_di("Brescia", "Paesino") is None
+    righe = [_riga(1, province=None, city="Desenzano del Garda"), _riga(2, province="Mantova", city="Suzzara"),
+             _riga(3, province=None, city="Boh", region="Lombardia"), _riga(4, province="Verona", city="Peschiera"),
+             _riga(5, province="Roma", city=None), _riga(6, province=None, city="Livigno")]
+    items, tolte = _scegli(righe)
+    assert {it["id"]: it["provincia"] for it in items} == {1: "BS", 2: "MN", 3: None, 6: "SO"}
+    assert tolte == {"fuori_lombardia": 1, "roma": 1}
+
+
+def test_segnaposto_del_telefono_mai_nella_scheda():
+    righe = [_riga(1, version_raw=f"GTB chiamare {TEL}", title=f"Ferrari 488 {TEL}"),
+             _riga(2, make=None, model=None, version_raw=None, title=f"Vendo Ferrari tel {TEL}", province="MI")]
+    it = VS.scheda(righe[0])
+    testo = json.dumps([it, VS.scheda(righe[1])])
+    assert "numero col bottone" not in testo and TEL not in testo
+    assert it["versione"] == "GTB chiamare"
+
+
+def test_tempo_massimo_e_pausa_dopo_errore(monkeypatch):
+    """Revisione: statement_timeout a ogni blocco; a memoria vuota e database fermo non si riprova a ogni richiesta."""
+    class Conn:
+        def __init__(self):
+            self.sql = []
+
+        def execute(self, sql, par=None):
+            self.sql.append(sql)
+            return _Ris([])
+
+        def rollback(self):
+            pass
+    c = Conn()
+    assert VS.carica(c)[0] == [] and c.sql[0].startswith("SET LOCAL statement_timeout") and "20s" in c.sql[0]
+    c = Conn()
+    VS._leggi_blocco(c, [1], frozenset())
+    assert c.sql[0].startswith("SET LOCAL statement_timeout")
+    chiamate = []
+
+    def rotto(conn, scarti=frozenset()):
+        chiamate.append(1)
+        raise RuntimeError("database fermo")
+
+    @contextmanager
+    def connetti():
+        yield object()
+    monkeypatch.setattr(VS, "carica", rotto)
+    monkeypatch.setattr(VS, "_cache", {"t": 0.0, "items": None, "totale": 0})
+    monkeypatch.setattr(VS, "_errore", [0.0])
+    for _ in range(3):
+        try:
+            VS.elenco(connetti, None)
+            raise AssertionError("doveva fallire")
+        except RuntimeError:
+            pass
+    assert len(chiamate) == 1 and VS.PAUSA_DOPO_ERRORE == 60 and VS.ATTESA_LOCK == 25
+    assert not VS._cache_lock.locked()
 
 
 def test_loconte_e_commercianti_esclusi():
@@ -473,6 +593,7 @@ def test_cache_di_qualche_minuto(monkeypatch):
         yield object()
     monkeypatch.setattr(VS, "carica", carica)
     monkeypatch.setattr(VS, "_cache", {"t": 0.0, "items": None, "totale": 0})
+    monkeypatch.setattr(VS, "_errore", [0.0])
     a = VS.elenco(connetti, lambda: {5})
     b = VS.elenco(connetti, lambda: {5})
     assert a == b and len(a[0]) == 2 and a[1] == 9 and letture == [{5}]          # la seconda dalla memoria
@@ -504,6 +625,7 @@ def test_query_su_postgres_vero():
     conn.execute("""CREATE TABLE listings (id BIGINT PRIMARY KEY, source TEXT, source_id TEXT, url TEXT, title TEXT,
         description TEXT, make TEXT, model TEXT, version_raw TEXT, year INT, mileage_km INT, fuel TEXT, gearbox TEXT,
         power_kw INT, price_eur INT, price_flags TEXT[] NOT NULL DEFAULT '{}', seller_type TEXT, city TEXT, province TEXT,
+        region TEXT,
         status TEXT, stage TEXT, stage_reason TEXT, first_seen_at TIMESTAMPTZ DEFAULT now(), telefono_ok BOOLEAN)""")
     conn.execute("CREATE TABLE listing_photos (id BIGSERIAL PRIMARY KEY, listing_id BIGINT, position INT, source_url TEXT)")
     conn.execute("CREATE TABLE commercianti_as24 (seller_id TEXT PRIMARY KEY, nome TEXT)")
@@ -522,6 +644,9 @@ def test_query_su_postgres_vero():
         (15, "volkswagen", "golf", "2.0 TDI R-Line", 26000, "MI", "Milano", "attivo", "privato"),  # allestimento
         (16, "volkswagen", "golf", "2.0 TSI GTI", 23000, "PV", "Pavia", "attivo", "commerciante"),
         (17, "fiat", "panda", "1.2", 6000, "MI", "Milano", "attivo", "privato"),
+        (18, "porsche", "boxster", "2.7", 20500, None, "Desenzano del Garda", "attivo", "privato"),   # comune in più
+        (19, "porsche", "cayman", "2.7", 30500, "Mantova", "Suzzara", "attivo", "privato"),            # provincia per esteso
+        (20, "porsche", "macan", "2.0", 41000, "Verona", "Peschiera del Garda", "attivo", "privato"), # fuori
         (8, "maserati", "ghibli", "Diesel", 18000, "BS", "Brescia", "attivo", "commerciante"),  # Loconte (nome)
         (9, "lamborghini", "urus", "", 250000, "MI", "Milano", "attivo", "privato"),            # prezzo a rata (AI)
         (10, "mercedes-benz", "classe-a", "A 45 S AMG 4Matic+", 52000, "VA", "Varese", "attivo", "commerciante"),
@@ -541,11 +666,12 @@ def test_query_su_postgres_vero():
     conn.execute("INSERT INTO decisione_ai VALUES (9, '{\"prezzo_rata\": {\"noul\": 0.95}}')")
     items, numeri = VS.carica(conn)
     tolte = numeri["tolte"]
-    assert [it["id"] for it in items] == [1, 4, 6, 10, 7, 16, 14], ([it["id"] for it in items], numeri)
-    assert [it["supercar"] for it in items] == [True, True, True, False, False, False, False]
+    assert [it["id"] for it in items] == [1, 4, 6, 10, 19, 7, 16, 18, 14], ([it["id"] for it in items], numeri)
+    assert [it["supercar"] for it in items] == [True, True, True, False, True, False, False, True, False]
+    assert {it["id"]: it["provincia"] for it in items}[18] == "BS"
     per = {it["id"]: it for it in items}
     assert per[4]["salone"] == "Autosalone Orobico" and per[4]["venditore"] == "commerciante"
     assert per[6]["provincia"] == "CO" and per[1]["n_foto"] == 2 and per[1]["foto"] and per[4]["foto"] is None
     assert tolte["commerciante_escluso"] == 1 and tolte["prezzo_a_rata"] == 1
-    assert numeri["candidate"] == 9 and numeri["candidate_supercar"] == 5 and numeri["non_lette"] == 0
+    assert numeri["candidate"] == 11 and numeri["candidate_supercar"] == 7 and numeri["non_lette"] == 0
     assert VS.riepilogo(items)["per_marca"]["Ferrari"] == 1

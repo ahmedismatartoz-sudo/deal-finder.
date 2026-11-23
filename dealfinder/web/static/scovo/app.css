@@ -1865,7 +1865,9 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 .k5-tag{color:var(--ink)}
 
 /* 23/11: vetrina a parte "Sportive e supercar in Lombardia" (#/supercar-lombardia): schede al prezzo dell'annuncio */
-.scl-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:6px}
+.scl-f{display:flex;gap:8px;align-items:center;overflow-x:auto;margin:0 calc(-1*var(--gut));padding:2px var(--gut) 6px;scrollbar-width:none}
+.scl-f::-webkit-scrollbar{display:none}
+.scl-f>*{flex:none}
 .scl-f .chip{min-height:40px;padding:0 14px}
 .scl-f .qsel select{min-height:40px;max-width:170px}
 .scl-f .chip.clear{background:transparent;color:var(--link);font-weight:600}
