@@ -430,12 +430,13 @@ def test_riepilogo_per_il_log_senza_dati_personali():
     items, _ = _scegli(righe, saloni={2: "Autosalone Rossi", 4: "Autosalone Bianchi"})
     r = VS.riepilogo(items)
     assert r == {"totale": 4, "supercar": 3, "sportive": 1, "privati": 2, "commercianti": 2,
-                 "per_marca": {"Ferrari": 2, "Abarth": 1, "BMW": 1}}
+                 "con_mercato": 0, "per_marca": {"Ferrari": 2, "Abarth": 1, "BMW": 1}}
     testo = json.dumps(r)
     assert "Autosalone" not in testo and TEL not in testo and "esempio.invalid" not in testo
 
 
-VIETATE = ("margine", "mercato", "pv", "gain", "guadagno", "affare", "stima", "netto", "sconto", "telefono", "tel",
+# 23/11 sera: "mercato" e "confronti" ora ci sono (solo da valutazioni salvate); margine e guadagno restano vietati
+VIETATE = ("margine", "pv", "gain", "guadagno", "affare", "stima", "netto", "sconto", "telefono", "tel",
            "phone", "description", "descrizione", "rip_lo", "rip_hi", "top", "trattare")
 
 
@@ -451,7 +452,9 @@ def test_scheda_senza_margine_e_senza_telefono():
     for it in items:
         assert not set(it) & set(VIETATE), set(it) & set(VIETATE)
         assert set(it) == {"id", "marca", "modello", "versione", "nome", "anno", "km", "carb", "cambio", "prezzo", "citta",
-                           "provincia", "supercar", "venditore", "salone", "ha_telefono", "giorni", "fonte", "foto", "n_foto", "url"}
+                           "provincia", "supercar", "venditore", "salone", "ha_telefono", "giorni", "fonte", "foto", "n_foto", "url",
+                           "mercato", "confronti"}
+        assert it["mercato"] is None and it["confronti"] is None        # nessuna valutazione: mai un mercato inventato
         assert isinstance(it["ha_telefono"], bool)
     per = {it["id"]: it for it in items}
     assert per[4]["ha_telefono"] is True and per[3]["ha_telefono"] is False and per[2]["ha_telefono"] is True
@@ -460,6 +463,84 @@ def test_scheda_senza_margine_e_senza_telefono():
     assert per[3]["marca"] == "Ferrari" and per[3]["carb"] == "benzina" and per[3]["cambio"] == "automatico"
     # numero scritto nel titolo di un annuncio senza marca/modello: il nome non lo mostra
     assert TEL not in VS.scheda(senza_nome)["nome"]
+
+
+# ------------------------------------------------------------------------------------------------ mercato
+def test_mercato_solo_da_valutazioni_vere():
+    """23/11 sera: il mercato si mostra solo con almeno 5 confronti, valutazione recente e non di ripiego."""
+    from datetime import datetime, timedelta, timezone
+    ora = datetime(2026, 11, 23, 12, tzinfo=timezone.utc)
+    t = ora.timestamp()
+    ieri, vecchia = ora - timedelta(days=1), ora - timedelta(days=8)
+    assert VS.MERCATO_N_MIN == 5 and VS.MERCATO_GIORNI == 7 and VS.MERCATO_GIORNI_EU == 2
+    assert VS.mercato_valido("45000", "5", ieri, ora=t) == (45000, 5)
+    assert VS.mercato_valido(45000.4, 12, ieri, ora=t) == (45000, 12)
+    assert VS.mercato_valido(45000, 4, ieri, ora=t) is None                      # pochi confronti
+    assert VS.mercato_valido(45000, None, ieri, ora=t) is None                   # confronti ignoti
+    assert VS.mercato_valido(None, 9, ieri, ora=t) is None and VS.mercato_valido(0, 9, ieri, ora=t) is None
+    assert VS.mercato_valido(45000, 9, vecchia, ora=t) is None                   # più di 7 giorni
+    assert VS.mercato_valido(45000, 9, ora - timedelta(days=6, hours=23), ora=t) == (45000, 9)
+    assert VS.mercato_valido(45000, 9, None, ora=t) is None                      # senza data
+    assert VS.mercato_valido(45000, 9, ieri.isoformat(), ora=t) == (45000, 9)    # data scritta come testo
+    assert VS.mercato_valido(45000, 9, ieri, ripiego="true", ora=t) is None      # stima di ripiego: non è un mercato
+    assert VS.mercato_valido(45000, 9, ieri, ripiego="false", ora=t) == (45000, 9)
+    assert VS.mercato_valido(45000, 9, ora - timedelta(days=3), giorni=VS.MERCATO_GIORNI_EU, ora=t) is None
+    # solo letture: nessun calcolo, nessuna AI
+    for q, _g in VS.MERCATO_SQL:
+        assert q.lstrip().upper().startswith("SELECT") and "ANY(%s)" in q
+    assert "valutazioni_policy" in VS.MERCATO_SQL[0][0] and "supercar_eu" in VS.MERCATO_SQL[1][0]
+    import inspect
+    sorgente = inspect.getsource(VS)
+    assert "anthropic" not in sorgente.lower() and "import policy_v2" not in sorgente and "from ..pricing" not in sorgente
+
+
+def test_mercato_nella_scheda_senza_margine():
+    items, _ = _scegli([_riga(1), _riga(2), _riga(3)], mercati={1: (230000, 8), 3: (190000, 5)})
+    per = {it["id"]: it for it in items}
+    assert per[1]["mercato"] == 230000 and per[1]["confronti"] == 8
+    assert per[2]["mercato"] is None and per[2]["confronti"] is None
+    assert per[3]["mercato"] == 190000 and per[3]["prezzo"] == 200003           # sopra il mercato: si mostra lo stesso
+    for it in items:
+        assert not set(it) & set(VIETATE)
+    testo = json.dumps(items, default=str).lower()
+    for parola in ("margine", "guadagno", "netto", "gain", "sconto"):
+        assert parola not in testo
+    r = VS.riepilogo(items)
+    assert r["con_mercato"] == 2 and r["totale"] == 3
+
+
+def test_mercato_letto_a_blocchi_con_tempo_massimo():
+    from datetime import datetime, timedelta, timezone
+    ora = datetime.now(timezone.utc)
+
+    class Conn:
+        def __init__(self, rotta=False):
+            self.sql, self.rotta, self.rollback_n = [], rotta, 0
+
+        def execute(self, sql, par=None):
+            self.sql.append(sql)
+            if "valutazioni_policy" in sql:
+                if self.rotta:
+                    raise RuntimeError("relation does not exist")
+                return _Ris([{"listing_id": 1, "m": "50000", "n": "9", "ripiego": None, "quando": ora},
+                             {"listing_id": 2, "m": "50000", "n": "3", "ripiego": None, "quando": ora},
+                             {"listing_id": 4, "m": "50000", "n": "9", "ripiego": None, "quando": ora - timedelta(days=30)}])
+            if "supercar_eu" in sql:
+                return _Ris([{"listing_id": 1, "m": 99999, "n": 20, "ripiego": None, "quando": ora},
+                             {"listing_id": 3, "m": 300000, "n": 6, "ripiego": None, "quando": ora},
+                             {"listing_id": 5, "m": 300000, "n": 6, "ripiego": None, "quando": ora - timedelta(days=3)}])
+            return _Ris([])
+
+        def rollback(self):
+            self.rollback_n += 1
+    c = Conn()
+    assert VS._leggi_mercati(c, [1, 2, 3, 4, 5]) == {1: (50000, 9), 3: (300000, 6)}
+    assert c.sql[0].startswith("SET LOCAL statement_timeout") and c.sql[2].startswith("SET LOCAL statement_timeout")
+    c = Conn(rotta=True)                                # tabella mancante: resta supercar_eu, la vetrina non si ferma
+    assert VS._leggi_mercati(c, [1, 3]) == {1: (99999, 20), 3: (300000, 6)} and c.rollback_n == 1
+    c = Conn()
+    VS._leggi_blocco(c, [1], frozenset())
+    assert any("valutazioni_policy" in q for q in c.sql) and any("supercar_eu" in q for q in c.sql)
 
 
 # ------------------------------------------------------------------------------------------------ endpoint
@@ -562,7 +643,7 @@ def test_abbonato_vede_e_solo_admin_ids(monkeypatch):
     d = json.loads(A.api_vetrina_supercar(_Richiesta()).body)
     assert [it["id"] for it in d["items"]] == [3, 1] and d["totale"] == 2
     testo = json.dumps(d)
-    for parola in ("margine", "mercato", "guadagno", "\"telefono\"", "\"tel\""):
+    for parola in ("margine", "guadagno", "\"telefono\"", "\"tel\""):
         assert parola not in testo, parola
     # l'amministratore la vede (anche senza abbonamento)
     A, _ = _prepara(monkeypatch, {"id": 1, "role": "admin"}, {}, schede)
@@ -651,6 +732,18 @@ def test_query_su_postgres_vero():
     conn.execute("CREATE TABLE commercianti_as24 (seller_id TEXT PRIMARY KEY, nome TEXT)")
     conn.execute("CREATE TABLE commercianti_as24_annunci (seller_id TEXT, listing_id TEXT)")
     conn.execute("CREATE TABLE decisione_ai (listing_id BIGINT, risposta JSONB)")
+    conn.execute("CREATE TABLE valutazioni_policy (listing_id BIGINT, computed_at TIMESTAMPTZ DEFAULT now(), riassunto JSONB, categoria TEXT)")
+    conn.execute("CREATE TABLE supercar_eu (listing_id BIGINT PRIMARY KEY, m INTEGER, n INTEGER, computed_at TIMESTAMPTZ DEFAULT now(), categoria TEXT DEFAULT 'opportunita')")
+    conn.execute("""INSERT INTO valutazioni_policy (listing_id, computed_at, riassunto) VALUES
+        (4, now() - interval '3 days', '{"M": 70000, "n": 9}'), (4, now() - interval '1 day', '{"M": 84500.4, "n": 7}'),
+        (7, now(), '{"M": 26000, "n": 4}'), (16, now() - interval '9 days', '{"M": 25000, "n": 30}'),
+        (14, now(), '{"M": 13000, "n": 11, "stima_ripiego": true}'), (10, now() - interval '1 day', '{"M": 90000, "n": 12}'),
+        (10, now(), '{"M": 150000, "n": 9}')""")
+    # revisione: l'ultima valutazione di 10 è inaffidabile (dati_insufficienti) -> niente mercato, nemmeno quella prima
+    conn.execute("UPDATE valutazioni_policy SET categoria = 'dati_insufficienti' WHERE listing_id = 10 AND riassunto->>'M' = '150000'")
+    conn.execute("""INSERT INTO supercar_eu (listing_id, m, n, computed_at) VALUES (1, 225000, 6, now()),
+        (4, 1, 99, now()), (6, 80000, 12, now() - interval '3 days')""")
+    conn.execute("INSERT INTO supercar_eu (listing_id, m, n, computed_at, categoria) VALUES (19, 60000, 8, now(), 'leasing')")
     # lead_tutti_dealer / lead_tutti_ann non ci sono: la lettura dei nomi non deve fermare la vetrina
     auto = [
         (1, "ferrari", "488", "GTB", 210000, "MI", "Milano", "attivo", "privato"),
@@ -695,6 +788,9 @@ def test_query_su_postgres_vero():
     assert tolte["commerciante_escluso"] == 1 and tolte["prezzo_a_rata"] == 1
     assert numeri["candidate"] == 11 and numeri["candidate_supercar"] == 7 and numeri["non_lette"] == 0
     assert VS.riepilogo(items)["per_marca"]["Ferrari"] == 1
+    # mercato: ultima valutazione del sito (id 4), supercar_eu (id 1); pochi confronti, vecchie o di ripiego: niente
+    assert {it["id"]: (it["mercato"], it["confronti"]) for it in items if it["mercato"]} == {4: (84500, 7), 1: (225000, 6)}
+    assert numeri["riepilogo"]["con_mercato"] == 2
 
 
 def test_caricamento_in_un_thread_a_parte(monkeypatch):

@@ -2191,8 +2191,8 @@ def api_vetrina_supercar(request: Request):
     try:
         items, totale = _vs.elenco(connect, _scarti_cliente_ids)
     except _vs.InCaricamento:
-        return jsonify({"items": [], "totale": 0, "in_caricamento": True,
-                        "errore": "Sto preparando l'elenco: riprova tra un minuto"})
+        # 23/11 sera: non è un errore; la pagina scrive "Sto preparando l'elenco…" e riprova da sola
+        return jsonify({"items": [], "totale": 0, "in_caricamento": True})
     except Exception as e:
         logging.getLogger("scovo").warning("VETRINA_SUPERCAR errore: %s", str(e)[:300])
         return jsonify({"items": [], "totale": 0, "errore": "non disponibile"})
@@ -2220,7 +2220,13 @@ def affari(request: Request):
     for n, it in enumerate(scelte):
         it["vetrina"] = n
     n = len(scelte)
+    try:      # 23/11 sera: riquadro "Sportive e supercar in Lombardia: N auto" (solo dalla memoria, mai dal database)
+        from . import vetrina_supercar as _vs
+        n_scl = _vs.totale_in_memoria()
+    except Exception:
+        n_scl = None
     return jsonify({"items": items, "vetrina_titolo": vet.get("titolo") if n else None,
+                    "supercar_lombardia": n_scl,
                     "policy": scovo.POLICY_VERSION if scovo.POLICY_SITO == "pv2" and scovo.POLICY_PRONTA["ok"] else None,
                     # 4/11: costi del commerciante al massimo 200 € fissi (tagliando e pulizia) più i pezzi
                     "costi_fissi": {"tagliando_pulizia": int(os.environ.get("COSTI_FISSI_MAX", "200"))},

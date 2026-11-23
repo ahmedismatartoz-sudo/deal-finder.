@@ -279,7 +279,7 @@ async function loadCars(force){
   S.loading = true; S.loadErr = ""; if (isList(S.route)) render({keep:true});
   try {
     const d = await api("/api/affari");
-    S.cars = d.items || []; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now(); S.policy = d.policy || null;
+    S.cars = d.items || []; S.sclTot = d.supercar_lombardia != null ? d.supercar_lombardia : null; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now(); S.policy = d.policy || null;
     if (d.soglie) S.soglie = d.soglie;
     if (d.costi_fissi) S.costs = Object.values(d.costi_fissi).reduce((a,b) => a + b, 0);
     const known = new Set(S.cars.map(c => c.marca)); S.brands = S.brands.filter(b => known.has(b));
@@ -399,7 +399,7 @@ function viewList(){
   return header(trV ? "Da trattare" : scV ? "Supercar Europa" : incV ? "Incidentate" : ecoV ? "Sotto 3.000" : nome1 ? "Ciao, " + nome1 : "Le auto di oggi", trV ? `${list.length} auto sotto 10.000 € e 100.000 km · con uno sconto piccolo diventano un affare` : scV ? `${list.length} supercar di privati in tutta Europa · prima i prezzi migliori sul mercato` : incV ? `${list.length} auto incidentate da riparare · ${S.policy ? "rivendita prudente" : "rivendita −" + S.sconto + "%"}` : ecoV ? `${list.length} auto con il numero, sotto i 3.000 €` : riassunto(list), right, trV || scV || incV || ecoV ? "Scovo" : oggi()) + `${mini}
     ${fbar}
   </header>
-  <main class="list" aria-live="polite">${cmNovita()}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
+  <main class="list" aria-live="polite">${S.route === "affari" ? sclBanner() : ""}${cmNovita()}${!scV && !incV && !ecoV && !trV ? venduteBanner() : ""}${trV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">€</span><span><b>Auto della fascia più richiesta</b> (sotto 10.000 €, meno di 100.000 km, benzina, ibride, GPL e diesel recenti), annunci degli ultimi 10 giorni, con il margine appena sotto il minimo. Su ogni auto c'è lo sconto da chiedere, al massimo 500 € fino a 7.000 € e 700 € sopra: se il venditore accetta, il guadagno arriva al minimo.</span></div>` : ""}${scV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span><b>Supercar e auto di lusso di privati in 8 paesi europei.</b> Ferrari, Lamborghini, Porsche, Aston Martin, McLaren, Bentley, Rolls-Royce e altre, confrontate con le auto uguali in Europa. Solo auto con un margine calcolato di almeno 10.000 € e del 15% del prezzo, già tolti i costi di import, e controllate dall'AI (foto vere, davvero in vendita). Niente leasing né rate.</span></div>` : ""}${ecoV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Auto di privati sotto i 3.000 €, tutte con il numero.</b> Solo quelle con un guadagno calcolato di almeno ${eur(S.soglie && S.soglie[0] ? S.soglie[0][1] : 1500)}. Non le abbiamo ancora controllate una per una: mercato e guadagno sono stime, guarda foto e auto dal vivo.</span></div>` : ""}${incV ? `<div class="tip inc-tip"><span class="eur" aria-hidden="true">!</span><span><b>Per carrozzieri e commercianti di incidentate.</b> Danni anche pesanti: il guadagno è già calcolato con i pezzi da cambiare (solo pezzi, manodopera esclusa). Guarda sempre l'auto dal vivo.</span></div>` : ""}${S.bot ? botBanner(list.length) : ""}${guest() && !S.bot ? `<div class="tip" style="font:600 16px/1.3 var(--body)"><span class="eur" aria-hidden="true">i</span><span>Sito aperto: puoi contattare i venditori anche senza account. <a href="#/entra" style="color:inherit;font-weight:800">Entra</a> per salvare le tue auto.</span></div>` : ""}${S.offline ? `<div class="banner">Sei senza connessione: vedi le auto dell'ultimo aggiornamento.</div>` : ""}${S.loadErr ? `<div class="banner">${esc(S.loadErr)}</div>` : ""}${list.length ? cards : empty}</main>`;
 }
 
 /* ---------- 31/10: "Già vendute" — affari passati da Skovo e spariti dagli annunci negli ultimi 7 giorni ---------- */
@@ -442,20 +442,36 @@ function viewVendute(){
    all'annuncio originale (nessun numero nel sito). Dati da /api/vetrina/supercar, separati dall'elenco degli affari. */
 const SCL_PASSO = 60;
 const SCL_PREZZI = [10000, 20000, 30000, 50000, 70000, 100000, 150000, 250000];
-S.sclF = {marca: "", vend: "", pmin: "", pmax: "", gruppo: ""}; S.sclN = SCL_PASSO;
+const SCL_F0 = () => ({marca: "", vend: "", pmin: "", pmax: "", gruppo: "", sotto: false, ord: "prezzo"});
+S.sclF = SCL_F0(); S.sclN = SCL_PASSO;
 async function loadScl(force){
-  if (S.sclLoading || (!force && S.scl && !S.scl.errore && Date.now() - S.scl._t < 5 * 60 * 1000)) return;
+  if (S.sclLoading || (!force && S.scl && !S.scl.errore && !S.scl.in_caricamento && Date.now() - S.scl._t < 5 * 60 * 1000)) return;
+  clearTimeout(S.sclT);
   S.sclLoading = true; if (S.route === SCL) render({keep:true});
   try { S.scl = Object.assign(await api("/api/vetrina/supercar"), {_t: Date.now()}); }
   catch (e) { S.scl = {items: [], errore: e.message, _t: Date.now()}; }
   S.sclLoading = false;
+  // 23/11 sera: il server sta preparando l'elenco (lettura lunga): non è un errore, si riprova da soli ogni 20 secondi
+  if (S.scl.in_caricamento) { delete S.scl.errore; S.sclT = setTimeout(() => { if (S.route === SCL) loadScl(true); }, 20000); }
+  else if (!S.scl.errore && S.scl.totale != null) S.sclTot = S.scl.totale;
   if (S.route === SCL) render({keep:true});
 }
+/* mercato: solo se il server lo manda (valutazione salvata con almeno 5 confronti); la differenza è prezzo − mercato */
+const sclDiff = c => c.mercato ? c.prezzo - c.mercato : null;
 function sclFiltrate(senzaMarca){
   const f = S.sclF, l = (S.scl && S.scl.items) || [];
-  return l.filter(c => (senzaMarca || !f.marca || c.marca === f.marca) && (!f.vend || c.venditore === f.vend)
-    && (!f.gruppo || (f.gruppo === "supercar") === !!c.supercar)
+  const out = l.filter(c => (senzaMarca || !f.marca || c.marca === f.marca) && (!f.vend || c.venditore === f.vend)
+    && (!f.gruppo || (f.gruppo === "supercar") === !!c.supercar) && (!f.sotto || (c.mercato && c.prezzo < c.mercato))
     && (f.pmin === "" || c.prezzo >= Number(f.pmin)) && (f.pmax === "" || c.prezzo <= Number(f.pmax)));
+  if (f.ord !== "sconto") return out;                 // il server le manda già per prezzo
+  const q = c => c.mercato ? c.prezzo / c.mercato : Infinity;      // prima le più sotto il mercato; senza mercato in fondo
+  return out.map((c, i) => [c, i]).sort((a, b) => (q(a[0]) - q(b[0])) || (a[1] - b[1])).map(x => x[0]);
+}
+function sclMercato(c){
+  if (!c.mercato) return `<div class="scl-m"><span class="scl-m1">Mercato: non stimato</span></div>`;
+  const d = sclDiff(c), cf = c.confronti ? `<small>${num(c.confronti)} confronti</small>` : "";
+  const diff = d < 0 ? `<span class="scl-d giu">−${eur(-d)} sotto il mercato</span>` : d > 0 ? `<span class="scl-d su">+${eur(d)} sopra il mercato</span>` : `<span class="scl-d">In linea con il mercato</span>`;
+  return `<div class="scl-m"><span class="scl-m1">Mercato: <b>${eur(c.mercato)}</b> ${cf}</span>${diff}</div>`;
 }
 function sclCard(c, i){
   const riga = [c.anno, c.km != null ? num(c.km) + " km" : "", c.carb, c.cambio].filter(Boolean).join(" · ");
@@ -463,24 +479,33 @@ function sclCard(c, i){
   const chi = c.venditore === "commerciante" ? (c.salone || "Commerciante") : "Privato";
   const giorni = c.giorni == null ? "" : c.giorni === 0 ? "In vendita da oggi" : c.giorni === 1 ? "In vendita da 1 giorno" : `In vendita da ${c.giorni} giorni`;
   const titolo = [c.marca, c.modello].filter(Boolean).join(" ") || c.nome || "Auto";
-  const dentro = `<div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome || titolo, i < 2)}<span class="badge">${c.venditore === "commerciante" ? "Commerciante" : "Privato"}</span></div>
+  const dentro = `<div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome || titolo, i < 2)}<span class="badge">${c.supercar ? "Supercar" : "Sportiva"}</span></div>
       <div class="card-body scl-b">
-        <div><div class="name">${esc(titolo)}</div>${c.versione ? `<div class="scl-v">${esc(c.versione)}</div>` : ""}<div class="meta">${esc(riga)}</div></div>
+        <div><div class="scl-t">${esc(titolo)}</div>${c.versione ? `<div class="scl-v">${esc(c.versione)}</div>` : ""}</div>
         <div class="scl-p"><b>${eur(c.prezzo)}</b><span>prezzo dell'annuncio</span></div>
-        <div class="scl-chi"><span>${esc(chi)}${dove ? " · " + esc(dove) : ""}</span>${giorni ? `<span>${giorni}</span>` : ""}</div>
-        ${c.url ? `<span class="scl-go">Vedi l'annuncio${c.fonte ? " su " + esc(c.fonte) : ""} ${ICON.next}</span>` : ""}
+        ${sclMercato(c)}
+        ${riga ? `<div class="scl-r">${esc(riga)}</div>` : ""}
+        <div class="scl-chi">${dove ? `<span>${esc(dove)}</span>` : ""}<span>${c.venditore === "commerciante" ? "Salone: " : "Venditore: "}${esc(chi)}</span>${giorni ? `<span>${giorni}</span>` : ""}</div>
+        ${c.url ? `<span class="btn scl-go">Vedi l'annuncio${c.fonte ? " su " + esc(c.fonte) : ""} ${ICON.next}</span>` : ""}
       </div>`;
   return c.url && /^https?:\/\//i.test(c.url)
     ? `<a class="card scl-card" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(titolo)}, ${eur(c.prezzo)}, apre l'annuncio originale">${dentro}</a>`
     : `<div class="card scl-card">${dentro}</div>`;
+}
+/* riquadro in cima agli affari: porta alla vetrina; il numero c'è solo se il server lo ha già in memoria */
+function sclBanner(){
+  if (!canBrowse() || !tabOk(SCL)) return "";
+  const n = S.sclTot;
+  return `<button class="scl-banner" data-act="tab" data-v="${SCL}"><span class="scl-banner-ic" aria-hidden="true">🏎</span><span class="scl-banner-t"><b>Sportive e supercar in Lombardia${n ? `: ${num(n)} auto` : ""}</b><small>Privati e saloni, con il prezzo di mercato dove c'è</small></span><span class="scl-banner-go" aria-hidden="true">${ICON.next}</span></button>`;
 }
 function viewScl(){
   const v = S.scl, f = S.sclF, tutte = (v && v.items) || [], l = sclFiltrate(), n = Math.min(l.length, S.sclN || SCL_PASSO);
   const perMarca = {}; sclFiltrate(true).forEach(c => perMarca[c.marca] = (perMarca[c.marca] || 0) + 1);
   if (f.marca && !perMarca[f.marca]) perMarca[f.marca] = 0;          // la marca scelta resta nella tendina anche a zero
   const marche = Object.keys(perMarca).sort((a, b) => a.localeCompare(b, "it"));
-  const attivi = !!(f.marca || f.vend || f.pmin !== "" || f.pmax !== "" || f.gruppo);
-  const sub = !v ? "Carico…" : v.errore ? "Non riesco a caricare le auto" : attivi ? `${num(l.length)} di ${num(tutte.length)} auto` : `${num(tutte.length)} auto${v.totale > tutte.length ? " (le più care di " + num(v.totale) + ")" : ""}`;
+  const attivi = !!(f.marca || f.vend || f.pmin !== "" || f.pmax !== "" || f.gruppo || f.sotto);
+  const prep = !!(v && v.in_caricamento);
+  const sub = !v ? "Carico…" : prep ? "Sto preparando l'elenco…" : v.errore ? "Non riesco a caricare le auto" : attivi ? `${num(l.length)} di ${num(tutte.length)} auto` : `${num(tutte.length)} auto${v.totale > tutte.length ? " (le più care di " + num(v.totale) + ")" : ""}`;
   const chip = (act, val, cur, txt) => `<button class="chip" data-act="${act}" data-v="${val}" aria-pressed="${cur === val}">${txt}</button>`;
   const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar",SCL].includes(id) && tabOk(id));
   const right = `<div class="top-act"><button class="refresh${S.sclLoading ? " spinning" : ""}" data-act="scl-reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>${avatarBtn()}</div>`;
@@ -488,6 +513,8 @@ function viewScl(){
 </div>
     <div class="scl-f" role="group" aria-label="Filtri">
       ${chip("scl-gruppo", "supercar", f.gruppo, "Supercar")}${chip("scl-gruppo", "sportive", f.gruppo, "Sportive")}
+      <button class="chip" data-act="scl-sotto" aria-pressed="${!!f.sotto}">Sotto il mercato</button>
+      <label class="qsel ${f.ord === "sconto" ? "on" : ""}"><span class="sr">Ordina per</span><select id="scl-ord"><option value="prezzo" ${f.ord !== "sconto" ? "selected" : ""}>Ordina: prezzo</option><option value="sconto" ${f.ord === "sconto" ? "selected" : ""}>Ordina: sconto sul mercato</option></select></label>
       <label class="qsel ${f.marca ? "on" : ""}"><span class="sr">Marca</span><select id="scl-marca">${opts(marche.map(m => [m, m + " (" + perMarca[m] + ")"]), f.marca, "Marca")}</select></label>
       ${chip("scl-vend", "privato", f.vend, "Privati")}${chip("scl-vend", "commerciante", f.vend, "Commercianti")}
       <label class="qsel ${f.pmin !== "" ? "on" : ""}"><span class="sr">Prezzo minimo</span><select id="scl-pmin">${opts(SCL_PREZZI.map(x => [x, "Da " + num(x) + " €"]), f.pmin, "Prezzo da")}</select></label>
@@ -495,11 +522,12 @@ function viewScl(){
       ${attivi ? `<button class="chip clear" data-act="scl-reset">Azzera</button>` : ""}
     </div>`;
   const vuoto = !v ? `<div class="empty"><span class="meta">Carico le auto…</span></div>`
+    : prep ? `<div class="empty" role="status"><strong style="font:700 19px var(--disp)">Sto preparando l'elenco…</strong><span class="meta">Ci vuole qualche minuto. La pagina si aggiorna da sola.</span></div>`
     : v.errore ? `<div class="empty"><strong style="font:700 19px var(--disp)">${esc(v.errore === "non disponibile" ? "Elenco non disponibile in questo momento" : v.errore)}</strong><button class="btn" data-act="scl-reload">Riprova</button></div>`
     : `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${tutte.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>${tutte.length ? `<button class="btn" data-act="scl-reset">Togli i filtri</button>` : `<button class="btn" data-act="scl-reload">Aggiorna</button>`}</div>`;
   return header("Sportive e supercar in Lombardia", sub, right, "Scovo") + `${filtri}</header>
   <main class="list" aria-live="polite">
-    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio. Il prezzo è quello chiesto dal venditore, senza valutazione di Scovo.</span></div>
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio. Il prezzo è quello chiesto dal venditore. Il mercato c'è solo dove Scovo ha già una valutazione con almeno 5 auto di confronto; altrimenti trovi "non stimato".</span></div>
     ${l.length ? `<div class="scl-grid">${l.slice(0, n).map(sclCard).join("")}</div>${l.length > n ? `<button class="btn scl-piu" data-act="scl-piu">Mostra altre ${Math.min(SCL_PASSO, l.length - n)} (${num(l.length - n)} rimaste)</button>` : ""}` : vuoto}
   </main>`;
 }
@@ -2237,7 +2265,8 @@ $app.addEventListener("click", e => {
     case "scl-piu": S.sclN = (S.sclN || SCL_PASSO) + SCL_PASSO; break;
     case "scl-gruppo": S.sclF.gruppo = S.sclF.gruppo === v ? "" : v; S.sclN = SCL_PASSO; break;
     case "scl-vend": S.sclF.vend = S.sclF.vend === v ? "" : v; S.sclN = SCL_PASSO; break;
-    case "scl-reset": S.sclF = {marca: "", vend: "", pmin: "", pmax: "", gruppo: ""}; S.sclN = SCL_PASSO; break;
+    case "scl-sotto": S.sclF.sotto = !S.sclF.sotto; S.sclN = SCL_PASSO; break;
+    case "scl-reset": S.sclF = Object.assign(SCL_F0(), {ord: S.sclF.ord}); S.sclN = SCL_PASSO; break;
     case "foto-full": S.full = Number(v) || 0; document.body.style.overflow = "hidden"; break;
     case "foto-chiudi": S.full = null; break;
     case "foto-vai": { const lb = document.getElementById("lbs"), k = lb && lb.children[Number(v)]; if (k) lb.scrollTo({left: k.offsetLeft - (lb.clientWidth - k.clientWidth) / 2, behavior: calmo() ? "auto" : "smooth"}); return; }
@@ -2358,7 +2387,7 @@ $app.addEventListener("change", e => {
   const sb2 = document.querySelector(".sheet-body"); if (sb2) sb2.scrollTop = sy;
 });
 $app.addEventListener("change", e => {
-  const k = {"scl-marca": "marca", "scl-pmin": "pmin", "scl-pmax": "pmax"}[e.target.id];
+  const k = {"scl-marca": "marca", "scl-pmin": "pmin", "scl-pmax": "pmax", "scl-ord": "ord"}[e.target.id];
   if (!k) return;
   S.sclF[k] = e.target.value; S.sclN = SCL_PASSO;
   render({keep: true});

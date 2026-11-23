@@ -1,7 +1,9 @@
 """23/11 (cliente: "Supercar e macchine sportive: le voglio subito sul sito, tutte quelle della Lombardia").
 
 VETRINA A PARTE "Supercar Lombardia": tutte le sportive e supercar in vendita nelle 12 province lombarde, di privati e
-di commercianti, al prezzo dell'annuncio. NON sono affari: niente margine, niente mercato, niente stima. Per questo
+di commercianti, al prezzo dell'annuncio. NON sono affari: niente margine, niente stima. 23/11 sera (cliente: "il
+prezzo di mercato per ogni auto, quando esiste davvero"): accanto al prezzo c'è il mercato SOLO se una valutazione
+già salvata nel database lo dice (vedi MERCATO_SQL e mercato_valido): nessun calcolo nuovo, nessuna AI. Per questo
 sta FUORI da sito_regole e dall'elenco del sito (_elenco): le regole degli affari, i tetti dei commercianti, il
 conteggio delle auto del sito e le email automatiche non la vedono.
 
@@ -21,6 +23,7 @@ import re
 import threading
 import time
 import unicodedata
+from datetime import datetime, timezone
 
 from ..ai.supercar_vero import LEASING_RE
 from . import foto, scovo
@@ -371,6 +374,46 @@ NOMI_SQL = (
     "JOIN lead_tutti_dealer d ON d.chiave = t.chiave WHERE l.id = ANY(%s) AND d.nome IS NOT NULL",
 )
 
+# 23/11 sera: mercato = valutazioni GIÀ salvate dal software, lette e basta (nessun calcolo, nessuna AI).
+#   1) valutazioni_policy.riassunto: "M" (il Mercato che il sito mostra negli affari, scovo.item) e "n" (confronti);
+#      vale l'ultima valutazione dell'annuncio; fuori le stime di ripiego (confronti allargati: non è un mercato vero)
+#   2) supercar_eu: m (mediana dei confronti europei) e n, con la freschezza che usa già il sito (SITO_SQL: 2 giorni)
+MERCATO_N_MIN = 5               # sotto 5 confronti il mercato non si mostra
+MERCATO_GIORNI = 7              # valutazione più vecchia: non si mostra
+MERCATO_GIORNI_EU = 2           # supercar_eu: come pipeline/supercar_eu.SITO_SQL
+MERCATO_SQL = (
+    # revisione 23/11: vale solo l'ULTIMA valutazione e solo se il software non l'ha giudicata inaffidabile
+    # (dati_insufficienti: prezzo troppo sotto la mediana, confronti dispersi...): filtro fuori dal DISTINCT ON
+    ("SELECT x.listing_id, x.m, x.n, x.ripiego, x.quando FROM (SELECT DISTINCT ON (vp.listing_id) vp.listing_id, "
+     "vp.riassunto->>'M' AS m, vp.riassunto->>'n' AS n, "
+     "COALESCE(vp.riassunto->>'stima_ripiego', CASE WHEN vp.riassunto->>'M_fonte' = 'ripiego' THEN 'true' END) AS ripiego, "
+     "vp.categoria, vp.computed_at AS quando FROM valutazioni_policy vp "
+     "WHERE vp.listing_id = ANY(%s) ORDER BY vp.listing_id, vp.computed_at DESC) x "
+     "WHERE x.categoria IS DISTINCT FROM 'dati_insufficienti'", MERCATO_GIORNI),
+    ("SELECT s.listing_id, s.m, s.n, NULL AS ripiego, s.computed_at AS quando FROM supercar_eu s "
+     "WHERE s.listing_id = ANY(%s) AND s.categoria IN ('opportunita', 'non_conveniente')", MERCATO_GIORNI_EU),
+)
+
+
+def mercato_valido(m, n, quando, *, ripiego=None, giorni: int = MERCATO_GIORNI, ora: float | None = None) -> tuple[int, int] | None:
+    """(mercato in euro, confronti) se la valutazione salvata si può mostrare, altrimenti None. Funzione pura: almeno
+    MERCATO_N_MIN confronti, valutazione di al massimo `giorni` giorni, non una stima di ripiego. Senza data: no."""
+    try:
+        m, n = int(round(float(m))), int(float(n))
+        if isinstance(quando, str):                 # data scritta come testo ISO
+            quando = datetime.fromisoformat(quando.replace("Z", "+00:00"))
+        if quando.tzinfo is None:
+            quando = quando.replace(tzinfo=timezone.utc)
+        eta = (ora or time.time()) - quando.timestamp()
+    except Exception:
+        return None
+    if str(ripiego or "").strip().lower() not in ("", "false", "0", "null", "none"):
+        return None
+    if m <= 0 or n < MERCATO_N_MIN or eta > giorni * 86400:
+        return None
+    return m, n
+
+
 RATA_SQL = ("SELECT d.listing_id, (d.risposta->'prezzo_rata'->>'noul')::float AS rata FROM decisione_ai d "
             "WHERE d.listing_id = ANY(%s)")
 
@@ -429,8 +472,9 @@ def _senza_numeri(testo) -> str:
     return re.sub(r"\s+", " ", t).strip(" -·,")
 
 
-def scheda(r: dict, nome_salone: str | None = None, ora: float | None = None) -> dict:
-    """Scheda della vetrina: solo dati dell'annuncio. Niente margine, mercato o stima; mai un numero di telefono."""
+def scheda(r: dict, nome_salone: str | None = None, ora: float | None = None, mercato: tuple | None = None) -> dict:
+    """Scheda della vetrina: dati dell'annuncio e, se c'è una valutazione salvata valida (mercato_valido), il mercato
+    con il numero di confronti. Niente margine, guadagno o stima; mai un numero di telefono."""
     comm = r.get("seller_type") == "commerciante"
     n_ph = int(r.get("n_photos") or 0)
     testo = f"{r.get('title') or ''} {r.get('description') or ''}"
@@ -451,6 +495,9 @@ def scheda(r: dict, nome_salone: str | None = None, ora: float | None = None) ->
         "fonte": scovo.SOURCE_NAMES.get(r.get("source"), r.get("source")),
         "foto": foto.url_for(r["id"], 0) if n_ph else None, "n_foto": min(n_ph, foto.MAX_PER_AUTO),
         "url": r.get("url"),
+        # 23/11 sera: solo da una valutazione salvata (None = "Mercato: non stimato"); la differenza col prezzo la fa
+        # la pagina, qui non c'è nessun margine
+        "mercato": int(mercato[0]) if mercato else None, "confronti": int(mercato[1]) if mercato else None,
     }
 
 
@@ -481,19 +528,19 @@ def senza_doppioni(items: list[dict]) -> tuple[list[dict], int]:
 
 
 def scegli(righe: list[dict], *, scarti=frozenset(), nomi_tutti: str = "", nomi_sempre: str = "", saloni: dict | None = None,
-           rate: dict | None = None, ora: float | None = None) -> tuple[list[dict], dict]:
+           rate: dict | None = None, ora: float | None = None, mercati: dict | None = None) -> tuple[list[dict], dict]:
     """(schede in ordine di prezzo decrescente, {motivo: quante tolte}). Funzione pura, senza tetto (vedi taglia).
     nomi_tutti / nomi_sempre: espressioni di sito_regole.nomi_esclusi_re (commercianti=True / False)."""
     nomi = re.compile(nomi_sempre, re.I) if nomi_sempre else None
     nomi_comm = re.compile(nomi_tutti, re.I) if nomi_tutti else None
-    saloni, rate, tolte, buone = saloni or {}, rate or {}, {}, []
+    saloni, rate, mercati, tolte, buone = saloni or {}, rate or {}, mercati or {}, {}, []
     for r in righe:
         nome = saloni.get(r.get("id"))
         m = motivo_fuori(r, scarti=scarti, nomi=nomi, nomi_comm=nomi_comm, nome_salone=nome, rata=rate.get(r.get("id")))
         if m:
             tolte[m] = tolte.get(m, 0) + 1
         else:
-            buone.append(scheda(r, nome, ora))
+            buone.append(scheda(r, nome, ora, mercati.get(r.get("id"))))
     out, doppi = senza_doppioni(buone)
     if doppi:
         tolte["doppione"] = tolte.get("doppione", 0) + doppi
@@ -516,7 +563,7 @@ def riepilogo(items: list[dict]) -> dict:
     sc = sum(1 for it in items if it.get("supercar"))
     comm = sum(1 for it in items if it.get("venditore") == "commerciante")
     return {"totale": len(items), "supercar": sc, "sportive": len(items) - sc, "privati": len(items) - comm,
-            "commercianti": comm, "per_marca": dict(sorted(per_marca.items(), key=lambda x: (-x[1], x[0])))}
+            "commercianti": comm, "con_mercato": sum(1 for it in items if it.get("mercato")), "per_marca": dict(sorted(per_marca.items(), key=lambda x: (-x[1], x[0])))}
 
 
 def _tempo_massimo(conn) -> None:
@@ -543,7 +590,25 @@ def _leggi_blocco(conn, ids: list, scarti) -> tuple[list[dict], dict]:
         conn.rollback()
         log.warning("VETRINA_SUPERCAR prezzo a rata non letto: %s", str(e)[:150])
     return scegli(righe, scarti=scarti, nomi_tutti=SR.nomi_esclusi_re(commercianti=True),
-                  nomi_sempre=SR.nomi_esclusi_re(commercianti=False), saloni=saloni, rate=rate)
+                  nomi_sempre=SR.nomi_esclusi_re(commercianti=False), saloni=saloni, rate=rate,
+                  mercati=_leggi_mercati(conn, ids))
+
+
+def _leggi_mercati(conn, ids: list) -> dict:
+    """{id: (mercato, confronti)} dalle valutazioni salvate (MERCATO_SQL), solo quelle valide. Se una tabella manca o
+    la lettura fallisce l'auto resta senza mercato ("non stimato"): la vetrina non si ferma."""
+    mercati: dict = {}
+    for q, giorni in MERCATO_SQL:
+        try:
+            _tempo_massimo(conn)                    # dopo un rollback il SET LOCAL di prima non vale più
+            for r in conn.execute(q, (ids,)).fetchall():
+                v = mercato_valido(r.get("m"), r.get("n"), r.get("quando"), ripiego=r.get("ripiego"), giorni=giorni)
+                if v and r["listing_id"] not in mercati:       # prima la valutazione del sito, poi supercar_eu
+                    mercati[r["listing_id"]] = v
+        except Exception as e:
+            conn.rollback()
+            log.warning("VETRINA_SUPERCAR mercato non letto: %s", str(e)[:150])
+    return mercati
 
 
 def carica(conn, *, scarti=frozenset()) -> tuple[list[dict], dict]:
@@ -592,6 +657,11 @@ _cache_lock = threading.Lock()
 def svuota_cache() -> None:
     _cache.update(t=0.0, items=None, totale=0)
     _errore[0] = 0.0
+
+
+def totale_in_memoria() -> int | None:
+    """Quante auto ha la vetrina, se l'elenco è già in memoria (None = memoria vuota). Non legge il database."""
+    return int(_cache["totale"] or 0) if _cache["items"] is not None else None
 
 
 def da_ricaricare() -> bool:
