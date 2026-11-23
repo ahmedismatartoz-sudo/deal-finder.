@@ -106,7 +106,7 @@ class Brevo:
                                         {"type": "sms", "credits": self.crediti, "creditsType": "sendLimit"}]})
 
     def post(self, url, json=None, **k):
-        assert url == "https://api.brevo.com/v3/transactionalSMS/send"
+        assert url == "https://api.brevo.com/v3/transactionalSMS/sms"
         self.chiamate = getattr(self, "chiamate", 0) + 1
         if self.chiamate in self.errori:
             return _Risposta(self.errori[self.chiamate])

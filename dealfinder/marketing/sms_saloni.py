@@ -283,7 +283,7 @@ def invia(giro: str, conn, c, *, solo_primo: bool = False, env=None, adesso=None
             continue
         codice = ""
         try:
-            r = c.post(f"{API}/transactionalSMS/send",
+            r = c.post(f"{API}/transactionalSMS/sms",
                        json={"sender": mittente(env), "recipient": d["tel"].lstrip("+"), "content": testo_sms(token, env),
                              "type": tipo, "tag": ("skovo_" + re.sub(r"[^A-Za-z0-9_]", "_", giro))[:60],
                              "unicodeEnabled": False})
