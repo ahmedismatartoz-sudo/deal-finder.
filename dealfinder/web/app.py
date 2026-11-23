@@ -3317,6 +3317,64 @@ def _accesso_incentivi(request: Request) -> tuple[bool, int, str]:
     return False, 403, "Il tuo account non comprende gli Incentivi. Chiedi all'amministratore di attivarli"
 
 
+# ---------------------------------------------------------------------------
+# 24/11 (cliente): SMS ai saloni con il link "Mi interessa" (marketing/sms_saloni.py)
+# ---------------------------------------------------------------------------
+_sms_ip: dict[str, list[float]] = defaultdict(list)
+SMS_CLIC_IP_ORA = 20               # clic contati per IP in un'ora; oltre, la pagina si vede ma non si registra
+_SMS_PAGINA_H = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"}
+
+
+def _sms_troppi(request: Request) -> bool:
+    ip, now = client_ip(request), time.time()
+    if len(_sms_ip) > 5000:                                  # memoria limitata anche sotto una raffica di IP diversi
+        for k in [k for k, v in _sms_ip.items() if not v or now - v[-1] > 3600]:
+            _sms_ip.pop(k, None)
+    _sms_ip[ip] = [t for t in _sms_ip[ip] if now - t < 3600]
+    if len(_sms_ip[ip]) >= SMS_CLIC_IP_ORA:
+        return True
+    _sms_ip[ip].append(now)
+    return False
+
+
+def sms_mi_interessa(request: Request):
+    """GET /mi/{token}, pubblica: pagina di ringraziamento (uguale per ogni token) e clic registrato."""
+    from ..marketing import sms_saloni as SS
+    token = request.path_params.get("token")
+    if _sms_troppi(request):
+        return HTMLResponse(SS.pagina(token), status_code=429, headers=_SMS_PAGINA_H)
+    if request.method == "GET":                              # HEAD (controlli automatici dei link) non conta
+        try:
+            with connect() as conn:
+                SS.registra_clic(conn, token, request.headers.get("user-agent") or "")
+        except Exception as e:
+            logging.getLogger("scovo").warning("SMS_INTERESSATO non registrato: %s", type(e).__name__)
+    return HTMLResponse(SS.pagina(token), headers=_SMS_PAGINA_H)
+
+
+def sms_mi_stop(request: Request):
+    """POST /mi/{token}/stop: il salone non vuole più SMS (tabella sms_stop)."""
+    from ..marketing import sms_saloni as SS
+    token = request.path_params.get("token")
+    if _sms_troppi(request):
+        return HTMLResponse(SS.pagina(token), status_code=429, headers=_SMS_PAGINA_H)
+    try:
+        with connect() as conn:
+            SS.registra_stop(conn, token)
+    except Exception as e:
+        logging.getLogger("scovo").warning("SMS_STOP non registrato: %s", type(e).__name__)
+    return HTMLResponse(SS.pagina(token, stop=True), headers=_SMS_PAGINA_H)
+
+
+def admin_sms_interessati(request: Request):
+    """Solo amministratore: chi ha toccato "Mi interessa" (nome, telefono, quando, quante volte): da richiamare."""
+    current_user(request, admin=True)
+    from ..marketing import sms_saloni as SS
+    with connect() as conn:
+        righe = SS.interessati(conn)
+    return jsonify({"interessati": righe, "totale": len(righe)})
+
+
 from .vetrina import api_vetrina, foto_vetrina
 from . import admin_sito as _admin_sito  # noqa: E402
 
@@ -3364,6 +3422,9 @@ routes = [
     Route("/api/opportunities/{id:int}/feedback", feedback, methods=["POST"]),
     Route("/api/affari/{id:int}/esito", esito_affare, methods=["POST"]),
     Route("/api/admin/sito-funnel", admin_sito_funnel),
+    Route("/api/admin/sms_interessati", admin_sms_interessati),
+    Route("/mi/{token}/stop", sms_mi_stop, methods=["POST"]),
+    Route("/mi/{token}", sms_mi_interessa),
     *_admin_sito.ROTTE,                   # 12/11: pannello → Sito (ribassi, in cima, auto tolte) senza deploy
     Route("/api/activity", my_activity),
     Route("/api/notifications", notifications),
@@ -4279,6 +4340,14 @@ def _tempo_reale():
         # 16/11 (fond-server): le voci lunghe (raccolta60, perche_fuori, prova_cieca; con LAVORI_NEL_CRON=tutti anche le
         # chiamate Brevo brevi) non si fanno più qui: vanno nella coda del cron (pipeline/coda_lavori.py, stesso codice,
         # stesse chiavi _una_volta). Se il cron non le prende (variabile mancante, cron fermo) le fa il sito, come prima.
+        if v.startswith(("sms_saloni:", "sms_prova:")):   # 24/11 (cliente): SMS ai saloni con il link "Mi interessa"
+            time.sleep(30)
+            try:
+                from ..marketing import sms_saloni as _ss
+                _ss.lavoro(v)
+            except Exception as e:
+                lg.warning("SMS_SALONI non riuscito: %s", str(e)[:200])
+            return
         from ..pipeline import coda_lavori as _cl
         if _cl.spostabile(v) and not forza:
             try:
