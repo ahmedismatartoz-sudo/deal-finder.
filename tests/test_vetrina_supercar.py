@@ -867,3 +867,15 @@ def test_scheda_completa_per_le_auto_della_vetrina(monkeypatch):
     i = js.index("function sclCard")
     corpo = js[i:js.index("\n}\n", i)]
     assert 'data-act="open"' in corpo and "target=\"_blank\"" not in corpo
+
+
+def test_prezzi_gonfiati_fuori():
+    """23/11 sera: stessi controlli dello sconto alto del sito e di Supercar Europa."""
+    base = {"mercato": 30000, "prezzo": 27000, "guadagno": 2000, "supercar": False}
+    assert VS.prezzo_sospetto(base) is None
+    assert VS.prezzo_sospetto(dict(base, prezzo=20000)) == "troppo_sotto_il_mercato"
+    assert VS.prezzo_sospetto(dict(base, prezzo=23000, guadagno=6000)) == "guadagno_irreale"
+    assert VS.prezzo_sospetto(dict(base, prezzo=23500, guadagno=4000)) == "sconto_alto_da_controllare"   # 6.500 > 6.000
+    assert VS.prezzo_sospetto(dict(base, prezzo=23500, guadagno=4000, supercar=True)) is None
+    r = VS._riga_controllo(dict(base, id=1, marca="Audi", modello="RS3", anno=2020, km=1))
+    assert r["sconto_pct"] == 10.0 and "venditore" not in r and "salone" not in r
