@@ -843,11 +843,12 @@ def test_caricamento_in_un_thread_a_parte(monkeypatch):
 
 def test_guadagno_come_gli_affari():
     """23/11 sera: il guadagno della vetrina è quello degli affari, mai il margine grezzo."""
-    assert VS.guadagno_sito({"margine": 5000, "acquisto": 20000}, 20000, None) == 5000
+    assert VS.guadagno_sito({"margine": 5000, "acquisto": 20000}, 20000, []) == 5000
     assert VS.guadagno_sito({"margine": 5000, "acquisto": 20000}, 21000, None) is None          # prezzo cambiato
     assert VS.guadagno_sito({"margine": 5000, "sospetto_truffa": True}, 20000, None) is None
-    assert VS.guadagno_sito('{"margine": 4000}', 20000, None) == 4000
-    assert VS.guadagno_sito({}, 20000, None) is None
+    assert VS.guadagno_sito('{"margine": 4000}', 20000, []) == 4000
+    assert VS.guadagno_sito({}, 20000, []) is None
+    assert VS.guadagno_sito({"margine": 5000}, 20000, None) is None            # fattori non letti: niente guadagno
     r = {"m": 100000, "r": 99000, "n": 8, "costi": 0}
     assert VS.guadagno_supercar(r, 80000) == int(100000 * 0.92 * 0.95) - 80000
     assert VS.guadagno_supercar(dict(r, n=7), 80000) is None                                  # pochi confronti

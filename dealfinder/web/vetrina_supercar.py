@@ -629,6 +629,8 @@ def guadagno_sito(pv, prezzo_ora, fattori) -> int | None:
         if pv.get("acquisto") is not None and int(float(pv["acquisto"])) != int(float(prezzo_ora or 0)):
             return None
         marg = int(round(float(pv["margine"])))
+        if fattori is None and pv.get("calibrato") is None:
+            return None                     # fattori non letti: meglio "non stimato" che un guadagno gonfiato
         giu = 0
         if pv.get("calibrato") is None and fattori:
             from .. import regole as RG
@@ -663,8 +665,9 @@ def _leggi_mercati(conn, ids: list) -> dict:
     mercati: dict = {}
     try:
         fattori = FATTORI() if callable(FATTORI) else (FATTORI or [])
-    except Exception:
-        fattori = []
+    except Exception as e:                  # senza correzione chiesto -> venduto il guadagno sarebbe più alto: no
+        log.warning("VETRINA_SUPERCAR fattori di calibrazione non letti: %s", str(e)[:150])
+        fattori = None
     for q, giorni in MERCATO_SQL:
         try:
             _tempo_massimo(conn)                    # dopo un rollback il SET LOCAL di prima non vale più
