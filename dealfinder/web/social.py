@@ -144,26 +144,48 @@ def find_or_create(conn, provider: str, info: dict, name_hint: str | None = None
                                (d["email"],)).fetchone()
         return d, ("in_attesa" if pending else "disattivato")
     name = (info.get("name") or name_hint or info["email"].split("@")[0])[:120]
+    return crea_account(conn, name, info["email"], {col: info["sub"]}, provider,
+                        f"Iscritto con {provider.capitalize()}")
+
+
+def registrazione_attiva() -> bool:
+    """23/11: registrazione con email e password dal sito. Accesa di default; REGISTRAZIONE=0 la spegne."""
+    return os.environ.get("REGISTRAZIONE", "1").strip() != "0"
+
+
+def crea_account(conn, name: str, email: str, extra: dict, fonte: str, nota: str,
+                 richiesta: dict | None = None) -> tuple[dict, str]:
+    """Account nuovo di chi si iscrive da solo: UNA sola regola per Google/Apple e per la registrazione con password
+    (23/11). `extra` = colonne in più di dealers scritte dal codice (google_sub, password_hash, company, phone...),
+    mai nomi presi dalla richiesta. Ritorna (commerciante, esito): esito = ok | in_attesa.
+
+    ISCRIZIONE=pagamento: account attivo, richiede_abbonamento, permesso "auto", tutte le zone; le auto si vedono
+    dopo il pagamento. Altrimenti: attivo solo con ISCRIZIONE=aperta, se no resta in attesa con una riga in
+    access_requests (la vede l'amministratore)."""
+    cols = {"name": name[:120], "email": email, "role": "commerciante", **extra}
     if os.environ.get("ISCRIZIONE") == "pagamento":
         # iscrizione libera con abbonamento: l'account è attivo, le auto si vedono dopo il pagamento
         from ..zone import tutte
-        d = conn.execute(
-            f"""INSERT INTO dealers (name, email, role, active, {col}, richiede_abbonamento, permessi, provinces)
-                VALUES (%s,%s,'commerciante',true,%s,true,'{{auto}}',%s) RETURNING *""",
-            (name, info["email"], info["sub"], tutte())).fetchone()
-        conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s) ON CONFLICT DO NOTHING", (d["id"],))
-        conn.commit()
-        return d, "ok"
-    active = signup_open()
+        cols.update(active=True, richiede_abbonamento=True, permessi=["auto"], provinces=tutte())
+        if extra.get("password_hash"):
+            # abbonamento.puo_vedere lascia entrare senza abbonamento gli account con password (creati da noi dal
+            # gestionale): chi si registra da solo con la password deve pagare con carta come chi entra con Google
+            cols["paga_carta"] = True
+        esito = "ok"
+    else:
+        cols["active"] = signup_open()
+        esito = "ok" if cols["active"] else "in_attesa"
+    nomi = list(cols)
     d = conn.execute(
-        f"INSERT INTO dealers (name, email, role, active, {col}) VALUES (%s,%s,'commerciante',%s,%s) RETURNING *",
-        (name, info["email"], active, info["sub"])).fetchone()
+        f"INSERT INTO dealers ({', '.join(nomi)}) VALUES ({','.join(['%s'] * len(nomi))}) RETURNING *",
+        tuple(cols[k] for k in nomi)).fetchone()
     conn.execute("INSERT INTO dealer_costs (dealer_id) VALUES (%s) ON CONFLICT DO NOTHING", (d["id"],))
-    if not active:
-        conn.execute("INSERT INTO access_requests (name, email, note, source) VALUES (%s,%s,%s,%s)",
-                     (name, info["email"], f"Iscritto con {provider.capitalize()}", provider))
+    if esito == "in_attesa":
+        r = richiesta or {}
+        conn.execute("INSERT INTO access_requests (name, company, email, phone, note, source) VALUES (%s,%s,%s,%s,%s,%s)",
+                     (name[:120], r.get("company"), email, r.get("phone"), nota, fonte))
     conn.commit()
-    return d, ("ok" if active else "in_attesa")
+    return d, esito
 
 
 def one_time_code(dealer: dict, method: str = "google") -> str:

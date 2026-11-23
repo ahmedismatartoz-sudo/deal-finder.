@@ -212,6 +212,7 @@
 .hm-plan li::before{content:"";width:18px;height:18px;margin-top:3px;border-radius:50%;
   background:#2fbf71 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.3l2.6 2.5L12 5.5' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat}
 .hm-plan .hm-btn{width:100%}
+.hm-plan .hm-btn-google:not([hidden])+.hm-btn{margin-top:12px}
 .hm-plan .hm-btn-google{border-color:transparent}
 .hm-plan-fine{font-size:13px;color:#9fb0c8;margin-top:14px}
 @media (max-width:900px){.hm-price{grid-template-columns:1fr;gap:32px}.hm-plan{transform:none}}

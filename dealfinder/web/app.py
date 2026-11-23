@@ -38,8 +38,8 @@ FEEDBACK_STATUSES = {"scartata", "contattato", "trattativa", "comprata", "vendut
 
 
 class HTTPError(Exception):
-    def __init__(self, status: int, message: str):
-        self.status, self.message = status, message
+    def __init__(self, status: int, message: str, campo: str | None = None):
+        self.status, self.message, self.campo = status, message, campo     # campo: quale campo del modulo è sbagliato
 
 
 def err(status: int, message: str):
@@ -219,6 +219,139 @@ async def login(request: Request):
         _attempts["ip:" + ip].append(now)
         err(401, "Email o password non corretti")
     return jsonify(await run_in_threadpool(start_session, request, u, "password"))
+
+
+# ---------------------------------------------------------------------------
+# 23/11: registrazione con email e password (oltre a Google): l'utente si iscrive da solo e poi va al pagamento
+# ---------------------------------------------------------------------------
+REGISTRAZIONI_ORA = 5            # account nuovi per indirizzo IP in un'ora
+REGISTRAZIONI_PROVE_ORA = 20     # richieste arrivate al database per IP in un'ora (anche "email già registrata")
+_registrazioni_ip: dict[str, list[float]] = defaultdict(list)
+_EMAIL_RE = re.compile(r"^[a-z0-9._%+\-]+@[a-z0-9](?:[a-z0-9.\-]*[a-z0-9])?\.[a-z]{2,24}$")
+_MSG_GIA_REGISTRATA = "Questa email ha già un account: accedi"
+
+
+def _telefono_italiano(v: str) -> str | None:
+    """Cellulare (3xx) o fisso (0x) italiano, anche con +39 / 0039, spazi, punti, trattini. Ritorna +39... o None."""
+    t = re.sub(r"[\s.\-/()]", "", str(v or ""))
+    if t.startswith("+39"):
+        t = t[3:]
+    elif t.startswith("0039"):
+        t = t[4:]
+    if re.fullmatch(r"3[0-9]{8,9}", t) or re.fullmatch(r"0[0-9]{5,10}", t):
+        return "+39" + t
+    return None
+
+
+def _valida_registrazione(data: dict) -> dict:
+    """Controlli sul server (il sito fa gli stessi prima di inviare). Errore 400 con un messaggio chiaro e il campo."""
+    def testo(k):
+        v = data.get(k)
+        return " ".join(v.split()) if isinstance(v, str) else ""
+
+    def no(campo, msg):
+        raise HTTPError(400, msg, campo)
+    out = {}
+    for k, massimo, minimo, vuoto, lungo in (
+            ("nome", 120, 3, "Scrivi nome e cognome", "Nome e cognome troppo lungo (massimo 120 caratteri)"),
+            ("azienda", 120, 2, "Scrivi il nome del salone o dell'azienda", "Nome del salone troppo lungo (massimo 120 caratteri)"),
+            ("citta", 80, 2, "Scrivi la città o la provincia", "Città troppo lunga (massimo 80 caratteri)")):
+        v = testo(k)
+        if len(v) < minimo:
+            no(k, vuoto)
+        if len(v) > massimo:
+            no(k, lungo)
+        out[k] = v
+    tel_raw = data.get("telefono") if isinstance(data.get("telefono"), str) else ""
+    if not tel_raw.strip():
+        no("telefono", "Scrivi il numero di telefono")
+    tel = _telefono_italiano(tel_raw) if len(tel_raw) <= 30 else None
+    if not tel:
+        no("telefono", "Scrivi un numero di telefono italiano valido (cellulare o fisso)")
+    out["telefono"] = tel
+    email = str(data.get("email") or "").strip().lower() if isinstance(data.get("email"), str) else ""
+    if not email:
+        no("email", "Scrivi la tua email")
+    if len(email) > 200 or not _EMAIL_RE.match(email) or ".." in email:
+        no("email", "Scrivi un'email valida")
+    out["email"] = email
+    pwd, conferma = data.get("password"), data.get("conferma")
+    if not isinstance(pwd, str) or not pwd:
+        no("password", "Scegli una password")
+    if len(pwd) < 8:
+        no("password", "La password deve avere almeno 8 caratteri")
+    if len(pwd) > 200:
+        no("password", "Password troppo lunga (massimo 200 caratteri)")
+    if not re.search(r"[^\W\d_]", pwd) or not re.search(r"\d", pwd):
+        no("password", "La password deve avere almeno una lettera e un numero")
+    if not isinstance(conferma, str) or conferma != pwd:
+        no("conferma", "Le due password non sono uguali")
+    out["password"] = pwd
+    if data.get("consenso") is not True:
+        no("consenso", "Per registrarti devi accettare le condizioni d'uso e la privacy")
+    return out
+
+
+def _crea_registrato(v: dict) -> tuple[dict | None, str]:
+    """(commerciante, esito): esito = ok | in_attesa | esiste. L'account nasce come quello di chi entra con Google
+    (social.crea_account), con in più password, salone, telefono e città."""
+    with connect() as conn:
+        if conn.execute("SELECT 1 FROM dealers WHERE lower(email)=%s", (v["email"],)).fetchone():
+            return None, "esiste"
+        extra = {"password_hash": hash_password(v["password"]), "company": v["azienda"], "phone": v["telefono"]}
+        if abbonamento.ha_colonna(conn, "dealers", "citta"):          # migrazione 065 (se rimandata si entra lo stesso)
+            extra["citta"] = v["citta"]
+        if abbonamento.ha_colonna(conn, "dealers", "consenso_at"):
+            from datetime import datetime, timezone
+            extra["consenso_at"] = datetime.now(timezone.utc)
+        try:
+            return social.crea_account(conn, v["nome"], v["email"], extra, "registrazione",
+                                       "Registrato dal sito con email e password" + (" · " + v["citta"] if v["citta"] else ""),
+                                       {"company": v["azienda"], "phone": v["telefono"]})
+        except Exception as e:
+            # due richieste insieme con la stessa email: vince la prima (indice unico su dealers.email)
+            if getattr(e, "sqlstate", "") == "23505" or "unique" in str(e).lower() or "duplicate" in str(e).lower():
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                return None, "esiste"
+            raise
+
+
+async def registrati(request: Request):
+    """POST /api/auth/registrati: account nuovo con email e password, poi sessione aperta come dopo il login.
+    Nei log solo l'id e l'email mascherata: mai password, telefono o altri dati."""
+    if not social.registrazione_attiva():
+        err(403, "La registrazione dal sito non è attiva: entra con Google o chiedi di provare Scovo")
+    data = await body(request)
+    if not isinstance(data, dict):
+        err(400, "Richiesta non valida")
+    ip, now = client_ip(request), time.time()
+    k_ok, k_prove = "ok:" + ip, "prove:" + ip
+    for k in (k_ok, k_prove):
+        _registrazioni_ip[k] = [t for t in _registrazioni_ip[k] if now - t < 3600]
+    if len(_registrazioni_ip[k_ok]) >= REGISTRAZIONI_ORA or len(_registrazioni_ip[k_prove]) >= REGISTRAZIONI_PROVE_ORA:
+        err(429, "Troppe registrazioni da questa connessione: riprova tra un'ora")
+    if data.get("sito"):                      # campo nascosto: lo compilano solo i robot. Nessun account, nessun errore
+        return jsonify({"ok": True})
+    v = _valida_registrazione(data)
+    _registrazioni_ip[k_prove].append(now)
+    if len(_registrazioni_ip) > 5000:
+        for k in [k for k, ts in _registrazioni_ip.items() if not ts or now - ts[-1] > 3600]:
+            _registrazioni_ip.pop(k, None)
+    u, esito = await run_in_threadpool(_crea_registrato, v)
+    if esito == "esiste":
+        err(409, _MSG_GIA_REGISTRATA)
+    _registrazioni_ip[k_ok].append(now)
+    log.warning("REGISTRAZIONE ok id=%s email=%s", u["id"], _maschera_email(v["email"]))
+    if esito == "in_attesa":
+        return jsonify({"in_attesa": True, "messaggio": "Registrazione ricevuta. Attiviamo il tuo account entro un "
+                        "giorno lavorativo: poi entri con la tua email e la password che hai scelto."}, 202)
+    out = await run_in_threadpool(start_session, request, u, "password")
+    # stessa regola dell'elenco auto (abbonamento.puo_vedere): il sito apre subito la scelta del piano
+    paga = not abbonamento.puo_vedere({**u, "con_password": True})
+    return jsonify({**out, "richiede_abbonamento": paga}, 201)
 
 
 def me(request: Request):
@@ -640,7 +773,8 @@ def health(request: Request):
 # ---------------------------------------------------------------------------
 def auth_metodi(request: Request):
     from . import voce
-    return jsonify({**social.enabled(), "aperto": site_open(), "voce": voce.info(), "abbonamento": abbonamento.info()})
+    return jsonify({**social.enabled(), "registrazione": social.registrazione_attiva(), "aperto": site_open(),
+                    "voce": voce.info(), "abbonamento": abbonamento.info()})
 
 
 async def abbonamento_checkout(request: Request):
@@ -3138,7 +3272,10 @@ def seo_guida(request: Request):
 
 
 async def http_error(request: Request, exc: HTTPError):
-    return JSONResponse({"error": exc.message}, status_code=exc.status)
+    d = {"error": exc.message}
+    if getattr(exc, "campo", None):
+        d["campo"] = exc.campo
+    return JSONResponse(d, status_code=exc.status)
 
 
 async def server_error(request: Request, exc: Exception):
@@ -3253,6 +3390,7 @@ routes = [
     Route("/api/vetrina-foto", foto_vetrina),
     Route("/health", health),
     Route("/api/auth/login", login, methods=["POST"]),
+    Route("/api/auth/registrati", registrati, methods=["POST"]),
     Route("/api/auth/metodi", auth_metodi),
     Route("/api/abbonamento/checkout", abbonamento_checkout, methods=["POST"]),
     Route("/api/abbonamento/portale", abbonamento_portale, methods=["POST"]),

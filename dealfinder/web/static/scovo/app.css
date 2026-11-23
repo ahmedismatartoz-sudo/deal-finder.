@@ -1863,3 +1863,14 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 .k5-conto[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
 .k5-conto>.box{border-radius:0;box-shadow:none;background:none;border-top:1px solid var(--line)}
 .k5-tag{color:var(--ink)}
+
+/* 23/11: registrazione con email e password (schermata d'ingresso) */
+.auth .reg-vai{min-height:50px;font:var(--t-head);text-align:center;white-space:normal}
+.auth .reg-ok{display:flex;flex-direction:column;gap:6px}
+.auth .reg-chk{display:flex;align-items:flex-start;gap:12px;font:var(--t-sub);color:var(--ink-2);min-height:var(--tap);cursor:pointer}
+.auth .reg-chk input{flex:none;width:24px;height:24px;margin:1px 0 0;accent-color:var(--tag)}
+.auth .reg-chk a{color:var(--link);font-weight:600;text-decoration:none}
+.auth .field .hint{font-weight:400}
+.auth .field .err,.auth .reg-ok .err,.auth form>.err{font-weight:600}
+.auth .field input[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad) inset}
+.auth [data-err][hidden]{display:none}

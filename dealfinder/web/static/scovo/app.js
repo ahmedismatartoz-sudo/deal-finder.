@@ -74,7 +74,7 @@ const S = {
 };
 const V = {targa:"", km:"", note:"", cambio:"", foto:[], stato:"form", err:"", res:null};
 const R = {targa:"", pezzo:"", pezzi:[], stato:"form", err:"", res:null, aperti:{}};
-const L = {mode:"login", err:"", busy:false, sent:false, email:"", req:{}};
+const L = {mode:"login", err:"", busy:false, sent:false, email:"", req:{}, reg:{}, regSent:""};
 
 // Il token vive anche in un cookie, così le sezioni aperte come pagina (Incentivi) sanno chi sei.
 function syncCookie(){
@@ -1089,10 +1089,98 @@ function socialButtons(){
       ${m.apple ? `<a class="l-btn l-btn-apple" href="/auth/apple">${APPLE_SVG}Continua con Apple</a>` : ""}
     </div><div class="auth-or">oppure con email</div>`;
 }
+/* 23/11: registrazione con email e password (oltre a Google). Accesa se il server non dice il contrario. */
+const REG_ON = () => !(S.metodi && S.metodi.registrazione === false);
+const pwEye = id => `<button type="button" class="pw-eye" aria-label="Mostra o nascondi la password" aria-pressed="false" onclick="var i=document.getElementById('${id}'),s=i.type==='password';i.type=s?'text':'password';this.setAttribute('aria-pressed',s)">${ICON.eye}</button>`;
+const regErr = k => `<span class="err" role="alert" data-err="${k}" hidden></span>`;
+function viewRegistrati(top){
+  const v = L.reg || {};
+  if (L.regSent) return `<div class="auth">${top}
+    <div><h1>Registrazione ricevuta</h1></div>
+    <div class="note-box info" role="status">${esc(L.regSent)}</div>
+    <a class="l-btn l-btn-blue" href="#/entra">Vai all'accesso</a></div>`;
+  return `<div class="auth">${top}
+    <div><h1>Registrati</h1><p class="l-sub">Crea il tuo account: poi scegli il piano e paghi con carta su Stripe.</p></div>
+    ${socialButtons().replace("oppure con email", "oppure registrati con email")}
+    <form id="reg-form" novalidate>
+      <label class="field">Nome e cognome<input name="nome" autocomplete="name" autocapitalize="words" maxlength="120" required value="${esc(v.nome || "")}">${regErr("nome")}</label>
+      <label class="field">Nome del salone o dell'azienda<input name="azienda" autocomplete="organization" maxlength="120" required value="${esc(v.azienda || "")}">${regErr("azienda")}</label>
+      <label class="field">Telefono (cellulare o fisso)<input name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" required value="${esc(v.telefono || "")}">${regErr("telefono")}</label>
+      <label class="field">Città o provincia<input name="citta" autocomplete="address-level2" autocapitalize="words" maxlength="80" required value="${esc(v.citta || "")}">${regErr("citta")}</label>
+      <label class="field">Email<input name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200" required value="${esc(v.email || L.email || "")}">${regErr("email")}</label>
+      <label class="field">Password<span class="pw-wrap"><input name="password" id="r-pwd" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200" required>${pwEye("r-pwd")}</span><span class="hint">Almeno 8 caratteri, con una lettera e un numero.</span>${regErr("password")}</label>
+      <label class="field">Conferma password<span class="pw-wrap"><input name="conferma" id="r-pwd2" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200" required>${pwEye("r-pwd2")}</span>${regErr("conferma")}</label>
+      <label class="hp" aria-hidden="true">Sito<input name="sito" tabindex="-1" autocomplete="off"></label>
+      <div class="reg-ok"><label class="reg-chk"><input type="checkbox" name="consenso" value="1" ${v.consenso ? "checked" : ""}><span>Accetto le <a href="/condizioni" target="_blank" rel="noopener">condizioni d'uso</a> e l'informativa sulla <a href="/privacy" target="_blank" rel="noopener">privacy</a>.</span></label>${regErr("consenso")}</div>
+      ${regErr("generale")}
+      <button class="l-btn l-btn-blue" type="submit">Registrati e vai al pagamento</button>
+      <span class="hint">Il pagamento è gestito da Stripe: Scovo non vede né salva i dati della tua carta.</span>
+    </form>
+    <a class="l-link" href="#/entra">Hai già un account? Entra</a>
+    <nav class="foot" aria-label="Informazioni"><a href="/chi-siamo">Chi siamo</a><a href="/privacy">Privacy</a><a href="/condizioni">Condizioni d'uso</a></nav>
+  </div>`;
+}
+/* Stessi controlli del server (che li rifà sempre): [campo, messaggio] oppure null. */
+function regControlla(d){
+  const t = k => String(d[k] || "").trim().replace(/\s+/g, " ");
+  if (t("nome").length < 3) return ["nome", "Scrivi nome e cognome"];
+  if (t("azienda").length < 2) return ["azienda", "Scrivi il nome del salone o dell'azienda"];
+  const tel = String(d.telefono || "").replace(/[\s.\-/()]/g, "").replace(/^(\+39|0039)/, "");
+  if (!tel) return ["telefono", "Scrivi il numero di telefono"];
+  if (!/^(3[0-9]{8,9}|0[0-9]{5,10})$/.test(tel)) return ["telefono", "Scrivi un numero di telefono italiano valido (cellulare o fisso)"];
+  if (t("citta").length < 2) return ["citta", "Scrivi la città o la provincia"];
+  const em = t("email").toLowerCase();
+  if (!em) return ["email", "Scrivi la tua email"];
+  if (!/^[a-z0-9._%+\-]+@[a-z0-9]([a-z0-9.\-]*[a-z0-9])?\.[a-z]{2,24}$/.test(em) || em.includes("..")) return ["email", "Scrivi un'email valida"];
+  const p = String(d.password || "");
+  if (!p) return ["password", "Scegli una password"];
+  if (p.length < 8) return ["password", "La password deve avere almeno 8 caratteri"];
+  if (!/\p{L}/u.test(p) || !/[0-9]/.test(p)) return ["password", "La password deve avere almeno una lettera e un numero"];
+  if (String(d.conferma || "") !== p) return ["conferma", "Le due password non sono uguali"];
+  if (!d.consenso) return ["consenso", "Per registrarti devi accettare le condizioni d'uso e la privacy"];
+  return null;
+}
+/* Errori e attesa scritti nella pagina senza ridisegnare il modulo: le password scritte non si perdono. */
+function regMostra(f, campo, msg){
+  f.querySelectorAll("[data-err]").forEach(x => { x.hidden = true; x.textContent = ""; });
+  f.querySelectorAll("[aria-invalid]").forEach(x => x.removeAttribute("aria-invalid"));
+  if (!msg) return;
+  const box = f.querySelector(`[data-err="${campo}"]`) || f.querySelector('[data-err="generale"]');
+  box.textContent = msg; box.hidden = false;
+  const i = f.querySelector(`[name="${campo}"]`);
+  if (i) { i.setAttribute("aria-invalid", "true"); try { i.focus({preventScroll: true}); } catch (e) {} }
+  box.scrollIntoView({block: "center", behavior: "smooth"});
+}
+async function registrati(f, data){
+  if (L.busy) return;
+  L.reg = {nome: data.nome, azienda: data.azienda, telefono: data.telefono, citta: data.citta, email: data.email, consenso: !!data.consenso};
+  const no = regControlla(data);
+  if (no) return regMostra(f, no[0], no[1]);
+  regMostra(f);
+  const b = f.querySelector('button[type="submit"]'), testo = b.textContent;
+  L.busy = true; b.disabled = true; b.textContent = "Creo l'account…";
+  try {
+    const r = await api("/api/auth/registrati", {method: "POST", body: {nome: data.nome, azienda: data.azienda, telefono: data.telefono,
+      citta: data.citta, email: data.email, password: data.password, conferma: data.conferma, consenso: true, sito: data.sito || ""}});
+    L.busy = false;
+    if (r && r.in_attesa) { L.reg = {}; L.regSent = r.messaggio || "Registrazione ricevuta: ti scriviamo appena l'account è attivo."; return render({top:true}); }
+    if (!r || !r.token) { b.disabled = false; b.textContent = testo; return regMostra(f, "generale", "Registrazione non riuscita. Riprova tra poco."); }
+    L.reg = {}; L.err = "";
+    // come chi entra con Google la prima volta: si apre subito la scelta del piano, poi il pagamento su Stripe
+    if (r.richiede_abbonamento) S.paywall = true;
+    loggedIn(r);
+    toast(r.richiede_abbonamento ? "Account creato: scegli il piano" : "Account creato: benvenuto in Scovo!");
+  } catch (err) {
+    L.busy = false; b.disabled = false; b.textContent = testo;
+    if (err.status === 409) { L.email = String(data.email || "").trim(); }
+    regMostra(f, (err.data && err.data.campo) || (err.status === 409 ? "email" : "generale"), err.message);
+  }
+}
 function viewLogin(){
   const req = S.route === "prova";
   const esito = ESITI_ACCESSO[S.esitoAccesso || ""];
   const top = `<div class="auth-top"><a class="l-brand" href="#/">${LOGO(34)}<span>scovo</span></a><a class="l-link auth-back" href="#/" aria-label="Indietro, torna alla pagina iniziale">${ICON.back}Indietro</a></div>`;
+  if (S.route === "registrati" && REG_ON()) return viewRegistrati(top);
   if (req) return `<div class="auth">${top}
     <div><h1>Prova Scovo</h1><p class="l-sub">Lasciaci i tuoi dati: ti attiviamo l'accesso e ti spieghiamo come funziona.</p></div>
     ${L.sent ? `<div class="note-box info">Richiesta inviata. Ti contattiamo entro un giorno lavorativo.</div><a class="l-btn l-btn-blue" href="#/">Torna alla pagina iniziale</a>` : `
@@ -1119,7 +1207,7 @@ function viewLogin(){
       ${L.err ? `<span class="err" role="alert">${esc(L.err)}</span>` : ""}
       <button class="l-btn l-btn-blue" type="submit" ${L.busy ? "disabled" : ""}>${L.busy ? "Entro…" : "Entra"}</button>
     </form>
-    <a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a>
+    ${REG_ON() ? `<a class="l-btn l-btn-ghost reg-vai" href="#/registrati">Non hai un account? Registrati</a>` : `<a class="l-link" href="#/prova">Non hai un account? Chiedi di provare Scovo</a>`}
     <nav class="foot" aria-label="Informazioni"><a href="/chi-siamo">Chi siamo</a><a href="/privacy">Privacy</a><a href="/condizioni">Condizioni d'uso</a></nav>
   </div>`;
 }
@@ -1130,6 +1218,7 @@ async function onSubmit(e){
   const data = Object.fromEntries(new FormData(f).entries());
   if (data.email) L.email = data.email;
   if (f.id === "req-form") L.req = data;
+  if (f.id === "reg-form") return registrati(f, data);
   if (f.id === "login-form") {
     if (!data.email || !data.password) { L.err = "Scrivi email e password."; return render(); }
     L.busy = true; L.err = ""; render();
@@ -1175,6 +1264,7 @@ function parseHash(){
   const e = h.match(/^entra(?:\/([\w-]+))?$/);
   if (e) return {route: "entra", esito: e[1] || ""};
   if (h === "prova") return {route: "prova"};
+  if (h === "registrati") return {route: "registrati"};
   const pg = h.match(/^paga(?:\/(base|max|pro))?$/);   // 11/11: link diretto al pagamento (dopo l'accesso)
   if (pg) return {route: "paga", piano: pg[1] || "base"};
   const ab = h.match(/^abbonamento\/(ok|annullato)$/);
@@ -1214,11 +1304,11 @@ function applyRoute(){
     render({top:true}); loadCars(true); return;
   }
   if (r.route === "accesso") { history.replaceState(null, "", "#/entra"); S.route = "entra"; render({top:true}); redeemCode(r.code); return; }
-  if (S.token && ["entra","prova","vetrina"].includes(r.route)) { go("affari", true); return; }
+  if (S.token && ["entra","prova","registrati","vetrina"].includes(r.route)) { go("affari", true); return; }
   if (r.route === "entra") { S.esitoAccesso = r.esito; if (r.esito) history.replaceState(null, "", "#/entra"); }
   S.route = r.route; S.sel = r.sel; S.sheet = null; S.descOpen = false;
   if (S.route === "auto") { if (!canBrowse()) { go("entra", true); return; } loadDetail(S.sel); render({top:true}); }
-  else if (S.route === "entra" || S.route === "prova") render({top:true});
+  else if (S.route === "entra" || S.route === "prova" || S.route === "registrati") { if (S.route !== "registrati") L.regSent = ""; render({top:true}); }
   else render({y: S.scroll[S.route] || 0});
   if (isList(S.route) && canBrowse()) loadCars();
   if (S.route === "vendute" && canBrowse()) { loadVendute(); if (!S.cars) loadCars(); }
@@ -1760,7 +1850,7 @@ function render(opts){
   }
   if (land) land.hidden = true; $app.hidden = false;
   let html;
-  if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
+  if (!S.token && (!guest() || S.route === "entra" || S.route === "prova" || S.route === "registrati")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : S.route === "registrati" && REG_ON() ? "Registrati" : "Entra") + " · Scovo"; }
   else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
   else if (S.token && S.pagaStato && (isList(S.route) || S.route === "auto")) { html = viewPagamento(); }
   else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall(); }
@@ -2320,8 +2410,15 @@ S.metodi = {};
 api("/api/auth/metodi").then(m => {
   S.metodi = m || {};
   document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
-  document.querySelectorAll("[data-solo-senza-google]").forEach(a => { a.hidden = !!S.metodi.google; });
+  document.querySelectorAll("[data-solo-senza-google]").forEach(a => { a.hidden = !!S.metodi.google || REG_ON(); });
+  document.querySelectorAll("[data-registrazione]").forEach(a => { a.hidden = !REG_ON(); });
   if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
+  // il modulo di registrazione non si ridisegna se è già stato cominciato (le password scritte non si perdono)
+  if (!S.token && S.route === "registrati") {
+    const rf = document.getElementById("reg-form");
+    if (!REG_ON()) go("entra", true);
+    else if (!rf || ![...rf.querySelectorAll("input")].some(i => i.type === "checkbox" ? i.checked : i.value)) render({keep:true});
+  }
   if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|trattare|incidentate|economiche|supercar|vendute)$/.test(h) ? h : "affari", true); }
 }).catch(() => {});
 (function demo(){
