@@ -39,7 +39,7 @@ LIMITE_SPORTIVE = 2000
 LIMITE = LIMITE_SUPERCAR + LIMITE_SPORTIVE
 LEGGI_X = 2                     # candidate lette per intero per gruppo: fino a LEGGI_X volte il tetto del gruppo
 BLOCCO = 500                    # annunci letti per intero (con la descrizione) per volta
-CACHE_SECONDI = 600
+CACHE_SECONDI = 1800              # 23/11: la vetrina non sono affari; lettura lunga, non ogni 10 minuti
 TEMPO_QUERY = "20s"             # come l'elenco del sito: meglio un errore che il sito fermo
 TEMPO_CANDIDATE = "180s"        # 23/11: la lettura delle candidate (una sola query) in produzione supera i 20 s; gira
                                 # in un thread a parte (_carica_sotto), mai dentro la richiesta di una pagina
@@ -634,7 +634,8 @@ def avvia(connetti, scarti_ids=None) -> bool:
 def _carica_sotto(connetti, scarti_ids) -> None:
     """Nel thread: il lock è già preso da avvia() e si rilascia qui."""
     try:
-        _carica(connetti, scarti_ids)
+        if da_ricaricare():                             # un altro thread può averla appena ricaricata
+            _carica(connetti, scarti_ids)
     except Exception:
         pass                                            # già scritto nel log da _carica
     finally:
@@ -654,7 +655,7 @@ def _carica(connetti, scarti_ids=None) -> tuple[list[dict], int]:
             if _cache["items"] is None:
                 _errore[0] = time.time()
                 raise
-            _cache["t"] = time.time() - CACHE_SECONDI + 60        # si riprova tra un minuto
+            _cache["t"] = time.time() - CACHE_SECONDI + 900       # si riprova tra 15 minuti (DB già lento)
             return _cache["items"], _cache["totale"]
         totale = len(items) + int(numeri.get("oltre_il_tetto") or 0) + int(numeri.get("non_lette") or 0)
         _cache.update(t=time.time(), items=items, totale=totale)

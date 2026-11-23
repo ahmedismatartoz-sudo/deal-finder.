@@ -587,6 +587,7 @@ def test_rotta_prima_di_quella_con_slug():
 
 
 def test_cache_di_qualche_minuto(monkeypatch):
+    import time as _t
     letture = []
 
     def carica(conn, scarti=frozenset()):
@@ -596,21 +597,35 @@ def test_cache_di_qualche_minuto(monkeypatch):
     @contextmanager
     def connetti():
         yield object()
+
+    def aspetta():
+        for _i in range(300):
+            if not VS._cache_lock.locked():
+                return
+            _t.sleep(0.01)
     monkeypatch.setattr(VS, "carica", carica)
     monkeypatch.setattr(VS, "_cache", {"t": 0.0, "items": None, "totale": 0})
     monkeypatch.setattr(VS, "_errore", [0.0])
+    try:
+        VS.elenco(connetti, lambda: {5})
+    except VS.InCaricamento:
+        pass
+    aspetta()
     a = VS.elenco(connetti, lambda: {5})
     b = VS.elenco(connetti, lambda: {5})
     assert a == b and len(a[0]) == 2 and a[1] == 9 and letture == [{5}]          # la seconda dalla memoria
     VS._cache["t"] -= VS.CACHE_SECONDI + 1
     VS.elenco(connetti, lambda: {5})
-    assert len(letture) == 2 and 120 <= VS.CACHE_SECONDI <= 600
+    aspetta()
+    assert len(letture) == 2 and 600 <= VS.CACHE_SECONDI <= 3600
 
     def rotto(conn, scarti=frozenset()):
         raise RuntimeError("database fermo")
     monkeypatch.setattr(VS, "carica", rotto)
     VS._cache["t"] -= VS.CACHE_SECONDI + 1
     assert VS.elenco(connetti, None) == a                           # database fermo: resta l'elenco di prima
+    aspetta()
+    assert VS.elenco(connetti, None) == a and not VS.da_ricaricare()   # e non si riprova subito
 
 
 def test_vetrina_fuori_dalle_regole_e_dall_elenco():
