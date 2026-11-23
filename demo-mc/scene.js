@@ -4,10 +4,6 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
-import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
-import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
-import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {Reflector} from 'three/addons/objects/Reflector.js';
 
 const BASE='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/';
@@ -34,9 +30,10 @@ export async function createStage(canvas,o){
   o=o||{};const hero=o.mode!=='viewer',MOB=!!o.mobile;
   const r=new THREE.WebGLRenderer({canvas,antialias:!MOB,alpha:!hero,powerPreference:'high-performance'});
   r.setPixelRatio(Math.min(window.devicePixelRatio||1,MOB?1.25:2));
-  r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=hero?.95:1.05;
+  r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=hero?1.02:1.05;
   const s=new THREE.Scene();
-  if(hero){s.background=new THREE.Color(0x050506);s.fog=new THREE.Fog(0x050506,14,46)}
+  const BG=0xf1f1ef; // studio chiaro
+  if(hero){s.background=new THREE.Color(BG);s.fog=new THREE.Fog(BG,16,48)}
   const pm=new THREE.PMREMGenerator(r);s.environment=pm.fromScene(new RoomEnvironment(),.04).texture;
   const cam=new THREE.PerspectiveCamera(hero?(MOB?52:32):30,1,.1,200);
   const accent=new THREE.Color(o.accent||'#e1061b');
@@ -45,36 +42,36 @@ export async function createStage(canvas,o){
   /* ---------- studio ---------- */
   const strips=[];let rim=null,wall=null;
   if(hero){
-    if(!MOB){const rf=new Reflector(new THREE.PlaneGeometry(80,80),{textureWidth:Math.round(innerWidth*.6),textureHeight:Math.round(innerHeight*.6),color:0x8a8a8a});rf.rotation.x=-Math.PI/2;s.add(rf)}
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x0b0c0f,roughness:.32,metalness:.65,transparent:!MOB,opacity:MOB?1:.84}));
+    if(!MOB){const rf=new Reflector(new THREE.PlaneGeometry(80,80),{textureWidth:Math.round(innerWidth*.6),textureHeight:Math.round(innerHeight*.6),color:0xb8b8b6});rf.rotation.x=-Math.PI/2;s.add(rf)}
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0xf3f3f1,roughness:.55,metalness:0,transparent:!MOB,opacity:MOB?1:.8}));
     floor.rotation.x=-Math.PI/2;floor.position.y=.002;s.add(floor);
     // strisce di luce a soffitto: si accendono una dopo l'altra
-    for(let i=0;i<7;i++){const m=new THREE.MeshBasicMaterial({color:0x000000});const b=new THREE.Mesh(new THREE.BoxGeometry(15,.04,.2),m);b.position.set(0,6.4,7-i*2.6);s.add(b);strips.push(m)}
+    for(let i=0;i<7;i++){const m=new THREE.MeshBasicMaterial({color:0xd8d8d5});const b=new THREE.Mesh(new THREE.BoxGeometry(15,.04,.2),m);b.position.set(0,6.4,7-i*2.6);s.add(b);strips.push(m)}
     // parete di fondo con il marchio MC disegnato su canvas (nessun logo di terzi)
     const tex=()=>{const c=document.createElement('canvas');c.width=2048;c.height=768;const x=c.getContext('2d');
-      x.font='700 640px "Barlow Condensed","Arial Narrow",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#e9e9ea';x.fillText('MC',960,400);
+      x.font='700 640px "Barlow Condensed","Arial Narrow",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#d6d6d2';x.fillText('MC',960,400);
       x.save();x.translate(1560,400);x.transform(1,0,-.25,1,0,0);x.fillStyle='#'+accent.getHexString();x.fillRect(-45,-230,90,460);x.restore();
       const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t};
-    const back=new THREE.Mesh(new THREE.PlaneGeometry(44,10),new THREE.MeshStandardMaterial({color:0x0c0d10,roughness:.9}));back.position.set(0,5,-10);s.add(back);
-    wall=new THREE.Mesh(new THREE.PlaneGeometry(13,4.875),new THREE.MeshBasicMaterial({map:tex(),transparent:true,opacity:.5,depthWrite:false}));wall.position.set(0,3.5,-9.95);s.add(wall);
+    const back=new THREE.Mesh(new THREE.PlaneGeometry(44,10),new THREE.MeshBasicMaterial({color:BG,fog:false,toneMapped:false}));back.position.set(0,5,-10);s.add(back);
+    wall=new THREE.Mesh(new THREE.PlaneGeometry(13,4.875),new THREE.MeshBasicMaterial({map:tex(),transparent:true,opacity:.9,depthWrite:false,fog:false,toneMapped:false}));wall.position.set(0,3.5,-9.95);s.add(wall);
     wall.userData.redraw=()=>{wall.material.map.dispose();wall.material.map=tex();wall.material.needsUpdate=true};
     if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>wall&&wall.userData.redraw()).catch(()=>{});
     const neonM=new THREE.MeshBasicMaterial({color:accent.clone()});accMats.push(neonM);
     const neon=new THREE.Mesh(new THREE.BoxGeometry(16,.035,.035),neonM);neon.position.set(0,.9,-9.9);s.add(neon);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(3.7,.018,10,160),neonM);ring.rotation.x=Math.PI/2;ring.position.y=.012;s.add(ring);
-    for(const sx of[-1,1])for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.BoxGeometry(.4,7,.4),new THREE.MeshStandardMaterial({color:0x121317,roughness:.5,metalness:.4}));c.position.set(sx*10.5,3.5,-7+i*5);s.add(c);
+    for(const sx of[-1,1])for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.BoxGeometry(.4,7,.4),new THREE.MeshStandardMaterial({color:0xe4e4e1,roughness:.7,metalness:0}));c.position.set(sx*10.5,3.5,-7+i*5);s.add(c);
       const l=new THREE.Mesh(new THREE.BoxGeometry(.03,6,.03),new THREE.MeshBasicMaterial({color:0xffffff}));l.position.set(sx*(10.5-.22),3.5,-7+i*5);s.add(l)}
-    s.add(new THREE.HemisphereLight(0xffffff,0x111111,.22));
-    const key=new THREE.SpotLight(0xffffff,240,30,.55,.6);key.position.set(0,9,3);key.target.position.set(0,0,0);s.add(key,key.target);
-    rim=new THREE.PointLight(accent.clone(),45,14);s.add(rim);
+    s.add(new THREE.HemisphereLight(0xffffff,0xd8d8d4,1.15));
+    const key=new THREE.SpotLight(0xffffff,150,30,.6,.7);key.position.set(0,9,3);key.target.position.set(0,0,0);s.add(key,key.target);
+    rim=new THREE.PointLight(accent.clone(),6,10);s.add(rim);
     if(!MOB){const N=900,g=new THREE.BufferGeometry(),p=new Float32Array(N*3);for(let i=0;i<N;i++)p.set([(Math.random()-.5)*22,Math.random()*6,(Math.random()-.5)*20],i*3);
-      g.setAttribute('position',new THREE.BufferAttribute(p,3));const dust=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:.02,transparent:true,opacity:.3,depthWrite:false}));dust.name='dust';s.add(dust)}
+      g.setAttribute('position',new THREE.BufferAttribute(p,3));const dust=new THREE.Points(g,new THREE.PointsMaterial({color:0xb9b9b5,size:.016,transparent:true,opacity:.22,depthWrite:false}));dust.name='dust';s.add(dust)}
   }else{
-    const disc=new THREE.Mesh(new THREE.CircleGeometry(4.2,96),new THREE.MeshStandardMaterial({color:0x0c0d10,roughness:.3,metalness:.7}));disc.rotation.x=-Math.PI/2;s.add(disc);
+    const disc=new THREE.Mesh(new THREE.CircleGeometry(4.2,96),new THREE.MeshStandardMaterial({color:0xe9e9e6,roughness:.6,metalness:0}));disc.rotation.x=-Math.PI/2;s.add(disc);
     const ringM=new THREE.MeshBasicMaterial({color:accent.clone()});accMats.push(ringM);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(4.2,.02,10,160),ringM);ring.rotation.x=Math.PI/2;ring.position.y=.01;s.add(ring);
-    s.add(new THREE.HemisphereLight(0xffffff,0x222222,.5));
-    const key=new THREE.SpotLight(0xffffff,160,30,.6,.6);key.position.set(2,8,4);s.add(key,key.target);
+    s.add(new THREE.HemisphereLight(0xffffff,0xd8d8d4,1.1));
+    const key=new THREE.SpotLight(0xffffff,110,30,.6,.6);key.position.set(2,8,4);s.add(key,key.target);
   }
 
   /* ---------- auto ---------- */
@@ -107,7 +104,7 @@ export async function createStage(canvas,o){
   m.scale.setScalar(1.15);m.position.y=.01;car.add(m);
 
   /* ---------- post (solo desktop, solo hero) ---------- */
-  if(hero&&!MOB){comp=new EffectComposer(r);comp.addPass(new RenderPass(s,cam));bloom=new UnrealBloomPass(new THREE.Vector2(1,1),.38,.5,.86);comp.addPass(bloom);comp.addPass(new OutputPass())}
+  /* bloom tolto: sullo studio bianco bruciava i chiari. Si disegna diretto, con antialias nativo. */
   function dim(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);r.setSize(w,h,false);if(comp)comp.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
   dim();
   const ro='ResizeObserver' in window?new ResizeObserver(dim):null;ro&&ro.observe(canvas);
@@ -129,11 +126,11 @@ export async function createStage(canvas,o){
     const dt=Math.min(.05,(now-last)/1000||0);last=now;t+=dt;
     if(hero){
       qv+=(q-qv)*.08;const k=out3((t-.25)/3.4),portrait=cam.aspect<.8;
-      strips.forEach((mm,i)=>{const on=ss(.15+i*.22,.5+i*.22,t),fl=on<1&&on>0?(.6+.4*Math.sin(t*60+i)):1;mm.color.setScalar(on*fl)});
-      // l'auto entra dal buio, fari accesi, e si ferma al centro
+      strips.forEach((mm,i)=>{const on=ss(.15+i*.22,.5+i*.22,t),fl=on<1&&on>0?(.6+.4*Math.sin(t*60+i)):1;mm.color.setScalar(.84+.16*on*fl)});
+      // l'auto entra dal fondo dello studio, fari accesi, e si ferma al centro
       const z=L(-7,0,k);car.position.z=z;wheels.forEach(w=>w.rotation.x=-(z/.38)-qv*2);
       car.rotation.y=L(0,-.35,ss(.2,1,k));
-      lampL.intensity=lampR.intensity=L(160,18,ss(.7,1,k));
+      lampL.intensity=lampR.intensity=L(40,6,ss(.7,1,k));
       const a=.42+qv*Math.PI*1.8+mx*.22+Math.sin(t*.18)*.05;
       const wide=!portrait&&!MOB,rad=(L(11.5,wide?9.6:7.4,k)-Math.sin(qv*Math.PI)*(wide?2.4:.9)+ss(.72,1,qv)*2.6)*(portrait?1.42:1);
       C.set(Math.sin(a)*rad,L(.75,1.2,k)+ss(.62,1,qv)*4.4-my*.35,Math.cos(a)*rad);
@@ -161,7 +158,7 @@ export async function createStage(canvas,o){
     setScroll(v){q=Math.min(1,Math.max(0,v))},
     isRunning:()=>running,
     /* istantanee del modello per la galleria */
-    snapshots(n){const outp=[],bg=s.background,wasRun=running;s.background=new THREE.Color(0x0b0c0e);
+    snapshots(n){const outp=[],bg=s.background,wasRun=running;s.background=new THREE.Color(0xf1f1ef);
       try{for(let i=0;i<n;i++){const a=.7+i*(Math.PI*2/n),rad=cam.aspect<1?9.6:7.2;cam.position.set(Math.sin(a)*rad,i===1?3.4:1.5,Math.cos(a)*rad);cam.lookAt(0,.5,0);r.render(s,cam);outp.push(canvas.toDataURL('image/jpeg',.82))}}catch(e){}
       s.background=bg;if(wasRun)r.render(s,cam);return outp},
     dispose(){dead=true;stop();io&&io.disconnect();ro&&ro.disconnect();removeEventListener('resize',dim);removeEventListener('pointermove',onMove);document.removeEventListener('visibilitychange',onVis);progL.delete(o.onProgress);

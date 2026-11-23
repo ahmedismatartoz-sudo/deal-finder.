@@ -216,7 +216,7 @@ function viewRent(){const brands=[...new Set(CARS.map(c=>c.brand))];
     <label class="field"><span>${T('Marca','Brand')}</span>${sel('brand',brands.map(b=>[b,b]),T('Tutte','All'))}</label>
     <label class="field"><span>${T('Categoria','Category')}</span>${sel('cat',Object.keys(CATS).map(k=>[k,T(CATS[k].it,CATS[k].en)]),T('Tutte','All'))}</label>
     <label class="field"><span>${T('Alimentazione','Fuel')}</span>${sel('fuel',Object.keys(FUELS).map(k=>[k,T(FUELS[k].it,FUELS[k].en)]),T('Tutte','All'))}</label>
-    <label class="field"><span>${T('Prezzo massimo al giorno','Max price per day')}: <b id="rfMax" style="color:#fff">${eur(RF.max)}</b></span><input type="range" data-chg="rf" name="max" min="250" max="2000" step="50" value="${RF.max}"></label>
+    <label class="field"><span>${T('Prezzo massimo al giorno','Max price per day')}: <b id="rfMax" style="color:var(--text)">${eur(RF.max)}</b></span><input type="range" data-chg="rf" name="max" min="250" max="2000" step="50" value="${RF.max}"></label>
     <label class="check"><input type="checkbox" data-chg="rf" name="free" ${RF.free?'checked':''}><span>${T('Solo auto disponibili','Available cars only')}</span></label>
     <p class="xs dim">${T('Disponibilità dimostrativa: in produzione arriva dal calendario reale.','Demo availability: in production it comes from the live calendar.')}</p>
    </aside>

@@ -33,12 +33,12 @@ const fmtDs=d=>fmtD(d,{day:'numeric',month:'short'});
 
 /* ---------- accento ---------- */
 const ACCENTS=[
-  {id:'rosso',it:'Rosso corsa',en:'Racing red',c:'#e1061b',on:'#ffffff',hi:'#ff5a66'},
-  {id:'giallo',it:'Giallo Modena',en:'Modena yellow',c:'#ffd60a',on:'#111111',hi:'#ffd60a'},
-  {id:'blu',it:'Blu elettrico',en:'Electric blue',c:'#2563eb',on:'#ffffff',hi:'#7aa5ff'},
-  {id:'verde',it:'Verde inglese',en:'Racing green',c:'#0a7d45',on:'#ffffff',hi:'#3ddc84'},
-  {id:'arancio',it:'Arancio',en:'Orange',c:'#ff6b00',on:'#111111',hi:'#ff8a3d'},
-  {id:'argento',it:'Argento',en:'Silver',c:'#d7dadf',on:'#111111',hi:'#e6e8eb'}
+  {id:'rosso',it:'Rosso corsa',en:'Racing red',c:'#e1061b',on:'#ffffff',hi:'#c40517'},
+  {id:'giallo',it:'Giallo Modena',en:'Modena yellow',c:'#ffd60a',on:'#111111',hi:'#7a5f00'},
+  {id:'blu',it:'Blu elettrico',en:'Electric blue',c:'#2563eb',on:'#ffffff',hi:'#1d4ed8'},
+  {id:'verde',it:'Verde inglese',en:'Racing green',c:'#0a7d45',on:'#ffffff',hi:'#086a3a'},
+  {id:'arancio',it:'Arancio',en:'Orange',c:'#ff6b00',on:'#111111',hi:'#a84300'},
+  {id:'argento',it:'Argento',en:'Silver',c:'#9aa0a8',on:'#111111',hi:'#555a62'}
 ];
 function applyAccent(id){
   const a=ACCENTS.find(x=>x.id===id)||ACCENTS[0];store.set('accent',a.id);
@@ -120,11 +120,11 @@ function carSVG(car,o){o=o||{};const g=car.geo,S=SHAPE[car.id],G=350,hex=o.hex||
   <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a6675"/><stop offset=".42" stop-color="#11151b"/><stop offset=".6" stop-color="#0a0c10"/><stop offset="1" stop-color="#2a323c"/></linearGradient>
   <linearGradient id="${id}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3c6cc"/><stop offset="1" stop-color="#5d6067"/></linearGradient>
   <radialGradient id="${id}t"><stop offset=".7" stop-color="#17171a"/><stop offset=".9" stop-color="#0d0d0f"/><stop offset="1" stop-color="#050506"/></radialGradient>
-  <radialGradient id="${id}s"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset=".6" stop-color="#000" stop-opacity=".5"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  <radialGradient id="${id}s"><stop offset="0" stop-color="#14161a" stop-opacity=".5"/><stop offset=".55" stop-color="#14161a" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
   <linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".3" stop-color="#fff" stop-opacity=".5"/><stop offset=".8" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-  <ellipse cx="${(g.x0+g.x1)/2}" cy="${G+2}" rx="${(g.x1-g.x0)*.54}" ry="13" fill="url(#${id}s)"/>
+  <ellipse cx="${(g.x0+g.x1)/2}" cy="${G+2}" rx="${(g.x1-g.x0)*.54}" ry="15" fill="url(#${id}s)"/>
   <circle cx="${g.fw}" cy="${cy}" r="${ar+2}" fill="#050506"/><circle cx="${g.rw}" cy="${cy}" r="${ar+2}" fill="#050506"/>
-  <path d="${body}" fill="url(#${id}b)"/>
+  <path d="${body}" fill="url(#${id}b)" stroke="${lum>.6?'rgba(17,18,20,.34)':'rgba(17,18,20,.14)'}" stroke-width="1.4" stroke-linejoin="round"/>
   <path d="M${sx+6} ${S.nose+3}${S.top}" fill="none" stroke="url(#${id}h)" stroke-width="1.6" opacity="${dk?.55:.7}"/>
   <path d="${S.glass}" fill="url(#${id}g)"/>
   ${S.pil.map(x=>`<path d="M${x-3} ${ty+16}L${x+3} ${S.belt+2}" stroke="#0b0c0e" stroke-width="7"/>`).join('')}
@@ -135,7 +135,7 @@ function carSVG(car,o){o=o||{};const g=car.geo,S=SHAPE[car.id],G=350,hex=o.hex||
   <path d="M${g.x0+7} ${S.nose+36}L${g.x0+44} ${S.nose+30}L${g.x0+52} ${by-18}L${g.x0+12} ${by-13}Z" fill="#08080a"/>
   <path d="M${g.x1-5} ${by-46}L${g.x1-44} ${by-40}L${g.x1-48} ${by-12}L${g.x1-9} ${by-18}Z" fill="#0a0a0c" opacity=".85"/>
   <path d="M${g.x0+16} ${by-5}H${g.fw-dx-1}M${g.fw+dx+1} ${by-5}H${g.rw-dx-1}M${g.rw+dx+1} ${by-5}H${g.x1-26}" stroke="#09090b" stroke-width="10"/>
-  <path d="M${sx-14} ${S.nose+24}l62 -13l-6 9l-48 12z" fill="#eef4ff"/><path d="M${sx-14} ${S.nose+24}l62 -13" stroke="#fff" stroke-width="1.5"/>
+  <path d="M${sx-14} ${S.nose+24}l62 -13l-6 9l-48 12z" fill="#eef4ff" stroke="rgba(17,18,20,.35)" stroke-width="1"/>
   <path d="M${g.x1-3} ${S.tail+15}l-58 -5l2 8l54 8z" fill="#d81420"/><path d="M${g.x1-3} ${S.tail+15}l-58 -5" stroke="#ff6a70" stroke-width="1.2"/>
   ${wheel(g.fw)}${wheel(g.rw)}
   </svg>`}
