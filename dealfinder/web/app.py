@@ -2175,6 +2175,26 @@ def api_vendute(request: Request):
         return jsonify({"items": [], "errore": "non disponibile"})
 
 
+def api_vetrina_supercar(request: Request):
+    """23/11 (cliente: "supercar e sportive, tutte quelle della Lombardia"): VETRINA A PARTE, al prezzo dell'annuncio,
+    senza margine né stima (web/vetrina_supercar.py). Non passa da sito_regole né dall'elenco del sito: affari, tetti
+    dei commercianti, conteggio delle auto ed email automatiche restano come sono. Stesso accesso delle auto (chi non
+    paga non la vede); le auto di SOLO_ADMIN_IDS solo all'amministratore. Mai numeri di telefono."""
+    user = richiede(request, "auto")
+    from . import vetrina_supercar as _vs
+    try:
+        items, totale = _vs.elenco(connect, _scarti_cliente_ids)
+    except Exception as e:
+        logging.getLogger("scovo").warning("VETRINA_SUPERCAR errore: %s", str(e)[:300])
+        return jsonify({"items": [], "totale": 0, "errore": "non disponibile"})
+    if user.get("role") != "admin":
+        visibili = _per_clienti(items)
+        totale -= len(items) - len(visibili)
+        items = visibili
+    return jsonify({"items": items, "totale": max(totale, len(items)), "limite": _vs.LIMITE, "supercar_da": _vs.SUPERCAR_DA,
+                    "aggiornato": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+
+
 def affari(request: Request):
     user = viewer(request, "auto")
     items = [dict(scovo.con_netto(scovo.in_cima(scovo.prezzo_sito(it)))) for it in _elenco_per(user["id"], user.get("role") == "admin")]
@@ -3249,6 +3269,7 @@ from .vetrina import api_vetrina, foto_vetrina
 from . import admin_sito as _admin_sito  # noqa: E402
 
 routes = [
+    Route("/api/vetrina/supercar", api_vetrina_supercar),     # prima di /api/vetrina/{slug}
     Route("/api/vetrina/{slug}", api_vetrina),
     Route("/api/vetrina-foto", foto_vetrina),
     Route("/health", health),

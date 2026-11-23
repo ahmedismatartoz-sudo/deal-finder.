@@ -1863,3 +1863,22 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 .k5-conto[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
 .k5-conto>.box{border-radius:0;box-shadow:none;background:none;border-top:1px solid var(--line)}
 .k5-tag{color:var(--ink)}
+
+/* 23/11: vetrina a parte "Sportive e supercar in Lombardia" (#/supercar-lombardia): schede al prezzo dell'annuncio */
+.scl-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:6px}
+.scl-f .chip{min-height:40px;padding:0 14px}
+.scl-f .qsel select{min-height:40px;max-width:170px}
+.scl-f .chip.clear{background:transparent;color:var(--link);font-weight:600}
+.scl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--gut)}
+.scl-card{text-decoration:none;color:var(--ink);min-width:0}
+.scl-b{gap:8px}
+.scl-b .name{overflow-wrap:anywhere}
+.scl-v{font:500 15px/20px var(--body);color:var(--ink);overflow-wrap:anywhere;margin-top:2px}
+.scl-p{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.scl-p b{font:700 24px/28px var(--disp);letter-spacing:-.3px}
+.scl-p span{font:400 13px/18px var(--body);color:var(--muted)}
+.scl-chi{display:flex;flex-direction:column;gap:2px;font:400 14px/19px var(--body);color:var(--muted);overflow-wrap:anywhere}
+.scl-chi span:first-child{color:var(--ink);font-weight:500}
+.scl-go{display:inline-flex;align-items:center;gap:4px;min-height:var(--tap);font:600 15px/20px var(--body);color:var(--link)}
+.scl-go svg{width:16px;height:16px}
+.scl-piu{width:100%}

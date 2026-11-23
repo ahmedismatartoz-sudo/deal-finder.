@@ -49,6 +49,7 @@ const TABS = [["affari","Affari",'<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
               ["economiche","Sotto 3000",'<path d="M4 7h16v10H4z"/><circle cx="12" cy="12" r="2.5"/><path d="M7 10v4M17 10v4"/>'],
               ["vendute","Vendute",'<path d="M20 6 9 17l-5-5"/>'],
               ["supercar","Supercar",'<path d="M2 15l2-4c1-2 3-3 5-3h5c2 0 4 1 5.5 3L21 13c.6.2 1 .8 1 1.4V16a1 1 0 0 1-1 1h-1"/><path d="M4 17H3a1 1 0 0 1-1-1v-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/>'],
+              ["supercar-lombardia","Supercar Lombardia",'<path d="M3 16l1.5-4.5C5.2 9.6 6.9 8.5 8.8 8.5h4.6c1.8 0 3.5.8 4.7 2.2L20 13c.9.3 1.5 1.1 1.5 2v1"/><circle cx="7.5" cy="16.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/><path d="M9.5 16.5h5M12 3l.9 1.9 2.1.3-1.5 1.5.4 2.1L12 7.8l-1.9 1 .4-2.1L9 5.2l2.1-.3z"/>'],
               ["profilo","Profilo",'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']];
 const BANDS = [
   {id:"tutti", label:"Tutti i prezzi", min:null, max:null},
@@ -382,7 +383,7 @@ function viewList(){
   const incV = S.route === "incidentate", ecoV = S.route === "economiche", scV = S.route === "supercar", trV = S.route === "trattare";
   const ac = activeChips();
   const SORTS = [["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
-  const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar"].includes(id) && tabOk(id));
+  const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar",SCL].includes(id) && tabOk(id));
   const fbar = `<button class="search-pill" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.search}<span class="sp-t">Marca, modello, prezzo, km…</span><span class="sp-f">${nf ? `<span class="count-pill">${nf}</span>` : ICON.sliders}</span></button>
     <div class="ctl-row">${SEZ.length > 1 ? `<nav class="cats" aria-label="Sezioni">${SEZ.map(([id,l,p]) => `<button class="cat" data-act="tab" data-v="${id}" aria-current="${S.route === id ? "page" : "false"}"><span class="cat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg></span><span class="cat-l">${l}</span></button>`).join("")}</nav>` : ""}
     <div class="qf" role="group" aria-label="Ordinamento e filtri veloci">
@@ -433,6 +434,72 @@ function viewVendute(){
   <main class="list" aria-live="polite">
     <div class="tip inc-tip"><span class="eur" aria-hidden="true">✓</span><span><b>Affari trovati da Skovo negli ultimi ${(v && v.giorni) || 7} giorni e già spariti dagli annunci.</b> Auto di privati della zona con il margine minimo del sito. Quasi sempre vuol dire vendute: qualcuno le ha prese prima. Prezzo, mercato e margine sono quelli calcolati quando l'auto era online. Contatti e annunci non sono più disponibili.</span></div>
     ${!v ? `<div class="empty"><span class="meta">Carico le auto vendute…</span></div>` : l.length ? cards : `<div class="empty"><strong style="font:700 19px var(--disp)">Nessuna auto in questo momento</strong><span class="meta">${esc(v.errore || "Riprova più tardi.")}</span></div>`}
+  </main>`;
+}
+
+/* ---------- 23/11: vetrina a parte "Sportive e supercar in Lombardia" ----------
+   Annunci di privati e commercianti al prezzo del venditore: niente margine, niente stima. Il contatto passa dal link
+   all'annuncio originale (nessun numero nel sito). Dati da /api/vetrina/supercar, separati dall'elenco degli affari. */
+const SCL_PASSO = 60;
+const SCL_PREZZI = [10000, 20000, 30000, 50000, 70000, 100000, 150000, 250000];
+S.sclF = {marca: "", vend: "", pmin: "", pmax: "", gruppo: ""}; S.sclN = SCL_PASSO;
+async function loadScl(force){
+  if (S.sclLoading || (!force && S.scl && !S.scl.errore && Date.now() - S.scl._t < 5 * 60 * 1000)) return;
+  S.sclLoading = true; if (S.route === SCL) render({keep:true});
+  try { S.scl = Object.assign(await api("/api/vetrina/supercar"), {_t: Date.now()}); }
+  catch (e) { S.scl = {items: [], errore: e.message, _t: Date.now()}; }
+  S.sclLoading = false;
+  if (S.route === SCL) render({keep:true});
+}
+function sclFiltrate(senzaMarca){
+  const f = S.sclF, l = (S.scl && S.scl.items) || [];
+  return l.filter(c => (senzaMarca || !f.marca || c.marca === f.marca) && (!f.vend || c.venditore === f.vend)
+    && (!f.gruppo || (f.gruppo === "supercar") === !!c.supercar)
+    && (f.pmin === "" || c.prezzo >= Number(f.pmin)) && (f.pmax === "" || c.prezzo <= Number(f.pmax)));
+}
+function sclCard(c, i){
+  const riga = [c.anno, c.km != null ? num(c.km) + " km" : "", c.carb, c.cambio].filter(Boolean).join(" · ");
+  const dove = [c.citta, c.provincia ? "(" + c.provincia + ")" : ""].filter(Boolean).join(" ");
+  const chi = c.venditore === "commerciante" ? (c.salone || "Commerciante") : "Privato";
+  const giorni = c.giorni == null ? "" : c.giorni === 0 ? "In vendita da oggi" : c.giorni === 1 ? "In vendita da 1 giorno" : `In vendita da ${c.giorni} giorni`;
+  const titolo = [c.marca, c.modello].filter(Boolean).join(" ") || c.nome || "Auto";
+  const dentro = `<div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome || titolo, i < 2)}<span class="badge">${c.venditore === "commerciante" ? "Commerciante" : "Privato"}</span></div>
+      <div class="card-body scl-b">
+        <div><div class="name">${esc(titolo)}</div>${c.versione ? `<div class="scl-v">${esc(c.versione)}</div>` : ""}<div class="meta">${esc(riga)}</div></div>
+        <div class="scl-p"><b>${eur(c.prezzo)}</b><span>prezzo dell'annuncio</span></div>
+        <div class="scl-chi"><span>${esc(chi)}${dove ? " · " + esc(dove) : ""}</span>${giorni ? `<span>${giorni}</span>` : ""}</div>
+        ${c.url ? `<span class="scl-go">Vedi l'annuncio${c.fonte ? " su " + esc(c.fonte) : ""} ${ICON.next}</span>` : ""}
+      </div>`;
+  return c.url && /^https?:\/\//i.test(c.url)
+    ? `<a class="card scl-card" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(titolo)}, ${eur(c.prezzo)}, apre l'annuncio originale">${dentro}</a>`
+    : `<div class="card scl-card">${dentro}</div>`;
+}
+function viewScl(){
+  const v = S.scl, f = S.sclF, tutte = (v && v.items) || [], l = sclFiltrate(), n = Math.min(l.length, S.sclN || SCL_PASSO);
+  const perMarca = {}; sclFiltrate(true).forEach(c => perMarca[c.marca] = (perMarca[c.marca] || 0) + 1);
+  const marche = Object.keys(perMarca).sort((a, b) => a.localeCompare(b, "it"));
+  const attivi = !!(f.marca || f.vend || f.pmin !== "" || f.pmax !== "" || f.gruppo);
+  const sub = !v ? "Carico…" : v.errore ? "Non riesco a caricare le auto" : attivi ? `${num(l.length)} di ${num(tutte.length)} auto` : `${num(tutte.length)} auto${v.totale > tutte.length ? " (le più care di " + num(v.totale) + ")" : ""}`;
+  const chip = (act, val, cur, txt) => `<button class="chip" data-act="${act}" data-v="${val}" aria-pressed="${cur === val}">${txt}</button>`;
+  const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar",SCL].includes(id) && tabOk(id));
+  const right = `<div class="top-act"><button class="refresh${S.sclLoading ? " spinning" : ""}" data-act="scl-reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>${avatarBtn()}</div>`;
+  const filtri = `<div class="ctl-row">${SEZ.length > 1 ? `<nav class="cats" aria-label="Sezioni">${SEZ.map(([id,lb,p]) => `<button class="cat" data-act="tab" data-v="${id}" aria-current="${S.route === id ? "page" : "false"}"><span class="cat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg></span><span class="cat-l">${lb}</span></button>`).join("")}</nav>` : ""}
+</div>
+    <div class="scl-f" role="group" aria-label="Filtri">
+      ${chip("scl-gruppo", "supercar", f.gruppo, "Supercar")}${chip("scl-gruppo", "sportive", f.gruppo, "Sportive")}
+      <label class="qsel ${f.marca ? "on" : ""}"><span class="sr">Marca</span><select id="scl-marca">${opts(marche.map(m => [m, m + " (" + perMarca[m] + ")"]), f.marca, "Marca")}</select></label>
+      ${chip("scl-vend", "privato", f.vend, "Privati")}${chip("scl-vend", "commerciante", f.vend, "Commercianti")}
+      <label class="qsel ${f.pmin !== "" ? "on" : ""}"><span class="sr">Prezzo minimo</span><select id="scl-pmin">${opts(SCL_PREZZI.map(x => [x, "Da " + num(x) + " €"]), f.pmin, "Prezzo da")}</select></label>
+      <label class="qsel ${f.pmax !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="scl-pmax">${opts(SCL_PREZZI.map(x => [x, "Fino a " + num(x) + " €"]), f.pmax, "Prezzo fino a")}</select></label>
+      ${attivi ? `<button class="chip clear" data-act="scl-reset">Azzera</button>` : ""}
+    </div>`;
+  const vuoto = !v ? `<div class="empty"><span class="meta">Carico le auto…</span></div>`
+    : v.errore ? `<div class="empty"><strong style="font:700 19px var(--disp)">${esc(v.errore === "non disponibile" ? "Elenco non disponibile in questo momento" : v.errore)}</strong><button class="btn" data-act="scl-reload">Riprova</button></div>`
+    : `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${tutte.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>${tutte.length ? `<button class="btn" data-act="scl-reset">Togli i filtri</button>` : `<button class="btn" data-act="scl-reload">Aggiorna</button>`}</div>`;
+  return header("Sportive e supercar in Lombardia", sub, right, "Scovo") + `${filtri}</header>
+  <main class="list" aria-live="polite">
+    <div class="tip inc-tip"><span class="eur" aria-hidden="true">★</span><span>Tutte le sportive e supercar in vendita in Lombardia, a prezzo d'annuncio. Non sono affari valutati: il prezzo è quello del venditore.</span></div>
+    ${l.length ? `<div class="scl-grid">${l.slice(0, n).map(sclCard).join("")}</div>${l.length > n ? `<button class="btn scl-piu" data-act="scl-piu">Mostra altre ${Math.min(SCL_PASSO, l.length - n)} (${num(l.length - n)} rimaste)</button>` : ""}` : vuoto}
   </main>`;
 }
 
@@ -1166,6 +1233,9 @@ function logout(silent){
 
 /* ---------- navigazione (il tasto indietro del telefono funziona) ---------- */
 const isList = r => r === "affari" || r === "trattare" || r === "incidentate" || r === "economiche" || r === "supercar";
+/* 23/11: vetrina a parte "Sportive e supercar in Lombardia" (#/supercar-lombardia): annunci al prezzo del venditore, non affari */
+const SCL = "supercar-lombardia";
+const conAbbonamento = r => isList(r) || r === "auto" || r === SCL;
 function parseHash(){
   const h = location.hash.replace(/^#\/?/, "");
   const m = h.match(/^auto\/(\d+)$/);
@@ -1181,7 +1251,7 @@ function parseHash(){
   if (ab) return {route: "abbonamento", esito: ab[1]};
   if (!canBrowse()) return {route: "vetrina"};
   if (h === "ricambi") { location.replace("/incentivi/"); }
-  return {route: ["vendi","profilo","trattare","incidentate","economiche","supercar","vendute"].includes(h) ? h : "affari", sel: null};
+  return {route: ["vendi","profilo","trattare","incidentate","economiche","supercar","vendute",SCL].includes(h) ? h : "affari", sel: null};
 }
 function go(route, replace){
   const h = "#/" + route;
@@ -1222,6 +1292,7 @@ function applyRoute(){
   else render({y: S.scroll[S.route] || 0});
   if (isList(S.route) && canBrowse()) loadCars();
   if (S.route === "vendute" && canBrowse()) { loadVendute(); if (!S.cars) loadCars(); }
+  if (S.route === SCL && S.token) loadScl();
 }
 window.addEventListener("popstate", () => { if (S.sheet === "cerca") cmSpegni(); if (S.sheet) { S.sheet = null; } applyRoute(); });
 
@@ -1728,7 +1799,7 @@ async function cmInvia(){
   } catch (e) { CM.err = e.message || "Invio non riuscito: riprova"; }
   CM.busy = false; cmPaint();
 }
-const ALTRE = ["incidentate","economiche","supercar"];
+const ALTRE = ["incidentate","economiche","supercar","supercar-lombardia"];
 function tabBar(){
   const cur = S.route === "auto" ? (S.fromInc || "affari") : S.route;
   const ok = TABS.filter(([id]) => tabOk(id)), altre = ok.filter(([id]) => ALTRE.includes(id));
@@ -1761,16 +1832,16 @@ function render(opts){
   if (land) land.hidden = true; $app.hidden = false;
   let html;
   if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
-  else if (guest() && ["vendi","ricambi","profilo"].includes(S.route)) { html = viewGuestLock() + tabBar(); }
-  else if (S.token && S.pagaStato && (isList(S.route) || S.route === "auto")) { html = viewPagamento(); }
-  else if (S.paywall && S.token && (isList(S.route) || S.route === "auto")) { html = viewPaywall(); }
+  else if (guest() && ["vendi","ricambi","profilo",SCL].includes(S.route)) { html = viewGuestLock() + tabBar(); }
+  else if (S.token && S.pagaStato && conAbbonamento(S.route)) { html = viewPagamento(); }
+  else if (S.paywall && S.token && conAbbonamento(S.route)) { html = viewPaywall(); }
   else if (S.route === "auto") { html = viewDetail(); }
-  else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : viewList()) + tabBar();
+  else html = (S.route === "vendi" ? viewVendi() : S.route === "ricambi" ? viewRicambi() : S.route === "profilo" ? viewProfilo() : S.route === "vendute" ? viewVendute() : S.route === SCL ? viewScl() : viewList()) + tabBar();
   if (canBrowse()) {
     if ((isList(S.route) || S.route === "vendute") && !S.sheet && !VC.on && !S.paywall) html += cmFab();     // 9/11: "Chiedi" = Cercamela (piano Max)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
     html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : S.sheet === "altro" ? sheetAltro() : "";
-    const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", trattare:"Da trattare", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
+    const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", trattare:"Da trattare", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", "supercar-lombardia":"Sportive e supercar in Lombardia", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
   if (S.sheet && S.sheet === FX.sheet) html = html.replace('class="sheet-wrap', 'class="sheet-wrap still');
@@ -2161,6 +2232,11 @@ $app.addEventListener("click", e => {
     case "open": S.full = null; if (VC.on) vcEnd(); S.fromList = true; S.fromInc = S.route === "affari" ? null : S.route; go("auto/" + v); return;
     case "back": S.full = null; if (S.fromList && S.route === "auto") { S.fromList = false; history.back(); } else go(S.fromInc || "affari", true); return;
     case "reload": loadCars(true); return;
+    case "scl-reload": loadScl(true); return;
+    case "scl-piu": S.sclN = (S.sclN || SCL_PASSO) + SCL_PASSO; break;
+    case "scl-gruppo": S.sclF.gruppo = S.sclF.gruppo === v ? "" : v; S.sclN = SCL_PASSO; break;
+    case "scl-vend": S.sclF.vend = S.sclF.vend === v ? "" : v; S.sclN = SCL_PASSO; break;
+    case "scl-reset": S.sclF = {marca: "", vend: "", pmin: "", pmax: "", gruppo: ""}; S.sclN = SCL_PASSO; break;
     case "foto-full": S.full = Number(v) || 0; document.body.style.overflow = "hidden"; break;
     case "foto-chiudi": S.full = null; break;
     case "foto-vai": { const lb = document.getElementById("lbs"), k = lb && lb.children[Number(v)]; if (k) lb.scrollTo({left: k.offsetLeft - (lb.clientWidth - k.clientWidth) / 2, behavior: calmo() ? "auto" : "smooth"}); return; }
@@ -2280,6 +2356,12 @@ $app.addEventListener("change", e => {
   render({keep: true});
   const sb2 = document.querySelector(".sheet-body"); if (sb2) sb2.scrollTop = sy;
 });
+$app.addEventListener("change", e => {
+  const k = {"scl-marca": "marca", "scl-pmin": "pmin", "scl-pmax": "pmax"}[e.target.id];
+  if (!k) return;
+  S.sclF[k] = e.target.value; S.sclN = SCL_PASSO;
+  render({keep: true});
+});
 $app.addEventListener("change", async e => {
   if (e.target.id !== "v-foto") return;
   const files = [...e.target.files].slice(0, 6 - V.foto.length);
@@ -2322,7 +2404,7 @@ api("/api/auth/metodi").then(m => {
   document.querySelectorAll("[data-social]").forEach(a => { a.hidden = !S.metodi[a.dataset.social]; });
   document.querySelectorAll("[data-solo-senza-google]").forEach(a => { a.hidden = !!S.metodi.google; });
   if (!S.token && (S.route === "entra" || S.route === "prova")) render({keep:true});
-  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|trattare|incidentate|economiche|supercar|vendute)$/.test(h) ? h : "affari", true); }
+  if (guest() && S.route === "vetrina") { const h = location.hash.replace(/^#\/?/, ""); go(/^(auto\/\d+|vendi|ricambi|profilo|trattare|incidentate|economiche|supercar|supercar-lombardia|vendute)$/.test(h) ? h : "affari", true); }
 }).catch(() => {});
 (function demo(){
   const card = document.getElementById("demo"), r = document.getElementById("sconto-demo");
