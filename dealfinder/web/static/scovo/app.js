@@ -69,7 +69,7 @@ const S = {
   raggio: saved.raggio || 0, centro: saved.centro || "milano", modello: saved.modello || "",
   kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
   pos: store.get("pos", null),
-  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "guadagno",   /* si entra SEMPRE con l'ordine per guadagno in percentuale sul prezzo, dalla più alta */
+  sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "novita",   /* 24/11 (cliente): si entra SEMPRE con le auto più nuove in cima; "Più guadagno %" resta tra gli ordinamenti */
   cars: null, costs: 200, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
 };
@@ -174,7 +174,46 @@ const gruppoMarca = c => { const m = String(c.marca || c.nome || "").toLowerCase
 const perPct = (a, b) => (gruppoMarca(a) - gruppoMarca(b)) || (rendePct(b) - rendePct(a)) || (b.gainMax - a.gainMax);
 /* 4/11 pom. (cliente): supercar, prima gli affari col prezzo migliore rispetto al mercato */
 const scontoM = c => c.pv && c.pv.M ? (c.pv.M - c.prezzo) / c.pv.M : -1;
+/* ORDINE-NOVITA inizio
+   24/11 (cliente): di base in cima le auto più NUOVE (annuncio online da meno tempo: visto_dal, altrimenti l'arrivo sul
+   sito), a fasce: ultime 2 ore, oggi, ieri, ultimi 7 giorni, più vecchie. Dentro ogni fascia l'ordine è mescolato con un
+   seme "chi guarda + ora": cambia a ogni ora e da un commerciante all'altro, ma è lo stesso finché l'ora non cambia
+   (scorrere, aprire una scheda e tornare, cambiare filtro non spostano le auto). La posizione dipende solo da seme e id
+   dell'auto, non dall'ordine in arrivo né da quante auto sono in elenco. Cambia solo l'ordine, mai quali auto si vedono. */
+const ORA_MS = 3600000;
+function hashOrdine(t){ let h = 2166136261; t = String(t);
+  for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13; h = Math.imul(h, 3266489909); h ^= h >>> 16;
+  return h >>> 0; }
+const dataNovita = c => { const t = Date.parse(c.visto_dal || c.nuova || ""); return isNaN(t) ? null : t; };
+function fasciaNovita(c, ora){
+  const t = dataNovita(c); if (t == null) return 4;
+  const h = Math.floor(ora / ORA_MS) * ORA_MS;                     // inizio dell'ora: le fasce non si muovono dentro l'ora
+  if (t >= h - 2 * ORA_MS) return 0;
+  const g = new Date(h); g.setHours(0, 0, 0, 0); const oggi = g.getTime();
+  return t >= oggi ? 1 : t >= oggi - 24 * ORA_MS ? 2 : t >= oggi - 7 * 24 * ORA_MS ? 3 : 4;
+}
+const semeNovita = (chi, ora) => String(chi || "") + ":" + Math.floor(ora / ORA_MS);
+function ordinaNovita(arr, chi, ora){
+  const seme = semeNovita(chi, ora);
+  return arr.map(c => [fasciaNovita(c, ora), hashOrdine(seme + ":" + c.id), c])
+    .sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]) || (String(a[2].id) < String(b[2].id) ? -1 : 1))
+    .map(x => Object.assign(x[2], {_grp: "n" + x[0]}));
+}
+/* ORDINE-NOVITA fine */
+/* chi guarda: il commerciante entrato, altrimenti un codice a caso tenuto nel telefono (ospite) */
+function chiOrdine(){
+  if (S.user && (S.user.id != null || S.user.email)) return "u" + (S.user.id != null ? S.user.id : S.user.email);
+  if (!S.ordChi) { S.ordChi = store.get("ordChi", null) || (Math.random().toString(36).slice(2) + Date.now().toString(36)); store.set("ordChi", S.ordChi); }
+  return "o" + S.ordChi;
+}
 function ordinaLista(s, arr){
+  if (s.sort === "novita") {
+    // le scelte a mano (data/vetrina.json) restano in cima come con "Più guadagno %"; tutte le altre per novità
+    const ora = S.ordT || Date.now();
+    const vet = arr.filter(c => c.vetrina != null).sort((a, b) => a.vetrina - b.vetrina).map(c => Object.assign(c, {_grp: "top"}));
+    return vet.concat(ordinaNovita(arr.filter(c => c.vetrina == null), chiOrdine(), ora));
+  }
   if (s.sc && s.sort === "guadagno") return arr.slice().sort((a, b) => scontoM(b) - scontoM(a)).map(c => Object.assign(c, {_grp: "all"}));
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
@@ -279,7 +318,7 @@ async function loadCars(force){
   S.loading = true; S.loadErr = ""; if (isList(S.route)) render({keep:true});
   try {
     const d = await api("/api/affari");
-    S.cars = d.items || []; S.sclTot = d.supercar_lombardia != null ? d.supercar_lombardia : null; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now(); S.policy = d.policy || null;
+    S.cars = d.items || []; S.sclTot = d.supercar_lombardia != null ? d.supercar_lombardia : null; S.vetrinaTitolo = d.vetrina_titolo || null; S.loadedAt = Date.now(); S.ordT = S.loadedAt; S.policy = d.policy || null;
     if (d.soglie) S.soglie = d.soglie;
     if (d.costi_fissi) S.costs = Object.values(d.costi_fissi).reduce((a,b) => a + b, 0);
     const known = new Set(S.cars.map(c => c.marca)); S.brands = S.brands.filter(b => known.has(b));
@@ -373,8 +412,9 @@ function viewList(){
   const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const zoneBar = `<div class="zona-box" role="group" aria-label="Zona">${zoneList().map(([k,l]) =>
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
-  const TIT = {all: "Margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)"};
-  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? (c._grp === "all" ? `<h2 class="sr">Tutte le auto, ${TIT.all.toLowerCase()}</h2>` : `<h2 class="sec-h"><b>${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</b></h2>`) : ""}
+  const TIT = {all: "Margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)",
+    n0: "Appena arrivate · ultime 2 ore", n1: "Di oggi", n2: "Di ieri", n3: "Degli ultimi 7 giorni", n4: "Le altre"};
+  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || S.sort === "novita" || c._grp === "care") && list.length > 1 ? (c._grp === "all" ? `<h2 class="sr">Tutte le auto, ${TIT.all.toLowerCase()}</h2>` : `<h2 class="sec-h"><b>${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</b></h2>`) : ""}
     ${carCard(c, i)}`).join("");
   const empty = `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
@@ -382,7 +422,7 @@ function viewList(){
   const right = `<div class="top-act"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>${avatarBtn()}</div>`;
   const incV = S.route === "incidentate", ecoV = S.route === "economiche", scV = S.route === "supercar", trV = S.route === "trattare";
   const ac = activeChips();
-  const SORTS = [["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
+  const SORTS = [["novita","Più nuove"],["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
   const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar",SCL].includes(id) && tabOk(id));
   const fbar = `<button class="search-pill" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.search}<span class="sp-t">Marca, modello, prezzo, km…</span><span class="sp-f">${nf ? `<span class="count-pill">${nf}</span>` : ICON.sliders}</span></button>
     <div class="ctl-row">${SEZ.length > 1 ? `<nav class="cats" aria-label="Sezioni">${SEZ.map(([id,l,p]) => `<button class="cat" data-act="tab" data-v="${id}" aria-current="${S.route === id ? "page" : "false"}"><span class="cat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg></span><span class="cat-l">${l}</span></button>`).join("")}</nav>` : ""}
