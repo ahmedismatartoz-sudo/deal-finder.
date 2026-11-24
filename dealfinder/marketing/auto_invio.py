@@ -603,9 +603,14 @@ def nuovi_3_11(tag: str, elenco) -> dict:
         da_togliere = max(0, len(attuali) + len(cand) - tetto)
         tolti = 0
         with connect() as conn:
+            from .brevo_liste import liste_tutti, protetto
+            protette = liste_tutti(c)     # 24/11: mai cancellare chi sta in una lista "Skovo tutti ..." (carica_tutti)
+            protetti = {x["email"].lower() for x in contatti if x.get("email") and protetto(x, protette)}
             for e in sorted(attuali, key=lambda x: x in tenere):
                 if tolti >= da_togliere:
                     break
+                if e in protetti:
+                    continue
                 conn.execute("INSERT INTO brevo_inviati (email) VALUES (%s) ON CONFLICT DO NOTHING", (e,))
                 conn.commit()
                 r = c.delete(f"{API}/contacts/{e}")

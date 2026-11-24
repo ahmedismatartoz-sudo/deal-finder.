@@ -470,17 +470,15 @@ def esegui(v: str) -> bool | None:
             lg.warning("CONTA_EMAIL non riuscito: %s", str(e)[:300])
         return
     if v.startswith("carica_tutti:"):     # 24/11 (cliente): tutte le email dei commercianti nella lista nuova "Skovo
-        # tutti 24-11" (qui non vale il tetto dei 1.495: vale il limite del piano). Non invia niente. Solo conteggi
-        try:
+        # tutti 24-11" (qui non vale il tetto dei 1.495: vale il limite del piano). Non invia niente. Solo conteggi.
+        # _lungo: fatta solo a lavoro finito (l'import è ripetibile senza doppioni), al massimo 3 tentativi
+        def _carica_tutti():
             from ..marketing import brevo_liste as bl
-            from ..pipeline.ciclo import _una_volta
-            if _una_volta(f"carica_tutti:{v.split(':', 1)[1][:80]}"):
-                lg.warning("CARICA_TUTTI %s", json.dumps(bl.carica_tutti()))
-            else:
-                lg.warning("CARICA_TUTTI %s già fatto", v[:60])
-        except Exception as e:
-            lg.warning("CARICA_TUTTI non riuscito: %s", type(e).__name__)
-        return
+            esito = bl.carica_tutti()
+            lg.warning("CARICA_TUTTI %s", json.dumps(esito))
+            if esito.get("errore") or esito.get("blocchi_falliti"):
+                raise RuntimeError("caricamento incompleto: " + str(esito.get("errore") or "blocchi falliti"))
+        return _lungo(f"carica_tutti:{v.split(':', 1)[1][:80]}", "CARICA_TUTTI", _carica_tutti)
     if v.startswith("pulita:"):           # 8/11 (cliente): lista di chi apre, pulita, per il nuovo mittente (non invia)
         try:
             from ..marketing import brevo_liste as bl
