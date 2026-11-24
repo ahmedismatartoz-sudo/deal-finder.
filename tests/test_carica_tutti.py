@@ -32,11 +32,12 @@ def test_scegli_tutti_esclusioni_e_nomi():
         ("doppio@i.it", "Autosalone Bianchi"), ("doppio@i.it", "GT Automobili srl"),
         ("doppio@l.it", "Auto Verdi"), ("doppio@l.it", "Loconte Auto"), ("tolto@m.it", "M")]
     out, n = bl.scegli_tutti(voci, {impronta("via@d.it"), impronta("rimbalzo@e.it")}, {"tolto@m.it"})
-    assert out == [{"email": "buono@f.com", "nome": ""}, {"email": "info@salone.it", "nome": "Salone Rossi"}]
+    assert out == [{"email": "buono@f.com", "nome": ""}, {"email": "info@salone.it", "nome": "Salone Rossi"},
+                   {"email": "tolto@m.it", "nome": "M"}]
     assert n["non_valide"] == 2 and n["escluse_pec"] == 2 and n["escluse_disiscritte_o_rimbalzate"] == 2
     assert n["escluse_loconte"] == 3 and n["escluse_altri_esclusi"] == len(ESCLUSE) - 1 + 2
-    assert n["rimessi_cancellati_esclusi"] == 1 and "escluse_spazzatura" not in n
-    assert n["da_caricare"] == 2 and n["con_nome"] == 1
+    assert n["rimessi_cancellati"] == 1 and "escluse_spazzatura" not in n          # rientra: "tutti tutti tutti"
+    assert n["da_caricare"] == 3 and n["con_nome"] == 2
 
 
 def test_spazzatura_fuori_e_commercianti_dentro():
@@ -324,21 +325,22 @@ def test_carica_tutti_a_blocchi_senza_esclusi_e_senza_email_nei_log(monkeypatch)
         esito = bl.carica_tutti(attesa_s=1, dormi=lambda s: None)
         logging.getLogger("t").warning("CARICA_TUTTI %s", json.dumps(esito))
     imp = [j for u, j in brevo.post_ if u == "/contacts/import"]
-    assert [len(j["jsonBody"]) for j in imp] == [500, 500, 201]                     # a blocchi, niente tetto a 1.495
+    assert [len(j["jsonBody"]) for j in imp] == [500, 500, 231]                     # a blocchi, niente tetto a 1.495
     assert all(j["listIds"] == [99] and j["updateExistingContacts"] is True and j["emptyContactsAttributes"] is False
                for j in imp)
     caricate = [x["email"] for j in imp for x in j["jsonBody"]]
-    assert sorted(caricate) == sorted(buone + ["nuovo@inpiu.it"])                   # mai "nnuovo@" dall'a capo
+    vecchi = [x["email"] for x in tabelle["brevo_inviati"]][:30]
+    assert sorted(caricate) == sorted(buone + ["nuovo@inpiu.it"] + vecchi)                   # mai "nnuovo@" dall'a capo
     assert ("/contacts/lists", {"name": "Skovo tutti 24-11", "folderId": 7}) in brevo.post_
     assert not any("ampaign" in u or "smtp" in u for u, _ in brevo.post_)            # nessun invio
     con_nome = [x for j in imp for x in j["jsonBody"] if "attributes" in x]
-    assert len(con_nome) == 699 and all(x["attributes"]["AZIENDA"].startswith("Salone ") for x in con_nome)
+    assert len(con_nome) == 729 and all(x["attributes"]["AZIENDA"].startswith(("Salone ", "Vecchi")) for x in con_nome)
     assert buone[0] not in [x["email"] for x in con_nome]          # l'AZIENDA di chi è già in Brevo non si tocca
-    assert esito["caricati"] == 1201 and esito["lista_id"] == 99 and esito["blocchi"] == 3
-    assert esito["nomi_mandati"] == 699 and esito["import_codici"] == {"202": 3} and esito["blocchi_falliti"] == 0
+    assert esito["caricati"] == 1231 and esito["lista_id"] == 99 and esito["blocchi"] == 3
+    assert esito["nomi_mandati"] == 729 and esito["import_codici"] == {"202": 3} and esito["blocchi_falliti"] == 0
     assert esito["escluse_loconte"] == 9 and esito["escluse_altri_esclusi"] == 2
     assert esito["escluse_pec"] == 2 and esito["escluse_disiscritte_o_rimbalzate"] == 2
-    assert esito["escluse_spazzatura"] == 2 and esito["rimessi_cancellati_esclusi"] == 30
+    assert esito["escluse_spazzatura"] == 2 and esito["rimessi_cancellati"] == 30       # tolti per il vecchio tetto: rientrano
     assert esito["privati_esclusi"] == 1 and len(esito["process_id"]) == 3
     assert esito["processi"] == {"completed": 3} and esito["nella_lista"] == 1203 and esito["limite_piano"] == 500_000
     assert esito["limite_fonte"] == "decisione_cliente" and esito["processi_finiti"] is True and esito["piano"] == "Starter"
@@ -361,7 +363,7 @@ def test_import_riprova_su_429_e_5xx_e_conta_i_codici(monkeypatch):
     assert esito["nomi_mandati"] == 0                                               # attributo AZIENDA non verificato
     brevo = _prepara(monkeypatch, [], tabelle, risposte_import=[429, 502], attributi=())
     esito = bl.carica_tutti(attesa_s=0, dormi=attese.append)
-    assert esito["blocchi_falliti"] == 0 and esito["caricati"] == 1195 and esito["import_codici"]["202"] == 3
+    assert esito["blocchi_falliti"] == 0 and esito["caricati"] == 1226 and esito["import_codici"]["202"] == 3
     assert not any("attributes" in x for u, j in brevo.post_ if u == "/contacts/import" for x in j["jsonBody"])
 
 
@@ -383,11 +385,13 @@ def test_carica_tutti_fermo_senza_i_disiscritti(monkeypatch):
     assert bl.carica_tutti(attesa_s=0)["fermo"] == "disiscritti_incompleti" and not brevo.post_
 
 
-def test_carica_tutti_fermo_senza_brevo_inviati(monkeypatch):
+def test_carica_tutti_senza_brevo_inviati_va_avanti(monkeypatch):
     _, tabelle = _tabelle()
     del tabelle["brevo_inviati"]
-    brevo = _prepara(monkeypatch, [], tabelle)
-    assert bl.carica_tutti(attesa_s=0)["fermo"] == "brevo_inviati_non_letta" and not brevo.post_
+    _prepara(monkeypatch, [], tabelle)
+    esito = bl.carica_tutti(attesa_s=0, dormi=lambda s: None)
+    assert "fermo" not in esito and esito["fonti"]["brevo_inviati"].startswith("non letta")
+    assert esito["caricati"] == 1226 and esito["rimessi_cancellati"] == 0
 
 
 class _Lav:
@@ -419,3 +423,14 @@ def test_coda_fatta_solo_a_lavoro_finito(monkeypatch):
     assert esiti == ["fallito", "fatto", "fallito"]
     assert giri == ["carica_tutti:2411", "carica_tutti:2411", "carica_tutti:2411bis"]
     assert 'CARICA_TUTTI {"caricati": 3, "lista_id": 99}' in caplog.text and "già fatto" in caplog.text
+
+
+def test_tetto_brevo_unico_a_500_000():
+    # 24/11 (cliente): il tetto dei contatti in Brevo passa da 1.495 a 500.000 per tutti i lavori, da una sola costante
+    import inspect
+    from dealfinder.marketing import auto_invio, giro_1711, giro_lotto, su_misura
+    assert bl.TETTO_BREVO == 500_000 and bl.LIMITE_PIANO == bl.TETTO_BREVO
+    assert su_misura.TETTO_BREVO == 500_000 and giro_1711.TETTO_BREVO == 500_000 and auto_invio._tetto() == 500_000
+    assert "TETTO_BREVO - int(n_brevo)" in inspect.getsource(giro_lotto)
+    testo = inspect.getsource(auto_invio)
+    assert testo.count("or _tetto())") == 4 and '"1450"' not in testo and '"1498"' not in testo

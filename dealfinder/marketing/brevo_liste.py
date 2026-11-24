@@ -267,7 +267,9 @@ import re as _re
 _EMAIL_OK = _re.compile(r"^[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}$")
 _NON_EMAIL = _re.compile(r"(\.(png|jpe?g|gif|webp|avif|svg|bmp)$)|@2x", _re.I)
 LISTA_RIMESSI = "Skovo contatti vecchi rimessi 04-11"
-TETTO_BREVO = 1495                       # regola: meno di 1.500 contatti in Brevo
+# Tetto dei contatti in Brevo per TUTTI i lavori (unica costante: auto_invio, giro_lotto, giro_1711, su_misura la
+# prendono da qui). 24/11 (cliente): da 1.495 a 500.000, il piano arriva a 500.000 contatti (prima: meno di 1.500).
+TETTO_BREVO = 500_000
 
 
 def scegli_rimessi(emails, bloccati: set, gia_in_brevo: set, posto: int) -> list[str]:
@@ -867,7 +869,7 @@ def cliccati(campagne=(70, 72)) -> dict:
 # ---------- 24/11 11:35 (cliente: "carica tutti tutti tutti quelli che abbiamo in database tranne quelli esclusi") ----------
 LISTA_TUTTI = "Skovo tutti 24-11"
 BLOCCO_TUTTI = 500                       # contatti per chiamata a /contacts/import (come gli altri lavori)
-LIMITE_PIANO = 500_000                   # decisione del cliente del 24/11: il piano arriva a 500.000 contatti
+LIMITE_PIANO = TETTO_BREVO               # decisione del cliente del 24/11: il piano arriva a 500.000 contatti
 ATTRIBUTO_NOME = "AZIENDA"               # lo stesso attributo dei commercianti con il telefono
 _TROVA_EMAIL = _re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _CHIAVI_NOME = ("nome", "commerciante", "companyName", "company_name", "company", "ragione_sociale", "ragioneSociale",
@@ -979,8 +981,9 @@ def spazzatura(e: str) -> bool:
 def scegli_tutti(voci, bloccati: set, cancellati: set = frozenset()) -> tuple[list[dict], dict]:
     """voci: coppie (email, nome o None). Restituisce i contatti da caricare ({"email", "nome"}) e i conteggi per
     motivo di esclusione. Funzione pura: mai Loconte né gli esclusi (per indirizzo o per UNO QUALSIASI dei nomi visti
-    con quell'indirizzo), mai PEC, mai spazzatura, mai disiscritti/rimbalzati (impronte), mai chi era stato caricato
-    in Brevo e non c'è più (`cancellati`, come da_importare), mai indirizzi non validi; ognuno una volta sola."""
+    con quell'indirizzo), mai PEC, mai spazzatura, mai disiscritti/rimbalzati (impronte), mai indirizzi non validi;
+    ognuno una volta sola. `cancellati`: chi era stato caricato in Brevo e poi tolto per stare sotto il vecchio tetto;
+    per decisione del cliente ("tutti tutti tutti") rientra, e si conta in rimessi_cancellati."""
     from collections import Counter
     from .invii import impronta, norm_email
     nomi: dict[str, list[str]] = {}
@@ -1009,10 +1012,10 @@ def scegli_tutti(voci, bloccati: set, cancellati: set = frozenset()) -> tuple[li
             n["escluse_spazzatura"] += 1
         elif impronta(e) in bloccati:
             n["escluse_disiscritte_o_rimbalzate"] += 1
-        elif e in cancellati:
-            n["rimessi_cancellati_esclusi"] += 1
         else:
+            n["rimessi_cancellati"] += e in cancellati
             out.append({"email": e, "nome": next((x for x in nomi[e] if not x.startswith("\x00")), "")})
+    n["rimessi_cancellati"] += 0
     n["da_caricare"] = len(out)
     n["con_nome"] = sum(1 for x in out if x["nome"])
     return out, dict(n)
@@ -1062,8 +1065,9 @@ def _scorri(conn, sql: str, blocco: int = 2000):
 
 def _voci_db(conn) -> tuple[set, set | None, dict]:
     """Le email di commercianti nel database: lead_consegne (la fonte di conteggio_email, solo le righe con una @) e
-    lead_email (con il nome dall'archivio dei commercianti). Coppie (email, nome) senza doppioni. Poi gli indirizzi
-    di brevo_inviati (None se non si legge). Una tabella che manca non ferma le altre."""
+    lead_email (con il nome dall'archivio dei commercianti) e brevo_inviati (chi è già stato caricato in Brevo).
+    Coppie (email, nome) senza doppioni; a parte gli indirizzi di brevo_inviati (None se non si legge), per contare
+    chi rientra. Una tabella che manca non ferma le altre."""
     from .invii import norm_email
     voci, fonti = set(), {}
 
@@ -1095,7 +1099,9 @@ def _voci_db(conn) -> tuple[set, set | None, dict]:
           lambda r: voci.update((norm_email(e), r.get("nome")) for e in (r.get("email") or [])))
     inviati: set = set()
     ok = leggi("brevo_inviati", "SELECT email FROM brevo_inviati", lambda r: inviati.add(norm_email(r["email"])))
-    fonti["brevo_inviati"] = len(inviati) if ok else fonti["brevo_inviati"]
+    if ok:                                # di nuovo una fonte: anche chi era stato tolto da Brevo per il vecchio tetto
+        voci.update((e, None) for e in inviati if e)
+        fonti["brevo_inviati"] = len(inviati)
     return voci, (inviati if ok else None), fonti
 
 
@@ -1228,9 +1234,6 @@ def carica_tutti(attesa_s: int = 180, dormi=None) -> dict:
                      totale_in_brevo_dopo=len(in_brevo) + nuovi, caricati=0)
         if len(bloccati) < BLOCCATI_MINIMI or not nel_db:
             esito["fermo"] = "disiscritti_incompleti"
-            return esito
-        if inviati is None:               # senza brevo_inviati non si sa chi era stato cancellato da Brevo
-            esito["fermo"] = "brevo_inviati_non_letta"
             return esito
         if len(in_brevo) + nuovi > limite:
             esito["fermo"] = "piano_insufficiente"

@@ -470,7 +470,7 @@ def esegui(v: str) -> bool | None:
             lg.warning("CONTA_EMAIL non riuscito: %s", str(e)[:300])
         return
     if v.startswith("carica_tutti:"):     # 24/11 (cliente): tutte le email dei commercianti nella lista nuova "Skovo
-        # tutti 24-11" (qui non vale il tetto dei 1.495: vale il limite del piano). Non invia niente. Solo conteggi.
+        # tutti 24-11" (tetto dei contatti: 500.000, il limite del piano). Non invia niente. Solo conteggi.
         # _lungo: fatta solo a lavoro finito (l'import è ripetibile senza doppioni), al massimo 3 tentativi
         def _carica_tutti():
             from ..marketing import brevo_liste as bl

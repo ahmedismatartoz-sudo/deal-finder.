@@ -7,7 +7,8 @@ Giro continuo sul servizio web (AUTO_INVIO=1):
 3. le profila per fascia (prezzo mediano delle auto del commerciante) e, appena sono almeno AUTO_MIN_N,
    le carica in Brevo e manda subito: le prime AUTO_TESTO_RESTANTI con il testo corto, le altre con 2 auto vere
    del sito della loro fascia (prezzo vero dell'annuncio in _card, nessuno sconto da trattativa);
-4. non supera mai AUTO_TETTO_CONTATTI contatti in Brevo (limite del piano del cliente: 1.500).
+4. non supera mai AUTO_TETTO_CONTATTI contatti in Brevo (24/11, cliente: tetto a 500.000, brevo_liste.TETTO_BREVO;
+   prima 1.500).
 Nei log solo conteggi (AUTO_INVIO ...), mai indirizzi.
 
 4/11: ogni invio passa da _manda con un "lavoro" stabile (invii.prenota): un destinatario riceve un lavoro una
@@ -104,6 +105,12 @@ def _fascia(prezzi):
     return "utilitarie" if m < 8000 else "medie" if m < 15000 else "alte" if m < 50000 else "supercar"
 
 
+def _tetto() -> int:
+    """Tetto dei contatti in Brevo: l'unica costante è brevo_liste.TETTO_BREVO (24/11, cliente: 500.000)."""
+    from .brevo_liste import TETTO_BREVO
+    return TETTO_BREVO
+
+
 def _contatti_brevo(c: httpx.Client) -> list[dict]:
     out, off = [], 0
     while True:
@@ -191,7 +198,7 @@ def ciclo(elenco=None) -> None:
     from ..db import connect
     from ..pipeline import lead_email as LE
     key = _chiave()
-    tetto = int(os.environ.get("AUTO_TETTO_CONTATTI", "1450"))
+    tetto = int(os.environ.get("AUTO_TETTO_CONTATTI") or _tetto())
     minimo = int(os.environ.get("AUTO_MIN_N", "30"))
     pausa = int(os.environ.get("AUTO_MIN", "20")) * 60
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c, connect() as conn:
@@ -283,10 +290,10 @@ def invia_2_11(tag: str) -> dict:
     """2/11 notte (cliente: "mettile tutte su Brevo subito e mandiamo a tutti"): le email raccolte della zona
     (MI, MB, VA, CO, LC, BG, LO) mai caricate prima (non in brevo_inviati, che contiene i 1.345 contatti cancellati),
     senza doppioni né indirizzi finti, in una lista Brevo nuova e il testo corto approvato il 1/11 sera. Una volta.
-    Tetto BREVO_TETTO_2_11 (predefinito 1.450, limite del piano). Nei log solo conteggi."""
+    Tetto BREVO_TETTO_2_11 (predefinito brevo_liste.TETTO_BREVO: 500.000 dal 24/11, prima 1.450). Nei log solo conteggi."""
     from collections import Counter
     from ..db import connect
-    tetto = int(os.environ.get("BREVO_TETTO_2_11", "1450"))
+    tetto = int(os.environ.get("BREVO_TETTO_2_11") or _tetto())
     with connect() as conn:
         gia = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
         rows = conn.execute(
@@ -328,11 +335,11 @@ def invia_2_11(tag: str) -> dict:
 def rimetti_contatti(tag: str) -> None:
     """2/11 (cliente: "dalle email rimetti i contatti vecchi fino ad arrivare a 1500 su Brevo"): ricarica in Brevo i contatti
     vecchi scelti (data/brevo_rimetti.json, solo hash: non bloccati/disiscritti, prima chi aveva aperto, poi la zona),
-    presi da brevo_inviati. Solo caricamento in una lista: NESSUN invio. Si ferma a BREVO_TETTO (1.498) contatti."""
+    presi da brevo_inviati. Solo caricamento in una lista: NESSUN invio. Si ferma a BREVO_TETTO contatti (predefinito brevo_liste.TETTO_BREVO: 500.000 dal 24/11, prima 1.498)."""
     import hashlib
     from ..db import connect
     scelti = set(json.loads((_DATA / "brevo_rimetti.json").read_text()))
-    tetto = int(os.environ.get("BREVO_TETTO", "1498"))
+    tetto = int(os.environ.get("BREVO_TETTO") or _tetto())
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c, connect() as conn:
         ora = _conta_brevo(c)
         via = invii.disiscritti(conn)                  # 4/11: mai rimettere chi si è disiscritto o è stato bloccato
@@ -503,14 +510,14 @@ ESCLUSI_3_11 = re.compile(r"(officinemulino|cosvalauto|autoeautovarese|srauto|lo
 
 def nuovi_3_11(tag: str, elenco) -> dict:
     """Commercianti MAI contattati (non in brevo_inviati), prima la zona entro 100 km poi il resto del Nord, fino al
-    tetto del piano Brevo (1.498): per fare posto si tolgono da Brevo i contatti già usati (restano in brevo_inviati e
+    tetto dei contatti in Brevo (500.000 dal 24/11, prima 1.498): per fare posto si tolgono da Brevo i contatti già usati (restano in brevo_inviati e
     non vengono mai ricontattati per errore). Ogni contatto nella fascia delle auto che vende, una lista e una
     campagna per fascia con il testo approvato del 2/11 e 3 auto di esempio di oggi (metodo nuovo), INVIATE subito.
     Esclusi chi si è lamentato e i nomi esclusi. Nei log solo conteggi."""
     import hashlib  # noqa: F401
     from collections import Counter
     from ..db import connect
-    tetto = int(os.environ.get("BREVO_TETTO", "1498"))
+    tetto = int(os.environ.get("BREVO_TETTO") or _tetto())
     nord = ("MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC", "MN", "SO", "VC", "BI", "VB",
             "AL", "AT", "TO", "CN", "GE", "SV", "PR", "RE", "MO", "BO", "VR", "VI", "PD", "VE", "TV", "TN", "BZ")
     st = Counter()
