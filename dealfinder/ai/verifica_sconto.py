@@ -30,8 +30,9 @@ zone, km, anno, telefono obbligatorio, tetti dei commercianti. Mai numeri di tel
 conteggi e id). Lo storico del VENDITORE non è usato: nel database non c'è (listings.seller_info non è scritto da nessun
 collettore) e un dato obbligatorio sempre mancante terrebbe fuori tutto.
 
-Spesa: nessun tetto di spesa esiste più (cliente 18/11); qui valgono limiti tecnici propri: VERIFICA_PER_GIRO (15) auto
-per giro, VERIFICA_MAX_GIORNO (300) chiamate al giorno, una sola verifica per decisione, pausa comune su credito/limite.
+Spesa: nessun tetto di spesa (regola del cliente, 18/11: "nessun limite di spesa AI"). Restano VERIFICA_PER_GIRO (15) auto
+per giro, una sola verifica per decisione e la pausa comune su credito/limite. VERIFICA_MAX_GIORNO è facoltativa: se non
+è impostata non c'è nessun limite di chiamate al giorno.
 Ogni chiamata si registra in ai_usage (task "verifica_sconto_alto") e si conferma subito.
 
 Interruttore senza deploy: automatismi "verifica_sconto_alto" (o VERIFICA_SCONTO_ALTO=0 in locale).
@@ -111,8 +112,16 @@ def per_giro() -> int:
     return max(0, int(_num("VERIFICA_PER_GIRO", 15)))
 
 
-def max_giorno() -> int:
-    return max(0, int(_num("VERIFICA_MAX_GIORNO", 300)))
+def max_giorno() -> int | None:
+    """Tetto facoltativo di chiamate al giorno: None (nessun limite) se VERIFICA_MAX_GIORNO non è impostata o non è
+    un numero. Il cliente non vuole limiti di spesa AI: il limite c'è solo se qualcuno lo imposta."""
+    v = (os.environ.get("VERIFICA_MAX_GIORNO") or "").strip()
+    if not v:
+        return None
+    try:
+        return max(0, int(float(v)))
+    except ValueError:
+        return None
 
 
 def modello() -> str:
@@ -354,7 +363,8 @@ def giro(conn, chiama=None, foto=None, g=None) -> dict:
     leggere = [i for i in ids if i not in _ATTESA][:500]
     righe = {r["id"]: dict(r) for r in conn.execute(VERIFICA_SQL, {"ids": leggere, "nf": n_foto()}).fetchall()}
     fatte_g = fatte_oggi(conn)
-    posto = max(0, min(per_giro(), max_giorno() - fatte_g))
+    tetto = max_giorno()                               # None = nessun limite al giorno (default)
+    posto = per_giro() if tetto is None else max(0, min(per_giro(), tetto - fatte_g))
     da_fare = []
     for i in leggere:                                  # nell'ordine di priorità dell'elenco
         a = righe.get(i)

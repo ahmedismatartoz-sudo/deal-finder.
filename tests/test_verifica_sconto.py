@@ -292,15 +292,20 @@ def test_limiti_per_giro_al_giorno_e_una_sola_volta():
         res = VS.giro(Conn(righe), chiama=chiama, foto=_foto, g=G)
         assert len(n) == 3 and res["verifica_restanti"] == 7
         assert CA.attesa_prossimo_giro(dict(res, candidate=0), 3600.0) == 120.0     # coda non finita: giro dopo presto
-        res = VS.giro(Conn(righe, fatte=299), chiama=chiama, foto=_foto, g=G)       # tetto al giorno: 300
-        assert len(n) == 4 and res["verifica_fatte"] == 1
+        # nessun tetto al giorno se VERIFICA_MAX_GIORNO non è impostata (cliente: nessun limite di spesa AI)
+        assert VS.max_giorno() is None
+        res = VS.giro(Conn(righe, fatte=100000), chiama=chiama, foto=_foto, g=G)
+        assert len(n) == 6 and res["verifica_fatte"] == 3
+    with env(**dict(NO_ENV, VERIFICA_PER_GIRO="3", VERIFICA_MAX_GIORNO="300")):     # tetto facoltativo, se impostato
+        res = VS.giro(Conn(righe, fatte=299), chiama=chiama, foto=_foto, g=G)
+        assert len(n) == 7 and res["verifica_fatte"] == 1
         res = VS.giro(Conn(righe, fatte=300), chiama=chiama, foto=_foto, g=G)
-        assert len(n) == 4 and res["verifica_fatte"] == 0 and "verifica_restanti" not in res
+        assert len(n) == 7 and res["verifica_fatte"] == 0 and "verifica_restanti" not in res
         assert CA.attesa_prossimo_giro(dict(res, candidate=0), 3600.0) == 3600.0     # mai giri a vuoto
         # già verificate (segno _verifica sulla decisione): nessuna chiamata, per sempre
         res = VS.giro(Conn([riga(i, d_verifica={"esito": "non_pulita"}) for i in range(1, 11)]), chiama=chiama,
                       foto=_foto, g=G)
-        assert len(n) == 4 and res["verifica_fatte"] == 0
+        assert len(n) == 7 and res["verifica_fatte"] == 0
     _pulisci()
 
 
