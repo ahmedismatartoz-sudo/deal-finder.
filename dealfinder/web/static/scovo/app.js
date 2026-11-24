@@ -411,7 +411,7 @@ function viewList(){
     `<button class="zona-btn" data-act="zona" data-v="${k}" aria-pressed="${S.zona === k}">${PIN}<span class="zona-txt"><b>${l.replace(" e dintorni","").replace("Resto d'Italia","Italia")}</b><small>${zc[k] || 0} auto</small></span></button>`).join("")}</div>`;
   const TIT = {all: "Margine più alto in cima", top: "⭐ Le 15 migliori di oggi · tra 1.500 e 12.000 €", rest: "Tutte le altre, dalla migliore", care: "Le più care (oltre 15.000 €)",
     n0: "Appena arrivate · ultime 2 ore", n1: "Di oggi", n2: "Di ieri", n3: "Degli ultimi 7 giorni", n4: "Le altre"};
-  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || S.sort === "novita" || c._grp === "care") && list.length > 1 ? (c._grp === "all" ? `<h2 class="sr">Tutte le auto, ${TIT.all.toLowerCase()}</h2>` : `<h2 class="sec-h"><b>${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</b></h2>`) : ""}
+  const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? (c._grp === "all" ? `<h2 class="sr">Tutte le auto, ${TIT.all.toLowerCase()}</h2>` : `<h2 class="sec-h"><b>${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</b></h2>`) : ""}
     ${carCard(c, i)}`).join("");
   const empty = `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
       <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
