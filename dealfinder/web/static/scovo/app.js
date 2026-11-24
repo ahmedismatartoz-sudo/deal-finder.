@@ -208,12 +208,9 @@ function chiOrdine(){
   return "o" + S.ordChi;
 }
 function ordinaLista(s, arr){
-  if (s.sort === "novita") {
-    // le scelte a mano (data/vetrina.json) restano in cima come con "Più guadagno %"; tutte le altre per novità
-    const ora = S.ordT || Date.now();
-    const vet = arr.filter(c => c.vetrina != null).sort((a, b) => a.vetrina - b.vetrina).map(c => Object.assign(c, {_grp: "top"}));
-    return vet.concat(ordinaNovita(arr.filter(c => c.vetrina == null), chiOrdine(), ora));
-  }
+  // 24/11 sera (cliente): con "Più nuove" in cima SOLO le auto nuove: le scelte a mano (data/vetrina.json) seguono
+  // l'ordine come tutte le altre; restano in cima solo con "Più guadagno %"
+  if (s.sort === "novita") return ordinaNovita(arr, chiOrdine(), S.ordT || Date.now());
   if (s.sc && s.sort === "guadagno") return arr.slice().sort((a, b) => scontoM(b) - scontoM(a)).map(c => Object.assign(c, {_grp: "all"}));
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.

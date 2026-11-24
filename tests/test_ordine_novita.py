@@ -52,7 +52,7 @@ def test_default_novita_e_altri_ordinamenti_restano():
     # "Più guadagno %" come prima: vetrina in cima, poi perPct; supercar per sconto sul mercato
     assert "const altre = arr.filter(c => c.vetrina == null).sort(perPct);" in corpo
     assert 'if (s.sc && s.sort === "guadagno") return arr.slice().sort((a, b) => scontoM(b) - scontoM(a))' in corpo
-    assert 'if (s.sort === "novita")' in corpo and "ordinaNovita(" in corpo and "chiOrdine()" in corpo
+    assert 'if (s.sort === "novita") return ordinaNovita(arr, chiOrdine(), S.ordT || Date.now());' in corpo
     # prezzo / più recenti / km: confronto invariato
     assert ('s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova))'
             in js)
@@ -113,3 +113,29 @@ def test_mescolamento_uniforme():
     if r is None:
         return
     assert len(r) == 7 and min(r.values()) >= 25, r
+
+
+def test_vetrina_non_bloccata_in_cima_con_piu_nuove():
+    """24/11 sera (cliente): con "Più nuove" le scelte a mano seguono l'ordine come le altre; con "Più guadagno %" restano in cima."""
+    js = _js()
+    i = js.index("function ordinaLista")
+    corpo = js[i:js.index("\n}\n", i)]
+    a, b = corpo.index('if (s.sort === "novita")'), corpo.index('if (s.sc && s.sort === "guadagno")')
+    ramo = corpo[a:b]
+    assert a < b and "vetrina" not in ramo.split("\n")[0] and "return ordinaNovita(arr, chiOrdine()" in ramo
+    assert "const vet = arr.filter(c => c.vetrina != null).sort((a, b) => a.vetrina - b.vetrina);" in corpo[b:]   # guadagno: come prima
+    r = _node(PREP + """
+    const S = {ordT: ORA, user: {id: 7}}, store = {get: () => null, set: () => {}};
+    const perPct = (a, b) => a.id - b.id, scontoM = () => 0, CARE = 15000, TOP_MIN = 0, TOP_MAX = 0, PRIME = 15, topScore = () => 0;
+    """ + js[js.index("function chiOrdine"):js.index("\n}\n", js.index("function chiOrdine")) + 3] + corpo + """
+}
+    const con = () => copia().map(c => Object.assign(c, {prezzo: 5000}, c.id === 1044 ? {vetrina: 0} : c.id === 1021 ? {vetrina: 1} : {}));
+    const nov = ordinaLista({sort: "novita"}, con()), gua = ordinaLista({sort: "guadagno"}, con());
+    console.log(JSON.stringify({nov: nov.map(c => [c.id, c._grp]), senza: ids(ordinaNovita(copia(), "u7", ORA)), gua: gua.slice(0, 3).map(c => [c.id, c._grp])}));
+    """)
+    if r is None:
+        return
+    assert [i for i, _ in r["nov"]] == r["senza"]                      # stesso ordine che senza vetrina
+    assert dict(map(tuple, r["nov"]))[1044] == "n4" and dict(map(tuple, r["nov"]))[1021] == "n2"
+    assert r["nov"][0][1] == "n0" and all(g != "top" for _, g in r["nov"])
+    assert r["gua"][:2] == [[1044, "top"], [1021, "top"]] and r["gua"][2][1] == "rest"
