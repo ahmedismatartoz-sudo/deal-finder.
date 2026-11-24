@@ -2,7 +2,9 @@
 import asyncio
 import datetime as dt
 import json
+import logging
 import re
+import time
 
 from starlette.requests import Request
 
@@ -35,7 +37,7 @@ class Db:
 
     def __init__(self):
         self.link, self.clic, self.disiscritti, self.sms = {}, [], {impronta(f"vecchio{i}@x.it") for i in range(200)}, set()
-        self.foto, self.rotto = {}, False
+        self.foto, self.rotto, self.si = {}, False, []
 
     def __enter__(self):
         return self
@@ -93,27 +95,42 @@ class Db:
             self.clic.append({"token": p[0], "user_agent": p[1], "anteprima": p[2]})
             return _Cur([])
         if q.startswith("SELECT count(*) AS n FROM email_clic"):
-            return _Cur([{"n": sum(1 for c in self.clic if c["token"] == p[0] and c["anteprima"] is None)}])
+            return _Cur([{"n": sum(1 for c in self.clic if c["token"] == p[0])}])
+        if q.startswith("INSERT INTO email_si"):
+            self.si.append({"token": p[0], "user_agent": p[1]})
+            return _Cur([])
+        if q.startswith("SELECT count(*) AS n FROM email_si"):
+            return _Cur([{"n": sum(1 for c in self.si if c["token"] == p[0])}])
         if q.startswith("SELECT email_hash FROM disiscritti"):
             return _Cur([{"email_hash": h} for h in self.disiscritti])
         if q.startswith("INSERT INTO disiscritti"):
             nuovo = p[0] not in self.disiscritti
             self.disiscritti.add(p[0])
             return _Cur([{"email_hash": p[0]}] if nuovo else [])
-        if q.startswith("SELECT 'email' AS canale, l.token"):
+        if q.startswith("SELECT 'email' AS canale, l.token"):        # i confermati, con gli aperti in una colonna
+            assert "FROM email_si c JOIN email_link l" in q and "FROM email_clic a WHERE a.token = l.token) AS aperti" in q
             out = []
             for t, x in self.link.items():
-                miei = [c for c in self.clic if c["token"] == t]
-                if miei:
+                n = sum(1 for c in self.si if c["token"] == t)
+                if n:
                     out.append({"canale": "email", "token": t, "nome": x["nome"], "telefono": x["telefono"],
-                                "email": x["email"], "giro": x["giro"], "clic": sum(1 for c in miei if c["anteprima"] is None),
-                                "forse_anteprima": sum(1 for c in miei if c["anteprima"]), "primo_clic": None,
+                                "email": x["email"], "giro": x["giro"], "clic": n,
+                                "aperti": sum(1 for c in self.clic if c["token"] == t), "primo_clic": None,
                                 "ultimo_clic": None, "stop": x["stop"]})
+            return _Cur(out)
+        if q.startswith("SELECT 'email' AS canale, a.token"):        # chi ha solo aperto
+            assert "NOT EXISTS (SELECT 1 FROM email_si" in q
+            out = []
+            for t, x in self.link.items():
+                n = sum(1 for c in self.clic if c["token"] == t)
+                if n and not any(c["token"] == t for c in self.si):
+                    out.append({"canale": "email", "token": t, "nome": x["nome"], "telefono": x["telefono"],
+                                "email": x["email"], "giro": x["giro"], "aperti": n, "primo_aperto": None, "ultimo_aperto": None})
             return _Cur(out)
         # le frasi degli SMS usate dalle rotte: nessun token SMS in questi test
         if q.startswith(("SELECT nome, telefono FROM sms_link", "SELECT telefono FROM sms_link WHERE token")):
             return _Cur([])
-        if q.startswith("SELECT l.token"):
+        if q.startswith("SELECT 'sms' AS canale"):
             return _Cur([])
         raise AssertionError("frase non prevista: " + q[:80])
 
@@ -360,6 +377,89 @@ def test_due_gruppi_vicini_a_milano_e_simili_per_zona():
     # senza numero: tutti, chi non ha posizione va senza esempi
     con, senza, n = EE.dividi(saloni, auto, 0, uso_max=100)
     assert len(con) + len(senza) == 41 and n["senza_posizione"] == 1 and len(con) == 40
+
+
+def test_tutti_anche_i_saloni_senza_posizione_nel_gruppo_senza_esempi():
+    auto = EE.auto_usabili(ITEMS + [_auto(20 + i, f"Marca{i} Modello{i}", "Milano (MI)", 6000 + i, 2000) for i in range(30)])
+    comuni = [("Milano", "MI"), ("Sesto San Giovanni", "MI"), ("Cologno Monzese", "MI"), ("Monza", "MB"), ("Brugherio", "MB")]
+
+    def saloni():
+        return ([_salone(f"s{i:02d}@x.it", *comuni[i % 5]) for i in range(40)]
+                + [_salone(f"ignoto{i}@x.it", "", "") for i in range(7)])
+    # senza l'opzione: come prima, chi non ha posizione resta fuori
+    base_con, base_senza, _ = EE.dividi(saloni(), auto, 4)
+    assert len(base_con) == len(base_senza) == 4 and not any(d["email"].startswith("ignoto") for d in base_con + base_senza)
+    # con l'opzione: gli stessi due gruppi con posizione, più tutti i senza posizione nel gruppo senza esempi
+    con, senza, n = EE.dividi(saloni(), auto, 4, senza_posizione=True)
+    assert [d["email"] for d in con] == [d["email"] for d in base_con]
+    assert [d["email"] for d in senza[:4]] == [d["email"] for d in base_senza]
+    assert sorted(d["email"] for d in senza[4:]) == [f"ignoto{i}@x.it" for i in range(7)] and n["senza_posizione"] == 7
+    assert all(d["auto"] == [] and d["perche"] == "senza_posizione" for d in senza[4:]) and "fuori_tetto" not in n
+    assert not any(d["email"].startswith("ignoto") for d in con)
+    # il tetto del giro vale per tutto il giro (con + senza): 8 con posizione + 3 senza = 11
+    con, senza, n = EE.dividi(saloni(), auto, 4, senza_posizione=True, tetto=11)
+    assert len(con) == 4 and len(senza) == 7 and n["senza_posizione"] == 3 and n["fuori_tetto"] == 4
+    # la regola delle 72 ore vale anche per loro
+    recenti = {"ignoto1@x.it": True, "ignoto2@x.it": None}
+    con, senza, n = EE.dividi(saloni(), auto, 4, recente=lambda e: recenti.get(e, False), senza_posizione=True)
+    assert n["senza_posizione"] == 5 and n["saltati_email_recente"] == 1 and n["saltati_non_verificati"] == 1
+    assert not {"ignoto1@x.it", "ignoto2@x.it"} & {d["email"] for d in senza}
+    # pochi saloni con posizione (gruppi non pieni): i senza posizione entrano lo stesso
+    pochi = saloni()[:3] + saloni()[40:]
+    con, senza, n = EE.dividi(pochi, auto, 150, senza_posizione=True)
+    assert len(con) + len(senza) == 10 and n["senza_posizione"] == 7
+
+
+def test_lavoro_tutti_stessi_filtri_tetto_e_non_chi_e_in_un_altro_giro():
+    from dealfinder.marketing import brevo_liste as BL
+    brevo, db, profili = _scena_lavoro()
+    senza_pos = [f"nuovo{i}@autonuova{i}.it" for i in range(5)]
+    brevo.contatti += [{"email": e, "listIds": [91], "attributes": {"AZIENDA": f"Auto Nuova {i}"}} for i, e in enumerate(senza_pos)]
+    brevo.contatti += [{"email": "stop@autostop.it", "listIds": [91], "emailBlacklisted": True, "attributes": {}}]
+    # uno dei senza posizione è già stato usato in un altro giro
+    db.link["zzzz9999"] = {"email": senza_pos[4], "nome": "", "telefono": "", "giro": "email_esempi:altro", "versione": "senza",
+                           "creato_at": ADESSO, "stop": False}
+    esito = _prepara(brevo, db, profili, per_gruppo=3, senza_posizione=True)
+    scelti = {x["email"] for i in brevo.importi for x in i["jsonBody"]}
+    senza = {x["email"] for i in brevo.importi if i["listIds"] == [esito["liste"]["senza"]] for x in i["jsonBody"]}
+    assert esito["anche_senza_posizione"] is True and esito["con_esempi"] == 3
+    assert set(senza_pos[:4]) | {"s03@salone03.it"} <= senza                                 # i validi senza posizione
+    assert senza_pos[4] not in scelti and esito["gia_in_un_altro_giro"] == 1                 # già in un altro giro
+    # gli stessi filtri: bloccati in Brevo, disiscritti, esclusi e spazzatura restano fuori
+    assert not scelti & {"bloccato@x.it", "stop@autostop.it", "fuori@lista.it", "info@officinemulino.it", "ditta@pec.it", "vecchio1@x.it"}
+    assert esito["senza_posizione"] == len(senza) - 3 and esito["senza_esempi"] == len(senza)
+    assert len(scelti) <= BL.TETTO_INVIO and BL.TETTO_INVIO == 1495
+    # senza l'opzione, sugli stessi dati: nessuno senza posizione
+    brevo2, db2, profili2 = _scena_lavoro()
+    brevo2.contatti += [{"email": e, "listIds": [91], "attributes": {}} for e in senza_pos]
+    esito2 = _prepara(brevo2, db2, profili2, per_gruppo=3)
+    scelti2 = {x["email"] for i in brevo2.importi for x in i["jsonBody"]}
+    assert esito2["anche_senza_posizione"] is False and len(scelti2) == 6 and not scelti2 & (set(senza_pos) | {"s03@salone03.it"})
+    # il tetto del giro
+    vecchio = BL.TETTO_INVIO
+    BL.TETTO_INVIO = 8
+    try:
+        brevo3, db3, profili3 = _scena_lavoro()
+        brevo3.contatti += [{"email": e, "listIds": [91], "attributes": {}} for e in senza_pos]
+        esito3 = _prepara(brevo3, db3, profili3, per_gruppo=3, senza_posizione=True)
+    finally:
+        BL.TETTO_INVIO = vecchio
+    assert esito3["con_esempi"] + esito3["senza_esempi"] == 8 and esito3["fuori_tetto"] >= 4
+
+
+def test_etichetta_con_tutti():
+    visti = []
+    vecchio = EE.prepara
+    EE.prepara = lambda items, giro, per_gruppo=0, **k: (visti.append((giro, per_gruppo, k)), {"giro": giro})[1]
+    vecchio_inc = EE.incompleto
+    EE.incompleto = lambda esito: None
+    try:
+        for v in ("email_esempi:2511:150:tutti", "email_esempi:2511:150", "email_esempi:2511:150:altro", "email_esempi:2511:0:TUTTI"):
+            EE.lavoro(v, lambda: ITEMS, lungo=lambda chiave, nome, fn: fn())
+    finally:
+        EE.prepara, EE.incompleto = vecchio, vecchio_inc
+    assert visti == [("email_esempi:2511", 150, {"senza_posizione": True}), ("email_esempi:2511", 150, {"senza_posizione": False}),
+                     ("email_esempi:2511", 150, {"senza_posizione": False}), ("email_esempi:2511", 0, {"senza_posizione": True})]
 
 
 def test_km_da_milano():
@@ -617,7 +717,7 @@ def test_log_solo_conteggi():
     v = (EE.lg, EE.prepara, EE.profili_db)
     EE.lg = log
     EE.profili_db = lambda conn: profili
-    EE.prepara = lambda items, giro, per_gruppo: fatti.append((giro, per_gruppo)) or v[1](
+    EE.prepara = lambda items, giro, per_gruppo, senza_posizione=False: fatti.append((giro, per_gruppo)) or v[1](
         ITEMS + [_auto(30 + i, f"Marca{i} Tipo{i}", "Milano (MI)", 6000, 2000) for i in range(20)], giro, per_gruppo, c=brevo,
         connetti=lambda: db, foto_ok=lambda i: True, dormi=lambda s: None, env=ENV, recente=None)
     try:
@@ -652,16 +752,17 @@ def _iso(secondi_fa):
     return (ADESSO - dt.timedelta(seconds=secondi_fa)).isoformat()
 
 
-def test_clic_vero_registrato_senza_dati_personali():
+def test_aperto_senza_dati_personali_e_conferma_con_nome_e_ultime_cifre():
     db, log = _db_con_link(), _Log()
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0 (iPhone)", c=Brevo(inviati={"titolare@salone.it": [_iso(3600)]}),
-                         adesso=ADESSO, log=log, env={})
-    assert r["contato"] and r["n"] == 1 and r["dopo_s"] == 3600
-    assert log.righe == ["EMAIL_INTERESSATO token=abc23456 canale=email nome=Salone Prova tel=***9876 n=1 dopo_s=3600"]
-    assert "titolare" not in log.righe[0] and "3330009876" not in log.righe[0]
+    assert EE.registra_aperto(db, "abc23456", "Mozilla/5.0 (Windows NT 10.0)", log=log) == {"contato": True, "n": 1}
+    assert log.righe == ["EMAIL_APERTO token=abc23456 canale=email n=1"]        # né nome né telefono né indirizzo
+    assert len(db.clic) == 1 and not db.si
+    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0 (iPhone)", log=log)
+    assert r["contato"] and r["n"] == 1 and len(db.si) == 1 and len(db.clic) == 1
+    assert log.righe[-1] == "EMAIL_INTERESSATO token=abc23456 canale=email nome=Salone Prova tel=***9876 n=1"
+    assert not any("titolare" in x or "3330009876" in x for x in log.righe)
     db2, log2 = _db_con_link(tel=""), _Log()
-    EE.registra_clic(db2, "abc23456", "Mozilla/5.0", c=Brevo(inviati={"titolare@salone.it": [_iso(900)]}), adesso=ADESSO,
-                     log=log2, env={})
+    EE.registra_clic(db2, "abc23456", "Mozilla/5.0", log=log2)
     assert " tel=- " in log2.righe[0]
 
 
@@ -671,55 +772,19 @@ def test_nome_nel_log_senza_numeri_di_telefono():
     assert EE.nome_log("riga\nfinta") == "riga finta" and EE.nome_log(None) == "?"
     db, log = _db_con_link(), _Log()
     db.link["abc23456"]["nome"] = "Salone Rossi tel 3331234567"
-    EE.registra_clic(db, "abc23456", "Mozilla/5.0", c=Brevo(inviati={"titolare@salone.it": [_iso(3600)]}), adesso=ADESSO,
-                     log=log, env={})
+    EE.registra_clic(db, "abc23456", "Mozilla/5.0", log=log)
     assert "nome=Salone Rossi tel tel=***9876" in log.righe[0] and "3331234567" not in log.righe[0]
 
 
-def test_clic_pochi_secondi_dopo_l_invio_e_forse_anteprima():
+def test_programmi_automatici_e_token_sconosciuti_non_registrano_niente():
     db, log = _db_con_link(), _Log()
-    brevo = Brevo(inviati={"titolare@salone.it": [_iso(8)]})
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0 (Windows NT 10.0)", c=brevo, adesso=ADESSO, log=log, env={})
-    assert r == {"contato": False, "motivo": "anteprima", "perche": "subito_dopo_l_invio", "dopo_s": 8}
-    assert log.righe[0].startswith("EMAIL_FORSE_ANTEPRIMA token=abc23456 nome=Salone Prova tel=***9876 motivo=subito_dopo_l_invio")
-    assert db.clic[0]["anteprima"] == "subito_dopo_l_invio" and not any("INTERESSATO" in x for x in log.righe)
-    # lo stesso salone tocca davvero il pulsante un'ora dopo: conta, ed è il primo clic vero
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0 (iPhone)", c=brevo, adesso=ADESSO + dt.timedelta(hours=1), log=log, env={})
-    assert r["contato"] and r["n"] == 1 and log.righe[-1].startswith("EMAIL_INTERESSATO")
-    # soglia regolabile
-    db3 = _db_con_link()
-    assert EE.registra_clic(db3, "abc23456", "Mozilla/5.0", c=brevo, adesso=ADESSO, log=_Log(),
-                            env={"EMAIL_ANTEPRIMA_S": "5"})["contato"]
-
-
-def test_brevo_non_ha_ancora_scritto_l_invio_vale_la_partenza_della_campagna():
-    EE._campagne.update(t=0.0, partenze=[])
-    db, log = _db_con_link(), _Log()
-    brevo = Brevo(campagne=[{"status": "sent", "sentDate": _iso(200)}, {"status": "draft", "scheduledAt": _iso(5)},
-                            {"status": "sent", "sentDate": (ADESSO - dt.timedelta(days=9)).isoformat()}])
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0", c=brevo, adesso=ADESSO, log=log, env={})
-    assert not r["contato"] and r["perche"] == "subito_dopo_la_partenza" and r["dopo_s"] == 200
-    EE._campagne.update(t=0.0, partenze=[])
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0", c=brevo, adesso=ADESSO + dt.timedelta(minutes=30), log=log, env={})
-    assert r["contato"] and r["dopo_s"] == 2000
-    EE._campagne.update(t=0.0, partenze=[])
-
-
-def test_invio_ignoto_il_clic_conta_e_i_programmi_automatici_no():
-    EE._campagne.update(t=0.0, partenze=[])
-    db, log = _db_con_link(), _Log()
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0", c=Brevo(), adesso=ADESSO, log=log, env={})
-    assert r["contato"] and r["dopo_s"] is None and log.righe[0].endswith("dopo_s=?")
-
-    class Rotto:
-        def get(self, *a, **k):
-            raise OSError("rete")
-    assert EE.registra_clic(db, "abc23456", "Mozilla/5.0", c=Rotto(), adesso=ADESSO, log=log, env={})["contato"]
-    brevo = Brevo()
-    r = EE.registra_clic(db, "abc23456", "Mozilla/5.0 (compatible; GoogleImageProxy)\nfinto", c=brevo, adesso=ADESSO, log=log, env={})
-    assert r["perche"] == "programma_automatico" and not brevo.chiamate and "\n" not in log.righe[-1]
-    assert EE.registra_clic(db, "nonce999", "Mozilla/5.0", c=brevo, adesso=ADESSO, log=log) == {"contato": False, "motivo": "sconosciuto"}
-    assert EE.registra_clic(db, "<b>", "Mozilla/5.0", c=brevo, adesso=ADESSO, log=log)["motivo"] == "sconosciuto"
+    for ua in ("Mozilla/5.0 (compatible; GoogleImageProxy)\nfinto", "python-requests/2.32", "Barracuda Link Scanner"):
+        assert EE.registra_aperto(db, "abc23456", ua, log=log) == {"contato": False, "motivo": "anteprima"}
+        assert EE.registra_clic(db, "abc23456", ua, log=log) == {"contato": False, "motivo": "anteprima"}
+    for tok in ("nonce999", "<b>", None):
+        assert EE.registra_aperto(db, tok, "Mozilla/5.0", log=log) == {"contato": False, "motivo": "sconosciuto"}
+        assert EE.registra_clic(db, tok, "Mozilla/5.0", log=log) == {"contato": False, "motivo": "sconosciuto"}
+    assert not db.clic and not db.si and not log.righe
 
 
 def test_stop_disiscrive_nel_database_in_brevo_e_dalle_liste():
@@ -787,9 +852,18 @@ def test_pulisci_liste_toglie_i_disiscritti_prima_dell_invio():
 
 
 # ---------- rotte ----------
-def _req(path, token, ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", ip="93.40.1.2", metodo="GET"):
+def _req(path, token, ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", ip="93.40.1.2", metodo="GET", corpo=b""):
+    async def ricevi():
+        return {"type": "http.request", "body": corpo, "more_body": False}
     return Request({"type": "http", "method": metodo, "path": path, "query_string": b"", "path_params": {"token": token},
-                    "headers": [(b"user-agent", ua.encode()), (b"x-real-ip", ip.encode())], "client": (ip, 1)})
+                    "headers": [(b"user-agent", ua.encode()), (b"x-real-ip", ip.encode())], "client": (ip, 1)}, ricevi)
+
+
+def _si(token, t=None, dopo=10, **k):
+    """Il pulsante "Sì, chiamatemi": POST /mi/<token>/si con il campo firmato dalla pagina aperta `dopo` secondi fa."""
+    from urllib.parse import urlencode
+    t = A._mi_firma(token, time.time() - dopo) if t is None else t
+    return asyncio.run(A.sms_mi_si(_req(f"/mi/{token}/si", token, metodo="POST", corpo=urlencode({"t": t}).encode(), **k)))
 
 
 class _Scena:
@@ -798,42 +872,70 @@ class _Scena:
         self.db, self.log, self.brevo = _db_con_link(), _Log(), brevo or Brevo(inviati={"titolare@salone.it": [_iso(3600)]})
         self.v = (A.connect, EE.lg, SS.lg, EE._client)
         A.connect, EE.lg, SS.lg, EE._client = (lambda: self.db), self.log, self.log, (lambda: self.brevo)
+        logging.getLogger("scovo").warning = self.log.warning
         A._sms_ip.clear()
 
     def fine(self):
         A.connect, EE.lg, SS.lg, EE._client = self.v
+        logging.getLogger("scovo").__dict__.pop("warning", None)
         A._sms_ip.clear()
 
 
-def test_pagina_grazie_uguale_agli_sms_con_il_pulsante_delle_email():
+def test_il_link_dell_email_apre_il_pulsante_e_solo_il_pulsante_registra():
     s = _Scena()
     try:
-        r = A.sms_mi_interessa(_req("/mi/abc23456", "abc23456"))
+        senza_t = lambda c: re.sub(r'name="t" value="[^"]*"', "", c)
+        # un filtro della posta apre il link tre volte nello stesso secondo: tre "aperto", nessun interessato
+        for _ in range(3):
+            r = A.sms_mi_interessa(_req("/mi/abc23456", "abc23456", ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"))
         corpo = r.body.decode()
-        assert r.status_code == 200 and "Grazie!" in corpo and "Ti chiamiamo a breve" in corpo and "348 242 5633" in corpo
-        assert "Non voglio più ricevere email" in corpo and "Non voglio più ricevere SMS" not in corpo
-        assert 'action="/mi/abc23456/stop"' in corpo and "noindex" in r.headers["x-robots-tag"]
+        assert r.status_code == 200 and r.background is None and "Grazie!" not in corpo and "Sì, chiamatemi" in corpo
+        assert '<form class="si" method="post" action="/mi/abc23456/si">' in corpo and "348 242 5633" in corpo
+        assert '<a class="no" href="/mi/abc23456/stop">Non mi interessa</a>' in corpo and "noindex" in r.headers["x-robots-tag"]
         assert "Salone Prova" not in corpo and "titolare" not in corpo and "9876" not in corpo
+        assert senza_t(corpo) == senza_t(SS.pagina("abc23456", chiedi="x"))                    # la stessa pagina degli SMS
+        assert len(s.db.clic) == 3 and not s.db.si
+        assert s.log.righe == [f"EMAIL_APERTO token=abc23456 canale=email n={i}" for i in (1, 2, 3)]
+        assert not s.brevo.chiamate                                                           # aprire non chiede niente a Brevo
+        # il filtro invia anche il modulo, subito: non conta
+        t = re.search(r'name="t" value="([^"]+)"', corpo).group(1)
+        r = _si("abc23456", t=t)
+        assert "Grazie!" not in r.body.decode() and "Tocca di nuovo il pulsante" in r.body.decode() and not s.db.si
+        assert s.log.righe[-1] == "EMAIL_CONFERMA_SCARTATA token=abc23456 motivo=presto"
+        # la persona tocca il pulsante
+        r = _si("abc23456")
+        corpo = r.body.decode()
+        assert r.status_code == 200 and "Grazie!" in corpo and "Ti chiamiamo a breve dal" in corpo and "348 242 5633" in corpo
+        assert "Non voglio più ricevere email" in corpo and "Non voglio più ricevere SMS" not in corpo
+        assert 'action="/mi/abc23456/stop"' in corpo and "Salone Prova" not in corpo and "titolare" not in corpo
         assert corpo.replace("email</button>", "SMS</button>") == SS.pagina("abc23456")          # per il resto la stessa pagina
-        assert not s.db.clic                                                                  # il clic si registra dopo la risposta
-        asyncio.run(r.background())
-        assert len(s.db.clic) == 1 and s.log.righe[-1].startswith("EMAIL_INTERESSATO token=abc23456 canale=email")
-        assert not any(x.startswith("SMS_INTERESSATO") for x in s.log.righe)
-        # un token di 8 caratteri che non esiste: la stessa identica pagina (non si capisce se un token è valido)
+        assert len(s.db.si) == 1
+        assert s.log.righe[-1] == "EMAIL_INTERESSATO token=abc23456 canale=email nome=Salone Prova tel=***9876 n=1"
+        assert not any(x.startswith("SMS_") for x in s.log.righe)
+        # un token di 8 caratteri che non esiste: le stesse identiche pagine (non si capisce se un token è valido)
         prima = len(s.log.righe)
         r = A.sms_mi_interessa(_req("/mi/nonce999", "nonce999"))
-        assert r.status_code == 200 and r.body.decode().replace("nonce999", "abc23456") == corpo
-        asyncio.run(r.background())
-        assert len(s.db.clic) == 1 and len(s.log.righe) == prima
+        assert r.status_code == 200 and "Sì, chiamatemi" in r.body.decode()
+        assert _si("nonce999").body.decode().replace("nonce999", "abc23456") == corpo
+        assert len(s.db.clic) == 3 and len(s.db.si) == 1 and len(s.log.righe) == prima
         r = A.sms_mi_stop(_req("/mi/nonce999/stop", "nonce999", metodo="POST"))
         assert r.status_code == 200 and r.body.decode() == SS.pagina("nonce999", stop=True, canale="email")
         assert not s.brevo.messi
         # un token di 7 caratteri resta sul giro degli SMS
-        r = A.sms_mi_interessa(_req("/mi/nonce99", "nonce99"))
-        assert r.background is None and "Non voglio più ricevere SMS" in r.body.decode()
-        assert s.log.righe[-1] == "SMS_INTERESSATO token=nonce99 nome=? tel=***? n=0"
-        # HEAD non conta
-        assert A.sms_mi_interessa(_req("/mi/abc23456", "abc23456", metodo="HEAD")).background is None
+        r = _si("nonce99")
+        assert "Non voglio più ricevere SMS" in r.body.decode()
+        assert s.log.righe[-1] == "SMS_INTERESSATO token=nonce99 canale=sms nome=? tel=***? n=0"
+        # HEAD e programmi automatici non registrano niente, nemmeno con la firma buona
+        prima = len(s.log.righe)
+        assert A.sms_mi_interessa(_req("/mi/abc23456", "abc23456", metodo="HEAD")).status_code == 200
+        A.sms_mi_interessa(_req("/mi/abc23456", "abc23456", ua="Mozilla/5.0 (compatible; MSOffice link preview)"))
+        assert "Grazie!" not in _si("abc23456", ua="curl/8.5").body.decode()
+        assert len(s.db.clic) == 3 and len(s.db.si) == 1 and len(s.log.righe) == prima
+        # database fermo: mai "Grazie!" senza aver registrato
+        s.db.rotto = True
+        r = _si("abc23456")
+        assert r.status_code == 503 and "Grazie!" not in r.body.decode() and r.headers["retry-after"] == "120"
+        assert s.log.righe[-1] == "EMAIL_INTERESSATO non registrato: OSError"
     finally:
         s.fine()
 
@@ -869,20 +971,25 @@ def test_non_mi_interessa_chiede_conferma_e_solo_il_pulsante_disiscrive():
         s.fine()
 
 
-def test_elenco_interessati_con_le_email():
-    s = _Scena(Brevo(inviati={"titolare@salone.it": [_iso(4)]}))
+def test_elenco_interessati_con_le_email_solo_i_confermati():
+    s = _Scena()
     try:
-        EE.registra_clic(s.db, "abc23456", "Mozilla/5.0", adesso=ADESSO)                       # anteprima
-        EE.registra_clic(s.db, "abc23456", "Mozilla/5.0", adesso=ADESSO + dt.timedelta(hours=2))
+        s.db.link["def67890"] = dict(s.db.link["abc23456"], email="altro@salone.it", nome="Salone Filtro")
+        for _ in range(4):                                                                     # filtro della posta
+            A.sms_mi_interessa(_req("/mi/def67890", "def67890"))
+        A.sms_mi_interessa(_req("/mi/abc23456", "abc23456"))
+        _si("abc23456")
         vecchio = A.current_user
         A.current_user = lambda request, admin=False: {"id": 1, "role": "admin"} if admin else A.err(500, "serve admin=True")
         try:
             d = json.loads(A.admin_sms_interessati(_req("/api/admin/sms_interessati", "")).body)
         finally:
             A.current_user = vecchio
-        assert d["totale"] == 1
+        assert d["totale"] == 1 and len(d["interessati"]) == 1
         x = d["interessati"][0]
-        assert x["canale"] == "email" and x["email"] == "titolare@salone.it" and x["clic"] == 1 and x["forse_anteprima"] == 1
+        assert x["canale"] == "email" and x["email"] == "titolare@salone.it" and x["clic"] == 1 and x["aperti"] == 1
+        assert "forse_anteprima" not in x
+        assert d["totale_solo_aperti"] == 1 and d["solo_aperti"][0]["email"] == "altro@salone.it" and d["solo_aperti"][0]["aperti"] == 4
     finally:
         s.fine()
 
