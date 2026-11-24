@@ -264,7 +264,7 @@ nav.top .logo img{height:48px;width:auto;filter:drop-shadow(0 4px 10px rgba(0,0,
 .svc{grid-template-columns:repeat(3,1fr)}
 .svc>div{min-height:150px;background:rgba(20,21,24,.55)}
 .svc p{font-size:13px;max-width:300px}
-.revs{grid-template-columns:240px repeat(4,1fr)}
+.revs{grid-template-columns:240px repeat(3,1fr)}
 .revs .h b{font-size:24px;line-height:1.05}
 .revs .pt{display:block;font:600 18px/1.15 var(--fh);text-transform:uppercase;letter-spacing:.02em;color:#fff;padding-left:14px;border-left:2px solid var(--cyan)}
 .revs p{font-size:13.5px;color:var(--mut);margin-top:8px;line-height:1.45}
@@ -354,6 +354,18 @@ html.scrolled .fab{opacity:1;pointer-events:auto}
 body.menu-open{overflow:hidden}
 @media (max-width:900px){.menubtn{display:inline-flex}.menu-in{grid-template-columns:1fr 1fr}}
 @media (max-width:760px){.menubtn span{display:none}.menubtn{width:40px;padding:0}.nav-r .ig.wa{display:none}.menu-in{grid-template-columns:1fr}.hlinks{grid-template-columns:1fr}.menu{padding-top:72px}}
+
+/* passaggio all'autosalone S&C */
+.btn.xsite{border-color:var(--yel);color:var(--yel);background:rgba(11,12,14,.5)}
+.btn.xsite i{font-style:normal;font-size:14px;line-height:.8}
+.btn.xsite:not(.pri):hover{background:var(--yel);border-color:var(--yel);color:#141000}
+.xbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border:1px solid var(--yel);color:var(--yel);font:600 22px/1 var(--fh);letter-spacing:.03em;text-transform:uppercase;transition:background .25s,color .25s}
+.xbar small{display:block;font:500 10px/1.3 var(--fm);letter-spacing:.18em;color:var(--mut);margin-bottom:6px}
+.xbar i{font-style:normal;font-size:24px}
+.xbar:hover{background:var(--yel);color:#141000}.xbar:hover small{color:#141000}
+.xfw{margin-top:22px}
+@media (max-width:1100px){.nav-r .btn.xsite{display:none}}
+@media (max-width:760px){.xfw .btn{display:flex;justify-content:space-between;white-space:normal}}
 </style>
 <link rel="canonical" href="https://prototipo-autofficina-sarli.onrender.com/">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -383,12 +395,13 @@ body.menu-open{overflow:hidden}
       <ul>
         <li><a href="/servizi/"><span>01</span>Servizi</a></li>
         <li><a href="/zone/"><span>02</span>Zone</a></li>
-        <li><a href="/officina-autorizzata-motrio/"><span>03</span>Motrio</a></li>
-        <li><a href="/chi-siamo/"><span>04</span>Chi siamo</a></li>
-        <li><a href="/contatti/"><span>05</span>Contatti</a></li>
+        
+        <li><a href="/chi-siamo/"><span>03</span>Chi siamo</a></li>
+        <li><a href="/contatti/"><span>04</span>Contatti</a></li>
       </ul>
       <div class="nav-r">
         <a class="ig wa" href="https://wa.me/393382230548" target="_blank" rel="noopener" aria-label="Scrivi su WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.54-3.7 8.24-8.24 8.24zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg></a>
+        <a class="btn sm xsite" href="https://prototipo-sc-car-center.onrender.com/" aria-label="Auto in vendita: vai al sito dell'autosalone S&amp;C Car Center">Auto in vendita <i aria-hidden="true">→</i></a>
         <a class="btn sm pri" href="tel:+393382230548"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg> Chiama</a>
         <button class="menubtn" type="button" aria-expanded="false" aria-controls="menu"><i></i><span>Menu</span></button>
       </div>
@@ -406,8 +419,9 @@ body.menu-open{overflow:hidden}
     <div class="specs rv d4">
       <div><div class="k">Sede</div><div class="v">Via Nuova Circonvallazione 3</div></div>
       <div><div class="k">Cellulare</div><div class="v"><a href="tel:+393382230548">338 223 0548</a></div></div>
-      <div><div class="k">Officina autorizzata</div><div class="v">Motrio · rete Renault</div></div>
+      
       <div><div class="k">Impianti a gas</div><div class="v">Landirenzo Gas Specialist</div></div>
+      <div><div class="k">Orari</div><div class="v">Su appuntamento</div></div>
     </div>
   </section>
 
@@ -427,7 +441,7 @@ body.menu-open{overflow:hidden}
     </div>
     <div class="revs" id="perche">
       <div class="h"><div class="sn">02 — Perché sceglierci</div><b>Un solo riferimento per la tua auto</b></div>
-      <div><b class="pt"><a href="/officina-autorizzata-motrio/">Officina autorizzata Motrio</a></b><p>Fa parte di Motrio, la rete di officine del gruppo Renault.</p></div>
+      
       <div><b class="pt"><a href="/landirenzo-gas-specialist/">Landirenzo Gas Specialist</a></b><p>Officina specializzata negli impianti a gas Landirenzo.</p></div>
       <div><b class="pt">Tutto nella stessa sede</b><p>Meccanica, carrozzeria, gas, gomme e ganci traino senza girare tra più officine.</p></div>
       <div><b class="pt">Contatto diretto</b><p>Chiami o scrivi su WhatsApp e fissi l'appuntamento con noi.</p></div>
@@ -448,7 +462,7 @@ body.menu-open{overflow:hidden}
           <div><div class="k">Indirizzo</div><div class="v">Via Nuova Circonvallazione 3<br>27022 Casorate Primo (PV)</div></div>
           <div><div class="k">Cellulare</div><div class="v"><a href="tel:+393382230548">338 223 0548</a></div></div>
           <div><div class="k">Orari</div><div class="v">Chiama per appuntamento</div></div>
-          <div><div class="k">Officina autorizzata</div><div class="v">Motrio · Landirenzo Gas Specialist</div></div>
+          <div><div class="k">Impianti a gas</div><div class="v">Landirenzo Gas Specialist</div></div>
         </div>
       </div>
       <a class="map" href="https://www.google.com/maps/search/?api=1&amp;query=Via+Nuova+Circonvallazione+3,+27022+Casorate+Primo+PV" target="_blank" rel="noopener" aria-label="Apri l'indirizzo in Google Maps">
@@ -463,7 +477,8 @@ body.menu-open{overflow:hidden}
         <span class="mapcap"><b>Via Nuova Circonvallazione 3</b><em>27022 Casorate Primo (PV)</em><i class="lnk">Apri in Google Maps <span class="arr"></span></i></span>
       </a>
     </div>
-    <div class="hlinks"><div class="k">Servizi</div><p><a href="/servizi/officina-meccanica/">Officina meccanica</a> <i>·</i> <a href="/servizi/carrozzeria/">Carrozzeria</a> <i>·</i> <a href="/servizi/impianti-gpl/">Impianti GPL</a> <i>·</i> <a href="/servizi/impianti-metano/">Impianti a metano</a> <i>·</i> <a href="/servizi/ganci-traino/">Ganci traino</a> <i>·</i> <a href="/servizi/gommista/">Gommista e cambio gomme</a> <i>·</i> <a href="/servizi/tagliando-auto/">Tagliando auto</a> <i>·</i> <a href="/servizi/controlli-pre-revisione/">Controlli prima della revisione</a> <i>·</i> <a href="/servizi/climatizzatore/">Climatizzatore auto</a> <i>·</i> <a href="/servizi/freni/">Freni</a> <i>·</i> <a href="/servizi/diagnosi-elettronica/">Diagnosi elettronica</a> <i>·</i> <a href="/servizi/batterie/">Batterie auto</a></p><div class="k">Zone servite</div><p><a href="/zone/casorate-primo/">Casorate Primo</a> <i>·</i> <a href="/zone/motta-visconti/">Motta Visconti</a> <i>·</i> <a href="/zone/besate/">Besate</a> <i>·</i> <a href="/zone/bereguardo/">Bereguardo</a> <i>·</i> <a href="/zone/trovo/">Trovo</a> <i>·</i> <a href="/zone/rognano/">Rognano</a> <i>·</i> <a href="/zone/vernate/">Vernate</a> <i>·</i> <a href="/zone/rosate/">Rosate</a> <i>·</i> <a href="/zone/binasco/">Binasco</a> <i>·</i> <a href="/zone/abbiategrasso/">Abbiategrasso</a> <i>·</i> <a href="/zone/pavia/">Pavia</a> <i>·</i> <a href="/zone/vigevano/">Vigevano</a> <i>·</i> <a href="/zone/milano-sud/">Milano sud</a></p><div class="k">Officina</div><p><a href="/officina-autorizzata-motrio/">Officina autorizzata Motrio</a> <i>·</i> <a href="/landirenzo-gas-specialist/">Landirenzo Gas Specialist</a> <i>·</i> <a href="/chi-siamo/">Chi siamo</a> <i>·</i> <a href="/domande-frequenti/">Domande frequenti</a> <i>·</i> <a href="/contatti/">Contatti</a></p></div>
+    <div class="hlinks"><div class="k">Servizi</div><p><a href="/servizi/officina-meccanica/">Officina meccanica</a> <i>·</i> <a href="/servizi/carrozzeria/">Carrozzeria</a> <i>·</i> <a href="/servizi/impianti-gpl/">Impianti GPL</a> <i>·</i> <a href="/servizi/impianti-metano/">Impianti a metano</a> <i>·</i> <a href="/servizi/ganci-traino/">Ganci traino</a> <i>·</i> <a href="/servizi/gommista/">Gommista e cambio gomme</a> <i>·</i> <a href="/servizi/tagliando-auto/">Tagliando auto</a> <i>·</i> <a href="/servizi/controlli-pre-revisione/">Controlli prima della revisione</a> <i>·</i> <a href="/servizi/climatizzatore/">Climatizzatore auto</a> <i>·</i> <a href="/servizi/freni/">Freni</a> <i>·</i> <a href="/servizi/diagnosi-elettronica/">Diagnosi elettronica</a> <i>·</i> <a href="/servizi/batterie/">Batterie auto</a></p><div class="k">Zone servite</div><p><a href="/zone/casorate-primo/">Casorate Primo</a> <i>·</i> <a href="/zone/motta-visconti/">Motta Visconti</a> <i>·</i> <a href="/zone/besate/">Besate</a> <i>·</i> <a href="/zone/bereguardo/">Bereguardo</a> <i>·</i> <a href="/zone/trovo/">Trovo</a> <i>·</i> <a href="/zone/rognano/">Rognano</a> <i>·</i> <a href="/zone/vernate/">Vernate</a> <i>·</i> <a href="/zone/rosate/">Rosate</a> <i>·</i> <a href="/zone/binasco/">Binasco</a> <i>·</i> <a href="/zone/abbiategrasso/">Abbiategrasso</a> <i>·</i> <a href="/zone/pavia/">Pavia</a> <i>·</i> <a href="/zone/vigevano/">Vigevano</a> <i>·</i> <a href="/zone/milano-sud/">Milano sud</a></p><div class="k">Officina</div><p><a href="/landirenzo-gas-specialist/">Landirenzo Gas Specialist</a> <i>·</i> <a href="/chi-siamo/">Chi siamo</a> <i>·</i> <a href="/domande-frequenti/">Domande frequenti</a> <i>·</i> <a href="/contatti/">Contatti</a></p></div>
+    <div class="xfw"><a class="btn xsite xfoot" href="https://prototipo-sc-car-center.onrender.com/">Auto in vendita · Autosalone S&amp;C <i aria-hidden="true">→</i></a></div>
     <footer><span>© 2026 Autofficina Carrozzeria Sarli · P.IVA 09264570962</span><span>Via Nuova Circonvallazione 3 · 27022 Casorate Primo (PV) · Cell. 338 223 0548</span></footer>
   </section>
 </main>
@@ -472,9 +487,10 @@ body.menu-open{overflow:hidden}
 <script>(function(){var r=document.documentElement;function f(){r.classList.toggle("scrolled",scrollY>innerHeight*.6)}addEventListener("scroll",f,{passive:true});f()})();</script>
 <div id="menu" class="menu" hidden>
   <button class="menubtn mclose" type="button" aria-expanded="true" aria-label="Chiudi menu"><i></i></button><div class="menu-in">
+    <a class="xbar" href="https://prototipo-sc-car-center.onrender.com/"><span><small>Autosalone S&amp;C Car Center</small>Auto in vendita</span><i aria-hidden="true">→</i></a>
     <div class="mcol"><div class="k">Servizi</div><ul><li><a href="/servizi/">Tutti i servizi</a></li><li><a href="/servizi/officina-meccanica/">Officina meccanica</a></li><li><a href="/servizi/carrozzeria/">Carrozzeria</a></li><li><a href="/servizi/impianti-gpl/">Impianti GPL</a></li><li><a href="/servizi/impianti-metano/">Impianti a metano</a></li><li><a href="/servizi/ganci-traino/">Ganci traino</a></li><li><a href="/servizi/gommista/">Gommista e cambio gomme</a></li><li><a href="/servizi/tagliando-auto/">Tagliando auto</a></li><li><a href="/servizi/controlli-pre-revisione/">Controlli prima della revisione</a></li><li><a href="/servizi/climatizzatore/">Climatizzatore auto</a></li><li><a href="/servizi/freni/">Freni</a></li><li><a href="/servizi/diagnosi-elettronica/">Diagnosi elettronica</a></li><li><a href="/servizi/batterie/">Batterie auto</a></li></ul></div>
     <div class="mcol"><div class="k">Zone</div><ul><li><a href="/zone/">Tutte le zone</a></li><li><a href="/zone/casorate-primo/">Casorate Primo</a></li><li><a href="/zone/motta-visconti/">Motta Visconti</a></li><li><a href="/zone/besate/">Besate</a></li><li><a href="/zone/bereguardo/">Bereguardo</a></li><li><a href="/zone/trovo/">Trovo</a></li><li><a href="/zone/rognano/">Rognano</a></li><li><a href="/zone/vernate/">Vernate</a></li><li><a href="/zone/rosate/">Rosate</a></li><li><a href="/zone/binasco/">Binasco</a></li><li><a href="/zone/abbiategrasso/">Abbiategrasso</a></li><li><a href="/zone/pavia/">Pavia</a></li><li><a href="/zone/vigevano/">Vigevano</a></li><li><a href="/zone/milano-sud/">Milano sud</a></li></ul></div>
-    <div class="mcol"><div class="k">Officina</div><ul><li><a href="/">Home</a></li><li><a href="/officina-autorizzata-motrio/">Officina autorizzata Motrio</a></li><li><a href="/landirenzo-gas-specialist/">Landirenzo Gas Specialist</a></li><li><a href="/chi-siamo/">Chi siamo</a></li><li><a href="/domande-frequenti/">Domande frequenti</a></li><li><a href="/contatti/">Contatti</a></li></ul>
+    <div class="mcol"><div class="k">Officina</div><ul><li><a href="/">Home</a></li><li><a href="/landirenzo-gas-specialist/">Landirenzo Gas Specialist</a></li><li><a href="/chi-siamo/">Chi siamo</a></li><li><a href="/domande-frequenti/">Domande frequenti</a></li><li><a href="/contatti/">Contatti</a></li></ul>
       <div class="mcta"><a class="btn pri" href="tel:+393382230548"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg><span>Chiama 338 223 0548</span></a><a class="btn wa" href="https://wa.me/393382230548" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.54-3.7 8.24-8.24 8.24zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg><span>WhatsApp</span></a></div></div>
   </div>
 </div>

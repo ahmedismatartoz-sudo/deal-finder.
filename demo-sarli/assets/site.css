@@ -214,3 +214,15 @@ a.map:hover{border-color:var(--yel)}
   .cdl dd{margin-bottom:10px}
   .fab{width:50px;height:50px}
 }
+
+/* passaggio all'autosalone S&C */
+.btn.xsite{border-color:var(--yel);color:var(--yel)}
+.btn.xsite i{font-style:normal;font-size:14px;line-height:.8}
+.btn.xsite:hover{background:var(--yel);border-color:var(--yel);color:#141000}
+.xbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border:1px solid var(--yel);color:var(--yel);font:600 22px/1 var(--fh);letter-spacing:.03em;text-transform:uppercase;transition:background .25s,color .25s}
+.xbar small{display:block;font:500 10px/1.3 var(--fm);letter-spacing:.18em;color:var(--mut);margin-bottom:6px}
+.xbar i{font-style:normal;font-size:24px}
+.xbar:hover{background:var(--yel);color:#141000}.xbar:hover small{color:#141000}
+.ftr .xfoot{margin-top:6px}
+@media (max-width:1360px) and (min-width:1181px){.hdr-r .btn.xsite{padding:12px 11px}.mainnav>ul>li>a{padding:10px 8px}}
+@media (max-width:640px){.hdr-r .btn.xsite{display:none}}
