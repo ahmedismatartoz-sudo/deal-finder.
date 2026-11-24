@@ -29,7 +29,7 @@ Cosa fa, in ordine (si ferma al primo problema, PRIMA di qualsiasi cancellazione
     bloccati restano in Brevo, così Brevo continua a bloccarli), con TUTTE le liste fra quelle della base (chi è anche
     in un'altra lista non si tocca) e non in una lista di una campagna programmata o in invio. Rimuoverli solo dalla
     lista non libera posto: il tetto del piano conta i contatti, non le iscrizioni.
- 4. ricontare i contatti in Brevo, caricare i scelti entro TETTO_BREVO in una lista nuova "Skovo lotto gg-mm".
+ 4. ricontare i contatti in Brevo, caricare i scelti (al massimo TETTO_INVIO_GIRO per giro, entro TETTO_BREVO) in una lista nuova "Skovo lotto gg-mm".
  5. creare la campagna con oggetto, anteprima, HTML, mittente (id), risposta, intestazione e piè di pagina della
     base, sulla lista nuova, programmata per <quando> (invia Brevo). Se l'import o la creazione falliscono i
     contatti scelti tornano disponibili per il giro dopo.
@@ -203,7 +203,7 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
     """Vedi la descrizione del modulo. Restituisce un riepilogo di soli numeri (più 'fermo' con il motivo)."""
     from . import invii
     from .auto_invio import _contatti_brevo
-    from .brevo_liste import API, BLOCCATI_MINIMI, TETTO_BREVO, _bloccati_0111, _cartella, _chiave, _liste, nomi_campagne
+    from .brevo_liste import API, BLOCCATI_MINIMI, TETTO_BREVO, TETTO_INVIO_GIRO, liste_tutti, protetto, _bloccati_0111, _cartella, _chiave, _liste, nomi_campagne
     from .su_misura import _aspetta_import, _righe_db
     from .. import db as _db
     esito: dict = {"base": int(base)}
@@ -335,10 +335,15 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
         return {**esito, "fermo": "campagne_programmate_non_lette"}
     ricevuti = {(e or "").lower() for e in arrivati}
     solo_base = set(liste_base)
+    # 24/11: con il tetto dei contatti a 500.000 non serve più fare posto: si cancella solo se con il giro nuovo si
+    # passerebbe TETTO_BREVO, e mai chi sta in una lista "Skovo tutti ..." (anche se è proprio la lista della base)
+    protette = liste_tutti(c)
+    serve_posto = len(contatti) + min(len(candidati), TETTO_INVIO_GIRO) > TETTO_BREVO
     da_togliere = sorted({(x.get("email") or "").lower() for x in nella_base
                           if (x.get("email") or "").lower() in ricevuti and not invii.contatto_bloccato(x)
                           and x.get("listIds") and set(x.get("listIds")) <= solo_base
-                          and not (set(x.get("listIds") or []) & attesa)})
+                          and not (set(x.get("listIds") or []) & attesa)
+                          and not protetto(x, protette)}) if serve_posto else []
     tolti = errori = 0
     for e in da_togliere:
         rd = c.delete(f"{API}/contacts/{quote(e, safe='')}")
@@ -354,7 +359,7 @@ def giro_lotto(base: int, quando: str, precedenti=None, client=None, pausa: floa
     n_brevo = (rc.json() or {}).get("count") if rc.status_code < 300 else None
     if n_brevo is None:
         return {**esito, "fermo": "conteggio_brevo_non_letto"}
-    posto = TETTO_BREVO - int(n_brevo)
+    posto = min(TETTO_BREVO - int(n_brevo), TETTO_INVIO_GIRO)    # contatti tenuti: 500.000; email per giro: 1.400
     scelti = candidati[:max(0, posto)]
     esito.update({"in_brevo_dopo": int(n_brevo), "posto": posto, "caricati": len(scelti),
                   "restano_dopo_questo_giro": len(candidati) - len(scelti)})

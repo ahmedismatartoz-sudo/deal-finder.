@@ -188,6 +188,9 @@ def _prepara(monkeypatch, brevo, righe, db):
     monkeypatch.setattr(D, "connect", lambda: db)
     monkeypatch.setattr(SM, "_righe_db", lambda conn: righe)
     monkeypatch.setattr(BL, "BLOCCATI_MINIMI", 1)
+    # 24/11: si cancella "per fare posto" solo se contatti + giro nuovo passano TETTO_BREVO (500.000 di norma): qui il
+    # tetto è 14 (11 contatti + 4 nuovi = 15), come quando era 1.495 e Brevo era pieno
+    monkeypatch.setattr(BL, "TETTO_BREVO", 14)
     monkeypatch.setattr(BL, "_bloccati_0111", lambda: set())
     monkeypatch.setattr(time, "sleep", lambda s: None)
 
@@ -352,3 +355,26 @@ def test_funzioni_pure():
     assert GL.normalizza_quando("2026-11-17T08:00:00Z") == "2026-11-17T08:00:00+00:00"
     assert GL.radice_da_nome("Skovo lotto 17-11 (r77)", 78) == 77 and GL.radice_da_nome("Skovo corta", 77) == 77
     assert GL.rimbalzi_ripetuti([["A@x.it", "b@x.it"], ["a@x.it"], ["c@x.it"]]) == {"a@x.it"}
+
+
+def test_con_il_tetto_a_500_000_non_si_cancella_e_skovo_tutti_mai(monkeypatch):
+    import dealfinder.marketing.brevo_liste as BL
+    # tetto vero (500.000): c'è posto, nessuno viene cancellato, il giro carica lo stesso i suoi 4
+    brevo, righe, db = _scenario()
+    _prepara(monkeypatch, brevo, righe, db)
+    monkeypatch.setattr(BL, "TETTO_BREVO", 500_000)
+    out = GL.giro_lotto(77, QUANDO, client=brevo, pausa=0, pausa_cancella=0, adesso=ADESSO)
+    assert "fermo" not in out and not brevo.cancellati and out["tolti_da_brevo"] == 0 and len(brevo.importati) == 4
+    # al massimo TETTO_INVIO_GIRO contatti nuovi per giro, anche se in Brevo c'è posto per 500.000
+    brevo, righe, db = _scenario()
+    _prepara(monkeypatch, brevo, righe, db)
+    monkeypatch.setattr(BL, "TETTO_BREVO", 500_000)
+    monkeypatch.setattr(BL, "TETTO_INVIO_GIRO", 2)
+    out = GL.giro_lotto(77, QUANDO, client=brevo, pausa=0, pausa_cancella=0, adesso=ADESSO)
+    assert out["caricati"] == 2 and len(brevo.importati) == 2 and out["restano_dopo_questo_giro"] == 2
+    # anche col tetto pieno: chi sta in una lista "Skovo tutti ..." non si cancella, neppure se è la lista della base
+    brevo, righe, db = _scenario()
+    brevo.liste[84] = "Skovo tutti 24-11"
+    _prepara(monkeypatch, brevo, righe, db)
+    GL.giro_lotto(77, QUANDO, client=brevo, pausa=0, pausa_cancella=0, adesso=ADESSO)
+    assert not brevo.cancellati

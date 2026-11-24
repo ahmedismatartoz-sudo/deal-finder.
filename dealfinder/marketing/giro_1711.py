@@ -16,7 +16,7 @@ from pathlib import Path
 
 import httpx
 
-from .brevo_liste import API, BLOCCATI_MINIMI, TETTO_BREVO, _bloccati_0111, _cartella, _chiave, _esclusi, _liste
+from .brevo_liste import API, BLOCCATI_MINIMI, TETTO_INVIO, _bloccati_0111, _cartella, _chiave, _esclusi, _liste
 
 lg = logging.getLogger("dealfinder.marketing")
 _FILE = Path(__file__).resolve().with_suffix(".bin")
@@ -105,7 +105,7 @@ def lavoro(chiave: str) -> dict:
             invii.sincronizza_da_brevo(conn, contatti)
             bloccati = invii.disiscritti(conn) | _bloccati_0111()
         in_brevo = {invii.norm_email(x.get("email")) for x in contatti if x.get("email")}
-        posto = TETTO_BREVO - len(in_brevo)
+        posto = TETTO_INVIO - len(in_brevo)     # limite di invio, come prima
         esito.update({"in_brevo": len(in_brevo), "posto": posto, "disiscritti": len(bloccati)})
         if len(bloccati) < BLOCCATI_MINIMI:
             return {**esito, "fermo": "disiscritti_incompleti"}

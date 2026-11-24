@@ -21,7 +21,9 @@ import statistics
 import httpx
 
 from ..geo import coords, km
-from .brevo_liste import API, TETTO_BREVO, _DOMINI_FERMI, _EMAIL_OK, _NON_EMAIL, _cartella, _chiave, _esporta, _liste
+# TETTO_INVIO: il posto di un giro si calcola come prima (1.495), non con il tetto dei contatti tenuti (500.000)
+from .brevo_liste import API, TETTO_INVIO, _DOMINI_FERMI, _EMAIL_OK, _NON_EMAIL, _cartella, _chiave, _esporta, _liste
+from .brevo_liste import liste_tutti as _liste_tutti, protetto as _protetto
 
 lg = logging.getLogger("dealfinder.marketing")
 
@@ -259,7 +261,7 @@ def prepara(items: list[dict], totale: int = 1450, quando: str = "2026-11-09T09:
         for cid in campagne_aperture:
             aperti |= set(_esporta(c, cid, "openers"))
         bloccati_in_brevo = [x for x in contatti if invii.contatto_bloccato(x)]
-        posto = TETTO_BREVO - len(bloccati_in_brevo)
+        posto = TETTO_INVIO - len(bloccati_in_brevo)
         saloni = scegli_saloni(righe, bloccati, aperti, totale * 2)
         scelti = assegna(saloni, auto, min(totale, posto))
         esito.update({"saloni_candidati": len(saloni), "scelti": len(scelti),
@@ -271,9 +273,11 @@ def prepara(items: list[dict], totale: int = 1450, quando: str = "2026-11-09T09:
         from urllib.parse import quote
         tieni = {s["email"] for s in scelti}
         tolti = 0
+        protette = _liste_tutti(c)        # 24/11: mai cancellare chi sta in una lista "Skovo tutti ..." (carica_tutti)
+        esito["protetti_skovo_tutti"] = sum(1 for x in contatti if _protetto(x, protette))
         for x in contatti:
             e = (x.get("email") or "").lower()
-            if e and e not in tieni and not invii.contatto_bloccato(x):
+            if e and e not in tieni and not invii.contatto_bloccato(x) and not _protetto(x, protette):
                 if c.delete(f"{API}/contacts/{quote(e, safe='')}").status_code in (200, 204, 404):
                     tolti += 1
         esito["tolti_da_brevo"] = tolti
@@ -405,7 +409,7 @@ def prepara_secondo(items: list[dict], totale: int = 1100, campagna_fatta: int =
             esito["fermo"] = "elenco_campagna_70_incompleto"
             return esito
         bloccati_in_brevo = [x for x in contatti if invii.contatto_bloccato(x)]
-        posto = TETTO_BREVO - len(bloccati_in_brevo)
+        posto = TETTO_INVIO - len(bloccati_in_brevo)
         saloni = scegli_secondo(righe, bloccati, gia | rimb, totale * 2)
         scelti = assegna_secondo(saloni, auto, min(totale, posto))
         from collections import Counter
@@ -421,9 +425,11 @@ def prepara_secondo(items: list[dict], totale: int = 1100, campagna_fatta: int =
             return esito
         tieni = {s["email"] for s in scelti}
         tolti = 0
+        protette = _liste_tutti(c)        # 24/11: mai cancellare chi sta in una lista "Skovo tutti ..." (carica_tutti)
+        esito["protetti_skovo_tutti"] = sum(1 for x in contatti if _protetto(x, protette))
         for x in contatti:
             e = (x.get("email") or "").lower()
-            if e and e not in tieni and not invii.contatto_bloccato(x):
+            if e and e not in tieni and not invii.contatto_bloccato(x) and not _protetto(x, protette):
                 if c.delete(f"{API}/contacts/{quote(e, safe='')}").status_code in (200, 204, 404):
                     tolti += 1
         esito["tolti_da_brevo"] = tolti
@@ -511,7 +517,7 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
         if len(bloccati) < BLOCCATI_MINIMI:
             return {**esito, "fermo": "disiscritti_incompleti"}
         bloccati_in_brevo = [x for x in contatti if invii.contatto_bloccato(x)]
-        posto = TETTO_BREVO - len(bloccati_in_brevo)
+        posto = TETTO_INVIO - len(bloccati_in_brevo)
         saloni = scegli_secondo(righe, bloccati, fuori, totale * 2)
         scelti = assegna_secondo(saloni, auto, min(totale, posto))
         esito.update({"saloni": len(saloni), "scelti": len(scelti), "bloccati_tenuti_in_brevo": len(bloccati_in_brevo)})
@@ -521,9 +527,11 @@ def prepara_rinvio(items: list[dict], campagne=(70, 72), quando: str = "2026-11-
             return esito
         tieni = {s["email"] for s in scelti}
         tolti = 0
+        protette = _liste_tutti(c)        # 24/11: mai cancellare chi sta in una lista "Skovo tutti ..." (carica_tutti)
+        esito["protetti_skovo_tutti"] = sum(1 for x in contatti if _protetto(x, protette))
         for x in contatti:
             e = (x.get("email") or "").lower()
-            if e and e not in tieni and not invii.contatto_bloccato(x):
+            if e and e not in tieni and not invii.contatto_bloccato(x) and not _protetto(x, protette):
                 if c.delete(f"{API}/contacts/{quote(e, safe='')}").status_code in (200, 204, 404):
                     tolti += 1
         esito["tolti_da_brevo"] = tolti
@@ -564,7 +572,7 @@ def ripesca_fermi(totale: int = 1400, quando: str = "2026-11-13T09:00:00+01:00",
     from ..db import connect
     from . import invii
     from .auto_invio import _contatti_brevo
-    from .brevo_liste import BLOCCATI_MINIMI, TETTO_BREVO as _TETTO, _bloccati_0111, _esporta
+    from .brevo_liste import BLOCCATI_MINIMI, TETTO_INVIO as _TETTO, _bloccati_0111, _esporta
     minimi = minimi or {74: 6, 75: 3}
     key = _chiave()
     if not key:
@@ -717,7 +725,7 @@ def carica_fuori84(totale: int = 1495, quando: str = "subito", oggi_pref=None, c
     from ..db import connect
     from . import invii
     from .auto_invio import _contatti_brevo
-    from .brevo_liste import BLOCCATI_MINIMI, TETTO_BREVO as _TETTO, _bloccati_0111
+    from .brevo_liste import BLOCCATI_MINIMI, TETTO_INVIO as _TETTO, _bloccati_0111
     oggi = {x for x in (oggi_pref or ()) if len(x) == 16}
     esito: dict = {"oggi_75": len(oggi)}
     if len(oggi) < 1000:

@@ -43,6 +43,7 @@ SPOSTABILI: dict = {
     "fermi:": (False, BREVO),
     "fermi2:": (False, BREVO),
     "conta_email:": (False, BREVO),
+    "carica_tutti:": (False, BREVO),    # 24/11 11:35 (cliente: "carica tutti tutti tutti ... tranne quelli esclusi")
     "pulita:": (False, BREVO),
     "cliccati:": (False, BREVO),
     "aperture:": (False, BREVO),
@@ -468,6 +469,17 @@ def esegui(v: str) -> bool | None:
         except Exception as e:
             lg.warning("CONTA_EMAIL non riuscito: %s", str(e)[:300])
         return
+    if v.startswith("carica_tutti:"):     # 24/11 (cliente): tutte le email dei commercianti nella lista nuova "Skovo
+        # tutti 24-11" (tetto dei contatti: 500.000, il limite del piano). Non invia niente. Solo conteggi.
+        # _lungo: fatta solo a lavoro finito (l'import è ripetibile senza doppioni), al massimo 3 tentativi
+        def _carica_tutti():
+            from ..marketing import brevo_liste as bl
+            esito = bl.carica_tutti()
+            lg.warning("CARICA_TUTTI %s", json.dumps(esito))
+            perche = bl.incompleto(esito)  # fermo, fonte non letta, blocchi rifiutati, import fallito o non finito
+            if perche:
+                raise RuntimeError("caricamento incompleto: " + perche)
+        return _lungo(f"carica_tutti:{v.split(':', 1)[1][:80]}", "CARICA_TUTTI", _carica_tutti)
     if v.startswith("pulita:"):           # 8/11 (cliente): lista di chi apre, pulita, per il nuovo mittente (non invia)
         try:
             from ..marketing import brevo_liste as bl
