@@ -879,10 +879,13 @@ def attesa_prossimo_giro(res: dict, attesa: float, per_giro_n: int | None = None
     if not isinstance(res, dict) or res.get("saltato") or res.get("spenta"):
         return attesa
     n = per_giro() if per_giro_n is None else per_giro_n
-    if not (res.get("candidate", 0) >= n or res.get("sito_restanti")):
+    # 24/11: anche la seconda verifica (verifica_sconto) con auto rimaste: verifica_restanti c'è solo se il lotto ne ha
+    # concluse (mai un ciclo a vuoto) e senza pausa
+    if not (res.get("candidate", 0) >= n or res.get("sito_restanti") or res.get("verifica_restanti")):
         return attesa
     if controlla_tutte() and res.get("fonte") == "claude" and (
-            not res.get("fatte") or any(str(k).startswith("pausa_") for k in res)):
+            (not res.get("fatte") and not res.get("verifica_restanti"))
+            or any(str(k).startswith("pausa_") for k in res)):
         return attesa
     return veloce
 
@@ -905,6 +908,7 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     dopo: list = []          # 19/11: tetto dei commercianti pieno ma con margine da prendere il posto di una più debole
     tutte_attivo = controlla_tutte()
     sa_tutte, sa_gia, sa_fuori = set(), set(), {}     # 19/11: per stato_coda (solo id e conteggi)
+    sa_auto: list = []                                # 24/11: le stesse auto, per la seconda verifica (verifica_sconto)
     for it in items:
         if it.get("id") not in tolti:
             continue
@@ -915,6 +919,7 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
         except Exception:
             m = "errore"
         sa_tutte.add(it.get("id"))
+        sa_auto.append(it)
         try:
             if gia_controllata(it):
                 sa_gia.add(it.get("id"))
@@ -976,6 +981,13 @@ def coda_dal_sito(items: list[dict], out: list[dict], fun, g=None) -> dict:
     CODA_SITO.update(t=time.time(), entra=[it["id"] for it in entra], fuori=fuori, sul_sito=dentro,
                      motivi=dict(motivi), inutili=inutili, gia_controllate=gia, chat=[it["id"] for it in chat],
                      sconto_alto=sa_tutte, sconto_alto_gia=sa_gia, sconto_alto_fuori=sa_fuori)
+    # 24/11 (cliente): seconda verifica delle auto già controllate e rimaste in zona grigia (ai/verifica_sconto.py):
+    # qui solo l'elenco degli id idonei e i conteggi per motivo; le chiamate le fa il giro, in background
+    try:
+        from . import verifica_sconto as _VS
+        _VS.prepara([(it, sa_fuori.get(it.get("id")), it.get("id") in sa_gia) for it in sa_auto], g)
+    except Exception:                     # non deve mai fermare l'elenco
+        CODA_SITO.update(verifica=[], verifica_motivi={})
     res = {"entra": len(entra), "fuori_per_altro": len(fuori), **dict(motivi),
            **({"chat_in_coda": len(chat)} if getattr(g, "chat_subito", 0) > 0 else {}),
            "entrate_oggi": len(mis["entrate"]), "entrate_sito_oggi": len(mis["entrate_sito"]),
@@ -1196,7 +1208,26 @@ def fallite_da_db(conn) -> set:
         return set()
 
 
-def giro(conn, massimo: int | None = None, chiama=None) -> dict:
+def giro(conn, massimo: int | None = None, chiama=None, chiama_verifica=None) -> dict:
+    """Il giro del controllo (_giro_controllo, come prima) e, dopo, un lotto della seconda verifica delle auto con
+    sconto alto rimaste in zona grigia (24/11, ai/verifica_sconto.py: chiavi verifica_* nel risultato). La verifica
+    non può far fallire il giro."""
+    res = _giro_controllo(conn, massimo, chiama)
+    try:
+        from . import verifica_sconto as _VS
+        v = _VS.giro(conn, chiama=chiama_verifica)
+        if v:
+            res = dict(res, **v)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        log.warning("VERIFICA_SCONTO_ALTO non riuscita: %s", str(e)[:200])
+    return res
+
+
+def _giro_controllo(conn, massimo: int | None = None, chiama=None) -> dict:
     """Un giro sulle auto candidate non ancora controllate (stesso elenco di Jev). `chiama(testo, foto)` ->
     (json, token_in, token_out, modello) si sostituisce nei test."""
     import threading
