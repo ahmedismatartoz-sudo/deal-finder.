@@ -3344,12 +3344,38 @@ def _sms_troppi(request: Request) -> bool:
     return False
 
 
+def _mi_email(token) -> bool:
+    """Il token è di una email (marketing/email_esempi.py, tabella email_link)? Se non si riesce a leggere: no (SMS)."""
+    try:
+        from ..marketing import email_esempi as EE
+        with connect() as conn:
+            return EE.trova(conn, token) is not None
+    except Exception:
+        return False
+
+
+def _mi_clic_email(token, user_agent: str) -> None:
+    """Dopo la risposta (chiede a Brevo quando è partita l'email: chi ha toccato il pulsante non aspetta)."""
+    try:
+        from ..marketing import email_esempi as EE
+        with connect() as conn:
+            EE.registra_clic(conn, token, user_agent)
+    except Exception as e:
+        logging.getLogger("scovo").warning("EMAIL_INTERESSATO non registrato: %s", type(e).__name__)
+
+
 def sms_mi_interessa(request: Request):
-    """GET /mi/{token}, pubblica: pagina di ringraziamento (uguale per ogni token) e clic registrato."""
+    """GET /mi/{token}, pubblica: pagina di ringraziamento (uguale per ogni token) e clic registrato.
+    Il token di una email (email_esempi) apre la stessa pagina, con il pulsante in fondo che parla di email."""
+    from starlette.background import BackgroundTask
     from ..marketing import sms_saloni as SS
     token = request.path_params.get("token")
     if _sms_troppi(request):
         return HTMLResponse(SS.pagina(token), status_code=429, headers=_SMS_PAGINA_H)
+    if _mi_email(token):
+        dopo = (BackgroundTask(_mi_clic_email, token, request.headers.get("user-agent") or "")
+                if request.method == "GET" else None)
+        return HTMLResponse(SS.pagina(token, canale="email"), headers=_SMS_PAGINA_H, background=dopo)
     if request.method == "GET":                              # HEAD (controlli automatici dei link) non conta
         try:
             with connect() as conn:
@@ -3360,25 +3386,41 @@ def sms_mi_interessa(request: Request):
 
 
 def sms_mi_stop(request: Request):
-    """POST /mi/{token}/stop: il salone non vuole più SMS (tabella sms_stop)."""
+    """POST /mi/{token}/stop: il salone non vuole più SMS (tabella sms_stop) o, se il token è di una email, non vuole
+    più email (disiscritti + emailBlacklisted in Brevo). GET (il pulsante "Non mi interessa" dell'email): solo la pagina
+    che chiede conferma, non disiscrive (le anteprime automatiche dei programmi di posta aprono i link)."""
     from ..marketing import sms_saloni as SS
     token = request.path_params.get("token")
     if _sms_troppi(request):
         return HTMLResponse(SS.pagina(token), status_code=429, headers=_SMS_PAGINA_H)
+    canale = "email" if _mi_email(token) else "sms"
+    if request.method != "POST":
+        return HTMLResponse(SS.pagina(token, canale=canale, conferma=True), headers=_SMS_PAGINA_H)
     try:
         with connect() as conn:
-            SS.registra_stop(conn, token)
+            if canale == "email":
+                from ..marketing import email_esempi as EE
+                EE.registra_stop(conn, token)
+            else:
+                SS.registra_stop(conn, token)
     except Exception as e:
-        logging.getLogger("scovo").warning("SMS_STOP non registrato: %s", type(e).__name__)
-    return HTMLResponse(SS.pagina(token, stop=True), headers=_SMS_PAGINA_H)
+        logging.getLogger("scovo").warning("%s_STOP non registrato: %s", canale.upper(), type(e).__name__)
+    return HTMLResponse(SS.pagina(token, stop=True, canale=canale), headers=_SMS_PAGINA_H)
 
 
 def admin_sms_interessati(request: Request):
-    """Solo amministratore: chi ha toccato "Mi interessa" (nome, telefono, quando, quante volte): da richiamare."""
+    """Solo amministratore: chi ha toccato "Mi interessa" (nome, telefono, quando, quante volte): da richiamare.
+    Dentro anche quelli delle email (canale "email", con l'indirizzo): `clic` sono i clic veri, `forse_anteprima`
+    quelli arrivati subito dopo l'invio."""
     current_user(request, admin=True)
     from ..marketing import sms_saloni as SS
     with connect() as conn:
         righe = SS.interessati(conn)
+        try:
+            from ..marketing import email_esempi as EE
+            righe = righe + EE.interessati(conn)
+        except Exception as e:
+            logging.getLogger("scovo").warning("EMAIL_INTERESSATI non letti: %s", type(e).__name__)
     return jsonify({"interessati": righe, "totale": len(righe)})
 
 
@@ -3430,7 +3472,7 @@ routes = [
     Route("/api/affari/{id:int}/esito", esito_affare, methods=["POST"]),
     Route("/api/admin/sito-funnel", admin_sito_funnel),
     Route("/api/admin/sms_interessati", admin_sms_interessati),
-    Route("/mi/{token}/stop", sms_mi_stop, methods=["POST"]),
+    Route("/mi/{token}/stop", sms_mi_stop, methods=["GET", "POST"]),
     Route("/mi/{token}", sms_mi_interessa),
     *_admin_sito.ROTTE,                   # 12/11: pannello → Sito (ribassi, in cima, auto tolte) senza deploy
     Route("/api/activity", my_activity),
@@ -4347,6 +4389,16 @@ def _tempo_reale():
         # 16/11 (fond-server): le voci lunghe (raccolta60, perche_fuori, prova_cieca; con LAVORI_NEL_CRON=tutti anche le
         # chiamate Brevo brevi) non si fanno più qui: vanno nella coda del cron (pipeline/coda_lavori.py, stesso codice,
         # stesse chiavi _una_volta). Se il cron non le prende (variabile mancante, cron fermo) le fa il sito, come prima.
+        if v.startswith("email_esempi:"):     # 24/11 (cliente): il messaggio dei WhatsApp per email. Prepara in Brevo
+            # token, attributi delle 2 auto e le due liste (con e senza esempi). Nessuna campagna, nessun invio. Nel
+            # sito: gli servono le auto pubblicate adesso (le foto /email-foto/ esistono solo per quelle)
+            time.sleep(30)
+            try:
+                from ..marketing import email_esempi as _ee
+                _ee.lavoro(v, lambda: _elenco.get("items") or [])
+            except Exception as e:
+                lg.warning("EMAIL_ESEMPI non riuscito: %s", str(e)[:200])
+            return
         if v.startswith(("sms_saloni:", "sms_prova:")):   # 24/11 (cliente): SMS ai saloni con il link "Mi interessa"
             time.sleep(30)
             try:
