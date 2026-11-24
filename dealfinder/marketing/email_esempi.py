@@ -2,12 +2,17 @@
 
 Due versioni: CON ESEMPI (due auto vicine al salone, con foto, prezzo, mercato e margine, come il template WhatsApp
 skovo_due_auto_foto) e SENZA ESEMPI (solo testo). In tutte e due il pulsante "Mi interessa" personale, come negli SMS:
-<PUBLIC_URL>/mi/<token> -> pagina "Grazie!", clic registrato, elenco in /api/admin/sms_interessati.
+<PUBLIC_URL>/mi/<token> -> pagina con il pulsante "Sì, chiamatemi" (aprire il link è solo "aperto": i filtri della
+posta delle aziende aprono tutti i link); il pulsante registra l'interesse, elenco in /api/admin/sms_interessati.
 
 Lavoro una tantum da BREVO_IMPORT_LISTE:  email_esempi:<giro>:<quanti per gruppo>   (es. email_esempi:2411:150)
 Con il numero (decisione del cliente per il primo giro: 150 + 150) nelle due liste entrano solo i saloni PIÙ VICINI A
 MILANO: <quanti> con esempi e altri <quanti> senza esempi, presi a turno andando da Milano verso fuori, così i due
 gruppi sono simili per zona. Senza numero (o 0): tutti i contatti validi, con esempi chi ha 2 auto adatte.
+Con il numero restano fuori i saloni senza comune noto (circa 1.180 validi): con un quarto pezzo ":tutti"
+(email_esempi:<giro>:<quanti>:tutti), riempiti i due gruppi con posizione, nel gruppo SENZA ESEMPI entrano anche tutti
+i contatti validi senza posizione non ancora usati in un altro giro (stessi filtri: esclusi, disiscritti, bloccati,
+spazzatura; stessa regola delle 72 ore), finché il giro non arriva a TETTO_INVIO contatti (1.495).
 Chi ha già ricevuto una email nelle ultime 72 ore (Brevo, campaignStats del contatto) si salta.
 Il mittente "Skovo" <info@skovo.net> viene creato in Brevo se manca (POST /v3/senders; non parte nessuna email).
 Gira NEL SITO (gli servono le auto pubblicate in questo momento: le foto /email-foto/<id>/0.jpg esistono solo per quelle).
@@ -134,6 +139,14 @@ SQL_TABELLE = (
         anteprima  TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS email_clic_token ON email_clic (token)",
+    # 24/11: email_clic sono le APERTURE della pagina (GET); l'interesse vero è il pulsante "Sì, chiamatemi" (email_si)
+    """CREATE TABLE IF NOT EXISTS email_si (
+        id         BIGSERIAL PRIMARY KEY,
+        token      TEXT NOT NULL,
+        at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+        user_agent TEXT
+    )""",
+    "CREATE INDEX IF NOT EXISTS email_si_token ON email_si (token)",
     """CREATE TABLE IF NOT EXISTS email_foto (
         id         BIGINT PRIMARY KEY,
         foto       BYTEA NOT NULL,
@@ -335,11 +348,14 @@ def scegli_due(d: dict, auto: list[dict], uso: dict, uso_max: int = USO_MAX, fot
 
 
 def dividi(saloni: list[dict], auto: list[dict], per_gruppo: int = 0, uso_max: int = USO_MAX, foto_ok=None,
-           recente=None) -> tuple[list[dict], list[dict], dict]:
+           recente=None, senza_posizione: bool = False, tetto: int = 0) -> tuple[list[dict], list[dict], dict]:
     """I due gruppi: (con esempi, senza esempi, conteggi). Si va dal salone più vicino a Milano verso fuori.
     per_gruppo > 0: solo saloni con la posizione nota, al massimo `per_gruppo` per gruppo, a turno (prima si prova a
     dare le 2 auto al gruppo che è indietro: chi non le ha va nel gruppo senza esempi), così i due gruppi sono simili
     per zona. per_gruppo = 0: tutti; con esempi chi ha 2 auto adatte, gli altri (anche senza posizione) senza.
+    senza_posizione (il pezzo ":tutti" dell'etichetta, con per_gruppo > 0): riempiti i due gruppi con chi ha la
+    posizione, nel gruppo senza esempi entrano anche TUTTI i saloni senza posizione nota (comune ignoto), finché il giro
+    non arriva a `tetto` contatti in tutto (0 = nessun tetto); quelli rimasti fuori sono in "fuori_tetto".
     `recente(email)`: True se ha ricevuto una email da poco (si salta), None se non si è riusciti a saperlo (si salta
     lo stesso: nel dubbio non si scrive). Scrive in ogni salone scelto "auto" (2 o nessuna) e "perche"."""
     uso: dict = {}
@@ -348,7 +364,24 @@ def dividi(saloni: list[dict], auto: list[dict], per_gruppo: int = 0, uso_max: i
     for d in sorted(saloni, key=lambda d: (d.get("km") is None, d.get("km") or 0, d["email"])):
         pieno_con = bool(per_gruppo) and len(con) >= per_gruppo
         pieno_senza = bool(per_gruppo) and len(senza) >= per_gruppo
-        if per_gruppo and ((pieno_con and pieno_senza) or d.get("km") is None):
+        if per_gruppo and d.get("km") is None:
+            if not senza_posizione:
+                break
+            if tetto and len(con) + len(senza) >= tetto:
+                n["fuori_tetto"] += 1
+                continue
+            if recente is not None:
+                r = recente(d["email"])
+                if r or r is None:
+                    n["saltati_email_recente" if r else "saltati_non_verificati"] += 1
+                    continue
+            senza.append(d)
+            n["senza_posizione"] += 1
+            d["auto"], d["perche"] = [], "senza_posizione"
+            continue
+        if per_gruppo and pieno_con and pieno_senza:
+            if senza_posizione:
+                continue                                      # si va avanti fino a quelli senza posizione, in fondo
             break
         if recente is not None:
             r = recente(d["email"])
@@ -810,9 +843,10 @@ def incompleto(esito: dict) -> str | None:
 
 
 def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connetti=None, foto_ok=_foto_dal_sito,
-            dormi=time.sleep, env=None, recente="brevo") -> dict:
+            dormi=time.sleep, env=None, recente="brevo", senza_posizione: bool = False) -> dict:
     """Il lavoro (vedi il testo in cima). `items`: le auto del sito in questo momento; `per_gruppo`: quanti contatti
-    per lista (0 = tutti). Restituisce solo conteggi."""
+    per lista (0 = tutti); `senza_posizione` (":tutti"): nel gruppo senza esempi anche i saloni validi senza comune
+    noto, entro BL.TETTO_INVIO contatti per giro. Restituisce solo conteggi."""
     from . import brevo_liste as BL
     from . import invii
     from . import sms_saloni as SS
@@ -826,7 +860,7 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
         uso_max = USO_MAX
     base = SS.base_url(env)
     auto = auto_usabili(items)
-    esito: dict = {"giro": giro, "per_gruppo": per_gruppo, "auto_sito": len(items or []), "auto_usabili": len(auto),
+    esito: dict = {"giro": giro, "per_gruppo": per_gruppo, "anche_senza_posizione": bool(senza_posizione), "auto_sito": len(items or []), "auto_usabili": len(auto),
                    "uso_max": uso_max}
     chiudi = c is None
     c = c or _client()
@@ -892,7 +926,8 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
                 recente = recente_brevo(c, dormi=dormi)
             liberi = [d for d in saloni if d["email"] not in altri_giri]
             esito["gia_in_un_altro_giro"] = len(saloni) - len(liberi)
-            con, senza, conti = dividi(liberi, auto, per_gruppo, uso_max, foto_ok, recente)
+            con, senza, conti = dividi(liberi, auto, per_gruppo, uso_max, foto_ok, recente,
+                                       senza_posizione=senza_posizione, tetto=BL.TETTO_INVIO if senza_posizione else 0)
         scelti = con + senza
         esito.update(conti)
         esito.update(con_esempi=len(con), senza_esempi=len(senza),
@@ -958,7 +993,8 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
 
 
 def lavoro(v: str, items_fn, lungo=None, attesa_min: int = 30, dormi=time.sleep) -> bool | None:
-    """Voce di BREVO_IMPORT_LISTE: email_esempi:<giro>[:<quanti per gruppo>]. Aspetta che il sito abbia le auto in
+    """Voce di BREVO_IMPORT_LISTE: email_esempi:<giro>[:<quanti per gruppo>[:tutti]]. Con ":tutti" nel gruppo senza
+    esempi entrano anche i saloni validi senza posizione nota (vedi dividi), entro TETTO_INVIO per giro. Aspetta che il sito abbia le auto in
     memoria, poi prepara(). Segnata fatta solo a lavoro finito (coda_lavori._lungo); un tentativo rifatto dopo un
     errore riprende gli STESSI contatti del giro (stessi token), non ne sceglie altri: per altri contatti serve un
     giro nuovo. Nei log solo conteggi."""
@@ -966,6 +1002,7 @@ def lavoro(v: str, items_fn, lungo=None, attesa_min: int = 30, dormi=time.sleep)
     parti = chiave.split(":")
     giro = ":".join(parti[:2])
     per_gruppo = int(parti[2]) if len(parti) > 2 and parti[2].isdigit() else 0
+    tutti = len(parti) > 3 and parti[3].lower() == "tutti"
     if lungo is None:
         from ..pipeline.coda_lavori import _lungo as lungo
 
@@ -978,7 +1015,7 @@ def lavoro(v: str, items_fn, lungo=None, attesa_min: int = 30, dormi=time.sleep)
             dormi(60)
         if not items:
             raise RuntimeError("il sito non ha ancora le auto")
-        esito = prepara(items, giro, per_gruppo)
+        esito = prepara(items, giro, per_gruppo, senza_posizione=tutti)
         lg.warning("EMAIL_ESEMPI %s", json.dumps(esito, ensure_ascii=False))
         perche = incompleto(esito)
         if perche:
@@ -1042,89 +1079,44 @@ def _data(v) -> dt.datetime | None:
     return d if d.tzinfo else d.replace(tzinfo=dt.timezone.utc)
 
 
-_campagne: dict = {"t": 0.0, "partenze": []}
-
-
-def _partenze_campagne(c, adesso: dt.datetime) -> list[dt.datetime]:
-    """Quando sono partite le ultime campagne email (letto da Brevo al massimo una volta ogni 2 minuti)."""
-    if time.monotonic() - _campagne["t"] < 120 and _campagne["t"]:
-        return _campagne["partenze"]
-    out = []
-    r = c.get(f"{API}/emailCampaigns", params={"limit": 50, "offset": 0, "sort": "desc", "excludeHtmlContent": "true"})
-    if r.status_code < 300:
-        for x in (r.json() or {}).get("campaigns") or []:
-            if x.get("status") in ("sent", "in_process", "queued"):
-                d = _data(x.get("sentDate") or x.get("scheduledAt"))
-                if d:
-                    out.append(d)
-        _campagne.update(t=time.monotonic(), partenze=out)
-    return out
-
-
-def forse_anteprima(c, riga: dict, adesso: dt.datetime, env=None) -> tuple[str | None, int | None]:
-    """(motivo, secondi dall'invio) se il clic arriva troppo presto dopo l'invio per essere di una persona; (None, s)
-    se è un clic vero; (None, None) se l'invio non si conosce (Brevo non risponde): allora il clic conta."""
-    env = os.environ if env is None else env
-
-    def secondi(nome, pred):
-        try:
-            return max(1, int(env.get(nome) or pred))
-        except ValueError:
-            return pred
-    creato = _data(riga.get("creato_at")) or dt.datetime(2000, 1, 1, tzinfo=dt.timezone.utc)
-    try:
-        r = c.get(f"{API}/contacts/{quote(riga['email'], safe='')}/campaignStats")
-        if r.status_code < 300:
-            inviati = [d for d in (_data(x.get("eventTime")) for x in (r.json() or {}).get("messagesSent") or [])
-                       if d and creato <= d <= adesso + dt.timedelta(seconds=60)]
-            if inviati:
-                s = int((adesso - max(inviati)).total_seconds())
-                return ("subito_dopo_l_invio" if s < secondi("EMAIL_ANTEPRIMA_S", 120) else None), s
-        partenze = [d for d in _partenze_campagne(c, adesso) if creato <= d <= adesso + dt.timedelta(seconds=60)]
-        if partenze:
-            s = int((adesso - max(partenze)).total_seconds())
-            return ("subito_dopo_la_partenza" if s < secondi("EMAIL_ANTEPRIMA_GIRO_S", 600) else None), s
-    except Exception:
-        pass
-    return None, None
-
-
-def registra_clic(conn, token, user_agent: str = "", c=None, adesso: dt.datetime | None = None, log=None, env=None) -> dict:
-    """Clic sul pulsante dell'email: salva in email_clic e scrive EMAIL_INTERESSATO (nome del salone, ultime 4 cifre se
-    c'è un telefono, numero di clic veri) oppure EMAIL_FORSE_ANTEPRIMA. Mai l'indirizzo email nei log."""
+def registra_aperto(conn, token, user_agent: str = "", log=None) -> dict:
+    """Pagina aperta dal pulsante dell'email (GET): salva in email_clic e scrive EMAIL_APERTO (solo token e numero di
+    aperture: nessun nome, telefono o indirizzo). NON è un interessato: i filtri della posta delle aziende aprono
+    tutti i link qualche minuto dopo l'arrivo. Token sconosciuto e programmi automatici: niente."""
     from . import sms_saloni as SS
     log = log or lg
+    ua = re.sub(r"[\x00-\x1f\x7f]", " ", str(user_agent or ""))[:200]
+    if SS.RE_BOT.search(ua):
+        return {"contato": False, "motivo": "anteprima"}
     riga = trova(conn, token)
     if not riga:
         return {"contato": False, "motivo": "sconosciuto"}
-    adesso = adesso or dt.datetime.now(dt.timezone.utc)
+    conn.execute("INSERT INTO email_clic (token, user_agent, anteprima) VALUES (%s, %s, %s)", (riga["token"], ua, None))
+    n = conn.execute("SELECT count(*) AS n FROM email_clic WHERE token = %s", (riga["token"],)).fetchone()["n"]
+    conn.commit()
+    log.warning("EMAIL_APERTO token=%s canale=email n=%d", riga["token"], n)
+    return {"contato": True, "n": n}
+
+
+def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
+    """Pulsante "Sì, chiamatemi" (POST /mi/<token>/si): salva in email_si e scrive EMAIL_INTERESSATO (nome del salone,
+    ultime 4 cifre se c'è un telefono, numero di conferme). Mai l'indirizzo email nei log. I programmi automatici
+    non contano."""
+    from . import sms_saloni as SS
+    log = log or lg
     ua = re.sub(r"[\x00-\x1f\x7f]", " ", str(user_agent or ""))[:200]
+    if SS.RE_BOT.search(ua):
+        return {"contato": False, "motivo": "anteprima"}
+    riga = trova(conn, token)
+    if not riga:
+        return {"contato": False, "motivo": "sconosciuto"}
     nome = nome_log(riga["nome"])
     tel = SS.coda4(riga["telefono"]) if riga.get("telefono") else "-"
-    motivo, dopo = ("programma_automatico", None) if SS.RE_BOT.search(ua) else (None, None)
-    if not motivo:
-        chiudi = c is None
-        try:
-            c = c or _client()
-            motivo, dopo = forse_anteprima(c, riga, adesso, env)
-        except Exception:
-            motivo, dopo = None, None
-        finally:
-            if chiudi and c is not None:
-                try:
-                    c.close()
-                except Exception:
-                    pass
-    conn.execute("INSERT INTO email_clic (token, user_agent, anteprima) VALUES (%s, %s, %s)", (riga["token"], ua, motivo))
-    n = conn.execute("SELECT count(*) AS n FROM email_clic WHERE token = %s AND anteprima IS NULL",
-                     (riga["token"],)).fetchone()["n"]
+    conn.execute("INSERT INTO email_si (token, user_agent) VALUES (%s, %s)", (riga["token"], ua))
+    n = conn.execute("SELECT count(*) AS n FROM email_si WHERE token = %s", (riga["token"],)).fetchone()["n"]
     conn.commit()
-    quando = "?" if dopo is None else str(dopo)
-    if motivo:
-        log.warning("EMAIL_FORSE_ANTEPRIMA token=%s nome=%s tel=%s motivo=%s dopo_s=%s", riga["token"], nome, tel, motivo, quando)
-        return {"contato": False, "motivo": "anteprima", "perche": motivo, "dopo_s": dopo}
-    log.warning("EMAIL_INTERESSATO token=%s canale=email nome=%s tel=%s n=%d dopo_s=%s", riga["token"], nome, tel, n, quando)
-    return {"contato": True, "n": n, "nome": riga["nome"], "dopo_s": dopo}
+    log.warning("EMAIL_INTERESSATO token=%s canale=email nome=%s tel=%s n=%d", riga["token"], nome, tel, n)
+    return {"contato": True, "n": n, "nome": riga["nome"]}
 
 
 def registra_stop(conn, token, c=None, log=None, dormi=time.sleep, piu_tardi=None) -> bool:
@@ -1168,15 +1160,25 @@ def registra_stop(conn, token, c=None, log=None, dormi=time.sleep, piu_tardi=Non
 
 
 def interessati(conn) -> list[dict]:
-    """Per l'amministratore: chi ha toccato il pulsante dell'email. `clic` sono i clic veri, `forse_anteprima` quelli
-    arrivati subito dopo l'invio (programmi di posta); chi ha solo quelli ha clic = 0."""
+    """Per l'amministratore: chi ha CONFERMATO con il pulsante "Sì, chiamatemi" della pagina. `clic` sono le conferme,
+    `aperti` quante volte la pagina è stata solo aperta (anche dai filtri della posta)."""
     assicura(conn)
     righe = conn.execute(
-        "SELECT 'email' AS canale, l.token, l.nome, l.telefono, l.email, l.giro, "
-        "count(*) FILTER (WHERE c.anteprima IS NULL) AS clic, count(*) FILTER (WHERE c.anteprima IS NOT NULL) AS forse_anteprima, "
-        "min(c.at) FILTER (WHERE c.anteprima IS NULL) AS primo_clic, max(c.at) FILTER (WHERE c.anteprima IS NULL) AS ultimo_clic, "
+        "SELECT 'email' AS canale, l.token, l.nome, l.telefono, l.email, l.giro, count(*) AS clic, "
+        "(SELECT count(*) FROM email_clic a WHERE a.token = l.token) AS aperti, min(c.at) AS primo_clic, max(c.at) AS ultimo_clic, "
         "l.stop_at IS NOT NULL AS stop "
-        "FROM email_clic c JOIN email_link l ON l.token = c.token "
-        "GROUP BY l.token, l.nome, l.telefono, l.email, l.giro, l.stop_at "
-        "ORDER BY max(c.at) FILTER (WHERE c.anteprima IS NULL) DESC NULLS LAST, max(c.at) DESC LIMIT 5000").fetchall()
+        "FROM email_si c JOIN email_link l ON l.token = c.token "
+        "GROUP BY l.token, l.nome, l.telefono, l.email, l.giro, l.stop_at ORDER BY max(c.at) DESC LIMIT 5000").fetchall()
+    return [dict(r) for r in righe]
+
+
+def solo_aperti(conn) -> list[dict]:
+    """Chi ha solo aperto la pagina senza toccare il pulsante (dentro anche i clic di prima del 24/11, quando bastava
+    aprire il link, in gran parte dei filtri della posta): NON sono interessati confermati."""
+    assicura(conn)
+    righe = conn.execute(
+        "SELECT 'email' AS canale, a.token, l.nome, l.telefono, l.email, l.giro, count(*) AS aperti, min(a.at) AS primo_aperto, "
+        "max(a.at) AS ultimo_aperto FROM email_clic a JOIN email_link l ON l.token = a.token "
+        "WHERE NOT EXISTS (SELECT 1 FROM email_si c WHERE c.token = a.token) "
+        "GROUP BY a.token, l.nome, l.telefono, l.email, l.giro ORDER BY max(a.at) DESC LIMIT 5000").fetchall()
     return [dict(r) for r in righe]

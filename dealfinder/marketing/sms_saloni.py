@@ -1,7 +1,8 @@
 """24/11 (cliente): SMS ai SALONI (solo commercianti, mai privati) "senza esempi", con il link "Mi interessa".
 
 Gli SMS non hanno pulsanti: ogni salone riceve un link personale <PUBLIC_URL>/mi/<token>. Chi lo tocca vede una pagina
-di ringraziamento e finisce nell'elenco di chi va richiamato (/api/admin/sms_interessati).
+con il pulsante "Sì, chiamatemi": solo chi tocca il pulsante finisce nell'elenco di chi va richiamato
+(/api/admin/sms_interessati). Aprire il link non basta (lo fanno anche i filtri e le anteprime): è solo "aperto".
 
 Lavoro una tantum da BREVO_IMPORT_LISTE (una volta per etichetta):
   sms_saloni:<giro>   invia a tutta la lista
@@ -63,6 +64,14 @@ SQL_TABELLE = (
         user_agent TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS sms_clic_token ON sms_clic (token)",
+    # 24/11: sms_clic sono le APERTURE della pagina (GET); l'interesse vero è il pulsante "Sì, chiamatemi" (sms_si)
+    """CREATE TABLE IF NOT EXISTS sms_si (
+        id         BIGSERIAL PRIMARY KEY,
+        token      TEXT NOT NULL,
+        at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+        user_agent TEXT
+    )""",
+    "CREATE INDEX IF NOT EXISTS sms_si_token ON sms_si (token)",
     """CREATE TABLE IF NOT EXISTS sms_stop (
         telefono   TEXT PRIMARY KEY,
         at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -396,12 +405,37 @@ def token_pulito(t) -> str | None:
     return t if RE_TOKEN.fullmatch(t) else None
 
 
-def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
-    """Clic sul link: salva in sms_clic e scrive SMS_INTERESSATO (nome del salone, ultime 4 cifre, numero di clic).
-    Token sconosciuto: solo il log, con nome=?. Le anteprime automatiche dei link (bot) non contano."""
+def _ua(user_agent) -> str:
+    return re.sub(r"[\x00-\x1f\x7f]", " ", str(user_agent or ""))[:200]
+
+
+def registra_aperto(conn, token, user_agent: str = "", log=None) -> dict:
+    """Pagina aperta (GET del link): salva in sms_clic e scrive SMS_APERTO (solo token e numero di aperture, nessun
+    dato del salone). NON è un interessato: i filtri della posta e le anteprime aprono i link da soli. Token
+    sconosciuto e programmi automatici: niente."""
     log = log or lg
     tok = token_pulito(token)
-    ua = re.sub(r"[\x00-\x1f\x7f]", " ", str(user_agent or ""))[:200]
+    ua = _ua(user_agent)
+    if RE_BOT.search(ua):
+        return {"contato": False, "motivo": "anteprima"}
+    if not tok:
+        return {"contato": False, "motivo": "sconosciuto"}
+    assicura(conn)
+    if not conn.execute("SELECT nome, telefono FROM sms_link WHERE token = %s", (tok,)).fetchone():
+        return {"contato": False, "motivo": "sconosciuto"}
+    conn.execute("INSERT INTO sms_clic (token, user_agent) VALUES (%s, %s)", (tok, ua))
+    n = conn.execute("SELECT count(*) AS n FROM sms_clic WHERE token = %s", (tok,)).fetchone()["n"]
+    conn.commit()
+    log.warning("SMS_APERTO token=%s canale=sms n=%d", tok, n)
+    return {"contato": True, "n": n}
+
+
+def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
+    """Pulsante "Sì, chiamatemi" (POST /mi/<token>/si): salva in sms_si e scrive SMS_INTERESSATO (nome del salone,
+    ultime 4 cifre, numero di conferme). Token sconosciuto: solo il log, con nome=?. I programmi automatici non contano."""
+    log = log or lg
+    tok = token_pulito(token)
+    ua = _ua(user_agent)
     if RE_BOT.search(ua):
         return {"contato": False, "motivo": "anteprima"}
     riga = None
@@ -409,13 +443,13 @@ def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
         assicura(conn)
         riga = conn.execute("SELECT nome, telefono FROM sms_link WHERE token = %s", (tok,)).fetchone()
     if not riga:
-        log.warning("SMS_INTERESSATO token=%s nome=? tel=***? n=0", tok or "?")
+        log.warning("SMS_INTERESSATO token=%s canale=sms nome=? tel=***? n=0", tok or "?")
         return {"contato": False, "motivo": "sconosciuto"}
-    conn.execute("INSERT INTO sms_clic (token, user_agent) VALUES (%s, %s)", (tok, ua))
-    n = conn.execute("SELECT count(*) AS n FROM sms_clic WHERE token = %s", (tok,)).fetchone()["n"]
+    conn.execute("INSERT INTO sms_si (token, user_agent) VALUES (%s, %s)", (tok, ua))
+    n = conn.execute("SELECT count(*) AS n FROM sms_si WHERE token = %s", (tok,)).fetchone()["n"]
     conn.commit()
     nome = re.sub(r"[\x00-\x1f\x7f]", " ", str(riga["nome"] or "?"))[:80]
-    log.warning("SMS_INTERESSATO token=%s nome=%s tel=%s n=%d", tok, nome, coda4(riga["telefono"]), n)
+    log.warning("SMS_INTERESSATO token=%s canale=sms nome=%s tel=%s n=%d", tok, nome, coda4(riga["telefono"]), n)
     return {"contato": True, "n": n, "nome": riga["nome"]}
 
 
@@ -437,21 +471,39 @@ def registra_stop(conn, token, log=None) -> bool:
 
 
 def interessati(conn) -> list[dict]:
-    """Per l'amministratore: chi ha toccato il link, con nome, telefono, primo e ultimo clic e quante volte."""
+    """Per l'amministratore: chi ha CONFERMATO con il pulsante "Sì, chiamatemi" (nome, telefono, prima e ultima
+    conferma, quante volte). `aperti`: quante volte la pagina è stata solo aperta (anche da programmi automatici)."""
     assicura(conn)
     righe = conn.execute(
-        "SELECT l.token, l.nome, l.telefono, l.giro, count(*) AS clic, min(c.at) AS primo_clic, max(c.at) AS ultimo_clic, "
+        "SELECT 'sms' AS canale, l.token, l.nome, l.telefono, l.giro, count(*) AS clic, "
+        "(SELECT count(*) FROM sms_clic a WHERE a.token = l.token) AS aperti, min(c.at) AS primo_clic, max(c.at) AS ultimo_clic, "
         "EXISTS (SELECT 1 FROM sms_stop s WHERE s.telefono = l.telefono) AS stop "
-        "FROM sms_clic c JOIN sms_link l ON l.token = c.token "
+        "FROM sms_si c JOIN sms_link l ON l.token = c.token "
         "GROUP BY l.token, l.nome, l.telefono, l.giro ORDER BY max(c.at) DESC LIMIT 2000").fetchall()
     return [dict(r) for r in righe]
 
 
+def solo_aperti(conn) -> list[dict]:
+    """Chi ha solo aperto la pagina senza toccare il pulsante (dentro anche i clic di prima del 24/11, quando bastava
+    aprire il link): NON sono interessati confermati."""
+    assicura(conn)
+    righe = conn.execute(
+        "SELECT 'sms' AS canale, a.token, l.nome, l.telefono, l.giro, count(*) AS aperti, min(a.at) AS primo_aperto, "
+        "max(a.at) AS ultimo_aperto FROM sms_clic a JOIN sms_link l ON l.token = a.token "
+        "WHERE NOT EXISTS (SELECT 1 FROM sms_si c WHERE c.token = a.token) "
+        "GROUP BY a.token, l.nome, l.telefono, l.giro ORDER BY max(a.at) DESC LIMIT 2000").fetchall()
+    return [dict(r) for r in righe]
+
+
 def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", conferma: bool = False,
-           errore: bool = False) -> str:
-    """Pagina pubblica di ringraziamento, uguale per ogni token (valido o no). Niente dati del salone.
+           errore: bool = False, chiedi: str | None = None, riprova: bool = False) -> str:
+    """Pagina pubblica, uguale per ogni token (valido o no). Niente dati del salone.
+    chiedi (il timestamp firmato da mettere nel modulo): la pagina che si apre dal link (GET /mi/<token>), con il
+    pulsante verde "Sì, chiamatemi" (POST /mi/<token>/si): solo quello registra l'interesse, così i filtri della posta
+    che aprono i link non contano. riprova: il pulsante è arrivato troppo presto o non è stato registrato, va toccato
+    di nuovo. Senza chiedi: la pagina "Grazie!" dopo il pulsante.
     canale "email": il pulsante in fondo parla di email (e disiscrive da Brevo). conferma: la pagina che si apre dal
-    pulsante "Non mi interessa" dell'email (GET /mi/<token>/stop): chiede conferma, la disiscrizione parte solo dal
+    pulsante "Non mi interessa" (GET /mi/<token>/stop): chiede conferma, la disiscrizione parte solo dal
     pulsante (POST), così le anteprime automatiche dei programmi di posta non disiscrivono nessuno. errore: la
     disiscrizione non è stata registrata (database fermo): la pagina lo dice e fa riprovare, mai "Fatto."."""
     tok = token_pulito(token)
@@ -459,11 +511,15 @@ def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", co
     segno = "M5 12.5l4.5 4.5L19 7.5"
     modulo = (f'<form method="post" action="/mi/{html.escape(tok)}/stop"><button class="{{}}" type="submit">'
               f'Non voglio più ricevere {cosa}</button></form>') if tok else ""
+    chiama = (f'<a class="cta" href="tel:{TEL_TITOLARE}">Chiamaci ora</a>\n'
+              '<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>')
+    centro = chiama
     if errore:
         titolo, testo = "Riprova tra poco", ("Non siamo riusciti a registrare la tua richiesta. Riprova tra qualche "
                                              "minuto con il pulsante qui sotto, oppure chiamaci.")
         sotto = modulo.format("cta stop")
         segno = "M12 7v6M12 17h.01"
+        centro = ""
     elif stop:
         titolo, testo = "Fatto.", f"Non riceverai più {cosa} da Skovo. Se cambi idea, chiamaci quando vuoi."
         sotto = ""
@@ -471,12 +527,22 @@ def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", co
         titolo, testo = "Non ti interessa?", f"Nessun problema. Conferma qui sotto e non ti mandiamo più {cosa}."
         sotto = modulo.format("cta stop")
         segno = "M6 6l12 12M18 6L6 18"
+        centro = ""
+    elif chiedi is not None and tok:
+        titolo = "Tocca di nuovo il pulsante" if riprova else "Vuoi che ti chiamiamo?"
+        testo = (("Non abbiamo registrato la richiesta. " if riprova else "") +
+                 f"Tocca il pulsante verde e ti chiamiamo dal <strong>{TEL_TITOLARE_TESTO}</strong> per spiegarti come "
+                 "funziona Skovo.")
+        segno = "M6.5 4h3l1.5 4.5-2 1.5a12 12 0 0 0 5 5l1.5-2 4.5 1.5v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 6a2 2 0 0 1 2-2z"
+        centro = (f'<form class="si" method="post" action="/mi/{html.escape(tok)}/si">'
+                  f'<input type="hidden" name="t" value="{html.escape(str(chiedi), quote=True)}">'
+                  '<button class="cta stop" type="submit">Sì, chiamatemi</button></form>\n'
+                  '<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>')
+        sotto = f'<p class="giu"><a class="no" href="/mi/{html.escape(tok)}/stop">Non mi interessa</a></p>'
     else:
         titolo = "Grazie!"
         testo = (f"Ti chiamiamo a breve dal <strong>{TEL_TITOLARE_TESTO}</strong> per spiegarti come funziona Skovo.")
         sotto = modulo.format("no")
-    centro = ("" if conferma or errore else f'<a class="cta" href="tel:{TEL_TITOLARE}">Chiamaci ora</a>\n'
-              '<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>')
     return f"""<!doctype html>
 <html lang="it">
 <head>
@@ -505,6 +571,9 @@ p strong{{color:var(--ink);white-space:nowrap}}
 .cta:focus-visible,.no:focus-visible{{outline:3px solid var(--ink);outline-offset:3px}}
 .nota{{font-size:14px;margin:14px 0 0}}
 form{{margin:18px 0 0}}
+form.si{{margin:0}}
+.giu{{margin:18px 0 0}}
+a.no{{display:inline-block}}
 .no{{background:none;border:0;padding:14px 8px;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}}
 .stop{{width:100%;border:0;font-family:inherit;cursor:pointer}}
 </style>

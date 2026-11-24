@@ -3355,38 +3355,105 @@ def _sms_troppi(request: Request) -> bool:
     return False
 
 
-def _mi_clic_email(token, user_agent: str) -> None:
-    """Dopo la risposta (chiede a Brevo quando è partita l'email: chi ha toccato il pulsante non aspetta)."""
-    try:
-        from ..marketing import email_esempi as EE
-        with connect() as conn:
-            EE.registra_clic(conn, token, user_agent)
-    except Exception as e:
-        logging.getLogger("scovo").warning("EMAIL_INTERESSATO non registrato: %s", type(e).__name__)
+MI_ATTESA_S = 2                    # il pulsante "Sì, chiamatemi" conta solo se arriva almeno 2 secondi dopo la pagina
+MI_SCADE_S = 86400                 # e al massimo un giorno dopo (poi la pagina va riaperta)
+
+
+def _mi_firma(token, quando: float | None = None) -> str:
+    """Il campo nascosto del pulsante: "<secondi>.<firma>" (HMAC di token e secondi con la chiave del sito)."""
+    import hashlib
+    import hmac
+    ts = int(time.time() if quando is None else quando)
+    from .auth import _secret
+    f = hmac.new(_secret(), f"mi|{token}|{ts}".encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{ts}.{f}"
+
+
+def _mi_firma_valida(token, valore, adesso: float | None = None) -> str | None:
+    """None se il pulsante è buono; altrimenti il motivo: firma (manca, falsa o di un altro token), presto (meno di
+    MI_ATTESA_S dalla pagina: un programma che invia il modulo appena lo vede), scaduta."""
+    import hmac
+    ts, _, f = str(valore or "")[:80].partition(".")
+    if not (ts.isascii() and ts.isdigit() and f) or not hmac.compare_digest(_mi_firma(token, int(ts)), f"{int(ts)}.{f}"):
+        return "firma"
+    eta = (time.time() if adesso is None else adesso) - int(ts)
+    return "presto" if eta < MI_ATTESA_S else "scaduta" if eta > MI_SCADE_S else None
+
+
+def _mi_canale(token) -> str:
+    from ..marketing import email_esempi as EE
+    return "email" if EE.token_email(token) else "sms"
+
+
+def _mi_chiedi(token, canale, riprova=False, status_code=200, headers=None):
+    from ..marketing import sms_saloni as SS
+    return HTMLResponse(SS.pagina(token, canale=canale, chiedi=_mi_firma(SS.token_pulito(token) or ""), riprova=riprova),
+                        status_code=status_code, headers=dict(_SMS_PAGINA_H, **(headers or {})))
 
 
 def sms_mi_interessa(request: Request):
-    """GET /mi/{token}, pubblica: pagina di ringraziamento (uguale per ogni token) e clic registrato.
-    I token delle email hanno 8 caratteri (marketing/email_esempi.py): aprono la stessa pagina con il pulsante in
-    fondo che parla di email. La pagina dipende solo dalla FORMA del token, mai dal fatto che esista."""
-    from starlette.background import BackgroundTask
+    """GET /mi/{token}, pubblica: la pagina con il pulsante verde "Sì, chiamatemi" (uguale per ogni token). Il GET
+    registra solo "aperto" (SMS_APERTO / EMAIL_APERTO, senza dati del salone): i filtri della posta delle aziende
+    aprono tutti i link, quindi aprire non vuol dire essere interessati. L'interesse lo registra solo il pulsante
+    (POST /mi/{token}/si). HEAD e i programmi automatici non registrano niente.
+    I token delle email hanno 8 caratteri (marketing/email_esempi.py). La pagina dipende solo dalla FORMA del token,
+    mai dal fatto che esista."""
     from ..marketing import email_esempi as EE
     from ..marketing import sms_saloni as SS
     token = request.path_params.get("token")
-    canale = "email" if EE.token_email(token) else "sms"
+    canale = _mi_canale(token)
     if _sms_troppi(request):
-        return HTMLResponse(SS.pagina(token, canale=canale), status_code=429, headers=_SMS_PAGINA_H)
-    if canale == "email":
-        dopo = (BackgroundTask(_mi_clic_email, token, request.headers.get("user-agent") or "")
-                if request.method == "GET" else None)
-        return HTMLResponse(SS.pagina(token, canale="email"), headers=_SMS_PAGINA_H, background=dopo)
+        return _mi_chiedi(token, canale, status_code=429)
     if request.method == "GET":                              # HEAD (controlli automatici dei link) non conta
         try:
             with connect() as conn:
-                SS.registra_clic(conn, token, request.headers.get("user-agent") or "")
+                (EE if canale == "email" else SS).registra_aperto(conn, token, request.headers.get("user-agent") or "")
         except Exception as e:
-            logging.getLogger("scovo").warning("SMS_INTERESSATO non registrato: %s", type(e).__name__)
-    return HTMLResponse(SS.pagina(token), headers=_SMS_PAGINA_H)
+            logging.getLogger("scovo").warning("%s_APERTO non registrato: %s", canale.upper(), type(e).__name__)
+    return _mi_chiedi(token, canale)
+
+
+def _mi_si(token, canale, user_agent: str, valore) -> tuple[str, int]:
+    """("grazie" | "riprova", stato HTTP). Registra l'interesse solo se il campo firmato è buono."""
+    from ..marketing import email_esempi as EE
+    from ..marketing import sms_saloni as SS
+    lg_ = logging.getLogger("scovo")
+    if SS.RE_BOT.search(user_agent or ""):                   # programmi automatici: niente, nemmeno nel log
+        return "riprova", 200
+    motivo = _mi_firma_valida(SS.token_pulito(token) or "", valore)
+    if motivo:
+        lg_.warning("%s_CONFERMA_SCARTATA token=%s motivo=%s", canale.upper(), SS.token_pulito(token) or "?", motivo)
+        return "riprova", 200
+    try:
+        with connect() as conn:
+            (EE if canale == "email" else SS).registra_clic(conn, token, user_agent)
+    except Exception as e:
+        lg_.warning("%s_INTERESSATO non registrato: %s", canale.upper(), type(e).__name__)
+        return "riprova", 503                                # mai "Grazie!" senza averlo registrato
+    return "grazie", 200
+
+
+async def sms_mi_si(request: Request):
+    """POST /mi/{token}/si, pubblica: il pulsante "Sì, chiamatemi". Solo questo registra l'interesse
+    (SMS_INTERESSATO / EMAIL_INTERESSATO) e mostra "Grazie! Ti chiamiamo a breve…". Il modulo porta un timestamp
+    firmato (campo t, messo dal GET della pagina dello stesso token): se manca, è falso o arriva meno di MI_ATTESA_S
+    secondi dopo la pagina, non si registra niente e la pagina chiede di toccare di nuovo il pulsante."""
+    from urllib.parse import parse_qs
+    from ..marketing import sms_saloni as SS
+    token = request.path_params.get("token")
+    canale = _mi_canale(token)
+    if _sms_troppi(request):
+        return _mi_chiedi(token, canale, riprova=True, status_code=429)
+    try:
+        campi = parse_qs((await request.body())[:2000].decode("utf-8", "ignore"))
+    except Exception:
+        campi = {}
+    esito, stato = await run_in_threadpool(_mi_si, token, canale, request.headers.get("user-agent") or "",
+                                           (campi.get("t") or [""])[0])
+    if esito != "grazie":
+        return _mi_chiedi(token, canale, riprova=True, status_code=stato,
+                          headers={"Retry-After": "120"} if stato == 503 else None)
+    return HTMLResponse(SS.pagina(token, canale=canale), headers=_SMS_PAGINA_H)
 
 
 def sms_mi_stop(request: Request):
@@ -3400,7 +3467,7 @@ def sms_mi_stop(request: Request):
     token = request.path_params.get("token")
     canale = "email" if EE.token_email(token) else "sms"
     if _sms_troppi(request):
-        return HTMLResponse(SS.pagina(token, canale=canale), status_code=429, headers=_SMS_PAGINA_H)
+        return HTMLResponse(SS.pagina(token, canale=canale, conferma=True), status_code=429, headers=_SMS_PAGINA_H)
     if request.method != "POST":
         return HTMLResponse(SS.pagina(token, canale=canale, conferma=True), headers=_SMS_PAGINA_H)
     if canale == "email":
@@ -3421,19 +3488,20 @@ def sms_mi_stop(request: Request):
 
 
 def admin_sms_interessati(request: Request):
-    """Solo amministratore: chi ha toccato "Mi interessa" (nome, telefono, quando, quante volte): da richiamare.
-    Dentro anche quelli delle email (canale "email", con l'indirizzo): `clic` sono i clic veri, `forse_anteprima`
-    quelli arrivati subito dopo l'invio."""
+    """Solo amministratore: chi ha CONFERMATO con il pulsante "Sì, chiamatemi" (nome, telefono, quando, quante
+    volte): da richiamare. Dentro anche quelli delle email (canale "email", con l'indirizzo). `clic` sono le conferme,
+    `aperti` (colonna a parte) quante volte la pagina è stata solo aperta. In `solo_aperti` chi ha aperto la pagina
+    senza confermare (filtri della posta, anteprime, curiosi, e i clic di prima del pulsante): non sono interessati."""
     current_user(request, admin=True)
     from ..marketing import sms_saloni as SS
     with connect() as conn:
-        righe = SS.interessati(conn)
+        righe, aperti = SS.interessati(conn), SS.solo_aperti(conn)
         try:
             from ..marketing import email_esempi as EE
-            righe = righe + EE.interessati(conn)
+            righe, aperti = righe + EE.interessati(conn), aperti + EE.solo_aperti(conn)
         except Exception as e:
             logging.getLogger("scovo").warning("EMAIL_INTERESSATI non letti: %s", type(e).__name__)
-    return jsonify({"interessati": righe, "totale": len(righe)})
+    return jsonify({"interessati": righe, "totale": len(righe), "solo_aperti": aperti, "totale_solo_aperti": len(aperti)})
 
 
 from .vetrina import api_vetrina, foto_vetrina
@@ -3485,6 +3553,7 @@ routes = [
     Route("/api/admin/sito-funnel", admin_sito_funnel),
     Route("/api/admin/sms_interessati", admin_sms_interessati),
     Route("/mi/{token}/stop", sms_mi_stop, methods=["GET", "POST"]),
+    Route("/mi/{token}/si", sms_mi_si, methods=["POST"]),
     Route("/mi/{token}", sms_mi_interessa),
     *_admin_sito.ROTTE,                   # 12/11: pannello → Sito (ribassi, in cima, auto tolte) senza deploy
     Route("/api/activity", my_activity),
