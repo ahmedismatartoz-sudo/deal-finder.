@@ -7,8 +7,9 @@ Giro continuo sul servizio web (AUTO_INVIO=1):
 3. le profila per fascia (prezzo mediano delle auto del commerciante) e, appena sono almeno AUTO_MIN_N,
    le carica in Brevo e manda subito: le prime AUTO_TESTO_RESTANTI con il testo corto, le altre con 2 auto vere
    del sito della loro fascia (prezzo vero dell'annuncio in _card, nessuno sconto da trattativa);
-4. non supera mai AUTO_TETTO_CONTATTI contatti in Brevo (24/11, cliente: tetto a 500.000, brevo_liste.TETTO_BREVO;
-   prima 1.500).
+4. si ferma quando in Brevo ci sono AUTO_TETTO_CONTATTI contatti (predefinito 1.450, brevo_liste.TETTO_INVIO_AUTO).
+   24/11: il cliente ha alzato a 500.000 i contatti che si possono TENERE in Brevo, non le email da mandare: questo
+   numero resta quello di prima. Mai a chi è entrato con carica_tutti (liste "Skovo tutti ...", brevo_tutti_caricati).
 Nei log solo conteggi (AUTO_INVIO ...), mai indirizzi.
 
 4/11: ogni invio passa da _manda con un "lavoro" stabile (invii.prenota): un destinatario riceve un lavoro una
@@ -106,9 +107,34 @@ def _fascia(prezzi):
 
 
 def _tetto() -> int:
-    """Tetto dei contatti in Brevo: l'unica costante è brevo_liste.TETTO_BREVO (24/11, cliente: 500.000)."""
+    """Tetto dei contatti che si possono TENERE in Brevo: brevo_liste.TETTO_BREVO (24/11, cliente: 500.000)."""
     from .brevo_liste import TETTO_BREVO
     return TETTO_BREVO
+
+
+def _tetto_invio(variabile: str, predefinito: int | None = None) -> int:
+    """Limite di INVIO di un lavoro: la sua variabile se impostata, altrimenti il numero di prima del 24/11
+    (brevo_liste.TETTO_INVIO_AUTO = 1.450, o `predefinito`). Non è il tetto dei contatti tenuti."""
+    from .brevo_liste import TETTO_INVIO_AUTO
+    return int(os.environ.get(variabile) or predefinito or TETTO_INVIO_AUTO)
+
+
+def gia_raggiunti(conn) -> set[str]:
+    """Indirizzi a cui il giro automatico non scrive: già caricati in Brevo (brevo_inviati) o entrati con
+    carica_tutti (brevo_tutti_caricati)."""
+    from .brevo_liste import caricati_tutti
+    return {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()} | caricati_tutti(conn)
+
+
+def senza_skovo_tutti(c: httpx.Client, nuove: dict) -> dict:
+    """Toglie dalle email nuove (per fascia) chi in Brevo sta in una lista "Skovo tutti ...". Se Brevo non risponde
+    solleva un errore: il giro salta, non scrive alla cieca."""
+    from .brevo_liste import liste_tutti, protetto
+    protette = liste_tutti(c)
+    if not protette:
+        return nuove
+    via = {(x.get("email") or "").lower() for x in _contatti_brevo(c) if protetto(x, protette)}
+    return {f: [e for e in ems if e.lower() not in via] for f, ems in nuove.items()}
 
 
 def _contatti_brevo(c: httpx.Client) -> list[dict]:
@@ -198,7 +224,7 @@ def ciclo(elenco=None) -> None:
     from ..db import connect
     from ..pipeline import lead_email as LE
     key = _chiave()
-    tetto = int(os.environ.get("AUTO_TETTO_CONTATTI") or _tetto())
+    tetto = _tetto_invio("AUTO_TETTO_CONTATTI")
     minimo = int(os.environ.get("AUTO_MIN_N", "30"))
     pausa = int(os.environ.get("AUTO_MIN", "20")) * 60
     with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60) as c, connect() as conn:
@@ -226,7 +252,7 @@ def ciclo(elenco=None) -> None:
                 ann: dict = {}
                 for r in conn.execute("SELECT chiave, prezzo FROM lead_tutti_ann").fetchall():
                     ann.setdefault(r["chiave"], []).append(r["prezzo"])
-                gia = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
+                gia = gia_raggiunti(conn)             # 24/11: anche chi è entrato con carica_tutti
             nuove, visti = {}, set()
             for r in rows:
                 e = _scegli(list(r["email"]), r["sito"])
@@ -244,6 +270,8 @@ def ciclo(elenco=None) -> None:
                     spazio = tetto - cnt
                     if spazio <= 0:
                         lg.warning("AUTO_INVIO fermo: %d contatti in Brevo (tetto %d)", cnt, tetto)
+                    else:
+                        nuove = senza_skovo_tutti(c, nuove)
                     restanti = int(os.environ.get("AUTO_TESTO_RESTANTI", "0"))
                     ts = time.strftime("%d-%m %H%M")
                     for fascia, ems in nuove.items():
@@ -290,10 +318,10 @@ def invia_2_11(tag: str) -> dict:
     """2/11 notte (cliente: "mettile tutte su Brevo subito e mandiamo a tutti"): le email raccolte della zona
     (MI, MB, VA, CO, LC, BG, LO) mai caricate prima (non in brevo_inviati, che contiene i 1.345 contatti cancellati),
     senza doppioni né indirizzi finti, in una lista Brevo nuova e il testo corto approvato il 1/11 sera. Una volta.
-    Tetto BREVO_TETTO_2_11 (predefinito brevo_liste.TETTO_BREVO: 500.000 dal 24/11, prima 1.450). Nei log solo conteggi."""
+    Al massimo BREVO_TETTO_2_11 email (predefinito 1.450: è un limite di invio, il 24/11 non è cambiato). Nei log solo conteggi."""
     from collections import Counter
     from ..db import connect
-    tetto = int(os.environ.get("BREVO_TETTO_2_11") or _tetto())
+    tetto = _tetto_invio("BREVO_TETTO_2_11")
     with connect() as conn:
         gia = {r["email"] for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
         rows = conn.execute(
@@ -335,11 +363,11 @@ def invia_2_11(tag: str) -> dict:
 def rimetti_contatti(tag: str) -> None:
     """2/11 (cliente: "dalle email rimetti i contatti vecchi fino ad arrivare a 1500 su Brevo"): ricarica in Brevo i contatti
     vecchi scelti (data/brevo_rimetti.json, solo hash: non bloccati/disiscritti, prima chi aveva aperto, poi la zona),
-    presi da brevo_inviati. Solo caricamento in una lista: NESSUN invio. Si ferma a BREVO_TETTO contatti (predefinito brevo_liste.TETTO_BREVO: 500.000 dal 24/11, prima 1.498)."""
+    presi da brevo_inviati. Solo caricamento in una lista: NESSUN invio. Si ferma a BREVO_TETTO (1.498) contatti."""
     import hashlib
     from ..db import connect
     scelti = set(json.loads((_DATA / "brevo_rimetti.json").read_text()))
-    tetto = int(os.environ.get("BREVO_TETTO") or _tetto())
+    tetto = _tetto_invio("BREVO_TETTO", 1498)    # come prima del 24/11: questi contatti poi ricevono (invia_rimessi)
     with httpx.Client(headers={"api-key": _chiave(), "accept": "application/json"}, timeout=120) as c, connect() as conn:
         ora = _conta_brevo(c)
         via = invii.disiscritti(conn)                  # 4/11: mai rimettere chi si è disiscritto o è stato bloccato
@@ -510,14 +538,14 @@ ESCLUSI_3_11 = re.compile(r"(officinemulino|cosvalauto|autoeautovarese|srauto|lo
 
 def nuovi_3_11(tag: str, elenco) -> dict:
     """Commercianti MAI contattati (non in brevo_inviati), prima la zona entro 100 km poi il resto del Nord, fino al
-    tetto dei contatti in Brevo (500.000 dal 24/11, prima 1.498): per fare posto si tolgono da Brevo i contatti già usati (restano in brevo_inviati e
+    limite di invio BREVO_TETTO (1.498, come prima del 24/11): per fare posto si tolgono da Brevo i contatti già usati (restano in brevo_inviati e
     non vengono mai ricontattati per errore). Ogni contatto nella fascia delle auto che vende, una lista e una
     campagna per fascia con il testo approvato del 2/11 e 3 auto di esempio di oggi (metodo nuovo), INVIATE subito.
     Esclusi chi si è lamentato e i nomi esclusi. Nei log solo conteggi."""
     import hashlib  # noqa: F401
     from collections import Counter
     from ..db import connect
-    tetto = int(os.environ.get("BREVO_TETTO") or _tetto())
+    tetto = _tetto_invio("BREVO_TETTO", 1498)    # limite di INVIO (come prima), non il tetto dei contatti tenuti
     nord = ("MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC", "MN", "SO", "VC", "BI", "VB",
             "AL", "AT", "TO", "CN", "GE", "SV", "PR", "RE", "MO", "BO", "VR", "VI", "PD", "VE", "TV", "TN", "BZ")
     st = Counter()
@@ -590,10 +618,16 @@ def nuovi_3_11(tag: str, elenco) -> dict:
         with connect() as conn:                        # 4/11: i bloccati restano esclusi anche se tolti da Brevo
             invii.sincronizza_da_brevo(conn, contatti)
         attuali = [x["email"].lower() for x in contatti if x.get("email") and not invii.contatto_bloccato(x)]
+        # 24/11: chi sta in una lista "Skovo tutti ..." (carica_tutti) non riceve e non si cancella; in tutto mai più
+        # di `tetto` destinatari (nuovi + mai aperto), e le letture campaignStats si fermano appena il posto è pieno
+        from .brevo_liste import liste_tutti, protetto
+        protette = liste_tutti(c)
+        protetti = {x["email"].lower() for x in contatti if x.get("email") and protetto(x, protette)}
+        posto = max(0, tetto - len(cand))
         # chi è già in Brevo e NON ha mai aperto una nostra email resta e la riceve; chi ha aperto fa posto ai nuovi
         mai_aperte, aperte = [], []
         for e in attuali:
-            if ESCLUSI_3_11.search(e):
+            if ESCLUSI_3_11.search(e) or e in protetti or len(mai_aperte) >= posto:
                 aperte.append(e)
                 continue
             try:
@@ -607,12 +641,10 @@ def nuovi_3_11(tag: str, elenco) -> dict:
         lg.warning("NUOVI_3_11 %s: già in Brevo %d, mai aperto %d (ricevono di nuovo), aperto o esclusi %d", tag,
                    len(attuali), len(mai_aperte), len(aperte))
         tenere = set(mai_aperte)
-        da_togliere = max(0, len(attuali) + len(cand) - tetto)
+        # si cancella solo se non ci si sta nei contatti che si possono tenere (500.000), non più per il limite di invio
+        da_togliere = max(0, len(attuali) + len(cand) - _tetto())
         tolti = 0
         with connect() as conn:
-            from .brevo_liste import liste_tutti, protetto
-            protette = liste_tutti(c)     # 24/11: mai cancellare chi sta in una lista "Skovo tutti ..." (carica_tutti)
-            protetti = {x["email"].lower() for x in contatti if x.get("email") and protetto(x, protette)}
             for e in sorted(attuali, key=lambda x: x in tenere):
                 if tolti >= da_togliere:
                     break

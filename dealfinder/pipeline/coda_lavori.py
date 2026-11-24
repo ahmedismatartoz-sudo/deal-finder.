@@ -476,8 +476,9 @@ def esegui(v: str) -> bool | None:
             from ..marketing import brevo_liste as bl
             esito = bl.carica_tutti()
             lg.warning("CARICA_TUTTI %s", json.dumps(esito))
-            if esito.get("errore") or esito.get("blocchi_falliti"):
-                raise RuntimeError("caricamento incompleto: " + str(esito.get("errore") or "blocchi falliti"))
+            perche = bl.incompleto(esito)  # fermo, fonte non letta, blocchi rifiutati, import fallito o non finito
+            if perche:
+                raise RuntimeError("caricamento incompleto: " + perche)
         return _lungo(f"carica_tutti:{v.split(':', 1)[1][:80]}", "CARICA_TUTTI", _carica_tutti)
     if v.startswith("pulita:"):           # 8/11 (cliente): lista di chi apre, pulita, per il nuovo mittente (non invia)
         try:

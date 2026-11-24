@@ -42,7 +42,8 @@ def test_scegli_tutti_esclusioni_e_nomi():
 
 def test_spazzatura_fuori_e_commercianti_dentro():
     buone = ["info@salone.it", "support@salone.it", "assistenza@autorossi.it", "vendite@gmail.com", "3emme@libero.it",
-             "2000auto@tiscali.it", "privacyauto@salone.it"]
+             "2000auto@tiscali.it", "privacyauto@salone.it", "salone@googlemail.com", "rossi@aruba.it",
+             "info@autorossi.altervista.org", "20auto@libero.it", "22auto@gmail.com", "27auto@tiscali.it"]
     out, n = bl.scegli_tutti([(e, None) for e in SPAZZATURA + buone], set())
     assert [x["email"] for x in out] == sorted(buone)
     assert n["escluse_spazzatura"] == len(SPAZZATURA)
@@ -65,13 +66,29 @@ def test_righe_di_privati_mai():
 
 def test_riga_che_nomina_un_escluso():
     # il nome è in una chiave qualsiasi (o solo nel sito): l'indirizzo esce segnato ed è escluso dovunque compaia
-    righe = ['{"companyName": "Privacar Milano", "email": "a@buono.it"}', '{"ragione": "LOCONTE SRL", "email": "b@buono.it"}',
-             '{"sito": "https://www.gt-automobili.it", "email": "c@buono.it"}', '{"nome": "Vroom", "email": "d@buono.it"}',
-             '{"email": "a@buono.it"}', '{"nome": "Salone", "email": "e@buono.it"}']
+    righe = ['{"companyName": "Privacar Milano", "email": "a@buono1.it"}', '{"ragione": "LOCONTE SRL", "email": "b@buono2.it"}',
+             '{"sito": "https://www.gt-automobili.it", "email": "c@buono3.it"}', '{"nome": "Vroom", "email": "d@buono4.it"}',
+             '{"email": "a@buono1.it"}', '{"nome": "Salone", "email": "e@buono5.it"}',
+             # scritti in altri modi, o solo nel sito / in un campo qualsiasi
+             '{"nome": "Auto&Auto - Varese", "email": "f@buono6.it"}', '{"nome": "G.T. Automobili", "email": "g@buono7.it"}',
+             '{"nome": "S R Automobili", "email": "h@buono8.it"}', '{"x": "Lo-Conte auto", "email": "i@buono9.it"}',
+             '{"sito": "www.auto-e-auto-varese.it", "email": "l@buono10.it"}', '{"x": "officine_mulino", "email": "m@buono11.it"}',
+             '{"email": "s.r.auto@gmail.com"}',
+             # non sono loro: Carlo Conte, "lo contesto", una srl qualsiasi
+             '{"nome": "Carlo Conte Auto s.r.l. automobili", "note": "lo contesto", "email": "n@buono12.it"}']
     voci = [v for r in righe for v in bl.voci_da_riga(r)]
     out, n = bl.scegli_tutti(voci, set())
-    assert out == [{"email": "e@buono.it", "nome": "Salone"}]
-    assert n["escluse_loconte"] == 1 and n["escluse_altri_esclusi"] == 3
+    assert [x["email"] for x in out] == ["e@buono5.it", "n@buono12.it"]
+    assert n["escluse_loconte"] == 2 and n["escluse_altri_esclusi"] == 9
+
+
+def test_stesso_dominio_di_un_escluso():
+    voci = [("info@salonex.it", "Privacar Bergamo"), ("vendite@salonex.it", None), ("altro@salonex.it", "Altro nome"),
+            ("mario@gmail.com", "GT Automobili"), ("luigi@gmail.com", None), ("a@libero.it", "Loconte"), ("b@libero.it", None),
+            ("capo@autoy.it", "Loconte srl"), ("ufficio@autoy.it", None), ("ok@salonez.it", "Salone Z")]
+    out, n = bl.scegli_tutti(voci, set())
+    assert [x["email"] for x in out] == ["b@libero.it", "luigi@gmail.com", "ok@salonez.it"]   # gmail e libero sono di tutti
+    assert n["escluse_stesso_dominio_di_un_escluso"] == 3 and n["escluse_loconte"] == 2 and n["escluse_altri_esclusi"] == 2
 
 
 def test_email_senza_resti_di_a_capo():
@@ -97,7 +114,8 @@ def test_limite_piano_niente_stime(monkeypatch):
 def test_pec_per_gestore_non_per_tre_lettere():
     for e in ("a@pec.it", "a@legalmail.it", "a@cert.legalmail.it", "a@postecert.it", "a@sicurezzapostale.it",
               "a@actaliscertymail.it", "a@ticertifica.it", "a@arubapec.it", "a@pec.salone.it", "a@salone.pec.it",
-              "a@pec.libero.it", "a@x.legalmail.it"):
+              "a@pec.libero.it", "a@x.legalmail.it", "a@ascompec.it", "a@cnapec.it", "a@keypec.it", "a@pecveneto.it",
+              "a@dadapec.com", "a@cert.salone.it"):
         assert bl.pec(e), e.split("@")[1]
     for e in ("info@specialcar.it", "info@specauto.com", "a@autopecchia.it", "a@gmail.com"):
         assert not bl.pec(e), e.split("@")[1]
@@ -246,18 +264,21 @@ class _Cur:
 
 class _Conn:
     def __init__(self, tabelle):
-        self.t, self.sql, self.cursori = tabelle, [], 0
+        self.t, self.sql, self.cursori, self.segnati = tabelle, [], 0, set()
 
     def _righe(self, sql):
         self.sql.append(sql)
         for nome, righe in self.t.items():
             if f"FROM {nome}" in sql:
                 return righe
-        if sql.startswith(("INSERT INTO disiscritti", "SET LOCAL")):
+        if sql.startswith(("INSERT INTO disiscritti", "SET LOCAL", "CREATE TABLE IF NOT EXISTS brevo_tutti_caricati")):
             return []
         raise RuntimeError("tabella che manca")
 
     def execute(self, sql, par=None):
+        if sql.startswith("INSERT INTO brevo_tutti_caricati"):
+            self.segnati |= set(par[0])
+            return _Cur([])
         return _Cur(self._righe(sql))
 
     def cursor(self, name=None):
@@ -345,6 +366,7 @@ def test_carica_tutti_a_blocchi_senza_esclusi_e_senza_email_nei_log(monkeypatch)
     assert esito["processi"] == {"completed": 3} and esito["nella_lista"] == 1203 and esito["limite_piano"] == 500_000
     assert esito["limite_fonte"] == "decisione_cliente" and esito["processi_finiti"] is True and esito["piano"] == "Starter"
     assert "@" not in caplog.text and "@" not in json.dumps(esito)                   # nei log solo conteggi
+    assert brevo.conn.segnati == set(caricate) and bl.incompleto(esito) is None      # marcatore per auto_invio
     # memoria: solo le righe con una @, cursore a blocchi, tempo massimo
     assert any("FROM lead_consegne WHERE strpos(dati::text, '@') > 0" in q for q in brevo.conn.sql)
     assert brevo.conn.cursori == 3 and any("statement_timeout = '120s'" in q for q in brevo.conn.sql)
@@ -394,6 +416,29 @@ def test_carica_tutti_senza_brevo_inviati_va_avanti(monkeypatch):
     assert esito["caricati"] == 1226 and esito["rimessi_cancellati"] == 0
 
 
+def test_carica_tutti_fermo_se_una_fonte_non_si_legge(monkeypatch):
+    for fonte in ("lead_consegne", "lead_email e"):
+        _, tabelle = _tabelle()
+        del tabelle[fonte]
+        brevo = _prepara(monkeypatch, [], tabelle)
+        esito = bl.carica_tutti(attesa_s=0, dormi=lambda s: None)
+        assert esito["fermo"] == "fonte_non_letta" and not brevo.post_ and bl.incompleto(esito) == "fonte_non_letta"
+
+
+def test_incompleto_il_lavoro_non_e_fatto():
+    ok = {"fonti": {"lead_consegne": 10, "lead_email": 5}, "caricati": 15, "blocchi_falliti": 0,
+          "processi": {"completed": 1}, "processi_finiti": True}
+    assert bl.incompleto(ok) is None and bl.incompleto({**ok, "processi": {}}) is None
+    assert bl.incompleto({**ok, "fermo": "piano_insufficiente"}) == "piano_insufficiente"
+    assert bl.incompleto({"errore": "chiave"}) == "chiave"
+    assert bl.incompleto({**ok, "fonti": {"lead_consegne": "non letta (X)", "lead_email": 5}}) == "lead_consegne_non_letta"
+    assert bl.incompleto({**ok, "fonti": {"lead_consegne": 3}}) == "lead_email_non_letta"
+    assert bl.incompleto({**ok, "blocchi_falliti": 1}) == "blocchi_falliti"
+    assert bl.incompleto({**ok, "processi": {"completed": 2, "failed": 1}}) == "import_fallito"
+    assert bl.incompleto({**ok, "processi": {"completed": 2, "in_queue": 1}}) == "import_non_finito"
+    assert bl.incompleto({**ok, "processi": {"in_attesa": 1}}) == "import_non_finito"
+
+
 class _Lav:
     def __init__(self, esiti):
         self.esiti = esiti
@@ -410,8 +455,12 @@ def test_coda_fatta_solo_a_lavoro_finito(monkeypatch):
     assert cl.SPOSTABILI["carica_tutti:"] == (False, cl.BREVO)
     assert cl.mancano("carica_tutti:2411", {}) == ["BREVO_API_KEY"]
     fatti, esiti, giri = set(), [], []
-    risultati = [{"caricati": 3, "blocchi_falliti": 1, "lista_id": 99}, {"caricati": 3, "lista_id": 99},
-                 {"errore": "chiave rifiutata"}]
+    fonti = {"lead_consegne": 2, "lead_email": 1}
+    risultati = [{"caricati": 3, "blocchi_falliti": 1, "lista_id": 99, "fonti": fonti},
+                 {"caricati": 3, "lista_id": 99, "fonti": fonti}, {"errore": "chiave rifiutata"},
+                 {"fermo": "disiscritti_incompleti", "fonti": fonti},
+                 {"caricati": 3, "fonti": fonti, "processi": {"failed": 1}},
+                 {"caricati": 3, "fonti": fonti, "processi": {"in_attesa": 1}}]
     monkeypatch.setattr(ciclo, "inizia", lambda job, **k: None if job in fatti else (giri.append(job) or _Lav(esiti)))
     monkeypatch.setattr(bl, "carica_tutti", lambda: risultati.pop(0))
     with _Log() as caplog:
@@ -420,17 +469,137 @@ def test_coda_fatta_solo_a_lavoro_finito(monkeypatch):
         fatti.add("carica_tutti:2411")
         assert cl.esegui("carica_tutti:2411") is None             # una volta per etichetta
         assert cl.esegui("carica_tutti:2411bis") is False         # chiave rifiutata: non fatta
-    assert esiti == ["fallito", "fatto", "fallito"]
-    assert giri == ["carica_tutti:2411", "carica_tutti:2411", "carica_tutti:2411bis"]
-    assert 'CARICA_TUTTI {"caricati": 3, "lista_id": 99}' in caplog.text and "già fatto" in caplog.text
+        assert cl.esegui("carica_tutti:c") is False               # fermo: non fatta
+        assert cl.esegui("carica_tutti:d") is False               # un import fallito: non fatta
+        assert cl.esegui("carica_tutti:e") is False               # import non finito in tempo: non fatta
+    assert esiti == ["fallito", "fatto", "fallito", "fallito", "fallito", "fallito"]
+    assert giri[:3] == ["carica_tutti:2411", "carica_tutti:2411", "carica_tutti:2411bis"]
+    assert '"lista_id": 99' in caplog.text and "già fatto" in caplog.text and "import_non_finito" in caplog.text
 
 
-def test_tetto_brevo_unico_a_500_000():
-    # 24/11 (cliente): il tetto dei contatti in Brevo passa da 1.495 a 500.000 per tutti i lavori, da una sola costante
+def test_tetto_dei_contatti_e_limiti_di_invio_separati():
+    # 24/11 (cliente): 500.000 sono i contatti che si possono TENERE; le email per giro restano quelle di prima
     import inspect
     from dealfinder.marketing import auto_invio, giro_1711, giro_lotto, su_misura
     assert bl.TETTO_BREVO == 500_000 and bl.LIMITE_PIANO == bl.TETTO_BREVO
-    assert su_misura.TETTO_BREVO == 500_000 and giro_1711.TETTO_BREVO == 500_000 and auto_invio._tetto() == 500_000
-    assert "TETTO_BREVO - int(n_brevo)" in inspect.getsource(giro_lotto)
-    testo = inspect.getsource(auto_invio)
-    assert testo.count("or _tetto())") == 4 and '"1450"' not in testo and '"1498"' not in testo
+    assert (bl.TETTO_INVIO, bl.TETTO_INVIO_GIRO, bl.TETTO_INVIO_AUTO) == (1495, 1400, 1450)
+    assert su_misura.TETTO_INVIO == 1495 and giro_1711.TETTO_INVIO == 1495
+    for modulo in (su_misura, giro_1711):
+        assert "TETTO_BREVO" not in inspect.getsource(modulo)
+    for fn in (bl.rimetti_e_invia, bl.carica_e_programma, bl.mix_e_invia, bl.lista_pulita):
+        t = inspect.getsource(fn)
+        assert "TETTO_INVIO - " in t and "TETTO_BREVO" not in t, fn.__name__
+    assert "min(TETTO_BREVO - int(n_brevo), TETTO_INVIO_GIRO)" in inspect.getsource(giro_lotto)
+    assert auto_invio._tetto() == 500_000
+    t = inspect.getsource(auto_invio)
+    assert 'tetto = _tetto_invio("AUTO_TETTO_CONTATTI")' in inspect.getsource(auto_invio.ciclo)
+    assert 'tetto = _tetto_invio("BREVO_TETTO_2_11")' in inspect.getsource(auto_invio.invia_2_11)
+    assert 'tetto = _tetto_invio("BREVO_TETTO", 1498)' in inspect.getsource(auto_invio.nuovi_3_11)
+    assert "or _tetto())" not in t
+
+
+def test_limiti_di_invio_di_auto_invio(monkeypatch):
+    from dealfinder.marketing import auto_invio
+    for v in ("AUTO_TETTO_CONTATTI", "BREVO_TETTO_2_11", "BREVO_TETTO"):
+        monkeypatch.delenv(v, raising=False)
+    assert auto_invio._tetto_invio("AUTO_TETTO_CONTATTI") == 1450 and auto_invio._tetto_invio("BREVO_TETTO_2_11") == 1450
+    assert auto_invio._tetto_invio("BREVO_TETTO", 1498) == 1498
+    monkeypatch.setenv("AUTO_TETTO_CONTATTI", "900")              # la variabile, se c'è, vale più del predefinito
+    assert auto_invio._tetto_invio("AUTO_TETTO_CONTATTI") == 900
+
+
+class _ConnAuto:
+    """Database finto per auto_invio.ciclo: archivio dei commercianti, brevo_inviati e il marcatore di carica_tutti."""
+    def __init__(self, emails, inviati, marcati):
+        self.emails, self.inviati, self.marcati = emails, set(inviati), set(marcati)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def execute(self, sql, par=None):
+        if "FROM lead_email e" in sql:
+            return _Cur([{"chiave": f"k{i}", "email": [e], "sito": None} for i, e in enumerate(self.emails)])
+        if "FROM brevo_tutti_caricati" in sql:
+            return _Cur([{"email": e} for e in self.marcati])
+        if "FROM brevo_inviati" in sql:
+            return _Cur([{"email": e} for e in self.inviati])
+        if sql.startswith("INSERT INTO brevo_inviati"):
+            self.inviati.add(par[0])
+        return _Cur([])
+
+    def commit(self):
+        pass
+
+
+def _gira_ciclo(monkeypatch, conn, in_brevo, contatti):
+    import dealfinder.db as db
+    from dealfinder.marketing import auto_invio
+    from dealfinder.pipeline import lead_email
+    mandate = []
+
+    class C:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def get(self, url, params=None):
+            assert url.endswith("/contacts/lists"), url
+            return _R({"lists": [{"name": "Skovo tutti 24-11", "id": 99}, {"name": "Skovo altra", "id": 3}]})
+
+    class Fine(Exception):
+        pass
+
+    def basta(s):
+        raise Fine()
+    for v in ("AUTO_TETTO_CONTATTI", "AUTO_PROV"):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setenv("BREVO_API_KEY", "xkeysib-finta")
+    monkeypatch.setenv("AUTO_MIN_N", "1")
+    monkeypatch.setenv("AUTO_TESTO_RESTANTI", "100000")           # tutte con il testo corto: non servono le auto del sito
+    monkeypatch.setattr(db, "connect", lambda: conn)
+    monkeypatch.setattr(auto_invio, "httpx", types.SimpleNamespace(Client=lambda **k: C()))
+    monkeypatch.setattr(auto_invio, "_semina", lambda c, conn: None)
+    monkeypatch.setattr(lead_email, "giro", lambda: None)
+    monkeypatch.setattr(auto_invio, "_conta_brevo", lambda c: in_brevo)
+    monkeypatch.setattr(auto_invio, "_contatti_brevo", lambda c: contatti)
+    monkeypatch.setattr(auto_invio, "_manda", lambda c, nome, oggetto, html, emails, lavoro=None: mandate.append(list(emails)) or True)
+    monkeypatch.setattr(auto_invio, "time", types.SimpleNamespace(sleep=basta, strftime=lambda f: "24-11 1200"))
+    try:
+        auto_invio.ciclo(lambda: [])
+    except Fine:
+        pass
+    return mandate
+
+
+def test_auto_invio_non_scrive_a_chi_e_entrato_con_carica_tutti(monkeypatch):
+    emails = ["a@salone1.it", "b@salone2.it", "c@salone3.it", "d@salone4.it"]
+    # b: segnato da carica_tutti; c: in Brevo nella lista "Skovo tutti" (senza marcatore); d: già caricato prima
+    conn = _ConnAuto(emails, inviati={"d@salone4.it"}, marcati={"b@salone2.it"})
+    contatti = [{"email": "C@salone3.it", "listIds": [99]}, {"email": "x@altro.it", "listIds": [3]}]
+    assert _gira_ciclo(monkeypatch, conn, 100, contatti) == [["a@salone1.it"]]
+    assert conn.inviati == {"d@salone4.it", "a@salone1.it"}       # solo a chi ha ricevuto
+    # tutti entrati con carica_tutti: nessuna campagna
+    conn = _ConnAuto(emails, inviati=set(), marcati=set(emails))
+    assert _gira_ciclo(monkeypatch, conn, 100, []) == []
+    # dopo carica_tutti Brevo ha migliaia di contatti: il limite di invio è quello di prima (1.450), il giro resta fermo
+    conn = _ConnAuto(emails, inviati=set(), marcati=set())
+    assert _gira_ciclo(monkeypatch, conn, 4000, []) == [] and not conn.inviati
+    # il limite per giro: con 1.447 contatti in Brevo partono al massimo 3 email, non 4
+    assert [len(x) for x in _gira_ciclo(monkeypatch, conn, 1447, [])] == [3]
+
+
+def test_nuovi_3_11_limite_di_invio_e_nessuna_cancellazione_per_fare_posto():
+    import inspect
+    from dealfinder.marketing import auto_invio
+    t = inspect.getsource(auto_invio.nuovi_3_11)
+    # i "mai aperto" (e le letture campaignStats) si fermano al posto rimasto sotto il limite di invio; chi sta in
+    # "Skovo tutti" non riceve; si cancella solo oltre i contatti che si possono tenere (500.000)
+    assert "if ESCLUSI_3_11.search(e) or e in protetti or len(mai_aperte) >= posto:" in t
+    assert t.index("len(mai_aperte) >= posto") < t.index("/campaignStats")
+    assert "cand = cand[:tetto]" in t and "da_togliere = max(0, len(attuali) + len(cand) - _tetto())" in t
+    assert "scelte = scelte[:tetto]" in inspect.getsource(auto_invio.invia_2_11)

@@ -267,9 +267,14 @@ import re as _re
 _EMAIL_OK = _re.compile(r"^[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}$")
 _NON_EMAIL = _re.compile(r"(\.(png|jpe?g|gif|webp|avif|svg|bmp)$)|@2x", _re.I)
 LISTA_RIMESSI = "Skovo contatti vecchi rimessi 04-11"
-# Tetto dei contatti in Brevo per TUTTI i lavori (unica costante: auto_invio, giro_lotto, giro_1711, su_misura la
-# prendono da qui). 24/11 (cliente): da 1.495 a 500.000, il piano arriva a 500.000 contatti (prima: meno di 1.500).
+# 24/11 (cliente): due numeri diversi.
+# TETTO_BREVO: quanti contatti si possono TENERE in Brevo (il piano arriva a 500.000; prima meno di 1.500).
+# TETTO_INVIO: a quante persone può arrivare un giro di email. Il cliente ha alzato il primo, NON il secondo: ogni
+# lavoro che manda email calcola il suo posto come prima, come se il tetto fosse ancora 1.495 (mai più persone di prima).
 TETTO_BREVO = 500_000
+TETTO_INVIO = 1495
+TETTO_INVIO_GIRO = 1400                  # giro_lotto: al massimo tanti contatti nuovi (e quindi email) per giro
+TETTO_INVIO_AUTO = 1450                  # auto_invio (ciclo, invia_2_11): il vecchio predefinito di AUTO_TETTO_CONTATTI
 
 
 def scegli_rimessi(emails, bloccati: set, gia_in_brevo: set, posto: int) -> list[str]:
@@ -303,13 +308,29 @@ def _rimessi_0111() -> set[str]:
 def _esclusi(e: str) -> bool:
     """9/11: clienti/contatti da non scrivere mai (Officine Mulino ha ricevuto la campagna 70 dopo essersi disiscritto)."""
     from .auto_invio import ESCLUSI_3_11
-    return bool(ESCLUSI_3_11.search(e or "") or _ESCLUSI_ALTRI.search(e or ""))
+    return bool(ESCLUSI_3_11.search(e or "") or _ESCLUSI_ALTRI.search(e or "") or _ESCLUSI_TESTO.search(e or ""))
 
 
 # 24/11: gli esclusi di raccolta_numeri che qui mancavano (GT Automobili, Privacar, Vroom) e gli stessi nomi di
 # ESCLUSI_3_11 scritti con un separatore in mezzo (officine-mulino, sr.auto, auto-e-auto-varese)
 _ESCLUSI_ALTRI = _re.compile(r"(officine[._-]*mulino|cosval|auto[._-]*e?[._-]*auto[._-]*varese|sr[._-]*auto|"
                              r"gt[._-]*automobili|privacar|vroom)", _re.I)
+
+
+# gli stessi nomi scritti in qualsiasi modo (spazi, punti, trattini, &): "Auto&Auto - Varese", "G.T. Automobili",
+# "S R Automobili", "lo-conte", s.r.auto@, www.auto-e-auto-varese.it, officine_mulino. I nomi corti vogliono un confine
+# di parola davanti ("Carlo Conte" e "Cosvaldo... " a parte, non sono Loconte né SR Auto).
+_SEP = r"[\s._&'/-]*"
+_ESCLUSI_TESTO = _re.compile(
+    r"((^|[^a-z])lo" + _SEP + r"conte([^a-z]|$)|officine" + _SEP + r"mulino|(^|[^a-z])cosval|"
+    r"auto" + _SEP + r"(e|and)?" + _SEP + r"auto" + _SEP + r"varese|"
+    r"(^|[^a-z])s" + _SEP + r"r" + _SEP + r"auto|(^|[^a-z])g" + _SEP + r"t" + _SEP + r"automobili|privacar|"
+    r"(^|[^a-z])vroom)", _re.I)
+_LOCONTE_TESTO = _re.compile(r"loconte|(^|[^a-z])lo" + _SEP + r"conte([^a-z]|$)", _re.I)
+_DOMINI_PUBBLICI = _re.compile(
+    r"^(gmail|googlemail|libero|hotmail|yahoo|outlook|icloud|alice|tiscali|virgilio|live|msn|me|mac|tin|inwind|iol|"
+    r"fastwebnet|email|katamail|aruba|pec|legalmail|tim|teletu|vodafone|aol|gmx|mail|ymail|rocketmail|protonmail|"
+    r"proton|yandex|blu|giallo|supereva|interfree|poste|postecert|arubapec|tiscalinet|hotmail)\.[a-z.]{2,6}$", _re.I)
 
 
 def _bloccati_0111() -> set[str]:
@@ -346,7 +367,7 @@ def rimetti_e_invia(campagna_id: int) -> dict:
         scelti = _rimessi_0111()
         if scelti:                                   # solo i contatti delle prime campagne (esportazione del 1/11)
             vecchi = [e for e in vecchi if invii.impronta(e) in scelti]
-        buoni = scegli_rimessi(vecchi, bloccati, in_brevo, TETTO_BREVO - len(in_brevo))
+        buoni = scegli_rimessi(vecchi, bloccati, in_brevo, TETTO_INVIO - len(in_brevo))
         esito = {"vecchi": len(vecchi), "in_brevo": len(in_brevo), "da_rimettere": len(buoni), "disiscritti": len(bloccati)}
         if len(bloccati) < BLOCCATI_MINIMI:          # elenco dei disiscritti incompleto: si rischia di riscrivere a chi
             esito["fermo"] = "disiscritti_incompleti"  # ha chiesto di non ricevere più email -> niente invio
@@ -425,7 +446,7 @@ def carica_e_programma(emails: list[str], modello_id: int, quando: str) -> dict:
             bloccati = invii.disiscritti(conn) | _bloccati_0111()
             gia = {invii.norm_email(r["email"]) for r in conn.execute("SELECT email FROM brevo_inviati").fetchall()}
         in_brevo = {(x.get("email") or "").lower() for x in contatti}
-        posto = TETTO_BREVO - len(in_brevo)
+        posto = TETTO_INVIO - len(in_brevo)
         tutti = scegli_nuovi(emails, bloccati, gia, in_brevo, 10**6)
         buoni = tutti[:max(0, posto)]
         esito = {"ricevute": len(emails), "valide_mai_usate": len(tutti), "in_brevo": len(in_brevo), "posto": posto,
@@ -628,7 +649,7 @@ def mix_e_invia(modello_id: int, totale: int = 1200, campagne_richiamo=(64, 65, 
             _t.sleep(0.12)
         esito["tolti_da_brevo"] = tolti
         n_brevo = int((c.get(f"{API}/contacts", params={"limit": 1}).json() or {}).get("count") or 0)
-        posto = TETTO_BREVO - n_brevo
+        posto = TETTO_INVIO - n_brevo
         esito["in_brevo_dopo"] = n_brevo
         scelti = scelti[:max(0, posto)]
         esito["da_caricare"] = len(scelti)
@@ -730,7 +751,7 @@ def lista_pulita(campagne=(69, 68, 65, 54, 53, 52, 44, 43, 42, 41, 40, 39, 35, 3
         in_brevo = {(x.get("email") or "").lower() for x in contatti}
         nuovi = [e for e in scelti if e not in in_brevo]
         n_brevo = len(contatti)
-        posto = max(0, TETTO_BREVO - n_brevo)
+        posto = max(0, TETTO_INVIO - n_brevo)
         if len(nuovi) > posto:
             tenuti = set(nuovi[:posto])
             scelti = [e for e in scelti if e in in_brevo or e in tenuti]
@@ -888,9 +909,9 @@ _PIATTAFORME = _re.compile(r"(autoscout|subito\.|automobile\.it|mobile\.de|autou
                            r"aruba|register\.it|godaddy|ovh\.|siteground|wordpress|shopify|zendesk|freshdesk|hubspot|"
                            r"dealerk|cargurus|autohero|brumbrum)", _re.I)
 # residui di codifica davanti all'indirizzo vero (u003einfo@, %3Einfo@ -> 3einfo@, %20info@ -> 20info@): "3e" e "20" solo
-# davanti a una casella tipica, perché "3emme@" o "2000auto@" sono commercianti veri
+# davanti a una casella tipica, perché "3emme@", "2000auto@", "20auto@", "22auto@", "27auto@" sono commercianti veri
 _LOCALE_CODIFICA = _re.compile(r"^(u00[0-9a-f]{2}[a-z]|(3e|3c|20|22|27)(info|vendite|commerciale|amministrazione|"
-                               r"contatti|contact|mail|email|segreteria|sales|direzione|ufficio|admin|posta|auto)([^a-z]|$))",
+                               r"contatti|contact|mail|email|segreteria|sales|direzione|ufficio|admin|posta)([^a-z]|$))",
                                _re.I)
 _LOCALE_ESADECIMALE = _re.compile(r"^[0-9a-f-]{24,}$", _re.I)
 
@@ -929,13 +950,19 @@ _GESTORI_PEC = frozenset((
 
 
 def pec(e: str) -> bool:
-    """Indirizzo di posta certificata, riconosciuto dal gestore (dominio esatto o suo sottodominio) o da un pezzo
-    "pec" del dominio (pec.salone.it, salone.pec.it). Non basta "pec" dentro una parola: specialcar.it è un salone.
-    Solo per carica_tutti: gli altri lavori restano con gruppo_dominio. Funzione pura."""
+    """Indirizzo di posta certificata: gestore noto (dominio esatto o suo sottodominio), un pezzo del dominio che è
+    "pec" o "cert" o che finisce per "pec" (pec.salone.it, salone.pec.it, ascompec.it, cnapec.it, keypec.it,
+    dadapec.com, cert.x.it), o un gestore che comincia per "pec" (pecveneto.it). Non basta "pec" in mezzo a una parola:
+    specialcar.it è un salone. Solo per carica_tutti: gli altri lavori restano con gruppo_dominio. Funzione pura."""
     pezzi = e.rpartition("@")[2].lower().split(".")
-    if "pec" in pezzi[:-1] or "legalmail" in pezzi:
+    if any(x in ("pec", "cert", "legalmail") or x.endswith("pec") or x in _GESTORI_PEC_NOMI for x in pezzi[:-1]):
         return True
     return any(".".join(pezzi[k:]) in _GESTORI_PEC for k in range(len(pezzi) - 1))
+
+
+_GESTORI_PEC_NOMI = frozenset(("pecveneto", "pecimprese", "pecaruba", "pecmail", "peceasy", "pecprivato", "pecditta",
+                               "pecspeciale", "postecert", "postacert", "postacertificata", "sicurezzapostale",
+                               "actaliscertymail", "ticertifica", "pec-legal", "pecavvocati", "pecconfesercenti"))
 
 
 def privato(dati) -> bool:
@@ -956,14 +983,25 @@ def privato(dati) -> bool:
 
 
 def _nome_escluso(nome: str) -> bool:
-    """Nome (o testo) di un commerciante da non scrivere mai (stessi nomi del sito e di raccolta_numeri)."""
+    """Nome (o testo intero di una riga) di un commerciante da non scrivere mai: i nomi del sito e di raccolta_numeri,
+    le espressioni usate per gli indirizzi (www.auto-e-auto-varese.it, officine_mulino) e gli stessi nomi scritti con
+    punti, spazi, trattini o & in mezzo ("G.T. Automobili", "Auto&Auto - Varese", "S R Automobili")."""
     if not nome:
         return False
     if nome == _RIGA_ESCLUSA:
         return True
     from ..pipeline.raccolta_numeri import ESCLUSI_EXTRA
     from ..web.sito_regole import nomi_esclusi_re
-    return bool(_re.search(nomi_esclusi_re() + "|" + "|".join(f"({x})" for x in ESCLUSI_EXTRA), nome, _re.I))
+    if _re.search(nomi_esclusi_re() + "|" + "|".join(f"({x})" for x in ESCLUSI_EXTRA), nome, _re.I):
+        return True
+    return _esclusi(nome)
+
+
+def _dominio_proprio(e: str) -> str:
+    """Il dominio dell'indirizzo se è di un'azienda ("" per gmail, libero, hotmail...): serve a escludere gli altri
+    indirizzi dello stesso commerciante escluso."""
+    dom = e.rpartition("@")[2]
+    return "" if _DOMINI_PUBBLICI.match(dom) else dom
 
 
 def spazzatura(e: str) -> bool:
@@ -971,7 +1009,9 @@ def spazzatura(e: str) -> bool:
     codifica presi dalle pagine (%20info@, u003einfo@), stringhe esadecimali, indirizzi lunghissimi. Funzione pura."""
     from ..pipeline.lead_email import NO_DOMINI
     loc, _, dom = e.rpartition("@")
-    if NO_DOMINI.search(dom) or _DOMINI_SPAZZATURA.search(dom) or _LOCALI_SPAZZATURA.search(loc):
+    # caselle vere che NO_DOMINI (pensato per le pagine dei siti) butterebbe: googlemail, aruba.it, *.altervista.org
+    casella = dom in ("gmail.com", "googlemail.com", "aruba.it") or dom.endswith(".altervista.org")
+    if (not casella and NO_DOMINI.search(dom)) or _DOMINI_SPAZZATURA.search(dom) or _LOCALI_SPAZZATURA.search(loc):
         return True
     if _LOCALI_PIATTAFORMA.search(loc) and _PIATTAFORME.search(dom):
         return True
@@ -1000,12 +1040,20 @@ def scegli_tutti(voci, bloccati: set, cancellati: set = frozenset()) -> tuple[li
         if nome and nome not in visti:
             visti.append(nome)
     n["raccolti"] = len(nomi)
+    loconte = {e for e in nomi if _LOCONTE_TESTO.search(e) or any(x == _RIGA_LOCONTE or _LOCONTE_TESTO.search(x)
+                                                                  for x in nomi[e])}
+    esclusi = {e for e in nomi if e not in loconte and (_esclusi(e) or any(_nome_escluso(x) for x in nomi[e]))}
+    # gli altri indirizzi dello stesso commerciante (stesso dominio aziendale) seguono la stessa sorte
+    dom_loconte = {_dominio_proprio(e) for e in loconte} - {""}
+    dom_esclusi = {_dominio_proprio(e) for e in esclusi} - {""}
     out = []
     for e in sorted(nomi):
-        if "loconte" in e or any("loconte" in x.lower() for x in nomi[e]):
+        if e in loconte:
             n["escluse_loconte"] += 1
-        elif _esclusi(e) or any(_nome_escluso(x) for x in nomi[e]):
+        elif e in esclusi:
             n["escluse_altri_esclusi"] += 1
+        elif _dominio_proprio(e) in dom_loconte | dom_esclusi:
+            n["escluse_stesso_dominio_di_un_escluso"] += 1
         elif pec(e):
             n["escluse_pec"] += 1
         elif spazzatura(e):
@@ -1043,11 +1091,47 @@ def voci_da_riga(dati) -> list[tuple[str, str | None]] | None:
         return []
     testo = " | ".join(_stringhe(dati)) if not isinstance(dati, str) else dati
     out = [(e, nome) for e in emails]
-    if "loconte" in testo.lower():
+    if _LOCONTE_TESTO.search(testo):
         out += [(e, _RIGA_LOCONTE) for e in emails]
     elif _nome_escluso(testo):
         out += [(e, _RIGA_ESCLUSA) for e in emails]
     return out
+
+
+# Chi è entrato in Brevo con carica_tutti: tabella a parte (NON brevo_inviati, che per gli altri lavori vuol dire "già
+# contattato" e cambierebbe i loro conti). auto_invio la legge come "già raggiunti": a loro il giro automatico non scrive.
+SQL_TUTTI_CARICATI = ("CREATE TABLE IF NOT EXISTS brevo_tutti_caricati (email TEXT PRIMARY KEY, lista TEXT, "
+                      "quando TIMESTAMPTZ NOT NULL DEFAULT now())")
+
+
+def segna_tutti(conn, emails, lista: str = LISTA_TUTTI) -> None:
+    conn.execute(SQL_TUTTI_CARICATI)
+    conn.execute("INSERT INTO brevo_tutti_caricati (email, lista) SELECT unnest(%s::text[]), %s ON CONFLICT DO NOTHING",
+                 (list(emails), lista))
+    conn.commit()
+
+
+def caricati_tutti(conn) -> set[str]:
+    """Gli indirizzi caricati da carica_tutti (insieme vuoto se non è mai girato)."""
+    conn.execute(SQL_TUTTI_CARICATI)
+    conn.commit()
+    return {r["email"] for r in conn.execute("SELECT email FROM brevo_tutti_caricati").fetchall()}
+
+
+def incompleto(esito: dict) -> str | None:
+    """Perché il caricamento NON si può segnare fatto (None se è completo): errore, fermo, una fonte non letta, blocchi
+    rifiutati, un processo di import fallito o non finito in tempo. Funzione pura."""
+    if esito.get("errore") or esito.get("fermo"):
+        return str(esito.get("errore") or esito.get("fermo"))
+    for f in ("lead_consegne", "lead_email"):
+        if not isinstance((esito.get("fonti") or {}).get(f), int):
+            return f"{f}_non_letta"
+    if esito.get("blocchi_falliti"):
+        return "blocchi_falliti"
+    stati = esito.get("processi") or {}
+    if any(k != "completed" for k in stati):
+        return "import_fallito" if any(k in ("failed", "cancelled") for k in stati) else "import_non_finito"
+    return None
 
 
 def _scorri(conn, sql: str, blocco: int = 2000):
@@ -1194,9 +1278,12 @@ def _importa_blocco(c: httpx.Client, corpo: dict, codici, dormi, tentativi: int 
 
 
 def carica_tutti(attesa_s: int = 180, dormi=None) -> dict:
-    """Carica in Brevo, nella lista nuova LISTA_TUTTI, tutte le email di commercianti che abbiamo (database + contatti
-    già in Brevo) tranne gli esclusi. Per decisione del cliente qui NON vale TETTO_BREVO (resta per gli altri lavori):
-    vale il limite del piano. Non crea campagne e non invia niente. Restituisce solo conteggi."""
+    """Carica in Brevo, nella lista nuova LISTA_TUTTI, tutte le email di commercianti che abbiamo (lead_consegne,
+    lead_email, brevo_inviati e contatti già in Brevo) tranne gli esclusi: Loconte e gli altri esclusi (per indirizzo,
+    nome o dominio), PEC, spazzatura, privati, disiscritti/rimbalzati/bloccati. Vale TETTO_BREVO (500.000: i contatti
+    che si possono tenere), non i limiti di invio. Non crea campagne e non invia niente; segna i caricati in
+    brevo_tutti_caricati, così auto_invio non scrive loro. Restituisce solo conteggi; `incompleto(esito)` dice se il
+    lavoro è da rifare (fermo, fonte non letta, blocchi rifiutati, import fallito o non finito)."""
     import time as _t
     from collections import Counter
     from ..db import connect
@@ -1235,6 +1322,9 @@ def carica_tutti(attesa_s: int = 180, dormi=None) -> dict:
         if len(bloccati) < BLOCCATI_MINIMI or not nel_db:
             esito["fermo"] = "disiscritti_incompleti"
             return esito
+        if not all(isinstance(fonti.get(f), int) for f in ("lead_consegne", "lead_email")):
+            esito["fermo"] = "fonte_non_letta"    # senza una fonte il caricamento sarebbe parziale: niente, si riprova
+            return esito
         if len(in_brevo) + nuovi > limite:
             esito["fermo"] = "piano_insufficiente"
             return esito
@@ -1255,6 +1345,8 @@ def carica_tutti(attesa_s: int = 180, dormi=None) -> dict:
                 falliti += 1
                 continue
             esito["caricati"] += len(blocco)
+            with connect() as conn:       # marcatore per auto_invio: a chi entra da qui il giro automatico non scrive
+                segna_tutti(conn, [x["email"] for x in blocco])
             nomi_mandati += sum(1 for x in corpo if "attributes" in x)
             try:
                 pid = (r.json() or {}).get("processId")
