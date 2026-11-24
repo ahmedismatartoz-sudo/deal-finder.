@@ -1218,7 +1218,7 @@ function frame(now){rafOn=false;
   // qualità adattiva: i primi 20 fotogrammi non contano, si scende a piccoli passi e mai sotto 0,6;
   // si risale appena il fotogramma medio sta sotto ~19 ms (quindi anche sugli schermi a 60 Hz)
   if(FREEZE==null&&dt>0&&dt<1000&&++frN>20){ftAcc+=Math.min(dt,250);ftN++;if(ftN>=24){const avg=ftAcc/ftN;ftAcc=0;ftN=0;
-    if(now-lastDrop>20000)capScale=maxScale;
+    if(now-lastDrop>20000&&capScale<maxScale){capScale=Math.min(maxScale,capScale*1.1);lastDrop=now;}
     if(avg>26&&scale>minScale&&now-lastAdj>600){capScale=Math.max(minScale,scale*.95);scale=Math.max(minScale,scale*.9);lastAdj=lastDrop=now;resize(true);}
     else if(avg<19&&scale<capScale-.005&&now-lastAdj>2000){scale=Math.min(capScale,scale*1.1);lastAdj=now;resize(true);}}}
 }
