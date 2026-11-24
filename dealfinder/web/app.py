@@ -3011,13 +3011,24 @@ def foto_email(request: Request):
     """22/10 (cliente): foto delle auto del sito per le email ai commercianti (indirizzo fisso, senza firma),
     solo per le auto che sono sul sito in questo momento e solo le prime 4 foto."""
     lid, pos = int(request.path_params["id"]), int(request.path_params["pos"])
-    if pos >= 4 or lid not in {it.get("id") for it in (_elenco.get("items") or [])}:
+    if pos >= 4:
         return Response(status_code=404)
-    request.path_params["id"], request.path_params["pos"] = lid, pos
-    content = _foto_mem.get((lid, pos))
-    if content is None:
-        with connect() as conn:
-            content = foto.fetch_one(conn, lid, pos)
+    content = None
+    if lid in {it.get("id") for it in (_elenco.get("items") or [])}:
+        request.path_params["id"], request.path_params["pos"] = lid, pos
+        content = _foto_mem.get((lid, pos))
+        if content is None:
+            with connect() as conn:
+                content = foto.fetch_one(conn, lid, pos)
+    if not content and pos == 0:
+        # 24/11: la foto in cima a un'email già mandata resta anche quando l'auto esce dal sito (copia salvata da
+        # marketing/email_esempi.py quando ha preparato il giro)
+        try:
+            from ..marketing import email_esempi as _ee
+            with connect() as conn:
+                content = _ee.foto_salvata(conn, lid, pos)
+        except Exception:
+            content = None
     if not content:
         return Response(status_code=404, headers={"Cache-Control": "no-store"})
     return Response(content, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})
@@ -3344,16 +3355,6 @@ def _sms_troppi(request: Request) -> bool:
     return False
 
 
-def _mi_email(token) -> bool:
-    """Il token è di una email (marketing/email_esempi.py, tabella email_link)? Se non si riesce a leggere: no (SMS)."""
-    try:
-        from ..marketing import email_esempi as EE
-        with connect() as conn:
-            return EE.trova(conn, token) is not None
-    except Exception:
-        return False
-
-
 def _mi_clic_email(token, user_agent: str) -> None:
     """Dopo la risposta (chiede a Brevo quando è partita l'email: chi ha toccato il pulsante non aspetta)."""
     try:
@@ -3366,13 +3367,16 @@ def _mi_clic_email(token, user_agent: str) -> None:
 
 def sms_mi_interessa(request: Request):
     """GET /mi/{token}, pubblica: pagina di ringraziamento (uguale per ogni token) e clic registrato.
-    Il token di una email (email_esempi) apre la stessa pagina, con il pulsante in fondo che parla di email."""
+    I token delle email hanno 8 caratteri (marketing/email_esempi.py): aprono la stessa pagina con il pulsante in
+    fondo che parla di email. La pagina dipende solo dalla FORMA del token, mai dal fatto che esista."""
     from starlette.background import BackgroundTask
+    from ..marketing import email_esempi as EE
     from ..marketing import sms_saloni as SS
     token = request.path_params.get("token")
+    canale = "email" if EE.token_email(token) else "sms"
     if _sms_troppi(request):
-        return HTMLResponse(SS.pagina(token), status_code=429, headers=_SMS_PAGINA_H)
-    if _mi_email(token):
+        return HTMLResponse(SS.pagina(token, canale=canale), status_code=429, headers=_SMS_PAGINA_H)
+    if canale == "email":
         dopo = (BackgroundTask(_mi_clic_email, token, request.headers.get("user-agent") or "")
                 if request.method == "GET" else None)
         return HTMLResponse(SS.pagina(token, canale="email"), headers=_SMS_PAGINA_H, background=dopo)
@@ -3386,26 +3390,34 @@ def sms_mi_interessa(request: Request):
 
 
 def sms_mi_stop(request: Request):
-    """POST /mi/{token}/stop: il salone non vuole più SMS (tabella sms_stop) o, se il token è di una email, non vuole
-    più email (disiscritti + emailBlacklisted in Brevo). GET (il pulsante "Non mi interessa" dell'email): solo la pagina
-    che chiede conferma, non disiscrive (le anteprime automatiche dei programmi di posta aprono i link)."""
+    """POST /mi/{token}/stop: il salone non vuole più SMS (tabella sms_stop) o, se il token è di una email (8
+    caratteri), non vuole più email (disiscritti + emailBlacklisted e fuori dalle liste in Brevo). GET (il pulsante
+    "Non mi interessa" dell'email): solo la pagina che chiede conferma, non disiscrive (le anteprime automatiche dei
+    programmi di posta aprono i link). Se la disiscrizione di una email non si riesce a registrare (database fermo)
+    la pagina dice di riprovare, con 503: mai "Fatto." senza averlo fatto."""
+    from ..marketing import email_esempi as EE
     from ..marketing import sms_saloni as SS
     token = request.path_params.get("token")
+    canale = "email" if EE.token_email(token) else "sms"
     if _sms_troppi(request):
-        return HTMLResponse(SS.pagina(token), status_code=429, headers=_SMS_PAGINA_H)
-    canale = "email" if _mi_email(token) else "sms"
+        return HTMLResponse(SS.pagina(token, canale=canale), status_code=429, headers=_SMS_PAGINA_H)
     if request.method != "POST":
         return HTMLResponse(SS.pagina(token, canale=canale, conferma=True), headers=_SMS_PAGINA_H)
+    if canale == "email":
+        try:
+            with connect() as conn:
+                EE.registra_stop(conn, token)
+        except Exception as e:
+            logging.getLogger("scovo").warning("EMAIL_STOP non registrato: %s", type(e).__name__)
+            return HTMLResponse(SS.pagina(token, canale="email", errore=True), status_code=503,
+                                headers=dict(_SMS_PAGINA_H, **{"Retry-After": "120"}))
+        return HTMLResponse(SS.pagina(token, stop=True, canale="email"), headers=_SMS_PAGINA_H)
     try:
         with connect() as conn:
-            if canale == "email":
-                from ..marketing import email_esempi as EE
-                EE.registra_stop(conn, token)
-            else:
-                SS.registra_stop(conn, token)
+            SS.registra_stop(conn, token)
     except Exception as e:
-        logging.getLogger("scovo").warning("%s_STOP non registrato: %s", canale.upper(), type(e).__name__)
-    return HTMLResponse(SS.pagina(token, stop=True, canale=canale), headers=_SMS_PAGINA_H)
+        logging.getLogger("scovo").warning("SMS_STOP non registrato: %s", type(e).__name__)
+    return HTMLResponse(SS.pagina(token, stop=True), headers=_SMS_PAGINA_H)
 
 
 def admin_sms_interessati(request: Request):
@@ -4398,6 +4410,14 @@ def _tempo_reale():
                 _ee.lavoro(v, lambda: _elenco.get("items") or [])
             except Exception as e:
                 lg.warning("EMAIL_ESEMPI non riuscito: %s", str(e)[:200])
+            return
+        if v.startswith("email_pulisci:"):    # 24/11: prima di ogni invio email, via dalle due liste chi è disiscritto
+            time.sleep(30)
+            try:
+                from ..marketing import email_esempi as _ee
+                _ee.lavoro_pulisci(v)
+            except Exception as e:
+                lg.warning("EMAIL_PULISCI non riuscito: %s", str(e)[:200])
             return
         if v.startswith(("sms_saloni:", "sms_prova:")):   # 24/11 (cliente): SMS ai saloni con il link "Mi interessa"
             time.sleep(30)

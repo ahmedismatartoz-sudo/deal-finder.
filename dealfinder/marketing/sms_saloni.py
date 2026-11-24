@@ -129,9 +129,9 @@ def coda4(t) -> str:
     return "***" + d[-4:] if len(d) >= 4 else "***?"
 
 
-def nuovo_token(esistenti=()) -> str:
+def nuovo_token(esistenti=(), lunghezza: int = TOKEN_LEN) -> str:
     while True:
-        t = "".join(secrets.choice(ALFABETO) for _ in range(TOKEN_LEN))
+        t = "".join(secrets.choice(ALFABETO) for _ in range(lunghezza))
         if t not in esistenti:
             return t
 
@@ -447,17 +447,24 @@ def interessati(conn) -> list[dict]:
     return [dict(r) for r in righe]
 
 
-def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", conferma: bool = False) -> str:
+def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", conferma: bool = False,
+           errore: bool = False) -> str:
     """Pagina pubblica di ringraziamento, uguale per ogni token (valido o no). Niente dati del salone.
     canale "email": il pulsante in fondo parla di email (e disiscrive da Brevo). conferma: la pagina che si apre dal
     pulsante "Non mi interessa" dell'email (GET /mi/<token>/stop): chiede conferma, la disiscrizione parte solo dal
-    pulsante (POST), così le anteprime automatiche dei programmi di posta non disiscrivono nessuno."""
+    pulsante (POST), così le anteprime automatiche dei programmi di posta non disiscrivono nessuno. errore: la
+    disiscrizione non è stata registrata (database fermo): la pagina lo dice e fa riprovare, mai "Fatto."."""
     tok = token_pulito(token)
     cosa = "email" if canale == "email" else "SMS"
     segno = "M5 12.5l4.5 4.5L19 7.5"
     modulo = (f'<form method="post" action="/mi/{html.escape(tok)}/stop"><button class="{{}}" type="submit">'
               f'Non voglio più ricevere {cosa}</button></form>') if tok else ""
-    if stop:
+    if errore:
+        titolo, testo = "Riprova tra poco", ("Non siamo riusciti a registrare la tua richiesta. Riprova tra qualche "
+                                             "minuto con il pulsante qui sotto, oppure chiamaci.")
+        sotto = modulo.format("cta stop")
+        segno = "M12 7v6M12 17h.01"
+    elif stop:
         titolo, testo = "Fatto.", f"Non riceverai più {cosa} da Skovo. Se cambi idea, chiamaci quando vuoi."
         sotto = ""
     elif conferma:
@@ -468,7 +475,7 @@ def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", co
         titolo = "Grazie!"
         testo = (f"Ti chiamiamo a breve dal <strong>{TEL_TITOLARE_TESTO}</strong> per spiegarti come funziona Skovo.")
         sotto = modulo.format("no")
-    centro = ("" if conferma else f'<a class="cta" href="tel:{TEL_TITOLARE}">Chiamaci ora</a>\n'
+    centro = ("" if conferma or errore else f'<a class="cta" href="tel:{TEL_TITOLARE}">Chiamaci ora</a>\n'
               '<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>')
     return f"""<!doctype html>
 <html lang="it">

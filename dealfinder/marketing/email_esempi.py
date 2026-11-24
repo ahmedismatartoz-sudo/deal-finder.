@@ -13,13 +13,20 @@ Il mittente "Skovo" <info@skovo.net> viene creato in Brevo se manca (POST /v3/se
 Gira NEL SITO (gli servono le auto pubblicate in questo momento: le foto /email-foto/<id>/0.jpg esistono solo per quelle).
 NON crea campagne e NON invia niente. Per ogni contatto della lista che non è bloccato, disiscritto o escluso (le stesse
 regole di carica_tutti):
-  - un token personale in email_link (canale "email"), lo stesso a ogni ripetizione del giro;
+  - un token personale di 8 caratteri in email_link (canale "email"; quelli degli SMS ne hanno 7);
   - le 2 auto d'esempio con le regole del giro WhatsApp del 24/11 (vedi scegli_due). Senza posizione del salone o senza
     2 auto adatte: versione senza esempi;
   - attributi del contatto in Brevo: MI_LINK, STOP_LINK (MI_LINK + "/stop": il pulsante "Non mi interessa"), AUTO1,
     DATI1, FOTO1, AUTO2, DATI2, FOTO2 (nell'email, come nel WhatsApp, si vede solo la foto della prima auto);
   - due liste nuove: "Skovo email con esempi 24-11" e "Skovo email senza esempi 24-11".
 Nei log solo conteggi (EMAIL_ESEMPI): mai email né telefoni.
+
+Un giro (la parte <giro> dell'etichetta) sceglie i suoi contatti UNA volta sola: rifare il lavoro con lo stesso giro
+(un tentativo dopo un errore, o la stessa voce con un altro numero) non ne aggiunge e non ne cambia; rinfresca solo le
+auto d'esempio di chi è già nel gruppo con esempi e toglie chi nel frattempo si è disiscritto. Per altri contatti
+serve un giro nuovo (es. email_esempi:2511:150): chi ha già un token di un giro precedente non viene ripreso.
+email_pulisci:<etichetta> (da lanciare prima di ogni invio): toglie dalle due liste chi è nei disiscritti o è
+bloccato in Brevo e riprova le disiscrizioni che Brevo non aveva preso.
 
 Clic: le anteprime automatiche dei programmi di posta e degli antivirus aprono il link pochi secondi dopo l'invio. Un
 clic entro EMAIL_ANTEPRIMA_S (120) secondi dall'invio a quel contatto (Brevo: campaignStats), o entro
@@ -57,19 +64,25 @@ CONFRONTO_MIN = 5                         # almeno 5 auto uguali nel confronto
 PREZZO_MAX = 60000
 RAGGIO_KM = 60                            # km del salone da Milano + km dell'auto da Milano: di sicuro entro 60 km
 USO_MAX = 5                               # la stessa auto al massimo a 5 saloni (EMAIL_ESEMPI_USO_MAX)
-CATEGORIE = ("opportunita", "candidato")
+CATEGORIE = ("opportunita",)               # solo opportunità pulite del sito (mai candidate)
+NON_PULITE = ("incidentata", "economica", "verificare", "supercar", "stima_ripiego")     # segni dell'auto sul sito
+TOKEN_LEN = 8                             # i token delle email (quelli degli SMS ne hanno 7)
 FASCE = ((8000, (0, 8000)), (15000, (8000, 15000)), (25000, (15000, 25000)), (10 ** 9, (25000, 10 ** 7)))
 FASCIA_PREMIUM = (12000, 60000)
 FASCIA_IGNOTA = (2500, 13000)
 PREMIUM = {"mercedes-benz", "mercedes", "bmw", "audi", "land rover", "land-rover", "porsche", "maserati", "jaguar",
            "lexus", "volvo", "tesla", "ferrari", "alfa romeo", "alfa-romeo", "jeep", "ds automobiles", "mini", "cupra"}
-DIESEL = re.compile(r"(?i)\b(tdi|cdi|dci|mjt|multijet|hdi|bluehdi|crdi|tdci|ecoblue|jtdm|d4d|sd|td\w*|d)\b|\d{2,3}d\b|"
-                    r"turbodiesel|diesel|bluetec|ddis")
+# indizi di gasolio nel nome: sigle dei motori (TDI, dCi, CDTI, JTD, MJet, HDi, CRDi...), "d" e "de" da sole
+# ("2.0 d", "300 de"), 116d / 220 d, D250 / D4, la parola gasolio
+DIESEL = re.compile(r"(?i)\b(tdi|cdi|cdti|dci|mjt|mjet|m-jet|multijet|hdi|bluehdi|e-hdi|crdi|tdci|ecoblue|jtd\w*|d4d|d-4d|"
+                    r"sd|td\w*|dtec|skyactiv-d|d|de)\b|\b\d{2,3}\s?d\b|\bd\s?\d{1,3}\b|turbodiesel|diesel|bluetec|ddis|"
+                    r"gasolio")
+NON_DIESEL = re.compile(r"(?i)^(benzina|gpl|metano|elettric[ao]|ibrid[ao]|hybrid|benzina\s*/\s*(gpl|metano)|"
+                        r"(gpl|metano)\s*/\s*benzina|ibrida\s*(benzina|plug-?in)?|plug-?in)$")
 
 # data/comuni_60km.json ha i comuni entro 60 km da Milano FUORI dalla provincia di Milano. Per quelli della provincia
 # di Milano: chilometri in linea d'aria dal Duomo, STIMATI (bastano per dire "vicino": errore di 2-3 km). Un comune
-# della provincia che qui manca vale KM_MI_IGNOTO.
-KM_MI_IGNOTO = 18.0
+# che non è né qui né nel file non è riconosciuto: nessuna posizione, quindi niente esempi.
 KM_MI = {k: float(v) for v, nomi in {
     8: "bresso cormano novatemilanese corsico buccinasco cesanoboscone segrate",
     9: "sestosangiovanni colognomonzese baranzate pero assago rozzano opera sandonatomilanese vimodrone",
@@ -109,7 +122,8 @@ SQL_TABELLE = (
         giro       TEXT NOT NULL,
         versione   TEXT,
         creato_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-        stop_at    TIMESTAMPTZ
+        stop_at    TIMESTAMPTZ,
+        stop_brevo TEXT
     )""",
     "CREATE UNIQUE INDEX IF NOT EXISTS email_link_giro_email ON email_link (giro, email)",
     """CREATE TABLE IF NOT EXISTS email_clic (
@@ -120,6 +134,12 @@ SQL_TABELLE = (
         anteprima  TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS email_clic_token ON email_clic (token)",
+    """CREATE TABLE IF NOT EXISTS email_foto (
+        id         BIGINT PRIMARY KEY,
+        foto       BYTEA NOT NULL,
+        giro       TEXT,
+        quando     TIMESTAMPTZ NOT NULL DEFAULT now()
+    )""",
 )
 
 
@@ -169,22 +189,45 @@ def km_da_milano(comune, prov=None) -> float | None:
     v = _km60.get(k)
     if v and not (pv and v.get("pv") and pv != v["pv"]):
         return float(v["km"])
-    return KM_MI_IGNOTO if pv == "MI" else None
+    return None
+
+
+def _pulito(t) -> str:
+    """Testo che finisce in un attributo Brevo e quindi nell'HTML dell'email (Brevo non fa l'escape): via i caratteri
+    di controllo e " < > &."""
+    return " ".join(re.sub(r'[\x00-\x1f\x7f"<>&]', " ", str(t or "")).split())
 
 
 def _citta(zona) -> str:
-    c = str(zona or "").split("(")[0].split(" - ")[0].strip()
+    c = _pulito(str(zona or "").split("(")[0].split(" - ")[0])
     return c.title() if c.islower() or c.isupper() else c
 
 
 def e_diesel(a: dict) -> bool:
     nome, carb = str(a.get("nome") or ""), str(a.get("carb") or "").lower()
-    return "diesel" in carb or bool(DIESEL.search(nome)) or ("evoque" in nome.lower() and carb == "ibrida")
+    return "diesel" in carb or "gasolio" in carb or bool(DIESEL.search(nome)) or ("evoque" in nome.lower() and carb == "ibrida")
+
+
+def non_diesel_sicuro(a: dict) -> bool:
+    """L'auto è CHIARAMENTE non diesel: alimentazione benzina, GPL, metano, elettrica o ibrida, e nessun indizio di
+    gasolio nel nome. Alimentazione vuota o dubbia, o un indizio nel nome: non è sicuro (ai saloni di Milano non va)."""
+    carb = " ".join(str(a.get("carb") or "").lower().split())
+    return bool(NON_DIESEL.match(carb)) and not e_diesel(a)
+
+
+def auto_pulita(it: dict) -> bool:
+    """Opportunità pulita del sito: categoria "opportunita", non incidentata, economica, da verificare, supercar o
+    con stima di ripiego, senza danno dichiarato, di un privato."""
+    pv = it.get("pv") or {}
+    r = it.get("_r") or {}
+    if pv.get("categoria") not in CATEGORIE or any(it.get(k) for k in NON_PULITE) or r.get("danno_dichiarato"):
+        return False
+    return not (str(it.get("_tipo") or "").startswith("comm_") or r.get("seller_type") == "commerciante")
 
 
 def auto_usabili(items: list[dict]) -> list[dict]:
-    """Auto del sito buone come esempio (regole del giro WhatsApp): opportunità o candidata, margine >= 1.200 €, netto
-    >= 300 €, almeno 5 auto uguali nel confronto, fino a 60.000 €, in un comune entro 60 km da Milano."""
+    """Auto del sito buone come esempio (regole del giro WhatsApp): opportunità pulita (auto_pulita), margine >=
+    1.200 €, netto >= 300 €, almeno 5 auto uguali nel confronto, fino a 60.000 €, in un comune entro 60 km da Milano."""
     out = []
     for it in items or []:
         pv = it.get("pv") or {}
@@ -193,16 +236,19 @@ def auto_usabili(items: list[dict]) -> list[dict]:
         m = re.search(r"\(([A-Za-z]{2})\)", zona)
         if not it.get("id") or not prezzo or not margine or not it.get("anno") or not str(it.get("nome") or "").strip():
             continue
-        if pv.get("categoria") not in CATEGORIE or margine < MARGINE_MIN or (pv.get("netto") or 0) < NETTO_MIN \
+        if not isinstance(it.get("km"), (int, float)) or isinstance(it.get("km"), bool) or it["km"] < 0:
+            continue                                          # chilometri mancanti: l'auto non si usa
+        if not auto_pulita(it) or margine < MARGINE_MIN or (pv.get("netto") or 0) < NETTO_MIN \
                 or (pv.get("n") or 0) < CONFRONTO_MIN or prezzo > PREZZO_MAX:
             continue
         kmz = km_da_milano(zona, m.group(1) if m else None)
         if kmz is None or kmz > RAGGIO_KM:
             continue
-        a = {"id": int(it["id"]), "nome": " ".join(str(it["nome"]).split()), "anno": it["anno"], "km": int(it.get("km") or 0),
+        a = {"id": int(it["id"]), "nome": " ".join(str(it["nome"]).split()), "anno": it["anno"], "km": int(it["km"]),
              "carb": str(it.get("carb") or "").strip(), "prezzo": int(prezzo), "margine": int(margine),
              "netto": int(pv.get("netto") or 0), "zona": zona, "kmz": kmz, "comune": _chiave_comune(zona)}
         a["diesel"] = e_diesel(a)
+        a["non_diesel"] = non_diesel_sicuro(a)
         out.append(a)
     ordine = sorted(a["id"] for a in out)
     pos = {i: k / len(ordine) for k, i in enumerate(ordine)}
@@ -213,7 +259,8 @@ def auto_usabili(items: list[dict]) -> list[dict]:
 
 def testi(a: dict, base: str) -> dict:
     """Gli attributi di un'auto: AUTO e DATI scritti come nei WhatsApp (skovo_due_auto_foto), più la foto."""
-    pezzi = [f"{a['nome']} {a['anno']}", f"{_eur(a['km'])} km"] + ([a["carb"]] if a["carb"] else []) + [_citta(a["zona"])]
+    carb = _pulito(a["carb"])
+    pezzi = [f"{_pulito(a['nome'])} {int(a['anno'])}", f"{_eur(a['km'])} km"] + ([carb] if carb else []) + [_citta(a["zona"])]
     return {"AUTO": " · ".join(pezzi),
             "DATI": f"{_eur(a['prezzo'])} € · mercato {_eur(a['prezzo'] + a['margine'])} € · margine +{_eur(a['margine'])} €",
             "FOTO": f"{base}/email-foto/{a['id']}/0.jpg"}
@@ -229,12 +276,15 @@ def fascia(d: dict) -> tuple[int, int]:
 
 
 def comune_milano(d: dict) -> bool:
-    return str(d.get("comune") or "").strip().lower().startswith("milano")
+    """Salone del comune di Milano: il comune contiene "milano" (Milano, Milano - Lambrate, Milano (MI)...) e la
+    provincia è MI o non è scritta. "Novate Milanese" e "Cusano Milanino" sono altri comuni."""
+    return bool(re.search(r"(^|[^a-z])milano([^a-z]|$)", str(d.get("comune") or "").lower())) \
+        and str(d.get("prov") or "").strip().upper()[:2] in ("", "MI")
 
 
 def scegli_due(d: dict, auto: list[dict], uso: dict, uso_max: int = USO_MAX, foto_ok=None) -> list[dict]:
     """Le 2 auto d'esempio per il salone `d` (km = chilometri da Milano), con le regole del giro WhatsApp:
-    mai un diesel a un salone del comune di Milano; km del salone + km dell'auto da Milano <= 60; prezzo nella fascia
+    a un salone del comune di Milano solo auto chiaramente non diesel (non_diesel_sicuro); km del salone + km dell'auto da Milano <= 60; prezzo nella fascia
     del salone (-20% / +15%); la stessa auto al massimo a `uso_max` saloni; due modelli diversi. Punti: marca che il
     salone tratta, fascia piena, vicinanza, margine netto, annuncio recente. La prima deve avere la foto (è quella in
     cima all'email). [] se non ce ne sono due."""
@@ -246,7 +296,7 @@ def scegli_due(d: dict, auto: list[dict], uso: dict, uso_max: int = USO_MAX, fot
     com = _chiave_comune(d.get("comune"))
     cand = []
     for a in auto:
-        if (milano and a["diesel"]) or uso.get(a["id"], 0) >= uso_max:
+        if (milano and not a.get("non_diesel")) or uso.get(a["id"], 0) >= uso_max:
             continue
         if d["km"] + a["kmz"] > RAGGIO_KM or not lo * 0.8 <= a["prezzo"] <= hi * 1.15:
             continue
@@ -270,10 +320,13 @@ def scegli_due(d: dict, auto: list[dict], uso: dict, uso_max: int = USO_MAX, fot
         if mod in modelli or (not scelte and a.get("senza_foto")):
             continue
         if not scelte and foto_ok is not None and not a.get("con_foto"):
-            if not foto_ok(a["id"]):
+            f = foto_ok(a["id"])
+            if not f:
                 a["senza_foto"] = True
                 continue
             a["con_foto"] = True
+            if isinstance(f, (bytes, bytearray)):
+                a["foto"] = bytes(f)                          # la copia da salvare (salva_foto)
         modelli.add(mod)
         scelte.append(a)
         if len(scelte) == 2:
@@ -390,13 +443,13 @@ def profili_db(conn) -> dict:
 
 # ---------- token ----------
 def token_per(conn, giro: str, saloni: list[dict]) -> int:
-    """Un token per salone in email_link: quello che il salone ha già in questo giro, altrimenti uno nuovo (mai uguale
-    a un token degli SMS). Scrive d["token"]; restituisce quanti ne ha creati."""
+    """Un token per salone in email_link: quello che il salone ha già in questo giro, altrimenti uno nuovo di 8
+    caratteri (mai uguale a un token degli SMS). Scrive d["token"]; restituisce quanti ne ha creati."""
     from . import sms_saloni as SS
     assicura(conn)
     SS.assicura(conn)
     gia = {r["email"]: r["token"] for r in
-           conn.execute("SELECT email, token FROM email_link WHERE giro = %s", (giro,)).fetchall()}
+           conn.execute("SELECT email, token, versione FROM email_link WHERE giro = %s", (giro,)).fetchall()}
     nuovi = 0
     for k, d in enumerate(saloni, 1):
         versione = "con" if d.get("auto") else "senza"
@@ -406,7 +459,7 @@ def token_per(conn, giro: str, saloni: list[dict]) -> int:
         else:
             d["token"] = None
             for _ in range(6):
-                t = SS.nuovo_token()
+                t = SS.nuovo_token(lunghezza=TOKEN_LEN)
                 if conn.execute("SELECT 1 FROM sms_link WHERE token = %s", (t,)).fetchone():
                     continue
                 r = conn.execute(
@@ -425,6 +478,61 @@ def token_per(conn, giro: str, saloni: list[dict]) -> int:
     return nuovi
 
 
+def gia_scelti(conn, giro: str) -> tuple[dict, set]:
+    """({email: versione} dei contatti che questo giro ha già scelto, {email} di chi ha un token di un ALTRO giro)."""
+    assicura(conn)
+    miei, altri = {}, set()
+    for r in conn.execute("SELECT email, giro, versione FROM email_link").fetchall():
+        if r["giro"] == giro:
+            miei[r["email"]] = r["versione"] or "senza"
+        else:
+            altri.add(r["email"])
+    return miei, altri
+
+
+# ---------- foto ----------
+def salva_foto(conn, giro: str, foto: dict) -> int:
+    """Copia della foto della prima auto di ogni email ({id: bytes}): /email-foto/<id>/0.jpg la serve anche quando
+    l'auto non è più sul sito (venduta, tolta), così l'email aperta giorni dopo ha ancora la sua foto."""
+    assicura(conn)
+    n = 0
+    for lid, dati in foto.items():
+        if isinstance(dati, (bytes, bytearray)) and dati:
+            conn.execute("INSERT INTO email_foto (id, foto, giro) VALUES (%s, %s, %s) ON CONFLICT (id) DO UPDATE "
+                         "SET foto = EXCLUDED.foto, giro = EXCLUDED.giro, quando = now()", (int(lid), bytes(dati), giro))
+            n += 1
+    conn.commit()
+    return n
+
+
+_foto_ids: dict = {"t": 0.0, "ids": frozenset()}
+
+
+def foto_salvata(conn, lid: int, pos: int = 0) -> bytes | None:
+    """La copia della foto di un'auto usata in un giro email (solo la prima foto). L'elenco degli id si rilegge al
+    massimo ogni 5 minuti: un id qualsiasi chiesto da fuori non costa una lettura della foto."""
+    if pos != 0:
+        return None
+    if not _foto_ids["t"] or time.monotonic() - _foto_ids["t"] > 300:
+        assicura(conn)
+        _foto_ids.update(t=time.monotonic(),
+                         ids=frozenset(r["id"] for r in conn.execute("SELECT id FROM email_foto").fetchall()))
+    if int(lid) not in _foto_ids["ids"]:
+        return None
+    r = conn.execute("SELECT foto FROM email_foto WHERE id = %s", (int(lid),)).fetchone()
+    return bytes(r["foto"]) if r and r["foto"] else None
+
+
+def _foto_dal_sito(lid: int):
+    """I byte della foto /email-foto/<id>/0.jpg (chiesta al sito stesso, come brevo_liste._foto_ok); None se manca."""
+    import httpx
+    try:
+        r = httpx.get(f"http://127.0.0.1:{os.environ.get('PORT', '10000')}/email-foto/{lid}/0.jpg", timeout=30)
+        return r.content if r.status_code == 200 and r.content else None
+    except Exception:
+        return None
+
+
 # ---------- Brevo ----------
 def _client():
     import httpx
@@ -435,10 +543,53 @@ def _client():
     return httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=60)
 
 
-def _tutte_le_liste(c) -> dict:
+def _attesa(r, k: int, massimo: float) -> float:
+    try:
+        v = float((getattr(r, "headers", None) or {}).get("Retry-After") or 0)
+    except (TypeError, ValueError):
+        v = 0.0
+    return min(massimo, max(v, 3.0 * (k + 1)))
+
+
+def chiedi(c, metodo: str, url: str, dormi=time.sleep, tentativi: int = 4, massimo: float = 60.0, **k):
+    """Una chiamata a Brevo che riprova su errore di rete, 429 e 5xx (attesa da Retry-After, al massimo `massimo`
+    secondi). Restituisce l'ultima risposta; se la rete non risponde mai solleva l'ultimo errore."""
+    ultimo = None
+    for n in range(tentativi):
+        try:
+            r = getattr(c, metodo)(url, **k)
+        except AssertionError:
+            raise
+        except Exception as e:
+            ultimo, r = e, None
+        else:
+            if r.status_code != 429 and r.status_code < 500:
+                return r
+            ultimo = None
+        if n + 1 < tentativi:
+            dormi(_attesa(r, n, massimo) if r is not None else min(massimo, 3.0 * (n + 1)))
+    if ultimo is not None:
+        raise ultimo
+    return r
+
+
+def ritenta(fn, dormi=time.sleep, tentativi: int = 3):
+    """Per le letture preliminari fatte da altre funzioni (tutti i contatti, la cartella): riprova se sollevano."""
+    for n in range(tentativi):
+        try:
+            return fn()
+        except AssertionError:
+            raise
+        except Exception:
+            if n + 1 == tentativi:
+                raise
+            dormi(5.0 * (n + 1))
+
+
+def _tutte_le_liste(c, dormi=time.sleep) -> dict:
     out, off = {}, 0
     while True:
-        r = c.get(f"{API}/contacts/lists", params={"limit": 50, "offset": off})
+        r = chiedi(c, "get", f"{API}/contacts/lists", dormi, params={"limit": 50, "offset": off})
         r.raise_for_status()
         ls = r.json().get("lists") or []
         out.update({x.get("name"): x["id"] for x in ls})
@@ -447,22 +598,29 @@ def _tutte_le_liste(c) -> dict:
         off += 50
 
 
-def _attributi(c) -> list[str]:
+def _attributi(c, dormi=time.sleep) -> list[str]:
     """Crea gli attributi di testo che mancano. Restituisce quelli che non ci sono nemmeno dopo."""
     def esistenti():
-        r = c.get(f"{API}/contacts/attributes")
+        r = chiedi(c, "get", f"{API}/contacts/attributes", dormi)
         r.raise_for_status()
         return {a.get("name") for a in (r.json() or {}).get("attributes") or []}
     for a in [a for a in ATTRIBUTI if a not in esistenti()]:
-        c.post(f"{API}/contacts/attributes/normal/{a}", json={"type": "text"})
+        chiedi(c, "post", f"{API}/contacts/attributes/normal/{a}", dormi, json={"type": "text"})
     ci_sono = esistenti()
     return [a for a in ATTRIBUTI if a not in ci_sono]
+
+
+def senza_protocollo(url: str) -> str:
+    """Brevo traccia i clic dei link presi da un attributo solo se il protocollo è scritto nel modello
+    (href="https://{{ contact.MI_LINK }}"): nell'attributo va l'indirizzo senza https://."""
+    return re.sub(r"^https?://", "", url)
 
 
 def corpo_contatto(d: dict, base: str) -> dict:
     """Il contatto come va a /contacts/import. Senza esempi gli attributi delle auto vanno vuoti (con
     emptyContactsAttributes Brevo cancella quelli di un giro prima)."""
-    attr = {"MI_LINK": f"{base}/mi/{d['token']}", "STOP_LINK": f"{base}/mi/{d['token']}/stop"}
+    link = senza_protocollo(f"{base}/mi/{d['token']}")
+    attr = {"MI_LINK": link, "STOP_LINK": link + "/stop"}
     attr.update({a: "" for a in ATTRIBUTI_AUTO})
     for n, a in enumerate(d.get("auto") or [], 1):
         attr.update({f"{k}{n}": v for k, v in testi(a, base).items()})
@@ -489,46 +647,33 @@ def _aspetta(c, risposta, dormi, max_s: int = 300) -> str:
     return st
 
 
-def _togli(c, lid: int, emails: list[str], dormi) -> int:
+def _togli(c, lid: int, emails: list[str], dormi, massimo: float = 60.0) -> int:
     """Toglie i contatti da una lista (non li cancella). Restituisce quanti blocchi non sono riusciti."""
     falliti = 0
     for k in range(0, len(emails), BLOCCO_TOGLI):
-        for prova in range(3):
-            try:
-                r = c.post(f"{API}/contacts/lists/{lid}/contacts/remove", json={"emails": emails[k:k + BLOCCO_TOGLI]})
-                if r.status_code < 300 or r.status_code == 400:      # 400: già fuori dalla lista
-                    break
-            except Exception:
-                pass
-            dormi(5.0 * (prova + 1))
-        else:
-            falliti += 1
+        try:
+            r = chiedi(c, "post", f"{API}/contacts/lists/{lid}/contacts/remove", dormi, tentativi=3, massimo=massimo,
+                       json={"emails": emails[k:k + BLOCCO_TOGLI]})
+            ok = r.status_code < 300 or r.status_code in (400, 404)      # 400: già fuori dalla lista
+        except Exception:
+            ok = False
+        falliti += not ok
     return falliti
 
 
-def _foto_dal_sito(lid: int) -> bool:
-    """La foto /email-foto/<id>/0.jpg esiste (chiesta al sito stesso, come brevo_liste._foto_ok)."""
-    import httpx
-    try:
-        return httpx.get(f"http://127.0.0.1:{os.environ.get('PORT', '10000')}/email-foto/{lid}/0.jpg",
-                         timeout=30).status_code == 200
-    except Exception:
-        return False
-
-
-def mittente(c) -> dict:
+def mittente(c, dormi=time.sleep) -> dict:
     """Il mittente MITTENTE in Brevo: se manca lo crea (POST /v3/senders: non manda email a nessun contatto).
-    Restituisce {"id", "attivo", "creato"} oppure {"errore"}: senza mittente le liste si preparano lo stesso."""
+    Restituisce {"id", "attivo", "creato"} oppure {"errore"}: allora il lavoro risulta incompleto."""
     try:
-        r = c.get(f"{API}/senders")
+        r = chiedi(c, "get", f"{API}/senders", dormi)
         if r.status_code >= 300:
-            return {"errore": f"HTTP {r.status_code}"}
+            return {"errore": f"lettura HTTP {r.status_code}"}
         for x in (r.json() or {}).get("senders") or []:
             if str(x.get("email") or "").lower() == MITTENTE["email"]:
                 return {"id": x.get("id"), "attivo": bool(x.get("active")), "creato": False}
-        r = c.post(f"{API}/senders", json=dict(MITTENTE))
+        r = chiedi(c, "post", f"{API}/senders", dormi, json=dict(MITTENTE))
         if r.status_code >= 300:
-            return {"errore": f"HTTP {r.status_code}"}
+            return {"errore": f"creazione HTTP {r.status_code}"}
         return {"id": (r.json() or {}).get("id"), "attivo": None, "creato": True}
     except Exception as e:
         return {"errore": type(e).__name__}
@@ -541,21 +686,112 @@ def recente_brevo(c, ore: float = ORE_RECENTI, adesso: dt.datetime | None = None
     da = adesso - dt.timedelta(hours=ore)
 
     def recente(email: str):
-        for prova in range(3):
-            try:
-                r = c.get(f"{API}/contacts/{quote(email, safe='')}/campaignStats")
-            except Exception:
-                dormi(2.0 * (prova + 1))
-                continue
-            if r.status_code < 300:
-                dormi(0.12)                                    # sotto il limite di 10 chiamate al secondo
-                return any(d and d >= da for d in (_data(x.get("eventTime"))
-                                                   for x in (r.json() or {}).get("messagesSent") or []))
-            if r.status_code != 429 and r.status_code < 500:
-                return None
-            dormi(2.0 * (prova + 1))
-        return None
+        try:
+            r = chiedi(c, "get", f"{API}/contacts/{quote(email, safe='')}/campaignStats", dormi, tentativi=3, massimo=20)
+        except Exception:
+            return None
+        if r.status_code >= 300:
+            return None
+        dormi(0.12)                                            # sotto il limite di 10 chiamate al secondo
+        return any(d and d >= da for d in (_data(x.get("eventTime")) for x in (r.json() or {}).get("messagesSent") or []))
     return recente
+
+
+# ---------- disiscrizioni in Brevo ----------
+_ids_liste: dict = {}
+
+
+def ids_liste_email(c, dormi=time.sleep) -> dict:
+    """{nome: id} delle due liste email che esistono in Brevo (ricordate nel processo)."""
+    if len(_ids_liste) < 2:
+        tutte = _tutte_le_liste(c, dormi)
+        _ids_liste.update({n: tutte[n] for n in (LISTA_CON, LISTA_SENZA) if tutte.get(n) is not None})
+    return dict(_ids_liste)
+
+
+def stop_in_brevo(c, email: str, dormi=time.sleep, massimo: float = 10.0) -> str:
+    """Disiscrive in Brevo: emailBlacklisted e fuori dalle due liste email. "ok", "contatto_assente" o "errore ..."
+    (allora la richiesta resta in coda: riprova_stop). Su 429/5xx aspetta (Retry-After, al massimo `massimo` secondi)."""
+    try:
+        r = chiedi(c, "put", f"{API}/contacts/{quote(email, safe='')}", dormi, tentativi=3, massimo=massimo,
+                   json={"emailBlacklisted": True})
+        if r.status_code == 404:
+            return "contatto_assente"
+        if r.status_code >= 300:
+            return f"errore {r.status_code}"
+        for lid in ids_liste_email(c, dormi).values():
+            if _togli(c, lid, [email], dormi, massimo):
+                return "errore liste"
+    except Exception as e:
+        return "errore " + type(e).__name__
+    return "ok"
+
+
+def riprova_stop(conn, c, dormi=time.sleep, massimo: float = 60.0) -> dict:
+    """La coda delle disiscrizioni che Brevo non aveva preso (email_link con stop_at e stop_brevo non riuscito): le
+    riprova, con attese più lunghe. Restituisce i conteggi."""
+    assicura(conn)
+    righe = conn.execute("SELECT token, email FROM email_link WHERE stop_at IS NOT NULL AND "
+                         "COALESCE(stop_brevo, '') NOT IN ('ok', 'contatto_assente')").fetchall()
+    n = Counter(in_coda=len(righe))
+    for r in righe:
+        esito = stop_in_brevo(c, r["email"], dormi, massimo)
+        conn.execute("UPDATE email_link SET stop_brevo = %s WHERE token = %s", (esito[:60], r["token"]))
+        conn.commit()
+        n["riusciti" if not esito.startswith("errore") else "ancora_in_coda"] += 1
+    return dict(n)
+
+
+ATTESE_CODA_S = (60, 300, 1800, 7200)
+
+
+def _riprova_piu_tardi(connetti=None, client=None, dormi=time.sleep, attese=ATTESE_CODA_S) -> None:
+    """In un thread a parte dopo una disiscrizione che Brevo non ha preso: riprova dopo 1, 5, 30 minuti e 2 ore.
+    Se il processo si riavvia prima, la coda la riprendono la prossima disiscrizione, email_pulisci e email_esempi."""
+    if connetti is None:
+        from ..db import connect as connetti
+    for s in attese:
+        dormi(s)
+        c = None
+        try:
+            c = (client or _client)()
+            with connetti() as conn:
+                if not riprova_stop(conn, c, dormi).get("ancora_in_coda"):
+                    return
+        except Exception as e:
+            lg.warning("EMAIL_STOP coda non riprovata: %s", type(e).__name__)
+        finally:
+            try:
+                if c is not None:
+                    c.close()
+            except Exception:
+                pass
+
+
+def pulisci_liste(c, connetti=None, dormi=time.sleep, contatti=None) -> dict:
+    """Da fare prima di ogni invio: riprova le disiscrizioni in coda e toglie dalle due liste email chi è nei
+    disiscritti del database o è bloccato in Brevo (disiscritto, in blacklist, rimbalzato). Solo conteggi."""
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    if connetti is None:
+        from ..db import connect as connetti
+    esito: dict = {}
+    with connetti() as conn:
+        esito["coda_stop"] = riprova_stop(conn, c, dormi)
+    if contatti is None:
+        contatti = ritenta(lambda: _contatti_brevo(c), dormi)
+    with connetti() as conn:
+        invii.sincronizza_da_brevo(conn, contatti)
+        bloccati = invii.disiscritti(conn)
+    ids = ids_liste_email(c, dormi)
+    tolti, falliti = 0, 0
+    for nome, lid in ids.items():
+        via = [invii.norm_email(x["email"]) for x in contatti if x.get("email") and lid in (x.get("listIds") or [])
+               and (invii.contatto_bloccato(x) or invii.impronta(x["email"]) in bloccati)]
+        tolti += len(via)
+        falliti += _togli(c, lid, via, dormi)
+    esito.update(liste=len(ids), disiscritti_tolti=tolti, tolti_falliti=falliti)
+    return esito
 
 
 def incompleto(esito: dict) -> str | None:
@@ -566,6 +802,10 @@ def incompleto(esito: dict) -> str | None:
         return "blocchi_falliti"
     if any(k not in ("completed", "senza_processo") for k in (esito.get("processi") or {})):
         return "import_non_finito"
+    if (esito.get("coda_stop") or {}).get("ancora_in_coda"):
+        return "disiscrizioni_in_coda"
+    if "errore" in (esito.get("mittente") or {}):
+        return "mittente_non_creato"
     return None
 
 
@@ -591,17 +831,20 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
     chiudi = c is None
     c = c or _client()
     try:
-        if c.get(f"{API}/account").status_code != 200:
+        if chiedi(c, "get", f"{API}/account", dormi).status_code != 200:
             return {**esito, "errore": "chiave rifiutata"}
-        liste = _tutte_le_liste(c)
+        liste = _tutte_le_liste(c, dormi)
         lid_tutti = liste.get(BL.LISTA_TUTTI)
         if lid_tutti is None:
             return {**esito, "fermo": "lista_tutti_assente"}
-        contatti = _contatti_brevo(c)
+        with connetti() as conn:                              # prima di tutto le disiscrizioni rimaste in coda
+            esito["coda_stop"] = riprova_stop(conn, c, dormi)
+        contatti = ritenta(lambda: _contatti_brevo(c), dormi)
         with connetti() as conn:
             invii.sincronizza_da_brevo(conn, contatti)
             nel_db = invii.disiscritti(conn)
             profili = profili_db(conn)
+            miei, altri_giri = gia_scelti(conn, giro)
         bloccati = nel_db | BL._bloccati_0111()
         nella = [x for x in contatti if x.get("email") and lid_tutti in (x.get("listIds") or [])]
         esito.update(nella_lista=len(nella), disiscritti_noti=len(bloccati))
@@ -618,8 +861,9 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
                 continue
             attr = x.get("attributes") or {}
             if isinstance(attr.get(BL.ATTRIBUTO_NOME), str) and attr[BL.ATTRIBUTO_NOME].strip():
-                azienda[e] = attr[BL.ATTRIBUTO_NOME].strip()
-            # i nomi (non gli attributi di questo lavoro, che cambiano a ogni giro) servono a riconoscere gli esclusi
+                azienda[e] = " ".join(attr[BL.ATTRIBUTO_NOME].split())[:120]
+            # gli altri attributi (non quelli di questo lavoro, che cambiano a ogni giro) servono SOLO a riconoscere
+            # gli esclusi: il nome del salone è AZIENDA, altrimenti quello dell'archivio
             nomi = [v for k, v in attr.items() if isinstance(v, str) and v.strip() and k not in ATTRIBUTI]
             nomi.append((profili.get(e) or {}).get("nome") or None)
             voci += [(e, v) for v in nomi]
@@ -629,7 +873,7 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
         saloni = []
         for x in buoni:
             p = profili.get(x["email"]) or {}
-            saloni.append({"email": x["email"], "nome": azienda.get(x["email"]) or x["nome"] or p.get("nome") or "",
+            saloni.append({"email": x["email"], "nome": azienda.get(x["email"]) or p.get("nome") or "",
                            "comune": p.get("comune") or "", "prov": p.get("prov") or "", "tel": p.get("tel") or "",
                            "pmed": p.get("pmed"), "marche": p.get("marche") or [],
                            "km": km_da_milano(p.get("comune"), p.get("prov")) if p.get("comune") else None})
@@ -637,9 +881,18 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
                      con_posizione=sum(1 for d in saloni if d["km"] is not None))
         if not saloni:
             return {**esito, "fermo": "nessun_contatto_valido"}
-        if recente == "brevo":
-            recente = recente_brevo(c, dormi=dormi)
-        con, senza, conti = dividi(saloni, auto, per_gruppo, uso_max, foto_ok, recente)
+        if miei:
+            # il giro ha già scelto i suoi contatti: non se ne aggiungono e non si cambiano. Si rinfrescano le auto di
+            # chi era nel gruppo con esempi (chi non ne ha più due passa al gruppo senza) e chi non è più valido esce
+            esito.update(giro_gia_scelto=len(miei), usciti_dal_giro=len(miei) - sum(1 for d in saloni if d["email"] in miei))
+            con, mai, conti = dividi([d for d in saloni if miei.get(d["email"]) == "con"], auto, 0, uso_max, foto_ok)
+            senza = mai + [dict(d, auto=[], perche="senza_esempi") for d in saloni if miei.get(d["email"]) == "senza"]
+        else:
+            if recente == "brevo":
+                recente = recente_brevo(c, dormi=dormi)
+            liberi = [d for d in saloni if d["email"] not in altri_giri]
+            esito["gia_in_un_altro_giro"] = len(saloni) - len(liberi)
+            con, senza, conti = dividi(liberi, auto, per_gruppo, uso_max, foto_ok, recente)
         scelti = con + senza
         esito.update(conti)
         esito.update(con_esempi=len(con), senza_esempi=len(senza),
@@ -648,19 +901,25 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
             return {**esito, "fermo": "nessun_contatto_scelto"}
         with connetti() as conn:
             esito["token_nuovi"] = token_per(conn, giro, scelti)
-        esito["mittente"] = mittente(c)
-        mancano = _attributi(c)
+            esito["foto_salvate"] = salva_foto(conn, giro, {d["auto"][0]["id"]: d["auto"][0].get("foto") for d in con})
+        esito["mittente"] = mittente(c, dormi)
+        if "errore" in esito["mittente"]:
+            lg.warning("EMAIL_ESEMPI ATTENZIONE: il mittente %s NON c'è in Brevo e non è stato creato (%s). Le liste si "
+                       "preparano lo stesso ma il lavoro resta incompleto: senza mittente la campagna non parte",
+                       MITTENTE["email"], esito["mittente"]["errore"])
+        mancano = _attributi(c, dormi)
         if mancano:
             return {**esito, "fermo": "attributi_non_creati", "attributi_mancanti": len(mancano)}
         cartella = None
         ids = {}
         for nome in (LISTA_CON, LISTA_SENZA):
             if liste.get(nome) is None:
-                cartella = cartella or BL._cartella(c)
-                r = c.post(f"{API}/contacts/lists", json={"name": nome, "folderId": cartella})
+                cartella = cartella or ritenta(lambda: BL._cartella(c), dormi)
+                r = chiedi(c, "post", f"{API}/contacts/lists", dormi, json={"name": nome, "folderId": cartella})
                 r.raise_for_status()
                 liste[nome] = r.json()["id"]
             ids[nome] = liste[nome]
+        _ids_liste.update(ids)
         esito["liste"] = {"con": ids[LISTA_CON], "senza": ids[LISTA_SENZA]}
         codici, processi, falliti, caricati = Counter(), Counter(), 0, 0
         for nome, gruppo in ((LISTA_CON, con), (LISTA_SENZA, senza)):
@@ -673,7 +932,8 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
                     continue
                 caricati += len(blocco)
                 processi[_aspetta(c, r, dormi)] += 1
-        # chi a un giro prima stava nell'altra lista, o non è più valido, esce (resta in "Skovo tutti")
+        # nelle due liste resta solo chi è di questo giro e nella lista giusta: escono chi ha cambiato gruppo, chi non
+        # è più valido (disiscritto, bloccato, escluso) e i contatti di un giro precedente (restano in "Skovo tutti")
         giusta = {d["email"]: ids[LISTA_CON if d["auto"] else LISTA_SENZA] for d in scelti}
         tolti, tolti_falliti = 0, 0
         for nome in (LISTA_CON, LISTA_SENZA):
@@ -699,8 +959,9 @@ def prepara(items: list[dict], giro: str, per_gruppo: int = 0, *, c=None, connet
 
 def lavoro(v: str, items_fn, lungo=None, attesa_min: int = 30, dormi=time.sleep) -> bool | None:
     """Voce di BREVO_IMPORT_LISTE: email_esempi:<giro>[:<quanti per gruppo>]. Aspetta che il sito abbia le auto in
-    memoria, poi prepara(). Segnata fatta solo a lavoro finito (coda_lavori._lungo): ripeterla non duplica niente
-    (stessi token per giro, import che aggiorna). Nei log solo conteggi."""
+    memoria, poi prepara(). Segnata fatta solo a lavoro finito (coda_lavori._lungo); un tentativo rifatto dopo un
+    errore riprende gli STESSI contatti del giro (stessi token), non ne sceglie altri: per altri contatti serve un
+    giro nuovo. Nei log solo conteggi."""
     chiave = re.sub(r"[^A-Za-z0-9_:.-]", "", v)[:60]
     parti = chiave.split(":")
     giro = ":".join(parti[:2])
@@ -725,7 +986,41 @@ def lavoro(v: str, items_fn, lungo=None, attesa_min: int = 30, dormi=time.sleep)
     return lungo(chiave, "EMAIL_ESEMPI", fai)
 
 
+def lavoro_pulisci(v: str, lungo=None) -> bool | None:
+    """Voce di BREVO_IMPORT_LISTE: email_pulisci:<etichetta>, da lanciare prima di ogni invio (pulisci_liste)."""
+    chiave = re.sub(r"[^A-Za-z0-9_:.-]", "", v)[:60]
+    if lungo is None:
+        from ..pipeline.coda_lavori import _lungo as lungo
+
+    def fai():
+        c = _client()
+        try:
+            esito = pulisci_liste(c)
+        finally:
+            c.close()
+        lg.warning("EMAIL_PULISCI %s", json.dumps(esito, ensure_ascii=False))
+        if esito.get("tolti_falliti") or (esito.get("coda_stop") or {}).get("ancora_in_coda"):
+            raise RuntimeError("pulizia incompleta")
+    return lungo(chiave, "EMAIL_PULISCI", fai)
+
+
 # ---------- /mi/<token> per il canale email ----------
+def nome_log(nome) -> str:
+    """Il nome del salone per i log: senza caratteri di controllo e, se dentro ci sono più di 6 cifre (potrebbe
+    essere un numero di telefono finito nel nome), senza le cifre."""
+    n = re.sub(r"[\x00-\x1f\x7f]", " ", str(nome or "?"))[:80]
+    if sum(ch.isdigit() for ch in n) > 6:
+        n = " ".join(re.sub(r"[\d+]", "", n).split()) or "?"
+    return n
+
+
+def token_email(token) -> bool:
+    """Il token ha la forma di quelli delle email (8 caratteri). Vale per la PAGINA: un token di 8 caratteri vede la
+    pagina delle email, che esista o no, così la pagina non dice se un token è valido."""
+    from .sms_saloni import token_pulito
+    return len(token_pulito(token) or "") == TOKEN_LEN
+
+
 def trova(conn, token) -> dict | None:
     """La riga di email_link del token (None se il token non è di una email)."""
     from .sms_saloni import token_pulito
@@ -804,7 +1099,7 @@ def registra_clic(conn, token, user_agent: str = "", c=None, adesso: dt.datetime
         return {"contato": False, "motivo": "sconosciuto"}
     adesso = adesso or dt.datetime.now(dt.timezone.utc)
     ua = re.sub(r"[\x00-\x1f\x7f]", " ", str(user_agent or ""))[:200]
-    nome = re.sub(r"[\x00-\x1f\x7f]", " ", str(riga["nome"] or "?"))[:80]
+    nome = nome_log(riga["nome"])
     tel = SS.coda4(riga["telefono"]) if riga.get("telefono") else "-"
     motivo, dopo = ("programma_automatico", None) if SS.RE_BOT.search(ua) else (None, None)
     if not motivo:
@@ -832,30 +1127,24 @@ def registra_clic(conn, token, user_agent: str = "", c=None, adesso: dt.datetime
     return {"contato": True, "n": n, "nome": riga["nome"], "dopo_s": dopo}
 
 
-def registra_stop(conn, token, c=None, log=None, dormi=time.sleep) -> bool:
+def registra_stop(conn, token, c=None, log=None, dormi=time.sleep, piu_tardi=None) -> bool:
     """"Non voglio più ricevere email" dalla pagina: l'indirizzo va nei disiscritti (mai più email, anche se il
-    contatto viene cancellato da Brevo) e in Brevo diventa emailBlacklisted."""
+    contatto viene cancellato da Brevo); in Brevo diventa emailBlacklisted ed esce dalle due liste email. Se Brevo
+    non risponde la richiesta resta in coda (stop_brevo) e si riprova più tardi (`piu_tardi`, predefinito: un thread;
+    poi a ogni disiscrizione, a email_pulisci e a email_esempi). Se il database non scrive solleva: la pagina dice
+    di riprovare."""
     from . import invii
     log = log or lg
     riga = trova(conn, token)
     if not riga:
         return False
     invii.aggiungi_disiscritti(conn, [riga["email"]], "pagina_mi " + riga["token"])
-    conn.execute("UPDATE email_link SET stop_at = now() WHERE token = %s", (riga["token"],))
+    conn.execute("UPDATE email_link SET stop_at = now(), stop_brevo = %s WHERE token = %s", ("da_fare", riga["token"]))
     conn.commit()
-    brevo = "errore"
     chiudi = c is None
     try:
         c = c or _client()
-        for prova in range(3):
-            r = c.put(f"{API}/contacts/{quote(riga['email'], safe='')}", json={"emailBlacklisted": True})
-            if r.status_code < 300:
-                brevo = "ok"
-                break
-            if r.status_code == 404:
-                brevo = "contatto_assente"
-                break
-            dormi(1.0 + prova)
+        brevo = stop_in_brevo(c, riga["email"], dormi)
     except Exception as e:
         brevo = "errore " + type(e).__name__
     finally:
@@ -864,8 +1153,17 @@ def registra_stop(conn, token, c=None, log=None, dormi=time.sleep) -> bool:
                 c.close()
             except Exception:
                 pass
-    log.warning("EMAIL_STOP token=%s nome=%s brevo=%s", riga["token"],
-                re.sub(r"[\x00-\x1f\x7f]", " ", str(riga["nome"] or "?"))[:80], brevo)
+    conn.execute("UPDATE email_link SET stop_brevo = %s WHERE token = %s", (brevo[:60], riga["token"]))
+    conn.commit()
+    in_coda = brevo.startswith("errore")
+    log.warning("EMAIL_STOP token=%s nome=%s brevo=%s%s", riga["token"], nome_log(riga["nome"]), brevo,
+                " in_coda=si" if in_coda else "")
+    if in_coda:
+        if piu_tardi is None:
+            import threading
+            threading.Thread(target=_riprova_piu_tardi, daemon=True, name="email_stop_coda").start()
+        else:
+            piu_tardi()
     return True
 
 
