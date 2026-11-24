@@ -603,3 +603,35 @@ def test_nuovi_3_11_limite_di_invio_e_nessuna_cancellazione_per_fare_posto():
     assert t.index("len(mai_aperte) >= posto") < t.index("/campaignStats")
     assert "cand = cand[:tetto]" in t and "da_togliere = max(0, len(attuali) + len(cand) - _tetto())" in t
     assert "scelte = scelte[:tetto]" in inspect.getsource(auto_invio.invia_2_11)
+
+
+def test_nomi_corti_solo_come_parola_intera():
+    # _esclusi() serve anche agli altri lavori: non deve portarsi via saloni che hanno solo un nome simile
+    for buono in ("Toyota Yaris 1.5 SR automatica", "SR Autonoleggio", "S.R. Autofficina", "Cosvaldo Motors",
+                  "Autovroom", "info@autovroom.it", "cosvaldo@gmail.com", "info@sr-autonoleggio.it",
+                  "Auto e moto Varese", "Carlo Conte Auto"):
+        assert not bl._esclusi(buono) and not bl._nome_escluso(buono), buono
+    for escluso in ("SR Auto", "S.R. Auto srl", "S R Automobili", "sr-auto", "c@srauto.it", "x@sr-auto.it", "s.r.auto@gmail.com",
+                    "Cosval", "Cosval Auto", "z@cosval.it", "a@cosvalauto.it", "Vroom", "Vroom Italia", "ciao@vroom.it",
+                    "Auto & Auto Varese", "Auto&Auto - Varese", "Auto &amp; Auto (Varese)", "Auto + Auto, Varese",
+                    "Auto e Auto S.r.l. Varese", "autoeauto@gmail.com", "info@autoeauto.it", "b@autoeautovarese.it"):
+        assert bl._nome_escluso(escluso), escluso
+    # "auto & auto" in un campo e Varese in un altro della stessa riga
+    riga = '{"nome": "Auto & Auto", "comune": "Varese", "email": "info@salonevarese.it"}'
+    out, n = bl.scegli_tutti(bl.voci_da_riga(riga), set())
+    assert out == [] and n["escluse_altri_esclusi"] == 1
+    riga = '{"nome": "Auto & Auto", "comune": "Lecce", "email": "info@salonelecce.it"}'             # un altro Auto & Auto
+    assert len(bl.scegli_tutti(bl.voci_da_riga(riga), set())[0]) == 1
+
+
+def test_pec_elenco_esplicito_e_domini_pubblici():
+    for e in ("a@autospec.it", "a@carspec.it", "a@aspec.it", "a@specialcar.it"):
+        assert not bl.pec(e), e.split("@")[1]
+    for e in ("a@legal.email.it", "a@postemailcertificata.it", "a@mailcert.it", "a@pecservizi.it", "a@peclegale.it",
+              "a@pecposta.it", "a@ascompec.it", "a@cnapec.it", "a@keypec.it", "a@dadapec.com", "a@pecveneto.it",
+              "a@arubapec.it", "a@x.pecposta.it"):
+        assert bl.pec(e), e.split("@")[1]
+    for d in ("windowslive.com", "tre.it", "wind.it", "infinito.it", "jumpy.it", "lycos.it", "tele2.it", "fastwebmail.it",
+              "pm.me", "tutanota.com", "zoho.com", "web.de", "free.fr", "orange.fr", "gmail.com", "libero.it"):
+        assert bl._dominio_proprio("x@" + d) == "", d
+    assert bl._dominio_proprio("x@salone.it") == "salone.it"

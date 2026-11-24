@@ -313,24 +313,32 @@ def _esclusi(e: str) -> bool:
 
 # 24/11: gli esclusi di raccolta_numeri che qui mancavano (GT Automobili, Privacar, Vroom) e gli stessi nomi di
 # ESCLUSI_3_11 scritti con un separatore in mezzo (officine-mulino, sr.auto, auto-e-auto-varese)
-_ESCLUSI_ALTRI = _re.compile(r"(officine[._-]*mulino|cosval|auto[._-]*e?[._-]*auto[._-]*varese|sr[._-]*auto|"
-                             r"gt[._-]*automobili|privacar|vroom)", _re.I)
+# (i nomi corti - SR Auto, Cosval, Vroom - stanno più sotto in _ESCLUSI_TESTO, con il confine di parola)
+_ESCLUSI_ALTRI = _re.compile(r"(officine[._-]*mulino|auto[._-]*e?[._-]*auto[._-]*varese|gt[._-]*automobili|privacar)",
+                             _re.I)
 
 
 # gli stessi nomi scritti in qualsiasi modo (spazi, punti, trattini, &): "Auto&Auto - Varese", "G.T. Automobili",
 # "S R Automobili", "lo-conte", s.r.auto@, www.auto-e-auto-varese.it, officine_mulino. I nomi corti vogliono un confine
 # di parola davanti ("Carlo Conte" e "Cosvaldo... " a parte, non sono Loconte né SR Auto).
 _SEP = r"[\s._&'/-]*"
+_E = r"[\s._'/-]*(e|and|&amp;|&|\+)[\s._'/-]*"       # il legame di "Auto & Auto": e, and, &, &amp;, +
 _ESCLUSI_TESTO = _re.compile(
-    r"((^|[^a-z])lo" + _SEP + r"conte([^a-z]|$)|officine" + _SEP + r"mulino|(^|[^a-z])cosval|"
-    r"auto" + _SEP + r"(e|and)?" + _SEP + r"auto" + _SEP + r"varese|"
-    r"(^|[^a-z])s" + _SEP + r"r" + _SEP + r"auto|(^|[^a-z])g" + _SEP + r"t" + _SEP + r"automobili|privacar|"
-    r"(^|[^a-z])vroom)", _re.I)
+    r"((^|[^a-z])lo" + _SEP + r"conte([^a-z]|$)|officine" + _SEP + r"mulino|"
+    # Cosval e Vroom solo come parola intera: "Cosvaldo Motors" e "Autovroom" sono altri
+    r"(^|[^a-z])cosval(" + _SEP + r"auto)?([^a-z]|$)|(^|[^a-z])vroom([^a-z]|$)|"
+    # Auto & Auto Varese: anche con parentesi, virgole o S.r.l. prima di Varese; e i suoi indirizzi (autoeauto@, @autoeauto.it)
+    r"auto" + _E + r"auto[^a-z]*(s\.?\s*r\.?\s*l\.?[^a-z]*)?varese|(^|[^a-z])autoeauto([^a-z]|$)|"
+    # SR Auto / SR Automobili, non "SR automatica", "SR Autonoleggio", "S.R. Autofficina" (come sito_regole)
+    r"(^|[^a-z])s" + _SEP + r"r" + _SEP + r"auto(mobili)?([^a-z]|$)|"
+    r"(^|[^a-z])g" + _SEP + r"t" + _SEP + r"automobili|privacar)", _re.I)
+_AUTO_E_AUTO = _re.compile(r"(^|[^a-z])auto" + _E + r"auto([^a-z]|$)", _re.I)     # con "varese" altrove nella riga
 _LOCONTE_TESTO = _re.compile(r"loconte|(^|[^a-z])lo" + _SEP + r"conte([^a-z]|$)", _re.I)
 _DOMINI_PUBBLICI = _re.compile(
     r"^(gmail|googlemail|libero|hotmail|yahoo|outlook|icloud|alice|tiscali|virgilio|live|msn|me|mac|tin|inwind|iol|"
     r"fastwebnet|email|katamail|aruba|pec|legalmail|tim|teletu|vodafone|aol|gmx|mail|ymail|rocketmail|protonmail|"
-    r"proton|yandex|blu|giallo|supereva|interfree|poste|postecert|arubapec|tiscalinet|hotmail)\.[a-z.]{2,6}$", _re.I)
+    r"proton|yandex|blu|giallo|supereva|interfree|poste|postecert|arubapec|tiscalinet|hotmail|windowslive|tre|wind|"
+    r"infinito|jumpy|lycos|tele2|fastwebmail|pm|tutanota|zoho|web|free|orange)\.[a-z.]{2,6}$", _re.I)
 
 
 def _bloccati_0111() -> set[str]:
@@ -946,23 +954,28 @@ _GESTORI_PEC = frozenset((
     "arubapec.it", "pecaruba.it", "pecimprese.it", "registerpec.it", "mypec.eu", "gigapec.it", "casellapec.com",
     "legalpec.it", "pec-legal.it", "lamiapec.it", "postacert.it", "postacertificata.it", "pecspeciale.it",
     "cert.legalmail.it", "pec.net", "pec.eu", "pec.com", "pecmail.it", "peceasy.it", "pecprivato.it",
-    "pecditta.com", "cgn.legalmail.it", "kelipec.it", "open.legalmail.it", "messaggipec.it", "trustpec.it"))
+    "pecditta.com", "cgn.legalmail.it", "kelipec.it", "open.legalmail.it", "messaggipec.it", "trustpec.it",
+    "legal.email.it", "postemailcertificata.it", "mailcert.it", "pecservizi.it", "peclegale.it", "pecposta.it",
+    "ascompec.it", "cnapec.it", "keypec.it", "dadapec.com", "pecveneto.it"))
 
 
 def pec(e: str) -> bool:
     """Indirizzo di posta certificata: gestore noto (dominio esatto o suo sottodominio), un pezzo del dominio che è
-    "pec" o "cert" o che finisce per "pec" (pec.salone.it, salone.pec.it, ascompec.it, cnapec.it, keypec.it,
-    dadapec.com, cert.x.it), o un gestore che comincia per "pec" (pecveneto.it). Non basta "pec" in mezzo a una parola:
-    specialcar.it è un salone. Solo per carica_tutti: gli altri lavori restano con gruppo_dominio. Funzione pura."""
+    "pec" o "cert" (pec.salone.it, salone.pec.it, cert.x.it) o il nome di un gestore dell'elenco (ascompec, cnapec,
+    keypec, dadapec, pecveneto...). Non basta "pec" dentro o in fondo a una parola: specialcar.it, autospec.it,
+    carspec.it e aspec.it sono saloni. Solo per carica_tutti: gli altri lavori restano con gruppo_dominio. Funzione pura."""
     pezzi = e.rpartition("@")[2].lower().split(".")
-    if any(x in ("pec", "cert", "legalmail") or x.endswith("pec") or x in _GESTORI_PEC_NOMI for x in pezzi[:-1]):
+    if any(x in ("pec", "cert", "legalmail") or x in _GESTORI_PEC_NOMI for x in pezzi[:-1]):
         return True
     return any(".".join(pezzi[k:]) in _GESTORI_PEC for k in range(len(pezzi) - 1))
 
 
 _GESTORI_PEC_NOMI = frozenset(("pecveneto", "pecimprese", "pecaruba", "pecmail", "peceasy", "pecprivato", "pecditta",
                                "pecspeciale", "postecert", "postacert", "postacertificata", "sicurezzapostale",
-                               "actaliscertymail", "ticertifica", "pec-legal", "pecavvocati", "pecconfesercenti"))
+                               "actaliscertymail", "ticertifica", "pec-legal", "pecavvocati", "pecconfesercenti",
+                               "ascompec", "cnapec", "keypec", "dadapec", "arubapec", "registerpec", "gigapec",
+                               "casellapec", "legalpec", "lamiapec", "kelipec", "messaggipec", "trustpec", "mypec",
+                               "postemailcertificata", "mailcert", "pecservizi", "peclegale", "pecposta"))
 
 
 def privato(dati) -> bool:
@@ -983,18 +996,18 @@ def privato(dati) -> bool:
 
 
 def _nome_escluso(nome: str) -> bool:
-    """Nome (o testo intero di una riga) di un commerciante da non scrivere mai: i nomi del sito e di raccolta_numeri,
-    le espressioni usate per gli indirizzi (www.auto-e-auto-varese.it, officine_mulino) e gli stessi nomi scritti con
-    punti, spazi, trattini o & in mezzo ("G.T. Automobili", "Auto&Auto - Varese", "S R Automobili")."""
+    """Nome (o testo intero di una riga) di un commerciante da non scrivere mai: le stesse espressioni degli indirizzi
+    (_esclusi: Officine Mulino, Cosval, Auto & Auto Varese, SR Auto, GT Automobili, Privacar, Vroom, scritti con
+    punti, spazi, trattini o & in mezzo), "auto & auto" con Varese in un altro punto del testo, e i nomi aggiunti
+    dal cliente in SITO_COMMERCIANTI_NOMI. I nomi corti valgono solo come parola intera."""
     if not nome:
         return False
-    if nome == _RIGA_ESCLUSA:
+    if nome == _RIGA_ESCLUSA or _esclusi(nome):
         return True
-    from ..pipeline.raccolta_numeri import ESCLUSI_EXTRA
-    from ..web.sito_regole import nomi_esclusi_re
-    if _re.search(nomi_esclusi_re() + "|" + "|".join(f"({x})" for x in ESCLUSI_EXTRA), nome, _re.I):
+    if _AUTO_E_AUTO.search(nome) and "varese" in nome.lower():
         return True
-    return _esclusi(nome)
+    altri = [x.strip().lower() for x in os.environ.get("SITO_COMMERCIANTI_NOMI", "").split(",") if x.strip()]
+    return any(x in nome.lower() for x in altri)
 
 
 def _dominio_proprio(e: str) -> str:
