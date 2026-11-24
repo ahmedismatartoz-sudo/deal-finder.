@@ -86,8 +86,9 @@ class Conn:
             assert params["ids"], "lettura con un elenco vuoto"
             self.passi.append("legge_gia")
             ids = set(params["ids"])
-            return _Ris([{"gia_verificata": r["id"]} for r in self.righe
-                         if r["id"] in ids and r.get("d_verifica") is not None])
+            def chiusa(v):                         # come l'SQL: segno presente, tranne "non_valida" senza "v"
+                return v is not None and not (v.get("esito") == "non_valida" and v.get("v") is None)
+            return _Ris([{"gia_verificata": r["id"]} for r in self.righe if r["id"] in ids and chiusa(r.get("d_verifica"))])
         if "JOIN decisione_ai d" in s:
             assert params["ids"], "lettura con un elenco vuoto"
             self.passi.append("legge")
@@ -834,4 +835,179 @@ def test_pg_vero_rilettura_della_decisione_gia_verificate_e_segno():
         assert ra["d_verifica"]["esito"] == "ok" and ra["d_truffa"] == .35               # il resto della risposta resta
         assert VS.senza_chiamata(ra) == "gia_verificata"
         assert VS.fatte_oggi(c) == 0
+        # 24/11 sera: "non_valida" scritta dalla lettura di prima (senza "v") = di nuovo verificabile, una volta
+        VS._segna(c, b, {"esito": "non_valida"})
+        assert VS.gia_verificate(c, ids) == {a, senza_storico}
+        rb = c.execute(VS.VERIFICA_SQL, {"ids": [b], "nf": 3}).fetchone()
+        assert VS.da_rifare(rb["d_verifica"]) and VS.senza_chiamata(dict(rb, d_truffa=.35)) is None
+        VS._segna(c, b, {"esito": "non_valida", "v": VS.SEGNO_V, "difetto": "troncata"})
+        assert VS.gia_verificate(c, ids) == {a, b, senza_storico}
+    _pulisci()
+
+
+# ================================================================== 24/11 sera: 9 risposte su 11 "non valide"
+RISPOSTA_JSON = json.dumps(PULITA)
+
+
+def test_leggi_risposta_legge_una_risposta_ben_formata_comunque_sia_avvolta():
+    for testo in (RISPOSTA_JSON,
+                  "```json\n" + RISPOSTA_JSON + "\n```",
+                  "```json\n" + RISPOSTA_JSON,                                      # recinto non chiuso
+                  "```\n" + RISPOSTA_JSON + "\n```\nSpero sia utile.",
+                  "Ho guardato le 6 foto [interni, cerchi, targa]: stessa auto.\n\n" + RISPOSTA_JSON,
+                  "Analisi (foto 1-6):\n" + RISPOSTA_JSON + "\nNota: verificare il libretto [tagliandi].",
+                  json.dumps({"risposta": PULITA}),                                 # un solo involucro
+                  json.dumps({k.upper() + " ": v for k, v in PULITA.items()}),      # maiuscole e spazi nei nomi
+                  json.dumps(dict(PULITA, note='targa "AB123" {vista} nelle foto'))):
+        d = VS.leggi_risposta(testo, "end_turn")
+        x = CA.valida(d, con_foto=True, con_confronti=False)
+        assert VS.pulita(dict(x, _foto=6), G) == [], testo[:40]
+        assert x["truffa"] == PULITA["truffa"] and x["auto_vera"] == PULITA["auto_vera"]
+    # la lettura di prima (dal primo "{" o "[" all'ultimo "}" o "]") su questi testi falliva: era il difetto
+    from dealfinder.ai import client as AI
+    for testo in ("Ho guardato le 6 foto [interni, cerchi, targa]: stessa auto.\n\n" + RISPOSTA_JSON,
+                  "Analisi (foto 1-6):\n" + RISPOSTA_JSON + "\nNota: verificare il libretto [tagliandi]."):
+        try:
+            AI.extract_json(testo)
+            rotta = False
+        except Exception:
+            rotta = True
+        assert rotta
+    # numeri scritti come testo: si leggono (controllo_auto._p), le soglie restano le stesse
+    come_testo = {k: (str(v).replace(".", ",") if isinstance(v, float) else v) for k, v in PULITA.items()}
+    x = CA.valida(VS.leggi_risposta(json.dumps(come_testo)), con_foto=True, con_confronti=False)
+    assert x["truffa"] == PULITA["truffa"] and VS.pulita(dict(x, _foto=6), G) == []
+
+
+def test_leggi_risposta_in_dubbio_resta_non_valida_con_il_tipo_di_difetto():
+    def difetto(testo, stop="end_turn"):
+        try:
+            VS.leggi_risposta(testo, stop)
+        except VS.RispostaNonLetta as e:
+            return e.difetto
+        return None
+    assert difetto("") == "risposta_vuota" and difetto("", "max_tokens") == "troncata_vuota"
+    assert difetto("Non posso valutare questo annuncio.") == "senza_json"
+    assert difetto(RISPOSTA_JSON[:-40], "max_tokens") == "troncata"                  # JSON a metà
+    assert difetto("Le foto mostrano la stessa auto, gli interni", "max_tokens") == "troncata"
+    assert difetto(RISPOSTA_JSON[:-40]) == "json_rotto"
+    assert difetto(json.dumps({"scam": .1, "real_car": .9, "decision": "buy"})) == "campi_con_altri_nomi"
+    assert difetto(RISPOSTA_JSON + "\noppure\n" + json.dumps(dict(PULITA, truffa=.9))) == "piu_risposte"
+    assert difetto(RISPOSTA_JSON + "\n" + RISPOSTA_JSON) is None                     # la stessa due volte: è una
+    # tipo_difetto: mai il testo della risposta
+    for d, atteso in (({k: v for k, v in PULITA.items() if k != "truffa"}, "campo_mancante:truffa"),
+                      (dict(PULITA, auto_vera="alta 3331234567"), "campo_non_numerico:auto_vera"),
+                      (dict(PULITA, truffa=30), "campo_fuori_da_0_1:truffa"),
+                      (dict(PULITA, decisione="chiama 3331234567"), "decisione_non_ammessa"), ([1], "non_oggetto")):
+        try:
+            CA.valida(d, con_foto=True, con_confronti=False)
+            raise AssertionError("doveva essere non valida")
+        except CA.ControlloNonValido as e:
+            assert VS.tipo_difetto(e) == atteso and "333" not in VS.tipo_difetto(e)
+    assert VS.tipo_difetto(CA.ControlloNonValido("mario@example.com mancante")) == "altro"
+
+
+def test_chiamata_vera_prompt_token_e_lettura():
+    _pulisci()
+    from dealfinder.ai import client as AI
+    visti = {}
+
+    class _B:
+        def __init__(self, tipo, text):
+            self.type, self.text = tipo, text
+
+    class _U:
+        input_tokens, output_tokens = 5000, 600
+
+    class _R:
+        def __init__(self, blocchi, stop):
+            self.content, self.stop_reason, self.usage = blocchi, stop, _U()
+    risposte = [_R([_B("thinking", "ragiono {a: 1}"), _B("text", "Le foto [1-6] sono coerenti.\n```json\n" + RISPOSTA_JSON + "\n```")], "end_turn"),
+                _R([_B("text", "Le foto mostrano " + RISPOSTA_JSON[:60])], "max_tokens")]
+
+    def crea(**kw):
+        visti.update(kw)
+        return risposte.pop(0)
+    prima = AI.crea
+    AI.crea = crea
+    try:
+        with env(**dict(NO_ENV, VERIFICA_MAX_TOKENS=None)):
+            dati, tin, tout, mod = VS._chiama("testo", [], timeout=30)
+            assert isinstance(dati, dict) and dati["truffa"] == PULITA["truffa"] and (tin, tout) == (5000, 600)
+            assert visti["max_tokens"] == 1500 and visti["timeout"] == 30.0 and mod == VS.modello()
+            # il prompt: l'aggiunta viene dopo lo schema JSON e CHIUDE con il formato (non con domande aperte)
+            sistema = visti["system"]
+            assert sistema.startswith(CA.SISTEMA) and sistema.rstrip().endswith("mai percentuali).")
+            assert sistema.rindex("Rispondi SOLO con") > sistema.rindex("non arrotondare verso il sì")
+            assert "mai true/false" in sistema and "senza testo prima o dopo" in sistema
+            dati, _i, _o, _m = VS._chiama("testo", [])
+            assert isinstance(dati, VS.RispostaNonLetta) and dati.difetto == "troncata"
+    finally:
+        AI.crea = prima
+    _pulisci()
+
+
+def test_difetto_nel_segno_e_nel_log_senza_dati():
+    _pulisci()
+    risposte = {1: VS.RispostaNonLetta("troncata"), 2: dict(PULITA, truffa="boh 3331234567"),
+                3: dict(PULITA, auto_vera=True), 4: dict(PULITA, targa_visibile=True),
+                5: {k: v for k, v in PULITA.items() if k != "dati_coerenti"}}
+
+    def chiama(testo, foto):
+        lid = next(i for i in risposte if f"https://x/{i}-0.jpg" in foto[0]["source"]["url"])
+        r = risposte[lid]
+        return (r if isinstance(r, Exception) else dict(r)), 5000, 200, "claude-sonnet-5-5"
+    with env(**NO_ENV):
+        _coda(1, 2, 3, 4, 5)
+        conn = Conn([riga(i) for i in range(1, 6)])
+        with _Log() as lg:
+            res = VS.giro(conn, chiama=chiama, foto=_foto, g=G)
+    s = conn.segni()
+    assert res["verifica_fatte"] == 5 and res["verifica_ok"] == 1        # la 4: vero/falso solo sulla targa, si legge
+    assert s[4]["esito"] == "ok" and all(v["v"] == VS.SEGNO_V for v in s.values())
+    assert [s[i]["esito"] for i in (1, 2, 3, 5)] == ["non_valida"] * 4
+    assert s[1]["difetto"] == "troncata" and s[2]["difetto"] == "campo_non_numerico:truffa"
+    assert s[3]["difetto"] == "booleani_al_posto_dei_punteggi" and s[5]["difetto"] == "campo_mancante:dati_coerenti"
+    d = json.loads(next(r for r in lg.righe if r.startswith("VERIFICA_SCONTO_ALTO {")).split(" ", 1)[1])
+    assert d["non_valide_per_difetto"] == {"troncata": 1, "campo_non_numerico": 1, "booleani_al_posto_dei_punteggi": 1,
+                                           "campo_mancante": 1}
+    assert d["fuori_per_motivo"] == {"risposta_non_valida": 4} and d["passate"] == 1
+    assert "3331234567" not in " ".join(lg.righe) + json.dumps(s)
+    # le soglie non sono cambiate
+    assert VS.PULITA == {"truffa_max": 0.15, "auto_vera_min": 0.85, "foto_internet_max": 0.2, "dati_coerenti_min": 0.8,
+                         "danni_max": 0.3, "guasto_max": 0.3, "rata_max": 0.3, "km_credibili_min": 0.7}
+    assert VS.con_booleani(dict(PULITA, targa_visibile=False)) is False
+    for campo in ("truffa", "auto_vera", "foto_internet", "danni_foto", "dati_coerenti", "guasto", "prezzo_rata",
+                  "km_credibili", "versione_ok", "confidenza"):
+        assert VS.con_booleani(dict(PULITA, **{campo: True})) is True, campo
+    _pulisci()
+
+
+def test_le_non_valide_di_prima_si_verificano_di_nuovo_una_volta():
+    _pulisci()
+    vecchio = {"at": "2026-11-24T16:00:00", "modello": "claude-sonnet-5-5", "foto": 6, "esito": "non_valida"}
+    assert VS.da_rifare(vecchio) and VS.da_rifare(json.dumps(vecchio))
+    assert not VS.da_rifare(dict(vecchio, v=2)) and not VS.da_rifare(dict(vecchio, esito="non_pulita"))
+    assert not VS.da_rifare(dict(vecchio, esito="ok")) and not VS.da_rifare(None) and not VS.da_rifare("x")
+    n = []
+
+    def chiama(testo, foto):
+        n.append(1)
+        return VS.RispostaNonLetta("senza_json"), 5000, 200, "claude-sonnet-5-5"     # ancora non valida
+    with env(**NO_ENV):
+        _coda(1, 2, 3)
+        conn = Conn([riga(1, d_verifica=dict(vecchio)), riga(2, d_verifica=dict(vecchio, esito="non_pulita")),
+                     riga(3, d_verifica=dict(vecchio, v=2))])
+        res, d, conn = _senza(conn, chiama=chiama)
+        assert len(n) == 1 and res["verifica_fatte"] == 1 and d["riverificate"] == 1
+        assert d["idonee"] == 1 and d["senza_chiamata"] == {"gia_verificata": 2}
+        nuovo = conn.segni()[1]
+        assert nuovo["esito"] == "non_valida" and nuovo["v"] == VS.SEGNO_V and nuovo["difetto"] == "senza_json"
+        # il giro dopo: il segno nuovo la chiude, mai una terza chiamata
+        VS.STATO["t"] = 0.0
+        _coda(1)
+        res, d, conn = _senza([riga(1, d_verifica=nuovo)], chiama=_mai)
+        assert res["verifica_fatte"] == 0 and d["senza_chiamata"] == {"gia_verificata": 1}
+        assert VS.senza_chiamata(riga(1, d_verifica=nuovo)) == "gia_verificata"
+        assert VS.senza_chiamata(riga(1, d_verifica=dict(vecchio))) is None
     _pulisci()
