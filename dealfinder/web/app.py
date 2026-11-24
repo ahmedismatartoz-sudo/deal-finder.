@@ -3876,7 +3876,7 @@ def _tempo_reale():
                                 res = jev.giro(conn, int(os.environ.get("JEV_LOTTO_PICCOLO", "60")) if piccolo else None)
                                 _memoria.rilascia("jev")
                                 lg.warning("JEV_RIEPILOGO 3 giorni: %s", jev.riepilogo(conn))
-                                if res.get("conferma_ok") and not res.get("pubblicate"):
+                                if (res.get("conferma_ok") or res.get("verifica_ok")) and not res.get("pubblicate"):
                                     # 18/11: un'auto con sconto alto appena confermata va sul sito subito (non al
                                     # prossimo elenco programmato)
                                     _elenco["t"] = 0.0
