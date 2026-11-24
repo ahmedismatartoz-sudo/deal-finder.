@@ -129,9 +129,9 @@ def coda4(t) -> str:
     return "***" + d[-4:] if len(d) >= 4 else "***?"
 
 
-def nuovo_token(esistenti=()) -> str:
+def nuovo_token(esistenti=(), lunghezza: int = TOKEN_LEN) -> str:
     while True:
-        t = "".join(secrets.choice(ALFABETO) for _ in range(TOKEN_LEN))
+        t = "".join(secrets.choice(ALFABETO) for _ in range(lunghezza))
         if t not in esistenti:
             return t
 
@@ -447,17 +447,36 @@ def interessati(conn) -> list[dict]:
     return [dict(r) for r in righe]
 
 
-def pagina(token: str | None = None, stop: bool = False) -> str:
-    """Pagina pubblica di ringraziamento, uguale per ogni token (valido o no). Niente dati del salone."""
+def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", conferma: bool = False,
+           errore: bool = False) -> str:
+    """Pagina pubblica di ringraziamento, uguale per ogni token (valido o no). Niente dati del salone.
+    canale "email": il pulsante in fondo parla di email (e disiscrive da Brevo). conferma: la pagina che si apre dal
+    pulsante "Non mi interessa" dell'email (GET /mi/<token>/stop): chiede conferma, la disiscrizione parte solo dal
+    pulsante (POST), così le anteprime automatiche dei programmi di posta non disiscrivono nessuno. errore: la
+    disiscrizione non è stata registrata (database fermo): la pagina lo dice e fa riprovare, mai "Fatto."."""
     tok = token_pulito(token)
-    if stop:
-        titolo, testo = "Fatto.", "Non riceverai più SMS da Skovo. Se cambi idea, chiamaci quando vuoi."
+    cosa = "email" if canale == "email" else "SMS"
+    segno = "M5 12.5l4.5 4.5L19 7.5"
+    modulo = (f'<form method="post" action="/mi/{html.escape(tok)}/stop"><button class="{{}}" type="submit">'
+              f'Non voglio più ricevere {cosa}</button></form>') if tok else ""
+    if errore:
+        titolo, testo = "Riprova tra poco", ("Non siamo riusciti a registrare la tua richiesta. Riprova tra qualche "
+                                             "minuto con il pulsante qui sotto, oppure chiamaci.")
+        sotto = modulo.format("cta stop")
+        segno = "M12 7v6M12 17h.01"
+    elif stop:
+        titolo, testo = "Fatto.", f"Non riceverai più {cosa} da Skovo. Se cambi idea, chiamaci quando vuoi."
         sotto = ""
+    elif conferma:
+        titolo, testo = "Non ti interessa?", f"Nessun problema. Conferma qui sotto e non ti mandiamo più {cosa}."
+        sotto = modulo.format("cta stop")
+        segno = "M6 6l12 12M18 6L6 18"
     else:
         titolo = "Grazie!"
         testo = (f"Ti chiamiamo a breve dal <strong>{TEL_TITOLARE_TESTO}</strong> per spiegarti come funziona Skovo.")
-        sotto = (f'<form method="post" action="/mi/{html.escape(tok)}/stop"><button class="no" type="submit">'
-                 f'Non voglio più ricevere SMS</button></form>') if tok else ""
+        sotto = modulo.format("no")
+    centro = ("" if conferma or errore else f'<a class="cta" href="tel:{TEL_TITOLARE}">Chiamaci ora</a>\n'
+              '<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>')
     return f"""<!doctype html>
 <html lang="it">
 <head>
@@ -487,16 +506,16 @@ p strong{{color:var(--ink);white-space:nowrap}}
 .nota{{font-size:14px;margin:14px 0 0}}
 form{{margin:18px 0 0}}
 .no{{background:none;border:0;padding:14px 8px;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}}
+.stop{{width:100%;border:0;font-family:inherit;cursor:pointer}}
 </style>
 </head>
 <body>
 <main>
 <p class="marca">Skovo</p>
-<div class="ok" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+<div class="ok" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="{segno}"/></svg></div>
 <h1>{titolo}</h1>
 <p>{testo}</p>
-<a class="cta" href="tel:{TEL_TITOLARE}">Chiamaci ora</a>
-<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>
+{centro}
 {sotto}
 </main>
 </body>
