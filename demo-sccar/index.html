@@ -1020,7 +1020,8 @@ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(lost)return
   const y=scrollY,sh=sp.offsetHeight,was=SD;SD=false;skipTo=null;
   introEl.style.opacity=0;introEl.style.visibility='hidden';introDone=true;canvas.style.display='none';
   root.classList.remove('intro');root.classList.add('ready','nosp');
-  if(was)scrollTo(0,Math.max(0,y-sh));});
+  if(was)scrollTo(0,Math.max(0,y-sh));
+  requestAnimationFrame(()=>{dispatchEvent(new Event('scroll'));dispatchEvent(new Event('resize'));});});
 let lost=false;
 
 /* ---------- regia ---------- */
@@ -1216,7 +1217,7 @@ function frame(now){rafOn=false;
   if(!(FREEZE!=null&&++frozenN>3)&&restN<4)loopKick();
   // qualità adattiva: i primi 20 fotogrammi non contano, si scende a piccoli passi e mai sotto 0,6;
   // si risale appena il fotogramma medio sta sotto ~19 ms (quindi anche sugli schermi a 60 Hz)
-  if(FREEZE==null&&dt>0&&dt<120&&++frN>20){ftAcc+=dt;ftN++;if(ftN>=24){const avg=ftAcc/ftN;ftAcc=0;ftN=0;
+  if(FREEZE==null&&dt>0&&dt<1000&&++frN>20){ftAcc+=Math.min(dt,250);ftN++;if(ftN>=24){const avg=ftAcc/ftN;ftAcc=0;ftN=0;
     if(now-lastDrop>20000)capScale=maxScale;
     if(avg>26&&scale>minScale&&now-lastAdj>600){capScale=Math.max(minScale,scale*.95);scale=Math.max(minScale,scale*.9);lastAdj=lastDrop=now;resize(true);}
     else if(avg<19&&scale<capScale-.005&&now-lastAdj>2000){scale=Math.min(capScale,scale*1.1);lastAdj=now;resize(true);}}}
