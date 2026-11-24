@@ -43,6 +43,7 @@ SPOSTABILI: dict = {
     "fermi:": (False, BREVO),
     "fermi2:": (False, BREVO),
     "conta_email:": (False, BREVO),
+    "carica_tutti:": (False, BREVO),    # 24/11 11:35 (cliente: "carica tutti tutti tutti ... tranne quelli esclusi")
     "pulita:": (False, BREVO),
     "cliccati:": (False, BREVO),
     "aperture:": (False, BREVO),
@@ -467,6 +468,18 @@ def esegui(v: str) -> bool | None:
             lg.warning("CONTA_EMAIL %s", json.dumps(bl.conteggio_email()))
         except Exception as e:
             lg.warning("CONTA_EMAIL non riuscito: %s", str(e)[:300])
+        return
+    if v.startswith("carica_tutti:"):     # 24/11 (cliente): tutte le email dei commercianti nella lista nuova "Skovo
+        # tutti 24-11" (qui non vale il tetto dei 1.495: vale il limite del piano). Non invia niente. Solo conteggi
+        try:
+            from ..marketing import brevo_liste as bl
+            from ..pipeline.ciclo import _una_volta
+            if _una_volta(f"carica_tutti:{v.split(':', 1)[1][:80]}"):
+                lg.warning("CARICA_TUTTI %s", json.dumps(bl.carica_tutti()))
+            else:
+                lg.warning("CARICA_TUTTI %s già fatto", v[:60])
+        except Exception as e:
+            lg.warning("CARICA_TUTTI non riuscito: %s", type(e).__name__)
         return
     if v.startswith("pulita:"):           # 8/11 (cliente): lista di chi apre, pulita, per il nuovo mittente (non invia)
         try:

@@ -301,7 +301,11 @@ def _rimessi_0111() -> set[str]:
 def _esclusi(e: str) -> bool:
     """9/11: clienti/contatti da non scrivere mai (Officine Mulino ha ricevuto la campagna 70 dopo essersi disiscritto)."""
     from .auto_invio import ESCLUSI_3_11
-    return bool(ESCLUSI_3_11.search(e or ""))
+    return bool(ESCLUSI_3_11.search(e or "") or _ESCLUSI_ALTRI.search(e or ""))
+
+
+# 24/11: gli esclusi di raccolta_numeri che qui mancavano (GT Automobili, Privacar, Vroom), scritti come negli indirizzi
+_ESCLUSI_ALTRI = _re.compile(r"(gt[._-]*automobili|privacar|vroom)", _re.I)
 
 
 def _bloccati_0111() -> set[str]:
@@ -855,3 +859,227 @@ def cliccati(campagne=(70, 72)) -> dict:
                       testo or "nessuno")
     return {"campagne": list(campagne), "cliccati": len(emails), "righe": len(righe),
             "con_numero": sum(1 for r in righe if r["tel"]), "email_mandata": ok}
+
+
+# ---------- 24/11 11:35 (cliente: "carica tutti tutti tutti quelli che abbiamo in database tranne quelli esclusi") ----------
+LISTA_TUTTI = "Skovo tutti 24-11"
+BLOCCO_TUTTI = 500                       # contatti per chiamata a /contacts/import (come gli altri lavori)
+LIMITE_PIANO = {"paid": 500_000, "free": 100_000}   # Brevo non dice il limite in /account: Starter arriva a 500.000
+ATTRIBUTO_NOME = "AZIENDA"               # lo stesso attributo dei commercianti con il telefono
+_TROVA_EMAIL = _re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+
+
+def _nome_escluso(nome: str) -> bool:
+    """Nome di un commerciante da non scrivere mai (stessi nomi del sito e di raccolta_numeri)."""
+    if not nome:
+        return False
+    from ..pipeline.raccolta_numeri import ESCLUSI_EXTRA
+    from ..web.sito_regole import nomi_esclusi_re
+    return bool(_re.search(nomi_esclusi_re() + "|" + "|".join(f"({x})" for x in ESCLUSI_EXTRA), nome, _re.I))
+
+
+def scegli_tutti(voci, bloccati: set) -> tuple[list[dict], dict]:
+    """voci: coppie (email, nome o None). Restituisce i contatti da caricare ({"email", "nome"}) e i conteggi per
+    motivo di esclusione. Funzione pura: mai Loconte né gli esclusi (per indirizzo o per nome), mai PEC, mai
+    disiscritti/rimbalzati (impronte), mai indirizzi non validi; ogni indirizzo una volta sola."""
+    from collections import Counter
+    from .invii import impronta, norm_email
+    nomi: dict[str, str] = {}
+    n = Counter()
+    for e, nome in voci:
+        e = norm_email(e).strip(".")
+        if not e:
+            continue
+        if not _EMAIL_OK.match(e) or _NON_EMAIL.search(e):
+            n["non_valide"] += 1          # qui i doppioni si contano: un indirizzo non valido non ha identità
+            continue
+        nome = " ".join(str(nome or "").split())[:80]
+        if e not in nomi or (nome and not nomi[e]):
+            nomi[e] = nome
+    n["raccolti"] = len(nomi)
+    out = []
+    for e in sorted(nomi):
+        if "loconte" in e or "loconte" in nomi[e].lower():
+            n["escluse_loconte"] += 1
+        elif _esclusi(e) or _nome_escluso(nomi[e]):
+            n["escluse_altri_esclusi"] += 1
+        elif gruppo_dominio(e) == "pec" or ".pec." in e:
+            n["escluse_pec"] += 1
+        elif impronta(e) in bloccati:
+            n["escluse_disiscritte_o_rimbalzate"] += 1
+        else:
+            out.append({"email": e, "nome": nomi[e]})
+    n["da_caricare"] = len(out)
+    n["con_nome"] = sum(1 for x in out if x["nome"])
+    return out, dict(n)
+
+
+def voci_da_riga(dati) -> list[tuple[str, str | None]] | None:
+    """Email (con il nome, se la riga lo dice) di una riga di lead_consegne. None se la riga dice di non essere
+    un'attività ("azienda": false): solo commercianti, mai privati. Funzione pura."""
+    nome = None
+    if isinstance(dati, str):
+        try:
+            dati = json.loads(dati)
+        except ValueError:
+            pass
+    if isinstance(dati, dict):
+        if dati.get("azienda") is False or str(dati.get("venditore") or "").lower() == "privato":
+            return None
+        nome = dati.get("nome") or dati.get("commerciante")
+        nome = nome if isinstance(nome, str) else None
+    testo = dati if isinstance(dati, str) else json.dumps(dati, ensure_ascii=False, default=str)
+    return [(e, nome) for e in _TROVA_EMAIL.findall(testo or "")]
+
+
+def _voci_db(conn) -> tuple[list, dict]:
+    """Tutte le email di commercianti nel database: lead_consegne (la fonte di conteggio_email), lead_email (con il
+    nome dall'archivio dei commercianti) e brevo_inviati. Una tabella che manca non ferma le altre."""
+    voci, fonti = [], {}
+
+    def leggi(nome, sql, fn):
+        try:
+            righe = conn.execute(sql).fetchall()
+        except Exception as e:
+            conn.rollback()
+            fonti[nome] = f"non letta ({type(e).__name__})"
+            return
+        prima = len(voci)
+        for r in righe:
+            fn(r)
+        fonti[nome] = len(voci) - prima
+
+    def consegne(r):
+        v = voci_da_riga(r["d"])
+        if v is None:
+            fonti["righe_non_attivita"] = fonti.get("righe_non_attivita", 0) + 1
+        else:
+            voci.extend(v)
+
+    leggi("lead_consegne", "SELECT dati::text AS d FROM lead_consegne", consegne)
+    leggi("lead_email",
+          "SELECT e.email, COALESCE(d.nome, m.nome) AS nome FROM lead_email e "
+          "LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
+          "LEFT JOIN lead_maps m ON e.chiave = 'maps:' || m.place_id WHERE cardinality(e.email) > 0",
+          lambda r: voci.extend((e, r.get("nome")) for e in (r.get("email") or [])))
+    leggi("brevo_inviati", "SELECT email FROM brevo_inviati", lambda r: voci.append((r["email"], None)))
+    return voci, fonti
+
+
+def _limite_piano(conto: dict) -> int:
+    """Quanti contatti permette il piano. /v3/account non lo scrive: un piano a pagamento attivo (Starter o più)
+    arriva a 500.000, quello gratuito a 100.000. Se un giorno Brevo lo scrive, vale il numero scritto."""
+    for p in (conto.get("plan") or []) + (conto.get("planVerticals") or []):
+        for k in ("contactsLimit", "contactLimit", "maxContacts"):
+            if str(p.get(k) or "").isdigit():
+                return int(p[k])
+    pagato = any(p.get("planCategory") == "Marketing" and p.get("planType") == "paid" and p.get("status") == "active"
+                 for p in conto.get("planVerticals") or []) or \
+        any(p.get("type") in ("subscription", "payAsYouGo") for p in conto.get("plan") or [])
+    return LIMITE_PIANO["paid" if pagato else "free"]
+
+
+def _lista_tutti(c: httpx.Client) -> int:
+    """Id della lista LISTA_TUTTI (cercata in tutte le pagine: le liste sono più di 50), creata se manca."""
+    off = 0
+    while True:
+        r = c.get(f"{API}/contacts/lists", params={"limit": 50, "offset": off})
+        r.raise_for_status()
+        ls = r.json().get("lists") or []
+        for x in ls:
+            if x.get("name") == LISTA_TUTTI:
+                return x["id"]
+        if len(ls) < 50:
+            break
+        off += 50
+    r = c.post(f"{API}/contacts/lists", json={"name": LISTA_TUTTI, "folderId": _cartella(c)})
+    r.raise_for_status()
+    return r.json()["id"]
+
+
+def carica_tutti(attesa_s: int = 180) -> dict:
+    """Carica in Brevo, nella lista nuova LISTA_TUTTI, tutte le email di commercianti che abbiamo (database + contatti
+    già in Brevo) tranne gli esclusi. Per decisione del cliente qui NON vale TETTO_BREVO (resta per gli altri lavori):
+    vale il limite del piano. Non crea campagne e non invia niente. Restituisce solo conteggi."""
+    import time as _t
+    from ..db import connect
+    from . import invii
+    from .auto_invio import _contatti_brevo
+    key = _chiave()
+    if not key:
+        return {"errore": "chiave"}
+    with httpx.Client(headers={"api-key": key, "accept": "application/json"}, timeout=120) as c:
+        r = c.get(f"{API}/account")
+        if r.status_code != 200:
+            return {"errore": "chiave rifiutata"}
+        limite = _limite_piano(r.json() or {})
+        contatti = _contatti_brevo(c)
+        with connect() as conn:
+            invii.sincronizza_da_brevo(conn, contatti)
+            bloccati = invii.disiscritti(conn) | _bloccati_0111()
+            voci, fonti = _voci_db(conn)
+        fonti["brevo"] = len(contatti)
+        in_brevo = {invii.norm_email(x.get("email")) for x in contatti if x.get("email")}
+        for x in contatti:
+            a = x.get("attributes") or {}
+            voci.append((x.get("email"), a.get(ATTRIBUTO_NOME) if isinstance(a.get(ATTRIBUTO_NOME), str) else None))
+        bloccati |= {invii.impronta(x["email"]) for x in contatti if x.get("email") and invii.contatto_bloccato(x)}
+        buoni, esito = scegli_tutti(voci, bloccati)
+        nuovi = sum(1 for x in buoni if x["email"] not in in_brevo)
+        esito.update(fonti=fonti, in_brevo=len(in_brevo), nuovi_per_brevo=nuovi, disiscritti_noti=len(bloccati),
+                     limite_piano=limite, totale_in_brevo_dopo=len(in_brevo) + nuovi, caricati=0)
+        if len(bloccati) < BLOCCATI_MINIMI:
+            esito["fermo"] = "disiscritti_incompleti"
+            return esito
+        if len(in_brevo) + nuovi > limite:
+            esito["fermo"] = "piano_insufficiente"
+            return esito
+        if not buoni:
+            return esito
+        if any(x["nome"] for x in buoni):
+            try:
+                c.post(f"{API}/contacts/attributes/normal/{ATTRIBUTO_NOME}", json={"type": "text"})  # già esistente: ignorato
+            except Exception:
+                pass
+        lid = _lista_tutti(c)
+        esito["lista_id"] = lid
+        processi, falliti = [], 0
+        for k in range(0, len(buoni), BLOCCO_TUTTI):
+            blocco = buoni[k:k + BLOCCO_TUTTI]
+            corpo = [{"email": x["email"], "attributes": {ATTRIBUTO_NOME: x["nome"]}} if x["nome"] else {"email": x["email"]}
+                     for x in blocco]
+            r = c.post(f"{API}/contacts/import", json={"jsonBody": corpo, "listIds": [lid],
+                                                       "updateExistingContacts": True, "emptyContactsAttributes": False})
+            if r.status_code >= 300:
+                falliti += 1
+                esito["import_http"] = r.status_code
+                continue
+            esito["caricati"] += len(blocco)
+            try:
+                pid = (r.json() or {}).get("processId")
+            except ValueError:
+                pid = None
+            if pid:
+                processi.append(pid)
+        esito.update(blocchi=-(-len(buoni) // BLOCCO_TUTTI), blocchi_falliti=falliti, process_id=processi)
+        stati: dict = {}
+        fine = _t.monotonic() + attesa_s
+        aperti = list(processi)
+        while aperti and _t.monotonic() < fine:
+            _t.sleep(10 if attesa_s >= 10 else 0)
+            for pid in list(aperti):
+                try:
+                    st = (c.get(f"{API}/processes/{pid}").json() or {}).get("status") or "sconosciuto"
+                except Exception:
+                    st = "non_letto"
+                stati[pid] = st
+                if st in ("completed", "failed", "cancelled"):
+                    aperti.remove(pid)
+        if processi:
+            from collections import Counter
+            esito["processi"] = dict(Counter(stati.get(p, "in_attesa") for p in processi))
+        try:
+            esito["nella_lista"] = int((c.get(f"{API}/contacts/lists/{lid}").json() or {}).get("uniqueSubscribers") or 0)
+        except Exception:
+            pass
+    return esito
