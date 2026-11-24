@@ -2,11 +2,26 @@
 from dealfinder.pipeline import raccolta60 as R
 
 
-def test_comuni_zona_ha_milano_monza_e_niente_oltre_60():
+def test_comuni_zona_ha_milano_monza_e_niente_oltre_50():
     z = R.comuni_zona()
+    assert R.RAGGIO_KM == 50                                  # 25/11 (cliente): 50 km da Milano, nel codice
     assert "milano" in z and "monza" in z and "sesto-san-giovanni" in z
-    assert all(km is None or km <= 60 for _, _, km in z.values())
-    assert len(z) > 700
+    assert all(km is None or km <= 50 for _, _, km in z.values())
+    assert all(pv in ("MI", "MB") for _, pv, km in z.values() if km is None)
+    assert len(z) > 600
+    larga = R.comuni_zona(60)
+    oltre = [k for k, v in larga.items() if v[2] and v[2] > 50]
+    assert oltre and not any(k in z for k in oltre)           # i comuni tra 50 e 60 km non ci sono più
+
+
+def test_nel_raggio_scarta_oltre_50_e_comuni_non_riconosciuti():
+    larga = R.comuni_zona(60)
+    nome, pv, km = next(v for v in larga.values() if v[2] and v[2] > 55)
+    assert R.nel_raggio(nome, pv) is None                     # tra 50 e 60 km: fuori
+    assert R.nel_raggio("Monza (MB)")[1] == "MB" and R.nel_raggio("Monza - MB") and R.nel_raggio("20900 Monza")
+    assert R.nel_raggio("Roma", "RM") is None and R.nel_raggio("", "BG") is None and R.nel_raggio(None, None) is None
+    assert R.nel_raggio("Paese Inventato", "BG") is None      # comune non riconoscibile: scartato
+    assert R.nel_raggio("Milano Lambrate", "MI")              # MI e MB sono tutte entro 50 km
 
 
 def test_dati_pagina_cellulari_fissi_email():

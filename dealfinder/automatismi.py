@@ -15,6 +15,9 @@ Nomi degli interruttori: memoria_auto, confronti_notte, controllo_tutte, salute,
 chat_subito (corsia delle auto di privati su Subito senza numero, contattabili con la chat; numero regolabile
 chat_subito_max), stima_ripiego e stima_ripiego_largo (stima di ripiego con confronti allargati, pricing/valore_base).
 Dal 24/11 verifica_sconto_alto (seconda verifica AI delle auto con sconto alto in zona grigia, ai/verifica_sconto.py).
+Dal 25/11 raccolta_contatti (giro giornaliero di email e cellulari dai siti dei saloni, pipeline/raccolta_contatti.py;
+numeri raccolta_contatti_minuti e raccolta_contatti_siti) e raccolta_contatti_in_lead_email: tutti e due SPENTI di
+default (si accendono scrivendo true nella chiave).
 La chiave NON è tra impostazioni.CHIAVI: dal pannello non si scrive. Per spegnere (rollback senza deploy):
     INSERT INTO sito_impostazioni (chiave, valore) VALUES ('automatismi','{"confronti_notte": false}')
     ON CONFLICT (chiave) DO UPDATE SET valore = sito_impostazioni.valore || EXCLUDED.valore
@@ -27,6 +30,8 @@ import os
 CHIAVE = "automatismi"
 NOMI = ("memoria_auto", "confronti_notte", "controllo_tutte", "salute", "salute_azioni",
         "chat_subito", "stima_ripiego", "stima_ripiego_largo", "verifica_sconto_alto")
+# interruttori SPENTI di default (chi li legge passa default=False): si accendono solo scrivendo true nella chiave
+NOMI_SPENTI = ("raccolta_contatti", "raccolta_contatti_in_lead_email")
 PREFISSO_ENV = "AUTOMATISMO_"
 _SI = {"1", "true", "t", "si", "sì", "s", "on", "yes", "y", "acceso", "attivo"}
 _NO = {"0", "false", "f", "no", "n", "off", "spento", "fermo"}

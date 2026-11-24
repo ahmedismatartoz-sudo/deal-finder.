@@ -53,12 +53,20 @@ def testo(html: str) -> str:
     return unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html or "")))
 
 
-def comuni_zona() -> dict:
-    """{slug: (nome, prov, km)}: tutti i comuni di MI e MB (km 0 se non noti) e quelli entro 60 km dell'elenco."""
+# 25/11 (cliente: "solo commercianti entro 50 km da Milano, non oltre"): raggio delle RACCOLTE DI CONTATTI (raccolta60,
+# raccolta_numeri, lead_email, raccolta_contatti). Sta nel codice, non in una variabile. Vale solo per queste raccolte:
+# le zone del sito e le regole sulle auto leggono data/comuni_60km.json per conto loro e non cambiano.
+RAGGIO_KM = 50
+
+
+def comuni_zona(raggio: float | None = None) -> dict:
+    """{slug: (nome, prov, km)} dei comuni delle raccolte di contatti: quelli dell'elenco entro `raggio` km da Milano
+    (RAGGIO_KM) e tutti i comuni di MI e MB (tutti entro 50 km; km None se non è nell'elenco)."""
+    raggio = float(RAGGIO_KM if raggio is None else raggio)
     base = Path(__file__).resolve().parents[2] / "data"
     out: dict = {}
     for k, v in json.loads((base / "comuni_60km.json").read_text()).items():
-        if float(v.get("km") or 99) <= 60:
+        if float(v.get("km") or 99) <= raggio:
             out[slug(v["comune"])] = (v["comune"], v["pv"], float(v["km"]))
     for nome, pv in json.loads((base / "comuni_zona_lead.json").read_text()):
         if pv in ("MI", "MB") and slug(nome) not in out:
@@ -67,6 +75,26 @@ def comuni_zona() -> dict:
         if pv in ("MI", "MB") and slug(nome) not in out:
             out[slug(nome)] = (nome, pv, None)
     return out
+
+
+_ZONA: dict = {}
+
+
+def nel_raggio(comune, prov=None, zona: dict | None = None) -> tuple | None:
+    """(nome, prov, km) se il comune è riconosciuto entro RAGGIO_KM da Milano, altrimenti None (il contatto si scarta).
+    Il comune può arrivare come "Monza (MB)", "Monza - MB", "20900 Monza". Senza comune riconosciuto vale solo la
+    provincia MI o MB (tutte dentro il raggio)."""
+    if zona is None:
+        if not _ZONA:
+            _ZONA.update(comuni_zona())
+        zona = _ZONA
+    c = re.sub(r"\(.*?\)", " ", str(comune or ""))
+    c = re.sub(r"^\s*\d{5}\s+", "", re.sub(r"\s+[-–]\s*[A-Za-z]{2}\s*$", "", c)).strip()
+    z = zona.get(slug(c)) or zona.get(slug(c.split(" - ")[0]))
+    if z:
+        return z
+    pv = str(prov or "").strip().upper()[:2]
+    return (c or None, pv, None) if pv in ("MI", "MB") else None
 
 
 def dati_pagina(html: str) -> dict:
@@ -215,7 +243,7 @@ class Raccolta:
     def _as_url(self, lo: int, hi: int, page: int, years) -> str:
         anni = (f"&fregfrom={years[0]}" + (f"&fregto={years[1]}" if years[1] else "")) if years else ""
         return (f"{BASE_AS}/lst?atype=C&cy=I&ustate=N%2CU&damaged_listing=include&custtype=D"
-                f"&zip={os.environ.get('R60_CAP', '20121')}&zipr={os.environ.get('R60_RAGGIO', '60')}"
+                f"&zip={os.environ.get('R60_CAP', '20121')}&zipr={min(int(os.environ.get('R60_RAGGIO') or RAGGIO_KM), RAGGIO_KM)}"
                 f"&pricefrom={lo}&priceto={hi}{anni}&sort=age&desc=1&page={page}")
 
     def _as_items(self, items) -> None:
@@ -543,7 +571,7 @@ def cerca_email_salone(c, r: dict, pausa_as: float = 1.0) -> dict:
 OVERPASS = "https://overpass-api.de/api/interpreter"
 
 
-def osm_saloni(c, raggio_m: int = 60000) -> list[dict]:
+def osm_saloni(c, raggio_m: int = RAGGIO_KM * 1000) -> list[dict]:
     """16/11 sera: i concessionari di auto (shop=car) entro 60 km da Milano su OpenStreetMap (dati aperti, licenza
     ODbL, API pubblica Overpass): nome, comune, sito, email e telefono quando dichiarati. Una sola richiesta."""
     q = (f'[out:json][timeout:180];(node["shop"="car"](around:{raggio_m},45.4642,9.19);'
@@ -584,6 +612,9 @@ def lavoro_email(etichetta: str) -> dict:
         if k in visti:
             continue
         visti.add(k)
+        km = r.get("km")
+        if (isinstance(km, (int, float)) and km > RAGGIO_KM) or not nel_raggio(r.get("comune"), r.get("prov")):
+            continue                            # 25/11: righe R60 raccolte a 60 km, oltre i 50 non si cercano più
         if not r.get("email") and (r.get("sito") or "autoscout24" in (r.get("link_autoscout") or "")):
             cand.append(r)
     # saloni in più dal web aperto (OpenStreetMap): quelli che non abbiamo già (per nome normalizzato)

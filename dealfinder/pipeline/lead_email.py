@@ -102,13 +102,16 @@ def giro(solo_nomi: bool = False) -> dict:
     with connect() as conn:
         conn.execute(SQL)
         conn.commit()
+        # 25/11 (cliente): solo commercianti con il comune riconosciuto entro 50 km da Milano (raccolta60.nel_raggio)
+        from .raccolta60 import nel_raggio
         da_fare = [r["chiave"] for r in conn.execute(
-            "SELECT d.chiave FROM lead_tutti_dealer d LEFT JOIN lead_email e ON e.chiave = d.chiave "
-            "WHERE e.chiave IS NULL AND d.chiave LIKE '%%/concessionari/%%' ORDER BY d.prov, d.chiave").fetchall()]
+            "SELECT d.chiave, d.comune, d.prov FROM lead_tutti_dealer d LEFT JOIN lead_email e ON e.chiave = d.chiave "
+            "WHERE e.chiave IS NULL AND d.chiave LIKE '%%/concessionari/%%' ORDER BY d.prov, d.chiave").fetchall()
+                   if nel_raggio(r["comune"], r["prov"])]
         try:
             maps = [(r["place_id"], r["sito"]) for r in conn.execute(
-                "SELECT m.place_id, m.sito FROM lead_maps m LEFT JOIN lead_email e ON e.chiave = 'maps:' || m.place_id "
-                "WHERE e.chiave IS NULL AND m.sito IS NOT NULL").fetchall()]
+                "SELECT m.place_id, m.sito, m.comune, m.prov FROM lead_maps m LEFT JOIN lead_email e ON e.chiave = 'maps:' || m.place_id "
+                "WHERE e.chiave IS NULL AND m.sito IS NOT NULL").fetchall() if nel_raggio(r["comune"], r["prov"])]
         except Exception:
             conn.rollback()
             maps = []
@@ -117,9 +120,10 @@ def giro(solo_nomi: bool = False) -> dict:
         prov = [x.strip().upper() for x in (os.environ.get("LEADE_PROV") or "").split(",") if x.strip()] or None
         with connect() as conn:
             riprova = [(r["chiave"], r["sito"], r["nome"], r["comune"]) for r in conn.execute(
-                "SELECT e.chiave, e.sito, d.nome, d.comune FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
+                "SELECT e.chiave, e.sito, d.nome, d.comune, d.prov FROM lead_email e LEFT JOIN lead_tutti_dealer d ON d.chiave = e.chiave "
                 "WHERE cardinality(e.email) = 0 AND e.fonte IS DISTINCT FROM %(m)s "
-                "AND (%(p)s::text[] IS NULL OR upper(d.prov) = ANY(%(p)s))", {"p": prov, "m": _marca()}).fetchall()]
+                "AND (%(p)s::text[] IS NULL OR upper(d.prov) = ANY(%(p)s))", {"p": prov, "m": _marca()}).fetchall()
+                       if nel_raggio(r["comune"], r["prov"])]
         log.warning("LEADE_RIPROVA %d siti da riprovare", len(riprova))
     pagine = trovati = provati = 0
     t0 = time.time()
@@ -374,6 +378,8 @@ def _giro_nomi(dal_sito, salva, connect) -> dict:
             "AND (e.chiave IS NULL OR (cardinality(e.email) = 0 AND coalesce(e.fonte, '') <> 'nome_maps')) "
             "ORDER BY array_position(%s::text[], upper(d.prov)), d.chiave LIMIT %s",
             (prov, prov, int(os.environ.get("LEADE_NOMI_MAX", "2500")))).fetchall()
+    from .raccolta60 import nel_raggio                       # 25/11: solo entro 50 km da Milano
+    rows = [r for r in rows if nel_raggio(r["comune"], r["prov"])]
     st = {"commercianti": len(rows), "con_sito": 0, "nuove_email": 0, "nome_diverso": 0, "senza_risultato": 0, "errori": 0}
     log.warning("LEADE_NOMI parte: %d commercianti senza email (province %s)", len(rows), ",".join(prov))
     fermo = {"si": False}
