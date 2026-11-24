@@ -162,7 +162,7 @@ def negozi_da_annunci(ads: list, zona: dict, prov: str) -> list[dict]:
         citta = str((town or {}).get("value") or "")
         z = zona.get(slug(citta))
         if not z and prov not in ("MI", "MB"):
-            continue                                       # fuori dai 60 km
+            continue                                       # fuori dal raggio (raccolta60.RAGGIO_KM, 50 km)
         visti.add(sid)
         nome = str(adv.get("shop_name") or adv.get("name") or "").strip()
         out.append({"sid": sid, "nome": nome[:150], "comune": (z[0] if z else citta) or None,

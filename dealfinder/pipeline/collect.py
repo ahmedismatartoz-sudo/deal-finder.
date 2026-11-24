@@ -1894,6 +1894,13 @@ if __name__ == "__main__":
                 _cl.esegui_coda(lunghi=False, budget_min=min(30.0, _giro.resto_min() - 60))
             except Exception as e:
                 log.warning("LAVORI in coda non fatti: %s", str(e)[:200])
+            try:                                     # 25/11: giro giornaliero dei contatti dai siti dei saloni
+                from . import raccolta_contatti as _rc          # (interruttore raccolta_contatti, spento di default)
+                if _giro.resto_min() > 90:
+                    _giro.fase("raccolta_contatti")
+                    _rc.giro_periodico()
+            except Exception as e:
+                log.warning("RACCOLTA giro non fatto: %s", type(e).__name__)
     # COLLECT_PRIMA (da Render), es. "leadsp:3,benzina_mi:5": giri pesanti una tantum fatti qui, in un processo
     # tutto loro, invece che dentro il sito (512 MB: il sito andava in crash). Ognuno una volta sola.
     import time
