@@ -1215,7 +1215,7 @@ def giro(conn, massimo: int | None = None, chiama=None, chiama_verifica=None) ->
     res = _giro_controllo(conn, massimo, chiama)
     try:
         from . import verifica_sconto as _VS
-        v = _VS.giro(conn, chiama=chiama_verifica)
+        v = _VS.giro(conn, chiama=chiama_verifica, primo=res, massimo=massimo)
         if v:
             res = dict(res, **v)
     except Exception as e:
@@ -1223,7 +1223,7 @@ def giro(conn, massimo: int | None = None, chiama=None, chiama_verifica=None) ->
             conn.rollback()
         except Exception:
             pass
-        log.warning("VERIFICA_SCONTO_ALTO non riuscita: %s", str(e)[:200])
+        log.warning("VERIFICA_SCONTO_ALTO non riuscita: %s", type(e).__name__)   # solo il tipo di errore
     return res
 
 
