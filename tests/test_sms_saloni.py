@@ -410,3 +410,23 @@ def test_elenco_interessati_solo_admin():
 def test_rotte_registrate():
     percorsi = {getattr(r, "path", "") for r in A.routes}
     assert {"/mi/{token}", "/mi/{token}/stop", "/api/admin/sms_interessati"} <= percorsi
+
+
+def test_lista_dal_file_del_giro():
+    """24/11: Render non accetta più variabili (tetto 300): la lista si legge da data/sms_liste/<giro>.json."""
+    import json as _j
+    import tempfile
+    from dealfinder.marketing import sms_saloni as SS
+    vecchia = SS.LISTE_DIR
+    with tempfile.TemporaryDirectory() as d:
+        with open(d + "/2411.json", "w") as fh:
+            fh.write(_j.dumps([{"tel": "+393000000001", "nome": "Prova"}]))
+        SS.LISTE_DIR = d
+        try:
+            assert SS.leggi_lista({}, "sms_prova:2411")[0]["nome"] == "Prova"
+            assert SS.leggi_lista({}, "sms_saloni:2411")[0]["nome"] == "Prova"
+            assert SS.leggi_lista({}, "sms_saloni:9999") == []
+            assert SS.leggi_lista({"SMS_LISTA": '[{"tel":"+393000000002","nome":"Env"}]'}, "sms_prova:2411")[0]["nome"] == "Env"
+            assert SS.leggi_lista({}, "sms_prova:../../etc") == []
+        finally:
+            SS.LISTE_DIR = vecchia

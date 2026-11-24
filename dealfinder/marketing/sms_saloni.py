@@ -136,9 +136,21 @@ def nuovo_token(esistenti=()) -> str:
             return t
 
 
-def leggi_lista(env=None) -> list[dict]:
+LISTE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "sms_liste")
+
+
+def leggi_lista(env=None, giro: str | None = None) -> list[dict]:
+    """Da env SMS_LISTA; se manca (Render ha un tetto di 300 variabili, 24/11), dal file data/sms_liste/<numero>.json
+    del giro (es. sms_prova:2411 e sms_saloni:2411 -> 2411.json). Solo numeri di SALONI, mai privati."""
     env = os.environ if env is None else env
-    dati = json.loads((env.get("SMS_LISTA") or "").strip() or "[]")
+    testo = (env.get("SMS_LISTA") or "").strip()
+    if not testo and giro:
+        nome = re.sub(r"[^A-Za-z0-9_-]", "", giro.split(":", 1)[-1])
+        f = os.path.join(LISTE_DIR, nome + ".json")
+        if nome and os.path.isfile(f):
+            with open(f, encoding="utf-8") as fh:
+                testo = fh.read().strip()
+    dati = json.loads(testo or "[]")
     if not isinstance(dati, list):
         raise ValueError("SMS_LISTA deve essere un elenco JSON")
     return [x for x in dati if isinstance(x, dict)]
@@ -231,7 +243,7 @@ def invia(giro: str, conn, c, *, solo_primo: bool = False, env=None, adesso=None
         return fine("fuori_orario")
     assicura(conn)
     stop = {r["telefono"] for r in conn.execute("SELECT telefono FROM sms_stop").fetchall()}
-    lista = leggi_lista(env)
+    lista = leggi_lista(env, giro)
     if solo_primo:
         lista = lista[:1]          # revisione: la prova va SOLO al primo della lista (il titolare), mai a un salone
     dest, salti = prepara(lista, stop)
@@ -349,7 +361,7 @@ def lavoro(v: str, connetti=None, client=None, una_volta=None) -> dict | None:
                    giro, ora_roma().strftime("%H:%M"), ORA_DA, ORA_A)
         return None
     try:
-        if not leggi_lista():
+        if not leggi_lista(giro=giro):
             lg.warning("SMS_SALONI %s: SMS_LISTA vuota, nessun SMS inviato", giro)
             return None
     except Exception as e:
