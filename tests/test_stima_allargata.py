@@ -398,3 +398,98 @@ def test_simulazione_sintetica_mai_sopra_il_valore_normale():
     for prova, m in ris.items():
         assert m["n"] > 50 and m["scostamento_mediano_pct"] < 0, prova      # sempre dalla parte prudente
         assert m["oltre_5pct_sopra_pct"] <= 1.0 and m["sopra_il_normale_pct"] <= 5.0, prova
+
+
+# ------------------------------------------------------------------ rivalutazione una tantum (26/11)
+
+def test_rivaluta_allargata_registrata_solo_nel_sito():
+    from dealfinder.pipeline import coda_lavori as CL
+    assert CL._prefisso("rivaluta_allargata:2611") == "rivaluta_allargata:"
+    assert "rivaluta_allargata:2611".startswith(CL.SOLO_SITO) and not CL.spostabile("rivaluta_allargata:2611")
+    assert CL._prefisso("rivaluta_base:ora") == "rivaluta_base:"
+    # solo le auto pochi_confronti senza la stima allargata (ripresa: le già fatte si saltano), mai le protezioni
+    q = SA.RIVALUTA_SQL
+    assert "vp.categoria = 'dati_insufficienti'" in q and "LIKE 'pochi_confronti:%%'" in q
+    assert "vp.dati->'stima_allargata' IS NULL" in q and "vp.dati->'ripiego_scartato' IS NULL" in q
+    assert SA.RIVALUTA_BLOCCO == 200
+    assert "INSERT" not in SA.PRECISIONE_SQL.upper() and "UPDATE" not in SA.PRECISIONE_SQL.upper()
+
+
+def test_rivaluta_allargata_a_blocchi_solo_conteggi(monkeypatch):
+    from contextlib import contextmanager
+    from dealfinder.pricing import valutazione as VZ
+    monkeypatch.setattr(SA, "RIVALUTA_BLOCCO", 2)
+    sql = []
+
+    class Conn:
+        def execute(self, q, args=None):
+            sql.append(q)
+            return SimpleNamespace(fetchall=lambda: [{"id": i, "make": "Fiat", "model": m, "fuel": "benzina"}
+                                                     for i, m in ((1, "Panda"), (2, "Panda"), (3, "Punto"), (4, "Tipo"))])
+
+        def commit(self):
+            pass
+
+    @contextmanager
+    def connetti():
+        yield Conn()
+
+    chiamate = []
+
+    def ves(c, ids, fonte, pubblica=None, pausa_gruppo=0.0):
+        chiamate.append((list(ids), fonte, pubblica))
+        if ids == [3, 4]:
+            raise RuntimeError("database caduto")
+        es = VZ.Esito()
+        es.salvata.update({1: "candidato", 2: "dati_insufficienti"})
+        es.stats.update({"allargata:entra": 1, "allargata:nessuna_stima": 1, "allargata_reale": 1, "pubblicate": 1})
+        return es
+
+    h = _Log()
+    logging.getLogger("valutazione").addHandler(h)
+    try:
+        out = SA.rivaluta("rivaluta_allargata:x", connetti=connetti, ves=ves, pausa=0,
+                          misura=lambda c: {"zona": {"n": 3}})
+    finally:
+        logging.getLogger("valutazione").removeHandler(h)
+    assert chiamate == [([1, 2], "rivaluta-allargata", True), ([3, 4], "rivaluta-allargata", True)]
+    c = out["conteggi"]
+    assert c["auto"] == 4 and c["blocchi"] == 1 and c["blocchi_errore"] == 1 and c["rivalutate"] == 2
+    assert c["nuove_buone"] == 1 and c["allargata:entra"] == 1 and c["allargata_reale"] == 1
+    assert out["precisione"] == {"zona": {"n": 3}} and out["fermata"] is None
+    assert len([r for r in h.righe if r.startswith("RIVALUTA_ALLARGATA {")]) == 1
+    assert sum(1 for q in sql if "allargata:rivaluta" in q) == 1
+    # tempo finito: si ferma e solleva (il lavoro resta da finire e riprende dalle auto non ancora fatte)
+    monkeypatch.setattr(SA, "RIVALUTA_MINUTI", -1)
+    try:
+        SA.rivaluta("x", connetti=connetti, ves=ves, pausa=0, misura=lambda c: {})
+        assert False
+    except RuntimeError as e:
+        assert "tempo" in str(e)
+
+
+def test_misura_campione_sola_lettura(monkeypatch):
+    from contextlib import contextmanager
+    D = [_r(i, 9000 + 100 * i) for i in range(1, 9)]
+    monkeypatch.setattr(VB, "carica", lambda conn, mk, md, fu, zona="milano": {"D": D, "V": []})
+    monkeypatch.setattr(SA, "carica_italia", lambda conn, mk, md, fu: {"D": D, "V": []})
+    sql = []
+
+    class Conn:
+        def execute(self, q, args=None):
+            sql.append(q)
+            return SimpleNamespace(fetchall=lambda: [dict(_r(900 + i, 6000, sel="privato")) for i in range(5)])
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+    @contextmanager
+    def connetti():
+        yield Conn()
+
+    ris = SA.misura_campione(connetti, n=5, pausa=0)
+    assert ris["zona"]["n"] == 5 and ris["zona"]["scostamento_mediano_pct"] < 0
+    assert ris["zona"]["sopra_il_normale_pct"] == 0.0 and len(sql) == 1 and "allargata:precisione" in sql[0]

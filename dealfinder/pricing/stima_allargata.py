@@ -601,3 +601,157 @@ def ombra_sito(copie: list, sul_sito, g, elenco=None) -> dict:
     }
     log.warning("CONFRONTI_OMBRA %s", json.dumps(riga, ensure_ascii=False, default=str))
     return riga
+
+
+# ------------------------------------------------------------------ rivalutazione una tantum (26/11)
+# Dopo il deploy le auto già "dati_insufficienti" restano con la decisione vecchia: la valutazione gira solo sugli
+# annunci nuovi o cambiati (CONFRONTI_OMBRA: non_ancora_calcolata). Lavoro una tantum nel sito:
+#     BREVO_IMPORT_LISTE=rivaluta_allargata:<etichetta>
+# rivaluta con la strada di sempre (valutazione.valuta_e_scrivi, pubblica=True) SOLO le auto attive della zona con
+# l'ultima valutazione dati_insufficienti:pochi_confronti:* che non porta ancora `stima_allargata` (una ripresa dopo
+# un'interruzione salta quelle già fatte), a blocchi di RIVALUTA_BLOCCO auto con una pausa tra i blocchi e tra i
+# gruppi. Le altre auto non si toccano. Alla fine misura la precisione in SOLA LETTURA su un campione di auto col
+# valore normale (nessuna scrittura) e scrive UNA riga RIVALUTA_ALLARGATA {json} di soli conteggi.
+RIVALUTA_BLOCCO = 200
+RIVALUTA_PAUSA_S = 2.0         # tra un blocco e l'altro: il lavoro gira nel processo del sito (contenitore da 2 GB)
+RIVALUTA_MINUTI = 90           # oltre: si ferma e solleva (resta "da finire": _lungo lo riprende al prossimo avvio)
+PRECISIONE_AUTO = 400          # auto col valore normale misurate (sola lettura)
+PRECISIONE_MINUTI = 10
+
+RIVALUTA_SQL = """
+/*allargata:rivaluta*/
+SELECT l.id, l.make, l.model, l.fuel FROM listings l
+JOIN valutazioni_policy vp ON vp.listing_id = l.id AND vp.policy_version = %(pv)s
+WHERE l.status = 'attivo' AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL
+  AND l.price_eur IS NOT NULL
+  AND (l.stage = 'approfondito'
+       OR (l.province = ANY(%(prov)s) AND l.last_seen_at > now() - interval '5 days'
+           AND l.year >= %(anno)s AND COALESCE(l.mileage_km, 0) <= %(km)s))
+  AND vp.categoria = 'dati_insufficienti' AND vp.metodo = 'base_vendute'
+  AND COALESCE(vp.dati->>'motivo_dati', '') LIKE 'pochi_confronti:%%'
+  AND vp.dati->'stima_allargata' IS NULL AND vp.dati->'ripiego_scartato' IS NULL
+ORDER BY lower(l.make), lower(l.model), l.fuel, l.id"""
+
+PRECISIONE_SQL = """
+/*allargata:precisione*/
+SELECT l.id, l.make, l.model, l.fuel, l.gearbox, l.power_kw, l.year, l.mileage_km, l.price_eur, l.province
+FROM listings l
+JOIN valutazioni_policy vp ON vp.listing_id = l.id AND vp.policy_version = %(pv)s
+WHERE l.status = 'attivo' AND l.province = ANY(%(prov)s) AND l.year IS NOT NULL AND l.mileage_km IS NOT NULL
+  AND l.make IS NOT NULL AND l.model IS NOT NULL AND l.fuel IS NOT NULL AND l.price_eur IS NOT NULL
+  AND vp.metodo = 'base_vendute' AND vp.riassunto->>'M_fonte' IN ('commercianti', 'vendute')
+ORDER BY md5(l.id::text) LIMIT %(n)s"""
+
+
+def misura_campione(connetti, n: int = PRECISIONE_AUTO, minuti: float = PRECISIONE_MINUTI, pausa: float = 0.05) -> dict:
+    """SOLA LETTURA: su un campione di auto attive col valore normale, la stima allargata di ogni prova come se il
+    valore mancasse, divisa per il valore prudente ricalcolato adesso (VB.stima_prudente). Niente si scrive.
+    {prova: {n, errore_mediano_pct, errore_p90_pct, ...}} (_quantili)."""
+    from .. import regole as RG
+    from . import policy_v2 as P
+    vb = RG.regole().valore_base
+    t0 = time.time()
+    with connetti() as conn:
+        righe = [dict(r) for r in conn.execute(PRECISIONE_SQL, {"pv": P.POLICY_VERSION, "prov": VB.province_sito(),
+                                                                "n": int(n)}).fetchall()]
+        conn.commit()
+    righe.sort(key=lambda r: (str(r["make"]).lower(), str(r["model"]).lower(), str(r["fuel"]), r["id"]))
+    per: dict = {}
+    gruppo, basi, italia = None, {}, None
+    with connetti() as conn:
+        for r in righe:
+            if time.time() - t0 > minuti * 60:
+                break
+            try:
+                key = (r["make"], r["model"], r["fuel"])
+                zona = VB.zona_di(r.get("province"))
+                if key != gruppo:
+                    time.sleep(pausa)
+                    basi = {zona: VB.carica(conn, *key, zona=zona)}
+                    italia = carica_italia(conn, *key)
+                    gruppo = key
+                    conn.commit()
+                elif zona not in basi:
+                    basi[zona] = VB.carica(conn, *key, zona=zona)
+                    conn.commit()
+                tt = VB.norm(r)
+                D = [c for c in basi[zona]["D"] if c.get("id") != r["id"]]
+                V = [c for c in basi[zona]["V"] if c.get("id") != r["id"]]
+                sp = VB.stima_prudente(D, V, tt, vb)
+                if not sp.get("valore"):
+                    continue
+                for pr in PROVE:
+                    rr = stima(D, V, tt, vb, italia=italia, solo=pr.nome)
+                    if rr.get("valore"):
+                        per.setdefault(pr.nome, []).append(rr["valore"] / sp["valore"])
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                gruppo = None
+    return {k: _quantili(v) for k, v in sorted(per.items()) if v}
+
+
+def rivaluta(spec: str = "", connetti=None, ves=None, misura=None, pausa: float | None = None) -> dict:
+    """Rivalutazione una tantum delle auto dati_insufficienti:pochi_confronti:* senza `stima_allargata` (vedi sopra).
+    Solo conteggi nel log (RIVALUTA_ALLARGATA). Fermata per tempo = eccezione: si riprende al prossimo avvio."""
+    from .. import regole as RG
+    from ..web import scovo
+    from . import policy_v2 as P
+    lg = logging.getLogger("valutazione")
+    if connetti is None:
+        from ..db import connect as connetti
+    if ves is None:
+        from .valutazione import valuta_e_scrivi as ves
+    t0 = time.time()
+    st: Counter = Counter()
+    if not VB.attivo() or not (OMBRA or MODO_REALE):
+        lg.warning("RIVALUTA_ALLARGATA spento")
+        return {"fermata": "spento"}
+    a = RG.regole().ammissione
+    with connetti() as conn:
+        righe = conn.execute(RIVALUTA_SQL, {"pv": P.POLICY_VERSION, "prov": VB.province_sito(),
+                                            "anno": int(a.anno_min), "km": int(a.km_max)}).fetchall()
+        conn.commit()
+    blocchi = VB._blocchi([dict(r) for r in righe], RIVALUTA_BLOCCO)
+    st["auto"] = len(righe)
+    st["blocchi_totali"] = len(blocchi)
+    fermata = None
+    for n_b, pezzo in enumerate(blocchi):
+        if time.time() - t0 > RIVALUTA_MINUTI * 60:
+            fermata = "tempo"
+            break
+        if n_b:
+            time.sleep(RIVALUTA_PAUSA_S if pausa is None else pausa)
+        try:
+            with connetti() as conn:
+                es = ves(conn, pezzo, "rivaluta-allargata", pubblica=True, pausa_gruppo=VB.PAUSA_GRUPPO_S)
+                conn.commit()
+        except Exception as e:
+            st["blocchi_errore"] += 1
+            lg.warning("RIVALUTA_ALLARGATA blocco di %d auto non riuscito: %s", len(pezzo), type(e).__name__)
+            continue
+        st["blocchi"] += 1
+        for k, n in es.stats.items():
+            if k.startswith(("categoria:", "allargata", "scrittura:", "dati_insufficienti:")) \
+                    or k in ("errore", "pubblicate"):
+                st[k] += n
+        for lid in pezzo:
+            c = es.salvata.get(lid)
+            st["rivalutate"] += 1 if lid in es.salvata else 0
+            if c in scovo.CATEGORIE_SITO:
+                st["nuove_buone"] += 1
+            elif c and c != "dati_insufficienti":
+                st["uscite_da_dati_insufficienti_non_buone"] += 1
+    out = {"fermata": fermata, "secondi": round(time.time() - t0), "modo": "reale" if MODO_REALE else "ombra",
+           "conteggi": dict(st)}
+    if not fermata:
+        try:
+            out["precisione"] = (misura or misura_campione)(connetti)
+        except Exception as e:
+            out["precisione_errore"] = type(e).__name__
+    lg.warning("RIVALUTA_ALLARGATA %s", json.dumps(out, ensure_ascii=False))
+    if fermata:
+        raise RuntimeError(f"rivalutazione allargata fermata ({fermata}): si riprende al prossimo avvio")
+    return out

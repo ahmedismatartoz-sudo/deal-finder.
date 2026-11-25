@@ -54,6 +54,7 @@ SPOSTABILI: dict = {
     "giro1711:": (False, BREVO),        # 17/11 sera (cliente): due liste + due campagne, subito nel sito
     "base_vendute:": (False, ()),       # 18/11 notte (cliente, OK): ricalcolo di prova su vendute e commercianti, sola lettura
     "conta_mercato:": (False, ()),      # 18/11 notte: quanti annunci hanno i siti contro quanti ne abbiamo (sola lettura)
+    "rivaluta_allargata:": (False, ()),  # 26/11: una tantum, le auto pochi_confronti con la stima allargata; SOLO nel sito
     "rivaluta_base:": (False, ()),      # 18/11 (cliente, OK): rivalutazione una tantum col valore da vendute e commercianti
     "ribassi_accesi:": (False, ()),     # 19/11 10:23 (cliente: "attiva i ribassi"): li riaccende con le fasce salvate
     "ribassi_spenti:": (False, ()),     # 18/11 23:04 (cliente: "perché i ribassi sono ancora attivi? disattivalo")
@@ -63,7 +64,7 @@ SPOSTABILI: dict = {
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:", "lettura_completa:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "rivaluta_allargata:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:", "lettura_completa:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -405,6 +406,11 @@ def esegui(v: str) -> bool | None:
         # (SOLO_SITO), una volta per etichetta (rivaluta_base:ora); nel log solo conteggi
         from ..pricing import valore_base as VB
         return _lungo(v, "RIVALUTA_BASE", lambda: VB.rivaluta(v))
+    if v.startswith("rivaluta_allargata:"):   # 26/11: le auto già "dati_insufficienti" per pochi confronti non si
+        # rivalutano da sole (la valutazione gira su annunci nuovi o cambiati): una tantum, a blocchi di 200 con pause
+        # (pricing/stima_allargata.rivaluta), nel sito, una volta per etichetta; interrotta = si riprende da dove era
+        from ..pricing import stima_allargata as SA
+        return _lungo(v, "RIVALUTA_ALLARGATA", lambda: SA.rivaluta(v))
     if v.startswith("non_aperti:"):       # 25/11 (cliente): non_aperti:<campagna1>,<campagna2>:<nome lista>. Lista Brevo
         # di chi non ha aperto, per il rinvio (non crea campagne, non invia). Nel sito (SOLO_SITO), appena dopo il
         # deploy. _lungo: una volta per etichetta, fatta solo a lavoro finito (aggiungere a una lista è ripetibile);
