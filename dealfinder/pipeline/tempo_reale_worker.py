@@ -206,6 +206,15 @@ class Guardiano:
 COMPLETO_MAX_MIN = 120     # 16/11: la lettura completa (~15 minuti) bloccata oltre 2 ore chiude il processo
 
 
+LETTURA_MAX_MIN = 45       # 25/11: un pezzo della lettura completa dura 12 minuti; bloccato oltre 45 il processo esce
+
+
+def guardiano_lettura(fine, g: "Guardiano") -> None:
+    while not fine.ev.is_set():
+        g.controlla()
+        fine.ev.wait(30)
+
+
 def un_giro(completo: bool, tr=None) -> dict | None:
     from . import tempo_reale as _tr
     tr = tr or _tr
@@ -274,6 +283,12 @@ def main(giri: int | None = None, dormi=None):
     threading.Thread(target=guardiano.gira, args=(fine, (g_completo,)), daemon=True, name="tr-guardiano").start()
     if giri is None and os.environ.get("TR_COMPLETO", "1") == "1":
         threading.Thread(target=_completo_a_parte, args=(fine, g_completo), daemon=True, name="tr-completo").start()
+    if giri is None:
+        # 25/11: lettura completa della zona a pezzi (lettura_completa.py), filo e lucchetto suoi, sorvegliata
+        from . import lettura_completa as _lc
+        g_lettura = Guardiano(variabile="", massimo_min=LETTURA_MAX_MIN, nome="lettura completa della zona")
+        threading.Thread(target=guardiano_lettura, args=(fine, g_lettura), daemon=True, name="tr-guardiano-lettura").start()
+        threading.Thread(target=_lc.filo_worker, args=(fine, g_lettura), daemon=True, name="tr-lettura").start()
     from ..memoria import rilascia
     n = 0
     while not fine.ev.is_set() and (giri is None or n < giri):

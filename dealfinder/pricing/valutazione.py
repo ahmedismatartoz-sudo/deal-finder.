@@ -357,6 +357,14 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
     usa_dot = bool(rg.trazione.attiva or rg.dotazioni.aggiusta)
     gruppo, mercato, cache, commercianti = None, [], {}, None
     basi, n_gruppo = {}, 0
+    from . import stima_allargata as SA
+    italia_c: dict = {}                    # 25/11: base d'Italia del gruppo, letta solo se serve (stima allargata)
+
+    def _italia(k):
+        if k not in italia_c:
+            italia_c.clear()
+            italia_c[k] = SA.carica_italia(conn, *k)
+        return italia_c[k]
     vecchi_vr = 0
     tetto = tetto_attesa(fonte)
     from ..ai import giudice as GI
@@ -407,6 +415,11 @@ def valuta_e_scrivi(conn, ids: list, fonte: str, extra: dict | None = None, tien
                     if pausa_gruppo and n_gruppo % 20 == 0:
                         __import__("time").sleep(0.01)           # gruppi grandi: il sito resta reattivo
                     v = VB.valuta(t, basi[zona], soglia_fn(int(r["price_eur"])), rg, cfg)
+                    # 25/11: stima allargata SOLO per le auto rimaste dati_insufficienti:pochi_confronti (le altre
+                    # valutazioni restano identiche; al più il campo di misura allargata_prova)
+                    v = SA.dopo_valutazione(v, t, basi[zona], soglia_fn(int(r["price_eur"])), rg, cfg,
+                                            italia=lambda k=key: _italia(k),
+                                            italia_pronta=lambda k=key: italia_c.get(k), stats=es.stats)
                     es.stats[f"categoria:{v['categoria']}"] += 1
                     es.stats["valore_base:" + str(v.get("fonte_base") or "nessuna_stima")] += 1
                     if v.get("motivo_dati"):         # 18/11 sera: perché resta senza stima (solo conti)

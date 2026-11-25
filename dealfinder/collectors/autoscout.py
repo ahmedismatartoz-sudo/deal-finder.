@@ -296,6 +296,15 @@ class AutoScoutCollector(Collector):
         _salva_commercianti(items)
         return items, self._total(props), True
 
+    def _nota(self, lo, hi, ctype, years, **kw) -> None:
+        """25/11: misura della copertura (pipeline/copertura_lettura, solo conteggi; nulla se nessun giro è aperto)."""
+        try:
+            from ..pipeline import copertura_lettura as CL
+            gruppo = f"{os.environ.get('AUTOSCOUT_CAP', '20121')}:{os.environ.get('AUTOSCOUT_RAGGIO', '100')}:{ctype}"
+            CL.nota("autoscout24", f"{gruppo}:{lo}-{hi}" + (f":{years[0]}-{years[1]}" if years else ""), gruppo=gruppo, **kw)
+        except Exception:
+            pass
+
     def _emit(self, items, ctype: str, seller: str):
         for it in items:
             l = parse_item(it)
@@ -330,17 +339,23 @@ class AutoScoutCollector(Collector):
         while not (self.blocked or self.stop):
             items, _total, ok = self._page(self.search_url(lo, hi, page, ctype, years))
             if not ok:
+                self._nota(lo, hi, ctype, years, motivo="blocco" if self.blocked or self.errori_blocco else "errore")
                 return
+            self._nota(lo, hi, ctype, years, pagine=1, letti=len(items), totale=_total if page == 1 else None)
             yield from self._emit(items, ctype, seller)
             if stop.pagina([parse_item(it) for it in items]):
+                self._nota(lo, hi, ctype, years, motivo="gia_visto")
                 return
             if len(items) < 20:
+                self._nota(lo, hi, ctype, years, motivo="fine_risultati")
                 return
             if page >= 20:
                 pezzi = self._dividi(lo, hi, years)
                 if not pezzi:
                     log.warning("autoscout incrementale: fascia %s-%s anni %s con 20 pagine di nuovi, non divisibile", lo, hi, years)
+                    self._nota(lo, hi, ctype, years, motivo="tetto_portale")
                     return
+                self._nota(lo, hi, ctype, years, motivo="divisa")
                 self.noti.conta("fasce_divise")
                 for a, b, ys in pezzi:
                     yield from self._band(a, b, ctype, seller, ys)
@@ -355,8 +370,11 @@ class AutoScoutCollector(Collector):
             return
         items, total, ok = self._page(self.search_url(lo, hi, 1, ctype, years))
         if not ok:
+            self._nota(lo, hi, ctype, years, motivo="blocco" if self.blocked or self.errori_blocco else "errore")
             return
         troppi = total is not None and total > self.TETTO
+        self._nota(lo, hi, ctype, years, pagine=1, letti=len(items), totale=total,
+                   motivo="divisa" if troppi else None)       # "divisa" resta solo se qui sotto si divide davvero
         if troppi:
             if hi - lo >= 100:
                 mid = (lo + hi) // 2
@@ -383,10 +401,15 @@ class AutoScoutCollector(Collector):
             page += 1
             last, _, ok = self._page(self.search_url(lo, hi, page, ctype, years))
             if not ok:
+                self._nota(lo, hi, ctype, years, motivo="blocco" if self.blocked or self.errori_blocco else "errore")
                 return
+            self._nota(lo, hi, ctype, years, pagine=1, letti=len(last))
             yield from self._emit(last, ctype, seller)
+        self._nota(lo, hi, ctype, years, motivo="tetto_portale" if troppi or (page >= 20 and len(last) >= 20)
+                   else "fine_risultati" if len(last) < 20 else "tempo")
         if total is None and page >= 20 and len(last) >= 20 and hi - lo >= 100:
             # totale non letto ma 20 pagine piene: ce ne sono altri, si divide la fascia
+            self._nota(lo, hi, ctype, years, motivo="divisa")
             mid = (lo + hi) // 2
             yield from self._band(lo, mid, ctype, seller, years)
             yield from self._band(mid + 1, hi, ctype, seller, years)

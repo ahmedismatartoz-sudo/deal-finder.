@@ -735,6 +735,8 @@ def run(mode: str) -> Counter:
         from ..db import db_pieno
         from .tempo_reale import ha_numero_testo, salva_telefono, telefono_subito
         modi_full = ("milano_full", "full_as", "full_sub", "sub_extra", "sub_extra2", "as_extra")
+        from . import copertura_lettura as _CL        # 25/11: riga COPERTURA_LETTURA a fine raccolta (solo conteggi)
+        _misura = _CL.apri("collect:" + mode)
         for collector, query in sources:
             try:
                 for listing in collector.search(query):
@@ -862,6 +864,8 @@ def run(mode: str) -> Counter:
             for sid, n in getattr(collector, "done_sids", []):   # lotti Facebook importati: non si riscaricano
                 conn.execute("INSERT INTO fb_snapshots (sid, rows) VALUES (%s,%s) ON CONFLICT (sid) DO NOTHING", (sid, n))
             conn.commit()
+        _CL.chiudi(_misura, nuovi={f: int(stats.get(f + ":nuovo", 0)) for f in ("subito", "autoscout24")
+                                   if any(k.startswith(f + ":") or k == "letti:" + f for k in stats)})
         # Si segnano gli scomparsi solo se la raccolta è andata a buon fine,
         # altrimenti un blocco del sito farebbe "sparire" tutto.
         # 3/11: e solo con una PROVA per ogni annuncio (pagina aperta: 404/410, rimando alla ricerca, "scaduto").

@@ -25,6 +25,8 @@ from datetime import datetime, timedelta, timezone
 
 log = logging.getLogger("tempo_reale")
 
+from . import copertura_lettura as _CL          # 25/11: riga COPERTURA_LETTURA a fine giro (solo conteggi)  # noqa: E402
+
 REGIONI = {
     "lombardia": ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO"],
     "piemonte": ["NO", "VC", "BI", "VB", "AL", "AT", "TO", "CN"],        # 9/11: CN per Torino e dintorni
@@ -33,7 +35,7 @@ REGIONI = {
 }
 _codici_regione: dict[str, int] = {}
 LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104, "completo": 734105,
-        "rinfresca": 734106}
+        "rinfresca": 734106, "lettura": 734107}       # 25/11: lettura completa della zona (lettura_completa.py)
 
 
 # ------------------------------------------------------------------ fondamenta della velocità (16/11, FOND_VELOCITA.md)
@@ -1168,6 +1170,7 @@ def subito_completo(conn, minuti: float | None = None, col=None, basta=None) -> 
     t0 = time.time()
     fine = t0 + minuti * 60 if minuti else None
     pacco: list = []
+    _misura = _CL.apri("subito_completo")
 
     def salva():
         if pacco:
@@ -1214,6 +1217,8 @@ def subito_completo(conn, minuti: float | None = None, col=None, basta=None) -> 
         if st["fermato_tempo"]:
             break
     st["letti"] = sum(v for k, v in st.items() if k.startswith("letti:"))
+    _CL.chiudi(_misura, nuovi={"subito": int(st.get("subito:nuovo", 0))},
+               extra={"fermato_tempo": bool(st.get("fermato_tempo"))})
     log.warning("SUBITO_COMPLETO_FINE in %.0fs: %s", time.time() - t0, dict(st))
     return dict(st)
 
@@ -1585,6 +1590,8 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
                 st["subito_pagine"] += 1
                 if pausa:
                     _dormi(random.uniform(*pausa))
+                _CL.nota("subito", f"veloce:{reg}", gruppo="veloce", pagine=1,       # 25/11: misura della copertura
+                         motivo=_CL.motivo_http(r.status_code) if r.status_code != 200 else "tetto_pagine")
                 if r.status_code in (403, 429):
                     _sub_leggero["fermo_fino"] = time.time() + SUB_LEGGERO_PAUSA_MIN * 60
                     log.warning("TR subito leggero: HTTP %s, fermo per %d minuti", r.status_code, SUB_LEGGERO_PAUSA_MIN)
@@ -1618,6 +1625,8 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
                         continue
                     out.append(l)
                 st["subito_noti"] += note
+                _CL.nota("subito", f"veloce:{reg}", letti=len(ads),
+                         motivo="gia_visto" if note >= len(ads) else "fine_risultati" if len(ads) < 100 else None)
                 if note >= len(ads) or len(ads) < 100:
                     break                              # pagina tutta già vista: i successivi sono più vecchi
     except Exception as e:
@@ -1635,6 +1644,14 @@ def _subito_nuovi_leggero(conn, col=None, pagine: int | None = None, secondi: fl
 # Ora: gli id già visti (anche fuori zona) si ricordano, il fuori zona si scarta PRIMA del dettaglio, raggio 150 km.
 _AS_VISTI: set = _VISTI["autoscout24"]        # 16/11: stesso insieme di _VISTI (si segna dopo il salvataggio)
 _AS_VISTI_MAX = _VISTI_MAX
+
+
+def _totale_as(props) -> int | None:
+    try:
+        from ..collectors.autoscout import AutoScoutCollector
+        return AutoScoutCollector._total(props) if isinstance(props, dict) else None
+    except Exception:
+        return None
 
 
 def _as_zona() -> set:
@@ -1709,12 +1726,17 @@ def _autoscout_nuovi(conn, pagine: int | None = None) -> list:
         r = as_riprova.get(client, url, "TR autoscout ricerca", dormi=_dormi)
         if r is None:
             fermo_su_nota = True
+            _CL.nota("autoscout24", "veloce", motivo="blocco" if as_riprova.fermo() else "errore")
             break
         if r.status_code != 200:
             log.warning("TR autoscout ricerca HTTP %s", r.status_code)
             fermo_su_nota = True
+            _CL.nota("autoscout24", "veloce", pagine=1, motivo=_CL.motivo_http(r.status_code))
             break
-        items = (((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}).get("listings") or []
+        _props = ((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}
+        items = _props.get("listings") or []
+        _CL.nota("autoscout24", "veloce", pagine=1, letti=len(items), totale=_totale_as(_props) if page == 1 else None,
+                 motivo="tetto_pagine" if items else "fine_risultati")      # 25/11: misura della copertura
         if not items:
             fermo_su_nota = True                   # finiti i risultati: letto tutto
             break
@@ -1738,6 +1760,7 @@ def _autoscout_nuovi(conn, pagine: int | None = None) -> list:
             out.append(l)                          # in zona: "visto" solo dopo il salvataggio (_segna_visti)
         if len(gia) >= len(ids):           # pagina tutta già vista: i successivi sono più vecchi
             fermo_su_nota = True
+            _CL.nota("autoscout24", "veloce", motivo="gia_visto")
             break
     if page and not fermo_su_nota:
         _as_veloce_diag["tetto_pagine"] += 1
@@ -1868,7 +1891,9 @@ def _autoscout_tutti(conn) -> list:
         r = None if fermato() else as_riprova.get(client, _as_url_completo(lo, hi, page, desc),
                                                    f"TR completo autoscout fascia {lo}-{hi}{verso} pagina {page}",
                                                    dormi=_dormi)
+        ric = f"completo:{lo}-{hi}" + ("" if desc else ":dal_vecchio")      # 25/11: misura della copertura
         if r is None:
+            _CL.nota("autoscout24", ric, gruppo="completo", motivo="tempo" if fermato() else "blocco" if as_riprova.fermo() else "errore")
             if as_riprova.attivo() or fermato():
                 # rilettura dal più vecchio interrotta: si riprende dall'ultima pagina dal più recente (poche pagine in più)
                 as_riprova.salva_ripresa(conn, idx, page if desc else AS_PAGINE_MAX)
@@ -1876,10 +1901,14 @@ def _autoscout_tutti(conn) -> list:
             return "stop"
         if r.status_code != 200:
             log.warning("TR completo autoscout HTTP %s (fascia %s-%s%s pagina %s)", r.status_code, lo, hi, verso, page)
+            _CL.nota("autoscout24", ric, gruppo="completo", pagine=1, motivo=_CL.motivo_http(r.status_code))
             return "stop"
         pagine += 1
-        items = [it for it in ((((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}).get("listings") or [])
-                 if isinstance(it, dict)]
+        _props = ((next_data(r.text) or {}).get("props") or {}).get("pageProps") or {}
+        items = [it for it in (_props.get("listings") or []) if isinstance(it, dict)]
+        _CL.nota("autoscout24", ric, gruppo="completo", pagine=1, letti=len(items),
+                 totale=_totale_as(_props) if page == 1 and desc else None,
+                 motivo="fine_risultati" if len(items) < 20 else "tetto_portale" if page >= AS_PAGINE_MAX else None)
         if not items:
             return "fine"
         ids = [str(it.get("id")) for it in items]
@@ -2428,6 +2457,7 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
     l'arresto (FERMA): quello che è già salvato resta in coda per il processo dopo."""
     stats: Counter = Counter()
     t_giro = time.time()
+    _misura = _CL.apri("tr_completo" if completo else "tr_nuovi")
     coda = coda_attiva(conn)
     stats["coda"] = int(coda)
     row = conn.execute("SELECT ultimo_at FROM tempo_reale WHERE giro='nuovi'").fetchone()
@@ -2492,6 +2522,7 @@ def giro_nuovi(conn, completo: bool = False) -> Counter:
         stats["tempo_valuta_s"] = round(time.time() - t0, 1)
         _avvio["primo"] = False
     stats["tempo_giro_s"] = round(time.time() - t_giro, 1)
+    _CL.chiudi(_misura, nuovi={f: int(stats.get(f + ":nuovo", 0)) for f in ("subito", "autoscout24")})
     if fermato():
         stats["fermato_arresto"] = 1
     conn.execute("INSERT INTO tempo_reale (giro, ultimo_at, stats) VALUES (%s, %s, %s) ON CONFLICT (giro) DO UPDATE "

@@ -31,10 +31,14 @@ def bande_parallele(lo: int, hi: int, step: int, venditori, workers: int | None 
     pausa = (float(os.environ.get("RACCOLTA_PAUSA_MIN", "0.25")), float(os.environ.get("RACCOLTA_PAUSA_MAX", "0.6")))
     compiti = [(a, min(a + step - 1, hi), ct, sel) for ct, sel in venditori for a in range(lo, hi, step)]
 
+    from . import copertura_lettura as _CL
+    _misura = _CL.corrente()                  # 25/11: la misura del giro vale anche nei fili delle fasce
+
     def leggi(c):
         col = AutoScoutCollector()
         col.min_delay_s, col.max_delay_s = pausa
         col.noti = noti
+        _CL.usa(_misura)
         try:
             out = list(col._band(*c))
             for l in out:                     # memoria (512 MB): dell'annuncio originale serve solo il venditore

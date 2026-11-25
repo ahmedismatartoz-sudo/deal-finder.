@@ -1250,6 +1250,8 @@ def riassunto(v: dict) -> dict:
             # 18/11: valore dalle auto vendute e dai commercianti (pricing/valore_base.py)
             "fonte_base", "valore_base", "calibrato", "sospetto_truffa", "non_pulita",
             "motivo_dati",      # 18/11 sera: motivo del dati_insufficienti (valore_base.motivo_dati, log del sito)
+            # 25/11: stima allargata (pricing/stima_allargata): numeri della stima e misura della precisione
+            "stima_allargata", "allargata_prova", "etichetta_stima", "avviso_stima",
             "stima_ripiego")    # 20/11: stima di ripiego con confronti allargati (valore_base, sito_regole.r_valutata)
     out = {k: v.get(k) for k in keys if v.get(k) is not None}
     if v.get("riserva"):

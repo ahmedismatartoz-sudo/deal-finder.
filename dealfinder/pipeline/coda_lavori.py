@@ -58,11 +58,12 @@ SPOSTABILI: dict = {
     "ribassi_accesi:": (False, ()),     # 19/11 10:23 (cliente: "attiva i ribassi"): li riaccende con le fasce salvate
     "ribassi_spenti:": (False, ()),     # 18/11 23:04 (cliente: "perché i ribassi sono ancora attivi? disattivalo")
     "non_aperti:": (False, BREVO),      # 25/11 (cliente): lista Brevo di chi non ha aperto le campagne; SOLO nel sito, subito
+    "lettura_completa:": (False, ()),   # 25/11 (cliente: "leggi tutti gli annunci, subito"): avvio a mano; SOLO nel sito
     "esporta_raccolta:": (False, BREVO),  # 25/11 (cliente): i cellulari di raccolta_contatti in una lista Brevo; SOLO nel sito
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:", "lettura_completa:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -419,6 +420,12 @@ def esegui(v: str) -> bool | None:
             from ..marketing import esporta_raccolta as ER
             ER.lavoro(v)
         return _lungo(f"esporta_raccolta:{v.split(':', 1)[1][:40]}", "ESPORTA_RACCOLTA", _esporta_raccolta)
+    if v.startswith("lettura_completa:"):  # 25/11 (cliente): un ciclo della lettura completa della zona, subito, una
+        # volta per etichetta (lettura_completa:ora). A pezzi, con pause e arresto al primo blocco; solo conteggi nei log
+        def _lettura():
+            from . import lettura_completa as LC
+            lg.warning("LETTURA_COMPLETA_LAVORO %s", json.dumps(LC.lavoro(v)))
+        return _lungo(v, "LETTURA_COMPLETA", _lettura)
     if v.startswith("conta_mercato:"):    # 18/11 notte (cliente: "oltre 60.000 annunci nei 150 km")
         from . import conta_mercato as CM
         _lungo(v, "CONTA_MERCATO", lambda: lg.warning("CONTA_MERCATO %s", json.dumps(CM.lavoro(v), ensure_ascii=False)))

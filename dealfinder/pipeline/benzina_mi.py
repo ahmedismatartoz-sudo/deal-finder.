@@ -262,6 +262,8 @@ def giro() -> dict:
         from datetime import datetime as _dt, timezone as _tz
         nome_giro = os.environ.get("BENZ_INCR_NOME", "zona_cron")
         inizio_giro = _dt.now(_tz.utc)
+        from . import copertura_lettura as _CL        # 25/11: riga COPERTURA_LETTURA a fine lettura (solo conteggi)
+        _misura = _CL.apri(nome_giro + (":incrementale" if os.environ.get("BENZ_INCREMENTALE") == "1" else ":completo"))
         # 2/11: prima di tutto le auto con anno/km mancanti: dati letti dal testo e subito rivalutate (pochi minuti)
         if os.environ.get("BENZ_SOLO_INSUFF") == "mai":
             try:
@@ -440,6 +442,10 @@ def giro() -> dict:
                 else:
                     os.environ[k] = v
 
+        if not solo_valuta:
+            _CL.chiudi(_misura, nuovi={f: int(st.get(f + ":nuovo", 0)) for f in ("subito", "autoscout24")},
+                       extra={"letture_con_errori": int(st.get("lettura_errori", 0)) + int(getattr(sub, "errori", 0) or 0)
+                              + int(esito_as.get("fasce_non_complete", 0))})
         if noti is not None:
             st.update({f"incr_{k}": v for k, v in noti.stats.items()})
         st["lettura_errori"] += int(getattr(sub, "errori", 0) or 0) + int(esito_as.get("fasce_non_complete", 0))

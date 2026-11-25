@@ -616,15 +616,18 @@ def utile(l, g: dict, province: set) -> str | None:
 def parametri_subito(g: dict, regione: int, page: int) -> dict:
     """Parametri della ricerca Subito di un gruppo: auto in vendita, parole "marca modello", regione, dal più recente.
     Mai un prezzo minimo o massimo."""
-    return {"c": 2, "t": "s", "q": f"{g['make']} {g['model']}", "r": regione, "lim": 100, "start": page * 100,
-            "sort": "datedesc"}
+    par = {"c": 2, "t": "s", "q": f"{g['make']} {g['model']}", "r": regione, "lim": 100, "start": page * 100,
+           "sort": "datedesc"}
+    if regione is None:                # 25/11: ricerca in tutta Italia (cerca_italia): nessuna regione
+        par.pop("r")
+    return par
 
 
 def cerca_subito(sub, g: dict, pagine: int, st: Counter) -> list:
     """Ricerca mirata su Subito (stessa interfaccia della raccolta, search_parole): parole "marca modello", regione
     della zona, dal più recente. Nessuna fascia di prezzo. Ritorna gli annunci (Listing)."""
     from ..collectors import subito as S
-    reg = S.REGION_CODES.get(ZONA_REGIONE.get(g["zona"], "lombardia"), 4)
+    reg = None if g["zona"] == ZONA_ITALIA else S.REGION_CODES.get(ZONA_REGIONE.get(g["zona"], "lombardia"), 4)
     out = []
     for page in range(pagine):
         try:
@@ -663,8 +666,9 @@ _SLUG_NO: set = set()          # (marca, modello) la cui pagina AutoScout24 è r
 def url_autoscout(base: str, percorso: str, g: dict, page: int) -> str:
     """Pagina di ricerca AutoScout24 di un gruppo: `percorso` = "marca/modello" (o la sola marca), solo concessionari,
     100 km dal centro della zona, anni del gruppo, dal più recente. Mai un prezzo minimo o massimo."""
+    dove = "" if g["zona"] == ZONA_ITALIA else f"&zip={ZONA_CAP.get(g['zona'], '20121')}&zipr=100"   # 25/11: Italia
     return (f"{base}/lst/{percorso}?atype=C&cy=I&ustate=N%2CU&damaged_listing=exclude&custtype=D"
-            f"&zip={ZONA_CAP.get(g['zona'], '20121')}&zipr=100&fregfrom={g['anno_da']}&fregto={g['anno_a']}"
+            f"{dove}&fregfrom={g['anno_da']}&fregto={g['anno_a']}"
             f"&sort=age&desc=1&page={page}")
 
 
@@ -772,6 +776,145 @@ def salva(conn, annunci: list, g: dict, province: set, st: Counter) -> set:
     return ids
 
 
+# ------------------------------------------------------------------ ricerche mirate in tutta Italia (25/11)
+# Cliente 25/11 sera: per ogni auto con pochi confronti una ricerca mirata di QUEL modello in tutta Italia su Subito e
+# AutoScout24. I risultati servono SOLO da confronto per la stima allargata (pricing/stima_allargata, prova "italia"):
+# fuori dalla zona del sito si salvano come stage 'mercato' / 'mercato_nord' ("mai proposta", valutazione.NON_PROPOSTE)
+# e il sito ha comunque la sua regola di zona. Stessi collector della raccolta notturna (pause, intestazioni, stop al
+# 403/429: cerca_subito / cerca_autoscout), una ricerca per modello ogni ITALIA_RIPOSO_ORE (riga "italia" di
+# confronti_gruppi), al massimo ITALIA_GRUPPI modelli e ITALIA_PAGINE pagine per notte.
+ZONA_ITALIA = "italia"
+ITALIA_GRUPPI = 80             # modelli (marca/modello/alimentazione) cercati al massimo per notte
+ITALIA_PAGINE = 200            # pagine al massimo per notte (Subito + AutoScout24)
+ITALIA_PAGINE_GRUPPO = 1       # pagine per fonte e modello
+ITALIA_RIPOSO_ORE = 24         # la stessa ricerca non si ripete prima di 24 ore
+ITALIA_KM_MAX = 400000         # = stima_allargata.KM_CONFRONTI_MAX
+
+
+def gruppi_italia(righe: list[dict], cercati: dict | None = None, massimo: int | None = None) -> list[dict]:
+    """Un gruppo per marca/modello/alimentazione delle auto pochi_confronti (anni delle sue auto ±2), nell'ordine
+    delle righe; fuori quelli cercati in tutta Italia da meno di ITALIA_RIPOSO_ORE ore. Solo dati (testabile)."""
+    cercati = cercati or {}
+    gruppi: dict = {}
+    for r in righe:
+        if not r.get("make") or not r.get("model") or not r.get("fuel") or not r.get("year"):
+            continue
+        k = (str(r["make"]).strip().lower(), str(r["model"]).strip().lower(), str(r["fuel"]).strip().lower())
+        x = gruppi.setdefault(k, {"make": r["make"], "model": r["model"], "fuel": r["fuel"], "zona": ZONA_ITALIA,
+                                  "ids": [], "anno_da": int(r["year"]) - 2, "anno_a": int(r["year"]) + 2})
+        x["ids"].append(int(r["id"]))
+        x["anno_da"], x["anno_a"] = min(x["anno_da"], int(r["year"]) - 2), max(x["anno_a"], int(r["year"]) + 2)
+    out = []
+    for x in gruppi.values():
+        visto = cercati.get(chiave_gruppo(x))
+        if visto is not None and float(visto[0]) < ITALIA_RIPOSO_ORE:
+            continue
+        out.append(x)
+    return out[:massimo] if massimo else out
+
+
+def salva_italia(conn, annunci: list, g: dict, st: Counter) -> set:
+    """Salva gli annunci trovati in tutta Italia come confronti: stesso modello e alimentazione, anni del gruppo, km
+    fino a ITALIA_KM_MAX, provincia nota e mai Roma. Un annuncio NUOVO fuori dalla zona del sito (o oltre i 60 km dei
+    comuni) è solo un prezzo di riferimento: stage 'mercato', motivo 'mercato_nord' (mai proposto). Ritorna gli id."""
+    from ..core.dal_testo import completa
+    from ..core.normalize import normalize_fields
+    from ..db import upsert_listing
+    from ..web import sito_regole as SR
+    from ..zone import comune_ok
+    from . import valore_base as VB
+    zona = set(VB.province_sito())
+    ids = set()
+    for l in annunci:
+        try:
+            for k, v in completa({"fuel": l.fuel, "year": l.year, "mileage_km": l.mileage_km, "gearbox": l.gearbox,
+                                  "power_kw": l.power_kw, "version_raw": l.version_raw}, l.title, l.description).items():
+                setattr(l, k, v)
+            normalize_fields(l)
+        except Exception:
+            st["italia_scarto:dati"] += 1
+            continue
+        prov = str(getattr(l, "province", "") or "").upper()
+        y, km = getattr(l, "year", None), getattr(l, "mileage_km", None)
+        if not _stesso_modello(l, g) or str(getattr(l, "fuel", "") or "").lower() != str(g["fuel"]).lower():
+            st["italia_scarto:altro_modello"] += 1
+            continue
+        if not y or not (g["anno_da"] <= int(y) <= g["anno_a"]) or km is None or int(km) > ITALIA_KM_MAX \
+                or not getattr(l, "price_eur", None):
+            st["italia_scarto:anno_km_prezzo"] += 1
+            continue
+        if not prov or prov in SR.ROMA:
+            st["italia_scarto:provincia"] += 1
+            continue
+        if not getattr(l, "region", None):
+            try:
+                from ..core.normalize import PROVINCE_REGION
+                l.region = PROVINCE_REGION.get(prov)
+            except Exception:
+                pass
+        in_zona = prov in zona and comune_ok(l.province, l.city)
+        try:
+            lid, event = upsert_listing(conn, l)
+            if event == "nuovo" and not in_zona:
+                conn.execute("UPDATE listings SET stage='mercato', stage_reason='mercato_nord' WHERE id=%s", (lid,))
+            conn.execute("UPDATE listings SET last_checked_at = now() WHERE id = %s AND status = 'attivo'", (lid,))
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            st["italia_scarto:non_salvato"] += 1
+            st["_italia_non_salvati"] += 1
+            if st["_italia_non_salvati"] >= SALVATAGGI_FALLITI_MAX:
+                break
+            continue
+        st["_italia_non_salvati"] = 0
+        ids.add(lid)
+        st["italia_confronti_salvati"] += 1
+    return ids
+
+
+def cerca_italia(conn, righe: list[dict], fonti, st: Counter, fermo=None, salva_fn=None) -> set:
+    """Le ricerche mirate in tutta Italia per i modelli delle auto `righe` (pochi_confronti). `fonti` = (("subito",
+    fn), ("autoscout24", fn)) con fn(g, pagine, st) come nella notte; una fonte bloccata (403/429) non si chiama più.
+    `fermo()` = True quando il tempo della notte è finito. Ritorna gli id delle auto da rivalutare (gruppi con
+    confronti salvati). Solo conteggi in `st` (chiavi "italia_*")."""
+    gruppi = gruppi_italia(righe, gruppi_cercati(conn), ITALIA_GRUPPI)
+    st["italia_gruppi"] = len(gruppi)
+    pagine0 = st["pagine"]
+    da_rivalutare: set = set()
+    for g in gruppi:
+        if (fermo is not None and fermo()) or st["pagine"] - pagine0 >= ITALIA_PAGINE \
+                or st["_italia_non_salvati"] >= SALVATAGGI_FALLITI_MAX:
+            st["italia_fermata"] = 1
+            break
+        if all(st[f"{nome}:bloccato"] for nome, _fn in fonti):
+            st["italia_fermata_blocco"] = 1
+            break
+        trovati, letta = [], False
+        for nome, fn in fonti:
+            if st[f"{nome}:bloccato"]:
+                continue
+            try:
+                trovati += fn(g, ITALIA_PAGINE_GRUPPO, st) or []
+                letta = letta or not st[f"{nome}:bloccato"]
+            except Exception as e:
+                st[f"italia_{nome}:errore"] += 1
+                if st[f"italia_{nome}:errore"] <= 2:
+                    log.warning("CONFRONTI_ITALIA ricerca %s non riuscita: %s", nome, type(e).__name__)
+        st["italia_annunci_letti"] += len(trovati)
+        salvati = (salva_fn or salva_italia)(conn, trovati, g, st)
+        if letta:
+            segna_gruppo(conn, g, len(trovati), len(salvati))      # 24 ore prima di rifare la stessa ricerca
+            st["italia_gruppi_cercati"] += 1
+        if salvati:
+            da_rivalutare |= set(g["ids"])
+    st["italia_pagine"] = st["pagine"] - pagine0
+    st.pop("_italia_non_salvati", None)
+    return da_rivalutare
+
+
 SALVATAGGI_FALLITI_MAX = 20     # annunci non salvati DI FILA (anche tra gruppi diversi): connessione caduta, ci si ferma
 
 
@@ -780,7 +923,7 @@ CHIAVI_LOG = ("gruppi", "gruppi_cercati", "pagine", "confronti_salvati", "rivalu
 
 
 def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=None, adesso=None, minuti_max=None,
-          orologio=None, salva_fn=None, scadenza=None) -> dict:
+          orologio=None, salva_fn=None, scadenza=None, italia=None) -> dict:
     """La raccolta notturna intera (vedi sopra). Mai un'eccezione verso fuori: riga di log CONFRONTI_MIRATI_NOTTE con i
     conteggi prima/dopo (auto in dati_insufficienti:pochi_confronti nella zona, uscite, nuove buone sul sito).
     Si ferma da sola: tempo (minuti, al massimo `minuti_max` se il cron ne ha meno), pagine, tutte le fonti bloccate
@@ -824,7 +967,9 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                                       cercati=gruppi_cercati(conn), st=st)
                 st["gruppi"] = len(gruppi)
                 zone = VB.zone()
-                if gruppi and (cerca_sub is None or cerca_as is None):
+                # 25/11: ricerche in tutta Italia (cerca_italia) solo coi collector veri, o se chi chiama passa `italia`
+                fa_italia = italia is not None or (cerca_sub is None and cerca_as is None)
+                if (gruppi or (righe and fa_italia)) and (cerca_sub is None or cerca_as is None):
                     from ..collectors.autoscout import AutoScoutCollector
                     from ..collectors.subito import SubitoCollector
                     if cerca_sub is None:
@@ -876,6 +1021,16 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                 st["gruppi_cercati"] = len(cercati)
                 st["gruppi_con_confronti"] = sum(1 for g in cercati if g.get("_salvati"))
                 st["confronti_nuovi_o_rinfrescati"] = len(nuovi_conf)
+                ids_italia: set = set()
+                try:
+                    from . import stima_allargata as SA
+                    if fa_italia and righe and (SA.OMBRA or SA.MODO_REALE):
+                        ids_italia = set((italia or cerca_italia)(
+                            conn, righe, fonti, st,
+                            lambda: orologio() - t0 > minuti * 60 or scaduta() or st["pagine"] >= pagine_max))
+                except Exception as e:
+                    st["italia_errore"] += 1
+                    log.warning("CONFRONTI_ITALIA non riuscita: %s", type(e).__name__)
                 # riapertura dei commercianti vecchi (giro di sempre), con le pagine che restano alla notte
                 try:
                     if scaduta():
@@ -892,7 +1047,7 @@ def notte(connetti=None, cerca_sub=None, cerca_as=None, rivaluta=None, riapri=No
                     log.warning("CONFRONTI_NOTTE riapertura non riuscita: %s", type(e).__name__)
                 # rivalutazione con la strada di sempre: le auto dei gruppi che hanno avuto confronti nuovi o
                 # rinfrescati (un gruppo senza niente di nuovo darebbe lo stesso risultato di prima)
-                da_rivalutare = {i for g in cercati if g.get("_salvati") for i in g["ids"]}
+                da_rivalutare = {i for g in cercati if g.get("_salvati") for i in g["ids"]} | ids_italia
                 per_id = {int(r["id"]): r for r in righe}
                 pezzi = VB._blocchi([per_id[i] for i in sorted(da_rivalutare, key=lambda i: (
                     str(per_id[i]["make"]).lower(), str(per_id[i]["model"]).lower(), str(per_id[i]["fuel"]), i))

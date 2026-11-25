@@ -1878,7 +1878,19 @@ def _calcola_elenco() -> None:
         logging.getLogger("scovo").warning("CALIBRA non applicata: %s", str(e)[:200])
         _g = SR.Regole.da_env()
     _g = _dc.replace(_g, chat_subito=_tetto_chat_subito(_g))
+    _copie_ombra = None
+    try:      # 25/11: copia dell'elenco per la misura CONFRONTI_OMBRA (ogni 10 minuti; l'elenco vero non si tocca)
+        from ..pricing import stima_allargata as _sa
+        _copie_ombra = _sa.copie_per_ombra(items)
+    except Exception as e:
+        logging.getLogger("scovo").warning("CONFRONTI_OMBRA copia non fatta: %s", str(e)[:200])
     out, fun = SR.elenco_sito(items, g=_g, caricamento=stats)
+    if _copie_ombra is not None:
+        try:
+            _sa.ombra_sito(_copie_ombra, [it.get("id") for it in out], _g)
+        except Exception as e:
+            logging.getLogger("scovo").warning("CONFRONTI_OMBRA non riuscita: %s", str(e)[:200])
+        _copie_ombra = None
     # auto tolte solo perché il numero non è mai stato letto: le ricontrolla il lavoro telefoni_candidate
     # 20/11: anche le auto della corsia chat di Subito rimaste fuori dal loro tetto (col numero letto entrerebbero)
     _senza_numero = SR.senza_numero_da_leggere(items, out, fun)

@@ -84,6 +84,16 @@ LABELS = {
 }
 
 
+def _totale(j) -> int | None:
+    """25/11: totale dichiarato dall'interfaccia di ricerca, se c'è (stesse chiavi di pipeline/conta_mercato)."""
+    if isinstance(j, dict):
+        for k in ("count_all", "total", "count", "total_count", "totalCount", "numberOfResults"):
+            v = j.get(k)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return int(v)
+    return None
+
+
 def search_url(region: str, province: str, max_price: int, page: int, private_only: bool = False) -> str:
     url = f"{BASE}/annunci-{region}/vendita/auto/{province}/?pe={max_price}&o={page}"
     if private_only:
@@ -293,20 +303,27 @@ class SubitoCollector(Collector):
         letti = tenuti = 0
         from ..pipeline.incrementale import Arresto
         stop = Arresto(self.noti) if getattr(self, "noti", None) is not None else None
+        from ..pipeline import copertura_lettura as CL       # 25/11: misura della copertura (solo conteggi)
+        ric, motivo = f"recenti:{region}", "tetto_pagine"
         for page in range(max_pages):
             r = self._api({"c": 2, "r": reg, "t": "s", "lim": 100, "start": page * 100, "sort": "datedesc"})
             self.pause()
             if r.status_code != 200:
                 log.warning("subito recenti %s: HTTP %s a pagina %s", region, r.status_code, page)
                 self.errori = getattr(self, "errori", 0) + 1
+                motivo = CL.motivo_http(r.status_code)
                 break
             try:
-                ads = (r.json() or {}).get("ads") or []
+                j = r.json() or {}
+                ads = j.get("ads") or []
             except Exception as e:
                 log.warning("subito recenti %s: risposta non leggibile a pagina %s (%s)", region, page, str(e)[:100])
                 self.errori = getattr(self, "errori", 0) + 1
+                motivo = "errore"
                 break
+            CL.nota("subito", ric, gruppo="recenti", pagine=1, letti=len(ads), totale=_totale(j) if page == 0 else None)
             if not ads:
+                motivo = "fine_risultati"
                 break
             vecchi = 0
             pagina = []
@@ -325,9 +342,12 @@ class SubitoCollector(Collector):
                 tenuti += 1
                 yield listing
             if vecchi >= len(ads) * 0.8:
+                motivo = "data"
                 break
             if stop is not None and stop.pagina(pagina):
+                motivo = "gia_visto"
                 break                    # 12/11 lettura incrementale: K pagine di fila già viste e invariate
+        CL.nota("subito", ric, gruppo="recenti", motivo=motivo)
         log.info("subito recenti %s dal %s: %d letti, %d nelle province", region, dal, letti, tenuti)
 
     def search(self, query: dict) -> Iterator[Listing]:
@@ -343,7 +363,12 @@ class SubitoCollector(Collector):
                 log.warning("subito api -> HTTP %s (pagina %s): ripiego sulle pagine web", r.status_code, page)
                 yield from self._search_html(query)
                 return
-            ads = (r.json() or {}).get("ads") or []
+            j = r.json() or {}
+            ads = j.get("ads") or []
+            from ..pipeline import copertura_lettura as CL       # 25/11: misura della copertura (solo conteggi)
+            CL.nota("subito", f"recenti:{query.get('region', 'lombardia')}", gruppo="recenti", pagine=1, letti=len(ads),
+                    totale=_totale(j) if page == 0 else None,
+                    motivo="fine_risultati" if len(ads) < lim else "tetto_pagine")
             if not ads:
                 break
             if page == 0 and __import__("os").environ.get("SUBITO_DEBUG") == "1":
@@ -547,6 +572,8 @@ class SubitoCollector(Collector):
         piena = False
         from ..pipeline.incrementale import Arresto
         stop = Arresto(self.noti) if getattr(self, "noti", None) is not None else None
+        from ..pipeline import copertura_lettura as CL           # 25/11: misura della copertura (solo conteggi)
+        ric = f"{sn}:{ps}-{pe}"
         for page in range(pages):
             r = self._api({"c": 2, "r": region, "ci": key, "t": "s", "ps": ps, "pe": pe,
                            "lim": lim, "start": page * lim, "sort": "datedesc"})
@@ -554,8 +581,11 @@ class SubitoCollector(Collector):
             if r.status_code != 200:
                 log.warning("subito %s fascia %s-%s: HTTP %s", sn, ps, pe, r.status_code)
                 esito["ok"] = False
+                CL.nota("subito", ric, gruppo=sn, motivo=CL.motivo_http(r.status_code))
                 return
-            ads = (r.json() or {}).get("ads") or []
+            j = r.json() or {}
+            ads = j.get("ads") or []
+            CL.nota("subito", ric, gruppo=sn, pagine=1, letti=len(ads), totale=_totale(j) if page == 0 else None)
             pagina = []
             for it in ads:
                 listing = parse_item(it)
@@ -572,12 +602,15 @@ class SubitoCollector(Collector):
             if page == 0 and pagina:
                 self._controlla_codice(region, key, sn, pagina)
             if len(ads) < lim:
+                CL.nota("subito", ric, gruppo=sn, motivo="fine_risultati")
                 return
             if stop is not None and stop.pagina(pagina):
+                CL.nota("subito", ric, gruppo=sn, motivo="gia_visto")
                 return                # 12/11 lettura incrementale: il resto della fascia è già visto e invariato
             piena = page == pages - 1
         if not piena:
             return
+        CL.nota("subito", ric, gruppo=sn, motivo="tetto_pagine")     # diventa "divisa" se qui sotto si divide
         if livello >= self.FASCIA_DIVISIONI or pe - ps < self.FASCIA_MINIMA:
             log.warning("subito %s fascia %s-%s: ancora piena dopo %d pagine, letti solo i più recenti", sn, ps, pe, pages)
             return
@@ -588,6 +621,7 @@ class SubitoCollector(Collector):
                         sn, ps, pe, self.FASCIA_PAGINE_EXTRA)
             return
         self._pagine_extra = extra + 2 * pages
+        CL.nota("subito", ric, gruppo=sn, motivo="divisa")
         mid = (ps + pe) // 2
         log.info("subito %s fascia %s-%s piena: divisa in %s-%s e %s-%s", sn, ps, pe, ps, mid, mid, pe)
         yield from self._fascia(region, key, sn, ps, mid, pages, lim, wanted, visti, livello + 1, tot, esito)

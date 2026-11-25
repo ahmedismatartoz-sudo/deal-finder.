@@ -770,14 +770,18 @@ def _valuta(t: dict, base: dict, soglia: int, rg, cfg, stato: dict) -> dict:
     rr = None
     if not scelta:
         rp = getattr(rg, "stima_ripiego", None)
-        rr = ripiego_ammesso(D, V, tt, vb, rp) if rp is not None else None
+        # 25/11: stima allargata (pricing/stima_allargata.valuta): solo se chi chiama la passa in `stato`, per
+        # un'auto che questa funzione ha già lasciato senza stima. valuta() non la passa mai: niente cambia
+        rr = stato.get("allargata")
+        if rr is None:
+            rr = ripiego_ammesso(D, V, tt, vb, rp) if rp is not None else None
         if rr is None:
             return _senza_stima(out, sp, tt, D, V, base, lid, vb)
         # 22/11: stima di ripiego. La valutazione senza stima (identica a prima) resta da parte: si ridà se col
         # ripiego l'auto non arriva a una categoria (valuta)
         stato["senza"] = _senza_stima(copy.deepcopy(out), sp, tt, D, V, base, lid, vb)
         stato["ripiego"] = rr
-        _con_ripiego(out, rr, stato["senza"].get("motivo_dati"), set(map(id, D)))
+        (stato.get("scrivi") or _con_ripiego)(out, rr, stato["senza"].get("motivo_dati"), set(map(id, D)))
         R, n, fonte = out["R"], out["n"], "ripiego"
     else:
         R = int(round(sp["valore"]))

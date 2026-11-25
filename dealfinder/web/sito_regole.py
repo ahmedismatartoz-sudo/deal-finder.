@@ -330,10 +330,29 @@ def r_valutata(it, g: Regole):
         if (sr.get("livello") if isinstance(sr, dict) else None) not in (_r(it).get("ripiego_livelli") or ()):
             return "dati_insufficienti"
         it["stima_ripiego"] = True
+    sa = pv.get("stima_allargata")
+    if sa and pv.get("categoria") != "dati_insufficienti":
+        # 25/11: valutazione scritta con la stima allargata (pricing/stima_allargata, modo reale): resta solo con
+        # l'interruttore acceso e nella sua fascia. Segnata stima_allargata (etichetta "stima allargata", avviso
+        # "prezzo stimato con meno confronti") e trattata come ogni stima di ripiego (avviso di verifica, mai "Da
+        # trattare", mai nelle corsie "per bene": it["stima_ripiego"])
+        from ..pricing import stima_allargata as _SA
+        if not (isinstance(sa, dict) and _SA.reale(sa.get("fascia"))):
+            return "dati_insufficienti"
+        it["stima_allargata"] = it["stima_ripiego"] = True
     if pv.get("categoria") == "dati_insufficienti":
         if pv.get("metodo") == "base_vendute":
             # 18/11 (cliente: "il sito usa SOLO il nuovo calcolo"): senza abbastanza vendute/commercianti l'auto resta
             # fuori; la stima di ripiego (pricing/ripiego_prudente.py) è del calcolo di prima e non la fa rientrare
+            if _r(it).get("allargata_ombra"):
+                # 25/11: SOLO sulle copie dell'ombra (stima_allargata.copie_per_ombra, mai sull'elenco vero): l'auto
+                # prosegue con la stima allargata per contare quante passerebbero tutte le altre regole
+                from ..pricing import stima_allargata as _SA
+                pvo = _SA.pv_sito(pv)
+                if pvo is not None:
+                    it["pv"] = pvo
+                    it["stima_allargata"] = it["stima_ripiego"] = True
+                    return None
             return "dati_insufficienti"
         rip = _r(it).get("ripiego")
         if not (g.ripiego and isinstance(rip, dict) and rip.get("margine") is not None and rip.get("M")):
@@ -1098,6 +1117,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
         it.pop("versione_solo_nome", None)
         it.pop("ripiego_prudente", None)
         it.pop("stima_ripiego", None)
+        it.pop("stima_allargata", None)
         it.pop("diesel_extra", None)
         it.pop("_diesel_fuori", None)
         it.pop("_chat", None)
