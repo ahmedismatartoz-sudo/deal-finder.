@@ -55,7 +55,7 @@ class Db:
         q = " ".join(q.split())
         if self.rotto:
             raise OSError("database fermo")
-        if q.startswith("CREATE"):
+        if q.startswith(("CREATE", "ALTER TABLE email_si ADD COLUMN IF NOT EXISTS", "ALTER TABLE sms_si ADD COLUMN IF NOT EXISTS")):
             return _Cur([])
         if q.startswith("SELECT email, giro, versione FROM email_link"):
             return _Cur([{"email": x["email"], "giro": x["giro"], "versione": x["versione"]} for x in self.link.values()])
@@ -97,7 +97,7 @@ class Db:
         if q.startswith("SELECT count(*) AS n FROM email_clic"):
             return _Cur([{"n": sum(1 for c in self.clic if c["token"] == p[0])}])
         if q.startswith("INSERT INTO email_si"):
-            self.si.append({"token": p[0], "user_agent": p[1]})
+            self.si.append({"token": p[0], "user_agent": p[1], "tel_lasciato": p[2]})
             return _Cur([])
         if q.startswith("SELECT count(*) AS n FROM email_si"):
             return _Cur([{"n": sum(1 for c in self.si if c["token"] == p[0])}])
@@ -109,6 +109,7 @@ class Db:
             return _Cur([{"email_hash": p[0]}] if nuovo else [])
         if q.startswith("SELECT 'email' AS canale, l.token"):        # i confermati, con gli aperti in una colonna
             assert "FROM email_si c JOIN email_link l" in q and "FROM email_clic a WHERE a.token = l.token) AS aperti" in q
+            assert "(SELECT s.tel_lasciato FROM email_si s WHERE s.token = l.token AND s.tel_lasciato IS NOT NULL" in q
             out = []
             for t, x in self.link.items():
                 n = sum(1 for c in self.si if c["token"] == t)
@@ -116,7 +117,9 @@ class Db:
                     out.append({"canale": "email", "token": t, "nome": x["nome"], "telefono": x["telefono"],
                                 "email": x["email"], "giro": x["giro"], "clic": n,
                                 "aperti": sum(1 for c in self.clic if c["token"] == t), "primo_clic": None,
-                                "ultimo_clic": None, "stop": x["stop"]})
+                                "ultimo_clic": None, "stop": x["stop"],
+                                "tel_lasciato": next((c["tel_lasciato"] for c in reversed(self.si)
+                                                      if c["token"] == t and c["tel_lasciato"]), None)})
             return _Cur(out)
         if q.startswith("SELECT 'email' AS canale, a.token"):        # chi ha solo aperto
             assert "NOT EXISTS (SELECT 1 FROM email_si" in q
@@ -859,11 +862,13 @@ def _req(path, token, ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)
                     "headers": [(b"user-agent", ua.encode()), (b"x-real-ip", ip.encode())], "client": (ip, 1)}, ricevi)
 
 
-def _si(token, t=None, dopo=10, **k):
-    """Il pulsante "Sì, chiamatemi": POST /mi/<token>/si con il campo firmato dalla pagina aperta `dopo` secondi fa."""
+def _si(token, t=None, dopo=10, tel="348 111 2233", **k):
+    """Il pulsante "Chiamatemi": POST /mi/<token>/si con il campo firmato dalla pagina aperta `dopo` secondi fa e il
+    numero scritto nel campo (tel=None: il campo non arriva)."""
     from urllib.parse import urlencode
     t = A._mi_firma(token, time.time() - dopo) if t is None else t
-    return asyncio.run(A.sms_mi_si(_req(f"/mi/{token}/si", token, metodo="POST", corpo=urlencode({"t": t}).encode(), **k)))
+    campi = {"t": t} if tel is None else {"t": t, "tel": tel}
+    return asyncio.run(A.sms_mi_si(_req(f"/mi/{token}/si", token, metodo="POST", corpo=urlencode(campi).encode(), **k)))
 
 
 class _Scena:
@@ -889,7 +894,7 @@ def test_il_link_dell_email_apre_il_pulsante_e_solo_il_pulsante_registra():
         for _ in range(3):
             r = A.sms_mi_interessa(_req("/mi/abc23456", "abc23456", ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"))
         corpo = r.body.decode()
-        assert r.status_code == 200 and r.background is None and "Grazie!" not in corpo and "Sì, chiamatemi" in corpo
+        assert r.status_code == 200 and r.background is None and "Grazie!" not in corpo and "📞 Chiamatemi</button>" in corpo
         assert '<form class="si" method="post" action="/mi/abc23456/si">' in corpo and "348 242 5633" in corpo
         assert '<a class="no" href="/mi/abc23456/stop">Non mi interessa</a>' in corpo and "noindex" in r.headers["x-robots-tag"]
         assert "Salone Prova" not in corpo and "titolare" not in corpo and "9876" not in corpo
@@ -905,17 +910,30 @@ def test_il_link_dell_email_apre_il_pulsante_e_solo_il_pulsante_registra():
         # la persona tocca il pulsante
         r = _si("abc23456")
         corpo = r.body.decode()
-        assert r.status_code == 200 and "Grazie!" in corpo and "Ti chiamiamo a breve dal" in corpo and "348 242 5633" in corpo
+        assert r.status_code == 200 and "Grazie!" in corpo and "<p>Ti chiamiamo a breve.</p>" in corpo and "348 242 5633" in corpo
+        assert s.log.righe[-1] == ("EMAIL_INTERESSATO token=abc23456 canale=email nome=Salone Prova tel=***9876 n=1 "
+                                   "tel_lasciato=***2233")
+        assert s.db.si[0]["tel_lasciato"] == "3481112233" and "2233" not in corpo
         assert "Non voglio più ricevere email" in corpo and "Non voglio più ricevere SMS" not in corpo
         assert 'action="/mi/abc23456/stop"' in corpo and "Salone Prova" not in corpo and "titolare" not in corpo
         assert corpo.replace("email</button>", "SMS</button>") == SS.pagina("abc23456")          # per il resto la stessa pagina
         assert len(s.db.si) == 1
-        assert s.log.righe[-1] == "EMAIL_INTERESSATO token=abc23456 canale=email nome=Salone Prova tel=***9876 n=1"
+        # senza numero, o con un numero non italiano, non si registra niente: messaggio rosso e di nuovo il campo
+        for tel, motivo in ((None, "manca"), ("", "manca"), ("123", "non_valido"), ("+33 6 12 34 56 78", "non_valido")):
+            r = _si("abc23456", tel=tel)
+            assert "Grazie!" not in r.body.decode() and 'class="err"' in r.body.decode() and len(s.db.si) == 1
+            assert "Numero non valido" in r.body.decode() and "Il tuo numero di telefono" in r.body.decode()
+            assert s.log.righe[-1] == f"EMAIL_TELEFONO_SCARTATO token=abc23456 motivo={motivo}"
+        # troppo presto: come prima, anche con il numero giusto
+        r = _si("abc23456", dopo=1)
+        assert "Tocca di nuovo il pulsante" in r.body.decode() and len(s.db.si) == 1
+        assert not any(re.search(r"\d{6,}", x) for x in s.log.righe)
+        assert sum("EMAIL_INTERESSATO" in x for x in s.log.righe) == 1
         assert not any(x.startswith("SMS_") for x in s.log.righe)
         # un token di 8 caratteri che non esiste: le stesse identiche pagine (non si capisce se un token è valido)
         prima = len(s.log.righe)
         r = A.sms_mi_interessa(_req("/mi/nonce999", "nonce999"))
-        assert r.status_code == 200 and "Sì, chiamatemi" in r.body.decode()
+        assert r.status_code == 200 and "📞 Chiamatemi" in r.body.decode()
         assert _si("nonce999").body.decode().replace("nonce999", "abc23456") == corpo
         assert len(s.db.clic) == 3 and len(s.db.si) == 1 and len(s.log.righe) == prima
         r = A.sms_mi_stop(_req("/mi/nonce999/stop", "nonce999", metodo="POST"))
@@ -924,7 +942,7 @@ def test_il_link_dell_email_apre_il_pulsante_e_solo_il_pulsante_registra():
         # un token di 7 caratteri resta sul giro degli SMS
         r = _si("nonce99")
         assert "Non voglio più ricevere SMS" in r.body.decode()
-        assert s.log.righe[-1] == "SMS_INTERESSATO token=nonce99 canale=sms nome=? tel=***? n=0"
+        assert s.log.righe[-1] == "SMS_INTERESSATO token=nonce99 canale=sms nome=? tel=***? n=0 tel_lasciato=***2233"
         # HEAD e programmi automatici non registrano niente, nemmeno con la firma buona
         prima = len(s.log.righe)
         assert A.sms_mi_interessa(_req("/mi/abc23456", "abc23456", metodo="HEAD")).status_code == 200
@@ -988,7 +1006,7 @@ def test_elenco_interessati_con_le_email_solo_i_confermati():
         assert d["totale"] == 1 and len(d["interessati"]) == 1
         x = d["interessati"][0]
         assert x["canale"] == "email" and x["email"] == "titolare@salone.it" and x["clic"] == 1 and x["aperti"] == 1
-        assert "forse_anteprima" not in x
+        assert "forse_anteprima" not in x and x["tel_lasciato"] == "3481112233"
         assert d["totale_solo_aperti"] == 1 and d["solo_aperti"][0]["email"] == "altro@salone.it" and d["solo_aperti"][0]["aperti"] == 4
     finally:
         s.fine()

@@ -3355,7 +3355,7 @@ def _sms_troppi(request: Request) -> bool:
     return False
 
 
-MI_ATTESA_S = 2                    # il pulsante "Sì, chiamatemi" conta solo se arriva almeno 2 secondi dopo la pagina
+MI_ATTESA_S = 2                    # il pulsante "Chiamatemi" conta solo se arriva almeno 2 secondi dopo la pagina
 MI_SCADE_S = 86400                 # e al massimo un giorno dopo (poi la pagina va riaperta)
 
 
@@ -3385,14 +3385,16 @@ def _mi_canale(token) -> str:
     return "email" if EE.token_email(token) else "sms"
 
 
-def _mi_chiedi(token, canale, riprova=False, status_code=200, headers=None):
+def _mi_chiedi(token, canale, riprova=False, status_code=200, headers=None, tel_errato=False, tel=""):
     from ..marketing import sms_saloni as SS
-    return HTMLResponse(SS.pagina(token, canale=canale, chiedi=_mi_firma(SS.token_pulito(token) or ""), riprova=riprova),
+    return HTMLResponse(SS.pagina(token, canale=canale, chiedi=_mi_firma(SS.token_pulito(token) or ""), riprova=riprova,
+                                  tel_errato=tel_errato, tel=tel),
                         status_code=status_code, headers=dict(_SMS_PAGINA_H, **(headers or {})))
 
 
 def sms_mi_interessa(request: Request):
-    """GET /mi/{token}, pubblica: la pagina con il pulsante verde "Sì, chiamatemi" (uguale per ogni token). Il GET
+    """GET /mi/{token}, pubblica: la pagina con il campo del telefono e il pulsante verde "Chiamatemi" (uguale per
+    ogni token). Il GET
     registra solo "aperto" (SMS_APERTO / EMAIL_APERTO, senza dati del salone): i filtri della posta delle aziende
     aprono tutti i link, quindi aprire non vuol dire essere interessati. L'interesse lo registra solo il pulsante
     (POST /mi/{token}/si). HEAD e i programmi automatici non registrano niente.
@@ -3413,8 +3415,9 @@ def sms_mi_interessa(request: Request):
     return _mi_chiedi(token, canale)
 
 
-def _mi_si(token, canale, user_agent: str, valore) -> tuple[str, int]:
-    """("grazie" | "riprova", stato HTTP). Registra l'interesse solo se il campo firmato è buono."""
+def _mi_si(token, canale, user_agent: str, valore, tel_scritto="") -> tuple[str, int]:
+    """("grazie" | "riprova" | "telefono", stato HTTP). Registra l'interesse solo se il campo firmato è buono E il
+    numero scritto è un numero italiano (25/11): senza numero valido niente registrato, la pagina lo richiede."""
     from ..marketing import email_esempi as EE
     from ..marketing import sms_saloni as SS
     lg_ = logging.getLogger("scovo")
@@ -3424,9 +3427,14 @@ def _mi_si(token, canale, user_agent: str, valore) -> tuple[str, int]:
     if motivo:
         lg_.warning("%s_CONFERMA_SCARTATA token=%s motivo=%s", canale.upper(), SS.token_pulito(token) or "?", motivo)
         return "riprova", 200
+    tel = SS.tel_lasciato(tel_scritto)
+    if not tel:                                              # mai il numero scritto nel log, nemmeno se sbagliato
+        lg_.warning("%s_TELEFONO_SCARTATO token=%s motivo=%s", canale.upper(), SS.token_pulito(token) or "?",
+                    "non_valido" if str(tel_scritto or "").strip() else "manca")
+        return "telefono", 200
     try:
         with connect() as conn:
-            (EE if canale == "email" else SS).registra_clic(conn, token, user_agent)
+            (EE if canale == "email" else SS).registra_clic(conn, token, user_agent, tel=tel)
     except Exception as e:
         lg_.warning("%s_INTERESSATO non registrato: %s", canale.upper(), type(e).__name__)
         return "riprova", 503                                # mai "Grazie!" senza averlo registrato
@@ -3434,10 +3442,12 @@ def _mi_si(token, canale, user_agent: str, valore) -> tuple[str, int]:
 
 
 async def sms_mi_si(request: Request):
-    """POST /mi/{token}/si, pubblica: il pulsante "Sì, chiamatemi". Solo questo registra l'interesse
-    (SMS_INTERESSATO / EMAIL_INTERESSATO) e mostra "Grazie! Ti chiamiamo a breve…". Il modulo porta un timestamp
-    firmato (campo t, messo dal GET della pagina dello stesso token): se manca, è falso o arriva meno di MI_ATTESA_S
-    secondi dopo la pagina, non si registra niente e la pagina chiede di toccare di nuovo il pulsante."""
+    """POST /mi/{token}/si, pubblica: il pulsante "Chiamatemi". Solo questo registra l'interesse
+    (SMS_INTERESSATO / EMAIL_INTERESSATO, con tel_lasciato=***<ultime 4>) e mostra "Grazie! Ti chiamiamo a breve.".
+    Il modulo porta un timestamp firmato (campo t, messo dal GET della pagina dello stesso token): se manca, è falso
+    o arriva meno di MI_ATTESA_S secondi dopo la pagina, non si registra niente e la pagina chiede di toccare di nuovo
+    il pulsante. 25/11: porta anche il numero a cui richiamare (campo tel); se manca o non è un numero italiano non
+    si registra niente e la pagina torna con un messaggio rosso."""
     from urllib.parse import parse_qs
     from ..marketing import sms_saloni as SS
     token = request.path_params.get("token")
@@ -3448,8 +3458,11 @@ async def sms_mi_si(request: Request):
         campi = parse_qs((await request.body())[:2000].decode("utf-8", "ignore"))
     except Exception:
         campi = {}
+    tel = (campi.get("tel") or [""])[0][:40]
     esito, stato = await run_in_threadpool(_mi_si, token, canale, request.headers.get("user-agent") or "",
-                                           (campi.get("t") or [""])[0])
+                                           (campi.get("t") or [""])[0], tel)
+    if esito == "telefono":
+        return _mi_chiedi(token, canale, tel_errato=True, tel=tel)
     if esito != "grazie":
         return _mi_chiedi(token, canale, riprova=True, status_code=stato,
                           headers={"Retry-After": "120"} if stato == 503 else None)
@@ -3488,8 +3501,8 @@ def sms_mi_stop(request: Request):
 
 
 def admin_sms_interessati(request: Request):
-    """Solo amministratore: chi ha CONFERMATO con il pulsante "Sì, chiamatemi" (nome, telefono, quando, quante
-    volte): da richiamare. Dentro anche quelli delle email (canale "email", con l'indirizzo). `clic` sono le conferme,
+    """Solo amministratore: chi ha CONFERMATO con il pulsante "Chiamatemi" (nome, telefono, quando, quante
+    volte, e `tel_lasciato`: il numero che ha scritto nella pagina): da richiamare. Dentro anche quelli delle email (canale "email", con l'indirizzo). `clic` sono le conferme,
     `aperti` (colonna a parte) quante volte la pagina è stata solo aperta. In `solo_aperti` chi ha aperto la pagina
     senza confermare (filtri della posta, anteprime, curiosi, e i clic di prima del pulsante): non sono interessati."""
     current_user(request, admin=True)

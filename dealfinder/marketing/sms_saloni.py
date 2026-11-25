@@ -1,7 +1,7 @@
 """24/11 (cliente): SMS ai SALONI (solo commercianti, mai privati) "senza esempi", con il link "Mi interessa".
 
 Gli SMS non hanno pulsanti: ogni salone riceve un link personale <PUBLIC_URL>/mi/<token>. Chi lo tocca vede una pagina
-con il pulsante "Sì, chiamatemi": solo chi tocca il pulsante finisce nell'elenco di chi va richiamato
+con il campo del telefono e il pulsante "Chiamatemi": solo chi tocca il pulsante finisce nell'elenco di chi va richiamato
 (/api/admin/sms_interessati). Aprire il link non basta (lo fanno anche i filtri e le anteprime): è solo "aperto".
 
 Lavoro una tantum da BREVO_IMPORT_LISTE (una volta per etichetta):
@@ -64,7 +64,7 @@ SQL_TABELLE = (
         user_agent TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS sms_clic_token ON sms_clic (token)",
-    # 24/11: sms_clic sono le APERTURE della pagina (GET); l'interesse vero è il pulsante "Sì, chiamatemi" (sms_si)
+    # 24/11: sms_clic sono le APERTURE della pagina (GET); l'interesse vero è il pulsante "Chiamatemi" (sms_si)
     """CREATE TABLE IF NOT EXISTS sms_si (
         id         BIGSERIAL PRIMARY KEY,
         token      TEXT NOT NULL,
@@ -72,6 +72,8 @@ SQL_TABELLE = (
         user_agent TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS sms_si_token ON sms_si (token)",
+    # 25/11 (cliente): la pagina chiede il numero a cui richiamare; resta accanto alla conferma (per intero solo qui)
+    "ALTER TABLE sms_si ADD COLUMN IF NOT EXISTS tel_lasciato TEXT",
     """CREATE TABLE IF NOT EXISTS sms_stop (
         telefono   TEXT PRIMARY KEY,
         at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -130,6 +132,21 @@ def norm_tel(t) -> str | None:
     elif d.startswith("39") and (len(d) > 10 or grezzo.startswith("+")):
         d = d[2:]
     return "+39" + d if re.fullmatch(r"3\d{9}", d) else None
+
+
+def tel_lasciato(t) -> str | None:
+    """Il numero scritto nella pagina /mi/<token>: cellulare italiano (3xx, 9 o 10 cifre) o fisso (0x, da 6 a 11
+    cifre). Si accettano spazi, punti, trattini, barre, parentesi e il prefisso +39 (o 0039). Restituisce le sole
+    cifre senza prefisso (10 per un cellulare normale), None se manca o non è un numero italiano."""
+    grezzo = str(t or "").strip()
+    if not grezzo or len(grezzo) > 30 or not re.fullmatch(r"\+?[\d\s.\-/()]+", grezzo):
+        return None
+    d = re.sub(r"\D", "", grezzo)
+    if d.startswith("0039"):
+        d = d[4:]
+    elif d.startswith("39") and (len(d) > 10 or grezzo.startswith("+")):
+        d = d[2:]
+    return d if re.fullmatch(r"3\d{8,9}|0\d{5,10}", d) else None
 
 
 def coda4(t) -> str:
@@ -430,26 +447,29 @@ def registra_aperto(conn, token, user_agent: str = "", log=None) -> dict:
     return {"contato": True, "n": n}
 
 
-def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
-    """Pulsante "Sì, chiamatemi" (POST /mi/<token>/si): salva in sms_si e scrive SMS_INTERESSATO (nome del salone,
-    ultime 4 cifre, numero di conferme). Token sconosciuto: solo il log, con nome=?. I programmi automatici non contano."""
+def registra_clic(conn, token, user_agent: str = "", log=None, tel: str | None = None) -> dict:
+    """Pulsante "Chiamatemi" (POST /mi/<token>/si): salva in sms_si e scrive SMS_INTERESSATO (nome del salone,
+    ultime 4 cifre, numero di conferme). `tel`: il numero lasciato nella pagina, già controllato (tel_lasciato): per
+    intero va solo nel database (sms_si.tel_lasciato), nel log le ultime 4 cifre. Token sconosciuto: solo il log, con
+    nome=?. I programmi automatici non contano."""
     log = log or lg
     tok = token_pulito(token)
     ua = _ua(user_agent)
     if RE_BOT.search(ua):
         return {"contato": False, "motivo": "anteprima"}
     riga = None
+    lasciato = " tel_lasciato=" + coda4(tel) if tel else ""
     if tok:
         assicura(conn)
         riga = conn.execute("SELECT nome, telefono FROM sms_link WHERE token = %s", (tok,)).fetchone()
     if not riga:
-        log.warning("SMS_INTERESSATO token=%s canale=sms nome=? tel=***? n=0", tok or "?")
+        log.warning("SMS_INTERESSATO token=%s canale=sms nome=? tel=***? n=0%s", tok or "?", lasciato)
         return {"contato": False, "motivo": "sconosciuto"}
-    conn.execute("INSERT INTO sms_si (token, user_agent) VALUES (%s, %s)", (tok, ua))
+    conn.execute("INSERT INTO sms_si (token, user_agent, tel_lasciato) VALUES (%s, %s, %s)", (tok, ua, tel or None))
     n = conn.execute("SELECT count(*) AS n FROM sms_si WHERE token = %s", (tok,)).fetchone()["n"]
     conn.commit()
     nome = re.sub(r"[\x00-\x1f\x7f]", " ", str(riga["nome"] or "?"))[:80]
-    log.warning("SMS_INTERESSATO token=%s canale=sms nome=%s tel=%s n=%d", tok, nome, coda4(riga["telefono"]), n)
+    log.warning("SMS_INTERESSATO token=%s canale=sms nome=%s tel=%s n=%d%s", tok, nome, coda4(riga["telefono"]), n, lasciato)
     return {"contato": True, "n": n, "nome": riga["nome"]}
 
 
@@ -471,11 +491,14 @@ def registra_stop(conn, token, log=None) -> bool:
 
 
 def interessati(conn) -> list[dict]:
-    """Per l'amministratore: chi ha CONFERMATO con il pulsante "Sì, chiamatemi" (nome, telefono, prima e ultima
-    conferma, quante volte). `aperti`: quante volte la pagina è stata solo aperta (anche da programmi automatici)."""
+    """Per l'amministratore: chi ha CONFERMATO con il pulsante "Chiamatemi" (nome, telefono, prima e ultima
+    conferma, quante volte). `tel_lasciato`: l'ultimo numero scritto nella pagina (a quello vuole essere richiamato).
+    `aperti`: quante volte la pagina è stata solo aperta (anche da programmi automatici)."""
     assicura(conn)
     righe = conn.execute(
         "SELECT 'sms' AS canale, l.token, l.nome, l.telefono, l.giro, count(*) AS clic, "
+        "(SELECT s.tel_lasciato FROM sms_si s WHERE s.token = l.token AND s.tel_lasciato IS NOT NULL "
+        "ORDER BY s.at DESC, s.id DESC LIMIT 1) AS tel_lasciato, "
         "(SELECT count(*) FROM sms_clic a WHERE a.token = l.token) AS aperti, min(c.at) AS primo_clic, max(c.at) AS ultimo_clic, "
         "EXISTS (SELECT 1 FROM sms_stop s WHERE s.telefono = l.telefono) AS stop "
         "FROM sms_si c JOIN sms_link l ON l.token = c.token "
@@ -496,12 +519,15 @@ def solo_aperti(conn) -> list[dict]:
 
 
 def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", conferma: bool = False,
-           errore: bool = False, chiedi: str | None = None, riprova: bool = False) -> str:
+           errore: bool = False, chiedi: str | None = None, riprova: bool = False, tel_errato: bool = False,
+           tel: str = "") -> str:
     """Pagina pubblica, uguale per ogni token (valido o no). Niente dati del salone.
     chiedi (il timestamp firmato da mettere nel modulo): la pagina che si apre dal link (GET /mi/<token>), con il
-    pulsante verde "Sì, chiamatemi" (POST /mi/<token>/si): solo quello registra l'interesse, così i filtri della posta
-    che aprono i link non contano. riprova: il pulsante è arrivato troppo presto o non è stato registrato, va toccato
-    di nuovo. Senza chiedi: la pagina "Grazie!" dopo il pulsante.
+    campo "Il tuo numero di telefono" e il pulsante verde "Chiamatemi" (POST /mi/<token>/si): solo quello registra
+    l'interesse, così i filtri della posta che aprono i link non contano. riprova: il pulsante è arrivato troppo
+    presto o non è stato registrato, va toccato di nuovo. tel_errato: il numero manca o non è un numero italiano
+    (messaggio rosso, niente registrato); tel: quello che era stato scritto, da rimettere nel campo. Senza chiedi: la
+    pagina "Grazie!" dopo il pulsante.
     canale "email": il pulsante in fondo parla di email (e disiscrive da Brevo). conferma: la pagina che si apre dal
     pulsante "Non mi interessa" (GET /mi/<token>/stop): chiede conferma, la disiscrizione parte solo dal
     pulsante (POST), così le anteprime automatiche dei programmi di posta non disiscrivono nessuno. errore: la
@@ -531,17 +557,27 @@ def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", co
     elif chiedi is not None and tok:
         titolo = "Tocca di nuovo il pulsante" if riprova else "Vuoi che ti chiamiamo?"
         testo = (("Non abbiamo registrato la richiesta. " if riprova else "") +
-                 f"Tocca il pulsante verde e ti chiamiamo dal <strong>{TEL_TITOLARE_TESTO}</strong> per spiegarti come "
-                 "funziona Skovo.")
+                 f"Scrivi il tuo numero, tocca il pulsante verde e ti chiamiamo dal <strong>{TEL_TITOLARE_TESTO}</strong> "
+                 "per spiegarti come funziona Skovo.")
+        scritto = html.escape(re.sub(r"[^\d\s.+\-/()]", "", str(tel or ""))[:30], quote=True)
+        invalido = ' aria-invalid="true" aria-describedby="tel-err"' if tel_errato else ""
+        avviso = ('<p class="err" id="tel-err" role="alert">Numero non valido: scrivi un cellulare o un fisso italiano.</p>'
+                  if tel_errato else "")
         segno = "M6.5 4h3l1.5 4.5-2 1.5a12 12 0 0 0 5 5l1.5-2 4.5 1.5v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 6a2 2 0 0 1 2-2z"
         centro = (f'<form class="si" method="post" action="/mi/{html.escape(tok)}/si">'
                   f'<input type="hidden" name="t" value="{html.escape(str(chiedi), quote=True)}">'
-                  '<button class="cta stop" type="submit">Sì, chiamatemi</button></form>\n'
+                  '<label class="et" for="tel">Il tuo numero di telefono</label>'
+                  f'<input class="tel{" ko" if tel_errato else ""}" id="tel" name="tel" type="tel" inputmode="tel" '
+                  f'autocomplete="tel" maxlength="30" required placeholder="333 123 4567" value="{scritto}"'
+                  f'{invalido}>{avviso}'
+                  '<button class="cta stop" type="submit">📞 Chiamatemi</button></form>\n'
                   '<p class="nota">Auto di privati sotto prezzo, con il margine già calcolato.</p>')
         sotto = f'<p class="giu"><a class="no" href="/mi/{html.escape(tok)}/stop">Non mi interessa</a></p>'
     else:
         titolo = "Grazie!"
-        testo = (f"Ti chiamiamo a breve dal <strong>{TEL_TITOLARE_TESTO}</strong> per spiegarti come funziona Skovo.")
+        testo = "Ti chiamiamo a breve."
+        centro = (f'<p class="nota due">Oppure chiamaci tu: <a class="num" href="tel:{TEL_TITOLARE}">'
+                  f'{TEL_TITOLARE_TESTO}</a></p>')
         sotto = modulo.format("no")
     return f"""<!doctype html>
 <html lang="it">
@@ -554,8 +590,8 @@ def pagina(token: str | None = None, stop: bool = False, canale: str = "sms", co
 <title>Skovo</title>
 <link rel="icon" href="/static/scovo/favicon.svg" type="image/svg+xml">
 <style>
-:root{{--bg:#f6f4ef;--card:#fff;--ink:#16181d;--muted:#5d6470;--line:#e4e0d6;--acc:#0f7b4b;--acc-ink:#fff}}
-@media (prefers-color-scheme:dark){{:root{{--bg:#0f1114;--card:#191c21;--ink:#f1efe9;--muted:#a3a9b4;--line:#2a2e36;--acc:#2fbf7f;--acc-ink:#06130c}}}}
+:root{{--bg:#f6f4ef;--card:#fff;--ink:#16181d;--muted:#5d6470;--line:#e4e0d6;--acc:#0f7b4b;--acc-ink:#fff;--err:#b3261e}}
+@media (prefers-color-scheme:dark){{:root{{--bg:#0f1114;--card:#191c21;--ink:#f1efe9;--muted:#a3a9b4;--line:#2a2e36;--acc:#2fbf7f;--acc-ink:#06130c;--err:#ff8a80}}}}
 *{{box-sizing:border-box}}
 html,body{{margin:0;min-height:100%}}
 body{{background:var(--bg);color:var(--ink);font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -571,7 +607,14 @@ p strong{{color:var(--ink);white-space:nowrap}}
 .cta:focus-visible,.no:focus-visible{{outline:3px solid var(--ink);outline-offset:3px}}
 .nota{{font-size:14px;margin:14px 0 0}}
 form{{margin:18px 0 0}}
-form.si{{margin:0}}
+form.si{{margin:0;text-align:left}}
+.et{{display:block;font-size:14px;font-weight:600;margin:0 0 6px}}
+.tel{{display:block;width:100%;padding:14px 16px;margin:0 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);font:inherit;font-size:18px}}
+.tel:focus-visible{{outline:3px solid var(--acc);outline-offset:1px}}
+.tel.ko{{border-color:var(--err);margin-bottom:6px}}
+.err{{color:var(--err);font-size:14px;font-weight:600;margin:0 0 14px}}
+.due{{margin:0;font-size:15px}}
+.num{{color:var(--ink);font-weight:700;white-space:nowrap}}
 .giu{{margin:18px 0 0}}
 a.no{{display:inline-block}}
 .no{{background:none;border:0;padding:14px 8px;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}}

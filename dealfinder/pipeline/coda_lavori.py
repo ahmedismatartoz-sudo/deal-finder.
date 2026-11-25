@@ -57,10 +57,12 @@ SPOSTABILI: dict = {
     "rivaluta_base:": (False, ()),      # 18/11 (cliente, OK): rivalutazione una tantum col valore da vendute e commercianti
     "ribassi_accesi:": (False, ()),     # 19/11 10:23 (cliente: "attiva i ribassi"): li riaccende con le fasce salvate
     "ribassi_spenti:": (False, ()),     # 18/11 23:04 (cliente: "perché i ribassi sono ancora attivi? disattivalo")
+    "non_aperti:": (False, BREVO),      # 25/11 (cliente): lista Brevo di chi non ha aperto le campagne; SOLO nel sito, subito
+    "esporta_raccolta:": (False, BREVO),  # 25/11 (cliente): i cellulari di raccolta_contatti in una lista Brevo; SOLO nel sito
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -402,6 +404,21 @@ def esegui(v: str) -> bool | None:
         # (SOLO_SITO), una volta per etichetta (rivaluta_base:ora); nel log solo conteggi
         from ..pricing import valore_base as VB
         return _lungo(v, "RIVALUTA_BASE", lambda: VB.rivaluta(v))
+    if v.startswith("non_aperti:"):       # 25/11 (cliente): non_aperti:<campagna1>,<campagna2>:<nome lista>. Lista Brevo
+        # di chi non ha aperto, per il rinvio (non crea campagne, non invia). Nel sito (SOLO_SITO), appena dopo il
+        # deploy. _lungo: una volta per etichetta, fatta solo a lavoro finito (aggiungere a una lista è ripetibile);
+        # se un'esportazione non riesce resta da fare e si riprova al prossimo avvio (al massimo 3 tentativi)
+        def _non_aperti():
+            from ..marketing import non_aperti as NA
+            NA.lavoro(v)
+        return _lungo(f"non_aperti:{v.split(':', 1)[1][:100]}", "NON_APERTI", _non_aperti)
+    if v.startswith("esporta_raccolta:"):  # 25/11 (cliente): esporta_raccolta:<etichetta>. I cellulari RACC_CELL (entro
+        # 50 km, senza esclusi) nella lista Brevo "Skovo raccolta cellulari <etichetta>". Non invia niente. Nel sito
+        # (SOLO_SITO), appena dopo il deploy; _lungo: una volta per etichetta, fatta solo a lavoro finito (ripetibile)
+        def _esporta_raccolta():
+            from ..marketing import esporta_raccolta as ER
+            ER.lavoro(v)
+        return _lungo(f"esporta_raccolta:{v.split(':', 1)[1][:40]}", "ESPORTA_RACCOLTA", _esporta_raccolta)
     if v.startswith("conta_mercato:"):    # 18/11 notte (cliente: "oltre 60.000 annunci nei 150 km")
         from . import conta_mercato as CM
         _lungo(v, "CONTA_MERCATO", lambda: lg.warning("CONTA_MERCATO %s", json.dumps(CM.lavoro(v), ensure_ascii=False)))

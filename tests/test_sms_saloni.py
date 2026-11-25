@@ -50,7 +50,7 @@ class Db:
 
     def execute(self, q, p=()):
         q = " ".join(q.split())
-        if q.startswith("CREATE"):
+        if q.startswith(("CREATE", "ALTER TABLE sms_si ADD COLUMN IF NOT EXISTS")):
             return _Cur([])
         if q.startswith("SELECT telefono FROM sms_stop"):
             return _Cur([{"telefono": t} for t in self.stop])
@@ -73,7 +73,7 @@ class Db:
         if q.startswith("SELECT count(*) AS n FROM sms_clic"):
             return _Cur([{"n": sum(1 for c in self.clic if c["token"] == p[0])}])
         if q.startswith("INSERT INTO sms_si"):
-            self.si.append({"token": p[0], "user_agent": p[1]})
+            self.si.append({"token": p[0], "user_agent": p[1], "tel_lasciato": p[2]})
             return _Cur([])
         if q.startswith("SELECT count(*) AS n FROM sms_si"):
             return _Cur([{"n": sum(1 for c in self.si if c["token"] == p[0])}])
@@ -87,6 +87,8 @@ class Db:
                 if n:
                     out.append({"canale": "sms", "token": t, "nome": x["nome"], "telefono": x["telefono"], "giro": x["giro"],
                                 "clic": n, "aperti": sum(1 for c in self.clic if c["token"] == t),
+                                "tel_lasciato": next((c["tel_lasciato"] for c in reversed(self.si)
+                                                      if c["token"] == t and c["tel_lasciato"]), None),
                                 "primo_clic": "2026-11-24", "ultimo_clic": "2026-11-24", "stop": x["telefono"] in self.stop})
             return _Cur(out)
         if q.startswith("SELECT 'sms' AS canale, a.token"):          # chi ha solo aperto
@@ -321,12 +323,14 @@ def _req(path, token, ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)
                     "headers": [(b"user-agent", ua.encode()), (b"x-real-ip", ip.encode())], "client": (ip, 1)}, ricevi)
 
 
-def _si(token, t=None, dopo=10, **k):
-    """Il pulsante "Sì, chiamatemi": POST /mi/<token>/si con il campo firmato dalla pagina aperta `dopo` secondi fa."""
+def _si(token, t=None, dopo=10, tel="348 111 2233", **k):
+    """Il pulsante "Chiamatemi": POST /mi/<token>/si con il campo firmato dalla pagina aperta `dopo` secondi fa e il
+    numero scritto nel campo (tel=None: il campo non arriva)."""
     import asyncio
     from urllib.parse import urlencode
     t = A._mi_firma(token, time.time() - dopo) if t is None else t
-    return asyncio.run(A.sms_mi_si(_req(f"/mi/{token}/si", token, metodo="POST", corpo=urlencode({"t": t}).encode(), **k)))
+    campi = {"t": t} if tel is None else {"t": t, "tel": tel}
+    return asyncio.run(A.sms_mi_si(_req(f"/mi/{token}/si", token, metodo="POST", corpo=urlencode(campi).encode(), **k)))
 
 
 class _Scena:
@@ -350,8 +354,10 @@ def test_aprire_il_link_registra_solo_aperto_e_mostra_il_pulsante():
         r = A.sms_mi_interessa(_req("/mi/abc2345", "abc2345"))
         corpo = r.body.decode()
         assert r.status_code == 200 and "noindex" in corpo and "noindex" in r.headers["x-robots-tag"]
-        assert "Grazie!" not in corpo and "Sì, chiamatemi" in corpo and "348 242 5633" in corpo
+        assert "Grazie!" not in corpo and "📞 Chiamatemi</button>" in corpo and "348 242 5633" in corpo
         assert '<form class="si" method="post" action="/mi/abc2345/si">' in corpo
+        assert '<label class="et" for="tel">Il tuo numero di telefono</label>' in corpo and 'class="err"' not in corpo
+        assert re.search(r'<input class="tel" id="tel" name="tel" type="tel" [^>]*required[^>]* value="">', corpo)
         assert re.search(r'<input type="hidden" name="t" value="\d+\.[0-9a-f]{32}">', corpo)
         assert '<a class="no" href="/mi/abc2345/stop">Non mi interessa</a>' in corpo
         assert "Salone Prova" not in corpo and "9876" not in corpo         # niente dati del salone nella pagina
@@ -373,13 +379,67 @@ def test_solo_il_pulsante_registra_l_interesse_e_mostra_grazie():
         assert A._mi_firma_valida("abc2345", t) == "presto"                 # appena aperta: ancora presto
         r = _si("abc2345")
         corpo = r.body.decode()
-        assert r.status_code == 200 and "Grazie!" in corpo and "Ti chiamiamo a breve dal" in corpo and "348 242 5633" in corpo
-        assert "per spiegarti come funziona Skovo" in corpo and 'href="tel:+393482425633"' in corpo and "Chiamaci ora" in corpo
-        assert "Sì, chiamatemi" not in corpo and "Non voglio più ricevere SMS" in corpo and "noindex" in r.headers["x-robots-tag"]
-        assert "Salone Prova" not in corpo and "9876" not in corpo
-        assert s.log.righe[-1] == "SMS_INTERESSATO token=abc2345 canale=sms nome=Salone Prova tel=***9876 n=1"
-        _si("abc2345")
-        assert s.log.righe[-1].endswith("n=2") and len(s.db.si) == 2 and len(s.db.clic) == 1
+        assert r.status_code == 200 and "<h1>Grazie!</h1>" in corpo and "<p>Ti chiamiamo a breve.</p>" in corpo
+        # il nostro numero resta come seconda scelta (un link piccolo, non più il pulsante verde)
+        assert 'Oppure chiamaci tu: <a class="num" href="tel:+393482425633">348 242 5633</a>' in corpo
+        assert "Chiamaci ora" not in corpo and 'class="cta"' not in corpo
+        assert "Chiamatemi" not in corpo and "Non voglio più ricevere SMS" in corpo and "noindex" in r.headers["x-robots-tag"]
+        assert "Salone Prova" not in corpo and "9876" not in corpo and "2233" not in corpo
+        assert s.log.righe[-1] == ("SMS_INTERESSATO token=abc2345 canale=sms nome=Salone Prova tel=***9876 n=1 "
+                                   "tel_lasciato=***2233")
+        assert s.db.si[0]["tel_lasciato"] == "3481112233"                   # per intero solo nel database
+        _si("abc2345", tel="+39 02.1234.5678")
+        assert s.log.righe[-1].endswith("n=2 tel_lasciato=***5678") and len(s.db.si) == 2 and len(s.db.clic) == 1
+        assert s.db.si[1]["tel_lasciato"] == "0212345678"
+        assert not any(re.search(r"\d{6,}", x) for x in s.log.righe)        # mai un numero intero nei log
+    finally:
+        s.fine()
+
+
+def test_numeri_lasciati_validi_e_non_validi():
+    buoni = {"348 242 5633": "3482425633", "+39 348 242 5633": "3482425633", "+393482425633": "3482425633",
+             "0039 348.242.5633": "3482425633", "393482425633": "3482425633", "348.24.25.633": "3482425633",
+             "392 1234567": "3921234567",                                   # 39x è un prefisso di cellulare, non il +39
+             "330 123456": "330123456",                                     # cellulari vecchi di 9 cifre
+             "02 1234 5678": "0212345678", "+39 0362 123456": "0362123456", "06 123456": "06123456",
+             "348-242-5633": "3482425633", "(02) 12345678": "0212345678"}
+    for scritto, atteso in buoni.items():
+        assert SS.tel_lasciato(scritto) == atteso, scritto
+    for scritto in ("", None, "   ", "348", "34824256", "3482425633999", "1234567890", "+44 7911 123456", "+1 348 242 5633",
+                    "348 242 5633 interno 2", "chiamatemi", "348242563a", "8001234567", "0", "+39", "٣٤٨٢٤٢٥٦٣٣",
+                    "348 242 5633" + " 0" * 12, "<b>3482425633</b>"):
+        assert SS.tel_lasciato(scritto) is None, scritto
+
+
+def test_numero_mancante_o_non_valido_non_registra_e_richiede_il_numero():
+    s = _Scena()
+    try:
+        for tel, motivo in ((None, "manca"), ("", "manca"), ("   ", "manca"), ("12345", "non_valido"),
+                            ("+44 7911 123456", "non_valido"), ("il mio numero", "non_valido")):
+            r = _si("abc2345", tel=tel)
+            corpo = r.body.decode()
+            assert r.status_code == 200 and "Grazie!" not in corpo and not s.db.si, tel
+            assert '<p class="err" id="tel-err" role="alert">Numero non valido' in corpo and 'class="tel ko"' in corpo
+            assert "📞 Chiamatemi</button>" in corpo and 'action="/mi/abc2345/si"' in corpo
+            assert "Tocca di nuovo il pulsante" not in corpo
+            assert s.log.righe[-1] == f"SMS_TELEFONO_SCARTATO token=abc2345 motivo={motivo}"
+            # la pagina torna con un timbro nuovo: il modulo si può rimandare (dopo i 2 secondi)
+            t = re.search(r'name="t" value="([^"]+)"', corpo).group(1)
+            assert A._mi_firma_valida("abc2345", t, adesso=time.time() + 5) is None
+        # quello che era scritto torna nel campo, senza niente che non sia di un numero; mai nel log
+        corpo = _si("abc2345", tel='+44 7911 123456"><script>').body.decode()
+        assert 'value="+44 7911 123456"' in corpo and "<script>" not in corpo
+        assert not any("7911" in x for x in s.log.righe) and not s.db.si
+        # il controllo del tempo viene prima: troppo presto resta "tocca di nuovo", anche con un numero buono o senza
+        for tel in ("348 111 2233", ""):
+            r = _si("abc2345", dopo=0, tel=tel)
+            assert "Tocca di nuovo il pulsante" in r.body.decode() and 'class="err"' not in r.body.decode() and not s.db.si
+            assert s.log.righe[-1] == "SMS_CONFERMA_SCARTATA token=abc2345 motivo=presto"
+        # i programmi automatici: niente nemmeno nel log
+        prima = len(s.log.righe)
+        assert "Grazie!" not in _si("abc2345", tel="", ua="curl/8.5").body.decode() and len(s.log.righe) == prima
+        # poi con il numero giusto si registra
+        assert "Grazie!" in _si("abc2345").body.decode() and len(s.db.si) == 1
     finally:
         s.fine()
 
@@ -400,7 +460,7 @@ def test_pulsante_troppo_presto_o_senza_firma_non_conta():
                 str(int(buono.split(".")[0]) - 20) + "." + buono.split(".")[1]]    # secondi cambiati a mano
         for t in casi:
             r = _si("abc2345", t=t)
-            assert "Grazie!" not in r.body.decode() and "Sì, chiamatemi" in r.body.decode(), t
+            assert "Grazie!" not in r.body.decode() and "📞 Chiamatemi" in r.body.decode(), t
         assert len(s.db.si) == 1 and s.log.righe[-1].startswith("SMS_CONFERMA_SCARTATA token=abc2345 motivo=")
         assert sum("motivo=scaduta" in x for x in s.log.righe) == 1 and sum("motivo=firma" in x for x in s.log.righe) == len(casi) - 1
         # senza corpo del tutto
@@ -420,7 +480,7 @@ def test_pulsante_database_fermo_mai_grazie():
         assert r.headers["retry-after"] == "120" and s.log.righe[-1] == "SMS_INTERESSATO non registrato: ZeroDivisionError"
         # l'apertura con il database fermo: la pagina si vede lo stesso
         r = A.sms_mi_interessa(_req("/mi/abc2345", "abc2345"))
-        assert r.status_code == 200 and "Sì, chiamatemi" in r.body.decode()
+        assert r.status_code == 200 and "📞 Chiamatemi" in r.body.decode()
         assert s.log.righe[-1] == "SMS_APERTO non registrato: ZeroDivisionError"
     finally:
         s.fine()
@@ -432,18 +492,20 @@ def test_pagina_token_sconosciuto_stessa_pagina_gentile():
         senza_t = lambda c: re.sub(r'name="t" value="[^"]*"', "", c)
         buona = A.sms_mi_interessa(_req("/mi/abc2345", "abc2345")).body.decode()
         r = A.sms_mi_interessa(_req("/mi/nonce99", "nonce99"))
-        assert r.status_code == 200 and "Sì, chiamatemi" in r.body.decode()
+        assert r.status_code == 200 and "📞 Chiamatemi" in r.body.decode()
         assert senza_t(r.body.decode()).replace("nonce99", "abc2345") == senza_t(buona)
         assert len(s.log.righe) == 1 and len(s.db.clic) == 1                 # un token che non esiste non si registra
         r = _si("nonce99")
         assert r.body.decode().replace("nonce99", "abc2345") == _si("abc2345").body.decode()
-        assert "SMS_INTERESSATO token=nonce99 canale=sms nome=? tel=***? n=0" in s.log.righe and len(s.db.si) == 1
+        assert "SMS_INTERESSATO token=nonce99 canale=sms nome=? tel=***? n=0 tel_lasciato=***2233" in s.log.righe
+        assert len(s.db.si) == 1
         # token con caratteri strani: mai copiato nel log né nella pagina
         prima = len(s.log.righe)
         r = A.sms_mi_interessa(_req("/mi/x", "<b>\nSMS_FINE finto"))
-        assert len(s.log.righe) == prima and "<b>" not in r.body.decode() and "Chiamaci ora" in r.body.decode()
+        assert len(s.log.righe) == prima and "<b>" not in r.body.decode() and "Oppure chiamaci tu" in r.body.decode()
         r = _si("<b>\nSMS_FINE finto", t=A._mi_firma("", time.time() - 10))
-        assert s.log.righe[-1] == "SMS_INTERESSATO token=? canale=sms nome=? tel=***? n=0" and "<b>" not in r.body.decode()
+        assert s.log.righe[-1] == "SMS_INTERESSATO token=? canale=sms nome=? tel=***? n=0 tel_lasciato=***2233"
+        assert "<b>" not in r.body.decode()
     finally:
         s.fine()
 
@@ -471,7 +533,7 @@ def test_limite_per_ip():
         for _ in range(A.SMS_CLIC_IP_ORA):
             assert A.sms_mi_interessa(_req("/mi/abc2345", "abc2345")).status_code == 200
         r = A.sms_mi_interessa(_req("/mi/abc2345", "abc2345"))
-        assert r.status_code == 429 and "Sì, chiamatemi" in r.body.decode() and len(s.db.clic) == A.SMS_CLIC_IP_ORA
+        assert r.status_code == 429 and "📞 Chiamatemi" in r.body.decode() and len(s.db.clic) == A.SMS_CLIC_IP_ORA
         r = _si("abc2345")
         assert r.status_code == 429 and "Grazie!" not in r.body.decode() and not s.db.si
         assert A.sms_mi_interessa(_req("/mi/abc2345", "abc2345", ip="93.40.9.9")).status_code == 200
@@ -501,7 +563,7 @@ def test_elenco_interessati_solo_admin_solo_i_confermati():
             A.sms_mi_interessa(_req("/mi/abc2345", "abc2345"))
         A.sms_mi_interessa(_req("/mi/def6789", "def6789"))                  # apre e basta
         _si("abc2345")
-        _si("abc2345")
+        _si("abc2345", tel="02 1234 5678")
         try:
             A.admin_sms_interessati(_req("/api/admin/sms_interessati", ""))
             assert False, "senza accesso doveva rifiutare"
@@ -516,6 +578,7 @@ def test_elenco_interessati_solo_admin_solo_i_confermati():
         assert d["totale"] == 1 and d["interessati"][0]["nome"] == "Salone Prova"
         x = d["interessati"][0]
         assert x["telefono"] == "+393330009876" and x["clic"] == 2 and x["aperti"] == 3 and x["canale"] == "sms"
+        assert x["tel_lasciato"] == "0212345678"                            # l'ultimo numero lasciato, solo per l'admin
         assert d["totale_solo_aperti"] == 1 and d["solo_aperti"][0]["nome"] == "Salone Curioso" and d["solo_aperti"][0]["aperti"] == 1
     finally:
         s.fine()
@@ -531,7 +594,9 @@ def test_frasi_dell_elenco_confermati_da_sms_si_e_aperti_da_sms_clic():
     SS.interessati(Spia())
     q = next(x for x in viste if x.startswith("SELECT 'sms' AS canale, l.token"))
     assert "FROM sms_si c JOIN sms_link l" in q and "(SELECT count(*) FROM sms_clic a WHERE a.token = l.token) AS aperti" in q
+    assert "(SELECT s.tel_lasciato FROM sms_si s WHERE s.token = l.token AND s.tel_lasciato IS NOT NULL" in q
     assert any("CREATE TABLE IF NOT EXISTS sms_si" in x for x in viste)
+    assert "ALTER TABLE sms_si ADD COLUMN IF NOT EXISTS tel_lasciato TEXT" in viste       # migrazione ripetibile
 
 
 def test_rotte_registrate():

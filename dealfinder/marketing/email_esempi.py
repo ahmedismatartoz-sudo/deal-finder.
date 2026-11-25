@@ -2,7 +2,7 @@
 
 Due versioni: CON ESEMPI (due auto vicine al salone, con foto, prezzo, mercato e margine, come il template WhatsApp
 skovo_due_auto_foto) e SENZA ESEMPI (solo testo). In tutte e due il pulsante "Mi interessa" personale, come negli SMS:
-<PUBLIC_URL>/mi/<token> -> pagina con il pulsante "Sì, chiamatemi" (aprire il link è solo "aperto": i filtri della
+<PUBLIC_URL>/mi/<token> -> pagina con il pulsante "Chiamatemi" (aprire il link è solo "aperto": i filtri della
 posta delle aziende aprono tutti i link); il pulsante registra l'interesse, elenco in /api/admin/sms_interessati.
 
 Lavoro una tantum da BREVO_IMPORT_LISTE:  email_esempi:<giro>:<quanti per gruppo>   (es. email_esempi:2411:150)
@@ -139,7 +139,7 @@ SQL_TABELLE = (
         anteprima  TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS email_clic_token ON email_clic (token)",
-    # 24/11: email_clic sono le APERTURE della pagina (GET); l'interesse vero è il pulsante "Sì, chiamatemi" (email_si)
+    # 24/11: email_clic sono le APERTURE della pagina (GET); l'interesse vero è il pulsante "Chiamatemi" (email_si)
     """CREATE TABLE IF NOT EXISTS email_si (
         id         BIGSERIAL PRIMARY KEY,
         token      TEXT NOT NULL,
@@ -147,6 +147,8 @@ SQL_TABELLE = (
         user_agent TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS email_si_token ON email_si (token)",
+    # 25/11 (cliente): la pagina chiede il numero a cui richiamare; resta accanto alla conferma (per intero solo qui)
+    "ALTER TABLE email_si ADD COLUMN IF NOT EXISTS tel_lasciato TEXT",
     """CREATE TABLE IF NOT EXISTS email_foto (
         id         BIGINT PRIMARY KEY,
         foto       BYTEA NOT NULL,
@@ -1098,10 +1100,11 @@ def registra_aperto(conn, token, user_agent: str = "", log=None) -> dict:
     return {"contato": True, "n": n}
 
 
-def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
-    """Pulsante "Sì, chiamatemi" (POST /mi/<token>/si): salva in email_si e scrive EMAIL_INTERESSATO (nome del salone,
-    ultime 4 cifre se c'è un telefono, numero di conferme). Mai l'indirizzo email nei log. I programmi automatici
-    non contano."""
+def registra_clic(conn, token, user_agent: str = "", log=None, tel: str | None = None) -> dict:
+    """Pulsante "Chiamatemi" (POST /mi/<token>/si): salva in email_si e scrive EMAIL_INTERESSATO (nome del salone,
+    ultime 4 cifre se c'è un telefono, numero di conferme). `tel`: il numero lasciato nella pagina, già controllato
+    (sms_saloni.tel_lasciato): per intero va solo nel database (email_si.tel_lasciato), nel log le ultime 4 cifre.
+    Mai l'indirizzo email nei log. I programmi automatici non contano."""
     from . import sms_saloni as SS
     log = log or lg
     ua = re.sub(r"[\x00-\x1f\x7f]", " ", str(user_agent or ""))[:200]
@@ -1111,11 +1114,12 @@ def registra_clic(conn, token, user_agent: str = "", log=None) -> dict:
     if not riga:
         return {"contato": False, "motivo": "sconosciuto"}
     nome = nome_log(riga["nome"])
-    tel = SS.coda4(riga["telefono"]) if riga.get("telefono") else "-"
-    conn.execute("INSERT INTO email_si (token, user_agent) VALUES (%s, %s)", (riga["token"], ua))
+    noto = SS.coda4(riga["telefono"]) if riga.get("telefono") else "-"
+    conn.execute("INSERT INTO email_si (token, user_agent, tel_lasciato) VALUES (%s, %s, %s)", (riga["token"], ua, tel or None))
     n = conn.execute("SELECT count(*) AS n FROM email_si WHERE token = %s", (riga["token"],)).fetchone()["n"]
     conn.commit()
-    log.warning("EMAIL_INTERESSATO token=%s canale=email nome=%s tel=%s n=%d", riga["token"], nome, tel, n)
+    log.warning("EMAIL_INTERESSATO token=%s canale=email nome=%s tel=%s n=%d%s", riga["token"], nome, noto, n,
+                " tel_lasciato=" + SS.coda4(tel) if tel else "")
     return {"contato": True, "n": n, "nome": riga["nome"]}
 
 
@@ -1160,11 +1164,14 @@ def registra_stop(conn, token, c=None, log=None, dormi=time.sleep, piu_tardi=Non
 
 
 def interessati(conn) -> list[dict]:
-    """Per l'amministratore: chi ha CONFERMATO con il pulsante "Sì, chiamatemi" della pagina. `clic` sono le conferme,
-    `aperti` quante volte la pagina è stata solo aperta (anche dai filtri della posta)."""
+    """Per l'amministratore: chi ha CONFERMATO con il pulsante "Chiamatemi" della pagina. `clic` sono le conferme,
+    `tel_lasciato` l'ultimo numero scritto nella pagina (a quello vuole essere richiamato), `aperti` quante volte la
+    pagina è stata solo aperta (anche dai filtri della posta)."""
     assicura(conn)
     righe = conn.execute(
         "SELECT 'email' AS canale, l.token, l.nome, l.telefono, l.email, l.giro, count(*) AS clic, "
+        "(SELECT s.tel_lasciato FROM email_si s WHERE s.token = l.token AND s.tel_lasciato IS NOT NULL "
+        "ORDER BY s.at DESC, s.id DESC LIMIT 1) AS tel_lasciato, "
         "(SELECT count(*) FROM email_clic a WHERE a.token = l.token) AS aperti, min(c.at) AS primo_clic, max(c.at) AS ultimo_clic, "
         "l.stop_at IS NOT NULL AS stop "
         "FROM email_si c JOIN email_link l ON l.token = c.token "
