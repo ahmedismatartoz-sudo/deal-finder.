@@ -288,12 +288,12 @@ function patchRec(key,code,patch){const L=store.get(key,[]),x=L.find(r=>r.code==
 const waHref=t=>BIZ.wa+'?text='+encodeURIComponent(t);
 function waText(kind,r){const L=['Salve MC, vi scrivo dal sito (prototipo).'],c=r.car&&carBy(r.car);
   const add=(k,v)=>{if(v!=null&&v!=='')L.push(k+': '+v)};
-  add('Richiesta',{appt:'Appuntamento – '+(APPT[r.type]?APPT[r.type].it:''),rent:'Prenotazione noleggio',quote:'Preventivo',call:'Richiamatemi',trade:'Valutazione permuta',fin:'Finanziamento'}[kind]);
+  add('Richiesta',{appt:'Appuntamento – '+(APPT[r.type]?APPT[r.type].it:''),rent:'Prenotazione noleggio',quote:'Preventivo',call:'Richiamatemi',trade:'Valutazione permuta',fin:'Finanziamento',event:'Evento',avail:'Disponibilità per date'}[kind]);
   add('Codice',r.code);if(c)add('Auto',carName(c));
   if(kind==='appt'){add('Data',fmtD(fromIso(r.date),{weekday:'long',day:'numeric',month:'long',year:'numeric'}));add('Ora',r.time)}
   if(kind==='rent'){add('Ritiro',fmtD(fromIso(r.from))+' ore '+r.tf);add('Riconsegna',fmtD(fromIso(r.to))+' ore '+r.tt);add('Totale (esempio)',eur(r.total))}
   if(r.fin)add('Rata scelta (esempio)',r.fin);
-  if(kind==='quote'){add('Tipo',r.kindLabel);add('Dettagli',r.detail)}
+  if(kind==='quote'||kind==='event'){add('Tipo',r.kindLabel);add('Dettagli',r.detail)}
   if(kind==='trade'){add('Auto in permuta',r.tmod);add('Stima indicativa',r.range)}
   if(kind==='call')add('Fascia preferita',r.slot);
   add('Nome',r.who);add('Telefono',r.tel);add('Note',r.note);

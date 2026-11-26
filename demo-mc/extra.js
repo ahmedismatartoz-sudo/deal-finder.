@@ -7,7 +7,7 @@ function saleList(){const l=CARS.filter(c=>(!SF.brand||c.brand===SF.brand)&&(!SF
   return l.sort({rel:()=>0,up:(a,b)=>a.sale-b.sale,down:(a,b)=>b.sale-a.sale,km:(a,b)=>a.km-b.km,year:(a,b)=>b.year-a.year}[SF.sort])}
 function saleResults(){const l=saleList();return l.length?`<div class="cars">${l.map(c=>carCard(c,{mode:'sale'})).join('')}</div>`:`<div class="empty"><b>${T('Nessuna auto con questi filtri','No cars match these filters')}</b><p>${T('Allarga prezzo o chilometri, oppure chiedici cosa cerchi: possiamo trovarla per te.','Widen price or mileage, or tell us what you want: we can source it for you.')}</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn btn-line btn-sm" data-act="saleReset">${T('Azzera i filtri','Reset filters')}</button>${waBtn('btn-white btn-sm')}</div></div>`}
 function viewSale(){const sel=(n,opts,all)=>`<select class="inp" data-chg="sf" name="${n}"><option value="${n==='year'?0:''}">${all}</option>${opts.map(o=>`<option value="${o[0]}" ${String(SF[n])===String(o[0])?'selected':''}>${o[1]}</option>`).join('')}</select>`;
-  return `<div class="page"><div class="wrap"><div class="page-head"><p class="eyebrow">${T('Vendita','Sales')}</p><h1>${T('Auto in vendita','Cars for sale')}</h1><p class="lead">${T('Vetture selezionate, con test drive, permuta e preventivo su richiesta.','Hand-picked cars, with test drive, trade-in and quote on request.')} ${demoTag()}</p></div>
+  return `<div class="page"><div class="wrap"><div class="page-head"><p class="eyebrow">${T('Vendita','Sales')}</p><h1>${seoH1('vendita',T('Auto in vendita.','Cars for sale.'))}</h1><p class="lead">${T('Vetture selezionate, con test drive, permuta e preventivo su richiesta.','Hand-picked cars, with test drive, trade-in and quote on request.')} ${demoTag()}</p></div>
   <div class="cat-layout"><aside class="filters" id="filters" aria-label="${T('Filtri','Filters')}"><h3>${T('Filtri','Filters')}<button class="link xs" data-act="saleReset">${T('Azzera','Reset')}</button></h3>
     <label class="field"><span>${T('Marca','Brand')}</span>${sel('brand',[...new Set(CARS.map(c=>c.brand))].map(b=>[b,b]),T('Tutte','All'))}</label>
     <label class="field"><span>${T('Anno da','Year from')}</span>${sel('year',[2021,2022,2023].map(y=>[y,y]),T('Qualsiasi','Any'))}</label>
@@ -27,9 +27,10 @@ ACT.saleReset=()=>{Object.assign(SF,SF0);route()};
 /* scheda vendita: visore 360°, configuratore, calcolatore rata, test drive, preventivo, permuta */
 function viewSaleCar(id,qs){const c=carBy(id);if(!c)return view404();DT.view=0;FN.page=false;if(FN.car!==c.id){FN.car=c.id;FN.down=null}
   const opt=[T('Cerchi in lega sportivi','Sport alloy wheels'),T('Sedili sportivi','Sport seats'),T('Scarico sportivo','Sport exhaust'),T('Fari a matrice di LED','Matrix LED headlights'),T('Navigatore e connettività','Navigation and connectivity'),T('Telecamere di parcheggio','Parking cameras')];
-  return `<div class="page"><div class="wrap"><nav class="crumb" aria-label="breadcrumb"><a href="#/">Home</a><span>/</span><a href="#/vendita">${T('Vendita','Sales')}</a><span>/</span><span>${carName(c)}</span></nav>
-  <div class="detail"><div class="d-main">${viewerBlock(c)}
-    <section class="card" id="finCard"><div class="cfg-head"><h3>${T('Calcola la rata','Work out the payment')}</h3><span class="xs dim">${T('valori di esempio','sample values')}</span></div>${finBox()}</section>
+  return `<div class="page"><div class="wrap">${lbl('02',T('scheda','details'))}<nav class="crumb" aria-label="breadcrumb"><a href="#/">Home</a><span>/</span><a href="#/vendita">${T('Vendita','Sales')}</a><span>/</span><span>${carName(c)}</span></nav>
+  <div class="detail"><div class="d-main">${viewerBlock(c)}${bigSpecs(c)}
+    ${seoCarText(c.id,'vendita')?`<section class="about-car"><h2 class="h-s">${T("L'auto",'The car')}</h2><p>${esc(seoCarText(c.id,'vendita'))}</p></section>`:''}
+    <section class="card" id="finCard"><div class="fin-head"><h3>${T('Calcola la rata','Work out the payment')}</h3><span class="xs dim">${T('valori di esempio','sample values')}</span></div>${finBox()}</section>
     <section class="d-tabs"><h3 style="margin-bottom:14px">${T('Scheda tecnica','Tech specs')}</h3>${specGrid(c)}
      <h3 style="margin:26px 0 14px">${T('Dotazioni','Equipment')} ${demoTag()}</h3><ul class="list-check cols2">${opt.map(o=>`<li><span>${o}</span></li>`).join('')}</ul></section></div>
    <aside class="buybox"><div><p class="bb-brand">${c.brand} · ${c.year} · ${num(c.km)} km</p><h1>${c.model}</h1></div>

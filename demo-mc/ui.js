@@ -55,11 +55,11 @@ function renderShell(route){
   $('#foot').innerHTML=`<div class="wrap"><div class="foot-hero"><a class="logo big" href="#/"><span>MC</span><b></b></a><p class="foot-claim">${T('Auto speciali a Milano.<br><em>Noleggio, vendita, immagine.</em>','Special cars in Milan.<br><em>Rental, sales, image.</em>')}</p></div>
    <div class="foot-grid">
    <div><h4>${T('Collezione','Collection')}</h4><ul><li><a href="#/noleggio">${T('Noleggio breve','Short-term rental')}</a></li><li><a href="#/lungo-termine">${T('Noleggio a lungo termine','Long-term rental')}</a></li><li><a href="#/vendita">${T('Auto in vendita','Cars for sale')}</a></li><li><a href="#/preferiti">${T('Preferiti','Favourites')}</a></li></ul></div>
-   <div><h4>${T('Servizi','Services')}</h4><ul><li><a href="#/finanziamento">${T('Calcolo rata','Payment calculator')}</a></li><li><a href="#/preventivo">${T('Richiedi un preventivo','Request a quote')}</a></li><li><a href="#/permuta">${T('Valutazione permuta','Trade-in valuation')}</a></li><li><a href="#/agenda">${T('Test drive e visite','Test drives and visits')}</a></li><li><button class="linkish" data-act="callback">${T('Ti richiamiamo noi','We call you back')}</button></li></ul></div>
+   <div><h4>${T('Servizi','Services')}</h4><ul><li><a href="#/finanziamento">${T('Calcolo rata','Payment calculator')}</a></li><li><a href="#/preventivo">${T('Richiedi un preventivo','Request a quote')}</a></li><li><a href="#/permuta">${T('Valutazione permuta','Trade-in valuation')}</a></li><li><a href="#/agenda">${T('Test drive e visite','Test drives and visits')}</a></li><li><a href="#/noleggio-o-acquisto">${T('Noleggio o acquisto?','Rent or buy?')}</a></li><li><a href="#/eventi">${T('Matrimoni ed eventi','Weddings and events')}</a></li><li><a href="#/consegna">${T('Consegna e aeroporti','Delivery and airports')}</a></li><li><a href="#/documenti">${T('Documenti per il noleggio','Rental documents')}</a></li><li><button class="linkish" data-act="callback">${T('Ti richiamiamo noi','We call you back')}</button></li></ul></div>
    <div id="contatti"><h4>${T('Contatti','Contact')}</h4><ul><li>${BIZ.addr}<br>${BIZ.cap}</li><li><a href="${BIZ.telHref}">${BIZ.tel}</a></li><li><a href="${BIZ.wa}" target="_blank" rel="noopener">WhatsApp</a></li><li><a href="${BIZ.dir}" target="_blank" rel="noopener">${T('Indicazioni stradali','Get directions')} ↗</a></li></ul></div>
    <div><h4>${T('Orari','Opening hours')} <span class="demo-tag">${T('da confermare','to be confirmed')}</span></h4><ul class="hours">${HOURS().map(h=>`<li><span>${h[0]}</span><span>${h[1]}</span></li>`).join('')}</ul>
-    <h4 style="margin-top:24px">${T('Prototipo','Prototype')}</h4><ul><li><a href="#/chi-siamo">${T('Chi siamo','About us')}</a></li><li><a href="#/admin">${T('Area salone (demo)','Showroom area (demo)')}</a></li><li><a href="#/account">${T('Area cliente (demo)','Client area (demo)')}</a></li><li><a href="#/progetto">${T('Il progetto','The project')}</a></li><li><a href="#/" data-act="cookieOpen">${T('Preferenze cookie','Cookie preferences')}</a></li></ul></div>
-   </div><div class="foot-bot"><span class="proto-note">${T('Prototipo dimostrativo · prezzi, disponibilità e dati sono di esempio.','Demo prototype · prices, availability and data are samples.')}</span><span>© ${new Date().getFullYear()} MC · ${BIZ.addr}, ${BIZ.cap}</span><span>${T('Prototipo dimostrativo: prezzi, disponibilità, rate, recensioni e prenotazioni sono dati di esempio. Pagamenti, firma e documenti sono simulati.','Demo prototype: prices, availability, instalments, reviews and bookings are sample data. Payments, signature and documents are simulated.')}</span><span>${T('Illustrazioni e rendering 3D generici, generati nel browser: nessun logo, marchio o design di case automobilistiche. I nomi dei modelli indicano solo il parco auto.','Generic illustrations and 3D renders generated in the browser: no logos, trademarks or car-maker designs. Model names only identify the fleet.')}</span></div></div>`;
+    <h4 style="margin-top:24px">${T('Prototipo','Prototype')}</h4><ul><li><a href="#/chi-siamo">${T('Chi siamo','About us')}</a></li><li><a href="#/admin">${T('Area salone (demo)','Showroom area (demo)')}</a></li><li><a href="#/account">${T('Area cliente (demo)','Client area (demo)')}</a></li><li><a href="#/progetto">${T('Il progetto','The project')}</a></li><li><a href="#/crediti-foto">${T('Crediti foto','Photo credits')}</a></li><li><a href="#/" data-act="cookieOpen">${T('Preferenze cookie','Cookie preferences')}</a></li></ul></div>
+   </div>${nlBox()}<div class="foot-mono" aria-hidden="true">MC</div><div class="foot-bot"><span class="proto-note">${T('Prototipo dimostrativo · prezzi, disponibilità e dati sono di esempio.','Demo prototype · prices, availability and data are samples.')}</span><span>© ${new Date().getFullYear()} MC · ${BIZ.addr}, ${BIZ.cap}</span><span>${T('Prototipo dimostrativo: prezzi, disponibilità, rate, recensioni e prenotazioni sono dati di esempio. Pagamenti, firma e documenti sono simulati.','Demo prototype: prices, availability, instalments, reviews and bookings are sample data. Payments, signature and documents are simulated.')}</span><span>${T('Illustrazioni e rendering 3D generici, generati nel browser: nessun logo, marchio o design di case automobilistiche. I nomi dei modelli indicano solo il parco auto.','Generic illustrations and 3D renders generated in the browser: no logos, trademarks or car-maker designs. Model names only identify the fleet.')}</span></div></div>`;
   $('#dock').innerHTML=`<a href="${BIZ.telHref}">${IC.phone}<span>${T('Chiama','Call')}</span></a><a href="${BIZ.wa}" target="_blank" rel="noopener">${IC.wa}<span>WhatsApp</span></a><a href="#/agenda">${IC.cal}<span>${T('Prenota','Book')}</span></a><button data-act="agentToggle">${IC.chat}<span>${T('Assistente','Assistant')}</span></button>`;
   $('#agentFab').innerHTML=`<i></i><span>${T('Assistenti','Assistants')}</span>`;$('#agentFab').setAttribute('aria-label',T('Apri gli assistenti AI (demo)','Open AI assistants (demo)'));
   onScrollTop();
@@ -89,12 +89,12 @@ function availBadge(c,from,to){const st=fleetState()[c.id];
 function carCard(c,o){o=o||{};const sale=o.mode==='sale',f=favs().includes(c.id),q=!sale&&o.from&&o.to?quote(c,{from:o.from,to:o.to}):null,d=LANG==='it'?',':'.';
   const href=sale?'#/vendita/'+c.id:'#/auto/'+c.id,fin=sale?finance({price:c.sale,down:Math.round(c.sale*.25),months:48,balloon:true,bPct:35}):null;
   return `<article class="car reveal">
-  <a class="car-img" href="${href}" aria-label="${esc(carName(c))}">${carSVG(c)}
+  <a class="car-img" href="${href}" aria-label="${esc(carName(c))}">${carPic(c,{sizes:'(max-width:820px) 92vw, 420px'})}
    <div class="tl"><span class="badge plain">${T(CATS[c.cat].it,CATS[c.cat].en)}</span>${sale?'':availBadge(c,o.from,o.to)}</div></a>
   <div class="car-tr"><button class="icon-btn fav" data-act="fav" data-id="${c.id}" aria-pressed="${f}" aria-label="${T('Preferiti','Favourite')}: ${esc(carName(c))}">${IC.heart}</button>
    <button class="icon-btn" data-act="cmp" data-id="${c.id}" aria-pressed="${CMP.includes(c.id)}" aria-label="${T('Confronta','Compare')}: ${esc(carName(c))}">${IC.cmp}</button></div>
-  <div class="car-body"><div><div class="brand">${c.brand}</div><h3><a href="${href}">${c.model}</a></h3></div>
-   <div class="specs"><span><b>${c.cv}</b> ${PW()}</span><span><b>${String(c.s100).replace('.',d)}</b> s</span>${sale?`<span><b>${c.year}</b></span><span><b>${num(c.km)}</b> km</span>`:`<span><b>${c.kmDay}</b> km/${T('g','d')}</span>`}</div>
+  <div class="car-body"><div><div class="brand">${c.brand}</div><h3><a href="${href}">${c.model}</a></h3></div><div class="pills"><span class="pill">${c.cv} ${PW()}</span><span class="pill">${T(FUELS[c.fuel].it,FUELS[c.fuel].en)}</span></div>
+   <div class="specs"><span><b>${String(c.s100).replace('.',d)}</b> s 0–100</span>${sale?`<span><b>${c.year}</b></span><span><b>${num(c.km)}</b> km</span>`:`<span><b>${c.kmDay}</b> km/${T('g','d')}</span>`}</div>
    <div class="car-foot"><div class="price">${sale?`<span class="num">${eur(c.sale)}</span><small>${T('o','or')} ${eur(fin.rata)}/${T('mese','mo')} · ${T('esempio','example')}</small>`:
      q&&q.ok?`<span class="num">${eur(q.total)}</span><small>${q.days} ${T(q.days>1?'giorni':'giorno',q.days>1?'days':'day')} · ${T('esempio','example')}</small>`:
      `<span class="num">${eur(c.day)}<small> /${T('giorno','day')}</small></span><small>${T('da','from')} ${eur(tiers(c).month)}/${T('mese','mo')} · ${T('esempio','example')}</small>`}</div>
@@ -128,64 +128,56 @@ addEventListener('scroll',()=>{if(observeReveal.t)return;observeReveal.t=setTime
 
 /* ================= HOME ================= */
 let searchTab='rent';
-function viewHome(){
-  const hero=CARS[0],d=LANG==='it'?',':'.';
-  return `<section class="hero" id="hero"><div class="hero-stage" aria-hidden="true"><div class="hero-light"></div><div class="hero-beam"></div><div class="hero-floor"></div>
-     <div class="hero-car"><div class="carwrap">${carSVG(hero,{label:''})}</div><div class="mirror">${carSVG(hero,{label:''})}</div></div></div>
-    <div class="wrap hero-in"><div class="hero-copy">
-      <p class="eyebrow">${T('Milano · Via Arbe 95','Milan · Via Arbe 95')}</p>
-      <h1>${T('L\'eccezione,<br><em>a portata di chiavi.</em>','The exceptional,<br><em>within reach.</em>')}</h1>
-      <p class="lead">${T('Noleggio e vendita di auto speciali: supercar, SUV sportivi e wagon ad alte prestazioni, preparate una per una.','Rental and sales of special cars: supercars, performance SUVs and high-performance estates, prepared one by one.')}</p>
-      <div class="cta"><a class="btn btn-primary" href="#/noleggio">${T('Scopri la collezione','Explore the collection')} ${IC.arrow}</a><a class="btn btn-line" href="#/agenda">${IC.cal}<span>${T('Prenota una visita','Book a visit')}</span></a></div>
-    </div>
-    <div class="hero-meta"><div><b class="num">${hero.cv}</b><span>${PW()} · ${hero.model}</span></div><div><b class="num">${String(hero.s100).replace('.',d)} s</b><span>0–100 km/h</span></div><div><b class="num">6</b><span>${T('auto in collezione','cars in the collection')}</span></div></div></div></section>
+/* ---------- foto con ripiego sul disegno ---------- */
+const carPhotos=c=>(PHOTOS.cars[c.id]||[]);
+function imgTag(ph,alt,o){o=o||{};return `<img src="${esc(ph.src)}" ${ph.srcset?`srcset="${esc(ph.srcset)}" sizes="${o.sizes||'(max-width:820px) 100vw, 60vw'}"`:''} alt="${esc(alt)}" loading="${o.eager?'eager':'lazy'}" decoding="async" ${ph.w?`width="${ph.w}" height="${ph.h}"`:''} referrerpolicy="no-referrer" onerror="this.closest('.pic').classList.add('pic-svg');this.remove()">`}
+function carPic(c,o){o=o||{};const ph=carPhotos(c)[o.i||0];
+  if(!carPhotos(c).length)return `<div class="pic pic-none ${o.cls||''}"><div class="pn"><small>${c.brand}</small><b>${c.model}</b><span>${T('Foto in arrivo','Photos coming soon')}</span></div></div>`;
+  const svg=`<div class="pic-fb">${carSVG(c,{label:''})}</div>`;
+  return `<div class="pic ${ph?'':'pic-svg'} ${o.cls||''}">${ph?imgTag(ph,carName(c)+' – '+T('foto di esempio','sample photo'),o):''}${svg}</div>`}
+function atmoPic(i,o){const ph=PHOTOS.atmo[i];if(ph)return `<div class="pic ${o&&o.cls||''}">${imgTag(ph,T('Foto di esempio','Sample photo'),o)}<div class="pic-fb">${carSVG(CARS[i%CARS.length],{label:''})}</div></div>`;
+  const withPh=CARS.filter(c=>carPhotos(c).length),pool=withPh.length?withPh:CARS,c=pool[i%pool.length];return carPic(c,Object.assign({},o,{i:Math.floor(i/pool.length)%Math.max(1,carPhotos(c).length)}))}
+const sup=(n,s)=>`<span class="big-n">${n}<sup>${s}</sup></span>`;
+const arrowDR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 7l10 10M17 8v9H8"/></svg>',arrowUR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg>';
+const lbl=(n,t)=>`<p class="lbl"><b>${n}/</b> ${t}</p>`;
+let OPENCH=0;
+function viewHome(){const S=SEO.sezioni_home,it=LANG!=='en',hero=CARS[0],d=LANG==='it'?',':'.';
+  const ch=[['#/noleggio',T('Noleggio breve','Short-term rental'),sup(eur(Math.min(...CARS.map(c=>c.day))).replace(/\s?€/,''),'€/'+T('giorno','day')),T('da, tariffa di esempio','from, sample rate'),0],
+    ['#/lungo-termine',T('Lungo termine','Long-term'),sup('48','mesi'),T('durata massima, servizi inclusi','maximum term, services included'),1],
+    ['#/vendita',T('Vendita','Sales'),sup('6','auto'),T('in collezione, verificate una per una','in the collection, checked one by one'),2],
+    ['#/finanziamento',T('Finanziamento','Finance'),sup('84','mesi'),T('con anticipo e maxirata su misura','with tailored down payment and balloon'),3],
+    ['#/permuta',T('Permuta e test drive','Trade-in and test drive'),sup('1','min'),T('per una stima indicativa della tua auto','for an indicative estimate of your car'),4],
+    ['#/chi-siamo',T('Il salone','The showroom'),sup('95','Via Arbe'),T('Milano Nord, tra Niguarda e Bicocca','North Milan, between Niguarda and Bicocca'),5]];
+  return `<section class="hero2" id="hero" data-hero-slot aria-label="Hero"><div class="h2-stick"><div class="wrap h2-top">${lbl('01',T('home','home'))}
+     <div class="h2-head"><h1>${seoH1('home',T('Auto sportive a Milano.','Sports cars in Milan.'))}</h1>
+      <div class="h2-side"><p>${T('Noleggio breve e lungo termine, vendita, finanziamento e permuta di auto sportive e premium. Un salone solo, in Via Arbe 95.','Short and long-term rental, sales, finance and trade-in of sports and premium cars. One showroom, Via Arbe 95.')}</p>
+       <div class="cta"><a class="btn btn-primary" href="#/noleggio">${T('Scopri la collezione','Explore the collection')}</a><a class="btn btn-line" href="#/agenda">${T('Prenota una visita','Book a visit')}</a></div></div></div></div>
+    <div class="h2-media">${atmoPic(0,{eager:1,cls:'h2-pic',sizes:'100vw'})}<div class="h2-tags"><span class="pill">${hero.cv} ${PW()}</span><span class="pill">${String(hero.s100).replace('.',d)} s 0–100</span><span class="pill">${T('Foto di esempio','Sample photo')}</span></div></div>
+    <a class="scroll-down" href="#collezione" data-act="scrollTo" data-id="collezione"><span class="circ">↓</span>${T('Scorri','Scroll down')}</a></div></section>
 
-  <section class="search"><div class="wrap"><div class="search-box reveal">
-    <div class="seg" role="tablist" aria-label="${T('Cosa cerchi','What are you looking for')}"><button role="tab" data-act="searchTab" data-t="rent" aria-selected="${searchTab==='rent'}">${T('Noleggio','Rental')}</button><button role="tab" data-act="searchTab" data-t="buy" aria-selected="${searchTab==='buy'}">${T('Acquisto','Purchase')}</button></div>
-    <div id="searchForm">${searchForm()}</div></div></div></section>
+  <section class="sec" id="collezione"><div class="wrap">${lbl('02',T('collezione','collection'))}<div class="sec-head"><h2>${seoH2('home',3,T('La collezione.','The collection.'))}</h2><a class="link" href="#/noleggio">${T('Tutte le auto','All cars')} ›</a></div></div>
+    <div class="gallery" tabindex="0" aria-label="${T('Auto in evidenza','Featured cars')}">${CARS.map(c=>`<a class="g-card reveal" href="#/auto/${c.id}">${carPic(c,{sizes:'(max-width:820px) 86vw, 520px'})}<div class="g-cap"><span class="pill pill-d">${T(CATS[c.cat].it,CATS[c.cat].en)}</span><h3>${carName(c)}</h3><p>${c.cv} ${PW()} · ${T('da','from')} ${eur(c.day)}/${T('giorno','day')}</p></div><span class="g-go">${arrowUR}</span></a>`).join('')}</div></section>
 
-  <section class="sec"><div class="wrap">${secHead(T('La collezione','The collection'),T('Sei auto, <em>un solo standard.</em>','Six cars, <em>one standard.</em>'),'',`<a class="link" href="#/noleggio">${T('Tutte le auto','All cars')} →</a>`)}</div>
-    <div class="hscroll" tabindex="0" aria-label="${T('Auto in evidenza','Featured cars')}">${CARS.map(c=>carCard(c)).join('')}</div></section>
+  <section class="sec tight"><div class="wrap">${lbl('03',T('servizi','services'))}<h2 class="sec-h">${T('Tutto quello che serve.','Everything you need.')}</h2>
+    <ol class="chapters">${ch.map((x,i)=>`<li class="chap ${OPENCH===i?'open':''}"><button class="chap-h" data-act="chap" data-i="${i}" aria-expanded="${OPENCH===i}"><span class="chap-n">0${i+1}</span><span class="chap-t">${x[1]}</span><span class="chap-b">${OPENCH===i?'×':arrowDR}</span></button>
+      <div class="chap-body"><div class="chap-card">${atmoPic(i+1,{sizes:'(max-width:820px) 100vw, 50vw'})}<div class="chap-txt">${x[2]}<p class="muted small">${x[3]}</p>${it&&S[x[4]]?`<h3>${esc(S[x[4]].titolo)}</h3><p>${esc(S[x[4]].testo)}</p>`:''}<a class="btn btn-line btn-sm" href="${x[0]}">${T('Scopri','Discover')} ›</a></div></div></div></li>`).join('')}</ol></div></section>
 
-  <section class="sec tight"><div class="wrap">${secHead(T('Servizi','Services'),T('Tutto quello che serve, <em>in un solo posto.</em>','Everything you need, <em>in one place.</em>'))}
-    <div class="svc">${[
-      ['#/noleggio','01',T('Noleggio breve','Short-term rental'),T('Un giorno, un weekend o una settimana: totale chiaro per le tue date, km inclusi e cauzione.','A day, a weekend or a week: a clear total for your dates, included km and deposit.')],
-      ['#/lungo-termine','02',T('Lungo termine','Long-term rental'),T('Da 12 a 48 mesi, canone mensile con servizi inclusi.','12 to 48 months, monthly fee with services included.')],
-      ['#/vendita','03',T('Vendita','Sales'),T('Auto selezionate, configurabili e con storico verificato.','Selected cars, configurable, with verified history.')],
-      ['#/finanziamento','04',T('Finanziamento','Finance'),T('Rata, anticipo e maxirata: simula in tempo reale.','Instalment, down payment and balloon: simulate live.')],
-      ['#/permuta','05',T('Permuta','Trade-in'),T('Una stima indicativa della tua auto in un minuto.','An indicative estimate of your car in a minute.')],
-      ['#/agenda','06',T('Test drive e visite','Test drives and visits'),T('Scegli giorno e ora: l\'agenda mostra solo le fasce libere.','Pick day and time: the agenda shows only free slots.')]
-     ].map(s=>`<a class="svc-i reveal" href="${s[0]}"><span class="n">${s[1]}</span><h3>${s[2]}</h3><p>${s[3]}</p><span class="go">${IC.arrow}</span></a>`).join('')}</div></div></section>
+  <section class="sec tight"><div class="wrap"><div class="bigs">${[[hero.cv,PW(),T('la più potente','the most powerful')],[String(hero.s100).replace('.',d),'s','0–100 km/h'],[6,'+',T('auto in collezione','cars in the collection')],[3,'✈',T('aeroporti serviti','airports served')]].map(b=>`<div class="reveal">${sup(b[0],b[1])}<p>${b[2]}</p></div>`).join('')}</div></div></section>
 
-  <section class="sec tight"><div class="wrap"><div class="live-board reveal"><div class="lb-head"><div><p class="eyebrow">${T('In tempo reale','Live')} <span class="demo-tag">${T('simulato','simulated')}</span></p><h2>${T('Disponibilità <em>adesso.</em>','Availability <em>right now.</em>')}</h2></div>
-     <p class="small muted">${T('Aggiornato alle','Updated at')} <b data-live-time>${fmtD(new Date(),{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</b>. ${T('Legge prenotazioni e stato flotta del prototipo, anche se cambiano in un\'altra scheda.','Reads the prototype\'s bookings and fleet status, even if they change in another tab.')}</p></div>
-    <ul class="lb-list">${CARS.map(c=>`<li><a href="#/auto/${c.id}"><span class="lb-car">${carSVG(c,{label:''})}</span><span class="lb-name"><small>${c.brand}</small><b>${c.model}</b>${liveBadge(c)}</span><span class="lb-price">${eur(c.day)}<small>/${T('g','d')}</small></span></a></li>`).join('')}</ul></div></div></section>
+  <section class="sec tight"><div class="wrap">${lbl('04',T('disponibilità','availability'))}<div class="lb-head"><h2 class="sec-h">${T('Chi è libera, adesso.','What is free, right now.')}</h2><p class="small muted">${T('Simulata · aggiornata alle','Simulated · updated at')} <span data-live-time>${fmtD(new Date(),{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span></p></div>
+    <ul class="lb-list">${CARS.map(c=>`<li><a href="#/auto/${c.id}"><span class="lb-car">${carPic(c,{sizes:'120px'})}</span><span class="lb-name"><small>${c.brand}</small><b>${c.model}</b>${liveBadge(c)}</span><span class="lb-price">${eur(c.day)}<small>/${T('giorno','day')}</small></span></a></li>`).join('')}</ul></div></section>
 
-  <section class="sec"><div class="wrap"><div class="split-feature reveal"><div class="sf-media">${carSVG(CARS[2],{hex:'#1f3f8f',rim:'m10',fin:'bronzo',label:''})}</div>
-    <div class="sf-copy"><p class="eyebrow">${T('Configuratore','Configurator')}</p><h2>${T('Il colore giusto, <em>i cerchi giusti.</em>','The right colour, <em>the right wheels.</em>')}</h2><p class="lead">${T('In ogni scheda: otto vernici, tre disegni di cerchi, quattro finiture e il colore delle pinze. Il visore 3D si gira a 360°.','On every page: eight paints, three wheel designs, four finishes and the caliper colour. The 3D viewer turns 360°.')}</p>
-    <div class="cta"><a class="btn btn-line" href="#/vendita/${CARS[2].id}">${T('Prova il configuratore','Try the configurator')} ${IC.arrow}</a></div></div></div></div></section>
+  <section class="sec tight"><div class="wrap">${lbl('05',T('recensioni','reviews'))}<h2 class="sec-h">${T('La parola ai clienti.','In our clients\' words.')}</h2>
+    <p class="small muted">${T('Recensioni di esempio: testi e nomi inventati per mostrare l\'impaginazione, non sono di clienti reali.','Sample reviews: made-up texts and names to show the layout, not from real clients.')}</p>
+    <div class="reviews">${REVIEWS.map(r=>`<figure class="review reveal"><span class="sample">${T('Esempio','Example')}</span><blockquote>${T(r.it,r.en)}</blockquote><figcaption><b>${r.who}</b><small>${carName(carBy(r.car))}</small></figcaption></figure>`).join('')}</div></div></section>
 
-  <section class="sec tight"><div class="wrap">${secHead(T('Come funziona','How it works'),T('Dalla scelta <em>alle chiavi.</em>','From choice <em>to keys.</em>'))}
-    <ol class="steps">${[
-      [T('Scegli auto e date','Pick car and dates'),T('Disponibilità e totale subito, km inclusi e cauzione.','Availability and total at once, included km and deposit.')],
-      [T('Fissa l\'appuntamento','Book the slot'),T('Ritiro, test drive o visita: scegli giorno e ora liberi.','Pick-up, test drive or visit: choose a free day and time.')],
-      [T('Documenti e firma','Documents and signature'),T('Dal telefono, senza passare in sede.','From your phone, without visiting.')],
-      [T('Avvisa il salone','Notify the showroom'),T('Ultimo passo: WhatsApp con il riepilogo già scritto.','Final step: WhatsApp with the summary pre-written.')]
-     ].map(s=>`<li class="reveal"><h3>${s[0]}</h3><p>${s[1]}</p></li>`).join('')}</ol></div></section>
+  <section class="sec tight"><div class="wrap narrow">${lbl('06','FAQ')}<h2 class="sec-h">${T('Domande frequenti.','Common questions.')}</h2>
+    <div class="faq">${FAQ().map(f=>`<details class="reveal"><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join('')}</div></div></section>
 
-  <section class="sec tight"><div class="wrap">${secHead(T('Recensioni','Reviews'),T('La parola <em>ai clienti.</em>','In our <em>clients\' words.</em>'))}
-    <div class="note warn" role="note"><b>${T('Recensioni di ESEMPIO','SAMPLE reviews')}.</b> ${T('Testi e nomi inventati solo per mostrare l\'impaginazione: non sono recensioni di clienti reali. In produzione qui compariranno le recensioni pubblicate sul profilo Google di MC.','Made-up texts and names, only to show the layout: these are not real client reviews. In production, the reviews published on MC\'s Google profile will appear here.')}</div>
-    <div class="reviews">${REVIEWS.map(r=>`<figure class="review reveal"><span class="sample">${T('Esempio','Example')}</span><div class="stars" aria-label="${T('Valutazione di esempio','Sample rating')}">★★★★★</div><blockquote>${T(r.it,r.en)}</blockquote><figcaption><b>${r.who}</b><small>${carName(carBy(r.car))}</small></figcaption></figure>`).join('')}</div></div></section>
+  <section class="sec tight"><div class="wrap">${lbl('07',T('dove siamo','where we are'))}${whereBlock()}</div></section>`}
+ACT.chap=el=>{const i=+el.dataset.i;OPENCH=OPENCH===i?-1:i;$$('.chap').forEach((li,k)=>{const o=k===OPENCH;li.classList.toggle('open',o);const b=$('.chap-h',li);b.setAttribute('aria-expanded',o);$('.chap-b',li).innerHTML=o?'×':arrowDR})};
+ACT.scrollTo=(el,e)=>{e.preventDefault();const t=document.getElementById(el.dataset.id);t&&scrollTo({top:t.getBoundingClientRect().top+scrollY-70,behavior:REDUCED?'auto':'smooth'})};
 
-  <section class="sec tight"><div class="wrap narrow">${secHead('FAQ',T('Domande <em>frequenti.</em>','Common <em>questions.</em>'))}
-    <div class="faq">${FAQ().map(f=>`<details class="reveal"><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join('')}</div>
-    <p class="small dim" style="margin-top:16px">${T('Condizioni di esempio: quelle definitive le stabilisce MC.','Sample terms: the final ones are set by MC.')}</p></div></section>
-
-  <section class="sec tight"><div class="wrap">${whereBlock()}</div></section>
-
-  <section class="sec tight"><div class="wrap"><div class="cta-band reveal"><p class="eyebrow">${T('Pronto?','Ready?')}</p><h2>${T('La prossima auto <em>la scegli tu.</em>','Your next car <em>is your call.</em>')}</h2><p class="lead">${BIZ.addr}, ${BIZ.cap} · ${BIZ.tel}</p>
-    <div class="cta"><a class="btn btn-primary" href="#/noleggio">${T('Prenota un\'auto','Book a car')} ${IC.arrow}</a><a class="btn btn-line" href="#/vendita">${T('Auto in vendita','Cars for sale')}</a><button class="btn btn-line" data-act="callback">${IC.phone}<span>${T('Ti richiamiamo','We call you back')}</span></button></div></div></div></section>`;
-}
 /* mappa stilizzata (nessun iframe esterno) + link a Google Maps */
 function whereBlock(){return `<div class="where reveal"><div class="map" role="img" aria-label="${T('Mappa schematica della zona di Via Arbe, Milano','Schematic map of the Via Arbe area, Milan')}">
    <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><pattern id="mgrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="currentColor" stroke-opacity=".06"/></pattern></defs>
@@ -194,10 +186,11 @@ function whereBlock(){return `<div class="where reveal"><div class="map" role="i
     <path d="M250 -20 C270 120 300 200 310 420" stroke="currentColor" stroke-opacity=".1" stroke-width="6" fill="none"/>
     <circle cx="318" cy="214" r="46" fill="var(--accent)" fill-opacity=".12"/><circle cx="318" cy="214" r="9" fill="var(--accent)"/><circle cx="318" cy="214" r="18" fill="none" stroke="var(--accent)" stroke-width="2" class="ping"/></svg>
    <span class="map-tag">${IC.pin}<b>MC</b> · ${BIZ.addr}</span><small class="map-note">${T('Schema indicativo, non in scala','Indicative sketch, not to scale')}</small></div>
-  <div class="where-copy"><p class="eyebrow">${T('Dove siamo','Where we are')}</p><h2>${T('Via Arbe 95, <em>Milano.</em>','Via Arbe 95, <em>Milan.</em>')}</h2><p class="lead">${T('Zona Maciachini – Bicocca, a pochi minuti da Linate e dalla tangenziale. Su appuntamento anche fuori orario.','Maciachini – Bicocca area, minutes from Linate and the ring road. By appointment also outside hours.')}</p>
+  <div class="where-copy"><p class="eyebrow">${T('Dove siamo','Where we are')}</p><h2 class="h-s">${seoH2('home',5,T('Via Arbe 95, Milano.','Via Arbe 95, Milan.'))}</h2><p class="lead">${T('Milano Nord, tra Niguarda e Bicocca, a pochi minuti da Linate e dalla tangenziale. Su appuntamento anche fuori orario.','Maciachini – Bicocca area, minutes from Linate and the ring road. By appointment also outside hours.')}</p>
    <ul class="hours">${HOURS().map(h=>`<li><span>${h[0]}</span><span>${h[1]}</span></li>`).join('')}</ul>
    <div class="cta"><a class="btn btn-primary" href="${BIZ.dir}" target="_blank" rel="noopener">${IC.pin}<span>${T('Indicazioni su Google Maps','Directions on Google Maps')}</span></a><a class="btn btn-line" href="${BIZ.maps}" target="_blank" rel="noopener">${T('Apri la mappa','Open the map')} ↗</a><a class="btn btn-line" href="${BIZ.telHref}">${IC.phone}<span>${BIZ.tel}</span></a></div></div></div>`}
-const FAQ=()=>[
+const FAQ=()=>LANG!=='en'?SEO.faq.map(f=>[esc(f.domanda),esc(f.risposta)]).concat(FAQ_EN().slice(4,5).map(x=>x),FAQ_EN().slice(7,8)):FAQ_EN();
+const FAQ_EN=()=>[
   [T('Cosa serve per noleggiare?','What do I need to rent?'),T('Patente valida, documento d\'identità e una carta di credito per la cauzione. L\'età minima cambia da auto ad auto ed è indicata in ogni scheda.','A valid driving licence, an ID document and a credit card for the security deposit. Minimum age varies by car and is shown on each page.')],
   [T('Come funziona la cauzione?','How does the security deposit work?'),T('È una pre-autorizzazione sulla carta: non viene incassata e si sblocca alla riconsegna se l\'auto rientra senza danni.','It is a pre-authorisation on your card: it is not charged and is released at return if the car comes back undamaged.')],
   [T('Posso annullare?','Can I cancel?'),T('Sì. Fino a 7 giorni prima l\'acconto viene rimborsato per intero, da 7 a 3 giorni al 50%, sotto i 3 giorni non è rimborsabile.','Yes. Up to 7 days before, the down payment is fully refunded; from 7 to 3 days, 50%; under 3 days it is non-refundable.')],
@@ -241,7 +234,7 @@ function rentResults(){const l=rentList(),dates=RF.from&&RF.to&&RF.to>=RF.from;
 function viewRent(){const brands=[...new Set(CARS.map(c=>c.brand))];
   const sel=(n,opts,all)=>`<select class="inp" data-chg="rf" name="${n}"><option value="">${all}</option>${opts.map(o=>`<option value="${o[0]}" ${RF[n]===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>`;
   return `<div class="page"><div class="wrap">
-  <div class="page-head"><p class="eyebrow">${T('Noleggio','Rental')}</p><h1>${T('Scegli <em>la tua auto.</em>','Choose <em>your car.</em>')}</h1><p class="lead">${T('Disponibilità e totale calcolati sulle tue date. Tariffe a giorno, weekend, settimana e mese.','Availability and total worked out on your dates. Day, weekend, week and month rates.')} ${demoTag()}</p>
+  <div class="page-head"><p class="eyebrow">${T('Noleggio','Rental')}</p><h1>${seoH1('noleggio',T('Scegli la tua auto.','Choose your car.'))}</h1><p class="lead">${T('Disponibilità e totale calcolati sulle tue date. Tariffe a giorno, weekend, settimana e mese.','Availability and total worked out on your dates. Day, weekend, week and month rates.')} ${demoTag()}</p>
    <div class="seg" role="tablist"><a role="tab" aria-selected="true" href="#/noleggio">${T('Breve termine','Short-term')}</a><a role="tab" aria-selected="false" href="#/lungo-termine">${T('Lungo termine','Long-term')}</a></div></div>
   <div class="cat-layout">
    <aside class="filters" id="filters" aria-label="${T('Filtri','Filters')}"><h3>${T('Filtri','Filters')}<button class="link xs" data-act="rentReset">${T('Azzera','Reset')}</button></h3>
@@ -269,17 +262,18 @@ ACT.filterToggle=el=>{const o=$('#filters').classList.toggle('open');el.setAttri
 /* ================= CONFIGURATORE + VISORE (comune a noleggio e vendita) ================= */
 let DT={tab:'tariffe',from:'',to:'',view:0,lt:{m:36,km:15000,down:0}};
 const svgOpt=c=>({});
-/* viste 2D per il visore senza WebGL: si trascina o si usano le frecce */
-const VIEWS=()=>[[T('Profilo sinistro','Left side'),{}],[T('Profilo destro','Right side'),{flip:1}],[T('Anteriore','Front'),{front:1}],[T('Posteriore','Rear'),{rear:1}],[T('Cerchio','Wheel'),{rimv:1}]];
-function view2D(c,i){const v=VIEWS()[i][1],o=svgOpt(c);if(v.rimv)return `<div class="rimv">${rimSVG(o)}</div>`;
-  if(v.front)return carSVG(c,Object.assign({vb:[c.geo.x0-30,SHAPE[c.id].ty+20,420,270]},o));if(v.rear)return carSVG(c,Object.assign({vb:[c.geo.x1-390,SHAPE[c.id].ty+20,420,270]},o));return carSVG(c,Object.assign({flip:v.flip},o))}
-function viewerBlock(c){const V=VIEWS();return `<div class="viewer" id="viewer" data-car="${c.id}"><div class="viewer-fb" id="viewerFb" data-drag>${view2D(c,DT.view)}</div>
-   <div class="viewer-hud"><span class="xs muted" id="viewerTag">${V[DT.view][0]}</span><span class="xs dim">${T('Illustrazione generica','Generic illustration')}</span></div>
-   <div class="viewer-nav"><button class="icon-btn" data-act="vPrev" aria-label="${T('Vista precedente','Previous view')}">‹</button><span id="viewerHint" class="xs">${T('Trascina per girare','Drag to turn')}</span><button class="icon-btn" data-act="vNext" aria-label="${T('Vista successiva','Next view')}">›</button></div></div>
-  <div class="thumbs" id="thumbs">${V.map((v,i)=>`<button class="tv ${i===DT.view?'on':''}" data-act="vGo" data-i="${i}" aria-label="${v[0]}">${view2D(c,i)}<small>${v[0]}</small></button>`).join('')}</div>`}
-function vSet(i){const c=carBy(curId());const n=VIEWS().length;DT.view=(i+n)%n;const fb=$('#viewerFb');if(fb){fb.innerHTML=view2D(c,DT.view);fb.classList.remove('swap');void fb.offsetWidth;fb.classList.add('swap')}
+/* galleria della scheda: foto di esempio (se ci sono) e poi i disegni; si trascina o si usano le frecce */
+const VIEWS=c=>{const P=carPhotos(c);return P.length?P.map((p,i)=>[p.caption?p.caption:T('Foto di esempio','Sample photo')+' '+(i+1),{ph:i}]):[[T('Foto in arrivo','Photos coming soon'),{ph:0}]]};
+function view2D(c,i){const v=(VIEWS(c)[i]||VIEWS(c)[0])[1];if(v.ph!=null)return carPic(c,{i:v.ph,eager:i===0,sizes:'(max-width:1000px) 100vw, 60vw'});
+  if(v.front)return carSVG(c,{vb:[c.geo.x0-30,SHAPE[c.id].ty+20,420,270]});if(v.rear)return carSVG(c,{vb:[c.geo.x1-390,SHAPE[c.id].ty+20,420,270]});return carSVG(c)}
+function viewerBlock(c){const V=VIEWS(c);return `<div class="viewer ${carPhotos(c).length?'has-ph':''}" id="viewer" data-car="${c.id}"><div class="viewer-fb" id="viewerFb" data-drag>${view2D(c,DT.view)}</div>
+   <div class="viewer-hud"><span class="pill pill-w" id="viewerTag">${V[DT.view][0]}</span><span class="pill pill-w">${carPhotos(c).length?T('Foto di esempio','Sample photo'):T('Foto in arrivo','Photos coming soon')}</span></div>
+   <div class="viewer-nav"><button class="icon-btn" data-act="vPrev" aria-label="${T('Precedente','Previous')}">‹</button><button class="icon-btn" data-act="vNext" aria-label="${T('Successiva','Next')}">›</button></div></div>
+  <div class="thumbs" id="thumbs">${V.map((v,i)=>`<button class="tv ${i===DT.view?'on':''}" data-act="vGo" data-i="${i}" aria-label="${v[0]}">${view2D(c,i)}</button>`).join('')}</div>`}
+const bigSpecs=c=>{const d=LANG==='it'?',':'.';return `<div class="bigs bigs-s">${[[c.cv,PW(),T('potenza','power')],[String(c.s100).replace('.',d),'s','0–100 km/h'],[c.vmax,'km/h',T('velocità massima','top speed')]].map(b=>`<div>${sup(b[0],b[1])}<p>${b[2]}</p></div>`).join('')}</div>`};
+function vSet(i){const c=carBy(curId());const n=VIEWS(c).length;DT.view=(i+n)%n;const fb=$('#viewerFb');if(fb){fb.innerHTML=view2D(c,DT.view);fb.classList.remove('swap');void fb.offsetWidth;fb.classList.add('swap')}
   $$('#thumbs .tv').forEach((b,k)=>b.classList.toggle('on',k===DT.view));const tg=$('#viewerTag');
-  if(tg)tg.textContent=VIEWS()[DT.view][0]}
+  if(tg)tg.textContent=VIEWS(c)[DT.view][0]}
 ACT.vPrev=()=>vSet(DT.view-1);ACT.vNext=()=>vSet(DT.view+1);ACT.vGo=el=>vSet(+el.dataset.i);
 /* trascinamento nel visore 2D */
 document.addEventListener('pointerdown',e=>{const fb=e.target.closest('[data-drag]');if(!fb)return;const x0=e.clientX;let done=false;
@@ -315,21 +309,22 @@ function viewCar(id,qs){const c=carBy(id);if(!c)return view404();DT.view=0;
   const cond=[[T('Età minima','Minimum age'),c.age+' '+T('anni','years')],[T('Patente','Licence'),T('B da almeno 3 anni','B, held for at least 3 years')],[T('Cauzione (pre-autorizzazione)','Security deposit (pre-authorisation)'),eur(c.dep)+' '+demoTag()],[T('Km inclusi','Km included'),c.kmDay+' '+T('al giorno','per day')+' · '+T('extra','extra')+' '+eur2(c.kmEx)+'/km'],[T('Acconto alla prenotazione','Down payment at booking'),'30%'],[T('Cancellazione','Cancellation'),T('Gratis fino a 7 giorni prima','Free up to 7 days before')],[T('Carburante','Fuel'),T('Pieno alla consegna, pieno al rientro','Full at handover, full at return')]];
   DT.cond=cond;
   return `<div class="page"><div class="wrap">
-  <nav class="crumb" aria-label="breadcrumb"><a href="#/">Home</a><span>/</span><a href="#/noleggio">${T('Noleggio','Rental')}</a><span>/</span><span>${carName(c)}</span></nav>
-  <div class="detail"><div class="d-main">${viewerBlock(c)}
+  ${lbl('02',T('scheda','details'))}<nav class="crumb" aria-label="breadcrumb"><a href="#/">Home</a><span>/</span><a href="#/noleggio">${T('Noleggio','Rental')}</a><span>/</span><span>${carName(c)}</span></nav>
+  <div class="detail"><div class="d-main">${viewerBlock(c)}${bigSpecs(c)}
+   ${seoCarText(c.id,'noleggio')?`<section class="about-car"><h2 class="h-s">${T("L'auto",'The car')}</h2><p>${esc(seoCarText(c.id,'noleggio'))}</p></section>`:''}
    <div class="d-tabs"><div class="tabs" role="tablist">${[['tariffe',T('Tariffe','Rates')],['spec',T('Scheda tecnica','Tech specs')],['cond',T('Condizioni','Terms')],['extra',T('Servizi extra','Extras')],['lungo',T('Lungo termine','Long-term')]].map(t=>`<button role="tab" data-act="dtTab" data-t="${t[0]}" aria-selected="${DT.tab===t[0]}">${t[1]}</button>`).join('')}</div>
     <div id="dtPanel">${dtPanel(c)}</div></div></div>
-   <aside class="buybox"><div><p class="bb-brand">${c.brand} · ${T(CATS[c.cat].it,CATS[c.cat].en)}</p><h1>${c.model}</h1></div>
+   <aside class="buybox"><div><p class="bb-brand">${c.brand} · ${T(CATS[c.cat].it,CATS[c.cat].en)}</p><h1>${c.model}</h1>${seoPage(0,c.id)?`<p class="h1-sub">${esc(seoPage(0,c.id).h1)}</p>`:''}</div>
     <div class="bb-live">${liveBadge(c)}<span class="xs dim">${T('agg.','upd.')} <span data-live-time>${fmtD(new Date(),{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span> · ${T('simulato','simulated')}</span></div>
     <div class="bigprice"><span class="num">${eur(c.day)}</span><span class="muted">/${T('giorno','day')}</span>${demoTag()}</div>
     <div class="card bb-card"><div class="grid2" style="gap:10px"><label class="field"><span>${T('Ritiro','Pick-up')}</span><input class="inp" type="date" data-chg="dtDate" name="from" min="${iso(TODAY)}" value="${DT.from}"></label><label class="field"><span>${T('Riconsegna','Return')}</span><input class="inp" type="date" data-chg="dtDate" name="to" min="${iso(TODAY)}" value="${DT.to}"></label></div>
      <div id="dtQuote" aria-live="polite">${dtQuote(c)}</div>
      <a class="btn btn-primary btn-block" id="dtBook" href="#/prenota/${c.id}${DT.from&&DT.to&&DT.to>=DT.from?'?da='+DT.from+'&a='+DT.to:''}">${T('Prenota questa auto','Book this car')} ${IC.arrow}</a>
      <div class="grid2" style="gap:8px"><a class="btn btn-line btn-sm" href="#/agenda?tipo=ritiro&auto=${c.id}">${IC.cal}<span>${T('Fissa il ritiro','Book pick-up')}</span></a><a class="btn btn-line btn-sm" href="#/preventivo?tipo=breve&auto=${c.id}">${T('Preventivo','Quote')}</a></div></div>
-    <div class="bb-actions"><button class="chip" data-act="fav" data-id="${c.id}" aria-pressed="${favs().includes(c.id)}">${IC.heart}${T('Preferiti','Favourite')}</button><button class="chip" data-act="cmp" data-id="${c.id}" aria-pressed="${CMP.includes(c.id)}">${IC.cmp}${T('Confronta','Compare')}</button><button class="chip" data-act="share" data-title="${esc(carName(c))} – MC Milano">${IC.share}${T('Condividi','Share')}</button><a class="chip" href="#/vendita/${c.id}">${T('Acquisto','Purchase')} →</a></div>
-    ${waBtn('btn-line btn-block',T('Domande? Scrivici su WhatsApp','Questions? Message us on WhatsApp'),'Salve MC, vorrei informazioni sul noleggio di '+carName(c)+'.')}
+    <div class="bb-actions"><button class="chip" data-act="fav" data-id="${c.id}" aria-pressed="${favs().includes(c.id)}">${IC.heart}${T('Preferiti','Favourite')}</button><button class="chip" data-act="cmp" data-id="${c.id}" aria-pressed="${CMP.includes(c.id)}">${IC.cmp}${T('Confronta','Compare')}</button><button class="chip" data-act="share" data-title="${esc(carName(c))} – MC Milano">${IC.share}${T('Condividi','Share')}</button><a class="chip" href="#/vendita/${c.id}">${T('Acquisto','Purchase')} →</a><a class="chip" href="#/noleggio-o-acquisto?auto=${c.id}">${T('Noleggio o acquisto?','Rent or buy?')}</a><a class="chip" href="#/documenti?auto=${c.id}">${T('Documenti','Documents')}</a></div>
+    <a class="btn btn-line btn-block" id="dtAsk" href="${waHref(availText(c))}" target="_blank" rel="noopener">${IC.wa}<span>${T('Chiedi disponibilità per le tue date','Ask availability for your dates')}</span></a><p class="xs dim">${T('Si apre WhatsApp con le date già scritte: la risposta arriva dal salone.','WhatsApp opens with your dates written in: the showroom replies.')}</p>
    </aside></div>
-  <section class="sec tight"><div class="sec-head"><div><p class="eyebrow">${T('Altre auto','More cars')}</p><h2>${T('Potrebbe <em>piacerti anche.</em>','You might <em>also like.</em>')}</h2></div></div><div class="cars">${CARS.filter(x=>x.id!==c.id).slice(0,3).map(x=>carCard(x)).join('')}</div></section>
+  <section class="sec tight"><div class="sec-head"><div><p class="eyebrow">${T('Altre auto','More cars')}</p><h2>${T('Potrebbe <em>piacerti anche.</em>','You might <em>also like.</em>')}</h2></div></div><div class="cars">${similar(c).map(x=>carCard(x)).join('')}</div></section>
   </div></div>`}
 function dtPanel(c){
   if(DT.tab==='tariffe')return tierTable(c);
@@ -344,6 +339,7 @@ function dtQuote(c){if(!DT.from||!DT.to)return `<p class="small muted">${T('Sceg
   return `<div class="rows"><div><span>${q.days} × ${eur(c.day)}</span><span>${eur(q.base)}</span></div>${q.weekend?`<div><span>${T('Supplemento weekend','Weekend surcharge')}</span><span>${eur(q.weekend)}</span></div>`:''}${q.disc?`<div class="neg"><span>${T('Sconto durata','Duration discount')} −${Math.round(q.discPct*100)}%</span><span>−${eur(q.disc)}</span></div>`:''}
    <div><span>${T('Km inclusi','Km included')}</span><span>${num(q.km)} km</span></div><div><span>${T('Cauzione (non incassata)','Deposit (not charged)')}</span><span>${eur(c.dep)}</span></div><div class="tot"><span>${T('Totale','Total')} ${demoTag()}</span><span>${eur(q.total)}</span></div></div>`}
 ACT.dtTab=el=>{DT.tab=el.dataset.t;$$('[data-act=dtTab]').forEach(b=>b.setAttribute('aria-selected',b===el));$('#dtPanel').innerHTML=dtPanel(carBy(curId()))};
-CHG.dtDate=el=>{DT[el.name]=el.value;const c=carBy(curId());$('#dtQuote').innerHTML=dtQuote(c);const ok=DT.from&&DT.to&&DT.to>=DT.from;$('#dtBook').href='#/prenota/'+c.id+(ok?'?da='+DT.from+'&a='+DT.to:'')};
+const availText=c=>waText('avail',{car:c.id,note:DT.from&&DT.to?'dal '+fmtD(fromIso(DT.from))+' al '+fmtD(fromIso(DT.to))+' – è disponibile?':'Vorrei sapere le prime date libere.'});
+CHG.dtDate=el=>{DT[el.name]=el.value;const c=carBy(curId());const ak=$('#dtAsk');if(ak)ak.href=waHref(availText(c));$('#dtQuote').innerHTML=dtQuote(c);const ok=DT.from&&DT.to&&DT.to>=DT.from;$('#dtBook').href='#/prenota/'+c.id+(ok?'?da='+DT.from+'&a='+DT.to:'')};
 const curId=()=>location.hash.split('?')[0].split('/')[2];
 function view404(){return `<div class="page"><div class="wrap"><div class="empty" style="margin:40px 0"><b>${T('Pagina non trovata','Page not found')}</b><p>${T('Il link non corrisponde a nessuna pagina del prototipo.','This link does not match any page of the prototype.')}</p><a class="btn btn-primary btn-sm" href="#/">${T('Torna alla home','Back to home')}</a></div></div></div>`}
