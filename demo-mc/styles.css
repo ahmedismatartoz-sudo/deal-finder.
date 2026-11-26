@@ -804,3 +804,4 @@ h1{font-weight:500;letter-spacing:-.045em}h2{font-weight:500;letter-spacing:-.04
 .pn{display:grid;gap:6px;justify-items:center;text-align:center;padding:16px}.pn small{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.pn b{font:500 clamp(22px,3vw,40px)/1 var(--sans);letter-spacing:-.03em}.pn span{font-size:12px;color:var(--muted);border:1px solid var(--line3);border-radius:99px;padding:5px 10px}
 .g-card .pic-none{background:linear-gradient(160deg,#2a2a2d,#141416);color:#fff}.g-card .pic-none .pn{display:none}
 .lb-car .pn b{font-size:13px}.lb-car .pn span,.lb-car .pn small,.tv .pn span,.tv .pn small{display:none}.tv .pn b{font-size:11px}
+.chapters{list-style:none;padding:0;margin:0}
