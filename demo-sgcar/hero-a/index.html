@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta name="robots" content="noindex, nofollow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MC Studio Hero</title>
+  <meta name="description" content="MC — Supercar a Milano. Noleggio e vendita.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hero.css">
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; background: #0b0a09; color: #f4f2ee; }
+    body { font-family: "Inter", system-ui, sans-serif; }
+    .after { min-height: 80vh; display: grid; place-items: center; padding: 64px 16px; text-align: center; }
+    .after p { max-width: 36ch; margin: 0 auto; font-weight: 300; font-size: clamp(18px, 2vw, 24px); line-height: 1.5; color: rgba(244,242,238,.6); }
+    .after small { display: block; margin-top: 28px; font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: rgba(244,242,238,.35); }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <section id="hero" aria-label="MC — Supercar a Milano"></section>
+
+  <section class="after">
+    <div>
+      <p>Il resto del sito continua qui.</p>
+      <small>Sezione successiva</small>
+    </div>
+  </section>
+
+  <script type="module">
+    import { initHero } from './hero.js';
+    const q = new URLSearchParams(location.search);
+    window.mcHero = initHero(document.getElementById('hero'), {
+      quality: q.get('q') || 'auto',          // ?q=high | ?q=low per forzare
+      adaptive: q.get('gov') !== '0',
+      ...(q.get('model') ? { modelUrl: q.get('model') } : {}),
+    });
+  </script>
+</body>
+</html>

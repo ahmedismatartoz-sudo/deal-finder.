@@ -1,0 +1,29 @@
+MC — Hero 3D "STUDIO" (variante A) — Crediti e licenze
+=======================================================
+
+three.js r160 (0.160.0)
+  https://github.com/mrdoob/three.js — Licenza MIT (Copyright 2010-2023 three.js authors)
+  Caricato da https://cdn.jsdelivr.net/npm/three@0.160.0/ (build + examples/jsm:
+  GLTFLoader, DRACOLoader, RectAreaLightUniformsLib, Reflector, EffectComposer,
+  RenderPass, UnrealBloomPass, BokehPass, OutputPass). Decoder Draco: examples/jsm/libs/draco/gltf/
+  (Draco, Google, Apache-2.0).
+
+Modello 3D: "Ferrari 458 Italia" di vicent091036
+  File: https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/ferrari.glb
+        (+ ferrari_ao.png, ombra AO dello stesso esempio)
+  Fonte originale: https://sketchfab.com/models/57bf6cc56931426e87494f554df1dab6
+  Credito come riportato nell'esempio ufficiale three.js "webgl_materials_car".
+
+  ATTENZIONE SULLA LICENZA (verifica del 26/11/2026):
+  - Il repository three.js è MIT, ma il file del modello NON ha un LICENSE/README
+    dedicato nella cartella examples/models/gltf/ e l'esempio cita solo l'autore.
+  - La pagina Sketchfab originale risulta oggi "disabilitata": non è stato possibile
+    confermare la licenza dichiarata (storicamente indicata come CC Attribution, ma NON verificata).
+  - "Ferrari" e il design della 458 sono marchi/disegni di Ferrari S.p.A.: per un sito
+    commerciale (salone MC) l'uso del modello va considerato SOLO DIMOSTRATIVO.
+  => Per la messa in produzione sostituire con un modello di cui si possiedono i diritti
+     (o CC0/CC-BY verificato) passando initHero(el, { modelUrl, aoUrl }).
+
+Font: Inter (Google Fonts) — SIL Open Font License 1.1.
+
+Ambiente HDR: generato proceduralmente in hero.js (softbox emissive + PMREMGenerator), nessun file esterno.
