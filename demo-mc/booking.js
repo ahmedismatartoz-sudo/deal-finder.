@@ -5,7 +5,7 @@ let BK=null,holdTick=0;
 const bkMode=()=>store.get('mode','auto');
 const BKSTEPS=()=>[T('Auto','Car'),T('Date','Dates'),T('Ritiro','Pick-up'),T('Totale','Total'),T('Extra','Extras'),T('Dati','Details'),T('Documenti','Documents'),T('Acconto','Payment'),T('Firma','Signature'),T('Conferma','Done')];
 function bkInit(id,qs){
-  if(!BK||BK.car!==id||BK.code){BK={car:id,step:1,max:1,from:'',tf:'10:00',to:'',tt:'10:00',pu:'sede',dr:'sede',extras:[],cust:{},docs:{},paid:false,signed:false,hold:0,code:null,err:{}}}
+  if(!BK||BK.car!==id||BK.code){BK={car:id,step:1,max:1,from:'',tf:'10:30',to:'',tt:'10:00',pu:'sede',dr:'sede',extras:[],cust:{},docs:{},paid:false,signed:false,hold:0,code:null,err:{}}}
   if(qs.da&&qs.a&&!BK.from){BK.from=qs.da;BK.to=qs.a;BK.step=2;BK.max=2}
 }
 const bkQ=()=>quote(carBy(BK.car),BK);
@@ -53,7 +53,7 @@ function bkStepHtml(){const c=carBy(BK.car),q=bkQ(),n=BK.step,S=BKSTEPS(),hd=(t,
     `<div style="display:grid;gap:10px">${CARS.map(x=>{const m=fleetState()[x.id]==='maint';return `<label class="extra ${x.id===BK.car?'on':''}" ${m?'style="opacity:.55;cursor:not-allowed"':''}><input type="radio" name="bkcar" value="${x.id}" data-chg="bkCar" ${x.id===BK.car?'checked':''} ${m?'disabled':''} style="position:absolute;opacity:0;pointer-events:none"><div style="display:flex;gap:14px;align-items:center;min-width:0"><div style="width:96px;flex:none">${carSVG(x)}</div><div style="min-width:0"><b>${carName(x)}</b><small>${m?T('In manutenzione','In maintenance'):x.cv+' '+PW()+' · '+paintName(x)}</small></div></div><span class="num">${eur(x.day)}</span></label>`}).join('')}</div>`+bkNav();
   if(n===2)return hd(T('Date e orari','Dates and times'),T('La tariffa è a giornate di 24 ore, con un\'ora di tolleranza alla riconsegna.','The rate is per 24-hour day, with one hour of grace at return.'))+
     `<div class="grid2"><label class="field"><span>${T('Data di ritiro','Pick-up date')}</span><input class="inp" type="date" data-chg="bkF" name="from" min="${iso(TODAY)}" value="${BK.from}" ${inv('from')}>${E('from')}</label>
-     <label class="field"><span>${T('Ora di ritiro','Pick-up time')}</span><select class="inp" data-chg="bkF" name="tf">${TIMES.map(t=>`<option ${t===BK.tf?'selected':''}>${t}</option>`).join('')}</select></label>
+     <label class="field"><span>${T('Ora di ritiro','Pick-up time')}</span><select class="inp" data-chg="bkF" name="tf">${(BK.from?daySlots(BK.from):SLOTS_WD).map(t=>{const st=BK.from?slotState(BK.from,t):'free';return `<option value="${t}" ${t===BK.tf?'selected':''} ${st!=='free'?'disabled':''}>${t}${st==='busy'||st==='mine'?' · '+T('occupato','booked'):st==='past'?' · '+T('passato','past'):''}</option>`}).join('')}</select></label>
      <label class="field"><span>${T('Data di riconsegna','Return date')}</span><input class="inp" type="date" data-chg="bkF" name="to" min="${BK.from||iso(TODAY)}" value="${BK.to}" ${inv('to')}>${E('to')}</label>
      <label class="field"><span>${T('Ora di riconsegna','Return time')}</span><select class="inp" data-chg="bkF" name="tt">${TIMES.map(t=>`<option ${t===BK.tt?'selected':''}>${t}</option>`).join('')}</select></label></div>
      <div id="bkAvail" aria-live="polite">${bkAvail()}</div>
@@ -114,7 +114,7 @@ function bkStepHtml(){const c=carBy(BK.car),q=bkQ(),n=BK.step,S=BKSTEPS(),hd=(t,
    <div class="kv"><div><span>${T('Codice','Code')}</span><b>${BK.code}</b></div><div><span>${T('Auto','Car')}</span><b>${carName(c)}</b></div><div><span>${T('Ritiro','Pick-up')}</span><b>${fmtDs(fromIso(BK.from))} · ${BK.tf}</b></div><div><span>${T('Riconsegna','Return')}</span><b>${fmtDs(fromIso(BK.to))} · ${BK.tt}</b></div><div><span>${T('Totale','Total')}</span><b>${eur(q.total)}</b></div><div><span>${T('Acconto (simulato)','Down payment (simulated)')}</span><b>${eur(q.now)}</b></div></div>
    <div class="card"><h3 style="margin-bottom:12px">${T('Cosa succede adesso','What happens next')}</h3><ul class="list-check"><li><span>${T('Porta con te patente e documento originali e la carta di credito per la cauzione.','Bring your original licence and ID and the credit card for the deposit.')}</span></li><li><span>${T('Ritiro','Pick-up')}: <b>${T(q.pu.it,q.pu.en)}</b>.</span></li><li><span>${T('Al ritiro si salda il resto e si controlla insieme l\'auto.','At pick-up you pay the balance and we check the car together.')}</span></li></ul>
     ${prod(T('email di conferma, promemoria automatici di ritiro e riconsegna, messaggio su WhatsApp Business.','confirmation email, automatic pick-up and return reminders, WhatsApp Business message.'))}</div>
-   <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-primary" href="#/account/prenotazioni">${T('Vedi nell\'area cliente','See in my account')}</a><a class="btn btn-line" href="#/admin">${T('Vedi nella dashboard','See in the dashboard')}</a>${waBtn('btn-line')}</div>`;
+   ${waFinal('rent',Object.assign({},myBookings().find(b=>b.code===BK.code)||{},{code:BK.code,car:c.id,from:BK.from,to:BK.to,tf:BK.tf,tt:BK.tt,total:q.total,who:((BK.cust.nome||'')+' '+(BK.cust.cognome||'')).trim(),tel:BK.cust.tel}),'bookings')}<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-line" href="#/account/prenotazioni">${T('Vedi nell\'area cliente','See in my account')}</a><a class="btn btn-line" href="#/admin">${T('Vedi nella dashboard','See in the dashboard')}</a></div>`;
 }
 function bkAvail(){if(!BK.from||!BK.to)return '';const c=carBy(BK.car);if(rentalDays(BK.from,BK.tf,BK.to,BK.tt)<1)return `<div class="note bad" role="alert">${T('La riconsegna deve essere dopo il ritiro.','Return must be after pick-up.')}</div>`;
   if(fromIso(BK.from)<TODAY)return `<div class="note bad" role="alert">${T('La data di ritiro è nel passato.','The pick-up date is in the past.')}</div>`;
@@ -125,7 +125,7 @@ function bkAvail(){if(!BK.from||!BK.to)return '';const c=carBy(BK.car);if(rental
 function bkValidate(){const e={},c=carBy(BK.car),n=BK.step;
   if(n===1&&fleetState()[c.id]==='maint')e.car=1;
   if(n===2){if(!BK.from)e.from=T('Scegli la data di ritiro','Pick a pick-up date');if(!BK.to)e.to=T('Scegli la data di riconsegna','Pick a return date');
-    if(BK.from&&BK.to&&(rentalDays(BK.from,BK.tf,BK.to,BK.tt)<1||fromIso(BK.from)<TODAY||!isFree(c,BK.from,BK.to)))e.to=T('Date non valide o non disponibili','Dates invalid or unavailable')}
+    if(BK.from&&BK.to&&(rentalDays(BK.from,BK.tf,BK.to,BK.tt)<1||fromIso(BK.from)<TODAY||!isFree(c,BK.from,BK.to)))e.to=T('Date non valide o non disponibili','Dates invalid or unavailable');if(BK.from&&!slotFree(BK.from,BK.tf))e.from=T('Nessuna fascia di ritiro libera in questo giorno (la domenica è chiusa)','No free pick-up slot on this day (closed on Sundays)')}
   if(n===6){const u=BK.cust;['nome','cognome','citta'].forEach(k=>{if(!(u[k]||'').trim())e[k]=T('Campo obbligatorio','Required field')});
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(u.mail||''))e.mail=T('Email non valida','Invalid email');
     if((u.tel||'').replace(/\D/g,'').length<8)e.tel=T('Numero non valido','Invalid number');
@@ -144,7 +144,7 @@ ACT.bkGo=el=>{const n=+el.dataset.n;if(n>BK.max&&!BK.err.final)return;BK.err={};
 ACT.bkExpire=()=>{BK.hold=Date.now()-1;bkPaint()};
 ACT.bkRehold=()=>{const c=carBy(BK.car);if(!isFree(c,BK.from,BK.to)){BK.step=2;BK.max=2;BK.hold=0;toast(T('Le date non sono più libere','The dates are no longer free'));bkPaint();return}BK.hold=Date.now()+RULES.holdMin*6e4;toast(T('Blocco rinnovato: 15 minuti','Hold renewed: 15 minutes'));bkPaint()};
 CHG.bkCar=el=>{location.hash='#/prenota/'+el.value};
-CHG.bkF=el=>{BK[el.name]=el.value;BK.err={};if(el.name==='from'&&BK.to&&BK.to<BK.from){BK.to='';bkPaint();return}BK.hold=0;BK.max=Math.min(BK.max,2);BK.paid=false;$('#bkAvail').innerHTML=bkAvail();bkSum();
+CHG.bkF=el=>{BK[el.name]=el.value;BK.err={};if(el.name==='from'&&BK.from&&!slotFree(BK.from,BK.tf)){const f=daySlots(BK.from).find(t=>slotFree(BK.from,t));if(f)BK.tf=f;setTimeout(()=>bkPaint(),0)}if(el.name==='from'&&BK.to&&BK.to<BK.from){BK.to='';bkPaint();return}BK.hold=0;BK.max=Math.min(BK.max,2);BK.paid=false;$('#bkAvail').innerHTML=bkAvail();bkSum();
   $('#bkStepper')&&$$('.stepper button').forEach((b,i)=>b.disabled=i+1>BK.max)};
 CHG.bkPlace=el=>{BK[el.name]=el.value;bkPaint()};
 CHG.bkExtra=el=>{const i=BK.extras.indexOf(el.value);el.checked?i<0&&BK.extras.push(el.value):i>=0&&BK.extras.splice(i,1);el.closest('.extra').classList.toggle('on',el.checked);bkSum()};
@@ -168,8 +168,8 @@ ACT.signClear=()=>{const cv=$('#sign');cv.getContext('2d').clearRect(0,0,cv.widt
 /* conferma: nessuna prenotazione è confermata finché tutti i controlli non passano */
 function bkFinish(){BK.working=true;bkPaint(true);let i=0;const t=setInterval(()=>{const li=$(`#bkChecks li[data-i="${i}"]`);if(li)li.style.opacity=1;i++;if(i<4)return;clearInterval(t);
   setTimeout(()=>{if(!BK)return;BK.working=false;const c=carBy(BK.car),q=bkQ();
-    if(!isFree(c,BK.from,BK.to)){BK.err={final:T('Nel frattempo le date sono state prese da un\'altra prenotazione. L\'acconto simulato verrebbe rimborsato in automatico.','Meanwhile the dates were taken by another booking. The simulated down payment would be refunded automatically.')};BK.max=2;bkPaint();return}
-    BK.final=bkMode()==='auto'?'confermata':'attesa';BK.code=newCode();
+    if(!isFree(c,BK.from,BK.to)||!slotFree(BK.from,BK.tf)){BK.err={final:T('Nel frattempo le date sono state prese da un\'altra prenotazione. L\'acconto simulato verrebbe rimborsato in automatico.','Meanwhile the dates were taken by another booking. The simulated down payment would be refunded automatically.')};BK.max=2;bkPaint();return}
+    BK.final=bkMode()==='auto'?'confermata':'attesa';BK.code=newCode();BK.appt=takeSlot({type:'ritiro',car:c.id,date:BK.from,time:BK.tf,who:((BK.cust.nome||'')+' '+(BK.cust.cognome||'')).trim(),tel:BK.cust.tel,mail:BK.cust.mail,note:BK.code});
     const all=myBookings();all.unshift({code:BK.code,car:c.id,from:BK.from,to:BK.to,tf:BK.tf,tt:BK.tt,pu:BK.pu,dr:BK.dr,extras:BK.extras.slice(),total:q.total,now:q.now,dep:q.dep,st:BK.final,who:((BK.cust.nome||'')+' '+(BK.cust.cognome||'')).trim(),mail:BK.cust.mail,payId:BK.payId,made:Date.now()});store.set('bookings',all);
     store.set('profile',Object.assign(store.get('profile',{}),{nome:BK.cust.nome,cognome:BK.cust.cognome,mail:BK.cust.mail,tel:BK.cust.tel,citta:BK.cust.citta}));
     upsertLead({who:((BK.cust.nome||'')+' '+(BK.cust.cognome||'')).trim(),mail:BK.cust.mail,tel:BK.cust.tel,type:'noleggio',car:c.id,note:BK.code});
