@@ -1,0 +1,29 @@
+MC — Hero 3D "Notte in città" (variante B) — crediti
+
+MODELLO 3D
+  "Ferrari 458 Italia" di vicent091036
+  https://sketchfab.com/vicent091036  —  https://skfb.ly/6Bx6J
+  Licenza: Creative Commons Attribution 4.0 (CC BY 4.0) — https://creativecommons.org/licenses/by/4.0/
+  Distribuito (compresso Draco) negli esempi ufficiali di three.js:
+  https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/ferrari.glb
+  (riserva: https://threejs.org/examples/models/gltf/ferrari.glb)
+  Usato nell'esempio three.js "webgl_materials_car", da cui derivano nomi delle mesh e impostazione dei materiali.
+  Materiali, luci, scena e animazione sono stati rifatti per questa demo.
+
+  NOTA: la sandbox in cui è stata scritta la demo non raggiungeva jsdelivr, GitHub né Sketchfab,
+  quindi la licenza NON è stata riletta alla fonte: è riportata come la attribuiscono gli esempi di three.js.
+  Prima della pubblicazione verificare la pagina Sketchfab del modello (licenza e testo di attribuzione).
+  Il modello raffigura un'auto di un marchio registrato: CC BY copre il modello, non il marchio.
+  Per un sito commerciale valutare un modello senza marchi o con licenza d'uso commerciale specifica.
+
+SOFTWARE
+  three.js r160 (0.160.0) — MIT License — https://github.com/mrdoob/three.js
+  Caricati da https://cdn.jsdelivr.net/npm/three@0.160.0/ : three.module.js, GLTFLoader, DRACOLoader
+  (+ decoder Draco in examples/jsm/libs/draco/gltf/, Apache 2.0), EffectComposer, RenderPass,
+  UnrealBloomPass, OutputPass, Reflector.
+
+FONT
+  Inter — Rasmus Andersson — SIL Open Font License 1.1 — via Google Fonts.
+
+Tutto il resto (shader dell'asfalto bagnato, strisce di luce, pioggia, environment notturno,
+coni dei fari, regia dello scroll, CSS) è originale.

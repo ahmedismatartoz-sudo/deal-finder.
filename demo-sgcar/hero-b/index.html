@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta name="robots" content="noindex, nofollow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MC — Notte in città</title>
+  <meta name="description" content="MC Milano: noleggio e vendita di auto speciali.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="hero.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    html, body { margin: 0; background: #040509; color: #f4f4f2; font-family: "Inter", "Helvetica Neue", Arial, sans-serif; }
+    .after { min-height: 70vh; padding: 18vh clamp(16px, 6vw, 96px); font-weight: 200; font-size: clamp(22px, 2.6vw, 36px); line-height: 1.3; max-width: 32ch; }
+    .after small { display: block; margin-bottom: 20px; font-size: 11px; font-weight: 400; letter-spacing: .3em; text-transform: uppercase; color: rgba(244,244,242,.5); }
+    footer { padding: 32px clamp(16px, 6vw, 96px) 40px; border-top: 1px solid rgba(255,255,255,.08); font-size: 11px; line-height: 1.7; color: rgba(244,244,242,.45); font-weight: 300; }
+    footer a { color: rgba(244,244,242,.7); }
+  </style>
+</head>
+<body>
+  <section id="hero" aria-label="MC Milano, noleggio e vendita di auto speciali"></section>
+
+  <section class="after" id="collezione">
+    <small>La collezione</small>
+    Ogni auto è scelta, preparata e consegnata a mano. A Milano, di giorno e di notte.
+  </section>
+
+  <footer>
+    MC Milano — demo hero “Notte in città”.<br>
+    Modello 3D: “Ferrari 458 Italia” di <a href="https://sketchfab.com/vicent091036" rel="noopener">vicent091036</a>
+    (<a href="https://skfb.ly/6Bx6J" rel="noopener">Sketchfab</a>), licenza CC BY 4.0, distribuito negli esempi di
+    <a href="https://github.com/mrdoob/three.js" rel="noopener">three.js</a>. Materiali e scena originali.
+    Motore: three.js r160 (MIT). Modello mostrato a scopo dimostrativo; nessuna affiliazione con il marchio.
+  </footer>
+
+  <script type="module">
+    import { initHero } from './hero.js';
+    const q = new URLSearchParams(location.search);
+    window.mcHero = initHero(document.getElementById('hero'), {
+      noCar: q.has('nocar'),                       // solo per test: scena senza modello
+      mobile: q.has('mobile') ? true : undefined,  // forza la qualità ridotta
+      modelUrls: q.get('model') ? [q.get('model')] : undefined,
+      onLog: (m) => console.info('[MC hero]', m),
+    });
+  </script>
+</body>
+</html>

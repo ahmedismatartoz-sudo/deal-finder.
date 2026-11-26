@@ -1,0 +1,22 @@
+MC - Hero variante C "Galleria Bianca" - crediti e licenze
+
+Modello 3D
+  "Ferrari 458 Italia" di vicent091036 (Sketchfab), licenza Creative Commons Attribution 4.0 (CC BY 4.0).
+  File: ferrari.glb e ferrari_ao.png distribuiti nel repository three.js (examples/models/gltf/, tag r160),
+  caricati in hotlink da:
+    https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/ferrari.glb
+    https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/ferrari_ao.png
+  Attribuzione richiesta dalla CC BY 4.0: autore + licenza + link (presente nel footer della demo e nell'hero).
+  NOTA: la licenza e l'autore sono quelli indicati dall'esempio ufficiale three.js "webgl_materials_car"
+  ("Ferrari 458 Italia model by vicent091036"); da questa sandbox non e' stato possibile aprire la pagina
+  Sketchfab per riconfermarla. Verificare prima della messa in produzione.
+  ATTENZIONE MARCHIO: la CC BY copre il modello, non il marchio/design Ferrari. Per un sito commerciale
+  valutare un modello di auto non riconoscibile o le auto reali del salone.
+
+Software
+  three.js 0.160.0 (https://threejs.org) - licenza MIT. Moduli: GLTFLoader, DRACOLoader (+ decoder Draco,
+  Apache 2.0), RoomEnvironment.
+  Materiali auto ripresi dall'esempio ufficiale three.js webgl_materials_car (MIT).
+
+Font
+  Inter di Rasmus Andersson, via Google Fonts - SIL Open Font License 1.1.

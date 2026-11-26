@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MC — Galleria Bianca</title>
+<meta name="description" content="MC, noleggio e vendita di supercar a Milano.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap">
+<link rel="stylesheet" href="hero.css">
+<style>
+  html,body{margin:0;background:#f5f5f3;color:#0b0b0c}
+  .after{min-height:70vh;display:grid;place-items:center;font:300 18px/1.5 "Inter",-apple-system,Helvetica,Arial,sans-serif;color:#6e6e73;padding:0 16px;text-align:center}
+  .foot{padding:28px 16px 40px;text-align:center;font:400 11px/1.6 "Inter",-apple-system,Helvetica,Arial,sans-serif;color:#86868b;border-top:1px solid rgba(0,0,0,.08)}
+  .foot a{color:inherit}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+  <section id="hero" aria-label="MC, supercar a Milano"></section>
+  <section class="after">Il resto della pagina continua qui.</section>
+  <footer class="foot">
+    Modello 3D “Ferrari 458 Italia” di vicent091036, licenza CC BY 4.0, distribuito con gli esempi di
+    <a href="https://github.com/mrdoob/three.js/tree/r160/examples/models/gltf">three.js</a> · three.js © mrdoob e contributori, licenza MIT ·
+    Inter di Rasmus Andersson, SIL OFL 1.1. Ferrari è un marchio registrato di Ferrari S.p.A.; demo non affiliata.
+  </footer>
+  <script type="module">
+    import { initHero } from './hero.js';
+    window.MCHero = initHero(document.getElementById('hero'));
+  </script>
+</body>
+</html>
