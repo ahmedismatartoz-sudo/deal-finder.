@@ -1219,7 +1219,39 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
                                                   "fascia_fuori_zona": sum(1 for it in items if it.get("fuori_zona_km") is not None),
                                                   "caricamento": caricamento or {},
                                                   "passi": fun.passi}, ensure_ascii=False, default=str))
+        try:
+            log.warning("SITO_PROVINCE %s", json.dumps(funnel_province(tutte, items, fun), ensure_ascii=False))
+        except Exception as e:                     # solo diagnosi: non deve mai fermare il sito
+            log.warning("SITO_PROVINCE non riuscita: %s", str(e)[:200])
     return items, fun
+
+
+# 26/11 (cliente: "a Novara, Cremona, Crema, Pavia solo 20 auto? c'è qualche problema"): per provincia, quante auto
+# entrano nelle regole, quante finiscono sul sito e a quale passo escono le altre. Solo conteggi, nessuna regola cambia.
+PROVINCE_DIAGNOSI = tuple(sorted(PROVINCE_100KM)) + ("AL", "VB")
+
+
+def funnel_province(tutte: list[dict], finali: list[dict], fun: Funnel) -> dict:
+    from collections import Counter
+    prov = {it.get("id"): _r(it).get("provincia") for it in tutte}
+    out: dict = {}
+    for p in PROVINCE_DIAGNOSI:
+        out[p] = {"entrate": 0, "sito": 0, "privati_sito": 0, "uscite": Counter()}
+    for it in tutte:
+        p = prov.get(it.get("id"))
+        if p in out:
+            out[p]["entrate"] += 1
+    for it in finali:
+        p = prov.get(it.get("id"))
+        if p in out:
+            out[p]["sito"] += 1
+            out[p]["privati_sito"] += 0 if e_commerciante(it) else 1
+    for passo, ids in fun.tolti.items():
+        for i in ids:
+            p = prov.get(i)
+            if p in out:
+                out[p]["uscite"][passo] += 1
+    return {p: {**v, "uscite": dict(v["uscite"].most_common())} for p, v in out.items()}
 
 
 def righe_giorno(fun: Funnel) -> list[tuple[str, int, int]]:

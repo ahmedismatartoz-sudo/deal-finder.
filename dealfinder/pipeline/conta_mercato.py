@@ -16,6 +16,9 @@ import os
 
 log = logging.getLogger("dealfinder.pipeline")
 PROVINCE = ("MI", "MB", "BG", "BS", "CO", "CR", "LC", "LO", "MN", "PV", "SO", "VA")
+# 26/11 (cliente: "forse non leggiamo bene quelle città"): anche le province vicine fuori dalla Lombardia, per regione
+# di Subito (2 Piemonte, 8 Emilia-Romagna). Solo conteggio: nessuna regola cambia.
+PROVINCE_ALTRE = {2: ("NO", "AL", "VB"), 8: ("PC",)}
 
 
 def _totale_subito(j: dict):
@@ -57,22 +60,24 @@ def subito() -> dict:
     from ..collectors.subito import SubitoCollector
     c = SubitoCollector()
     out: dict = {}
-    keys = c._province_keys(4, set(PROVINCE), 100)
     chiavi_viste = None
-    for sn in PROVINCE:
-        key = keys.get(sn)
-        if not key:
-            out[sn] = "codice_mancante"
-            continue
-        r = c._api({"c": 2, "r": 4, "ci": key, "t": "s", "lim": 1, "start": 0})
-        if r.status_code != 200:
-            out[sn] = f"HTTP {r.status_code}"
-            continue
-        j = r.json() or {}
-        tot = _totale_subito(j)
-        if tot is None and chiavi_viste is None:
-            chiavi_viste = sorted(j)[:30]
-        out[sn] = tot
+    gruppi = [(4, PROVINCE)] + list(PROVINCE_ALTRE.items())
+    for reg, prov in gruppi:
+        keys = c._province_keys(reg, set(prov), 100)
+        for sn in prov:
+            key = keys.get(sn)
+            if not key:
+                out[sn] = "codice_mancante"
+                continue
+            r = c._api({"c": 2, "r": reg, "ci": key, "t": "s", "lim": 1, "start": 0})
+            if r.status_code != 200:
+                out[sn] = f"HTTP {r.status_code}"
+                continue
+            j = r.json() or {}
+            tot = _totale_subito(j)
+            if tot is None and chiavi_viste is None:
+                chiavi_viste = sorted(j)[:30]
+            out[sn] = tot
     if chiavi_viste is not None:
         out["_chiavi_risposta"] = chiavi_viste
     return out
@@ -97,17 +102,77 @@ def nostri() -> dict:
     with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
         conn.execute("SET TRANSACTION READ ONLY")
         conn.execute("SET statement_timeout = '300s'")
-        for r in conn.execute(NOSTRI_SQL, {"prov": list(PROVINCE)}).fetchall():
+        for r in conn.execute(NOSTRI_SQL, {"prov": list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]}).fetchall():
             d = out.setdefault(f'{r["fonte"]}:{r["venditore"]}', {"tutti": 0, "regole": 0, "per_provincia": {}})
             d["tutti"] += r["tutti"]
             d["regole"] += r["regole"]
             d["per_provincia"][r["prov"]] = d["per_provincia"].get(r["prov"], 0) + r["regole"]
+            t = d.setdefault("per_provincia_tutti", {})       # 26/11: anche senza i filtri anno/km (confronto col portale)
+            t[r["prov"]] = t.get(r["prov"], 0) + r["tutti"]
     return out
 
 
+# 26/11 (cliente: "troppe poche auto per le città, fai un controllo mirato"): per provincia e per alcune città, dove si
+# fermano gli annunci letti prima del sito: fase (nuovo/mercato/approfondito/scartato), motivo dello scarto, auto
+# approfondite e controllate nelle ultime 24 ore (solo queste vanno al sito), categoria della valutazione.
+# Solo conteggi in lettura: nessun dato del venditore, nessuna regola cambia.
+CITTA_DIAGNOSI = ("crema", "cremona", "novara", "pavia", "vigevano", "voghera", "lecco", "lodi", "piacenza", "milano")
+
+IMBUTO_SQL = """
+WITH a AS (
+  SELECT l.id, upper(l.province) AS prov, lower(coalesce(l.city, '')) AS citta, coalesce(l.seller_type, '?') AS vend,
+         l.stage, coalesce(l.stage_reason, '') AS motivo,
+         (l.year >= 2007 AND l.mileage_km BETWEEN 0 AND 150000) AS regole,
+         (l.last_checked_at > now() - interval '24 hours') AS controllata_24h
+  FROM listings l
+  WHERE l.status = 'attivo' AND l.last_seen_at > now() - interval '48 hours'
+    AND (upper(l.province) = ANY(%(prov)s) OR lower(coalesce(l.city, '')) = ANY(%(citta)s))
+)
+SELECT prov, citta, vend, stage, motivo, regole, controllata_24h, count(*) AS n FROM a GROUP BY 1, 2, 3, 4, 5, 6, 7"""
+
+
+def imbuto_province() -> dict:
+    import psycopg
+    from psycopg.rows import dict_row
+
+    from ..config import settings
+    prov = list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]
+    per_prov: dict = {}
+    per_citta: dict = {}
+
+    def somma(d, r):
+        d["letti"] = d.get("letti", 0) + r["n"]
+        if r["regole"]:
+            d["regole"] = d.get("regole", 0) + r["n"]
+            if r["vend"] == "privato":
+                d["regole_privati"] = d.get("regole_privati", 0) + r["n"]
+            f = d.setdefault("fase_regole", {})
+            f[r["stage"]] = f.get(r["stage"], 0) + r["n"]
+            if r["stage"] == "approfondito" and r["controllata_24h"]:
+                d["al_sito_24h"] = d.get("al_sito_24h", 0) + r["n"]
+            if r["stage"] == "approfondito" and not r["controllata_24h"]:
+                d["approfondite_non_ricontrollate"] = d.get("approfondite_non_ricontrollate", 0) + r["n"]
+            if r["stage"] != "approfondito" and r["motivo"]:
+                m = d.setdefault("_motivi", {})
+                m[r["motivo"][:40]] = m.get(r["motivo"][:40], 0) + r["n"]
+
+    with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
+        conn.execute("SET TRANSACTION READ ONLY")
+        conn.execute("SET statement_timeout = '300s'")
+        for r in conn.execute(IMBUTO_SQL, {"prov": prov, "citta": list(CITTA_DIAGNOSI)}).fetchall():
+            if r["prov"] in prov:
+                somma(per_prov.setdefault(r["prov"], {}), r)
+            if r["citta"] in CITTA_DIAGNOSI:
+                somma(per_citta.setdefault(r["citta"], {}), r)
+    for d in list(per_prov.values()) + list(per_citta.values()):
+        m = d.pop("_motivi", {})
+        d["motivi_top"] = dict(sorted(m.items(), key=lambda kv: -kv[1])[:6])
+    return {"province": per_prov, "citta": per_citta}
+
+
 def lavoro(spec: str = "") -> dict:
-    esito: dict = {"province": list(PROVINCE)}
-    for nome, fn in (("autoscout24_sito", autoscout), ("subito_sito", subito), ("noi", nostri)):
+    esito: dict = {"province": list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]}
+    for nome, fn in (("autoscout24_sito", autoscout), ("subito_sito", subito), ("noi", nostri), ("imbuto", imbuto_province)):
         try:
             esito[nome] = fn()
         except Exception as e:                       # un pezzo che fallisce non ferma gli altri
