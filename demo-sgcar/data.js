@@ -38,10 +38,11 @@ const fmtDs=d=>fmtD(d,{day:'numeric',month:'short'});
 const fmtDl=d=>fmtD(d,{weekday:'long',day:'numeric',month:'long'});
 
 /* ---------- tema e accento ---------- */
-const curTheme=()=>store.get('theme','dark')==='light'?'light':'dark';
+const curTheme=()=>'light'; /* tema chiaro unico (richiesta del cliente) */
 function applyTheme(t){t=t==='light'?'light':'dark';store.set('theme',t);document.documentElement.dataset.theme=t;
   const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',t==='light'?'#f4f3ef':'#0a0a0b');return t}
 const ACCENTS=[
+  {id:'blu0',it:'Blu',en:'Blue',c:'#0071e3',on:'#ffffff',hi:'#2997ff',hiL:'#0066cc'},
   {id:'rosso',it:'Rosso corsa',en:'Racing red',c:'#e1061b',on:'#ffffff',hi:'#ff3b4a',hiL:'#c40517'},
   {id:'oro',it:'Champagne',en:'Champagne',c:'#c9a46a',on:'#111111',hi:'#dcbd88',hiL:'#8a6a35'},
   {id:'giallo',it:'Giallo Modena',en:'Modena yellow',c:'#ffd60a',on:'#111111',hi:'#ffe14d',hiL:'#7a5f00'},
@@ -54,7 +55,7 @@ function applyAccent(id){
   const s=document.documentElement.style;s.setProperty('--accent',a.c);s.setProperty('--on-accent',a.on);s.setProperty('--accent-hi-d',a.hi);s.setProperty('--accent-hi-l',a.hiL);
   window.dispatchEvent(new CustomEvent('mc:accent',{detail:a}));return a;
 }
-const curAccent=()=>ACCENTS.find(x=>x.id===store.get('accent','rosso'))||ACCENTS[0];
+const curAccent=()=>ACCENTS.find(x=>x.id===store.get('accent','blu0'))||ACCENTS[0];
 
 /* ---------- flotta (dati tecnici pubblici dei modelli; prezzi, km e anni = esempi) ---------- */
 const PAINTS={rosso:{hex:'#c8102e',it:'Rosso',en:'Red'},nero:{hex:'#16171a',it:'Nero',en:'Black'},nardo:{hex:'#8b8f93',it:'Grigio Nardo',en:'Nardo Grey'}};
@@ -90,16 +91,8 @@ const carBy=id=>CARS.find(c=>c.id===id);
 const carName=c=>c.brand+' '+c.model;
 const paintName=c=>T(PAINTS[c.paint].it,PAINTS[c.paint].en);
 
-/* ---------- configuratore: vernici, cerchi, pinze (prezzi = esempi) ---------- */
-const PALETTE=[
-  {hex:'#c8102e',it:'Rosso',en:'Red',eur:0},{hex:'#16171a',it:'Nero',en:'Black',eur:0},{hex:'#8b8f93',it:'Grigio Nardo',en:'Nardo Grey',eur:1800},
-  {hex:'#eceff1',it:'Bianco',en:'White',eur:0},{hex:'#f2c200',it:'Giallo',en:'Yellow',eur:4500},{hex:'#1f3f8f',it:'Blu',en:'Blue',eur:1800},
-  {hex:'#1f4d3a',it:'Verde',en:'Green',eur:4500},{hex:'#e25a12',it:'Arancio',en:'Orange',eur:4500}];
-const RIMS=[{id:'y5',it:'Cinque razze doppie',en:'Five twin-spoke',eur:0},{id:'m10',it:'Dieci razze sottili',en:'Ten slim-spoke',eur:2400},{id:'disc',it:'Monoblocco aero',en:'Aero monoblock',eur:3100}];
-const FINISH=[{id:'argento',it:'Argento',en:'Silver',hex:['#dfe2e6','#6b6e75'],eur:0},{id:'nero',it:'Nero lucido',en:'Gloss black',hex:['#4a4d53','#121316'],eur:900},{id:'titanio',it:'Titanio',en:'Titanium',hex:['#9a9ea5','#383b40'],eur:1100},{id:'bronzo',it:'Bronzo',en:'Bronze',hex:['#c3a067','#5e4626'],eur:1400}];
-const CALIPERS=[{id:'accento',it:'Colore accento',en:'Accent colour',hex:null,eur:0},{id:'rosso',it:'Rosso',en:'Red',hex:'#c8102e',eur:600},{id:'giallo',it:'Giallo',en:'Yellow',hex:'#f2c200',eur:600},{id:'nero',it:'Nero',en:'Black',hex:'#1b1c1f',eur:0},{id:'argento',it:'Argento',en:'Silver',hex:'#b9bcc2',eur:300}];
-const finishBy=id=>FINISH.find(f=>f.id===id)||FINISH[0];
-const caliperHex=id=>{const c=CALIPERS.find(x=>x.id===id);return c&&c.hex||curAccent().c};
+/* cerchi in finitura argento: illustrazione fissa, nessun configuratore */
+const RIMFIN=['#dfe2e6','#6b6e75'];
 
 /* ---------- sagoma vettoriale (disegnata a mano, generica: nessun logo né elemento di marca) ---------- */
 function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
@@ -120,8 +113,8 @@ const SHAPE={
  'audi-rs3-sportback':{nose:226,tail:178,ty:84,belt:184,top:'C175 208 272 196 364 184C406 136 442 98 490 90C580 84 680 88 752 98L780 102C812 126 840 152 862 174L889 178',
    glass:'M390 182C422 142 450 108 490 102C580 96 670 100 744 110C770 128 792 150 806 170L390 184Z',pil:[548,694],doors:[380,550,704],mir:[396,174]}
 };
-/* o: {hex, rim:'y5'|'m10'|'disc', fin:'argento'..., cal:'#hex', vb, cls, label, flip} */
-function carSVG(car,o){o=o||{};const g=car.geo,S=SHAPE[car.id],G=350,hex=o.hex||PAINTS[car.paint].hex,id='s'+(++SIL),fin=finishBy(o.fin).hex,rim=o.rim||'y5',cal=o.cal||'var(--accent)';
+/* o: {hex, vb, cls, label, flip} */
+function carSVG(car,o){o=o||{};const g=car.geo,S=SHAPE[car.id],G=350,hex=o.hex||PAINTS[car.paint].hex,id='s'+(++SIL),fin=RIMFIN,rim=o.rim||'y5',cal=o.cal||'var(--accent)';
   const by=G-g.cl,cy=G-g.r,ar=g.r+8,dx=Math.sqrt(ar*ar-(by-cy)*(by-cy)),sx=g.x0+26,ty=S.ty,R=g.r;
   const body=`M${g.x0+24} ${by}L${g.x0+8} ${by-12}Q${g.x0-4} ${S.nose+22} ${sx} ${S.nose}${S.top}Q${g.x1+4} ${S.tail+6} ${g.x1} ${S.tail+36}L${g.x1-5} ${by-24}Q${g.x1-8} ${by} ${g.x1-34} ${by}`+
    `L${g.rw+dx} ${by}A${ar} ${ar} 0 1 0 ${g.rw-dx} ${by}L${g.fw+dx} ${by}A${ar} ${ar} 0 1 0 ${g.fw-dx} ${by}Z`;
@@ -165,7 +158,7 @@ function carSVG(car,o){o=o||{};const g=car.geo,S=SHAPE[car.id],G=350,hex=o.hex||
   ${wheel(g.fw)}${wheel(g.rw)}</g>
   </svg>`}
 /* cerchio isolato per il dettaglio della galleria */
-function rimSVG(o){o=o||{};const R=120,x=150,y=150,fin=finishBy(o.fin).hex,id='r'+(++SIL),rim=o.rim||'y5',cal=o.cal||'var(--accent)';let sp='';
+function rimSVG(o){o=o||{};const R=120,x=150,y=150,fin=RIMFIN,id='r'+(++SIL),rim=o.rim||'y5',cal=o.cal||'var(--accent)';let sp='';
   if(rim==='disc'){for(let i=0;i<6;i++){const a=i*Math.PI/3;sp+=`<circle cx="${(x+Math.cos(a)*R*.42).toFixed(1)}" cy="${(y+Math.sin(a)*R*.42).toFixed(1)}" r="${R*.1}" fill="#0b0b0d"/>`}sp=`<circle cx="${x}" cy="${y}" r="${R*.72}" fill="url(#${id}w)"/>`+sp}
   else{const N=rim==='m10'?10:5,dd=rim==='m10'?[0]:[-9,9];let ln='';for(let i=0;i<N;i++)for(const d of dd){const a=(i*360/N-90+d)*Math.PI/180,b=(i*360/N-90+d*.35)*Math.PI/180;ln+=`<path d="M${(x+Math.cos(b)*R*.12).toFixed(1)} ${(y+Math.sin(b)*R*.12).toFixed(1)}L${(x+Math.cos(a)*R*.7).toFixed(1)} ${(y+Math.sin(a)*R*.7).toFixed(1)}"/>`}
     sp=`<g stroke="url(#${id}w)" stroke-width="${R*(rim==='m10'?.055:.075)}" stroke-linecap="round">${ln}</g><circle cx="${x}" cy="${y}" r="${R*.73}" fill="none" stroke="url(#${id}w)" stroke-width="${R*.07}"/>`}
@@ -299,7 +292,6 @@ function waText(kind,r){const L=['Salve MC, vi scrivo dal sito (prototipo).'],c=
   add('Codice',r.code);if(c)add('Auto',carName(c));
   if(kind==='appt'){add('Data',fmtD(fromIso(r.date),{weekday:'long',day:'numeric',month:'long',year:'numeric'}));add('Ora',r.time)}
   if(kind==='rent'){add('Ritiro',fmtD(fromIso(r.from))+' ore '+r.tf);add('Riconsegna',fmtD(fromIso(r.to))+' ore '+r.tt);add('Totale (esempio)',eur(r.total))}
-  if(r.cfg)add('Configurazione',r.cfg);
   if(r.fin)add('Rata scelta (esempio)',r.fin);
   if(kind==='quote'){add('Tipo',r.kindLabel);add('Dettagli',r.detail)}
   if(kind==='trade'){add('Auto in permuta',r.tmod);add('Stima indicativa',r.range)}

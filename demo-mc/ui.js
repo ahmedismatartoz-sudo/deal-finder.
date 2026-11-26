@@ -8,7 +8,7 @@ const IC={
   arrow:'<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16M14 6l6 6-6 6"/></svg>',
   wa:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-2.97.78.79-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.15c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.7-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.42h-.48c-.16 0-.43.06-.66.31-.23.25-.86.84-.86 2.05 0 1.21.88 2.38 1 2.54.12.16 1.73 2.65 4.2 3.71.59.25 1.04.4 1.4.52.59.19 1.12.16 1.54.1.47-.07 1.46-.6 1.66-1.17.2-.58.2-1.07.14-1.17-.06-.11-.22-.17-.47-.29z"/></svg>',
   send:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l16-8-6 16-3-7z"/></svg>',
-  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
   cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
   moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
@@ -45,12 +45,10 @@ const HOURS=()=>[[T('Lunedì – Venerdì','Monday – Friday'),'9:30 – 18:30'
 const NAV=()=>[['#/noleggio',T('Noleggio','Rental')],['#/vendita',T('Vendita','Sales')],['#/finanziamento',T('Finanziamento','Finance')],['#/agenda',T('Agenda','Book a visit')],['#/chi-siamo',T('Chi siamo','About')]];
 function renderShell(route){
   document.documentElement.lang=LANG;const th=curTheme(),nf=favs().length;
-  $('#ribbon').innerHTML=`<i></i>${T('Prototipo dimostrativo · prezzi e dati di esempio','Demo prototype · sample prices and data')}`;
   $('#top').innerHTML=`<div class="wrap top-in"><a class="logo" href="#/" aria-label="MC home"><span>MC</span><b></b><small>Milano<br>${T('Auto speciali','Special cars')}</small></a>
    <nav class="nav" id="nav" aria-label="${T('Principale','Main')}">${NAV().map(n=>`<a href="${n[0]}" class="${route.indexOf(n[0].slice(1))===0?'on':''}">${n[1]}</a>`).join('')}<a href="#contatti" data-act="goContact">${T('Contatti','Contact')}</a>
     <div class="nav-extra"><a href="#/preventivo">${T('Preventivo','Quote')}</a><a href="#/permuta">${T('Permuta','Trade-in')}</a><a href="#/lungo-termine">${T('Lungo termine','Long-term')}</a><a href="#/admin">${T('Area salone (demo)','Showroom area (demo)')}</a></div></nav>
    <div class="tools"><a class="tool fav-link" href="#/preferiti" aria-label="${T('Preferiti','Favourites')} (${nf})">${IC.heart}<span class="cnt" ${nf?'':'hidden'}>${nf}</span></a>
-    <button class="tool" data-act="theme" aria-label="${th==='dark'?T('Passa al tema chiaro','Switch to light theme'):T('Passa al tema scuro','Switch to dark theme')}" title="${T('Tema','Theme')}">${th==='dark'?IC.sun:IC.moon}</button>
     <div class="lang" role="group" aria-label="${T('Lingua','Language')}"><button data-act="lang" data-l="it" aria-pressed="${LANG==='it'}">IT</button><button data-act="lang" data-l="en" aria-pressed="${LANG==='en'}">EN</button></div>
     <a class="btn btn-primary btn-sm top-cta" href="#/agenda">${T('Prenota una visita','Book a visit')}</a>
     <button class="burger" data-act="menu" aria-label="Menu" aria-expanded="false" aria-controls="nav"><span></span></button></div></div>`;
@@ -60,8 +58,8 @@ function renderShell(route){
    <div><h4>${T('Servizi','Services')}</h4><ul><li><a href="#/finanziamento">${T('Calcolo rata','Payment calculator')}</a></li><li><a href="#/preventivo">${T('Richiedi un preventivo','Request a quote')}</a></li><li><a href="#/permuta">${T('Valutazione permuta','Trade-in valuation')}</a></li><li><a href="#/agenda">${T('Test drive e visite','Test drives and visits')}</a></li><li><button class="linkish" data-act="callback">${T('Ti richiamiamo noi','We call you back')}</button></li></ul></div>
    <div id="contatti"><h4>${T('Contatti','Contact')}</h4><ul><li>${BIZ.addr}<br>${BIZ.cap}</li><li><a href="${BIZ.telHref}">${BIZ.tel}</a></li><li><a href="${BIZ.wa}" target="_blank" rel="noopener">WhatsApp</a></li><li><a href="${BIZ.dir}" target="_blank" rel="noopener">${T('Indicazioni stradali','Get directions')} ↗</a></li></ul></div>
    <div><h4>${T('Orari','Opening hours')} <span class="demo-tag">${T('da confermare','to be confirmed')}</span></h4><ul class="hours">${HOURS().map(h=>`<li><span>${h[0]}</span><span>${h[1]}</span></li>`).join('')}</ul>
-    <h4 style="margin-top:24px">${T('Prototipo','Prototype')}</h4><ul><li><a href="#/chi-siamo">${T('Chi siamo','About us')}</a></li><li><a href="#/admin">${T('Area salone (demo)','Showroom area (demo)')}</a></li><li><a href="#/account">${T('Area cliente (demo)','Client area (demo)')}</a></li><li><a href="#/progetto">${T('Il progetto','The project')}</a></li><li><button class="linkish" data-act="introReplay">${T('Rivedi l\'intro 3D','Replay the 3D intro')}</button></li><li><a href="#/" data-act="cookieOpen">${T('Preferenze cookie','Cookie preferences')}</a></li></ul></div>
-   </div><div class="foot-bot"><span>© ${new Date().getFullYear()} MC · ${BIZ.addr}, ${BIZ.cap}</span><span>${T('Prototipo dimostrativo: prezzi, disponibilità, rate, recensioni e prenotazioni sono dati di esempio. Pagamenti, firma e documenti sono simulati.','Demo prototype: prices, availability, instalments, reviews and bookings are sample data. Payments, signature and documents are simulated.')}</span><span>${T('Illustrazioni e rendering 3D generici, generati nel browser: nessun logo, marchio o design di case automobilistiche. I nomi dei modelli indicano solo il parco auto.','Generic illustrations and 3D renders generated in the browser: no logos, trademarks or car-maker designs. Model names only identify the fleet.')}</span></div></div>`;
+    <h4 style="margin-top:24px">${T('Prototipo','Prototype')}</h4><ul><li><a href="#/chi-siamo">${T('Chi siamo','About us')}</a></li><li><a href="#/admin">${T('Area salone (demo)','Showroom area (demo)')}</a></li><li><a href="#/account">${T('Area cliente (demo)','Client area (demo)')}</a></li><li><a href="#/progetto">${T('Il progetto','The project')}</a></li><li><a href="#/" data-act="cookieOpen">${T('Preferenze cookie','Cookie preferences')}</a></li></ul></div>
+   </div><div class="foot-bot"><span class="proto-note">${T('Prototipo dimostrativo · prezzi, disponibilità e dati sono di esempio.','Demo prototype · prices, availability and data are samples.')}</span><span>© ${new Date().getFullYear()} MC · ${BIZ.addr}, ${BIZ.cap}</span><span>${T('Prototipo dimostrativo: prezzi, disponibilità, rate, recensioni e prenotazioni sono dati di esempio. Pagamenti, firma e documenti sono simulati.','Demo prototype: prices, availability, instalments, reviews and bookings are sample data. Payments, signature and documents are simulated.')}</span><span>${T('Illustrazioni e rendering 3D generici, generati nel browser: nessun logo, marchio o design di case automobilistiche. I nomi dei modelli indicano solo il parco auto.','Generic illustrations and 3D renders generated in the browser: no logos, trademarks or car-maker designs. Model names only identify the fleet.')}</span></div></div>`;
   $('#dock').innerHTML=`<a href="${BIZ.telHref}">${IC.phone}<span>${T('Chiama','Call')}</span></a><a href="${BIZ.wa}" target="_blank" rel="noopener">${IC.wa}<span>WhatsApp</span></a><a href="#/agenda">${IC.cal}<span>${T('Prenota','Book')}</span></a><button data-act="agentToggle">${IC.chat}<span>${T('Assistente','Assistant')}</span></button>`;
   $('#agentFab').innerHTML=`<i></i><span>${T('Assistenti','Assistants')}</span>`;$('#agentFab').setAttribute('aria-label',T('Apri gli assistenti AI (demo)','Open AI assistants (demo)'));
   onScrollTop();
@@ -140,8 +138,7 @@ function viewHome(){
       <p class="lead">${T('Noleggio e vendita di auto speciali: supercar, SUV sportivi e wagon ad alte prestazioni, preparate una per una.','Rental and sales of special cars: supercars, performance SUVs and high-performance estates, prepared one by one.')}</p>
       <div class="cta"><a class="btn btn-primary" href="#/noleggio">${T('Scopri la collezione','Explore the collection')} ${IC.arrow}</a><a class="btn btn-line" href="#/agenda">${IC.cal}<span>${T('Prenota una visita','Book a visit')}</span></a></div>
     </div>
-    <div class="hero-meta"><div><b class="num">${hero.cv}</b><span>${PW()} · ${hero.model}</span></div><div><b class="num">${String(hero.s100).replace('.',d)} s</b><span>0–100 km/h</span></div><div><b class="num">6</b><span>${T('auto in collezione','cars in the collection')}</span></div>
-      <button class="replay" data-act="introReplay">${IC.play}<span>${T('Rivedi l\'intro 3D','Replay the 3D intro')}</span></button></div></div></section>
+    <div class="hero-meta"><div><b class="num">${hero.cv}</b><span>${PW()} · ${hero.model}</span></div><div><b class="num">${String(hero.s100).replace('.',d)} s</b><span>0–100 km/h</span></div><div><b class="num">6</b><span>${T('auto in collezione','cars in the collection')}</span></div></div></div></section>
 
   <section class="search"><div class="wrap"><div class="search-box reveal">
     <div class="seg" role="tablist" aria-label="${T('Cosa cerchi','What are you looking for')}"><button role="tab" data-act="searchTab" data-t="rent" aria-selected="${searchTab==='rent'}">${T('Noleggio','Rental')}</button><button role="tab" data-act="searchTab" data-t="buy" aria-selected="${searchTab==='buy'}">${T('Acquisto','Purchase')}</button></div>
@@ -162,7 +159,7 @@ function viewHome(){
 
   <section class="sec tight"><div class="wrap"><div class="live-board reveal"><div class="lb-head"><div><p class="eyebrow">${T('In tempo reale','Live')} <span class="demo-tag">${T('simulato','simulated')}</span></p><h2>${T('Disponibilità <em>adesso.</em>','Availability <em>right now.</em>')}</h2></div>
      <p class="small muted">${T('Aggiornato alle','Updated at')} <b data-live-time>${fmtD(new Date(),{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</b>. ${T('Legge prenotazioni e stato flotta del prototipo, anche se cambiano in un\'altra scheda.','Reads the prototype\'s bookings and fleet status, even if they change in another tab.')}</p></div>
-    <ul class="lb-list">${CARS.map(c=>`<li><a href="#/auto/${c.id}"><span class="lb-car">${carSVG(c,{label:''})}</span><span class="lb-name"><small>${c.brand}</small><b>${c.model}</b></span>${liveBadge(c)}<span class="lb-price">${eur(c.day)}<small>/${T('g','d')}</small></span></a></li>`).join('')}</ul></div></div></section>
+    <ul class="lb-list">${CARS.map(c=>`<li><a href="#/auto/${c.id}"><span class="lb-car">${carSVG(c,{label:''})}</span><span class="lb-name"><small>${c.brand}</small><b>${c.model}</b>${liveBadge(c)}</span><span class="lb-price">${eur(c.day)}<small>/${T('g','d')}</small></span></a></li>`).join('')}</ul></div></div></section>
 
   <section class="sec"><div class="wrap"><div class="split-feature reveal"><div class="sf-media">${carSVG(CARS[2],{hex:'#1f3f8f',rim:'m10',fin:'bronzo',label:''})}</div>
     <div class="sf-copy"><p class="eyebrow">${T('Configuratore','Configurator')}</p><h2>${T('Il colore giusto, <em>i cerchi giusti.</em>','The right colour, <em>the right wheels.</em>')}</h2><p class="lead">${T('In ogni scheda: otto vernici, tre disegni di cerchi, quattro finiture e il colore delle pinze. Il visore 3D si gira a 360°.','On every page: eight paints, three wheel designs, four finishes and the caliper colour. The 3D viewer turns 360°.')}</p>
@@ -270,45 +267,22 @@ ACT.rentReset=()=>{Object.assign(RF,RF0);route()};
 ACT.filterToggle=el=>{const o=$('#filters').classList.toggle('open');el.setAttribute('aria-expanded',o)};
 
 /* ================= CONFIGURATORE + VISORE (comune a noleggio e vendita) ================= */
-let DT={tab:'tariffe',hex:null,rim:'y5',fin:'argento',cal:'accento',from:'',to:'',view:0,lt:{m:36,km:15000,down:0}};
-function cfgFromQuery(q,c){DT.hex=q.col&&/^[0-9a-f]{6}$/i.test(q.col)?'#'+q.col.toLowerCase():null;DT.rim=RIMS.some(r=>r.id===q.rim)?q.rim:'y5';DT.fin=FINISH.some(f=>f.id===q.fin)?q.fin:'argento';DT.cal=CALIPERS.some(x=>x.id===q.cal)?q.cal:'accento'}
-const cfgHex=c=>DT.hex||PAINTS[c.paint].hex;
-const cfgPaint=c=>PALETTE.find(p=>p.hex===cfgHex(c))||{hex:cfgHex(c),it:paintName(c),en:paintName(c),eur:0};
-const cfgExtra=c=>cfgPaint(c).eur+RIMS.find(r=>r.id===DT.rim).eur+finishBy(DT.fin).eur+CALIPERS.find(x=>x.id===DT.cal).eur;
-const cfgLabel=c=>[T(cfgPaint(c).it,cfgPaint(c).en),T(RIMS.find(r=>r.id===DT.rim).it,RIMS.find(r=>r.id===DT.rim).en)+' '+T(finishBy(DT.fin).it,finishBy(DT.fin).en).toLowerCase(),T('pinze ','calipers ')+T(CALIPERS.find(x=>x.id===DT.cal).it,CALIPERS.find(x=>x.id===DT.cal).en).toLowerCase()].join(' · ');
-const cfgQS=c=>`col=${cfgHex(c).slice(1)}&rim=${DT.rim}&fin=${DT.fin}&cal=${DT.cal}`;
-const svgOpt=c=>({hex:cfgHex(c),rim:DT.rim,fin:DT.fin,cal:caliperHex(DT.cal)});
+let DT={tab:'tariffe',from:'',to:'',view:0,lt:{m:36,km:15000,down:0}};
+const svgOpt=c=>({});
 /* viste 2D per il visore senza WebGL: si trascina o si usano le frecce */
 const VIEWS=()=>[[T('Profilo sinistro','Left side'),{}],[T('Profilo destro','Right side'),{flip:1}],[T('Anteriore','Front'),{front:1}],[T('Posteriore','Rear'),{rear:1}],[T('Cerchio','Wheel'),{rimv:1}]];
 function view2D(c,i){const v=VIEWS()[i][1],o=svgOpt(c);if(v.rimv)return `<div class="rimv">${rimSVG(o)}</div>`;
   if(v.front)return carSVG(c,Object.assign({vb:[c.geo.x0-30,SHAPE[c.id].ty+20,420,270]},o));if(v.rear)return carSVG(c,Object.assign({vb:[c.geo.x1-390,SHAPE[c.id].ty+20,420,270]},o));return carSVG(c,Object.assign({flip:v.flip},o))}
-function viewerBlock(c){const V=VIEWS();return `<div class="viewer" id="viewer" data-car="${c.id}"><div class="viewer-fb" id="viewerFb" data-drag>${view2D(c,DT.view)}</div><canvas id="viewerCanvas" aria-label="${T('Modello 3D ruotabile a 360°: trascina per girare','360° rotatable 3D model: drag to turn')}"></canvas>
-   <div class="viewer-hud"><span class="badge plain" id="viewerTag">${T('Vista 2D','2D view')} · ${V[DT.view][0]}</span><span class="badge plain">${T('Rendering generico','Generic render')}</span></div>
+function viewerBlock(c){const V=VIEWS();return `<div class="viewer" id="viewer" data-car="${c.id}"><div class="viewer-fb" id="viewerFb" data-drag>${view2D(c,DT.view)}</div>
+   <div class="viewer-hud"><span class="xs muted" id="viewerTag">${V[DT.view][0]}</span><span class="xs dim">${T('Illustrazione generica','Generic illustration')}</span></div>
    <div class="viewer-nav"><button class="icon-btn" data-act="vPrev" aria-label="${T('Vista precedente','Previous view')}">‹</button><span id="viewerHint" class="xs">${T('Trascina per girare','Drag to turn')}</span><button class="icon-btn" data-act="vNext" aria-label="${T('Vista successiva','Next view')}">›</button></div></div>
   <div class="thumbs" id="thumbs">${V.map((v,i)=>`<button class="tv ${i===DT.view?'on':''}" data-act="vGo" data-i="${i}" aria-label="${v[0]}">${view2D(c,i)}<small>${v[0]}</small></button>`).join('')}</div>`}
-function cfgPanel(c){return `<section class="cfg" id="cfg" aria-label="${T('Configuratore','Configurator')}"><div class="cfg-head"><h3>${T('Configura','Configure')}</h3><span class="xs dim">${T('Optional di esempio','Sample options')}</span></div>
-   <div class="cfg-row"><span class="cfg-l">${T('Vernice','Paint')}: <b id="cfgPaint">${T(cfgPaint(c).it,cfgPaint(c).en)}</b></span><div class="swatches" role="group" aria-label="${T('Colore carrozzeria','Body colour')}">${PALETTE.map(k=>`<button class="swatch" style="--c:${k.hex}" data-act="paint" data-hex="${k.hex}" aria-pressed="${cfgHex(c)===k.hex}" aria-label="${T(k.it,k.en)}${k.eur?' +'+eur(k.eur):''}" title="${T(k.it,k.en)}${k.eur?' +'+eur(k.eur):''}"></button>`).join('')}</div></div>
-   <div class="cfg-row"><span class="cfg-l">${T('Cerchi','Wheels')}</span><div class="opts">${RIMS.map(r=>`<button class="opt" data-act="rim" data-id="${r.id}" aria-pressed="${DT.rim===r.id}"><span class="opt-rim">${rimSVG({rim:r.id,fin:DT.fin,cal:caliperHex(DT.cal)})}</span><span>${T(r.it,r.en)}<small>${r.eur?'+'+eur(r.eur):T('di serie','standard')}</small></span></button>`).join('')}</div></div>
-   <div class="cfg-row"><span class="cfg-l">${T('Finitura cerchi','Wheel finish')}</span><div class="chips">${FINISH.map(f=>`<button class="chip" data-act="fin" data-id="${f.id}" aria-pressed="${DT.fin===f.id}"><i style="background:linear-gradient(${f.hex[0]},${f.hex[1]})"></i>${T(f.it,f.en)}</button>`).join('')}</div></div>
-   <div class="cfg-row"><span class="cfg-l">${T('Pinze freno','Brake calipers')}</span><div class="chips">${CALIPERS.map(x=>`<button class="chip" data-act="cal" data-id="${x.id}" aria-pressed="${DT.cal===x.id}"><i style="background:${x.hex||'var(--accent)'}"></i>${T(x.it,x.en)}</button>`).join('')}</div></div>
-   <div class="cfg-sum"><span>${T('Optional configurati','Configured options')}</span><b class="num" id="cfgEur">${cfgExtra(c)?'+'+eur(cfgExtra(c)):eur(0)}</b><span class="demo-tag">${T('esempio','example')}</span></div></section>`}
-function cfgRefresh(){const c=carBy(curId());if(!c)return;const fb=$('#viewerFb');if(fb)fb.innerHTML=view2D(c,DT.view);
-  $$('#thumbs .tv').forEach((b,i)=>{b.innerHTML=view2D(c,i)+`<small>${VIEWS()[i][0]}</small>`});
-  const cf=$('#cfg');if(cf)cf.outerHTML=cfgPanel(c);
-  if(window.MC3D&&MC3D.viewer){const v=MC3D.viewer;v.setPaint(cfgHex(c));v.setRim(DT.rim);v.setFinish(finishBy(DT.fin).hex[0]);v.setCaliper(caliperHex(DT.cal))}
-  const qs=cfgQS(c);$$('[data-cfglink]').forEach(a=>{const b=a.getAttribute('href').split('?')[0],extra=a.dataset.cfglink;a.setAttribute('href',b+'?'+(extra?extra+'&':'')+qs)});
-  try{history.replaceState(null,'',location.hash.split('?')[0]+'?'+qs)}catch(e){}
-  if(typeof finPaint==='function')finPaint()}
-ACT.paint=el=>{DT.hex=el.dataset.hex;cfgRefresh()};
-ACT.rim=el=>{DT.rim=el.dataset.id;cfgRefresh()};
-ACT.fin=el=>{DT.fin=el.dataset.id;cfgRefresh()};
-ACT.cal=el=>{DT.cal=el.dataset.id;cfgRefresh()};
 function vSet(i){const c=carBy(curId());const n=VIEWS().length;DT.view=(i+n)%n;const fb=$('#viewerFb');if(fb){fb.innerHTML=view2D(c,DT.view);fb.classList.remove('swap');void fb.offsetWidth;fb.classList.add('swap')}
   $$('#thumbs .tv').forEach((b,k)=>b.classList.toggle('on',k===DT.view));const tg=$('#viewerTag');
-  if(window.MC3D&&MC3D.viewer){MC3D.viewer.view(['side','back3','front','rear','three'][DT.view]);if(tg)tg.textContent='3D · '+VIEWS()[DT.view][0]}else if(tg)tg.textContent=T('Vista 2D','2D view')+' · '+VIEWS()[DT.view][0]}
+  if(tg)tg.textContent=VIEWS()[DT.view][0]}
 ACT.vPrev=()=>vSet(DT.view-1);ACT.vNext=()=>vSet(DT.view+1);ACT.vGo=el=>vSet(+el.dataset.i);
 /* trascinamento nel visore 2D */
-document.addEventListener('pointerdown',e=>{const fb=e.target.closest('[data-drag]');if(!fb||$('#viewer.live'))return;const x0=e.clientX;let done=false;
+document.addEventListener('pointerdown',e=>{const fb=e.target.closest('[data-drag]');if(!fb)return;const x0=e.clientX;let done=false;
   const mv=ev=>{if(done)return;const dx=ev.clientX-x0;if(Math.abs(dx)>40){done=true;vSet(DT.view+(dx<0?1:-1))}};const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};
   addEventListener('pointermove',mv);addEventListener('pointerup',up)});
 
@@ -335,14 +309,14 @@ function ltBox(c){const r=ltCanone(c,DT.lt.m,DT.lt.km,DT.lt.down);return `<div c
    <label class="field"><span>${T('Anticipo (€)','Upfront (€)')}</span><input class="inp" type="number" min="0" step="1000" data-chg="lt" name="down" value="${DT.lt.down}"></label></div>
    <div class="lt-out"><span>${T('Canone mensile indicativo','Indicative monthly fee')}</span><b class="num" id="ltOut">${eur(r.canone)}<small>/${T('mese','mo')} ${T('IVA incl.','VAT incl.')}</small></b><span class="demo-tag">${T('esempio','example')}</span></div>
    <ul class="list-check cols2">${[T('RCA, furto e incendio','Liability, theft and fire'),T('Manutenzione ordinaria e straordinaria','Routine and extra maintenance'),T('Pneumatici','Tyres'),T('Assistenza stradale 24/7','24/7 roadside assistance')].map(x=>`<li><span>${x}</span></li>`).join('')}</ul>
-   <a class="btn btn-line btn-sm" data-cfglink="tipo=lungo&auto=${c.id}" href="#/preventivo?tipo=lungo&auto=${c.id}&${cfgQS(c)}">${T('Chiedi il preventivo lungo termine','Request a long-term quote')} ${IC.arrow}</a></div>`}
+   <a class="btn btn-line btn-sm" href="#/preventivo?tipo=lungo&auto=${c.id}">${T('Chiedi il preventivo lungo termine','Request a long-term quote')} ${IC.arrow}</a></div>`}
 CHG.lt=el=>{DT.lt[el.name]=+el.value||0;const c=carBy(curId()),r=ltCanone(c,DT.lt.m,DT.lt.km,DT.lt.down),o=$('#ltOut');if(o)o.innerHTML=`${eur(r.canone)}<small>/${T('mese','mo')} ${T('IVA incl.','VAT incl.')}</small>`};
-function viewCar(id,qs){const c=carBy(id);if(!c)return view404();cfgFromQuery(qs||{},c);DT.view=0;
+function viewCar(id,qs){const c=carBy(id);if(!c)return view404();DT.view=0;
   const cond=[[T('Età minima','Minimum age'),c.age+' '+T('anni','years')],[T('Patente','Licence'),T('B da almeno 3 anni','B, held for at least 3 years')],[T('Cauzione (pre-autorizzazione)','Security deposit (pre-authorisation)'),eur(c.dep)+' '+demoTag()],[T('Km inclusi','Km included'),c.kmDay+' '+T('al giorno','per day')+' · '+T('extra','extra')+' '+eur2(c.kmEx)+'/km'],[T('Acconto alla prenotazione','Down payment at booking'),'30%'],[T('Cancellazione','Cancellation'),T('Gratis fino a 7 giorni prima','Free up to 7 days before')],[T('Carburante','Fuel'),T('Pieno alla consegna, pieno al rientro','Full at handover, full at return')]];
   DT.cond=cond;
   return `<div class="page"><div class="wrap">
   <nav class="crumb" aria-label="breadcrumb"><a href="#/">Home</a><span>/</span><a href="#/noleggio">${T('Noleggio','Rental')}</a><span>/</span><span>${carName(c)}</span></nav>
-  <div class="detail"><div class="d-main">${viewerBlock(c)}${cfgPanel(c)}
+  <div class="detail"><div class="d-main">${viewerBlock(c)}
    <div class="d-tabs"><div class="tabs" role="tablist">${[['tariffe',T('Tariffe','Rates')],['spec',T('Scheda tecnica','Tech specs')],['cond',T('Condizioni','Terms')],['extra',T('Servizi extra','Extras')],['lungo',T('Lungo termine','Long-term')]].map(t=>`<button role="tab" data-act="dtTab" data-t="${t[0]}" aria-selected="${DT.tab===t[0]}">${t[1]}</button>`).join('')}</div>
     <div id="dtPanel">${dtPanel(c)}</div></div></div>
    <aside class="buybox"><div><p class="bb-brand">${c.brand} · ${T(CATS[c.cat].it,CATS[c.cat].en)}</p><h1>${c.model}</h1></div>
@@ -351,7 +325,7 @@ function viewCar(id,qs){const c=carBy(id);if(!c)return view404();cfgFromQuery(qs
     <div class="card bb-card"><div class="grid2" style="gap:10px"><label class="field"><span>${T('Ritiro','Pick-up')}</span><input class="inp" type="date" data-chg="dtDate" name="from" min="${iso(TODAY)}" value="${DT.from}"></label><label class="field"><span>${T('Riconsegna','Return')}</span><input class="inp" type="date" data-chg="dtDate" name="to" min="${iso(TODAY)}" value="${DT.to}"></label></div>
      <div id="dtQuote" aria-live="polite">${dtQuote(c)}</div>
      <a class="btn btn-primary btn-block" id="dtBook" href="#/prenota/${c.id}${DT.from&&DT.to&&DT.to>=DT.from?'?da='+DT.from+'&a='+DT.to:''}">${T('Prenota questa auto','Book this car')} ${IC.arrow}</a>
-     <div class="grid2" style="gap:8px"><a class="btn btn-line btn-sm" href="#/agenda?tipo=ritiro&auto=${c.id}">${IC.cal}<span>${T('Fissa il ritiro','Book pick-up')}</span></a><a class="btn btn-line btn-sm" data-cfglink="tipo=breve&auto=${c.id}" href="#/preventivo?tipo=breve&auto=${c.id}&${cfgQS(c)}">${T('Preventivo','Quote')}</a></div></div>
+     <div class="grid2" style="gap:8px"><a class="btn btn-line btn-sm" href="#/agenda?tipo=ritiro&auto=${c.id}">${IC.cal}<span>${T('Fissa il ritiro','Book pick-up')}</span></a><a class="btn btn-line btn-sm" href="#/preventivo?tipo=breve&auto=${c.id}">${T('Preventivo','Quote')}</a></div></div>
     <div class="bb-actions"><button class="chip" data-act="fav" data-id="${c.id}" aria-pressed="${favs().includes(c.id)}">${IC.heart}${T('Preferiti','Favourite')}</button><button class="chip" data-act="cmp" data-id="${c.id}" aria-pressed="${CMP.includes(c.id)}">${IC.cmp}${T('Confronta','Compare')}</button><button class="chip" data-act="share" data-title="${esc(carName(c))} – MC Milano">${IC.share}${T('Condividi','Share')}</button><a class="chip" href="#/vendita/${c.id}">${T('Acquisto','Purchase')} →</a></div>
     ${waBtn('btn-line btn-block',T('Domande? Scrivici su WhatsApp','Questions? Message us on WhatsApp'),'Salve MC, vorrei informazioni sul noleggio di '+carName(c)+'.')}
    </aside></div>

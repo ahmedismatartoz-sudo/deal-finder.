@@ -104,7 +104,8 @@ ACT.introEnd=introEnd;
 ACT.introReplay=(el,e)=>{e&&e.preventDefault();if(location.hash&&location.hash!=='#/'){location.hash='#/'}introStart(true)};
 
 /* ---------- visore 3D della scheda (leggero, niente post-processing) ---------- */
-function viewerInit(c,seq){const box=$('#viewer');if(!box||!c)return;if(REDUCED||!hasWebGL())return;
+function viewerInit(c,seq){return; /* niente auto 3D: la scheda usa la galleria 2D */
+  const box=$('#viewer');if(!box||!c)return;if(REDUCED||!hasWebGL())return;
   const stageP=loadScene().then(m=>m.createStage($('#viewerCanvas'),{mode:'viewer',mobile:isMobile(),theme:curTheme(),accent:curAccent().c,body:c.b3,paint:cfgHex(c),rim:DT.rim,fin:finishBy(DT.fin).hex[0],cal:caliperHex(DT.cal)}));
   withTimeout(stageP,15000)
    .then(st=>{if(seq!==routeSeq||!$('#viewer')){st.dispose();return}MC3D.viewer=st;box.classList.add('live');
@@ -122,4 +123,4 @@ document.addEventListener('change',e=>{if(e.target.type==='date')setTimeout(()=>
 /* ---------- avvio ---------- */
 applyTheme(curTheme());applyAccent(store.get('accent','rosso'));
 route();
-{const q=parse().q,home=!parse().parts.length;if(q.intro!=='0'&&(q.intro==='1'||(home&&!sess.get('intro'))))introStart()}
+/* intro a tempo sull'auto rimossa su richiesta del cliente */

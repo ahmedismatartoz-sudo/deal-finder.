@@ -79,13 +79,13 @@ ACT.agIcs=()=>{const r=AGD.done;if(!r)return;const st=r.date.replace(/-/g,'')+'T
 
 /* ================= FINANZIAMENTO ================= */
 let FN={car:CARS[0].id,price:0,down:null,months:48,balloon:true,bPct:35,tan:FIN.tan,page:false};
-function finPrice(){if(FN.page&&!FN.car)return FN.price;const c=carBy(FN.car);return c?c.sale+(FN.page?0:cfgExtra(c)):FN.price}
+function finPrice(){if(FN.page&&!FN.car)return FN.price;const c=carBy(FN.car);return c?c.sale:FN.price}
 function finCalcNow(){const P=finPrice();if(FN.down==null||FN.down>P*.9)FN.down=Math.round(P*.25/500)*500;return finance({price:P,down:FN.down,months:FN.months,balloon:FN.balloon,bPct:FN.bPct,tan:FN.tan})}
 const finLabel=f=>`${eur2(f.rata)}/mese × ${f.n} · anticipo ${eur(f.A)}${f.B?' · maxirata '+eur(f.B):''} · TAN ${pct(f.tan)} · TAEG ${pct(f.taeg)} (esempio)`;
 function finBox(){const f=finCalcNow(),P=finPrice();
   return `<div class="fin" id="fin">
    ${FN.page?`<div class="grid2"><label class="field"><span>${T('Auto','Car')}</span><select class="inp" data-chg="fin" name="car">${carOpts(FN.car,T('Altro importo','Other amount'))}</select></label>
-     <label class="field"><span>${T('Prezzo (€)','Price (€)')}</span><input class="inp" type="number" min="5000" step="500" data-chg="fin" name="price" value="${Math.round(P)}" ${FN.car?'readonly':''}></label></div>`:`<div class="fin-price"><span>${T('Prezzo con optional','Price with options')}</span><b class="num" id="finP">${eur(P)}</b></div>`}
+     <label class="field"><span>${T('Prezzo (€)','Price (€)')}</span><input class="inp" type="number" min="5000" step="500" data-chg="fin" name="price" value="${Math.round(P)}" ${FN.car?'readonly':''}></label></div>`:`<div class="fin-price"><span>${T('Prezzo','Price')}</span><b class="num" id="finP">${eur(P)}</b></div>`}
    <label class="field"><span>${T('Anticipo','Down payment')}: <b id="finDownO">${eur(f.A)}</b> <i class="dim" id="finDownP">(${Math.round(f.A/P*100)}%)</i></span><input type="range" data-chg="fin" name="down" min="0" max="${Math.round(P*.5/500)*500}" step="500" value="${f.A}"></label>
    <div class="field"><span>${T('Durata','Term')}</span><div class="chips" role="group">${[24,36,48,60,72,84].map(m=>`<button class="chip" data-act="finM" data-m="${m}" aria-pressed="${FN.months===m}">${m} ${T('mesi','mo')}</button>`).join('')}</div></div>
    <div class="grid2"><label class="check"><input type="checkbox" data-chg="fin" name="balloon" ${FN.balloon?'checked':''}><span>${T('Con maxirata finale','With final balloon')}</span></label>
@@ -100,7 +100,7 @@ function finPaint(){const box=$('#fin');if(!box)return;const f=finCalcNow(),P=fi
   const o=$('#finOut');if(o)o.innerHTML=finOut(f);const d=$('#finDownO');if(d)d.textContent=eur(f.A);const dp=$('#finDownP');if(dp)dp.textContent='('+Math.round(f.A/P*100)+'%)';
   const r=$('input[name=down]',box);if(r){r.max=Math.round(P*.5/500)*500;r.value=f.A}const bo=$('#finBO');if(bo)bo.textContent=FN.balloon?FN.bPct+'%':'—';const b=$('input[name=bPct]',box);if(b)b.disabled=!FN.balloon;
   const pp=$('#finP');if(pp)pp.textContent=eur(P);const pin=$('input[name=price]',box);if(pin&&FN.car){pin.value=Math.round(P);pin.readOnly=true}else if(pin)pin.readOnly=false;
-  $$('[data-finlink]').forEach(a=>{const c=carBy(FN.car);a.setAttribute('href','#/preventivo?tipo=acquisto&fin=1'+(c?'&auto='+c.id:'')+'&ant='+f.A+'&mesi='+f.n+'&maxi='+(FN.balloon?FN.bPct:0)+'&tan='+FN.tan+(c&&!FN.page?'&'+cfgQS(c):''))})}
+  $$('[data-finlink]').forEach(a=>{const c=carBy(FN.car);a.setAttribute('href','#/preventivo?tipo=acquisto&fin=1'+(c?'&auto='+c.id:'')+'&ant='+f.A+'&mesi='+f.n+'&maxi='+(FN.balloon?FN.bPct:0)+'&tan='+FN.tan)})}
 CHG.fin=el=>{const n=el.name;if(n==='car'){FN.car=el.value;FN.down=null;if(!FN.car)FN.price=FN.price||100000}else if(n==='price'){FN.price=Math.max(0,+el.value||0);FN.down=null}else if(n==='balloon')FN.balloon=el.checked;else FN[n]=+el.value;finPaint()};
 ACT.finM=el=>{FN.months=+el.dataset.m;$$('[data-act=finM]').forEach(b=>b.setAttribute('aria-pressed',b===el));finPaint()};
 function viewFinance(q){q=q||{};FN.page=true;if(qsAuto(q)){FN.car=q.auto;FN.down=null}
@@ -115,10 +115,9 @@ function viewFinance(q){q=q||{};FN.page=true;if(qsAuto(q)){FN.car=q.auto;FN.down
 /* ================= PREVENTIVO (vendita e noleggio) ================= */
 let PQ=null;
 function pqInit(q){q=q||{};const t=['acquisto','breve','lungo'].includes(q.tipo)?q.tipo:'acquisto';
-  PQ={tipo:t,car:qsAuto(q)||CARS[0].id,from:q.da||'',to:q.a||'',m:36,km:15000,ltdown:0,fin:q.fin==='1'||t==='acquisto',perm:false,v:{},err:{},done:null,
-    cfg:q.col?{hex:'#'+q.col,rim:q.rim,fin:q.fin,cal:q.cal}:null};
+  PQ={tipo:t,car:qsAuto(q)||CARS[0].id,from:q.da||'',to:q.a||'',m:36,km:15000,ltdown:0,fin:q.fin==='1'||t==='acquisto',perm:false,v:{},err:{},done:null};
   if(q.ant!=null&&q.ant!==''){FN.down=+q.ant;FN.months=+q.mesi||FN.months;FN.balloon=+q.maxi>0;if(+q.maxi>0)FN.bPct=+q.maxi;if(q.tan)FN.tan=+q.tan}}
-function viewQuote(q){pqInit(q);FN.page=false;FN.car=PQ.car;if(PQ.cfg){DT.hex=/^#[0-9a-f]{6}$/i.test(PQ.cfg.hex)?PQ.cfg.hex.toLowerCase():null;DT.rim=RIMS.some(r=>r.id===PQ.cfg.rim)?PQ.cfg.rim:'y5';DT.fin=FINISH.some(f=>f.id===PQ.cfg.fin)?PQ.cfg.fin:'argento';DT.cal=CALIPERS.some(x=>x.id===PQ.cfg.cal)?PQ.cfg.cal:'accento'}else{DT.hex=null;DT.rim='y5';DT.fin='argento';DT.cal='accento'}
+function viewQuote(q){pqInit(q);FN.page=false;FN.car=PQ.car;
   return `<div class="page"><div class="wrap"><div class="page-head"><p class="eyebrow">${T('Preventivo','Quote')}</p><h1>${T('Il tuo preventivo, <em>su misura.</em>','Your quote, <em>tailored.</em>')}</h1>
    <p class="lead">${T('Acquisto, noleggio breve o lungo termine: raccogliamo i dati, generiamo il riepilogo e lo mandi al salone su WhatsApp.','Purchase, short-term or long-term rental: we collect the details, generate the summary and you send it to the showroom on WhatsApp.')}</p></div><div id="pqBody">${pqBody()}</div></div></div>`}
 function pqBody(){if(PQ.done)return pqDone();const P=PQ,c=carBy(P.car),v=P.v,e=P.err;
@@ -135,8 +134,7 @@ function pqBody(){if(PQ.done)return pqDone();const P=PQ,c=carBy(P.car),v=P.v,e=P
   return `<form class="pq" data-form="quote" novalidate><div class="pq-main">
    <section class="ag-step"><h2 class="h-step"><span>01</span>${T('Tipo di preventivo','Quote type')}</h2><div class="types" role="radiogroup">${[['acquisto',T('Acquisto','Purchase'),T('Con finanziamento e permuta, se vuoi','With finance and trade-in, if you like')],['breve',T('Noleggio breve','Short-term rental'),T('Giorni o settimane','Days or weeks')],['lungo',T('Lungo termine','Long-term'),T('Da 12 a 48 mesi','12 to 48 months')]].map(t=>`<button type="button" class="type" role="radio" aria-checked="${P.tipo===t[0]}" data-act="pqType" data-t="${t[0]}"><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div></section>
    <section class="ag-step"><h2 class="h-step"><span>02</span>${T('Auto e dettagli','Car and details')}</h2>
-    <div class="pq-car"><div class="pq-img">${carSVG(c,svgOpt(c))}</div><div><label class="field"><span>${T('Auto','Car')}</span><select class="inp" data-chg="pq" name="car">${carOpts(P.car)}</select></label>
-     <p class="xs muted" style="margin-top:8px">${T('Configurazione','Configuration')}: <b>${cfgLabel(c)}</b>${cfgExtra(c)?` · +${eur(cfgExtra(c))} ${T('optional','options')}`:''}. <a class="link xs" href="#/vendita/${c.id}?${cfgQS(c)}">${T('Modifica','Edit')}</a></p></div></div>${mid}</section>
+    <div class="pq-car"><div class="pq-img">${carSVG(c)}</div><div><label class="field"><span>${T('Auto','Car')}</span><select class="inp" data-chg="pq" name="car">${carOpts(P.car)}</select></label></div></div>${mid}</section>
    <section class="ag-step"><h2 class="h-step"><span>03</span>${T('I tuoi dati','Your details')}</h2>
     <div class="grid2">${field('nome',T('Nome e cognome','Full name'),{req:1,v:v.nome,ac:'name',err:e.nome})}${field('tel',T('Telefono','Phone'),{req:1,type:'tel',v:v.tel,ac:'tel',ph:'+39 …',err:e.tel})}</div>
     ${field('mail','Email',{type:'email',v:v.mail,ac:'email',ph:T('facoltativa','optional'),err:e.mail})}
@@ -145,24 +143,24 @@ function pqBody(){if(PQ.done)return pqDone();const P=PQ,c=carBy(P.car),v=P.v,e=P
 const pqSave=()=>{const f=$('form[data-form=quote]');if(!f)return;const d=new FormData(f);['nome','tel','mail','note','tmod','tyear','tkm'].forEach(k=>{if(d.has(k))PQ.v[k]=d.get(k)});PQ.v.privacy=!!d.get('privacy')};
 ACT.pqType=el=>{pqSave();PQ.tipo=el.dataset.t;PQ.err={};$('#pqBody').innerHTML=pqBody()};
 CHG.pq=el=>{pqSave();const n=el.name;if(n==='fin'||n==='perm')PQ[n]=el.checked;else if(['m','km','ltdown'].includes(n))PQ[n]=+el.value||0;else PQ[n]=el.value;
-  if(n==='car'){FN.car=PQ.car;FN.down=null;DT.hex=null}if(n==='from'&&PQ.to&&PQ.to<PQ.from)PQ.to='';$('#pqBody').innerHTML=pqBody()};
+  if(n==='car'){FN.car=PQ.car;FN.down=null}if(n==='from'&&PQ.to&&PQ.to<PQ.from)PQ.to='';$('#pqBody').innerHTML=pqBody()};
 FORM.quote=()=>{pqSave();const P=PQ,v=P.v,e={},c=carBy(P.car);
   if(!(v.nome||'').trim())e.nome=T('Campo obbligatorio','Required field');if(!telOk(v.tel))e.tel=T('Numero non valido','Invalid number');if(!mailOk(v.mail))e.mail=T('Email non valida','Invalid email');if(!v.privacy)e.privacy=T('Serve il consenso per ricontattarti','Consent is needed to contact you');
   if(P.tipo==='breve'&&!quote(c,{from:P.from,to:P.to}).ok)e.dates=T('Scegli date valide','Choose valid dates');if(P.tipo==='acquisto'&&P.perm&&!(v.tmod||'').trim())e.tmod=T('Indica la tua auto','Tell us your car');
   P.err=e;if(Object.keys(e).length){$('#pqBody').innerHTML=pqBody();const x=$('#pqBody [aria-invalid=true],#pqBody .err');x&&x.scrollIntoView({block:'center',behavior:'smooth'});return}
   const lines=[],kindLabel={acquisto:'Acquisto',breve:'Noleggio breve',lungo:'Noleggio lungo termine'}[P.tipo];let detail='',finTxt='',amount=0;
-  lines.push([T('Auto','Car'),carName(c)],[T('Configurazione','Configuration'),cfgLabel(c)]);
-  if(P.tipo==='acquisto'){amount=c.sale+cfgExtra(c);lines.push([T('Prezzo con optional','Price with options'),eur(amount)]);detail='Prezzo con optional '+eur(amount);
+  lines.push([T('Auto','Car'),carName(c)]);
+  if(P.tipo==='acquisto'){amount=c.sale;lines.push([T('Prezzo','Price'),eur(amount)]);detail='Prezzo '+eur(amount);
     if(P.fin){const f=finCalcNow();finTxt=finLabel(f);lines.push([T('Rata','Payment'),eur2(f.rata)+'/'+T('mese','mo')+' × '+f.n],[T('Anticipo','Down payment'),eur(f.A)],f.B?[T('Maxirata','Balloon'),eur(f.B)]:null,['TAN / TAEG',pct(f.tan)+' / '+pct(f.taeg)])}
     if(P.perm){lines.push([T('Permuta','Trade-in'),[v.tmod,v.tyear,v.tkm?num(+v.tkm)+' km':''].filter(Boolean).join(', ')]);detail+=' · Permuta: '+[v.tmod,v.tyear,v.tkm?v.tkm+' km':''].filter(Boolean).join(', ')}}
   if(P.tipo==='breve'){const q=quote(c,{from:P.from,to:P.to});amount=q.total;lines.push([T('Periodo','Period'),fmtD(fromIso(P.from))+' → '+fmtD(fromIso(P.to))+' ('+q.days+' '+T('giorni','days')+')'],[T('Km inclusi','Km included'),num(q.km)+' km'],[T('Cauzione','Deposit'),eur(c.dep)],[T('Totale indicativo','Indicative total'),eur(q.total)]);detail=fmtD(fromIso(P.from))+' → '+fmtD(fromIso(P.to))+', totale indicativo '+eur(q.total)}
   if(P.tipo==='lungo'){const r=ltCanone(c,P.m,P.km,P.ltdown);amount=r.canone;lines.push([T('Durata','Term'),P.m+' '+T('mesi','months')],[T('Km all\'anno','Km per year'),num(P.km)],[T('Anticipo','Upfront'),eur(P.ltdown)],[T('Canone indicativo','Indicative fee'),eur(r.canone)+'/'+T('mese','mo')]);detail=P.m+' mesi, '+num(P.km)+' km/anno, anticipo '+eur(P.ltdown)+', canone indicativo '+eur(r.canone)+'/mese'}
-  const rec=saveQuote({tipo:P.tipo,kindLabel,car:c.id,cfg:cfgLabel(c),detail,fin:finTxt,amount,lines:lines.filter(Boolean),who:v.nome.trim(),tel:v.tel.trim(),mail:(v.mail||'').trim(),note:(v.note||'').trim()});
+  const rec=saveQuote({tipo:P.tipo,kindLabel,car:c.id,detail,fin:finTxt,amount,lines:lines.filter(Boolean),who:v.nome.trim(),tel:v.tel.trim(),mail:(v.mail||'').trim(),note:(v.note||'').trim()});
   upsertLead({who:rec.who,mail:rec.mail,tel:rec.tel,type:P.tipo==='lungo'?'lungo':P.tipo==='breve'?'noleggio':(P.fin?'finanziamento':'preventivo'),car:c.id,note:rec.code});
   P.done=rec;$('#pqBody').innerHTML=pqBody();scrollTo({top:0,behavior:'smooth'})};
 function pqDone(){const r=PQ.done,c=carBy(r.car);
   return `<div class="done"><div class="done-main"><article class="card summary-doc" id="pqDoc"><div class="sd-head"><div><p class="eyebrow">${T('Riepilogo preventivo','Quote summary')}</p><h2>${r.code}</h2><p class="xs dim">${fmtD(r.made,{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})} · ${T('valori di esempio','sample values')}</p></div><a class="logo" href="#/"><span>MC</span><b></b></a></div>
-    <div class="sd-car">${carSVG(c,svgOpt(c))}</div>
+    <div class="sd-car">${carSVG(c)}</div>
     ${sumRows([[T('Tipo','Type'),T({acquisto:'Acquisto',breve:'Noleggio breve',lungo:'Noleggio a lungo termine'}[r.tipo],{acquisto:'Purchase',breve:'Short-term rental',lungo:'Long-term rental'}[r.tipo])]].concat(r.lines).concat([[T('Nome','Name'),esc(r.who)],[T('Telefono','Phone'),esc(r.tel)],r.mail?['Email',esc(r.mail)]:null,r.note?[T('Note','Notes'),esc(r.note)]:null]))}
     <p class="xs dim" style="margin-top:14px">${T('Documento generato nel browser dal prototipo: non è un\'offerta vincolante. Prezzi, rate e canoni sono di esempio.','Document generated in the browser by the prototype: not a binding offer. Prices, payments and fees are samples.')}</p></article>
    <div class="cta"><button class="btn btn-line btn-sm" data-act="print">${T('Stampa o salva PDF','Print or save PDF')}</button><button class="btn btn-ghost btn-sm" data-act="pqNew">${T('Nuovo preventivo','New quote')}</button><a class="btn btn-ghost btn-sm" href="#/admin/preventivi">${T('Vedi nell\'area salone','See in the showroom area')}</a></div></div>

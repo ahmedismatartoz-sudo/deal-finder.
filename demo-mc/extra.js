@@ -25,10 +25,10 @@ CHG.sf=el=>{SF[el.name]=el.type==='range'||el.name==='year'?+el.value:el.value;i
 ACT.saleReset=()=>{Object.assign(SF,SF0);route()};
 
 /* scheda vendita: visore 360°, configuratore, calcolatore rata, test drive, preventivo, permuta */
-function viewSaleCar(id,qs){const c=carBy(id);if(!c)return view404();cfgFromQuery(qs||{},c);DT.view=0;FN.page=false;if(FN.car!==c.id){FN.car=c.id;FN.down=null}
+function viewSaleCar(id,qs){const c=carBy(id);if(!c)return view404();DT.view=0;FN.page=false;if(FN.car!==c.id){FN.car=c.id;FN.down=null}
   const opt=[T('Cerchi in lega sportivi','Sport alloy wheels'),T('Sedili sportivi','Sport seats'),T('Scarico sportivo','Sport exhaust'),T('Fari a matrice di LED','Matrix LED headlights'),T('Navigatore e connettività','Navigation and connectivity'),T('Telecamere di parcheggio','Parking cameras')];
   return `<div class="page"><div class="wrap"><nav class="crumb" aria-label="breadcrumb"><a href="#/">Home</a><span>/</span><a href="#/vendita">${T('Vendita','Sales')}</a><span>/</span><span>${carName(c)}</span></nav>
-  <div class="detail"><div class="d-main">${viewerBlock(c)}${cfgPanel(c)}
+  <div class="detail"><div class="d-main">${viewerBlock(c)}
     <section class="card" id="finCard"><div class="cfg-head"><h3>${T('Calcola la rata','Work out the payment')}</h3><span class="xs dim">${T('valori di esempio','sample values')}</span></div>${finBox()}</section>
     <section class="d-tabs"><h3 style="margin-bottom:14px">${T('Scheda tecnica','Tech specs')}</h3>${specGrid(c)}
      <h3 style="margin:26px 0 14px">${T('Dotazioni','Equipment')} ${demoTag()}</h3><ul class="list-check cols2">${opt.map(o=>`<li><span>${o}</span></li>`).join('')}</ul></section></div>
