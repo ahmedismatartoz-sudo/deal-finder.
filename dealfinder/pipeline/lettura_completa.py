@@ -579,3 +579,76 @@ def lavoro(spec: str = "", dormi=time.sleep) -> dict:
         dormi(60)
     esiti["minuti"] = round((time.time() - t0) / 60)
     return esiti
+
+
+# ------------------------------------------------------------------ 27/11 lettura mirata di una zona (Ferrara)
+# Cliente: "ho bisogno di molte più auto di Ferrara entro stasera". La lettura completa copre solo la Lombardia e il
+# Piemonte (tempo_reale.REGIONI): Ferrara e la Romagna arrivano solo dalle ultime 8 pagine di Subito ogni 3 ore e da
+# nessuna ricerca AutoScout24. Questo lavoro legge per intero Subito (tutte le fasce di prezzo) nelle province date e
+# AutoScout24 (privati) attorno ai centri dati. Nessuna regola cambia: gli annunci passano dalla valutazione di sempre.
+ZONA_MIRATA = {"FE": "Ferrara"}                    # provincia -> nome per Subito
+ZONA_MIRATA_REGIONE = "emilia-romagna"
+ZONA_MIRATA_AS = (("44121", "35"), ("48121", "60"))   # Ferrara 35 km, Ravenna 60 km (Romagna e basso ferrarese)
+
+
+def lavoro_zona(spec: str = "", dormi=time.sleep) -> dict:
+    """BREVO_IMPORT_LISTE=lettura_zona:<etichetta>[:FE,RA,...]: una lettura completa e mirata, una volta per etichetta.
+    Stesso lucchetto della lettura completa (mai due letture insieme); salva come il tempo reale."""
+    from ..collectors.subito import REGION_CODES, SubitoCollector
+    from . import tempo_reale as tr
+    parti = spec.split(":")
+    prov = [p.strip().upper() for p in (parti[2] if len(parti) > 2 and parti[2] else "FE").split(",") if p.strip()]
+    esito: dict = {"province": prov, "salvati": 0, "per_fonte": {}, "chiavi_mancanti": []}
+
+    def corpo(conn):
+        def salva(listings: list) -> int:
+            from collections import Counter
+            c: Counter = Counter()
+            try:
+                tr._salva(conn, listings, c)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                log.warning("LETTURA_ZONA salvataggio non riuscito: %s", type(e).__name__)
+                return 0
+            esito["salvati"] += int(c.get("salvati", 0))
+            if listings:
+                f = listings[0].source
+                esito["per_fonte"][f] = esito["per_fonte"].get(f, 0) + int(c.get("salvati", 0))
+            return sum(1 for l in listings if getattr(l, "_tr_ev", None) == "nuovo")
+
+        L = Lettore(salva, scadenza=time.time() + LAVORO_ORE_MAX * 3600, dormi=tr._dormi, fermato=tr.fermato,
+                    fatto=lambda k: False, segna=lambda k: None)
+        col = SubitoCollector(proxy=None)
+        reg = REGION_CODES.get(ZONA_MIRATA_REGIONE)
+        try:
+            keys = col._province_keys(reg, set(prov), 100)
+        except Exception as e:
+            keys = {}
+            log.warning("LETTURA_ZONA codici province non letti: %s", type(e).__name__)
+        for sn in prov:
+            key = keys.get(sn)
+            if not key:
+                esito["chiavi_mancanti"].append(sn)
+                continue
+            visti: set = set()
+            for ps, pe in fasce_subito():
+                try:
+                    subito_fetta(L, col, reg, key, sn, ps, pe, visti, False)
+                except (Tempo, Blocco) as e:
+                    esito["subito_fermo"] = type(e).__name__
+                    break
+        try:
+            leggi_autoscout(L, client_autoscout(tr), centri=list(ZONA_MIRATA_AS))
+        except (Tempo, Blocco) as e:
+            esito["autoscout_fermo"] = type(e).__name__
+        except Exception as e:
+            esito["autoscout_errore"] = type(e).__name__
+        return esito
+
+    t0 = time.time()
+    st = tr.con_lucchetto("lettura", corpo)
+    if st is None:
+        esito["saltato"] = "lucchetto occupato: riprovare con un'altra etichetta"
+    esito["minuti"] = round((time.time() - t0) / 60)
+    return esito

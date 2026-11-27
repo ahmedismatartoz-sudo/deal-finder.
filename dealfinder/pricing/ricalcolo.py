@@ -567,13 +567,16 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     (stage 'approfondito') e in top_auto (ordinate per margine/soglia)."""
     from ..core.dal_testo import completa_db
     from ..web import scovo
-    from ..zone import MILANO
+    from ..zone import MILANO, RAVENNA
     from .valutazione import valuta_e_scrivi
     t0 = time.time()
+    # 27/11 (cliente: "molte più auto di Ferrara"): anche i privati di Ravenna e dintorni (FE, RA, BO, FC, RN), che il
+    # sito già ammette ma che qui non venivano mai valutati. Nessuna regola del sito cambia.
+    zona_val = sorted(set(MILANO) | set(RAVENNA))
     a = RG.regole().ammissione
     log.warning("DAL_TESTO %s", json.dumps(completa_db(conn)))          # anno, km, alimentazione mancanti: dal testo
     ids = [r["id"] for r in conn.execute(UTIL_SQL, {"lo": 500, "hi": 50000, "anno": a.anno_min, "km": a.km_max,
-                                                    "prov": list(MILANO)}).fetchall()]
+                                                    "prov": zona_val}).fetchall()]
     lette = len(ids)
     ids, saltate = senza_invariate(conn, ids)
     es = valuta_e_scrivi(conn, ids, "cron-utilitarie")
