@@ -113,6 +113,10 @@ def test_telefono_zona_km_anno_uguali_al_16_11():
         # 27/11: Lombardia intera, decisione del cliente (anche Mantova e Sondrio)
         if a.get("zona") in ("provincia_AL", "provincia_VB", "provincia_MN", "provincia_SO"):
             a["zona"] = None
+        # 28/11: raggio 200 km, decisione del cliente: entrano tutte le province entro 200 km da Milano
+        from dealfinder.web import sito_regole as SR
+        if a.get("zona") and a["zona"].startswith("provincia_") and a["zona"][10:] in SR.PROVINCE_SITO:
+            a["zona"] = None
         return a
     diversi = [(c["id"], atteso(c), r) for c in _casi() if (r := _regole_sito(c)) != atteso(c)]
     assert not diversi, f"{len(diversi)} auto con esito diverso, prime: {diversi[:5]}"
@@ -129,4 +133,6 @@ def test_auto_sul_sito_passano_telefono_zona_km_anno():
         fuori.update(r.keys())
         assert c["prov"] not in ("RM", "LT", "FR", "VT", "RI") or "zona" in r or "no_roma" in r
     # 27/11: Lombardia intera, decisione del cliente: Mantova e Sondrio dentro, le fuori zona del dump scendono a 94
-    assert set(fuori) <= {"zona"} and fuori["zona"] > 80
+    # 28/11: raggio 200 km, decisione del cliente: restano fuori solo le 4 di Bolzano (203 km)
+    assert set(fuori) <= {"zona"} and fuori["zona"] == 4
+    assert {c["prov"] for c in _casi() if _regole_sito(c).get("zona")} == {"BZ"}

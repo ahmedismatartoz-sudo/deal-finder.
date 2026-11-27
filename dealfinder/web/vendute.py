@@ -100,11 +100,11 @@ WHERE l.status = 'scomparso' AND l.disappeared_at > now() - make_interval(days =
 
 
 def _zona() -> list[str]:
-    """Province della sezione: ZONA_SITO se impostata, altrimenti le stesse del sito (100 km da Milano e Ravenna).
-    Roma mai."""
-    from .sito_regole import PROVINCE_100KM, RAVENNA, ROMA, TORINO
+    """Province della sezione: ZONA_SITO se impostata, altrimenti le stesse del sito (dal 28/11 entro 200 km da Milano,
+    Torino e Ravenna). Roma mai."""
+    from .sito_regole import PROVINCE_SITO, RAVENNA, ROMA, TORINO
     prov = [p.strip().upper() for p in (os.environ.get("ZONA_SITO") or "").split(",") if p.strip()]
-    return [p for p in (prov or sorted(PROVINCE_100KM | RAVENNA | TORINO)) if p not in ROMA]
+    return [p for p in (prov or sorted(PROVINCE_SITO | RAVENNA | TORINO)) if p not in ROMA]
 
 
 def _giorni(a, b) -> int | None:

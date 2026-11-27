@@ -136,7 +136,7 @@ def test_coda_dal_sito_solo_le_auto_che_entrerebbero():
              auto(2, margine=200),                            # sconto alto ma sotto il margine minimo: non entra
              auto(3, _r={"perizia": {"giudizio": "caro"}}),   # perizia "caro": la conferma è impossibile
              auto(4, M=10000),                                # sconto 2.000: già sul sito senza AI
-             auto(5, prov="RE"),                              # fuori zona: nessuna chiamata pagata
+             auto(5, prov="PD"),                              # fuori zona: nessuna chiamata pagata (28/11: raggio 200 km, decisione del cliente: RE dentro, PD fuori)
              auto(6, tel=False),                              # senza numero su Subito (20/11: corsia chat): con lo
              #                                                  sconto alto avrebbe l'avviso, la corsia non la tiene
              auto(7, tel=False, fonte="AutoScout24")]         # senza numero non su Subito: fuori al passo telefono

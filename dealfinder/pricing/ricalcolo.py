@@ -567,12 +567,14 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     (stage 'approfondito') e in top_auto (ordinate per margine/soglia)."""
     from ..core.dal_testo import completa_db
     from ..web import scovo
-    from ..zone import MILANO, RAVENNA
+    from ..zone import MILANO, PROVINCE_200KM, RAVENNA, ROMA
     from .valutazione import valuta_e_scrivi
     t0 = time.time()
     # 27/11 (cliente: "molte più auto di Ferrara"): anche i privati di Ravenna e dintorni (FE, RA, BO, FC, RN), che il
     # sito già ammette ma che qui non venivano mai valutati. Nessuna regola del sito cambia.
-    zona_val = sorted(set(MILANO) | set(RAVENNA))
+    # 28/11 (raggio 200 km, decisione del cliente): anche i privati di tutte le province entro 200 km da Milano
+    # (zone.PROVINCE_200KM, CN compresa). Mai Roma. Il valore di mercato resta quello di valore_base (zona di Milano).
+    zona_val = sorted((set(MILANO) | set(RAVENNA) | set(PROVINCE_200KM)) - set(ROMA))
     a = RG.regole().ammissione
     log.warning("DAL_TESTO %s", json.dumps(completa_db(conn)))          # anno, km, alimentazione mancanti: dal testo
     ids = [r["id"] for r in conn.execute(UTIL_SQL, {"lo": 500, "hi": 50000, "anno": a.anno_min, "km": a.km_max,

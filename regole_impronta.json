@@ -514,6 +514,41 @@
     "VA",
     "VB"
    ],
+   "PROVINCE_SITO": [
+    "AL",
+    "AO",
+    "AT",
+    "BG",
+    "BI",
+    "BS",
+    "CN",
+    "CO",
+    "CR",
+    "GE",
+    "IM",
+    "LC",
+    "LO",
+    "MB",
+    "MI",
+    "MN",
+    "MO",
+    "MS",
+    "NO",
+    "PC",
+    "PR",
+    "PV",
+    "RE",
+    "SO",
+    "SP",
+    "SV",
+    "TN",
+    "TO",
+    "VA",
+    "VB",
+    "VC",
+    "VI",
+    "VR"
+   ],
    "RAVENNA": [
     "BO",
     "FC",
@@ -537,6 +572,6 @@
    ]
   }
  },
- "impronta": "6c1b138b230b",
+ "impronta": "342cb5617428",
  "nota": "dati = regole con i soli default del codice (controllo su GitHub). ammessi_produzione = valori diversi impostati apposta con variabili d'ambiente su Render, letti dalla riga CONFIG_IMPRONTA del sito del 16/11 18:20 UTC (commit e763aeb): il canarino confronta le regole effettive con dati + ammessi_produzione. Si cambia solo con un commit 'REGOLE:'. 19/11: ammessi_produzione.regole_impronta aggiornata a quella dei default (valore prudente in regole.ValoreBase): gli interruttori di produzione (CONFIG override ai.attiva=false, giudice_ai=true, zona.italia=true del 18/11) danno la stessa impronta dei default. 19/11 pomeriggio: idem con la regola mediana-1911b (solo regole.ValoreBase). 19/11 sera: idem con la regola mediana-1911c (solo regole.ValoreBase.sconti). 22/11: idem con la stima di ripiego accesa (regole.StimaRipiego, decisione del proprietario: solo unione 10-15k / 15-20k / >20k e largo 15-20k / >20k, sconto extra 0): ammessi_produzione.regole_impronta da 2248a486eb6c a ea9ee6b0e14b; gli interruttori automatismi stima_ripiego / stima_ripiego_largo non sono nell'impronta e nessuna variabile di Render cambia."
 }

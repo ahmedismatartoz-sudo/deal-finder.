@@ -807,10 +807,11 @@ def _categorie_sito() -> list[str]:
 
 
 def _zona() -> set:
-    """Province che passano il filtro zona del SITO (sito_regole.r_zona): Milano 100 km, Torino, Ravenna."""
+    """Province che passano il filtro zona del SITO (sito_regole.r_zona): dal 28/11 tutte quelle entro 200 km da Milano
+    (sito_regole.PROVINCE_SITO), Torino, Ravenna."""
     try:
         from ..web import sito_regole as SR
-        return set(SR.PROVINCE_100KM) | set(SR.RAVENNA) | set(SR.TORINO)
+        return set(SR.PROVINCE_SITO) | set(SR.RAVENNA) | set(SR.TORINO)
     except Exception:
         return set()
 
@@ -1655,12 +1656,15 @@ def _totale_as(props) -> int | None:
 
 
 def _as_zona() -> set:
-    from ..zone import MILANO, TORINO
-    return set(MILANO) | set(TORINO)
+    """28/11 (raggio 200 km, decisione del cliente): anche tutte le province entro 200 km da Milano (zone.PROVINCE_200KM)
+    e Ravenna e dintorni, le stesse che _salva tiene: prima Genova e Torino sì, Verona, Savona, Modena... no."""
+    from ..zone import province_lettura
+    return province_lettura()
 
 
 def _raggio_as() -> str:
-    return os.environ.get("TR_RAGGIO_AS", "150")
+    """28/11 (cliente: "da AutoScout ti autorizzo a mettere un raggio di 200 km"): 200 km da Milano (prima 150)."""
+    return os.environ.get("TR_RAGGIO_AS", "200")
 
 
 def _as_prezzo_max() -> int:
@@ -2054,12 +2058,14 @@ def _salva(conn, listings: list, stats: Counter, coda: bool = False) -> list[int
     persistente (tabella tr_coda) NELLA STESSA transazione dell'annuncio: un riavvio non li perde."""
     from ..core.normalize import normalize_fields
     from ..db import upsert_listing_con_scheda as upsert_listing      # 12/11: anche la scheda tecnica (dati_auto)
-    from ..zone import MILANO, RAVENNA, TORINO
+    from ..zone import MILANO, PROVINCE_200KM, RAVENNA, ROMA, TORINO
     from .collect import doppione_altro_sito
     da_valutare = []
     # 27/11: anche Ravenna e dintorni (FE, RA, BO, FC, RN), già ammessi sul sito: prima gli annunci letti di Ferrara
     # venivano scartati qui e la lettura mirata (lettura_zona:) non salvava niente da Subito.
-    zona = set(MILANO) | set(TORINO) | set(RAVENNA)
+    # 28/11 (raggio 200 km, decisione del cliente): anche tutte le province entro 200 km da Milano (zone.PROVINCE_200KM:
+    # Verona, Savona, Modena, Trento, Vicenza, Aosta, La Spezia, Massa, Imperia, Cuneo...). Mai Roma.
+    zona = (set(MILANO) | set(TORINO) | set(RAVENNA) | set(PROVINCE_200KM)) - set(ROMA)
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
     prima = _gia_salvati(conn, listings) if _invariati_veloci() else {}
     invariati: list = []

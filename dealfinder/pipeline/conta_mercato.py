@@ -19,6 +19,16 @@ PROVINCE = ("MI", "MB", "BG", "BS", "CO", "CR", "LC", "LO", "MN", "PV", "SO", "V
 # 26/11 (cliente: "forse non leggiamo bene quelle città"): anche le province vicine fuori dalla Lombardia, per regione
 # di Subito (2 Piemonte, 8 Emilia-Romagna). Solo conteggio: nessuna regola cambia.
 PROVINCE_ALTRE = {2: ("NO", "AL", "VB"), 8: ("PC",)}
+# 28/11 (raggio 200 km, decisione del cliente): AutoScout24 contato nel raggio di 200 km (quello che ora si legge) e i
+# nostri annunci per tutte le province entro 200 km (zone.PROVINCE_200KM). Subito per provincia resta com'era.
+RAGGIO_AS = "200"
+
+
+def province_conteggio() -> list:
+    """Province dei conteggi "noi" e dell'imbuto: Lombardia, le altre di prima e poi il resto dei 200 km."""
+    from ..zone import PROVINCE_200KM
+    prima = list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]
+    return prima + [p for p in PROVINCE_200KM if p not in prima]
 
 
 def _totale_subito(j: dict):
@@ -35,7 +45,7 @@ def autoscout() -> dict:
                                             "AUTOSCOUT_ADAGE")}
     out: dict = {}
     try:
-        os.environ.update({"AUTOSCOUT_CAP": "20121", "AUTOSCOUT_RAGGIO": "150"})
+        os.environ.update({"AUTOSCOUT_CAP": "20121", "AUTOSCOUT_RAGGIO": RAGGIO_AS})
         for k in ("AUTOSCOUT_CARB", "AUTOSCOUT_ADAGE"):
             os.environ.pop(k, None)
         c = AutoScoutCollector()
@@ -102,7 +112,7 @@ def nostri() -> dict:
     with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
         conn.execute("SET TRANSACTION READ ONLY")
         conn.execute("SET statement_timeout = '300s'")
-        for r in conn.execute(NOSTRI_SQL, {"prov": list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]}).fetchall():
+        for r in conn.execute(NOSTRI_SQL, {"prov": province_conteggio()}).fetchall():
             d = out.setdefault(f'{r["fonte"]}:{r["venditore"]}', {"tutti": 0, "regole": 0, "per_provincia": {}})
             d["tutti"] += r["tutti"]
             d["regole"] += r["regole"]
@@ -136,7 +146,7 @@ def imbuto_province() -> dict:
     from psycopg.rows import dict_row
 
     from ..config import settings
-    prov = list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]
+    prov = province_conteggio()
     per_prov: dict = {}
     per_citta: dict = {}
 
@@ -171,7 +181,7 @@ def imbuto_province() -> dict:
 
 
 def lavoro(spec: str = "") -> dict:
-    esito: dict = {"province": list(PROVINCE) + [x for v in PROVINCE_ALTRE.values() for x in v]}
+    esito: dict = {"province": province_conteggio()}
     for nome, fn in (("autoscout24_sito", autoscout), ("subito_sito", subito), ("noi", nostri), ("imbuto", imbuto_province)):
         try:
             esito[nome] = fn()

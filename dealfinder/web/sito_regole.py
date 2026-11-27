@@ -15,7 +15,8 @@ Ordine (il margine minimo si controlla UNA volta sola, alla fine, dopo l'unica m
   km               km scritti e al massimo 150.000
   telefono         numero del venditore obbligatorio (supercar europee no: si contattano dall'annuncio); Facebook solo se FB_SITO=1
   no_roma          Roma mai, nemmeno le supercar
-  zona             12 province entro 100 km da Milano (fascia richiesta: anche fuori, poi le 100 più vicine,
+  zona             dal 28/11 le 33 province entro 200 km da Milano (PROVINCE_SITO; prima le province entro
+                   100 km) (fascia richiesta: anche fuori, poi le 100 più vicine,
                    passo tetto_fuori_zona) (provincia ricavata dalla città se manca), zona di Ravenna,
                    supercar europee
   venditore        privati; commercianti: fascia richiesta senza promo (senza tetto) oppure lontani (fuori provincia
@@ -85,6 +86,17 @@ PROVINCE_100KM = frozenset({"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR"
                             "NO", "PC", "AL", "VB"})
 RAVENNA = frozenset({"RA", "FC", "RN", "FE", "BO"})
 ROMA = frozenset({"RM", "LT", "FR", "VT", "RI"})
+# 28/11 (raggio 200 km, decisione del cliente 27/11 23:59: "leggete tutto e fate entrare tutto, sempre con posizione
+# attiva"): le auto di TUTTE le province con il capoluogo entro 200 km da Milano entrano sul sito (zone.PROVINCE_200KM,
+# 33 province, elenco e km in zone.py). Passo zona (r_zona), diagnosi per provincia, rinfresco e coda del controllo.
+# PROVINCE_100KM (le 16 province di prima, "zona di Milano") resta com'era per le regole che NON cambiano:
+# regola diesel (diesel_commerciante_zona, diesel_per_bene), corsia chat di Subito (chat_candidata), commercianti della
+# fascia richiesta del giro della zona (benzina_mi), province lette da Subito nel giro della zona (collect) e mercato
+# del valore (pricing/valore_base: un'auto di Genova o Verona si confronta con le auto della zona di Milano, come le
+# "province lontane" di prima). La posizione di chi guarda resta attiva (default 100 km da lui, può allargare).
+from ..zone import PROVINCE_200KM as _P200  # noqa: E402
+
+PROVINCE_SITO = frozenset(_P200) - ROMA
 # 9/11: Torino e dintorni sul sito (SITO_TORINO=0 la spegne)
 TORINO = frozenset({"TO", "AT", "CN", "BI", "VC"}) if os.environ.get("SITO_TORINO", "1") == "1" else frozenset()
 
@@ -99,7 +111,9 @@ _CAPOLUOGHI = {
     "nichelino": "TO", "settimotorinese": "TO", "grugliasco": "TO", "chieri": "TO", "pinerolo": "TO", "ivrea": "TO",
     "alba": "CN", "bra": "CN", "vercelli": "VC", "biella": "BI", "asti": "AT", "parma": "PR",
     "reggioemilia": "RE", "modena": "MO", "verona": "VR", "trento": "TN", "fiumicino": "RM", "ostia": "RM",
-    "sestosangiovanni": "MI", "cinisellobalsamo": "MI", "legnano": "MI", "rho": "MI", "busto arsizio": "VA",
+    "savona": "SV", "imperia": "IM", "sanremo": "IM", "laspezia": "SP", "aosta": "AO", "massa": "MS",
+    "carrara": "MS", "vicenza": "VI", "verbania": "VB", "bassanodelgrappa": "VI", "rovereto": "TN",
+    "carpi": "MO", "sassuolo": "MO", "sestosangiovanni": "MI", "cinisellobalsamo": "MI", "legnano": "MI", "rho": "MI", "busto arsizio": "VA",
     "bustoarsizio": "VA", "gallarate": "VA", "saronno": "VA", "vigevano": "PV", "voghera": "PV", "crema": "CR",
 }
 _COMUNI: dict | None = None
@@ -431,7 +445,8 @@ def km_da_milano(provincia: str | None) -> float | None:
 
 def r_zona(it, g):
     p = _r(it).get("provincia")
-    if it.get("supercar") or p in PROVINCE_100KM or p in RAVENNA or p in TORINO:
+    # 28/11: PROVINCE_SITO (entro 200 km da Milano) al posto di PROVINCE_100KM, decisione del cliente
+    if it.get("supercar") or p in PROVINCE_SITO or p in RAVENNA or p in TORINO:
         return None
     if g.fascia_fuori_max > 0 and fascia(it) and p not in ROMA:
         d = km_da_milano(p)
@@ -1233,7 +1248,8 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
 
 # 26/11 (cliente: "a Novara, Cremona, Crema, Pavia solo 20 auto? c'è qualche problema"): per provincia, quante auto
 # entrano nelle regole, quante finiscono sul sito e a quale passo escono le altre. Solo conteggi, nessuna regola cambia.
-PROVINCE_DIAGNOSI = tuple(sorted(PROVINCE_100KM))
+# 28/11: tutte le province del sito entro 200 km da Milano (PROVINCE_SITO)
+PROVINCE_DIAGNOSI = tuple(sorted(PROVINCE_SITO))
 
 
 def funnel_province(tutte: list[dict], finali: list[dict], fun: Funnel) -> dict:

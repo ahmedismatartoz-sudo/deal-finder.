@@ -842,14 +842,16 @@ def controlla_tutte() -> bool:
 
 def priorita_sito(it: dict, SR=None, scovo=None) -> tuple:
     """19/11 (cliente): ordine della coda del sito. Prima le auto della zona di Milano (province entro 100 km,
-    sito_regole.PROVINCE_100KM), poi margine/soglia più alto, poi l'id. Solo l'ordine: nessuna regola cambia."""
+    sito_regole.PROVINCE_100KM), poi margine/soglia più alto, poi l'id. Solo l'ordine: nessuna regola cambia.
+    28/11 (raggio 200 km, decisione del cliente): prima tutte le province del sito (sito_regole.PROVINCE_SITO, entro
+    200 km), così le auto delle province nuove non restano sempre in fondo alla coda."""
     if SR is None:
         from ..web import sito_regole as SR
     if scovo is None:
         from ..web import scovo
     p = str(SR._r(it).get("provincia") or "").upper()
     rapporto = float(SR.margine(it) or 0) / max(1, scovo.soglia(int(it.get("prezzo") or 0)))
-    return (0 if p in SR.PROVINCE_100KM else 1, -rapporto, it.get("id") or 0)
+    return (0 if p in SR.PROVINCE_SITO else 1, -rapporto, it.get("id") or 0)
 
 
 def per_giro_sito(da_fare_sito: int) -> int:

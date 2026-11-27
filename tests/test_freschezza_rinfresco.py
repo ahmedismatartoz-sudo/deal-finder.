@@ -26,7 +26,8 @@ def _riga(i, ore, cat="opportunita", prov="MI", tel=True, top=False, margine=100
 
 def test_zona_del_rinfresco_e_quella_del_sito():
     z = tr._zona()
-    assert {"MI", "BG", "TO", "RA"} <= z and "RE" not in z and "RM" not in z
+    # 28/11: raggio 200 km, decisione del cliente: RE, VR, GE dentro; PD (210 km) fuori
+    assert {"MI", "BG", "TO", "RA", "RE", "VR", "GE"} <= z and "PD" not in z and "RM" not in z
 
 
 def test_la_regola_delle_48_ore_non_cambia():
@@ -292,7 +293,8 @@ def test_query_vere_rinfresco_e_conteggi():
                   "motivo_altro": "scartata | opportunita"}.get(extra, "opportunita")
         c.execute("INSERT INTO listings VALUES (%s, 'subito', 'u', 5000, true, %s, 'approfondito', %s, %s, "
                   "NULL, now() - make_interval(hours => %s))",
-                  (i, "RE" if extra == "fuori_zona" else "MI", "scomparso" if extra == "venduta" else "attivo",
+                  (i, "PD" if extra == "fuori_zona" else "MI",   # 28/11: raggio 200 km, decisione del cliente (RE dentro)
+                   "scomparso" if extra == "venduta" else "attivo",
                    motivo, ore))
         if extra != "senza_valuations":
             c.execute("INSERT INTO valuations (listing_id, created_at) VALUES (%s, now() - interval '3 days')", (i,))

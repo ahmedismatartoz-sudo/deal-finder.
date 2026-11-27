@@ -71,15 +71,17 @@ def test_fascia_fuori_zona_le_100_piu_vicine():
     def a(i, prov, **k):
         return dict({"id": i, "prezzo": 6000, "km": 80000, "carb": "Benzina", "anno": 2016,
                      "pv": {"M": 9000, "margine": 3000}, "_r": {"provincia": prov}}, **k)
-    to, rm, mi = a(1, "GE"), a(2, "RM"), a(3, "MI")          # 9/11: Torino ora è zona del sito, si prova con Genova
+    # 9/11: Torino ora è zona del sito, si prova con Genova; 28/11: raggio 200 km, decisione del cliente: Genova e Vicenza dentro, si prova con
+    # Padova (210 km) e Firenze (249 km)
+    to, rm, mi = a(1, "PD"), a(2, "RM"), a(3, "MI")
     assert SR.r_zona(to, g) is None and to["fuori_zona_km"] > 100
     assert SR.r_zona(rm, g) == "provincia_RM"
     assert SR.r_zona(mi, g) is None and "fuori_zona_km" not in mi
-    fuori_fascia = a(4, "GE", km=130000)
-    assert SR.r_zona(fuori_fascia, g) == "provincia_GE"
+    fuori_fascia = a(4, "PD", km=130000)
+    assert SR.r_zona(fuori_fascia, g) == "provincia_PD"
     import dataclasses
     g2 = dataclasses.replace(g, fascia_fuori_max=1)
-    vi = a(5, "VI"); SR.r_zona(vi, g2)
+    vi = a(5, "FI"); SR.r_zona(vi, g2)          # Firenze 249 km: più lontana di Padova, esce col tetto
     tenute, via = SR.tetto_fuori_zona([to, vi, mi], g2)
     assert via == {5} and [x["id"] for x in tenute] == [1, 3]
 

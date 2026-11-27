@@ -10,8 +10,9 @@ reale), così i portali non ricevono mai una raffica:
 - Subito: ogni provincia della zona attiva (zone.tutte()), fasce di prezzo di tempo_reale.FASCE_SUBITO fino a
   PREZZO_MAX, 100 annunci a pagina. Una fascia con più di SUB_PAGINE_MAX pagine (totale dichiarato, o pagine tutte
   piene) si DIVIDE a metà finché ogni pezzo sta sotto il tetto (o è larga meno di SUB_FASCIA_MIN euro);
-- AutoScout24: privati, stessi centri del giro della zona (Milano + raggio del tempo reale, Brescia, Torino), fasce di
-  tempo_reale._fasce_as(). Il portale mostra al massimo 20 pagine da 20: una ricerca con più di 400 risultati si divide
+- AutoScout24: privati, dal 28/11 (raggio 200 km, decisione del cliente) i centri di zone.CENTRI_AS_200KM: Milano 200 km
+  (raggio del tempo reale) più Imperia 50 e Trento 70 per i pezzi delle province fuori dal cerchio; prima Milano 150,
+  Brescia 90 e Torino 100. Fasce di tempo_reale._fasce_as(). Il portale mostra al massimo 20 pagine da 20: una ricerca con più di 400 risultati si divide
   per prezzo, poi per anni (AutoScoutCollector._dividi, la stessa regola della raccolta massiva).
 I pezzi già letti si ricordano (pipeline/passi, job "lettura_completa:<ciclo>"): un riavvio o la fine del tempo
 riprendono da lì.
@@ -55,7 +56,11 @@ SUB_PAUSA = (1.2, 2.5)     # come il tempo reale (TR_SUBITO_PAUSA_*)
 AS_PAGINA = 20
 AS_PAGINE_MAX = 20         # AutoScout24 non mostra oltre la 20ª pagina (400 annunci)
 AS_PAUSA = (2.0, 4.5)      # come AutoScoutCollector, in più del limitatore del tempo reale
-AS_CENTRI_EXTRA = (("25121", "90"), ("10121", "100"))   # Brescia e Torino, come il giro della zona (ZC_CAP_EXTRA)
+# 28/11 (raggio 200 km): centri oltre a Milano, da zone.CENTRI_AS_200KM (Imperia 50 km, Trento 70 km). Prima Brescia 90 e
+# Torino 100 (come il giro della zona, ZC_CAP_EXTRA): sono dentro il cerchio di 200 km di Milano
+from ..zone import CENTRI_AS_200KM as _C200  # noqa: E402
+
+AS_CENTRI_EXTRA = tuple(c for c in _C200 if c[0] != "20121")
 
 FONTI = ("subito", "autoscout24")
 RIGA = "lettura_completa"
@@ -350,6 +355,7 @@ def client_autoscout(tr):
 
 
 def centri_autoscout() -> list:
+    """Milano con il raggio del tempo reale (TR_RAGGIO_AS, dal 28/11 200 km) e i centri dei bordi del cerchio."""
     from .tempo_reale import _raggio_as
     return [("20121", str(_raggio_as()))] + [c for c in AS_CENTRI_EXTRA]
 
@@ -650,5 +656,80 @@ def lavoro_zona(spec: str = "", dormi=time.sleep) -> dict:
     st = tr.con_lucchetto("lettura", corpo)
     if st is None:
         esito["saltato"] = "lucchetto occupato: riprovare con un'altra etichetta"
+    esito["minuti"] = round((time.time() - t0) / 60)
+    return esito
+
+
+# ------------------------------------------------------------------ 28/11 lettura di AutoScout24 nei 200 km (una tantum)
+# Cliente (27/11 23:59): "Da AutoScout ti autorizzo a mettere un raggio di 200 km e leggete tutto e fate entrare tutto,
+# sempre con posizione attiva. Ho bisogno di più macchine." La lettura completa periodica (giro, un ciclo al giorno) usa
+# già i centri dei 200 km; questo lavoro la fa SUBITO, una volta per etichetta: BREVO_IMPORT_LISTE=lettura_200km:<etichetta>.
+# Solo AutoScout24 (privati, custtype=P), tutte le fasce di prezzo di tempo_reale._fasce_as(), divise per prezzo e anni
+# sotto il tetto delle 20 pagine (as_fetta). Stesso lucchetto della lettura completa ("lettura": mai due letture
+# insieme), stesso limitatore del tempo reale e stesse pause (AS_PAUSA 2-4,5 s in più), si ferma al primo 403/429.
+# I pezzi letti si ricordano (passi, job "lettura_200km:<etichetta>"): un riavvio riprende da lì (_lungo riprova fino a
+# 3 volte). Salvataggio con tempo_reale._salva (province entro 200 km). Nessuna regola cambia.
+# Stima: ~15-25 mila annunci di privati dal 2007 nei 200 km = ~750-1.250 pagine da 20, più ~15% per le divisioni
+# (la prima pagina di ogni ricerca troppo piena) e ~40 pagine per Imperia e Trento: ~900-1.500 richieste, a ~4-5 s
+# l'una (pausa 2-4,5 s + limitatore 1,5 s + risposta) = circa 1-2 ore.
+LAVORO_200KM_ORE_MAX = 6
+LAVORO_200KM_ATTESA_MIN = 40       # minuti di attesa al massimo se il lucchetto della lettura è occupato
+
+
+def lavoro_200km(spec: str = "", dormi=time.sleep) -> dict:
+    """BREVO_IMPORT_LISTE=lettura_200km:<etichetta>: tutta AutoScout24 (privati) entro 200 km da Milano, subito."""
+    from . import passi, tempo_reale as tr
+    etichetta = (spec.split(":", 1)[1] if ":" in spec else "") or "ora"
+    job = f"lettura_200km:{etichetta[:40]}"
+    centri = centri_autoscout()
+    esito: dict = {"job": job, "centri": [f"{c}:{r}" for c, r in centri], "salvati": 0, "nuovi": 0, "finito": False}
+
+    def corpo(conn):
+        def salva(listings: list) -> int:
+            from collections import Counter
+            c: Counter = Counter()
+            try:
+                tr._salva(conn, listings, c)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                log.warning("LETTURA_200KM salvataggio non riuscito: %s", type(e).__name__)
+                return 0
+            esito["salvati"] += int(c.get("salvati", 0))
+            nuovi = sum(1 for l in listings if getattr(l, "_tr_ev", None) == "nuovo")
+            esito["nuovi"] += nuovi
+            return nuovi
+
+        m = CL.apri("lettura_200km")
+        with passi.locale(job):
+            L = Lettore(salva, scadenza=time.time() + LAVORO_200KM_ORE_MAX * 3600, dormi=tr._dormi, fermato=tr.fermato)
+            try:
+                leggi_autoscout(L, client_autoscout(tr), centri=centri)
+                esito["finito"] = not L.incompleta
+            except (Tempo, Blocco) as e:
+                esito["autoscout_fermo"] = f"{type(e).__name__} {str(e)[:60]}".strip()
+            except Exception as e:
+                esito["autoscout_errore"] = type(e).__name__
+            CL.chiudi(m, extra={"job": job, "salvati": esito["salvati"], "finito": esito["finito"]})
+            if esito["finito"]:
+                try:
+                    passi.finito(job)
+                except Exception as e:
+                    log.warning("LETTURA_200KM passi non cancellati: %s", type(e).__name__)
+        return esito
+
+    t0 = time.time()
+    st = None
+    for _ in range(LAVORO_200KM_ATTESA_MIN):
+        # lucchetto occupato (un pezzo della lettura completa dura al massimo GIRO_MINUTI): si aspetta, un minuto alla
+        # volta, invece di segnare il lavoro fatto senza aver letto niente
+        st = tr.con_lucchetto("lettura", corpo)
+        if st is not None or tr.fermato():
+            break
+        dormi(60)
+    if st is None:
+        esito["saltato"] = "lucchetto occupato (lettura completa in corso): rilanciare con un'altra etichetta"
+    # bloccato da AutoScout24 (403/429): ci si ferma e basta, nessuna riprova a raffica; il resto lo legge la lettura
+    # completa periodica (stessi centri dei 200 km) o un nuovo lettura_200km:<altra etichetta> (rilegge da capo)
     esito["minuti"] = round((time.time() - t0) / 60)
     return esito

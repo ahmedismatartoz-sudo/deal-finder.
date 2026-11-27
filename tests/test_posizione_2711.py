@@ -20,7 +20,9 @@ def test_mantova_e_sondrio_ammesse_dalle_regole_zona():
         assert p in SR.PROVINCE_100KM
         assert SR.r_zona({"_r": {"provincia": p}}, g) is None, p
     # nient'altro cambia: fuori zona resta fuori, Roma mai
-    assert SR.r_zona({"_r": {"provincia": "VR"}}, g) == "provincia_VR"
+    # 28/11: raggio 200 km, decisione del cliente: Verona (140 km) ora dentro, Padova (210 km) fuori
+    assert SR.r_zona({"_r": {"provincia": "VR"}}, g) is None
+    assert SR.r_zona({"_r": {"provincia": "PD"}}, g) == "provincia_PD"
     assert SR.r_zona({"_r": {"provincia": "RM"}}, g) == "provincia_RM"
     assert SR.chat_candidata({"fonte": "Subito", "_r": {"seller_type": "privato", "provincia": "MN"}}, g)
 
@@ -31,7 +33,8 @@ def test_lettura_e_valutazione_coprono_mantova_e_sondrio():
     assert {"MN", "SO"} <= set(zone.MILANO)                  # salvataggio (tempo_reale._salva) e valutazione (_utilitarie)
     assert {"MN", "SO"} <= set(tempo_reale.REGIONI["lombardia"])   # lettura Subito
     src = open(os.path.join(QUI, "..", "dealfinder", "pricing", "ricalcolo.py"), encoding="utf-8").read()
-    assert "zona_val = sorted(set(MILANO) | set(RAVENNA))" in src
+    # 28/11: raggio 200 km, decisione del cliente: anche le province entro 200 km nella valutazione
+    assert "zona_val = sorted((set(MILANO) | set(RAVENNA) | set(PROVINCE_200KM)) - set(ROMA))" in src
 
 
 def test_regole_non_toccate():

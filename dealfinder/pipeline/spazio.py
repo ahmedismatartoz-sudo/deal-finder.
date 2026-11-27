@@ -56,7 +56,10 @@ def run() -> dict:
     if os.environ.get("SPAZIO_SOLO_REPORT") == "1":
         return {}
     out = {}
-    zona = list(MILANO)
+    # 28/11 (raggio 200 km, decisione del cliente): non si cancellano mai le province che la lettura tiene
+    # (zone.province_lettura: Milano e dintorni, Torino, Ravenna, entro 200 km da Milano)
+    from ..zone import province_lettura
+    zona = sorted(set(MILANO) | province_lettura())
     # 1. fuori zona (Facebook senza provincia: si tiene, la raccolta è già solo Milano)
     out["fuori_zona"] = _cancella(
         "SELECT id FROM listings WHERE province IS NOT NULL AND NOT (province = ANY(%s))", (zona,), "fuori zona")

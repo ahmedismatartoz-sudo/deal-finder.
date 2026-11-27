@@ -37,7 +37,7 @@ def dati() -> dict:
                   "ANNO_MINIMO": scovo.ANNO_MINIMO, "KM_MASSIMO": scovo.KM_MASSIMO, "COSTI_FISSI": scovo.COSTI_FISSI,
                   "SCONTO_DEFAULT": scovo.SCONTO_DEFAULT, "MIN_MOSTRATO": scovo.MIN_MOSTRATO},
         "sito_regole": dataclasses.asdict(SR.Regole.da_env()),
-        "zona": {"PROVINCE_100KM": sorted(SR.PROVINCE_100KM), "RAVENNA": sorted(SR.RAVENNA), "ROMA": sorted(SR.ROMA),
+        "zona": {"PROVINCE_100KM": sorted(SR.PROVINCE_100KM), "PROVINCE_SITO": sorted(SR.PROVINCE_SITO), "RAVENNA": sorted(SR.RAVENNA), "ROMA": sorted(SR.ROMA),
                  "TORINO": sorted(SR.TORINO)},
         "trattativa": PV.TRATTA_MAX,
     }

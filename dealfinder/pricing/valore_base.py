@@ -154,7 +154,11 @@ def zone() -> dict:
 
 def zona_di(provincia) -> str:
     """Nome della zona della provincia: Torino con Torino, Ravenna con Ravenna; il resto (Milano e dintorni, province
-    lontane o mancanti) con le province di Milano, come la prova base_vendute."""
+    lontane o mancanti) con le province di Milano, come la prova base_vendute.
+    28/11 (raggio 200 km): le province nuove del sito (Verona, Genova, Savona, Modena, Trento, Vicenza...) NON hanno un
+    mercato proprio: si confrontano con commercianti e vendute delle 16 province della zona di Milano
+    (sito_regole.PROVINCE_100KM, invariata apposta: allargarla cambierebbe il valore anche delle auto di Milano). Mercato
+    unico, nessun correttivo: segnalato al cliente."""
     p = str(provincia or "").strip().upper()
     for nome, prov in zone().items():
         if nome != "milano" and p in prov:

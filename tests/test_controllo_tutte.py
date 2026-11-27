@@ -96,11 +96,12 @@ def _sito(n, **kw):
 def test_ordine_milano_poi_margine_poi_id():
     _pulisci()
     with env(**NO_ENV):
-        items = [auto(1, prov="TO", margine=6000),      # fuori dai 100 km: dopo, anche col margine più alto
+        # 28/11: raggio 200 km, decisione del cliente: Torino ora tra le province del sito; fuori zona qui Padova
+        items = [auto(1, prov="PD", margine=6000),      # fuori dai 200 km: dopo, anche col margine più alto
                  auto(2, prov="MI", margine=3500),
                  auto(3, prov="BG", margine=5000),       # zona di Milano, margine più alto: per prima
                  auto(5, prov="MI", margine=3500),       # pari alla 2: decide l'id
-                 auto(4, prov="TO", margine=3500)]
+                 auto(4, prov="PD", margine=3500)]
         res, out = _coda(items)
         tolte = [i for i in CA.CODA_SITO["entra"]]
         assert tolte == [i for i in (3, 2, 5, 1, 4) if i in tolte] and {2, 3, 5} <= set(tolte)

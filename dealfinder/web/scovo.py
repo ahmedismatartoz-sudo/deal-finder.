@@ -485,8 +485,10 @@ WHERE l.status='attivo' AND l.price_eur BETWEEN 300 AND %(eco_max)s AND l.year >
 
 
 def eco_params(me: int) -> dict:
-    from ..zone import tutte
-    return {"me": me, "eco_max": ECO_MAX, "eco_anno": ECO_ANNO, "eco_prov": list(tutte()) + ["MN", "SO"]}
+    from ..zone import PROVINCE_200KM, tutte
+    # 28/11 (raggio 200 km, decisione del cliente): anche le province entro 200 km da Milano
+    prov = list(tutte()) + ["MN", "SO"]
+    return {"me": me, "eco_max": ECO_MAX, "eco_anno": ECO_ANNO, "eco_prov": prov + [p for p in PROVINCE_200KM if p not in prov]}
 
 
 def item_eco(r: dict) -> dict | None:
@@ -646,7 +648,7 @@ def _geo(r: dict):
 
 def area(r: dict) -> str:
     """Zona di lavoro: "ravenna", "torino" (9/11) oppure "milano" (Milano e dintorni)."""
-    from ..zone import MILANO, RAVENNA, ROMA
+    from ..zone import MILANO, PROVINCE_200KM, RAVENNA, ROMA
     from .sito_regole import TORINO
     pv = (r.get("province") or "").upper()
     if pv in RAVENNA:
@@ -655,7 +657,8 @@ def area(r: dict) -> str:
         return "torino"
     if pv in ROMA:
         return "roma"
-    return "milano" if (not pv or pv in MILANO or pv in ("MN", "SO")) else "italia"
+    # 28/11: anche le province entro 200 km da Milano (Verona, Savona, Modena...) sono "Milano e dintorni" nel filtro zona
+    return "milano" if (not pv or pv in MILANO or pv in ("MN", "SO") or pv in PROVINCE_200KM) else "italia"
 
 
 def visible(r: dict, max_opens: int) -> bool:
