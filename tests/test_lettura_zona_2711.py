@@ -20,3 +20,9 @@ def test_lavoro_zona_lucchetto_occupato(monkeypatch):
     monkeypatch.setattr(tr, "con_lucchetto", lambda nome, fn, *a: None)
     es = LC.lavoro_zona("lettura_zona:prova:FE")
     assert es["province"] == ["FE"] and "saltato" in es
+
+
+def test_salva_tiene_ravenna_e_dintorni():
+    from dealfinder.pipeline import tempo_reale as tr
+    src = inspect.getsource(tr._salva)
+    assert "set(RAVENNA)" in src

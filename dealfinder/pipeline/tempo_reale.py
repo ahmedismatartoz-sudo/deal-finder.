@@ -2054,10 +2054,12 @@ def _salva(conn, listings: list, stats: Counter, coda: bool = False) -> list[int
     persistente (tabella tr_coda) NELLA STESSA transazione dell'annuncio: un riavvio non li perde."""
     from ..core.normalize import normalize_fields
     from ..db import upsert_listing_con_scheda as upsert_listing      # 12/11: anche la scheda tecnica (dati_auto)
-    from ..zone import MILANO, TORINO
+    from ..zone import MILANO, RAVENNA, TORINO
     from .collect import doppione_altro_sito
     da_valutare = []
-    zona = set(MILANO) | set(TORINO)
+    # 27/11: anche Ravenna e dintorni (FE, RA, BO, FC, RN), già ammessi sul sito: prima gli annunci letti di Ferrara
+    # venivano scartati qui e la lettura mirata (lettura_zona:) non salvava niente da Subito.
+    zona = set(MILANO) | set(TORINO) | set(RAVENNA)
     km_max, anno_min = int(os.environ.get("KM_MASSIMO", "180000")), int(os.environ.get("ANNO_MINIMO", "2007"))
     prima = _gia_salvati(conn, listings) if _invariati_veloci() else {}
     invariati: list = []
