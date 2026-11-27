@@ -77,7 +77,9 @@ from . import scovo
 
 log = logging.getLogger("scovo")
 
-PROVINCE_100KM = frozenset({"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC"})
+# 27/11 (decisione del cliente: "tutto fino a 100 km"): anche Alessandria (Tortona 68 km, Alessandria 76, Acqui/Ovada
+# circa 95 in linea d'aria) e Verbania (Verbania circa 85 km).
+PROVINCE_100KM = frozenset({"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC", "AL", "VB"})
 RAVENNA = frozenset({"RA", "FC", "RN", "FE", "BO"})
 ROMA = frozenset({"RM", "LT", "FR", "VT", "RI"})
 # 9/11: Torino e dintorni sul sito (SITO_TORINO=0 la spegne)
@@ -1228,7 +1230,7 @@ def elenco_sito(items: list[dict], g: Regole | None = None, scrivi_log: bool = T
 
 # 26/11 (cliente: "a Novara, Cremona, Crema, Pavia solo 20 auto? c'è qualche problema"): per provincia, quante auto
 # entrano nelle regole, quante finiscono sul sito e a quale passo escono le altre. Solo conteggi, nessuna regola cambia.
-PROVINCE_DIAGNOSI = tuple(sorted(PROVINCE_100KM)) + ("AL", "VB")
+PROVINCE_DIAGNOSI = tuple(sorted(PROVINCE_100KM))
 
 
 def funnel_province(tutte: list[dict], finali: list[dict], fun: Funnel) -> dict:

@@ -108,8 +108,12 @@ def _regole_sito(c: dict) -> dict:
 
 
 def test_telefono_zona_km_anno_uguali_al_16_11():
-    diversi = [(c["id"], c["atteso"]["regole_sito"], r) for c in _casi()
-               if (r := _regole_sito(c)) != c["atteso"]["regole_sito"]]
+    def atteso(c):                     # 27/11 (decisione del cliente): Alessandria e Verbania entrano nella zona
+        a = dict(c["atteso"]["regole_sito"])
+        if a.get("zona") in ("provincia_AL", "provincia_VB"):
+            a["zona"] = None
+        return a
+    diversi = [(c["id"], atteso(c), r) for c in _casi() if (r := _regole_sito(c)) != atteso(c)]
     assert not diversi, f"{len(diversi)} auto con esito diverso, prime: {diversi[:5]}"
 
 

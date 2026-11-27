@@ -149,7 +149,7 @@ def test_sparite_autoscout_sulle_province_del_sito():
             assert len(visto["zona"]) == len(set(visto["zona"]))
             os.environ["TORINO_DOPO_ZONA"] = "0"                             # Torino legge AutoScout da sé: come prima
             C.lavori_zona({"letti_autoscout": 5000})
-            assert "AL" not in visto["zona"] and "NO" in visto["zona"]
+            assert "NO" in visto["zona"]  # 27/11: AL ora è una provincia del sito, quindi c'è sempre
         finally:
             _env(**env)
         visto.clear()
