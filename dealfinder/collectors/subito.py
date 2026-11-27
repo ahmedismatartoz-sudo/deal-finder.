@@ -207,6 +207,13 @@ def parse_item(item: dict) -> Listing | None:
         damage_declared=True if ("danneg" in damage_raw or "incident" in damage_raw) else None,
         raw=item, dati_auto=dati_auto.da_subito(item),
     )
+    # 27/11 sera: coordinate del comune dell'annuncio, se Subito le manda (geo.map o geo.town), per la distanza sul sito
+    from ..core.models import coordinate
+    _m = geo.get("map") if isinstance(geo.get("map"), dict) else {}
+    _t = geo.get("town") if isinstance(geo.get("town"), dict) else {}
+    listing.lat, listing.lon = coordinate((_m.get("latitude"), _m.get("longitude")),
+                                          (_t.get("latitude"), _t.get("longitude")),
+                                          (geo.get("latitude"), geo.get("longitude")))
     return listing
 
 

@@ -128,7 +128,7 @@ def test_provincia_dai_comuni_dei_lead():
 def test_provincia_sconosciuta_sempre_nel_funnel():
     from dealfinder.web import sito_regole as SR
     items = []
-    for k, p in enumerate(["GE", "PR", "RE", "VR", "VI", "MO", "TN", "SO", "BZ", "FI", "MN", "UD"]):  # 27/11: AL ora nelle province del sito
+    for k, p in enumerate(["GE", "PR", "RE", "VR", "VI", "MO", "TN", "BZ", "FI", "UD"]):  # 27/11: AL ora nelle province del sito; 27/11: Lombardia intera, decisione del cliente (MN e SO dentro)
         for j in range(3):
             items.append({"id": 100 * k + j, "_r": {"provincia": p}})
     items.append({"id": 9999, "_r": {"provincia": None}})

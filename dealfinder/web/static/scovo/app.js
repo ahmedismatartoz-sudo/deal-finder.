@@ -61,14 +61,25 @@ const BANDS = [
 ];
 
 /* ---------- stato ---------- */
+const RAGGIO_BASE = 100;
+/* 27/11 sera: la posizione si tiene solo arrotondata (2 decimali, circa 1 km) con il nome del comune */
+const r2 = x => Math.round(Number(x) * 100) / 100;
+function posCarica(p){
+  if (!p || typeof p !== "object") return null;
+  if (p.fonte === "milano") return {fonte: "milano"};
+  if (p.lat == null || p.lon == null || !isFinite(p.lat) || !isFinite(p.lon)) return null;
+  return {lat: r2(p.lat), lon: r2(p.lon), comune: p.comune || "", fonte: p.fonte === "manuale" ? "manuale" : "gps"};
+}
 const saved = store.get("filtri", {});
 const S = {
   token: store.get("token", null), user: store.get("user", null),
   route: "affari", sel: null, sheet: null, tip: store.get("tip", true),
   brands: saved.brands || [], min: saved.min || "", max: saved.max || "", stato: saved.stato || "tutte", zona: "tutte",
-  raggio: saved.raggio || 0, centro: saved.centro || "milano", modello: saved.modello || "",
+  /* 27/11 sera (cliente): di base le auto entro 100 km da chi guarda; 0 = "Tutte". rv:1 = scelta già fatta con il
+     nuovo filtro (prima di oggi il default era "ovunque" e il valore salvato non conta) */
+  raggio: saved.rv === 1 ? Number(saved.raggio) || 0 : RAGGIO_BASE, centro: "pos", modello: saved.modello || "",
   kmMin: saved.kmMin || "", kmMax: saved.kmMax || "", annoMin: saved.annoMin || "", annoMax: saved.annoMax || "", carb: saved.carb || [],
-  pos: store.get("pos", null),
+  pos: posCarica(store.get("pos", null)),
   sconto: ((saved.sv === 2 || saved.sv === 3) && saved.sconto != null) ? Number(saved.sconto) : 10, sort: "novita",   /* 24/11 (cliente): si entra SEMPRE con le auto più nuove in cima; "Più guadagno %" resta tra gli ordinamenti */
   cars: null, costs: 200, soglie: [[5000, 1500], [null, 2000]], loading: false, loadErr: "", loadedAt: 0, offline: !navigator.onLine,
   detail: {}, scroll: {}, descOpen: false, fbOpen: false
@@ -89,8 +100,8 @@ const tabOk = id => id === "profilo" || (id === "incentivi" ? perm("incentivi") 
 const guest = () => !S.token && !!(S.metodi && S.metodi.aperto);
 const canBrowse = () => !!S.token || guest();
 function saveFilters(){ store.set("filtri", {brands:S.brands, min:S.min, max:S.max, stato:S.stato, sconto:S.sconto, sv:3, sort:S.sort,
-  modello:S.modello, kmMin:S.kmMin, kmMax:S.kmMax, annoMin:S.annoMin, annoMax:S.annoMax, carb:S.carb, raggio:S.raggio, centro:S.centro}); }
-function resetFilters(){ Object.assign(S, {brands:[], modello:"", min:"", max:"", kmMin:"", kmMax:"", annoMin:"", annoMax:"", carb:[], raggio:0, stato:"tutte", zona:"tutte", bot:null}); }
+  modello:S.modello, kmMin:S.kmMin, kmMax:S.kmMax, annoMin:S.annoMin, annoMax:S.annoMax, carb:S.carb, raggio:S.raggio, rv:1}); }
+function resetFilters(){ Object.assign(S, {brands:[], modello:"", min:"", max:"", kmMin:"", kmMax:"", annoMin:"", annoMax:"", carb:[], raggio:RAGGIO_BASE, stato:"tutte", zona:"tutte", bot:null}); }
 
 /* ---------- API ---------- */
 async function api(path, opts = {}) {
@@ -143,7 +154,7 @@ function filtered(over){
   const s = Object.assign({}, S, over || {});
   const min = s.min === "" ? 0 : Number(s.min), max = s.max === "" ? Infinity : Number(s.max);
   const sec = s.sezione || sezioneDi(S.route), inc = sec === "incidentate", eco = sec === "economiche", sc = sec === "supercar", tr = sec === "trattare";
-  return ordinaLista(Object.assign({}, s, {eco, sc}), (S.cars || []).filter(c => tr ? !!c.trattare : !c.trattare).filter(c => tr ? true : sc ? !!c.supercar : !c.supercar && (eco ? !!c.economica : (!inc && c.vetrina != null) || (!c.economica && !!c.incidentata === inc))).map(c => Object.assign({}, c, numeri(c)))
+  return ordinaLista(Object.assign({}, s, {eco, sc}), (S.cars || []).filter(c => tr ? !!c.trattare : !c.trattare).filter(c => tr ? true : sc ? !!c.supercar : !c.supercar && (eco ? !!c.economica : (!inc && c.vetrina != null) || (!c.economica && !!c.incidentata === inc))).map(c => Object.assign({}, c, numeri(c), {_d: distKm(c)}))
     .filter(c => eco || c.pv || c.gain >= (c.soglia_min != null ? Math.min(c.soglia_min, sogliaDi(c.prezzo)) : sogliaDi(c.prezzo)))
     .filter(c => c.prezzo >= min && c.prezzo <= max)
     .filter(c => s.brands.length === 0 || s.brands.includes(c.marca))
@@ -152,9 +163,10 @@ function filtered(over){
     .filter(c => (s.annoMin === "" || (c.anno || 0) >= Number(s.annoMin)) && (s.annoMax === "" || !c.anno || c.anno <= Number(s.annoMax)))
     .filter(c => !s.carb.length || s.carb.includes(carbKey(c.carb)))
     .filter(c => s.stato === "tutte" || (s.stato === "sane" ? c.rip_hi === 0 : c.rip_hi > 0))
-    .filter(c => inc || sc || ((!s.zona || s.zona === "tutte") ? (c.area || "milano") !== "torino" : s.zona === "novara" ? /\((NO|VC)\)\s*$/.test(c.zona || "") : (c.area || "milano") === s.zona))   // incidentate: tutta Italia; 9/11: Torino solo se scelta nei filtri
+    // 27/11 sera: con "Tutte le zone" niente più esclusione di Torino: decide il raggio dalla posizione di chi guarda
+    .filter(c => inc || sc || ((!s.zona || s.zona === "tutte") ? true : s.zona === "novara" ? /\((NO|VC)\)\s*$/.test(c.zona || "") : (c.area || "milano") === s.zona))   // incidentate: tutta Italia; 9/11: Torino solo se scelta nei filtri
     .filter(c => botMatch(c, s.bot))
-    .filter(c => { if (!s.raggio || sc) return true; const d = distKm(c); return d == null || d <= s.raggio; })
+    .filter(c => !s.raggio || sc || c._d == null || c._d <= s.raggio)
     .sort((a,b) => s.sort === "prezzo" ? a.prezzo - b.prezzo : s.sort === "nuove" ? String(b.nuova).localeCompare(String(a.nuova))
       : s.sort === "km" ? (a.km || 9e9) - (b.km || 9e9) : perPct(a, b)));
 }
@@ -211,6 +223,8 @@ function ordinaLista(s, arr){
   // 24/11 sera (cliente): con "Più nuove" in cima SOLO le auto nuove: le scelte a mano (data/vetrina.json) seguono
   // l'ordine come tutte le altre; restano in cima solo con "Più guadagno %"
   if (s.sort === "novita") return ordinaNovita(arr, chiOrdine(), S.ordT || Date.now());
+  // 27/11 sera: "Più vicine" (distanza dal centro scelto; le auto senza posizione in fondo, poi per guadagno)
+  if (s.sort === "vicine") return arr.slice().sort((a, b) => ((a._d == null ? 1e9 : a._d) - (b._d == null ? 1e9 : b._d)) || perPct(a, b)).map(c => Object.assign(c, {_grp: "all"}));
   if (s.sc && s.sort === "guadagno") return arr.slice().sort((a, b) => scontoM(b) - scontoM(a)).map(c => Object.assign(c, {_grp: "all"}));
   // 17/10: con l'ordine "guadagno" (quello di default) le auto vanno SEMPRE dalla più alta per margine,
   // qualunque filtro sia attivo: niente gruppi, niente vetrina, niente auto care in fondo.
@@ -239,26 +253,100 @@ function ordinaLista(s, arr){
   return top.concat(altre, care.map(c => Object.assign(c, {_grp: "care"})));
 }
 const MILANO_C = {lat: 45.4642, lon: 9.19};
-function centro(){ return S.centro === "pos" && S.pos ? S.pos : MILANO_C; }
+/* 27/11 sera: centro = posizione salvata (GPS o città scelta), altrimenti Milano */
+const posOk = () => !!(S.pos && S.pos.lat != null && S.pos.lon != null);
+function centro(){ return posOk() ? S.pos : MILANO_C; }
+const centroNome = () => posOk() ? (S.pos.comune || "la tua posizione") : "Milano";
+const daTe = () => posOk() && S.pos.fonte === "gps";
+function distTxt(d){ if (d == null) return ""; const n = Math.max(1, Math.round(d)); return "a " + num(n) + " km da " + (daTe() ? "te" : centroNome()); }
 function distKm(c){
   const o = centro();
   if (!c.geo) return null;
-  const R = Math.PI / 180, la1 = o.lat * R, la2 = c.geo[0] * R, dla = la2 - la1, dlo = (c.geo[1] - o.lon) * R;
-  const h = Math.sin(dla / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(h));
+  return haversine(o.lat, o.lon, c.geo[0], c.geo[1]);
 }
-const RAGGI = [[50,"50 km"],[100,"100 km"],[200,"200 km"],[300,"300 km"],[0,"Ovunque"]];
-/* 2/11 (cliente: "il filtro della distanza deve vedersi"): distanza nei filtri veloci, fino a 200 km */
-const DIST_STEPS = [25, 50, 100, 150, 200];
-function chiediPosizione(silenzioso){
-  if (!navigator.geolocation) { if (!silenzioso) toast("Questo telefono non dà la posizione"); return; }
-  navigator.geolocation.getCurrentPosition(p => {
-    S.pos = {lat: p.coords.latitude, lon: p.coords.longitude, t: Date.now()}; store.set("pos", S.pos); store.del("posNo");
-    if (S.token) api("/api/me", {method: "PUT", body: {posizione: {lat: S.pos.lat, lon: S.pos.lon}}}).catch(() => {});
-    render({keep: true});
-    if (!silenzioso) toast("Posizione attiva: vedi prima le auto entro " + (S.raggio || 100) + " km");
-  }, () => { store.set("posNo", true); if (!silenzioso) toast("Posizione non concessa: vedi le auto di tutte le zone"); render({keep: true}); },
-  {enableHighAccuracy: false, timeout: 15000, maximumAge: 6 * 3600 * 1000});
+/* 27/11 sera (cliente): raggi 20, 50, 100 (default), 200, 500 km e "Tutte" (0) */
+const RAGGI = [[20,"20 km"],[50,"50 km"],[100,"100 km"],[200,"200 km"],[500,"500 km"],[0,"Tutte"]];
+const DIST_STEPS = [20, 50, 100, 200, 500];
+/* 27/11 sera (cliente): appena si entra si chiede UNA volta la posizione, con un pannello prima della richiesta del
+   browser. Si salva solo arrotondata (circa 1 km) e il nome del comune: nel telefono (localStorage) e, per chi ha
+   l'account, sul server (PUT /api/me, colonne dealers.lat/lon/pos_comune/pos_fonte). Rifiutata o non disponibile:
+   città o CAP a mano, oppure Milano; non si chiede più. Nessun servizio esterno: i comuni arrivano da /api/comuni. */
+const POSP = {modo: "chiedi", q: "", err: "", busy: false};
+function posDecisa(){ return !!S.pos || !!store.get("posChiesta", false) || !!store.get("posNo", false); }
+function posServe(){ return canBrowse() && isList(S.route) && !S.sheet && !posDecisa() && (!S.token || S.meOk) && !S.posVisto; }
+function apriPos(modo){ POSP.modo = modo || "chiedi"; POSP.err = ""; POSP.busy = false; S.posVisto = true; S.sheet = "pos"; if (POSP.modo === "manuale") caricaComuni(); }
+async function caricaComuni(){
+  if (S.comuni || S.comuniLoading) return S.comuni;
+  S.comuniLoading = true;
+  try { S.comuni = (await api("/api/comuni")).comuni || []; } catch (e) { S.comuni = null; }
+  S.comuniLoading = false;
+  if (S.sheet === "pos" && POSP.modo === "manuale") { const dl = document.getElementById("pos-dl"); if (dl) dl.innerHTML = comuniOpts(); }
+  return S.comuni;
+}
+const chiaveLuogo = t => String(t || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[,(]/)[0].replace(/[^a-z]/g, "");
+const comuniOpts = () => (S.comuni || []).map(c => `<option value="${esc(c[0])} (${esc(c[1])})"></option>`).join("");
+function comuneVicino(lat, lon){
+  let best = null, bd = 1e9;
+  for (const c of S.comuni || []) { const d = haversine(lat, lon, c[2], c[3]); if (d < bd) { bd = d; best = c[0]; } }
+  return best || "";
+}
+function posSalva(p, msg){
+  S.pos = posCarica(p); store.set("pos", S.pos); store.set("posChiesta", true); store.del("posNo");
+  if (S.token) api("/api/me", {method: "PUT", body: {posizione: S.pos}}).catch(() => {});
+  if (S.sheet === "pos") S.sheet = null;
+  if (posOk() && !S.raggio) S.raggio = RAGGIO_BASE;
+  saveFilters(); render({keep: true});
+  if (msg) toast(msg);
+}
+function chiediPosizione(){
+  if (!navigator.geolocation) { POSP.modo = "manuale"; POSP.err = "Questo dispositivo non dà la posizione: scrivi la tua città o il CAP."; caricaComuni(); render({keep: true}); return; }
+  POSP.busy = true; render({keep: true});
+  navigator.geolocation.getCurrentPosition(async p => {
+    const lat = r2(p.coords.latitude), lon = r2(p.coords.longitude);
+    await caricaComuni();
+    POSP.busy = false;
+    posSalva({lat, lon, comune: comuneVicino(lat, lon), fonte: "gps"}, "Ti mostriamo le auto entro " + (S.raggio || RAGGIO_BASE) + " km da te");
+  }, () => {
+    POSP.busy = false; POSP.modo = "manuale"; POSP.err = "Posizione non concessa: scrivi la tua città o il CAP, oppure usa Milano.";
+    store.set("posChiesta", true); caricaComuni(); render({keep: true});
+    if (S.token) api("/api/me", {method: "PUT", body: {posizione: {fonte: "milano"}}}).catch(() => {});   // non si chiede più, anche su un altro telefono
+  }, {enableHighAccuracy: false, timeout: 15000, maximumAge: 6 * 3600 * 1000});
+}
+async function posManuale(){
+  const q = String(POSP.q || "").trim();
+  if (!q) { POSP.err = "Scrivi una città o un CAP."; render({keep: true}); return; }
+  await caricaComuni();
+  const k = chiaveLuogo(q), c = (S.comuni || []).find(x => chiaveLuogo(x[0]) === k);
+  if (c) { posSalva({lat: c[2], lon: c[3], comune: c[0], fonte: "manuale"}, "Auto entro " + (S.raggio || RAGGIO_BASE) + " km da " + c[0]); return; }
+  try {
+    const x = await api("/api/comuni?q=" + encodeURIComponent(q));
+    posSalva({lat: x.lat, lon: x.lon, comune: x.comune, fonte: "manuale"}, "Auto entro " + (S.raggio || RAGGIO_BASE) + " km da " + x.comune);
+  } catch (e) { POSP.err = "Non trovo “" + q + "”: prova il capoluogo di provincia o il CAP."; render({keep: true}); }
+}
+function posMilano(){ posSalva({fonte: "milano"}, "Centro: Milano. Puoi cambiarlo dai filtri"); }
+function sheetPos(){
+  const PIN = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  const man = POSP.modo === "manuale";
+  return `<div class="sheet-wrap" data-act="close-bg"><div class="sheet pos-sheet" role="dialog" aria-modal="true" aria-labelledby="posh">
+    <div class="sheet-head"><h2 id="posh">${man ? "Da dove guardi?" : "Le auto vicino a te"}</h2><button class="link" data-act="close">${man ? "Chiudi" : "Non ora"}</button></div>
+    <div class="sheet-body">
+      ${man ? "" : `<div class="pos-ic" aria-hidden="true">${PIN}</div>
+      <p class="pos-q">Ti mostriamo le auto entro ${S.raggio || RAGGIO_BASE} km da te. Consenti la posizione?</p>`}
+      ${POSP.err ? `<p class="pos-err" role="alert">${esc(POSP.err)}</p>` : ""}
+      ${man ? `<label class="pos-lab" for="pos-q">Città o CAP</label>
+      <div class="pos-row"><input id="pos-q" class="pos-in" list="pos-dl" autocomplete="off" inputmode="text" placeholder="Es. Bergamo o 24121" value="${esc(POSP.q)}"><datalist id="pos-dl">${comuniOpts()}</datalist>
+        <button class="btn btn-dark" data-act="pos-man">Usa questa</button></div>
+      <div class="pos-alt">${navigator.geolocation && !POSP.err ? `<button class="btn" data-act="pos-gps">Usa la mia posizione</button>` : ""}<button class="btn" data-act="pos-mi">Usa Milano</button></div>`
+      : `<div class="pos-btns"><button class="btn btn-dark" data-act="pos-gps" ${POSP.busy ? "disabled" : ""}>${POSP.busy ? "Attendo il permesso…" : "Consenti"}</button>
+        <button class="btn" data-act="pos-scegli">Scegli città a mano</button></div>`}
+      <p class="hint pos-priv">Usiamo la posizione solo per mostrarti le auto vicine; salviamo solo il comune. Non la diamo a nessuno.</p>
+    </div>
+  </div></div>`;
+}
+function haversine(la1, lo1, la2, lo2){
+  const R = Math.PI / 180, a1 = la1 * R, a2 = la2 * R, dla = a2 - a1, dlo = (lo2 - lo1) * R;
+  const h = Math.sin(dla / 2) ** 2 + Math.cos(a1) * Math.cos(a2) * Math.sin(dlo / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 function vetrinaOn(s){ return false; }
 function vetrinaOnVecchia(s){ return S.route !== "incidentate" && !s.bot && s.sort === "guadagno" && !s.brands.length && s.min === "" && s.max === "" && s.stato === "tutte" && (!s.zona || s.zona === "tutte"); }
@@ -282,7 +370,7 @@ function dueZone(){ return true; }       // Milano e Ravenna sempre visibili nei
 const CARB = [["benzina","Benzina"],["diesel","Diesel"],["gpl","GPL"],["metano","Metano"],["ibrida","Ibrida"],["elettrica","Elettrica"]];
 const carbKey = t => { t = String(t || "").toLowerCase(); return t.startsWith("ibrid") ? "ibrida" : t; };
 function nFiltri(){ return S.brands.length + (S.modello ? 1 : 0) + (S.min !== "" || S.max !== "" ? 1 : 0) + (S.kmMin !== "" || S.kmMax !== "" ? 1 : 0)
-  + (S.annoMin !== "" || S.annoMax !== "" ? 1 : 0) + (S.carb.length ? 1 : 0) + (S.raggio ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
+  + (S.annoMin !== "" || S.annoMax !== "" ? 1 : 0) + (S.carb.length ? 1 : 0) + (S.raggio !== RAGGIO_BASE ? 1 : 0) + (S.stato !== "tutte" ? 1 : 0); }
 /* filtri attivi come chip che si tolgono con un tocco */
 function activeChips(){
   const out = [], rng = (a, b, f, u) => a !== "" && b !== "" ? f(a) + "–" + f(b) + u : a !== "" ? "da " + f(a) + u : "fino a " + f(b) + u;
@@ -291,7 +379,7 @@ function activeChips(){
   if (S.kmMin !== "" || S.kmMax !== "") out.push(["km", rng(S.kmMin, S.kmMax, num, " km")]);
   if (S.annoMin !== "" || S.annoMax !== "") out.push(["anno", rng(S.annoMin, S.annoMax, String, "")]);
   if (S.carb.length) out.push(["carb", S.carb.map(k => (CARB.find(c => c[0] === k) || [k, k])[1]).join(", ")]);
-  if (S.raggio) out.push(["raggio", "entro " + S.raggio + " km " + (S.centro === "pos" && S.pos ? "da te" : "da Milano")]);
+  if (S.raggio) out.push(["raggio", "Entro " + S.raggio + " km da " + (daTe() ? "te" : centroNome())]);
   if (S.stato !== "tutte") out.push(["stato", S.stato === "sane" ? "Senza danni" : "Con danni"]);
   return out;
 }
@@ -305,7 +393,7 @@ function gainTxt(c){
   const lo = Math.max(c.gain, 0);
   return c.gainMax !== c.gain ? (c.gain < 0 ? "fino a +" + eur(c.gainMax) : "+" + num(lo) + "–" + num(c.gainMax) + " €") : "+" + eur(c.gain);
 }
-function meta(c){ const d = distKm(c); return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, ...stRigaElenco(c), c.zona].filter(Boolean).join(" · "); }
+function meta(c){ return [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", c.carb, ...stRigaElenco(c), c.zona, distTxt(distKm(c))].filter(Boolean).join(" · "); }
 function img(src, alt, eager){ return src ? `<img src="${esc(src)}" alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">` : ""; }
 
 /* ---------- dati ---------- */
@@ -368,11 +456,11 @@ function carCard(c, i, hero){
   // Stile app premium: foto, nome, prezzo, guadagno + UNA riga piccola di contesto. Tutto il resto nella scheda dell'auto.
   const zona = c.zona ? String(c.zona).replace(/\s*\([A-Z]{2}\)\s*$/, "") : "";
   const ctx = [c.anno, c.km ? num(c.km) + " km" : "km da chiedere", zona].filter(Boolean).join(" · ");
-  const sg = segnoCard(c);
-  return `<button class="card k5${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}${c.avviso_verifica ? ", verificare prima di pagare" : ""}">
+  const sg = segnoCard(c), dk = c._d !== undefined ? c._d : distKm(c), dt = distTxt(dk);
+  return `<button class="card k5${hero ? " card-hero" : ""}${i === 0 && !hero ? " card-first" : ""}${c._grp === "top" ? " vet" : ""}" data-act="open" data-v="${c.id}" aria-label="${esc(c.nome)}, ${eur(c.prezzo)}, guadagno ${gainTxt(c)}${dt ? ", " + dt : ""}${c.avviso_verifica ? ", verificare prima di pagare" : ""}">
       <div class="photo${c.foto ? "" : " nofoto"}">${CAR_SVG}${img(c.foto, c.nome, hero || i < 2)}</div>
       <div class="card-body k5-b">
-        <div class="k5-id"><span class="k5-nome">${esc(nomeCorto(c))}</span><span class="k5-ctx"><span class="k5-ct">${esc(ctx)}</span>${sg ? `<span class="k5-sg ${sg.cls}">${esc(sg.t)}</span>` : ""}</span>${c.avviso_verifica ? `<span class="k5-avv">⚠︎ Verificare prima di pagare</span>` : ""}</div>
+        <div class="k5-id"><span class="k5-nome">${esc(nomeCorto(c))}</span><span class="k5-ctx"><span class="k5-ct">${esc(ctx)}</span>${sg ? `<span class="k5-sg ${sg.cls}">${esc(sg.t)}</span>` : ""}</span>${dt ? `<span class="k5-dist">${esc(dt)}</span>` : ""}${c.avviso_verifica ? `<span class="k5-avv">⚠︎ Verificare prima di pagare</span>` : ""}</div>
         <div class="k5-soldi">
           <div class="k5-p"><b>${eur(c.prezzo)}</b><span>Prezzo</span></div>
           <div class="k5-g"><b>${gainTxt(c)}</b><span>${gainLbl(c)}</span></div>
@@ -385,7 +473,8 @@ function riassunto(list){
   const g = list.map(c => c.gain).filter(x => x > -1e5 && isFinite(x));
   const media = g.length ? g.reduce((a, b) => a + b, 0) / g.length : null;
   const daCont = list.filter(c => !c.aperta).length;
-  return [`${list.length} auto`, list.length ? `${daCont} da contattare` : "", media != null && list.length > 1 ? `<span class="only-wide">margine medio</span><span class="only-narrow">media</span> <b class="good">${eur(media)}</b>` : ""].filter(Boolean).join(" · ");
+  const rg = S.raggio && !["supercar"].includes(S.route) ? ` entro ${S.raggio} km` : "";
+  return [`${list.length} auto${rg}`, list.length ? `${daCont} da contattare` : "", media != null && list.length > 1 ? `<span class="only-wide">margine medio</span><span class="only-narrow">media</span> <b class="good">${eur(media)}</b>` : ""].filter(Boolean).join(" · ");
 }
 function topOggi(list){
   // le 5 con il margine più alto tra quelle in elenco (stessi dati, nessun conto nuovo)
@@ -414,12 +503,12 @@ function viewList(){
   const cards = list.map((c, i) => `${!c.economica && (i === 0 || list[i-1]._grp !== c._grp) && (S.sort === "guadagno" || c._grp === "care") && list.length > 1 ? (c._grp === "all" ? `<h2 class="sr">Tutte le auto, ${TIT.all.toLowerCase()}</h2>` : `<h2 class="sec-h"><b>${c._grp === "top" && S.vetrinaTitolo ? esc(S.vetrinaTitolo) : TIT[c._grp]}</b></h2>`) : ""}
     ${carCard(c, i)}`).join("");
   const empty = `<div class="empty"><span class="empty-ic">${ICON.search}</span><strong style="font:700 19px var(--disp)">${S.cars.length ? "Nessuna auto con questi filtri" : "Nessuna auto in questo momento"}</strong>
-      <span class="meta">${S.cars.length ? "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno." : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
-      ${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
+      <span class="meta">${S.cars.length ? (S.raggio ? "Nessuna entro " + S.raggio + " km da " + (daTe() ? "te" : centroNome()) + ": allarga la distanza o togli qualche filtro." : "Allarga il prezzo, togli qualche marca o metti la rivendita a mercato pieno.") : "Cerchiamo nuove auto ogni 3 ore: riprova più tardi."}</span>
+      ${S.cars.length && S.raggio ? `<button class="btn btn-dark" data-act="raggio" data-v="0">Mostra tutte le distanze</button>` : ""}${S.cars.length ? `<button class="btn" data-act="reset">Togli tutti i filtri</button>` : `<button class="btn" data-act="reload">Aggiorna</button>`}</div>`;
   const right = `<div class="top-act"><button class="refresh${S.loading ? " spinning" : ""}" data-act="reload" aria-label="Aggiorna l'elenco">${ICON.refresh}</button>${avatarBtn()}</div>`;
   const incV = S.route === "incidentate", ecoV = S.route === "economiche", scV = S.route === "supercar", trV = S.route === "trattare";
   const ac = activeChips();
-  const SORTS = [["novita","Più nuove"],["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"]];
+  const SORTS = [["novita","Più nuove"],["guadagno","Più guadagno %"],["prezzo","Prezzo più basso"],["nuove","Più recenti"],["km","Meno km"],["vicine","Più vicine"]];
   const SEZ = TABS.filter(([id]) => ["affari","trattare","incidentate","economiche","supercar",SCL].includes(id) && tabOk(id));
   const fbar = `<button class="search-pill" data-act="filters" aria-label="Apri tutti i filtri${nf ? ", " + nf + " attivi" : ""}">${ICON.search}<span class="sp-t">Marca, modello, prezzo, km…</span><span class="sp-f">${nf ? `<span class="count-pill">${nf}</span>` : ICON.sliders}</span></button>
     <div class="ctl-row">${SEZ.length > 1 ? `<nav class="cats" aria-label="Sezioni">${SEZ.map(([id,l,p]) => `<button class="cat" data-act="tab" data-v="${id}" aria-current="${S.route === id ? "page" : "false"}"><span class="cat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg></span><span class="cat-l">${l}</span></button>`).join("")}</nav>` : ""}
@@ -428,7 +517,7 @@ function viewList(){
       <label class="qsel ${S.max !== "" ? "on" : ""}"><span class="sr">Prezzo massimo</span><select id="q-pmax">${opts(P_STEPS.map(v => [v, "Fino a " + num(v) + " €"]), S.max, "Prezzo")}</select></label>
       <label class="qsel ${S.carb.length ? "on" : ""}"><span class="sr">Alimentazione</span><select id="q-carb">${S.carb.length > 1 ? `<option value="__multi" selected>${S.carb.length} alimentazioni</option>` : ""}${opts(CARB, S.carb.length === 1 ? S.carb[0] : "", "Alimentazione")}</select></label>
       <label class="qsel ${S.kmMax !== "" ? "on" : ""}"><span class="sr">Chilometri massimi</span><select id="q-kmax">${opts(KM_STEPS.map(v => [v, "Fino a " + num(v) + " km"]), S.kmMax, "Km")}</select></label>
-      <label class="qsel ${S.raggio ? "on" : ""}"><span class="sr">Distanza</span><select id="q-raggio">${opts(DIST_STEPS.map(v => [v, "Entro " + v + " km"]), S.raggio || "", "Distanza")}</select></label>
+      <label class="qsel ${S.raggio ? "on" : ""}"><span class="sr">Distanza</span><select id="q-raggio">${opts(DIST_STEPS.map(v => [v, "Entro " + v + " km"]), S.raggio || "", "Tutte le distanze")}</select></label>
     </div></div>
     ${ac.length ? `<div class="chips fchips" role="group" aria-label="Filtri attivi">${ac.map(([k,l]) => `<button class="chip on" data-act="unf" data-v="${k}" aria-label="Togli filtro ${esc(l)}">${esc(l)}<span aria-hidden="true">×</span></button>`).join("")}<button class="chip clear" data-act="reset">Azzera tutto</button></div>` : ""}`;
   const nome1 = S.user && S.user.name ? esc(String(S.user.name).trim().split(/\s+/)[0]) : "";
@@ -913,7 +1002,11 @@ function sheetFilters(){
   <div class="sheet-wrap fpanel-wrap" data-act="close-bg"><div class="sheet fpanel" role="dialog" aria-modal="true" aria-labelledby="fh">
     <div class="sheet-head"><h2 id="fh">Filtri</h2><button class="link" data-act="close" aria-label="Chiudi i filtri">Chiudi</button></div>
     <div class="sheet-body">
-      <section class="fgrp"><h3>Zona</h3>${seg([["tutte", "Milano"], ["torino", "Torino"], ["novara", "Novara"]], ["torino","novara"].includes(S.zona) ? S.zona : "tutte", "zona-f", 3)}</section>
+      <section class="fgrp"><h3>Distanza</h3>
+        <div class="pos-centro"><span>Da <b>${esc(centroNome())}</b>${daTe() ? " · tua posizione" : ""}</span><button class="link" data-act="pos-cambia">Cambia posizione</button></div>
+        ${seg(RAGGI, S.raggio, "raggio-f", 3)}
+      </section>
+      <section class="fgrp"><h3>Zona</h3>${seg([["tutte", "Tutte"], ["milano", "Milano"], ["torino", "Torino"], ["novara", "Novara"]], ["milano","torino","novara"].includes(S.zona) ? S.zona : "tutte", "zona-f", 4)}</section>
       <section class="fgrp"><h3>Marca e modello</h3><div class="fgrid">
         ${sel("f-marca", "Marca", opts(marche.map(m => [m, m + " (" + bc[m] + ")"]), S.brands[0] || "", "Tutte le marche"))}
         ${sel("f-modello", "Modello", S.brands.length ? opts(modelli.map(m => [m, m + " (" + mc[m] + ")"]), S.modello, "Tutti i modelli") : `<option value="">Scegli prima la marca</option>`)}
@@ -932,10 +1025,6 @@ function sheetFilters(){
       </div></section>
       <section class="fgrp"><h3>Alimentazione</h3><div class="fcheck">${CARB.map(([k,l]) =>
         `<button class="fck" data-act="carb" data-v="${k}" aria-pressed="${S.carb.includes(k)}" ${!cc[k] && !S.carb.includes(k) ? "disabled" : ""}><i aria-hidden="true"></i>${l}<span class="n">${cc[k] || 0}</span></button>`).join("")}</div></section>
-      <section class="fgrp"><h3>Distanza</h3>
-        ${seg([["milano","Da Milano"],["pos","Dalla mia posizione"]], S.centro, "centro", 2)}
-        <div class="fgrid" style="margin-top:10px">${sel("f-raggio", "Entro", opts([[10,"10 km"],[25,"25 km"],[50,"50 km"],[75,"75 km"],[100,"100 km"],[150,"150 km"],[200,"200 km"]], S.raggio || "", "Qualsiasi distanza"))}</div>
-      </section>
       <section class="fgrp"><h3>Stato</h3>${seg([["tutte","Tutte"],["sane","Senza danni"],["danni","Con danni"]], S.stato, "stato", 3)}</section>
       ${S.policy ? `<section class="fgrp"><h3>Rivendita</h3><span class="hint">Rivendita prudente calcolata per ogni auto: il più basso tra la mediana ridotta per fascia e il 25° percentile dei confronti equivalenti, meno tutti i costi.</span></section>`
         : `<section class="fgrp"><h3>Rivendita sotto il mercato</h3>${seg([[0,"Pieno"],[5,"−5%"],[10,"−10%"]], S.sconto, "sconto", 3)}
@@ -1897,6 +1986,7 @@ function render(opts){
     return;
   }
   if (land) land.hidden = true; $app.hidden = false;
+  if (posServe()) apriPos("chiedi");      // 27/11 sera: la prima volta, pannello della posizione (una volta sola)
   let html;
   if (!S.token && (!guest() || S.route === "entra" || S.route === "prova")) { html = viewLogin(); document.title = (S.route === "prova" ? "Prova Scovo" : "Entra") + " · Scovo"; }
   else if (guest() && ["vendi","ricambi","profilo",SCL].includes(S.route)) { html = viewGuestLock() + tabBar(); }
@@ -1907,7 +1997,7 @@ function render(opts){
   if (canBrowse()) {
     if ((isList(S.route) || S.route === "vendute") && !S.sheet && !VC.on && !S.paywall) html += cmFab();     // 9/11: "Chiedi" = Cercamela (piano Max)
     if (VC.on && S.sheet !== "bot" && S.route !== "auto") html += vcDock();
-    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : S.sheet === "altro" ? sheetAltro() : "";
+    html += S.sheet === "filters" ? sheetFilters() : S.sheet === "parts" ? sheetParts() : S.sheet === "comprata" ? sheetComprata() : S.sheet === "venduta" ? sheetVenduta() : S.sheet === "appuntamento" ? sheetAppuntamento() : S.sheet === "azienda" ? sheetAzienda() : S.sheet === "bot" ? sheetBot() : S.sheet === "cerca" ? sheetCerca() : S.sheet === "altro" ? sheetAltro() : S.sheet === "pos" ? sheetPos() : "";
     const t = S.route === "auto" ? ((S.cars || []).find(c => c.id === S.sel) || {}).nome : ({affari:"Affari", trattare:"Da trattare", incidentate:"Incidentate", economiche:"Sotto 3.000 €", supercar:"Supercar Europa", "supercar-lombardia":"Sportive e supercar in Lombardia", vendute:"Già vendute", vendi:"Vendi", ricambi:"Ricambi", profilo:"Profilo"})[S.route];
     document.title = (t ? t + " · " : "") + "Scovo";
   }
@@ -2336,7 +2426,7 @@ $app.addEventListener("click", e => {
     case "cm-idea": CM.testo = v; break;
     case "cm-send": cmInvia(); return;
     case "cm-nuova": CM.sent = null; CM.intanto = []; CM.testo = ""; break;
-    case "close": case "close-bg": if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); if (S.sheet === "cerca" && CM.rec) cmSpegni(); S.sheet = null; break;
+    case "close": case "close-bg": if (S.sheet === "pos" && !posDecisa()) { posMilano(); return; } if (A.rec) { try { A.rec.abort(); } catch (err) {} } if (S.sheet === "bot") stopVoice(); if (S.sheet === "cerca" && CM.rec) cmSpegni(); S.sheet = null; break;
     case "bot": {
       // dal bottone "Chiedi": conversazione a voce, un tocco solo
       if ((t.dataset.voce || t.classList.contains("bb-ask")) && (SR || EARS())) { vcStart(); return; }
@@ -2358,7 +2448,12 @@ $app.addEventListener("click", e => {
     case "tip": S.tip = false; store.set("tip", false); break;
     case "reset": resetFilters(); stopVoice(); saveFilters(); break;
     case "carb": S.carb = S.carb.includes(v) ? S.carb.filter(x => x !== v) : S.carb.concat([v]); saveFilters(); break;
-    case "centro": if (v === "pos" && !S.pos) chiediPosizione(false); S.centro = v; saveFilters(); break;
+    case "pos-gps": chiediPosizione(); return;
+    case "pos-scegli": POSP.modo = "manuale"; POSP.err = ""; caricaComuni(); break;
+    case "pos-man": { const i = document.getElementById("pos-q"); if (i) POSP.q = i.value; posManuale(); return; }
+    case "pos-mi": posMilano(); return;
+    case "pos-cambia": apriPos("manuale"); break;
+    case "raggio-f": S.raggio = Number(v) || 0; saveFilters(); break;
     case "unf": {
       if (v === "marca") { S.brands = []; S.modello = ""; } else if (v === "prezzo") { S.min = ""; S.max = ""; } else if (v === "km") { S.kmMin = ""; S.kmMax = ""; }
       else if (v === "anno") { S.annoMin = ""; S.annoMax = ""; } else if (v === "carb") S.carb = []; else if (v === "raggio") S.raggio = 0; else if (v === "stato") S.stato = "tutte";
@@ -2368,7 +2463,7 @@ $app.addEventListener("click", e => {
     case "zona": S.zona = S.zona === v ? "tutte" : v; saveFilters(); window.scrollTo(0, 0); break;
     case "zona-f": S.zona = v; saveFilters(); break;
     case "raggio": S.raggio = Number(v); saveFilters(); window.scrollTo(0, 0); break;
-    case "posizione": chiediPosizione(false); return;
+    case "posizione": apriPos("manuale"); break;
     case "sconto": S.sconto = Number(v); saveFilters(); break;
     case "sort": S.sort = v; saveFilters(); break;
     case "esito": if (v === "comprata" || v === "venduta") { S.sheet = v; break; } sendEsito(v); return;
@@ -2439,12 +2534,14 @@ $app.addEventListener("change", async e => {
 });
 $app.addEventListener("keydown", e => {
   if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.act === "foto-full") { e.preventDefault(); e.target.click(); return; }
+  if (e.key === "Enter" && e.target.id === "pos-q") { e.preventDefault(); POSP.q = e.target.value; posManuale(); return; }
   if (e.key === "Enter" && e.target.id === "r-pezzo") { e.preventDefault(); addPezzo(R.pezzo); render(); }
   if (e.key === "Enter" && (e.target.id === "v-targa" || e.target.id === "v-km" || e.target.id === "v-note")) { e.preventDefault(); e.target.blur(); }
 });
 $app.addEventListener("input", e => {
   const id = e.target.id, val = e.target.value;
   if (id === "bot-text") { A.text = val; return; }
+  if (id === "pos-q") { POSP.q = val; return; }
   if (id === "cm-text") { const prima = CM.testo.trim().length >= 6; CM.testo = val; const b = document.querySelector(".cm-send"); if (b) b.disabled = CM.busy || val.trim().length < 6; if (!prima && val && document.querySelector(".cm-ideas")) document.querySelector(".cm-ideas").remove(); return; }
   if (id === "v-targa") V.targa = val; else if (id === "v-km") { V.km = val.replace(/\D/g, ""); if (val !== V.km) e.target.value = V.km; }
   else if (id === "v-note") V.note = val; else if (id === "r-targa") R.targa = val; else if (id === "r-pezzo") R.pezzo = val;
@@ -2536,6 +2633,8 @@ applyRoute();
 syncCookie();
 
 if (S.token) api("/api/me").then(u => { S.user = Object.assign({}, S.user, {name: u.name, email: u.email, role: u.role, permessi: u.permessi, ha_pagamento: u.ha_pagamento}); syncCookie();
-  if (!S.pos && u.lat != null && u.lon != null) { S.pos = {lat: u.lat, lon: u.lon, t: 0}; store.set("pos", S.pos); }
+  S.meOk = true;
+  if (!S.pos && (u.pos_fonte || (u.lat != null && u.lon != null))) { S.pos = posCarica({lat: u.lat, lon: u.lon, comune: u.pos_comune, fonte: u.pos_fonte || "gps"}); store.set("pos", S.pos); store.set("posChiesta", true); }
+  else if (S.pos && !u.pos_fonte) api("/api/me", {method: "PUT", body: {posizione: S.pos}}).catch(() => {});
   if (!perm("auto") && perm("incentivi")) { location.href = "/incentivi/"; return; }
-  render({keep:true}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => {});
+  render({keep:true}); store.set("user", S.user); if (S.route === "profilo") render({keep:true}); }).catch(() => { S.meOk = true; render({keep:true}); });

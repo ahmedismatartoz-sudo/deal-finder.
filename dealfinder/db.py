@@ -469,6 +469,8 @@ def upsert_listing(conn, listing: Listing) -> tuple[int, str]:
         raw=json.dumps(listing.raw, default=str) if listing.source == "facebook" and listing.raw else None,
         problem_search=listing.problem_search,
     )
+    if getattr(listing, "lat", None) is not None and getattr(listing, "lon", None) is not None:
+        params["lat"], params["lon"] = listing.lat, listing.lon      # 27/11 sera: colonne di 001_init, mai scritte prima
     if getattr(listing, "fuel_tipo", None) is not None and ha_colonna(conn, "fuel_tipo"):
         params["fuel_tipo"] = listing.fuel_tipo
     dati_ricerca = _dati_auto_ricerca(listing)

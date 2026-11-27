@@ -225,7 +225,7 @@ def me(request: Request):
     user = current_user(request)
     with connect() as conn:
         u = conn.execute("SELECT id, name, email, role, company, provinces, max_purchase, accept_damage, "
-                         "preferred_parts, resale_as, lat, lon, ((richiede_abbonamento AND password_hash IS NULL OR paga_carta) AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
+                         "preferred_parts, resale_as, lat, lon, pos_comune, pos_fonte, ((richiede_abbonamento AND password_hash IS NULL OR paga_carta) AND role <> 'admin') AS richiede_abbonamento, abbonamento_stato, "
                          "abbonamento_fino, (stripe_customer IS NOT NULL) AS ha_pagamento "
                          "FROM dealers WHERE id=%s", (user["id"],)).fetchone()
         c = conn.execute("SELECT * FROM dealer_costs WHERE dealer_id=%s", (user["id"],)).fetchone()
@@ -234,6 +234,44 @@ def me(request: Request):
     with connect() as conn:
         perm = permessi_di(conn, {"id": user["id"], "role": u.get("role")})
     return jsonify({**u, "permessi": perm, "costs": cards.costs_dict(cards.dealer_costs(c))})
+
+
+def posizione_da_salvare(pos: dict) -> dict | None:
+    """27/11 sera: la posizione che si salva per il commerciante. Mai quella precisa: lat/lon a 2 decimali (circa 1 km)
+    e il nome del comune. fonte 'gps' (dal browser) o 'manuale' (città o CAP scritti) con le coordinate; 'milano' =
+    posizione rifiutata, si ricorda solo questo (così non si chiede più) e il centro resta Milano."""
+    from .. import geo
+    fonte = pos.get("fonte") if pos.get("fonte") in ("gps", "manuale", "milano") else "gps"
+    if fonte == "milano":
+        return {"lat": None, "lon": None, "comune": None, "fonte": "milano"}
+    if fonte == "manuale" and pos.get("comune") and pos.get("lat") is None:
+        x = geo.luogo(str(pos["comune"])[:80])
+        if not x:
+            return None
+        return {"lat": x["lat"], "lon": x["lon"], "comune": x["comune"], "fonte": "manuale"}
+    try:
+        lat, lon = float(pos["lat"]), float(pos["lon"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return None
+    lat, lon = round(lat, 2), round(lon, 2)
+    x = geo.luogo(str(pos.get("comune") or "")[:80]) if fonte == "manuale" else None
+    nome = x["comune"] if x else geo.comune_vicino(lat, lon)["comune"]
+    return {"lat": lat, "lon": lon, "comune": nome, "fonte": fonte}
+
+
+def api_comuni(request: Request):
+    """27/11 sera: elenco delle città per "scegli la città a mano" ([nome, provincia, lat, lon]); con ?q= (nome o CAP)
+    il luogo trovato. Dati fissi del codice (dealfinder/geo.py), niente database e niente servizi esterni."""
+    from .. import geo
+    q = request.query_params.get("q")
+    if q is not None:
+        x = geo.luogo(q[:80])
+        if not x:
+            err(404, "Città o CAP non trovati")
+        return jsonify(x)
+    return JSONResponse({"comuni": geo.elenco_luoghi()}, headers={"cache-control": "public, max-age=86400"})
 
 
 async def update_me(request: Request):
@@ -255,13 +293,10 @@ async def update_me(request: Request):
             conn.execute(f"UPDATE dealers SET {k}=%s WHERE id=%s", (v, user["id"]))
         pos = data.get("posizione")
         if isinstance(pos, dict):
-            try:
-                lat, lon = float(pos["lat"]), float(pos["lon"])
-                if -90 <= lat <= 90 and -180 <= lon <= 180:
-                    conn.execute("UPDATE dealers SET lat=%s, lon=%s, pos_at=now() WHERE id=%s",
-                                 (round(lat, 3), round(lon, 3), user["id"]))
-            except (KeyError, TypeError, ValueError):
-                pass
+            p = posizione_da_salvare(pos)
+            if p:
+                conn.execute("UPDATE dealers SET lat=%s, lon=%s, pos_comune=%s, pos_fonte=%s, pos_at=now() WHERE id=%s",
+                             (p["lat"], p["lon"], p["comune"], p["fonte"], user["id"]))
         costs = data.get("costs") or {}
         clean = {}
         for k in cards.COST_FIELDS:
@@ -3259,7 +3294,8 @@ SECURITY_HEADERS = [
     (b"x-content-type-options", b"nosniff"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
     (b"x-frame-options", b"DENY"),
-    (b"permissions-policy", b"camera=(self), geolocation=(), microphone=(self)"),
+    # 27/11 sera: geolocation=(self) perché il sito chiede (una volta, con il consenso) la posizione per le auto vicine
+    (b"permissions-policy", b"camera=(self), geolocation=(self), microphone=(self)"),
     (b"content-security-policy", CSP.encode()),
 ]
 
@@ -3550,6 +3586,7 @@ routes = [
     Route("/api/me", me, methods=["GET"]),
     Route("/api/me", update_me, methods=["PUT"]),
     Route("/api/me/password", cambia_password, methods=["PUT"]),
+    Route("/api/comuni", api_comuni),
     Route("/api/vendute", api_vendute),
     Route("/api/affari", affari),
     Route("/api/affari/{id:int}", affare),

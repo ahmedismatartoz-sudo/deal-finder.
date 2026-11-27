@@ -79,7 +79,10 @@ log = logging.getLogger("scovo")
 
 # 27/11 (decisione del cliente: "tutto fino a 100 km"): anche Alessandria (Tortona 68 km, Alessandria 76, Acqui/Ovada
 # circa 95 in linea d'aria) e Verbania (Verbania circa 85 km).
-PROVINCE_100KM = frozenset({"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "NO", "PC", "AL", "VB"})
+# 27/11 sera (decisione del cliente: "tutta la Lombardia"): anche Mantova e Sondrio, così entrano TUTTE le 12
+# province lombarde oltre a quelle entro circa 100 km. Nessun'altra regola cambia.
+PROVINCE_100KM = frozenset({"MI", "MB", "VA", "CO", "LC", "BG", "LO", "PV", "CR", "BS", "MN", "SO",
+                            "NO", "PC", "AL", "VB"})
 RAVENNA = frozenset({"RA", "FC", "RN", "FE", "BO"})
 ROMA = frozenset({"RM", "LT", "FR", "VT", "RI"})
 # 9/11: Torino e dintorni sul sito (SITO_TORINO=0 la spegne)

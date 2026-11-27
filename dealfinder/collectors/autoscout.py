@@ -178,7 +178,11 @@ def parse_item(it: dict) -> Listing | None:
         if lab not in (None, "", {}, []):
             flags.append("as24_prezzo:" + re.sub(r"[^a-z0-9_-]", "", str(lab).lower())[:30])
             break
+    # 27/11 sera: coordinate dell'annuncio, se AutoScout24 le manda (location.latitude/longitude o lat/lng)
+    from ..core.models import coordinate
+    _la, _lo = coordinate((loc.get("latitude"), loc.get("longitude")), (loc.get("lat"), loc.get("lng") or loc.get("lon")))
     return Listing(
+        lat=_la, lon=_lo,
         source="autoscout24", source_id=str(lid), url=(BASE + url) if str(url).startswith("/") else str(url),
         title=title, description=it.get("description"),
         make=veh.get("make"), model=veh.get("model"), version_raw=veh.get("modelVersionInput"),

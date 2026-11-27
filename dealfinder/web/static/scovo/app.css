@@ -1905,3 +1905,23 @@ main.list:has(> .card.k5)>.sec-h{margin-bottom:-14px}
 .scl-banner-go{flex:none;display:flex}
 .scl-banner-go svg{width:22px;height:22px}
 .scl-piu{width:100%}
+
+/* 27/11 sera: posizione del visitatore (pannello prima della richiesta del browser) e distanza "a X km da te" */
+.k5-dist{display:flex;align-items:center;gap:4px;margin-top:2px;font:600 13px/18px var(--body);color:var(--link);font-variant-numeric:tabular-nums}
+.k5-dist::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.8;flex:none}
+.pos-sheet .sheet-body{gap:14px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.pos-ic{width:52px;height:52px;border-radius:26px;background:var(--tip);color:var(--link);display:flex;align-items:center;justify-content:center}
+.pos-q{margin:0;font:var(--t-title3);color:var(--ink);text-wrap:balance}
+.pos-btns,.pos-alt{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pos-alt{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.pos-btns .btn,.pos-alt .btn{width:100%;padding:0 12px}
+.pos-lab{font:600 15px/20px var(--body);color:var(--ink)}
+.pos-row{display:flex;gap:8px}
+.pos-in{flex:1;min-width:0;min-height:52px;padding:0 16px;border-radius:var(--r-ctl);border:1px solid var(--line);background:var(--raised);color:var(--ink);font:var(--t-body)}
+.pos-row .btn{flex:none}
+.pos-err{margin:0;padding:10px 12px;border-radius:12px;background:var(--warn-soft);color:var(--warn);font:500 15px/20px var(--body)}
+.pos-priv{margin:0}
+.pos-centro{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 var(--gut) 10px;font:var(--t-sub);color:var(--ink-2)}
+.pos-centro span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pos-centro .link{flex:none;font-weight:600}
+@media (max-width:440px){.pos-btns{grid-template-columns:1fr}}

@@ -637,8 +637,10 @@ def zona(r: dict) -> str:
 
 
 def _geo(r: dict):
-    from ..geo import coords
-    c = coords(r.get("province"))
+    """[lat, lon] dell'auto per la distanza "a X km da te" (27/11 sera): coordinate dell'annuncio se la fonte le dà,
+    altrimenti il comune (tabella di geo.COMUNI), altrimenti il capoluogo di provincia. Vedi geo.coords_auto."""
+    from ..geo import coords_auto
+    c, _ = coords_auto(r)
     return [c[0], c[1]] if c else None
 
 

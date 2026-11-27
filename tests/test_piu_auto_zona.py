@@ -32,7 +32,8 @@ def test_comm_fascia_parametri_dalle_regole_del_cliente():
     from dealfinder.regole import regole
     a = regole().ammissione
     p = B.comm_fascia_parametri(["MI", "TO", "NO", "PC", "MN", "SO", "CN"], 1000, 0.92, 400000, 300)
-    assert p["prov"] == ["MI", "NO", "PC"]                       # solo PROVINCE_100KM: niente Torino, Mantova, Sondrio
+    # 27/11: Lombardia intera, decisione del cliente: Mantova e Sondrio ora in PROVINCE_100KM
+    assert p["prov"] == ["MI", "NO", "PC", "MN", "SO"]           # solo PROVINCE_100KM: niente Torino né Cuneo
     assert p["fascia_prezzo"] == a.richiesta_prezzo_max == 10000 and p["fascia_km"] == a.richiesta_km_max == 100000
     assert p["diesel_dal"] == a.richiesta_diesel_dal == 2017 and p["soglia"] == 0.92
     import re

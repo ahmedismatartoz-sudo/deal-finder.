@@ -49,6 +49,9 @@ class Listing:
     problem_search: bool = False   # trovato con una ricerca mirata ad auto con problemi
     fuel_tipo: str | None = None   # 3/11: mild | full | plug-in | bifuel (fuel resta il gruppo dei confronti)
     dati_auto: dict = field(default_factory=dict)   # 12/11: scheda tecnica dalla fonte (core/dati_auto.py), chiavi in italiano
+    # 27/11 sera: coordinate dell'annuncio quando la fonte le dà (servono a "a X km da te" sul sito); None = non date
+    lat: float | None = None
+    lon: float | None = None
 
     REQUIRED = ("make", "model", "year", "mileage_km", "fuel", "price_eur")
 
@@ -61,3 +64,16 @@ class Listing:
         if not self.photos:
             self.missing_fields.append("photos")
         return self.missing_fields
+
+
+def coordinate(*coppie) -> tuple[float | None, float | None]:
+    """27/11 sera: la prima coppia (lat, lon) valida e dentro l'Italia, arrotondata a 2 decimali (circa 1 km);
+    (None, None) se la fonte non le dà. Accetta numeri o testi ("45.46")."""
+    for la, lo in coppie:
+        try:
+            la, lo = float(la), float(lo)
+        except (TypeError, ValueError):
+            continue
+        if 35 <= la <= 48 and 6 <= lo <= 19:
+            return round(la, 2), round(lo, 2)
+    return None, None

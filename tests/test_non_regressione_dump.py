@@ -110,7 +110,8 @@ def _regole_sito(c: dict) -> dict:
 def test_telefono_zona_km_anno_uguali_al_16_11():
     def atteso(c):                     # 27/11 (decisione del cliente): Alessandria e Verbania entrano nella zona
         a = dict(c["atteso"]["regole_sito"])
-        if a.get("zona") in ("provincia_AL", "provincia_VB"):
+        # 27/11: Lombardia intera, decisione del cliente (anche Mantova e Sondrio)
+        if a.get("zona") in ("provincia_AL", "provincia_VB", "provincia_MN", "provincia_SO"):
             a["zona"] = None
         return a
     diversi = [(c["id"], atteso(c), r) for c in _casi() if (r := _regole_sito(c)) != atteso(c)]
@@ -127,4 +128,5 @@ def test_auto_sul_sito_passano_telefono_zona_km_anno():
             assert not r, (c["id"], r)
         fuori.update(r.keys())
         assert c["prov"] not in ("RM", "LT", "FR", "VT", "RI") or "zona" in r or "no_roma" in r
-    assert set(fuori) <= {"zona"} and fuori["zona"] > 100
+    # 27/11: Lombardia intera, decisione del cliente: Mantova e Sondrio dentro, le fuori zona del dump scendono a 94
+    assert set(fuori) <= {"zona"} and fuori["zona"] > 80
