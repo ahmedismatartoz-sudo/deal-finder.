@@ -62,11 +62,13 @@ SPOSTABILI: dict = {
     "lettura_completa:": (False, ()),   # 25/11 (cliente: "leggi tutti gli annunci, subito"): avvio a mano; SOLO nel sito
     "lettura_zona:": (False, ()),       # 27/11: lettura mirata di una zona (Ferrara), SOLO nel sito
     "lettura_200km:": (False, ()),      # 28/11 (cliente: "raggio di 200 km da AutoScout"): lettura una tantum, SOLO nel sito
+    "lettura_subito_200km:": (False, ()),  # 28/11 (cliente: "Subito anche a 200 km"): lettura una tantum, SOLO nel sito
+    "rivaluta_200km:": (False, ()),     # 28/11 (cliente: lontane alla valutazione e al sito): una tantum, SOLO nel sito
     "esporta_raccolta:": (False, BREVO),  # 25/11 (cliente): i cellulari di raccolta_contatti in una lista Brevo; SOLO nel sito
 }
 # 16/11 sera (cliente: "il risultato adesso"): voci eseguite da coda_lavori.esegui ma SEMPRE nel sito, appena dopo
 # il deploy (filo di brevo_liste in web/app.py), mai messe nella coda del cron, qualunque sia LAVORI_NEL_CRON
-SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "rivaluta_allargata:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:", "lettura_completa:", "lettura_zona:", "lettura_200km:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
+SOLO_SITO = ("clienti_tel:", "utenti:", "censimento:", "giro1711:", "perche_fuori:ora", "conta_mercato:", "base_vendute:", "rivaluta_base:", "rivaluta_allargata:", "ribassi_spenti:", "ribassi_accesi:", "non_aperti:", "esporta_raccolta:", "lettura_completa:", "lettura_zona:", "lettura_200km:", "lettura_subito_200km:", "rivaluta_200km:")   # 17/11 21:43 cliente: "lancialo adesso" (perche_fuori:ora = subito nel sito)
 RIPIEGO_ORE = 6                 # voci brevi non prese da nessun cron entro tante ore: le fa il sito
 RIPIEGO_ORE_LUNGHI = 30         # voci lunghe: il passo notturno passa una volta al giorno
 
@@ -444,6 +446,16 @@ def esegui(v: str) -> bool | None:
             from . import lettura_completa as LC
             lg.warning("LETTURA_200KM %s", json.dumps(LC.lavoro_200km(v)))
         return _lungo(v, "LETTURA_200KM", _lettura_200km)
+    if v.startswith("lettura_subito_200km:"):   # 28/11 (cliente, "ti autorizzo con il sì"): Subito (privati) nelle
+        def _lettura_subito_200km():             # province entro 200 km, subito (lettura_completa.lavoro_subito_200km)
+            from . import lettura_completa as LC
+            lg.warning("LETTURA_SUBITO_200KM %s", json.dumps(LC.lavoro_subito_200km(v), ensure_ascii=False))
+        return _lungo(v, "LETTURA_SUBITO_200KM", _lettura_subito_200km)
+    if v.startswith("rivaluta_200km:"):   # 28/11 (cliente: "far arrivare alla valutazione e al sito le auto già lette
+        # delle province lontane", senza cambiare regole di margine): pricing/rivaluta_200km, log RIVALUTA_200KM;
+        # fermata per tempo = eccezione: _lungo la riprende al prossimo avvio dalla provincia dopo
+        from ..pricing import rivaluta_200km as R2
+        return _lungo(v, "RIVALUTA_200KM", lambda: R2.lavoro(v))
     if v.startswith("conta_mercato:"):    # 18/11 notte (cliente: "oltre 60.000 annunci nei 150 km")
         from . import conta_mercato as CM
         _lungo(v, "CONTA_MERCATO", lambda: lg.warning("CONTA_MERCATO %s", json.dumps(CM.lavoro(v), ensure_ascii=False)))

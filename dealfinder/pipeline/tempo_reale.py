@@ -30,8 +30,15 @@ from . import copertura_lettura as _CL          # 25/11: riga COPERTURA_LETTURA 
 REGIONI = {
     "lombardia": ["MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO"],
     "piemonte": ["NO", "VC", "BI", "VB", "AL", "AT", "TO", "CN"],        # 9/11: CN per Torino e dintorni
-    "emilia-romagna": ["PC", "PR", "RE"],
-    "liguria": ["GE"],
+    "emilia-romagna": ["PC", "PR", "RE", "MO"],
+    "liguria": ["GE", "SV", "SP", "IM"],
+    # 28/11 (Subito 200 km, decisione del cliente: "leggere Subito in tutte le province entro 200 km"): le province di
+    # zone.PROVINCE_200KM che mancavano, SOLO quelle (non le intere regioni: Padova, Bolzano, Lucca... restano fuori).
+    # In fondo all'elenco: il giro veloce ha un tempo massimo unico, Lombardia e Piemonte restano per prime.
+    "veneto": ["VR", "VI"],
+    "trentino-alto-adige": ["TN"],
+    "valle-d-aosta": ["AO"],
+    "toscana": ["MS"],
 }
 _codici_regione: dict[str, int] = {}
 LOCK = {"nuovi": 734101, "verifica": 734102, "telefoni": 734103, "targhe": 734104, "completo": 734105,

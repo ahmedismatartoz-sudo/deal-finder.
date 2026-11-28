@@ -52,7 +52,16 @@ REGION_CODES = {"lombardia": 4, "emilia-romagna": int(__import__("os").environ.g
                 "lazio": int(__import__("os").environ.get("SUBITO_CODICE_LAZIO", "12")),
                 # 3/11: codici già usati dal giro della zona (benzina_mi) e dal tempo reale (_SUB_REGIONI_NOTE)
                 "piemonte": int(__import__("os").environ.get("SUBITO_CODICE_PIEMONTE", "2")),
-                "liguria": int(__import__("os").environ.get("SUBITO_CODICE_LIGURIA", "3"))}
+                "liguria": int(__import__("os").environ.get("SUBITO_CODICE_LIGURIA", "3")),
+                # 28/11 (Subito 200 km, decisione del cliente): le regioni delle province entro 200 km da Milano. Codici
+                # nell'ordine delle regioni di Subito (1 Valle d'Aosta, 2 Piemonte, 3 Liguria, 4 Lombardia, 5 Trentino-
+                # Alto Adige, 6 Veneto, 7 Friuli, 8 Emilia-Romagna, 9 Toscana, ... 12 Lazio: 2, 3, 4, 8 e 12 già
+                # verificati nei log). Un codice sbagliato non salva niente di sbagliato: gli annunci di altre province
+                # si scartano e la lettura completa si ferma alla prima pagina (lettura_completa.subito_fetta)
+                "valle-d-aosta": int(__import__("os").environ.get("SUBITO_CODICE_VDA", "1")),
+                "trentino-alto-adige": int(__import__("os").environ.get("SUBITO_CODICE_TRENTINO", "5")),
+                "veneto": int(__import__("os").environ.get("SUBITO_CODICE_VENETO", "6")),
+                "toscana": int(__import__("os").environ.get("SUBITO_CODICE_TOSCANA", "9"))}
 # 17/11: codici interni delle province (geo.city.key) visti nei log della raccolta profonda (15-16/11), per regione:
 # ripiego quando una provincia non compare nelle prime pagine (_province_keys)
 PROVINCE_KEYS_NOTE = {
@@ -60,7 +69,14 @@ PROVINCE_KEYS_NOTE = {
         "SO": "11", "VA": "12"},                                                       # Lombardia
     2: {"AL": "1", "AT": "2", "BI": "3", "CN": "4", "NO": "5", "TO": "6", "VB": "7", "VC": "8"},   # Piemonte
     8: {"MO": "4", "PR": "5", "PC": "6", "RE": "8"},                                    # Emilia-Romagna
-    3: {"GE": "1", "SP": "3", "SV": "4"},                                               # Liguria
+    3: {"GE": "1", "IM": "2", "SP": "3", "SV": "4"},                                    # Liguria
+    # 28/11 (Subito 200 km): codici DEDOTTI dall'ordine alfabetico dentro la regione (regola valida per tutti quelli
+    # visti: Lombardia, Piemonte, Emilia-Romagna, Liguria; Imperia = 2 tra Genova 1 e La Spezia 3). Solo ripiego:
+    # il lavoro lettura_subito_200km legge prima i codici dagli annunci; un codice sbagliato si scopre alla prima pagina
+    1: {"AO": "1"},                                                                     # Valle d'Aosta
+    5: {"TN": "2"},                                                                     # Trentino-Alto Adige (BZ 1)
+    6: {"VR": "6", "VI": "7"},                                                          # Veneto (BL PD RO TV VE prima)
+    9: {"MS": "6"},                                                                     # Toscana (AR FI GR LI LU prima)
 }
 PROVINCE_CODES = {"milano": "MI", "monza-e-della-brianza": "MB", "bergamo": "BG", "brescia": "BS",
                   "como": "CO", "varese": "VA", "lecco": "LC", "lodi": "LO", "pavia": "PV",

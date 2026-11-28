@@ -582,51 +582,69 @@ def _utilitarie(conn, pubblica: bool = False) -> dict:
     lette = len(ids)
     ids, saltate = senza_invariate(conn, ids)
     es = valuta_e_scrivi(conn, ids, "cron-utilitarie")
-    pass_ = [(lid, v) for lid, v in es.valutazioni.items()
-             if es.salvata.get(lid) in scovo.CATEGORIE_SITO and v.get("categoria") in scovo.CATEGORIE_SITO
-             and v.get("margine") is not None and v.get("acquisto")
-             and v["margine"] >= scovo.soglia(int(v["acquisto"])) and es.telefono.get(lid) is not False]
+    pass_ = scelte_utilitarie(es)
     per_fascia = Counter(next(f"<{lim}" for lim in (5000, 10000, 15000, 20000, 30000, 10**9) if int(v["acquisto"]) < lim)
                          for _, v in pass_)
     out = {"lette": lette, "saltate_invariate": saltate, "valutate": len(es.valutazioni), "stats": dict(es.stats),
            "pubblicabili_per_fascia": dict(per_fascia), "secondi": round(time.time() - t0)}
     log.warning("UTILITARIE_SIM %s", json.dumps(out, ensure_ascii=False))
     if pubblica:
-        n = promosse = 0
         conn.execute("DELETE FROM top_auto")
         ordine = sorted(pass_, key=lambda x: -x[1]["margine"] / scovo.soglia(int(x[1]["acquisto"])))
         for pos, (lid, v) in enumerate(ordine):
             conn.execute("INSERT INTO top_auto (listing_id, posizione, margine) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING",
                          (lid, pos, v["margine"]))
-        for lid, v in ordine:
-            if not conn.execute("SELECT 1 FROM valuations WHERE listing_id=%s LIMIT 1", (lid,)).fetchone():
-                conn.execute(
-                    """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
-                         n_comparables, comparables_used, confidence, parts_cost_low, parts_cost_high)
-                       VALUES (%s,%s,%s,%s,%s,%s,'[]',%s,0,0)""",
-                    (lid, P.POLICY_VERSION + "+utilitarie", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
-                     "affidabile" if v["categoria"] == "opportunita" else "da_verificare"))
-            # 17/11: prima "AND stage <> 'approfondito'": un'auto approfondita con un motivo che il sito non mostra
-            # (es. 'scartata' o 'non_valutabile' del vecchio approfondimento) e oggi buona restava fuori PER SEMPRE
-            # (il giro della zona salta le approfondite, il ricalcolo legge solo quelle già sul sito). Ora si lasciano
-            # stare solo quelle già sul sito (opportunita, da_verificare, incidentata, affidabile), confrontando la
-            # PRIMA parte del motivo (verify.mark aggiunge " | scomparso ...": "incidentata | scomparso" non deve
-            # diventare opportunita).
-            # (unione notte-09 + notte-10): motivo con scovo.motivo_stadio_sql (taglio al primo '|'), motivi già sul
-            # sito = scovo.MOTIVI_ELENCO, "solo confronto" = valutazione.NON_PROPOSTE
-            from . import valutazione as _VAL
-            _mot = scovo.motivo_stadio_sql("stage_reason")
-            r_up = conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
-                                "last_checked_at=now() WHERE id=%s AND NOT (stage = 'approfondito' AND "
-                                + _mot + " = ANY(%s)) "
-                                # come valutazione.PROMUOVI_SQL: mai i "solo confronto" né il solo finanziamento
-                                "AND NOT (stage = 'mercato' AND " + _mot + " = ANY(%s)) "
-                                "AND " + _mot + " <> 'solo_finanziamento'",
-                                ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid,
-                                 list(scovo.MOTIVI_ELENCO), list(_VAL.NON_PROPOSTE)))
-            n += 1
-            promosse += int(getattr(r_up, "rowcount", 0) or 0)
+        n, promosse = promuovi_utilitarie(conn, ordine)
         conn.commit()
         log.warning("UTILITARIE_PUBBLICATE %d (promosse ora %d)", n, promosse)
         out["promosse"] = promosse
     return out
+
+
+def scelte_utilitarie(es) -> list:
+    """Le auto di `es` (valuta_e_scrivi) che le utilitarie mettono sul sito: riga salvata e valutazione nuova in una
+    categoria del sito, margine almeno alla soglia del sito (scovo.soglia), numero del venditore non escluso (None =
+    da controllare: lo controlla il sito). 28/11: estratta da _utilitarie senza cambiare nulla, la usa anche
+    pricing/rivaluta_200km."""
+    from ..web import scovo
+    return [(lid, v) for lid, v in es.valutazioni.items()
+            if es.salvata.get(lid) in scovo.CATEGORIE_SITO and v.get("categoria") in scovo.CATEGORIE_SITO
+            and v.get("margine") is not None and v.get("acquisto")
+            and v["margine"] >= scovo.soglia(int(v["acquisto"])) and es.telefono.get(lid) is not False]
+
+
+def promuovi_utilitarie(conn, ordine: list) -> tuple[int, int]:
+    """(auto passate, promosse ora): riga in valuations se manca e stage 'approfondito' (motivo opportunita o
+    da_verificare). 28/11: estratta da _utilitarie senza cambiare nulla (stesse istruzioni, stesso ordine); il commit
+    lo fa chi chiama."""
+    from ..web import scovo
+    n = promosse = 0
+    for lid, v in ordine:
+        if not conn.execute("SELECT 1 FROM valuations WHERE listing_id=%s LIMIT 1", (lid,)).fetchone():
+            conn.execute(
+                """INSERT INTO valuations (listing_id, engine_version, private_median, resale_median, resale_prudent,
+                     n_comparables, comparables_used, confidence, parts_cost_low, parts_cost_high)
+                   VALUES (%s,%s,%s,%s,%s,%s,'[]',%s,0,0)""",
+                (lid, P.POLICY_VERSION + "+utilitarie", v.get("M"), v.get("M"), v.get("R_finale"), v.get("n"),
+                 "affidabile" if v["categoria"] == "opportunita" else "da_verificare"))
+        # 17/11: prima "AND stage <> 'approfondito'": un'auto approfondita con un motivo che il sito non mostra
+        # (es. 'scartata' o 'non_valutabile' del vecchio approfondimento) e oggi buona restava fuori PER SEMPRE
+        # (il giro della zona salta le approfondite, il ricalcolo legge solo quelle già sul sito). Ora si lasciano
+        # stare solo quelle già sul sito (opportunita, da_verificare, incidentata, affidabile), confrontando la
+        # PRIMA parte del motivo (verify.mark aggiunge " | scomparso ...": "incidentata | scomparso" non deve
+        # diventare opportunita).
+        # (unione notte-09 + notte-10): motivo con scovo.motivo_stadio_sql (taglio al primo '|'), motivi già sul
+        # sito = scovo.MOTIVI_ELENCO, "solo confronto" = valutazione.NON_PROPOSTE
+        from . import valutazione as _VAL
+        _mot = scovo.motivo_stadio_sql("stage_reason")
+        r_up = conn.execute("UPDATE listings SET stage='approfondito', stage_reason=%s, deep_at=COALESCE(deep_at, now()), "
+                            "last_checked_at=now() WHERE id=%s AND NOT (stage = 'approfondito' AND "
+                            + _mot + " = ANY(%s)) "
+                            # come valutazione.PROMUOVI_SQL: mai i "solo confronto" né il solo finanziamento
+                            "AND NOT (stage = 'mercato' AND " + _mot + " = ANY(%s)) "
+                            "AND " + _mot + " <> 'solo_finanziamento'",
+                            ("opportunita" if v["categoria"] == "opportunita" else "da_verificare", lid,
+                             list(scovo.MOTIVI_ELENCO), list(_VAL.NON_PROPOSTE)))
+        n += 1
+        promosse += int(getattr(r_up, "rowcount", 0) or 0)
+    return n, promosse

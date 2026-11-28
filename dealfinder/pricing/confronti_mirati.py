@@ -823,7 +823,9 @@ def salva_italia(conn, annunci: list, g: dict, st: Counter) -> set:
     from ..web import sito_regole as SR
     from ..zone import comune_ok
     from . import valore_base as VB
-    zona = set(VB.province_sito())
+    # 28/11 (lontane, decisione del cliente): anche le province del sito entro 200 km (sito_regole.PROVINCE_SITO): un
+    # annuncio nuovo di Verona o Savona non è più "solo prezzo" (prima la zona era quella del mercato, 100 km)
+    zona = set(VB.province_sito()) | set(SR.PROVINCE_SITO)
     ids = set()
     for l in annunci:
         try:

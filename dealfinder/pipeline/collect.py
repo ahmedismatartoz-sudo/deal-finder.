@@ -802,7 +802,12 @@ def run(mode: str) -> Counter:
                         log.warning("annuncio %s non salvato: %s", listing.url, str(e)[:120])
                         continue
                     stats["salvati"] += 1
-                    if mode == "mercato_nord":           # solo prezzo di riferimento: mai proposta
+                    if mode == "mercato_nord" and nord_proponibile(listing):
+                        # 28/11 (lontane, decisione del cliente): un PRIVATO di una provincia entro 200 km da Milano
+                        # (Verona, Vicenza, Trento, Modena, Savona, Imperia, La Spezia, Aosta...) non è più "solo
+                        # prezzo": resta un annuncio normale (valutazione e sito come quelli letti dal tempo reale)
+                        stats["mercato_nord:privati_200km"] += 1
+                    elif mode == "mercato_nord":           # solo prezzo di riferimento: mai proposta
                         conn.execute("UPDATE listings SET stage='mercato', stage_reason='mercato_nord' WHERE id=%s", (lid,))
                     elif solo_confronto:
                         conn.execute("UPDATE listings SET stage='mercato', stage_reason='fuori_regole' "
@@ -905,6 +910,19 @@ def run(mode: str) -> Counter:
     log.info("raccolta %s: %s", mode, dict(stats))
     log.warning("RACCOLTA_SCARTI %s", json.dumps(riepilogo_scarti(stats)))
     return stats
+
+
+def nord_proponibile(listing) -> bool:
+    """28/11 (lontane e Subito 200 km, decisione del cliente: "far arrivare alla valutazione e al sito le auto già
+    lette delle province lontane"). Prima mercato_nord segnava OGNI annuncio letto fuori dalla zona (zone.tutte(): Milano
+    a 150 km e Torino) come stage 'mercato' / 'mercato_nord' ("mai proposta", valutazione.NON_PROPOSTE), a ogni ciclo
+    e senza condizioni: i privati di Verona, Vicenza, Trento, Modena, Savona, Imperia, La Spezia e Aosta, già nel
+    database da lì, restavano "solo prezzo" anche dopo il raggio di 200 km (la lettura li trovava "invariati" e non
+    toccava lo stadio; utilitarie e promozione li escludono). Ora un privato di una provincia che la lettura tiene
+    (zone.province_lettura, 200 km) è un annuncio normale; i commercianti restano prezzi di riferimento."""
+    from ..zone import province_lettura
+    pv = str(getattr(listing, "province", "") or "").upper()
+    return getattr(listing, "seller_type", None) == "privato" and pv in province_lettura()
 
 
 NORD_RSS_MB = 420          # MB: oltre si ferma (512 MB del cron mercato, margine per il salvataggio)

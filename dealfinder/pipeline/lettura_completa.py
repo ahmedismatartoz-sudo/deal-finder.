@@ -7,7 +7,9 @@ La valutazione e la pubblicazione restano quelle di sempre (giro della zona ogni
 
 Cosa legge, un ciclo al giorno (CICLO_ORE), a pezzi di GIRO_MINUTI minuti ogni PAUSA_GIRI_MIN (filo del worker del tempo
 reale), così i portali non ricevono mai una raffica:
-- Subito: ogni provincia della zona attiva (zone.tutte()), fasce di prezzo di tempo_reale.FASCE_SUBITO fino a
+- Subito: ogni provincia della zona attiva (zone.tutte()) e, dal 28/11 (Subito 200 km, decisione del cliente), tutte
+  le province entro 200 km (zona_subito: anche Verona, Vicenza, Trento, Modena, Savona, Imperia, La Spezia, Massa,
+  Aosta; solo quelle, non le intere regioni), fasce di prezzo di tempo_reale.FASCE_SUBITO fino a
   PREZZO_MAX, 100 annunci a pagina. Una fascia con più di SUB_PAGINE_MAX pagine (totale dichiarato, o pagine tutte
   piene) si DIVIDE a metà finché ogni pezzo sta sotto il tetto (o è larga meno di SUB_FASCIA_MIN euro);
 - AutoScout24: privati, dal 28/11 (raggio 200 km, decisione del cliente) i centri di zone.CENTRI_AS_200KM: Milano 200 km
@@ -177,6 +179,14 @@ def subito_fetta(L: Lettore, col, regione, key, sn: str, ps: int, pe: int, visti
             CL.nota("subito", ricerca, gruppo=sn, motivo="blocco")
             raise
         if pagina == 0:
+            if codice_errato(ads, sn):
+                # 28/11 (Subito 200 km): il codice della provincia (dedotto, PROVINCE_KEYS_NOTE) restituisce annunci di
+                # altre province: si smette subito (prima si leggevano tutte le pagine per scartarle una a una)
+                CL.nota("subito", ricerca, gruppo=sn, pagine=1, letti=len(ads), motivo="codice_errato")
+                log.warning("LETTURA_COMPLETA subito %s: il codice provincia %s (regione %s) restituisce altre "
+                            "province, ricerca saltata", sn, key, regione)
+                L.segna(chiave)
+                return
             totale = tot
             if totale is not None and totale > SUB_PAGINE_MAX * SUB_LIM and divisibile:
                 return dividi(totale, 1)
@@ -206,6 +216,21 @@ def subito_fetta(L: Lettore, col, regione, key, sn: str, ps: int, pe: int, visti
             return
 
 
+CODICE_ERRATO_MIN = 5          # annunci nella 1ª pagina, nessuno della provincia cercata: codice provincia sbagliato
+
+
+def codice_errato(ads: list, sn: str) -> bool:
+    """28/11: la prima pagina ha almeno CODICE_ERRATO_MIN annunci con la provincia scritta e NESSUNO è della provincia
+    cercata (il filtro ci= di Subito con un codice sbagliato restituisce un'altra provincia o tutta la regione)."""
+    from ..collectors.subito import parse_item
+    prov = []
+    for it in ads or []:
+        l = parse_item(it) if isinstance(it, dict) else None
+        if l is not None and l.province:
+            prov.append(str(l.province).upper())
+    return len(prov) >= CODICE_ERRATO_MIN and str(sn).upper() not in prov
+
+
 def province_subito(zona: set) -> list:
     """[(codice regione, provincia, codice provincia)] per le province della zona che Subito conosce."""
     from ..collectors.subito import PROVINCE_KEYS_NOTE, REGION_CODES
@@ -220,6 +245,13 @@ def province_subito(zona: set) -> list:
     return out
 
 
+def zona_subito() -> set:
+    """Province di Subito della lettura completa: la zona attiva (zone.tutte()) e, dal 28/11 (Subito 200 km, decisione
+    del cliente), tutte le province entro 200 km da Milano (zone.PROVINCE_200KM). Mai Roma."""
+    from ..zone import PROVINCE_200KM, ROMA, tutte
+    return (set(tutte()) | set(PROVINCE_200KM)) - set(ROMA)
+
+
 def fasce_subito() -> list:
     from .tempo_reale import FASCE_SUBITO
     f = [(a, b) for a, b in FASCE_SUBITO if a < PREZZO_MAX]
@@ -228,11 +260,12 @@ def fasce_subito() -> list:
     return f
 
 
-def leggi_subito(L: Lettore, col, zona: set, solo_privati: bool = False) -> None:
+def leggi_subito(L: Lettore, col, zona: set, solo_privati: bool = False, privati_in=frozenset()) -> None:
+    """privati_in (28/11): province in cui si tengono SOLO i privati (quelle aggiunte con i 200 km: "Subito (privati)")."""
     for regione, sn, key in province_subito(zona):
         visti: set = set()
         for ps, pe in fasce_subito():
-            subito_fetta(L, col, regione, key, sn, ps, pe, visti, solo_privati)
+            subito_fetta(L, col, regione, key, sn, ps, pe, visti, solo_privati or sn in privati_in)
 
 
 # ------------------------------------------------------------------ AutoScout24
@@ -476,9 +509,10 @@ def giro(conn, minuti: float | None = None, forza: bool = False, fonti=FONTI, le
         def _sub(L):
             from ..collectors.subito import SubitoCollector
             from ..db import db_pieno
-            from ..zone import tutte
             col = SubitoCollector(proxy=None)        # mai proxy né Web Unlocker: solo l'interfaccia di ricerca
-            leggi_subito(L, col, set(tutte()), solo_privati=bool(db_pieno(conn)))
+            from ..zone import tutte
+            leggi_subito(L, col, zona_subito(), solo_privati=bool(db_pieno(conn)),
+                         privati_in=zona_subito() - set(tutte()))
 
         def _as(L):
             leggi_autoscout(L, client_autoscout(tr))
@@ -731,5 +765,164 @@ def lavoro_200km(spec: str = "", dormi=time.sleep) -> dict:
         esito["saltato"] = "lucchetto occupato (lettura completa in corso): rilanciare con un'altra etichetta"
     # bloccato da AutoScout24 (403/429): ci si ferma e basta, nessuna riprova a raffica; il resto lo legge la lettura
     # completa periodica (stessi centri dei 200 km) o un nuovo lettura_200km:<altra etichetta> (rilegge da capo)
+    esito["minuti"] = round((time.time() - t0) / 60)
+    return esito
+
+
+# ------------------------------------------------------------------ 28/11 lettura di Subito nei 200 km (una tantum)
+# Cliente (28/11 11:09, "ti autorizzo con il sì"): "Subito anche a 200 km: leggere Subito (privati) in tutte le province
+# entro 200 km". La lettura completa periodica legge ora anche queste province (zona_subito, un ciclo al giorno); questo
+# lavoro la fa SUBITO, una volta per etichetta:
+#   BREVO_IMPORT_LISTE=lettura_subito_200km:<etichetta>            le 9 province mai lette da Subito prima del 28/11
+#                                                                   (AO IM MO MS SP SV TN VI VR)
+#   BREVO_IMPORT_LISTE=lettura_subito_200km:<etichetta>:tutte      tutte le 33 province entro 200 km
+#   BREVO_IMPORT_LISTE=lettura_subito_200km:<etichetta>:VR,VI      solo quelle (sempre dentro i 200 km)
+# Solo privati (solo_privati), solo le province della lista (filtro per provincia di Subito, ci=<codice>), tutte le fasce
+# di prezzo fino a PREZZO_MAX divise sotto il tetto delle pagine (subito_fetta). Codici delle province letti prima dagli
+# annunci della regione (fino a CHIAVI_PAGINE pagine), poi quelli noti (PROVINCE_KEYS_NOTE); un codice sbagliato si
+# scopre alla prima pagina (codice_errato) e la provincia si salta. Stesse pause della lettura completa (SUB_PAUSA
+# 1,2-2,5 s), una richiesta alla volta, nessun proxy, stop al primo 403/429 (Blocco). Stesso lucchetto della lettura
+# ("lettura": mai due letture insieme, si aspetta fino a LAVORO_200KM_ATTESA_MIN minuti). Passi ricordati (job
+# "lettura_subito_200km:<etichetta>"): un riavvio riprende da lì. Salvataggio con tempo_reale._salva (200 km). La
+# valutazione NON è qui: dopo la lettura, rivaluta_200km:<altra etichetta> (pricing/rivaluta_200km).
+# Stima (9 province): ~30-40 mila annunci in tutto (privati e commercianti: Subito non filtra i privati nella ricerca),
+# ~14 fasce per provincia = ~130 richieste minime + ~350 pagine da 100 + ≤30 per i codici = ~450-550 richieste a
+# ~2,4 s (pausa 1,2-2,5 s + risposta) = circa 20-25 minuti. Con ":tutte" ~2.500 richieste in più: circa 2 ore in tutto.
+SUBITO_PRIMA_2811 = frozenset({"MI", "MB", "BG", "BS", "CO", "VA", "LC", "LO", "PV", "CR", "MN", "SO", "NO", "VC", "BI",
+                               "VB", "AL", "AT", "TO", "CN", "PC", "PR", "RE", "GE"})   # tempo_reale.REGIONI fino al 27/11
+CHIAVI_PAGINE = 5
+LAVORO_SUBITO_ORE_MAX = 4
+
+
+def province_subito_200km(spec: str = "") -> list:
+    """Province del lavoro: le nuove (default), ':tutte' o un elenco (solo quelle entro 200 km)."""
+    from ..zone import PROVINCE_200KM, ROMA
+    dentro = [p for p in PROVINCE_200KM if p not in ROMA]
+    parti = (spec or "").split(":")
+    scelta = parti[2].strip() if len(parti) > 2 else ""
+    if scelta.lower() == "tutte":
+        return dentro
+    if scelta:
+        voluti = {x.strip().upper() for x in scelta.split(",") if x.strip()}
+        return [p for p in dentro if p in voluti]
+    return [p for p in dentro if p not in SUBITO_PRIMA_2811]
+
+
+def regioni_subito(prov: list) -> list:
+    """[(nome regione, codice, [province])] dall'elenco di tempo_reale.REGIONI, nell'ordine di quell'elenco."""
+    from ..collectors.subito import REGION_CODES
+    from .tempo_reale import REGIONI
+    out = []
+    for reg, provs in REGIONI.items():
+        voluti = [p for p in provs if p in prov]
+        if voluti and REGION_CODES.get(reg):
+            out.append((reg, REGION_CODES[reg], voluti))
+    return out
+
+
+def chiavi_subito(L: Lettore, col, codice: int, voluti: list) -> dict:
+    """Codice interno di ogni provincia (geo.city.key) dagli annunci più recenti della regione, poi quelli noti per le
+    mancanti (solo se la regione risponde con annunci). Blocco (403/429) e Tempo salgono a chi chiama."""
+    from ..collectors.subito import PROVINCE_KEYS_NOTE
+    keys: dict = {}
+    visti_annunci = 0
+    for pagina in range(CHIAVI_PAGINE):
+        try:
+            ads, _tot = _subito_pagina(L, col, {"c": 2, "r": codice, "t": "s", "lim": SUB_LIM,
+                                                "start": pagina * SUB_LIM, "sort": "datedesc"})
+        except Errore:
+            break
+        visti_annunci += len(ads)
+        for it in ads:
+            city = ((it.get("geo") or {}).get("city") or {}) if isinstance(it, dict) else {}
+            sn, key = str(city.get("short_name") or "").upper(), city.get("key")
+            if sn in voluti and key and sn not in keys:
+                keys[sn] = str(key)
+        if set(voluti) <= set(keys) or len(ads) < SUB_LIM:
+            break
+    note = PROVINCE_KEYS_NOTE.get(int(codice)) or {}
+    if visti_annunci:
+        for sn in voluti:
+            if sn not in keys and sn in note:
+                keys[sn] = note[sn]
+                log.warning("LETTURA_SUBITO_200KM codice provincia %s non visto negli annunci: uso quello noto %s", sn,
+                            note[sn])
+    return keys
+
+
+def lavoro_subito_200km(spec: str = "", dormi=time.sleep, col=None) -> dict:
+    """BREVO_IMPORT_LISTE=lettura_subito_200km:<etichetta>[:tutte|:VR,VI]: Subito (privati) nelle province entro 200 km."""
+    from . import passi, tempo_reale as tr
+    etichetta = ((spec.split(":")[1] if ":" in spec else "") or "ora")[:40]
+    job = f"lettura_subito_200km:{etichetta}"
+    prov = province_subito_200km(spec)
+    esito: dict = {"job": job, "province": prov, "salvati": 0, "nuovi": 0, "per_provincia": {}, "codici": {},
+                   "chiavi_mancanti": [], "finito": False}
+
+    def corpo(conn):
+        from ..collectors.subito import SubitoCollector
+
+        def salva(listings: list) -> int:
+            from collections import Counter
+            c: Counter = Counter()
+            try:
+                tr._salva(conn, listings, c)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                log.warning("LETTURA_SUBITO_200KM salvataggio non riuscito: %s", type(e).__name__)
+                return 0
+            esito["salvati"] += int(c.get("salvati", 0))
+            nuovi = 0
+            for l in listings:
+                ev = getattr(l, "_tr_ev", None)
+                d = esito["per_provincia"].setdefault(str(l.province or "?").upper(), {"salvati": 0, "nuovi": 0})
+                if ev not in (None, "scartato", "errore"):
+                    d["salvati"] += 1
+                if ev == "nuovo":
+                    d["nuovi"] += 1
+                    nuovi += 1
+            esito["nuovi"] += nuovi
+            return nuovi
+
+        c = col or SubitoCollector(proxy=None)        # mai proxy né Web Unlocker: solo l'interfaccia di ricerca
+        m = CL.apri("lettura_subito_200km")
+        with passi.locale(job):
+            L = Lettore(salva, scadenza=time.time() + LAVORO_SUBITO_ORE_MAX * 3600, dormi=tr._dormi,
+                        fermato=tr.fermato)
+            try:
+                for reg, codice, voluti in regioni_subito(prov):
+                    keys = chiavi_subito(L, c, codice, voluti)
+                    esito["codici"][reg] = {"regione": codice, **keys}
+                    for sn in voluti:
+                        key = keys.get(sn)
+                        if not key:
+                            esito["chiavi_mancanti"].append(sn)
+                            continue
+                        visti: set = set()
+                        for ps, pe in fasce_subito():
+                            subito_fetta(L, c, codice, key, sn, ps, pe, visti, solo_privati=True)
+                esito["finito"] = not L.incompleta and not esito["chiavi_mancanti"]
+            except (Tempo, Blocco) as e:
+                esito["subito_fermo"] = f"{type(e).__name__} {str(e)[:60]}".strip()
+            except Exception as e:
+                esito["subito_errore"] = type(e).__name__
+            CL.chiudi(m, extra={"job": job, "salvati": esito["salvati"], "finito": esito["finito"]})
+            if esito["finito"]:
+                try:
+                    passi.finito(job)
+                except Exception as e:
+                    log.warning("LETTURA_SUBITO_200KM passi non cancellati: %s", type(e).__name__)
+        return esito
+
+    t0 = time.time()
+    st = None
+    for _ in range(LAVORO_200KM_ATTESA_MIN):
+        st = tr.con_lucchetto("lettura", corpo)       # lucchetto occupato: si aspetta un minuto alla volta
+        if st is not None or tr.fermato():
+            break
+        dormi(60)
+    if st is None:
+        esito["saltato"] = "lucchetto occupato (lettura completa in corso): rilanciare con un'altra etichetta"
     esito["minuti"] = round((time.time() - t0) / 60)
     return esito
